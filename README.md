@@ -1,162 +1,104 @@
-# FitMiniApp
+# 🏋️ FitMiniApp
 
-Telegram Mini App для тренировок: профиль пользователя, конструктор программ, режим тренера, каталог упражнений, тренировка на сегодня, подписки, уведомления и админ-панель.
+> Мини-приложение для Telegram с тренировками, прогрессией и ролью
+> тренера\
+> Backend + Mini App + Admin panel - всё в одном проекте
 
-## Что уже есть
+------------------------------------------------------------------------
 
-- Авторизация через Telegram Mini App (`initData`)
-- Dev-вход для локальной отладки, если включён `ENABLE_DEV_AUTH=true`
-- Профиль пользователя
-- Конструктор программ:
-  - для себя
-  - для клиента
-- Каталог упражнений
-- Тренировка на сегодня
-- Отметка подходов, отмена последнего подхода
-- Прогрессия по прошлой тренировке
-- Уведомления
-- Подписки с mock-billing
-- Админ-панель
+## ✨ Возможности
 
-## Стек
+### 👤 Пользователь
 
-- **Backend**: FastAPI
-- **База данных**: PostgreSQL
-- **Бот**: Telegram Bot API
-- **Frontend**: HTML/CSS/JS
-- **Инфраструктура**: Docker Compose
+-   📅 Тренировка на сегодня
+-   🏋️ Логирование подходов (вес + повторения)
+-   📈 Прогресс (тоннаж, максимальный вес)
+-   🔔 Уведомления о тренировках
+-   💳 Подписка (mock)
 
-## Структура проекта
+------------------------------------------------------------------------
 
-```text
-backend/
-  app/
-    api/
-    core/
-    db/
-    models/
-    schemas/
-    services/
-    static/
-      index.html
-      admin.html
-      app.js
-      styles.css
-  alembic/
-  Dockerfile
-  worker-entrypoint.sh
-  docker-entrypoint.sh
+### 🧠 Тренер / Админ
 
-bot/
-  ...
+-   🧩 Конструктор программ тренировок
+-   👥 Назначение программ клиентам
+-   ➕ Добавление упражнений через UI
+-   📊 Просмотр клиентов
 
-docker-compose.yml
-.env
-README.md
-```
+------------------------------------------------------------------------
 
-## Настройка `.env`
+### 🔐 Админка
 
-Минимальный пример:
+-   👤 Пользователи
+-   💰 Платежи
+-   🔔 Уведомления
+-   📚 Шаблоны программ
 
-```env
-APP_ENV=prod
-APP_NAME=FitMiniApp
-APP_HOST=0.0.0.0
-APP_PORT=8000
-APP_DEBUG=false
+------------------------------------------------------------------------
 
-SECRET_KEY=CHANGE_ME
-ACCESS_TOKEN_EXPIRE_MINUTES=60
-REFRESH_TOKEN_EXPIRE_DAYS=30
+## 🧱 Архитектура
 
-DATABASE_URL=postgresql+psycopg://fitminiapp:STRONG_PASSWORD@db:5432/fitminiapp
+    Telegram Mini App (Frontend)
+            ↓
+       FastAPI Backend
+            ↓
+     PostgreSQL
 
-ENABLE_DEV_AUTH=false
+------------------------------------------------------------------------
 
-FRONTEND_BASE_URL=https://your-domain.com
-TELEGRAM_BOT_TOKEN=YOUR_BOT_TOKEN
-TELEGRAM_BOT_USERNAME=your_bot_username
+## 🛠️ Стек
 
-PAYMENT_PROVIDER=mock
-PAYMENT_PUBLIC_URL=https://your-domain.com
+-   Backend - FastAPI, SQLAlchemy, Alembic\
+-   DB - PostgreSQL\
+-   Frontend - Vanilla JS (Telegram Mini App)\
+-   Auth - JWT + Telegram WebApp\
+-   Infra - Docker / Docker Compose\
+-   Rate limit - slowapi
 
-WORKER_POLL_SECONDS=10
-```
+------------------------------------------------------------------------
 
-## Важно по продакшену
+## 🚀 Быстрый старт
 
-Перед выкладкой обязательно:
+### 1. Клонирование
 
-- заменить `SECRET_KEY`
-- использовать сильный пароль БД
-- выключить `ENABLE_DEV_AUTH`
-- проверить, что в интерфейсе не осталось dev-элементов
-- запускать Mini App через Telegram, иначе `initData` будет пустым
+    git clone https://github.com/your-username/fit-mini-app.git
+    cd fit-mini-app
 
-## Локальный запуск
+------------------------------------------------------------------------
 
-```bash
-docker compose down
-docker compose up --build
-```
+### 2. Создай .env
 
-Открыть:
+    cp .env.example .env
 
-- Mini App: `http://127.0.0.1:8000/app`
-- Админка: `http://127.0.0.1:8000/admin`
-- Swagger: `http://127.0.0.1:8000/docs`
-- Healthcheck: `http://127.0.0.1:8000/health`
+------------------------------------------------------------------------
 
-## Важные URL API
+### 3. Запуск
 
-Если маршруты подключены правильно, должны работать:
+    docker compose up --build
 
-- `GET /api/v1/public/config`
-- `POST /api/v1/auth/dev-login`
-- `POST /api/v1/auth/telegram/init`
-- `GET /api/v1/me`
-- `PATCH /api/v1/me/profile`
-- `GET /api/v1/programs/exercises`
-- `POST /api/v1/programs/exercises`
-- `POST /api/v1/programs/templates`
-- `GET /api/v1/programs/templates/mine`
-- `GET /api/v1/programs/clients`
-- `GET /api/v1/workouts/today`
-- `POST /api/v1/workouts/{id}/start`
-- `POST /api/v1/workouts/{id}/complete`
-- `POST /api/v1/workouts/{id}/sets`
-- `DELETE /api/v1/workouts/{id}/exercises/{exercise_id}/last-set`
-- `GET /api/v1/billing/plans`
-- `GET /api/v1/billing/subscription`
-- `POST /api/v1/billing/checkout`
-- `POST /api/v1/billing/mock/complete/{checkout_id}`
-- `GET /api/v1/notifications/settings`
-- `PATCH /api/v1/notifications/settings`
-- `GET /api/v1/notifications`
-- `GET /api/v1/admin/users`
-- `GET /api/v1/admin/payments`
-- `GET /api/v1/admin/notifications`
-- `GET /api/v1/admin/templates`
+------------------------------------------------------------------------
 
-## Почему Mini App может быть пустым
+### 4. Доступ
 
-Самая частая причина - нет авторизации.
+-   Mini App: http://localhost:8000/app\
+-   Admin: http://localhost:8000/admin\
+-   Docs: http://localhost:8000/docs
 
-Признаки:
+------------------------------------------------------------------------
 
-- статус `Не авторизован`
-- в логах сообщение про отсутствие `initData`
-- не загружаются упражнения, шаблоны, клиенты, тренировка
+## 🔐 Роли
 
-Что делать:
+  Роль    Возможности
+  ------- ---------------
+  User    тренировки
+  Coach   программы
+  Admin   полный доступ
 
-- либо открыть Mini App из Telegram
-- либо временно включить dev-вход для локального теста:
+------------------------------------------------------------------------
 
-```env
-APP_ENV=dev
-ENABLE_DEV_AUTH=true
-```
+## ⚠️ Безопасность
 
-После этого пересобрать контейнеры.
+Никогда не коммить .env\
+Используй .env.example
+
+------------------------------------------------------------------------
