@@ -1,109 +1,162 @@
 # FitMiniApp
 
-Production-ready scaffold for a Telegram Mini App with:
-- Telegram auth via `initData`
-- JWT access/refresh tokens
-- Alembic migrations
-- workout program builder for self and coach mode
-- recomposition goal
-- mock billing and subscription activation
-- notification queue + Telegram delivery worker
-- simple admin panel
-- pytest tests
+Telegram Mini App для тренировок: профиль пользователя, конструктор программ, режим тренера, каталог упражнений, тренировка на сегодня, подписки, уведомления и админ-панель.
 
-## Main services
-- `backend` - FastAPI API + Mini App pages
-- `bot` - aiogram bot with `/start` and Mini App button
-- `worker` - sends queued Telegram notifications and processes reminders
-- `db` - PostgreSQL
+## Что уже есть
 
-## Quick start
+- Авторизация через Telegram Mini App (`initData`)
+- Dev-вход для локальной отладки, если включён `ENABLE_DEV_AUTH=true`
+- Профиль пользователя
+- Конструктор программ:
+  - для себя
+  - для клиента
+- Каталог упражнений
+- Тренировка на сегодня
+- Отметка подходов, отмена последнего подхода
+- Прогрессия по прошлой тренировке
+- Уведомления
+- Подписки с mock-billing
+- Админ-панель
+
+## Стек
+
+- **Backend**: FastAPI
+- **База данных**: PostgreSQL
+- **Бот**: Telegram Bot API
+- **Frontend**: HTML/CSS/JS
+- **Инфраструктура**: Docker Compose
+
+## Структура проекта
+
+```text
+backend/
+  app/
+    api/
+    core/
+    db/
+    models/
+    schemas/
+    services/
+    static/
+      index.html
+      admin.html
+      app.js
+      styles.css
+  alembic/
+  Dockerfile
+  worker-entrypoint.sh
+  docker-entrypoint.sh
+
+bot/
+  ...
+
+docker-compose.yml
+.env
+README.md
+```
+
+## Настройка `.env`
+
+Минимальный пример:
+
+```env
+APP_ENV=prod
+APP_NAME=FitMiniApp
+APP_HOST=0.0.0.0
+APP_PORT=8000
+APP_DEBUG=false
+
+SECRET_KEY=CHANGE_ME
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+REFRESH_TOKEN_EXPIRE_DAYS=30
+
+DATABASE_URL=postgresql+psycopg://fitminiapp:STRONG_PASSWORD@db:5432/fitminiapp
+
+ENABLE_DEV_AUTH=false
+
+FRONTEND_BASE_URL=https://your-domain.com
+TELEGRAM_BOT_TOKEN=YOUR_BOT_TOKEN
+TELEGRAM_BOT_USERNAME=your_bot_username
+
+PAYMENT_PROVIDER=mock
+PAYMENT_PUBLIC_URL=https://your-domain.com
+
+WORKER_POLL_SECONDS=10
+```
+
+## Важно по продакшену
+
+Перед выкладкой обязательно:
+
+- заменить `SECRET_KEY`
+- использовать сильный пароль БД
+- выключить `ENABLE_DEV_AUTH`
+- проверить, что в интерфейсе не осталось dev-элементов
+- запускать Mini App через Telegram, иначе `initData` будет пустым
+
+## Локальный запуск
+
 ```bash
-cp .env.example .env
-# fill BOT_TOKEN / TELEGRAM_BOT_TOKEN if you want real Telegram delivery
+docker compose down
 docker compose up --build
 ```
 
-Then open:
-- Mini App: `http://localhost:8000/app`
-- Admin panel: `http://localhost:8000/admin`
-- Swagger: `http://localhost:8000/docs`
+Открыть:
 
-## First run
-Backend container automatically runs:
-```bash
-alembic upgrade head
-```
-Then it seeds:
-- exercises
-- demo coach `1001`
-- demo clients `2001`, `2002`
-- plans: Free, Premium, Coach
-- public demo template
+- Mini App: `http://127.0.0.1:8000/app`
+- Админка: `http://127.0.0.1:8000/admin`
+- Swagger: `http://127.0.0.1:8000/docs`
+- Healthcheck: `http://127.0.0.1:8000/health`
 
-## Auth modes
-### Development
-By default `ENABLE_DEV_AUTH=true`.
-You can log in from the UI with a debug Telegram ID.
+## Важные URL API
 
-### Telegram production auth
-Frontend can call:
+Если маршруты подключены правильно, должны работать:
+
+- `GET /api/v1/public/config`
+- `POST /api/v1/auth/dev-login`
 - `POST /api/v1/auth/telegram/init`
+- `GET /api/v1/me`
+- `PATCH /api/v1/me/profile`
+- `GET /api/v1/programs/exercises`
+- `POST /api/v1/programs/exercises`
+- `POST /api/v1/programs/templates`
+- `GET /api/v1/programs/templates/mine`
+- `GET /api/v1/programs/clients`
+- `GET /api/v1/workouts/today`
+- `POST /api/v1/workouts/{id}/start`
+- `POST /api/v1/workouts/{id}/complete`
+- `POST /api/v1/workouts/{id}/sets`
+- `DELETE /api/v1/workouts/{id}/exercises/{exercise_id}/last-set`
+- `GET /api/v1/billing/plans`
+- `GET /api/v1/billing/subscription`
+- `POST /api/v1/billing/checkout`
+- `POST /api/v1/billing/mock/complete/{checkout_id}`
+- `GET /api/v1/notifications/settings`
+- `PATCH /api/v1/notifications/settings`
+- `GET /api/v1/notifications`
+- `GET /api/v1/admin/users`
+- `GET /api/v1/admin/payments`
+- `GET /api/v1/admin/notifications`
+- `GET /api/v1/admin/templates`
 
-Request body:
-```json
-{
-  "init_data": "query_id=...&user=...&hash=..."
-}
+## Почему Mini App может быть пустым
+
+Самая частая причина - нет авторизации.
+
+Признаки:
+
+- статус `Не авторизован`
+- в логах сообщение про отсутствие `initData`
+- не загружаются упражнения, шаблоны, клиенты, тренировка
+
+Что делать:
+
+- либо открыть Mini App из Telegram
+- либо временно включить dev-вход для локального теста:
+
+```env
+APP_ENV=dev
+ENABLE_DEV_AUTH=true
 ```
-Server verifies hash using Telegram spec and creates user profile.
 
-## Billing flow
-Implemented mock provider:
-1. `GET /api/v1/billing/plans`
-2. `POST /api/v1/billing/checkout`
-3. receive `checkout_id`
-4. finish payment with `POST /api/v1/billing/mock/complete/{checkout_id}`
-5. subscription becomes active
-
-## Notifications
-Notification worker checks queued records and sends Telegram messages.
-When a program is assigned, workout reminders are scheduled.
-
-## Admin panel
-`/admin` shows:
-- users
-- clients/coaches
-- templates
-- subscriptions
-- payments
-- notifications
-
-Admin endpoints require a coach user.
-In dev mode use debug user `1001`.
-
-## Tests
-Run locally:
-```bash
-cd backend
-pytest -q
-```
-
-Covered scenarios:
-- dev auth and token issuance
-- creating template and assigning to self
-- workout set logging rules
-- mock billing activation
-
-## Important note
-This is a strong production scaffold, not a finished commercial app. Before a real public launch, still review:
-- data protection and privacy policy
-- payment provider integration for your jurisdiction
-- rate limiting / WAF / backups / secrets management
-- CI/CD and environment separation
-
-
-## Каталог упражнений
-- Тренер и админ могут создавать новые упражнения через Mini App в блоке `Каталог упражнений`.
-- Обычные пользователи видят упражнения в конструкторе программ, но не могут создавать новые.
-- API для создания: `POST /api/v1/programs/exercises`.
+После этого пересобрать контейнеры.
