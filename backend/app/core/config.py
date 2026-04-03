@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(case_sensitive=False, extra="ignore")
 
     app_env: str = "dev"
-    app_name: str = "FitMiniApp Production"
+    app_name: str = "FitMiniApp"
     app_host: str = "0.0.0.0"
     app_port: int = 8000
     app_debug: bool = True

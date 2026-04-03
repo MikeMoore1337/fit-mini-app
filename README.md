@@ -1,4 +1,4 @@
-# FitMiniApp Production
+# FitMiniApp
 
 Production-ready scaffold for a Telegram Mini App with:
 - Telegram auth via `initData`

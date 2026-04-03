@@ -5,8 +5,8 @@ router = APIRouter()
 
 
 @router.get("/public/config")
-def public_config():
+def public_config() -> dict[str, str | bool]:
     return {
-        "app_env": settings.APP_ENV,
-        "enable_dev_auth": settings.ENABLE_DEV_AUTH,
+        "app_env": settings.app_env,
+        "enable_dev_auth": settings.enable_dev_auth,
     }

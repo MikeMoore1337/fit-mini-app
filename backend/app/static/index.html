@@ -1,145 +1,191 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FitMiniApp Production</title>
-  <link rel="stylesheet" href="/app-static/styles.css" />
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>FitMiniApp</title>
+    <link rel="stylesheet" href="/static/styles.css"/>
 </head>
 <body>
-  <div class="container">
+<div class="container">
     <div class="card hero-card">
-      <div>
-        <h1>FitMiniApp Production</h1>
-        <p class="muted">Mini App c auth, billing, уведомлениями, конструктором программ и режимом тренера.</p>
-      </div>
-      <div id="env-badge" class="badge hidden"></div>
+        <div>
+            <h1>FitMiniApp</h1>
+            <p class="muted">Мини-приложение с авторизацией, подписками, уведомлениями, конструктором программ и режимом
+                тренера.</p>
+        </div>
+        <div id="env-badge" class="badge hidden"></div>
     </div>
 
     <div class="card">
-      <h2>Вход</h2>
-      <div class="toolbar wrap">
-        <input id="debugUserId" type="number" placeholder="Debug Telegram ID" value="1001" />
-        <input id="debugUserName" placeholder="Имя" value="Тренер Demo" />
-        <label class="checkbox-inline"><input id="debugIsCoach" type="checkbox" checked /> Тренер</label>
-        <button id="devLoginBtn" class="hidden">Dev login</button>
-        <button id="telegramLoginBtn" class="secondary">Telegram auth</button>
-        <a href="/admin" id="adminLink" class="button-link hidden">Админка</a>
-      </div>
-      <p class="muted" id="authState">Не авторизован</p>
+        <h2>Вход</h2>
+
+        <div class="stack">
+            <input id="debugUserId" type="number" placeholder="Telegram ID" value="1001"/>
+            <input id="debugUserName" type="text" placeholder="Имя пользователя" value="Тренер Demo"/>
+
+            <label class="checkbox-row">
+                <input id="debugIsCoach" type="checkbox" checked/>
+                <span>Тренер</span>
+            </label>
+
+            <div class="toolbar wrap">
+                <button id="devLoginBtn" class="hidden">Dev login</button>
+                <button id="telegramLoginBtn" class="secondary">Войти через Telegram</button>
+                <a href="/admin" id="adminLink" class="button-link hidden">Админка</a>
+            </div>
+
+            <div id="authState" class="muted">Не авторизован</div>
+        </div>
     </div>
 
     <div class="card">
-      <h2>Профиль</h2>
-      <div class="grid profile-grid">
-        <input id="full_name" placeholder="Имя" />
-        <select id="goal">
-          <option value="">Цель</option>
-          <option value="muscle_gain">Набор</option>
-          <option value="fat_loss">Похудение</option>
-          <option value="maintenance">Поддержание</option>
-          <option value="recomposition">Рекомпозиция</option>
-        </select>
-        <select id="level">
-          <option value="">Уровень</option>
-          <option value="beginner">Начальный</option>
-          <option value="intermediate">Средний</option>
-          <option value="advanced">Продвинутый</option>
-        </select>
-        <input id="height_cm" placeholder="Рост, см" type="number" />
-        <input id="weight_kg" placeholder="Вес, кг" type="number" />
-        <input id="workouts_per_week" placeholder="Тренировок в неделю" type="number" />
-      </div>
-      <button id="saveProfileBtn">Сохранить профиль</button>
-    </div>
-
-
-
-    <div class="card hidden" id="exerciseAdminCard">
-      <div class="section-head"><h2>Каталог упражнений</h2><button id="reloadExercisesBtn" class="secondary small">Обновить</button></div>
-      <p class="muted">Создание новых упражнений доступно только тренеру или админу.</p>
-      <div class="grid builder-top-grid">
-        <input id="newExerciseTitle" placeholder="Название упражнения" />
-        <input id="newExerciseMuscle" placeholder="Основная мышечная группа" />
-        <input id="newExerciseEquipment" placeholder="Оборудование" />
-      </div>
-      <div class="toolbar wrap">
-        <button id="createExerciseBtn">Добавить упражнение</button>
-      </div>
-      <div id="exerciseCatalogList" class="stack"></div>
-    </div>
-
-
-    <div class="card">
-      <h2>Конструктор программы</h2>
-      <div class="grid builder-top-grid">
-        <select id="builder_mode">
-          <option value="self">Для себя</option>
-          <option value="coach">Для клиента</option>
-        </select>
-        <input id="program_title" placeholder="Название программы" value="Моя программа" />
-        <select id="program_goal">
-          <option value="muscle_gain">Набор</option>
-          <option value="fat_loss">Похудение</option>
-          <option value="maintenance">Поддержание</option>
-          <option value="recomposition">Рекомпозиция</option>
-        </select>
-        <select id="program_level">
-          <option value="beginner">Начальный</option>
-          <option value="intermediate" selected>Средний</option>
-          <option value="advanced">Продвинутый</option>
-        </select>
-      </div>
-      <div id="coachFields" class="grid builder-top-grid hidden">
-        <input id="target_telegram_user_id" type="number" placeholder="Telegram ID клиента" />
-        <input id="target_full_name" placeholder="Имя клиента" />
-      </div>
-      <div class="toolbar wrap">
-        <button id="addDayBtn" class="secondary">+ День</button>
-        <button id="fillExampleBtn" class="secondary">Заполнить пример</button>
-        <button id="saveProgramBtn">Сохранить и назначить</button>
-      </div>
-      <div id="dayBuilder" class="stack"></div>
-      <p id="builderResult" class="muted"></p>
+        <h2>Профиль</h2>
+        <div class="grid grid-4">
+            <input id="full_name" type="text" placeholder="Имя"/>
+            <select id="goal">
+                <option value="">Цель</option>
+                <option value="fat_loss">Похудение</option>
+                <option value="muscle_gain">Набор мышц</option>
+                <option value="maintenance">Поддержание</option>
+                <option value="recomposition">Рекомпозиция</option>
+            </select>
+            <select id="level">
+                <option value="">Уровень</option>
+                <option value="beginner">Начальный</option>
+                <option value="intermediate">Средний</option>
+                <option value="advanced">Продвинутый</option>
+            </select>
+            <input id="height_cm" type="number" placeholder="Рост, см"/>
+            <input id="weight_kg" type="number" placeholder="Вес, кг"/>
+            <input id="workouts_per_week" type="number" placeholder="Тренировок в неделю"/>
+        </div>
+        <div class="toolbar top-gap">
+            <button id="saveProfileBtn">Сохранить профиль</button>
+        </div>
     </div>
 
     <div class="card">
-      <div class="section-head"><h2>Шаблоны</h2><button id="reloadTemplatesBtn" class="secondary small">Обновить</button></div>
-      <div id="templatesList" class="stack"></div>
+        <h2>Конструктор программы</h2>
+
+        <div class="grid grid-4">
+            <select id="builder_mode">
+                <option value="self">Для себя</option>
+                <option value="coach">Для клиента</option>
+            </select>
+
+            <input id="program_title" type="text" placeholder="Название программы" value="Моя программа"/>
+
+            <select id="program_goal">
+                <option value="fat_loss">Похудение</option>
+                <option value="muscle_gain" selected>Набор</option>
+                <option value="maintenance">Поддержание</option>
+                <option value="recomposition">Рекомпозиция</option>
+            </select>
+
+            <select id="program_level">
+                <option value="beginner">Начальный</option>
+                <option value="intermediate" selected>Средний</option>
+                <option value="advanced">Продвинутый</option>
+            </select>
+        </div>
+
+        <div id="coachFields" class="grid grid-2 hidden top-gap">
+            <input id="target_telegram_user_id" type="number" placeholder="Telegram ID клиента"/>
+            <input id="target_full_name" type="text" placeholder="Имя клиента"/>
+        </div>
+
+        <div class="toolbar wrap top-gap">
+            <button id="addDayBtn" class="secondary">+ День</button>
+            <button id="fillExampleBtn" class="secondary">Заполнить пример</button>
+            <button id="saveProgramBtn">Сохранить и назначить</button>
+        </div>
+
+        <div id="builderResult" class="muted top-gap"></div>
+        <div id="dayBuilder" class="stack top-gap"></div>
     </div>
 
     <div class="card">
-      <div class="section-head"><h2>Клиенты</h2><button id="reloadClientsBtn" class="secondary small">Обновить</button></div>
-      <div id="clientsList" class="stack"></div>
+        <div class="section-head">
+            <h2>Шаблоны</h2>
+            <button id="reloadTemplatesBtn" class="secondary">Обновить</button>
+        </div>
+        <div id="templatesList" class="stack"></div>
     </div>
 
     <div class="card">
-      <div class="section-head"><h2>Тренировка на сегодня</h2><button id="assignProgramBtn" class="secondary">Назначить демо</button></div>
-      <div id="todayWorkout">Загрузка...</div>
+        <div class="section-head">
+            <h2>Клиенты</h2>
+            <button id="reloadClientsBtn" class="secondary">Обновить</button>
+        </div>
+        <div id="clientsList" class="stack"></div>
     </div>
 
     <div class="card">
-      <div class="section-head"><h2>Подписка</h2><button id="reloadBillingBtn" class="secondary small">Обновить</button></div>
-      <div id="plansList" class="stack"></div>
-      <p id="subscriptionInfo" class="muted"></p>
+        <div class="section-head">
+            <h2>Тренировка на сегодня</h2>
+            <button id="assignProgramBtn" class="secondary">Назначить демо</button>
+        </div>
+        <div id="todayWorkout">Загрузка...</div>
     </div>
 
     <div class="card">
-      <div class="section-head"><h2>Уведомления</h2><button id="reloadNotificationsBtn" class="secondary small">Обновить</button></div>
-      <div class="toolbar wrap">
-        <label class="checkbox-inline"><input id="notifEnabled" type="checkbox" /> Напоминания о тренировке</label>
-        <input id="notifHour" type="number" min="0" max="23" value="9" placeholder="Час" />
-        <button id="saveNotifBtn">Сохранить</button>
-      </div>
-      <div id="notificationsList" class="stack"></div>
+        <div class="section-head">
+            <h2>Подписка</h2>
+            <button id="reloadBillingBtn" class="secondary">Обновить</button>
+        </div>
+        <div id="subscriptionInfo" class="muted"></div>
+        <div id="plansList" class="stack top-gap"></div>
     </div>
 
     <div class="card">
-      <h2>Лог</h2>
-      <pre id="log"></pre>
+        <div class="section-head">
+            <h2>Уведомления</h2>
+            <button id="reloadNotificationsBtn" class="secondary">Обновить</button>
+        </div>
+
+        <label class="checkbox-row">
+            <input id="notifEnabled" type="checkbox"/>
+            <span>Напоминания о тренировке</span>
+        </label>
+
+        <input id="notifHour" type="number" min="0" max="23" value="9" class="top-gap" placeholder="Час напоминания"/>
+
+        <div class="toolbar top-gap">
+            <button id="saveNotifBtn">Сохранить</button>
+        </div>
+
+        <div id="notificationsList" class="stack top-gap"></div>
     </div>
-  </div>
-  <script src="/app-static/app.js"></script>
+
+    <div id="exerciseAdminCard" class="card hidden">
+        <div class="section-head">
+            <h2>Каталог упражнений</h2>
+            <button id="reloadExercisesBtn" class="secondary">Обновить</button>
+        </div>
+
+        <div class="grid grid-3">
+            <input id="newExerciseTitle" type="text" placeholder="Название упражнения"/>
+            <input id="newExerciseMuscle" type="text" placeholder="Основная мышечная группа"/>
+            <input id="newExerciseEquipment" type="text" placeholder="Оборудование"/>
+        </div>
+
+        <div class="toolbar top-gap">
+            <button id="createExerciseBtn">Добавить упражнение</button>
+        </div>
+
+        <div id="exerciseCatalogList" class="stack top-gap"></div>
+    </div>
+
+    <div class="card">
+        <h2>Лог</h2>
+        <pre id="log" class="log-box"></pre>
+    </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="/static/app.js"></script>
 </body>
 </html>

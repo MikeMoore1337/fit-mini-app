@@ -1,14 +1,13 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
-
 from app.api.router import api_router
 from app.core.config import settings
 from app.db.session import get_session_context
 from app.services.seed import seed_demo_data
+from fastapi import FastAPI
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 
 @asynccontextmanager
@@ -19,7 +18,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title=settings.app_name, debug=settings.app_debug, lifespan=lifespan)
-app.mount("/app-static", StaticFiles(directory="app/static"), name="static")
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(api_router)
 
 

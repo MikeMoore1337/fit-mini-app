@@ -1,49 +1,182 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FitMiniApp Admin</title>
-  <link rel="stylesheet" href="/app-static/styles.css" />
+  <title>Админка - FitMiniApp</title>
+  <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
-  <div class="container">
-    <div class="card hero-card"><div><h1>Admin panel</h1><p class="muted">Панель администратора</p></div><a href="/app" class="button-link">К Mini App</a></div>
-    <div class="card">
-      <div class="toolbar wrap">
-        <input id="debugUserId" type="number" value="1001" placeholder="Coach Telegram ID" />
-        <button id="loginBtn" class="hidden">Dev login</button>
+  <div class="container narrow">
+    <div class="card hero-card">
+      <div>
+        <h1>Панель администратора</h1>
+        <p class="muted">Просмотр пользователей, платежей, уведомлений и шаблонов программ.</p>
       </div>
-      <p id="adminState" class="muted"></p>
+      <a href="/app" class="button-link">К Mini App</a>
     </div>
-    <div class="card"><div class="section-head"><h2>Users</h2><button id="loadUsersBtn" class="secondary small">Load</button></div><div id="usersList" class="stack"></div></div>
-    <div class="card"><div class="section-head"><h2>Payments</h2><button id="loadPaymentsBtn" class="secondary small">Load</button></div><div id="paymentsList" class="stack"></div></div>
-    <div class="card"><div class="section-head"><h2>Notifications</h2><button id="loadNotificationsBtn" class="secondary small">Load</button></div><div id="notificationsList" class="stack"></div></div>
-    <div class="card"><div class="section-head"><h2>Templates</h2><button id="loadTemplatesBtn" class="secondary small">Load</button></div><div id="templatesList" class="stack"></div></div>
+
+    <div class="card">
+      <div class="section-head">
+        <h2>Пользователи</h2>
+        <button id="loadUsersBtn" class="secondary">Загрузить</button>
+      </div>
+      <div id="usersList" class="stack"></div>
+    </div>
+
+    <div class="card">
+      <div class="section-head">
+        <h2>Платежи</h2>
+        <button id="loadPaymentsBtn" class="secondary">Загрузить</button>
+      </div>
+      <div id="paymentsList" class="stack"></div>
+    </div>
+
+    <div class="card">
+      <div class="section-head">
+        <h2>Уведомления</h2>
+        <button id="loadNotificationsBtn" class="secondary">Загрузить</button>
+      </div>
+      <div id="adminNotificationsList" class="stack"></div>
+    </div>
+
+    <div class="card">
+      <div class="section-head">
+        <h2>Шаблоны программ</h2>
+        <button id="loadTemplatesBtn" class="secondary">Загрузить</button>
+      </div>
+      <div id="adminTemplatesList" class="stack"></div>
+    </div>
+
+    <div class="card">
+      <h2>Лог</h2>
+      <pre id="adminLog" class="log-box"></pre>
+    </div>
   </div>
+
+  <div id="toast" class="toast hidden"></div>
+
   <script>
-    const tokenKey = 'fit_access_token';
-    const log = (t) => console.log(t);
-    async function api(path, options = {}) {
-      const token = localStorage.getItem(tokenKey);
-      const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
-      if (token) headers.Authorization = `Bearer ${token}`;
-      const res = await fetch(path, { ...options, headers });
-      if (!res.ok) throw new Error(await res.text());
+    const accessTokenKey = 'fit_access_token';
+
+    const $ = (id) => document.getElementById(id);
+
+    function log(msg) {
+      const node = $('adminLog');
+      if (!node) return;
+      const text = typeof msg === 'string' ? msg : JSON.stringify(msg, null, 2);
+      node.textContent = `${new Date().toLocaleTimeString()} - ${text}\n${node.textContent}`;
+    }
+
+    function showToast(message, type = 'success') {
+      const toast = $('toast');
+      if (!toast) return;
+
+      toast.textContent = message;
+      toast.className = `toast ${type === 'error' ? 'error' : ''}`.trim();
+
+      setTimeout(() => {
+        toast.className = 'toast hidden';
+      }, 2500);
+    }
+
+    function authHeaders() {
+      const token = localStorage.getItem(accessTokenKey);
+      return {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
+    }
+
+    async function api(path) {
+      const res = await fetch(path, { headers: authHeaders() });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text);
+      }
       return res.json();
     }
-    async function devLogin() {
-      const telegram_user_id = Number(document.getElementById('debugUserId').value || '1001');
-      const data = await api('/api/v1/auth/dev-login', { method: 'POST', body: JSON.stringify({ telegram_user_id, is_coach: true }) });
-      localStorage.setItem(tokenKey, data.access_token);
-      document.getElementById('adminState').textContent = 'Авторизован как coach/admin';
+
+    async function loadUsers() {
+      const rows = await api('/api/v1/admin/users');
+      $('usersList').innerHTML = rows.map(user => `
+        <div class="item-card">
+          <strong>${user.full_name || user.telegram_user_id}</strong><br>
+          <span class="muted">
+            ID: ${user.telegram_user_id} |
+            coach=${user.is_coach} |
+            admin=${user.is_admin}
+          </span>
+        </div>
+      `).join('') || '<p class="muted">Пользователей нет</p>';
+      showToast('Пользователи загружены');
     }
-    const render = (id, rows) => document.getElementById(id).innerHTML = rows.map(r => `<div class="item-card"><pre>${JSON.stringify(r, null, 2)}</pre></div>`).join('') || '<p class="muted">Пусто</p>';
-    document.getElementById('loginBtn').onclick = devLogin;
-    document.getElementById('loadUsersBtn').onclick = async () => render('usersList', await api('/api/v1/admin/users'));
-    document.getElementById('loadPaymentsBtn').onclick = async () => render('paymentsList', await api('/api/v1/admin/payments'));
-    document.getElementById('loadNotificationsBtn').onclick = async () => render('notificationsList', await api('/api/v1/admin/notifications'));
-    document.getElementById('loadTemplatesBtn').onclick = async () => render('templatesList', await api('/api/v1/admin/templates'));
+
+    async function loadPayments() {
+      const rows = await api('/api/v1/admin/payments');
+      $('paymentsList').innerHTML = rows.map(row => `
+        <div class="item-card">
+          <strong>${row.plan_title || row.plan_code}</strong><br>
+          <span class="muted">
+            Пользователь: ${row.telegram_user_id} |
+            Статус: ${row.status} |
+            ${row.amount} ${row.currency}
+          </span>
+        </div>
+      `).join('') || '<p class="muted">Платежей нет</p>';
+      showToast('Платежи загружены');
+    }
+
+    async function loadNotifications() {
+      const rows = await api('/api/v1/admin/notifications');
+      $('adminNotificationsList').innerHTML = rows.map(row => `
+        <div class="item-card">
+          <strong>${row.title}</strong><br>
+          <span class="muted">${new Date(row.scheduled_for).toLocaleString()} - ${row.status}</span>
+          <div>${row.body}</div>
+        </div>
+      `).join('') || '<p class="muted">Уведомлений нет</p>';
+      showToast('Уведомления загружены');
+    }
+
+    async function loadTemplates() {
+      const rows = await api('/api/v1/admin/templates');
+      $('adminTemplatesList').innerHTML = rows.map(row => `
+        <div class="item-card">
+          <strong>${row.title}</strong><br>
+          <span class="muted">${row.goal} - ${row.level}</span>
+        </div>
+      `).join('') || '<p class="muted">Шаблонов нет</p>';
+      showToast('Шаблоны загружены');
+    }
+
+    async function withLoading(button, action, successText, errorText) {
+      const original = button.textContent;
+      try {
+        button.disabled = true;
+        button.textContent = 'Загрузка...';
+        await action();
+        if (successText) showToast(successText);
+      } catch (error) {
+        log(String(error));
+        showToast(errorText || 'Ошибка', 'error');
+      } finally {
+        button.disabled = false;
+        button.textContent = original;
+      }
+    }
+
+    $('loadUsersBtn').onclick = (e) =>
+      withLoading(e.currentTarget, loadUsers, null, 'Не удалось загрузить пользователей');
+
+    $('loadPaymentsBtn').onclick = (e) =>
+      withLoading(e.currentTarget, loadPayments, null, 'Не удалось загрузить платежи');
+
+    $('loadNotificationsBtn').onclick = (e) =>
+      withLoading(e.currentTarget, loadNotifications, null, 'Не удалось загрузить уведомления');
+
+    $('loadTemplatesBtn').onclick = (e) =>
+      withLoading(e.currentTarget, loadTemplates, null, 'Не удалось загрузить шаблоны');
   </script>
 </body>
 </html>
