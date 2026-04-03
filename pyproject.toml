@@ -1,0 +1,103 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "reminder_bot"
+version = "0.1.0"
+description = "Telegram bot for reminders"
+requires-python = ">=3.12"
+dependencies = [
+    "pybit>=5.6.0",
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+    "pandas-ta>=0.3.14b",
+    "python-dotenv>=1.0.0",
+    "requests>=2.31.0",
+    "colorlog>=6.7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.4.0",
+    "mypy>=1.10.0",
+    "pandas-stubs>=2.0.0",
+    "types-requests>=2.31.0",
+    "pre-commit>=3.0.0",
+]
+
+# ─── Ruff ────────────────────────────────────────────────────────────────────
+# Ruff заменяет flake8 + isort + pyupgrade + десятки других линтеров.
+# Работает в 10–100× быстрее каждого из них по отдельности.
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes (неиспользуемые импорты, переменные)
+    "I",   # isort (порядок импортов)
+    "UP",  # pyupgrade (современный синтаксис Python)
+    "B",   # flake8-bugbear (частые баги)
+    "C4",  # flake8-comprehensions (упрощение list/dict comprehensions)
+    "SIM", # flake8-simplify (упрощение условий)
+    "RUF", # ruff-specific rules
+]
+ignore = [
+    "E501",    # длина строки
+    "SIM108",  # тернарный оператор — не всегда читаемее
+
+    # RUF001/002/003 — ложные срабатывания на русском тексте.
+    # Ruff считает кириллические буквы (с, е, о, В...) "ambiguous" потому что
+    # они визуально похожи на латиницу. В русскоязычном проекте это неизбежно.
+    "RUF001",
+    "RUF002",
+    "RUF003",
+
+    # E402 — импорты не в начале файла.
+    # В optimize.py os.environ["BOT_DISABLE_FILE_LOGGING"] = "1" должен
+    # выполниться ДО импорта модулей проекта — это намеренно.
+    "E402",
+
+    # SIM105 — contextlib.suppress вместо try/except/pass.
+    # В watchdog намеренно подавляем все ошибки Telegram — suppress здесь
+    # менее читаем чем явный except.
+    "SIM105",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# config.py: RUF012 — mutable ClassVar. Config — намеренно изменяемый
+# синглтон (оптимизатор меняет поля напрямую), ClassVar здесь не подходит.
+"config.py" = ["RUF012"]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+    "bot", "strategy", "backtest", "config", "exchange",
+    "risk_manager", "logger", "telegram_notifier",
+    "multi_backtest", "optimize", "config_validation",
+]
+
+[tool.ruff.format]
+# ruff format совместим с black — используем его вместо black для скорости
+quote-style = "double"
+indent-style = "space"
+
+# ─── Mypy ────────────────────────────────────────────────────────────────────
+[tool.mypy]
+python_version = "3.12"
+strict = false
+exclude = ["^alembic/"]
+
+warn_return_any = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+
+[[tool.mypy.overrides]]
+module = ["alembic", "alembic.*"]
+ignore_errors = true

@@ -1,0 +1,20 @@
+# pip install pip-tools
+# pip-compile requirements.in
+# pip install -r requirements.txt
+# pip-compile --upgrade
+fastapi
+uvicorn[standard]
+sqlalchemy
+psycopg[binary]
+pydantic-settings
+alembic
+PyJWT
+httpx
+python-multipart
+pytest
+pre-commit
+colorlog
+ruff
+black
+mypy
+

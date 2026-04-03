@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FitMiniApp Admin</title>
+  <link rel="stylesheet" href="/app-static/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="card hero-card"><div><h1>Admin panel</h1><p class="muted">Dev-вход как coach/admin нужен для просмотра.</p></div><a href="/app" class="button-link">К Mini App</a></div>
+    <div class="card">
+      <div class="toolbar wrap">
+        <input id="debugUserId" type="number" value="1001" placeholder="Coach Telegram ID" />
+        <button id="loginBtn">Dev login</button>
+      </div>
+      <p id="adminState" class="muted"></p>
+    </div>
+    <div class="card"><div class="section-head"><h2>Users</h2><button id="loadUsersBtn" class="secondary small">Load</button></div><div id="usersList" class="stack"></div></div>
+    <div class="card"><div class="section-head"><h2>Payments</h2><button id="loadPaymentsBtn" class="secondary small">Load</button></div><div id="paymentsList" class="stack"></div></div>
+    <div class="card"><div class="section-head"><h2>Notifications</h2><button id="loadNotificationsBtn" class="secondary small">Load</button></div><div id="notificationsList" class="stack"></div></div>
+    <div class="card"><div class="section-head"><h2>Templates</h2><button id="loadTemplatesBtn" class="secondary small">Load</button></div><div id="templatesList" class="stack"></div></div>
+  </div>
+  <script>
+    const tokenKey = 'fit_access_token';
+    const log = (t) => console.log(t);
+    async function api(path, options = {}) {
+      const token = localStorage.getItem(tokenKey);
+      const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const res = await fetch(path, { ...options, headers });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    }
+    async function devLogin() {
+      const telegram_user_id = Number(document.getElementById('debugUserId').value || '1001');
+      const data = await api('/api/v1/auth/dev-login', { method: 'POST', body: JSON.stringify({ telegram_user_id, is_coach: true }) });
+      localStorage.setItem(tokenKey, data.access_token);
+      document.getElementById('adminState').textContent = 'Авторизован как coach/admin';
+    }
+    const render = (id, rows) => document.getElementById(id).innerHTML = rows.map(r => `<div class="item-card"><pre>${JSON.stringify(r, null, 2)}</pre></div>`).join('') || '<p class="muted">Пусто</p>';
+    document.getElementById('loginBtn').onclick = devLogin;
+    document.getElementById('loadUsersBtn').onclick = async () => render('usersList', await api('/api/v1/admin/users'));
+    document.getElementById('loadPaymentsBtn').onclick = async () => render('paymentsList', await api('/api/v1/admin/payments'));
+    document.getElementById('loadNotificationsBtn').onclick = async () => render('notificationsList', await api('/api/v1/admin/notifications'));
+    document.getElementById('loadTemplatesBtn').onclick = async () => render('templatesList', await api('/api/v1/admin/templates'));
+  </script>
+</body>
+</html>

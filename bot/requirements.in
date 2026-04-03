@@ -1,0 +1,8 @@
+# pip install pip-tools
+# pip-compile requirements.in
+# pip install -r requirements.txt
+# pip-compile --upgrade
+aiogram
+httpx
+pydantic-settings
+
