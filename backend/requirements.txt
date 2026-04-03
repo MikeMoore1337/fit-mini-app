@@ -33,6 +33,8 @@ colorama==0.4.6
     #   uvicorn
 colorlog==6.10.1
     # via -r backend/requirements.in
+deprecated==1.3.1
+    # via limits
 distlib==0.4.0
     # via virtualenv
 fastapi==0.115.0
@@ -63,6 +65,8 @@ iniconfig==2.3.0
     # via pytest
 librt==0.8.1
     # via mypy
+limits==5.8.0
+    # via slowapi
 mako==1.3.10
     # via alembic
 markupsafe==3.0.3
@@ -78,6 +82,7 @@ nodeenv==1.10.0
 packaging==26.0
     # via
     #   black
+    #   limits
     #   pytest
 pathspec==1.0.4
     # via
@@ -124,6 +129,8 @@ pyyaml==6.0.3
     #   uvicorn
 ruff==0.15.9
     # via -r backend/requirements.in
+slowapi==0.1.9
+    # via -r backend/requirements.in
 sniffio==1.3.1
     # via httpx
 sqlalchemy==2.0.35
@@ -137,6 +144,7 @@ typing-extensions==4.15.0
     #   alembic
     #   anyio
     #   fastapi
+    #   limits
     #   mypy
     #   psycopg
     #   pydantic
@@ -155,3 +163,5 @@ watchfiles==1.1.1
     # via uvicorn
 websockets==16.0
     # via uvicorn
+wrapt==2.1.2
+    # via deprecated

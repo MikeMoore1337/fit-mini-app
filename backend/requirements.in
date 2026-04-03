@@ -17,4 +17,4 @@ colorlog
 ruff
 black
 mypy
-
+slowapi

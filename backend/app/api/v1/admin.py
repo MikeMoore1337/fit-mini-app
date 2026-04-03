@@ -1,28 +1,20 @@
-from app.api.dependencies.auth import get_current_user
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+
+from app.api.dependencies.auth import require_coach_or_admin
 from app.db.session import get_db
 from app.models.billing import Payment, Plan
 from app.models.notification import Notification
 from app.models.program import ProgramTemplate
 from app.models.user import User, UserProfile
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 
 router = APIRouter()
 
 
-def require_admin_or_coach(current_user: User = Depends(get_current_user)) -> User:
-    if not (current_user.is_admin or current_user.is_coach):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Недостаточно прав",
-        )
-    return current_user
-
-
 @router.get("/users")
 def admin_users(
-        db: Session = Depends(get_db),
-        _: User = Depends(require_admin_or_coach),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_coach_or_admin),
 ) -> list[dict]:
     rows = (
         db.query(User, UserProfile)
@@ -49,8 +41,8 @@ def admin_users(
 
 @router.get("/payments")
 def admin_payments(
-        db: Session = Depends(get_db),
-        _: User = Depends(require_admin_or_coach),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_coach_or_admin),
 ) -> list[dict]:
     rows = (
         db.query(Payment, Plan)
@@ -78,8 +70,8 @@ def admin_payments(
 
 @router.get("/notifications")
 def admin_notifications(
-        db: Session = Depends(get_db),
-        _: User = Depends(require_admin_or_coach),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_coach_or_admin),
 ) -> list[dict]:
     rows = db.query(Notification).order_by(Notification.id.desc()).limit(200).all()
 
@@ -99,8 +91,8 @@ def admin_notifications(
 
 @router.get("/templates")
 def admin_templates(
-        db: Session = Depends(get_db),
-        _: User = Depends(require_admin_or_coach),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_coach_or_admin),
 ) -> list[dict]:
     rows = db.query(ProgramTemplate).order_by(ProgramTemplate.id.desc()).all()
 

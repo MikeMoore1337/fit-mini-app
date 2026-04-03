@@ -1,34 +1,46 @@
-from app.db.session import get_db
 from app.models.user import User
-from app.services.jwt import decode_token
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy.orm import Session
-
-security = HTTPBearer()
+from fastapi import HTTPException, Request, status
 
 
-def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db),
-) -> User:
-    token = credentials.credentials
+def get_current_user_from_request(request: Request) -> User | None:
+    return getattr(request.state, "user", None)
 
-    try:
-        payload = decode_token(token)
-        user_id = payload.get("user_id")
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Невалидный токен",
-        )
 
-    user = db.query(User).filter(User.id == user_id).first()
-
+def require_user(request: Request) -> User:
+    user = get_current_user_from_request(request)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Пользователь не найден",
+            detail="Требуется авторизация",
         )
+    return user
 
+
+def require_coach(request: Request) -> User:
+    user = require_user(request)
+    if not user.is_coach and not user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Недостаточно прав тренера",
+        )
+    return user
+
+
+def require_admin(request: Request) -> User:
+    user = require_user(request)
+    if not user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Недостаточно прав администратора",
+        )
+    return user
+
+
+def require_coach_or_admin(request: Request) -> User:
+    user = require_user(request)
+    if not user.is_coach and not user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Недостаточно прав",
+        )
     return user
