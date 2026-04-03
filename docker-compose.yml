@@ -1,6 +1,7 @@
 services:
   db:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -17,6 +18,7 @@ services:
 
   backend:
     build: ./backend
+    restart: unless-stopped
     env_file: .env
     depends_on:
       db:
@@ -26,6 +28,7 @@ services:
 
   bot:
     build: ./bot
+    restart: unless-stopped
     env_file: .env
     depends_on:
       backend:
@@ -33,6 +36,7 @@ services:
 
   worker:
     build: ./backend
+    restart: unless-stopped
     env_file: .env
     depends_on:
       backend:
