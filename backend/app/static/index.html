@@ -14,7 +14,7 @@
         <h1>FitMiniApp Production</h1>
         <p class="muted">Mini App c auth, billing, уведомлениями, конструктором программ и режимом тренера.</p>
       </div>
-      <div id="env-badge" class="badge">dev</div>
+      <div id="env-badge" class="badge hidden"></div>
     </div>
 
     <div class="card">
@@ -23,9 +23,9 @@
         <input id="debugUserId" type="number" placeholder="Debug Telegram ID" value="1001" />
         <input id="debugUserName" placeholder="Имя" value="Тренер Demo" />
         <label class="checkbox-inline"><input id="debugIsCoach" type="checkbox" checked /> Тренер</label>
-        <button id="devLoginBtn">Dev login</button>
+        <button id="devLoginBtn" class="hidden">Dev login</button>
         <button id="telegramLoginBtn" class="secondary">Telegram auth</button>
-        <a href="/admin" class="button-link">Админка</a>
+        <a href="/admin" id="adminLink" class="button-link hidden">Админка</a>
       </div>
       <p class="muted" id="authState">Не авторизован</p>
     </div>
