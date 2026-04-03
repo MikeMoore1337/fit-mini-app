@@ -1,1061 +1,151 @@
-const accessTokenKey = 'fit_access_token';
-const refreshTokenKey = 'fit_refresh_token';
+// ===== INIT =====
 
-const state = {
-  me: null,
-  exercises: [],
-  templates: [],
-  todayWorkout: null,
-  plans: [],
-  publicConfig: null,
-};
+const tg = window.Telegram?.WebApp;
 
-const $ = (id) => document.getElementById(id);
-
-const log = (msg) => {
-  const node = $('log');
-  if (!node) return;
-  const text = typeof msg === 'string' ? msg : JSON.stringify(msg, null, 2);
-  node.textContent = `${new Date().toLocaleTimeString()} - ${text}\n${node.textContent}`;
-};
-
-function showToast(message, type = 'success') {
-  const toast = $('toast');
-  if (!toast) return;
-
-  toast.textContent = message;
-  toast.className = `toast ${type === 'error' ? 'error' : ''}`.trim();
-
-  setTimeout(() => {
-    toast.className = 'toast hidden';
-  }, 2500);
+function log(...args) {
+    console.log("[APP]", ...args);
 }
 
-async function withButtonLoading(button, action, loadingText = 'Сохранение...') {
-  const originalText = button.textContent;
-  try {
-    button.disabled = true;
-    button.textContent = loadingText;
-    return await action();
-  } finally {
-    button.disabled = false;
-    button.textContent = originalText;
-  }
+function showError(text) {
+    alert(text);
 }
 
-function isCoachOrAdmin() {
-  return Boolean(state.me?.is_coach || state.me?.is_admin);
-}
+// ===== DEBUG =====
 
-function setAuthState(text) {
-  const node = $('authState');
-  if (node) node.textContent = text;
-}
+log("Telegram object:", tg);
+log("initData:", tg?.initData);
+log("initDataUnsafe:", tg?.initDataUnsafe);
 
-function toggleCoachUI() {
-  const card = $('exerciseAdminCard');
-  if (card) card.classList.toggle('hidden', !isCoachOrAdmin());
+// ===== STATE =====
 
-  const adminLink = $('adminLink');
-  if (adminLink) adminLink.classList.toggle('hidden', !isCoachOrAdmin());
+let accessToken = null;
 
-  const coachFields = $('coachFields');
-  if (coachFields && $('builder_mode')) {
-    coachFields.classList.toggle(
-      'hidden',
-      $('builder_mode').value !== 'coach' || !isCoachOrAdmin()
-    );
-  }
-}
+// ===== API =====
 
-function toggleDevAuthUI() {
-  const devBlock = $('devAuthBlock');
-  const devBtn = $('devLoginBtn');
+async function api(url, options = {}) {
+    const headers = {
+        "Content-Type": "application/json",
+        ...(options.headers || {}),
+    };
 
-  const enabled = Boolean(state.publicConfig?.enable_dev_auth);
+    if (accessToken) {
+        headers["Authorization"] = `Bearer ${accessToken}`;
+    }
 
-  if (devBlock) devBlock.classList.toggle('hidden', !enabled);
-  if (devBtn) devBtn.classList.toggle('hidden', !enabled);
-}
+    const res = await fetch(url, {
+        ...options,
+        headers,
+    });
 
-function authHeaders(extra = {}) {
-  const token = localStorage.getItem(accessTokenKey);
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...extra,
-  };
-}
-
-async function api(path, options = {}) {
-  const response = await fetch(path, {
-    ...options,
-    headers: authHeaders(options.headers || {}),
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text);
-  }
-
-  if (response.status === 204) {
-    return null;
-  }
-
-  return response.json();
-}
-
-function renderTelegramDebug() {
-  const node = $('tgDebug');
-  if (!node) return;
-
-  const tg = window.Telegram?.WebApp;
-
-  const data = {
-    hasTelegramObject: Boolean(window.Telegram),
-    hasWebAppObject: Boolean(tg),
-    initDataPresent: Boolean(tg?.initData),
-    initDataLength: tg?.initData?.length || 0,
-    initDataUnsafePresent: Boolean(tg?.initDataUnsafe),
-    platform: tg?.platform || null,
-    version: tg?.version || null,
-    colorScheme: tg?.colorScheme || null,
-    isExpanded: tg?.isExpanded ?? null,
-  };
-
-  node.textContent = JSON.stringify(data, null, 2);
-}
-
-async function loadEnv() {
-  try {
-    const res = await fetch('/api/v1/public/config');
     if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
+        const text = await res.text();
+        log("API ERROR:", res.status, text);
+        throw new Error(`API error ${res.status}`);
     }
 
-    const data = await res.json();
-    state.publicConfig = data;
+    return res.json();
+}
 
-    const envBadge = $('env-badge');
+// ===== AUTH =====
 
-    if (data.app_env === 'dev' && envBadge) {
-      envBadge.textContent = 'dev';
-      envBadge.classList.remove('hidden');
+async function loginWithTelegram() {
+    if (!tg || !tg.initData) {
+        showError("Открой Mini App через Telegram");
+        return;
     }
 
-    toggleDevAuthUI();
-  } catch (error) {
-    console.warn('Не удалось загрузить конфигурацию окружения', error);
-    log(`Не удалось загрузить конфигурацию окружения: ${String(error)}`);
-  }
+    try {
+        log("Sending initData to backend...");
+
+        const data = await api("/api/v1/auth/telegram/init", {
+            method: "POST",
+            body: JSON.stringify({
+                init_data: tg.initData,
+            }),
+        });
+
+        log("Auth response:", data);
+
+        accessToken = data.access_token;
+
+        document.getElementById("authState").innerText = "Авторизован ✅";
+
+        await loadProfile();
+
+    } catch (e) {
+        console.error(e);
+        showError("Ошибка авторизации");
+    }
 }
 
-async function devLogin() {
-  const body = {
-    telegram_user_id: Number($('debugUserId')?.value || '1001'),
-    full_name: $('debugUserName')?.value || null,
-    is_coach: Boolean($('debugIsCoach')?.checked),
-  };
+// ===== PROFILE =====
 
-  const response = await fetch('/api/v1/auth/dev-login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+async function loadProfile() {
+    try {
+        const me = await api("/api/v1/me");
+        log("Profile:", me);
 
-  const text = await response.text();
-  log(`Ответ /api/v1/auth/dev-login: ${response.status} ${text}`);
+        document.getElementById("full_name").value = me.full_name || "";
+        document.getElementById("goal").value = me.goal || "";
+        document.getElementById("level").value = me.level || "";
+        document.getElementById("height_cm").value = me.height_cm || "";
+        document.getElementById("weight_kg").value = me.weight_kg || "";
+        document.getElementById("workouts_per_week").value = me.workouts_per_week || "";
 
-  if (!response.ok) {
-    throw new Error(text);
-  }
-
-  const data = JSON.parse(text);
-  localStorage.setItem(accessTokenKey, data.access_token);
-  localStorage.setItem(refreshTokenKey, data.refresh_token);
-
-  setAuthState(`Авторизован как ${body.telegram_user_id}`);
-  showToast('Dev login выполнен');
-  await bootstrap();
+    } catch (e) {
+        log("No profile yet");
+    }
 }
 
-async function telegramLogin() {
-  const tg = window.Telegram?.WebApp;
-  const initData = tg?.initData;
-
-  log({
-    hasTelegram: Boolean(window.Telegram),
-    hasWebApp: Boolean(tg),
-    initDataPresent: Boolean(initData),
-    initDataLength: initData?.length || 0,
-  });
-
-  if (!initData) {
-    log('initData отсутствует. Mini App открыт без Telegram auth context.');
-    showToast('Telegram не передал initData', 'error');
-    setAuthState('Не удалось получить данные Telegram');
-    return false;
-  }
-
-  const response = await fetch('/api/v1/auth/telegram/init', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ init_data: initData }),
-  });
-
-  const text = await response.text();
-  log(`Ответ /api/v1/auth/telegram/init: ${response.status} ${text}`);
-
-  if (!response.ok) {
-    throw new Error(text);
-  }
-
-  const data = JSON.parse(text);
-  localStorage.setItem(accessTokenKey, data.access_token);
-  localStorage.setItem(refreshTokenKey, data.refresh_token);
-
-  setAuthState('Вход через Telegram выполнен');
-  showToast('Вход через Telegram выполнен');
-  await bootstrap();
-  return true;
-}
-
-async function tryTelegramAutoLogin() {
-  const tg = window.Telegram?.WebApp;
-  const initData = tg?.initData;
-
-  log({
-    autoLoginCheck: true,
-    hasTelegram: Boolean(window.Telegram),
-    hasWebApp: Boolean(tg),
-    initDataPresent: Boolean(initData),
-    initDataLength: initData?.length || 0,
-  });
-
-  if (!initData) {
-    setAuthState('Открой Mini App через кнопку Telegram');
-    return false;
-  }
-
-  try {
-    setAuthState('Выполняем вход через Telegram...');
-    return await telegramLogin();
-  } catch (error) {
-    log(`Ошибка авто-входа Telegram: ${String(error)}`);
-    showToast('Не удалось выполнить вход через Telegram', 'error');
-    setAuthState('Не удалось войти через Telegram');
-    return false;
-  }
-}
-
-async function loadMe() {
-  state.me = await api('/api/v1/me');
-
-  if ($('full_name')) $('full_name').value = state.me.profile?.full_name || '';
-  if ($('goal')) $('goal').value = state.me.profile?.goal || '';
-  if ($('level')) $('level').value = state.me.profile?.level || '';
-  if ($('height_cm')) $('height_cm').value = state.me.profile?.height_cm || '';
-  if ($('weight_kg')) $('weight_kg').value = state.me.profile?.weight_kg || '';
-  if ($('workouts_per_week')) $('workouts_per_week').value = state.me.profile?.workouts_per_week || '';
-
-  setAuthState(
-    `Пользователь: ${state.me.profile?.full_name || state.me.telegram_user_id}` +
-    ` | тренер=${state.me.is_coach} | админ=${state.me.is_admin}`
-  );
-
-  toggleCoachUI();
-}
+// ===== SAVE PROFILE =====
 
 async function saveProfile() {
-  const payload = {
-    full_name: $('full_name')?.value || null,
-    goal: $('goal')?.value || null,
-    level: $('level')?.value || null,
-    height_cm: $('height_cm')?.value ? Number($('height_cm').value) : null,
-    weight_kg: $('weight_kg')?.value ? Number($('weight_kg').value) : null,
-    workouts_per_week: $('workouts_per_week')?.value
-      ? Number($('workouts_per_week').value)
-      : null,
-  };
-
-  await api('/api/v1/me/profile', {
-    method: 'PATCH',
-    body: JSON.stringify(payload),
-  });
-
-  log('Профиль сохранён');
-  showToast('Профиль сохранён');
-  await loadMe();
-}
-
-async function loadExercises() {
-  state.exercises = await api('/api/v1/programs/exercises');
-  renderExerciseCatalog();
-}
-
-function renderExerciseCatalog() {
-  const list = $('exerciseCatalogList');
-  if (!list) return;
-
-  list.innerHTML =
-    state.exercises
-      .map(
-        (ex) => `
-        <div class="item-card">
-          <strong>${ex.title}</strong>
-          <div class="exercise-meta">
-            <span class="metric-pill">${ex.primary_muscle}</span>
-            <span class="metric-pill">${ex.equipment}</span>
-          </div>
-        </div>
-      `
-      )
-      .join('') || '<p class="muted">Упражнений пока нет</p>';
-}
-
-async function createExercise() {
-  if (!isCoachOrAdmin()) {
-    log('Добавлять упражнения могут только тренер и админ');
-    showToast('Недостаточно прав', 'error');
-    return;
-  }
-
-  const payload = {
-    title: $('newExerciseTitle')?.value.trim(),
-    primary_muscle: $('newExerciseMuscle')?.value.trim(),
-    equipment: $('newExerciseEquipment')?.value.trim(),
-  };
-
-  if (!payload.title || !payload.primary_muscle || !payload.equipment) {
-    log('Заполни название, мышечную группу и оборудование');
-    showToast('Заполни все поля упражнения', 'error');
-    return;
-  }
-
-  const created = await api('/api/v1/programs/exercises', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
-
-  if ($('newExerciseTitle')) $('newExerciseTitle').value = '';
-  if ($('newExerciseMuscle')) $('newExerciseMuscle').value = '';
-  if ($('newExerciseEquipment')) $('newExerciseEquipment').value = '';
-
-  log(`Добавлено упражнение: ${created.title}`);
-  showToast(`Упражнение "${created.title}" добавлено`);
-  await loadExercises();
-}
-
-function exerciseTemplate(defaultExerciseId = '', preset = null) {
-  const options = state.exercises
-    .map(
-      (ex) => `
-        <option value="${ex.id}" ${String(ex.id) === String(defaultExerciseId) ? 'selected' : ''}>
-          ${ex.title}
-        </option>
-      `
-    )
-    .join('');
-
-  return `
-    <div class="grid item-card program-ex-row" style="grid-template-columns:2fr 1fr 1fr 1fr;">
-      <select class="exercise-id">${options}</select>
-      <input class="exercise-sets" type="number" min="1" value="${preset?.prescribed_sets || 3}" placeholder="Подходы" />
-      <input class="exercise-reps" value="${preset?.prescribed_reps || '8-10'}" placeholder="Повторы" />
-      <input class="exercise-rest" type="number" min="15" value="${preset?.rest_seconds || 90}" placeholder="Отдых, сек" />
-    </div>
-  `;
-}
-
-function programDayTemplate(index, preset = null) {
-  return `
-    <div class="item-card day-card" data-day-index="${index}">
-      <div class="toolbar wrap">
-        <input class="day-title" placeholder="Название дня" value="${preset?.title || `День ${index + 1}`}" />
-        <button class="secondary add-ex-btn" type="button">+ Упражнение</button>
-      </div>
-      <div class="stack exercises-list">
-        ${(preset?.exercises || []).map((ex) => exerciseTemplate(ex.exercise_id, ex)).join('')}
-      </div>
-    </div>
-  `;
-}
-
-function addDay(preset = null) {
-  const idx = document.querySelectorAll('.day-card').length;
-  const wrapper = document.createElement('div');
-  wrapper.innerHTML = programDayTemplate(idx, preset);
-
-  const node = wrapper.firstElementChild;
-  $('dayBuilder')?.appendChild(node);
-
-  const addExerciseBtn = node.querySelector('.add-ex-btn');
-  if (addExerciseBtn) {
-    addExerciseBtn.onclick = () => {
-      const row = document.createElement('div');
-      row.innerHTML = exerciseTemplate();
-      const exerciseNode = row.firstElementChild;
-      node.querySelector('.exercises-list')?.appendChild(exerciseNode);
-    };
-  }
-
-  if (!preset?.exercises?.length) {
-    addExerciseBtn?.click();
-  }
-}
-
-function fillExample() {
-  const dayBuilder = $('dayBuilder');
-  if (!dayBuilder) return;
-
-  dayBuilder.innerHTML = '';
-
-  addDay({
-    title: 'Верх тела A',
-    exercises: [
-      { exercise_id: 1, prescribed_sets: 4, prescribed_reps: '6-8', rest_seconds: 120 },
-      { exercise_id: 2, prescribed_sets: 4, prescribed_reps: '8-10', rest_seconds: 120 },
-    ],
-  });
-
-  addDay({
-    title: 'Низ тела A',
-    exercises: [
-      { exercise_id: 3, prescribed_sets: 4, prescribed_reps: '6-8', rest_seconds: 150 },
-      { exercise_id: 4, prescribed_sets: 3, prescribed_reps: '8-10', rest_seconds: 120 },
-    ],
-  });
-
-  showToast('Пример программы заполнен');
-}
-
-function collectProgramPayload() {
-  const days = [...document.querySelectorAll('.day-card')].map((day) => ({
-    title: day.querySelector('.day-title')?.value || 'День',
-    exercises: [...day.querySelectorAll('.program-ex-row')].map((row) => ({
-      exercise_id: Number(row.querySelector('.exercise-id')?.value),
-      prescribed_sets: Number(row.querySelector('.exercise-sets')?.value),
-      prescribed_reps: row.querySelector('.exercise-reps')?.value,
-      rest_seconds: Number(row.querySelector('.exercise-rest')?.value),
-    })),
-  }));
-
-  return {
-    title: $('program_title')?.value,
-    goal: $('program_goal')?.value,
-    level: $('program_level')?.value,
-    mode: $('builder_mode')?.value,
-    target_telegram_user_id: $('target_telegram_user_id')?.value
-      ? Number($('target_telegram_user_id').value)
-      : null,
-    target_full_name: $('target_full_name')?.value || null,
-    days,
-    assign_after_create: true,
-  };
-}
-
-async function saveProgram() {
-  const payload = collectProgramPayload();
-  const data = await api('/api/v1/programs/templates', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
-
-  if ($('builderResult')) {
-    $('builderResult').textContent =
-      `Сохранено: ${data.template.title}, тренировок создано: ${data.workouts_created}`;
-  }
-
-  log(data);
-  showToast('Программа сохранена и назначена');
-  await loadTemplates();
-  await loadClients();
-  await loadTodayWorkout();
-  await loadNotifications();
-}
-
-async function loadTemplates() {
-  state.templates = await api('/api/v1/programs/templates/mine');
-
-  const list = $('templatesList');
-  if (!list) return;
-
-  list.innerHTML =
-    state.templates
-      .map(
-        (t) => `
-        <div class="item-card">
-          <strong>${t.title}</strong><br>
-          <span class="muted">${t.goal} - ${t.level}</span>
-          <div>
-            ${t.days
-              .map(
-                (d) => `
-                  <div><b>${d.title}</b>: ${d.exercises.map((e) => e.exercise_title).join(', ')}</div>
-                `
-              )
-              .join('')}
-          </div>
-        </div>
-      `
-      )
-      .join('') || '<p class="muted">Шаблонов пока нет</p>';
-}
-
-async function loadClients() {
-  const rows = await api('/api/v1/programs/clients');
-
-  const list = $('clientsList');
-  if (!list) return;
-
-  list.innerHTML =
-    rows
-      .map(
-        (c) => `
-        <div class="item-card">
-          <strong>${c.full_name || c.telegram_user_id}</strong><br>
-          <span class="muted">цель=${c.goal || '-'} | уровень=${c.level || '-'}</span>
-        </div>
-      `
-      )
-      .join('') || '<p class="muted">Клиентов пока нет</p>';
-}
-
-function statusLabel(status) {
-  return {
-    planned: 'Запланирована',
-    in_progress: 'В процессе',
-    completed: 'Завершена',
-  }[status] || status;
-}
-
-function formatSetValue(set) {
-  const reps = set?.actual_reps ?? '-';
-  const weight = set?.actual_weight ?? '-';
-  return `${reps}×${weight}`;
-}
-
-function formatDelta(value, unit = '') {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) {
-    return 'без изменений';
-  }
-
-  const numberValue = Number(value);
-  if (numberValue === 0) {
-    return 'без изменений';
-  }
-
-  const sign = numberValue > 0 ? '+' : '';
-  return `${sign}${numberValue.toFixed(0)}${unit}`;
-}
-
-function renderLoggedSets(exercise) {
-  const loggedMap = new Map(
-    (exercise.logged_sets || []).map((set) => [set.set_number, set])
-  );
-
-  return Array.from({ length: exercise.prescribed_sets })
-    .map((_, i) => {
-      const setNumber = i + 1;
-      const set = loggedMap.get(setNumber);
-
-      if (set) {
-        return `<span class="set-chip done" title="Подход ${setNumber}">${formatSetValue(set)}</span>`;
-      }
-
-      return `<span class="set-chip empty" title="Подход ${setNumber}">${setNumber}</span>`;
-    })
-    .join('');
-}
-
-function renderPreviousSets(exercise) {
-  if (!exercise.previous_logged_sets?.length) {
-    return '<span class="muted">Нет предыдущих данных</span>';
-  }
-
-  return exercise.previous_logged_sets
-    .map(
-      (set) =>
-        `<span class="set-chip previous" title="Прошлый подход ${set.set_number}">${formatSetValue(set)}</span>`
-    )
-    .join('');
-}
-
-function renderProgress(exercise) {
-  if (!exercise.progress) {
-    return '<div class="muted progress-line">Прошлой тренировки по этому упражнению пока нет</div>';
-  }
-
-  const dateLabel = exercise.progress.previous_workout_date
-    ? new Date(exercise.progress.previous_workout_date).toLocaleDateString()
-    : '';
-
-  return `
-    <div class="progress-box">
-      <div class="progress-head">
-        Прошлый раз: ${exercise.progress.previous_workout_title || 'Тренировка'}
-        ${dateLabel ? ` - ${dateLabel}` : ''}
-      </div>
-      <div class="set-badges previous-row">${renderPreviousSets(exercise)}</div>
-      <div class="progress-metrics">
-        <span class="metric-pill">Тоннаж: ${formatDelta(exercise.progress.volume_delta, ' кг')}</span>
-        <span class="metric-pill">Топ вес: ${formatDelta(exercise.progress.top_weight_delta, ' кг')}</span>
-      </div>
-    </div>
-  `;
-}
-
-async function loadTodayWorkout() {
-  const workout = await api('/api/v1/workouts/today');
-  state.todayWorkout = workout;
-
-  const container = $('todayWorkout');
-  if (!container) return;
-
-  if (!workout) {
-    container.innerHTML = '<p class="muted">На сегодня тренировка не назначена</p>';
-    return;
-  }
-
-  container.innerHTML = `
-    <div>
-      <p><strong>${workout.title}</strong> - статус: ${statusLabel(workout.status)}</p>
-      <div class="toolbar wrap">
-        <button id="startWorkoutBtn" ${!workout.can_start ? 'disabled' : ''}>Начать</button>
-        <button id="completeWorkoutBtn" class="secondary" ${!workout.can_complete ? 'disabled' : ''}>Завершить</button>
-      </div>
-      <div class="stack top-gap">
-        ${workout.exercises
-          .map(
-            (exercise) => `
-            <div class="item-card">
-              <strong>${exercise.title}</strong><br>
-              <span class="muted">${exercise.prescribed_sets} подходов x ${exercise.prescribed_reps}, отдых ${exercise.rest_seconds} сек</span>
-              <div class="set-badges current-row top-gap">${renderLoggedSets(exercise)}</div>
-              ${renderProgress(exercise)}
-              <div class="set-actions">
-                <input type="number" id="reps-${exercise.id}" placeholder="Повторы" ${!workout.can_log_sets ? 'disabled' : ''} />
-                <input type="number" id="weight-${exercise.id}" placeholder="Вес" ${!workout.can_log_sets ? 'disabled' : ''} />
-                <button data-ex-id="${exercise.id}" class="log-set-btn" ${!workout.can_log_sets ? 'disabled' : ''}>+ Подход</button>
-                <button data-ex-id="${exercise.id}" class="secondary undo-set-btn" ${!workout.can_log_sets ? 'disabled' : ''}>Отменить</button>
-              </div>
-            </div>
-          `
-          )
-          .join('')}
-      </div>
-    </div>
-  `;
-
-  const startBtn = $('startWorkoutBtn');
-  if (startBtn) {
-    startBtn.onclick = async () => {
-      try {
-        await withButtonLoading(startBtn, async () => {
-          await api(`/api/v1/workouts/${workout.id}/start`, { method: 'POST' });
-        }, 'Запуск...');
-        showToast('Тренировка начата');
-        await loadTodayWorkout();
-      } catch (error) {
-        log(String(error));
-        showToast('Не удалось начать тренировку', 'error');
-      }
-    };
-  }
-
-  const completeBtn = $('completeWorkoutBtn');
-  if (completeBtn) {
-    completeBtn.onclick = async () => {
-      try {
-        await withButtonLoading(completeBtn, async () => {
-          await api(`/api/v1/workouts/${workout.id}/complete`, { method: 'POST' });
-        }, 'Завершение...');
-        showToast('Тренировка завершена');
-        await loadTodayWorkout();
-      } catch (error) {
-        log(String(error));
-        showToast('Не удалось завершить тренировку', 'error');
-      }
-    };
-  }
-
-  document.querySelectorAll('.log-set-btn').forEach((btn) => {
-    btn.onclick = async (event) => {
-      const button = event.currentTarget;
-      const exId = Number(button.dataset.exId);
-      const exercise = workout.exercises.find((x) => x.id === exId);
-
-      try {
-        await withButtonLoading(button, async () => {
-          const payload = {
-            workout_exercise_id: exId,
-            set_number: exercise.completed_sets + 1,
-            actual_reps: Number($(`reps-${exId}`)?.value || '0') || null,
-            actual_weight: Number($(`weight-${exId}`)?.value || '0') || null,
-            is_completed: true,
-          };
-
-          await api(`/api/v1/workouts/${workout.id}/sets`, {
-            method: 'POST',
-            body: JSON.stringify(payload),
-          });
-        }, 'Сохранение...');
-
-        showToast('Подход сохранён');
-        await loadTodayWorkout();
-      } catch (error) {
-        log(String(error));
-        showToast('Не удалось сохранить подход', 'error');
-      }
-    };
-  });
-
-  document.querySelectorAll('.undo-set-btn').forEach((btn) => {
-    btn.onclick = async (event) => {
-      const button = event.currentTarget;
-      const exId = Number(button.dataset.exId);
-
-      try {
-        await withButtonLoading(button, async () => {
-          await api(`/api/v1/workouts/${workout.id}/exercises/${exId}/last-set`, {
-            method: 'DELETE',
-          });
-        }, 'Удаление...');
-
-        showToast('Последний подход удалён');
-        await loadTodayWorkout();
-      } catch (error) {
-        log(String(error));
-        showToast('Не удалось удалить подход', 'error');
-      }
-    };
-  });
-}
-
-async function assignDemoProgram() {
-  await api('/api/v1/programs/assign-demo', { method: 'POST' });
-  showToast('Демо-программа назначена');
-  await loadTodayWorkout();
-  await loadNotifications();
-}
-
-async function loadBilling() {
-  state.plans = await api('/api/v1/billing/plans');
-  const subscription = await api('/api/v1/billing/subscription');
-
-  if ($('subscriptionInfo')) {
-    $('subscriptionInfo').textContent = subscription
-      ? `Активна: ${subscription.plan_title} до ${new Date(subscription.ends_at).toLocaleString()}`
-      : 'Активной подписки нет';
-  }
-
-  const plansList = $('plansList');
-  if (!plansList) return;
-
-  plansList.innerHTML = state.plans
-    .map(
-      (plan) => `
-      <div class="item-card">
-        <strong>${plan.title}</strong><br>
-        <span class="muted">${plan.price} ${plan.currency} / ${plan.period_days} дн.</span>
-        <div class="toolbar wrap top-gap">
-          <button data-plan="${plan.code}" class="buy-plan-btn">Купить</button>
-        </div>
-      </div>
-    `
-    )
-    .join('');
-
-  document.querySelectorAll('.buy-plan-btn').forEach((btn) => {
-    btn.onclick = async (event) => {
-      const button = event.currentTarget;
-      const planCode = button.dataset.plan;
-
-      try {
-        await withButtonLoading(button, async () => {
-          const checkout = await api('/api/v1/billing/checkout', {
-            method: 'POST',
-            body: JSON.stringify({ plan_code: planCode }),
-          });
-
-          await api(`/api/v1/billing/mock/complete/${checkout.checkout_id}`, {
-            method: 'POST',
-          });
-        }, 'Оплата...');
-
-        log(`Подписка ${planCode} активирована через mock payment`);
-        showToast('Подписка активирована');
-        await loadBilling();
-      } catch (error) {
-        log(String(error));
-        showToast('Не удалось активировать подписку', 'error');
-      }
-    };
-  });
-}
-
-async function loadNotifications() {
-  const settings = await api('/api/v1/notifications/settings');
-
-  if ($('notifEnabled')) $('notifEnabled').checked = settings.workout_reminders_enabled;
-  if ($('notifHour')) $('notifHour').value = settings.reminder_hour;
-
-  const rows = await api('/api/v1/notifications');
-  const list = $('notificationsList');
-  if (!list) return;
-
-  list.innerHTML =
-    rows
-      .map(
-        (n) => `
-        <div class="item-card">
-          <strong>${n.title}</strong><br>
-          <span class="muted">${new Date(n.scheduled_for).toLocaleString()} - ${n.status}</span>
-          <div>${n.body}</div>
-        </div>
-      `
-      )
-      .join('') || '<p class="muted">Нет уведомлений</p>';
-}
-
-async function saveNotificationSettings() {
-  await api('/api/v1/notifications/settings', {
-    method: 'PATCH',
-    body: JSON.stringify({
-      workout_reminders_enabled: Boolean($('notifEnabled')?.checked),
-      reminder_hour: Number($('notifHour')?.value || '9'),
-    }),
-  });
-
-  showToast('Настройки уведомлений сохранены');
-  await loadNotifications();
-}
-
-function bindBuilder() {
-  if ($('builder_mode') && $('coachFields')) {
-    $('builder_mode').addEventListener('change', () => {
-      $('coachFields').classList.toggle(
-        'hidden',
-        $('builder_mode').value !== 'coach' || !isCoachOrAdmin()
-      );
-    });
-  }
-
-  if ($('addDayBtn')) {
-    $('addDayBtn').onclick = () => addDay();
-  }
-
-  if ($('fillExampleBtn')) {
-    $('fillExampleBtn').onclick = () => fillExample();
-  }
-
-  if ($('saveProgramBtn')) {
-    $('saveProgramBtn').onclick = async (e) => {
-      try {
-        await withButtonLoading(e.currentTarget, async () => {
-          await saveProgram();
-        }, 'Сохранение...');
-      } catch (error) {
-        log(String(error));
-        showToast('Не удалось сохранить программу', 'error');
-      }
-    };
-  }
-}
-
-async function bootstrap() {
-  try {
-    await loadMe();
-    await loadExercises();
-
-    if (!document.querySelector('.day-card')) {
-      fillExample();
-    }
-
-    await Promise.all([
-      loadTemplates(),
-      loadClients(),
-      loadTodayWorkout(),
-      loadBilling(),
-      loadNotifications(),
-    ]);
-  } catch (error) {
-    log(String(error));
-    showToast('Не удалось загрузить данные', 'error');
-  }
-}
-
-async function init() {
-  await loadEnv();
-  renderTelegramDebug();
-
-  let loggedIn = false;
-
-  if (localStorage.getItem(accessTokenKey)) {
     try {
-      setAuthState('Загружаем профиль...');
-      await bootstrap();
-      loggedIn = true;
-    } catch (error) {
-      log(`Ошибка загрузки по сохранённому токену: ${String(error)}`);
-      localStorage.removeItem(accessTokenKey);
-      localStorage.removeItem(refreshTokenKey);
+        const payload = {
+            full_name: document.getElementById("full_name").value,
+            goal: document.getElementById("goal").value,
+            level: document.getElementById("level").value,
+            height_cm: Number(document.getElementById("height_cm").value),
+            weight_kg: Number(document.getElementById("weight_kg").value),
+            workouts_per_week: Number(document.getElementById("workouts_per_week").value),
+        };
+
+        await api("/api/v1/me/profile", {
+            method: "PATCH",
+            body: JSON.stringify(payload),
+        });
+
+        alert("Профиль сохранён");
+
+    } catch (e) {
+        console.error(e);
+        alert("Ошибка сохранения профиля");
     }
-  }
-
-  if (!loggedIn) {
-    loggedIn = await tryTelegramAutoLogin();
-  }
-
-  if ($('devLoginBtn')) {
-    $('devLoginBtn').onclick = async (e) => {
-      try {
-        await withButtonLoading(e.currentTarget, async () => {
-          await devLogin();
-        }, 'Вход...');
-      } catch (error) {
-        log(String(error));
-        showToast('Не удалось выполнить dev login', 'error');
-      }
-    };
-  }
-
-  if ($('telegramLoginBtn')) {
-    $('telegramLoginBtn').onclick = async (e) => {
-      try {
-        await withButtonLoading(e.currentTarget, async () => {
-          await telegramLogin();
-        }, 'Вход...');
-      } catch (error) {
-        log(String(error));
-        showToast('Не удалось войти через Telegram', 'error');
-      }
-    };
-  }
-
-  if ($('saveProfileBtn')) {
-    $('saveProfileBtn').onclick = async (e) => {
-      try {
-        await withButtonLoading(e.currentTarget, async () => {
-          await saveProfile();
-        }, 'Сохранение...');
-      } catch (error) {
-        log(String(error));
-        showToast('Не удалось сохранить профиль', 'error');
-      }
-    };
-  }
-
-  if ($('assignProgramBtn')) {
-    $('assignProgramBtn').onclick = async (e) => {
-      try {
-        await withButtonLoading(e.currentTarget, async () => {
-          await assignDemoProgram();
-        }, 'Назначение...');
-      } catch (error) {
-        log(String(error));
-        showToast('Не удалось назначить демо-программу', 'error');
-      }
-    };
-  }
-
-  if ($('reloadTemplatesBtn')) {
-    $('reloadTemplatesBtn').onclick = async (e) => {
-      try {
-        await withButtonLoading(e.currentTarget, async () => {
-          await loadTemplates();
-        }, 'Обновление...');
-        showToast('Шаблоны обновлены');
-      } catch (error) {
-        log(String(error));
-        showToast('Не удалось обновить шаблоны', 'error');
-      }
-    };
-  }
-
-  if ($('reloadExercisesBtn')) {
-    $('reloadExercisesBtn').onclick = async (e) => {
-      try {
-        await withButtonLoading(e.currentTarget, async () => {
-          await loadExercises();
-        }, 'Обновление...');
-        showToast('Каталог упражнений обновлён');
-      } catch (error) {
-        log(String(error));
-        showToast('Не удалось обновить упражнения', 'error');
-      }
-    };
-  }
-
-  if ($('createExerciseBtn')) {
-    $('createExerciseBtn').onclick = async (e) => {
-      try {
-        await withButtonLoading(e.currentTarget, async () => {
-          await createExercise();
-        }, 'Добавление...');
-      } catch (error) {
-        log(String(error));
-        showToast('Не удалось добавить упражнение', 'error');
-      }
-    };
-  }
-
-  if ($('reloadClientsBtn')) {
-    $('reloadClientsBtn').onclick = async (e) => {
-      try {
-        await withButtonLoading(e.currentTarget, async () => {
-          await loadClients();
-        }, 'Обновление...');
-        showToast('Список клиентов обновлён');
-      } catch (error) {
-        log(String(error));
-        showToast('Не удалось обновить клиентов', 'error');
-      }
-    };
-  }
-
-  if ($('reloadBillingBtn')) {
-    $('reloadBillingBtn').onclick = async (e) => {
-      try {
-        await withButtonLoading(e.currentTarget, async () => {
-          await loadBilling();
-        }, 'Обновление...');
-        showToast('Подписки обновлены');
-      } catch (error) {
-        log(String(error));
-        showToast('Не удалось обновить подписки', 'error');
-      }
-    };
-  }
-
-  if ($('reloadNotificationsBtn')) {
-    $('reloadNotificationsBtn').onclick = async (e) => {
-      try {
-        await withButtonLoading(e.currentTarget, async () => {
-          await loadNotifications();
-        }, 'Обновление...');
-        showToast('Уведомления обновлены');
-      } catch (error) {
-        log(String(error));
-        showToast('Не удалось обновить уведомления', 'error');
-      }
-    };
-  }
-
-  if ($('saveNotifBtn')) {
-    $('saveNotifBtn').onclick = async (e) => {
-      try {
-        await withButtonLoading(e.currentTarget, async () => {
-          await saveNotificationSettings();
-        }, 'Сохранение...');
-      } catch (error) {
-        log(String(error));
-        showToast('Не удалось сохранить настройки уведомлений', 'error');
-      }
-    };
-  }
-
-  bindBuilder();
 }
 
-init();
+// ===== INIT UI =====
+
+document.getElementById("telegramLoginBtn")?.addEventListener("click", loginWithTelegram);
+document.getElementById("saveProfileBtn")?.addEventListener("click", saveProfile);
+
+// ===== AUTO LOGIN =====
+
+(async () => {
+    if (!tg) {
+        log("NOT in Telegram WebApp");
+        document.getElementById("authState").innerText = "Открой через Telegram";
+        return;
+    }
+
+    tg.ready();
+    tg.expand();
+
+    if (!tg.initData) {
+        log("initData is EMPTY");
+        document.getElementById("authState").innerText = "Нет данных Telegram";
+        return;
+    }
+
+    log("Auto login...");
+    await loginWithTelegram();
+})();
