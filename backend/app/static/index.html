@@ -11,8 +11,7 @@
     <div class="card hero-card">
         <div>
             <h1>FitMiniApp</h1>
-            <p class="muted">Мини-приложение с авторизацией, подписками, уведомлениями, конструктором программ и режимом
-                тренера.</p>
+            <p class="muted">Мини-приложение с авторизацией, подписками, уведомлениями, конструктором программ и режимом тренера.</p>
         </div>
         <div id="env-badge" class="badge hidden"></div>
     </div>
@@ -21,6 +20,15 @@
         <h2>Вход</h2>
 
         <div class="stack">
+            <div id="authState" class="muted">Проверяем авторизацию через Telegram...</div>
+
+            <div class="toolbar wrap">
+                <button id="telegramLoginBtn" class="secondary">Повторить вход через Telegram</button>
+                <a href="/admin" id="adminLink" class="button-link hidden">Админка</a>
+            </div>
+        </div>
+
+        <div id="devAuthBlock" class="stack hidden top-gap">
             <input id="debugUserId" type="number" placeholder="Telegram ID" value="1001"/>
             <input id="debugUserName" type="text" placeholder="Имя пользователя" value="Тренер Demo"/>
 
@@ -31,11 +39,7 @@
 
             <div class="toolbar wrap">
                 <button id="devLoginBtn" class="hidden">Dev login</button>
-                <button id="telegramLoginBtn" class="secondary">Войти через Telegram</button>
-                <a href="/admin" id="adminLink" class="button-link hidden">Админка</a>
             </div>
-
-            <div id="authState" class="muted">Не авторизован</div>
         </div>
     </div>
 
@@ -175,6 +179,11 @@
         </div>
 
         <div id="exerciseCatalogList" class="stack top-gap"></div>
+    </div>
+
+    <div class="card">
+        <h2>Диагностика Telegram</h2>
+        <pre id="tgDebug" class="log-box"></pre>
     </div>
 
     <div class="card">
