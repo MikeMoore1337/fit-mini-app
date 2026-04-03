@@ -1,14 +1,8 @@
 from pydantic import BaseModel
 
 
-class TelegramInitRequest(BaseModel):
-    init_data: str
-
-
-class DevLoginRequest(BaseModel):
-    telegram_user_id: int
-    full_name: str | None = None
-    is_coach: bool = False
+class RefreshRequest(BaseModel):
+    refresh_token: str
 
 
 class TokenPairResponse(BaseModel):

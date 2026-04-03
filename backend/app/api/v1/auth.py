@@ -1,13 +1,8 @@
-from __future__ import annotations
-
 from app.core.rate_limit import limiter
 from app.db.session import get_db
 from app.models.user import User
-from app.services.jwt import (
-    build_access_token,
-    build_refresh_token,
-    decode_token,
-)
+from app.schemas.auth import RefreshRequest, TokenPairResponse
+from app.services.jwt import build_access_token, build_refresh_token, decode_token
 from app.services.token_service import (
     get_refresh_token_by_jti,
     is_refresh_token_valid,
@@ -17,20 +12,9 @@ from app.services.token_service import (
     save_refresh_token,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 router = APIRouter()
-
-
-class TokenPairResponse(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-
-
-class RefreshRequest(BaseModel):
-    refresh_token: str
 
 
 def issue_token_pair(db: Session, user: User) -> TokenPairResponse:
@@ -53,7 +37,11 @@ def issue_token_pair(db: Session, user: User) -> TokenPairResponse:
 
 @router.post("/refresh", response_model=TokenPairResponse)
 @limiter.limit("10/minute")
-def refresh_tokens(request: Request, payload: RefreshRequest, db: Session = Depends(get_db)):
+def refresh_tokens(
+    request: Request,
+    payload: RefreshRequest,
+    db: Session = Depends(get_db),
+):
     try:
         token_payload = decode_token(payload.refresh_token)
     except Exception:
@@ -86,7 +74,10 @@ def refresh_tokens(request: Request, payload: RefreshRequest, db: Session = Depe
 
 
 @router.post("/logout")
-def logout(payload: RefreshRequest, db: Session = Depends(get_db)):
+def logout(
+    payload: RefreshRequest,
+    db: Session = Depends(get_db),
+):
     try:
         token_payload = decode_token(payload.refresh_token)
     except Exception:
