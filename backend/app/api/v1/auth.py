@@ -1,8 +1,13 @@
+from datetime import UTC, datetime
+
+from app.core.config import settings
 from app.core.rate_limit import limiter
 from app.db.session import get_db
-from app.models.user import User
-from app.schemas.auth import RefreshRequest, TokenPairResponse
+from app.models.user import User, UserProfile
+from app.schemas.auth import RefreshRequest
+from app.schemas.telegram_auth import TelegramInitRequest, TokenPairResponse
 from app.services.jwt import build_access_token, build_refresh_token, decode_token
+from app.services.telegram_auth import validate_init_data
 from app.services.token_service import (
     get_refresh_token_by_jti,
     is_refresh_token_valid,
@@ -15,6 +20,10 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 router = APIRouter()
+
+
+def utcnow() -> datetime:
+    return datetime.now(UTC)
 
 
 def issue_token_pair(db: Session, user: User) -> TokenPairResponse:
@@ -33,6 +42,60 @@ def issue_token_pair(db: Session, user: User) -> TokenPairResponse:
         access_token=access_token,
         refresh_token=refresh_token,
     )
+
+
+@router.post("/telegram/init", response_model=TokenPairResponse)
+@limiter.limit("20/minute")
+def telegram_init_auth(
+    request: Request,
+    payload: TelegramInitRequest,
+    db: Session = Depends(get_db),
+):
+    if not settings.telegram_bot_token or settings.telegram_bot_token == "replace-me":
+        raise HTTPException(status_code=500, detail="TELEGRAM_BOT_TOKEN не настроен")
+
+    try:
+        parsed = validate_init_data(payload.init_data, settings.telegram_bot_token)
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail=str(exc))
+
+    tg_user = parsed["user"]
+    telegram_user_id = tg_user["id"]
+    username = tg_user.get("username")
+    first_name = tg_user.get("first_name")
+    last_name = tg_user.get("last_name")
+    full_name = " ".join(part for part in [first_name, last_name] if part).strip() or username or str(telegram_user_id)
+
+    user = db.query(User).filter(User.telegram_user_id == telegram_user_id).first()
+
+    if not user:
+        user = User(
+            telegram_user_id=telegram_user_id,
+            is_coach=False,
+            is_admin=False,
+        )
+        db.add(user)
+        db.flush()
+
+    profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
+    if not profile:
+        profile = UserProfile(
+            user_id=user.id,
+            full_name=full_name,
+        )
+        db.add(profile)
+    else:
+        if not profile.full_name:
+            profile.full_name = full_name
+
+    # если у тебя в модели UserProfile есть username - раскомментируй
+    # if hasattr(profile, "username"):
+    #     profile.username = username
+
+    db.commit()
+    db.refresh(user)
+
+    return issue_token_pair(db, user)
 
 
 @router.post("/refresh", response_model=TokenPairResponse)
