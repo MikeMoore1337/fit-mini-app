@@ -1,27 +1,53 @@
+from app.db.session import get_db
+from app.schemas.billing import (
+    CheckoutRequest,
+    CheckoutResponse,
+    PlanResponse,
+    SubscriptionResponse,
+)
+from app.services.billing import (
+    BillingError,
+    complete_mock_payment,
+    create_checkout,
+    get_active_subscription,
+    list_plans,
+)
+from app.services.security import get_current_user
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.db.session import get_db
-from app.schemas.billing import CheckoutRequest, CheckoutResponse, PlanResponse, SubscriptionResponse
-from app.services.billing import BillingError, complete_mock_payment, create_checkout, get_active_subscription, list_plans
-from app.services.security import get_current_user
-
-router = APIRouter(prefix="/billing", tags=["billing"])
+router = APIRouter()
 
 
 @router.get("/plans", response_model=list[PlanResponse])
 def plans(db: Session = Depends(get_db), user=Depends(get_current_user)):
     del user
-    return [PlanResponse(id=p.id, code=p.code, title=p.title, price=float(p.price), currency=p.currency, period_days=p.period_days) for p in list_plans(db)]
+    return [
+        PlanResponse(
+            id=p.id,
+            code=p.code,
+            title=p.title,
+            price=float(p.price),
+            currency=p.currency,
+            period_days=p.period_days,
+        )
+        for p in list_plans(db)
+    ]
 
 
 @router.post("/checkout", response_model=CheckoutResponse)
-def checkout(payload: CheckoutRequest, db: Session = Depends(get_db), user=Depends(get_current_user)):
+def checkout(
+    payload: CheckoutRequest, db: Session = Depends(get_db), user=Depends(get_current_user)
+):
     try:
         payment = create_checkout(db, user, payload.plan_code)
     except BillingError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return CheckoutResponse(checkout_id=payment.provider_payment_id, checkout_url=payment.checkout_url or "", status=payment.status)
+    return CheckoutResponse(
+        checkout_id=payment.provider_payment_id,
+        checkout_url=payment.checkout_url or "",
+        status=payment.status,
+    )
 
 
 @router.post("/mock/complete/{checkout_id}")

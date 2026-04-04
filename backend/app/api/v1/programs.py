@@ -1,6 +1,3 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-
 from app.db.session import get_db
 from app.schemas.program import (
     AssignTemplateRequest,
@@ -25,8 +22,10 @@ from app.services.programs import (
     list_user_templates,
 )
 from app.services.security import get_current_user, require_coach
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 
-router = APIRouter(prefix="/programs", tags=["programs"])
+router = APIRouter()
 
 
 @router.get("/exercises", response_model=list[ExerciseCatalogItem])

@@ -1,12 +1,15 @@
+from app.db.session import get_db
+from app.schemas.notification import (
+    NotificationResponse,
+    NotificationSettingResponse,
+    NotificationSettingUpdate,
+)
+from app.services.notifications import get_or_create_settings, list_my_notifications
+from app.services.security import get_current_user
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.db.session import get_db
-from app.schemas.notification import NotificationResponse, NotificationSettingResponse, NotificationSettingUpdate
-from app.services.notifications import get_or_create_settings, list_my_notifications
-from app.services.security import get_current_user
-
-router = APIRouter(prefix="/notifications", tags=["notifications"])
+router = APIRouter()
 
 
 @router.get("/settings", response_model=NotificationSettingResponse)
@@ -19,7 +22,11 @@ def get_settings(db: Session = Depends(get_db), user=Depends(get_current_user)):
 
 
 @router.patch("/settings", response_model=NotificationSettingResponse)
-def patch_settings(payload: NotificationSettingUpdate, db: Session = Depends(get_db), user=Depends(get_current_user)):
+def patch_settings(
+    payload: NotificationSettingUpdate,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
     setting = get_or_create_settings(db, user)
     setting.workout_reminders_enabled = payload.workout_reminders_enabled
     setting.reminder_hour = payload.reminder_hour
