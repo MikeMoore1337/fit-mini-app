@@ -10,6 +10,7 @@ from app.models.program import (
     UserWorkoutExercise,
     UserWorkoutSet,
 )
+from app.models.token import RefreshToken
 from app.models.user import CoachClient, User, UserProfile
 
 __all__ = [
@@ -22,6 +23,7 @@ __all__ = [
     "ProgramTemplate",
     "ProgramTemplateDay",
     "ProgramTemplateExercise",
+    "RefreshToken",
     "Subscription",
     "User",
     "UserProfile",
