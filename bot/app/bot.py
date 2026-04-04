@@ -1,8 +1,14 @@
 import asyncio
 
-from aiogram import Bot, Dispatcher, F
+from aiogram import Bot, Dispatcher
 from aiogram.filters import CommandStart
-from aiogram.types import KeyboardButton, Message, ReplyKeyboardMarkup, WebAppInfo
+from aiogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Message,
+    ReplyKeyboardRemove,
+    WebAppInfo,
+)
 
 from app.config import settings
 
@@ -11,23 +17,26 @@ dp = Dispatcher()
 
 @dp.message(CommandStart())
 async def start(message: Message) -> None:
-    keyboard = ReplyKeyboardMarkup(
-        keyboard=[
+    inline_keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
             [
-                KeyboardButton(
+                InlineKeyboardButton(
                     text="Открыть FitMiniApp",
-                    web_app=WebAppInfo(url=f"{settings.frontend_base_url}/app"),
+                    web_app=WebAppInfo(url=f"{settings.frontend_base_url}/app?v=4"),
                 )
             ]
-        ],
-        resize_keyboard=True,
+        ]
     )
-    await message.answer("Открой Mini App кнопкой ниже.", reply_markup=keyboard)
 
+    await message.answer(
+        "Открой Mini App кнопкой под этим сообщением.",
+        reply_markup=ReplyKeyboardRemove(),
+    )
 
-@dp.message(F.text == "Помощь")
-async def help_text(message: Message) -> None:
-    await message.answer("Используй /start, чтобы открыть Mini App.")
+    await message.answer(
+        "Нажми кнопку ниже:",
+        reply_markup=inline_keyboard,
+    )
 
 
 async def main() -> None:
@@ -35,6 +44,7 @@ async def main() -> None:
         print("BOT_TOKEN not configured - bot is idle")
         while True:
             await asyncio.sleep(3600)
+
     bot = Bot(settings.bot_token)
     await dp.start_polling(bot)
 

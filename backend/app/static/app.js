@@ -149,3 +149,5 @@ document.getElementById("saveProfileBtn")?.addEventListener("click", saveProfile
     log("Auto login...");
     await loginWithTelegram();
 })();
+
+alert(window.Telegram?.WebApp?.initData)
