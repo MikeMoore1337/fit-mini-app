@@ -1,4 +1,4 @@
-const APP_VERSION = 'v7';
+const APP_VERSION = 'v8';
 
 const accessTokenKey = 'fit_access_token';
 const refreshTokenKey = 'fit_refresh_token';
@@ -25,12 +25,15 @@ const API = {
   clients: '/api/v1/programs/clients',
   assignDemo: '/api/v1/programs/assign-demo',
 
-  todayWorkout: '/api/v1/workouts/today',
+  workoutsToday: '/api/v1/workouts/today',
+
   billingPlans: '/api/v1/billing/plans',
   billingSubscription: '/api/v1/billing/subscription',
   billingCheckout: '/api/v1/billing/checkout',
+  billingMockComplete: (checkoutId) => `/api/v1/billing/mock/complete/${checkoutId}`,
+
   notificationsSettings: '/api/v1/notifications/settings',
-  notifications: '/api/v1/notifications',
+  notificationsList: '/api/v1/notifications',
 };
 
 const $ = (id) => document.getElementById(id);
@@ -125,12 +128,22 @@ function isCoachOrAdmin() {
   return Boolean(state.me?.is_coach || state.me?.is_admin);
 }
 
+function canEditProgramBuilder() {
+  const mode = $('builder_mode')?.value || 'self';
+  if (mode === 'self') return true;
+  return isCoachOrAdmin();
+}
+
 function toggleCoachUI() {
-  const card = $('exerciseAdminCard');
-  if (card) card.classList.toggle('hidden', !isCoachOrAdmin());
+  const exerciseCard = $('exerciseAdminCard');
+  if (exerciseCard) {
+    exerciseCard.classList.toggle('hidden', !isCoachOrAdmin());
+  }
 
   const adminLink = $('adminLink');
-  if (adminLink) adminLink.classList.toggle('hidden', !isCoachOrAdmin());
+  if (adminLink) {
+    adminLink.classList.toggle('hidden', !isCoachOrAdmin());
+  }
 
   const coachFields = $('coachFields');
   const builderMode = $('builder_mode');
@@ -141,6 +154,13 @@ function toggleCoachUI() {
       builderMode.value !== 'coach' || !isCoachOrAdmin()
     );
   }
+
+  const builderDisabled = !canEditProgramBuilder();
+
+  ['addDayBtn', 'fillExampleBtn', 'saveProgramBtn'].forEach((id) => {
+    const btn = $(id);
+    if (btn) btn.disabled = builderDisabled;
+  });
 }
 
 function toggleDevAuthUI() {
@@ -302,11 +322,12 @@ function exerciseTemplate(defaultExerciseId = '', preset = null) {
     .join('');
 
   return `
-    <div class="grid item-card program-ex-row" style="grid-template-columns:2fr 1fr 1fr 1fr;">
+    <div class="grid item-card program-ex-row" style="grid-template-columns:2fr 1fr 1fr 1fr auto;">
       <select class="exercise-id">${options}</select>
       <input class="exercise-sets" type="number" min="1" value="${preset?.prescribed_sets || 3}" placeholder="Подходы" />
       <input class="exercise-reps" type="text" value="${preset?.prescribed_reps || '8-10'}" placeholder="Повторы" />
       <input class="exercise-rest" type="number" min="15" value="${preset?.rest_seconds || 90}" placeholder="Отдых, сек" />
+      <button class="secondary remove-ex-btn" type="button">✕</button>
     </div>
   `;
 }
@@ -316,7 +337,10 @@ function programDayTemplate(index, preset = null) {
     <div class="item-card day-card" data-day-index="${index}">
       <div class="toolbar wrap">
         <input class="day-title" type="text" placeholder="Название дня" value="${preset?.title || `День ${index + 1}`}" />
-        <button class="secondary add-ex-btn" type="button">+ Упражнение</button>
+        <div class="toolbar wrap">
+          <button class="secondary add-ex-btn" type="button">+ Упражнение</button>
+          <button class="secondary remove-day-btn" type="button">Удалить день</button>
+        </div>
       </div>
       <div class="stack exercises-list">
         ${(preset?.exercises || []).map((ex) => exerciseTemplate(ex.exercise_id, ex)).join('')}
@@ -325,7 +349,25 @@ function programDayTemplate(index, preset = null) {
   `;
 }
 
+function bindRemoveExercise(row) {
+  const removeExBtn = row.querySelector('.remove-ex-btn');
+  if (removeExBtn) {
+    removeExBtn.onclick = function () {
+      if (!canEditProgramBuilder()) {
+        showToast('Недостаточно прав', 'error');
+        return;
+      }
+      row.remove();
+    };
+  }
+}
+
 function addDay(preset = null) {
+  if (!canEditProgramBuilder()) {
+    showToast('Недостаточно прав для редактирования программы', 'error');
+    return;
+  }
+
   const dayBuilder = $('dayBuilder');
   if (!dayBuilder) {
     log('dayBuilder not found');
@@ -340,16 +382,36 @@ function addDay(preset = null) {
   dayBuilder.appendChild(node);
 
   const addExBtn = node.querySelector('.add-ex-btn');
+  const removeDayBtn = node.querySelector('.remove-day-btn');
+
   if (addExBtn) {
     addExBtn.onclick = function () {
-      const row = document.createElement('div');
-      row.innerHTML = exerciseTemplate();
-      const child = row.firstElementChild;
-      if (child) {
-        node.querySelector('.exercises-list').appendChild(child);
+      if (!canEditProgramBuilder()) {
+        showToast('Недостаточно прав', 'error');
+        return;
+      }
+
+      const rowWrapper = document.createElement('div');
+      rowWrapper.innerHTML = exerciseTemplate();
+      const row = rowWrapper.firstElementChild;
+      if (row) {
+        bindRemoveExercise(row);
+        node.querySelector('.exercises-list').appendChild(row);
       }
     };
   }
+
+  if (removeDayBtn) {
+    removeDayBtn.onclick = function () {
+      if (!canEditProgramBuilder()) {
+        showToast('Недостаточно прав', 'error');
+        return;
+      }
+      node.remove();
+    };
+  }
+
+  node.querySelectorAll('.program-ex-row').forEach(bindRemoveExercise);
 
   if (!preset?.exercises?.length && addExBtn) {
     addExBtn.click();
@@ -359,6 +421,11 @@ function addDay(preset = null) {
 }
 
 function fillExample() {
+  if (!canEditProgramBuilder()) {
+    showToast('Недостаточно прав для заполнения программы', 'error');
+    return;
+  }
+
   const dayBuilder = $('dayBuilder');
   if (!dayBuilder) {
     log('dayBuilder not found in fillExample');
@@ -413,6 +480,11 @@ function collectProgramPayload() {
 }
 
 async function saveProgram() {
+  if (!canEditProgramBuilder()) {
+    showToast('Недостаточно прав для сохранения программы', 'error');
+    return;
+  }
+
   const payload = collectProgramPayload();
   log({ saveProgramPayload: payload });
 
@@ -477,10 +549,11 @@ async function loadClients() {
 }
 
 async function loadTodayWorkout() {
+  const container = $('todayWorkout');
+  if (!container) return;
+
   try {
-    const workout = await api(API.todayWorkout);
-    const container = $('todayWorkout');
-    if (!container) return;
+    const workout = await api(API.workoutsToday);
 
     if (!workout) {
       container.innerHTML = '<p class="muted">На сегодня тренировка не назначена</p>';
@@ -489,7 +562,14 @@ async function loadTodayWorkout() {
 
     container.innerHTML = `<p><strong>${workout.title}</strong></p>`;
   } catch (error) {
-    log(`loadTodayWorkout error: ${String(error)}`);
+    const text = String(error);
+    if (text.startsWith('404')) {
+      container.innerHTML = '<p class="muted">На сегодня тренировка не назначена</p>';
+      return;
+    }
+
+    log(`loadTodayWorkout error: ${text}`);
+    container.innerHTML = '<p class="muted">Не удалось загрузить тренировку</p>';
   }
 }
 
@@ -530,7 +610,7 @@ async function loadBilling() {
               body: JSON.stringify({ plan_code: planCode }),
             });
 
-            await api(`/api/v1/billing/mock/complete/${checkout.checkout_id}`, {
+            await api(API.billingMockComplete(checkout.checkout_id), {
               method: 'POST',
             });
 
@@ -551,7 +631,7 @@ async function loadBilling() {
 async function loadNotifications() {
   try {
     const settings = await api(API.notificationsSettings);
-    const rows = await api(API.notifications);
+    const rows = await api(API.notificationsList);
 
     if ($('notifEnabled')) $('notifEnabled').checked = Boolean(settings.workout_reminders_enabled);
     if ($('notifHour')) $('notifHour').value = settings.reminder_hour ?? 9;

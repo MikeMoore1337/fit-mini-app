@@ -22,10 +22,16 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title=settings.app_name, debug=settings.app_debug, lifespan=lifespan)
+app = FastAPI(
+    title=settings.app_name,
+    debug=settings.app_debug,
+    lifespan=lifespan,
+)
+
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(api_router)
 app.add_middleware(AuthMiddleware)
+
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)

@@ -25,5 +25,10 @@ class Settings(BaseSettings):
     frontend_base_url: str
     telegram_bot_token: str
 
+    payment_provider: str = "mock"
+    payment_public_url: str
+
+    worker_poll_seconds: int = 10
+
 
 settings = Settings()
