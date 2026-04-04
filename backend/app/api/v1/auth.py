@@ -3,6 +3,10 @@ from app.db.session import get_db
 from app.models.user import User
 from app.schemas.auth import RefreshRequest, TokenPairResponse
 from app.services.jwt import build_access_token, build_refresh_token, decode_token
+from app.services.telegram_auth import (
+    get_or_create_user_from_init_data,
+    validate_telegram_init_data,
+)
 from app.services.token_service import (
     get_refresh_token_by_jti,
     is_refresh_token_valid,
@@ -33,6 +37,24 @@ def issue_token_pair(db: Session, user: User) -> TokenPairResponse:
         access_token=access_token,
         refresh_token=refresh_token,
     )
+
+
+@router.post("/telegram/init", response_model=TokenPairResponse)
+@limiter.limit("20/minute")
+def telegram_init_auth(
+    request: Request,
+    payload: dict,
+    db: Session = Depends(get_db),
+):
+    init_data = payload.get("init_data")
+    if not init_data:
+        raise HTTPException(status_code=400, detail="init_data обязателен")
+
+    if not validate_telegram_init_data(init_data):
+        raise HTTPException(status_code=401, detail="Невалидный Telegram init data")
+
+    user = get_or_create_user_from_init_data(db, init_data)
+    return issue_token_pair(db, user)
 
 
 @router.post("/refresh", response_model=TokenPairResponse)
