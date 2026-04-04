@@ -4,13 +4,14 @@
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>FitMiniApp</title>
-    <link rel="stylesheet" href="/static/styles.css?v=5"/>
+    <link rel="stylesheet" href="/static/styles.css?v=7"/>
 </head>
 <body>
 <div class="container">
     <div class="card hero-card">
         <div>
             <h1>FitMiniApp</h1>
+            <div id="appVersion" class="muted">frontend: v7</div>
             <p class="muted">Мини-приложение с авторизацией, подписками, уведомлениями, конструктором программ и режимом тренера.</p>
         </div>
         <div id="env-badge" class="badge hidden"></div>
@@ -23,7 +24,7 @@
             <div id="authState" class="muted">Проверяем авторизацию через Telegram...</div>
 
             <div class="toolbar wrap">
-                <button id="telegramLoginBtn" class="secondary">Повторить вход через Telegram</button>
+                <button id="telegramLoginBtn" class="secondary" type="button">Повторить вход через Telegram</button>
                 <a href="/admin" id="adminLink" class="button-link hidden">Админка</a>
             </div>
         </div>
@@ -38,7 +39,7 @@
             </label>
 
             <div class="toolbar wrap">
-                <button id="devLoginBtn" class="hidden">Dev login</button>
+                <button id="devLoginBtn" class="hidden" type="button">Dev login</button>
             </div>
         </div>
     </div>
@@ -65,7 +66,7 @@
             <input id="workouts_per_week" type="number" placeholder="Тренировок в неделю"/>
         </div>
         <div class="toolbar top-gap">
-            <button id="saveProfileBtn">Сохранить профиль</button>
+            <button id="saveProfileBtn" type="button">Сохранить профиль</button>
         </div>
     </div>
 
@@ -100,9 +101,9 @@
         </div>
 
         <div class="toolbar wrap top-gap">
-            <button id="addDayBtn" class="secondary">+ День</button>
-            <button id="fillExampleBtn" class="secondary">Заполнить пример</button>
-            <button id="saveProgramBtn">Сохранить и назначить</button>
+            <button id="addDayBtn" class="secondary" type="button">+ День</button>
+            <button id="fillExampleBtn" class="secondary" type="button">Заполнить пример</button>
+            <button id="saveProgramBtn" type="button">Сохранить и назначить</button>
         </div>
 
         <div id="builderResult" class="muted top-gap"></div>
@@ -112,7 +113,7 @@
     <div class="card">
         <div class="section-head">
             <h2>Шаблоны</h2>
-            <button id="reloadTemplatesBtn" class="secondary">Обновить</button>
+            <button id="reloadTemplatesBtn" class="secondary" type="button">Обновить</button>
         </div>
         <div id="templatesList" class="stack"></div>
     </div>
@@ -120,7 +121,7 @@
     <div class="card">
         <div class="section-head">
             <h2>Клиенты</h2>
-            <button id="reloadClientsBtn" class="secondary">Обновить</button>
+            <button id="reloadClientsBtn" class="secondary" type="button">Обновить</button>
         </div>
         <div id="clientsList" class="stack"></div>
     </div>
@@ -128,7 +129,7 @@
     <div class="card">
         <div class="section-head">
             <h2>Тренировка на сегодня</h2>
-            <button id="assignProgramBtn" class="secondary">Назначить демо</button>
+            <button id="assignProgramBtn" class="secondary" type="button">Назначить демо</button>
         </div>
         <div id="todayWorkout">Загрузка...</div>
     </div>
@@ -136,7 +137,7 @@
     <div class="card">
         <div class="section-head">
             <h2>Подписка</h2>
-            <button id="reloadBillingBtn" class="secondary">Обновить</button>
+            <button id="reloadBillingBtn" class="secondary" type="button">Обновить</button>
         </div>
         <div id="subscriptionInfo" class="muted"></div>
         <div id="plansList" class="stack top-gap"></div>
@@ -145,7 +146,7 @@
     <div class="card">
         <div class="section-head">
             <h2>Уведомления</h2>
-            <button id="reloadNotificationsBtn" class="secondary">Обновить</button>
+            <button id="reloadNotificationsBtn" class="secondary" type="button">Обновить</button>
         </div>
 
         <label class="checkbox-row">
@@ -156,7 +157,7 @@
         <input id="notifHour" type="number" min="0" max="23" value="9" class="top-gap" placeholder="Час напоминания"/>
 
         <div class="toolbar top-gap">
-            <button id="saveNotifBtn">Сохранить</button>
+            <button id="saveNotifBtn" type="button">Сохранить</button>
         </div>
 
         <div id="notificationsList" class="stack top-gap"></div>
@@ -165,7 +166,7 @@
     <div id="exerciseAdminCard" class="card hidden">
         <div class="section-head">
             <h2>Каталог упражнений</h2>
-            <button id="reloadExercisesBtn" class="secondary">Обновить</button>
+            <button id="reloadExercisesBtn" class="secondary" type="button">Обновить</button>
         </div>
 
         <div class="grid grid-3">
@@ -175,7 +176,7 @@
         </div>
 
         <div class="toolbar top-gap">
-            <button id="createExerciseBtn">Добавить упражнение</button>
+            <button id="createExerciseBtn" type="button">Добавить упражнение</button>
         </div>
 
         <div id="exerciseCatalogList" class="stack top-gap"></div>
@@ -195,6 +196,6 @@
 <div id="toast" class="toast hidden"></div>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="/static/app.js?v=5"></script>
+<script src="/static/app.js?v=7"></script>
 </body>
 </html>

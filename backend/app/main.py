@@ -38,9 +38,23 @@ def health() -> dict[str, str]:
 
 @app.get("/app")
 def miniapp() -> FileResponse:
-    return FileResponse(Path("app/static/index.html"))
+    return FileResponse(
+        Path("app/static/index.html"),
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
+    )
 
 
 @app.get("/admin")
 def admin_page() -> FileResponse:
-    return FileResponse(Path("app/static/admin.html"))
+    return FileResponse(
+        Path("app/static/admin.html"),
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
+    )

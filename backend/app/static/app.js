@@ -1,3 +1,5 @@
+const APP_VERSION = 'v7';
+
 const accessTokenKey = 'fit_access_token';
 const refreshTokenKey = 'fit_refresh_token';
 
@@ -17,8 +19,6 @@ const API = {
   me: '/api/v1/me',
   meProfile: '/api/v1/me/profile',
 
-  // Если у тебя в Swagger реально двойной programs/programs - оставь так.
-  // Если уже исправил backend router, замени на /api/v1/programs/...
   exercises: '/api/v1/programs/exercises',
   saveTemplate: '/api/v1/programs/templates',
   myTemplates: '/api/v1/programs/templates/mine',
@@ -46,10 +46,17 @@ function showToast(message, type = 'success') {
   const toast = $('toast');
   if (!toast) return;
   toast.textContent = message;
-  toast.className = `toast ${type === 'error' ? 'error' : ''}`.trim();
+  toast.className = type === 'error' ? 'toast error' : 'toast';
   setTimeout(() => {
     toast.className = 'toast hidden';
   }, 2500);
+}
+
+function setVersion() {
+  const node = $('appVersion');
+  if (node) {
+    node.textContent = `frontend: ${APP_VERSION}`;
+  }
 }
 
 window.onerror = function (message, source, lineno, colno, error) {
@@ -153,6 +160,7 @@ function renderTelegramDebug() {
 
   node.textContent = JSON.stringify(
     {
+      appVersion: APP_VERSION,
       hasTelegramObject: Boolean(window.Telegram),
       hasWebAppObject: Boolean(tg),
       initDataPresent: Boolean(tg?.initData),
@@ -169,8 +177,8 @@ function renderTelegramDebug() {
 
 async function loadEnv() {
   state.publicConfig = await api(API.publicConfig);
-  const envBadge = $('env-badge');
 
+  const envBadge = $('env-badge');
   if (envBadge && state.publicConfig.app_env === 'dev') {
     envBadge.textContent = 'dev';
     envBadge.classList.remove('hidden');
@@ -273,14 +281,14 @@ function renderExerciseCatalog() {
     state.exercises
       .map(
         (ex) => `
-        <div class="item-card">
-          <strong>${ex.title}</strong>
-          <div class="exercise-meta">
-            <span class="metric-pill">${ex.primary_muscle}</span>
-            <span class="metric-pill">${ex.equipment}</span>
+          <div class="item-card">
+            <strong>${ex.title}</strong>
+            <div class="exercise-meta">
+              <span class="metric-pill">${ex.primary_muscle}</span>
+              <span class="metric-pill">${ex.equipment}</span>
+            </div>
           </div>
-        </div>
-      `
+        `
       )
       .join('') || '<p class="muted">Упражнений пока нет</p>';
 }
@@ -288,7 +296,8 @@ function renderExerciseCatalog() {
 function exerciseTemplate(defaultExerciseId = '', preset = null) {
   const options = state.exercises
     .map(
-      (ex) => `<option value="${ex.id}" ${String(ex.id) === String(defaultExerciseId) ? 'selected' : ''}>${ex.title}</option>`
+      (ex) =>
+        `<option value="${ex.id}" ${String(ex.id) === String(defaultExerciseId) ? 'selected' : ''}>${ex.title}</option>`
     )
     .join('');
 
@@ -318,7 +327,10 @@ function programDayTemplate(index, preset = null) {
 
 function addDay(preset = null) {
   const dayBuilder = $('dayBuilder');
-  if (!dayBuilder) return;
+  if (!dayBuilder) {
+    log('dayBuilder not found');
+    return;
+  }
 
   const idx = dayBuilder.querySelectorAll('.day-card').length;
   const wrapper = document.createElement('div');
@@ -328,13 +340,18 @@ function addDay(preset = null) {
   dayBuilder.appendChild(node);
 
   const addExBtn = node.querySelector('.add-ex-btn');
-  addExBtn.onclick = () => {
-    const row = document.createElement('div');
-    row.innerHTML = exerciseTemplate();
-    node.querySelector('.exercises-list').appendChild(row.firstElementChild);
-  };
+  if (addExBtn) {
+    addExBtn.onclick = function () {
+      const row = document.createElement('div');
+      row.innerHTML = exerciseTemplate();
+      const child = row.firstElementChild;
+      if (child) {
+        node.querySelector('.exercises-list').appendChild(child);
+      }
+    };
+  }
 
-  if (!preset?.exercises?.length) {
+  if (!preset?.exercises?.length && addExBtn) {
     addExBtn.click();
   }
 
@@ -343,7 +360,10 @@ function addDay(preset = null) {
 
 function fillExample() {
   const dayBuilder = $('dayBuilder');
-  if (!dayBuilder) return;
+  if (!dayBuilder) {
+    log('dayBuilder not found in fillExample');
+    return;
+  }
 
   dayBuilder.innerHTML = '';
 
@@ -363,8 +383,8 @@ function fillExample() {
     ],
   });
 
-  showToast('Пример заполнен');
   log('Заполнен пример программы');
+  showToast('Пример заполнен');
 }
 
 function collectProgramPayload() {
@@ -411,7 +431,13 @@ async function saveProgram() {
 }
 
 async function loadTemplates() {
-  state.templates = await api(API.myTemplates);
+  try {
+    state.templates = await api(API.myTemplates);
+  } catch (error) {
+    log(`loadTemplates error: ${String(error)}`);
+    return;
+  }
+
   const list = $('templatesList');
   if (!list) return;
 
@@ -429,21 +455,25 @@ async function loadTemplates() {
 }
 
 async function loadClients() {
-  const rows = await api(API.clients);
-  const list = $('clientsList');
-  if (!list) return;
+  try {
+    const rows = await api(API.clients);
+    const list = $('clientsList');
+    if (!list) return;
 
-  list.innerHTML =
-    rows
-      .map(
-        (c) => `
-          <div class="item-card">
-            <strong>${c.full_name || c.telegram_user_id}</strong><br>
-            <span class="muted">цель=${c.goal || '-'} | уровень=${c.level || '-'}</span>
-          </div>
-        `
-      )
-      .join('') || '<p class="muted">Клиентов пока нет</p>';
+    list.innerHTML =
+      rows
+        .map(
+          (c) => `
+            <div class="item-card">
+              <strong>${c.full_name || c.telegram_user_id}</strong><br>
+              <span class="muted">цель=${c.goal || '-'} | уровень=${c.level || '-'}</span>
+            </div>
+          `
+        )
+        .join('') || '<p class="muted">Клиентов пока нет</p>';
+  } catch (error) {
+    log(`loadClients error: ${String(error)}`);
+  }
 }
 
 async function loadTodayWorkout() {
@@ -459,26 +489,140 @@ async function loadTodayWorkout() {
 
     container.innerHTML = `<p><strong>${workout.title}</strong></p>`;
   } catch (error) {
-    log(`loadTodayWorkout: ${String(error)}`);
+    log(`loadTodayWorkout error: ${String(error)}`);
   }
 }
 
 async function loadBilling() {
   try {
-    await api(API.billingPlans);
-    await api(API.billingSubscription);
+    const plans = await api(API.billingPlans);
+    const sub = await api(API.billingSubscription);
+
+    const subNode = $('subscriptionInfo');
+    if (subNode) {
+      subNode.textContent = sub
+        ? `Активна: ${sub.plan_title} до ${new Date(sub.ends_at).toLocaleString()}`
+        : 'Активной подписки нет';
+    }
+
+    const plansList = $('plansList');
+    if (plansList) {
+      plansList.innerHTML = (plans || [])
+        .map(
+          (plan) => `
+            <div class="item-card">
+              <strong>${plan.title}</strong><br>
+              <span class="muted">${plan.price} ${plan.currency} / ${plan.period_days} дн.</span>
+              <div class="toolbar wrap top-gap">
+                <button data-plan="${plan.code}" class="buy-plan-btn" type="button">Купить</button>
+              </div>
+            </div>
+          `
+        )
+        .join('') || '<p class="muted">Тарифов пока нет</p>';
+
+      document.querySelectorAll('.buy-plan-btn').forEach((btn) => {
+        btn.onclick = async function () {
+          try {
+            const planCode = this.dataset.plan;
+            const checkout = await api(API.billingCheckout, {
+              method: 'POST',
+              body: JSON.stringify({ plan_code: planCode }),
+            });
+
+            await api(`/api/v1/billing/mock/complete/${checkout.checkout_id}`, {
+              method: 'POST',
+            });
+
+            showToast('Подписка активирована');
+            await loadBilling();
+          } catch (error) {
+            log(`buyPlan error: ${String(error)}`);
+            showToast('Не удалось активировать подписку', 'error');
+          }
+        };
+      });
+    }
   } catch (error) {
-    log(`loadBilling: ${String(error)}`);
+    log(`loadBilling error: ${String(error)}`);
   }
 }
 
 async function loadNotifications() {
   try {
-    await api(API.notificationsSettings);
-    await api(API.notifications);
+    const settings = await api(API.notificationsSettings);
+    const rows = await api(API.notifications);
+
+    if ($('notifEnabled')) $('notifEnabled').checked = Boolean(settings.workout_reminders_enabled);
+    if ($('notifHour')) $('notifHour').value = settings.reminder_hour ?? 9;
+
+    const list = $('notificationsList');
+    if (list) {
+      list.innerHTML =
+        (rows || [])
+          .map(
+            (n) => `
+              <div class="item-card">
+                <strong>${n.title}</strong><br>
+                <span class="muted">${new Date(n.scheduled_for).toLocaleString()} - ${n.status}</span>
+                <div>${n.body}</div>
+              </div>
+            `
+          )
+          .join('') || '<p class="muted">Нет уведомлений</p>';
+    }
   } catch (error) {
-    log(`loadNotifications: ${String(error)}`);
+    log(`loadNotifications error: ${String(error)}`);
   }
+}
+
+async function saveNotificationSettings() {
+  await api(API.notificationsSettings, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      workout_reminders_enabled: Boolean($('notifEnabled')?.checked),
+      reminder_hour: Number($('notifHour')?.value || '9'),
+    }),
+  });
+
+  showToast('Настройки уведомлений сохранены');
+  await loadNotifications();
+}
+
+async function createExercise() {
+  if (!isCoachOrAdmin()) {
+    showToast('Недостаточно прав', 'error');
+    return;
+  }
+
+  const payload = {
+    title: $('newExerciseTitle')?.value?.trim() || '',
+    primary_muscle: $('newExerciseMuscle')?.value?.trim() || '',
+    equipment: $('newExerciseEquipment')?.value?.trim() || '',
+  };
+
+  if (!payload.title || !payload.primary_muscle || !payload.equipment) {
+    showToast('Заполни все поля упражнения', 'error');
+    return;
+  }
+
+  await api(API.exercises, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+  if ($('newExerciseTitle')) $('newExerciseTitle').value = '';
+  if ($('newExerciseMuscle')) $('newExerciseMuscle').value = '';
+  if ($('newExerciseEquipment')) $('newExerciseEquipment').value = '';
+
+  showToast('Упражнение добавлено');
+  await loadExercises();
+}
+
+async function assignDemoProgram() {
+  await api(API.assignDemo, { method: 'POST' });
+  showToast('Демо-программа назначена');
+  await loadTodayWorkout();
 }
 
 async function bootstrap() {
@@ -496,99 +640,168 @@ async function bootstrap() {
 }
 
 function bindUI() {
+  log('bindUI start');
+
   if ($('telegramLoginBtn')) {
-    $('telegramLoginBtn').onclick = async () => {
+    $('telegramLoginBtn').onclick = async function () {
+      log('click telegramLoginBtn');
       try {
         await telegramLogin();
       } catch (error) {
-        log(`telegramLogin button: ${String(error)}`);
+        log(`telegramLogin button error: ${String(error)}`);
       }
     };
   }
 
   if ($('saveProfileBtn')) {
-    $('saveProfileBtn').onclick = async () => {
+    $('saveProfileBtn').onclick = async function () {
+      log('click saveProfileBtn');
       try {
         await saveProfile();
       } catch (error) {
-        log(`saveProfile: ${String(error)}`);
+        log(`saveProfile error: ${String(error)}`);
       }
     };
   }
 
   if ($('builder_mode')) {
-    $('builder_mode').addEventListener('change', toggleCoachUI);
+    $('builder_mode').addEventListener('change', function () {
+      log('change builder_mode');
+      toggleCoachUI();
+    });
   }
 
   if ($('addDayBtn')) {
-    $('addDayBtn').onclick = () => addDay();
+    $('addDayBtn').onclick = function () {
+      log('click addDayBtn');
+      addDay();
+    };
   }
 
   if ($('fillExampleBtn')) {
-    $('fillExampleBtn').onclick = () => fillExample();
+    $('fillExampleBtn').onclick = function () {
+      log('click fillExampleBtn');
+      fillExample();
+    };
   }
 
   if ($('saveProgramBtn')) {
-    $('saveProgramBtn').onclick = async () => {
+    $('saveProgramBtn').onclick = async function () {
+      log('click saveProgramBtn');
       try {
         await saveProgram();
       } catch (error) {
-        log(`saveProgramBtn: ${String(error)}`);
+        log(`saveProgramBtn error: ${String(error)}`);
         showToast('Не удалось сохранить программу', 'error');
       }
     };
   }
 
   if ($('reloadTemplatesBtn')) {
-    $('reloadTemplatesBtn').onclick = async () => {
-      try {
-        await loadTemplates();
-      } catch (error) {
-        log(`reloadTemplates: ${String(error)}`);
-      }
+    $('reloadTemplatesBtn').onclick = async function () {
+      log('click reloadTemplatesBtn');
+      await loadTemplates();
     };
   }
 
   if ($('reloadClientsBtn')) {
-    $('reloadClientsBtn').onclick = async () => {
-      try {
-        await loadClients();
-      } catch (error) {
-        log(`reloadClients: ${String(error)}`);
-      }
+    $('reloadClientsBtn').onclick = async function () {
+      log('click reloadClientsBtn');
+      await loadClients();
     };
   }
 
   if ($('reloadExercisesBtn')) {
-    $('reloadExercisesBtn').onclick = async () => {
-      try {
-        await loadExercises();
-      } catch (error) {
-        log(`reloadExercises: ${String(error)}`);
-      }
+    $('reloadExercisesBtn').onclick = async function () {
+      log('click reloadExercisesBtn');
+      await loadExercises();
     };
   }
 
   if ($('assignProgramBtn')) {
-    $('assignProgramBtn').onclick = async () => {
+    $('assignProgramBtn').onclick = async function () {
+      log('click assignProgramBtn');
       try {
-        await api(API.assignDemo, { method: 'POST' });
-        await loadTodayWorkout();
+        await assignDemoProgram();
       } catch (error) {
-        log(`assignProgramBtn: ${String(error)}`);
+        log(`assignProgramBtn error: ${String(error)}`);
       }
     };
   }
+
+  if ($('reloadBillingBtn')) {
+    $('reloadBillingBtn').onclick = async function () {
+      log('click reloadBillingBtn');
+      await loadBilling();
+    };
+  }
+
+  if ($('reloadNotificationsBtn')) {
+    $('reloadNotificationsBtn').onclick = async function () {
+      log('click reloadNotificationsBtn');
+      await loadNotifications();
+    };
+  }
+
+  if ($('saveNotifBtn')) {
+    $('saveNotifBtn').onclick = async function () {
+      log('click saveNotifBtn');
+      try {
+        await saveNotificationSettings();
+      } catch (error) {
+        log(`saveNotifBtn error: ${String(error)}`);
+      }
+    };
+  }
+
+  if ($('createExerciseBtn')) {
+    $('createExerciseBtn').onclick = async function () {
+      log('click createExerciseBtn');
+      try {
+        await createExercise();
+      } catch (error) {
+        log(`createExerciseBtn error: ${String(error)}`);
+      }
+    };
+  }
+
+  if ($('devLoginBtn')) {
+    $('devLoginBtn').onclick = async function () {
+      log('click devLoginBtn');
+      try {
+        const body = {
+          telegram_user_id: Number($('debugUserId')?.value || '1001'),
+          full_name: $('debugUserName')?.value || null,
+          is_coach: Boolean($('debugIsCoach')?.checked),
+        };
+
+        const data = await api(API.devLogin, {
+          method: 'POST',
+          body: JSON.stringify(body),
+        });
+
+        localStorage.setItem(accessTokenKey, data.access_token);
+        localStorage.setItem(refreshTokenKey, data.refresh_token);
+        setAuthState(`Авторизован как ${body.telegram_user_id}`);
+        await bootstrap();
+      } catch (error) {
+        log(`devLoginBtn error: ${String(error)}`);
+      }
+    };
+  }
+
+  log('bindUI done');
 }
 
 async function init() {
+  setVersion();
   bindUI();
   renderTelegramDebug();
 
   try {
     await loadEnv();
   } catch (error) {
-    log(`loadEnv: ${String(error)}`);
+    log(`loadEnv error: ${String(error)}`);
   }
 
   try {
@@ -598,22 +811,25 @@ async function init() {
       tg.expand();
     }
   } catch (error) {
-    log(`Telegram ready/expand: ${String(error)}`);
+    log(`Telegram ready/expand error: ${String(error)}`);
   }
 
   const token = localStorage.getItem(accessTokenKey);
 
   if (token) {
+    log('found saved token, bootstrap start');
     try {
       await bootstrap();
+      log('bootstrap by saved token success');
       return;
     } catch (error) {
-      log(`bootstrap by saved token: ${String(error)}`);
+      log(`bootstrap by saved token error: ${String(error)}`);
       localStorage.removeItem(accessTokenKey);
       localStorage.removeItem(refreshTokenKey);
     }
   }
 
+  log('no valid saved token, tryTelegramAutoLogin');
   await tryTelegramAutoLogin();
 }
 
