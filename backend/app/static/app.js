@@ -1,153 +1,620 @@
-// ===== INIT =====
+const accessTokenKey = 'fit_access_token';
+const refreshTokenKey = 'fit_refresh_token';
 
-const tg = window.Telegram?.WebApp;
+const state = {
+  me: null,
+  exercises: [],
+  templates: [],
+  todayWorkout: null,
+  plans: [],
+  publicConfig: null,
+};
 
-function log(...args) {
-    console.log("[APP]", ...args);
+const API = {
+  publicConfig: '/api/v1/public/config',
+  telegramInit: '/api/v1/auth/telegram/init',
+  devLogin: '/api/v1/auth/dev-login',
+  me: '/api/v1/me',
+  meProfile: '/api/v1/me/profile',
+
+  // Если у тебя в Swagger реально двойной programs/programs - оставь так.
+  // Если уже исправил backend router, замени на /api/v1/programs/...
+  exercises: '/api/v1/programs/exercises',
+  saveTemplate: '/api/v1/programs/templates',
+  myTemplates: '/api/v1/programs/templates/mine',
+  clients: '/api/v1/programs/clients',
+  assignDemo: '/api/v1/programs/assign-demo',
+
+  todayWorkout: '/api/v1/workouts/today',
+  billingPlans: '/api/v1/billing/plans',
+  billingSubscription: '/api/v1/billing/subscription',
+  billingCheckout: '/api/v1/billing/checkout',
+  notificationsSettings: '/api/v1/notifications/settings',
+  notifications: '/api/v1/notifications',
+};
+
+const $ = (id) => document.getElementById(id);
+
+function log(msg) {
+  const node = $('log');
+  if (!node) return;
+  const text = typeof msg === 'string' ? msg : JSON.stringify(msg, null, 2);
+  node.textContent = `${new Date().toLocaleTimeString()} - ${text}\n${node.textContent}`;
 }
 
-function showError(text) {
-    alert(text);
+function showToast(message, type = 'success') {
+  const toast = $('toast');
+  if (!toast) return;
+  toast.textContent = message;
+  toast.className = `toast ${type === 'error' ? 'error' : ''}`.trim();
+  setTimeout(() => {
+    toast.className = 'toast hidden';
+  }, 2500);
 }
 
-// ===== DEBUG =====
+window.onerror = function (message, source, lineno, colno, error) {
+  log({
+    type: 'window.onerror',
+    message,
+    source,
+    lineno,
+    colno,
+    stack: error?.stack || null,
+  });
+};
 
-log("Telegram object:", tg);
-log("initData:", tg?.initData);
-log("initDataUnsafe:", tg?.initDataUnsafe);
+window.onunhandledrejection = function (event) {
+  log({
+    type: 'unhandledrejection',
+    reason: String(event.reason),
+    stack: event.reason?.stack || null,
+  });
+};
 
-// ===== STATE =====
+function authHeaders(extra = {}) {
+  const token = localStorage.getItem(accessTokenKey);
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...extra,
+  };
+}
 
-let accessToken = null;
+async function api(path, options = {}) {
+  const response = await fetch(path, {
+    ...options,
+    headers: authHeaders(options.headers || {}),
+  });
 
-// ===== API =====
+  const text = await response.text();
 
-async function api(url, options = {}) {
-    const headers = {
-        "Content-Type": "application/json",
-        ...(options.headers || {}),
-    };
-
-    if (accessToken) {
-        headers["Authorization"] = `Bearer ${accessToken}`;
-    }
-
-    const res = await fetch(url, {
-        ...options,
-        headers,
+  if (!response.ok) {
+    log({
+      apiError: true,
+      path,
+      status: response.status,
+      response: text,
     });
+    throw new Error(`${response.status} ${text}`);
+  }
 
-    if (!res.ok) {
-        const text = await res.text();
-        log("API ERROR:", res.status, text);
-        throw new Error(`API error ${res.status}`);
-    }
+  if (response.status === 204) {
+    return null;
+  }
 
-    return res.json();
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
 }
 
-// ===== AUTH =====
-
-async function loginWithTelegram() {
-    if (!tg || !tg.initData) {
-        showError("Открой Mini App через Telegram");
-        return;
-    }
-
-    try {
-        log("Sending initData to backend...");
-
-        const data = await api("/api/v1/auth/telegram/init", {
-            method: "POST",
-            body: JSON.stringify({
-                init_data: tg.initData,
-            }),
-        });
-
-        log("Auth response:", data);
-
-        accessToken = data.access_token;
-
-        document.getElementById("authState").innerText = "Авторизован ✅";
-
-        await loadProfile();
-
-    } catch (e) {
-        console.error(e);
-        showError("Ошибка авторизации");
-    }
+function setAuthState(text) {
+  const node = $('authState');
+  if (node) node.textContent = text;
 }
 
-// ===== PROFILE =====
-
-async function loadProfile() {
-    try {
-        const me = await api("/api/v1/me");
-        log("Profile:", me);
-
-        document.getElementById("full_name").value = me.full_name || "";
-        document.getElementById("goal").value = me.goal || "";
-        document.getElementById("level").value = me.level || "";
-        document.getElementById("height_cm").value = me.height_cm || "";
-        document.getElementById("weight_kg").value = me.weight_kg || "";
-        document.getElementById("workouts_per_week").value = me.workouts_per_week || "";
-
-    } catch (e) {
-        log("No profile yet");
-    }
+function isCoachOrAdmin() {
+  return Boolean(state.me?.is_coach || state.me?.is_admin);
 }
 
-// ===== SAVE PROFILE =====
+function toggleCoachUI() {
+  const card = $('exerciseAdminCard');
+  if (card) card.classList.toggle('hidden', !isCoachOrAdmin());
+
+  const adminLink = $('adminLink');
+  if (adminLink) adminLink.classList.toggle('hidden', !isCoachOrAdmin());
+
+  const coachFields = $('coachFields');
+  const builderMode = $('builder_mode');
+
+  if (coachFields && builderMode) {
+    coachFields.classList.toggle(
+      'hidden',
+      builderMode.value !== 'coach' || !isCoachOrAdmin()
+    );
+  }
+}
+
+function toggleDevAuthUI() {
+  const devBlock = $('devAuthBlock');
+  const devBtn = $('devLoginBtn');
+  const enabled = Boolean(state.publicConfig?.enable_dev_auth);
+
+  if (devBlock) devBlock.classList.toggle('hidden', !enabled);
+  if (devBtn) devBtn.classList.toggle('hidden', !enabled);
+}
+
+function renderTelegramDebug() {
+  const node = $('tgDebug');
+  if (!node) return;
+
+  const tg = window.Telegram?.WebApp;
+
+  node.textContent = JSON.stringify(
+    {
+      hasTelegramObject: Boolean(window.Telegram),
+      hasWebAppObject: Boolean(tg),
+      initDataPresent: Boolean(tg?.initData),
+      initDataLength: tg?.initData?.length || 0,
+      initDataUnsafePresent: Boolean(tg?.initDataUnsafe),
+      platform: tg?.platform || null,
+      version: tg?.version || null,
+      isExpanded: tg?.isExpanded ?? null,
+    },
+    null,
+    2
+  );
+}
+
+async function loadEnv() {
+  state.publicConfig = await api(API.publicConfig);
+  const envBadge = $('env-badge');
+
+  if (envBadge && state.publicConfig.app_env === 'dev') {
+    envBadge.textContent = 'dev';
+    envBadge.classList.remove('hidden');
+  }
+
+  toggleDevAuthUI();
+}
+
+async function telegramLogin() {
+  const tg = window.Telegram?.WebApp;
+  const initData = tg?.initData;
+
+  log({
+    telegramLogin: true,
+    hasTelegram: Boolean(window.Telegram),
+    hasWebApp: Boolean(tg),
+    initDataPresent: Boolean(initData),
+    initDataLength: initData?.length || 0,
+  });
+
+  if (!initData) {
+    setAuthState('Нет данных Telegram');
+    showToast('Telegram не передал initData', 'error');
+    return false;
+  }
+
+  const data = await api(API.telegramInit, {
+    method: 'POST',
+    body: JSON.stringify({ init_data: initData }),
+  });
+
+  localStorage.setItem(accessTokenKey, data.access_token);
+  localStorage.setItem(refreshTokenKey, data.refresh_token);
+
+  setAuthState('Вход через Telegram выполнен');
+  showToast('Вход через Telegram выполнен');
+  await bootstrap();
+  return true;
+}
+
+async function tryTelegramAutoLogin() {
+  try {
+    return await telegramLogin();
+  } catch (error) {
+    log(`Ошибка Telegram auth: ${String(error)}`);
+    setAuthState('Не удалось войти через Telegram');
+    showToast('Не удалось войти через Telegram', 'error');
+    return false;
+  }
+}
+
+async function loadMe() {
+  state.me = await api(API.me);
+
+  const profile = state.me.profile || {};
+
+  if ($('full_name')) $('full_name').value = profile.full_name || '';
+  if ($('goal')) $('goal').value = profile.goal || '';
+  if ($('level')) $('level').value = profile.level || '';
+  if ($('height_cm')) $('height_cm').value = profile.height_cm || '';
+  if ($('weight_kg')) $('weight_kg').value = profile.weight_kg || '';
+  if ($('workouts_per_week')) $('workouts_per_week').value = profile.workouts_per_week || '';
+
+  setAuthState(
+    `Пользователь: ${profile.full_name || state.me.telegram_user_id} | тренер=${state.me.is_coach} | админ=${state.me.is_admin}`
+  );
+
+  toggleCoachUI();
+}
 
 async function saveProfile() {
-    try {
-        const payload = {
-            full_name: document.getElementById("full_name").value,
-            goal: document.getElementById("goal").value,
-            level: document.getElementById("level").value,
-            height_cm: Number(document.getElementById("height_cm").value),
-            weight_kg: Number(document.getElementById("weight_kg").value),
-            workouts_per_week: Number(document.getElementById("workouts_per_week").value),
-        };
+  const payload = {
+    full_name: $('full_name')?.value || null,
+    goal: $('goal')?.value || null,
+    level: $('level')?.value || null,
+    height_cm: $('height_cm')?.value ? Number($('height_cm').value) : null,
+    weight_kg: $('weight_kg')?.value ? Number($('weight_kg').value) : null,
+    workouts_per_week: $('workouts_per_week')?.value ? Number($('workouts_per_week').value) : null,
+  };
 
-        await api("/api/v1/me/profile", {
-            method: "PATCH",
-            body: JSON.stringify(payload),
-        });
+  await api(API.meProfile, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
 
-        alert("Профиль сохранён");
-
-    } catch (e) {
-        console.error(e);
-        alert("Ошибка сохранения профиля");
-    }
+  showToast('Профиль сохранён');
+  await loadMe();
 }
 
-// ===== INIT UI =====
+async function loadExercises() {
+  state.exercises = await api(API.exercises);
+  renderExerciseCatalog();
+}
 
-document.getElementById("telegramLoginBtn")?.addEventListener("click", loginWithTelegram);
-document.getElementById("saveProfileBtn")?.addEventListener("click", saveProfile);
+function renderExerciseCatalog() {
+  const list = $('exerciseCatalogList');
+  if (!list) return;
 
-// ===== AUTO LOGIN =====
+  list.innerHTML =
+    state.exercises
+      .map(
+        (ex) => `
+        <div class="item-card">
+          <strong>${ex.title}</strong>
+          <div class="exercise-meta">
+            <span class="metric-pill">${ex.primary_muscle}</span>
+            <span class="metric-pill">${ex.equipment}</span>
+          </div>
+        </div>
+      `
+      )
+      .join('') || '<p class="muted">Упражнений пока нет</p>';
+}
 
-(async () => {
-    if (!tg) {
-        log("NOT in Telegram WebApp");
-        document.getElementById("authState").innerText = "Открой через Telegram";
-        return;
+function exerciseTemplate(defaultExerciseId = '', preset = null) {
+  const options = state.exercises
+    .map(
+      (ex) => `<option value="${ex.id}" ${String(ex.id) === String(defaultExerciseId) ? 'selected' : ''}>${ex.title}</option>`
+    )
+    .join('');
+
+  return `
+    <div class="grid item-card program-ex-row" style="grid-template-columns:2fr 1fr 1fr 1fr;">
+      <select class="exercise-id">${options}</select>
+      <input class="exercise-sets" type="number" min="1" value="${preset?.prescribed_sets || 3}" placeholder="Подходы" />
+      <input class="exercise-reps" type="text" value="${preset?.prescribed_reps || '8-10'}" placeholder="Повторы" />
+      <input class="exercise-rest" type="number" min="15" value="${preset?.rest_seconds || 90}" placeholder="Отдых, сек" />
+    </div>
+  `;
+}
+
+function programDayTemplate(index, preset = null) {
+  return `
+    <div class="item-card day-card" data-day-index="${index}">
+      <div class="toolbar wrap">
+        <input class="day-title" type="text" placeholder="Название дня" value="${preset?.title || `День ${index + 1}`}" />
+        <button class="secondary add-ex-btn" type="button">+ Упражнение</button>
+      </div>
+      <div class="stack exercises-list">
+        ${(preset?.exercises || []).map((ex) => exerciseTemplate(ex.exercise_id, ex)).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function addDay(preset = null) {
+  const dayBuilder = $('dayBuilder');
+  if (!dayBuilder) return;
+
+  const idx = dayBuilder.querySelectorAll('.day-card').length;
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = programDayTemplate(idx, preset);
+
+  const node = wrapper.firstElementChild;
+  dayBuilder.appendChild(node);
+
+  const addExBtn = node.querySelector('.add-ex-btn');
+  addExBtn.onclick = () => {
+    const row = document.createElement('div');
+    row.innerHTML = exerciseTemplate();
+    node.querySelector('.exercises-list').appendChild(row.firstElementChild);
+  };
+
+  if (!preset?.exercises?.length) {
+    addExBtn.click();
+  }
+
+  log(`Добавлен день ${idx + 1}`);
+}
+
+function fillExample() {
+  const dayBuilder = $('dayBuilder');
+  if (!dayBuilder) return;
+
+  dayBuilder.innerHTML = '';
+
+  addDay({
+    title: 'Верх тела A',
+    exercises: [
+      { exercise_id: state.exercises[0]?.id || '', prescribed_sets: 4, prescribed_reps: '6-8', rest_seconds: 120 },
+      { exercise_id: state.exercises[1]?.id || '', prescribed_sets: 4, prescribed_reps: '8-10', rest_seconds: 120 },
+    ],
+  });
+
+  addDay({
+    title: 'Низ тела A',
+    exercises: [
+      { exercise_id: state.exercises[2]?.id || '', prescribed_sets: 4, prescribed_reps: '6-8', rest_seconds: 150 },
+      { exercise_id: state.exercises[3]?.id || '', prescribed_sets: 3, prescribed_reps: '8-10', rest_seconds: 120 },
+    ],
+  });
+
+  showToast('Пример заполнен');
+  log('Заполнен пример программы');
+}
+
+function collectProgramPayload() {
+  const days = [...document.querySelectorAll('.day-card')].map((day) => ({
+    title: day.querySelector('.day-title')?.value || 'День',
+    exercises: [...day.querySelectorAll('.program-ex-row')].map((row) => ({
+      exercise_id: Number(row.querySelector('.exercise-id')?.value),
+      prescribed_sets: Number(row.querySelector('.exercise-sets')?.value),
+      prescribed_reps: row.querySelector('.exercise-reps')?.value,
+      rest_seconds: Number(row.querySelector('.exercise-rest')?.value),
+    })),
+  }));
+
+  return {
+    title: $('program_title')?.value || 'Моя программа',
+    goal: $('program_goal')?.value,
+    level: $('program_level')?.value,
+    mode: $('builder_mode')?.value,
+    target_telegram_user_id: $('target_telegram_user_id')?.value
+      ? Number($('target_telegram_user_id').value)
+      : null,
+    target_full_name: $('target_full_name')?.value || null,
+    days,
+    assign_after_create: true,
+  };
+}
+
+async function saveProgram() {
+  const payload = collectProgramPayload();
+  log({ saveProgramPayload: payload });
+
+  const data = await api(API.saveTemplate, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+  if ($('builderResult')) {
+    $('builderResult').textContent = `Сохранено: ${data.template.title}, тренировок создано: ${data.workouts_created}`;
+  }
+
+  showToast('Программа сохранена');
+  await loadTemplates();
+  await loadClients();
+}
+
+async function loadTemplates() {
+  state.templates = await api(API.myTemplates);
+  const list = $('templatesList');
+  if (!list) return;
+
+  list.innerHTML =
+    state.templates
+      .map(
+        (t) => `
+          <div class="item-card">
+            <strong>${t.title}</strong><br>
+            <span class="muted">${t.goal} - ${t.level}</span>
+          </div>
+        `
+      )
+      .join('') || '<p class="muted">Шаблонов пока нет</p>';
+}
+
+async function loadClients() {
+  const rows = await api(API.clients);
+  const list = $('clientsList');
+  if (!list) return;
+
+  list.innerHTML =
+    rows
+      .map(
+        (c) => `
+          <div class="item-card">
+            <strong>${c.full_name || c.telegram_user_id}</strong><br>
+            <span class="muted">цель=${c.goal || '-'} | уровень=${c.level || '-'}</span>
+          </div>
+        `
+      )
+      .join('') || '<p class="muted">Клиентов пока нет</p>';
+}
+
+async function loadTodayWorkout() {
+  try {
+    const workout = await api(API.todayWorkout);
+    const container = $('todayWorkout');
+    if (!container) return;
+
+    if (!workout) {
+      container.innerHTML = '<p class="muted">На сегодня тренировка не назначена</p>';
+      return;
     }
 
-    tg.ready();
-    tg.expand();
+    container.innerHTML = `<p><strong>${workout.title}</strong></p>`;
+  } catch (error) {
+    log(`loadTodayWorkout: ${String(error)}`);
+  }
+}
 
-    if (!tg.initData) {
-        log("initData is EMPTY");
-        document.getElementById("authState").innerText = "Нет данных Telegram";
-        return;
+async function loadBilling() {
+  try {
+    await api(API.billingPlans);
+    await api(API.billingSubscription);
+  } catch (error) {
+    log(`loadBilling: ${String(error)}`);
+  }
+}
+
+async function loadNotifications() {
+  try {
+    await api(API.notificationsSettings);
+    await api(API.notifications);
+  } catch (error) {
+    log(`loadNotifications: ${String(error)}`);
+  }
+}
+
+async function bootstrap() {
+  await loadMe();
+  await loadExercises();
+  await loadTemplates();
+  await loadClients();
+  await loadTodayWorkout();
+  await loadBilling();
+  await loadNotifications();
+
+  if (!document.querySelector('.day-card')) {
+    fillExample();
+  }
+}
+
+function bindUI() {
+  if ($('telegramLoginBtn')) {
+    $('telegramLoginBtn').onclick = async () => {
+      try {
+        await telegramLogin();
+      } catch (error) {
+        log(`telegramLogin button: ${String(error)}`);
+      }
+    };
+  }
+
+  if ($('saveProfileBtn')) {
+    $('saveProfileBtn').onclick = async () => {
+      try {
+        await saveProfile();
+      } catch (error) {
+        log(`saveProfile: ${String(error)}`);
+      }
+    };
+  }
+
+  if ($('builder_mode')) {
+    $('builder_mode').addEventListener('change', toggleCoachUI);
+  }
+
+  if ($('addDayBtn')) {
+    $('addDayBtn').onclick = () => addDay();
+  }
+
+  if ($('fillExampleBtn')) {
+    $('fillExampleBtn').onclick = () => fillExample();
+  }
+
+  if ($('saveProgramBtn')) {
+    $('saveProgramBtn').onclick = async () => {
+      try {
+        await saveProgram();
+      } catch (error) {
+        log(`saveProgramBtn: ${String(error)}`);
+        showToast('Не удалось сохранить программу', 'error');
+      }
+    };
+  }
+
+  if ($('reloadTemplatesBtn')) {
+    $('reloadTemplatesBtn').onclick = async () => {
+      try {
+        await loadTemplates();
+      } catch (error) {
+        log(`reloadTemplates: ${String(error)}`);
+      }
+    };
+  }
+
+  if ($('reloadClientsBtn')) {
+    $('reloadClientsBtn').onclick = async () => {
+      try {
+        await loadClients();
+      } catch (error) {
+        log(`reloadClients: ${String(error)}`);
+      }
+    };
+  }
+
+  if ($('reloadExercisesBtn')) {
+    $('reloadExercisesBtn').onclick = async () => {
+      try {
+        await loadExercises();
+      } catch (error) {
+        log(`reloadExercises: ${String(error)}`);
+      }
+    };
+  }
+
+  if ($('assignProgramBtn')) {
+    $('assignProgramBtn').onclick = async () => {
+      try {
+        await api(API.assignDemo, { method: 'POST' });
+        await loadTodayWorkout();
+      } catch (error) {
+        log(`assignProgramBtn: ${String(error)}`);
+      }
+    };
+  }
+}
+
+async function init() {
+  bindUI();
+  renderTelegramDebug();
+
+  try {
+    await loadEnv();
+  } catch (error) {
+    log(`loadEnv: ${String(error)}`);
+  }
+
+  try {
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
     }
+  } catch (error) {
+    log(`Telegram ready/expand: ${String(error)}`);
+  }
 
-    log("Auto login...");
-    await loginWithTelegram();
-})();
+  const token = localStorage.getItem(accessTokenKey);
 
-alert(window.Telegram?.WebApp?.initData)
+  if (token) {
+    try {
+      await bootstrap();
+      return;
+    } catch (error) {
+      log(`bootstrap by saved token: ${String(error)}`);
+      localStorage.removeItem(accessTokenKey);
+      localStorage.removeItem(refreshTokenKey);
+    }
+  }
+
+  await tryTelegramAutoLogin();
+}
+
+document.addEventListener('DOMContentLoaded', init);
