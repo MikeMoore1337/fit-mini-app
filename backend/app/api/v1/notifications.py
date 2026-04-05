@@ -1,3 +1,6 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
 from app.api.dependencies.auth import require_user
 from app.db.session import get_db
 from app.models.notification import Notification
@@ -8,8 +11,6 @@ from app.schemas.notification import (
     NotificationSettingUpdate,
 )
 from app.services.notifications import get_or_create_settings, list_my_notifications
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 
 router = APIRouter()
 
