@@ -97,10 +97,10 @@ def build_template_response(item: ProgramTemplate) -> dict:
                         "rest_seconds": ex.rest_seconds,
                         "notes": ex.notes,
                     }
-                    for ex in day.exercises
+                    for ex in sorted(day.exercises, key=lambda row: row.sort_order)
                 ],
             }
-            for day in item.days
+            for day in sorted(item.days, key=lambda row: row.day_number)
         ],
     }
 
@@ -178,6 +178,59 @@ def create_exercise(
     return exercise
 
 
+def update_exercise_for_user(
+    db: Session,
+    current_user: User,
+    exercise_id: int,
+    title: str,
+    primary_muscle: str,
+    equipment: str,
+) -> Exercise:
+    exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
+    if not exercise:
+        raise ProgramError("Exercise not found")
+
+    can_edit = (
+        current_user.is_admin
+        or exercise.created_by_user_id == current_user.id
+    )
+    if not can_edit:
+        raise ProgramError("No permission to edit exercise")
+
+    normalized_title = title.strip()
+    normalized_muscle = primary_muscle.strip()
+    normalized_equipment = equipment.strip()
+
+    if not normalized_title:
+        raise ProgramError("Exercise title is required")
+    if not normalized_muscle:
+        raise ProgramError("Primary muscle is required")
+    if not normalized_equipment:
+        raise ProgramError("Equipment is required")
+
+    duplicate = (
+        db.query(Exercise)
+        .filter(
+            Exercise.id != exercise.id,
+            Exercise.title.ilike(normalized_title),
+            or_(
+                Exercise.created_by_user_id.is_(None),
+                Exercise.created_by_user_id == current_user.id,
+            ),
+        )
+        .first()
+    )
+    if duplicate:
+        raise ProgramError("Exercise with this title already exists")
+
+    exercise.title = normalized_title
+    exercise.primary_muscle = normalized_muscle
+    exercise.equipment = normalized_equipment
+    db.commit()
+    db.refresh(exercise)
+    return exercise
+
+
 def validate_program_payload(payload: ProgramTemplateCreate) -> None:
     if payload.goal not in GOALS:
         raise ProgramError("Unsupported goal")
@@ -210,9 +263,7 @@ def create_template(
     db.add(template)
     db.flush()
 
-    visible_exercise_ids = {
-        ex.id for ex in list_exercises(db, current_user)
-    }
+    visible_exercise_ids = {ex.id for ex in list_exercises(db, current_user)}
 
     for index, day in enumerate(payload.days, start=1):
         day_row = ProgramTemplateDay(
@@ -299,7 +350,7 @@ def assign_template_to_user(
     start_date = date.today()
     created = 0
 
-    for offset, day in enumerate(template.days):
+    for offset, day in enumerate(sorted(template.days, key=lambda row: row.day_number)):
         workout = UserWorkout(
             user_program_id=user_program.id,
             scheduled_date=start_date + timedelta(days=offset),
@@ -311,7 +362,7 @@ def assign_template_to_user(
         db.flush()
         workouts.append(workout)
 
-        for exercise_item in day.exercises:
+        for exercise_item in sorted(day.exercises, key=lambda row: row.sort_order):
             workout_exercise = UserWorkoutExercise(
                 workout_id=workout.id,
                 exercise_id=exercise_item.exercise_id,
@@ -343,11 +394,6 @@ def assign_template_to_user(
 
 def create_and_optionally_assign_program(db: Session, current_user: User, payload: ProgramTemplateCreate):
     target_user = current_user
-    target_user_data = {
-        "id": current_user.id,
-        "telegram_user_id": current_user.telegram_user_id,
-        "full_name": None,
-    }
 
     if payload.mode == "coach":
         current_user.is_coach = True
@@ -418,6 +464,106 @@ def list_user_templates(db: Session, current_user: User) -> list[ProgramTemplate
     )
 
 
+def get_template_for_user(
+    db: Session,
+    current_user: User,
+    template_id: int,
+) -> ProgramTemplate:
+    template = (
+        db.query(ProgramTemplate)
+        .options(
+            joinedload(ProgramTemplate.days)
+            .joinedload(ProgramTemplateDay.exercises)
+            .joinedload(ProgramTemplateExercise.exercise)
+        )
+        .filter(ProgramTemplate.id == template_id)
+        .first()
+    )
+    if not template:
+        raise ProgramError("Template not found")
+
+    can_view = (
+        template.is_public
+        or template.created_by_user_id == current_user.id
+        or template.owner_user_id == current_user.id
+        or current_user.is_admin
+        or current_user.is_coach
+    )
+    if not can_view:
+        raise ProgramError("No permission to view template")
+
+    return template
+
+
+def update_template_for_user(
+    db: Session,
+    current_user: User,
+    template_id: int,
+    payload: ProgramTemplateCreate,
+) -> ProgramTemplate:
+    template = db.query(ProgramTemplate).filter(ProgramTemplate.id == template_id).first()
+    if not template:
+        raise ProgramError("Template not found")
+
+    can_edit = (
+        current_user.is_admin
+        or current_user.is_coach
+        or template.created_by_user_id == current_user.id
+        or template.owner_user_id == current_user.id
+    )
+    if not can_edit:
+        raise ProgramError("No permission to edit template")
+
+    validate_program_payload(payload)
+
+    template.title = payload.title
+    template.goal = payload.goal
+    template.level = payload.level
+    template.owner_user_id = current_user.id if payload.mode == "self" else None
+
+    old_days = db.query(ProgramTemplateDay).filter(ProgramTemplateDay.program_id == template.id).all()
+    old_day_ids = [day.id for day in old_days]
+
+    if old_day_ids:
+        db.query(ProgramTemplateExercise).filter(
+            ProgramTemplateExercise.day_id.in_(old_day_ids)
+        ).delete(synchronize_session=False)
+        db.query(ProgramTemplateDay).filter(
+            ProgramTemplateDay.id.in_(old_day_ids)
+        ).delete(synchronize_session=False)
+
+    visible_exercise_ids = {ex.id for ex in list_exercises(db, current_user)}
+
+    for index, day in enumerate(payload.days, start=1):
+        day_row = ProgramTemplateDay(
+            program_id=template.id,
+            day_number=index,
+            title=day.title,
+        )
+        db.add(day_row)
+        db.flush()
+
+        for sort_order, ex in enumerate(day.exercises, start=1):
+            if ex.exercise_id not in visible_exercise_ids:
+                raise ProgramError("Exercise is not available for current user")
+
+            db.add(
+                ProgramTemplateExercise(
+                    day_id=day_row.id,
+                    exercise_id=ex.exercise_id,
+                    sort_order=sort_order,
+                    prescribed_sets=ex.prescribed_sets,
+                    prescribed_reps=ex.prescribed_reps,
+                    rest_seconds=ex.rest_seconds,
+                    notes=ex.notes,
+                )
+            )
+
+    db.commit()
+
+    return get_template_for_user(db, current_user, template.id)
+
+
 def list_clients(db: Session, coach: User) -> list[User]:
     return (
         db.query(User)
@@ -458,6 +604,39 @@ def assign_existing_template_to_user(
     db.commit()
     db.refresh(program)
     return program, created, target_user
+
+
+def assign_template_to_self(
+    db: Session,
+    current_user: User,
+    template_id: int,
+) -> tuple[UserProgram, int]:
+    template = (
+        db.query(ProgramTemplate)
+        .options(
+            joinedload(ProgramTemplate.days)
+            .joinedload(ProgramTemplateDay.exercises)
+        )
+        .filter(ProgramTemplate.id == template_id)
+        .first()
+    )
+    if not template:
+        raise ProgramError("Template not found")
+
+    can_use = (
+        current_user.is_admin
+        or current_user.is_coach
+        or template.created_by_user_id == current_user.id
+        or template.owner_user_id == current_user.id
+        or template.is_public
+    )
+    if not can_use:
+        raise ProgramError("No permission to use template")
+
+    program, created = assign_template_to_user(db, template, current_user, current_user)
+    db.commit()
+    db.refresh(program)
+    return program, created
 
 
 def delete_template_for_user(

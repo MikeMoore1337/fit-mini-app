@@ -4,7 +4,7 @@
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>FitMiniApp</title>
-    <link rel="stylesheet" href="/static/styles.css?v=10"/>
+    <link rel="stylesheet" href="/static/styles.css?v=11"/>
 </head>
 <body>
 <div class="container">
@@ -27,7 +27,6 @@
         <div id="section-auth-body" class="section-content">
             <div class="stack">
                 <div id="authState" class="muted">Проверяем авторизацию через Telegram...</div>
-
                 <div class="toolbar wrap">
                     <button id="telegramLoginBtn" class="secondary">Повторить вход через Telegram</button>
                     <a href="/admin" id="adminLink" class="button-link hidden">Админка</a>
@@ -118,10 +117,22 @@
                 <button id="addDayBtn" class="secondary" type="button">+ День</button>
                 <button id="fillExampleBtn" class="secondary" type="button">Заполнить пример</button>
                 <button id="saveProgramBtn" type="button">Сохранить и назначить</button>
+                <button id="cancelTemplateEditBtn" class="secondary hidden" type="button">Отменить редактирование</button>
             </div>
 
+            <div id="builderModeInfo" class="muted top-gap">Создание нового шаблона</div>
             <div id="builderResult" class="muted top-gap"></div>
             <div id="dayBuilder" class="stack top-gap"></div>
+        </div>
+    </div>
+
+    <div class="card" data-section="todayWorkout">
+        <div class="section-head">
+            <h2>Тренировка на сегодня</h2>
+            <button class="secondary section-toggle" type="button" data-target="section-todayWorkout-body">Свернуть</button>
+        </div>
+        <div id="section-todayWorkout-body" class="section-content">
+            <div id="todayWorkout">Загрузка...</div>
         </div>
     </div>
 
@@ -138,26 +149,30 @@
         </div>
     </div>
 
-    <div id="clientsCard" class="card hidden" data-section="clients">
+    <div class="card" data-section="exercises">
         <div class="section-head">
-            <h2>Клиенты</h2>
+            <h2>Мои упражнения</h2>
             <div class="toolbar wrap">
-                <button id="reloadClientsBtn" class="secondary" type="button">Обновить</button>
-                <button class="secondary section-toggle" type="button" data-target="section-clients-body">Свернуть</button>
+                <button id="reloadExercisesBtn" class="secondary" type="button">Обновить</button>
+                <button class="secondary section-toggle" type="button" data-target="section-exercises-body">Свернуть</button>
             </div>
         </div>
-        <div id="section-clients-body" class="section-content">
-            <div id="clientsList" class="stack"></div>
-        </div>
-    </div>
+        <div id="section-exercises-body" class="section-content">
+            <div class="grid grid-3">
+                <input id="newExerciseTitle" type="text" placeholder="Название упражнения"/>
+                <input id="newExerciseMuscle" type="text" placeholder="Основная мышечная группа"/>
+                <input id="newExerciseEquipment" type="text" placeholder="Оборудование"/>
+            </div>
 
-    <div class="card" data-section="todayWorkout">
-        <div class="section-head">
-            <h2>Тренировка на сегодня</h2>
-            <button class="secondary section-toggle" type="button" data-target="section-todayWorkout-body">Свернуть</button>
-        </div>
-        <div id="section-todayWorkout-body" class="section-content">
-            <div id="todayWorkout">Загрузка...</div>
+            <div class="toolbar top-gap">
+                <button id="createExerciseBtn" type="button">Добавить своё упражнение</button>
+            </div>
+
+            <div class="muted top-gap">
+                Общие упражнения видны всем. Личные упражнения видит и редактирует только создатель.
+            </div>
+
+            <div id="exerciseCatalogList" class="stack top-gap"></div>
         </div>
     </div>
 
@@ -168,20 +183,9 @@
         </div>
         <div id="section-history-body" class="section-content">
             <div id="workoutHistory">Загрузка...</div>
-        </div>
-    </div>
-
-    <div class="card" data-section="billing">
-        <div class="section-head">
-            <h2>Подписка</h2>
-            <div class="toolbar wrap">
-                <button id="reloadBillingBtn" class="secondary" type="button">Обновить</button>
-                <button class="secondary section-toggle" type="button" data-target="section-billing-body">Свернуть</button>
+            <div class="toolbar top-gap">
+                <button id="loadMoreHistoryBtn" class="secondary" type="button">Показать ещё</button>
             </div>
-        </div>
-        <div id="section-billing-body" class="section-content">
-            <div id="subscriptionInfo" class="muted"></div>
-            <div id="plansList" class="stack top-gap"></div>
         </div>
     </div>
 
@@ -219,30 +223,30 @@
         </div>
     </div>
 
-    <div class="card" data-section="exercises">
+    <div class="card" data-section="billing">
         <div class="section-head">
-            <h2>Мои упражнения</h2>
+            <h2>Подписка</h2>
             <div class="toolbar wrap">
-                <button id="reloadExercisesBtn" class="secondary" type="button">Обновить</button>
-                <button class="secondary section-toggle" type="button" data-target="section-exercises-body">Свернуть</button>
+                <button id="reloadBillingBtn" class="secondary" type="button">Обновить</button>
+                <button class="secondary section-toggle" type="button" data-target="section-billing-body">Свернуть</button>
             </div>
         </div>
-        <div id="section-exercises-body" class="section-content">
-            <div class="grid grid-3">
-                <input id="newExerciseTitle" type="text" placeholder="Название упражнения"/>
-                <input id="newExerciseMuscle" type="text" placeholder="Основная мышечная группа"/>
-                <input id="newExerciseEquipment" type="text" placeholder="Оборудование"/>
-            </div>
+        <div id="section-billing-body" class="section-content">
+            <div id="subscriptionInfo" class="muted"></div>
+            <div id="plansList" class="stack top-gap"></div>
+        </div>
+    </div>
 
-            <div class="toolbar top-gap">
-                <button id="createExerciseBtn" type="button">Добавить своё упражнение</button>
+    <div id="clientsCard" class="card hidden" data-section="clients">
+        <div class="section-head">
+            <h2>Клиенты</h2>
+            <div class="toolbar wrap">
+                <button id="reloadClientsBtn" class="secondary" type="button">Обновить</button>
+                <button class="secondary section-toggle" type="button" data-target="section-clients-body">Свернуть</button>
             </div>
-
-            <div class="muted top-gap">
-                Общие упражнения видны всем. Личные упражнения видит только создатель.
-            </div>
-
-            <div id="exerciseCatalogList" class="stack top-gap"></div>
+        </div>
+        <div id="section-clients-body" class="section-content">
+            <div id="clientsList" class="stack"></div>
         </div>
     </div>
 
@@ -270,6 +274,6 @@
 <div id="toast" class="toast hidden"></div>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="/static/app.js?v=10"></script>
+<script src="/static/app.js?v=11"></script>
 </body>
 </html>

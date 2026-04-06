@@ -4,13 +4,17 @@ from app.models.user import User
 from app.schemas.program import ProgramTemplateCreate
 from app.services.programs import (
     ProgramError,
+    assign_template_to_self,
     build_template_response,
     create_and_optionally_assign_program,
     create_exercise,
     delete_template_for_user,
+    get_template_for_user,
     list_clients,
     list_exercises,
     list_user_templates,
+    update_exercise_for_user,
+    update_template_for_user,
 )
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -66,6 +70,41 @@ def add_exercise(
     }
 
 
+@router.patch("/exercises/{exercise_id}")
+def edit_exercise(
+    exercise_id: int,
+    payload: dict,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        exercise = update_exercise_for_user(
+            db=db,
+            current_user=current_user,
+            exercise_id=exercise_id,
+            title=(payload.get("title") or "").strip(),
+            primary_muscle=(payload.get("primary_muscle") or "").strip(),
+            equipment=(payload.get("equipment") or "").strip(),
+        )
+    except ProgramError as exc:
+        detail = str(exc)
+        if detail == "Exercise not found":
+            raise HTTPException(status_code=404, detail=detail)
+        if detail == "No permission to edit exercise":
+            raise HTTPException(status_code=403, detail=detail)
+        raise HTTPException(status_code=400, detail=detail)
+
+    return {
+        "id": exercise.id,
+        "slug": exercise.slug,
+        "title": exercise.title,
+        "primary_muscle": exercise.primary_muscle,
+        "equipment": exercise.equipment,
+        "is_custom": exercise.created_by_user_id is not None,
+        "created_by_user_id": exercise.created_by_user_id,
+    }
+
+
 @router.post("/templates")
 def create_template(
     payload: ProgramTemplateCreate,
@@ -98,6 +137,72 @@ def my_templates(
 ):
     items = list_user_templates(db, current_user)
     return [build_template_response(item) for item in items]
+
+
+@router.get("/templates/{template_id}")
+def get_template(
+    template_id: int,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        template = get_template_for_user(db, current_user, template_id)
+    except ProgramError as exc:
+        detail = str(exc)
+        if detail == "Template not found":
+            raise HTTPException(status_code=404, detail=detail)
+        raise HTTPException(status_code=403, detail=detail)
+
+    return build_template_response(template)
+
+
+@router.patch("/templates/{template_id}")
+def edit_template(
+    template_id: int,
+    payload: ProgramTemplateCreate,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        template = update_template_for_user(
+            db=db,
+            current_user=current_user,
+            template_id=template_id,
+            payload=payload,
+        )
+    except ProgramError as exc:
+        detail = str(exc)
+        if detail == "Template not found":
+            raise HTTPException(status_code=404, detail=detail)
+        if detail == "No permission to edit template":
+            raise HTTPException(status_code=403, detail=detail)
+        raise HTTPException(status_code=400, detail=detail)
+
+    return build_template_response(template)
+
+
+@router.post("/templates/{template_id}/assign-to-me")
+def assign_template_me(
+    template_id: int,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        program, created = assign_template_to_self(
+            db=db,
+            current_user=current_user,
+            template_id=template_id,
+        )
+    except ProgramError as exc:
+        detail = str(exc)
+        if detail == "Template not found":
+            raise HTTPException(status_code=404, detail=detail)
+        raise HTTPException(status_code=403, detail=detail)
+
+    return {
+        "user_program_id": program.id,
+        "workouts_created": created,
+    }
 
 
 @router.delete("/templates/{template_id}", status_code=status.HTTP_204_NO_CONTENT)

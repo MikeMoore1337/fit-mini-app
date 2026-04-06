@@ -1,4 +1,4 @@
-const FRONTEND_VERSION = 'v10';
+const FRONTEND_VERSION = 'v11';
 
 const accessTokenKey = 'fit_access_token';
 const refreshTokenKey = 'fit_refresh_token';
@@ -12,6 +12,10 @@ const state = {
   plans: [],
   publicConfig: null,
   workoutTimer: null,
+  historyOffset: 0,
+  historyLimit: 4,
+  historyHasMore: true,
+  editingTemplateId: null,
 };
 
 const API = {
@@ -23,8 +27,13 @@ const API = {
 
   exercises: '/api/v1/programs/exercises',
   createExercise: '/api/v1/programs/exercises',
+  updateExercise: (exerciseId) => `/api/v1/programs/exercises/${exerciseId}`,
+
   saveTemplate: '/api/v1/programs/templates',
   myTemplates: '/api/v1/programs/templates/mine',
+  getTemplate: (templateId) => `/api/v1/programs/templates/${templateId}`,
+  updateTemplate: (templateId) => `/api/v1/programs/templates/${templateId}`,
+  assignTemplateToMe: (templateId) => `/api/v1/programs/templates/${templateId}/assign-to-me`,
   deleteTemplate: (templateId) => `/api/v1/programs/templates/${templateId}`,
   clients: '/api/v1/programs/clients',
 
@@ -32,7 +41,7 @@ const API = {
   startWorkout: (workoutId) => `/api/v1/workouts/${workoutId}/start`,
   finishWorkout: (workoutId) => `/api/v1/workouts/${workoutId}/finish`,
   updateSet: (setId) => `/api/v1/workouts/sets/${setId}`,
-  workoutHistory: '/api/v1/workouts/history',
+  workoutHistory: (offset, limit) => `/api/v1/workouts/history?offset=${offset}&limit=${limit}`,
 
   billingPlans: '/api/v1/billing/plans',
   billingSubscription: '/api/v1/billing/subscription',
@@ -149,6 +158,22 @@ function canDeleteTemplate(template) {
 function canEditSelfBuilder() {
   const mode = $('builder_mode')?.value;
   return mode === 'self' || isCoachOrAdmin();
+}
+
+function resetBuilderEditMode() {
+  state.editingTemplateId = null;
+  const modeInfo = $('builderModeInfo');
+  const cancelBtn = $('cancelTemplateEditBtn');
+  if (modeInfo) modeInfo.textContent = 'Создание нового шаблона';
+  if (cancelBtn) cancelBtn.classList.add('hidden');
+}
+
+function setBuilderEditMode(templateId, title) {
+  state.editingTemplateId = templateId;
+  const modeInfo = $('builderModeInfo');
+  const cancelBtn = $('cancelTemplateEditBtn');
+  if (modeInfo) modeInfo.textContent = `Редактирование шаблона: ${title}`;
+  if (cancelBtn) cancelBtn.classList.remove('hidden');
 }
 
 function toggleCoachUI() {
@@ -364,10 +389,52 @@ function renderExerciseCatalog() {
               <span class="metric-pill">${ex.equipment}</span>
               ${ex.is_custom ? '<span class="metric-pill">Личное</span>' : '<span class="metric-pill">Общее</span>'}
             </div>
+            ${
+              ex.created_by_user_id === state.me?.id || state.me?.is_admin
+                ? `
+                  <div class="toolbar wrap top-gap">
+                    <button class="secondary edit-exercise-btn" type="button" data-exercise-id="${ex.id}">Редактировать</button>
+                  </div>
+                `
+                : ''
+            }
           </div>
         `
       )
       .join('') || '<p class="muted">Упражнений пока нет</p>';
+
+  document.querySelectorAll('.edit-exercise-btn').forEach((btn) => {
+    btn.onclick = async () => {
+      const exerciseId = Number(btn.dataset.exerciseId);
+      const exercise = state.exercises.find((item) => item.id === exerciseId);
+      if (!exercise) return;
+
+      const title = prompt('Название упражнения', exercise.title);
+      if (title === null) return;
+
+      const primaryMuscle = prompt('Основная мышечная группа', exercise.primary_muscle);
+      if (primaryMuscle === null) return;
+
+      const equipment = prompt('Оборудование', exercise.equipment);
+      if (equipment === null) return;
+
+      try {
+        await api(API.updateExercise(exerciseId), {
+          method: 'PATCH',
+          body: JSON.stringify({
+            title,
+            primary_muscle: primaryMuscle,
+            equipment,
+          }),
+        });
+        showToast('Упражнение обновлено');
+        await loadExercises();
+      } catch (error) {
+        log(`editExercise: ${String(error)}`);
+        showToast('Не удалось обновить упражнение', 'error');
+      }
+    };
+  });
 }
 
 async function createExercise() {
@@ -574,18 +641,64 @@ async function saveProgram() {
     }
   }
 
-  const data = await api(API.saveTemplate, {
-    method: 'POST',
+  const isEditing = Boolean(state.editingTemplateId);
+  const url = isEditing ? API.updateTemplate(state.editingTemplateId) : API.saveTemplate;
+  const method = isEditing ? 'PATCH' : 'POST';
+
+  const data = await api(url, {
+    method,
     body: JSON.stringify(payload),
   });
 
   if ($('builderResult')) {
-    $('builderResult').textContent = `Сохранено: ${data.template.title}, тренировок создано: ${data.workouts_created}`;
+    const templateTitle = data.template?.title || payload.title;
+    $('builderResult').textContent = isEditing
+      ? `Шаблон обновлён: ${templateTitle}`
+      : `Сохранено: ${templateTitle}, тренировок создано: ${data.workouts_created}`;
   }
 
-  showToast('Программа сохранена');
+  showToast(isEditing ? 'Шаблон обновлён' : 'Программа сохранена');
+  resetBuilderEditMode();
   await loadTemplates();
   await loadClients();
+  await loadTodayWorkout();
+  await loadWorkoutHistory();
+  await loadNotifications();
+}
+
+async function loadTemplateIntoBuilder(templateId) {
+  const template = await api(API.getTemplate(templateId));
+
+  $('program_title').value = template.title || '';
+  $('program_goal').value = template.goal || 'muscle_gain';
+  $('program_level').value = template.level || 'intermediate';
+  $('builder_mode').value = template.owner_user_id ? 'self' : 'coach';
+
+  const dayBuilder = $('dayBuilder');
+  dayBuilder.innerHTML = '';
+
+  (template.days || []).forEach((day) => {
+    addDay({
+      title: day.title,
+      exercises: (day.exercises || []).map((ex) => ({
+        exercise_id: ex.exercise_id,
+        prescribed_sets: ex.prescribed_sets,
+        prescribed_reps: ex.prescribed_reps,
+        rest_seconds: ex.rest_seconds,
+      })),
+    });
+  });
+
+  toggleCoachUI();
+  setBuilderEditMode(template.id, template.title);
+  showToast('Шаблон загружен в конструктор');
+}
+
+async function assignTemplateToMe(templateId) {
+  await api(API.assignTemplateToMe(templateId), {
+    method: 'POST',
+  });
+  showToast('Шаблон загружен в тренировки');
   await loadTodayWorkout();
   await loadWorkoutHistory();
   await loadNotifications();
@@ -608,8 +721,14 @@ async function loadTemplates() {
     state.templates
       .map((template) => {
         const deleteBtn = canDeleteTemplate(template)
-          ? `<button class="secondary delete-template-btn" type="button" data-template-id="${template.id}">Удалить шаблон</button>`
+          ? `<button class="secondary delete-template-btn" type="button" data-template-id="${template.id}">Удалить</button>`
           : '';
+
+        const editBtn = canDeleteTemplate(template)
+          ? `<button class="secondary edit-template-btn" type="button" data-template-id="${template.id}">Редактировать</button>`
+          : '';
+
+        const assignBtn = `<button class="secondary assign-template-btn" type="button" data-template-id="${template.id}">В тренировки</button>`;
 
         return `
           <div class="item-card">
@@ -632,12 +751,36 @@ async function loadTemplates() {
               }
             </div>
             <div class="toolbar wrap top-gap">
+              ${assignBtn}
+              ${editBtn}
               ${deleteBtn}
             </div>
           </div>
         `;
       })
       .join('') || '<p class="muted">Шаблонов пока нет</p>';
+
+  document.querySelectorAll('.assign-template-btn').forEach((btn) => {
+    btn.onclick = async () => {
+      try {
+        await assignTemplateToMe(Number(btn.dataset.templateId));
+      } catch (error) {
+        log(`assignTemplateToMe: ${String(error)}`);
+        showToast('Не удалось загрузить шаблон в тренировки', 'error');
+      }
+    };
+  });
+
+  document.querySelectorAll('.edit-template-btn').forEach((btn) => {
+    btn.onclick = async () => {
+      try {
+        await loadTemplateIntoBuilder(Number(btn.dataset.templateId));
+      } catch (error) {
+        log(`loadTemplateIntoBuilder: ${String(error)}`);
+        showToast('Не удалось загрузить шаблон в конструктор', 'error');
+      }
+    };
+  });
 
   document.querySelectorAll('.delete-template-btn').forEach((btn) => {
     btn.onclick = async () => {
@@ -816,7 +959,7 @@ function renderTodayWorkout(workout) {
         state.todayWorkout = await api(API.startWorkout(workout.id), { method: 'POST' });
         showToast('Тренировка начата');
         renderTodayWorkout(state.todayWorkout);
-        await loadWorkoutHistory();
+        resetHistoryAndReload();
       } catch (error) {
         log(`startWorkout: ${String(error)}`);
         showToast('Не удалось начать тренировку', 'error');
@@ -831,7 +974,7 @@ function renderTodayWorkout(workout) {
         state.todayWorkout = await api(API.finishWorkout(workout.id), { method: 'POST' });
         showToast('Тренировка завершена');
         renderTodayWorkout(state.todayWorkout);
-        await loadWorkoutHistory();
+        resetHistoryAndReload();
       } catch (error) {
         log(`finishWorkout: ${String(error)}`);
         showToast('Не удалось завершить тренировку', 'error');
@@ -841,11 +984,15 @@ function renderTodayWorkout(workout) {
 
   document.querySelectorAll('.set-reps').forEach((input) => {
     input.addEventListener('change', async () => {
+      const setId = Number(input.dataset.setId);
+      const weightInput = document.querySelector(`.set-weight[data-set-id="${setId}"]`);
+      const completedInput = document.querySelector(`.set-completed[data-set-id="${setId}"]`);
+
       try {
-        await updateSetRow(Number(input.dataset.setId), {
+        await updateSetRow(setId, {
           actual_reps: input.value ? Number(input.value) : null,
-          actual_weight: null,
-          is_completed: false,
+          actual_weight: weightInput?.value ? Number(weightInput.value) : null,
+          is_completed: Boolean(completedInput?.checked),
         });
       } catch (error) {
         log(`update set reps: ${String(error)}`);
@@ -855,11 +1002,15 @@ function renderTodayWorkout(workout) {
 
   document.querySelectorAll('.set-weight').forEach((input) => {
     input.addEventListener('change', async () => {
+      const setId = Number(input.dataset.setId);
+      const repsInput = document.querySelector(`.set-reps[data-set-id="${setId}"]`);
+      const completedInput = document.querySelector(`.set-completed[data-set-id="${setId}"]`);
+
       try {
-        await updateSetRow(Number(input.dataset.setId), {
-          actual_reps: null,
+        await updateSetRow(setId, {
+          actual_reps: repsInput?.value ? Number(repsInput.value) : null,
           actual_weight: input.value ? Number(input.value) : null,
-          is_completed: false,
+          is_completed: Boolean(completedInput?.checked),
         });
       } catch (error) {
         log(`update set weight: ${String(error)}`);
@@ -904,25 +1055,56 @@ async function loadTodayWorkout() {
   }
 }
 
-async function loadWorkoutHistory() {
+function renderWorkoutHistoryRows(rows, append = false) {
   const container = $('workoutHistory');
   if (!container) return;
 
-  try {
-    const rows = await api(API.workoutHistory);
-    container.innerHTML =
-      rows
-        .map((item) => `
-          <div class="item-card">
-            <strong>${item.title}</strong><br>
-            <span class="muted">${item.scheduled_date} - ${statusLabel(item.status)}</span>
-          </div>
-        `)
-        .join('') || '<p class="muted">История тренировок пока пустая</p>';
-  } catch (error) {
-    log(`loadWorkoutHistory: ${String(error)}`);
-    container.innerHTML = '<p class="muted">Не удалось загрузить историю тренировок</p>';
+  if (!append) {
+    container.innerHTML = '';
   }
+
+  if (!rows.length && !append) {
+    container.innerHTML = '<p class="muted">История тренировок пока пустая</p>';
+    return;
+  }
+
+  const html = rows
+    .map((item) => `
+      <div class="item-card">
+        <strong>${item.title}</strong><br>
+        <span class="muted">${item.scheduled_date} - ${statusLabel(item.status)}</span>
+      </div>
+    `)
+    .join('');
+
+  container.insertAdjacentHTML('beforeend', html);
+}
+
+function updateHistoryLoadMoreVisibility() {
+  const btn = $('loadMoreHistoryBtn');
+  if (!btn) return;
+  btn.classList.toggle('hidden', !state.historyHasMore);
+}
+
+async function loadWorkoutHistory(append = false) {
+  const offset = append ? state.historyOffset : 0;
+  const rows = await api(API.workoutHistory(offset, state.historyLimit));
+
+  if (!append) {
+    state.historyOffset = 0;
+  }
+
+  renderWorkoutHistoryRows(rows, append);
+
+  state.historyOffset = offset + rows.length;
+  state.historyHasMore = rows.length === state.historyLimit;
+  updateHistoryLoadMoreVisibility();
+}
+
+async function resetHistoryAndReload() {
+  state.historyOffset = 0;
+  state.historyHasMore = true;
+  await loadWorkoutHistory(false);
 }
 
 async function loadBilling() {
@@ -1078,7 +1260,7 @@ async function bootstrap() {
   await loadTemplates();
   await loadClients();
   await loadTodayWorkout();
-  await loadWorkoutHistory();
+  await resetHistoryAndReload();
   await loadBilling();
   await loadNotifications();
 
@@ -1140,6 +1322,13 @@ function bindUI() {
         log(`saveProgramBtn: ${String(error)}`);
         showToast('Не удалось сохранить программу', 'error');
       }
+    };
+  }
+
+  if ($('cancelTemplateEditBtn')) {
+    $('cancelTemplateEditBtn').onclick = () => {
+      resetBuilderEditMode();
+      $('builderResult').textContent = '';
     };
   }
 
@@ -1222,6 +1411,17 @@ function bindUI() {
       } catch (error) {
         log(`createNotificationBtn: ${String(error)}`);
         showToast('Не удалось создать напоминание', 'error');
+      }
+    };
+  }
+
+  if ($('loadMoreHistoryBtn')) {
+    $('loadMoreHistoryBtn').onclick = async () => {
+      try {
+        await loadWorkoutHistory(true);
+      } catch (error) {
+        log(`loadMoreHistoryBtn: ${String(error)}`);
+        showToast('Не удалось загрузить ещё историю', 'error');
       }
     };
   }

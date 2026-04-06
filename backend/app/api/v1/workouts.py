@@ -4,7 +4,7 @@ from app.api.dependencies.auth import require_user
 from app.db.session import get_db
 from app.models.program import UserProgram, UserWorkout, UserWorkoutExercise, UserWorkoutSet
 from app.models.user import User
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 
 router = APIRouter()
@@ -15,8 +15,10 @@ def _get_user_workout_or_404(db: Session, current_user: User, workout_id: int) -
         db.query(UserWorkout)
         .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
         .options(
-            joinedload(UserWorkout.exercises).joinedload(UserWorkoutExercise.exercise),
-            joinedload(UserWorkout.exercises).joinedload(UserWorkoutExercise.sets),
+            joinedload(UserWorkout.exercises)
+            .joinedload(UserWorkoutExercise.exercise),
+            joinedload(UserWorkout.exercises)
+            .joinedload(UserWorkoutExercise.sets),
         )
         .filter(
             UserWorkout.id == workout_id,
@@ -42,9 +44,7 @@ def _serialize_workout(workout: UserWorkout) -> dict:
             {
                 "id": item.id,
                 "exercise_id": item.exercise_id,
-                "exercise_title": item.exercise.title
-                if item.exercise
-                else f"Exercise {item.exercise_id}",
+                "exercise_title": item.exercise.title if item.exercise else f"Exercise {item.exercise_id}",
                 "sort_order": item.sort_order,
                 "prescribed_sets": item.prescribed_sets,
                 "prescribed_reps": item.prescribed_reps,
@@ -76,8 +76,10 @@ def get_today_workout(
         db.query(UserWorkout)
         .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
         .options(
-            joinedload(UserWorkout.exercises).joinedload(UserWorkoutExercise.exercise),
-            joinedload(UserWorkout.exercises).joinedload(UserWorkoutExercise.sets),
+            joinedload(UserWorkout.exercises)
+            .joinedload(UserWorkoutExercise.exercise),
+            joinedload(UserWorkout.exercises)
+            .joinedload(UserWorkoutExercise.sets),
         )
         .filter(
             UserProgram.user_id == current_user.id,
@@ -157,9 +159,12 @@ def update_workout_set(
     if not set_row:
         raise HTTPException(status_code=404, detail="Подход не найден")
 
-    set_row.actual_reps = payload.get("actual_reps")
-    set_row.actual_weight = payload.get("actual_weight")
-    set_row.is_completed = bool(payload.get("is_completed"))
+    if "actual_reps" in payload:
+        set_row.actual_reps = payload.get("actual_reps")
+    if "actual_weight" in payload:
+        set_row.actual_weight = payload.get("actual_weight")
+    if "is_completed" in payload:
+        set_row.is_completed = bool(payload.get("is_completed"))
 
     db.commit()
     db.refresh(set_row)
@@ -177,13 +182,16 @@ def update_workout_set(
 def workout_history(
     current_user: User = Depends(require_user),
     db: Session = Depends(get_db),
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=4, ge=1, le=20),
 ):
     workouts = (
         db.query(UserWorkout)
         .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
         .filter(UserProgram.user_id == current_user.id)
         .order_by(UserWorkout.scheduled_date.desc(), UserWorkout.id.desc())
-        .limit(30)
+        .offset(offset)
+        .limit(limit)
         .all()
     )
 
