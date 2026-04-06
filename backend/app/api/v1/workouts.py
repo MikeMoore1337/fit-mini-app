@@ -1,147 +1,200 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from datetime import date, datetime
 
+from app.api.dependencies.auth import require_user
 from app.db.session import get_db
-from app.schemas.workout import (
-    LoggedSetItem,
-    WorkoutExerciseItem,
-    WorkoutProgressSnapshot,
-    WorkoutSetCreate,
-    WorkoutStatusResponse,
-    WorkoutTodayResponse,
-)
-from app.services.security import get_current_user
-from app.services.workouts import (
-    WorkoutStateError,
-    WorkoutValidationError,
-    _sets_volume,
-    _top_weight,
-    add_or_update_set,
-    complete_workout,
-    delete_last_set,
-    get_previous_completed_exercise,
-    get_today_workout,
-    start_workout,
-)
+from app.models.program import UserProgram, UserWorkout, UserWorkoutExercise, UserWorkoutSet
+from app.models.user import User
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session, joinedload
 
-router = APIRouter(prefix="/workouts", tags=["workouts"])
+router = APIRouter()
 
 
-@router.get("/today", response_model=WorkoutTodayResponse | None)
-def today(db: Session = Depends(get_db), user=Depends(get_current_user)):
-    workout = get_today_workout(db, user)
-    if workout is None:
-        return None
-    exercise_rows: list[WorkoutExerciseItem] = []
-    for exercise in workout.exercises:
-        completed_sets = [row for row in exercise.sets if row.is_completed]
-        previous_exercise = get_previous_completed_exercise(db, user, workout, exercise)
-        previous_sets = [row for row in (previous_exercise.sets if previous_exercise else []) if row.is_completed]
-        current_volume = _sets_volume(completed_sets)
-        previous_volume = _sets_volume(previous_sets) if previous_sets else None
-        current_top_weight = _top_weight(completed_sets)
-        previous_top_weight = _top_weight(previous_sets) if previous_sets else None
-
-        progress = None
-        if previous_exercise:
-            progress = WorkoutProgressSnapshot(
-                previous_workout_title=previous_exercise.workout.title if previous_exercise.workout else None,
-                previous_workout_date=previous_exercise.workout.scheduled_date.isoformat() if previous_exercise.workout else None,
-                previous_volume=previous_volume,
-                current_volume=current_volume,
-                volume_delta=(current_volume - previous_volume) if previous_volume is not None else None,
-                previous_top_weight=previous_top_weight,
-                current_top_weight=current_top_weight,
-                top_weight_delta=(current_top_weight - previous_top_weight) if current_top_weight is not None and previous_top_weight is not None else None,
-            )
-
-        exercise_rows.append(
-            WorkoutExerciseItem(
-                id=exercise.id,
-                title=exercise.exercise.title,
-                prescribed_sets=exercise.prescribed_sets,
-                prescribed_reps=exercise.prescribed_reps,
-                rest_seconds=exercise.rest_seconds,
-                completed_sets=len(completed_sets),
-                remaining_sets=max(exercise.prescribed_sets - len(completed_sets), 0),
-                logged_sets=[
-                    LoggedSetItem(
-                        set_number=row.set_number,
-                        actual_reps=row.actual_reps,
-                        actual_weight=row.actual_weight,
-                        is_completed=row.is_completed,
-                    )
-                    for row in sorted(completed_sets, key=lambda x: x.set_number)
-                ],
-                previous_logged_sets=[
-                    LoggedSetItem(
-                        set_number=row.set_number,
-                        actual_reps=row.actual_reps,
-                        actual_weight=row.actual_weight,
-                        is_completed=row.is_completed,
-                    )
-                    for row in sorted(previous_sets, key=lambda x: x.set_number)
-                ],
-                progress=progress,
-            )
+def _get_user_workout_or_404(db: Session, current_user: User, workout_id: int) -> UserWorkout:
+    workout = (
+        db.query(UserWorkout)
+        .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
+        .options(
+            joinedload(UserWorkout.exercises).joinedload(UserWorkoutExercise.exercise),
+            joinedload(UserWorkout.exercises).joinedload(UserWorkoutExercise.sets),
         )
+        .filter(
+            UserWorkout.id == workout_id,
+            UserProgram.user_id == current_user.id,
+        )
+        .first()
+    )
+    if not workout:
+        raise HTTPException(status_code=404, detail="Тренировка не найдена")
+    return workout
 
-    return WorkoutTodayResponse(
-        id=workout.id,
-        title=workout.title,
-        status=workout.status,
-        day_number=workout.day_number,
-        can_start=workout.status == "planned",
-        can_complete=workout.status in {"planned", "in_progress"},
-        can_log_sets=workout.status in {"planned", "in_progress"},
-        exercises=exercise_rows,
+
+def _serialize_workout(workout: UserWorkout) -> dict:
+    return {
+        "id": workout.id,
+        "scheduled_date": str(workout.scheduled_date),
+        "day_number": workout.day_number,
+        "title": workout.title,
+        "status": workout.status,
+        "started_at": workout.started_at.isoformat() if workout.started_at else None,
+        "completed_at": workout.completed_at.isoformat() if workout.completed_at else None,
+        "exercises": [
+            {
+                "id": item.id,
+                "exercise_id": item.exercise_id,
+                "exercise_title": item.exercise.title
+                if item.exercise
+                else f"Exercise {item.exercise_id}",
+                "sort_order": item.sort_order,
+                "prescribed_sets": item.prescribed_sets,
+                "prescribed_reps": item.prescribed_reps,
+                "rest_seconds": item.rest_seconds,
+                "sets": [
+                    {
+                        "id": set_item.id,
+                        "set_number": set_item.set_number,
+                        "actual_reps": set_item.actual_reps,
+                        "actual_weight": set_item.actual_weight,
+                        "is_completed": set_item.is_completed,
+                    }
+                    for set_item in sorted(item.sets, key=lambda x: x.set_number)
+                ],
+            }
+            for item in sorted(workout.exercises, key=lambda x: x.sort_order)
+        ],
+    }
+
+
+@router.get("/today")
+def get_today_workout(
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    today = date.today()
+
+    workout = (
+        db.query(UserWorkout)
+        .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
+        .options(
+            joinedload(UserWorkout.exercises).joinedload(UserWorkoutExercise.exercise),
+            joinedload(UserWorkout.exercises).joinedload(UserWorkoutExercise.sets),
+        )
+        .filter(
+            UserProgram.user_id == current_user.id,
+            UserProgram.is_active.is_(True),
+            UserWorkout.scheduled_date == today,
+        )
+        .order_by(UserWorkout.id.asc())
+        .first()
     )
 
+    if not workout:
+        raise HTTPException(status_code=404, detail="На сегодня тренировка не назначена")
 
-@router.post("/{workout_id}/start", response_model=WorkoutStatusResponse)
-def start(workout_id: int, db: Session = Depends(get_db), user=Depends(get_current_user)):
-    workout = get_today_workout(db, user)
-    if workout is None or workout.id != workout_id:
-        raise HTTPException(status_code=404, detail="Workout not found")
-    try:
-        workout = start_workout(db, workout)
-    except WorkoutStateError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return WorkoutStatusResponse(id=workout.id, status=workout.status)
+    return _serialize_workout(workout)
 
 
-@router.post("/{workout_id}/sets")
-def add_set(workout_id: int, payload: WorkoutSetCreate, db: Session = Depends(get_db), user=Depends(get_current_user)):
-    workout = get_today_workout(db, user)
-    if workout is None or workout.id != workout_id:
-        raise HTTPException(status_code=404, detail="Workout not found")
-    try:
-        row = add_or_update_set(db, workout, payload)
-    except WorkoutStateError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except WorkoutValidationError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return {"id": row.id, "is_completed": row.is_completed}
+@router.post("/{workout_id}/start")
+def start_workout(
+    workout_id: int,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    workout = _get_user_workout_or_404(db, current_user, workout_id)
+
+    if workout.status == "completed":
+        raise HTTPException(status_code=400, detail="Тренировка уже завершена")
+
+    if not workout.started_at:
+        workout.started_at = datetime.utcnow()
+    workout.status = "in_progress"
+    db.commit()
+    db.refresh(workout)
+
+    workout = _get_user_workout_or_404(db, current_user, workout_id)
+    return _serialize_workout(workout)
 
 
-@router.delete("/{workout_id}/exercises/{workout_exercise_id}/last-set")
-def remove_last_set(workout_id: int, workout_exercise_id: int, db: Session = Depends(get_db), user=Depends(get_current_user)):
-    workout = get_today_workout(db, user)
-    if workout is None or workout.id != workout_id:
-        raise HTTPException(status_code=404, detail="Workout not found")
-    try:
-        delete_last_set(db, workout, workout_exercise_id)
-    except WorkoutStateError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except WorkoutValidationError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return {"ok": True}
+@router.post("/{workout_id}/finish")
+def finish_workout(
+    workout_id: int,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    workout = _get_user_workout_or_404(db, current_user, workout_id)
+
+    if not workout.started_at:
+        workout.started_at = datetime.utcnow()
+    workout.completed_at = datetime.utcnow()
+    workout.status = "completed"
+
+    db.commit()
+    db.refresh(workout)
+
+    workout = _get_user_workout_or_404(db, current_user, workout_id)
+    return _serialize_workout(workout)
 
 
-@router.post("/{workout_id}/complete", response_model=WorkoutStatusResponse)
-def complete(workout_id: int, db: Session = Depends(get_db), user=Depends(get_current_user)):
-    workout = get_today_workout(db, user)
-    if workout is None or workout.id != workout_id:
-        raise HTTPException(status_code=404, detail="Workout not found")
-    workout = complete_workout(db, workout)
-    return WorkoutStatusResponse(id=workout.id, status=workout.status)
+@router.patch("/sets/{set_id}")
+def update_workout_set(
+    set_id: int,
+    payload: dict,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    set_row = (
+        db.query(UserWorkoutSet)
+        .join(UserWorkoutExercise, UserWorkoutExercise.id == UserWorkoutSet.workout_exercise_id)
+        .join(UserWorkout, UserWorkout.id == UserWorkoutExercise.workout_id)
+        .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
+        .filter(
+            UserWorkoutSet.id == set_id,
+            UserProgram.user_id == current_user.id,
+        )
+        .first()
+    )
+
+    if not set_row:
+        raise HTTPException(status_code=404, detail="Подход не найден")
+
+    set_row.actual_reps = payload.get("actual_reps")
+    set_row.actual_weight = payload.get("actual_weight")
+    set_row.is_completed = bool(payload.get("is_completed"))
+
+    db.commit()
+    db.refresh(set_row)
+
+    return {
+        "id": set_row.id,
+        "set_number": set_row.set_number,
+        "actual_reps": set_row.actual_reps,
+        "actual_weight": set_row.actual_weight,
+        "is_completed": set_row.is_completed,
+    }
+
+
+@router.get("/history")
+def workout_history(
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    workouts = (
+        db.query(UserWorkout)
+        .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
+        .filter(UserProgram.user_id == current_user.id)
+        .order_by(UserWorkout.scheduled_date.desc(), UserWorkout.id.desc())
+        .limit(30)
+        .all()
+    )
+
+    return [
+        {
+            "id": item.id,
+            "scheduled_date": str(item.scheduled_date),
+            "title": item.title,
+            "status": item.status,
+            "started_at": item.started_at.isoformat() if item.started_at else None,
+            "completed_at": item.completed_at.isoformat() if item.completed_at else None,
+        }
+        for item in workouts
+    ]

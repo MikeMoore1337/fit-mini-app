@@ -1,4 +1,4 @@
-const FRONTEND_VERSION = 'v9';
+const FRONTEND_VERSION = 'v10';
 
 const accessTokenKey = 'fit_access_token';
 const refreshTokenKey = 'fit_refresh_token';
@@ -11,6 +11,7 @@ const state = {
   todayWorkout: null,
   plans: [],
   publicConfig: null,
+  workoutTimer: null,
 };
 
 const API = {
@@ -26,9 +27,12 @@ const API = {
   myTemplates: '/api/v1/programs/templates/mine',
   deleteTemplate: (templateId) => `/api/v1/programs/templates/${templateId}`,
   clients: '/api/v1/programs/clients',
-  assignDemo: '/api/v1/programs/assign-demo',
 
   todayWorkout: '/api/v1/workouts/today',
+  startWorkout: (workoutId) => `/api/v1/workouts/${workoutId}/start`,
+  finishWorkout: (workoutId) => `/api/v1/workouts/${workoutId}/finish`,
+  updateSet: (setId) => `/api/v1/workouts/sets/${setId}`,
+  workoutHistory: '/api/v1/workouts/history',
 
   billingPlans: '/api/v1/billing/plans',
   billingSubscription: '/api/v1/billing/subscription',
@@ -132,31 +136,36 @@ function isAdmin() {
   return Boolean(state.me?.is_admin);
 }
 
+function canDeleteTemplate(template) {
+  if (!state.me) return false;
+  return Boolean(
+    state.me.is_admin ||
+    state.me.is_coach ||
+    template.owner_user_id === state.me.id ||
+    template.created_by_user_id === state.me.id
+  );
+}
+
 function canEditSelfBuilder() {
   const mode = $('builder_mode')?.value;
   return mode === 'self' || isCoachOrAdmin();
 }
 
 function toggleCoachUI() {
-  const card = $('exerciseAdminCard');
-  if (card) {
-    card.classList.toggle('hidden', !isCoachOrAdmin());
-  }
-
   const adminLink = $('adminLink');
-  if (adminLink) {
-    adminLink.classList.toggle('hidden', !isCoachOrAdmin());
-  }
+  if (adminLink) adminLink.classList.toggle('hidden', !isCoachOrAdmin());
 
   const coachFields = $('coachFields');
   const builderMode = $('builder_mode');
-
   if (coachFields && builderMode) {
     coachFields.classList.toggle(
       'hidden',
       builderMode.value !== 'coach' || !isCoachOrAdmin()
     );
   }
+
+  const clientsCard = $('clientsCard');
+  if (clientsCard) clientsCard.classList.toggle('hidden', !isCoachOrAdmin());
 
   const diagnosticCard = $('diagnosticCard');
   const logCard = $('logCard');
@@ -267,14 +276,6 @@ async function telegramLogin() {
   const tg = window.Telegram?.WebApp;
   const initData = tg?.initData;
 
-  log({
-    telegramLogin: true,
-    hasTelegram: Boolean(window.Telegram),
-    hasWebApp: Boolean(tg),
-    initDataPresent: Boolean(initData),
-    initDataLength: initData?.length || 0,
-  });
-
   if (!initData) {
     setAuthState('Нет данных Telegram');
     showToast('Telegram не передал initData', 'error');
@@ -361,6 +362,7 @@ function renderExerciseCatalog() {
             <div class="exercise-meta">
               <span class="metric-pill">${ex.primary_muscle}</span>
               <span class="metric-pill">${ex.equipment}</span>
+              ${ex.is_custom ? '<span class="metric-pill">Личное</span>' : '<span class="metric-pill">Общее</span>'}
             </div>
           </div>
         `
@@ -369,11 +371,6 @@ function renderExerciseCatalog() {
 }
 
 async function createExercise() {
-  if (!isCoachOrAdmin()) {
-    showToast('Добавлять упражнения может только тренер или админ', 'error');
-    return;
-  }
-
   const payload = {
     title: $('newExerciseTitle')?.value?.trim() || '',
     primary_muscle: $('newExerciseMuscle')?.value?.trim() || '',
@@ -590,17 +587,8 @@ async function saveProgram() {
   await loadTemplates();
   await loadClients();
   await loadTodayWorkout();
+  await loadWorkoutHistory();
   await loadNotifications();
-}
-
-function canDeleteTemplate(template) {
-  if (!state.me) return false;
-  return (
-    state.me.is_admin ||
-    state.me.is_coach ||
-    template.owner_user_id === state.me.id ||
-    template.created_by_user_id === state.me.id
-  );
 }
 
 async function deleteTemplate(templateId) {
@@ -665,6 +653,11 @@ async function loadTemplates() {
 }
 
 async function loadClients() {
+  const card = $('clientsCard');
+  if (card) card.classList.toggle('hidden', !isCoachOrAdmin());
+
+  if (!isCoachOrAdmin()) return;
+
   const rows = await api(API.clients);
   const list = $('clientsList');
   if (!list) return;
@@ -690,41 +683,246 @@ function statusLabel(status) {
   }[status] || status);
 }
 
-async function loadTodayWorkout() {
+function clearWorkoutTimer() {
+  if (state.workoutTimer) {
+    clearInterval(state.workoutTimer);
+    state.workoutTimer = null;
+  }
+}
+
+function formatDurationMs(ms) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+function startWorkoutTimer(startedAtIso) {
+  clearWorkoutTimer();
+  const timerNode = $('workoutTimer');
+  if (!timerNode || !startedAtIso) return;
+
+  const startedAt = new Date(startedAtIso).getTime();
+
+  const render = () => {
+    timerNode.textContent = `Длительность тренировки: ${formatDurationMs(Date.now() - startedAt)}`;
+  };
+
+  render();
+  state.workoutTimer = setInterval(render, 1000);
+}
+
+async function updateSetRow(setId, payload) {
+  await api(API.updateSet(setId), {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+function renderTodayWorkout(workout) {
   const container = $('todayWorkout');
   if (!container) return;
 
-  try {
-    const workout = await api(API.todayWorkout);
-    state.todayWorkout = workout;
+  if (!workout) {
+    container.innerHTML = '<p class="muted">На сегодня тренировка не назначена</p>';
+    clearWorkoutTimer();
+    return;
+  }
 
-    if (!workout) {
-      container.innerHTML = '<p class="muted">На сегодня тренировка не назначена</p>';
-      return;
-    }
+  const actionButtons =
+    workout.status === 'planned'
+      ? `<button id="startWorkoutBtn" type="button">Начать тренировку</button>`
+      : workout.status === 'in_progress'
+        ? `<button id="finishWorkoutBtn" type="button">Завершить тренировку</button>`
+        : '';
 
-    container.innerHTML = `
-      <div class="item-card">
-        <strong>${workout.title}</strong><br>
-        <span class="muted">Статус: ${statusLabel(workout.status)}</span>
+  container.innerHTML = `
+    <div class="item-card">
+      <strong>${workout.title}</strong><br>
+      <span class="muted">Статус: ${statusLabel(workout.status)}</span>
+      <div id="workoutTimer" class="top-gap muted"></div>
+      <div class="toolbar wrap top-gap">
+        ${actionButtons}
       </div>
-    `;
+    </div>
+
+    <div class="stack top-gap">
+      ${(workout.exercises || []).map((exercise) => `
+        <div class="item-card">
+          <strong>${exercise.exercise_title}</strong>
+          <div class="muted top-gap">
+            План: ${exercise.prescribed_sets} x ${exercise.prescribed_reps}, отдых ${exercise.rest_seconds} сек
+          </div>
+
+          <div class="stack top-gap">
+            ${(exercise.sets || []).map((setRow) => `
+              <div class="grid item-card" style="grid-template-columns: 1fr 1fr 1fr auto;">
+                <div>Подход ${setRow.set_number}</div>
+                <input
+                  class="set-reps"
+                  type="number"
+                  min="0"
+                  value="${setRow.actual_reps ?? ''}"
+                  data-set-id="${setRow.id}"
+                  placeholder="Повторы"
+                />
+                <input
+                  class="set-weight"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value="${setRow.actual_weight ?? ''}"
+                  data-set-id="${setRow.id}"
+                  placeholder="Вес"
+                />
+                <label class="checkbox-row">
+                  <input
+                    class="set-completed"
+                    type="checkbox"
+                    data-set-id="${setRow.id}"
+                    ${setRow.is_completed ? 'checked' : ''}
+                  />
+                  <span>Готово</span>
+                </label>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  if (workout.status === 'in_progress' && workout.started_at) {
+    startWorkoutTimer(workout.started_at);
+  } else if (workout.status === 'completed' && workout.started_at && workout.completed_at) {
+    clearWorkoutTimer();
+    const timerNode = $('workoutTimer');
+    if (timerNode) {
+      timerNode.textContent = `Длительность тренировки: ${formatDurationMs(new Date(workout.completed_at).getTime() - new Date(workout.started_at).getTime())}`;
+    }
+  } else {
+    clearWorkoutTimer();
+  }
+
+  const startBtn = $('startWorkoutBtn');
+  if (startBtn) {
+    startBtn.onclick = async () => {
+      try {
+        state.todayWorkout = await api(API.startWorkout(workout.id), { method: 'POST' });
+        showToast('Тренировка начата');
+        renderTodayWorkout(state.todayWorkout);
+        await loadWorkoutHistory();
+      } catch (error) {
+        log(`startWorkout: ${String(error)}`);
+        showToast('Не удалось начать тренировку', 'error');
+      }
+    };
+  }
+
+  const finishBtn = $('finishWorkoutBtn');
+  if (finishBtn) {
+    finishBtn.onclick = async () => {
+      try {
+        state.todayWorkout = await api(API.finishWorkout(workout.id), { method: 'POST' });
+        showToast('Тренировка завершена');
+        renderTodayWorkout(state.todayWorkout);
+        await loadWorkoutHistory();
+      } catch (error) {
+        log(`finishWorkout: ${String(error)}`);
+        showToast('Не удалось завершить тренировку', 'error');
+      }
+    };
+  }
+
+  document.querySelectorAll('.set-reps').forEach((input) => {
+    input.addEventListener('change', async () => {
+      try {
+        await updateSetRow(Number(input.dataset.setId), {
+          actual_reps: input.value ? Number(input.value) : null,
+          actual_weight: null,
+          is_completed: false,
+        });
+      } catch (error) {
+        log(`update set reps: ${String(error)}`);
+      }
+    });
+  });
+
+  document.querySelectorAll('.set-weight').forEach((input) => {
+    input.addEventListener('change', async () => {
+      try {
+        await updateSetRow(Number(input.dataset.setId), {
+          actual_reps: null,
+          actual_weight: input.value ? Number(input.value) : null,
+          is_completed: false,
+        });
+      } catch (error) {
+        log(`update set weight: ${String(error)}`);
+      }
+    });
+  });
+
+  document.querySelectorAll('.set-completed').forEach((input) => {
+    input.addEventListener('change', async () => {
+      const setId = Number(input.dataset.setId);
+      const repsInput = document.querySelector(`.set-reps[data-set-id="${setId}"]`);
+      const weightInput = document.querySelector(`.set-weight[data-set-id="${setId}"]`);
+
+      try {
+        await updateSetRow(setId, {
+          actual_reps: repsInput?.value ? Number(repsInput.value) : null,
+          actual_weight: weightInput?.value ? Number(weightInput.value) : null,
+          is_completed: input.checked,
+        });
+        showToast('Подход сохранён');
+      } catch (error) {
+        log(`update set completed: ${String(error)}`);
+        showToast('Не удалось сохранить подход', 'error');
+      }
+    });
+  });
+}
+
+async function loadTodayWorkout() {
+  try {
+    state.todayWorkout = await api(API.todayWorkout);
+    renderTodayWorkout(state.todayWorkout);
   } catch (error) {
     if (error.status === 404) {
-      container.innerHTML = '<p class="muted">На сегодня тренировка не назначена</p>';
+      state.todayWorkout = null;
+      renderTodayWorkout(null);
       return;
     }
 
     log(`loadTodayWorkout: ${String(error)}`);
-    container.innerHTML = '<p class="muted">Не удалось загрузить тренировку</p>';
+    renderTodayWorkout(null);
   }
 }
 
-async function assignDemoProgram() {
-  await api(API.assignDemo, { method: 'POST' });
-  showToast('Демо-программа назначена');
-  await loadTodayWorkout();
-  await loadNotifications();
+async function loadWorkoutHistory() {
+  const container = $('workoutHistory');
+  if (!container) return;
+
+  try {
+    const rows = await api(API.workoutHistory);
+    container.innerHTML =
+      rows
+        .map((item) => `
+          <div class="item-card">
+            <strong>${item.title}</strong><br>
+            <span class="muted">${item.scheduled_date} - ${statusLabel(item.status)}</span>
+          </div>
+        `)
+        .join('') || '<p class="muted">История тренировок пока пустая</p>';
+  } catch (error) {
+    log(`loadWorkoutHistory: ${String(error)}`);
+    container.innerHTML = '<p class="muted">Не удалось загрузить историю тренировок</p>';
+  }
 }
 
 async function loadBilling() {
@@ -780,6 +978,33 @@ async function loadBilling() {
   }
 }
 
+async function createManualNotification() {
+  const title = $('manualNotifTitle')?.value?.trim() || '';
+  const body = $('manualNotifBody')?.value?.trim() || '';
+  const dateTime = $('manualNotifDateTime')?.value || '';
+
+  if (!title || !body || !dateTime) {
+    showToast('Заполни заголовок, текст и дату/время', 'error');
+    return;
+  }
+
+  await api(API.notifications, {
+    method: 'POST',
+    body: JSON.stringify({
+      title,
+      body,
+      scheduled_for: new Date(dateTime).toISOString(),
+    }),
+  });
+
+  $('manualNotifTitle').value = '';
+  $('manualNotifBody').value = '';
+  $('manualNotifDateTime').value = '';
+
+  showToast('Напоминание создано');
+  await loadNotifications();
+}
+
 async function deleteNotification(notificationId) {
   await api(API.deleteNotification(notificationId), {
     method: 'DELETE',
@@ -815,7 +1040,7 @@ async function loadNotifications() {
             </div>
           `
         )
-        .join('') || '<p class="muted">Нет уведомлений</p>';
+        .join('') || '<p class="muted">Нет напоминаний</p>';
 
     document.querySelectorAll('.delete-notification-btn').forEach((btn) => {
       btn.onclick = async () => {
@@ -843,7 +1068,7 @@ async function saveNotificationSettings() {
     }),
   });
 
-  showToast('Настройки уведомлений сохранены');
+  showToast('Настройки авто-напоминаний сохранены');
   await loadNotifications();
 }
 
@@ -853,6 +1078,7 @@ async function bootstrap() {
   await loadTemplates();
   await loadClients();
   await loadTodayWorkout();
+  await loadWorkoutHistory();
   await loadBilling();
   await loadNotifications();
 
@@ -958,17 +1184,6 @@ function bindUI() {
     };
   }
 
-  if ($('assignProgramBtn')) {
-    $('assignProgramBtn').onclick = async () => {
-      try {
-        await assignDemoProgram();
-      } catch (error) {
-        log(`assignProgramBtn: ${String(error)}`);
-        showToast('Не удалось назначить демо-программу', 'error');
-      }
-    };
-  }
-
   if ($('reloadBillingBtn')) {
     $('reloadBillingBtn').onclick = async () => {
       try {
@@ -996,6 +1211,17 @@ function bindUI() {
       } catch (error) {
         log(`saveNotifBtn: ${String(error)}`);
         showToast('Не удалось сохранить настройки уведомлений', 'error');
+      }
+    };
+  }
+
+  if ($('createNotificationBtn')) {
+    $('createNotificationBtn').onclick = async () => {
+      try {
+        await createManualNotification();
+      } catch (error) {
+        log(`createNotificationBtn: ${String(error)}`);
+        showToast('Не удалось создать напоминание', 'error');
       }
     };
   }

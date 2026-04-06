@@ -4,7 +4,7 @@
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>FitMiniApp</title>
-    <link rel="stylesheet" href="/static/styles.css?v=9"/>
+    <link rel="stylesheet" href="/static/styles.css?v=10"/>
 </head>
 <body>
 <div class="container">
@@ -12,7 +12,7 @@
         <div>
             <h1>FitMiniApp</h1>
             <p class="muted">
-                Удобное мини-приложение для ведения тренировок: профиль, программы, шаблоны, напоминания и режим тренера.
+                Мини-приложение для ведения тренировок, шаблонов, упражнений и напоминаний.
             </p>
             <div id="adminMeta" class="muted hidden top-gap"></div>
         </div>
@@ -76,7 +76,7 @@
                 <input id="workouts_per_week" type="number" placeholder="Тренировок в неделю"/>
             </div>
             <div class="toolbar top-gap">
-                <button id="saveProfileBtn">Сохранить профиль</button>
+                <button id="saveProfileBtn" type="button">Сохранить профиль</button>
             </div>
         </div>
     </div>
@@ -120,10 +120,6 @@
                 <button id="saveProgramBtn" type="button">Сохранить и назначить</button>
             </div>
 
-            <div id="builderHelp" class="muted top-gap">
-                Для режима "Для себя" можно свободно добавлять, редактировать и удалять дни программы.
-            </div>
-
             <div id="builderResult" class="muted top-gap"></div>
             <div id="dayBuilder" class="stack top-gap"></div>
         </div>
@@ -142,7 +138,7 @@
         </div>
     </div>
 
-    <div class="card" data-section="clients">
+    <div id="clientsCard" class="card hidden" data-section="clients">
         <div class="section-head">
             <h2>Клиенты</h2>
             <div class="toolbar wrap">
@@ -158,16 +154,20 @@
     <div class="card" data-section="todayWorkout">
         <div class="section-head">
             <h2>Тренировка на сегодня</h2>
-            <div class="toolbar wrap">
-                <button id="assignProgramBtn" class="secondary" type="button">Назначить демо-программу</button>
-                <button class="secondary section-toggle" type="button" data-target="section-todayWorkout-body">Свернуть</button>
-            </div>
+            <button class="secondary section-toggle" type="button" data-target="section-todayWorkout-body">Свернуть</button>
         </div>
         <div id="section-todayWorkout-body" class="section-content">
-            <div class="muted">
-                Быстро назначает встроенную демо-программу для проверки сценария тренировок.
-            </div>
-            <div id="todayWorkout" class="top-gap">Загрузка...</div>
+            <div id="todayWorkout">Загрузка...</div>
+        </div>
+    </div>
+
+    <div class="card" data-section="history">
+        <div class="section-head">
+            <h2>История тренировок</h2>
+            <button class="secondary section-toggle" type="button" data-target="section-history-body">Свернуть</button>
+        </div>
+        <div id="section-history-body" class="section-content">
+            <div id="workoutHistory">Загрузка...</div>
         </div>
     </div>
 
@@ -196,28 +196,38 @@
         <div id="section-notifications-body" class="section-content">
             <label class="checkbox-row">
                 <input id="notifEnabled" type="checkbox"/>
-                <span>Напоминания о тренировке</span>
+                <span>Авто-напоминания о тренировке</span>
             </label>
 
-            <input id="notifHour" type="number" min="0" max="23" value="9" class="top-gap" placeholder="Час напоминания"/>
+            <input id="notifHour" type="number" min="0" max="23" value="9" class="top-gap" placeholder="Час авто-напоминания"/>
 
             <div class="toolbar top-gap">
-                <button id="saveNotifBtn" type="button">Сохранить</button>
+                <button id="saveNotifBtn" type="button">Сохранить настройки</button>
+            </div>
+
+            <div class="top-gap">
+                <h3>Добавить напоминание</h3>
+                <input id="manualNotifTitle" type="text" placeholder="Заголовок"/>
+                <textarea id="manualNotifBody" class="top-gap" placeholder="Текст напоминания"></textarea>
+                <input id="manualNotifDateTime" type="datetime-local" class="top-gap"/>
+                <div class="toolbar top-gap">
+                    <button id="createNotificationBtn" type="button">Создать напоминание</button>
+                </div>
             </div>
 
             <div id="notificationsList" class="stack top-gap"></div>
         </div>
     </div>
 
-    <div id="exerciseAdminCard" class="card hidden" data-section="exerciseCatalog">
+    <div class="card" data-section="exercises">
         <div class="section-head">
-            <h2>Каталог упражнений</h2>
+            <h2>Мои упражнения</h2>
             <div class="toolbar wrap">
                 <button id="reloadExercisesBtn" class="secondary" type="button">Обновить</button>
-                <button class="secondary section-toggle" type="button" data-target="section-exerciseCatalog-body">Свернуть</button>
+                <button class="secondary section-toggle" type="button" data-target="section-exercises-body">Свернуть</button>
             </div>
         </div>
-        <div id="section-exerciseCatalog-body" class="section-content">
+        <div id="section-exercises-body" class="section-content">
             <div class="grid grid-3">
                 <input id="newExerciseTitle" type="text" placeholder="Название упражнения"/>
                 <input id="newExerciseMuscle" type="text" placeholder="Основная мышечная группа"/>
@@ -225,7 +235,11 @@
             </div>
 
             <div class="toolbar top-gap">
-                <button id="createExerciseBtn" type="button">Добавить упражнение</button>
+                <button id="createExerciseBtn" type="button">Добавить своё упражнение</button>
+            </div>
+
+            <div class="muted top-gap">
+                Общие упражнения видны всем. Личные упражнения видит только создатель.
             </div>
 
             <div id="exerciseCatalogList" class="stack top-gap"></div>
@@ -256,6 +270,6 @@
 <div id="toast" class="toast hidden"></div>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="/static/app.js?v=9"></script>
+<script src="/static/app.js?v=10"></script>
 </body>
 </html>
