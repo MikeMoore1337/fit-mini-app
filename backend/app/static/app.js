@@ -1,4 +1,4 @@
-const FRONTEND_VERSION = 'v11';
+const FRONTEND_VERSION = 'v12';
 
 const accessTokenKey = 'fit_access_token';
 const refreshTokenKey = 'fit_refresh_token';
@@ -28,6 +28,7 @@ const API = {
   exercises: '/api/v1/programs/exercises',
   createExercise: '/api/v1/programs/exercises',
   updateExercise: (exerciseId) => `/api/v1/programs/exercises/${exerciseId}`,
+  deleteExercise: (exerciseId) => `/api/v1/programs/exercises/${exerciseId}`,
 
   saveTemplate: '/api/v1/programs/templates',
   myTemplates: '/api/v1/programs/templates/mine',
@@ -388,16 +389,16 @@ function renderExerciseCatalog() {
               <span class="metric-pill">${ex.primary_muscle}</span>
               <span class="metric-pill">${ex.equipment}</span>
               ${ex.is_custom ? '<span class="metric-pill">Личное</span>' : '<span class="metric-pill">Общее</span>'}
+              ${ex.is_personalized ? '<span class="metric-pill">Моё изменение</span>' : ''}
             </div>
-            ${
-              ex.created_by_user_id === state.me?.id || state.me?.is_admin
-                ? `
-                  <div class="toolbar wrap top-gap">
-                    <button class="secondary edit-exercise-btn" type="button" data-exercise-id="${ex.id}">Редактировать</button>
-                  </div>
-                `
-                : ''
-            }
+            <div class="toolbar wrap top-gap">
+              <button class="secondary edit-exercise-btn" type="button" data-exercise-id="${ex.edit_target_id}">
+                Редактировать
+              </button>
+              <button class="secondary delete-exercise-btn" type="button" data-exercise-id="${ex.edit_target_id}">
+                Удалить
+              </button>
+            </div>
           </div>
         `
       )
@@ -406,7 +407,7 @@ function renderExerciseCatalog() {
   document.querySelectorAll('.edit-exercise-btn').forEach((btn) => {
     btn.onclick = async () => {
       const exerciseId = Number(btn.dataset.exerciseId);
-      const exercise = state.exercises.find((item) => item.id === exerciseId);
+      const exercise = state.exercises.find((item) => item.edit_target_id === exerciseId);
       if (!exercise) return;
 
       const title = prompt('Название упражнения', exercise.title);
@@ -429,9 +430,31 @@ function renderExerciseCatalog() {
         });
         showToast('Упражнение обновлено');
         await loadExercises();
+        await loadTemplates();
+        await loadTodayWorkout();
       } catch (error) {
         log(`editExercise: ${String(error)}`);
         showToast('Не удалось обновить упражнение', 'error');
+      }
+    };
+  });
+
+  document.querySelectorAll('.delete-exercise-btn').forEach((btn) => {
+    btn.onclick = async () => {
+      const exerciseId = Number(btn.dataset.exerciseId);
+      if (!confirm('Удалить упражнение только у тебя?')) return;
+
+      try {
+        await api(API.deleteExercise(exerciseId), {
+          method: 'DELETE',
+        });
+        showToast('Упражнение скрыто/удалено для текущего пользователя');
+        await loadExercises();
+        await loadTemplates();
+        await loadTodayWorkout();
+      } catch (error) {
+        log(`deleteExercise: ${String(error)}`);
+        showToast('Не удалось удалить упражнение', 'error');
       }
     };
   });
@@ -662,7 +685,7 @@ async function saveProgram() {
   await loadTemplates();
   await loadClients();
   await loadTodayWorkout();
-  await loadWorkoutHistory();
+  await resetHistoryAndReload();
   await loadNotifications();
 }
 
@@ -700,7 +723,7 @@ async function assignTemplateToMe(templateId) {
   });
   showToast('Шаблон загружен в тренировки');
   await loadTodayWorkout();
-  await loadWorkoutHistory();
+  await resetHistoryAndReload();
   await loadNotifications();
 }
 

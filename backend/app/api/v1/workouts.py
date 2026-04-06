@@ -4,6 +4,7 @@ from app.api.dependencies.auth import require_user
 from app.db.session import get_db
 from app.models.program import UserProgram, UserWorkout, UserWorkoutExercise, UserWorkoutSet
 from app.models.user import User
+from app.services.programs import get_visible_exercise_display_map
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 
@@ -15,10 +16,8 @@ def _get_user_workout_or_404(db: Session, current_user: User, workout_id: int) -
         db.query(UserWorkout)
         .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
         .options(
-            joinedload(UserWorkout.exercises)
-            .joinedload(UserWorkoutExercise.exercise),
-            joinedload(UserWorkout.exercises)
-            .joinedload(UserWorkoutExercise.sets),
+            joinedload(UserWorkout.exercises).joinedload(UserWorkoutExercise.exercise),
+            joinedload(UserWorkout.exercises).joinedload(UserWorkoutExercise.sets),
         )
         .filter(
             UserWorkout.id == workout_id,
@@ -31,7 +30,9 @@ def _get_user_workout_or_404(db: Session, current_user: User, workout_id: int) -
     return workout
 
 
-def _serialize_workout(workout: UserWorkout) -> dict:
+def _serialize_workout(workout: UserWorkout, db: Session, current_user: User) -> dict:
+    visible_map = get_visible_exercise_display_map(db, current_user)
+
     return {
         "id": workout.id,
         "scheduled_date": str(workout.scheduled_date),
@@ -44,7 +45,11 @@ def _serialize_workout(workout: UserWorkout) -> dict:
             {
                 "id": item.id,
                 "exercise_id": item.exercise_id,
-                "exercise_title": item.exercise.title if item.exercise else f"Exercise {item.exercise_id}",
+                "exercise_title": (
+                    visible_map[item.exercise_id].title
+                    if item.exercise_id in visible_map
+                    else (item.exercise.title if item.exercise else f"Exercise {item.exercise_id}")
+                ),
                 "sort_order": item.sort_order,
                 "prescribed_sets": item.prescribed_sets,
                 "prescribed_reps": item.prescribed_reps,
@@ -76,10 +81,8 @@ def get_today_workout(
         db.query(UserWorkout)
         .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
         .options(
-            joinedload(UserWorkout.exercises)
-            .joinedload(UserWorkoutExercise.exercise),
-            joinedload(UserWorkout.exercises)
-            .joinedload(UserWorkoutExercise.sets),
+            joinedload(UserWorkout.exercises).joinedload(UserWorkoutExercise.exercise),
+            joinedload(UserWorkout.exercises).joinedload(UserWorkoutExercise.sets),
         )
         .filter(
             UserProgram.user_id == current_user.id,
@@ -93,7 +96,7 @@ def get_today_workout(
     if not workout:
         raise HTTPException(status_code=404, detail="На сегодня тренировка не назначена")
 
-    return _serialize_workout(workout)
+    return _serialize_workout(workout, db, current_user)
 
 
 @router.post("/{workout_id}/start")
@@ -114,7 +117,7 @@ def start_workout(
     db.refresh(workout)
 
     workout = _get_user_workout_or_404(db, current_user, workout_id)
-    return _serialize_workout(workout)
+    return _serialize_workout(workout, db, current_user)
 
 
 @router.post("/{workout_id}/finish")
@@ -134,7 +137,7 @@ def finish_workout(
     db.refresh(workout)
 
     workout = _get_user_workout_or_404(db, current_user, workout_id)
-    return _serialize_workout(workout)
+    return _serialize_workout(workout, db, current_user)
 
 
 @router.patch("/sets/{set_id}")

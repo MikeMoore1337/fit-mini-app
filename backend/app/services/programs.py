@@ -22,10 +22,73 @@ from sqlalchemy.orm import Session, joinedload
 GOALS = {"muscle_gain", "fat_loss", "maintenance", "recomposition"}
 LEVELS = {"beginner", "intermediate", "advanced"}
 MODES = {"self", "coach"}
+LEGACY_DEMO_TEMPLATE_SLUG = "upper-lower-4x"
 
 
 class ProgramError(ValueError):
     pass
+
+
+def _slugify(value: str) -> str:
+    cleaned = "".join(ch.lower() if ch.isalnum() else "-" for ch in value.strip())
+    while "--" in cleaned:
+        cleaned = cleaned.replace("--", "-")
+    return cleaned.strip("-") or f"exercise-{uuid4().hex[:8]}"
+
+
+def _effective_exercise_id(exercise: Exercise) -> int:
+    return exercise.source_exercise_id or exercise.id
+
+
+def _personal_slug(base: str) -> str:
+    return f"{base}-u-{uuid4().hex[:8]}"
+
+
+def _load_visible_exercise_rows(db: Session, current_user: User) -> list[Exercise]:
+    base_rows = (
+        db.query(Exercise)
+        .filter(Exercise.created_by_user_id.is_(None))
+        .order_by(Exercise.title.asc())
+        .all()
+    )
+
+    personal_rows = (
+        db.query(Exercise)
+        .filter(Exercise.created_by_user_id == current_user.id)
+        .all()
+    )
+
+    overrides_by_source: dict[int, Exercise] = {}
+    personal_custom_rows: list[Exercise] = []
+
+    for row in personal_rows:
+        if row.source_exercise_id:
+            overrides_by_source[row.source_exercise_id] = row
+        else:
+            personal_custom_rows.append(row)
+
+    visible: list[Exercise] = []
+
+    for base in base_rows:
+        override = overrides_by_source.get(base.id)
+        if override is not None:
+            if not override.is_deleted:
+                visible.append(override)
+        else:
+            if not base.is_deleted:
+                visible.append(base)
+
+    for row in personal_custom_rows:
+        if not row.is_deleted:
+            visible.append(row)
+
+    visible.sort(key=lambda x: x.title.lower())
+    return visible
+
+
+def get_visible_exercise_display_map(db: Session, current_user: User) -> dict[int, Exercise]:
+    rows = _load_visible_exercise_rows(db, current_user)
+    return {_effective_exercise_id(row): row for row in rows}
 
 
 def get_or_create_user_by_telegram_id(
@@ -72,7 +135,9 @@ def ensure_coach_link(db: Session, coach: User, client: User) -> None:
         db.flush()
 
 
-def build_template_response(item: ProgramTemplate) -> dict:
+def build_template_response(item: ProgramTemplate, db: Session, current_user: User) -> dict:
+    visible_map = get_visible_exercise_display_map(db, current_user)
+
     return {
         "id": item.id,
         "title": item.title,
@@ -91,7 +156,11 @@ def build_template_response(item: ProgramTemplate) -> dict:
                     {
                         "id": ex.id,
                         "exercise_id": ex.exercise_id,
-                        "exercise_title": ex.exercise.title,
+                        "exercise_title": (
+                            visible_map[ex.exercise_id].title
+                            if ex.exercise_id in visible_map
+                            else ex.exercise.title
+                        ),
                         "prescribed_sets": ex.prescribed_sets,
                         "prescribed_reps": ex.prescribed_reps,
                         "rest_seconds": ex.rest_seconds,
@@ -106,24 +175,7 @@ def build_template_response(item: ProgramTemplate) -> dict:
 
 
 def list_exercises(db: Session, current_user: User) -> list[Exercise]:
-    return (
-        db.query(Exercise)
-        .filter(
-            or_(
-                Exercise.created_by_user_id.is_(None),
-                Exercise.created_by_user_id == current_user.id,
-            )
-        )
-        .order_by(Exercise.title.asc())
-        .all()
-    )
-
-
-def _slugify(value: str) -> str:
-    cleaned = "".join(ch.lower() if ch.isalnum() else "-" for ch in value.strip())
-    while "--" in cleaned:
-        cleaned = cleaned.replace("--", "-")
-    return cleaned.strip("-") or f"exercise-{uuid4().hex[:8]}"
+    return _load_visible_exercise_rows(db, current_user)
 
 
 def create_exercise(
@@ -144,18 +196,8 @@ def create_exercise(
     if not normalized_equipment:
         raise ProgramError("Equipment is required")
 
-    existing_title = (
-        db.query(Exercise)
-        .filter(
-            Exercise.title.ilike(normalized_title),
-            or_(
-                Exercise.created_by_user_id.is_(None),
-                Exercise.created_by_user_id == current_user.id,
-            ),
-        )
-        .first()
-    )
-    if existing_title:
+    visible_rows = _load_visible_exercise_rows(db, current_user)
+    if any(row.title.lower() == normalized_title.lower() for row in visible_rows):
         raise ProgramError("Exercise with this title already exists")
 
     base_slug = _slugify(normalized_title)
@@ -171,11 +213,24 @@ def create_exercise(
         primary_muscle=normalized_muscle,
         equipment=normalized_equipment,
         created_by_user_id=current_user.id,
+        source_exercise_id=None,
+        is_deleted=False,
     )
     db.add(exercise)
     db.commit()
     db.refresh(exercise)
     return exercise
+
+
+def _find_personal_override(db: Session, current_user: User, base_exercise_id: int) -> Exercise | None:
+    return (
+        db.query(Exercise)
+        .filter(
+            Exercise.created_by_user_id == current_user.id,
+            Exercise.source_exercise_id == base_exercise_id,
+        )
+        .first()
+    )
 
 
 def update_exercise_for_user(
@@ -190,13 +245,6 @@ def update_exercise_for_user(
     if not exercise:
         raise ProgramError("Exercise not found")
 
-    can_edit = (
-        current_user.is_admin
-        or exercise.created_by_user_id == current_user.id
-    )
-    if not can_edit:
-        raise ProgramError("No permission to edit exercise")
-
     normalized_title = title.strip()
     normalized_muscle = primary_muscle.strip()
     normalized_equipment = equipment.strip()
@@ -208,27 +256,88 @@ def update_exercise_for_user(
     if not normalized_equipment:
         raise ProgramError("Equipment is required")
 
-    duplicate = (
-        db.query(Exercise)
-        .filter(
-            Exercise.id != exercise.id,
-            Exercise.title.ilike(normalized_title),
-            or_(
-                Exercise.created_by_user_id.is_(None),
-                Exercise.created_by_user_id == current_user.id,
-            ),
-        )
-        .first()
-    )
-    if duplicate:
+    visible_rows = _load_visible_exercise_rows(db, current_user)
+    visible_names = {
+        row.title.lower()
+        for row in visible_rows
+        if (_effective_exercise_id(row) != _effective_exercise_id(exercise))
+    }
+    if normalized_title.lower() in visible_names:
         raise ProgramError("Exercise with this title already exists")
 
-    exercise.title = normalized_title
-    exercise.primary_muscle = normalized_muscle
-    exercise.equipment = normalized_equipment
-    db.commit()
-    db.refresh(exercise)
-    return exercise
+    # Личная запись пользователя - редактируем напрямую
+    if exercise.created_by_user_id == current_user.id:
+        exercise.title = normalized_title
+        exercise.primary_muscle = normalized_muscle
+        exercise.equipment = normalized_equipment
+        exercise.is_deleted = False
+        db.commit()
+        db.refresh(exercise)
+        return exercise
+
+    # Общее упражнение - создаём или обновляем персональное переопределение
+    if exercise.created_by_user_id is None:
+        override = _find_personal_override(db, current_user, exercise.id)
+        if override is None:
+            override = Exercise(
+                slug=_personal_slug(exercise.slug),
+                title=normalized_title,
+                primary_muscle=normalized_muscle,
+                equipment=normalized_equipment,
+                created_by_user_id=current_user.id,
+                source_exercise_id=exercise.id,
+                is_deleted=False,
+            )
+            db.add(override)
+        else:
+            override.title = normalized_title
+            override.primary_muscle = normalized_muscle
+            override.equipment = normalized_equipment
+            override.is_deleted = False
+
+        db.commit()
+        db.refresh(override)
+        return override
+
+    raise ProgramError("No permission to edit exercise")
+
+
+def delete_exercise_for_user(
+    db: Session,
+    current_user: User,
+    exercise_id: int,
+) -> None:
+    exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
+    if not exercise:
+        raise ProgramError("Exercise not found")
+
+    # Личное упражнение или личное переопределение
+    if exercise.created_by_user_id == current_user.id:
+        exercise.is_deleted = True
+        db.commit()
+        return
+
+    # Общее упражнение - создаём персональную скрывающую запись
+    if exercise.created_by_user_id is None:
+        override = _find_personal_override(db, current_user, exercise.id)
+        if override is None:
+            override = Exercise(
+                slug=_personal_slug(exercise.slug),
+                title=exercise.title,
+                primary_muscle=exercise.primary_muscle,
+                equipment=exercise.equipment,
+                created_by_user_id=current_user.id,
+                source_exercise_id=exercise.id,
+                is_deleted=True,
+            )
+            db.add(override)
+        else:
+            override.is_deleted = True
+
+        db.commit()
+        return
+
+    raise ProgramError("No permission to delete exercise")
 
 
 def validate_program_payload(payload: ProgramTemplateCreate) -> None:
@@ -263,7 +372,7 @@ def create_template(
     db.add(template)
     db.flush()
 
-    visible_exercise_ids = {ex.id for ex in list_exercises(db, current_user)}
+    visible_effective_ids = {_effective_exercise_id(ex) for ex in _load_visible_exercise_rows(db, current_user)}
 
     for index, day in enumerate(payload.days, start=1):
         day_row = ProgramTemplateDay(
@@ -275,7 +384,7 @@ def create_template(
         db.flush()
 
         for sort_order, ex in enumerate(day.exercises, start=1):
-            if ex.exercise_id not in visible_exercise_ids:
+            if ex.exercise_id not in visible_effective_ids:
                 raise ProgramError("Exercise is not available for current user")
 
             db.add(
@@ -459,6 +568,7 @@ def list_user_templates(db: Session, current_user: User) -> list[ProgramTemplate
                 ProgramTemplate.is_public.is_(True),
             )
         )
+        .filter(ProgramTemplate.slug != LEGACY_DEMO_TEMPLATE_SLUG)
         .order_by(ProgramTemplate.id.desc())
         .all()
     )
@@ -476,7 +586,10 @@ def get_template_for_user(
             .joinedload(ProgramTemplateDay.exercises)
             .joinedload(ProgramTemplateExercise.exercise)
         )
-        .filter(ProgramTemplate.id == template_id)
+        .filter(
+            ProgramTemplate.id == template_id,
+            ProgramTemplate.slug != LEGACY_DEMO_TEMPLATE_SLUG,
+        )
         .first()
     )
     if not template:
@@ -501,7 +614,14 @@ def update_template_for_user(
     template_id: int,
     payload: ProgramTemplateCreate,
 ) -> ProgramTemplate:
-    template = db.query(ProgramTemplate).filter(ProgramTemplate.id == template_id).first()
+    template = (
+        db.query(ProgramTemplate)
+        .filter(
+            ProgramTemplate.id == template_id,
+            ProgramTemplate.slug != LEGACY_DEMO_TEMPLATE_SLUG,
+        )
+        .first()
+    )
     if not template:
         raise ProgramError("Template not found")
 
@@ -532,7 +652,7 @@ def update_template_for_user(
             ProgramTemplateDay.id.in_(old_day_ids)
         ).delete(synchronize_session=False)
 
-    visible_exercise_ids = {ex.id for ex in list_exercises(db, current_user)}
+    visible_effective_ids = {_effective_exercise_id(ex) for ex in _load_visible_exercise_rows(db, current_user)}
 
     for index, day in enumerate(payload.days, start=1):
         day_row = ProgramTemplateDay(
@@ -544,7 +664,7 @@ def update_template_for_user(
         db.flush()
 
         for sort_order, ex in enumerate(day.exercises, start=1):
-            if ex.exercise_id not in visible_exercise_ids:
+            if ex.exercise_id not in visible_effective_ids:
                 raise ProgramError("Exercise is not available for current user")
 
             db.add(
@@ -560,7 +680,6 @@ def update_template_for_user(
             )
 
     db.commit()
-
     return get_template_for_user(db, current_user, template.id)
 
 
@@ -575,37 +694,6 @@ def list_clients(db: Session, coach: User) -> list[User]:
     )
 
 
-def assign_existing_template_to_user(
-    db: Session,
-    current_user: User,
-    template_id: int,
-    target_telegram_user_id: int,
-    target_full_name: str | None = None,
-):
-    template = (
-        db.query(ProgramTemplate)
-        .options(
-            joinedload(ProgramTemplate.days)
-            .joinedload(ProgramTemplateDay.exercises)
-        )
-        .filter(ProgramTemplate.id == template_id)
-        .first()
-    )
-    if not template:
-        raise ProgramError("Template not found")
-
-    target_user = get_or_create_user_by_telegram_id(
-        db,
-        target_telegram_user_id,
-        target_full_name,
-    )
-    ensure_coach_link(db, current_user, target_user)
-    program, created = assign_template_to_user(db, template, target_user, current_user)
-    db.commit()
-    db.refresh(program)
-    return program, created, target_user
-
-
 def assign_template_to_self(
     db: Session,
     current_user: User,
@@ -617,7 +705,10 @@ def assign_template_to_self(
             joinedload(ProgramTemplate.days)
             .joinedload(ProgramTemplateDay.exercises)
         )
-        .filter(ProgramTemplate.id == template_id)
+        .filter(
+            ProgramTemplate.id == template_id,
+            ProgramTemplate.slug != LEGACY_DEMO_TEMPLATE_SLUG,
+        )
         .first()
     )
     if not template:
@@ -646,7 +737,10 @@ def delete_template_for_user(
 ) -> None:
     template = (
         db.query(ProgramTemplate)
-        .filter(ProgramTemplate.id == template_id)
+        .filter(
+            ProgramTemplate.id == template_id,
+            ProgramTemplate.slug != LEGACY_DEMO_TEMPLATE_SLUG,
+        )
         .first()
     )
     if not template:
