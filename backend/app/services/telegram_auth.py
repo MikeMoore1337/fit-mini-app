@@ -19,14 +19,14 @@ def parse_init_data(init_data: str) -> dict[str, str]:
     return dict(parse_qsl(init_data, keep_blank_values=True))
 
 
-def validate_init_data(init_data: str, bot_token: str) -> dict:
+def validate_telegram_init_data(init_data: str, bot_token: str) -> dict:
     data = parse_init_data(init_data)
 
     received_hash = data.pop("hash", None)
     if not received_hash:
         raise ValueError("hash отсутствует в init_data")
 
-    data_check_string = "\n".join(f"{k}={v}" for k, v in sorted(data.items()))
+    data_check_string = "\n".join(f"{key}={value}" for key, value in sorted(data.items()))
 
     secret_key = build_secret_key(bot_token)
     calculated_hash = hmac.new(
@@ -43,11 +43,16 @@ def validate_init_data(init_data: str, bot_token: str) -> dict:
         raise ValueError("В init_data отсутствует user")
 
     user_data = json.loads(user_raw)
+
     return {
         "auth_date": data.get("auth_date"),
         "user": user_data,
         "raw": data,
     }
+
+
+def validate_init_data(init_data: str, bot_token: str) -> dict:
+    return validate_telegram_init_data(init_data, bot_token)
 
 
 def get_or_create_user_from_init_data(db: Session, init_data: dict) -> User:
@@ -89,6 +94,21 @@ def get_or_create_user_from_init_data(db: Session, init_data: dict) -> User:
     user.username = username
     user.first_name = first_name
     user.last_name = last_name
+    user.is_active = True
+
+    profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
+    if not profile:
+        full_name = (
+            " ".join(part for part in [first_name, last_name] if part).strip()
+            or username
+            or f"User {telegram_user_id}"
+        )
+        profile = UserProfile(
+            user_id=user.id,
+            full_name=full_name,
+        )
+        db.add(profile)
+
     db.commit()
     db.refresh(user)
     return user
