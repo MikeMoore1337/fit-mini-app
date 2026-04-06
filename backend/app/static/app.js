@@ -1,4 +1,4 @@
-const FRONTEND_VERSION = 'v12';
+const FRONTEND_VERSION = 'v14';
 
 const accessTokenKey = 'fit_access_token';
 const refreshTokenKey = 'fit_refresh_token';
@@ -12,6 +12,7 @@ const state = {
   plans: [],
   publicConfig: null,
   workoutTimer: null,
+  currentWorkoutTimerStartedAtMs: null,
   historyOffset: 0,
   historyLimit: 4,
   historyHasMore: true,
@@ -39,6 +40,7 @@ const API = {
   clients: '/api/v1/programs/clients',
 
   todayWorkout: '/api/v1/workouts/today',
+  deleteTodayWorkout: '/api/v1/workouts/today',
   startWorkout: (workoutId) => `/api/v1/workouts/${workoutId}/start`,
   finishWorkout: (workoutId) => `/api/v1/workouts/${workoutId}/finish`,
   updateSet: (setId) => `/api/v1/workouts/sets/${setId}`,
@@ -264,6 +266,25 @@ function initSectionToggles() {
       localStorage.setItem(storageKey, collapsed ? 'collapsed' : 'expanded');
     };
   });
+}
+
+function getWorkoutTimerStorageKey(workoutId) {
+  return `fit_workout_timer_started_${workoutId}`;
+}
+
+function saveWorkoutTimerStart(workoutId, startedAtMs) {
+  localStorage.setItem(getWorkoutTimerStorageKey(workoutId), String(startedAtMs));
+}
+
+function loadWorkoutTimerStart(workoutId) {
+  const raw = localStorage.getItem(getWorkoutTimerStorageKey(workoutId));
+  if (!raw) return null;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
+}
+
+function clearWorkoutTimerStart(workoutId) {
+  localStorage.removeItem(getWorkoutTimerStorageKey(workoutId));
 }
 
 async function loadEnv() {
@@ -686,7 +707,6 @@ async function saveProgram() {
   await loadClients();
   await loadTodayWorkout();
   await resetHistoryAndReload();
-  await loadNotifications();
 }
 
 async function loadTemplateIntoBuilder(templateId) {
@@ -724,7 +744,6 @@ async function assignTemplateToMe(templateId) {
   showToast('Шаблон загружен в тренировки');
   await loadTodayWorkout();
   await resetHistoryAndReload();
-  await loadNotifications();
 }
 
 async function deleteTemplate(templateId) {
@@ -854,6 +873,7 @@ function clearWorkoutTimer() {
     clearInterval(state.workoutTimer);
     state.workoutTimer = null;
   }
+  state.currentWorkoutTimerStartedAtMs = null;
 }
 
 function formatDurationMs(ms) {
@@ -868,15 +888,15 @@ function formatDurationMs(ms) {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
-function startWorkoutTimer(startedAtIso) {
+function startWorkoutTimerFromMs(startedAtMs) {
   clearWorkoutTimer();
   const timerNode = $('workoutTimer');
-  if (!timerNode || !startedAtIso) return;
+  if (!timerNode || !startedAtMs) return;
 
-  const startedAt = new Date(startedAtIso).getTime();
+  state.currentWorkoutTimerStartedAtMs = startedAtMs;
 
   const render = () => {
-    timerNode.textContent = `Длительность тренировки: ${formatDurationMs(Date.now() - startedAt)}`;
+    timerNode.textContent = `Длительность тренировки: ${formatDurationMs(Date.now() - startedAtMs)}`;
   };
 
   render();
@@ -890,6 +910,21 @@ async function updateSetRow(setId, payload) {
   });
 }
 
+async function deleteTodayWorkout() {
+  if (state.todayWorkout?.id) {
+    clearWorkoutTimerStart(state.todayWorkout.id);
+  }
+
+  await api(API.deleteTodayWorkout, {
+    method: 'DELETE',
+  });
+  showToast('Тренировка на сегодня удалена');
+  state.todayWorkout = null;
+  clearWorkoutTimer();
+  renderTodayWorkout(null);
+  await resetHistoryAndReload();
+}
+
 function renderTodayWorkout(workout) {
   const container = $('todayWorkout');
   if (!container) return;
@@ -900,12 +935,14 @@ function renderTodayWorkout(workout) {
     return;
   }
 
+  const deleteBtn = `<button id="deleteTodayWorkoutBtn" class="secondary" type="button">Удалить тренировку</button>`;
+
   const actionButtons =
     workout.status === 'planned'
-      ? `<button id="startWorkoutBtn" type="button">Начать тренировку</button>`
+      ? `<button id="startWorkoutBtn" type="button">Начать тренировку</button>${deleteBtn}`
       : workout.status === 'in_progress'
-        ? `<button id="finishWorkoutBtn" type="button">Завершить тренировку</button>`
-        : '';
+        ? `<button id="finishWorkoutBtn" type="button">Завершить тренировку</button>${deleteBtn}`
+        : deleteBtn;
 
   container.innerHTML = `
     <div class="item-card">
@@ -963,26 +1000,53 @@ function renderTodayWorkout(workout) {
     </div>
   `;
 
-  if (workout.status === 'in_progress' && workout.started_at) {
-    startWorkoutTimer(workout.started_at);
-  } else if (workout.status === 'completed' && workout.started_at && workout.completed_at) {
+  if (workout.status === 'in_progress') {
+    let startedAtMs = loadWorkoutTimerStart(workout.id);
+    if (!startedAtMs) {
+      startedAtMs = Date.now();
+      saveWorkoutTimerStart(workout.id, startedAtMs);
+    }
+    startWorkoutTimerFromMs(startedAtMs);
+  } else if (workout.status === 'completed') {
     clearWorkoutTimer();
     const timerNode = $('workoutTimer');
-    if (timerNode) {
-      timerNode.textContent = `Длительность тренировки: ${formatDurationMs(new Date(workout.completed_at).getTime() - new Date(workout.started_at).getTime())}`;
+    const startedAtMs = loadWorkoutTimerStart(workout.id);
+    if (timerNode && startedAtMs) {
+      const finishedAtMs = Date.now();
+      timerNode.textContent = `Длительность тренировки: ${formatDurationMs(finishedAtMs - startedAtMs)}`;
     }
   } else {
     clearWorkoutTimer();
+    const timerNode = $('workoutTimer');
+    if (timerNode) {
+      timerNode.textContent = 'Таймер ещё не запущен';
+    }
+  }
+
+  const deleteBtnNode = $('deleteTodayWorkoutBtn');
+  if (deleteBtnNode) {
+    deleteBtnNode.onclick = async () => {
+      if (!confirm('Удалить тренировку на сегодня?')) return;
+      try {
+        await deleteTodayWorkout();
+      } catch (error) {
+        log(`deleteTodayWorkout: ${String(error)}`);
+        showToast('Не удалось удалить тренировку', 'error');
+      }
+    };
   }
 
   const startBtn = $('startWorkoutBtn');
   if (startBtn) {
     startBtn.onclick = async () => {
       try {
+        const localStartMs = Date.now();
+        saveWorkoutTimerStart(workout.id, localStartMs);
+
         state.todayWorkout = await api(API.startWorkout(workout.id), { method: 'POST' });
         showToast('Тренировка начата');
         renderTodayWorkout(state.todayWorkout);
-        resetHistoryAndReload();
+        await resetHistoryAndReload();
       } catch (error) {
         log(`startWorkout: ${String(error)}`);
         showToast('Не удалось начать тренировку', 'error');
@@ -994,10 +1058,19 @@ function renderTodayWorkout(workout) {
   if (finishBtn) {
     finishBtn.onclick = async () => {
       try {
+        const localStartMs = loadWorkoutTimerStart(workout.id);
         state.todayWorkout = await api(API.finishWorkout(workout.id), { method: 'POST' });
         showToast('Тренировка завершена');
         renderTodayWorkout(state.todayWorkout);
-        resetHistoryAndReload();
+
+        const timerNode = $('workoutTimer');
+        if (timerNode && localStartMs) {
+          timerNode.textContent = `Длительность тренировки: ${formatDurationMs(Date.now() - localStartMs)}`;
+        }
+
+        clearWorkoutTimerStart(workout.id);
+        clearWorkoutTimer();
+        await resetHistoryAndReload();
       } catch (error) {
         log(`finishWorkout: ${String(error)}`);
         showToast('Не удалось завершить тренировку', 'error');
@@ -1273,7 +1346,7 @@ async function saveNotificationSettings() {
     }),
   });
 
-  showToast('Настройки авто-напоминаний сохранены');
+  showToast('Настройки уведомлений сохранены');
   await loadNotifications();
 }
 

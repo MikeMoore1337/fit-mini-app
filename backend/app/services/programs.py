@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import date, timedelta
 from uuid import uuid4
 
 from app.models.exercise import Exercise
-from app.models.notification import Notification, NotificationSetting
 from app.models.program import (
     ProgramTemplate,
     ProgramTemplateDay,
@@ -111,7 +110,6 @@ def get_or_create_user_by_telegram_id(
                 full_name=full_name or f"Пользователь {telegram_user_id}",
             )
         )
-        db.add(NotificationSetting(user_id=user.id))
         db.commit()
         db.refresh(user)
     return user
@@ -265,7 +263,6 @@ def update_exercise_for_user(
     if normalized_title.lower() in visible_names:
         raise ProgramError("Exercise with this title already exists")
 
-    # Личная запись пользователя - редактируем напрямую
     if exercise.created_by_user_id == current_user.id:
         exercise.title = normalized_title
         exercise.primary_muscle = normalized_muscle
@@ -275,7 +272,6 @@ def update_exercise_for_user(
         db.refresh(exercise)
         return exercise
 
-    # Общее упражнение - создаём или обновляем персональное переопределение
     if exercise.created_by_user_id is None:
         override = _find_personal_override(db, current_user, exercise.id)
         if override is None:
@@ -299,6 +295,15 @@ def update_exercise_for_user(
         db.refresh(override)
         return override
 
+    if current_user.is_admin or current_user.is_coach:
+        exercise.title = normalized_title
+        exercise.primary_muscle = normalized_muscle
+        exercise.equipment = normalized_equipment
+        exercise.is_deleted = False
+        db.commit()
+        db.refresh(exercise)
+        return exercise
+
     raise ProgramError("No permission to edit exercise")
 
 
@@ -311,13 +316,11 @@ def delete_exercise_for_user(
     if not exercise:
         raise ProgramError("Exercise not found")
 
-    # Личное упражнение или личное переопределение
     if exercise.created_by_user_id == current_user.id:
         exercise.is_deleted = True
         db.commit()
         return
 
-    # Общее упражнение - создаём персональную скрывающую запись
     if exercise.created_by_user_id is None:
         override = _find_personal_override(db, current_user, exercise.id)
         if override is None:
@@ -334,6 +337,11 @@ def delete_exercise_for_user(
         else:
             override.is_deleted = True
 
+        db.commit()
+        return
+
+    if current_user.is_admin or current_user.is_coach:
+        exercise.is_deleted = True
         db.commit()
         return
 
@@ -403,38 +411,6 @@ def create_template(
     return template
 
 
-def schedule_workout_notifications(
-    db: Session,
-    target_user: User,
-    workouts: list[UserWorkout],
-) -> None:
-    settings = (
-        db.query(NotificationSetting)
-        .filter(NotificationSetting.user_id == target_user.id)
-        .first()
-    )
-    if settings and not settings.workout_reminders_enabled:
-        return
-
-    reminder_hour = settings.reminder_hour if settings else 9
-
-    for workout in workouts:
-        scheduled = datetime.combine(
-            workout.scheduled_date,
-            time(reminder_hour, 0),
-            tzinfo=UTC,
-        )
-        db.add(
-            Notification(
-                user_id=target_user.id,
-                title="Напоминание о тренировке",
-                body=f"Сегодня запланирована тренировка: {workout.title}",
-                scheduled_for=scheduled,
-                status="queued",
-            )
-        )
-
-
 def assign_template_to_user(
     db: Session,
     template: ProgramTemplate,
@@ -496,7 +472,6 @@ def assign_template_to_user(
 
         created += 1
 
-    schedule_workout_notifications(db, target_user, workouts)
     db.flush()
     return user_program, created
 

@@ -4,7 +4,7 @@
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>FitMiniApp</title>
-    <link rel="stylesheet" href="/static/styles.css?v=11"/>
+    <link rel="stylesheet" href="/static/styles.css?v=13"/>
 </head>
 <body>
 <div class="container">
@@ -12,23 +12,26 @@
         <div>
             <h1>FitMiniApp</h1>
             <p class="muted">
-                Мини-приложение для ведения тренировок, шаблонов, упражнений и напоминаний.
+                Приложение для ведения тренировок: профиля, программ, шаблонов, упражнений,
+                истории занятий и ручных напоминаний.
             </p>
-            <div id="adminMeta" class="muted hidden top-gap"></div>
+            <div id="adminMeta" class="muted top-gap hidden"></div>
         </div>
         <div id="env-badge" class="badge hidden"></div>
     </div>
 
-    <div class="card" data-section="auth">
+    <!-- Вход -->
+    <div class="card">
         <div class="section-head">
             <h2>Вход</h2>
-            <button class="secondary section-toggle" type="button" data-target="section-auth-body">Свернуть</button>
+            <button class="secondary section-toggle" type="button" data-target="section-auth">Свернуть</button>
         </div>
-        <div id="section-auth-body" class="section-content">
+        <div id="section-auth" class="section-content">
             <div class="stack">
                 <div id="authState" class="muted">Проверяем авторизацию через Telegram...</div>
+
                 <div class="toolbar wrap">
-                    <button id="telegramLoginBtn" class="secondary">Повторить вход через Telegram</button>
+                    <button id="telegramLoginBtn" class="secondary" type="button">Повторить вход через Telegram</button>
                     <a href="/admin" id="adminLink" class="button-link hidden">Админка</a>
                 </div>
             </div>
@@ -43,18 +46,19 @@
                 </label>
 
                 <div class="toolbar wrap">
-                    <button id="devLoginBtn" class="hidden">Dev login</button>
+                    <button id="devLoginBtn" class="secondary" type="button">Dev login</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="card" data-section="profile">
+    <!-- Профиль -->
+    <div class="card">
         <div class="section-head">
             <h2>Профиль</h2>
-            <button class="secondary section-toggle" type="button" data-target="section-profile-body">Свернуть</button>
+            <button class="secondary section-toggle" type="button" data-target="section-profile">Свернуть</button>
         </div>
-        <div id="section-profile-body" class="section-content">
+        <div id="section-profile" class="section-content">
             <div class="grid grid-4">
                 <input id="full_name" type="text" placeholder="Имя"/>
                 <select id="goal">
@@ -80,12 +84,16 @@
         </div>
     </div>
 
-    <div class="card" data-section="builder">
+    <!-- Конструктор программы -->
+    <div class="card">
         <div class="section-head">
-            <h2>Конструктор программы</h2>
-            <button class="secondary section-toggle" type="button" data-target="section-builder-body">Свернуть</button>
+            <div>
+                <h2>Конструктор программы</h2>
+                <div id="builderModeInfo" class="muted top-gap">Создание нового шаблона</div>
+            </div>
+            <button class="secondary section-toggle" type="button" data-target="section-builder">Свернуть</button>
         </div>
-        <div id="section-builder-body" class="section-content">
+        <div id="section-builder" class="section-content">
             <div class="grid grid-4">
                 <select id="builder_mode">
                     <option value="self">Для себя</option>
@@ -116,48 +124,50 @@
             <div class="toolbar wrap top-gap">
                 <button id="addDayBtn" class="secondary" type="button">+ День</button>
                 <button id="fillExampleBtn" class="secondary" type="button">Заполнить пример</button>
-                <button id="saveProgramBtn" type="button">Сохранить и назначить</button>
+                <button id="saveProgramBtn" type="button">Сохранить</button>
                 <button id="cancelTemplateEditBtn" class="secondary hidden" type="button">Отменить редактирование</button>
             </div>
 
-            <div id="builderModeInfo" class="muted top-gap">Создание нового шаблона</div>
             <div id="builderResult" class="muted top-gap"></div>
             <div id="dayBuilder" class="stack top-gap"></div>
         </div>
     </div>
 
-    <div class="card" data-section="todayWorkout">
+    <!-- Тренировка на сегодня -->
+    <div class="card">
         <div class="section-head">
             <h2>Тренировка на сегодня</h2>
-            <button class="secondary section-toggle" type="button" data-target="section-todayWorkout-body">Свернуть</button>
+            <button class="secondary section-toggle" type="button" data-target="section-today-workout">Свернуть</button>
         </div>
-        <div id="section-todayWorkout-body" class="section-content">
+        <div id="section-today-workout" class="section-content">
             <div id="todayWorkout">Загрузка...</div>
         </div>
     </div>
 
-    <div class="card" data-section="templates">
+    <!-- Шаблоны -->
+    <div class="card">
         <div class="section-head">
             <h2>Шаблоны</h2>
             <div class="toolbar wrap">
                 <button id="reloadTemplatesBtn" class="secondary" type="button">Обновить</button>
-                <button class="secondary section-toggle" type="button" data-target="section-templates-body">Свернуть</button>
+                <button class="secondary section-toggle" type="button" data-target="section-templates">Свернуть</button>
             </div>
         </div>
-        <div id="section-templates-body" class="section-content">
+        <div id="section-templates" class="section-content">
             <div id="templatesList" class="stack"></div>
         </div>
     </div>
 
-    <div class="card" data-section="exercises">
+    <!-- Мои упражнения -->
+    <div class="card">
         <div class="section-head">
             <h2>Мои упражнения</h2>
             <div class="toolbar wrap">
                 <button id="reloadExercisesBtn" class="secondary" type="button">Обновить</button>
-                <button class="secondary section-toggle" type="button" data-target="section-exercises-body">Свернуть</button>
+                <button class="secondary section-toggle" type="button" data-target="section-exercises">Свернуть</button>
             </div>
         </div>
-        <div id="section-exercises-body" class="section-content">
+        <div id="section-exercises" class="section-content">
             <div class="grid grid-3">
                 <input id="newExerciseTitle" type="text" placeholder="Название упражнения"/>
                 <input id="newExerciseMuscle" type="text" placeholder="Основная мышечная группа"/>
@@ -165,55 +175,82 @@
             </div>
 
             <div class="toolbar top-gap">
-                <button id="createExerciseBtn" type="button">Добавить своё упражнение</button>
-            </div>
-
-            <div class="muted top-gap">
-                Общие упражнения видны всем. Личные упражнения видит и редактирует только создатель.
+                <button id="createExerciseBtn" type="button">Добавить упражнение</button>
             </div>
 
             <div id="exerciseCatalogList" class="stack top-gap"></div>
         </div>
     </div>
 
-    <div class="card" data-section="history">
+    <!-- История тренировок -->
+    <div class="card">
         <div class="section-head">
             <h2>История тренировок</h2>
-            <button class="secondary section-toggle" type="button" data-target="section-history-body">Свернуть</button>
+            <button class="secondary section-toggle" type="button" data-target="section-history">Свернуть</button>
         </div>
-        <div id="section-history-body" class="section-content">
-            <div id="workoutHistory">Загрузка...</div>
+        <div id="section-history" class="section-content">
+            <div id="workoutHistory" class="stack"></div>
             <div class="toolbar top-gap">
-                <button id="loadMoreHistoryBtn" class="secondary" type="button">Показать ещё</button>
+                <button id="loadMoreHistoryBtn" class="secondary hidden" type="button">Загрузить ещё</button>
             </div>
         </div>
     </div>
 
-    <div class="card" data-section="notifications">
+    <!-- Клиенты -->
+    <div id="clientsCard" class="card hidden">
+        <div class="section-head">
+            <h2>Клиенты</h2>
+            <div class="toolbar wrap">
+                <button id="reloadClientsBtn" class="secondary" type="button">Обновить</button>
+                <button class="secondary section-toggle" type="button" data-target="section-clients">Свернуть</button>
+            </div>
+        </div>
+        <div id="section-clients" class="section-content">
+            <div id="clientsList" class="stack"></div>
+        </div>
+    </div>
+
+    <!-- Уведомления -->
+    <div class="card">
         <div class="section-head">
             <h2>Уведомления</h2>
             <div class="toolbar wrap">
                 <button id="reloadNotificationsBtn" class="secondary" type="button">Обновить</button>
-                <button class="secondary section-toggle" type="button" data-target="section-notifications-body">Свернуть</button>
+                <button class="secondary section-toggle" type="button" data-target="section-notifications">Свернуть</button>
             </div>
         </div>
-        <div id="section-notifications-body" class="section-content">
-            <label class="checkbox-row">
-                <input id="notifEnabled" type="checkbox"/>
-                <span>Авто-напоминания о тренировке</span>
-            </label>
+        <div id="section-notifications" class="section-content">
+            <div class="item-card">
+                <h3>Настройки</h3>
 
-            <input id="notifHour" type="number" min="0" max="23" value="9" class="top-gap" placeholder="Час авто-напоминания"/>
+                <label class="checkbox-row top-gap">
+                    <input id="notifEnabled" type="checkbox"/>
+                    <span>Напоминания о тренировке</span>
+                </label>
 
-            <div class="toolbar top-gap">
-                <button id="saveNotifBtn" type="button">Сохранить настройки</button>
+                <input
+                    id="notifHour"
+                    type="number"
+                    min="0"
+                    max="23"
+                    value="9"
+                    class="top-gap"
+                    placeholder="Час напоминания"
+                />
+
+                <div class="toolbar top-gap">
+                    <button id="saveNotifBtn" type="button">Сохранить настройки</button>
+                </div>
             </div>
 
-            <div class="top-gap">
-                <h3>Добавить напоминание</h3>
-                <input id="manualNotifTitle" type="text" placeholder="Заголовок"/>
-                <textarea id="manualNotifBody" class="top-gap" placeholder="Текст напоминания"></textarea>
-                <input id="manualNotifDateTime" type="datetime-local" class="top-gap"/>
+            <div class="item-card top-gap">
+                <h3>Создать напоминание вручную</h3>
+                <div class="stack top-gap">
+                    <input id="manualNotifTitle" type="text" placeholder="Заголовок"/>
+                    <textarea id="manualNotifBody" placeholder="Текст напоминания"></textarea>
+                    <input id="manualNotifDateTime" type="datetime-local"/>
+                </div>
+
                 <div class="toolbar top-gap">
                     <button id="createNotificationBtn" type="button">Создать напоминание</button>
                 </div>
@@ -223,49 +260,39 @@
         </div>
     </div>
 
-    <div class="card" data-section="billing">
+    <!-- Подписка -->
+    <div class="card">
         <div class="section-head">
             <h2>Подписка</h2>
             <div class="toolbar wrap">
                 <button id="reloadBillingBtn" class="secondary" type="button">Обновить</button>
-                <button class="secondary section-toggle" type="button" data-target="section-billing-body">Свернуть</button>
+                <button class="secondary section-toggle" type="button" data-target="section-billing">Свернуть</button>
             </div>
         </div>
-        <div id="section-billing-body" class="section-content">
+        <div id="section-billing" class="section-content">
             <div id="subscriptionInfo" class="muted"></div>
             <div id="plansList" class="stack top-gap"></div>
         </div>
     </div>
 
-    <div id="clientsCard" class="card hidden" data-section="clients">
-        <div class="section-head">
-            <h2>Клиенты</h2>
-            <div class="toolbar wrap">
-                <button id="reloadClientsBtn" class="secondary" type="button">Обновить</button>
-                <button class="secondary section-toggle" type="button" data-target="section-clients-body">Свернуть</button>
-            </div>
-        </div>
-        <div id="section-clients-body" class="section-content">
-            <div id="clientsList" class="stack"></div>
-        </div>
-    </div>
-
-    <div id="diagnosticCard" class="card hidden" data-section="diagnostic">
+    <!-- Диагностика Telegram -->
+    <div id="diagnosticCard" class="card hidden">
         <div class="section-head">
             <h2>Диагностика Telegram</h2>
-            <button class="secondary section-toggle" type="button" data-target="section-diagnostic-body">Свернуть</button>
+            <button class="secondary section-toggle" type="button" data-target="section-diagnostics">Свернуть</button>
         </div>
-        <div id="section-diagnostic-body" class="section-content">
+        <div id="section-diagnostics" class="section-content">
             <pre id="tgDebug" class="log-box"></pre>
         </div>
     </div>
 
-    <div id="logCard" class="card hidden" data-section="log">
+    <!-- Лог -->
+    <div id="logCard" class="card hidden">
         <div class="section-head">
             <h2>Лог</h2>
-            <button class="secondary section-toggle" type="button" data-target="section-log-body">Свернуть</button>
+            <button class="secondary section-toggle" type="button" data-target="section-log">Свернуть</button>
         </div>
-        <div id="section-log-body" class="section-content">
+        <div id="section-log" class="section-content">
             <pre id="log" class="log-box"></pre>
         </div>
     </div>
@@ -274,6 +301,6 @@
 <div id="toast" class="toast hidden"></div>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="/static/app.js?v=11"></script>
+<script src="/static/app.js?v=13"></script>
 </body>
 </html>

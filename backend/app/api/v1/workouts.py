@@ -5,7 +5,7 @@ from app.db.session import get_db
 from app.models.program import UserProgram, UserWorkout, UserWorkoutExercise, UserWorkoutSet
 from app.models.user import User
 from app.services.programs import get_visible_exercise_display_map
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session, joinedload
 
 router = APIRouter()
@@ -97,6 +97,47 @@ def get_today_workout(
         raise HTTPException(status_code=404, detail="На сегодня тренировка не назначена")
 
     return _serialize_workout(workout, db, current_user)
+
+
+@router.delete("/today", status_code=status.HTTP_204_NO_CONTENT)
+def delete_today_workout(
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    today = date.today()
+
+    workout = (
+        db.query(UserWorkout)
+        .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
+        .filter(
+            UserProgram.user_id == current_user.id,
+            UserProgram.is_active.is_(True),
+            UserWorkout.scheduled_date == today,
+        )
+        .order_by(UserWorkout.id.asc())
+        .first()
+    )
+
+    if not workout:
+        raise HTTPException(status_code=404, detail="На сегодня тренировка не назначена")
+
+    workout_exercises = db.query(UserWorkoutExercise).filter(
+        UserWorkoutExercise.workout_id == workout.id
+    ).all()
+    workout_exercise_ids = [item.id for item in workout_exercises]
+
+    if workout_exercise_ids:
+        db.query(UserWorkoutSet).filter(
+            UserWorkoutSet.workout_exercise_id.in_(workout_exercise_ids)
+        ).delete(synchronize_session=False)
+
+        db.query(UserWorkoutExercise).filter(
+            UserWorkoutExercise.id.in_(workout_exercise_ids)
+        ).delete(synchronize_session=False)
+
+    db.delete(workout)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/{workout_id}/start")
