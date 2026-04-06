@@ -3,8 +3,7 @@ import hmac
 import json
 from urllib.parse import parse_qsl
 
-from app.core.config import settings
-from app.models.user import User
+from app.models.user import User, UserProfile
 from sqlalchemy.orm import Session
 
 
@@ -51,43 +50,45 @@ def validate_init_data(init_data: str, bot_token: str) -> dict:
     }
 
 
-def validate_telegram_init_data(init_data: str) -> bool:
-    try:
-        validate_init_data(init_data, settings.telegram_bot_token)
-        return True
-    except Exception:
-        return False
+def get_or_create_user_from_init_data(db: Session, init_data: dict) -> User:
+    user_data = init_data["user"]
 
-
-def get_or_create_user_from_init_data(db: Session, init_data: str) -> User:
-    validated = validate_init_data(init_data, settings.telegram_bot_token)
-    tg_user = validated["user"]
-
-    telegram_user_id = int(tg_user["id"])
-    username = tg_user.get("username")
-    first_name = tg_user.get("first_name")
-    last_name = tg_user.get("last_name")
+    telegram_user_id = int(user_data["id"])
+    username = user_data.get("username")
+    first_name = user_data.get("first_name")
+    last_name = user_data.get("last_name")
 
     user = db.query(User).filter(User.telegram_user_id == telegram_user_id).first()
 
-    if user:
-        user.username = username
-        user.first_name = first_name
-        user.last_name = last_name
+    if not user:
+        user = User(
+            telegram_user_id=telegram_user_id,
+            username=username,
+            first_name=first_name,
+            last_name=last_name,
+            is_active=True,
+        )
+        db.add(user)
+        db.flush()
+
+        full_name = (
+            " ".join(part for part in [first_name, last_name] if part).strip()
+            or username
+            or f"User {telegram_user_id}"
+        )
+
+        profile = UserProfile(
+            user_id=user.id,
+            full_name=full_name,
+        )
+        db.add(profile)
         db.commit()
         db.refresh(user)
         return user
 
-    user = User(
-        telegram_user_id=telegram_user_id,
-        username=username,
-        first_name=first_name,
-        last_name=last_name,
-        is_coach=False,
-        is_admin=False,
-        is_active=True,
-    )
-    db.add(user)
+    user.username = username
+    user.first_name = first_name
+    user.last_name = last_name
     db.commit()
     db.refresh(user)
     return user
