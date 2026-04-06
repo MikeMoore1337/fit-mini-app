@@ -1,7 +1,8 @@
+from app.core.config import settings
 from app.core.rate_limit import limiter
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.auth import RefreshRequest, TokenPairResponse
+from app.schemas.auth import RefreshRequest, TelegramInitRequest, TokenPairResponse
 from app.services.jwt import build_access_token, build_refresh_token, decode_token
 from app.services.telegram_auth import (
     get_or_create_user_from_init_data,
@@ -43,17 +44,23 @@ def issue_token_pair(db: Session, user: User) -> TokenPairResponse:
 @limiter.limit("20/minute")
 def telegram_init_auth(
     request: Request,
-    payload: dict,
+    payload: TelegramInitRequest,
     db: Session = Depends(get_db),
 ):
-    init_data = payload.get("init_data")
+    init_data = payload.init_data.strip()
     if not init_data:
-        raise HTTPException(status_code=400, detail="init_data обязателен")
+        raise HTTPException(status_code=400, detail="init_data is required")
 
-    if not validate_telegram_init_data(init_data):
-        raise HTTPException(status_code=401, detail="Невалидный Telegram init data")
+    bot_token = settings.telegram_bot_token
+    if not bot_token or bot_token == "replace-me":
+        raise HTTPException(status_code=500, detail="Telegram bot token is not configured")
 
-    user = get_or_create_user_from_init_data(db, init_data)
+    try:
+        validated_init_data = validate_telegram_init_data(init_data, bot_token)
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail=str(exc))
+
+    user = get_or_create_user_from_init_data(db, validated_init_data)
     return issue_token_pair(db, user)
 
 
@@ -106,7 +113,6 @@ def logout(
         return {"status": "ok"}
 
     jti = token_payload.get("jti")
-
     row = get_refresh_token_by_jti(db, jti)
     if row:
         revoke_refresh_token(db, row)

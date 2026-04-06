@@ -1,4 +1,8 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+
+class TelegramInitRequest(BaseModel):
+    init_data: str = Field(..., min_length=1)
 
 
 class RefreshRequest(BaseModel):
