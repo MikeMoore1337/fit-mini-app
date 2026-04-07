@@ -1,4 +1,4 @@
-const FRONTEND_VERSION = 'v14';
+const FRONTEND_VERSION = 'v15';
 
 const accessTokenKey = 'fit_access_token';
 const refreshTokenKey = 'fit_refresh_token';
@@ -17,6 +17,7 @@ const state = {
   historyLimit: 4,
   historyHasMore: true,
   editingTemplateId: null,
+  isReauthInProgress: false,
 };
 
 const API = {
@@ -75,6 +76,11 @@ function showToast(message, type = 'success') {
   }, 2500);
 }
 
+function clearTokens() {
+  localStorage.removeItem(accessTokenKey);
+  localStorage.removeItem(refreshTokenKey);
+}
+
 window.onerror = function (message, source, lineno, colno, error) {
   log({
     type: 'window.onerror',
@@ -121,6 +127,7 @@ async function api(path, options = {}) {
 
     const error = new Error(`${response.status} ${text}`);
     error.status = response.status;
+    error.responseText = text;
     throw error;
   }
 
@@ -152,9 +159,9 @@ function canDeleteTemplate(template) {
   if (!state.me) return false;
   return Boolean(
     state.me.is_admin ||
-    state.me.is_coach ||
-    template.owner_user_id === state.me.id ||
-    template.created_by_user_id === state.me.id
+      state.me.is_coach ||
+      template.owner_user_id === state.me.id ||
+      template.created_by_user_id === state.me.id
   );
 }
 
@@ -319,13 +326,27 @@ async function devLogin() {
   await bootstrap();
 }
 
-async function telegramLogin() {
+async function telegramLogin({ silent = false } = {}) {
   const tg = window.Telegram?.WebApp;
   const initData = tg?.initData;
 
+  if (!silent) {
+    setAuthState('Пробуем войти через Telegram...');
+  }
+
+  log({
+    telegramLogin: true,
+    hasTelegram: Boolean(window.Telegram),
+    hasWebApp: Boolean(tg),
+    initDataPresent: Boolean(initData),
+    initDataLength: initData?.length || 0,
+  });
+
   if (!initData) {
-    setAuthState('Нет данных Telegram');
-    showToast('Telegram не передал initData', 'error');
+    setAuthState('Telegram не передал данные авторизации');
+    if (!silent) {
+      showToast('Telegram не передал initData', 'error');
+    }
     return false;
   }
 
@@ -338,14 +359,38 @@ async function telegramLogin() {
   localStorage.setItem(refreshTokenKey, data.refresh_token);
 
   setAuthState('Вход через Telegram выполнен');
-  showToast('Вход через Telegram выполнен');
-  await bootstrap();
+  if (!silent) {
+    showToast('Вход через Telegram выполнен');
+  }
   return true;
+}
+
+async function reauthenticateViaTelegram() {
+  if (state.isReauthInProgress) {
+    return false;
+  }
+
+  state.isReauthInProgress = true;
+  try {
+    clearTokens();
+    const ok = await telegramLogin({ silent: true });
+    if (!ok) {
+      setAuthState('Не удалось обновить авторизацию через Telegram');
+      return false;
+    }
+    return true;
+  } catch (error) {
+    log(`reauthenticateViaTelegram: ${String(error)}`);
+    setAuthState('Не удалось обновить авторизацию через Telegram');
+    return false;
+  } finally {
+    state.isReauthInProgress = false;
+  }
 }
 
 async function tryTelegramAutoLogin() {
   try {
-    return await telegramLogin();
+    return await telegramLogin({ silent: false });
   } catch (error) {
     log(`Ошибка Telegram auth: ${String(error)}`);
     setAuthState('Не удалось войти через Telegram');
@@ -354,8 +399,24 @@ async function tryTelegramAutoLogin() {
   }
 }
 
+async function withReauth(action) {
+  try {
+    return await action();
+  } catch (error) {
+    if (error?.status === 401) {
+      log('Получен 401, пробуем переавторизацию через Telegram');
+
+      const reloginOk = await reauthenticateViaTelegram();
+      if (reloginOk) {
+        return await action();
+      }
+    }
+    throw error;
+  }
+}
+
 async function loadMe() {
-  state.me = await api(API.me);
+  state.me = await withReauth(() => api(API.me));
   const profile = state.me.profile || {};
 
   if ($('full_name')) $('full_name').value = profile.full_name || '';
@@ -382,17 +443,19 @@ async function saveProfile() {
     workouts_per_week: $('workouts_per_week')?.value ? Number($('workouts_per_week').value) : null,
   };
 
-  await api(API.meProfile, {
-    method: 'PATCH',
-    body: JSON.stringify(payload),
-  });
+  await withReauth(() =>
+    api(API.meProfile, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    })
+  );
 
   showToast('Профиль сохранён');
   await loadMe();
 }
 
 async function loadExercises() {
-  state.exercises = await api(API.exercises);
+  state.exercises = await withReauth(() => api(API.exercises));
   renderExerciseCatalog();
 }
 
@@ -441,14 +504,16 @@ function renderExerciseCatalog() {
       if (equipment === null) return;
 
       try {
-        await api(API.updateExercise(exerciseId), {
-          method: 'PATCH',
-          body: JSON.stringify({
-            title,
-            primary_muscle: primaryMuscle,
-            equipment,
-          }),
-        });
+        await withReauth(() =>
+          api(API.updateExercise(exerciseId), {
+            method: 'PATCH',
+            body: JSON.stringify({
+              title,
+              primary_muscle: primaryMuscle,
+              equipment,
+            }),
+          })
+        );
         showToast('Упражнение обновлено');
         await loadExercises();
         await loadTemplates();
@@ -466,9 +531,11 @@ function renderExerciseCatalog() {
       if (!confirm('Удалить упражнение только у тебя?')) return;
 
       try {
-        await api(API.deleteExercise(exerciseId), {
-          method: 'DELETE',
-        });
+        await withReauth(() =>
+          api(API.deleteExercise(exerciseId), {
+            method: 'DELETE',
+          })
+        );
         showToast('Упражнение скрыто/удалено для текущего пользователя');
         await loadExercises();
         await loadTemplates();
@@ -493,10 +560,12 @@ async function createExercise() {
     return;
   }
 
-  const exercise = await api(API.createExercise, {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
+  const exercise = await withReauth(() =>
+    api(API.createExercise, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  );
 
   $('newExerciseTitle').value = '';
   $('newExerciseMuscle').value = '';
@@ -689,10 +758,12 @@ async function saveProgram() {
   const url = isEditing ? API.updateTemplate(state.editingTemplateId) : API.saveTemplate;
   const method = isEditing ? 'PATCH' : 'POST';
 
-  const data = await api(url, {
-    method,
-    body: JSON.stringify(payload),
-  });
+  const data = await withReauth(() =>
+    api(url, {
+      method,
+      body: JSON.stringify(payload),
+    })
+  );
 
   if ($('builderResult')) {
     const templateTitle = data.template?.title || payload.title;
@@ -710,7 +781,7 @@ async function saveProgram() {
 }
 
 async function loadTemplateIntoBuilder(templateId) {
-  const template = await api(API.getTemplate(templateId));
+  const template = await withReauth(() => api(API.getTemplate(templateId)));
 
   $('program_title').value = template.title || '';
   $('program_goal').value = template.goal || 'muscle_gain';
@@ -738,24 +809,28 @@ async function loadTemplateIntoBuilder(templateId) {
 }
 
 async function assignTemplateToMe(templateId) {
-  await api(API.assignTemplateToMe(templateId), {
-    method: 'POST',
-  });
+  await withReauth(() =>
+    api(API.assignTemplateToMe(templateId), {
+      method: 'POST',
+    })
+  );
   showToast('Шаблон загружен в тренировки');
   await loadTodayWorkout();
   await resetHistoryAndReload();
 }
 
 async function deleteTemplate(templateId) {
-  await api(API.deleteTemplate(templateId), {
-    method: 'DELETE',
-  });
+  await withReauth(() =>
+    api(API.deleteTemplate(templateId), {
+      method: 'DELETE',
+    })
+  );
   showToast('Шаблон удалён');
   await loadTemplates();
 }
 
 async function loadTemplates() {
-  state.templates = await api(API.myTemplates);
+  state.templates = await withReauth(() => api(API.myTemplates));
   const list = $('templatesList');
   if (!list) return;
 
@@ -843,7 +918,7 @@ async function loadClients() {
 
   if (!isCoachOrAdmin()) return;
 
-  const rows = await api(API.clients);
+  const rows = await withReauth(() => api(API.clients));
   const list = $('clientsList');
   if (!list) return;
 
@@ -904,10 +979,12 @@ function startWorkoutTimerFromMs(startedAtMs) {
 }
 
 async function updateSetRow(setId, payload) {
-  await api(API.updateSet(setId), {
-    method: 'PATCH',
-    body: JSON.stringify(payload),
-  });
+  await withReauth(() =>
+    api(API.updateSet(setId), {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    })
+  );
 }
 
 async function deleteTodayWorkout() {
@@ -915,9 +992,12 @@ async function deleteTodayWorkout() {
     clearWorkoutTimerStart(state.todayWorkout.id);
   }
 
-  await api(API.deleteTodayWorkout, {
-    method: 'DELETE',
-  });
+  await withReauth(() =>
+    api(API.deleteTodayWorkout, {
+      method: 'DELETE',
+    })
+  );
+
   showToast('Тренировка на сегодня удалена');
   state.todayWorkout = null;
   clearWorkoutTimer();
@@ -1043,7 +1123,9 @@ function renderTodayWorkout(workout) {
         const localStartMs = Date.now();
         saveWorkoutTimerStart(workout.id, localStartMs);
 
-        state.todayWorkout = await api(API.startWorkout(workout.id), { method: 'POST' });
+        state.todayWorkout = await withReauth(() =>
+          api(API.startWorkout(workout.id), { method: 'POST' })
+        );
         showToast('Тренировка начата');
         renderTodayWorkout(state.todayWorkout);
         await resetHistoryAndReload();
@@ -1059,7 +1141,9 @@ function renderTodayWorkout(workout) {
     finishBtn.onclick = async () => {
       try {
         const localStartMs = loadWorkoutTimerStart(workout.id);
-        state.todayWorkout = await api(API.finishWorkout(workout.id), { method: 'POST' });
+        state.todayWorkout = await withReauth(() =>
+          api(API.finishWorkout(workout.id), { method: 'POST' })
+        );
         showToast('Тренировка завершена');
         renderTodayWorkout(state.todayWorkout);
 
@@ -1137,7 +1221,7 @@ function renderTodayWorkout(workout) {
 
 async function loadTodayWorkout() {
   try {
-    state.todayWorkout = await api(API.todayWorkout);
+    state.todayWorkout = await withReauth(() => api(API.todayWorkout));
     renderTodayWorkout(state.todayWorkout);
   } catch (error) {
     if (error.status === 404) {
@@ -1184,7 +1268,7 @@ function updateHistoryLoadMoreVisibility() {
 
 async function loadWorkoutHistory(append = false) {
   const offset = append ? state.historyOffset : 0;
-  const rows = await api(API.workoutHistory(offset, state.historyLimit));
+  const rows = await withReauth(() => api(API.workoutHistory(offset, state.historyLimit)));
 
   if (!append) {
     state.historyOffset = 0;
@@ -1205,8 +1289,8 @@ async function resetHistoryAndReload() {
 
 async function loadBilling() {
   try {
-    state.plans = await api(API.billingPlans);
-    const subscription = await api(API.billingSubscription);
+    state.plans = await withReauth(() => api(API.billingPlans));
+    const subscription = await withReauth(() => api(API.billingSubscription));
 
     if ($('subscriptionInfo')) {
       $('subscriptionInfo').textContent = subscription
@@ -1235,13 +1319,15 @@ async function loadBilling() {
     document.querySelectorAll('.buy-plan-btn').forEach((btn) => {
       btn.onclick = async () => {
         try {
-          const checkout = await api(API.billingCheckout, {
-            method: 'POST',
-            body: JSON.stringify({ plan_code: btn.dataset.plan }),
-          });
+          const checkout = await withReauth(() =>
+            api(API.billingCheckout, {
+              method: 'POST',
+              body: JSON.stringify({ plan_code: btn.dataset.plan }),
+            })
+          );
 
           if (checkout?.checkout_id) {
-            await api(API.billingMockComplete(checkout.checkout_id), { method: 'POST' });
+            await withReauth(() => api(API.billingMockComplete(checkout.checkout_id), { method: 'POST' }));
             showToast('Подписка активирована');
             await loadBilling();
           }
@@ -1266,14 +1352,16 @@ async function createManualNotification() {
     return;
   }
 
-  await api(API.notifications, {
-    method: 'POST',
-    body: JSON.stringify({
-      title,
-      body,
-      scheduled_for: new Date(dateTime).toISOString(),
-    }),
-  });
+  await withReauth(() =>
+    api(API.notifications, {
+      method: 'POST',
+      body: JSON.stringify({
+        title,
+        body,
+        scheduled_for: new Date(dateTime).toISOString(),
+      }),
+    })
+  );
 
   $('manualNotifTitle').value = '';
   $('manualNotifBody').value = '';
@@ -1284,17 +1372,19 @@ async function createManualNotification() {
 }
 
 async function deleteNotification(notificationId) {
-  await api(API.deleteNotification(notificationId), {
-    method: 'DELETE',
-  });
+  await withReauth(() =>
+    api(API.deleteNotification(notificationId), {
+      method: 'DELETE',
+    })
+  );
   showToast('Напоминание удалено');
   await loadNotifications();
 }
 
 async function loadNotifications() {
   try {
-    const settings = await api(API.notificationsSettings);
-    const rows = await api(API.notifications);
+    const settings = await withReauth(() => api(API.notificationsSettings));
+    const rows = await withReauth(() => api(API.notifications));
 
     if ($('notifEnabled')) $('notifEnabled').checked = Boolean(settings.workout_reminders_enabled);
     if ($('notifHour')) $('notifHour').value = settings.reminder_hour ?? 9;
@@ -1338,13 +1428,15 @@ async function loadNotifications() {
 }
 
 async function saveNotificationSettings() {
-  await api(API.notificationsSettings, {
-    method: 'PATCH',
-    body: JSON.stringify({
-      workout_reminders_enabled: Boolean($('notifEnabled')?.checked),
-      reminder_hour: Number($('notifHour')?.value || '9'),
-    }),
-  });
+  await withReauth(() =>
+    api(API.notificationsSettings, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        workout_reminders_enabled: Boolean($('notifEnabled')?.checked),
+        reminder_hour: Number($('notifHour')?.value || '9'),
+      }),
+    })
+  );
 
   showToast('Настройки уведомлений сохранены');
   await loadNotifications();
@@ -1369,7 +1461,10 @@ function bindUI() {
   if ($('telegramLoginBtn')) {
     $('telegramLoginBtn').onclick = async () => {
       try {
-        await telegramLogin();
+        const ok = await tryTelegramAutoLogin();
+        if (ok) {
+          await bootstrap();
+        }
       } catch (error) {
         log(`telegramLogin button: ${String(error)}`);
       }
@@ -1544,6 +1639,8 @@ async function init() {
     log(`Telegram ready/expand: ${String(error)}`);
   }
 
+  setAuthState('Проверяем авторизацию через Telegram...');
+
   const token = localStorage.getItem(accessTokenKey);
 
   if (token) {
@@ -1552,12 +1649,37 @@ async function init() {
       return;
     } catch (error) {
       log(`bootstrap by saved token: ${String(error)}`);
-      localStorage.removeItem(accessTokenKey);
-      localStorage.removeItem(refreshTokenKey);
+
+      if (error?.status === 401) {
+        const reloginOk = await reauthenticateViaTelegram();
+        if (reloginOk) {
+          try {
+            await bootstrap();
+            return;
+          } catch (retryError) {
+            log(`bootstrap after reauth: ${String(retryError)}`);
+          }
+        }
+      }
+
+      clearTokens();
     }
   }
 
-  await tryTelegramAutoLogin();
+  const loginOk = await tryTelegramAutoLogin();
+  if (loginOk) {
+    try {
+      await bootstrap();
+      return;
+    } catch (error) {
+      log(`bootstrap after telegram login: ${String(error)}`);
+      showToast('Не удалось загрузить данные приложения', 'error');
+      setAuthState('Вход выполнен, но загрузка данных не удалась');
+      return;
+    }
+  }
+
+  setAuthState('Не удалось авторизоваться через Telegram');
 }
 
 document.addEventListener('DOMContentLoaded', init);
