@@ -1,4 +1,4 @@
-const FRONTEND_VERSION = 'v15';
+const FRONTEND_VERSION = 'v16';
 
 const accessTokenKey = 'fit_access_token';
 const refreshTokenKey = 'fit_refresh_token';
@@ -79,6 +79,10 @@ function showToast(message, type = 'success') {
 function clearTokens() {
   localStorage.removeItem(accessTokenKey);
   localStorage.removeItem(refreshTokenKey);
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 window.onerror = function (message, source, lineno, colno, error) {
@@ -294,6 +298,23 @@ function clearWorkoutTimerStart(workoutId) {
   localStorage.removeItem(getWorkoutTimerStorageKey(workoutId));
 }
 
+async function waitForTelegramInitData(timeoutMs = 4000) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const tg = window.Telegram?.WebApp;
+    const initData = tg?.initData;
+
+    if (initData && String(initData).trim()) {
+      return initData;
+    }
+
+    await sleep(150);
+  }
+
+  return '';
+}
+
 async function loadEnv() {
   state.publicConfig = await api(API.publicConfig);
   const envBadge = $('env-badge');
@@ -328,16 +349,23 @@ async function devLogin() {
 
 async function telegramLogin({ silent = false } = {}) {
   const tg = window.Telegram?.WebApp;
-  const initData = tg?.initData;
 
   if (!silent) {
     setAuthState('Пробуем войти через Telegram...');
   }
 
   log({
-    telegramLogin: true,
+    telegramLoginStarted: true,
     hasTelegram: Boolean(window.Telegram),
     hasWebApp: Boolean(tg),
+    initDataPresentImmediately: Boolean(tg?.initData),
+    initDataLengthImmediately: tg?.initData?.length || 0,
+  });
+
+  const initData = await waitForTelegramInitData(4000);
+
+  log({
+    telegramLoginAfterWait: true,
     initDataPresent: Boolean(initData),
     initDataLength: initData?.length || 0,
   });
