@@ -7,7 +7,12 @@ from app.models.user import User, UserProfile
 
 
 def admin_users(db: Session) -> list[User]:
-    return db.query(User).outerjoin(UserProfile, UserProfile.user_id == User.id).order_by(User.id.desc()).all()
+    return (
+        db.query(User)
+        .outerjoin(UserProfile, UserProfile.user_id == User.id)
+        .order_by(User.id.desc())
+        .all()
+    )
 
 
 def admin_templates(db: Session) -> list[ProgramTemplate]:

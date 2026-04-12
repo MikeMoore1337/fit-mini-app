@@ -1,9 +1,10 @@
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+
 from app.db.session import get_db
 from app.schemas.user import UserProfileResponse, UserProfileUpdate, UserResponse
 from app.services.profile import update_profile
 from app.services.security import get_current_user
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
 
 router = APIRouter()
 

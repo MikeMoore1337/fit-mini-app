@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import jwt
+
 from app.core.config import settings
 
 ALGORITHM = "HS256"
@@ -60,4 +61,4 @@ def extract_bearer_token(auth_header: str | None) -> str | None:
     prefix = "Bearer "
     if not auth_header.startswith(prefix):
         return None
-    return auth_header[len(prefix):].strip()
+    return auth_header[len(prefix) :].strip()

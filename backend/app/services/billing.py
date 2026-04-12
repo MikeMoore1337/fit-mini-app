@@ -61,7 +61,9 @@ def complete_mock_payment(db: Session, checkout_id: str) -> Payment:
     payment.paid_at = datetime.now(UTC).replace(tzinfo=None)
 
     plan = db.query(Plan).filter(Plan.id == payment.plan_id).first()
-    db.query(Subscription).filter(Subscription.user_id == payment.user_id, Subscription.status == "active").update({"status": "replaced"})
+    db.query(Subscription).filter(
+        Subscription.user_id == payment.user_id, Subscription.status == "active"
+    ).update({"status": "replaced"})
     sub = Subscription(
         user_id=payment.user_id,
         plan_id=payment.plan_id,

@@ -1,3 +1,6 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
 from app.db.session import get_db
 from app.schemas.billing import (
     CheckoutRequest,
@@ -13,8 +16,6 @@ from app.services.billing import (
     list_plans,
 )
 from app.services.security import get_current_user
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 
 router = APIRouter()
 

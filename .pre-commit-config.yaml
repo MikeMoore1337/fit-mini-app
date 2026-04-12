@@ -1,15 +1,7 @@
-# .pre-commit-config.yaml
-# Автоматически запускает линтеры перед каждым git commit.
-#
-# Установка:
-#   pip install pre-commit
-#   pre-commit install
-#
-# Ручной запуск на всех файлах:
-#   pre-commit run --all-files
+# Запуск: pip install pre-commit && pre-commit install
+# Все файлы: pre-commit run --all-files
 
 repos:
-  # Базовые проверки файлов
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:
@@ -22,23 +14,20 @@ repos:
         args: ["--maxkb=500"]
       - id: debug-statements
 
-  # Ruff — линтер + форматтер
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.7
+    rev: v0.15.9
     hooks:
       - id: ruff
         args: ["--fix"]
+        files: ^(backend/app|tests)/
       - id: ruff-format
+        files: ^(backend/app|tests)/
 
-  # Mypy — проверка типов.
-  # Модули с pybit (bot, backtest, exchange...) исключены через pyproject.toml
-  # [tool.mypy.overrides] ignore_errors = true — они требуют pybit в runtime.
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.10.0
+  - repo: local
     hooks:
-      - id: mypy
-        exclude: ^alembic/
-        additional_dependencies:
-          - pandas-stubs>=2.0.0
-          - types-requests>=2.31.0
-        args: ["--ignore-missing-imports"]
+      - id: mypy-backend
+        name: mypy (backend app)
+        entry: python scripts/run_mypy.py
+        language: system
+        pass_filenames: false
+        files: ^(backend/app|scripts/run_mypy\.py|pyproject\.toml)

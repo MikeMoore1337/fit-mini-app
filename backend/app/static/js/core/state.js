@@ -1,0 +1,15 @@
+export const state = {
+  me: null,
+  exercises: [],
+  templates: [],
+  todayWorkout: null,
+  plans: [],
+  publicConfig: null,
+  workoutTimer: null,
+  currentWorkoutTimerStartedAtMs: null,
+  historyOffset: 0,
+  historyLimit: 4,
+  historyHasMore: true,
+  editingTemplateId: null,
+  isReauthInProgress: false,
+};

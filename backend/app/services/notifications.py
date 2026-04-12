@@ -2,17 +2,14 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from sqlalchemy.orm import Session
+
 from app.models.notification import Notification, NotificationSetting
 from app.models.user import User
-from sqlalchemy.orm import Session
 
 
 def get_or_create_settings(db: Session, user: User) -> NotificationSetting:
-    setting = (
-        db.query(NotificationSetting)
-        .filter(NotificationSetting.user_id == user.id)
-        .first()
-    )
+    setting = db.query(NotificationSetting).filter(NotificationSetting.user_id == user.id).first()
     if not setting:
         setting = NotificationSetting(
             user_id=user.id,

@@ -5,11 +5,12 @@ from typing import Any
 from uuid import uuid4
 
 import jwt
+from fastapi import Depends, HTTPException, Request, status
+from sqlalchemy.orm import Session
+
 from app.core.config import settings
 from app.db.session import get_db
 from app.models.user import User
-from fastapi import Depends, HTTPException, Request, status
-from sqlalchemy.orm import Session
 
 
 class AuthError(Exception):

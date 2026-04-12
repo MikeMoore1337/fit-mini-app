@@ -1,5 +1,6 @@
-from app.models.user import User
 from fastapi import HTTPException, Request, status
+
+from app.models.user import User
 
 
 def get_current_user_from_request(request: Request) -> User | None:

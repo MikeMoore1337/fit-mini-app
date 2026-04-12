@@ -3,6 +3,9 @@ from __future__ import annotations
 from datetime import date, timedelta
 from uuid import uuid4
 
+from sqlalchemy import or_
+from sqlalchemy.orm import Session, joinedload
+
 from app.models.exercise import Exercise
 from app.models.program import (
     ProgramTemplate,
@@ -15,8 +18,6 @@ from app.models.program import (
 )
 from app.models.user import CoachClient, User, UserProfile
 from app.schemas.program import ProgramTemplateCreate
-from sqlalchemy import or_
-from sqlalchemy.orm import Session, joinedload
 
 GOALS = {"muscle_gain", "fat_loss", "maintenance", "recomposition"}
 LEVELS = {"beginner", "intermediate", "advanced"}
@@ -51,11 +52,7 @@ def _load_visible_exercise_rows(db: Session, current_user: User) -> list[Exercis
         .all()
     )
 
-    personal_rows = (
-        db.query(Exercise)
-        .filter(Exercise.created_by_user_id == current_user.id)
-        .all()
-    )
+    personal_rows = db.query(Exercise).filter(Exercise.created_by_user_id == current_user.id).all()
 
     overrides_by_source: dict[int, Exercise] = {}
     personal_custom_rows: list[Exercise] = []
@@ -220,7 +217,9 @@ def create_exercise(
     return exercise
 
 
-def _find_personal_override(db: Session, current_user: User, base_exercise_id: int) -> Exercise | None:
+def _find_personal_override(
+    db: Session, current_user: User, base_exercise_id: int
+) -> Exercise | None:
     return (
         db.query(Exercise)
         .filter(
@@ -380,7 +379,9 @@ def create_template(
     db.add(template)
     db.flush()
 
-    visible_effective_ids = {_effective_exercise_id(ex) for ex in _load_visible_exercise_rows(db, current_user)}
+    visible_effective_ids = {
+        _effective_exercise_id(ex) for ex in _load_visible_exercise_rows(db, current_user)
+    }
 
     for index, day in enumerate(payload.days, start=1):
         day_row = ProgramTemplateDay(
@@ -476,7 +477,9 @@ def assign_template_to_user(
     return user_program, created
 
 
-def create_and_optionally_assign_program(db: Session, current_user: User, payload: ProgramTemplateCreate):
+def create_and_optionally_assign_program(
+    db: Session, current_user: User, payload: ProgramTemplateCreate
+):
     target_user = current_user
 
     if payload.mode == "coach":
@@ -514,11 +517,7 @@ def create_and_optionally_assign_program(db: Session, current_user: User, payloa
         .first()
     )
 
-    target_profile = (
-        db.query(UserProfile)
-        .filter(UserProfile.user_id == target_user.id)
-        .first()
-    )
+    target_profile = db.query(UserProfile).filter(UserProfile.user_id == target_user.id).first()
     target_user_data = {
         "id": target_user.id,
         "telegram_user_id": target_user.telegram_user_id,
@@ -616,18 +615,22 @@ def update_template_for_user(
     template.level = payload.level
     template.owner_user_id = current_user.id if payload.mode == "self" else None
 
-    old_days = db.query(ProgramTemplateDay).filter(ProgramTemplateDay.program_id == template.id).all()
+    old_days = (
+        db.query(ProgramTemplateDay).filter(ProgramTemplateDay.program_id == template.id).all()
+    )
     old_day_ids = [day.id for day in old_days]
 
     if old_day_ids:
         db.query(ProgramTemplateExercise).filter(
             ProgramTemplateExercise.day_id.in_(old_day_ids)
         ).delete(synchronize_session=False)
-        db.query(ProgramTemplateDay).filter(
-            ProgramTemplateDay.id.in_(old_day_ids)
-        ).delete(synchronize_session=False)
+        db.query(ProgramTemplateDay).filter(ProgramTemplateDay.id.in_(old_day_ids)).delete(
+            synchronize_session=False
+        )
 
-    visible_effective_ids = {_effective_exercise_id(ex) for ex in _load_visible_exercise_rows(db, current_user)}
+    visible_effective_ids = {
+        _effective_exercise_id(ex) for ex in _load_visible_exercise_rows(db, current_user)
+    }
 
     for index, day in enumerate(payload.days, start=1):
         day_row = ProgramTemplateDay(
@@ -676,10 +679,7 @@ def assign_template_to_self(
 ) -> tuple[UserProgram, int]:
     template = (
         db.query(ProgramTemplate)
-        .options(
-            joinedload(ProgramTemplate.days)
-            .joinedload(ProgramTemplateDay.exercises)
-        )
+        .options(joinedload(ProgramTemplate.days).joinedload(ProgramTemplateDay.exercises))
         .filter(
             ProgramTemplate.id == template_id,
             ProgramTemplate.slug != LEGACY_DEMO_TEMPLATE_SLUG,
@@ -734,13 +734,17 @@ def delete_template_for_user(
     user_program_ids = [item.id for item in user_programs]
 
     if user_program_ids:
-        workouts = db.query(UserWorkout).filter(UserWorkout.user_program_id.in_(user_program_ids)).all()
+        workouts = (
+            db.query(UserWorkout).filter(UserWorkout.user_program_id.in_(user_program_ids)).all()
+        )
         workout_ids = [item.id for item in workouts]
 
         if workout_ids:
-            workout_exercises = db.query(UserWorkoutExercise).filter(
-                UserWorkoutExercise.workout_id.in_(workout_ids)
-            ).all()
+            workout_exercises = (
+                db.query(UserWorkoutExercise)
+                .filter(UserWorkoutExercise.workout_id.in_(workout_ids))
+                .all()
+            )
             workout_exercise_ids = [item.id for item in workout_exercises]
 
             if workout_exercise_ids:
@@ -752,13 +756,13 @@ def delete_template_for_user(
                     UserWorkoutExercise.id.in_(workout_exercise_ids)
                 ).delete(synchronize_session=False)
 
-            db.query(UserWorkout).filter(
-                UserWorkout.id.in_(workout_ids)
-            ).delete(synchronize_session=False)
+            db.query(UserWorkout).filter(UserWorkout.id.in_(workout_ids)).delete(
+                synchronize_session=False
+            )
 
-        db.query(UserProgram).filter(
-            UserProgram.id.in_(user_program_ids)
-        ).delete(synchronize_session=False)
+        db.query(UserProgram).filter(UserProgram.id.in_(user_program_ids)).delete(
+            synchronize_session=False
+        )
 
     days = db.query(ProgramTemplateDay).filter(ProgramTemplateDay.program_id == template.id).all()
     day_ids = [item.id for item in days]
@@ -768,9 +772,9 @@ def delete_template_for_user(
             ProgramTemplateExercise.day_id.in_(day_ids)
         ).delete(synchronize_session=False)
 
-        db.query(ProgramTemplateDay).filter(
-            ProgramTemplateDay.id.in_(day_ids)
-        ).delete(synchronize_session=False)
+        db.query(ProgramTemplateDay).filter(ProgramTemplateDay.id.in_(day_ids)).delete(
+            synchronize_session=False
+        )
 
     db.delete(template)
     db.commit()

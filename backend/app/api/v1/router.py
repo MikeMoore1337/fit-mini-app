@@ -1,5 +1,6 @@
-from app.api.v1 import admin, auth, billing, me, notifications, programs, public, workouts
 from fastapi import APIRouter
+
+from app.api.v1 import admin, auth, billing, me, notifications, programs, public, workouts
 
 api_router = APIRouter(prefix="/v1")
 

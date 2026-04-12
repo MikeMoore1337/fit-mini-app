@@ -1,3 +1,6 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
 from app.api.dependencies.auth import require_coach_or_admin, require_user
 from app.db.session import get_db
 from app.models.user import User
@@ -18,8 +21,6 @@ from app.services.programs import (
     update_exercise_for_user,
     update_template_for_user,
 )
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 
 router = APIRouter()
 
@@ -32,8 +33,8 @@ def get_exercises(
     exercises = list_exercises(db, current_user)
     return [
         {
-            "id": _effective_exercise_id(ex),           # effective id - использовать в шаблонах/тренировках
-            "edit_target_id": ex.id,                    # реальная запись для edit/delete
+            "id": _effective_exercise_id(ex),  # effective id - использовать в шаблонах/тренировках
+            "edit_target_id": ex.id,  # реальная запись для edit/delete
             "slug": ex.slug,
             "title": ex.title,
             "primary_muscle": ex.primary_muscle,
@@ -109,7 +110,8 @@ def edit_exercise(
         "title": exercise.title,
         "primary_muscle": exercise.primary_muscle,
         "equipment": exercise.equipment,
-        "is_custom": exercise.created_by_user_id is not None and exercise.source_exercise_id is None,
+        "is_custom": exercise.created_by_user_id is not None
+        and exercise.source_exercise_id is None,
         "is_personalized": exercise.created_by_user_id == current_user.id,
         "created_by_user_id": exercise.created_by_user_id,
         "source_exercise_id": exercise.source_exercise_id,
@@ -142,10 +144,12 @@ def create_template(
     db: Session = Depends(get_db),
 ):
     try:
-        template, assigned_program, workouts_created, target_user = create_and_optionally_assign_program(
-            db=db,
-            current_user=current_user,
-            payload=payload,
+        template, assigned_program, workouts_created, target_user = (
+            create_and_optionally_assign_program(
+                db=db,
+                current_user=current_user,
+                payload=payload,
+            )
         )
     except ProgramError as exc:
         raise HTTPException(status_code=400, detail=str(exc))

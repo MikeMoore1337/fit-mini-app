@@ -1,8 +1,9 @@
 from datetime import datetime
 
-from app.db.base import Base
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
+
+from app.db.base import Base
 
 
 class RefreshToken(Base):

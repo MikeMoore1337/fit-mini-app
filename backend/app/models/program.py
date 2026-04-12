@@ -6,6 +6,7 @@ from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, Stri
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.models.exercise import Exercise
 
 
 class ProgramTemplate(Base):
@@ -16,13 +17,20 @@ class ProgramTemplate(Base):
     title: Mapped[str] = mapped_column(String(128))
     goal: Mapped[str] = mapped_column(String(32))
     level: Mapped[str] = mapped_column(String(32))
-    owner_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True, nullable=True)
-    created_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True, nullable=True)
+    owner_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id"), index=True, nullable=True
+    )
+    created_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id"), index=True, nullable=True
+    )
     is_public: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
-    days: Mapped[list["ProgramTemplateDay"]] = relationship(
-        "ProgramTemplateDay", back_populates="program", cascade="all, delete-orphan", order_by="ProgramTemplateDay.day_number"
+    days: Mapped[list[ProgramTemplateDay]] = relationship(
+        "ProgramTemplateDay",
+        back_populates="program",
+        cascade="all, delete-orphan",
+        order_by="ProgramTemplateDay.day_number",
     )
 
 
@@ -35,7 +43,7 @@ class ProgramTemplateDay(Base):
     title: Mapped[str] = mapped_column(String(128))
 
     program: Mapped[ProgramTemplate] = relationship("ProgramTemplate", back_populates="days")
-    exercises: Mapped[list["ProgramTemplateExercise"]] = relationship(
+    exercises: Mapped[list[ProgramTemplateExercise]] = relationship(
         "ProgramTemplateExercise",
         back_populates="day",
         cascade="all, delete-orphan",
@@ -56,7 +64,7 @@ class ProgramTemplateExercise(Base):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     day: Mapped[ProgramTemplateDay] = relationship("ProgramTemplateDay", back_populates="exercises")
-    exercise: Mapped["Exercise"] = relationship("Exercise")
+    exercise: Mapped[Exercise] = relationship("Exercise")
 
 
 class UserProgram(Base):
@@ -65,12 +73,14 @@ class UserProgram(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     template_id: Mapped[int] = mapped_column(ForeignKey("program_templates.id"), index=True)
-    assigned_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True, nullable=True)
+    assigned_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id"), index=True, nullable=True
+    )
     assigned_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     template: Mapped[ProgramTemplate] = relationship("ProgramTemplate")
-    workouts: Mapped[list["UserWorkout"]] = relationship(
+    workouts: Mapped[list[UserWorkout]] = relationship(
         "UserWorkout", back_populates="user_program", cascade="all, delete-orphan"
     )
 
@@ -88,8 +98,11 @@ class UserWorkout(Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     user_program: Mapped[UserProgram] = relationship("UserProgram", back_populates="workouts")
-    exercises: Mapped[list["UserWorkoutExercise"]] = relationship(
-        "UserWorkoutExercise", back_populates="workout", cascade="all, delete-orphan", order_by="UserWorkoutExercise.sort_order"
+    exercises: Mapped[list[UserWorkoutExercise]] = relationship(
+        "UserWorkoutExercise",
+        back_populates="workout",
+        cascade="all, delete-orphan",
+        order_by="UserWorkoutExercise.sort_order",
     )
 
 
@@ -105,9 +118,12 @@ class UserWorkoutExercise(Base):
     rest_seconds: Mapped[int] = mapped_column(Integer, default=90)
 
     workout: Mapped[UserWorkout] = relationship("UserWorkout", back_populates="exercises")
-    exercise: Mapped["Exercise"] = relationship("Exercise")
-    sets: Mapped[list["UserWorkoutSet"]] = relationship(
-        "UserWorkoutSet", back_populates="workout_exercise", cascade="all, delete-orphan", order_by="UserWorkoutSet.set_number"
+    exercise: Mapped[Exercise] = relationship("Exercise")
+    sets: Mapped[list[UserWorkoutSet]] = relationship(
+        "UserWorkoutSet",
+        back_populates="workout_exercise",
+        cascade="all, delete-orphan",
+        order_by="UserWorkoutSet.set_number",
     )
 
 
@@ -115,10 +131,14 @@ class UserWorkoutSet(Base):
     __tablename__ = "user_workout_sets"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    workout_exercise_id: Mapped[int] = mapped_column(ForeignKey("user_workout_exercises.id"), index=True)
+    workout_exercise_id: Mapped[int] = mapped_column(
+        ForeignKey("user_workout_exercises.id"), index=True
+    )
     set_number: Mapped[int] = mapped_column(Integer)
     actual_reps: Mapped[int | None] = mapped_column(Integer, nullable=True)
     actual_weight: Mapped[float | None] = mapped_column(Float, nullable=True)
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False)
 
-    workout_exercise: Mapped[UserWorkoutExercise] = relationship("UserWorkoutExercise", back_populates="sets")
+    workout_exercise: Mapped[UserWorkoutExercise] = relationship(
+        "UserWorkoutExercise", back_populates="sets"
+    )

@@ -80,8 +80,6 @@ class ExerciseCatalogItem(BaseModel):
     equipment: str
 
 
-
-
 class ExerciseCatalogCreate(BaseModel):
     title: str
     primary_muscle: str

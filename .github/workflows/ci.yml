@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Ruff check
+        run: ruff check backend/app tests
+
+      - name: Ruff format
+        run: ruff format --check backend/app tests
+
+      - name: Mypy
+        run: python scripts/run_mypy.py
+
+      - name: Pytest
+        run: pytest tests -q
+        env:
+          DATABASE_URL: sqlite:///./test_fitminiapp_ci.db
+          ENABLE_DEV_AUTH: "true"
+          TELEGRAM_BOT_TOKEN: test-token
+          SECRET_KEY: test-secret-ci

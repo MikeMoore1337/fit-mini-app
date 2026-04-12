@@ -26,7 +26,11 @@ def get_today_workout(db: Session, user: User) -> UserWorkout | None:
             joinedload(UserWorkout.exercises).joinedload(UserWorkoutExercise.exercise),
             joinedload(UserWorkout.exercises).joinedload(UserWorkoutExercise.sets),
         )
-        .filter(UserProgram.user_id == user.id, UserProgram.is_active.is_(True), UserWorkout.scheduled_date == date.today())
+        .filter(
+            UserProgram.user_id == user.id,
+            UserProgram.is_active.is_(True),
+            UserWorkout.scheduled_date == date.today(),
+        )
         .first()
     )
 
@@ -42,14 +46,18 @@ def start_workout(db: Session, workout: UserWorkout) -> UserWorkout:
     return workout
 
 
-def add_or_update_set(db: Session, workout: UserWorkout, payload: WorkoutSetCreate) -> UserWorkoutSet:
+def add_or_update_set(
+    db: Session, workout: UserWorkout, payload: WorkoutSetCreate
+) -> UserWorkoutSet:
     if workout.status == "completed":
         raise WorkoutStateError("Cannot log sets for completed workout")
     if workout.status == "planned":
         workout.status = "in_progress"
         workout.started_at = datetime.now(UTC).replace(tzinfo=None)
 
-    exercise = next((row for row in workout.exercises if row.id == payload.workout_exercise_id), None)
+    exercise = next(
+        (row for row in workout.exercises if row.id == payload.workout_exercise_id), None
+    )
     if exercise is None:
         raise WorkoutValidationError("Exercise does not belong to workout")
     if payload.set_number < 1:
@@ -57,12 +65,18 @@ def add_or_update_set(db: Session, workout: UserWorkout, payload: WorkoutSetCrea
     if payload.set_number > exercise.prescribed_sets:
         raise WorkoutValidationError("set_number exceeds prescribed_sets")
 
-    row = db.query(UserWorkoutSet).filter(
-        UserWorkoutSet.workout_exercise_id == payload.workout_exercise_id,
-        UserWorkoutSet.set_number == payload.set_number,
-    ).first()
+    row = (
+        db.query(UserWorkoutSet)
+        .filter(
+            UserWorkoutSet.workout_exercise_id == payload.workout_exercise_id,
+            UserWorkoutSet.set_number == payload.set_number,
+        )
+        .first()
+    )
     if row is None:
-        row = UserWorkoutSet(workout_exercise_id=payload.workout_exercise_id, set_number=payload.set_number)
+        row = UserWorkoutSet(
+            workout_exercise_id=payload.workout_exercise_id, set_number=payload.set_number
+        )
         db.add(row)
 
     row.actual_reps = payload.actual_reps
@@ -79,7 +93,12 @@ def delete_last_set(db: Session, workout: UserWorkout, workout_exercise_id: int)
     exercise = next((row for row in workout.exercises if row.id == workout_exercise_id), None)
     if exercise is None:
         raise WorkoutValidationError("Exercise does not belong to workout")
-    last_set = db.query(UserWorkoutSet).filter(UserWorkoutSet.workout_exercise_id == workout_exercise_id).order_by(UserWorkoutSet.set_number.desc()).first()
+    last_set = (
+        db.query(UserWorkoutSet)
+        .filter(UserWorkoutSet.workout_exercise_id == workout_exercise_id)
+        .order_by(UserWorkoutSet.set_number.desc())
+        .first()
+    )
     if not last_set:
         raise WorkoutValidationError("No logged sets to delete")
     db.delete(last_set)
@@ -99,17 +118,23 @@ def complete_workout(db: Session, workout: UserWorkout) -> UserWorkout:
 
 
 def _sets_volume(sets: list[UserWorkoutSet]) -> float:
-    return float(sum((row.actual_reps or 0) * (row.actual_weight or 0) for row in sets if row.is_completed))
-
+    return float(
+        sum((row.actual_reps or 0) * (row.actual_weight or 0) for row in sets if row.is_completed)
+    )
 
 
 def _top_weight(sets: list[UserWorkoutSet]) -> float | None:
-    weights = [float(row.actual_weight) for row in sets if row.is_completed and row.actual_weight is not None]
+    weights = [
+        float(row.actual_weight)
+        for row in sets
+        if row.is_completed and row.actual_weight is not None
+    ]
     return max(weights) if weights else None
 
 
-
-def get_previous_completed_exercise(db: Session, user: User, workout: UserWorkout, exercise: UserWorkoutExercise) -> UserWorkoutExercise | None:
+def get_previous_completed_exercise(
+    db: Session, user: User, workout: UserWorkout, exercise: UserWorkoutExercise
+) -> UserWorkoutExercise | None:
     return (
         db.query(UserWorkoutExercise)
         .join(UserWorkout, UserWorkoutExercise.workout_id == UserWorkout.id)
@@ -122,6 +147,8 @@ def get_previous_completed_exercise(db: Session, user: User, workout: UserWorkou
             UserWorkout.status == "completed",
             UserWorkout.scheduled_date <= workout.scheduled_date,
         )
-        .order_by(desc(UserWorkout.scheduled_date), desc(UserWorkout.completed_at), desc(UserWorkout.id))
+        .order_by(
+            desc(UserWorkout.scheduled_date), desc(UserWorkout.completed_at), desc(UserWorkout.id)
+        )
         .first()
     )

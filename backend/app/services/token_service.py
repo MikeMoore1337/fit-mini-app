@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from sqlalchemy.orm import Session
+
 from app.models.token import RefreshToken
 from app.services.jwt import hash_token
-from sqlalchemy.orm import Session
 
 
 def utcnow() -> datetime:

@@ -1,5 +1,6 @@
 import os
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -8,10 +9,20 @@ sys.path.insert(0, str(ROOT / "backend"))
 import pytest
 from fastapi.testclient import TestClient
 
-os.environ['DATABASE_URL'] = 'sqlite:///./test_fitminiapp.db'
-os.environ['ENABLE_DEV_AUTH'] = 'true'
-os.environ['TELEGRAM_BOT_TOKEN'] = 'test-token'
-os.environ['SECRET_KEY'] = 'test-secret'
+_TEST_DB = Path(tempfile.gettempdir()) / "fitmini_pytest.db"
+os.environ.setdefault("APP_ENV", "dev")
+os.environ.setdefault("APP_NAME", "FitMiniApp Test")
+os.environ.setdefault("APP_HOST", "127.0.0.1")
+os.environ.setdefault("APP_PORT", "8000")
+os.environ.setdefault("APP_DEBUG", "false")
+os.environ.setdefault("SECRET_KEY", "test-secret")
+os.environ.setdefault("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
+os.environ.setdefault("REFRESH_TOKEN_EXPIRE_DAYS", "30")
+os.environ["DATABASE_URL"] = f"sqlite:///{_TEST_DB.as_posix()}"
+os.environ.setdefault("ENABLE_DEV_AUTH", "true")
+os.environ.setdefault("TELEGRAM_BOT_TOKEN", "test-token")
+os.environ.setdefault("FRONTEND_BASE_URL", "http://localhost:8000")
+os.environ.setdefault("PAYMENT_PUBLIC_URL", "http://localhost:8000")
 
 from app.db.base import Base
 from app.db.session import engine, get_session_context
@@ -27,9 +38,7 @@ def reset_db():
         seed_demo_data(session)
     yield
     Base.metadata.drop_all(bind=engine)
-    db_file = Path('test_fitminiapp.db')
-    if db_file.exists():
-        db_file.unlink()
+    engine.dispose()
 
 
 @pytest.fixture()

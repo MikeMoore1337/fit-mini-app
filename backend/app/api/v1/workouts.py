@@ -1,12 +1,13 @@
 from datetime import date, datetime
 
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from sqlalchemy.orm import Session, joinedload
+
 from app.api.dependencies.auth import require_user
 from app.db.session import get_db
 from app.models.program import UserProgram, UserWorkout, UserWorkoutExercise, UserWorkoutSet
 from app.models.user import User
 from app.services.programs import get_visible_exercise_display_map
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy.orm import Session, joinedload
 
 router = APIRouter()
 
@@ -121,9 +122,9 @@ def delete_today_workout(
     if not workout:
         raise HTTPException(status_code=404, detail="На сегодня тренировка не назначена")
 
-    workout_exercises = db.query(UserWorkoutExercise).filter(
-        UserWorkoutExercise.workout_id == workout.id
-    ).all()
+    workout_exercises = (
+        db.query(UserWorkoutExercise).filter(UserWorkoutExercise.workout_id == workout.id).all()
+    )
     workout_exercise_ids = [item.id for item in workout_exercises]
 
     if workout_exercise_ids:

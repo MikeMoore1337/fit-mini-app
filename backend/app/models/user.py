@@ -1,8 +1,9 @@
 from datetime import datetime
 
-from app.db.base import Base
 from sqlalchemy import BIGINT, Boolean, DateTime, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.db.base import Base
 
 
 class User(Base):
@@ -13,9 +14,15 @@ class User(Base):
     username: Mapped[str | None] = mapped_column(String(64), nullable=True)
     first_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
     last_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    is_coach: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
-    is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    is_coach: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    is_admin: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
 
     profile = relationship("UserProfile", back_populates="user", uselist=False)
@@ -38,9 +45,7 @@ class UserProfile(Base):
 
 class CoachClient(Base):
     __tablename__ = "coach_clients"
-    __table_args__ = (
-        UniqueConstraint("coach_user_id", "client_user_id", name="uq_coach_client"),
-    )
+    __table_args__ = (UniqueConstraint("coach_user_id", "client_user_id", name="uq_coach_client"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     coach_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)

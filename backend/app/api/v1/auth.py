@@ -1,8 +1,12 @@
+from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.orm import Session
+
 from app.core.config import settings
 from app.core.rate_limit import limiter
 from app.db.session import get_db
-from app.models.user import User
-from app.schemas.auth import RefreshRequest, TelegramInitRequest, TokenPairResponse
+from app.models.notification import NotificationSetting
+from app.models.user import User, UserProfile
+from app.schemas.auth import DevLoginRequest, RefreshRequest, TelegramInitRequest, TokenPairResponse
 from app.services.jwt import build_access_token, build_refresh_token, decode_token
 from app.services.telegram_auth import (
     get_or_create_user_from_init_data,
@@ -16,8 +20,6 @@ from app.services.token_service import (
     revoke_refresh_token,
     save_refresh_token,
 )
-from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy.orm import Session
 
 router = APIRouter()
 
@@ -61,6 +63,47 @@ def telegram_init_auth(
         raise HTTPException(status_code=401, detail=str(exc))
 
     user = get_or_create_user_from_init_data(db, validated_init_data)
+    return issue_token_pair(db, user)
+
+
+@router.post("/dev-login", response_model=TokenPairResponse)
+@limiter.limit("30/minute")
+def dev_login(
+    request: Request,
+    payload: DevLoginRequest,
+    db: Session = Depends(get_db),
+):
+    if not settings.enable_dev_auth:
+        raise HTTPException(status_code=403, detail="Dev-вход отключён")
+
+    user = db.query(User).filter(User.telegram_user_id == payload.telegram_user_id).first()
+    if not user:
+        user = User(
+            telegram_user_id=payload.telegram_user_id,
+            username=f"dev_{payload.telegram_user_id}",
+            is_coach=payload.is_coach,
+            is_active=True,
+        )
+        db.add(user)
+        db.flush()
+        db.add(
+            UserProfile(
+                user_id=user.id,
+                full_name=payload.full_name,
+            )
+        )
+        db.add(NotificationSetting(user_id=user.id))
+    else:
+        user.is_coach = payload.is_coach
+        if payload.full_name is not None:
+            profile = user.profile
+            if profile:
+                profile.full_name = payload.full_name
+            else:
+                db.add(UserProfile(user_id=user.id, full_name=payload.full_name))
+
+    db.commit()
+    db.refresh(user)
     return issue_token_pair(db, user)
 
 

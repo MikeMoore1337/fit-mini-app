@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+
 from app.db.session import SessionLocal
 from app.models.user import User
 from app.services.security import AuthError, decode_token
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
 
 
 class AuthMiddleware(BaseHTTPMiddleware):

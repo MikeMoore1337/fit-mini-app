@@ -4,11 +4,9 @@ import asyncio
 import logging
 
 import httpx
-from sqlalchemy.orm import joinedload
 
 from app.core.config import settings
 from app.db.session import get_session_context
-from app.models.notification import Notification
 from app.models.user import User
 from app.services.notifications import get_due_notifications
 
@@ -37,12 +35,12 @@ async def run_once() -> None:
                 await send_telegram_message(user.telegram_user_id, f"{row.title}\n\n{row.body}")
                 row.status = "sent"
                 from datetime import datetime
+
                 row.sent_at = datetime.utcnow()
-                row.last_error = None if hasattr(row, 'last_error') else None
-            except Exception as exc:  # noqa: BLE001
+                row.last_error = None
+            except Exception as exc:
                 row.status = "failed"
-                if hasattr(row, 'last_error'):
-                    row.last_error = str(exc)
+                row.last_error = str(exc)
                 logger.exception("Failed to send notification %s", row.id)
 
 

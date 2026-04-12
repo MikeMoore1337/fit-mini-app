@@ -1,89 +1,7 @@
-const FRONTEND_VERSION = 'v16';
-
-const accessTokenKey = 'fit_access_token';
-const refreshTokenKey = 'fit_refresh_token';
-const sectionStoragePrefix = 'fit_section_';
-
-const state = {
-  me: null,
-  exercises: [],
-  templates: [],
-  todayWorkout: null,
-  plans: [],
-  publicConfig: null,
-  workoutTimer: null,
-  currentWorkoutTimerStartedAtMs: null,
-  historyOffset: 0,
-  historyLimit: 4,
-  historyHasMore: true,
-  editingTemplateId: null,
-  isReauthInProgress: false,
-};
-
-const API = {
-  publicConfig: '/api/v1/public/config',
-  telegramInit: '/api/v1/auth/telegram/init',
-  devLogin: '/api/v1/auth/dev-login',
-  me: '/api/v1/me',
-  meProfile: '/api/v1/me/profile',
-
-  exercises: '/api/v1/programs/exercises',
-  createExercise: '/api/v1/programs/exercises',
-  updateExercise: (exerciseId) => `/api/v1/programs/exercises/${exerciseId}`,
-  deleteExercise: (exerciseId) => `/api/v1/programs/exercises/${exerciseId}`,
-
-  saveTemplate: '/api/v1/programs/templates',
-  myTemplates: '/api/v1/programs/templates/mine',
-  getTemplate: (templateId) => `/api/v1/programs/templates/${templateId}`,
-  updateTemplate: (templateId) => `/api/v1/programs/templates/${templateId}`,
-  assignTemplateToMe: (templateId) => `/api/v1/programs/templates/${templateId}/assign-to-me`,
-  deleteTemplate: (templateId) => `/api/v1/programs/templates/${templateId}`,
-  clients: '/api/v1/programs/clients',
-
-  todayWorkout: '/api/v1/workouts/today',
-  deleteTodayWorkout: '/api/v1/workouts/today',
-  startWorkout: (workoutId) => `/api/v1/workouts/${workoutId}/start`,
-  finishWorkout: (workoutId) => `/api/v1/workouts/${workoutId}/finish`,
-  updateSet: (setId) => `/api/v1/workouts/sets/${setId}`,
-  workoutHistory: (offset, limit) => `/api/v1/workouts/history?offset=${offset}&limit=${limit}`,
-
-  billingPlans: '/api/v1/billing/plans',
-  billingSubscription: '/api/v1/billing/subscription',
-  billingCheckout: '/api/v1/billing/checkout',
-  billingMockComplete: (checkoutId) => `/api/v1/billing/mock/complete/${checkoutId}`,
-
-  notificationsSettings: '/api/v1/notifications/settings',
-  notifications: '/api/v1/notifications',
-  deleteNotification: (notificationId) => `/api/v1/notifications/${notificationId}`,
-};
-
-const $ = (id) => document.getElementById(id);
-
-function log(message) {
-  const node = $('log');
-  if (!node) return;
-  const text = typeof message === 'string' ? message : JSON.stringify(message, null, 2);
-  node.textContent = `${new Date().toLocaleTimeString()} - ${text}\n${node.textContent}`;
-}
-
-function showToast(message, type = 'success') {
-  const toast = $('toast');
-  if (!toast) return;
-  toast.textContent = message;
-  toast.className = `toast${type === 'error' ? ' error' : ''}`;
-  setTimeout(() => {
-    toast.className = 'toast hidden';
-  }, 2500);
-}
-
-function clearTokens() {
-  localStorage.removeItem(accessTokenKey);
-  localStorage.removeItem(refreshTokenKey);
-}
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+import { API, FRONTEND_VERSION, accessTokenKey, refreshTokenKey, sectionStoragePrefix } from './core/config.js';
+import { state } from './core/state.js';
+import { $, log, showToast } from './core/ui.js';
+import { api, clearTokens, sleep } from './core/http.js';
 
 window.onerror = function (message, source, lineno, colno, error) {
   log({
@@ -103,48 +21,6 @@ window.onunhandledrejection = function (event) {
     stack: event.reason?.stack || null,
   });
 };
-
-function authHeaders(extra = {}) {
-  const token = localStorage.getItem(accessTokenKey);
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...extra,
-  };
-}
-
-async function api(path, options = {}) {
-  const response = await fetch(path, {
-    ...options,
-    headers: authHeaders(options.headers || {}),
-  });
-
-  const text = await response.text();
-
-  if (!response.ok) {
-    log({
-      apiError: true,
-      path,
-      status: response.status,
-      response: text,
-    });
-
-    const error = new Error(`${response.status} ${text}`);
-    error.status = response.status;
-    error.responseText = text;
-    throw error;
-  }
-
-  if (response.status === 204 || !text) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(text);
-  } catch {
-    return text;
-  }
-}
 
 function setAuthState(text) {
   const node = $('authState');

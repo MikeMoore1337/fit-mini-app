@@ -3,8 +3,9 @@ import hmac
 import json
 from urllib.parse import parse_qsl
 
-from app.models.user import User, UserProfile
 from sqlalchemy.orm import Session
+
+from app.models.user import User, UserProfile
 
 
 def build_secret_key(bot_token: str) -> bytes:
