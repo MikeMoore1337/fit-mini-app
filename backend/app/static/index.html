@@ -2,12 +2,13 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+    <meta name="theme-color" content="#0f1115"/>
     <title>FitMiniApp</title>
-    <link rel="stylesheet" href="/static/styles.css?v=17"/>
+    <link rel="stylesheet" href="/static/styles.css?v=19"/>
 </head>
 <body>
-<div class="container">
+<main class="container" id="app-main">
     <div class="card hero-card">
         <div>
             <h1>FitMiniApp</h1>
@@ -27,7 +28,9 @@
         </div>
         <div id="section-auth" class="section-content">
             <div class="stack">
-                <div id="authState" class="muted">Проверяем авторизацию через Telegram...</div>
+                <div id="authState" class="muted" role="status" aria-live="polite" aria-atomic="true">
+                    Проверяем авторизацию через Telegram...
+                </div>
 
                 <div class="toolbar wrap">
                     <button id="telegramLoginBtn" class="secondary" type="button">Повторить вход через Telegram</button>
@@ -51,7 +54,7 @@
         </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="card-profile">
         <div class="section-head">
             <h2>Профиль</h2>
             <button class="secondary section-toggle" type="button" data-target="section-profile">Свернуть</button>
@@ -82,7 +85,7 @@
         </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="card-builder">
         <div class="section-head">
             <div>
                 <h2>Конструктор программы</h2>
@@ -130,17 +133,19 @@
         </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="card-today">
         <div class="section-head">
             <h2>Тренировка на сегодня</h2>
             <button class="secondary section-toggle" type="button" data-target="section-today-workout">Свернуть</button>
         </div>
         <div id="section-today-workout" class="section-content">
-            <div id="todayWorkout">Загрузка...</div>
+            <div id="todayWorkout" class="today-workout-root">
+                <p class="muted">Загрузка…</p>
+            </div>
         </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="card-templates">
         <div class="section-head">
             <h2>Шаблоны</h2>
             <div class="toolbar wrap">
@@ -153,7 +158,7 @@
         </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="card-exercises">
         <div class="section-head">
             <h2>Мои упражнения</h2>
             <div class="toolbar wrap">
@@ -284,11 +289,62 @@
             <pre id="log" class="log-box"></pre>
         </div>
     </div>
+</main>
+
+<nav class="app-bottom-nav" id="appBottomNav" aria-label="Основные разделы">
+    <button type="button" class="app-bottom-nav__btn is-active" data-nav-section="section-today-workout" data-nav-card="card-today">
+        <span class="app-bottom-nav__icon" aria-hidden="true">◎</span>
+        <span class="app-bottom-nav__label">Сегодня</span>
+    </button>
+    <button type="button" class="app-bottom-nav__btn" data-nav-section="section-builder" data-nav-card="card-builder">
+        <span class="app-bottom-nav__icon" aria-hidden="true">⚙</span>
+        <span class="app-bottom-nav__label">Программа</span>
+    </button>
+    <button type="button" class="app-bottom-nav__btn" data-nav-section="section-templates" data-nav-card="card-templates">
+        <span class="app-bottom-nav__icon" aria-hidden="true">≡</span>
+        <span class="app-bottom-nav__label">Шаблоны</span>
+    </button>
+    <button type="button" class="app-bottom-nav__btn" data-nav-section="section-profile" data-nav-card="card-profile">
+        <span class="app-bottom-nav__icon" aria-hidden="true">◉</span>
+        <span class="app-bottom-nav__label">Профиль</span>
+    </button>
+</nav>
+
+<div
+    id="globalLoading"
+    class="global-loading hidden"
+    role="progressbar"
+    aria-hidden="true"
+    aria-busy="false"
+    aria-valuetext="Загрузка данных"
+>
+    <div class="global-loading__track">
+        <div class="global-loading__bar"></div>
+    </div>
 </div>
 
-<div id="toast" class="toast hidden"></div>
+<div
+    id="confirmModal"
+    class="modal hidden"
+    role="dialog"
+    aria-modal="true"
+    aria-hidden="true"
+    aria-labelledby="confirmModalTitle"
+>
+    <div class="modal__backdrop"></div>
+    <div class="modal__panel card">
+        <h3 id="confirmModalTitle" class="modal__title"></h3>
+        <p id="confirmModalBody" class="modal__body muted"></p>
+        <div class="modal__actions toolbar wrap">
+            <button type="button" class="secondary" id="confirmModalCancel">Отмена</button>
+            <button type="button" id="confirmModalOk">Подтвердить</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true"></div>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script type="module" src="/static/js/main.js?v=17"></script>
+<script type="module" src="/static/js/main.js?v=19"></script>
 </body>
 </html>

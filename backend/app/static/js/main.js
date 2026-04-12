@@ -1,6 +1,6 @@
 import { API, FRONTEND_VERSION, accessTokenKey, refreshTokenKey, sectionStoragePrefix } from './core/config.js';
 import { state } from './core/state.js';
-import { $, log, showToast } from './core/ui.js';
+import { $, log, showToast, toastError, setAppLoading, openConfirmDialog, bindGlobalNavHandlers } from './core/ui.js';
 import { api, clearTokens, sleep } from './core/http.js';
 
 window.onerror = function (message, source, lineno, colno, error) {
@@ -367,10 +367,20 @@ function renderExerciseCatalog() {
   const list = $('exerciseCatalogList');
   if (!list) return;
 
-  list.innerHTML =
-    state.exercises
-      .map(
-        (ex) => `
+  if (!state.exercises.length) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <p class="empty-state__title">Упражнений пока нет</p>
+        <p class="empty-state__text muted">
+          Добавь своё упражнение ниже или перезагрузи список — стандартный набор подтягивается с сервера.
+        </p>
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = state.exercises
+    .map(
+      (ex) => `
           <div class="item-card">
             <strong>${ex.title}</strong>
             <div class="exercise-meta">
@@ -389,8 +399,8 @@ function renderExerciseCatalog() {
             </div>
           </div>
         `
-      )
-      .join('') || '<p class="muted">Упражнений пока нет</p>';
+    )
+    .join('');
 
   document.querySelectorAll('.edit-exercise-btn').forEach((btn) => {
     btn.onclick = async () => {
@@ -424,7 +434,7 @@ function renderExerciseCatalog() {
         await loadTodayWorkout();
       } catch (error) {
         log(`editExercise: ${String(error)}`);
-        showToast('Не удалось обновить упражнение', 'error');
+        toastError(error, 'Не удалось обновить упражнение');
       }
     };
   });
@@ -432,7 +442,13 @@ function renderExerciseCatalog() {
   document.querySelectorAll('.delete-exercise-btn').forEach((btn) => {
     btn.onclick = async () => {
       const exerciseId = Number(btn.dataset.exerciseId);
-      if (!confirm('Удалить упражнение только у тебя?')) return;
+      const ok = await openConfirmDialog({
+        title: 'Скрыть упражнение?',
+        message: 'Упражнение будет скрыто только в твоём каталоге. Общие данные не затронуты.',
+        okText: 'Скрыть',
+        danger: true,
+      });
+      if (!ok) return;
 
       try {
         await withReauth(() =>
@@ -446,7 +462,7 @@ function renderExerciseCatalog() {
         await loadTodayWorkout();
       } catch (error) {
         log(`deleteExercise: ${String(error)}`);
-        showToast('Не удалось удалить упражнение', 'error');
+        toastError(error, 'Не удалось удалить упражнение');
       }
     };
   });
@@ -738,9 +754,24 @@ async function loadTemplates() {
   const list = $('templatesList');
   if (!list) return;
 
-  list.innerHTML =
-    state.templates
-      .map((template) => {
+  if (!state.templates.length) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <p class="empty-state__title">Шаблонов пока нет</p>
+        <p class="empty-state__text muted">
+          Создай программу в конструкторе и сохрани её — или назначь общий шаблон, если он доступен в списке.
+        </p>
+        <div class="toolbar wrap" style="justify-content: center">
+          <button type="button" class="secondary empty-state-goto" data-nav-section="section-builder" data-nav-card="card-builder">
+            Открыть конструктор
+          </button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = state.templates
+    .map((template) => {
         const deleteBtn = canDeleteTemplate(template)
           ? `<button class="secondary delete-template-btn" type="button" data-template-id="${template.id}">Удалить</button>`
           : '';
@@ -779,7 +810,7 @@ async function loadTemplates() {
           </div>
         `;
       })
-      .join('') || '<p class="muted">Шаблонов пока нет</p>';
+    .join('');
 
   document.querySelectorAll('.assign-template-btn').forEach((btn) => {
     btn.onclick = async () => {
@@ -787,7 +818,7 @@ async function loadTemplates() {
         await assignTemplateToMe(Number(btn.dataset.templateId));
       } catch (error) {
         log(`assignTemplateToMe: ${String(error)}`);
-        showToast('Не удалось загрузить шаблон в тренировки', 'error');
+        toastError(error, 'Не удалось загрузить шаблон в тренировки');
       }
     };
   });
@@ -798,19 +829,25 @@ async function loadTemplates() {
         await loadTemplateIntoBuilder(Number(btn.dataset.templateId));
       } catch (error) {
         log(`loadTemplateIntoBuilder: ${String(error)}`);
-        showToast('Не удалось загрузить шаблон в конструктор', 'error');
+        toastError(error, 'Не удалось загрузить шаблон в конструктор');
       }
     };
   });
 
   document.querySelectorAll('.delete-template-btn').forEach((btn) => {
     btn.onclick = async () => {
-      if (!confirm('Удалить шаблон?')) return;
+      const ok = await openConfirmDialog({
+        title: 'Удалить шаблон?',
+        message: 'Шаблон и связанные данные для тебя будут удалены. Это действие нельзя отменить.',
+        okText: 'Удалить',
+        danger: true,
+      });
+      if (!ok) return;
       try {
         await deleteTemplate(Number(btn.dataset.templateId));
       } catch (error) {
         log(`deleteTemplate: ${String(error)}`);
-        showToast('Не удалось удалить шаблон', 'error');
+        toastError(error, 'Не удалось удалить шаблон');
       }
     };
   });
@@ -826,17 +863,26 @@ async function loadClients() {
   const list = $('clientsList');
   if (!list) return;
 
-  list.innerHTML =
-    rows
-      .map(
-        (c) => `
+  list.innerHTML = rows.length
+    ? rows
+        .map(
+          (c) => `
           <div class="item-card">
             <strong>${c.full_name || c.telegram_user_id}</strong><br>
             <span class="muted">цель=${c.goal || '-'} | уровень=${c.level || '-'}</span>
           </div>
         `
-      )
-      .join('') || '<p class="muted">Клиентов пока нет</p>';
+        )
+        .join('')
+    : `<div class="empty-state">
+        <p class="empty-state__title">Клиентов пока нет</p>
+        <p class="empty-state__text muted">Назначай программы пользователям в режиме «Для клиента» в конструкторе.</p>
+        <div class="toolbar wrap" style="justify-content: center">
+          <button type="button" class="secondary empty-state-goto" data-nav-section="section-builder" data-nav-card="card-builder">
+            Конструктор
+          </button>
+        </div>
+      </div>`;
 }
 
 function statusLabel(status) {
@@ -914,7 +960,21 @@ function renderTodayWorkout(workout) {
   if (!container) return;
 
   if (!workout) {
-    container.innerHTML = '<p class="muted">На сегодня тренировка не назначена</p>';
+    container.innerHTML = `
+      <div class="empty-state">
+        <p class="empty-state__title">На сегодня тренировка не назначена</p>
+        <p class="empty-state__text muted">
+          Собери программу в конструкторе или назначь шаблон — тогда здесь появится план тренировки.
+        </p>
+        <div class="toolbar wrap" style="justify-content: center">
+          <button type="button" class="secondary empty-state-goto" data-nav-section="section-builder" data-nav-card="card-builder">
+            Открыть конструктор
+          </button>
+          <button type="button" class="secondary empty-state-goto" data-nav-section="section-templates" data-nav-card="card-templates">
+            К шаблонам
+          </button>
+        </div>
+      </div>`;
     clearWorkoutTimer();
     return;
   }
@@ -1010,12 +1070,18 @@ function renderTodayWorkout(workout) {
   const deleteBtnNode = $('deleteTodayWorkoutBtn');
   if (deleteBtnNode) {
     deleteBtnNode.onclick = async () => {
-      if (!confirm('Удалить тренировку на сегодня?')) return;
+      const ok = await openConfirmDialog({
+        title: 'Удалить тренировку?',
+        message: 'Тренировка на сегодня будет снята с расписания. Это действие нельзя отменить.',
+        okText: 'Удалить',
+        danger: true,
+      });
+      if (!ok) return;
       try {
         await deleteTodayWorkout();
       } catch (error) {
         log(`deleteTodayWorkout: ${String(error)}`);
-        showToast('Не удалось удалить тренировку', 'error');
+        toastError(error, 'Не удалось удалить тренировку');
       }
     };
   }
@@ -1035,7 +1101,7 @@ function renderTodayWorkout(workout) {
         await resetHistoryAndReload();
       } catch (error) {
         log(`startWorkout: ${String(error)}`);
-        showToast('Не удалось начать тренировку', 'error');
+        toastError(error, 'Не удалось начать тренировку');
       }
     };
   }
@@ -1061,7 +1127,7 @@ function renderTodayWorkout(workout) {
         await resetHistoryAndReload();
       } catch (error) {
         log(`finishWorkout: ${String(error)}`);
-        showToast('Не удалось завершить тренировку', 'error');
+        toastError(error, 'Не удалось завершить тренировку');
       }
     };
   }
@@ -1117,7 +1183,7 @@ function renderTodayWorkout(workout) {
         showToast('Подход сохранён');
       } catch (error) {
         log(`update set completed: ${String(error)}`);
-        showToast('Не удалось сохранить подход', 'error');
+        toastError(error, 'Не удалось сохранить подход');
       }
     });
   });
@@ -1148,7 +1214,16 @@ function renderWorkoutHistoryRows(rows, append = false) {
   }
 
   if (!rows.length && !append) {
-    container.innerHTML = '<p class="muted">История тренировок пока пустая</p>';
+    container.innerHTML = `
+      <div class="empty-state">
+        <p class="empty-state__title">История пуста</p>
+        <p class="empty-state__text muted">Завершённые тренировки появятся здесь после занятий.</p>
+        <div class="toolbar wrap" style="justify-content: center">
+          <button type="button" class="secondary empty-state-goto" data-nav-section="section-today-workout" data-nav-card="card-today">
+            К тренировке на сегодня
+          </button>
+        </div>
+      </div>`;
     return;
   }
 
@@ -1205,10 +1280,10 @@ async function loadBilling() {
     const plansList = $('plansList');
     if (!plansList) return;
 
-    plansList.innerHTML =
-      state.plans
-        .map(
-          (plan) => `
+    plansList.innerHTML = state.plans.length
+      ? state.plans
+          .map(
+            (plan) => `
             <div class="item-card">
               <strong>${plan.title}</strong><br>
               <span class="muted">${plan.price} ${plan.currency} / ${plan.period_days} дн.</span>
@@ -1217,8 +1292,12 @@ async function loadBilling() {
               </div>
             </div>
           `
-        )
-        .join('') || '<p class="muted">Тарифов пока нет</p>';
+          )
+          .join('')
+      : `<div class="empty-state">
+          <p class="empty-state__title">Тарифы недоступны</p>
+          <p class="empty-state__text muted">Попробуй обновить раздел позже.</p>
+        </div>`;
 
     document.querySelectorAll('.buy-plan-btn').forEach((btn) => {
       btn.onclick = async () => {
@@ -1237,7 +1316,7 @@ async function loadBilling() {
           }
         } catch (error) {
           log(`buyPlan: ${String(error)}`);
-          showToast('Не удалось оформить подписку', 'error');
+          toastError(error, 'Не удалось оформить подписку');
         }
       };
     });
@@ -1312,17 +1391,27 @@ async function loadNotifications() {
             </div>
           `
         )
-        .join('') || '<p class="muted">Нет напоминаний</p>';
+        .join('') ||
+      `<div class="empty-state">
+        <p class="empty-state__title">Нет напоминаний</p>
+        <p class="empty-state__text muted">Создай напоминание вручную или включи автоматические в настройках выше.</p>
+      </div>`;
 
     document.querySelectorAll('.delete-notification-btn').forEach((btn) => {
       btn.onclick = async () => {
-        if (!confirm('Удалить напоминание?')) return;
+        const ok = await openConfirmDialog({
+          title: 'Удалить напоминание?',
+          message: 'Напоминание будет удалено без возможности восстановления.',
+          okText: 'Удалить',
+          danger: true,
+        });
+        if (!ok) return;
 
         try {
           await deleteNotification(Number(btn.dataset.notificationId));
         } catch (error) {
           log(`deleteNotification: ${String(error)}`);
-          showToast('Не удалось удалить напоминание', 'error');
+          toastError(error, 'Не удалось удалить напоминание');
         }
       };
     });
@@ -1347,17 +1436,22 @@ async function saveNotificationSettings() {
 }
 
 async function bootstrap() {
-  await loadMe();
-  await loadExercises();
-  await loadTemplates();
-  await loadClients();
-  await loadTodayWorkout();
-  await resetHistoryAndReload();
-  await loadBilling();
-  await loadNotifications();
+  setAppLoading(true);
+  try {
+    await loadMe();
+    await loadExercises();
+    await loadTemplates();
+    await loadClients();
+    await loadTodayWorkout();
+    await resetHistoryAndReload();
+    await loadBilling();
+    await loadNotifications();
 
-  if (!document.querySelector('.day-card')) {
-    fillExample();
+    if (!document.querySelector('.day-card')) {
+      fillExample();
+    }
+  } finally {
+    setAppLoading(false);
   }
 }
 
@@ -1381,7 +1475,7 @@ function bindUI() {
         await devLogin();
       } catch (error) {
         log(`devLogin: ${String(error)}`);
-        showToast('Не удалось выполнить dev-вход', 'error');
+        toastError(error, 'Не удалось выполнить dev-вход');
       }
     };
   }
@@ -1392,7 +1486,7 @@ function bindUI() {
         await saveProfile();
       } catch (error) {
         log(`saveProfile: ${String(error)}`);
-        showToast('Не удалось сохранить профиль', 'error');
+        toastError(error, 'Не удалось сохранить профиль');
       }
     };
   }
@@ -1415,7 +1509,7 @@ function bindUI() {
         await saveProgram();
       } catch (error) {
         log(`saveProgramBtn: ${String(error)}`);
-        showToast('Не удалось сохранить программу', 'error');
+        toastError(error, 'Не удалось сохранить программу');
       }
     };
   }
@@ -1463,7 +1557,7 @@ function bindUI() {
         await createExercise();
       } catch (error) {
         log(`createExerciseBtn: ${String(error)}`);
-        showToast('Не удалось добавить упражнение', 'error');
+        toastError(error, 'Не удалось добавить упражнение');
       }
     };
   }
@@ -1494,7 +1588,7 @@ function bindUI() {
         await saveNotificationSettings();
       } catch (error) {
         log(`saveNotifBtn: ${String(error)}`);
-        showToast('Не удалось сохранить настройки уведомлений', 'error');
+        toastError(error, 'Не удалось сохранить настройки уведомлений');
       }
     };
   }
@@ -1505,7 +1599,7 @@ function bindUI() {
         await createManualNotification();
       } catch (error) {
         log(`createNotificationBtn: ${String(error)}`);
-        showToast('Не удалось создать напоминание', 'error');
+        toastError(error, 'Не удалось создать напоминание');
       }
     };
   }
@@ -1516,7 +1610,7 @@ function bindUI() {
         await loadWorkoutHistory(true);
       } catch (error) {
         log(`loadMoreHistoryBtn: ${String(error)}`);
-        showToast('Не удалось загрузить ещё историю', 'error');
+        toastError(error, 'Не удалось загрузить ещё историю');
       }
     };
   }
@@ -1524,6 +1618,7 @@ function bindUI() {
 
 async function init() {
   bindUI();
+  bindGlobalNavHandlers();
   initSectionToggles();
   renderTelegramDebug();
 
@@ -1577,7 +1672,7 @@ async function init() {
       return;
     } catch (error) {
       log(`bootstrap after telegram login: ${String(error)}`);
-      showToast('Не удалось загрузить данные приложения', 'error');
+      toastError(error, 'Не удалось загрузить данные приложения');
       setAuthState('Вход выполнен, но загрузка данных не удалась');
       return;
     }
