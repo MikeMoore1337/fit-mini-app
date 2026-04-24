@@ -7,8 +7,8 @@ from app.models.program import ProgramTemplate, ProgramTemplateDay, ProgramTempl
 from app.models.user import User, UserProfile
 
 
-def seed_demo_data(db: Session) -> None:
-    if db.query(User).count() == 0:
+def seed_demo_data(db: Session, include_demo_users: bool = True) -> None:
+    if include_demo_users and db.query(User).count() == 0:
         coach = User(telegram_user_id=1001, username="coach_1001", is_coach=True, is_admin=True)
         client1 = User(telegram_user_id=2001, username="client_2001")
         client2 = User(telegram_user_id=2002, username="client_2002")

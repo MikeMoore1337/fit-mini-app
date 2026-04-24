@@ -45,22 +45,24 @@ def admin_payments(
     _: User = Depends(require_coach_or_admin),
 ) -> list[dict]:
     rows = (
-        db.query(Payment, Plan)
-        .outerjoin(Plan, Plan.code == Payment.plan_code)
+        db.query(Payment, Plan, User)
+        .outerjoin(Plan, Plan.id == Payment.plan_id)
+        .outerjoin(User, User.id == Payment.user_id)
         .order_by(Payment.id.desc())
         .all()
     )
 
     result = []
-    for payment, plan in rows:
+    for payment, plan, user in rows:
+        plan_code = plan.code if plan else None
         result.append(
             {
                 "id": payment.id,
-                "telegram_user_id": payment.telegram_user_id,
-                "plan_code": payment.plan_code,
-                "plan_title": plan.title if plan else payment.plan_code,
+                "telegram_user_id": user.telegram_user_id if user else None,
+                "plan_code": plan_code,
+                "plan_title": plan.title if plan else plan_code,
                 "status": payment.status,
-                "amount": payment.amount,
+                "amount": float(payment.amount),
                 "currency": payment.currency,
                 "created_at": payment.created_at.isoformat() if payment.created_at else None,
             }

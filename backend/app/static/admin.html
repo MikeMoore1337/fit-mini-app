@@ -81,6 +81,18 @@
       }, 2500);
     }
 
+    function escapeHtml(value) {
+      const text = value == null ? '' : String(value);
+      const replacements = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;',
+      };
+      return text.replace(/[&<>"']/g, (char) => replacements[char]);
+    }
+
     function authHeaders() {
       const token = localStorage.getItem(accessTokenKey);
       return {
@@ -102,11 +114,11 @@
       const rows = await api('/api/v1/admin/users');
       $('usersList').innerHTML = rows.map(user => `
         <div class="item-card">
-          <strong>${user.full_name || user.telegram_user_id}</strong><br>
+          <strong>${escapeHtml(user.full_name || user.telegram_user_id)}</strong><br>
           <span class="muted">
-            ID: ${user.telegram_user_id} |
-            coach=${user.is_coach} |
-            admin=${user.is_admin}
+            ID: ${escapeHtml(user.telegram_user_id)} |
+            coach=${escapeHtml(user.is_coach)} |
+            admin=${escapeHtml(user.is_admin)}
           </span>
         </div>
       `).join('') || '<p class="muted">Пользователей нет</p>';
@@ -117,11 +129,11 @@
       const rows = await api('/api/v1/admin/payments');
       $('paymentsList').innerHTML = rows.map(row => `
         <div class="item-card">
-          <strong>${row.plan_title || row.plan_code}</strong><br>
+          <strong>${escapeHtml(row.plan_title || row.plan_code)}</strong><br>
           <span class="muted">
-            Пользователь: ${row.telegram_user_id} |
-            Статус: ${row.status} |
-            ${row.amount} ${row.currency}
+            Пользователь: ${escapeHtml(row.telegram_user_id)} |
+            Статус: ${escapeHtml(row.status)} |
+            ${escapeHtml(row.amount)} ${escapeHtml(row.currency)}
           </span>
         </div>
       `).join('') || '<p class="muted">Платежей нет</p>';
@@ -132,9 +144,9 @@
       const rows = await api('/api/v1/admin/notifications');
       $('adminNotificationsList').innerHTML = rows.map(row => `
         <div class="item-card">
-          <strong>${row.title}</strong><br>
-          <span class="muted">${new Date(row.scheduled_for).toLocaleString()} - ${row.status}</span>
-          <div>${row.body}</div>
+          <strong>${escapeHtml(row.title)}</strong><br>
+          <span class="muted">${escapeHtml(new Date(row.scheduled_for).toLocaleString())} - ${escapeHtml(row.status)}</span>
+          <div>${escapeHtml(row.body)}</div>
         </div>
       `).join('') || '<p class="muted">Уведомлений нет</p>';
       showToast('Уведомления загружены');
@@ -144,8 +156,8 @@
       const rows = await api('/api/v1/admin/templates');
       $('adminTemplatesList').innerHTML = rows.map(row => `
         <div class="item-card">
-          <strong>${row.title}</strong><br>
-          <span class="muted">${row.goal} - ${row.level}</span>
+          <strong>${escapeHtml(row.title)}</strong><br>
+          <span class="muted">${escapeHtml(row.goal)} - ${escapeHtml(row.level)}</span>
         </div>
       `).join('') || '<p class="muted">Шаблонов нет</p>';
       showToast('Шаблоны загружены');

@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int
 
     database_url: str
-    enable_dev_auth: bool = True
+    enable_dev_auth: bool = False
 
     frontend_base_url: str
     telegram_bot_token: str

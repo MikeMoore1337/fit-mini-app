@@ -35,6 +35,18 @@ function isAdmin() {
   return Boolean(state.me?.is_admin);
 }
 
+function escapeHtml(value) {
+  const text = value == null ? '' : String(value);
+  const replacements = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+  };
+  return text.replace(/[&<>"']/g, (char) => replacements[char]);
+}
+
 function canDeleteTemplate(template) {
   if (!state.me) return false;
   return Boolean(
@@ -382,10 +394,10 @@ function renderExerciseCatalog() {
     .map(
       (ex) => `
           <div class="item-card">
-            <strong>${ex.title}</strong>
+            <strong>${escapeHtml(ex.title)}</strong>
             <div class="exercise-meta">
-              <span class="metric-pill">${ex.primary_muscle}</span>
-              <span class="metric-pill">${ex.equipment}</span>
+              <span class="metric-pill">${escapeHtml(ex.primary_muscle)}</span>
+              <span class="metric-pill">${escapeHtml(ex.equipment)}</span>
               ${ex.is_custom ? '<span class="metric-pill">Личное</span>' : '<span class="metric-pill">Общее</span>'}
               ${ex.is_personalized ? '<span class="metric-pill">Моё изменение</span>' : ''}
             </div>
@@ -498,16 +510,16 @@ async function createExercise() {
 function exerciseTemplate(defaultExerciseId = '', preset = null) {
   const options = state.exercises
     .map(
-      (ex) => `<option value="${ex.id}" ${String(ex.id) === String(defaultExerciseId) ? 'selected' : ''}>${ex.title}</option>`
+      (ex) => `<option value="${escapeHtml(ex.id)}" ${String(ex.id) === String(defaultExerciseId) ? 'selected' : ''}>${escapeHtml(ex.title)}</option>`
     )
     .join('');
 
   return `
     <div class="grid item-card program-ex-row" style="grid-template-columns:2fr 1fr 1fr 1fr auto;">
       <select class="exercise-id">${options}</select>
-      <input class="exercise-sets" type="number" min="1" value="${preset?.prescribed_sets || 3}" placeholder="Подходы" />
-      <input class="exercise-reps" type="text" value="${preset?.prescribed_reps || '8-10'}" placeholder="Повторы" />
-      <input class="exercise-rest" type="number" min="15" value="${preset?.rest_seconds || 90}" placeholder="Отдых, сек" />
+      <input class="exercise-sets" type="number" min="1" value="${escapeHtml(preset?.prescribed_sets || 3)}" placeholder="Подходы" />
+      <input class="exercise-reps" type="text" value="${escapeHtml(preset?.prescribed_reps || '8-10')}" placeholder="Повторы" />
+      <input class="exercise-rest" type="number" min="15" value="${escapeHtml(preset?.rest_seconds || 90)}" placeholder="Отдых, сек" />
       <button class="secondary remove-ex-btn" type="button">Удалить</button>
     </div>
   `;
@@ -517,7 +529,7 @@ function programDayTemplate(index, preset = null) {
   return `
     <div class="item-card day-card" data-day-index="${index}">
       <div class="toolbar wrap">
-        <input class="day-title" type="text" placeholder="Название дня" value="${preset?.title || `День ${index + 1}`}" />
+        <input class="day-title" type="text" placeholder="Название дня" value="${escapeHtml(preset?.title || `День ${index + 1}`)}" />
         <button class="secondary add-ex-btn" type="button">+ Упражнение</button>
         <button class="secondary remove-day-btn" type="button">Удалить день</button>
       </div>
@@ -784,8 +796,8 @@ async function loadTemplates() {
 
         return `
           <div class="item-card">
-            <strong>${template.title}</strong><br>
-            <span class="muted">${template.goal} - ${template.level}</span>
+            <strong>${escapeHtml(template.title)}</strong><br>
+            <span class="muted">${escapeHtml(template.goal)} - ${escapeHtml(template.level)}</span>
             <div class="top-gap">
               ${
                 template.days?.length
@@ -793,8 +805,8 @@ async function loadTemplates() {
                       .map(
                         (day) => `
                           <div class="top-gap">
-                            <strong>${day.title}</strong>
-                            <div class="muted">${(day.exercises || []).map((ex) => ex.exercise_title).join(', ')}</div>
+                            <strong>${escapeHtml(day.title)}</strong>
+                            <div class="muted">${(day.exercises || []).map((ex) => escapeHtml(ex.exercise_title)).join(', ')}</div>
                           </div>
                         `
                       )
@@ -868,8 +880,8 @@ async function loadClients() {
         .map(
           (c) => `
           <div class="item-card">
-            <strong>${c.full_name || c.telegram_user_id}</strong><br>
-            <span class="muted">цель=${c.goal || '-'} | уровень=${c.level || '-'}</span>
+            <strong>${escapeHtml(c.full_name || c.telegram_user_id)}</strong><br>
+            <span class="muted">цель=${escapeHtml(c.goal || '-')} | уровень=${escapeHtml(c.level || '-')}</span>
           </div>
         `
         )
@@ -987,10 +999,11 @@ function renderTodayWorkout(workout) {
       : workout.status === 'in_progress'
         ? `<button id="finishWorkoutBtn" type="button">Завершить тренировку</button>${deleteBtn}`
         : deleteBtn;
+  const setInputsDisabled = workout.status === 'completed' ? 'disabled' : '';
 
   container.innerHTML = `
     <div class="item-card">
-      <strong>${workout.title}</strong><br>
+      <strong>${escapeHtml(workout.title)}</strong><br>
       <span class="muted">Статус: ${statusLabel(workout.status)}</span>
       <div id="workoutTimer" class="top-gap muted"></div>
       <div class="toolbar wrap top-gap">
@@ -1001,31 +1014,33 @@ function renderTodayWorkout(workout) {
     <div class="stack top-gap">
       ${(workout.exercises || []).map((exercise) => `
         <div class="item-card">
-          <strong>${exercise.exercise_title}</strong>
+          <strong>${escapeHtml(exercise.exercise_title)}</strong>
           <div class="muted top-gap">
-            План: ${exercise.prescribed_sets} x ${exercise.prescribed_reps}, отдых ${exercise.rest_seconds} сек
+            План: ${escapeHtml(exercise.prescribed_sets)} x ${escapeHtml(exercise.prescribed_reps)}, отдых ${escapeHtml(exercise.rest_seconds)} сек
           </div>
 
           <div class="stack top-gap">
             ${(exercise.sets || []).map((setRow) => `
               <div class="grid item-card" style="grid-template-columns: 1fr 1fr 1fr auto;">
-                <div>Подход ${setRow.set_number}</div>
+                <div>Подход ${escapeHtml(setRow.set_number)}</div>
                 <input
                   class="set-reps"
                   type="number"
                   min="0"
-                  value="${setRow.actual_reps ?? ''}"
+                  value="${escapeHtml(setRow.actual_reps ?? '')}"
                   data-set-id="${setRow.id}"
                   placeholder="Повторы"
+                  ${setInputsDisabled}
                 />
                 <input
                   class="set-weight"
                   type="number"
                   min="0"
                   step="0.1"
-                  value="${setRow.actual_weight ?? ''}"
+                  value="${escapeHtml(setRow.actual_weight ?? '')}"
                   data-set-id="${setRow.id}"
                   placeholder="Вес"
+                  ${setInputsDisabled}
                 />
                 <label class="checkbox-row">
                   <input
@@ -1033,6 +1048,7 @@ function renderTodayWorkout(workout) {
                     type="checkbox"
                     data-set-id="${setRow.id}"
                     ${setRow.is_completed ? 'checked' : ''}
+                    ${setInputsDisabled}
                   />
                   <span>Готово</span>
                 </label>
@@ -1230,8 +1246,8 @@ function renderWorkoutHistoryRows(rows, append = false) {
   const html = rows
     .map((item) => `
       <div class="item-card">
-        <strong>${item.title}</strong><br>
-        <span class="muted">${item.scheduled_date} - ${statusLabel(item.status)}</span>
+        <strong>${escapeHtml(item.title)}</strong><br>
+        <span class="muted">${escapeHtml(item.scheduled_date)} - ${statusLabel(item.status)}</span>
       </div>
     `)
     .join('');
@@ -1285,10 +1301,10 @@ async function loadBilling() {
           .map(
             (plan) => `
             <div class="item-card">
-              <strong>${plan.title}</strong><br>
-              <span class="muted">${plan.price} ${plan.currency} / ${plan.period_days} дн.</span>
+              <strong>${escapeHtml(plan.title)}</strong><br>
+              <span class="muted">${escapeHtml(plan.price)} ${escapeHtml(plan.currency)} / ${escapeHtml(plan.period_days)} дн.</span>
               <div class="toolbar wrap top-gap">
-                <button class="secondary buy-plan-btn" data-plan="${plan.code}" type="button">Купить</button>
+                <button class="secondary buy-plan-btn" data-plan="${escapeHtml(plan.code)}" type="button">Купить</button>
               </div>
             </div>
           `
@@ -1380,9 +1396,9 @@ async function loadNotifications() {
         .map(
           (n) => `
             <div class="item-card">
-              <strong>${n.title}</strong><br>
-              <span class="muted">${new Date(n.scheduled_for).toLocaleString()} - ${n.status}</span>
-              <div class="top-gap">${n.body}</div>
+              <strong>${escapeHtml(n.title)}</strong><br>
+              <span class="muted">${escapeHtml(new Date(n.scheduled_for).toLocaleString())} - ${escapeHtml(n.status)}</span>
+              <div class="top-gap">${escapeHtml(n.body)}</div>
               <div class="toolbar wrap top-gap">
                 <button class="secondary delete-notification-btn" type="button" data-notification-id="${n.id}">
                   Удалить напоминание

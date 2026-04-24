@@ -9,7 +9,7 @@ from app.services.jwt import hash_token
 
 
 def utcnow() -> datetime:
-    return datetime.now(UTC)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def save_refresh_token(

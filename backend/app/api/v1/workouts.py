@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session, joinedload
@@ -7,9 +7,14 @@ from app.api.dependencies.auth import require_user
 from app.db.session import get_db
 from app.models.program import UserProgram, UserWorkout, UserWorkoutExercise, UserWorkoutSet
 from app.models.user import User
+from app.schemas.workout import WorkoutSetUpdate
 from app.services.programs import get_visible_exercise_display_map
 
 router = APIRouter()
+
+
+def _utcnow_naive() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _get_user_workout_or_404(db: Session, current_user: User, workout_id: int) -> UserWorkout:
@@ -153,7 +158,7 @@ def start_workout(
         raise HTTPException(status_code=400, detail="Тренировка уже завершена")
 
     if not workout.started_at:
-        workout.started_at = datetime.utcnow()
+        workout.started_at = _utcnow_naive()
     workout.status = "in_progress"
     db.commit()
     db.refresh(workout)
@@ -171,8 +176,8 @@ def finish_workout(
     workout = _get_user_workout_or_404(db, current_user, workout_id)
 
     if not workout.started_at:
-        workout.started_at = datetime.utcnow()
-    workout.completed_at = datetime.utcnow()
+        workout.started_at = _utcnow_naive()
+    workout.completed_at = _utcnow_naive()
     workout.status = "completed"
 
     db.commit()
@@ -185,12 +190,12 @@ def finish_workout(
 @router.patch("/sets/{set_id}")
 def update_workout_set(
     set_id: int,
-    payload: dict,
+    payload: WorkoutSetUpdate,
     current_user: User = Depends(require_user),
     db: Session = Depends(get_db),
 ):
-    set_row = (
-        db.query(UserWorkoutSet)
+    result = (
+        db.query(UserWorkoutSet, UserWorkout)
         .join(UserWorkoutExercise, UserWorkoutExercise.id == UserWorkoutSet.workout_exercise_id)
         .join(UserWorkout, UserWorkout.id == UserWorkoutExercise.workout_id)
         .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
@@ -201,15 +206,20 @@ def update_workout_set(
         .first()
     )
 
-    if not set_row:
+    if not result:
         raise HTTPException(status_code=404, detail="Подход не найден")
 
-    if "actual_reps" in payload:
-        set_row.actual_reps = payload.get("actual_reps")
-    if "actual_weight" in payload:
-        set_row.actual_weight = payload.get("actual_weight")
-    if "is_completed" in payload:
-        set_row.is_completed = bool(payload.get("is_completed"))
+    set_row, workout = result
+    if workout.status == "completed":
+        raise HTTPException(status_code=400, detail="Нельзя изменять завершённую тренировку")
+
+    changes = payload.model_dump(exclude_unset=True)
+    if "actual_reps" in changes:
+        set_row.actual_reps = changes["actual_reps"]
+    if "actual_weight" in changes:
+        set_row.actual_weight = changes["actual_weight"]
+    if "is_completed" in changes and changes["is_completed"] is not None:
+        set_row.is_completed = changes["is_completed"]
 
     db.commit()
     db.refresh(set_row)

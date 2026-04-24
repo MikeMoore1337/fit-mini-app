@@ -7,7 +7,7 @@ from app.db.session import get_db
 from app.models.notification import NotificationSetting
 from app.models.user import User, UserProfile
 from app.schemas.auth import DevLoginRequest, RefreshRequest, TelegramInitRequest, TokenPairResponse
-from app.services.jwt import build_access_token, build_refresh_token, decode_token
+from app.services.jwt import AuthError, build_access_token, build_refresh_token, decode_token
 from app.services.telegram_auth import (
     get_or_create_user_from_init_data,
     validate_telegram_init_data,
@@ -115,15 +115,19 @@ def refresh_tokens(
     db: Session = Depends(get_db),
 ):
     try:
-        token_payload = decode_token(payload.refresh_token)
-    except Exception:
+        token_payload = decode_token(payload.refresh_token, expected_type="refresh")
+    except AuthError:
         raise HTTPException(status_code=401, detail="Невалидный refresh token")
 
-    if token_payload.get("type") != "refresh":
-        raise HTTPException(status_code=401, detail="Неверный тип токена")
-
     jti = token_payload.get("jti")
-    user_id = int(token_payload.get("sub"))
+    sub = token_payload.get("sub")
+    if not jti or not sub:
+        raise HTTPException(status_code=401, detail="Невалидный refresh token")
+
+    try:
+        user_id = int(sub)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=401, detail="Невалидный refresh token")
 
     row = get_refresh_token_by_jti(db, jti)
     if not row:
@@ -151,8 +155,8 @@ def logout(
     db: Session = Depends(get_db),
 ):
     try:
-        token_payload = decode_token(payload.refresh_token)
-    except Exception:
+        token_payload = decode_token(payload.refresh_token, expected_type="refresh")
+    except AuthError:
         return {"status": "ok"}
 
     jti = token_payload.get("jti")

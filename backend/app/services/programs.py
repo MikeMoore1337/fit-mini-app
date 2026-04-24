@@ -113,10 +113,6 @@ def get_or_create_user_by_telegram_id(
 
 
 def ensure_coach_link(db: Session, coach: User, client: User) -> None:
-    coach.is_coach = True
-    if not coach.is_admin:
-        coach.is_admin = True
-
     link = (
         db.query(CoachClient)
         .filter(
@@ -483,8 +479,9 @@ def create_and_optionally_assign_program(
     target_user = current_user
 
     if payload.mode == "coach":
-        current_user.is_coach = True
-        current_user.is_admin = True
+        if not current_user.is_coach and not current_user.is_admin:
+            raise ProgramError("No permission to assign program as coach")
+
         target_user = get_or_create_user_by_telegram_id(
             db,
             payload.target_telegram_user_id,

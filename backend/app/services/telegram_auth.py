@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+import time
 from urllib.parse import parse_qsl
 
 from sqlalchemy.orm import Session
@@ -20,7 +21,11 @@ def parse_init_data(init_data: str) -> dict[str, str]:
     return dict(parse_qsl(init_data, keep_blank_values=True))
 
 
-def validate_telegram_init_data(init_data: str, bot_token: str) -> dict:
+def validate_telegram_init_data(
+    init_data: str,
+    bot_token: str,
+    max_age_seconds: int = 24 * 60 * 60,
+) -> dict:
     data = parse_init_data(init_data)
 
     received_hash = data.pop("hash", None)
@@ -38,6 +43,21 @@ def validate_telegram_init_data(init_data: str, bot_token: str) -> dict:
 
     if not hmac.compare_digest(calculated_hash, received_hash):
         raise ValueError("Некорректная подпись Telegram initData")
+
+    auth_date_raw = data.get("auth_date")
+    if not auth_date_raw:
+        raise ValueError("auth_date отсутствует в init_data")
+
+    try:
+        auth_date = int(auth_date_raw)
+    except (TypeError, ValueError):
+        raise ValueError("Некорректный auth_date в init_data")
+
+    now = int(time.time())
+    if auth_date > now + 60:
+        raise ValueError("auth_date из будущего")
+    if now - auth_date > max_age_seconds:
+        raise ValueError("initData устарел")
 
     user_raw = data.get("user")
     if not user_raw:

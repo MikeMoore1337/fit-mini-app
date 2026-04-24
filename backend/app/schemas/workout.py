@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class WorkoutSetCreate(BaseModel):
@@ -7,6 +7,12 @@ class WorkoutSetCreate(BaseModel):
     actual_reps: int | None = None
     actual_weight: float | None = None
     is_completed: bool = True
+
+
+class WorkoutSetUpdate(BaseModel):
+    actual_reps: int | None = Field(default=None, ge=0)
+    actual_weight: float | None = Field(default=None, ge=0)
+    is_completed: bool | None = None
 
 
 class LoggedSetItem(BaseModel):

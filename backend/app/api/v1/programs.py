@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.api.dependencies.auth import require_coach_or_admin, require_user
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.program import ProgramTemplateCreate
+from app.schemas.program import ExerciseCatalogCreate, ProgramTemplateCreate
 from app.services.programs import (
     ProgramError,
     _effective_exercise_id,
@@ -50,7 +50,7 @@ def get_exercises(
 
 @router.post("/exercises", status_code=status.HTTP_201_CREATED)
 def add_exercise(
-    payload: dict,
+    payload: ExerciseCatalogCreate,
     current_user: User = Depends(require_user),
     db: Session = Depends(get_db),
 ):
@@ -58,9 +58,9 @@ def add_exercise(
         exercise = create_exercise(
             db=db,
             current_user=current_user,
-            title=(payload.get("title") or "").strip(),
-            primary_muscle=(payload.get("primary_muscle") or "").strip(),
-            equipment=(payload.get("equipment") or "").strip(),
+            title=payload.title.strip(),
+            primary_muscle=payload.primary_muscle.strip(),
+            equipment=payload.equipment.strip(),
         )
     except ProgramError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
@@ -82,7 +82,7 @@ def add_exercise(
 @router.patch("/exercises/{exercise_id}")
 def edit_exercise(
     exercise_id: int,
-    payload: dict,
+    payload: ExerciseCatalogCreate,
     current_user: User = Depends(require_user),
     db: Session = Depends(get_db),
 ):
@@ -91,9 +91,9 @@ def edit_exercise(
             db=db,
             current_user=current_user,
             exercise_id=exercise_id,
-            title=(payload.get("title") or "").strip(),
-            primary_muscle=(payload.get("primary_muscle") or "").strip(),
-            equipment=(payload.get("equipment") or "").strip(),
+            title=payload.title.strip(),
+            primary_muscle=payload.primary_muscle.strip(),
+            equipment=payload.equipment.strip(),
         )
     except ProgramError as exc:
         detail = str(exc)

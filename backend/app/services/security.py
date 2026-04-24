@@ -1,61 +1,11 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
-from typing import Any
-from uuid import uuid4
-
-import jwt
 from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
-from app.core.config import settings
 from app.db.session import get_db
 from app.models.user import User
-
-
-class AuthError(Exception):
-    pass
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC)
-
-
-def _build_token(
-    user_id: int,
-    token_type: str,
-    expires_delta: timedelta,
-) -> tuple[str, str, datetime]:
-    now = _utcnow()
-    expires_at = now + expires_delta
-    jti = uuid4().hex
-
-    payload = {
-        "sub": str(user_id),
-        "type": token_type,
-        "jti": jti,
-        "iat": int(now.timestamp()),
-        "exp": int(expires_at.timestamp()),
-    }
-
-    token = jwt.encode(payload, settings.secret_key, algorithm="HS256")
-    return token, jti, expires_at
-
-
-def build_access_token(user_id: int) -> tuple[str, str, datetime]:
-    return _build_token(
-        user_id=user_id,
-        token_type="access",
-        expires_delta=timedelta(minutes=settings.access_token_expire_minutes),
-    )
-
-
-def build_refresh_token(user_id: int) -> tuple[str, str, datetime]:
-    return _build_token(
-        user_id=user_id,
-        token_type="refresh",
-        expires_delta=timedelta(days=settings.refresh_token_expire_days),
-    )
+from app.services.jwt import AuthError, build_access_token, build_refresh_token, decode_token
 
 
 def create_access_token(user_id: int) -> str:
@@ -66,25 +16,6 @@ def create_access_token(user_id: int) -> str:
 def create_refresh_token(user_id: int) -> str:
     token, _, _ = build_refresh_token(user_id)
     return token
-
-
-def decode_token(token: str, expected_type: str | None = None) -> dict[str, Any]:
-    try:
-        payload = jwt.decode(
-            token,
-            settings.secret_key,
-            algorithms=["HS256"],
-        )
-    except jwt.ExpiredSignatureError as exc:
-        raise AuthError("Token expired") from exc
-    except jwt.InvalidTokenError as exc:
-        raise AuthError("Invalid token") from exc
-
-    token_type = payload.get("type")
-    if expected_type and token_type != expected_type:
-        raise AuthError("Invalid token type")
-
-    return payload
 
 
 def _extract_bearer_token(request: Request) -> str:

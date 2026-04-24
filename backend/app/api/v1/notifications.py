@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
@@ -8,6 +8,7 @@ from app.db.session import get_db
 from app.models.notification import Notification
 from app.models.user import User
 from app.schemas.notification import (
+    NotificationCreateRequest,
     NotificationResponse,
     NotificationSettingResponse,
     NotificationSettingUpdate,
@@ -71,28 +72,21 @@ def get_notifications(
 
 @router.post("", response_model=NotificationResponse, status_code=status.HTTP_201_CREATED)
 def create_notification(
-    payload: dict,
+    payload: NotificationCreateRequest,
     current_user: User = Depends(require_user),
     db: Session = Depends(get_db),
 ):
-    title = (payload.get("title") or "").strip()
-    body = (payload.get("body") or "").strip()
-    scheduled_for_raw = payload.get("scheduled_for")
+    title = payload.title.strip()
+    body = payload.body.strip()
 
     if not title:
         raise HTTPException(status_code=400, detail="title обязателен")
     if not body:
         raise HTTPException(status_code=400, detail="body обязателен")
-    if not scheduled_for_raw:
-        raise HTTPException(status_code=400, detail="scheduled_for обязателен")
 
-    try:
-        scheduled_for = datetime.fromisoformat(str(scheduled_for_raw).replace("Z", "+00:00"))
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Некорректный формат scheduled_for")
-
+    scheduled_for = payload.scheduled_for
     if scheduled_for.tzinfo is not None:
-        scheduled_for = scheduled_for.astimezone().replace(tzinfo=None)
+        scheduled_for = scheduled_for.astimezone(UTC).replace(tzinfo=None)
 
     row = Notification(
         user_id=current_user.id,

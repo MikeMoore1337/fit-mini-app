@@ -13,7 +13,6 @@ from app.api.router import api_router
 from app.core.config import settings
 from app.core.rate_limit import limiter
 from app.db.session import get_session_context
-from app.middleware.auth_middleware import AuthMiddleware
 from app.middleware.request_context import RequestContextMiddleware
 from app.services.seed import seed_demo_data
 
@@ -30,7 +29,7 @@ async def lifespan(app: FastAPI):
         format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
     )
     with get_session_context() as session:
-        seed_demo_data(session)
+        seed_demo_data(session, include_demo_users=settings.app_env == "dev")
     yield
 
 
@@ -42,7 +41,6 @@ app = FastAPI(
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.include_router(api_router)
-app.add_middleware(AuthMiddleware)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
