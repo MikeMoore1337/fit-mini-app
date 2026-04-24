@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     enable_dev_auth: bool = False
     admin_telegram_user_ids: str = ""
 
-    frontend_base_url: str = "http://localhost:8000"
+    frontend_base_url: str = "https://app.your-fitness-coach.ru"
     telegram_bot_token: str
 
     payment_provider: str = "mock"

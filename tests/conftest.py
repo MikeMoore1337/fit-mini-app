@@ -21,8 +21,8 @@ os.environ.setdefault("REFRESH_TOKEN_EXPIRE_DAYS", "30")
 os.environ["DATABASE_URL"] = f"sqlite:///{_TEST_DB.as_posix()}"
 os.environ.setdefault("ENABLE_DEV_AUTH", "true")
 os.environ.setdefault("TELEGRAM_BOT_TOKEN", "test-token")
-os.environ.setdefault("FRONTEND_BASE_URL", "http://localhost:8000")
-os.environ.setdefault("PAYMENT_PUBLIC_URL", "http://localhost:8000")
+os.environ.setdefault("FRONTEND_BASE_URL", "https://app.your-fitness-coach.ru")
+os.environ.setdefault("PAYMENT_PUBLIC_URL", "https://app.your-fitness-coach.ru")
 
 from app.db.base import Base
 from app.db.session import engine, get_session_context

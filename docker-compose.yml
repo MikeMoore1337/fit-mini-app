@@ -44,6 +44,15 @@ services:
       backend:
         condition: service_started
 
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    env_file: .env
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARED_TOKEN}
+    depends_on:
+      backend:
+        condition: service_healthy
+
   worker:
     build: ./backend
     restart: unless-stopped

@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     )
 
     bot_token: str = Field(validation_alias=AliasChoices("BOT_TOKEN", "TELEGRAM_BOT_TOKEN"))
-    frontend_base_url: str = "http://localhost:8000"
+    frontend_base_url: str = "https://app.your-fitness-coach.ru"
 
 
 settings = Settings()
