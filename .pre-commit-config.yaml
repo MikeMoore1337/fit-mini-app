@@ -1,5 +1,11 @@
 # Запуск: pip install pre-commit && pre-commit install
 # Все файлы: pre-commit run --all-files
+#
+# Ruff закрывает автофикс, сортировку импортов (isort), lint (flake8-подобные правила)
+# и форматирование (black-совместимый ruff-format). Настройки живут в pyproject.toml.
+
+default_language_version:
+  python: python3.12
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -18,16 +24,19 @@ repos:
     rev: v0.15.9
     hooks:
       - id: ruff
-        args: ["--fix"]
-        files: ^(backend/app|tests)/
+        args: ["--fix", "--no-cache"]
+        files: ^(backend/app|bot/app|tests|scripts)/.*\.py$
       - id: ruff-format
-        files: ^(backend/app|tests)/
+        args: ["--no-cache"]
+        files: ^(backend/app|bot/app|tests|scripts)/.*\.py$
 
   - repo: local
     hooks:
       - id: mypy-backend
         name: mypy (backend app)
         entry: python scripts/run_mypy.py
-        language: system
+        language: python
+        additional_dependencies:
+          - mypy>=1.10
         pass_filenames: false
         files: ^(backend/app|scripts/run_mypy\.py|pyproject\.toml)

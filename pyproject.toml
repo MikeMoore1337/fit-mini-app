@@ -15,14 +15,18 @@ dev = [
     "pytest>=8.3",
     "httpx>=0.27",
     "pre-commit>=3.0",
+    "ruff>=0.15.9",
+    "mypy>=1.10",
 ]
 
-# Рабочий Python-код в backend/app (пакет app). Ruff/mypy запускаются из корня репозитория.
+# Ruff запускается по backend/app, bot/app, tests и scripts.
+# Mypy пока проверяет backend/app: backend и bot оба используют пакет app, поэтому их типизацию
+# лучше разводить отдельной настройкой, когда будем ужесточать проверки бота.
 
 [tool.ruff]
 target-version = "py312"
 line-length = 100
-src = ["backend"]
+src = ["backend", "bot", "tests", "scripts"]
 
 [tool.ruff.lint]
 select = [

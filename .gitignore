@@ -180,3 +180,7 @@ cython_debug/
 # os
 .DS_Store
 Thumbs.db
+.ruff_cache/
+.tmp_pre_commit_cache/
+.tmp_pre_commit_cache_verify/
+.tmp_ruff_cache/

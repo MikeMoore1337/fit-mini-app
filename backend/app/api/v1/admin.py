@@ -118,19 +118,13 @@ def _delete_user_cascade(db: Session, user: User) -> None:
         )
     ).delete(synchronize_session=False)
 
-    db.query(Notification).filter(Notification.user_id == user.id).delete(
-        synchronize_session=False
-    )
+    db.query(Notification).filter(Notification.user_id == user.id).delete(synchronize_session=False)
     db.query(NotificationSetting).filter(NotificationSetting.user_id == user.id).delete(
         synchronize_session=False
     )
     db.query(Payment).filter(Payment.user_id == user.id).delete(synchronize_session=False)
-    db.query(Subscription).filter(Subscription.user_id == user.id).delete(
-        synchronize_session=False
-    )
-    db.query(RefreshToken).filter(RefreshToken.user_id == user.id).delete(
-        synchronize_session=False
-    )
+    db.query(Subscription).filter(Subscription.user_id == user.id).delete(synchronize_session=False)
+    db.query(RefreshToken).filter(RefreshToken.user_id == user.id).delete(synchronize_session=False)
     db.query(UserProfile).filter(UserProfile.user_id == user.id).delete(synchronize_session=False)
 
     db.delete(user)

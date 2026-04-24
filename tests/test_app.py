@@ -281,7 +281,9 @@ def test_coach_can_invite_client_by_username_and_link_on_login(client):
     assert listed.status_code == 200
     rows = listed.json()
     assert any(row["telegram_user_id"] == 5001 and row["status"] == "active" for row in rows)
-    assert not any(row["username"] == "future_client" and row["status"] == "pending" for row in rows)
+    assert not any(
+        row["username"] == "future_client" and row["status"] == "pending" for row in rows
+    )
 
 
 def test_me_requires_auth(client):
