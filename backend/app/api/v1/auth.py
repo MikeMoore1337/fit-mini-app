@@ -25,6 +25,9 @@ router = APIRouter()
 
 
 def issue_token_pair(db: Session, user: User) -> TokenPairResponse:
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Пользователь заблокирован")
+
     access_token, _, _ = build_access_token(user.id)
     refresh_token, refresh_jti, refresh_expires_at = build_refresh_token(user.id)
 
@@ -95,6 +98,9 @@ def dev_login(
         )
         db.add(NotificationSetting(user_id=user.id))
     else:
+        if not user.is_active:
+            raise HTTPException(status_code=403, detail="Пользователь заблокирован")
+
         user.is_coach = payload.is_coach
         user.is_admin = payload.is_admin
         if payload.full_name is not None:
@@ -145,7 +151,7 @@ def refresh_tokens(
     mark_refresh_token_used(db, row)
 
     user = db.query(User).filter(User.id == user_id).first()
-    if not user:
+    if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="Пользователь не найден")
 
     return issue_token_pair(db, user)

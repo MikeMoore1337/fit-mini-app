@@ -361,6 +361,127 @@ def test_admin_can_change_user_role(client):
     assert promoted.json()["is_coach"] is True
 
 
+def test_admin_can_block_and_unblock_user(client):
+    admin_headers = auth(client, telegram_user_id=1001, is_coach=True, is_admin=True)
+    user_headers = auth(client, telegram_user_id=5010, is_coach=False)
+    user = client.get("/api/v1/me", headers=user_headers).json()
+
+    blocked = client.patch(
+        f"/api/v1/admin/users/{user['id']}/status",
+        json={"is_active": False},
+        headers=admin_headers,
+    )
+    assert blocked.status_code == 200
+    assert blocked.json()["is_active"] is False
+
+    assert client.get("/api/v1/me", headers=user_headers).status_code == 401
+    relogin = client.post(
+        "/api/v1/auth/dev-login",
+        json={"telegram_user_id": 5010, "is_coach": False},
+    )
+    assert relogin.status_code == 403
+
+    unblocked = client.patch(
+        f"/api/v1/admin/users/{user['id']}/status",
+        json={"is_active": True},
+        headers=admin_headers,
+    )
+    assert unblocked.status_code == 200
+    assert unblocked.json()["is_active"] is True
+    assert auth(client, telegram_user_id=5010, is_coach=False)
+
+
+def test_admin_cannot_block_or_delete_self(client):
+    admin_headers = auth(client, telegram_user_id=1001, is_coach=True, is_admin=True)
+    admin_user = client.get("/api/v1/me", headers=admin_headers).json()
+
+    block = client.patch(
+        f"/api/v1/admin/users/{admin_user['id']}/status",
+        json={"is_active": False},
+        headers=admin_headers,
+    )
+    assert block.status_code == 400
+
+    delete = client.delete(f"/api/v1/admin/users/{admin_user['id']}", headers=admin_headers)
+    assert delete.status_code == 400
+
+
+def test_admin_can_delete_user(client):
+    admin_headers = auth(client, telegram_user_id=1001, is_coach=True, is_admin=True)
+    user_headers = auth(client, telegram_user_id=5011, is_coach=False)
+    user = client.get("/api/v1/me", headers=user_headers).json()
+    exercises = client.get("/api/v1/programs/exercises", headers=user_headers).json()
+    payload = {
+        "title": "Программа удаляемого пользователя",
+        "goal": "recomposition",
+        "level": "intermediate",
+        "mode": "self",
+        "assign_after_create": True,
+        "days": [
+            {
+                "title": "День 1",
+                "exercises": [
+                    {
+                        "exercise_id": exercises[0]["id"],
+                        "prescribed_sets": 1,
+                        "prescribed_reps": "8",
+                        "rest_seconds": 90,
+                    }
+                ],
+            }
+        ],
+    }
+    created = client.post("/api/v1/programs/templates", json=payload, headers=user_headers)
+    assert created.status_code == 200
+
+    deleted = client.delete(f"/api/v1/admin/users/{user['id']}", headers=admin_headers)
+    assert deleted.status_code == 204
+    assert client.get("/api/v1/me", headers=user_headers).status_code == 401
+
+    rows = client.get("/api/v1/admin/users", headers=admin_headers).json()
+    assert not any(row["telegram_user_id"] == 5011 for row in rows)
+
+
+def test_admin_can_delete_template_from_admin_panel(client):
+    admin_headers = auth(client, telegram_user_id=1001, is_coach=True, is_admin=True)
+    exercises = client.get("/api/v1/programs/exercises", headers=admin_headers).json()
+    payload = {
+        "title": "Админ удаляет шаблон",
+        "goal": "recomposition",
+        "level": "intermediate",
+        "mode": "self",
+        "assign_after_create": True,
+        "days": [
+            {
+                "title": "День 1",
+                "exercises": [
+                    {
+                        "exercise_id": exercises[0]["id"],
+                        "prescribed_sets": 1,
+                        "prescribed_reps": "8",
+                        "rest_seconds": 90,
+                    }
+                ],
+            }
+        ],
+    }
+    created = client.post("/api/v1/programs/templates", json=payload, headers=admin_headers)
+    assert created.status_code == 200
+    template_id = created.json()["template"]["id"]
+
+    deleted = client.delete(f"/api/v1/admin/templates/{template_id}", headers=admin_headers)
+    assert deleted.status_code == 204
+
+    missing = client.get(f"/api/v1/programs/templates/{template_id}", headers=admin_headers)
+    assert missing.status_code == 404
+
+
+def test_coach_cannot_use_admin_delete_template(client):
+    coach_headers = auth(client, telegram_user_id=1002, is_coach=True)
+    response = client.delete("/api/v1/admin/templates/1", headers=coach_headers)
+    assert response.status_code == 403
+
+
 def test_admin_payments_ok_for_admin(client):
     headers = auth(client, telegram_user_id=1001, is_coach=True, is_admin=True)
     plans = client.get("/api/v1/billing/plans", headers=headers).json()

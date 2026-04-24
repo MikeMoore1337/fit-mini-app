@@ -819,30 +819,7 @@ def assign_template_to_self(
     return program, created
 
 
-def delete_template_for_user(
-    db: Session,
-    current_user: User,
-    template_id: int,
-) -> None:
-    template = (
-        db.query(ProgramTemplate)
-        .filter(
-            ProgramTemplate.id == template_id,
-            ProgramTemplate.slug != LEGACY_DEMO_TEMPLATE_SLUG,
-        )
-        .first()
-    )
-    if not template:
-        raise ProgramError("Template not found")
-
-    can_delete = (
-        current_user.is_admin
-        or template.owner_user_id == current_user.id
-        or template.created_by_user_id == current_user.id
-    )
-    if not can_delete:
-        raise ProgramError("No permission to delete template")
-
+def delete_template_cascade(db: Session, template: ProgramTemplate) -> None:
     user_programs = db.query(UserProgram).filter(UserProgram.template_id == template.id).all()
     user_program_ids = [item.id for item in user_programs]
 
@@ -890,4 +867,31 @@ def delete_template_for_user(
         )
 
     db.delete(template)
+
+
+def delete_template_for_user(
+    db: Session,
+    current_user: User,
+    template_id: int,
+) -> None:
+    template = (
+        db.query(ProgramTemplate)
+        .filter(
+            ProgramTemplate.id == template_id,
+            ProgramTemplate.slug != LEGACY_DEMO_TEMPLATE_SLUG,
+        )
+        .first()
+    )
+    if not template:
+        raise ProgramError("Template not found")
+
+    can_delete = (
+        current_user.is_admin
+        or template.owner_user_id == current_user.id
+        or template.created_by_user_id == current_user.id
+    )
+    if not can_delete:
+        raise ProgramError("No permission to delete template")
+
+    delete_template_cascade(db, template)
     db.commit()

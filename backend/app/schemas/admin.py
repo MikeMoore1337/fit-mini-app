@@ -32,3 +32,7 @@ class AdminNotificationRow(BaseModel):
 
 class AdminUserRoleUpdate(BaseModel):
     role: Literal["client", "coach", "admin"]
+
+
+class AdminUserStatusUpdate(BaseModel):
+    is_active: bool

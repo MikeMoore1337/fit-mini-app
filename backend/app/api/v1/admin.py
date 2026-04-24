@@ -1,13 +1,24 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.api.dependencies.auth import require_admin
 from app.db.session import get_db
-from app.models.billing import Payment, Plan
-from app.models.notification import Notification
-from app.models.program import ProgramTemplate
-from app.models.user import User, UserProfile
-from app.schemas.admin import AdminUserRoleUpdate
+from app.models.billing import Payment, Plan, Subscription
+from app.models.exercise import Exercise
+from app.models.notification import Notification, NotificationSetting
+from app.models.program import (
+    ProgramTemplate,
+    UserProgram,
+    UserWorkout,
+    UserWorkoutExercise,
+    UserWorkoutSet,
+)
+from app.models.token import RefreshToken
+from app.models.user import CoachClient, CoachClientInvite, User, UserProfile
+from app.schemas.admin import AdminUserRoleUpdate, AdminUserStatusUpdate
+from app.services.programs import delete_template_cascade
+from app.services.token_service import revoke_all_user_refresh_tokens
 
 router = APIRouter()
 
@@ -28,10 +39,101 @@ def _serialize_user_row(user: User, profile: UserProfile | None) -> dict:
         "role": _role_from_user(user),
         "is_coach": user.is_coach,
         "is_admin": user.is_admin,
+        "is_active": user.is_active,
         "full_name": profile.full_name if profile else None,
         "goal": profile.goal if profile else None,
         "level": profile.level if profile else None,
     }
+
+
+def _delete_user_programs(db: Session, user_program_ids: list[int]) -> None:
+    if not user_program_ids:
+        return
+
+    workouts = db.query(UserWorkout).filter(UserWorkout.user_program_id.in_(user_program_ids)).all()
+    workout_ids = [item.id for item in workouts]
+
+    if workout_ids:
+        workout_exercises = (
+            db.query(UserWorkoutExercise)
+            .filter(UserWorkoutExercise.workout_id.in_(workout_ids))
+            .all()
+        )
+        workout_exercise_ids = [item.id for item in workout_exercises]
+
+        if workout_exercise_ids:
+            db.query(UserWorkoutSet).filter(
+                UserWorkoutSet.workout_exercise_id.in_(workout_exercise_ids)
+            ).delete(synchronize_session=False)
+            db.query(UserWorkoutExercise).filter(
+                UserWorkoutExercise.id.in_(workout_exercise_ids)
+            ).delete(synchronize_session=False)
+
+        db.query(UserWorkout).filter(UserWorkout.id.in_(workout_ids)).delete(
+            synchronize_session=False
+        )
+
+    db.query(UserProgram).filter(UserProgram.id.in_(user_program_ids)).delete(
+        synchronize_session=False
+    )
+
+
+def _delete_user_cascade(db: Session, user: User) -> None:
+    owned_templates = (
+        db.query(ProgramTemplate)
+        .filter(
+            or_(
+                ProgramTemplate.owner_user_id == user.id,
+                ProgramTemplate.created_by_user_id == user.id,
+            )
+        )
+        .all()
+    )
+    for template in owned_templates:
+        delete_template_cascade(db, template)
+        db.flush()
+
+    own_program_ids = [
+        item.id for item in db.query(UserProgram.id).filter(UserProgram.user_id == user.id).all()
+    ]
+    _delete_user_programs(db, own_program_ids)
+
+    db.query(UserProgram).filter(UserProgram.assigned_by_user_id == user.id).update(
+        {"assigned_by_user_id": None},
+        synchronize_session=False,
+    )
+    db.query(Exercise).filter(Exercise.created_by_user_id == user.id).update(
+        {"created_by_user_id": None},
+        synchronize_session=False,
+    )
+
+    db.query(CoachClient).filter(
+        or_(CoachClient.coach_user_id == user.id, CoachClient.client_user_id == user.id)
+    ).delete(synchronize_session=False)
+
+    db.query(CoachClientInvite).filter(
+        or_(
+            CoachClientInvite.coach_user_id == user.id,
+            CoachClientInvite.username == user.username,
+        )
+    ).delete(synchronize_session=False)
+
+    db.query(Notification).filter(Notification.user_id == user.id).delete(
+        synchronize_session=False
+    )
+    db.query(NotificationSetting).filter(NotificationSetting.user_id == user.id).delete(
+        synchronize_session=False
+    )
+    db.query(Payment).filter(Payment.user_id == user.id).delete(synchronize_session=False)
+    db.query(Subscription).filter(Subscription.user_id == user.id).delete(
+        synchronize_session=False
+    )
+    db.query(RefreshToken).filter(RefreshToken.user_id == user.id).delete(
+        synchronize_session=False
+    )
+    db.query(UserProfile).filter(UserProfile.user_id == user.id).delete(synchronize_session=False)
+
+    db.delete(user)
 
 
 @router.get("/users")
@@ -79,6 +181,52 @@ def update_user_role(
     db.commit()
     profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
     return _serialize_user_row(user, profile)
+
+
+@router.patch("/users/{user_id}/status")
+def update_user_status(
+    user_id: int,
+    payload: AdminUserStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+) -> dict:
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден")
+
+    if user.id == current_user.id and not payload.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Нельзя заблокировать текущего администратора",
+        )
+
+    user.is_active = payload.is_active
+    if not user.is_active:
+        revoke_all_user_refresh_tokens(db, user.id)
+
+    db.commit()
+    profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
+    return _serialize_user_row(user, profile)
+
+
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+) -> None:
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден")
+
+    if user.id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Нельзя удалить текущего администратора",
+        )
+
+    _delete_user_cascade(db, user)
+    db.commit()
 
 
 @router.get("/payments")
@@ -152,3 +300,17 @@ def admin_templates(
         }
         for row in rows
     ]
+
+
+@router.delete("/templates/{template_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_admin_template(
+    template_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+) -> None:
+    template = db.query(ProgramTemplate).filter(ProgramTemplate.id == template_id).first()
+    if not template:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Шаблон не найден")
+
+    delete_template_cascade(db, template)
+    db.commit()

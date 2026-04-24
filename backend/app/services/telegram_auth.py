@@ -155,7 +155,6 @@ def get_or_create_user_from_init_data(db: Session, init_data: dict) -> User:
     user.username = username
     user.first_name = first_name
     user.last_name = last_name
-    user.is_active = True
     _apply_bootstrap_admin_role(user)
 
     profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
