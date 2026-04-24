@@ -4,10 +4,11 @@ from sqlalchemy.orm import Session
 from app.api.dependencies.auth import require_coach_or_admin, require_user
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.program import ExerciseCatalogCreate, ProgramTemplateCreate
+from app.schemas.program import CoachClientCreate, ExerciseCatalogCreate, ProgramTemplateCreate
 from app.services.programs import (
     ProgramError,
     _effective_exercise_id,
+    add_client_for_coach,
     assign_template_to_self,
     build_template_response,
     create_and_optionally_assign_program,
@@ -257,15 +258,22 @@ def clients(
     current_user: User = Depends(require_coach_or_admin),
     db: Session = Depends(get_db),
 ):
-    items = list_clients(db, current_user)
-    return [
-        {
-            "id": user.id,
-            "telegram_user_id": user.telegram_user_id,
-            "username": user.username,
-            "full_name": user.profile.full_name if user.profile else None,
-            "goal": user.profile.goal if user.profile else None,
-            "level": user.profile.level if user.profile else None,
-        }
-        for user in items
-    ]
+    return list_clients(db, current_user)
+
+
+@router.post("/clients", status_code=status.HTTP_201_CREATED)
+def add_client(
+    payload: CoachClientCreate,
+    current_user: User = Depends(require_coach_or_admin),
+    db: Session = Depends(get_db),
+):
+    try:
+        return add_client_for_coach(
+            db=db,
+            coach=current_user,
+            telegram_user_id=payload.telegram_user_id,
+            username=payload.username,
+            full_name=payload.full_name,
+        )
+    except ProgramError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))

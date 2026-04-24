@@ -21,6 +21,7 @@ class Settings(BaseSettings):
 
     database_url: str
     enable_dev_auth: bool = False
+    admin_telegram_user_ids: str = ""
 
     frontend_base_url: str = "http://localhost:8000"
     telegram_bot_token: str
@@ -29,6 +30,19 @@ class Settings(BaseSettings):
     payment_public_url: str = ""
 
     worker_poll_seconds: int = 10
+
+    @property
+    def admin_telegram_id_set(self) -> set[int]:
+        result: set[int] = set()
+        for item in self.admin_telegram_user_ids.replace(";", ",").split(","):
+            value = item.strip()
+            if not value:
+                continue
+            try:
+                result.add(int(value))
+            except ValueError:
+                continue
+        return result
 
 
 settings = Settings()

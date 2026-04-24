@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
     <meta name="theme-color" content="#0f1115"/>
     <title>FitMiniApp</title>
-    <link rel="stylesheet" href="/static/styles.css?v=19"/>
+    <link rel="stylesheet" href="/static/styles.css?v=22"/>
 </head>
 <body>
 <main class="container" id="app-main">
@@ -18,7 +18,10 @@
             </p>
             <div id="adminMeta" class="muted top-gap hidden"></div>
         </div>
-        <div id="env-badge" class="badge hidden"></div>
+        <div class="hero-card__meta">
+            <div id="currentRoleBadge" class="badge role-badge hidden"></div>
+            <div id="env-badge" class="badge hidden"></div>
+        </div>
     </div>
 
     <div class="card">
@@ -32,23 +35,58 @@
                     Проверяем авторизацию через Telegram...
                 </div>
 
+                <div id="authSummary" class="auth-summary hidden">
+                    <div class="auth-summary__item">
+                        <span class="auth-summary__label">Пользователь</span>
+                        <strong id="authUserLabel" class="auth-summary__value"></strong>
+                    </div>
+                    <div class="auth-summary__item">
+                        <span class="auth-summary__label">Роль</span>
+                        <strong id="authRoleLabel" class="auth-summary__value"></strong>
+                    </div>
+                </div>
+
                 <div class="toolbar wrap">
                     <button id="telegramLoginBtn" class="secondary" type="button">Повторить вход через Telegram</button>
-                    <a href="/admin" id="adminLink" class="button-link hidden">Админка</a>
+                    <a href="/admin" id="adminLink" class="button-link hidden">Панель управления</a>
                 </div>
             </div>
 
-            <div id="devAuthBlock" class="stack hidden top-gap">
-                <input id="debugUserId" type="number" placeholder="Telegram ID" value="1001"/>
-                <input id="debugUserName" type="text" placeholder="Имя пользователя" value="Тренер Demo"/>
+            <div id="devAuthBlock" class="dev-auth hidden top-gap">
+                <div class="dev-auth__head">
+                    <h3>Демо-вход</h3>
+                    <span class="badge">DEV</span>
+                </div>
 
-                <label class="checkbox-row">
-                    <input id="debugIsCoach" type="checkbox" checked/>
-                    <span>Тренер</span>
-                </label>
+                <div class="dev-quick-grid" aria-label="Быстрый demo-вход">
+                    <button class="secondary dev-quick-login" type="button" data-dev-login-role="user">
+                        <strong>Пользователь</strong>
+                        <span>ID 2001</span>
+                    </button>
+                    <button class="secondary dev-quick-login" type="button" data-dev-login-role="coach">
+                        <strong>Тренер</strong>
+                        <span>ID 1002</span>
+                    </button>
+                    <button class="secondary dev-quick-login" type="button" data-dev-login-role="admin">
+                        <strong>Админ</strong>
+                        <span>ID 1001</span>
+                    </button>
+                </div>
 
-                <div class="toolbar wrap">
-                    <button id="devLoginBtn" class="secondary" type="button">Dev login</button>
+                <div class="grid grid-2 top-gap">
+                    <input id="debugUserId" type="number" placeholder="Telegram ID" value="2001"/>
+                    <input id="debugUserName" type="text" placeholder="Имя пользователя" value="Клиент Demo"/>
+                </div>
+
+                <input id="debugRole" type="hidden" value="user"/>
+                <div class="segmented-control top-gap" role="group" aria-label="Роль demo-пользователя">
+                    <button class="is-active" type="button" data-dev-role-option="user">Пользователь</button>
+                    <button type="button" data-dev-role-option="coach">Тренер</button>
+                    <button type="button" data-dev-role-option="admin">Админ</button>
+                </div>
+
+                <div class="toolbar wrap top-gap">
+                    <button id="devLoginBtn" class="secondary" type="button">Войти с этими данными</button>
                 </div>
             </div>
         </div>
@@ -203,11 +241,23 @@
             </div>
         </div>
         <div id="section-clients" class="section-content">
-            <div id="clientsList" class="stack"></div>
+            <div class="item-card">
+                <h3>Добавить клиента</h3>
+                <div class="grid grid-3 top-gap">
+                    <input id="clientTelegramId" type="number" placeholder="Telegram ID"/>
+                    <input id="clientUsername" type="text" placeholder="@username"/>
+                    <input id="clientFullName" type="text" placeholder="Имя клиента"/>
+                </div>
+                <div class="toolbar top-gap">
+                    <button id="addClientBtn" type="button">Добавить клиента</button>
+                </div>
+            </div>
+
+            <div id="clientsList" class="stack top-gap"></div>
         </div>
     </div>
 
-    <div class="card">
+    <div id="card-billing" class="card hidden">
         <div class="section-head">
             <h2>Уведомления</h2>
             <div class="toolbar wrap">
@@ -345,6 +395,6 @@
 <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true"></div>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script type="module" src="/static/js/main.js?v=19"></script>
+<script type="module" src="/static/js/main.js?v=22"></script>
 </body>
 </html>

@@ -1,6 +1,15 @@
 import { API, FRONTEND_VERSION, accessTokenKey, refreshTokenKey, sectionStoragePrefix } from './core/config.js';
 import { state } from './core/state.js';
-import { $, log, showToast, toastError, setAppLoading, openConfirmDialog, bindGlobalNavHandlers } from './core/ui.js';
+import {
+  $,
+  log,
+  showToast,
+  toastError,
+  setAppLoading,
+  openConfirmDialog,
+  bindGlobalNavHandlers,
+  expandSectionAndScroll,
+} from './core/ui.js';
 import { api, clearTokens, sleep } from './core/http.js';
 
 window.onerror = function (message, source, lineno, colno, error) {
@@ -35,6 +44,85 @@ function isAdmin() {
   return Boolean(state.me?.is_admin);
 }
 
+function getRoleLabel(user) {
+  if (user?.is_admin) return 'Администратор';
+  if (user?.is_coach) return 'Тренер';
+  return 'Пользователь';
+}
+
+const devRolePresets = {
+  user: {
+    telegram_user_id: 2001,
+    full_name: 'Клиент Demo',
+  },
+  coach: {
+    telegram_user_id: 1002,
+    full_name: 'Тренер Demo',
+  },
+  admin: {
+    telegram_user_id: 1001,
+    full_name: 'Админ Demo',
+  },
+};
+
+function getUserDisplayName(user) {
+  const profile = user?.profile || {};
+  return profile.full_name || user?.first_name || user?.username || user?.telegram_user_id || '';
+}
+
+function getDevRoleFlags(role) {
+  return {
+    is_coach: role === 'coach' || role === 'admin',
+    is_admin: role === 'admin',
+  };
+}
+
+function setDevRole(role) {
+  const normalizedRole = devRolePresets[role] ? role : 'user';
+  const roleInput = $('debugRole');
+
+  if (roleInput) roleInput.value = normalizedRole;
+
+  document.querySelectorAll('[data-dev-role-option]').forEach((button) => {
+    button.classList.toggle('is-active', button.dataset.devRoleOption === normalizedRole);
+  });
+}
+
+function fillDevPreset(role) {
+  const normalizedRole = devRolePresets[role] ? role : 'user';
+  const preset = devRolePresets[normalizedRole];
+
+  if ($('debugUserId')) $('debugUserId').value = String(preset.telegram_user_id);
+  if ($('debugUserName')) $('debugUserName').value = preset.full_name;
+
+  setDevRole(normalizedRole);
+}
+
+function renderCurrentAccess(user) {
+  const summary = $('authSummary');
+  const userLabel = $('authUserLabel');
+  const roleLabel = $('authRoleLabel');
+  const roleBadge = $('currentRoleBadge');
+
+  if (!user) {
+    if (summary) summary.classList.add('hidden');
+    if (roleBadge) roleBadge.classList.add('hidden');
+    return;
+  }
+
+  const displayName = getUserDisplayName(user);
+  const role = getRoleLabel(user);
+
+  if (userLabel) userLabel.textContent = displayName;
+  if (roleLabel) roleLabel.textContent = role;
+  if (summary) summary.classList.remove('hidden');
+
+  if (roleBadge) {
+    roleBadge.textContent = role;
+    roleBadge.classList.remove('hidden');
+  }
+}
+
 function escapeHtml(value) {
   const text = value == null ? '' : String(value);
   const replacements = {
@@ -51,7 +139,6 @@ function canDeleteTemplate(template) {
   if (!state.me) return false;
   return Boolean(
     state.me.is_admin ||
-      state.me.is_coach ||
       template.owner_user_id === state.me.id ||
       template.created_by_user_id === state.me.id
   );
@@ -80,7 +167,7 @@ function setBuilderEditMode(templateId, title) {
 
 function toggleCoachUI() {
   const adminLink = $('adminLink');
-  if (adminLink) adminLink.classList.toggle('hidden', !isCoachOrAdmin());
+  if (adminLink) adminLink.classList.toggle('hidden', !isAdmin());
 
   const coachFields = $('coachFields');
   const builderMode = $('builder_mode');
@@ -216,10 +303,12 @@ async function loadEnv() {
 }
 
 async function devLogin() {
+  const role = $('debugRole')?.value || 'user';
+  const roleFlags = getDevRoleFlags(role);
   const body = {
     telegram_user_id: Number($('debugUserId')?.value || '1001'),
     full_name: $('debugUserName')?.value || null,
-    is_coach: Boolean($('debugIsCoach')?.checked),
+    ...roleFlags,
   };
 
   const data = await api(API.devLogin, {
@@ -342,9 +431,8 @@ async function loadMe() {
   if ($('weight_kg')) $('weight_kg').value = profile.weight_kg || '';
   if ($('workouts_per_week')) $('workouts_per_week').value = profile.workouts_per_week || '';
 
-  setAuthState(
-    `Пользователь: ${profile.full_name || state.me.telegram_user_id} | тренер=${state.me.is_coach} | админ=${state.me.is_admin}`
-  );
+  renderCurrentAccess(state.me);
+  setAuthState('Вход выполнен');
 
   toggleCoachUI();
 }
@@ -761,6 +849,58 @@ async function deleteTemplate(templateId) {
   await loadTemplates();
 }
 
+function getClientDisplayName(client) {
+  return client.full_name || client.username || client.telegram_user_id || 'Клиент';
+}
+
+function selectClientForProgram(client) {
+  if (!client.telegram_user_id) {
+    showToast('Клиент ещё не привязан к Telegram ID', 'error');
+    return;
+  }
+
+  if ($('builder_mode')) $('builder_mode').value = 'coach';
+  if ($('target_telegram_user_id')) {
+    $('target_telegram_user_id').value = String(client.telegram_user_id);
+  }
+  if ($('target_full_name')) {
+    $('target_full_name').value = client.full_name || client.username || '';
+  }
+
+  toggleCoachUI();
+  expandSectionAndScroll('section-builder', 'card-builder');
+  showToast(`Клиент выбран: ${getClientDisplayName(client)}`);
+}
+
+async function addClient() {
+  const telegramIdValue = $('clientTelegramId')?.value?.trim() || '';
+  const username = $('clientUsername')?.value?.trim() || '';
+  const fullName = $('clientFullName')?.value?.trim() || '';
+
+  if (!telegramIdValue && !username) {
+    showToast('Укажи Telegram ID или username клиента', 'error');
+    return;
+  }
+
+  const client = await withReauth(() =>
+    api(API.createClient, {
+      method: 'POST',
+      body: JSON.stringify({
+        telegram_user_id: telegramIdValue ? Number(telegramIdValue) : null,
+        username: username || null,
+        full_name: fullName || null,
+      }),
+    })
+  );
+
+  if ($('clientTelegramId')) $('clientTelegramId').value = '';
+  if ($('clientUsername')) $('clientUsername').value = '';
+  if ($('clientFullName')) $('clientFullName').value = '';
+
+  showToast(client.status === 'pending' ? 'Клиент добавлен в ожидание' : 'Клиент добавлен');
+  await loadClients();
+}
+
 async function loadTemplates() {
   state.templates = await withReauth(() => api(API.myTemplates));
   const list = $('templatesList');
@@ -878,23 +1018,48 @@ async function loadClients() {
   list.innerHTML = rows.length
     ? rows
         .map(
-          (c) => `
+          (c) => {
+            const isPending = c.status === 'pending';
+            return `
           <div class="item-card">
-            <strong>${escapeHtml(c.full_name || c.telegram_user_id)}</strong><br>
-            <span class="muted">цель=${escapeHtml(c.goal || '-')} | уровень=${escapeHtml(c.level || '-')}</span>
-          </div>
-        `
+            <strong>${escapeHtml(getClientDisplayName(c))}</strong><br>
+            <span class="muted">
+              ${isPending ? 'Ожидает входа' : `ID: ${escapeHtml(c.telegram_user_id)}`}
+              ${c.username ? ` | @${escapeHtml(c.username)}` : ''}
+              ${!isPending ? ` | цель=${escapeHtml(c.goal || '-')} | уровень=${escapeHtml(c.level || '-')}` : ''}
+            </span>
+            ${
+              isPending
+                ? ''
+                : `<div class="toolbar wrap top-gap">
+                    <button
+                      class="secondary assign-client-btn"
+                      type="button"
+                      data-client='${escapeHtml(JSON.stringify(c))}'
+                    >
+                      Назначить программу
+                    </button>
+                  </div>`
+            }
+          </div>`;
+          }
         )
         .join('')
     : `<div class="empty-state">
         <p class="empty-state__title">Клиентов пока нет</p>
-        <p class="empty-state__text muted">Назначай программы пользователям в режиме «Для клиента» в конструкторе.</p>
-        <div class="toolbar wrap" style="justify-content: center">
-          <button type="button" class="secondary empty-state-goto" data-nav-section="section-builder" data-nav-card="card-builder">
-            Конструктор
-          </button>
-        </div>
+        <p class="empty-state__text muted">Добавь клиента по Telegram ID или username.</p>
       </div>`;
+
+  document.querySelectorAll('.assign-client-btn').forEach((btn) => {
+    btn.onclick = () => {
+      try {
+        selectClientForProgram(JSON.parse(btn.dataset.client));
+      } catch (error) {
+        log(`selectClientForProgram: ${String(error)}`);
+        showToast('Не удалось выбрать клиента', 'error');
+      }
+    };
+  });
 }
 
 function statusLabel(status) {
@@ -1460,7 +1625,6 @@ async function bootstrap() {
     await loadClients();
     await loadTodayWorkout();
     await resetHistoryAndReload();
-    await loadBilling();
     await loadNotifications();
 
     if (!document.querySelector('.day-card')) {
@@ -1495,6 +1659,24 @@ function bindUI() {
       }
     };
   }
+
+  document.querySelectorAll('[data-dev-login-role]').forEach((button) => {
+    button.onclick = async () => {
+      try {
+        fillDevPreset(button.dataset.devLoginRole);
+        await devLogin();
+      } catch (error) {
+        log(`quick devLogin: ${String(error)}`);
+        toastError(error, 'Не удалось выполнить demo-вход');
+      }
+    };
+  });
+
+  document.querySelectorAll('[data-dev-role-option]').forEach((button) => {
+    button.onclick = () => setDevRole(button.dataset.devRoleOption);
+  });
+
+  setDevRole($('debugRole')?.value || 'user');
 
   if ($('saveProfileBtn')) {
     $('saveProfileBtn').onclick = async () => {
@@ -1553,6 +1735,17 @@ function bindUI() {
         await loadClients();
       } catch (error) {
         log(`reloadClients: ${String(error)}`);
+      }
+    };
+  }
+
+  if ($('addClientBtn')) {
+    $('addClientBtn').onclick = async () => {
+      try {
+        await addClient();
+      } catch (error) {
+        log(`addClientBtn: ${String(error)}`);
+        toastError(error, 'Не удалось добавить клиента');
       }
     };
   }
@@ -1655,6 +1848,7 @@ async function init() {
   }
 
   setAuthState('Проверяем авторизацию через Telegram...');
+  renderCurrentAccess(null);
 
   const token = localStorage.getItem(accessTokenKey);
 

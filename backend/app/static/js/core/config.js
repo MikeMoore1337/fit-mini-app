@@ -1,4 +1,4 @@
-export const FRONTEND_VERSION = 'v19';
+export const FRONTEND_VERSION = 'v22';
 
 export const accessTokenKey = 'fit_access_token';
 export const refreshTokenKey = 'fit_refresh_token';
@@ -23,6 +23,7 @@ export const API = {
   assignTemplateToMe: (templateId) => `/api/v1/programs/templates/${templateId}/assign-to-me`,
   deleteTemplate: (templateId) => `/api/v1/programs/templates/${templateId}`,
   clients: '/api/v1/programs/clients',
+  createClient: '/api/v1/programs/clients',
 
   todayWorkout: '/api/v1/workouts/today',
   deleteTodayWorkout: '/api/v1/workouts/today',

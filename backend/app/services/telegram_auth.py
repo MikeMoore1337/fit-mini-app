@@ -6,7 +6,8 @@ from urllib.parse import parse_qsl
 
 from sqlalchemy.orm import Session
 
-from app.models.user import User, UserProfile
+from app.core.config import settings
+from app.models.user import CoachClient, CoachClientInvite, User, UserProfile
 
 
 def build_secret_key(bot_token: str) -> bytes:
@@ -76,11 +77,48 @@ def validate_init_data(init_data: str, bot_token: str) -> dict:
     return validate_telegram_init_data(init_data, bot_token)
 
 
+def normalize_telegram_username(username: str | None) -> str | None:
+    if not username:
+        return None
+    normalized = username.strip().lstrip("@").lower()
+    return normalized or None
+
+
+def _apply_bootstrap_admin_role(user: User) -> None:
+    if user.telegram_user_id in settings.admin_telegram_id_set:
+        user.is_admin = True
+
+
+def _link_pending_client_invites(db: Session, user: User) -> None:
+    username = normalize_telegram_username(user.username)
+    if not username:
+        return
+
+    invites = db.query(CoachClientInvite).filter(CoachClientInvite.username == username).all()
+    for invite in invites:
+        link = (
+            db.query(CoachClient)
+            .filter(
+                CoachClient.coach_user_id == invite.coach_user_id,
+                CoachClient.client_user_id == user.id,
+            )
+            .first()
+        )
+        if not link and invite.coach_user_id != user.id:
+            db.add(
+                CoachClient(
+                    coach_user_id=invite.coach_user_id,
+                    client_user_id=user.id,
+                )
+            )
+        db.delete(invite)
+
+
 def get_or_create_user_from_init_data(db: Session, init_data: dict) -> User:
     user_data = init_data["user"]
 
     telegram_user_id = int(user_data["id"])
-    username = user_data.get("username")
+    username = normalize_telegram_username(user_data.get("username"))
     first_name = user_data.get("first_name")
     last_name = user_data.get("last_name")
 
@@ -92,6 +130,7 @@ def get_or_create_user_from_init_data(db: Session, init_data: dict) -> User:
             username=username,
             first_name=first_name,
             last_name=last_name,
+            is_admin=telegram_user_id in settings.admin_telegram_id_set,
             is_active=True,
         )
         db.add(user)
@@ -108,6 +147,7 @@ def get_or_create_user_from_init_data(db: Session, init_data: dict) -> User:
             full_name=full_name,
         )
         db.add(profile)
+        _link_pending_client_invites(db, user)
         db.commit()
         db.refresh(user)
         return user
@@ -116,6 +156,7 @@ def get_or_create_user_from_init_data(db: Session, init_data: dict) -> User:
     user.first_name = first_name
     user.last_name = last_name
     user.is_active = True
+    _apply_bootstrap_admin_role(user)
 
     profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
     if not profile:
@@ -130,6 +171,7 @@ def get_or_create_user_from_init_data(db: Session, init_data: dict) -> User:
         )
         db.add(profile)
 
+    _link_pending_client_invites(db, user)
     db.commit()
     db.refresh(user)
     return user

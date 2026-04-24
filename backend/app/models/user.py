@@ -51,3 +51,16 @@ class CoachClient(Base):
     coach_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     client_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class CoachClientInvite(Base):
+    __tablename__ = "coach_client_invites"
+    __table_args__ = (
+        UniqueConstraint("coach_user_id", "username", name="uq_coach_client_invite_username"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    coach_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    username: Mapped[str] = mapped_column(String(64), nullable=False)
+    full_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)

@@ -10,10 +10,18 @@ import pytest
 from app.services.telegram_auth import validate_telegram_init_data
 
 
-def signed_init_data(bot_token: str, auth_date: int) -> str:
+def signed_init_data(
+    bot_token: str,
+    auth_date: int,
+    telegram_user_id: int = 555001,
+    username: str | None = None,
+) -> str:
+    user = {"id": telegram_user_id, "first_name": "Telegram"}
+    if username:
+        user["username"] = username
     data = {
         "auth_date": str(auth_date),
-        "user": json.dumps({"id": 555001, "first_name": "Telegram"}, separators=(",", ":")),
+        "user": json.dumps(user, separators=(",", ":")),
     }
     data_check_string = "\n".join(f"{key}={value}" for key, value in sorted(data.items()))
     secret_key = hmac.new(
@@ -29,10 +37,14 @@ def signed_init_data(bot_token: str, auth_date: int) -> str:
     return urlencode(data)
 
 
-def auth(client, telegram_user_id=1001, is_coach=True):
+def auth(client, telegram_user_id=1001, is_coach=True, is_admin=False):
     response = client.post(
         "/api/v1/auth/dev-login",
-        json={"telegram_user_id": telegram_user_id, "is_coach": is_coach},
+        json={
+            "telegram_user_id": telegram_user_id,
+            "is_coach": is_coach,
+            "is_admin": is_admin,
+        },
     )
     assert response.status_code == 200
     token = response.json()["access_token"]
@@ -46,6 +58,35 @@ def test_dev_login_and_me(client):
     data = response.json()
     assert data["telegram_user_id"] == 1001
     assert data["is_coach"] is True
+
+
+def test_dev_login_can_set_admin_role(client):
+    headers = auth(client, telegram_user_id=4001, is_coach=True, is_admin=True)
+    response = client.get("/api/v1/me", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["telegram_user_id"] == 4001
+    assert data["is_coach"] is True
+    assert data["is_admin"] is True
+
+
+def test_telegram_login_bootstraps_admin_from_env(client, monkeypatch):
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "admin_telegram_user_ids", "555001")
+    init_data = signed_init_data(
+        bot_token="test-token",
+        auth_date=int(time.time()),
+        telegram_user_id=555001,
+    )
+
+    login = client.post("/api/v1/auth/telegram/init", json={"init_data": init_data})
+    assert login.status_code == 200
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    response = client.get("/api/v1/me", headers=headers)
+    assert response.status_code == 200
+    assert response.json()["is_admin"] is True
 
 
 def test_create_program_and_today_workout(client):
@@ -196,6 +237,53 @@ def test_client_cannot_assign_program_as_coach(client):
     assert response.status_code == 400
 
 
+def test_coach_can_add_client_by_telegram_id(client):
+    headers = auth(client, telegram_user_id=1002, is_coach=True)
+
+    created = client.post(
+        "/api/v1/programs/clients",
+        json={"telegram_user_id": 2001, "full_name": "Клиент тренера"},
+        headers=headers,
+    )
+
+    assert created.status_code == 201
+    assert created.json()["status"] == "active"
+    assert created.json()["telegram_user_id"] == 2001
+
+    listed = client.get("/api/v1/programs/clients", headers=headers)
+    assert listed.status_code == 200
+    assert any(row["telegram_user_id"] == 2001 for row in listed.json())
+
+
+def test_coach_can_invite_client_by_username_and_link_on_login(client):
+    coach_headers = auth(client, telegram_user_id=1002, is_coach=True)
+
+    invited = client.post(
+        "/api/v1/programs/clients",
+        json={"username": "@future_client", "full_name": "Будущий клиент"},
+        headers=coach_headers,
+    )
+
+    assert invited.status_code == 201
+    assert invited.json()["status"] == "pending"
+    assert invited.json()["username"] == "future_client"
+
+    init_data = signed_init_data(
+        bot_token="test-token",
+        auth_date=int(time.time()),
+        telegram_user_id=5001,
+        username="future_client",
+    )
+    login = client.post("/api/v1/auth/telegram/init", json={"init_data": init_data})
+    assert login.status_code == 200
+
+    listed = client.get("/api/v1/programs/clients", headers=coach_headers)
+    assert listed.status_code == 200
+    rows = listed.json()
+    assert any(row["telegram_user_id"] == 5001 and row["status"] == "active" for row in rows)
+    assert not any(row["username"] == "future_client" and row["status"] == "pending" for row in rows)
+
+
 def test_me_requires_auth(client):
     response = client.get("/api/v1/me")
     assert response.status_code == 401
@@ -240,8 +328,14 @@ def test_admin_users_forbidden_for_client(client):
     assert response.status_code == 403
 
 
-def test_admin_users_ok_for_coach(client):
-    headers = auth(client, telegram_user_id=1001, is_coach=True)
+def test_admin_users_forbidden_for_coach(client):
+    headers = auth(client, telegram_user_id=1002, is_coach=True)
+    response = client.get("/api/v1/admin/users", headers=headers)
+    assert response.status_code == 403
+
+
+def test_admin_users_ok_for_admin(client):
+    headers = auth(client, telegram_user_id=1001, is_coach=True, is_admin=True)
     response = client.get("/api/v1/admin/users", headers=headers)
     assert response.status_code == 200
     data = response.json()
@@ -249,8 +343,26 @@ def test_admin_users_ok_for_coach(client):
     assert len(data) >= 1
 
 
-def test_admin_payments_ok_for_coach(client):
-    headers = auth(client, telegram_user_id=1001, is_coach=True)
+def test_admin_can_change_user_role(client):
+    admin_headers = auth(client, telegram_user_id=1001, is_coach=True, is_admin=True)
+    client_headers = auth(client, telegram_user_id=2001, is_coach=False)
+    user = client.get("/api/v1/me", headers=client_headers).json()
+
+    response = client.patch(
+        f"/api/v1/admin/users/{user['id']}/role",
+        json={"role": "coach"},
+        headers=admin_headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["role"] == "coach"
+    promoted = client.get("/api/v1/me", headers=client_headers)
+    assert promoted.status_code == 200
+    assert promoted.json()["is_coach"] is True
+
+
+def test_admin_payments_ok_for_admin(client):
+    headers = auth(client, telegram_user_id=1001, is_coach=True, is_admin=True)
     plans = client.get("/api/v1/billing/plans", headers=headers).json()
     premium = next(p for p in plans if p["code"] == "premium")
     checkout = client.post(

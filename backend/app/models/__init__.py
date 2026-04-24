@@ -11,10 +11,11 @@ from app.models.program import (
     UserWorkoutSet,
 )
 from app.models.token import RefreshToken
-from app.models.user import CoachClient, User, UserProfile
+from app.models.user import CoachClient, CoachClientInvite, User, UserProfile
 
 __all__ = [
     "CoachClient",
+    "CoachClientInvite",
     "Exercise",
     "Notification",
     "NotificationSetting",

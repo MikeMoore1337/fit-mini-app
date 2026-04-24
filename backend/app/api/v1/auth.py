@@ -82,6 +82,7 @@ def dev_login(
             telegram_user_id=payload.telegram_user_id,
             username=f"dev_{payload.telegram_user_id}",
             is_coach=payload.is_coach,
+            is_admin=payload.is_admin,
             is_active=True,
         )
         db.add(user)
@@ -95,6 +96,7 @@ def dev_login(
         db.add(NotificationSetting(user_id=user.id))
     else:
         user.is_coach = payload.is_coach
+        user.is_admin = payload.is_admin
         if payload.full_name is not None:
             profile = user.profile
             if profile:

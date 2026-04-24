@@ -67,6 +67,12 @@ class AssignTemplateRequest(BaseModel):
     target_full_name: str | None = None
 
 
+class CoachClientCreate(BaseModel):
+    telegram_user_id: int | None = Field(default=None, ge=1)
+    username: str | None = None
+    full_name: str | None = None
+
+
 class ProgramAssignedResponse(BaseModel):
     program_id: int
     title: str

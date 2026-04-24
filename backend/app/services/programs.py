@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 from uuid import uuid4
 
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.exercise import Exercise
@@ -16,8 +16,9 @@ from app.models.program import (
     UserWorkoutExercise,
     UserWorkoutSet,
 )
-from app.models.user import CoachClient, User, UserProfile
+from app.models.user import CoachClient, CoachClientInvite, User, UserProfile
 from app.schemas.program import ProgramTemplateCreate
+from app.services.telegram_auth import normalize_telegram_username
 
 GOALS = {"muscle_gain", "fat_loss", "maintenance", "recomposition"}
 LEVELS = {"beginner", "intermediate", "advanced"}
@@ -124,6 +125,114 @@ def ensure_coach_link(db: Session, coach: User, client: User) -> None:
     if not link:
         db.add(CoachClient(coach_user_id=coach.id, client_user_id=client.id))
         db.flush()
+
+
+def _set_profile_name(db: Session, user: User, full_name: str | None) -> None:
+    if not full_name:
+        return
+
+    profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
+    if profile:
+        profile.full_name = full_name
+    else:
+        db.add(UserProfile(user_id=user.id, full_name=full_name))
+
+
+def _client_entry_from_user(user: User) -> dict:
+    return {
+        "id": user.id,
+        "telegram_user_id": user.telegram_user_id,
+        "username": user.username,
+        "full_name": user.profile.full_name if user.profile else None,
+        "goal": user.profile.goal if user.profile else None,
+        "level": user.profile.level if user.profile else None,
+        "status": "active",
+    }
+
+
+def _client_entry_from_invite(invite: CoachClientInvite) -> dict:
+    return {
+        "id": None,
+        "telegram_user_id": None,
+        "username": invite.username,
+        "full_name": invite.full_name,
+        "goal": None,
+        "level": None,
+        "status": "pending",
+    }
+
+
+def add_client_for_coach(
+    db: Session,
+    coach: User,
+    telegram_user_id: int | None = None,
+    username: str | None = None,
+    full_name: str | None = None,
+) -> dict:
+    normalized_username = normalize_telegram_username(username)
+    normalized_name = full_name.strip() if full_name else None
+
+    if not telegram_user_id and not normalized_username:
+        raise ProgramError("Telegram ID or username is required")
+
+    if telegram_user_id == coach.telegram_user_id or normalized_username == coach.username:
+        raise ProgramError("Cannot add yourself as a client")
+
+    if telegram_user_id:
+        client = get_or_create_user_by_telegram_id(db, telegram_user_id, normalized_name)
+        if normalized_username:
+            client.username = normalized_username
+        _set_profile_name(db, client, normalized_name)
+        ensure_coach_link(db, coach, client)
+        if normalized_username:
+            db.query(CoachClientInvite).filter(
+                CoachClientInvite.coach_user_id == coach.id,
+                CoachClientInvite.username == normalized_username,
+            ).delete(synchronize_session=False)
+        db.commit()
+        db.refresh(client)
+        return _client_entry_from_user(client)
+
+    client = (
+        db.query(User)
+        .options(joinedload(User.profile))
+        .filter(func.lower(User.username) == normalized_username)
+        .first()
+    )
+    if client:
+        if client.id == coach.id:
+            raise ProgramError("Cannot add yourself as a client")
+        _set_profile_name(db, client, normalized_name)
+        ensure_coach_link(db, coach, client)
+        db.query(CoachClientInvite).filter(
+            CoachClientInvite.coach_user_id == coach.id,
+            CoachClientInvite.username == normalized_username,
+        ).delete(synchronize_session=False)
+        db.commit()
+        db.refresh(client)
+        return _client_entry_from_user(client)
+
+    invite = (
+        db.query(CoachClientInvite)
+        .filter(
+            CoachClientInvite.coach_user_id == coach.id,
+            CoachClientInvite.username == normalized_username,
+        )
+        .first()
+    )
+    if invite:
+        invite.full_name = normalized_name or invite.full_name
+    else:
+        invite = CoachClientInvite(
+            coach_user_id=coach.id,
+            username=normalized_username,
+            full_name=normalized_name,
+        )
+        db.add(invite)
+
+    db.commit()
+    db.refresh(invite)
+    return _client_entry_from_invite(invite)
 
 
 def build_template_response(item: ProgramTemplate, db: Session, current_user: User) -> dict:
@@ -571,7 +680,6 @@ def get_template_for_user(
         or template.created_by_user_id == current_user.id
         or template.owner_user_id == current_user.id
         or current_user.is_admin
-        or current_user.is_coach
     )
     if not can_view:
         raise ProgramError("No permission to view template")
@@ -598,7 +706,6 @@ def update_template_for_user(
 
     can_edit = (
         current_user.is_admin
-        or current_user.is_coach
         or template.created_by_user_id == current_user.id
         or template.owner_user_id == current_user.id
     )
@@ -658,8 +765,8 @@ def update_template_for_user(
     return get_template_for_user(db, current_user, template.id)
 
 
-def list_clients(db: Session, coach: User) -> list[User]:
-    return (
+def list_clients(db: Session, coach: User) -> list[dict]:
+    clients = (
         db.query(User)
         .join(CoachClient, CoachClient.client_user_id == User.id)
         .options(joinedload(User.profile))
@@ -667,6 +774,16 @@ def list_clients(db: Session, coach: User) -> list[User]:
         .order_by(User.id.desc())
         .all()
     )
+    invites = (
+        db.query(CoachClientInvite)
+        .filter(CoachClientInvite.coach_user_id == coach.id)
+        .order_by(CoachClientInvite.id.desc())
+        .all()
+    )
+
+    return [_client_entry_from_user(user) for user in clients] + [
+        _client_entry_from_invite(invite) for invite in invites
+    ]
 
 
 def assign_template_to_self(
@@ -720,7 +837,6 @@ def delete_template_for_user(
 
     can_delete = (
         current_user.is_admin
-        or current_user.is_coach
         or template.owner_user_id == current_user.id
         or template.created_by_user_id == current_user.id
     )

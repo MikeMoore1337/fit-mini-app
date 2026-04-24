@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -27,3 +28,7 @@ class AdminNotificationRow(BaseModel):
     status: str
     scheduled_for: datetime
     sent_at: datetime | None = None
+
+
+class AdminUserRoleUpdate(BaseModel):
+    role: Literal["client", "coach", "admin"]

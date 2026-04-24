@@ -4,15 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0f1115" />
-  <title>Админка - FitMiniApp</title>
-  <link rel="stylesheet" href="/static/styles.css?v=19" />
+  <title>Панель управления - FitMiniApp</title>
+  <link rel="stylesheet" href="/static/styles.css?v=22" />
 </head>
 <body>
   <div class="container narrow">
     <div class="card hero-card">
       <div>
-        <h1>Панель администратора</h1>
-        <p class="muted">Просмотр пользователей, платежей, уведомлений и шаблонов программ.</p>
+        <h1>Панель управления</h1>
+        <p class="muted">Пользователи, платежи, уведомления и шаблоны программ.</p>
       </div>
       <a href="/app" class="button-link">К Mini App</a>
     </div>
@@ -93,6 +93,20 @@
       return text.replace(/[&<>"']/g, (char) => replacements[char]);
     }
 
+    function getRoleLabel(user) {
+      if (user?.is_admin) return 'Администратор';
+      if (user?.is_coach) return 'Тренер';
+      return 'Пользователь';
+    }
+
+    function getRoleValue(user) {
+      return user?.role || (user?.is_admin ? 'admin' : user?.is_coach ? 'coach' : 'client');
+    }
+
+    function roleOption(value, label, current) {
+      return `<option value="${value}" ${current === value ? 'selected' : ''}>${label}</option>`;
+    }
+
     function authHeaders() {
       const token = localStorage.getItem(accessTokenKey);
       return {
@@ -101,8 +115,14 @@
       };
     }
 
-    async function api(path) {
-      const res = await fetch(path, { headers: authHeaders() });
+    async function api(path, options = {}) {
+      const res = await fetch(path, {
+        ...options,
+        headers: {
+          ...authHeaders(),
+          ...(options.headers || {}),
+        },
+      });
       if (!res.ok) {
         const text = await res.text();
         throw new Error(text);
@@ -117,11 +137,35 @@
           <strong>${escapeHtml(user.full_name || user.telegram_user_id)}</strong><br>
           <span class="muted">
             ID: ${escapeHtml(user.telegram_user_id)} |
-            coach=${escapeHtml(user.is_coach)} |
-            admin=${escapeHtml(user.is_admin)}
+            Роль: ${escapeHtml(getRoleLabel(user))}
           </span>
+          <div class="toolbar wrap top-gap">
+            <select class="user-role-select" data-user-id="${escapeHtml(user.id)}">
+              ${roleOption('client', 'Клиент', getRoleValue(user))}
+              ${roleOption('coach', 'Тренер', getRoleValue(user))}
+              ${roleOption('admin', 'Администратор', getRoleValue(user))}
+            </select>
+          </div>
         </div>
       `).join('') || '<p class="muted">Пользователей нет</p>';
+
+      document.querySelectorAll('.user-role-select').forEach(select => {
+        select.onchange = async () => {
+          try {
+            await api(`/api/v1/admin/users/${select.dataset.userId}/role`, {
+              method: 'PATCH',
+              body: JSON.stringify({ role: select.value }),
+            });
+            showToast('Роль обновлена');
+            await loadUsers();
+          } catch (error) {
+            log(String(error));
+            showToast('Не удалось обновить роль', 'error');
+            await loadUsers();
+          }
+        };
+      });
+
       showToast('Пользователи загружены');
     }
 

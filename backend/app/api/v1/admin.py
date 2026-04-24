@@ -1,20 +1,43 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.dependencies.auth import require_coach_or_admin
+from app.api.dependencies.auth import require_admin
 from app.db.session import get_db
 from app.models.billing import Payment, Plan
 from app.models.notification import Notification
 from app.models.program import ProgramTemplate
 from app.models.user import User, UserProfile
+from app.schemas.admin import AdminUserRoleUpdate
 
 router = APIRouter()
+
+
+def _role_from_user(user: User) -> str:
+    if user.is_admin:
+        return "admin"
+    if user.is_coach:
+        return "coach"
+    return "client"
+
+
+def _serialize_user_row(user: User, profile: UserProfile | None) -> dict:
+    return {
+        "id": user.id,
+        "telegram_user_id": user.telegram_user_id,
+        "username": user.username,
+        "role": _role_from_user(user),
+        "is_coach": user.is_coach,
+        "is_admin": user.is_admin,
+        "full_name": profile.full_name if profile else None,
+        "goal": profile.goal if profile else None,
+        "level": profile.level if profile else None,
+    }
 
 
 @router.get("/users")
 def admin_users(
     db: Session = Depends(get_db),
-    _: User = Depends(require_coach_or_admin),
+    _: User = Depends(require_admin),
 ) -> list[dict]:
     rows = (
         db.query(User, UserProfile)
@@ -23,26 +46,45 @@ def admin_users(
         .all()
     )
 
-    result = []
-    for user, profile in rows:
-        result.append(
-            {
-                "id": user.id,
-                "telegram_user_id": user.telegram_user_id,
-                "is_coach": user.is_coach,
-                "is_admin": user.is_admin,
-                "full_name": profile.full_name if profile else None,
-                "goal": profile.goal if profile else None,
-                "level": profile.level if profile else None,
-            }
+    return [_serialize_user_row(user, profile) for user, profile in rows]
+
+
+@router.patch("/users/{user_id}/role")
+def update_user_role(
+    user_id: int,
+    payload: AdminUserRoleUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+) -> dict:
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден")
+
+    if user.id == current_user.id and payload.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Нельзя снять роль администратора с текущего пользователя",
         )
-    return result
+
+    if payload.role == "client":
+        user.is_coach = False
+        user.is_admin = False
+    elif payload.role == "coach":
+        user.is_coach = True
+        user.is_admin = False
+    else:
+        user.is_coach = True
+        user.is_admin = True
+
+    db.commit()
+    profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
+    return _serialize_user_row(user, profile)
 
 
 @router.get("/payments")
 def admin_payments(
     db: Session = Depends(get_db),
-    _: User = Depends(require_coach_or_admin),
+    _: User = Depends(require_admin),
 ) -> list[dict]:
     rows = (
         db.query(Payment, Plan, User)
@@ -73,7 +115,7 @@ def admin_payments(
 @router.get("/notifications")
 def admin_notifications(
     db: Session = Depends(get_db),
-    _: User = Depends(require_coach_or_admin),
+    _: User = Depends(require_admin),
 ) -> list[dict]:
     rows = db.query(Notification).order_by(Notification.id.desc()).limit(200).all()
 
@@ -94,7 +136,7 @@ def admin_notifications(
 @router.get("/templates")
 def admin_templates(
     db: Session = Depends(get_db),
-    _: User = Depends(require_coach_or_admin),
+    _: User = Depends(require_admin),
 ) -> list[dict]:
     rows = db.query(ProgramTemplate).order_by(ProgramTemplate.id.desc()).all()
 
