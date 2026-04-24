@@ -20,6 +20,19 @@ def mini_app_url() -> str:
     return f"{settings.frontend_base_url.rstrip('/')}/app?v=23"
 
 
+async def set_mini_app_menu_button(bot: Bot, user_id: int | None = None) -> None:
+    try:
+        await bot.set_chat_menu_button(
+            user_id=user_id,
+            menu_button=MenuButtonWebApp(
+                text="Открыть Mini App",
+                web_app=WebAppInfo(url=mini_app_url()),
+            ),
+        )
+    except Exception as exc:
+        print(f"Failed to set Mini App menu button: {exc}")
+
+
 @dp.message(CommandStart())
 async def start(message: Message) -> None:
     web_app = WebAppInfo(url=mini_app_url())
@@ -34,12 +47,9 @@ async def start(message: Message) -> None:
         ]
     )
 
-    await message.bot.set_chat_menu_button(
-        chat_id=message.chat.id,
-        menu_button=MenuButtonWebApp(
-            text="Открыть Mini App",
-            web_app=web_app,
-        ),
+    await set_mini_app_menu_button(
+        message.bot,
+        user_id=message.from_user.id if message.from_user else None,
     )
 
     await message.answer(
@@ -60,12 +70,7 @@ async def main() -> None:
             await asyncio.sleep(3600)
 
     bot = Bot(settings.bot_token)
-    await bot.set_chat_menu_button(
-        menu_button=MenuButtonWebApp(
-            text="Открыть Mini App",
-            web_app=WebAppInfo(url=mini_app_url()),
-        ),
-    )
+    await set_mini_app_menu_button(bot)
     await dp.start_polling(bot)
 
 
