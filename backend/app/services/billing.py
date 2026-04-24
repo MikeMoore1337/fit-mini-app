@@ -33,7 +33,8 @@ def create_checkout(db: Session, user: User, plan_code: str) -> Payment:
     if not plan:
         raise BillingError("Plan not found")
     provider_payment_id = uuid4().hex
-    checkout_url = f"{settings.payment_public_url}/app?checkout_id={provider_payment_id}"
+    public_base_url = (settings.payment_public_url or settings.frontend_base_url).rstrip("/")
+    checkout_url = f"{public_base_url}/app?checkout_id={provider_payment_id}"
     payment = Payment(
         user_id=user.id,
         plan_id=plan.id,

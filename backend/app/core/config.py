@@ -22,11 +22,11 @@ class Settings(BaseSettings):
     database_url: str
     enable_dev_auth: bool = False
 
-    frontend_base_url: str
+    frontend_base_url: str = "http://localhost:8000"
     telegram_bot_token: str
 
     payment_provider: str = "mock"
-    payment_public_url: str
+    payment_public_url: str = ""
 
     worker_poll_seconds: int = 10
 

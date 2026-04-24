@@ -312,3 +312,23 @@ def test_mock_billing_activation(client):
     sub = client.get("/api/v1/billing/subscription", headers=headers)
     assert sub.status_code == 200
     assert sub.json()["plan_code"] == "premium"
+
+
+def test_billing_checkout_falls_back_to_frontend_base_url(client, monkeypatch):
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "payment_public_url", "")
+    monkeypatch.setattr(settings, "frontend_base_url", "http://localhost:8000")
+
+    headers = auth(client, telegram_user_id=2001, is_coach=False)
+    plans = client.get("/api/v1/billing/plans", headers=headers).json()
+    premium = next(p for p in plans if p["code"] == "premium")
+
+    checkout = client.post(
+        "/api/v1/billing/checkout",
+        json={"plan_code": premium["code"]},
+        headers=headers,
+    )
+
+    assert checkout.status_code == 200
+    assert checkout.json()["checkout_url"].startswith("http://localhost:8000/app?")
