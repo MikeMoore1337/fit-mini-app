@@ -1,4 +1,4 @@
-import { API, FRONTEND_VERSION, accessTokenKey, refreshTokenKey, sectionStoragePrefix } from './core/config.js';
+import { API, accessTokenKey, refreshTokenKey, sectionStoragePrefix } from './core/config.js';
 import { state } from './core/state.js';
 import {
   $,
@@ -185,14 +185,6 @@ function toggleCoachUI() {
   const logCard = $('logCard');
   if (diagnosticCard) diagnosticCard.classList.toggle('hidden', !isAdmin());
   if (logCard) logCard.classList.toggle('hidden', !isAdmin());
-
-  const adminMeta = $('adminMeta');
-  if (adminMeta) {
-    adminMeta.classList.toggle('hidden', !isAdmin());
-    if (isAdmin()) {
-      adminMeta.textContent = `Режим администратора - frontend ${FRONTEND_VERSION}`;
-    }
-  }
 
   refreshBuilderControls();
 }
