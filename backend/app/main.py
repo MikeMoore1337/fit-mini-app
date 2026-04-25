@@ -68,6 +68,11 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.head("/health")
+def health_head() -> Response:
+    return Response(status_code=200)
+
+
 @app.get("/app")
 def miniapp() -> FileResponse:
     return FileResponse(

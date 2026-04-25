@@ -5,9 +5,9 @@ Revises: 0005_users_telegram_id_bigint
 Create Date: 2026-04-24
 """
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 revision = "0006_add_coach_client_invites"
 down_revision = "0005_users_telegram_id_bigint"

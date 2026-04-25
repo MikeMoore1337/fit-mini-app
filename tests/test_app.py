@@ -533,6 +533,13 @@ def test_health_includes_request_id(client):
     assert "x-request-id" in {k.lower(): v for k, v in response.headers.items()}
 
 
+def test_health_supports_head(client):
+    response = client.head("/health")
+    assert response.status_code == 200
+    assert response.content == b""
+    assert "x-request-id" in {k.lower(): v for k, v in response.headers.items()}
+
+
 def test_mock_billing_activation(client):
     headers = auth(client, telegram_user_id=2001, is_coach=False)
     plans = client.get("/api/v1/billing/plans", headers=headers).json()
