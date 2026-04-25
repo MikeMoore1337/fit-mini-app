@@ -45,13 +45,13 @@ def url_keyboard(url: str) -> InlineKeyboardMarkup:
     )
 
 
-async def set_mini_app_menu_button(bot: Bot, chat_id: int | None = None) -> None:
+async def set_mini_app_menu_button(bot: Bot, chat_id: int | None = None) -> bool:
     url = mini_app_url()
     if not is_https_url(url):
         print(
             f"Skipped Mini App menu button: FRONTEND_BASE_URL must be HTTPS, got {url}", flush=True
         )
-        return
+        return False
 
     try:
         await bot.set_chat_menu_button(
@@ -62,8 +62,10 @@ async def set_mini_app_menu_button(bot: Bot, chat_id: int | None = None) -> None
             ),
         )
         print(f"Mini App menu button configured for {url}", flush=True)
+        return True
     except Exception as exc:
         print(f"Failed to set Mini App menu button for {url}: {exc!r}", flush=True)
+        return False
 
 
 async def answer_with_open_button(message: Message) -> None:
@@ -93,10 +95,14 @@ async def answer_with_open_button(message: Message) -> None:
 
 @dp.message(CommandStart())
 async def start(message: Message) -> None:
-    await set_mini_app_menu_button(
+    menu_button_ok = await set_mini_app_menu_button(
         message.bot,
         chat_id=message.from_user.id if message.from_user else None,
     )
+    if menu_button_ok:
+        await message.answer("Кнопка Mini App закреплена внизу.")
+        return
+
     await answer_with_open_button(message)
 
 
