@@ -36,7 +36,7 @@
 
                 <div id="authSummary" class="auth-summary hidden">
                     <div class="auth-summary__item">
-                        <span class="auth-summary__label">Пользователь</span>
+                        <span class="auth-summary__label">Аккаунт</span>
                         <strong id="authUserLabel" class="auth-summary__value"></strong>
                     </div>
                     <div class="auth-summary__item">
@@ -59,7 +59,7 @@
 
                 <div class="dev-quick-grid" aria-label="Быстрый demo-вход">
                     <button class="secondary dev-quick-login" type="button" data-dev-login-role="user">
-                        <strong>Пользователь</strong>
+                        <strong>Клиент</strong>
                         <span>ID 2001</span>
                     </button>
                     <button class="secondary dev-quick-login" type="button" data-dev-login-role="coach">
@@ -74,12 +74,12 @@
 
                 <div class="grid grid-2 top-gap">
                     <input id="debugUserId" type="number" placeholder="Telegram ID" value="2001"/>
-                    <input id="debugUserName" type="text" placeholder="Имя пользователя" value="Клиент Demo"/>
+                    <input id="debugUserName" type="text" placeholder="Имя аккаунта" value="Клиент Demo"/>
                 </div>
 
                 <input id="debugRole" type="hidden" value="user"/>
-                <div class="segmented-control top-gap" role="group" aria-label="Роль demo-пользователя">
-                    <button class="is-active" type="button" data-dev-role-option="user">Пользователь</button>
+                <div class="segmented-control top-gap" role="group" aria-label="Роль demo-аккаунта">
+                    <button class="is-active" type="button" data-dev-role-option="user">Клиент</button>
                     <button type="button" data-dev-role-option="coach">Тренер</button>
                     <button type="button" data-dev-role-option="admin">Админ</button>
                 </div>
@@ -134,7 +134,6 @@
             <div class="grid grid-4">
                 <select id="builder_mode">
                     <option value="self">Для себя</option>
-                    <option value="coach">Для клиента</option>
                 </select>
 
                 <input id="program_title" type="text" placeholder="Название программы" value="Моя программа"/>
@@ -394,6 +393,6 @@
 <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true"></div>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script type="module" src="/static/js/main.js?v=23"></script>
+<script type="module" src="/static/js/main.js?v=24"></script>
 </body>
 </html>

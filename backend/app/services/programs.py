@@ -105,7 +105,7 @@ def get_or_create_user_by_telegram_id(
         db.add(
             UserProfile(
                 user_id=user.id,
-                full_name=full_name or f"Пользователь {telegram_user_id}",
+                full_name=full_name or f"Клиент {telegram_user_id}",
             )
         )
         db.commit()

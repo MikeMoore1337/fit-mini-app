@@ -47,8 +47,10 @@ function isAdmin() {
 function getRoleLabel(user) {
   if (user?.is_admin) return 'Администратор';
   if (user?.is_coach) return 'Тренер';
-  return 'Пользователь';
+  return 'Клиент';
 }
+
+const builderCoachOptionLabel = 'Для клиента';
 
 const devRolePresets = {
   user: {
@@ -153,6 +155,28 @@ function canEditSelfBuilder() {
   return getEffectiveBuilderMode() === 'self' || isCoachOrAdmin();
 }
 
+function syncBuilderModeOptions(canAssignClients) {
+  const builderMode = $('builder_mode');
+  if (!builderMode) return;
+
+  let coachOption = [...builderMode.options].find((option) => option.value === 'coach');
+
+  if (canAssignClients && !coachOption) {
+    coachOption = document.createElement('option');
+    coachOption.value = 'coach';
+    coachOption.textContent = builderCoachOptionLabel;
+    builderMode.appendChild(coachOption);
+  }
+
+  if (!canAssignClients && coachOption) {
+    coachOption.remove();
+  }
+
+  if (!canAssignClients) {
+    builderMode.value = 'self';
+  }
+}
+
 function resetBuilderEditMode() {
   state.editingTemplateId = null;
   const modeInfo = $('builderModeInfo');
@@ -177,17 +201,7 @@ function toggleCoachUI() {
   const builderMode = $('builder_mode');
   const canAssignClients = isCoachOrAdmin();
 
-  if (builderMode) {
-    const coachOption = [...builderMode.options].find((option) => option.value === 'coach');
-    if (coachOption) {
-      coachOption.disabled = !canAssignClients;
-      coachOption.hidden = !canAssignClients;
-    }
-
-    if (!canAssignClients && builderMode.value === 'coach') {
-      builderMode.value = 'self';
-    }
-  }
+  syncBuilderModeOptions(canAssignClients);
 
   if (coachFields && builderMode) {
     const showCoachFields = builderMode.value === 'coach' && canAssignClients;
