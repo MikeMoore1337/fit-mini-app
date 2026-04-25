@@ -10,6 +10,7 @@ from app.schemas.auth import DevLoginRequest, RefreshRequest, TelegramInitReques
 from app.services.jwt import AuthError, build_access_token, build_refresh_token, decode_token
 from app.services.telegram_auth import (
     get_or_create_user_from_init_data,
+    normalize_telegram_username,
     validate_telegram_init_data,
 )
 from app.services.token_service import (
@@ -79,11 +80,14 @@ def dev_login(
     if not settings.enable_dev_auth:
         raise HTTPException(status_code=403, detail="Dev-вход отключён")
 
+    username = normalize_telegram_username(payload.username) if payload.username else None
     user = db.query(User).filter(User.telegram_user_id == payload.telegram_user_id).first()
     if not user:
         user = User(
             telegram_user_id=payload.telegram_user_id,
-            username=f"dev_{payload.telegram_user_id}",
+            username=username
+            if payload.username is not None
+            else f"dev_{payload.telegram_user_id}",
             is_coach=payload.is_coach,
             is_admin=payload.is_admin,
             is_active=True,
@@ -103,6 +107,8 @@ def dev_login(
 
         user.is_coach = payload.is_coach
         user.is_admin = payload.is_admin
+        if payload.username is not None:
+            user.username = username
         if payload.full_name is not None:
             profile = user.profile
             if profile:

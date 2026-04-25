@@ -1,6 +1,7 @@
 export const state = {
   me: null,
   exercises: [],
+  clients: [],
   templates: [],
   todayWorkout: null,
   plans: [],

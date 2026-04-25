@@ -421,6 +421,21 @@ button:disabled {
     align-items: center;
 }
 
+.kbju-result-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.kbju-result-grid .item-card {
+    display: grid;
+    gap: 6px;
+}
+
+.kbju-result-grid strong {
+    font-size: 18px;
+}
+
 .log-box {
     background: #0c1118;
     color: #cfd8e3;
@@ -581,7 +596,8 @@ a {
     }
 
     #todayWorkout .grid.item-card,
-    .program-ex-row {
+    .program-ex-row,
+    .kbju-result-grid {
         grid-template-columns: 1fr !important;
     }
 

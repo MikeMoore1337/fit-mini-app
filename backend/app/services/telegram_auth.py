@@ -94,23 +94,28 @@ def _link_pending_client_invites(db: Session, user: User) -> None:
     if not username:
         return
 
-    invites = db.query(CoachClientInvite).filter(CoachClientInvite.username == username).all()
-    for invite in invites:
-        link = (
-            db.query(CoachClient)
-            .filter(
-                CoachClient.coach_user_id == invite.coach_user_id,
-                CoachClient.client_user_id == user.id,
-            )
-            .first()
+    invites = (
+        db.query(CoachClientInvite)
+        .filter(CoachClientInvite.username == username)
+        .order_by(CoachClientInvite.id.desc())
+        .all()
+    )
+    if not invites:
+        return
+
+    accepted_invite = next((invite for invite in invites if invite.coach_user_id != user.id), None)
+    if accepted_invite:
+        db.query(CoachClient).filter(CoachClient.client_user_id == user.id).delete(
+            synchronize_session=False
         )
-        if not link and invite.coach_user_id != user.id:
-            db.add(
-                CoachClient(
-                    coach_user_id=invite.coach_user_id,
-                    client_user_id=user.id,
-                )
+        db.add(
+            CoachClient(
+                coach_user_id=accepted_invite.coach_user_id,
+                client_user_id=user.id,
             )
+        )
+
+    for invite in invites:
         db.delete(invite)
 
 

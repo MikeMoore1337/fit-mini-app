@@ -24,6 +24,7 @@ os.environ.setdefault("TELEGRAM_BOT_TOKEN", "test-token")
 os.environ.setdefault("FRONTEND_BASE_URL", "https://app.your-fitness-coach.ru")
 os.environ.setdefault("PAYMENT_PUBLIC_URL", "https://app.your-fitness-coach.ru")
 
+from app.core.rate_limit import limiter
 from app.db.base import Base
 from app.db.session import engine, get_session_context
 from app.main import app
@@ -32,6 +33,7 @@ from app.services.seed import seed_demo_data
 
 @pytest.fixture(autouse=True)
 def reset_db():
+    limiter.reset()
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     with get_session_context() as session:

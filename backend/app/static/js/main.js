@@ -125,6 +125,62 @@ function renderCurrentAccess(user) {
   }
 }
 
+function getTrainerDisplayName(trainer) {
+  if (!trainer) return '';
+  const username = trainer.username ? `@${trainer.username}` : '';
+  const name = trainer.full_name || '';
+  return [username, name].filter(Boolean).join(' / ') || `ID ${trainer.telegram_user_id}`;
+}
+
+function renderTrainerInfo(trainer) {
+  const node = $('trainerInfo');
+  if (!node) return;
+
+  if (!trainer) {
+    node.classList.add('hidden');
+    node.innerHTML = '';
+    return;
+  }
+
+  const trainerLabel = escapeHtml(getTrainerDisplayName(trainer));
+  const chatControl = trainer.can_open_chat && trainer.chat_url
+    ? `<a class="button-link" href="${escapeHtml(trainer.chat_url)}" target="_blank" rel="noopener noreferrer">Написать тренеру</a>`
+    : `<span class="muted">${escapeHtml(trainer.chat_unavailable_reason || 'Чат с тренером недоступен')}</span>`;
+
+  node.innerHTML = `
+    <strong>Ваш тренер: ${trainerLabel}</strong>
+    <div class="toolbar wrap top-gap">
+      ${chatControl}
+      <button id="detachTrainerBtn" class="secondary" type="button">Открепиться</button>
+    </div>
+  `;
+  node.classList.remove('hidden');
+
+  const detachBtn = $('detachTrainerBtn');
+  if (detachBtn) {
+    detachBtn.onclick = async () => {
+      const ok = await openConfirmDialog({
+        title: 'Открепиться от тренера?',
+        message: 'Тренер больше не сможет видеть и редактировать твои программы и упражнения.',
+        okText: 'Открепиться',
+        danger: true,
+      });
+      if (!ok) return;
+
+      try {
+        await withReauth(() => api(API.detachTrainer, { method: 'DELETE' }));
+        showToast('Тренер откреплён');
+        await loadMe();
+        await loadExercises();
+        await loadTemplates();
+      } catch (error) {
+        log(`detachTrainer: ${String(error)}`);
+        toastError(error, 'Не удалось открепиться от тренера');
+      }
+    };
+  }
+}
+
 function escapeHtml(value) {
   const text = value == null ? '' : String(value);
   const replacements = {
@@ -197,11 +253,15 @@ function toggleCoachUI() {
   const adminLink = $('adminLink');
   if (adminLink) adminLink.classList.toggle('hidden', !isAdmin());
 
+  const coachLink = $('coachLink');
+  if (coachLink) coachLink.classList.toggle('hidden', !isCoachOrAdmin());
+
   const coachFields = $('coachFields');
   const builderMode = $('builder_mode');
   const canAssignClients = isCoachOrAdmin();
 
   syncBuilderModeOptions(canAssignClients);
+  refreshProgramExerciseOptions();
 
   if (coachFields && builderMode) {
     const showCoachFields = builderMode.value === 'coach' && canAssignClients;
@@ -221,6 +281,7 @@ function toggleCoachUI() {
   if (diagnosticCard) diagnosticCard.classList.toggle('hidden', !isAdmin());
   if (logCard) logCard.classList.toggle('hidden', !isAdmin());
 
+  syncExerciseOwnerOptions();
   refreshBuilderControls();
 }
 
@@ -457,8 +518,16 @@ async function loadMe() {
   if ($('height_cm')) $('height_cm').value = profile.height_cm || '';
   if ($('weight_kg')) $('weight_kg').value = profile.weight_kg || '';
   if ($('workouts_per_week')) $('workouts_per_week').value = profile.workouts_per_week || '';
+  if ($('kbjuWeight')) $('kbjuWeight').value = profile.weight_kg || '';
+  if ($('kbjuHeight')) $('kbjuHeight').value = profile.height_cm || '';
+  if ($('kbjuGoal')) $('kbjuGoal').value = profile.goal || 'maintenance';
+  if ($('kbjuStrength') && profile.workouts_per_week != null) {
+    $('kbjuStrength').value = profile.workouts_per_week;
+  }
+  calculateKbju({ silent: true });
 
   renderCurrentAccess(state.me);
+  renderTrainerInfo(state.me.trainer);
   setAuthState('Вход выполнен');
 
   toggleCoachUI();
@@ -485,9 +554,122 @@ async function saveProfile() {
   await loadMe();
 }
 
+function parseDecimalInput(value) {
+  const normalized = String(value || '').trim().replace(',', '.');
+  if (!normalized) return null;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function parseTrainingCount(value) {
+  const normalized = String(value || '').trim();
+  if (!normalized) return 0;
+  const parsed = Number(normalized);
+  if (!Number.isInteger(parsed) || parsed < 0) return null;
+  return parsed;
+}
+
+function roundNumber(value) {
+  return Math.max(0, Math.round(value));
+}
+
+function getActivityFactor(strengthSessions, cardioSessions) {
+  const sessions = strengthSessions + cardioSessions;
+  if (sessions <= 0) return 1.2;
+  if (sessions <= 2) return 1.375;
+  if (sessions <= 4) return 1.55;
+  if (sessions <= 6) return 1.725;
+  return 1.9;
+}
+
+function getGoalCalories(tdee, goal) {
+  return roundNumber(tdee * ({
+    fat_loss: 0.85,
+    muscle_gain: 1.1,
+    maintenance: 1,
+    recomposition: 0.95,
+  }[goal] || 1));
+}
+
+function calculateMacros(weightKg, targetCalories, goal) {
+  const proteinPerKg = ({
+    fat_loss: 2,
+    muscle_gain: 1.8,
+    maintenance: 1.6,
+    recomposition: 2,
+  }[goal] || 1.6);
+  const fatPerKg = goal === 'muscle_gain' ? 0.9 : 0.8;
+  const protein = roundNumber(weightKg * proteinPerKg);
+  const fat = roundNumber(weightKg * fatPerKg);
+  const carbs = roundNumber((targetCalories - protein * 4 - fat * 9) / 4);
+
+  return { protein, fat, carbs };
+}
+
+function calculateKbju({ silent = false } = {}) {
+  const result = $('kbjuResult');
+  if (!result) return;
+
+  const sex = $('kbjuSex')?.value || 'male';
+  const weight = parseDecimalInput($('kbjuWeight')?.value);
+  const height = parseDecimalInput($('kbjuHeight')?.value);
+  const age = parseDecimalInput($('kbjuAge')?.value);
+  const strength = parseTrainingCount($('kbjuStrength')?.value);
+  const cardio = parseTrainingCount($('kbjuCardio')?.value);
+  const goal = $('kbjuGoal')?.value || 'maintenance';
+
+  if (!weight || !height || !age || strength == null || cardio == null) {
+    if (!silent) {
+      result.classList.remove('hidden');
+      result.innerHTML = '<div class="item-card muted">Заполни вес, рост, возраст и тренировки.</div>';
+    } else {
+      result.classList.add('hidden');
+      result.innerHTML = '';
+    }
+    return;
+  }
+
+  const sexConstant = sex === 'female' ? -161 : 5;
+  const bmr = 10 * weight + 6.25 * height - 5 * age + sexConstant;
+  const tdee = bmr * getActivityFactor(strength, cardio);
+  const targetCalories = getGoalCalories(tdee, goal);
+  const macros = calculateMacros(weight, targetCalories, goal);
+
+  result.classList.remove('hidden');
+  result.innerHTML = `
+    <div class="kbju-result-grid">
+      <div class="item-card">
+        <span class="muted">Основной обмен</span>
+        <strong>${roundNumber(bmr)} ккал</strong>
+      </div>
+      <div class="item-card">
+        <span class="muted">Поддержание</span>
+        <strong>${roundNumber(tdee)} ккал</strong>
+      </div>
+      <div class="item-card">
+        <span class="muted">Цель</span>
+        <strong>${targetCalories} ккал</strong>
+      </div>
+      <div class="item-card">
+        <span class="muted">Белки</span>
+        <strong>${macros.protein} г</strong>
+      </div>
+      <div class="item-card">
+        <span class="muted">Жиры</span>
+        <strong>${macros.fat} г</strong>
+      </div>
+      <div class="item-card">
+        <span class="muted">Углеводы</span>
+        <strong>${macros.carbs} г</strong>
+      </div>
+    </div>
+  `;
+}
+
 async function loadExercises() {
   state.exercises = await withReauth(() => api(API.exercises));
   renderExerciseCatalog();
+  refreshProgramExerciseOptions();
 }
 
 function renderExerciseCatalog() {
@@ -513,6 +695,7 @@ function renderExerciseCatalog() {
             <div class="exercise-meta">
               <span class="metric-pill">${escapeHtml(ex.primary_muscle)}</span>
               <span class="metric-pill">${escapeHtml(ex.equipment)}</span>
+              <span class="metric-pill">${escapeHtml(getExerciseOwnerLabel(ex))}</span>
               ${ex.is_custom ? '<span class="metric-pill">Личное</span>' : '<span class="metric-pill">Общее</span>'}
               ${ex.is_personalized ? '<span class="metric-pill">Моё изменение</span>' : ''}
             </div>
@@ -569,10 +752,16 @@ function renderExerciseCatalog() {
   document.querySelectorAll('.delete-exercise-btn').forEach((btn) => {
     btn.onclick = async () => {
       const exerciseId = Number(btn.dataset.exerciseId);
+      const exercise = state.exercises.find((item) => item.edit_target_id === exerciseId);
+      const deletesGlobalExercise = Boolean(
+        isAdmin() && exercise && !exercise.created_by_user_id && !exercise.source_exercise_id
+      );
       const ok = await openConfirmDialog({
         title: 'Скрыть упражнение?',
-        message: 'Упражнение будет скрыто только в твоём каталоге. Общие данные не затронуты.',
-        okText: 'Скрыть',
+        message: deletesGlobalExercise
+          ? 'Общее упражнение будет скрыто для всех пользователей.'
+          : 'Упражнение будет скрыто только в твоём каталоге. Общие данные не затронуты.',
+        okText: deletesGlobalExercise ? 'Скрыть для всех' : 'Скрыть',
         danger: true,
       });
       if (!ok) return;
@@ -596,10 +785,12 @@ function renderExerciseCatalog() {
 }
 
 async function createExercise() {
+  const ownerValue = $('exerciseOwner')?.value || '';
   const payload = {
     title: $('newExerciseTitle')?.value?.trim() || '',
     primary_muscle: $('newExerciseMuscle')?.value?.trim() || '',
     equipment: $('newExerciseEquipment')?.value?.trim() || '',
+    target_telegram_user_id: ownerValue ? Number(ownerValue) : null,
   };
 
   if (!payload.title || !payload.primary_muscle || !payload.equipment) {
@@ -622,13 +813,46 @@ async function createExercise() {
   await loadExercises();
 }
 
-function exerciseTemplate(defaultExerciseId = '', preset = null) {
-  const options = state.exercises
+function getClientByTelegramId(telegramUserId) {
+  return getActiveClients().find(
+    (client) => String(client.telegram_user_id) === String(telegramUserId)
+  );
+}
+
+function getBuilderExerciseRows() {
+  const mode = getEffectiveBuilderMode();
+  if (mode !== 'coach') {
+    return state.exercises.filter(
+      (exercise) => !exercise.created_by_user_id || exercise.created_by_user_id === state.me?.id
+    );
+  }
+
+  const targetTelegramId = $('target_telegram_user_id')?.value || '';
+  const targetClient = getClientByTelegramId(targetTelegramId);
+  return state.exercises.filter(
+    (exercise) =>
+      !exercise.created_by_user_id ||
+      (targetClient && exercise.created_by_user_id === targetClient.id)
+  );
+}
+
+function exerciseOptions(defaultExerciseId = '') {
+  return getBuilderExerciseRows()
     .map(
       (ex) => `<option value="${escapeHtml(ex.id)}" ${String(ex.id) === String(defaultExerciseId) ? 'selected' : ''}>${escapeHtml(ex.title)}</option>`
     )
     .join('');
+}
 
+function refreshProgramExerciseOptions() {
+  document.querySelectorAll('.exercise-id').forEach((select) => {
+    const selectedValue = select.value;
+    select.innerHTML = exerciseOptions(selectedValue);
+  });
+}
+
+function exerciseTemplate(defaultExerciseId = '', preset = null) {
+  const options = exerciseOptions(defaultExerciseId);
   return `
     <div class="grid item-card program-ex-row" style="grid-template-columns:2fr 1fr 1fr 1fr auto;">
       <select class="exercise-id">${options}</select>
@@ -834,7 +1058,20 @@ async function loadTemplateIntoBuilder(templateId) {
   $('program_title').value = template.title || '';
   $('program_goal').value = template.goal || 'muscle_gain';
   $('program_level').value = template.level || 'intermediate';
-  $('builder_mode').value = template.owner_user_id ? 'self' : 'coach';
+  $('builder_mode').value = template.is_public || template.owner_user_id ? 'self' : 'coach';
+  if (
+    template.owner_user_id &&
+    template.owner_user_id !== state.me?.id &&
+    template.owner_telegram_user_id
+  ) {
+    $('builder_mode').value = 'coach';
+    if ($('target_telegram_user_id')) {
+      $('target_telegram_user_id').value = String(template.owner_telegram_user_id);
+    }
+    if ($('target_full_name')) {
+      $('target_full_name').value = template.owner_full_name || '';
+    }
+  }
 
   const dayBuilder = $('dayBuilder');
   dayBuilder.innerHTML = '';
@@ -879,6 +1116,42 @@ async function deleteTemplate(templateId) {
 
 function getClientDisplayName(client) {
   return client.full_name || client.username || client.telegram_user_id || 'Клиент';
+}
+
+function getActiveClients() {
+  return (state.clients || []).filter((client) => client.status !== 'pending' && client.telegram_user_id);
+}
+
+function getExerciseOwnerLabel(exercise) {
+  if (!exercise.created_by_user_id) return 'Для всех';
+  if (exercise.created_by_user_id === state.me?.id) return 'Для себя';
+
+  const client = getActiveClients().find((item) => item.id === exercise.created_by_user_id);
+  if (client) return `Клиент: ${getClientDisplayName(client)}`;
+
+  return 'Личное';
+}
+
+function syncExerciseOwnerOptions() {
+  const select = $('exerciseOwner');
+  if (!select) return;
+
+  if (isAdmin()) {
+    select.innerHTML = '<option value="">Для всех</option>';
+    select.value = '';
+    select.classList.add('hidden');
+    return;
+  }
+
+  const clients = getActiveClients();
+  select.innerHTML = [
+    '<option value="">Для себя</option>',
+    ...clients.map(
+      (client) =>
+        `<option value="${escapeHtml(client.telegram_user_id)}">Клиент: ${escapeHtml(getClientDisplayName(client))}</option>`
+    ),
+  ].join('');
+  select.classList.toggle('hidden', !isCoachOrAdmin() || !clients.length);
 }
 
 function selectClientForProgram(client) {
@@ -1037,9 +1310,15 @@ async function loadClients() {
   const card = $('clientsCard');
   if (card) card.classList.toggle('hidden', !isCoachOrAdmin());
 
-  if (!isCoachOrAdmin()) return;
+  if (!isCoachOrAdmin()) {
+    state.clients = [];
+    syncExerciseOwnerOptions();
+    return;
+  }
 
   const rows = await withReauth(() => api(API.clients));
+  state.clients = rows;
+  syncExerciseOwnerOptions();
   const list = $('clientsList');
   if (!list) return;
 
@@ -1648,9 +1927,9 @@ async function bootstrap() {
   setAppLoading(true);
   try {
     await loadMe();
+    await loadClients();
     await loadExercises();
     await loadTemplates();
-    await loadClients();
     await loadTodayWorkout();
     await resetHistoryAndReload();
     await loadNotifications();
@@ -1717,8 +1996,30 @@ function bindUI() {
     };
   }
 
+  if ($('calculateKbjuBtn')) {
+    $('calculateKbjuBtn').onclick = () => calculateKbju();
+  }
+
+  [
+    'kbjuSex',
+    'kbjuWeight',
+    'kbjuHeight',
+    'kbjuAge',
+    'kbjuStrength',
+    'kbjuCardio',
+    'kbjuGoal',
+  ].forEach((id) => {
+    const node = $(id);
+    if (node) node.addEventListener('input', () => calculateKbju({ silent: true }));
+    if (node) node.addEventListener('change', () => calculateKbju({ silent: true }));
+  });
+
   if ($('builder_mode')) {
     $('builder_mode').addEventListener('change', toggleCoachUI);
+  }
+
+  if ($('target_telegram_user_id')) {
+    $('target_telegram_user_id').addEventListener('input', refreshProgramExerciseOptions);
   }
 
   if ($('addDayBtn')) {

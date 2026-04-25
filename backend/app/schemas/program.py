@@ -49,6 +49,8 @@ class ProgramTemplateResponse(BaseModel):
     goal: str
     level: str
     owner_user_id: int | None = None
+    owner_telegram_user_id: int | None = None
+    owner_full_name: str | None = None
     created_by_user_id: int | None = None
     is_public: bool = False
     days: list[ProgramTemplateDayResponse]
@@ -90,6 +92,7 @@ class ExerciseCatalogCreate(BaseModel):
     title: str
     primary_muscle: str
     equipment: str
+    target_telegram_user_id: int | None = Field(default=None, ge=1)
 
 
 class ExerciseCatalogCreateResponse(ExerciseCatalogItem):

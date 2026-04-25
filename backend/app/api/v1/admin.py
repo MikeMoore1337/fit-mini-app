@@ -103,7 +103,7 @@ def _delete_user_cascade(db: Session, user: User) -> None:
         synchronize_session=False,
     )
     db.query(Exercise).filter(Exercise.created_by_user_id == user.id).update(
-        {"created_by_user_id": None},
+        {"created_by_user_id": None, "is_deleted": True},
         synchronize_session=False,
     )
 

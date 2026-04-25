@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
     <meta name="theme-color" content="#0f1115"/>
     <title>FitMiniApp</title>
-    <link rel="stylesheet" href="/static/styles.css?v=23"/>
+    <link rel="stylesheet" href="/static/styles.css?v=26"/>
 </head>
 <body>
 <main class="container" id="app-main">
@@ -47,6 +47,7 @@
 
                 <div class="toolbar wrap">
                     <button id="telegramLoginBtn" class="secondary" type="button">Повторить вход через Telegram</button>
+                    <a href="/coach" id="coachLink" class="button-link hidden">Кабинет тренера</a>
                     <a href="/admin" id="adminLink" class="button-link hidden">Панель управления</a>
                 </div>
             </div>
@@ -97,6 +98,7 @@
             <button class="secondary section-toggle" type="button" data-target="section-profile">Свернуть</button>
         </div>
         <div id="section-profile" class="section-content">
+            <div id="trainerInfo" class="item-card hidden"></div>
             <div class="grid grid-4">
                 <input id="full_name" type="text" placeholder="Имя"/>
                 <select id="goal">
@@ -203,7 +205,10 @@
             </div>
         </div>
         <div id="section-exercises" class="section-content">
-            <div class="grid grid-3">
+            <div class="grid grid-4">
+                <select id="exerciseOwner" class="hidden">
+                    <option value="">Для себя</option>
+                </select>
                 <input id="newExerciseTitle" type="text" placeholder="Название упражнения"/>
                 <input id="newExerciseMuscle" type="text" placeholder="Основная мышечная группа"/>
                 <input id="newExerciseEquipment" type="text" placeholder="Оборудование"/>
@@ -304,17 +309,34 @@
         </div>
     </div>
 
-    <div class="card">
+    <div id="card-kbju" class="card">
         <div class="section-head">
-            <h2>Подписка</h2>
+            <h2>Калькулятор КБЖУ</h2>
             <div class="toolbar wrap">
-                <button id="reloadBillingBtn" class="secondary" type="button">Обновить</button>
-                <button class="secondary section-toggle" type="button" data-target="section-billing">Свернуть</button>
+                <button class="secondary section-toggle" type="button" data-target="section-kbju">Свернуть</button>
             </div>
         </div>
-        <div id="section-billing" class="section-content">
-            <div id="subscriptionInfo" class="muted"></div>
-            <div id="plansList" class="stack top-gap"></div>
+        <div id="section-kbju" class="section-content">
+            <div class="grid grid-4">
+                <select id="kbjuSex">
+                    <option value="male">Мужской</option>
+                    <option value="female">Женский</option>
+                </select>
+                <input id="kbjuWeight" type="text" inputmode="decimal" placeholder="Вес, кг"/>
+                <input id="kbjuHeight" type="text" inputmode="decimal" placeholder="Рост, см"/>
+                <input id="kbjuAge" type="text" inputmode="decimal" placeholder="Возраст"/>
+                <input id="kbjuStrength" type="number" min="0" step="1" placeholder="Силовые в неделю"/>
+                <input id="kbjuCardio" type="number" min="0" step="1" placeholder="Кардио в неделю"/>
+                <select id="kbjuGoal">
+                    <option value="fat_loss">Похудение</option>
+                    <option value="muscle_gain">Набор</option>
+                    <option value="maintenance">Поддержание</option>
+                    <option value="recomposition">Рекомпозиция</option>
+                </select>
+                <button id="calculateKbjuBtn" type="button">Рассчитать</button>
+            </div>
+
+            <div id="kbjuResult" class="kbju-result hidden top-gap"></div>
         </div>
     </div>
 
@@ -340,21 +362,25 @@
 </main>
 
 <nav class="app-bottom-nav" id="appBottomNav" aria-label="Основные разделы">
-    <button type="button" class="app-bottom-nav__btn is-active" data-nav-section="section-today-workout" data-nav-card="card-today">
-        <span class="app-bottom-nav__icon" aria-hidden="true">◎</span>
-        <span class="app-bottom-nav__label">Сегодня</span>
+    <button type="button" class="app-bottom-nav__btn is-active" data-nav-section="section-profile" data-nav-card="card-profile">
+        <span class="app-bottom-nav__icon" aria-hidden="true">◉</span>
+        <span class="app-bottom-nav__label">Профиль</span>
     </button>
     <button type="button" class="app-bottom-nav__btn" data-nav-section="section-builder" data-nav-card="card-builder">
         <span class="app-bottom-nav__icon" aria-hidden="true">⚙</span>
         <span class="app-bottom-nav__label">Программа</span>
     </button>
+    <button type="button" class="app-bottom-nav__btn" data-nav-section="section-today-workout" data-nav-card="card-today">
+        <span class="app-bottom-nav__icon" aria-hidden="true">◎</span>
+        <span class="app-bottom-nav__label">Сегодня</span>
+    </button>
     <button type="button" class="app-bottom-nav__btn" data-nav-section="section-templates" data-nav-card="card-templates">
         <span class="app-bottom-nav__icon" aria-hidden="true">≡</span>
         <span class="app-bottom-nav__label">Шаблоны</span>
     </button>
-    <button type="button" class="app-bottom-nav__btn" data-nav-section="section-profile" data-nav-card="card-profile">
-        <span class="app-bottom-nav__icon" aria-hidden="true">◉</span>
-        <span class="app-bottom-nav__label">Профиль</span>
+    <button type="button" class="app-bottom-nav__btn" data-nav-section="section-kbju" data-nav-card="card-kbju">
+        <span class="app-bottom-nav__icon" aria-hidden="true">◌</span>
+        <span class="app-bottom-nav__label">КБЖУ</span>
     </button>
 </nav>
 
@@ -393,6 +419,6 @@
 <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true"></div>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script type="module" src="/static/js/main.js?v=24"></script>
+<script type="module" src="/static/js/main.js?v=26"></script>
 </body>
 </html>

@@ -48,7 +48,10 @@ def _personal_slug(base: str) -> str:
 def _load_visible_exercise_rows(db: Session, current_user: User) -> list[Exercise]:
     base_rows = (
         db.query(Exercise)
-        .filter(Exercise.created_by_user_id.is_(None))
+        .filter(
+            Exercise.created_by_user_id.is_(None),
+            Exercise.source_exercise_id.is_(None),
+        )
         .order_by(Exercise.title.asc())
         .all()
     )
@@ -114,6 +117,11 @@ def get_or_create_user_by_telegram_id(
 
 
 def ensure_coach_link(db: Session, coach: User, client: User) -> None:
+    db.query(CoachClient).filter(
+        CoachClient.client_user_id == client.id,
+        CoachClient.coach_user_id != coach.id,
+    ).delete(synchronize_session=False)
+
     link = (
         db.query(CoachClient)
         .filter(
@@ -125,6 +133,62 @@ def ensure_coach_link(db: Session, coach: User, client: User) -> None:
     if not link:
         db.add(CoachClient(coach_user_id=coach.id, client_user_id=client.id))
         db.flush()
+
+
+def _coach_client_ids(db: Session, coach: User) -> list[int]:
+    return [
+        row.client_user_id
+        for row in db.query(CoachClient.client_user_id)
+        .filter(CoachClient.coach_user_id == coach.id)
+        .all()
+    ]
+
+
+def _is_coach_client(db: Session, coach: User, client: User) -> bool:
+    return (
+        db.query(CoachClient)
+        .filter(
+            CoachClient.coach_user_id == coach.id,
+            CoachClient.client_user_id == client.id,
+        )
+        .first()
+        is not None
+    )
+
+
+def _get_existing_user_by_telegram_id(db: Session, telegram_user_id: int) -> User | None:
+    return db.query(User).filter(User.telegram_user_id == telegram_user_id).first()
+
+
+def _resolve_manageable_user(
+    db: Session,
+    current_user: User,
+    target_telegram_user_id: int | None,
+) -> User:
+    if not target_telegram_user_id or target_telegram_user_id == current_user.telegram_user_id:
+        return current_user
+
+    target_user = _get_existing_user_by_telegram_id(db, target_telegram_user_id)
+    if not target_user:
+        raise ProgramError("Client is not linked to coach")
+
+    if current_user.is_admin:
+        return target_user
+
+    if current_user.is_coach and _is_coach_client(db, current_user, target_user):
+        return target_user
+
+    raise ProgramError("No permission to manage this user")
+
+
+def _can_manage_user_id(db: Session, current_user: User, owner_user_id: int | None) -> bool:
+    if current_user.is_admin:
+        return True
+    if owner_user_id is None:
+        return False
+    if owner_user_id == current_user.id:
+        return True
+    return current_user.is_coach and owner_user_id in _coach_client_ids(db, current_user)
 
 
 def _set_profile_name(db: Session, user: User, full_name: str | None) -> None:
@@ -162,6 +226,25 @@ def _client_entry_from_invite(invite: CoachClientInvite) -> dict:
     }
 
 
+def _trainer_entry_from_user(user: User) -> dict:
+    display_name = user.profile.full_name if user.profile else None
+    if not display_name:
+        name_parts = [user.first_name, user.last_name]
+        display_name = " ".join(part for part in name_parts if part) or None
+
+    return {
+        "id": user.id,
+        "telegram_user_id": user.telegram_user_id,
+        "username": user.username,
+        "full_name": display_name,
+        "can_open_chat": bool(user.username),
+        "chat_url": f"https://t.me/{user.username}" if user.username else None,
+        "chat_unavailable_reason": None
+        if user.username
+        else "У тренера не указан username, открыть чат из приложения нельзя",
+    }
+
+
 def add_client_for_coach(
     db: Session,
     coach: User,
@@ -175,7 +258,9 @@ def add_client_for_coach(
     if not telegram_user_id and not normalized_username:
         raise ProgramError("Telegram ID or username is required")
 
-    if telegram_user_id == coach.telegram_user_id or normalized_username == coach.username:
+    if telegram_user_id == coach.telegram_user_id or (
+        normalized_username and normalized_username == coach.username
+    ):
         raise ProgramError("Cannot add yourself as a client")
 
     if telegram_user_id:
@@ -184,10 +269,10 @@ def add_client_for_coach(
             client.username = normalized_username
         _set_profile_name(db, client, normalized_name)
         ensure_coach_link(db, coach, client)
-        if normalized_username:
+        invite_username = normalized_username or normalize_telegram_username(client.username)
+        if invite_username:
             db.query(CoachClientInvite).filter(
-                CoachClientInvite.coach_user_id == coach.id,
-                CoachClientInvite.username == normalized_username,
+                CoachClientInvite.username == invite_username,
             ).delete(synchronize_session=False)
         db.commit()
         db.refresh(client)
@@ -205,7 +290,6 @@ def add_client_for_coach(
         _set_profile_name(db, client, normalized_name)
         ensure_coach_link(db, coach, client)
         db.query(CoachClientInvite).filter(
-            CoachClientInvite.coach_user_id == coach.id,
             CoachClientInvite.username == normalized_username,
         ).delete(synchronize_session=False)
         db.commit()
@@ -223,6 +307,10 @@ def add_client_for_coach(
     if invite:
         invite.full_name = normalized_name or invite.full_name
     else:
+        db.query(CoachClientInvite).filter(
+            CoachClientInvite.username == normalized_username,
+            CoachClientInvite.coach_user_id != coach.id,
+        ).delete(synchronize_session=False)
         invite = CoachClientInvite(
             coach_user_id=coach.id,
             username=normalized_username,
@@ -235,8 +323,67 @@ def add_client_for_coach(
     return _client_entry_from_invite(invite)
 
 
+def remove_client_for_coach(db: Session, coach: User, client_id: int) -> None:
+    link = (
+        db.query(CoachClient)
+        .filter(
+            CoachClient.coach_user_id == coach.id,
+            CoachClient.client_user_id == client_id,
+        )
+        .first()
+    )
+    if not link:
+        raise ProgramError("Client link not found")
+
+    db.delete(link)
+    db.commit()
+
+
+def remove_pending_client_invite(db: Session, coach: User, username: str) -> None:
+    normalized_username = normalize_telegram_username(username)
+    if not normalized_username:
+        raise ProgramError("Client invite not found")
+
+    deleted = (
+        db.query(CoachClientInvite)
+        .filter(
+            CoachClientInvite.coach_user_id == coach.id,
+            CoachClientInvite.username == normalized_username,
+        )
+        .delete(synchronize_session=False)
+    )
+    if not deleted:
+        raise ProgramError("Client invite not found")
+
+    db.commit()
+
+
+def get_current_trainer(db: Session, client: User) -> dict | None:
+    trainer = (
+        db.query(User)
+        .join(CoachClient, CoachClient.coach_user_id == User.id)
+        .options(joinedload(User.profile))
+        .filter(CoachClient.client_user_id == client.id)
+        .order_by(CoachClient.id.desc())
+        .first()
+    )
+    if not trainer:
+        return None
+    return _trainer_entry_from_user(trainer)
+
+
+def remove_current_trainer(db: Session, client: User) -> None:
+    db.query(CoachClient).filter(CoachClient.client_user_id == client.id).delete(
+        synchronize_session=False
+    )
+    db.commit()
+
+
 def build_template_response(item: ProgramTemplate, db: Session, current_user: User) -> dict:
     visible_map = get_visible_exercise_display_map(db, current_user)
+    owner = (
+        db.query(User).filter(User.id == item.owner_user_id).first() if item.owner_user_id else None
+    )
 
     return {
         "id": item.id,
@@ -245,6 +392,8 @@ def build_template_response(item: ProgramTemplate, db: Session, current_user: Us
         "goal": item.goal,
         "level": item.level,
         "owner_user_id": item.owner_user_id,
+        "owner_telegram_user_id": owner.telegram_user_id if owner else None,
+        "owner_full_name": owner.profile.full_name if owner and owner.profile else None,
         "created_by_user_id": item.created_by_user_id,
         "is_public": item.is_public,
         "days": [
@@ -275,7 +424,21 @@ def build_template_response(item: ProgramTemplate, db: Session, current_user: Us
 
 
 def list_exercises(db: Session, current_user: User) -> list[Exercise]:
-    return _load_visible_exercise_rows(db, current_user)
+    rows = _load_visible_exercise_rows(db, current_user)
+
+    client_ids = _coach_client_ids(db, current_user) if current_user.is_coach else []
+    if client_ids:
+        rows.extend(
+            db.query(Exercise)
+            .filter(
+                Exercise.created_by_user_id.in_(client_ids),
+                Exercise.is_deleted.is_(False),
+            )
+            .all()
+        )
+
+    by_id = {row.id: row for row in rows}
+    return sorted(by_id.values(), key=lambda x: x.title.lower())
 
 
 def create_exercise(
@@ -284,6 +447,7 @@ def create_exercise(
     title: str,
     primary_muscle: str,
     equipment: str,
+    target_telegram_user_id: int | None = None,
 ) -> Exercise:
     normalized_title = title.strip()
     normalized_muscle = primary_muscle.strip()
@@ -296,7 +460,12 @@ def create_exercise(
     if not normalized_equipment:
         raise ProgramError("Equipment is required")
 
-    visible_rows = _load_visible_exercise_rows(db, current_user)
+    owner_user = _resolve_manageable_user(db, current_user, target_telegram_user_id)
+    is_global_admin_exercise = current_user.is_admin and owner_user.id == current_user.id
+    visible_rows = _load_visible_exercise_rows(
+        db,
+        current_user if is_global_admin_exercise else owner_user,
+    )
     if any(row.title.lower() == normalized_title.lower() for row in visible_rows):
         raise ProgramError("Exercise with this title already exists")
 
@@ -312,7 +481,7 @@ def create_exercise(
         title=normalized_title,
         primary_muscle=normalized_muscle,
         equipment=normalized_equipment,
-        created_by_user_id=current_user.id,
+        created_by_user_id=None if is_global_admin_exercise else owner_user.id,
         source_exercise_id=None,
         is_deleted=False,
     )
@@ -342,6 +511,7 @@ def update_exercise_for_user(
     title: str,
     primary_muscle: str,
     equipment: str,
+    target_telegram_user_id: int | None = None,
 ) -> Exercise:
     exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
     if not exercise:
@@ -358,7 +528,31 @@ def update_exercise_for_user(
     if not normalized_equipment:
         raise ProgramError("Equipment is required")
 
-    visible_rows = _load_visible_exercise_rows(db, current_user)
+    if exercise.created_by_user_id is not None and not _can_manage_user_id(
+        db,
+        current_user,
+        exercise.created_by_user_id,
+    ):
+        raise ProgramError("No permission to edit exercise")
+
+    owner_user = (
+        _resolve_manageable_user(db, current_user, target_telegram_user_id)
+        if exercise.created_by_user_id is None
+        else db.query(User).filter(User.id == exercise.created_by_user_id).first()
+    )
+    if owner_user is None:
+        raise ProgramError("No permission to edit exercise")
+
+    edits_global_exercise = (
+        exercise.created_by_user_id is None
+        and current_user.is_admin
+        and owner_user.id == current_user.id
+    )
+
+    visible_rows = _load_visible_exercise_rows(
+        db,
+        current_user if edits_global_exercise else owner_user,
+    )
     visible_names = {
         row.title.lower()
         for row in visible_rows
@@ -367,7 +561,7 @@ def update_exercise_for_user(
     if normalized_title.lower() in visible_names:
         raise ProgramError("Exercise with this title already exists")
 
-    if exercise.created_by_user_id == current_user.id:
+    if exercise.created_by_user_id is not None or edits_global_exercise:
         exercise.title = normalized_title
         exercise.primary_muscle = normalized_muscle
         exercise.equipment = normalized_equipment
@@ -377,14 +571,14 @@ def update_exercise_for_user(
         return exercise
 
     if exercise.created_by_user_id is None:
-        override = _find_personal_override(db, current_user, exercise.id)
+        override = _find_personal_override(db, owner_user, exercise.id)
         if override is None:
             override = Exercise(
                 slug=_personal_slug(exercise.slug),
                 title=normalized_title,
                 primary_muscle=normalized_muscle,
                 equipment=normalized_equipment,
-                created_by_user_id=current_user.id,
+                created_by_user_id=owner_user.id,
                 source_exercise_id=exercise.id,
                 is_deleted=False,
             )
@@ -399,15 +593,6 @@ def update_exercise_for_user(
         db.refresh(override)
         return override
 
-    if current_user.is_admin or current_user.is_coach:
-        exercise.title = normalized_title
-        exercise.primary_muscle = normalized_muscle
-        exercise.equipment = normalized_equipment
-        exercise.is_deleted = False
-        db.commit()
-        db.refresh(exercise)
-        return exercise
-
     raise ProgramError("No permission to edit exercise")
 
 
@@ -415,25 +600,35 @@ def delete_exercise_for_user(
     db: Session,
     current_user: User,
     exercise_id: int,
+    target_telegram_user_id: int | None = None,
 ) -> None:
     exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
     if not exercise:
         raise ProgramError("Exercise not found")
 
-    if exercise.created_by_user_id == current_user.id:
+    if exercise.created_by_user_id is not None:
+        if not _can_manage_user_id(db, current_user, exercise.created_by_user_id):
+            raise ProgramError("No permission to delete exercise")
+
         exercise.is_deleted = True
         db.commit()
         return
 
     if exercise.created_by_user_id is None:
-        override = _find_personal_override(db, current_user, exercise.id)
+        owner_user = _resolve_manageable_user(db, current_user, target_telegram_user_id)
+        if current_user.is_admin and owner_user.id == current_user.id:
+            exercise.is_deleted = True
+            db.commit()
+            return
+
+        override = _find_personal_override(db, owner_user, exercise.id)
         if override is None:
             override = Exercise(
                 slug=_personal_slug(exercise.slug),
                 title=exercise.title,
                 primary_muscle=exercise.primary_muscle,
                 equipment=exercise.equipment,
-                created_by_user_id=current_user.id,
+                created_by_user_id=owner_user.id,
                 source_exercise_id=exercise.id,
                 is_deleted=True,
             )
@@ -444,15 +639,13 @@ def delete_exercise_for_user(
         db.commit()
         return
 
-    if current_user.is_admin or current_user.is_coach:
-        exercise.is_deleted = True
-        db.commit()
-        return
-
     raise ProgramError("No permission to delete exercise")
 
 
-def validate_program_payload(payload: ProgramTemplateCreate) -> None:
+def validate_program_payload(
+    payload: ProgramTemplateCreate,
+    require_coach_target: bool = True,
+) -> None:
     if payload.goal not in GOALS:
         raise ProgramError("Unsupported goal")
     if payload.level not in LEVELS:
@@ -461,31 +654,82 @@ def validate_program_payload(payload: ProgramTemplateCreate) -> None:
         raise ProgramError("Unsupported mode")
     if not payload.days:
         raise ProgramError("At least one day is required")
-    if payload.mode == "coach" and not payload.target_telegram_user_id:
+    if payload.mode == "coach" and require_coach_target and not payload.target_telegram_user_id:
         raise ProgramError("target_telegram_user_id is required for coach mode")
+
+
+def _exercise_scope_for_template(
+    current_user: User,
+    target_user: User,
+    is_public: bool,
+) -> User:
+    return current_user if is_public else target_user
+
+
+def _template_owner(db: Session, template: ProgramTemplate) -> User | None:
+    if not template.owner_user_id:
+        return None
+    return db.query(User).filter(User.id == template.owner_user_id).first()
+
+
+def _created_by_current_user_with_manageable_owner(
+    db: Session,
+    current_user: User,
+    template: ProgramTemplate,
+) -> bool:
+    if template.created_by_user_id != current_user.id:
+        return False
+    return template.owner_user_id is None or _can_manage_user_id(
+        db,
+        current_user,
+        template.owner_user_id,
+    )
+
+
+def _can_view_template(db: Session, current_user: User, template: ProgramTemplate) -> bool:
+    return (
+        current_user.is_admin
+        or template.is_public
+        or template.owner_user_id == current_user.id
+        or _created_by_current_user_with_manageable_owner(db, current_user, template)
+        or (current_user.is_coach and template.owner_user_id in _coach_client_ids(db, current_user))
+    )
+
+
+def _can_manage_template(db: Session, current_user: User, template: ProgramTemplate) -> bool:
+    return (
+        current_user.is_admin
+        or template.owner_user_id == current_user.id
+        or _created_by_current_user_with_manageable_owner(db, current_user, template)
+        or (current_user.is_coach and template.owner_user_id in _coach_client_ids(db, current_user))
+    )
 
 
 def create_template(
     db: Session,
     current_user: User,
     payload: ProgramTemplateCreate,
+    target_user: User | None = None,
 ) -> ProgramTemplate:
     validate_program_payload(payload)
 
+    is_public = current_user.is_admin
+    owner_user = target_user if payload.mode == "coach" else current_user
     template = ProgramTemplate(
         slug=f"custom-{uuid4().hex[:10]}",
         title=payload.title,
         goal=payload.goal,
         level=payload.level,
-        owner_user_id=current_user.id if payload.mode == "self" else None,
+        owner_user_id=None if is_public else owner_user.id,
         created_by_user_id=current_user.id,
-        is_public=False,
+        is_public=is_public,
     )
     db.add(template)
     db.flush()
 
+    exercise_scope_user = _exercise_scope_for_template(current_user, owner_user, is_public)
     visible_effective_ids = {
-        _effective_exercise_id(ex) for ex in _load_visible_exercise_rows(db, current_user)
+        _effective_exercise_id(ex) for ex in _load_visible_exercise_rows(db, exercise_scope_user)
     }
 
     for index, day in enumerate(payload.days, start=1):
@@ -591,14 +835,21 @@ def create_and_optionally_assign_program(
         if not current_user.is_coach and not current_user.is_admin:
             raise ProgramError("No permission to assign program as coach")
 
-        target_user = get_or_create_user_by_telegram_id(
-            db,
-            payload.target_telegram_user_id,
-            payload.target_full_name,
-        )
-        ensure_coach_link(db, current_user, target_user)
+        if current_user.is_admin:
+            target_user = get_or_create_user_by_telegram_id(
+                db,
+                payload.target_telegram_user_id,
+                payload.target_full_name,
+            )
+        else:
+            target_user = _resolve_manageable_user(
+                db,
+                current_user,
+                payload.target_telegram_user_id,
+            )
+            _set_profile_name(db, target_user, payload.target_full_name)
 
-    template = create_template(db, current_user, payload)
+    template = create_template(db, current_user, payload, target_user)
     assigned_program = None
     workouts_created = 0
 
@@ -634,24 +885,28 @@ def create_and_optionally_assign_program(
 
 
 def list_user_templates(db: Session, current_user: User) -> list[ProgramTemplate]:
-    return (
+    client_ids = _coach_client_ids(db, current_user) if current_user.is_coach else []
+    visibility_filters = [
+        ProgramTemplate.is_public.is_(True),
+        ProgramTemplate.owner_user_id == current_user.id,
+        ProgramTemplate.created_by_user_id == current_user.id,
+    ]
+    if client_ids:
+        visibility_filters.append(ProgramTemplate.owner_user_id.in_(client_ids))
+
+    templates = (
         db.query(ProgramTemplate)
         .options(
             joinedload(ProgramTemplate.days)
             .joinedload(ProgramTemplateDay.exercises)
             .joinedload(ProgramTemplateExercise.exercise)
         )
-        .filter(
-            or_(
-                ProgramTemplate.created_by_user_id == current_user.id,
-                ProgramTemplate.owner_user_id == current_user.id,
-                ProgramTemplate.is_public.is_(True),
-            )
-        )
+        .filter(or_(*visibility_filters))
         .filter(ProgramTemplate.slug != LEGACY_DEMO_TEMPLATE_SLUG)
         .order_by(ProgramTemplate.id.desc())
         .all()
     )
+    return [template for template in templates if _can_view_template(db, current_user, template)]
 
 
 def get_template_for_user(
@@ -675,13 +930,7 @@ def get_template_for_user(
     if not template:
         raise ProgramError("Template not found")
 
-    can_view = (
-        template.is_public
-        or template.created_by_user_id == current_user.id
-        or template.owner_user_id == current_user.id
-        or current_user.is_admin
-    )
-    if not can_view:
+    if not _can_view_template(db, current_user, template):
         raise ProgramError("No permission to view template")
 
     return template
@@ -704,25 +953,37 @@ def update_template_for_user(
     if not template:
         raise ProgramError("Template not found")
 
-    can_edit = (
-        current_user.is_admin
-        or template.created_by_user_id == current_user.id
-        or template.owner_user_id == current_user.id
-    )
-    if not can_edit:
+    if not _can_manage_template(db, current_user, template):
         raise ProgramError("No permission to edit template")
 
-    validate_program_payload(payload)
+    validate_program_payload(
+        payload,
+        require_coach_target=template.owner_user_id is None and payload.mode == "coach",
+    )
 
     template.title = payload.title
     template.goal = payload.goal
     template.level = payload.level
-    template.owner_user_id = current_user.id if payload.mode == "self" else None
 
-    old_days = (
-        db.query(ProgramTemplateDay).filter(ProgramTemplateDay.program_id == template.id).all()
-    )
-    old_day_ids = [day.id for day in old_days]
+    target_user = _template_owner(db, template) or current_user
+    if not template.is_public:
+        if payload.mode == "coach" and payload.target_telegram_user_id:
+            target_user = _resolve_manageable_user(
+                db,
+                current_user,
+                payload.target_telegram_user_id,
+            )
+            template.owner_user_id = target_user.id
+        elif payload.mode == "self" and template.owner_user_id in (None, current_user.id):
+            target_user = current_user
+            template.owner_user_id = current_user.id
+
+    old_day_ids = [
+        day_id
+        for (day_id,) in db.query(ProgramTemplateDay.id)
+        .filter(ProgramTemplateDay.program_id == template.id)
+        .all()
+    ]
 
     if old_day_ids:
         db.query(ProgramTemplateExercise).filter(
@@ -731,9 +992,10 @@ def update_template_for_user(
         db.query(ProgramTemplateDay).filter(ProgramTemplateDay.id.in_(old_day_ids)).delete(
             synchronize_session=False
         )
+        db.flush()
 
     visible_effective_ids = {
-        _effective_exercise_id(ex) for ex in _load_visible_exercise_rows(db, current_user)
+        _effective_exercise_id(ex) for ex in _load_visible_exercise_rows(db, target_user)
     }
 
     for index, day in enumerate(payload.days, start=1):
@@ -805,10 +1067,12 @@ def assign_template_to_self(
 
     can_use = (
         current_user.is_admin
-        or current_user.is_coach
-        or template.created_by_user_id == current_user.id
-        or template.owner_user_id == current_user.id
         or template.is_public
+        or template.owner_user_id == current_user.id
+        or (
+            template.created_by_user_id == current_user.id
+            and template.owner_user_id in (None, current_user.id)
+        )
     )
     if not can_use:
         raise ProgramError("No permission to use template")
@@ -885,12 +1149,7 @@ def delete_template_for_user(
     if not template:
         raise ProgramError("Template not found")
 
-    can_delete = (
-        current_user.is_admin
-        or template.owner_user_id == current_user.id
-        or template.created_by_user_id == current_user.id
-    )
-    if not can_delete:
+    if not _can_manage_template(db, current_user, template):
         raise ProgramError("No permission to delete template")
 
     delete_template_cascade(db, template)

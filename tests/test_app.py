@@ -37,14 +37,27 @@ def signed_init_data(
     return urlencode(data)
 
 
-def auth(client, telegram_user_id=1001, is_coach=True, is_admin=False):
+def auth(
+    client,
+    telegram_user_id=1001,
+    is_coach=True,
+    is_admin=False,
+    username=None,
+    full_name=None,
+):
+    payload = {
+        "telegram_user_id": telegram_user_id,
+        "is_coach": is_coach,
+        "is_admin": is_admin,
+    }
+    if username is not None:
+        payload["username"] = username
+    if full_name is not None:
+        payload["full_name"] = full_name
+
     response = client.post(
         "/api/v1/auth/dev-login",
-        json={
-            "telegram_user_id": telegram_user_id,
-            "is_coach": is_coach,
-            "is_admin": is_admin,
-        },
+        json=payload,
     )
     assert response.status_code == 200
     token = response.json()["access_token"]
@@ -272,6 +285,384 @@ def test_client_target_fields_do_not_assign_program_to_another_user(client):
     assert client.get("/api/v1/workouts/today", headers=target_headers).status_code == 404
 
 
+def test_client_custom_exercise_is_private(client):
+    owner_headers = auth(client, telegram_user_id=3101, is_coach=False)
+    other_headers = auth(client, telegram_user_id=3102, is_coach=False)
+    coach_headers = auth(client, telegram_user_id=1101, is_coach=True)
+    title = "Private Client Raise"
+
+    created = client.post(
+        "/api/v1/programs/exercises",
+        json={"title": title, "primary_muscle": "shoulders", "equipment": "dumbbell"},
+        headers=owner_headers,
+    )
+
+    assert created.status_code == 201
+    assert created.json()["is_custom"] is True
+    assert created.json()["is_personalized"] is True
+
+    owner_titles = {
+        item["title"]
+        for item in client.get("/api/v1/programs/exercises", headers=owner_headers).json()
+    }
+    other_titles = {
+        item["title"]
+        for item in client.get("/api/v1/programs/exercises", headers=other_headers).json()
+    }
+    coach_titles = {
+        item["title"]
+        for item in client.get("/api/v1/programs/exercises", headers=coach_headers).json()
+    }
+
+    assert title in owner_titles
+    assert title not in other_titles
+    assert title not in coach_titles
+
+    coach_edit = client.patch(
+        f"/api/v1/programs/exercises/{created.json()['edit_target_id']}",
+        json={"title": "Coach Hijack", "primary_muscle": "back", "equipment": "barbell"},
+        headers=coach_headers,
+    )
+    assert coach_edit.status_code == 403
+
+
+def test_admin_custom_exercise_is_global(client):
+    admin_headers = auth(client, telegram_user_id=1102, is_coach=True, is_admin=True)
+    client_headers = auth(client, telegram_user_id=3103, is_coach=False)
+    coach_headers = auth(client, telegram_user_id=1103, is_coach=True)
+    title = "Global Admin Press"
+
+    created = client.post(
+        "/api/v1/programs/exercises",
+        json={"title": title, "primary_muscle": "chest", "equipment": "barbell"},
+        headers=admin_headers,
+    )
+
+    assert created.status_code == 201
+    assert created.json()["created_by_user_id"] is None
+    assert created.json()["is_custom"] is False
+
+    client_titles = {
+        item["title"]
+        for item in client.get("/api/v1/programs/exercises", headers=client_headers).json()
+    }
+    coach_titles = {
+        item["title"]
+        for item in client.get("/api/v1/programs/exercises", headers=coach_headers).json()
+    }
+
+    assert title in client_titles
+    assert title in coach_titles
+
+
+def test_coach_can_manage_own_client_exercise(client):
+    coach_headers = auth(client, telegram_user_id=1107, is_coach=True)
+    client_headers = auth(client, telegram_user_id=3109, is_coach=False)
+    other_headers = auth(client, telegram_user_id=3110, is_coach=False)
+    client_user = client.get("/api/v1/me", headers=client_headers).json()
+
+    linked = client.post(
+        "/api/v1/programs/clients",
+        json={"telegram_user_id": 3109, "full_name": "Клиент тренера"},
+        headers=coach_headers,
+    )
+    assert linked.status_code == 201
+
+    created = client.post(
+        "/api/v1/programs/exercises",
+        json={
+            "title": "Client Managed Row",
+            "primary_muscle": "back",
+            "equipment": "cable",
+            "target_telegram_user_id": 3109,
+        },
+        headers=coach_headers,
+    )
+    assert created.status_code == 201
+    assert created.json()["created_by_user_id"] == client_user["id"]
+
+    client_titles = {
+        item["title"]
+        for item in client.get("/api/v1/programs/exercises", headers=client_headers).json()
+    }
+    coach_titles = {
+        item["title"]
+        for item in client.get("/api/v1/programs/exercises", headers=coach_headers).json()
+    }
+    other_titles = {
+        item["title"]
+        for item in client.get("/api/v1/programs/exercises", headers=other_headers).json()
+    }
+    assert "Client Managed Row" in client_titles
+    assert "Client Managed Row" in coach_titles
+    assert "Client Managed Row" not in other_titles
+
+    updated = client.patch(
+        f"/api/v1/programs/exercises/{created.json()['edit_target_id']}",
+        json={"title": "Client Managed Updated", "primary_muscle": "back", "equipment": "cable"},
+        headers=coach_headers,
+    )
+    assert updated.status_code == 200
+    assert updated.json()["title"] == "Client Managed Updated"
+
+    deleted = client.delete(
+        f"/api/v1/programs/exercises/{created.json()['edit_target_id']}",
+        headers=coach_headers,
+    )
+    assert deleted.status_code == 204
+    client_titles_after_delete = {
+        item["title"]
+        for item in client.get("/api/v1/programs/exercises", headers=client_headers).json()
+    }
+    assert "Client Managed Updated" not in client_titles_after_delete
+
+
+def test_coach_cannot_create_exercise_for_non_client(client):
+    coach_headers = auth(client, telegram_user_id=1108, is_coach=True)
+    auth(client, telegram_user_id=3111, is_coach=False)
+
+    created = client.post(
+        "/api/v1/programs/exercises",
+        json={
+            "title": "Non Client Row",
+            "primary_muscle": "legs",
+            "equipment": "machine",
+            "target_telegram_user_id": 3111,
+        },
+        headers=coach_headers,
+    )
+
+    assert created.status_code == 403
+
+
+def test_client_template_is_private(client):
+    owner_headers = auth(client, telegram_user_id=3104, is_coach=False)
+    other_headers = auth(client, telegram_user_id=3105, is_coach=False)
+    exercises = client.get("/api/v1/programs/exercises", headers=owner_headers).json()
+    title = "Private Client Template"
+    payload = {
+        "title": title,
+        "goal": "recomposition",
+        "level": "intermediate",
+        "mode": "self",
+        "assign_after_create": False,
+        "days": [
+            {
+                "title": "День 1",
+                "exercises": [
+                    {
+                        "exercise_id": exercises[0]["id"],
+                        "prescribed_sets": 1,
+                        "prescribed_reps": "8",
+                        "rest_seconds": 90,
+                    }
+                ],
+            }
+        ],
+    }
+
+    created = client.post("/api/v1/programs/templates", json=payload, headers=owner_headers)
+
+    assert created.status_code == 200
+    assert created.json()["template"]["is_public"] is False
+
+    owner_titles = {
+        item["title"]
+        for item in client.get("/api/v1/programs/templates/mine", headers=owner_headers).json()
+    }
+    other_titles = {
+        item["title"]
+        for item in client.get("/api/v1/programs/templates/mine", headers=other_headers).json()
+    }
+
+    assert title in owner_titles
+    assert title not in other_titles
+
+
+def test_admin_template_is_public(client):
+    admin_headers = auth(client, telegram_user_id=1104, is_coach=True, is_admin=True)
+    client_headers = auth(client, telegram_user_id=3106, is_coach=False)
+    coach_headers = auth(client, telegram_user_id=1105, is_coach=True)
+    exercises = client.get("/api/v1/programs/exercises", headers=admin_headers).json()
+    title = "Global Admin Template"
+    payload = {
+        "title": title,
+        "goal": "recomposition",
+        "level": "intermediate",
+        "mode": "self",
+        "assign_after_create": False,
+        "days": [
+            {
+                "title": "День 1",
+                "exercises": [
+                    {
+                        "exercise_id": exercises[0]["id"],
+                        "prescribed_sets": 1,
+                        "prescribed_reps": "8",
+                        "rest_seconds": 90,
+                    }
+                ],
+            }
+        ],
+    }
+
+    created = client.post("/api/v1/programs/templates", json=payload, headers=admin_headers)
+
+    assert created.status_code == 200
+    assert created.json()["template"]["is_public"] is True
+
+    client_titles = {
+        item["title"]
+        for item in client.get("/api/v1/programs/templates/mine", headers=client_headers).json()
+    }
+    coach_titles = {
+        item["title"]
+        for item in client.get("/api/v1/programs/templates/mine", headers=coach_headers).json()
+    }
+
+    assert title in client_titles
+    assert title in coach_titles
+
+
+def test_coach_can_manage_program_for_own_client(client):
+    coach_headers = auth(client, telegram_user_id=1109, is_coach=True)
+    client_headers = auth(client, telegram_user_id=3112, is_coach=False)
+    other_coach_headers = auth(client, telegram_user_id=1110, is_coach=True)
+    client_user = client.get("/api/v1/me", headers=client_headers).json()
+
+    linked = client.post(
+        "/api/v1/programs/clients",
+        json={"telegram_user_id": 3112, "full_name": "Клиент программы"},
+        headers=coach_headers,
+    )
+    assert linked.status_code == 201
+
+    exercises = client.get("/api/v1/programs/exercises", headers=client_headers).json()
+    payload = {
+        "title": "Client Managed Program",
+        "goal": "recomposition",
+        "level": "intermediate",
+        "mode": "coach",
+        "target_telegram_user_id": 3112,
+        "target_full_name": "Клиент программы",
+        "assign_after_create": False,
+        "days": [
+            {
+                "title": "День 1",
+                "exercises": [
+                    {
+                        "exercise_id": exercises[0]["id"],
+                        "prescribed_sets": 1,
+                        "prescribed_reps": "8",
+                        "rest_seconds": 90,
+                    }
+                ],
+            }
+        ],
+    }
+
+    created = client.post("/api/v1/programs/templates", json=payload, headers=coach_headers)
+    assert created.status_code == 200
+    assert created.json()["template"]["owner_user_id"] == client_user["id"]
+    template_id = created.json()["template"]["id"]
+
+    client_titles = {
+        item["title"]
+        for item in client.get("/api/v1/programs/templates/mine", headers=client_headers).json()
+    }
+    coach_titles = {
+        item["title"]
+        for item in client.get("/api/v1/programs/templates/mine", headers=coach_headers).json()
+    }
+    other_coach_titles = {
+        item["title"]
+        for item in client.get(
+            "/api/v1/programs/templates/mine", headers=other_coach_headers
+        ).json()
+    }
+    assert "Client Managed Program" in client_titles
+    assert "Client Managed Program" in coach_titles
+    assert "Client Managed Program" not in other_coach_titles
+
+    payload["title"] = "Client Managed Program Updated"
+    updated = client.patch(
+        f"/api/v1/programs/templates/{template_id}",
+        json=payload,
+        headers=coach_headers,
+    )
+    assert updated.status_code == 200
+    assert updated.json()["title"] == "Client Managed Program Updated"
+
+    blocked_delete = client.delete(
+        f"/api/v1/programs/templates/{template_id}",
+        headers=other_coach_headers,
+    )
+    assert blocked_delete.status_code == 403
+
+    deleted = client.delete(f"/api/v1/programs/templates/{template_id}", headers=coach_headers)
+    assert deleted.status_code == 204
+    assert (
+        client.get(f"/api/v1/programs/templates/{template_id}", headers=client_headers).status_code
+        == 404
+    )
+
+
+def test_coach_cannot_create_program_for_non_client(client):
+    coach_headers = auth(client, telegram_user_id=1111, is_coach=True)
+    target_headers = auth(client, telegram_user_id=3113, is_coach=False)
+    exercises = client.get("/api/v1/programs/exercises", headers=target_headers).json()
+    payload = {
+        "title": "Forbidden Client Program",
+        "goal": "recomposition",
+        "level": "intermediate",
+        "mode": "coach",
+        "target_telegram_user_id": 3113,
+        "target_full_name": "Не клиент",
+        "assign_after_create": False,
+        "days": [
+            {
+                "title": "День 1",
+                "exercises": [
+                    {
+                        "exercise_id": exercises[0]["id"],
+                        "prescribed_sets": 1,
+                        "prescribed_reps": "8",
+                        "rest_seconds": 90,
+                    }
+                ],
+            }
+        ],
+    }
+
+    created = client.post("/api/v1/programs/templates", json=payload, headers=coach_headers)
+
+    assert created.status_code == 403
+
+
+def test_deleted_user_custom_exercises_do_not_become_global(client):
+    admin_headers = auth(client, telegram_user_id=1106, is_coach=True, is_admin=True)
+    user_headers = auth(client, telegram_user_id=3107, is_coach=False)
+    other_headers = auth(client, telegram_user_id=3108, is_coach=False)
+    user = client.get("/api/v1/me", headers=user_headers).json()
+    title = "Deleted User Private Exercise"
+
+    created = client.post(
+        "/api/v1/programs/exercises",
+        json={"title": title, "primary_muscle": "legs", "equipment": "machine"},
+        headers=user_headers,
+    )
+    assert created.status_code == 201
+
+    deleted = client.delete(f"/api/v1/admin/users/{user['id']}", headers=admin_headers)
+
+    assert deleted.status_code == 204
+    other_titles = {
+        item["title"]
+        for item in client.get("/api/v1/programs/exercises", headers=other_headers).json()
+    }
+    assert title not in other_titles
+
+
 def test_coach_can_add_client_by_telegram_id(client):
     headers = auth(client, telegram_user_id=1002, is_coach=True)
 
@@ -288,6 +679,119 @@ def test_coach_can_add_client_by_telegram_id(client):
     listed = client.get("/api/v1/programs/clients", headers=headers)
     assert listed.status_code == 200
     assert any(row["telegram_user_id"] == 2001 for row in listed.json())
+
+
+def test_client_has_only_one_active_coach_and_trainer_info(client):
+    coach_one_headers = auth(
+        client,
+        telegram_user_id=1201,
+        is_coach=True,
+        username="@coach_one",
+        full_name="Тренер Первый",
+    )
+    coach_two_headers = auth(
+        client,
+        telegram_user_id=1202,
+        is_coach=True,
+        username="@coach_two",
+        full_name="Тренер Второй",
+    )
+    client_headers = auth(client, telegram_user_id=5201, is_coach=False)
+    client_user = client.get("/api/v1/me", headers=client_headers).json()
+
+    first_link = client.post(
+        "/api/v1/coach/clients",
+        json={"telegram_user_id": 5201, "full_name": "Клиент с тренером"},
+        headers=coach_one_headers,
+    )
+    assert first_link.status_code == 201
+
+    trainer = client.get("/api/v1/me", headers=client_headers).json()["trainer"]
+    assert trainer["username"] == "coach_one"
+    assert trainer["full_name"] == "Тренер Первый"
+    assert trainer["chat_url"] == "https://t.me/coach_one"
+    assert trainer["can_open_chat"] is True
+
+    second_link = client.post(
+        "/api/v1/coach/clients",
+        json={"telegram_user_id": 5201, "full_name": "Клиент с тренером"},
+        headers=coach_two_headers,
+    )
+    assert second_link.status_code == 201
+
+    first_clients = client.get("/api/v1/coach/clients", headers=coach_one_headers).json()
+    second_clients = client.get("/api/v1/coach/clients", headers=coach_two_headers).json()
+    assert not any(row["id"] == client_user["id"] for row in first_clients)
+    assert any(row["id"] == client_user["id"] for row in second_clients)
+    assert (
+        client.get("/api/v1/me", headers=client_headers).json()["trainer"]["username"]
+        == "coach_two"
+    )
+
+
+def test_coach_can_remove_client_link(client):
+    coach_headers = auth(client, telegram_user_id=1203, is_coach=True, username="@unlink_coach")
+    client_headers = auth(client, telegram_user_id=5202, is_coach=False)
+    client_user = client.get("/api/v1/me", headers=client_headers).json()
+
+    linked = client.post(
+        "/api/v1/coach/clients",
+        json={"telegram_user_id": 5202, "full_name": "Клиент на удаление"},
+        headers=coach_headers,
+    )
+    assert linked.status_code == 201
+    assert client.get("/api/v1/me", headers=client_headers).json()["trainer"]
+
+    removed = client.delete(f"/api/v1/coach/clients/{client_user['id']}", headers=coach_headers)
+
+    assert removed.status_code == 204
+    assert client.get("/api/v1/me", headers=client_headers).json()["trainer"] is None
+    rows = client.get("/api/v1/coach/clients", headers=coach_headers).json()
+    assert not any(row["id"] == client_user["id"] for row in rows)
+
+
+def test_client_can_detach_trainer(client):
+    coach_headers = auth(client, telegram_user_id=1204, is_coach=True, username="@detach_coach")
+    client_headers = auth(client, telegram_user_id=5203, is_coach=False)
+    client_user = client.get("/api/v1/me", headers=client_headers).json()
+
+    linked = client.post(
+        "/api/v1/coach/clients",
+        json={"telegram_user_id": 5203, "full_name": "Самостоятельный клиент"},
+        headers=coach_headers,
+    )
+    assert linked.status_code == 201
+
+    detached = client.delete("/api/v1/me/trainer", headers=client_headers)
+
+    assert detached.status_code == 204
+    assert client.get("/api/v1/me", headers=client_headers).json()["trainer"] is None
+    rows = client.get("/api/v1/coach/clients", headers=coach_headers).json()
+    assert not any(row["id"] == client_user["id"] for row in rows)
+
+
+def test_trainer_info_without_username_is_not_clickable(client):
+    coach_headers = auth(
+        client,
+        telegram_user_id=1205,
+        is_coach=True,
+        username="",
+        full_name="Тренер Без Username",
+    )
+    client_headers = auth(client, telegram_user_id=5204, is_coach=False)
+
+    linked = client.post(
+        "/api/v1/coach/clients",
+        json={"telegram_user_id": 5204, "full_name": "Клиент без ссылки"},
+        headers=coach_headers,
+    )
+    assert linked.status_code == 201
+
+    trainer = client.get("/api/v1/me", headers=client_headers).json()["trainer"]
+    assert trainer["full_name"] == "Тренер Без Username"
+    assert trainer["can_open_chat"] is False
+    assert trainer["chat_url"] is None
+    assert "username" in trainer["chat_unavailable_reason"]
 
 
 def test_coach_can_invite_client_by_username_and_link_on_login(client):

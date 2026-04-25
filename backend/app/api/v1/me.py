@@ -1,16 +1,16 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.schemas.user import UserProfileResponse, UserProfileUpdate, UserResponse
 from app.services.profile import update_profile
+from app.services.programs import get_current_trainer, remove_current_trainer
 from app.services.security import get_current_user
 
 router = APIRouter()
 
 
-@router.get("", response_model=UserResponse)
-def read_me(user=Depends(get_current_user)):
+def _build_user_response(db: Session, user) -> UserResponse:
     return UserResponse(
         id=user.id,
         telegram_user_id=user.telegram_user_id,
@@ -29,7 +29,13 @@ def read_me(user=Depends(get_current_user)):
         )
         if user.profile
         else None,
+        trainer=get_current_trainer(db, user),
     )
+
+
+@router.get("", response_model=UserResponse)
+def read_me(user=Depends(get_current_user), db: Session = Depends(get_db)):
+    return _build_user_response(db, user)
 
 
 @router.patch("/profile", response_model=UserResponse)
@@ -37,4 +43,10 @@ def patch_profile(
     payload: UserProfileUpdate, db: Session = Depends(get_db), user=Depends(get_current_user)
 ):
     user = update_profile(db, user, payload)
-    return read_me(user)
+    return _build_user_response(db, user)
+
+
+@router.delete("/trainer", status_code=status.HTTP_204_NO_CONTENT)
+def detach_trainer(db: Session = Depends(get_db), user=Depends(get_current_user)):
+    remove_current_trainer(db, user)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1115" />
+  <title>Кабинет тренера - FitMiniApp</title>
+  <link rel="stylesheet" href="/static/styles.css?v=23" />
+</head>
+<body>
+  <main class="container narrow">
+    <div class="card hero-card">
+      <div>
+        <h1>Кабинет тренера</h1>
+        <p class="muted">Клиенты, закреплённые за вашим тренерским аккаунтом.</p>
+      </div>
+      <a href="/app" class="button-link">К Mini App</a>
+    </div>
+
+    <div class="card">
+      <div class="section-head">
+        <div>
+          <h2>Добавить клиента</h2>
+          <p class="muted top-gap">Укажите Telegram ID или username клиента.</p>
+        </div>
+      </div>
+      <div class="grid grid-3 top-gap">
+        <input id="clientTelegramId" type="number" placeholder="Telegram ID" />
+        <input id="clientUsername" type="text" placeholder="@username" />
+        <input id="clientFullName" type="text" placeholder="Имя клиента" />
+      </div>
+      <div class="toolbar top-gap">
+        <button id="addClientBtn" type="button">Добавить клиента</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-head">
+        <h2>Мои клиенты</h2>
+        <button id="reloadClientsBtn" class="secondary" type="button">Обновить</button>
+      </div>
+      <div id="coachClientsList" class="stack"></div>
+    </div>
+
+    <div class="card">
+      <h2>Лог</h2>
+      <pre id="coachLog" class="log-box"></pre>
+    </div>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script>
+    const accessTokenKey = 'fit_access_token';
+
+    const $ = (id) => document.getElementById(id);
+
+    function log(msg) {
+      const node = $('coachLog');
+      if (!node) return;
+      const text = typeof msg === 'string' ? msg : JSON.stringify(msg, null, 2);
+      node.textContent = `${new Date().toLocaleTimeString()} - ${text}\n${node.textContent}`;
+    }
+
+    function showToast(message, type = 'success') {
+      const toast = $('toast');
+      if (!toast) return;
+
+      toast.textContent = message;
+      toast.className = `toast ${type === 'error' ? 'error' : ''}`.trim();
+
+      setTimeout(() => {
+        toast.className = 'toast hidden';
+      }, 2500);
+    }
+
+    function escapeHtml(value) {
+      const text = value == null ? '' : String(value);
+      const replacements = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;',
+      };
+      return text.replace(/[&<>"']/g, (char) => replacements[char]);
+    }
+
+    function authHeaders() {
+      const token = localStorage.getItem(accessTokenKey);
+      return {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
+    }
+
+    async function api(path, options = {}) {
+      const res = await fetch(path, {
+        ...options,
+        headers: {
+          ...authHeaders(),
+          ...(options.headers || {}),
+        },
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text);
+      }
+      if (res.status === 204) return null;
+      return res.json();
+    }
+
+    function getClientDisplayName(client) {
+      return client.full_name || client.username || client.telegram_user_id || 'Клиент';
+    }
+
+    async function ensureCoachAccess() {
+      const me = await api('/api/v1/me');
+      if (!me.is_coach && !me.is_admin) {
+        $('coachClientsList').innerHTML = '<p class="muted">Недостаточно прав тренера.</p>';
+        throw new Error('Недостаточно прав тренера');
+      }
+    }
+
+    async function loadClients() {
+      const rows = await api('/api/v1/coach/clients');
+      const list = $('coachClientsList');
+
+      list.innerHTML = rows.length
+        ? rows.map((client) => {
+          const isPending = client.status === 'pending';
+          return `
+            <div class="item-card">
+              <strong>${escapeHtml(getClientDisplayName(client))}</strong><br>
+              <span class="muted">
+                ${isPending ? 'Ожидает входа' : `ID: ${escapeHtml(client.telegram_user_id)}`}
+                ${client.username ? ` | @${escapeHtml(client.username)}` : ''}
+                ${!isPending ? ` | цель=${escapeHtml(client.goal || '-')} | уровень=${escapeHtml(client.level || '-')}` : ''}
+              </span>
+              <div class="toolbar wrap top-gap">
+                ${!isPending ? `<a class="button-link" href="/app">Назначить программу</a>` : ''}
+                <button
+                  class="btn-danger remove-client-btn"
+                  type="button"
+                  data-client-id="${escapeHtml(client.id || '')}"
+                  data-client-username="${escapeHtml(client.username || '')}"
+                  data-client-name="${escapeHtml(getClientDisplayName(client))}"
+                  data-pending="${isPending ? 'true' : 'false'}"
+                >
+                  Удалить
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('')
+        : '<p class="muted">Клиентов пока нет</p>';
+
+      document.querySelectorAll('.remove-client-btn').forEach((button) => {
+        button.onclick = async () => {
+          const name = button.dataset.clientName || 'клиента';
+          if (!confirm(`Удалить ${name} из моих клиентов? Аккаунт и тренировки клиента сохранятся.`)) {
+            return;
+          }
+
+          try {
+            if (button.dataset.pending === 'true') {
+              await api(`/api/v1/coach/client-invites/${encodeURIComponent(button.dataset.clientUsername)}`, {
+                method: 'DELETE',
+              });
+            } else {
+              await api(`/api/v1/coach/clients/${button.dataset.clientId}`, {
+                method: 'DELETE',
+              });
+            }
+            showToast('Клиент удалён из списка');
+            await loadClients();
+          } catch (error) {
+            log(String(error));
+            showToast('Не удалось удалить клиента', 'error');
+          }
+        };
+      });
+    }
+
+    async function addClient() {
+      const telegramIdValue = $('clientTelegramId').value.trim();
+      const username = $('clientUsername').value.trim();
+      const fullName = $('clientFullName').value.trim();
+
+      if (!telegramIdValue && !username) {
+        showToast('Укажите Telegram ID или username клиента', 'error');
+        return;
+      }
+
+      const client = await api('/api/v1/coach/clients', {
+        method: 'POST',
+        body: JSON.stringify({
+          telegram_user_id: telegramIdValue ? Number(telegramIdValue) : null,
+          username: username || null,
+          full_name: fullName || null,
+        }),
+      });
+
+      $('clientTelegramId').value = '';
+      $('clientUsername').value = '';
+      $('clientFullName').value = '';
+
+      showToast(client.status === 'pending' ? 'Клиент добавлен в ожидание' : 'Клиент закреплён');
+      await loadClients();
+    }
+
+    $('addClientBtn').onclick = async () => {
+      try {
+        await addClient();
+      } catch (error) {
+        log(String(error));
+        showToast('Не удалось добавить клиента', 'error');
+      }
+    };
+
+    $('reloadClientsBtn').onclick = async () => {
+      try {
+        await loadClients();
+      } catch (error) {
+        log(String(error));
+        showToast('Не удалось загрузить клиентов', 'error');
+      }
+    };
+
+    (async () => {
+      try {
+        await ensureCoachAccess();
+        await loadClients();
+      } catch (error) {
+        log(String(error));
+      }
+    })();
+  </script>
+</body>
+</html>

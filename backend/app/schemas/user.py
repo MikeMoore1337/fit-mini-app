@@ -19,6 +19,16 @@ class UserProfileResponse(BaseModel):
     workouts_per_week: int | None = None
 
 
+class TrainerResponse(BaseModel):
+    id: int
+    telegram_user_id: int
+    username: str | None = None
+    full_name: str | None = None
+    can_open_chat: bool = False
+    chat_url: str | None = None
+    chat_unavailable_reason: str | None = None
+
+
 class UserResponse(BaseModel):
     id: int
     telegram_user_id: int
@@ -28,3 +38,4 @@ class UserResponse(BaseModel):
     is_coach: bool = False
     is_admin: bool = False
     profile: UserProfileResponse | None = None
+    trainer: TrainerResponse | None = None

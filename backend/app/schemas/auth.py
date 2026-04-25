@@ -5,6 +5,7 @@ class DevLoginRequest(BaseModel):
     telegram_user_id: int = Field(..., ge=1)
     is_coach: bool = False
     is_admin: bool = False
+    username: str | None = None
     full_name: str | None = None
 
 
