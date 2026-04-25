@@ -246,6 +246,47 @@ def test_create_program_and_today_workout(client):
     assert today.json()["title"] == "День 1"
 
 
+def test_user_can_clear_completed_workout_history(client):
+    headers = auth(client, telegram_user_id=6401, is_coach=False)
+    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()
+    payload = {
+        "title": "Программа для очистки истории",
+        "goal": "recomposition",
+        "level": "intermediate",
+        "mode": "self",
+        "assign_after_create": True,
+        "days": [
+            {
+                "title": "День 1",
+                "exercises": [
+                    {
+                        "exercise_id": exercises[0]["id"],
+                        "prescribed_sets": 1,
+                        "prescribed_reps": "8",
+                        "rest_seconds": 90,
+                    }
+                ],
+            }
+        ],
+    }
+    created = client.post("/api/v1/programs/templates", json=payload, headers=headers)
+    assert created.status_code == 200
+
+    assert client.get("/api/v1/workouts/history", headers=headers).json() == []
+    today = client.get("/api/v1/workouts/today", headers=headers).json()
+    finished = client.post(f"/api/v1/workouts/{today['id']}/finish", headers=headers)
+    assert finished.status_code == 200
+
+    history = client.get("/api/v1/workouts/history", headers=headers)
+    assert history.status_code == 200
+    assert len(history.json()) == 1
+
+    cleared = client.delete("/api/v1/workouts/history", headers=headers)
+    assert cleared.status_code == 204
+    assert client.get("/api/v1/workouts/history", headers=headers).json() == []
+    assert client.get("/api/v1/workouts/today", headers=headers).status_code == 404
+
+
 def test_workout_set_patch(client):
     headers = auth(client, telegram_user_id=2001, is_coach=False)
     exercises = client.get("/api/v1/programs/exercises", headers=headers).json()

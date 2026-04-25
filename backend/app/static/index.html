@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
     <meta name="theme-color" content="#0f1115"/>
     <title>FitMiniApp</title>
-    <link rel="stylesheet" href="/static/styles.css?v=27"/>
+    <link rel="stylesheet" href="/static/styles.css?v=28"/>
 </head>
 <body>
 <main class="container" id="app-main">
@@ -226,7 +226,10 @@
     <div class="card">
         <div class="section-head">
             <h2>История тренировок</h2>
-            <button class="secondary section-toggle" type="button" data-target="section-history">Свернуть</button>
+            <div class="toolbar wrap">
+                <button id="clearHistoryBtn" class="secondary hidden" type="button">Очистить историю</button>
+                <button class="secondary section-toggle" type="button" data-target="section-history">Свернуть</button>
+            </div>
         </div>
         <div id="section-history" class="section-content">
             <div id="workoutHistory" class="stack"></div>
@@ -426,6 +429,6 @@
 <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true"></div>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script type="module" src="/static/js/main.js?v=27"></script>
+<script type="module" src="/static/js/main.js?v=28"></script>
 </body>
 </html>

@@ -36,6 +36,34 @@ def _get_user_workout_or_404(db: Session, current_user: User, workout_id: int) -
     return workout
 
 
+def _delete_workouts(db: Session, workout_ids: list[int]) -> int:
+    if not workout_ids:
+        return 0
+
+    workout_exercise_ids = [
+        item.id
+        for item in db.query(UserWorkoutExercise.id)
+        .filter(UserWorkoutExercise.workout_id.in_(workout_ids))
+        .all()
+    ]
+
+    if workout_exercise_ids:
+        db.query(UserWorkoutSet).filter(
+            UserWorkoutSet.workout_exercise_id.in_(workout_exercise_ids)
+        ).delete(synchronize_session=False)
+
+        db.query(UserWorkoutExercise).filter(
+            UserWorkoutExercise.id.in_(workout_exercise_ids)
+        ).delete(synchronize_session=False)
+
+    deleted = (
+        db.query(UserWorkout)
+        .filter(UserWorkout.id.in_(workout_ids))
+        .delete(synchronize_session=False)
+    )
+    return deleted
+
+
 def _serialize_workout(workout: UserWorkout, db: Session, current_user: User) -> dict:
     visible_map = get_visible_exercise_display_map(db, current_user)
 
@@ -127,21 +155,7 @@ def delete_today_workout(
     if not workout:
         raise HTTPException(status_code=404, detail="На сегодня тренировка не назначена")
 
-    workout_exercises = (
-        db.query(UserWorkoutExercise).filter(UserWorkoutExercise.workout_id == workout.id).all()
-    )
-    workout_exercise_ids = [item.id for item in workout_exercises]
-
-    if workout_exercise_ids:
-        db.query(UserWorkoutSet).filter(
-            UserWorkoutSet.workout_exercise_id.in_(workout_exercise_ids)
-        ).delete(synchronize_session=False)
-
-        db.query(UserWorkoutExercise).filter(
-            UserWorkoutExercise.id.in_(workout_exercise_ids)
-        ).delete(synchronize_session=False)
-
-    db.delete(workout)
+    _delete_workouts(db, [workout.id])
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -243,7 +257,10 @@ def workout_history(
     workouts = (
         db.query(UserWorkout)
         .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
-        .filter(UserProgram.user_id == current_user.id)
+        .filter(
+            UserProgram.user_id == current_user.id,
+            UserWorkout.status == "completed",
+        )
         .order_by(UserWorkout.scheduled_date.desc(), UserWorkout.id.desc())
         .offset(offset)
         .limit(limit)
@@ -261,3 +278,23 @@ def workout_history(
         }
         for item in workouts
     ]
+
+
+@router.delete("/history", status_code=status.HTTP_204_NO_CONTENT)
+def clear_workout_history(
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    workout_ids = [
+        item.id
+        for item in db.query(UserWorkout.id)
+        .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
+        .filter(
+            UserProgram.user_id == current_user.id,
+            UserWorkout.status == "completed",
+        )
+        .all()
+    ]
+    _delete_workouts(db, workout_ids)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

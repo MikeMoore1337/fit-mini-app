@@ -38,18 +38,45 @@ export function setAppLoading(active) {
   document.body.classList.toggle('app-loading', active);
 }
 
-export function expandSectionAndScroll(sectionContentId, cardId) {
+function getSectionStorageKey(sectionContentId) {
+  return `${sectionStoragePrefix}${sectionContentId}`;
+}
+
+export function getStoredSectionState(sectionContentId) {
+  try {
+    return localStorage.getItem(getSectionStorageKey(sectionContentId));
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredSectionState(sectionContentId, state) {
+  try {
+    localStorage.setItem(getSectionStorageKey(sectionContentId), state);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function setSectionCollapsed(sectionContentId, collapsed, { persist = true } = {}) {
   const body = document.getElementById(sectionContentId);
   const btn = document.querySelector(`.section-toggle[data-target="${sectionContentId}"]`);
   if (body && btn) {
-    body.classList.remove('hidden');
-    btn.textContent = 'Свернуть';
-    try {
-      localStorage.setItem(`${sectionStoragePrefix}${sectionContentId}`, 'expanded');
-    } catch {
-      /* ignore */
-    }
+    body.classList.toggle('hidden', collapsed);
+    btn.textContent = collapsed ? 'Развернуть' : 'Свернуть';
+    if (persist) setStoredSectionState(sectionContentId, collapsed ? 'collapsed' : 'expanded');
   }
+}
+
+export function restoreSectionState(sectionContentId) {
+  setSectionCollapsed(sectionContentId, getStoredSectionState(sectionContentId) === 'collapsed', {
+    persist: false,
+  });
+}
+
+export function expandSectionAndScroll(sectionContentId, cardId) {
+  setSectionCollapsed(sectionContentId, false);
+
   const card = document.getElementById(cardId);
   if (card) {
     card.scrollIntoView({ behavior: 'smooth', block: 'start' });

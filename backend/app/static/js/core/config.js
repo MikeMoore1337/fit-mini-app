@@ -1,4 +1,4 @@
-export const FRONTEND_VERSION = 'v27';
+export const FRONTEND_VERSION = 'v28';
 
 export const accessTokenKey = 'fit_access_token';
 export const refreshTokenKey = 'fit_refresh_token';
@@ -33,6 +33,7 @@ export const API = {
   finishWorkout: (workoutId) => `/api/v1/workouts/${workoutId}/finish`,
   updateSet: (setId) => `/api/v1/workouts/sets/${setId}`,
   workoutHistory: (offset, limit) => `/api/v1/workouts/history?offset=${offset}&limit=${limit}`,
+  clearWorkoutHistory: '/api/v1/workouts/history',
 
   billingPlans: '/api/v1/billing/plans',
   billingSubscription: '/api/v1/billing/subscription',

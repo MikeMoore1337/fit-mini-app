@@ -1,4 +1,4 @@
-import { API, accessTokenKey, refreshTokenKey, sectionStoragePrefix } from './core/config.js';
+import { API, accessTokenKey, refreshTokenKey } from './core/config.js';
 import { state } from './core/state.js';
 import {
   $,
@@ -9,6 +9,8 @@ import {
   openConfirmDialog,
   bindGlobalNavHandlers,
   expandSectionAndScroll,
+  restoreSectionState,
+  setSectionCollapsed,
 } from './core/ui.js';
 import { api, clearTokens, sleep } from './core/http.js';
 
@@ -397,22 +399,11 @@ function initSectionToggles() {
     const body = document.getElementById(targetId);
     if (!body) return;
 
-    const storageKey = `${sectionStoragePrefix}${targetId}`;
-    const savedState = localStorage.getItem(storageKey);
-
-    if (savedState === 'collapsed') {
-      body.classList.add('hidden');
-      button.textContent = 'Развернуть';
-    } else {
-      body.classList.remove('hidden');
-      button.textContent = 'Свернуть';
-    }
+    restoreSectionState(targetId);
 
     button.onclick = () => {
       const collapsed = !body.classList.contains('hidden');
-      body.classList.toggle('hidden', collapsed);
-      button.textContent = collapsed ? 'Развернуть' : 'Свернуть';
-      localStorage.setItem(storageKey, collapsed ? 'collapsed' : 'expanded');
+      setSectionCollapsed(targetId, collapsed);
     };
   });
 }
@@ -1943,6 +1934,7 @@ function renderWorkoutHistoryRows(rows, append = false) {
   }
 
   if (!rows.length && !append) {
+    updateHistoryClearVisibility(false);
     container.innerHTML = `
       <div class="empty-state">
         <p class="empty-state__title">История пуста</p>
@@ -1956,6 +1948,10 @@ function renderWorkoutHistoryRows(rows, append = false) {
     return;
   }
 
+  if (rows.length) {
+    updateHistoryClearVisibility(true);
+  }
+
   const html = rows
     .map((item) => `
       <div class="item-card">
@@ -1966,6 +1962,12 @@ function renderWorkoutHistoryRows(rows, append = false) {
     .join('');
 
   container.insertAdjacentHTML('beforeend', html);
+}
+
+function updateHistoryClearVisibility(visible) {
+  const btn = $('clearHistoryBtn');
+  if (!btn) return;
+  btn.classList.toggle('hidden', !visible);
 }
 
 function updateHistoryLoadMoreVisibility() {
@@ -1993,6 +1995,26 @@ async function resetHistoryAndReload() {
   state.historyOffset = 0;
   state.historyHasMore = true;
   await loadWorkoutHistory(false);
+}
+
+async function clearWorkoutHistory() {
+  const ok = await openConfirmDialog({
+    title: 'Очистить историю?',
+    message: 'Будут удалены завершённые тренировки и сохранённые подходы. Текущая незавершённая тренировка останется.',
+    okText: 'Очистить',
+    danger: true,
+  });
+  if (!ok) return;
+
+  await withReauth(() =>
+    api(API.clearWorkoutHistory, {
+      method: 'DELETE',
+    })
+  );
+
+  showToast('История тренировок очищена');
+  await loadTodayWorkout();
+  await resetHistoryAndReload();
 }
 
 async function loadBilling() {
@@ -2401,6 +2423,17 @@ function bindUI() {
       } catch (error) {
         log(`loadMoreHistoryBtn: ${String(error)}`);
         toastError(error, 'Не удалось загрузить ещё историю');
+      }
+    };
+  }
+
+  if ($('clearHistoryBtn')) {
+    $('clearHistoryBtn').onclick = async () => {
+      try {
+        await clearWorkoutHistory();
+      } catch (error) {
+        log(`clearHistoryBtn: ${String(error)}`);
+        toastError(error, 'Не удалось очистить историю');
       }
     };
   }
