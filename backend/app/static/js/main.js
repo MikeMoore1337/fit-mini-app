@@ -144,9 +144,13 @@ function canDeleteTemplate(template) {
   );
 }
 
+function getEffectiveBuilderMode() {
+  const requestedMode = $('builder_mode')?.value || 'self';
+  return requestedMode === 'coach' && isCoachOrAdmin() ? 'coach' : 'self';
+}
+
 function canEditSelfBuilder() {
-  const mode = $('builder_mode')?.value;
-  return mode === 'self' || isCoachOrAdmin();
+  return getEffectiveBuilderMode() === 'self' || isCoachOrAdmin();
 }
 
 function resetBuilderEditMode() {
@@ -171,11 +175,28 @@ function toggleCoachUI() {
 
   const coachFields = $('coachFields');
   const builderMode = $('builder_mode');
+  const canAssignClients = isCoachOrAdmin();
+
+  if (builderMode) {
+    const coachOption = [...builderMode.options].find((option) => option.value === 'coach');
+    if (coachOption) {
+      coachOption.disabled = !canAssignClients;
+      coachOption.hidden = !canAssignClients;
+    }
+
+    if (!canAssignClients && builderMode.value === 'coach') {
+      builderMode.value = 'self';
+    }
+  }
+
   if (coachFields && builderMode) {
-    coachFields.classList.toggle(
-      'hidden',
-      builderMode.value !== 'coach' || !isCoachOrAdmin()
-    );
+    const showCoachFields = builderMode.value === 'coach' && canAssignClients;
+    coachFields.classList.toggle('hidden', !showCoachFields);
+
+    if (!showCoachFields) {
+      if ($('target_telegram_user_id')) $('target_telegram_user_id').value = '';
+      if ($('target_full_name')) $('target_full_name').value = '';
+    }
   }
 
   const clientsCard = $('clientsCard');
@@ -726,6 +747,7 @@ function fillExample() {
 }
 
 function collectProgramPayload() {
+  const mode = getEffectiveBuilderMode();
   const days = [...document.querySelectorAll('.day-card')].map((day) => ({
     title: day.querySelector('.day-title')?.value?.trim() || 'День',
     exercises: [...day.querySelectorAll('.program-ex-row')].map((row) => ({
@@ -741,11 +763,11 @@ function collectProgramPayload() {
     title: $('program_title')?.value?.trim() || 'Моя программа',
     goal: $('program_goal')?.value,
     level: $('program_level')?.value,
-    mode: $('builder_mode')?.value,
-    target_telegram_user_id: $('target_telegram_user_id')?.value
+    mode,
+    target_telegram_user_id: mode === 'coach' && $('target_telegram_user_id')?.value
       ? Number($('target_telegram_user_id').value)
       : null,
-    target_full_name: $('target_full_name')?.value?.trim() || null,
+    target_full_name: mode === 'coach' ? $('target_full_name')?.value?.trim() || null : null,
     days,
     assign_after_create: true,
   };

@@ -237,6 +237,41 @@ def test_client_cannot_assign_program_as_coach(client):
     assert response.status_code == 400
 
 
+def test_client_target_fields_do_not_assign_program_to_another_user(client):
+    target_headers = auth(client, telegram_user_id=3998, is_coach=False)
+    headers = auth(client, telegram_user_id=3002, is_coach=False)
+    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()
+    payload = {
+        "title": "Программа только для себя",
+        "goal": "recomposition",
+        "level": "intermediate",
+        "mode": "self",
+        "target_telegram_user_id": 3998,
+        "target_full_name": "Чужой клиент",
+        "assign_after_create": True,
+        "days": [
+            {
+                "title": "День 1",
+                "exercises": [
+                    {
+                        "exercise_id": exercises[0]["id"],
+                        "prescribed_sets": 1,
+                        "prescribed_reps": "8",
+                        "rest_seconds": 90,
+                    }
+                ],
+            }
+        ],
+    }
+
+    response = client.post("/api/v1/programs/templates", json=payload, headers=headers)
+
+    assert response.status_code == 200
+    assert response.json()["target_user"]["telegram_user_id"] == 3002
+    assert client.get("/api/v1/workouts/today", headers=headers).status_code == 200
+    assert client.get("/api/v1/workouts/today", headers=target_headers).status_code == 404
+
+
 def test_coach_can_add_client_by_telegram_id(client):
     headers = auth(client, telegram_user_id=1002, is_coach=True)
 
