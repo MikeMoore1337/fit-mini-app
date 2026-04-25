@@ -1,5 +1,5 @@
-import { API, accessTokenKey, refreshTokenKey } from './core/config.js';
-import { state } from './core/state.js';
+import { API, FRONTEND_VERSION, accessTokenKey, refreshTokenKey } from './core/config.js?v=30';
+import { state } from './core/state.js?v=30';
 import {
   $,
   log,
@@ -11,8 +11,15 @@ import {
   expandSectionAndScroll,
   restoreSectionState,
   setSectionCollapsed,
-} from './core/ui.js';
-import { api, clearTokens, sleep } from './core/http.js?v=29';
+} from './core/ui.js?v=30';
+import { api, clearTokens, sleep } from './core/http.js?v=30';
+
+window.__fitMiniAppBoot = {
+  ...(window.__fitMiniAppBoot || {}),
+  moduleStarted: true,
+  frontendVersion: FRONTEND_VERSION,
+  moduleStartedAt: new Date().toISOString(),
+};
 
 window.onerror = function (message, source, lineno, colno, error) {
   log({
@@ -36,6 +43,17 @@ window.onunhandledrejection = function (event) {
 function setAuthState(text) {
   const node = $('authState');
   if (node) node.textContent = text;
+}
+
+function reportFatalStartupError(error) {
+  log({
+    type: 'startup-fatal',
+    reason: String(error),
+    stack: error?.stack || null,
+  });
+  setAppLoading(false);
+  setAuthState(`Ошибка запуска интерфейса: ${error?.message || String(error)}`);
+  showToast('Ошибка запуска интерфейса', 'error');
 }
 
 function isCoachOrAdmin() {
@@ -2443,12 +2461,20 @@ function bindUI() {
 }
 
 async function init() {
+  window.__fitMiniAppBoot = {
+    ...(window.__fitMiniAppBoot || {}),
+    initStarted: true,
+    initStartedAt: new Date().toISOString(),
+  };
+
+  setAuthState('Запускаем интерфейс...');
   bindUI();
   bindGlobalNavHandlers();
   initSectionToggles();
   renderTelegramDebug();
 
   try {
+    setAuthState('Загружаем настройки приложения...');
     await loadEnv();
   } catch (error) {
     log(`loadEnv: ${String(error)}`);
@@ -2508,4 +2534,16 @@ async function init() {
   setAuthState('Не удалось авторизоваться через Telegram');
 }
 
-document.addEventListener('DOMContentLoaded', init);
+let initStarted = false;
+
+function startInit() {
+  if (initStarted) return;
+  initStarted = true;
+  init().catch(reportFatalStartupError);
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startInit, { once: true });
+} else {
+  startInit();
+}

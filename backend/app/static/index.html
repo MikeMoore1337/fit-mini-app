@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
     <meta name="theme-color" content="#0f1115"/>
     <title>FitMiniApp</title>
-    <link rel="stylesheet" href="/static/styles.css?v=29"/>
+    <link rel="stylesheet" href="/static/styles.css?v=30"/>
 </head>
 <body>
 <main class="container" id="app-main">
@@ -428,7 +428,42 @@
 
 <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true"></div>
 
+<script>
+    (function () {
+        window.__fitMiniAppBoot = window.__fitMiniAppBoot || {};
+
+        function showBootProblem(message) {
+            var authState = document.getElementById('authState');
+            if (authState) authState.textContent = message;
+
+            var logCard = document.getElementById('logCard');
+            var log = document.getElementById('log');
+            if (logCard) logCard.classList.remove('hidden');
+            if (log) {
+                log.textContent =
+                    new Date().toLocaleTimeString() + ' - boot watchdog: ' + message + '\n' + log.textContent;
+            }
+        }
+
+        window.addEventListener(
+            'error',
+            function (event) {
+                var target = event.target;
+                if (target && target.tagName === 'SCRIPT') {
+                    showBootProblem('Не удалось загрузить скрипт приложения. Обновите страницу и попробуйте снова.');
+                }
+            },
+            true
+        );
+
+        setTimeout(function () {
+            if (!window.__fitMiniAppBoot.moduleStarted) {
+                showBootProblem('Интерфейс не запустился. Обновите страницу или заново откройте Mini App из Telegram.');
+            }
+        }, 5000);
+    })();
+</script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script type="module" src="/static/js/main.js?v=29"></script>
+<script type="module" src="/static/js/main.js?v=30"></script>
 </body>
 </html>

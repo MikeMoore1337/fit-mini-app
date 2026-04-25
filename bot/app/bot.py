@@ -14,7 +14,7 @@ from aiogram.types import (
 from app.config import settings
 
 dp = Dispatcher()
-MINI_APP_CACHE_VERSION = "29"
+MINI_APP_CACHE_VERSION = "30"
 
 
 def mini_app_url() -> str:
@@ -48,7 +48,9 @@ def url_keyboard(url: str) -> InlineKeyboardMarkup:
 async def set_mini_app_menu_button(bot: Bot, chat_id: int | None = None) -> None:
     url = mini_app_url()
     if not is_https_url(url):
-        print(f"Skipped Mini App menu button: FRONTEND_BASE_URL must be HTTPS, got {url}")
+        print(
+            f"Skipped Mini App menu button: FRONTEND_BASE_URL must be HTTPS, got {url}", flush=True
+        )
         return
 
     try:
@@ -59,8 +61,9 @@ async def set_mini_app_menu_button(bot: Bot, chat_id: int | None = None) -> None
                 web_app=WebAppInfo(url=url),
             ),
         )
+        print(f"Mini App menu button configured for {url}", flush=True)
     except Exception as exc:
-        print(f"Failed to set Mini App menu button for {url}: {exc!r}")
+        print(f"Failed to set Mini App menu button for {url}: {exc!r}", flush=True)
 
 
 async def answer_with_open_button(message: Message) -> None:
@@ -74,9 +77,9 @@ async def answer_with_open_button(message: Message) -> None:
             )
             return
         except Exception as exc:
-            print(f"Failed to send Mini App web_app button for {url}: {exc!r}")
+            print(f"Failed to send Mini App web_app button for {url}: {exc!r}", flush=True)
     else:
-        print(f"Mini App web_app button requires HTTPS URL, got {url}")
+        print(f"Mini App web_app button requires HTTPS URL, got {url}", flush=True)
 
     try:
         await message.answer(
@@ -84,7 +87,7 @@ async def answer_with_open_button(message: Message) -> None:
             reply_markup=url_keyboard(url),
         )
     except Exception as exc:
-        print(f"Failed to send fallback URL button for {url}: {exc!r}")
+        print(f"Failed to send fallback URL button for {url}: {exc!r}", flush=True)
         await message.answer(f"Открыть FitMiniApp: {url}")
 
 
@@ -99,12 +102,14 @@ async def start(message: Message) -> None:
 
 async def main() -> None:
     if not settings.bot_token or settings.bot_token == "replace-me":
-        print("BOT_TOKEN not configured - bot is idle")
+        print("BOT_TOKEN not configured - bot is idle", flush=True)
         while True:
             await asyncio.sleep(3600)
 
     bot = Bot(settings.bot_token)
+    print(f"Bot starting polling. Mini App URL: {mini_app_url()}", flush=True)
     await set_mini_app_menu_button(bot)
+    print("Bot polling started", flush=True)
     await dp.start_polling(bot)
 
 
