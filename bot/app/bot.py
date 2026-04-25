@@ -14,10 +14,11 @@ from aiogram.types import (
 from app.config import settings
 
 dp = Dispatcher()
+MINI_APP_CACHE_VERSION = "29"
 
 
 def mini_app_url() -> str:
-    return f"{settings.frontend_base_url.rstrip('/')}/app?v=23"
+    return f"{settings.frontend_base_url.rstrip('/')}/app?v={MINI_APP_CACHE_VERSION}"
 
 
 def is_https_url(url: str) -> bool:
@@ -44,7 +45,7 @@ def url_keyboard(url: str) -> InlineKeyboardMarkup:
     )
 
 
-async def set_mini_app_menu_button(bot: Bot, user_id: int | None = None) -> None:
+async def set_mini_app_menu_button(bot: Bot, chat_id: int | None = None) -> None:
     url = mini_app_url()
     if not is_https_url(url):
         print(f"Skipped Mini App menu button: FRONTEND_BASE_URL must be HTTPS, got {url}")
@@ -52,7 +53,7 @@ async def set_mini_app_menu_button(bot: Bot, user_id: int | None = None) -> None
 
     try:
         await bot.set_chat_menu_button(
-            user_id=user_id,
+            chat_id=chat_id,
             menu_button=MenuButtonWebApp(
                 text="Открыть Mini App",
                 web_app=WebAppInfo(url=url),
@@ -91,7 +92,7 @@ async def answer_with_open_button(message: Message) -> None:
 async def start(message: Message) -> None:
     await set_mini_app_menu_button(
         message.bot,
-        user_id=message.from_user.id if message.from_user else None,
+        chat_id=message.from_user.id if message.from_user else None,
     )
     await answer_with_open_button(message)
 

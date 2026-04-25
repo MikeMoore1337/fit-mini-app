@@ -12,7 +12,7 @@ import {
   restoreSectionState,
   setSectionCollapsed,
 } from './core/ui.js';
-import { api, clearTokens, sleep } from './core/http.js';
+import { api, clearTokens, sleep } from './core/http.js?v=29';
 
 window.onerror = function (message, source, lineno, colno, error) {
   log({
@@ -445,7 +445,7 @@ async function waitForTelegramInitData(timeoutMs = 4000) {
 }
 
 async function loadEnv() {
-  state.publicConfig = await api(API.publicConfig);
+  state.publicConfig = await api(API.publicConfig, { timeoutMs: 4000 });
   const envBadge = $('env-badge');
 
   if (envBadge && state.publicConfig.app_env === 'dev') {
@@ -552,8 +552,11 @@ async function tryTelegramAutoLogin() {
     return await telegramLogin({ silent: false });
   } catch (error) {
     log(`Ошибка Telegram auth: ${String(error)}`);
-    setAuthState('Не удалось войти через Telegram');
-    showToast('Не удалось войти через Telegram', 'error');
+    const message = error?.message
+      ? `Не удалось войти через Telegram: ${error.message}`
+      : 'Не удалось войти через Telegram';
+    setAuthState(message);
+    showToast(error?.message || 'Не удалось войти через Telegram', 'error');
     return false;
   }
 }
