@@ -1,4 +1,4 @@
-export const FRONTEND_VERSION = 'v26';
+export const FRONTEND_VERSION = 'v27';
 
 export const accessTokenKey = 'fit_access_token';
 export const refreshTokenKey = 'fit_refresh_token';
@@ -11,6 +11,7 @@ export const API = {
   me: '/api/v1/me',
   meProfile: '/api/v1/me/profile',
   detachTrainer: '/api/v1/me/trainer',
+  saveNutritionTarget: '/api/v1/nutrition/targets',
 
   exercises: '/api/v1/programs/exercises',
   createExercise: '/api/v1/programs/exercises',

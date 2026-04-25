@@ -181,6 +181,80 @@ function renderTrainerInfo(trainer) {
   }
 }
 
+function getKbjuGoalLabel(goal) {
+  return ({
+    fat_loss: 'Похудение',
+    muscle_gain: 'Набор',
+    maintenance: 'Поддержание',
+    recomposition: 'Рекомпозиция',
+  }[goal] || goal || '-');
+}
+
+function getKbjuSexLabel(sex) {
+  return sex === 'female' ? 'Женский' : 'Мужской';
+}
+
+function getAssignedByLabel(assignedBy) {
+  if (!assignedBy) return '';
+  const username = assignedBy.username ? `@${assignedBy.username}` : '';
+  const name = assignedBy.full_name || '';
+  return [username, name].filter(Boolean).join(' / ') || `ID ${assignedBy.telegram_user_id}`;
+}
+
+function renderProfileKbju(kbju) {
+  const node = $('profileKbju');
+  if (!node) return;
+
+  if (!kbju) {
+    node.classList.add('hidden');
+    node.innerHTML = '';
+    return;
+  }
+
+  const assignedByLabel = getAssignedByLabel(kbju.assigned_by);
+  const savedAt = kbju.saved_at ? new Date(kbju.saved_at).toLocaleString() : '';
+
+  node.innerHTML = `
+    <div class="profile-kbju__head">
+      <strong>Сохранённый КБЖУ</strong>
+      <span class="muted">${escapeHtml(savedAt)}</span>
+    </div>
+    <div class="kbju-result-grid top-gap">
+      <div>
+        <span class="muted">Калории</span>
+        <strong>${escapeHtml(kbju.calories)} ккал</strong>
+      </div>
+      <div>
+        <span class="muted">Белки</span>
+        <strong>${escapeHtml(kbju.protein_g)} г</strong>
+      </div>
+      <div>
+        <span class="muted">Жиры</span>
+        <strong>${escapeHtml(kbju.fat_g)} г</strong>
+      </div>
+      <div>
+        <span class="muted">Углеводы</span>
+        <strong>${escapeHtml(kbju.carbs_g)} г</strong>
+      </div>
+      <div>
+        <span class="muted">Поддержание</span>
+        <strong>${escapeHtml(kbju.tdee)} ккал</strong>
+      </div>
+      <div>
+        <span class="muted">Цель</span>
+        <strong>${escapeHtml(getKbjuGoalLabel(kbju.goal))}</strong>
+      </div>
+    </div>
+    <div class="muted top-gap">
+      ${escapeHtml(getKbjuSexLabel(kbju.sex))}, ${escapeHtml(kbju.weight_kg)} кг,
+      ${escapeHtml(kbju.height_cm)} см, ${escapeHtml(kbju.age)} лет,
+      силовые ${escapeHtml(kbju.strength_trainings_per_week)} / кардио ${escapeHtml(kbju.cardio_trainings_per_week)}
+      ${assignedByLabel ? ` · назначил ${escapeHtml(assignedByLabel)}` : ''}
+    </div>
+  `;
+  node.classList.remove('hidden');
+}
+
 function escapeHtml(value) {
   const text = value == null ? '' : String(value);
   const replacements = {
@@ -282,6 +356,7 @@ function toggleCoachUI() {
   if (logCard) logCard.classList.toggle('hidden', !isAdmin());
 
   syncExerciseOwnerOptions();
+  syncKbjuTargetOptions();
   refreshBuilderControls();
 }
 
@@ -508,6 +583,24 @@ async function withReauth(action) {
   }
 }
 
+function fillKbjuFormFromUser(user) {
+  const profile = user?.profile || {};
+  const kbju = profile.kbju || user?.kbju || null;
+
+  if ($('kbjuSex')) $('kbjuSex').value = kbju?.sex || 'male';
+  if ($('kbjuWeight')) $('kbjuWeight').value = kbju?.weight_kg ?? profile.weight_kg ?? '';
+  if ($('kbjuHeight')) $('kbjuHeight').value = kbju?.height_cm ?? profile.height_cm ?? '';
+  if ($('kbjuAge')) $('kbjuAge').value = kbju?.age ?? '';
+  if ($('kbjuGoal')) $('kbjuGoal').value = kbju?.goal || profile.goal || 'maintenance';
+  if ($('kbjuStrength')) {
+    $('kbjuStrength').value =
+      kbju?.strength_trainings_per_week ?? profile.workouts_per_week ?? '';
+  }
+  if ($('kbjuCardio')) $('kbjuCardio').value = kbju?.cardio_trainings_per_week ?? '';
+
+  calculateKbju({ silent: true });
+}
+
 async function loadMe() {
   state.me = await withReauth(() => api(API.me));
   const profile = state.me.profile || {};
@@ -518,19 +611,20 @@ async function loadMe() {
   if ($('height_cm')) $('height_cm').value = profile.height_cm || '';
   if ($('weight_kg')) $('weight_kg').value = profile.weight_kg || '';
   if ($('workouts_per_week')) $('workouts_per_week').value = profile.workouts_per_week || '';
-  if ($('kbjuWeight')) $('kbjuWeight').value = profile.weight_kg || '';
-  if ($('kbjuHeight')) $('kbjuHeight').value = profile.height_cm || '';
-  if ($('kbjuGoal')) $('kbjuGoal').value = profile.goal || 'maintenance';
-  if ($('kbjuStrength') && profile.workouts_per_week != null) {
-    $('kbjuStrength').value = profile.workouts_per_week;
+
+  renderProfileKbju(profile.kbju);
+  if (!$('kbjuTarget')?.value) {
+    fillKbjuFormFromUser(state.me);
+  } else {
+    calculateKbju({ silent: true });
   }
-  calculateKbju({ silent: true });
 
   renderCurrentAccess(state.me);
   renderTrainerInfo(state.me.trainer);
   setAuthState('Вход выполнен');
 
   toggleCoachUI();
+  syncKbjuTargetOptions();
 }
 
 async function saveProfile() {
@@ -619,6 +713,7 @@ function calculateKbju({ silent = false } = {}) {
   const goal = $('kbjuGoal')?.value || 'maintenance';
 
   if (!weight || !height || !age || strength == null || cardio == null) {
+    state.currentKbjuResult = null;
     if (!silent) {
       result.classList.remove('hidden');
       result.innerHTML = '<div class="item-card muted">Заполни вес, рост, возраст и тренировки.</div>';
@@ -626,7 +721,7 @@ function calculateKbju({ silent = false } = {}) {
       result.classList.add('hidden');
       result.innerHTML = '';
     }
-    return;
+    return null;
   }
 
   const sexConstant = sex === 'female' ? -161 : 5;
@@ -634,6 +729,23 @@ function calculateKbju({ silent = false } = {}) {
   const tdee = bmr * getActivityFactor(strength, cardio);
   const targetCalories = getGoalCalories(tdee, goal);
   const macros = calculateMacros(weight, targetCalories, goal);
+  const calculation = {
+    sex,
+    weight_kg: weight,
+    height_cm: height,
+    age,
+    strength_trainings_per_week: strength,
+    cardio_trainings_per_week: cardio,
+    goal,
+    bmr: roundNumber(bmr),
+    tdee: roundNumber(tdee),
+    calories: targetCalories,
+    protein_g: macros.protein,
+    fat_g: macros.fat,
+    carbs_g: macros.carbs,
+  };
+
+  state.currentKbjuResult = calculation;
 
   result.classList.remove('hidden');
   result.innerHTML = `
@@ -664,6 +776,43 @@ function calculateKbju({ silent = false } = {}) {
       </div>
     </div>
   `;
+  return calculation;
+}
+
+function buildKbjuSavePayload() {
+  const calculation = calculateKbju({ silent: false });
+  if (!calculation) return null;
+
+  const targetTelegramUserId = $('kbjuTarget')?.value || '';
+  return {
+    target_telegram_user_id: targetTelegramUserId ? Number(targetTelegramUserId) : null,
+    sex: calculation.sex,
+    weight_kg: calculation.weight_kg,
+    height_cm: calculation.height_cm,
+    age: calculation.age,
+    strength_trainings_per_week: calculation.strength_trainings_per_week,
+    cardio_trainings_per_week: calculation.cardio_trainings_per_week,
+    goal: calculation.goal,
+  };
+}
+
+async function saveKbju() {
+  const payload = buildKbjuSavePayload();
+  if (!payload) return;
+
+  await withReauth(() =>
+    api(API.saveNutritionTarget, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  );
+
+  showToast(payload.target_telegram_user_id ? 'КБЖУ назначен клиенту' : 'КБЖУ сохранён');
+  if (payload.target_telegram_user_id) {
+    await loadClients();
+  } else {
+    await loadMe();
+  }
 }
 
 async function loadExercises() {
@@ -1154,6 +1303,78 @@ function syncExerciseOwnerOptions() {
   select.classList.toggle('hidden', !isCoachOrAdmin() || !clients.length);
 }
 
+function getSelectedKbjuClient() {
+  const selectedTelegramId = $('kbjuTarget')?.value || '';
+  if (!selectedTelegramId) return null;
+  return getActiveClients().find((client) => String(client.telegram_user_id) === selectedTelegramId) || null;
+}
+
+function updateSaveKbjuButton() {
+  const button = $('saveKbjuBtn');
+  if (!button) return;
+  button.textContent = getSelectedKbjuClient() ? 'Назначить клиенту' : 'Сохранить КБЖУ';
+}
+
+function syncKbjuTargetOptions() {
+  const select = $('kbjuTarget');
+  if (!select) return;
+
+  const clients = getActiveClients();
+  const currentValue = select.value || '';
+  select.innerHTML = [
+    '<option value="">Для себя</option>',
+    ...clients.map(
+      (client) =>
+        `<option value="${escapeHtml(client.telegram_user_id)}">Клиент: ${escapeHtml(getClientDisplayName(client))}</option>`
+    ),
+  ].join('');
+
+  const hasCurrentValue = [...select.options].some((option) => option.value === currentValue);
+  select.value = hasCurrentValue ? currentValue : '';
+  select.classList.toggle('hidden', !isCoachOrAdmin() || !clients.length);
+
+  if (currentValue && !hasCurrentValue) {
+    fillKbjuFormFromUser(state.me);
+  }
+
+  updateSaveKbjuButton();
+}
+
+function fillKbjuFormFromSelectedTarget() {
+  const selectedClient = getSelectedKbjuClient();
+  if (!selectedClient) {
+    fillKbjuFormFromUser(state.me);
+    updateSaveKbjuButton();
+    return;
+  }
+
+  fillKbjuFormFromUser({
+    profile: {
+      kbju: selectedClient.kbju,
+      goal: selectedClient.goal,
+      height_cm: selectedClient.height_cm,
+      weight_kg: selectedClient.weight_kg,
+      workouts_per_week: selectedClient.workouts_per_week,
+    },
+  });
+  updateSaveKbjuButton();
+}
+
+function selectClientForKbju(client) {
+  if (!client.telegram_user_id) {
+    showToast('Клиент ещё не привязан к Telegram ID', 'error');
+    return;
+  }
+
+  syncKbjuTargetOptions();
+  if ($('kbjuTarget')) {
+    $('kbjuTarget').value = String(client.telegram_user_id);
+  }
+  fillKbjuFormFromSelectedTarget();
+  expandSectionAndScroll('section-kbju', 'card-kbju');
+  showToast(`Клиент выбран: ${getClientDisplayName(client)}`);
+}
+
 function selectClientForProgram(client) {
   if (!client.telegram_user_id) {
     showToast('Клиент ещё не привязан к Telegram ID', 'error');
@@ -1313,12 +1534,14 @@ async function loadClients() {
   if (!isCoachOrAdmin()) {
     state.clients = [];
     syncExerciseOwnerOptions();
+    syncKbjuTargetOptions();
     return;
   }
 
   const rows = await withReauth(() => api(API.clients));
   state.clients = rows;
   syncExerciseOwnerOptions();
+  syncKbjuTargetOptions();
   const list = $('clientsList');
   if (!list) return;
 
@@ -1346,6 +1569,13 @@ async function loadClients() {
                     >
                       Назначить программу
                     </button>
+                    <button
+                      class="secondary assign-kbju-client-btn"
+                      type="button"
+                      data-client='${escapeHtml(JSON.stringify(c))}'
+                    >
+                      Назначить КБЖУ
+                    </button>
                   </div>`
             }
           </div>`;
@@ -1363,6 +1593,17 @@ async function loadClients() {
         selectClientForProgram(JSON.parse(btn.dataset.client));
       } catch (error) {
         log(`selectClientForProgram: ${String(error)}`);
+        showToast('Не удалось выбрать клиента', 'error');
+      }
+    };
+  });
+
+  document.querySelectorAll('.assign-kbju-client-btn').forEach((btn) => {
+    btn.onclick = () => {
+      try {
+        selectClientForKbju(JSON.parse(btn.dataset.client));
+      } catch (error) {
+        log(`selectClientForKbju: ${String(error)}`);
         showToast('Не удалось выбрать клиента', 'error');
       }
     };
@@ -1996,8 +2237,19 @@ function bindUI() {
     };
   }
 
-  if ($('calculateKbjuBtn')) {
-    $('calculateKbjuBtn').onclick = () => calculateKbju();
+  if ($('saveKbjuBtn')) {
+    $('saveKbjuBtn').onclick = async () => {
+      try {
+        await saveKbju();
+      } catch (error) {
+        log(`saveKbju: ${String(error)}`);
+        toastError(error, 'Не удалось сохранить КБЖУ');
+      }
+    };
+  }
+
+  if ($('kbjuTarget')) {
+    $('kbjuTarget').addEventListener('change', fillKbjuFormFromSelectedTarget);
   }
 
   [

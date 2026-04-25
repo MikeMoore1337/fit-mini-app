@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
     <meta name="theme-color" content="#0f1115"/>
     <title>FitMiniApp</title>
-    <link rel="stylesheet" href="/static/styles.css?v=26"/>
+    <link rel="stylesheet" href="/static/styles.css?v=27"/>
 </head>
 <body>
 <main class="container" id="app-main">
@@ -99,6 +99,7 @@
         </div>
         <div id="section-profile" class="section-content">
             <div id="trainerInfo" class="item-card hidden"></div>
+            <div id="profileKbju" class="item-card hidden"></div>
             <div class="grid grid-4">
                 <input id="full_name" type="text" placeholder="Имя"/>
                 <select id="goal">
@@ -318,6 +319,9 @@
         </div>
         <div id="section-kbju" class="section-content">
             <div class="grid grid-4">
+                <select id="kbjuTarget" class="hidden">
+                    <option value="">Для себя</option>
+                </select>
                 <select id="kbjuSex">
                     <option value="male">Мужской</option>
                     <option value="female">Женский</option>
@@ -333,10 +337,13 @@
                     <option value="maintenance">Поддержание</option>
                     <option value="recomposition">Рекомпозиция</option>
                 </select>
-                <button id="calculateKbjuBtn" type="button">Рассчитать</button>
             </div>
 
             <div id="kbjuResult" class="kbju-result hidden top-gap"></div>
+
+            <div class="toolbar top-gap">
+                <button id="saveKbjuBtn" type="button">Сохранить КБЖУ</button>
+            </div>
         </div>
     </div>
 
@@ -419,6 +426,6 @@
 <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true"></div>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script type="module" src="/static/js/main.js?v=26"></script>
+<script type="module" src="/static/js/main.js?v=27"></script>
 </body>
 </html>

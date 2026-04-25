@@ -1,6 +1,7 @@
 from app.models.billing import Payment, Plan, Subscription
 from app.models.exercise import Exercise
 from app.models.notification import Notification, NotificationSetting
+from app.models.nutrition import NutritionTarget
 from app.models.program import (
     ProgramTemplate,
     ProgramTemplateDay,
@@ -19,6 +20,7 @@ __all__ = [
     "Exercise",
     "Notification",
     "NotificationSetting",
+    "NutritionTarget",
     "Payment",
     "Plan",
     "ProgramTemplate",

@@ -18,6 +18,7 @@ from app.models.program import (
 )
 from app.models.user import CoachClient, CoachClientInvite, User, UserProfile
 from app.schemas.program import ProgramTemplateCreate
+from app.services.nutrition import get_nutrition_target_for_user
 from app.services.telegram_auth import normalize_telegram_username
 
 GOALS = {"muscle_gain", "fat_loss", "maintenance", "recomposition"}
@@ -202,14 +203,19 @@ def _set_profile_name(db: Session, user: User, full_name: str | None) -> None:
         db.add(UserProfile(user_id=user.id, full_name=full_name))
 
 
-def _client_entry_from_user(user: User) -> dict:
+def _client_entry_from_user(db: Session, user: User) -> dict:
+    profile = user.profile
     return {
         "id": user.id,
         "telegram_user_id": user.telegram_user_id,
         "username": user.username,
-        "full_name": user.profile.full_name if user.profile else None,
-        "goal": user.profile.goal if user.profile else None,
-        "level": user.profile.level if user.profile else None,
+        "full_name": profile.full_name if profile else None,
+        "goal": profile.goal if profile else None,
+        "level": profile.level if profile else None,
+        "height_cm": profile.height_cm if profile else None,
+        "weight_kg": profile.weight_kg if profile else None,
+        "workouts_per_week": profile.workouts_per_week if profile else None,
+        "kbju": get_nutrition_target_for_user(db, user),
         "status": "active",
     }
 
@@ -222,6 +228,10 @@ def _client_entry_from_invite(invite: CoachClientInvite) -> dict:
         "full_name": invite.full_name,
         "goal": None,
         "level": None,
+        "height_cm": None,
+        "weight_kg": None,
+        "workouts_per_week": None,
+        "kbju": None,
         "status": "pending",
     }
 
@@ -276,7 +286,7 @@ def add_client_for_coach(
             ).delete(synchronize_session=False)
         db.commit()
         db.refresh(client)
-        return _client_entry_from_user(client)
+        return _client_entry_from_user(db, client)
 
     client = (
         db.query(User)
@@ -294,7 +304,7 @@ def add_client_for_coach(
         ).delete(synchronize_session=False)
         db.commit()
         db.refresh(client)
-        return _client_entry_from_user(client)
+        return _client_entry_from_user(db, client)
 
     invite = (
         db.query(CoachClientInvite)
@@ -1043,7 +1053,7 @@ def list_clients(db: Session, coach: User) -> list[dict]:
         .all()
     )
 
-    return [_client_entry_from_user(user) for user in clients] + [
+    return [_client_entry_from_user(db, user) for user in clients] + [
         _client_entry_from_invite(invite) for invite in invites
     ]
 

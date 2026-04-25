@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 
+from app.schemas.nutrition import NutritionTargetResponse
+
 
 class UserProfileUpdate(BaseModel):
     full_name: str | None = None
@@ -17,6 +19,7 @@ class UserProfileResponse(BaseModel):
     height_cm: int | None = None
     weight_kg: int | None = None
     workouts_per_week: int | None = None
+    kbju: NutritionTargetResponse | None = None
 
 
 class TrainerResponse(BaseModel):

@@ -8,6 +8,7 @@ export const state = {
   publicConfig: null,
   workoutTimer: null,
   currentWorkoutTimerStartedAtMs: null,
+  currentKbjuResult: null,
   historyOffset: 0,
   historyLimit: 4,
   historyHasMore: true,

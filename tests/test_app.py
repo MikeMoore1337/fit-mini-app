@@ -83,6 +83,120 @@ def test_dev_login_can_set_admin_role(client):
     assert data["is_admin"] is True
 
 
+def test_client_can_save_kbju_and_see_it_in_profile(client):
+    headers = auth(client, telegram_user_id=6001, is_coach=False)
+    payload = {
+        "sex": "male",
+        "weight_kg": 80.0,
+        "height_cm": 180.0,
+        "age": 30.0,
+        "strength_trainings_per_week": 3,
+        "cardio_trainings_per_week": 1,
+        "goal": "muscle_gain",
+    }
+
+    saved = client.post("/api/v1/nutrition/targets", json=payload, headers=headers)
+
+    assert saved.status_code == 200
+    data = saved.json()
+    assert data["calories"] == 3035
+    assert data["protein_g"] == 144
+    assert data["fat_g"] == 72
+    assert data["carbs_g"] == 453
+
+    me = client.get("/api/v1/me", headers=headers).json()
+    kbju = me["profile"]["kbju"]
+    assert kbju["calories"] == 3035
+    assert kbju["assigned_by"]["telegram_user_id"] == 6001
+
+
+def test_coach_can_assign_kbju_to_own_client(client):
+    coach_headers = auth(
+        client,
+        telegram_user_id=6101,
+        is_coach=True,
+        username="@nutrition_coach",
+        full_name="КБЖУ Тренер",
+    )
+    client_headers = auth(client, telegram_user_id=6102, is_coach=False)
+    client.post(
+        "/api/v1/coach/clients",
+        json={"telegram_user_id": 6102},
+        headers=coach_headers,
+    )
+
+    saved = client.post(
+        "/api/v1/nutrition/targets",
+        json={
+            "target_telegram_user_id": 6102,
+            "sex": "female",
+            "weight_kg": 64.5,
+            "height_cm": 168.0,
+            "age": 28.0,
+            "strength_trainings_per_week": 2,
+            "cardio_trainings_per_week": 2,
+            "goal": "fat_loss",
+        },
+        headers=coach_headers,
+    )
+
+    assert saved.status_code == 200
+    data = saved.json()
+    assert data["telegram_user_id"] == 6102
+    assert data["assigned_by"]["username"] == "nutrition_coach"
+
+    me = client.get("/api/v1/me", headers=client_headers).json()
+    kbju = me["profile"]["kbju"]
+    assert kbju["telegram_user_id"] == 6102
+    assert kbju["assigned_by"]["full_name"] == "КБЖУ Тренер"
+
+
+def test_coach_cannot_assign_kbju_to_non_client(client):
+    coach_headers = auth(client, telegram_user_id=6201, is_coach=True)
+    auth(client, telegram_user_id=6202, is_coach=False)
+
+    response = client.post(
+        "/api/v1/nutrition/targets",
+        json={
+            "target_telegram_user_id": 6202,
+            "sex": "male",
+            "weight_kg": 90,
+            "height_cm": 185,
+            "age": 35,
+            "strength_trainings_per_week": 3,
+            "cardio_trainings_per_week": 1,
+            "goal": "maintenance",
+        },
+        headers=coach_headers,
+    )
+
+    assert response.status_code == 403
+
+
+def test_admin_can_assign_kbju_to_existing_user(client):
+    admin_headers = auth(client, telegram_user_id=6301, is_coach=True, is_admin=True)
+    user_headers = auth(client, telegram_user_id=6302, is_coach=False)
+
+    response = client.post(
+        "/api/v1/nutrition/targets",
+        json={
+            "target_telegram_user_id": 6302,
+            "sex": "male",
+            "weight_kg": 77,
+            "height_cm": 176,
+            "age": 32,
+            "strength_trainings_per_week": 4,
+            "cardio_trainings_per_week": 0,
+            "goal": "recomposition",
+        },
+        headers=admin_headers,
+    )
+
+    assert response.status_code == 200
+    kbju = client.get("/api/v1/me", headers=user_headers).json()["profile"]["kbju"]
+    assert kbju["assigned_by"]["telegram_user_id"] == 6301
+
+
 def test_telegram_login_bootstraps_admin_from_env(client, monkeypatch):
     from app.core.config import settings
 

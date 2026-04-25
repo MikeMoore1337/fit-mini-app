@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.schemas.user import UserProfileResponse, UserProfileUpdate, UserResponse
+from app.schemas.user import TrainerResponse, UserProfileResponse, UserProfileUpdate, UserResponse
+from app.services.nutrition import get_nutrition_target_for_user
 from app.services.profile import update_profile
 from app.services.programs import get_current_trainer, remove_current_trainer
 from app.services.security import get_current_user
@@ -11,6 +12,8 @@ router = APIRouter()
 
 
 def _build_user_response(db: Session, user) -> UserResponse:
+    kbju = get_nutrition_target_for_user(db, user)
+    trainer = get_current_trainer(db, user)
     return UserResponse(
         id=user.id,
         telegram_user_id=user.telegram_user_id,
@@ -26,10 +29,11 @@ def _build_user_response(db: Session, user) -> UserResponse:
             height_cm=user.profile.height_cm if user.profile else None,
             weight_kg=user.profile.weight_kg if user.profile else None,
             workouts_per_week=user.profile.workouts_per_week if user.profile else None,
+            kbju=kbju,
         )
-        if user.profile
+        if user.profile or kbju
         else None,
-        trainer=get_current_trainer(db, user),
+        trainer=TrainerResponse(**trainer) if trainer else None,
     )
 
 

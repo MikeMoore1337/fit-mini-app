@@ -427,6 +427,27 @@ button:disabled {
     gap: 12px;
 }
 
+.profile-kbju__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+#profileKbju {
+    margin-bottom: 14px;
+}
+
+#profileKbju .kbju-result-grid > div {
+    display: grid;
+    gap: 4px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.025);
+}
+
 .kbju-result-grid .item-card {
     display: grid;
     gap: 6px;
