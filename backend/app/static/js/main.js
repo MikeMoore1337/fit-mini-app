@@ -1,5 +1,5 @@
-import { API, FRONTEND_VERSION, accessTokenKey, refreshTokenKey } from './core/config.js?v=32';
-import { state } from './core/state.js?v=32';
+import { API, FRONTEND_VERSION, accessTokenKey, refreshTokenKey } from './core/config.js?v=33';
+import { state } from './core/state.js?v=33';
 import {
   $,
   log,
@@ -11,8 +11,8 @@ import {
   expandSectionAndScroll,
   restoreSectionState,
   setSectionCollapsed,
-} from './core/ui.js?v=32';
-import { api, clearTokens, sleep } from './core/http.js?v=32';
+} from './core/ui.js?v=33';
+import { api, clearTokens, sleep } from './core/http.js?v=33';
 
 window.__fitMiniAppBoot = {
   ...(window.__fitMiniAppBoot || {}),
@@ -290,10 +290,6 @@ function renderProfileKbju(kbju) {
       <div>
         <span class="muted">Углеводы</span>
         <strong>${escapeHtml(kbju.carbs_g)} г</strong>
-      </div>
-      <div>
-        <span class="muted">Поддержание</span>
-        <strong>${escapeHtml(kbju.tdee)} ккал</strong>
       </div>
       <div>
         <span class="muted">Цель</span>

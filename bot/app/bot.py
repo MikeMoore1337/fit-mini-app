@@ -19,7 +19,7 @@ from aiogram.types import (
 from app.config import settings
 
 dp = Dispatcher()
-MINI_APP_CACHE_VERSION = "32"
+MINI_APP_CACHE_VERSION = "33"
 TIMEZONE_PAGE_SIZE = 8
 TIMEZONE_REGIONS = [
     "Europe",
