@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
-
 from sqlalchemy import desc
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.timezone import now_msk_naive, today_for_user
 from app.models.program import UserProgram, UserWorkout, UserWorkoutExercise, UserWorkoutSet
 from app.models.user import User
 from app.schemas.workout import WorkoutSetCreate
@@ -29,7 +28,7 @@ def get_today_workout(db: Session, user: User) -> UserWorkout | None:
         .filter(
             UserProgram.user_id == user.id,
             UserProgram.is_active.is_(True),
-            UserWorkout.scheduled_date == date.today(),
+            UserWorkout.scheduled_date == today_for_user(user),
         )
         .first()
     )
@@ -40,7 +39,7 @@ def start_workout(db: Session, workout: UserWorkout) -> UserWorkout:
         raise WorkoutStateError("Workout already completed")
     if workout.status == "planned":
         workout.status = "in_progress"
-        workout.started_at = datetime.now(UTC).replace(tzinfo=None)
+        workout.started_at = now_msk_naive()
         db.commit()
         db.refresh(workout)
     return workout
@@ -53,7 +52,7 @@ def add_or_update_set(
         raise WorkoutStateError("Cannot log sets for completed workout")
     if workout.status == "planned":
         workout.status = "in_progress"
-        workout.started_at = datetime.now(UTC).replace(tzinfo=None)
+        workout.started_at = now_msk_naive()
 
     exercise = next(
         (row for row in workout.exercises if row.id == payload.workout_exercise_id), None
@@ -110,8 +109,8 @@ def complete_workout(db: Session, workout: UserWorkout) -> UserWorkout:
         return workout
     workout.status = "completed"
     if workout.started_at is None:
-        workout.started_at = datetime.now(UTC).replace(tzinfo=None)
-    workout.completed_at = datetime.now(UTC).replace(tzinfo=None)
+        workout.started_at = now_msk_naive()
+    workout.completed_at = now_msk_naive()
     db.commit()
     db.refresh(workout)
     return workout

@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import BIGINT, Boolean, DateTime, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.timezone import DEFAULT_TIMEZONE, now_msk_naive
 from app.db.base import Base
 
 
@@ -23,7 +24,7 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default="true"
     )
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now_msk_naive)
 
     profile = relationship("UserProfile", back_populates="user", uselist=False)
 
@@ -39,6 +40,12 @@ class UserProfile(Base):
     height_cm: Mapped[int | None] = mapped_column(Integer, nullable=True)
     weight_kg: Mapped[int | None] = mapped_column(Integer, nullable=True)
     workouts_per_week: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    timezone: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+        default=DEFAULT_TIMEZONE,
+        server_default=DEFAULT_TIMEZONE,
+    )
 
     user = relationship("User", back_populates="profile")
 
@@ -50,7 +57,7 @@ class CoachClient(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     coach_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     client_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now_msk_naive)
 
 
 class CoachClientInvite(Base):
@@ -63,4 +70,4 @@ class CoachClientInvite(Base):
     coach_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     username: Mapped[str] = mapped_column(String(64), nullable=False)
     full_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now_msk_naive)

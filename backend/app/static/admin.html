@@ -103,6 +103,31 @@
       return user?.role || (user?.is_admin ? 'admin' : user?.is_coach ? 'coach' : 'client');
     }
 
+    function formatDateTimeInZone(value, timezone = 'Europe/Moscow') {
+      if (!value) return '';
+      const raw = String(value);
+      const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/.test(raw);
+      if (!hasTimezone) {
+        const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+        if (match) {
+          const [, year, month, day, hour, minute] = match;
+          return `${day}.${month}.${year}, ${hour}:${minute}`;
+        }
+      }
+
+      const date = new Date(raw);
+      if (Number.isNaN(date.getTime())) return raw;
+
+      return new Intl.DateTimeFormat('ru-RU', {
+        timeZone: timezone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(date);
+    }
+
     function roleOption(value, label, current) {
       return `<option value="${value}" ${current === value ? 'selected' : ''}>${label}</option>`;
     }
@@ -246,7 +271,7 @@
       $('adminNotificationsList').innerHTML = rows.map(row => `
         <div class="item-card">
           <strong>${escapeHtml(row.title)}</strong><br>
-          <span class="muted">${escapeHtml(new Date(row.scheduled_for).toLocaleString())} - ${escapeHtml(row.status)}</span>
+          <span class="muted">${escapeHtml(formatDateTimeInZone(row.scheduled_for, row.timezone))} ${escapeHtml(row.timezone || 'Europe/Moscow')} - ${escapeHtml(row.status)}</span>
           <div>${escapeHtml(row.body)}</div>
         </div>
       `).join('') || '<p class="muted">Уведомлений нет</p>';

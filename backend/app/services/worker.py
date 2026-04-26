@@ -6,6 +6,7 @@ import logging
 import httpx
 
 from app.core.config import settings
+from app.core.timezone import now_for_user_naive
 from app.db.session import get_session_context
 from app.models.user import User
 from app.services.notifications import get_due_notifications
@@ -34,9 +35,7 @@ async def run_once() -> None:
             try:
                 await send_telegram_message(user.telegram_user_id, f"{row.title}\n\n{row.body}")
                 row.status = "sent"
-                from datetime import datetime
-
-                row.sent_at = datetime.utcnow()
+                row.sent_at = now_for_user_naive(user)
                 row.last_error = None
             except Exception as exc:
                 row.status = "failed"

@@ -29,6 +29,7 @@ def _build_user_response(db: Session, user) -> UserResponse:
             height_cm=user.profile.height_cm if user.profile else None,
             weight_kg=user.profile.weight_kg if user.profile else None,
             workouts_per_week=user.profile.workouts_per_week if user.profile else None,
+            timezone=user.profile.timezone if user.profile else "Europe/Moscow",
             kbju=kbju,
         )
         if user.profile or kbju

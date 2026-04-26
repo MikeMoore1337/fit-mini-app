@@ -1,11 +1,17 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 
 from sqlalchemy.orm import Session
 
+from app.core.timezone import (
+    get_timezone,
+    now_for_user_naive,
+    now_in_timezone_naive,
+    to_user_timezone_naive,
+)
 from app.models.notification import Notification, NotificationSetting
-from app.models.user import User
+from app.models.user import User, UserProfile
 
 
 def get_or_create_settings(db: Session, user: User) -> NotificationSetting:
@@ -33,20 +39,31 @@ def list_my_notifications(db: Session, user: User, limit: int = 100) -> list[Not
 
 
 def get_due_notifications(db: Session, now: datetime | None = None) -> list[Notification]:
-    current_time = now or datetime.now(UTC).replace(tzinfo=None)
-
-    return (
-        db.query(Notification)
+    rows = (
+        db.query(Notification, UserProfile.timezone)
+        .join(User, User.id == Notification.user_id)
+        .outerjoin(UserProfile, UserProfile.user_id == User.id)
         .filter(Notification.status == "queued")
-        .filter(Notification.scheduled_for <= current_time)
         .order_by(Notification.scheduled_for.asc(), Notification.id.asc())
         .all()
     )
 
+    due = []
+    for notification, timezone in rows:
+        current_time = (
+            now.astimezone(get_timezone(timezone)).replace(tzinfo=None)
+            if now and now.tzinfo is not None
+            else now or now_in_timezone_naive(timezone)
+        )
+        if notification.scheduled_for <= current_time:
+            due.append(notification)
+    return due
+
 
 def mark_notification_sent(db: Session, notification: Notification) -> Notification:
+    user = db.query(User).filter(User.id == notification.user_id).first()
     notification.status = "sent"
-    notification.sent_at = datetime.utcnow()
+    notification.sent_at = now_for_user_naive(user)
     notification.last_error = None
     db.commit()
     db.refresh(notification)
@@ -78,7 +95,7 @@ def create_manual_notification(
         channel=channel,
         title=title.strip(),
         body=body.strip(),
-        scheduled_for=scheduled_for,
+        scheduled_for=to_user_timezone_naive(scheduled_for, user),
         status="queued",
     )
     db.add(notification)

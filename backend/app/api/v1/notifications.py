@@ -1,9 +1,8 @@
-from datetime import UTC
-
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from app.api.dependencies.auth import require_user
+from app.core.timezone import to_user_timezone_naive
 from app.db.session import get_db
 from app.models.notification import Notification
 from app.models.user import User
@@ -84,9 +83,7 @@ def create_notification(
     if not body:
         raise HTTPException(status_code=400, detail="body обязателен")
 
-    scheduled_for = payload.scheduled_for
-    if scheduled_for.tzinfo is not None:
-        scheduled_for = scheduled_for.astimezone(UTC).replace(tzinfo=None)
+    scheduled_for = to_user_timezone_naive(payload.scheduled_for, current_user)
 
     row = Notification(
         user_id=current_user.id,

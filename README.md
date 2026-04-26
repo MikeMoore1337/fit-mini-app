@@ -144,21 +144,28 @@ curl https://app.your-fitness-coach.ru/health
 
 ## Telegram bot и Mini App
 
-Бот использует `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME` и `FRONTEND_BASE_URL`.
+Бот использует `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, `FRONTEND_BASE_URL` и
+`BACKEND_INTERNAL_URL`.
 
-При `/start` бот отправляет кнопку `Открыть FitMiniApp`. Если `FRONTEND_BASE_URL` начинается
-с `https://`, кнопка создаётся как Telegram Web App button. Если URL не HTTPS, Telegram такую
-Mini App кнопку не примет.
+При `/start` бот закрепляет кнопку Mini App в нижнем меню Telegram. Если Telegram не примет
+menu button, бот отправит fallback-сообщение с кнопкой `Открыть FitMiniApp`. Если
+`FRONTEND_BASE_URL` не начинается с `https://`, Telegram Web App кнопку не примет.
 
 Для production также проверь настройки в BotFather:
 
 - домен Mini App должен совпадать с `FRONTEND_BASE_URL`;
 - URL Mini App должен указывать на `/app`;
 - после изменения домена или URL иногда нужно заново открыть чат или отправить `/start`.
+- команда `/timezone` открывает большой список IANA timezones и сохраняет выбор в backend.
 
 ## Роли и доступы
 
 В production новые Telegram-пользователи создаются как клиенты.
+
+По умолчанию бизнес-время приложения работает в MSK (`Europe/Moscow`), но пользователь может
+выбрать свой IANA timezone через бота командой `/timezone`. Дата "сегодня", расписание
+тренировок, напоминания и пользовательские события считаются по timezone пользователя. JWT и
+проверка Telegram `initData` используют UTC/Unix time как системное время протоколов.
 
 Первый админ задаётся через:
 

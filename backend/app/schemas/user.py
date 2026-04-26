@@ -10,6 +10,7 @@ class UserProfileUpdate(BaseModel):
     height_cm: int | None = None
     weight_kg: int | None = None
     workouts_per_week: int | None = None
+    timezone: str | None = None
 
 
 class UserProfileResponse(BaseModel):
@@ -19,6 +20,7 @@ class UserProfileResponse(BaseModel):
     height_cm: int | None = None
     weight_kg: int | None = None
     workouts_per_week: int | None = None
+    timezone: str = "Europe/Moscow"
     kbju: NutritionTargetResponse | None = None
 
 

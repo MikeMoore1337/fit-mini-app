@@ -1,8 +1,9 @@
-from datetime import UTC, datetime
+from datetime import datetime
 
 from sqlalchemy import DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.timezone import now_msk_naive
 from app.db.base import Base
 
 
@@ -34,5 +35,5 @@ class NutritionTarget(Base):
     saved_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=lambda: datetime.now(UTC),
+        default=now_msk_naive,
     )

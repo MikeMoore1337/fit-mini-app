@@ -259,19 +259,26 @@ def admin_notifications(
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
 ) -> list[dict]:
-    rows = db.query(Notification).order_by(Notification.id.desc()).limit(200).all()
+    rows = (
+        db.query(Notification, UserProfile.timezone)
+        .outerjoin(UserProfile, UserProfile.user_id == Notification.user_id)
+        .order_by(Notification.id.desc())
+        .limit(200)
+        .all()
+    )
 
     return [
         {
             "id": row.id,
             "user_id": row.user_id,
+            "timezone": timezone or "Europe/Moscow",
             "title": row.title,
             "body": row.body,
             "status": row.status,
             "scheduled_for": row.scheduled_for.isoformat() if row.scheduled_for else None,
             "sent_at": row.sent_at.isoformat() if row.sent_at else None,
         }
-        for row in rows
+        for row, timezone in rows
     ]
 
 

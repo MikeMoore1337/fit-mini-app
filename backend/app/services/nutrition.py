@@ -1,8 +1,8 @@
 import math
-from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.timezone import now_for_user_naive
 from app.models.nutrition import NutritionTarget
 from app.models.user import CoachClient, User
 from app.schemas.nutrition import (
@@ -203,7 +203,7 @@ def save_nutrition_target(
     target.protein_g = calculations["protein_g"]
     target.fat_g = calculations["fat_g"]
     target.carbs_g = calculations["carbs_g"]
-    target.saved_at = datetime.now(UTC)
+    target.saved_at = now_for_user_naive(target_user)
 
     db.commit()
     db.refresh(target)

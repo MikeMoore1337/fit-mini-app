@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import timedelta
 from uuid import uuid4
 
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.timezone import today_for_user
 from app.models.exercise import Exercise
 from app.models.program import (
     ProgramTemplate,
@@ -792,7 +793,7 @@ def assign_template_to_user(
     db.flush()
 
     workouts: list[UserWorkout] = []
-    start_date = date.today()
+    start_date = today_for_user(target_user)
     created = 0
 
     for offset, day in enumerate(sorted(template.days, key=lambda row: row.day_number)):

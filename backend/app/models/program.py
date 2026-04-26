@@ -5,6 +5,7 @@ from datetime import date, datetime
 from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.timezone import now_msk_naive
 from app.db.base import Base
 from app.models.exercise import Exercise
 
@@ -24,7 +25,11 @@ class ProgramTemplate(Base):
         ForeignKey("users.id"), index=True, nullable=True
     )
     is_public: Mapped[bool] = mapped_column(Boolean, default=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=now_msk_naive,
+        server_default=func.now(),
+    )
 
     days: Mapped[list[ProgramTemplateDay]] = relationship(
         "ProgramTemplateDay",
@@ -76,7 +81,11 @@ class UserProgram(Base):
     assigned_by_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id"), index=True, nullable=True
     )
-    assigned_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    assigned_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=now_msk_naive,
+        server_default=func.now(),
+    )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     template: Mapped[ProgramTemplate] = relationship("ProgramTemplate")

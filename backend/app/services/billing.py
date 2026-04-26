@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.timezone import now_for_user_naive
 from app.models.billing import Payment, Plan, Subscription
 from app.models.user import User
 
@@ -59,7 +60,9 @@ def complete_mock_payment(db: Session, checkout_id: str) -> Payment:
         return payment
 
     payment.status = "paid"
-    payment.paid_at = datetime.now(UTC).replace(tzinfo=None)
+    user = db.query(User).filter(User.id == payment.user_id).first()
+    paid_at = now_for_user_naive(user)
+    payment.paid_at = paid_at
 
     plan = db.query(Plan).filter(Plan.id == payment.plan_id).first()
     db.query(Subscription).filter(
@@ -69,8 +72,8 @@ def complete_mock_payment(db: Session, checkout_id: str) -> Payment:
         user_id=payment.user_id,
         plan_id=payment.plan_id,
         status="active",
-        starts_at=datetime.now(UTC).replace(tzinfo=None),
-        ends_at=(datetime.now(UTC) + timedelta(days=plan.period_days)).replace(tzinfo=None),
+        starts_at=paid_at,
+        ends_at=paid_at + timedelta(days=plan.period_days),
     )
     db.add(sub)
     db.commit()

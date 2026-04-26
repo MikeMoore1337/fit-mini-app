@@ -7,6 +7,7 @@ from urllib.parse import urlencode
 
 import pytest
 
+from app.core.timezone import to_msk_naive
 from app.services.telegram_auth import validate_telegram_init_data
 
 
@@ -1218,6 +1219,72 @@ def test_create_notification_and_list(client):
     assert listed.status_code == 200
     rows = listed.json()
     assert any(row["title"] == "Test напоминание" for row in rows)
+
+
+def test_notification_scheduled_for_is_stored_as_msk_wall_time(client):
+    headers = auth(client, telegram_user_id=6501, is_coach=False)
+
+    response = client.post(
+        "/api/v1/notifications",
+        headers=headers,
+        json={
+            "title": "MSK напоминание",
+            "body": "Текст",
+            "scheduled_for": "2026-04-25T07:30:00Z",
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.json()["scheduled_for"] == "2026-04-25T10:30:00"
+
+
+def test_bot_can_set_user_timezone_and_notifications_use_it(client):
+    updated = client.post(
+        "/api/v1/bot/timezone",
+        headers={"X-Bot-Token": "test-token"},
+        json={
+            "telegram_user_id": 6502,
+            "timezone": "Asia/Tokyo",
+            "username": "tokyo_user",
+            "first_name": "Tokyo",
+        },
+    )
+    assert updated.status_code == 200
+    assert updated.json()["timezone"] == "Asia/Tokyo"
+
+    headers = auth(client, telegram_user_id=6502, is_coach=False)
+    me = client.get("/api/v1/me", headers=headers)
+    assert me.status_code == 200
+    assert me.json()["profile"]["timezone"] == "Asia/Tokyo"
+
+    response = client.post(
+        "/api/v1/notifications",
+        headers=headers,
+        json={
+            "title": "Tokyo напоминание",
+            "body": "Текст",
+            "scheduled_for": "2026-04-25T00:30:00Z",
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.json()["scheduled_for"] == "2026-04-25T09:30:00"
+
+
+def test_bot_rejects_invalid_timezone(client):
+    response = client.post(
+        "/api/v1/bot/timezone",
+        headers={"X-Bot-Token": "test-token"},
+        json={"telegram_user_id": 6503, "timezone": "Mars/Olympus"},
+    )
+
+    assert response.status_code == 400
+
+
+def test_to_msk_naive_converts_aware_utc_datetime():
+    converted = to_msk_naive(datetime(2026, 4, 25, 7, 30, tzinfo=UTC))
+
+    assert converted == datetime(2026, 4, 25, 10, 30)
 
 
 def test_health_includes_request_id(client):

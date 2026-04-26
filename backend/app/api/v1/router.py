@@ -4,6 +4,7 @@ from app.api.v1 import (
     admin,
     auth,
     billing,
+    bot,
     coach,
     me,
     notifications,
@@ -25,3 +26,4 @@ api_router.include_router(nutrition.router, prefix="/nutrition", tags=["nutritio
 api_router.include_router(billing.router, prefix="/billing", tags=["billing"])
 api_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
+api_router.include_router(bot.router, prefix="/bot", tags=["bot"])

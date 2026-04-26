@@ -1,9 +1,8 @@
-from datetime import UTC, date, datetime
-
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.dependencies.auth import require_user
+from app.core.timezone import now_for_user_naive, today_for_user
 from app.db.session import get_db
 from app.models.program import UserProgram, UserWorkout, UserWorkoutExercise, UserWorkoutSet
 from app.models.user import User
@@ -11,10 +10,6 @@ from app.schemas.workout import WorkoutSetUpdate
 from app.services.programs import get_visible_exercise_display_map
 
 router = APIRouter()
-
-
-def _utcnow_naive() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _get_user_workout_or_404(db: Session, current_user: User, workout_id: int) -> UserWorkout:
@@ -109,7 +104,7 @@ def get_today_workout(
     current_user: User = Depends(require_user),
     db: Session = Depends(get_db),
 ):
-    today = date.today()
+    today = today_for_user(current_user)
 
     workout = (
         db.query(UserWorkout)
@@ -138,7 +133,7 @@ def delete_today_workout(
     current_user: User = Depends(require_user),
     db: Session = Depends(get_db),
 ):
-    today = date.today()
+    today = today_for_user(current_user)
 
     workout = (
         db.query(UserWorkout)
@@ -172,7 +167,7 @@ def start_workout(
         raise HTTPException(status_code=400, detail="Тренировка уже завершена")
 
     if not workout.started_at:
-        workout.started_at = _utcnow_naive()
+        workout.started_at = now_for_user_naive(current_user)
     workout.status = "in_progress"
     db.commit()
     db.refresh(workout)
@@ -190,8 +185,8 @@ def finish_workout(
     workout = _get_user_workout_or_404(db, current_user, workout_id)
 
     if not workout.started_at:
-        workout.started_at = _utcnow_naive()
-    workout.completed_at = _utcnow_naive()
+        workout.started_at = now_for_user_naive(current_user)
+    workout.completed_at = now_for_user_naive(current_user)
     workout.status = "completed"
 
     db.commit()

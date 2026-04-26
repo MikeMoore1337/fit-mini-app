@@ -5,3 +5,4 @@
 aiogram
 httpx
 pydantic-settings
+tzdata

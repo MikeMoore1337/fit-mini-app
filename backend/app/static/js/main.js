@@ -1,5 +1,5 @@
-import { API, FRONTEND_VERSION, accessTokenKey, refreshTokenKey } from './core/config.js?v=30';
-import { state } from './core/state.js?v=30';
+import { API, FRONTEND_VERSION, accessTokenKey, refreshTokenKey } from './core/config.js?v=32';
+import { state } from './core/state.js?v=32';
 import {
   $,
   log,
@@ -11,8 +11,8 @@ import {
   expandSectionAndScroll,
   restoreSectionState,
   setSectionCollapsed,
-} from './core/ui.js?v=30';
-import { api, clearTokens, sleep } from './core/http.js?v=30';
+} from './core/ui.js?v=32';
+import { api, clearTokens, sleep } from './core/http.js?v=32';
 
 window.__fitMiniAppBoot = {
   ...(window.__fitMiniAppBoot || {}),
@@ -43,6 +43,41 @@ window.onunhandledrejection = function (event) {
 function setAuthState(text) {
   const node = $('authState');
   if (node) node.textContent = text;
+}
+
+function getCurrentTimezone() {
+  return state.me?.profile?.timezone || 'Europe/Moscow';
+}
+
+function dateTimeLocalToUserTimezoneIso(value) {
+  const normalized = String(value || '').trim();
+  if (!normalized) return '';
+  return normalized.length === 16 ? `${normalized}:00` : normalized;
+}
+
+function formatUserDateTime(value, timezone = getCurrentTimezone()) {
+  if (!value) return '';
+  const raw = String(value);
+  const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/.test(raw);
+  if (!hasTimezone) {
+    const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+    if (match) {
+      const [, year, month, day, hour, minute] = match;
+      return `${day}.${month}.${year}, ${hour}:${minute}`;
+    }
+  }
+
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return raw;
+
+  return new Intl.DateTimeFormat('ru-RU', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
 }
 
 function reportFatalStartupError(error) {
@@ -232,7 +267,7 @@ function renderProfileKbju(kbju) {
   }
 
   const assignedByLabel = getAssignedByLabel(kbju.assigned_by);
-  const savedAt = kbju.saved_at ? new Date(kbju.saved_at).toLocaleString() : '';
+  const savedAt = kbju.saved_at ? `${formatUserDateTime(kbju.saved_at)} ${getCurrentTimezone()}` : '';
 
   node.innerHTML = `
     <div class="profile-kbju__head">
@@ -2045,7 +2080,7 @@ async function loadBilling() {
 
     if ($('subscriptionInfo')) {
       $('subscriptionInfo').textContent = subscription
-        ? `Активна: ${subscription.plan_title} до ${new Date(subscription.ends_at).toLocaleString()}`
+        ? `Активна: ${subscription.plan_title} до ${formatUserDateTime(subscription.ends_at)} ${getCurrentTimezone()}`
         : 'Активной подписки нет';
     }
 
@@ -2113,7 +2148,7 @@ async function createManualNotification() {
       body: JSON.stringify({
         title,
         body,
-        scheduled_for: new Date(dateTime).toISOString(),
+        scheduled_for: dateTimeLocalToUserTimezoneIso(dateTime),
       }),
     })
   );
@@ -2153,7 +2188,7 @@ async function loadNotifications() {
           (n) => `
             <div class="item-card">
               <strong>${escapeHtml(n.title)}</strong><br>
-              <span class="muted">${escapeHtml(new Date(n.scheduled_for).toLocaleString())} - ${escapeHtml(n.status)}</span>
+              <span class="muted">${escapeHtml(formatUserDateTime(n.scheduled_for))} ${escapeHtml(getCurrentTimezone())} - ${escapeHtml(n.status)}</span>
               <div class="top-gap">${escapeHtml(n.body)}</div>
               <div class="toolbar wrap top-gap">
                 <button class="secondary delete-notification-btn" type="button" data-notification-id="${n.id}">

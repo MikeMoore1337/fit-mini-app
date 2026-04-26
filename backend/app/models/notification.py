@@ -5,6 +5,7 @@ from datetime import datetime
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.timezone import now_msk_naive
 from app.db.base import Base
 
 
@@ -28,5 +29,9 @@ class Notification(Base):
     scheduled_for: Mapped[datetime] = mapped_column(DateTime, index=True)
     status: Mapped[str] = mapped_column(String(32), default="queued")
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=now_msk_naive,
+        server_default=func.now(),
+    )
     sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

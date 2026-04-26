@@ -67,5 +67,7 @@ typing-extensions==4.15.0
     #   anyio
     #   pydantic
     #   pydantic-core
+tzdata==2025.3
+    # via -r bot/requirements.in
 yarl==1.23.0
     # via aiohttp
