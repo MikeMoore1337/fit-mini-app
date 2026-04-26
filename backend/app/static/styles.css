@@ -293,6 +293,13 @@ p {
 
 .toolbar.wrap {
     flex-wrap: wrap;
+    align-items: stretch;
+}
+
+.toolbar.wrap > button,
+.toolbar.wrap > .button-link {
+    min-width: 0;
+    text-align: center;
 }
 
 .section-head {
