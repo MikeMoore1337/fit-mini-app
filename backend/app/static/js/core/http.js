@@ -1,5 +1,5 @@
-import { accessTokenKey, refreshTokenKey } from './config.js?v=33';
-import { log } from './ui.js?v=33';
+import { accessTokenKey, refreshTokenKey } from './config.js?v=34';
+import { log } from './ui.js?v=34';
 
 export function clearTokens() {
   localStorage.removeItem(accessTokenKey);

@@ -77,7 +77,9 @@ def _serialize_workout(workout: UserWorkout, db: Session, current_user: User) ->
                 "exercise_title": (
                     visible_map[item.exercise_id].title
                     if item.exercise_id in visible_map
-                    else (item.exercise.title if item.exercise else f"Exercise {item.exercise_id}")
+                    else (
+                        item.exercise.title if item.exercise else f"Упражнение {item.exercise_id}"
+                    )
                 ),
                 "sort_order": item.sort_order,
                 "prescribed_sets": item.prescribed_sets,
@@ -252,6 +254,7 @@ def workout_history(
     workouts = (
         db.query(UserWorkout)
         .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
+        .options(joinedload(UserWorkout.exercises).joinedload(UserWorkoutExercise.sets))
         .filter(
             UserProgram.user_id == current_user.id,
             UserWorkout.status == "completed",
@@ -262,17 +265,27 @@ def workout_history(
         .all()
     )
 
-    return [
-        {
-            "id": item.id,
-            "scheduled_date": str(item.scheduled_date),
-            "title": item.title,
-            "status": item.status,
-            "started_at": item.started_at.isoformat() if item.started_at else None,
-            "completed_at": item.completed_at.isoformat() if item.completed_at else None,
-        }
-        for item in workouts
-    ]
+    rows = []
+    for item in workouts:
+        sets = [set_row for exercise in item.exercises for set_row in exercise.sets]
+        completed_sets = [set_row for set_row in sets if set_row.is_completed]
+        volume_kg = sum(
+            (set_row.actual_weight or 0) * (set_row.actual_reps or 0) for set_row in completed_sets
+        )
+        rows.append(
+            {
+                "id": item.id,
+                "scheduled_date": str(item.scheduled_date),
+                "title": item.title,
+                "status": item.status,
+                "started_at": item.started_at.isoformat() if item.started_at else None,
+                "completed_at": item.completed_at.isoformat() if item.completed_at else None,
+                "completed_sets": len(completed_sets),
+                "volume_kg": round(volume_kg, 1),
+            }
+        )
+
+    return rows
 
 
 @router.delete("/history", status_code=status.HTTP_204_NO_CONTENT)

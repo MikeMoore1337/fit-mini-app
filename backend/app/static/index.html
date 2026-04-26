@@ -13,8 +13,7 @@
         <div>
             <h1>FitMiniApp</h1>
             <p class="muted">
-                Приложение для ведения тренировок: профиля, программ, шаблонов, упражнений,
-                истории занятий и ручных напоминаний.
+                Тренировки, питание и прогресс в одном месте.
             </p>
         </div>
         <div class="hero-card__meta">
@@ -23,7 +22,7 @@
         </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="card-auth">
         <div class="section-head">
             <h2>Вход</h2>
             <button class="secondary section-toggle" type="button" data-target="section-auth">Свернуть</button>
@@ -58,28 +57,34 @@
                     <span class="badge">DEV</span>
                 </div>
 
-                <div class="dev-quick-grid" aria-label="Быстрый demo-вход">
+                <div class="dev-quick-grid" aria-label="Быстрый демо-вход">
                     <button class="secondary dev-quick-login" type="button" data-dev-login-role="user">
                         <strong>Клиент</strong>
-                        <span>ID 2001</span>
+                        <span>№ 2001</span>
                     </button>
                     <button class="secondary dev-quick-login" type="button" data-dev-login-role="coach">
                         <strong>Тренер</strong>
-                        <span>ID 1002</span>
+                        <span>№ 1002</span>
                     </button>
                     <button class="secondary dev-quick-login" type="button" data-dev-login-role="admin">
-                        <strong>Админ</strong>
-                        <span>ID 1001</span>
+                        <strong>Администратор</strong>
+                        <span>№ 1001</span>
                     </button>
                 </div>
 
                 <div class="grid grid-2 top-gap">
-                    <input id="debugUserId" type="number" placeholder="Telegram ID" value="2001"/>
-                    <input id="debugUserName" type="text" placeholder="Имя аккаунта" value="Клиент Demo"/>
+                    <label class="field">
+                        <span>Telegram ID</span>
+                        <input id="debugUserId" type="number" placeholder="Например, 2001" value="2001"/>
+                    </label>
+                    <label class="field">
+                        <span>Имя аккаунта</span>
+                        <input id="debugUserName" type="text" placeholder="Клиент Демо" value="Клиент Демо"/>
+                    </label>
                 </div>
 
                 <input id="debugRole" type="hidden" value="user"/>
-                <div class="segmented-control top-gap" role="group" aria-label="Роль demo-аккаунта">
+                <div class="segmented-control top-gap" role="group" aria-label="Роль демо-аккаунта">
                     <button class="is-active" type="button" data-dev-role-option="user">Клиент</button>
                     <button type="button" data-dev-role-option="coach">Тренер</button>
                     <button type="button" data-dev-role-option="admin">Админ</button>
@@ -92,6 +97,19 @@
         </div>
     </div>
 
+    <div class="card" id="card-onboarding">
+        <div class="section-head">
+            <div>
+                <h2>План запуска</h2>
+                <p class="muted top-gap">Короткий путь до первой тренировки.</p>
+            </div>
+            <button class="secondary section-toggle" type="button" data-target="section-onboarding">Свернуть</button>
+        </div>
+        <div id="section-onboarding" class="section-content">
+            <div id="onboardingChecklist" class="onboarding-list"></div>
+        </div>
+    </div>
+
     <div class="card" id="card-profile">
         <div class="section-head">
             <h2>Профиль</h2>
@@ -101,23 +119,41 @@
             <div id="trainerInfo" class="item-card hidden"></div>
             <div id="profileKbju" class="item-card hidden"></div>
             <div class="grid grid-4">
-                <input id="full_name" type="text" placeholder="Имя"/>
-                <select id="goal">
-                    <option value="">Цель</option>
-                    <option value="fat_loss">Похудение</option>
-                    <option value="muscle_gain">Набор мышц</option>
-                    <option value="maintenance">Поддержание</option>
-                    <option value="recomposition">Рекомпозиция</option>
-                </select>
-                <select id="level">
-                    <option value="">Уровень</option>
-                    <option value="beginner">Начальный</option>
-                    <option value="intermediate">Средний</option>
-                    <option value="advanced">Продвинутый</option>
-                </select>
-                <input id="height_cm" type="number" placeholder="Рост, см"/>
-                <input id="weight_kg" type="number" placeholder="Вес, кг"/>
-                <input id="workouts_per_week" type="number" placeholder="Тренировок в неделю"/>
+                <label class="field">
+                    <span>Имя</span>
+                    <input id="full_name" type="text" placeholder="Как к вам обращаться"/>
+                </label>
+                <label class="field">
+                    <span>Цель</span>
+                    <select id="goal">
+                        <option value="">Не выбрана</option>
+                        <option value="fat_loss">Похудение</option>
+                        <option value="muscle_gain">Набор мышц</option>
+                        <option value="maintenance">Поддержание</option>
+                        <option value="recomposition">Рекомпозиция</option>
+                    </select>
+                </label>
+                <label class="field">
+                    <span>Уровень</span>
+                    <select id="level">
+                        <option value="">Не выбран</option>
+                        <option value="beginner">Начальный</option>
+                        <option value="intermediate">Средний</option>
+                        <option value="advanced">Продвинутый</option>
+                    </select>
+                </label>
+                <label class="field">
+                    <span>Рост, см</span>
+                    <input id="height_cm" type="number" placeholder="Например, 178"/>
+                </label>
+                <label class="field">
+                    <span>Вес, кг</span>
+                    <input id="weight_kg" type="number" placeholder="Например, 74"/>
+                </label>
+                <label class="field">
+                    <span>Тренировок в неделю</span>
+                    <input id="workouts_per_week" type="number" placeholder="Например, 3"/>
+                </label>
             </div>
             <div class="toolbar top-gap">
                 <button id="saveProfileBtn" type="button">Сохранить профиль</button>
@@ -134,30 +170,56 @@
             <button class="secondary section-toggle" type="button" data-target="section-builder">Свернуть</button>
         </div>
         <div id="section-builder" class="section-content">
+            <div id="coachModeBanner" class="coach-mode-banner hidden">
+                <div>
+                    <strong>Режим тренера</strong>
+                    <span class="muted">Выберите клиента перед назначением программы или КБЖУ.</span>
+                </div>
+                <button class="secondary empty-state-goto" type="button" data-nav-section="section-clients" data-nav-card="clientsCard">К клиентам</button>
+            </div>
+
             <div class="grid grid-4">
-                <select id="builder_mode">
-                    <option value="self">Для себя</option>
-                </select>
+                <label class="field">
+                    <span>Кому назначить</span>
+                    <select id="builder_mode">
+                        <option value="self">Для себя</option>
+                    </select>
+                </label>
 
-                <input id="program_title" type="text" placeholder="Название программы" value="Моя программа"/>
+                <label class="field">
+                    <span>Название программы</span>
+                    <input id="program_title" type="text" placeholder="Например, Силовая база" value="Моя программа"/>
+                </label>
 
-                <select id="program_goal">
-                    <option value="fat_loss">Похудение</option>
-                    <option value="muscle_gain" selected>Набор</option>
-                    <option value="maintenance">Поддержание</option>
-                    <option value="recomposition">Рекомпозиция</option>
-                </select>
+                <label class="field">
+                    <span>Цель программы</span>
+                    <select id="program_goal">
+                        <option value="fat_loss">Похудение</option>
+                        <option value="muscle_gain" selected>Набор</option>
+                        <option value="maintenance">Поддержание</option>
+                        <option value="recomposition">Рекомпозиция</option>
+                    </select>
+                </label>
 
-                <select id="program_level">
-                    <option value="beginner">Начальный</option>
-                    <option value="intermediate" selected>Средний</option>
-                    <option value="advanced">Продвинутый</option>
-                </select>
+                <label class="field">
+                    <span>Уровень</span>
+                    <select id="program_level">
+                        <option value="beginner">Начальный</option>
+                        <option value="intermediate" selected>Средний</option>
+                        <option value="advanced">Продвинутый</option>
+                    </select>
+                </label>
             </div>
 
             <div id="coachFields" class="grid grid-2 hidden top-gap">
-                <input id="target_telegram_user_id" type="number" placeholder="Telegram ID клиента"/>
-                <input id="target_full_name" type="text" placeholder="Имя клиента"/>
+                <label class="field">
+                    <span>Telegram ID клиента</span>
+                    <input id="target_telegram_user_id" type="number" placeholder="Например, 100200300"/>
+                </label>
+                <label class="field">
+                    <span>Имя клиента</span>
+                    <input id="target_full_name" type="text" placeholder="Для отображения"/>
+                </label>
             </div>
 
             <div class="toolbar wrap top-gap">
@@ -207,12 +269,24 @@
         </div>
         <div id="section-exercises" class="section-content">
             <div class="grid grid-4">
-                <select id="exerciseOwner" class="hidden">
-                    <option value="">Для себя</option>
-                </select>
-                <input id="newExerciseTitle" type="text" placeholder="Название упражнения"/>
-                <input id="newExerciseMuscle" type="text" placeholder="Основная мышечная группа"/>
-                <input id="newExerciseEquipment" type="text" placeholder="Оборудование"/>
+                <label class="field hidden" id="exerciseOwnerField">
+                    <span>Владелец упражнения</span>
+                    <select id="exerciseOwner">
+                        <option value="">Для себя</option>
+                    </select>
+                </label>
+                <label class="field">
+                    <span>Название упражнения</span>
+                    <input id="newExerciseTitle" type="text" placeholder="Например, Жим гантелей"/>
+                </label>
+                <label class="field">
+                    <span>Основная мышечная группа</span>
+                    <input id="newExerciseMuscle" type="text" placeholder="Например, грудь"/>
+                </label>
+                <label class="field">
+                    <span>Оборудование</span>
+                    <input id="newExerciseEquipment" type="text" placeholder="Например, гантели"/>
+                </label>
             </div>
 
             <div class="toolbar top-gap">
@@ -223,7 +297,7 @@
         </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="card-history">
         <div class="section-head">
             <h2>История тренировок</h2>
             <div class="toolbar wrap">
@@ -251,9 +325,18 @@
             <div class="item-card">
                 <h3>Добавить клиента</h3>
                 <div class="grid grid-3 top-gap">
-                    <input id="clientTelegramId" type="number" placeholder="Telegram ID"/>
-                    <input id="clientUsername" type="text" placeholder="@username"/>
-                    <input id="clientFullName" type="text" placeholder="Имя клиента"/>
+                    <label class="field">
+                        <span>Telegram ID</span>
+                        <input id="clientTelegramId" type="number" placeholder="Если известен"/>
+                    </label>
+                    <label class="field">
+                        <span>Telegram @username</span>
+                        <input id="clientUsername" type="text" placeholder="Если есть"/>
+                    </label>
+                    <label class="field">
+                        <span>Имя клиента</span>
+                        <input id="clientFullName" type="text" placeholder="Для списка клиентов"/>
+                    </label>
                 </div>
                 <div class="toolbar top-gap">
                     <button id="addClientBtn" type="button">Добавить клиента</button>
@@ -264,7 +347,7 @@
         </div>
     </div>
 
-    <div id="card-billing" class="card hidden">
+    <div id="card-notifications" class="card">
         <div class="section-head">
             <h2>Уведомления</h2>
             <div class="toolbar wrap">
@@ -281,15 +364,17 @@
                     <span>Напоминания о тренировке</span>
                 </label>
 
-                <input
-                    id="notifHour"
-                    type="number"
-                    min="0"
-                    max="23"
-                    value="9"
-                    class="top-gap"
-                    placeholder="Час напоминания"
-                />
+                <label class="field top-gap">
+                    <span>Час напоминания</span>
+                    <input
+                        id="notifHour"
+                        type="number"
+                        min="0"
+                        max="23"
+                        value="9"
+                        placeholder="От 0 до 23"
+                    />
+                </label>
 
                 <div class="toolbar top-gap">
                     <button id="saveNotifBtn" type="button">Сохранить настройки</button>
@@ -299,9 +384,18 @@
             <div class="item-card top-gap">
                 <h3>Создать напоминание вручную</h3>
                 <div class="stack top-gap">
-                    <input id="manualNotifTitle" type="text" placeholder="Заголовок"/>
-                    <textarea id="manualNotifBody" placeholder="Текст напоминания"></textarea>
-                    <input id="manualNotifDateTime" type="datetime-local"/>
+                    <label class="field">
+                        <span>Заголовок</span>
+                        <input id="manualNotifTitle" type="text" placeholder="Например, Время тренировки"/>
+                    </label>
+                    <label class="field">
+                        <span>Текст напоминания</span>
+                        <textarea id="manualNotifBody" placeholder="Что нужно напомнить"></textarea>
+                    </label>
+                    <label class="field">
+                        <span>Дата и время</span>
+                        <input id="manualNotifDateTime" type="datetime-local"/>
+                    </label>
                 </div>
 
                 <div class="toolbar top-gap">
@@ -322,24 +416,48 @@
         </div>
         <div id="section-kbju" class="section-content">
             <div class="grid grid-4">
-                <select id="kbjuTarget" class="hidden">
-                    <option value="">Для себя</option>
-                </select>
-                <select id="kbjuSex">
-                    <option value="male">Мужской</option>
-                    <option value="female">Женский</option>
-                </select>
-                <input id="kbjuWeight" type="text" inputmode="decimal" placeholder="Вес, кг"/>
-                <input id="kbjuHeight" type="text" inputmode="decimal" placeholder="Рост, см"/>
-                <input id="kbjuAge" type="text" inputmode="decimal" placeholder="Возраст"/>
-                <input id="kbjuStrength" type="number" min="0" step="1" placeholder="Силовые в неделю"/>
-                <input id="kbjuCardio" type="number" min="0" step="1" placeholder="Кардио в неделю"/>
-                <select id="kbjuGoal">
-                    <option value="fat_loss">Похудение</option>
-                    <option value="muscle_gain">Набор</option>
-                    <option value="maintenance">Поддержание</option>
-                    <option value="recomposition">Рекомпозиция</option>
-                </select>
+                <label class="field hidden" id="kbjuTargetField">
+                    <span>Для кого расчёт</span>
+                    <select id="kbjuTarget">
+                        <option value="">Для себя</option>
+                    </select>
+                </label>
+                <label class="field">
+                    <span>Пол</span>
+                    <select id="kbjuSex">
+                        <option value="male">Мужской</option>
+                        <option value="female">Женский</option>
+                    </select>
+                </label>
+                <label class="field">
+                    <span>Вес, кг</span>
+                    <input id="kbjuWeight" type="text" inputmode="decimal" placeholder="Например, 74"/>
+                </label>
+                <label class="field">
+                    <span>Рост, см</span>
+                    <input id="kbjuHeight" type="text" inputmode="decimal" placeholder="Например, 178"/>
+                </label>
+                <label class="field">
+                    <span>Возраст</span>
+                    <input id="kbjuAge" type="text" inputmode="decimal" placeholder="Например, 32"/>
+                </label>
+                <label class="field">
+                    <span>Силовых тренировок в неделю</span>
+                    <input id="kbjuStrength" type="number" min="0" step="1" placeholder="Например, 3"/>
+                </label>
+                <label class="field">
+                    <span>Кардио в неделю</span>
+                    <input id="kbjuCardio" type="number" min="0" step="1" placeholder="Например, 1"/>
+                </label>
+                <label class="field">
+                    <span>Цель питания</span>
+                    <select id="kbjuGoal">
+                        <option value="fat_loss">Похудение</option>
+                        <option value="muscle_gain">Набор</option>
+                        <option value="maintenance">Поддержание</option>
+                        <option value="recomposition">Рекомпозиция</option>
+                    </select>
+                </label>
             </div>
 
             <div id="kbjuResult" class="kbju-result hidden top-gap"></div>
@@ -372,25 +490,25 @@
 </main>
 
 <nav class="app-bottom-nav" id="appBottomNav" aria-label="Основные разделы">
-    <button type="button" class="app-bottom-nav__btn is-active" data-nav-section="section-profile" data-nav-card="card-profile">
-        <span class="app-bottom-nav__icon" aria-hidden="true">◉</span>
-        <span class="app-bottom-nav__label">Профиль</span>
-    </button>
-    <button type="button" class="app-bottom-nav__btn" data-nav-section="section-builder" data-nav-card="card-builder">
-        <span class="app-bottom-nav__icon" aria-hidden="true">⚙</span>
-        <span class="app-bottom-nav__label">Программа</span>
-    </button>
-    <button type="button" class="app-bottom-nav__btn" data-nav-section="section-today-workout" data-nav-card="card-today">
-        <span class="app-bottom-nav__icon" aria-hidden="true">◎</span>
+    <button type="button" class="app-bottom-nav__btn is-active" data-nav-section="section-today-workout" data-nav-card="card-today">
+        <span class="app-bottom-nav__icon" aria-hidden="true">дн</span>
         <span class="app-bottom-nav__label">Сегодня</span>
     </button>
-    <button type="button" class="app-bottom-nav__btn" data-nav-section="section-templates" data-nav-card="card-templates">
-        <span class="app-bottom-nav__icon" aria-hidden="true">≡</span>
-        <span class="app-bottom-nav__label">Шаблоны</span>
+    <button type="button" class="app-bottom-nav__btn" data-nav-section="section-builder" data-nav-card="card-builder">
+        <span class="app-bottom-nav__icon" aria-hidden="true">пл</span>
+        <span class="app-bottom-nav__label">Программа</span>
     </button>
     <button type="button" class="app-bottom-nav__btn" data-nav-section="section-kbju" data-nav-card="card-kbju">
-        <span class="app-bottom-nav__icon" aria-hidden="true">◌</span>
+        <span class="app-bottom-nav__icon" aria-hidden="true">к</span>
         <span class="app-bottom-nav__label">КБЖУ</span>
+    </button>
+    <button type="button" class="app-bottom-nav__btn" data-nav-section="section-history" data-nav-card="card-history">
+        <span class="app-bottom-nav__icon" aria-hidden="true">ит</span>
+        <span class="app-bottom-nav__label">История</span>
+    </button>
+    <button type="button" class="app-bottom-nav__btn" data-nav-section="section-profile" data-nav-card="card-profile">
+        <span class="app-bottom-nav__icon" aria-hidden="true">я</span>
+        <span class="app-bottom-nav__label">Профиль</span>
     </button>
 </nav>
 
@@ -441,7 +559,7 @@
             if (logCard) logCard.classList.remove('hidden');
             if (log) {
                 log.textContent =
-                    new Date().toLocaleTimeString() + ' - boot watchdog: ' + message + '\n' + log.textContent;
+                    new Date().toLocaleTimeString() + ' · сторож запуска: ' + message + '\n' + log.textContent;
             }
         }
 
@@ -458,12 +576,12 @@
 
         setTimeout(function () {
             if (!window.__fitMiniAppBoot.moduleStarted) {
-                showBootProblem('Интерфейс не запустился. Обновите страницу или заново откройте Mini App из Telegram.');
+                showBootProblem('Интерфейс не запустился. Обновите страницу или заново откройте мини-приложение из Telegram.');
             }
         }, 5000);
     })();
 </script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script type="module" src="/static/js/main.js?v=33"></script>
+<script type="module" src="/static/js/main.js?v=34"></script>
 </body>
 </html>

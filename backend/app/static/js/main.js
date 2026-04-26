@@ -1,5 +1,5 @@
-import { API, FRONTEND_VERSION, accessTokenKey, refreshTokenKey } from './core/config.js?v=33';
-import { state } from './core/state.js?v=33';
+import { API, FRONTEND_VERSION, accessTokenKey, refreshTokenKey } from './core/config.js?v=34';
+import { state } from './core/state.js?v=34';
 import {
   $,
   log,
@@ -11,8 +11,8 @@ import {
   expandSectionAndScroll,
   restoreSectionState,
   setSectionCollapsed,
-} from './core/ui.js?v=33';
-import { api, clearTokens, sleep } from './core/http.js?v=33';
+} from './core/ui.js?v=34';
+import { api, clearTokens, sleep } from './core/http.js?v=34';
 
 window.__fitMiniAppBoot = {
   ...(window.__fitMiniAppBoot || {}),
@@ -110,17 +110,115 @@ const builderCoachOptionLabel = 'Для клиента';
 const devRolePresets = {
   user: {
     telegram_user_id: 2001,
-    full_name: 'Клиент Demo',
+    full_name: 'Клиент Демо',
   },
   coach: {
     telegram_user_id: 1002,
-    full_name: 'Тренер Demo',
+    full_name: 'Тренер Демо',
   },
   admin: {
     telegram_user_id: 1001,
-    full_name: 'Админ Demo',
+    full_name: 'Админ Демо',
   },
 };
+
+function getTelegramWebApp() {
+  return window.Telegram?.WebApp || null;
+}
+
+function hapticImpact(style = 'light') {
+  try {
+    getTelegramWebApp()?.HapticFeedback?.impactOccurred?.(style);
+  } catch {
+    /* Виброотклик Telegram может быть недоступен. */
+  }
+}
+
+function hapticNotification(type = 'success') {
+  try {
+    getTelegramWebApp()?.HapticFeedback?.notificationOccurred?.(type);
+  } catch {
+    /* Виброотклик Telegram может быть недоступен. */
+  }
+}
+
+function applyTelegramTheme() {
+  const tg = getTelegramWebApp();
+  const params = tg?.themeParams || {};
+  if (!params || !Object.keys(params).length) return;
+
+  const root = document.documentElement;
+  if (params.bg_color) root.style.setProperty('--bg', params.bg_color);
+  if (params.secondary_bg_color) root.style.setProperty('--card', params.secondary_bg_color);
+  if (params.text_color) root.style.setProperty('--text', params.text_color);
+  if (params.hint_color) root.style.setProperty('--muted', params.hint_color);
+  if (params.button_color) root.style.setProperty('--accent', params.button_color);
+  if (params.button_text_color) root.style.setProperty('--button-text', params.button_text_color);
+}
+
+function setActiveBottomNav(cardId) {
+  document.querySelectorAll('.app-bottom-nav__btn').forEach((btn) => {
+    btn.classList.toggle('is-active', btn.getAttribute('data-nav-card') === cardId);
+  });
+}
+
+function navigateToSection(sectionId, cardId) {
+  state.currentNavCard = cardId;
+  expandSectionAndScroll(sectionId, cardId);
+  setActiveBottomNav(cardId);
+  syncTelegramChrome();
+}
+
+function getMainTelegramButtonTarget() {
+  if (state.currentNavCard !== 'card-today' || !state.todayWorkout) return null;
+  if (state.todayWorkout.status === 'planned') {
+    return { text: 'Начать тренировку', targetId: 'startWorkoutBtn' };
+  }
+  if (state.todayWorkout.status === 'in_progress') {
+    return { text: 'Завершить тренировку', targetId: 'finishWorkoutBtn' };
+  }
+  return null;
+}
+
+function onTelegramMainButtonClick() {
+  if (!state.telegramMainButtonTargetId) return;
+  document.getElementById(state.telegramMainButtonTargetId)?.click();
+}
+
+function syncTelegramChrome() {
+  const tg = getTelegramWebApp();
+  if (!tg) return;
+
+  const mainButton = tg.MainButton;
+  if (mainButton) {
+    const target = getMainTelegramButtonTarget();
+    if (!state.telegramMainButtonBound) {
+      mainButton.onClick(onTelegramMainButtonClick);
+      state.telegramMainButtonBound = true;
+    }
+    if (target) {
+      state.telegramMainButtonTargetId = target.targetId;
+      mainButton.setText(target.text);
+      mainButton.show();
+    } else {
+      state.telegramMainButtonTargetId = null;
+      mainButton.hide();
+    }
+  }
+
+  const backButton = tg.BackButton;
+  if (backButton) {
+    if (!state.telegramBackButtonBound) {
+      backButton.onClick(() => navigateToSection('section-today-workout', 'card-today'));
+      state.telegramBackButtonBound = true;
+    }
+    if (state.currentNavCard && state.currentNavCard !== 'card-today') {
+      backButton.show();
+    } else {
+      backButton.hide();
+    }
+  }
+}
 
 function getUserDisplayName(user) {
   const profile = user?.profile || {};
@@ -184,7 +282,7 @@ function getTrainerDisplayName(trainer) {
   if (!trainer) return '';
   const username = trainer.username ? `@${trainer.username}` : '';
   const name = trainer.full_name || '';
-  return [username, name].filter(Boolean).join(' / ') || `ID ${trainer.telegram_user_id}`;
+  return [username, name].filter(Boolean).join(' / ') || `№ ${trainer.telegram_user_id}`;
 }
 
 function renderTrainerInfo(trainer) {
@@ -245,6 +343,29 @@ function getKbjuGoalLabel(goal) {
   }[goal] || goal || '-');
 }
 
+function getLevelLabel(level) {
+  return ({
+    beginner: 'Начальный',
+    intermediate: 'Средний',
+    advanced: 'Продвинутый',
+  }[level] || level || '-');
+}
+
+function getClientStatusLabel(status) {
+  return ({
+    pending: 'Ожидает входа',
+    active: 'Активен',
+  }[status] || status || '-');
+}
+
+function getNotificationStatusLabel(status) {
+  return ({
+    queued: 'Ожидает',
+    sent: 'Отправлено',
+    failed: 'Ошибка',
+  }[status] || status || '-');
+}
+
 function getKbjuSexLabel(sex) {
   return sex === 'female' ? 'Женский' : 'Мужской';
 }
@@ -253,7 +374,7 @@ function getAssignedByLabel(assignedBy) {
   if (!assignedBy) return '';
   const username = assignedBy.username ? `@${assignedBy.username}` : '';
   const name = assignedBy.full_name || '';
-  return [username, name].filter(Boolean).join(' / ') || `ID ${assignedBy.telegram_user_id}`;
+  return [username, name].filter(Boolean).join(' / ') || `№ ${assignedBy.telegram_user_id}`;
 }
 
 function renderProfileKbju(kbju) {
@@ -304,6 +425,148 @@ function renderProfileKbju(kbju) {
     </div>
   `;
   node.classList.remove('hidden');
+}
+
+function isProfileReady(profile = {}) {
+  return Boolean(
+    profile.full_name &&
+      profile.goal &&
+      profile.level &&
+      profile.height_cm &&
+      profile.weight_kg &&
+      profile.workouts_per_week
+  );
+}
+
+function getWorkoutSetProgress(workout) {
+  const sets = (workout?.exercises || []).flatMap((exercise) => exercise.sets || []);
+  const completed = sets.filter((setRow) => setRow.is_completed).length;
+  return {
+    completed,
+    total: sets.length,
+    percent: sets.length ? Math.round((completed / sets.length) * 100) : 0,
+  };
+}
+
+function updateWorkoutProgressFromDom() {
+  const inputs = [...document.querySelectorAll('.set-completed')];
+  if (!inputs.length) return;
+  const completed = inputs.filter((input) => input.checked).length;
+  const percent = Math.round((completed / inputs.length) * 100);
+  const fill = $('workoutProgressFill');
+  const text = $('workoutProgressText');
+  if (fill) fill.style.width = `${percent}%`;
+  if (text) text.textContent = `Выполнено подходов: ${completed}/${inputs.length}`;
+}
+
+function getHistoryStats() {
+  const rows = state.historyRows || [];
+  const completedThisWeek = rows.filter((item) => isDateInCurrentWeek(item.scheduled_date)).length;
+  const totalSets = rows.reduce((sum, item) => sum + Number(item.completed_sets || 0), 0);
+  const volume = rows.reduce((sum, item) => sum + Number(item.volume_kg || 0), 0);
+
+  return {
+    completedThisWeek,
+    totalSets,
+    volume,
+  };
+}
+
+function isDateInCurrentWeek(value) {
+  if (!value) return false;
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return false;
+  const now = new Date();
+  const day = (now.getDay() + 6) % 7;
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(now.getDate() - day);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 7);
+  return date >= start && date < end;
+}
+
+function renderOnboarding() {
+  const root = $('onboardingChecklist');
+  const card = $('card-onboarding');
+  if (!root || !card) return;
+
+  const profile = state.me?.profile || {};
+  const steps = [
+    {
+      done: isProfileReady(profile),
+      title: 'Заполнить профиль',
+      text: 'Цель, уровень, рост, вес и частота тренировок.',
+      section: 'section-profile',
+      card: 'card-profile',
+      action: 'Открыть профиль',
+    },
+    {
+      done: Boolean(profile.kbju),
+      title: 'Рассчитать КБЖУ',
+      text: 'Получить целевые калории и макросы.',
+      section: 'section-kbju',
+      card: 'card-kbju',
+      action: 'К расчёту',
+    },
+    {
+      done: Boolean((state.templates || []).length),
+      title: 'Создать программу',
+      text: 'Собрать шаблон или взять готовый.',
+      section: 'section-builder',
+      card: 'card-builder',
+      action: 'К программе',
+    },
+    {
+      done: Boolean(state.todayWorkout),
+      title: 'Назначить тренировку',
+      text: 'Тренировка появится на экране «Сегодня».',
+      section: 'section-templates',
+      card: 'card-templates',
+      action: 'К шаблонам',
+    },
+    {
+      done: Boolean((state.historyRows || []).length),
+      title: 'Завершить первую тренировку',
+      text: 'После завершения здесь появится прогресс.',
+      section: 'section-today-workout',
+      card: 'card-today',
+      action: 'К тренировке',
+    },
+  ];
+
+  const pending = steps.filter((step) => !step.done);
+  if (!pending.length) {
+    root.innerHTML = `
+      <div class="empty-state">
+        <p class="empty-state__title">База готова</p>
+        <p class="empty-state__text muted">Профиль, питание и тренировки настроены. Можно просто открывать «Сегодня».</p>
+      </div>`;
+    return;
+  }
+
+  root.innerHTML = steps
+    .map(
+      (step, index) => `
+        <div class="onboarding-step ${step.done ? 'is-done' : ''}">
+          <span class="onboarding-step__mark">${step.done ? '✓' : index + 1}</span>
+          <div>
+            <span class="onboarding-step__title">${escapeHtml(step.title)}</span>
+            <span class="onboarding-step__text">${escapeHtml(step.text)}</span>
+          </div>
+          <button
+            class="secondary empty-state-goto"
+            type="button"
+            data-nav-section="${escapeHtml(step.section)}"
+            data-nav-card="${escapeHtml(step.card)}"
+            ${step.done ? 'disabled' : ''}
+          >
+            ${step.done ? 'Готово' : escapeHtml(step.action)}
+          </button>
+        </div>
+      `
+    )
+    .join('');
 }
 
 function escapeHtml(value) {
@@ -401,6 +664,9 @@ function toggleCoachUI() {
   const clientsCard = $('clientsCard');
   if (clientsCard) clientsCard.classList.toggle('hidden', !isCoachOrAdmin());
 
+  const coachModeBanner = $('coachModeBanner');
+  if (coachModeBanner) coachModeBanner.classList.toggle('hidden', !isCoachOrAdmin());
+
   const diagnosticCard = $('diagnosticCard');
   const logCard = $('logCard');
   if (diagnosticCard) diagnosticCard.classList.toggle('hidden', !isAdmin());
@@ -428,14 +694,14 @@ function renderTelegramDebug() {
 
   node.textContent = JSON.stringify(
     {
-      hasTelegramObject: Boolean(window.Telegram),
-      hasWebAppObject: Boolean(tg),
-      initDataPresent: Boolean(tg?.initData),
-      initDataLength: tg?.initData?.length || 0,
-      initDataUnsafePresent: Boolean(tg?.initDataUnsafe),
-      platform: tg?.platform || null,
-      version: tg?.version || null,
-      isExpanded: tg?.isExpanded ?? null,
+      'Объект Telegram найден': Boolean(window.Telegram),
+      'Объект приложения найден': Boolean(tg),
+      'Данные входа есть': Boolean(tg?.initData),
+      'Длина данных входа': tg?.initData?.length || 0,
+      'Небезопасные данные есть': Boolean(tg?.initDataUnsafe),
+      'Платформа': tg?.platform || null,
+      'Версия': tg?.version || null,
+      'Развёрнуто': tg?.isExpanded ?? null,
     },
     null,
     2
@@ -498,7 +764,7 @@ async function loadEnv() {
   const envBadge = $('env-badge');
 
   if (envBadge && state.publicConfig.app_env === 'dev') {
-    envBadge.textContent = 'dev';
+    envBadge.textContent = 'тест';
     envBadge.classList.remove('hidden');
   }
 
@@ -522,8 +788,8 @@ async function devLogin() {
   localStorage.setItem(accessTokenKey, data.access_token);
   localStorage.setItem(refreshTokenKey, data.refresh_token);
 
-  setAuthState(`Dev-вход выполнен: ${body.telegram_user_id}`);
-  showToast('Dev-вход выполнен');
+  setAuthState(`Вход в режиме разработки выполнен: ${body.telegram_user_id}`);
+  showToast('Вход в режиме разработки выполнен');
   await bootstrap();
 }
 
@@ -553,7 +819,7 @@ async function telegramLogin({ silent = false } = {}) {
   if (!initData) {
     setAuthState('Telegram не передал данные авторизации');
     if (!silent) {
-      showToast('Telegram не передал initData', 'error');
+      showToast('Telegram не передал данные входа', 'error');
     }
     return false;
   }
@@ -668,6 +934,8 @@ async function loadMe() {
 
   toggleCoachUI();
   syncKbjuTargetOptions();
+  renderOnboarding();
+  syncTelegramChrome();
 }
 
 async function saveProfile() {
@@ -689,6 +957,7 @@ async function saveProfile() {
 
   showToast('Профиль сохранён');
   await loadMe();
+  renderOnboarding();
 }
 
 function parseDecimalInput(value) {
@@ -794,15 +1063,7 @@ function calculateKbju({ silent = false } = {}) {
   result.innerHTML = `
     <div class="kbju-result-grid">
       <div class="item-card">
-        <span class="muted">Основной обмен</span>
-        <strong>${roundNumber(bmr)} ккал</strong>
-      </div>
-      <div class="item-card">
-        <span class="muted">Поддержание</span>
-        <strong>${roundNumber(tdee)} ккал</strong>
-      </div>
-      <div class="item-card">
-        <span class="muted">Цель</span>
+        <span class="muted">Целевые калории</span>
         <strong>${targetCalories} ккал</strong>
       </div>
       <div class="item-card">
@@ -818,6 +1079,12 @@ function calculateKbju({ silent = false } = {}) {
         <strong>${macros.carbs} г</strong>
       </div>
     </div>
+    <details class="nutrition-details top-gap">
+      <summary>Подробнее о расчёте</summary>
+      <div class="muted top-gap">
+        Основной обмен: ${roundNumber(bmr)} ккал. Активность и цель уже учтены в целевых калориях.
+      </div>
+    </details>
   `;
   return calculation;
 }
@@ -1047,10 +1314,22 @@ function exerciseTemplate(defaultExerciseId = '', preset = null) {
   const options = exerciseOptions(defaultExerciseId);
   return `
     <div class="grid item-card program-ex-row" style="grid-template-columns:2fr 1fr 1fr 1fr auto;">
-      <select class="exercise-id">${options}</select>
-      <input class="exercise-sets" type="number" min="1" value="${escapeHtml(preset?.prescribed_sets || 3)}" placeholder="Подходы" />
-      <input class="exercise-reps" type="text" value="${escapeHtml(preset?.prescribed_reps || '8-10')}" placeholder="Повторы" />
-      <input class="exercise-rest" type="number" min="15" value="${escapeHtml(preset?.rest_seconds || 90)}" placeholder="Отдых, сек" />
+      <label class="field">
+        <span>Упражнение</span>
+        <select class="exercise-id">${options}</select>
+      </label>
+      <label class="field">
+        <span>Подходы</span>
+        <input class="exercise-sets" type="number" min="1" value="${escapeHtml(preset?.prescribed_sets || 3)}" placeholder="3" />
+      </label>
+      <label class="field">
+        <span>Повторы</span>
+        <input class="exercise-reps" type="text" value="${escapeHtml(preset?.prescribed_reps || '8-10')}" placeholder="8-10" />
+      </label>
+      <label class="field">
+        <span>Отдых, сек.</span>
+        <input class="exercise-rest" type="number" min="15" value="${escapeHtml(preset?.rest_seconds || 90)}" placeholder="90" />
+      </label>
       <button class="secondary remove-ex-btn" type="button">Удалить</button>
     </div>
   `;
@@ -1060,7 +1339,10 @@ function programDayTemplate(index, preset = null) {
   return `
     <div class="item-card day-card" data-day-index="${index}">
       <div class="toolbar wrap">
-        <input class="day-title" type="text" placeholder="Название дня" value="${escapeHtml(preset?.title || `День ${index + 1}`)}" />
+        <label class="field day-title-field">
+          <span>Название дня</span>
+          <input class="day-title" type="text" placeholder="Например, Верх тела" value="${escapeHtml(preset?.title || `День ${index + 1}`)}" />
+        </label>
         <button class="secondary add-ex-btn" type="button">+ Упражнение</button>
         <button class="secondary remove-day-btn" type="button">Удалить день</button>
       </div>
@@ -1326,12 +1608,13 @@ function getExerciseOwnerLabel(exercise) {
 
 function syncExerciseOwnerOptions() {
   const select = $('exerciseOwner');
+  const field = $('exerciseOwnerField');
   if (!select) return;
 
   if (isAdmin()) {
     select.innerHTML = '<option value="">Для всех</option>';
     select.value = '';
-    select.classList.add('hidden');
+    field?.classList.add('hidden');
     return;
   }
 
@@ -1343,7 +1626,7 @@ function syncExerciseOwnerOptions() {
         `<option value="${escapeHtml(client.telegram_user_id)}">Клиент: ${escapeHtml(getClientDisplayName(client))}</option>`
     ),
   ].join('');
-  select.classList.toggle('hidden', !isCoachOrAdmin() || !clients.length);
+  field?.classList.toggle('hidden', !isCoachOrAdmin() || !clients.length);
 }
 
 function getSelectedKbjuClient() {
@@ -1360,6 +1643,7 @@ function updateSaveKbjuButton() {
 
 function syncKbjuTargetOptions() {
   const select = $('kbjuTarget');
+  const field = $('kbjuTargetField');
   if (!select) return;
 
   const clients = getActiveClients();
@@ -1374,7 +1658,7 @@ function syncKbjuTargetOptions() {
 
   const hasCurrentValue = [...select.options].some((option) => option.value === currentValue);
   select.value = hasCurrentValue ? currentValue : '';
-  select.classList.toggle('hidden', !isCoachOrAdmin() || !clients.length);
+  field?.classList.toggle('hidden', !isCoachOrAdmin() || !clients.length);
 
   if (currentValue && !hasCurrentValue) {
     fillKbjuFormFromUser(state.me);
@@ -1405,7 +1689,7 @@ function fillKbjuFormFromSelectedTarget() {
 
 function selectClientForKbju(client) {
   if (!client.telegram_user_id) {
-    showToast('Клиент ещё не привязан к Telegram ID', 'error');
+    showToast('Клиент ещё не привязан к идентификатору Telegram', 'error');
     return;
   }
 
@@ -1420,7 +1704,7 @@ function selectClientForKbju(client) {
 
 function selectClientForProgram(client) {
   if (!client.telegram_user_id) {
-    showToast('Клиент ещё не привязан к Telegram ID', 'error');
+    showToast('Клиент ещё не привязан к идентификатору Telegram', 'error');
     return;
   }
 
@@ -1443,7 +1727,7 @@ async function addClient() {
   const fullName = $('clientFullName')?.value?.trim() || '';
 
   if (!telegramIdValue && !username) {
-    showToast('Укажи Telegram ID или username клиента', 'error');
+    showToast('Укажи идентификатор Telegram или имя пользователя клиента', 'error');
     return;
   }
 
@@ -1470,6 +1754,7 @@ async function loadTemplates() {
   state.templates = await withReauth(() => api(API.myTemplates));
   const list = $('templatesList');
   if (!list) return;
+  renderOnboarding();
 
   if (!state.templates.length) {
     list.innerHTML = `
@@ -1502,7 +1787,7 @@ async function loadTemplates() {
         return `
           <div class="item-card">
             <strong>${escapeHtml(template.title)}</strong><br>
-            <span class="muted">${escapeHtml(template.goal)} - ${escapeHtml(template.level)}</span>
+            <span class="muted">${escapeHtml(getKbjuGoalLabel(template.goal))} · ${escapeHtml(getLevelLabel(template.level))}</span>
             <div class="top-gap">
               ${
                 template.days?.length
@@ -1597,9 +1882,9 @@ async function loadClients() {
           <div class="item-card">
             <strong>${escapeHtml(getClientDisplayName(c))}</strong><br>
             <span class="muted">
-              ${isPending ? 'Ожидает входа' : `ID: ${escapeHtml(c.telegram_user_id)}`}
+              ${escapeHtml(getClientStatusLabel(c.status))}${isPending ? '' : ` · № ${escapeHtml(c.telegram_user_id)}`}
               ${c.username ? ` | @${escapeHtml(c.username)}` : ''}
-              ${!isPending ? ` | цель=${escapeHtml(c.goal || '-')} | уровень=${escapeHtml(c.level || '-')}` : ''}
+              ${!isPending ? ` | цель: ${escapeHtml(getKbjuGoalLabel(c.goal))} | уровень: ${escapeHtml(getLevelLabel(c.level))}` : ''}
             </span>
             ${
               isPending
@@ -1627,7 +1912,7 @@ async function loadClients() {
         .join('')
     : `<div class="empty-state">
         <p class="empty-state__title">Клиентов пока нет</p>
-        <p class="empty-state__text muted">Добавь клиента по Telegram ID или username.</p>
+        <p class="empty-state__text muted">Добавь клиента по идентификатору Telegram или имени пользователя.</p>
       </div>`;
 
   document.querySelectorAll('.assign-client-btn').forEach((btn) => {
@@ -1667,6 +1952,44 @@ function clearWorkoutTimer() {
     state.workoutTimer = null;
   }
   state.currentWorkoutTimerStartedAtMs = null;
+}
+
+function clearRestTimer() {
+  if (state.restTimer) {
+    clearInterval(state.restTimer);
+    state.restTimer = null;
+  }
+  state.restTimerEndsAtMs = null;
+  const timerNode = $('restTimer');
+  if (timerNode) {
+    timerNode.classList.add('hidden');
+    timerNode.textContent = '';
+  }
+}
+
+function startRestTimer(seconds) {
+  const durationMs = Math.max(0, Number(seconds || 0)) * 1000;
+  const timerNode = $('restTimer');
+  if (!timerNode || !durationMs) return;
+
+  clearRestTimer();
+  state.restTimerEndsAtMs = Date.now() + durationMs;
+  timerNode.classList.remove('hidden');
+
+  const render = () => {
+    const remainingMs = Math.max(0, state.restTimerEndsAtMs - Date.now());
+    timerNode.textContent = remainingMs
+      ? `Отдых: ${formatDurationMs(remainingMs)}`
+      : 'Отдых завершён';
+    if (!remainingMs) {
+      clearInterval(state.restTimer);
+      state.restTimer = null;
+      hapticNotification('success');
+    }
+  };
+
+  render();
+  state.restTimer = setInterval(render, 1000);
 }
 
 function formatDurationMs(ms) {
@@ -1744,9 +2067,13 @@ function renderTodayWorkout(workout) {
         </div>
       </div>`;
     clearWorkoutTimer();
+    clearRestTimer();
+    syncTelegramChrome();
     return;
   }
 
+  const progress = getWorkoutSetProgress(workout);
+  const totalExercises = (workout.exercises || []).length;
   const deleteBtn = `<button id="deleteTodayWorkoutBtn" class="secondary" type="button">Удалить тренировку</button>`;
 
   const actionButtons =
@@ -1758,10 +2085,26 @@ function renderTodayWorkout(workout) {
   const setInputsDisabled = workout.status === 'completed' ? 'disabled' : '';
 
   container.innerHTML = `
-    <div class="item-card">
-      <strong>${escapeHtml(workout.title)}</strong><br>
-      <span class="muted">Статус: ${statusLabel(workout.status)}</span>
-      <div id="workoutTimer" class="top-gap muted"></div>
+    <div class="item-card today-workout-card">
+      <div class="workout-hero">
+        <div class="workout-hero__top">
+          <div>
+            <div class="workout-title">${escapeHtml(workout.title)}</div>
+            <div class="muted top-gap">День ${escapeHtml(workout.day_number)} · упражнений: ${escapeHtml(totalExercises)}</div>
+          </div>
+          <span class="workout-status">${escapeHtml(statusLabel(workout.status))}</span>
+        </div>
+        <div class="workout-progress">
+          <div class="workout-progress__bar">
+            <div id="workoutProgressFill" class="workout-progress__fill" style="width: ${progress.percent}%"></div>
+          </div>
+          <div id="workoutProgressText" class="muted">Выполнено подходов: ${progress.completed}/${progress.total}</div>
+        </div>
+        <div class="workout-telemetry">
+          <span id="workoutTimer" class="metric-pill"></span>
+          <span id="restTimer" class="rest-timer hidden"></span>
+        </div>
+      </div>
       <div class="toolbar wrap top-gap">
         ${actionButtons}
       </div>
@@ -1769,40 +2112,54 @@ function renderTodayWorkout(workout) {
 
     <div class="stack top-gap">
       ${(workout.exercises || []).map((exercise) => `
-        <div class="item-card">
-          <strong>${escapeHtml(exercise.exercise_title)}</strong>
-          <div class="muted top-gap">
-            План: ${escapeHtml(exercise.prescribed_sets)} x ${escapeHtml(exercise.prescribed_reps)}, отдых ${escapeHtml(exercise.rest_seconds)} сек
+        <div class="item-card exercise-workout-card">
+          <div class="exercise-workout-card__head">
+            <div>
+              <div class="exercise-workout-card__title">${escapeHtml(exercise.exercise_title)}</div>
+              <div class="muted top-gap">
+                План: ${escapeHtml(exercise.prescribed_sets)} × ${escapeHtml(exercise.prescribed_reps)}, отдых ${escapeHtml(exercise.rest_seconds)} сек.
+              </div>
+            </div>
+            <span class="metric-pill">
+              ${(exercise.sets || []).filter((setRow) => setRow.is_completed).length}/${(exercise.sets || []).length}
+            </span>
           </div>
 
           <div class="stack top-gap">
             ${(exercise.sets || []).map((setRow) => `
-              <div class="grid item-card" style="grid-template-columns: 1fr 1fr 1fr auto;">
-                <div>Подход ${escapeHtml(setRow.set_number)}</div>
-                <input
-                  class="set-reps"
-                  type="number"
-                  min="0"
-                  value="${escapeHtml(setRow.actual_reps ?? '')}"
-                  data-set-id="${setRow.id}"
-                  placeholder="Повторы"
-                  ${setInputsDisabled}
-                />
-                <input
-                  class="set-weight"
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  value="${escapeHtml(setRow.actual_weight ?? '')}"
-                  data-set-id="${setRow.id}"
-                  placeholder="Вес"
-                  ${setInputsDisabled}
-                />
-                <label class="checkbox-row">
+              <div class="set-row ${setRow.is_completed ? 'is-completed' : ''}">
+                <div class="set-row__number">Подход ${escapeHtml(setRow.set_number)}</div>
+                <label class="field">
+                  <span>Повторы</span>
+                  <input
+                    class="set-reps"
+                    type="number"
+                    min="0"
+                    value="${escapeHtml(setRow.actual_reps ?? '')}"
+                    data-set-id="${setRow.id}"
+                    placeholder="0"
+                    ${setInputsDisabled}
+                  />
+                </label>
+                <label class="field">
+                  <span>Вес, кг</span>
+                  <input
+                    class="set-weight"
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value="${escapeHtml(setRow.actual_weight ?? '')}"
+                    data-set-id="${setRow.id}"
+                    placeholder="0"
+                    ${setInputsDisabled}
+                  />
+                </label>
+                <label class="checkbox-row set-done-label">
                   <input
                     class="set-completed"
                     type="checkbox"
                     data-set-id="${setRow.id}"
+                    data-rest-seconds="${escapeHtml(exercise.rest_seconds)}"
                     ${setRow.is_completed ? 'checked' : ''}
                     ${setInputsDisabled}
                   />
@@ -1869,7 +2226,9 @@ function renderTodayWorkout(workout) {
           api(API.startWorkout(workout.id), { method: 'POST' })
         );
         showToast('Тренировка начата');
+        hapticNotification('success');
         renderTodayWorkout(state.todayWorkout);
+        syncTelegramChrome();
         await resetHistoryAndReload();
       } catch (error) {
         log(`startWorkout: ${String(error)}`);
@@ -1887,6 +2246,7 @@ function renderTodayWorkout(workout) {
           api(API.finishWorkout(workout.id), { method: 'POST' })
         );
         showToast('Тренировка завершена');
+        hapticNotification('success');
         renderTodayWorkout(state.todayWorkout);
 
         const timerNode = $('workoutTimer');
@@ -1896,6 +2256,8 @@ function renderTodayWorkout(workout) {
 
         clearWorkoutTimerStart(workout.id);
         clearWorkoutTimer();
+        clearRestTimer();
+        syncTelegramChrome();
         await resetHistoryAndReload();
       } catch (error) {
         log(`finishWorkout: ${String(error)}`);
@@ -1952,6 +2314,12 @@ function renderTodayWorkout(workout) {
           actual_weight: weightInput?.value ? Number(weightInput.value) : null,
           is_completed: input.checked,
         });
+        input.closest('.set-row')?.classList.toggle('is-completed', input.checked);
+        updateWorkoutProgressFromDom();
+        if (input.checked) {
+          hapticImpact('medium');
+          startRestTimer(input.dataset.restSeconds);
+        }
         showToast('Подход сохранён');
       } catch (error) {
         log(`update set completed: ${String(error)}`);
@@ -1959,21 +2327,26 @@ function renderTodayWorkout(workout) {
       }
     });
   });
+
+  syncTelegramChrome();
 }
 
 async function loadTodayWorkout() {
   try {
     state.todayWorkout = await withReauth(() => api(API.todayWorkout));
     renderTodayWorkout(state.todayWorkout);
+    renderOnboarding();
   } catch (error) {
     if (error.status === 404) {
       state.todayWorkout = null;
-      renderTodayWorkout(null);
-      return;
-    }
+    renderTodayWorkout(null);
+    renderOnboarding();
+    return;
+  }
 
     log(`loadTodayWorkout: ${String(error)}`);
     renderTodayWorkout(null);
+    renderOnboarding();
   }
 }
 
@@ -1981,11 +2354,9 @@ function renderWorkoutHistoryRows(rows, append = false) {
   const container = $('workoutHistory');
   if (!container) return;
 
-  if (!append) {
-    container.innerHTML = '';
-  }
+  container.innerHTML = '';
 
-  if (!rows.length && !append) {
+  if (!rows.length) {
     updateHistoryClearVisibility(false);
     container.innerHTML = `
       <div class="empty-state">
@@ -2000,20 +2371,38 @@ function renderWorkoutHistoryRows(rows, append = false) {
     return;
   }
 
-  if (rows.length) {
-    updateHistoryClearVisibility(true);
-  }
+  updateHistoryClearVisibility(true);
+  const stats = getHistoryStats();
+  const statsHtml = `
+    <div class="progress-overview">
+      <div class="progress-card">
+        <span>На этой неделе</span>
+        <strong>${escapeHtml(stats.completedThisWeek)}</strong>
+      </div>
+      <div class="progress-card">
+        <span>Подходов в истории</span>
+        <strong>${escapeHtml(stats.totalSets)}</strong>
+      </div>
+      <div class="progress-card">
+        <span>Общий объём</span>
+        <strong>${escapeHtml(Math.round(stats.volume))} кг</strong>
+      </div>
+    </div>`;
 
   const html = rows
     .map((item) => `
       <div class="item-card">
         <strong>${escapeHtml(item.title)}</strong><br>
-        <span class="muted">${escapeHtml(item.scheduled_date)} - ${statusLabel(item.status)}</span>
+        <span class="muted">${escapeHtml(item.scheduled_date)} · ${statusLabel(item.status)}</span>
+        <div class="exercise-meta">
+          <span class="metric-pill">Подходов: ${escapeHtml(item.completed_sets || 0)}</span>
+          <span class="metric-pill">Объём: ${escapeHtml(Math.round(Number(item.volume_kg || 0)))} кг</span>
+        </div>
       </div>
     `)
     .join('');
 
-  container.insertAdjacentHTML('beforeend', html);
+  container.innerHTML = statsHtml + html;
 }
 
 function updateHistoryClearVisibility(visible) {
@@ -2034,13 +2423,17 @@ async function loadWorkoutHistory(append = false) {
 
   if (!append) {
     state.historyOffset = 0;
+    state.historyRows = rows;
+  } else {
+    state.historyRows = [...(state.historyRows || []), ...rows];
   }
 
-  renderWorkoutHistoryRows(rows, append);
+  renderWorkoutHistoryRows(state.historyRows, false);
 
   state.historyOffset = offset + rows.length;
   state.historyHasMore = rows.length === state.historyLimit;
   updateHistoryLoadMoreVisibility();
+  renderOnboarding();
 }
 
 async function resetHistoryAndReload() {
@@ -2184,7 +2577,7 @@ async function loadNotifications() {
           (n) => `
             <div class="item-card">
               <strong>${escapeHtml(n.title)}</strong><br>
-              <span class="muted">${escapeHtml(formatUserDateTime(n.scheduled_for))} ${escapeHtml(getCurrentTimezone())} - ${escapeHtml(n.status)}</span>
+              <span class="muted">${escapeHtml(formatUserDateTime(n.scheduled_for))} ${escapeHtml(getCurrentTimezone())} · ${escapeHtml(getNotificationStatusLabel(n.status))}</span>
               <div class="top-gap">${escapeHtml(n.body)}</div>
               <div class="toolbar wrap top-gap">
                 <button class="secondary delete-notification-btn" type="button" data-notification-id="${n.id}">
@@ -2252,12 +2645,26 @@ async function bootstrap() {
     if (!document.querySelector('.day-card')) {
       fillExample();
     }
+    renderOnboarding();
+    syncTelegramChrome();
+    if (!state.initialSectionOpened) {
+      state.initialSectionOpened = true;
+      requestAnimationFrame(() => navigateToSection('section-today-workout', 'card-today'));
+    }
   } finally {
     setAppLoading(false);
   }
 }
 
 function bindUI() {
+  document.addEventListener('fit:navigation', (event) => {
+    const card = event.detail?.card;
+    if (!card) return;
+    state.currentNavCard = card;
+    setActiveBottomNav(card);
+    syncTelegramChrome();
+  });
+
   if ($('telegramLoginBtn')) {
     $('telegramLoginBtn').onclick = async () => {
       try {
@@ -2277,7 +2684,7 @@ function bindUI() {
         await devLogin();
       } catch (error) {
         log(`devLogin: ${String(error)}`);
-        toastError(error, 'Не удалось выполнить dev-вход');
+        toastError(error, 'Не удалось войти в режиме разработки');
       }
     };
   }
@@ -2289,7 +2696,7 @@ function bindUI() {
         await devLogin();
       } catch (error) {
         log(`quick devLogin: ${String(error)}`);
-        toastError(error, 'Не удалось выполнить demo-вход');
+        toastError(error, 'Не удалось выполнить демо-вход');
       }
     };
   });
@@ -2514,6 +2921,8 @@ async function init() {
   try {
     const tg = window.Telegram?.WebApp;
     if (tg) {
+      applyTelegramTheme();
+      tg.onEvent?.('themeChanged', applyTelegramTheme);
       tg.ready();
       tg.expand();
     }

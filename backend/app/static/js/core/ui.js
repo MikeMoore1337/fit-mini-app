@@ -1,4 +1,4 @@
-import { sectionStoragePrefix } from './config.js?v=33';
+import { sectionStoragePrefix } from './config.js?v=34';
 
 export function $(id) {
   return document.getElementById(id);
@@ -8,7 +8,7 @@ export function log(message) {
   const node = $('log');
   if (!node) return;
   const text = typeof message === 'string' ? message : JSON.stringify(message, null, 2);
-  node.textContent = `${new Date().toLocaleTimeString()} - ${text}\n${node.textContent}`;
+  node.textContent = `${new Date().toLocaleTimeString()} · ${text}\n${node.textContent}`;
 }
 
 export function showToast(message, type = 'success') {
@@ -81,6 +81,12 @@ export function expandSectionAndScroll(sectionContentId, cardId) {
   if (card) {
     card.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
+
+  document.dispatchEvent(
+    new CustomEvent('fit:navigation', {
+      detail: { section: sectionContentId, card: cardId },
+    })
+  );
 }
 
 /**

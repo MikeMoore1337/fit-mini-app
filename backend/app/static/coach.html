@@ -25,9 +25,18 @@
         </div>
       </div>
       <div class="grid grid-3 top-gap">
-        <input id="clientTelegramId" type="number" placeholder="Telegram ID" />
-        <input id="clientUsername" type="text" placeholder="@username" />
-        <input id="clientFullName" type="text" placeholder="Имя клиента" />
+        <label class="field">
+          <span>Telegram ID</span>
+          <input id="clientTelegramId" type="number" placeholder="Если известен" />
+        </label>
+        <label class="field">
+          <span>Telegram @username</span>
+          <input id="clientUsername" type="text" placeholder="Если есть" />
+        </label>
+        <label class="field">
+          <span>Имя клиента</span>
+          <input id="clientFullName" type="text" placeholder="Для списка клиентов" />
+        </label>
       </div>
       <div class="toolbar top-gap">
         <button id="addClientBtn" type="button">Добавить клиента</button>
@@ -59,7 +68,7 @@
       const node = $('coachLog');
       if (!node) return;
       const text = typeof msg === 'string' ? msg : JSON.stringify(msg, null, 2);
-      node.textContent = `${new Date().toLocaleTimeString()} - ${text}\n${node.textContent}`;
+      node.textContent = `${new Date().toLocaleTimeString()} · ${text}\n${node.textContent}`;
     }
 
     function showToast(message, type = 'success') {
@@ -115,6 +124,23 @@
       return client.full_name || client.username || client.telegram_user_id || 'Клиент';
     }
 
+    function getGoalLabel(goal) {
+      return ({
+        fat_loss: 'Похудение',
+        muscle_gain: 'Набор',
+        maintenance: 'Поддержание',
+        recomposition: 'Рекомпозиция',
+      }[goal] || goal || '-');
+    }
+
+    function getLevelLabel(level) {
+      return ({
+        beginner: 'Начальный',
+        intermediate: 'Средний',
+        advanced: 'Продвинутый',
+      }[level] || level || '-');
+    }
+
     async function ensureCoachAccess() {
       const me = await api('/api/v1/me');
       if (!me.is_coach && !me.is_admin) {
@@ -136,7 +162,7 @@
               <span class="muted">
                 ${isPending ? 'Ожидает входа' : `ID: ${escapeHtml(client.telegram_user_id)}`}
                 ${client.username ? ` | @${escapeHtml(client.username)}` : ''}
-                ${!isPending ? ` | цель=${escapeHtml(client.goal || '-')} | уровень=${escapeHtml(client.level || '-')}` : ''}
+                ${!isPending ? ` | цель: ${escapeHtml(getGoalLabel(client.goal))} | уровень: ${escapeHtml(getLevelLabel(client.level))}` : ''}
               </span>
               <div class="toolbar wrap top-gap">
                 ${!isPending ? `<a class="button-link" href="/app">Назначить программу</a>` : ''}
@@ -189,7 +215,7 @@
       const fullName = $('clientFullName').value.trim();
 
       if (!telegramIdValue && !username) {
-        showToast('Укажите Telegram ID или username клиента', 'error');
+        showToast('Укажите Telegram ID или @username клиента', 'error');
         return;
       }
 

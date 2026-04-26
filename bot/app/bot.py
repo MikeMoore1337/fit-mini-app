@@ -19,7 +19,7 @@ from aiogram.types import (
 from app.config import settings
 
 dp = Dispatcher()
-MINI_APP_CACHE_VERSION = "33"
+MINI_APP_CACHE_VERSION = "34"
 TIMEZONE_PAGE_SIZE = 8
 TIMEZONE_REGIONS = [
     "Europe",
@@ -33,6 +33,18 @@ TIMEZONE_REGIONS = [
     "Antarctica",
     "Etc",
 ]
+TIMEZONE_REGION_LABELS = {
+    "Europe": "Европа",
+    "Asia": "Азия",
+    "America": "Америка",
+    "Africa": "Африка",
+    "Australia": "Австралия",
+    "Pacific": "Тихий океан",
+    "Atlantic": "Атлантика",
+    "Indian": "Индийский океан",
+    "Antarctica": "Антарктика",
+    "Etc": "UTC и прочие",
+}
 
 
 def mini_app_url() -> str:
@@ -82,15 +94,18 @@ def timezone_regions_keyboard() -> InlineKeyboardMarkup:
     rows: list[list[InlineKeyboardButton]] = []
     current_row: list[InlineKeyboardButton] = []
     for region in TIMEZONE_REGIONS:
-        current_row.append(InlineKeyboardButton(text=region, callback_data=f"tz:r:{region}:0"))
+        current_row.append(
+            InlineKeyboardButton(
+                text=TIMEZONE_REGION_LABELS.get(region, region),
+                callback_data=f"tz:r:{region}:0",
+            )
+        )
         if len(current_row) == 2:
             rows.append(current_row)
             current_row = []
     if current_row:
         rows.append(current_row)
-    rows.append(
-        [InlineKeyboardButton(text="MSK / Europe/Moscow", callback_data="tz:set:Europe/Moscow")]
-    )
+    rows.append([InlineKeyboardButton(text="MSK / Москва", callback_data="tz:set:Europe/Moscow")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -144,7 +159,9 @@ async def save_timezone_from_bot(telegram_user, timezone: str) -> bool:
             response.raise_for_status()
         return True
     except Exception as exc:
-        print(f"Failed to save timezone {timezone} via backend {url}: {exc!r}", flush=True)
+        print(
+            f"Не удалось сохранить часовой пояс {timezone} через backend {url}: {exc!r}", flush=True
+        )
         return False
 
 
@@ -152,7 +169,8 @@ async def set_mini_app_menu_button(bot: Bot, chat_id: int | None = None) -> bool
     url = mini_app_url()
     if not is_https_url(url):
         print(
-            f"Skipped Mini App menu button: FRONTEND_BASE_URL must be HTTPS, got {url}", flush=True
+            f"Кнопка меню FitMiniApp пропущена: FRONTEND_BASE_URL должен быть HTTPS, получено {url}",
+            flush=True,
         )
         return False
 
@@ -160,14 +178,14 @@ async def set_mini_app_menu_button(bot: Bot, chat_id: int | None = None) -> bool
         await bot.set_chat_menu_button(
             chat_id=chat_id,
             menu_button=MenuButtonWebApp(
-                text="Открыть Mini App",
+                text="Открыть FitMiniApp",
                 web_app=WebAppInfo(url=url),
             ),
         )
-        print(f"Mini App menu button configured for {url}", flush=True)
+        print(f"Кнопка меню FitMiniApp настроена для {url}", flush=True)
         return True
     except Exception as exc:
-        print(f"Failed to set Mini App menu button for {url}: {exc!r}", flush=True)
+        print(f"Не удалось настроить кнопку меню FitMiniApp для {url}: {exc!r}", flush=True)
         return False
 
 
@@ -182,17 +200,17 @@ async def answer_with_open_button(message: Message) -> None:
             )
             return
         except Exception as exc:
-            print(f"Failed to send Mini App web_app button for {url}: {exc!r}", flush=True)
+            print(f"Не удалось отправить кнопку FitMiniApp для {url}: {exc!r}", flush=True)
     else:
-        print(f"Mini App web_app button requires HTTPS URL, got {url}", flush=True)
+        print(f"Кнопке FitMiniApp нужен HTTPS URL, получено {url}", flush=True)
 
     try:
         await message.answer(
-            "Telegram не принял Mini App кнопку. Открой приложение по ссылке ниже.",
+            "Telegram не принял кнопку мини-приложения. Открой приложение по ссылке ниже.",
             reply_markup=url_keyboard(url),
         )
     except Exception as exc:
-        print(f"Failed to send fallback URL button for {url}: {exc!r}", flush=True)
+        print(f"Не удалось отправить запасную кнопку-ссылку для {url}: {exc!r}", flush=True)
         await message.answer(f"Открыть FitMiniApp: {url}")
 
 
@@ -203,7 +221,7 @@ async def start(message: Message) -> None:
         chat_id=message.from_user.id if message.from_user else None,
     )
     if menu_button_ok:
-        await message.answer("Кнопка Mini App закреплена внизу. Часовой пояс: /timezone")
+        await message.answer("Кнопка FitMiniApp закреплена внизу. Часовой пояс: /timezone")
         return
 
     await answer_with_open_button(message)
@@ -239,7 +257,7 @@ async def timezone_callback(callback: CallbackQuery) -> None:
         page = int(page_raw) if page_raw.isdigit() else 0
         if callback.message:
             await callback.message.edit_text(
-                f"Регион: {region}. Выберите часовой пояс.",
+                f"Регион: {TIMEZONE_REGION_LABELS.get(region, region)}. Выберите часовой пояс.",
                 reply_markup=timezone_page_keyboard(region, page),
             )
         await callback.answer()
@@ -262,14 +280,14 @@ async def timezone_callback(callback: CallbackQuery) -> None:
 
 async def main() -> None:
     if not settings.bot_token or settings.bot_token == "replace-me":
-        print("BOT_TOKEN not configured - bot is idle", flush=True)
+        print("Токен бота не настроен, бот ожидает", flush=True)
         while True:
             await asyncio.sleep(3600)
 
     bot = Bot(settings.bot_token)
-    print(f"Bot starting polling. Mini App URL: {mini_app_url()}", flush=True)
+    print(f"Бот запускает получение сообщений. URL FitMiniApp: {mini_app_url()}", flush=True)
     await set_mini_app_menu_button(bot)
-    print("Bot polling started", flush=True)
+    print("Получение сообщений ботом запущено", flush=True)
     await dp.start_polling(bot)
 
 

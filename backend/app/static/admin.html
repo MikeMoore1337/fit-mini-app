@@ -66,7 +66,7 @@
       const node = $('adminLog');
       if (!node) return;
       const text = typeof msg === 'string' ? msg : JSON.stringify(msg, null, 2);
-      node.textContent = `${new Date().toLocaleTimeString()} - ${text}\n${node.textContent}`;
+      node.textContent = `${new Date().toLocaleTimeString()} · ${text}\n${node.textContent}`;
     }
 
     function showToast(message, type = 'success') {
@@ -101,6 +101,39 @@
 
     function getRoleValue(user) {
       return user?.role || (user?.is_admin ? 'admin' : user?.is_coach ? 'coach' : 'client');
+    }
+
+    function getGoalLabel(goal) {
+      return ({
+        fat_loss: 'Похудение',
+        muscle_gain: 'Набор',
+        maintenance: 'Поддержание',
+        recomposition: 'Рекомпозиция',
+      }[goal] || goal || '-');
+    }
+
+    function getLevelLabel(level) {
+      return ({
+        beginner: 'Начальный',
+        intermediate: 'Средний',
+        advanced: 'Продвинутый',
+      }[level] || level || '-');
+    }
+
+    function getPaymentStatusLabel(status) {
+      return ({
+        created: 'Создан',
+        paid: 'Оплачен',
+        failed: 'Ошибка',
+      }[status] || status || '-');
+    }
+
+    function getNotificationStatusLabel(status) {
+      return ({
+        queued: 'Ожидает',
+        sent: 'Отправлено',
+        failed: 'Ошибка',
+      }[status] || status || '-');
     }
 
     function formatDateTimeInZone(value, timezone = 'Europe/Moscow') {
@@ -164,7 +197,7 @@
         <div class="item-card">
           <strong>${escapeHtml(user.full_name || user.telegram_user_id)}</strong><br>
           <span class="muted">
-            ID: ${escapeHtml(user.telegram_user_id)} |
+            № ${escapeHtml(user.telegram_user_id)} |
             Роль: ${escapeHtml(getRoleLabel(user))} |
             ${user.is_active ? 'Активен' : 'Заблокирован'}
           </span>
@@ -258,7 +291,7 @@
           <strong>${escapeHtml(row.plan_title || row.plan_code)}</strong><br>
           <span class="muted">
             Пользователь: ${escapeHtml(row.telegram_user_id)} |
-            Статус: ${escapeHtml(row.status)} |
+            Статус: ${escapeHtml(getPaymentStatusLabel(row.status))} |
             ${escapeHtml(row.amount)} ${escapeHtml(row.currency)}
           </span>
         </div>
@@ -271,7 +304,7 @@
       $('adminNotificationsList').innerHTML = rows.map(row => `
         <div class="item-card">
           <strong>${escapeHtml(row.title)}</strong><br>
-          <span class="muted">${escapeHtml(formatDateTimeInZone(row.scheduled_for, row.timezone))} ${escapeHtml(row.timezone || 'Europe/Moscow')} - ${escapeHtml(row.status)}</span>
+          <span class="muted">${escapeHtml(formatDateTimeInZone(row.scheduled_for, row.timezone))} ${escapeHtml(row.timezone || 'Europe/Moscow')} · ${escapeHtml(getNotificationStatusLabel(row.status))}</span>
           <div>${escapeHtml(row.body)}</div>
         </div>
       `).join('') || '<p class="muted">Уведомлений нет</p>';
@@ -283,7 +316,7 @@
       $('adminTemplatesList').innerHTML = rows.map(row => `
         <div class="item-card">
           <strong>${escapeHtml(row.title)}</strong><br>
-          <span class="muted">${escapeHtml(row.goal)} - ${escapeHtml(row.level)}</span>
+          <span class="muted">${escapeHtml(getGoalLabel(row.goal))} · ${escapeHtml(getLevelLabel(row.level))}</span>
           <div class="toolbar wrap top-gap">
             <button
               class="btn-danger delete-template-btn"
@@ -324,7 +357,7 @@
       const original = button.textContent;
       try {
         button.disabled = true;
-        button.textContent = 'Загрузка...';
+        button.textContent = 'Загрузка…';
         await action();
         if (successText) showToast(successText);
       } catch (error) {
