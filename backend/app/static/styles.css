@@ -973,15 +973,46 @@ a {
 
 @media (max-width: 640px) {
     body {
-        padding-top: max(14px, env(safe-area-inset-top, 0px));
-        padding-right: max(10px, env(safe-area-inset-right, 0px));
+        padding-top: max(12px, env(safe-area-inset-top, 0px));
+        padding-right: max(8px, env(safe-area-inset-right, 0px));
         padding-bottom: max(26px, env(safe-area-inset-bottom, 0px));
-        padding-left: max(10px, env(safe-area-inset-left, 0px));
+        padding-left: max(8px, env(safe-area-inset-left, 0px));
+    }
+
+    .container,
+    .stack,
+    .grid {
+        gap: 10px;
     }
 
     .card {
-        padding: 14px;
+        padding: 12px;
         border-radius: var(--radius);
+    }
+
+    .card:has(> .section-content.hidden) .section-head {
+        margin-bottom: 0;
+    }
+
+    .hero-card {
+        padding: 14px;
+        gap: 10px;
+    }
+
+    h1 {
+        font-size: 25px;
+    }
+
+    h2 {
+        font-size: 18px;
+    }
+
+    h3 {
+        font-size: 15px;
+    }
+
+    .top-gap {
+        margin-top: 10px;
     }
 
     .grid-4,
@@ -993,31 +1024,81 @@ a {
     .section-head {
         align-items: flex-start;
         flex-direction: column;
+        gap: 8px;
+        margin-bottom: 10px;
     }
 
     .auth-summary,
-    .dev-quick-grid,
-    .progress-overview {
+    .dev-quick-grid {
         grid-template-columns: 1fr;
+    }
+
+    .item-card {
+        padding: 12px;
+    }
+
+    .progress-overview {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+
+    .progress-card {
+        gap: 2px;
+        padding: 9px;
+    }
+
+    .progress-card span {
+        font-size: 11px;
+        line-height: 1.25;
+    }
+
+    .progress-card strong {
+        font-size: 18px;
     }
 
     .toolbar {
         width: 100%;
+        gap: 8px;
     }
 
     .toolbar.wrap > * {
-        flex: 1 1 auto;
+        flex: 1 1 0;
+        min-width: min(100%, 132px);
+    }
+
+    .section-head > .section-toggle {
+        width: 100%;
     }
 
     #todayWorkout .grid.item-card,
     .program-ex-row,
-    .set-row,
-    .kbju-result-grid {
+    .set-row {
         grid-template-columns: 1fr !important;
+    }
+
+    .kbju-result-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px;
+    }
+
+    #profileKbju .kbju-result-grid > div {
+        padding: 9px;
     }
 
     .onboarding-step {
         grid-template-columns: auto 1fr;
+        gap: 8px;
+        padding: 10px;
+    }
+
+    .onboarding-step__mark {
+        width: 26px;
+        height: 26px;
+    }
+
+    .onboarding-step__text {
+        font-size: 12px;
     }
 
     .onboarding-step .button-link,
@@ -1030,6 +1111,39 @@ a {
     .exercise-workout-card__head,
     .coach-mode-banner {
         flex-direction: column;
+    }
+
+    .workout-hero,
+    .exercise-workout-card {
+        gap: 10px;
+    }
+
+    .workout-title {
+        font-size: 21px;
+    }
+
+    .workout-status {
+        padding: 6px 9px;
+        font-size: 11px;
+    }
+
+    .set-row {
+        gap: 8px;
+        padding: 10px;
+    }
+
+    .exercise-meta {
+        gap: 6px;
+        margin-top: 8px;
+    }
+
+    .metric-pill {
+        padding: 5px 8px;
+        font-size: 11px;
+    }
+
+    .empty-state {
+        padding: 16px 12px;
     }
 
     .toast {
@@ -1169,6 +1283,39 @@ body:has(#appBottomNav) .toast:not(.hidden) {
         right: 18px;
         left: auto;
         bottom: 24px;
+    }
+}
+
+@media (max-width: 640px) {
+    .app-bottom-nav {
+        gap: 2px;
+        padding-top: 6px;
+        padding-bottom: max(6px, env(safe-area-inset-bottom, 0px));
+    }
+
+    .app-bottom-nav__btn {
+        min-height: 54px;
+        gap: 1px;
+        padding: 6px 4px;
+        font-size: 10px;
+    }
+
+    .app-bottom-nav__icon {
+        width: 26px;
+        height: 26px;
+    }
+
+    .app-bottom-nav__icon svg {
+        width: 17px;
+        height: 17px;
+    }
+
+    body:has(#appBottomNav) {
+        padding-bottom: max(82px, calc(env(safe-area-inset-bottom, 0px) + 68px));
+    }
+
+    body:has(#appBottomNav) .toast:not(.hidden) {
+        bottom: max(74px, calc(env(safe-area-inset-bottom, 0px) + 62px));
     }
 }
 
