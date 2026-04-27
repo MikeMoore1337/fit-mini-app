@@ -1,5 +1,5 @@
-import { API, FRONTEND_VERSION, accessTokenKey, refreshTokenKey } from './core/config.js?v=38';
-import { state } from './core/state.js?v=38';
+import { API, FRONTEND_VERSION, accessTokenKey, refreshTokenKey } from './core/config.js?v=39';
+import { state } from './core/state.js?v=39';
 import {
   $,
   log,
@@ -11,8 +11,8 @@ import {
   expandSectionAndScroll,
   restoreSectionState,
   setSectionCollapsed,
-} from './core/ui.js?v=38';
-import { api, clearTokens, sleep } from './core/http.js?v=38';
+} from './core/ui.js?v=39';
+import { api, clearTokens, sleep } from './core/http.js?v=39';
 
 window.__fitMiniAppBoot = {
   ...(window.__fitMiniAppBoot || {}),
@@ -1544,7 +1544,17 @@ async function loadExercises() {
 }
 
 function normalizeCatalogSearch(value) {
-  return String(value || '').trim().toLowerCase();
+  return String(value || '').trim().toLowerCase().replace(/ё/g, 'е');
+}
+
+function getExerciseCatalogBadgeLabel(exercise) {
+  if (!exercise.is_custom) return 'Общее';
+  if (exercise.created_by_user_id === state.me?.id) return 'Моё упражнение';
+
+  const client = getActiveClients().find((item) => item.id === exercise.created_by_user_id);
+  if (client) return 'Упражнение клиента';
+
+  return 'Личное упражнение';
 }
 
 function getExerciseSearchText(exercise) {
@@ -1554,7 +1564,8 @@ function getExerciseSearchText(exercise) {
       exercise.primary_muscle,
       exercise.equipment,
       getExerciseOwnerLabel(exercise),
-      exercise.is_custom ? 'личное' : 'общее',
+      getExerciseCatalogBadgeLabel(exercise),
+      exercise.is_custom ? 'личное' : '',
       exercise.is_personalized ? 'моё изменение' : '',
     ].join(' ')
   );
@@ -1613,7 +1624,7 @@ function renderExerciseCatalog() {
         ex.primary_muscle ? `<span class="metric-pill">${escapeHtml(ex.primary_muscle)}</span>` : '',
         ex.equipment ? `<span class="metric-pill">${escapeHtml(ex.equipment)}</span>` : '',
         `<span class="metric-pill">${escapeHtml(getExerciseOwnerLabel(ex))}</span>`,
-        ex.is_custom ? '<span class="metric-pill">Личное</span>' : '<span class="metric-pill">Общее</span>',
+        `<span class="metric-pill">${escapeHtml(getExerciseCatalogBadgeLabel(ex))}</span>`,
         ex.is_personalized ? '<span class="metric-pill">Моё изменение</span>' : '',
       ].join('');
 
@@ -1732,6 +1743,7 @@ async function createExercise() {
   $('newExerciseTitle').value = '';
   $('newExerciseMuscle').value = '';
   $('newExerciseEquipment').value = '';
+  if ($('addExerciseDetails')) $('addExerciseDetails').open = false;
 
   showToast(`Упражнение "${exercise.title}" добавлено`);
   await loadExercises();

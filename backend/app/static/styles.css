@@ -807,6 +807,54 @@ button:disabled {
     align-items: center;
 }
 
+.exercise-create-panel {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 14px;
+    overflow: hidden;
+}
+
+.exercise-create-panel summary {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-weight: 700;
+    list-style: none;
+}
+
+.exercise-create-panel summary::-webkit-details-marker {
+    display: none;
+}
+
+.exercise-create-panel summary::after {
+    content: "+";
+    display: inline-flex;
+    width: 24px;
+    height: 24px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--muted);
+    font-weight: 800;
+}
+
+.exercise-create-panel[open] summary {
+    border-bottom: 1px solid var(--border);
+}
+
+.exercise-create-panel[open] summary::after {
+    content: "-";
+}
+
+.exercise-create-panel__body {
+    padding: 14px;
+}
+
 .day-card {
     border-left: 4px solid var(--accent);
 }
