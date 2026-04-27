@@ -796,6 +796,17 @@ button:disabled {
     margin-top: 10px;
 }
 
+.exercise-search-row {
+    align-items: end;
+    margin-bottom: 14px;
+}
+
+.exercise-search-summary {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+}
+
 .day-card {
     border-left: 4px solid var(--accent);
 }

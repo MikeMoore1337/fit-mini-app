@@ -1,5 +1,5 @@
-import { API, FRONTEND_VERSION, accessTokenKey, refreshTokenKey } from './core/config.js?v=37';
-import { state } from './core/state.js?v=37';
+import { API, FRONTEND_VERSION, accessTokenKey, refreshTokenKey } from './core/config.js?v=38';
+import { state } from './core/state.js?v=38';
 import {
   $,
   log,
@@ -11,8 +11,8 @@ import {
   expandSectionAndScroll,
   restoreSectionState,
   setSectionCollapsed,
-} from './core/ui.js?v=37';
-import { api, clearTokens, sleep } from './core/http.js?v=37';
+} from './core/ui.js?v=38';
+import { api, clearTokens, sleep } from './core/http.js?v=38';
 
 window.__fitMiniAppBoot = {
   ...(window.__fitMiniAppBoot || {}),
@@ -1543,11 +1543,42 @@ async function loadExercises() {
   refreshProgramExerciseOptions();
 }
 
+function normalizeCatalogSearch(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function getExerciseSearchText(exercise) {
+  return normalizeCatalogSearch(
+    [
+      exercise.title,
+      exercise.primary_muscle,
+      exercise.equipment,
+      getExerciseOwnerLabel(exercise),
+      exercise.is_custom ? 'личное' : 'общее',
+      exercise.is_personalized ? 'моё изменение' : '',
+    ].join(' ')
+  );
+}
+
+function getFilteredExerciseCatalogRows() {
+  const query = normalizeCatalogSearch($('exerciseSearch')?.value);
+  if (!query) return state.exercises;
+
+  const terms = query.split(/\s+/).filter(Boolean);
+  return state.exercises.filter((exercise) => {
+    const searchable = getExerciseSearchText(exercise);
+    return terms.every((term) => searchable.includes(term));
+  });
+}
+
 function renderExerciseCatalog() {
   const list = $('exerciseCatalogList');
   if (!list) return;
+  const summary = $('exerciseSearchSummary');
+  const query = normalizeCatalogSearch($('exerciseSearch')?.value);
 
   if (!state.exercises.length) {
+    if (summary) summary.textContent = '';
     list.innerHTML = `
       <div class="empty-state">
         <p class="empty-state__title">Упражнений пока нет</p>
@@ -1558,7 +1589,25 @@ function renderExerciseCatalog() {
     return;
   }
 
-  list.innerHTML = state.exercises
+  const rows = getFilteredExerciseCatalogRows();
+  if (summary) {
+    summary.textContent = query
+      ? `Найдено: ${rows.length} из ${state.exercises.length}`
+      : `Всего упражнений: ${state.exercises.length}`;
+  }
+
+  if (!rows.length) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <p class="empty-state__title">Ничего не найдено</p>
+        <p class="empty-state__text muted">
+          Попробуй другое название, мышечную группу или оборудование.
+        </p>
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = rows
     .map((ex) => {
       const metadata = [
         ex.primary_muscle ? `<span class="metric-pill">${escapeHtml(ex.primary_muscle)}</span>` : '',
@@ -3306,6 +3355,10 @@ function bindUI() {
         log(`reloadExercises: ${String(error)}`);
       }
     };
+  }
+
+  if ($('exerciseSearch')) {
+    $('exerciseSearch').addEventListener('input', renderExerciseCatalog);
   }
 
   if ($('createExerciseBtn')) {

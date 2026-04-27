@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
     <meta name="theme-color" content="#0f1115"/>
     <title>FitMiniApp</title>
-    <link rel="stylesheet" href="/static/styles.css?v=39"/>
+    <link rel="stylesheet" href="/static/styles.css?v=40"/>
 </head>
 <body>
 <main class="container" id="app-main">
@@ -285,6 +285,14 @@
             </div>
         </div>
         <div id="section-exercises" class="section-content">
+            <div class="grid grid-2 exercise-search-row">
+                <label class="field">
+                    <span>Поиск по упражнениям</span>
+                    <input id="exerciseSearch" type="search" placeholder="Название, мышца, оборудование"/>
+                </label>
+                <div id="exerciseSearchSummary" class="muted exercise-search-summary"></div>
+            </div>
+
             <div class="grid grid-4">
                 <label class="field hidden" id="exerciseOwnerField">
                     <span>Владелец упражнения</span>
@@ -635,6 +643,6 @@
     })();
 </script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script type="module" src="/static/js/main.js?v=37"></script>
+<script type="module" src="/static/js/main.js?v=38"></script>
 </body>
 </html>
