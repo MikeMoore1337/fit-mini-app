@@ -10,8 +10,8 @@ class Exercise(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     slug: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
     title: Mapped[str] = mapped_column(String(128), nullable=False)
-    primary_muscle: Mapped[str] = mapped_column(String(64), nullable=False)
-    equipment: Mapped[str] = mapped_column(String(64), nullable=False)
+    primary_muscle: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    equipment: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     created_by_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id"),

@@ -1,5 +1,5 @@
-import { API, FRONTEND_VERSION, accessTokenKey, refreshTokenKey } from './core/config.js?v=36';
-import { state } from './core/state.js?v=36';
+import { API, FRONTEND_VERSION, accessTokenKey, refreshTokenKey } from './core/config.js?v=37';
+import { state } from './core/state.js?v=37';
 import {
   $,
   log,
@@ -11,8 +11,8 @@ import {
   expandSectionAndScroll,
   restoreSectionState,
   setSectionCollapsed,
-} from './core/ui.js?v=36';
-import { api, clearTokens, sleep } from './core/http.js?v=36';
+} from './core/ui.js?v=37';
+import { api, clearTokens, sleep } from './core/http.js?v=37';
 
 window.__fitMiniAppBoot = {
   ...(window.__fitMiniAppBoot || {}),
@@ -106,6 +106,301 @@ function getRoleLabel(user) {
 }
 
 const builderCoachOptionLabel = 'Для клиента';
+
+const strengthTemplateTypeLabels = {
+  split: 'Сплит',
+  push_pull_legs: 'Тяни-толкай-ноги',
+  upper_lower: 'Верх-низ',
+  fullbody: 'Фуллбади',
+};
+
+const strengthTemplateDayOptions = {
+  split: [3, 4, 5, 6],
+  push_pull_legs: [3, 4, 5, 6],
+  upper_lower: [2, 3, 4],
+  fullbody: [2, 3, 4],
+};
+
+const strengthWorkoutDayLibrary = {
+  splitChestTriceps: {
+    title: 'Грудь и трицепс',
+    exercises: [
+      ['bench-press', 4, '6-8', 150],
+      ['incline-dumbbell-press', 4, '8-10', 120],
+      ['machine-chest-press', 3, '10-12', 90],
+      ['cable-fly', 3, '12-15', 75],
+      ['rope-pushdown', 3, '10-12', 75],
+    ],
+  },
+  splitBackBiceps: {
+    title: 'Спина и бицепс',
+    exercises: [
+      ['pull-up', 4, '6-10', 120],
+      ['barbell-row', 4, '6-8', 150],
+      ['seated-cable-row', 3, '10-12', 90],
+      ['lat-pulldown', 3, '10-12', 90],
+      ['barbell-curl', 3, '8-10', 90],
+    ],
+  },
+  splitLegsShoulders: {
+    title: 'Ноги и плечи',
+    exercises: [
+      ['squat', 4, '5-8', 180],
+      ['romanian-deadlift', 3, '8-10', 150],
+      ['leg-press', 3, '10-12', 120],
+      ['overhead-press', 3, '6-8', 150],
+      ['dumbbell-lateral-raise', 3, '12-15', 60],
+    ],
+  },
+  splitChest: {
+    title: 'Грудь',
+    exercises: [
+      ['bench-press', 4, '6-8', 150],
+      ['incline-dumbbell-press', 4, '8-10', 120],
+      ['machine-chest-press', 3, '10-12', 90],
+      ['cable-fly', 3, '12-15', 75],
+      ['weighted-dip', 3, '8-10', 120],
+    ],
+  },
+  splitBack: {
+    title: 'Спина',
+    exercises: [
+      ['pull-up', 4, '6-10', 120],
+      ['barbell-row', 4, '6-8', 150],
+      ['seated-cable-row', 3, '10-12', 90],
+      ['lat-pulldown', 3, '10-12', 90],
+      ['straight-arm-pulldown', 3, '12-15', 75],
+    ],
+  },
+  splitLegs: {
+    title: 'Ноги',
+    exercises: [
+      ['squat', 4, '5-8', 180],
+      ['leg-press', 4, '10-12', 150],
+      ['romanian-deadlift', 3, '8-10', 150],
+      ['leg-curl', 3, '10-12', 90],
+      ['standing-calf-raise', 4, '12-15', 60],
+    ],
+  },
+  splitShoulders: {
+    title: 'Плечи',
+    exercises: [
+      ['overhead-press', 4, '6-8', 150],
+      ['dumbbell-lateral-raise', 4, '12-15', 60],
+      ['reverse-pec-deck', 3, '12-15', 75],
+      ['face-pull', 3, '12-15', 75],
+      ['dumbbell-shrug', 3, '10-12', 90],
+    ],
+  },
+  splitArms: {
+    title: 'Руки',
+    exercises: [
+      ['close-grip-bench-press', 4, '6-8', 150],
+      ['barbell-curl', 4, '8-10', 90],
+      ['rope-pushdown', 3, '10-12', 75],
+      ['hammer-curl', 3, '10-12', 75],
+      ['overhead-triceps-extension', 3, '12-15', 75],
+    ],
+  },
+  splitQuads: {
+    title: 'Квадрицепс',
+    exercises: [
+      ['front-squat', 4, '6-8', 150],
+      ['hack-squat', 4, '8-10', 150],
+      ['bulgarian-split-squat', 3, '8-10', 120],
+      ['leg-extension', 3, '12-15', 75],
+      ['standing-calf-raise', 4, '12-15', 60],
+    ],
+  },
+  splitHamstringsGlutes: {
+    title: 'Бедра и ягодицы',
+    exercises: [
+      ['romanian-deadlift', 4, '6-8', 150],
+      ['hip-thrust', 4, '8-10', 120],
+      ['seated-leg-curl', 3, '10-12', 90],
+      ['cable-pull-through', 3, '12-15', 75],
+      ['seated-calf-raise', 4, '12-15', 60],
+    ],
+  },
+  pushA: {
+    title: 'Толкай A',
+    exercises: [
+      ['bench-press', 4, '5-8', 150],
+      ['incline-dumbbell-press', 3, '8-10', 120],
+      ['overhead-press', 3, '6-8', 150],
+      ['dumbbell-lateral-raise', 3, '12-15', 60],
+      ['rope-pushdown', 3, '10-12', 75],
+    ],
+  },
+  pullA: {
+    title: 'Тяни A',
+    exercises: [
+      ['pull-up', 4, '6-10', 120],
+      ['barbell-row', 4, '6-8', 150],
+      ['lat-pulldown', 3, '10-12', 90],
+      ['face-pull', 3, '12-15', 75],
+      ['barbell-curl', 3, '8-10', 90],
+    ],
+  },
+  legsA: {
+    title: 'Ноги A',
+    exercises: [
+      ['squat', 4, '5-8', 180],
+      ['leg-press', 3, '10-12', 150],
+      ['romanian-deadlift', 3, '8-10', 150],
+      ['leg-curl', 3, '10-12', 90],
+      ['standing-calf-raise', 4, '12-15', 60],
+    ],
+  },
+  pushB: {
+    title: 'Толкай B',
+    exercises: [
+      ['incline-bench-press', 4, '6-8', 150],
+      ['machine-chest-press', 3, '10-12', 90],
+      ['seated-dumbbell-press', 3, '8-10', 120],
+      ['cable-lateral-raise', 3, '12-15', 60],
+      ['overhead-triceps-extension', 3, '10-12', 75],
+    ],
+  },
+  pullB: {
+    title: 'Тяни B',
+    exercises: [
+      ['deadlift', 3, '3-5', 180],
+      ['chest-supported-row', 4, '8-10', 120],
+      ['close-grip-lat-pulldown', 3, '10-12', 90],
+      ['rear-delt-fly', 3, '12-15', 75],
+      ['hammer-curl', 3, '10-12', 75],
+    ],
+  },
+  legsB: {
+    title: 'Ноги B',
+    exercises: [
+      ['front-squat', 4, '6-8', 150],
+      ['bulgarian-split-squat', 3, '8-10', 120],
+      ['hip-thrust', 4, '8-10', 120],
+      ['leg-extension', 3, '12-15', 75],
+      ['seated-calf-raise', 4, '12-15', 60],
+    ],
+  },
+  pplUpperPump: {
+    title: 'Верх добор',
+    exercises: [
+      ['incline-dumbbell-press', 3, '8-10', 120],
+      ['seated-cable-row', 3, '10-12', 90],
+      ['machine-shoulder-press', 3, '8-10', 120],
+      ['dumbbell-lateral-raise', 3, '12-15', 60],
+      ['rope-pushdown', 3, '10-12', 75],
+      ['hammer-curl', 3, '10-12', 75],
+    ],
+  },
+  upperA: {
+    title: 'Верх A',
+    exercises: [
+      ['bench-press', 4, '5-8', 150],
+      ['barbell-row', 4, '6-8', 150],
+      ['overhead-press', 3, '6-8', 120],
+      ['lat-pulldown', 3, '10-12', 90],
+      ['rope-pushdown', 3, '10-12', 75],
+      ['barbell-curl', 3, '10-12', 75],
+    ],
+  },
+  lowerA: {
+    title: 'Низ A',
+    exercises: [
+      ['squat', 4, '5-8', 180],
+      ['romanian-deadlift', 4, '8-10', 150],
+      ['leg-press', 3, '10-12', 120],
+      ['leg-curl', 3, '10-12', 90],
+      ['standing-calf-raise', 4, '12-15', 60],
+    ],
+  },
+  upperB: {
+    title: 'Верх B',
+    exercises: [
+      ['incline-dumbbell-press', 4, '8-10', 120],
+      ['pull-up', 4, '6-10', 120],
+      ['seated-dumbbell-press', 3, '8-10', 120],
+      ['seated-cable-row', 3, '10-12', 90],
+      ['dumbbell-lateral-raise', 3, '12-15', 60],
+      ['face-pull', 3, '12-15', 60],
+    ],
+  },
+  lowerB: {
+    title: 'Низ B',
+    exercises: [
+      ['front-squat', 4, '6-8', 150],
+      ['hip-thrust', 4, '8-10', 120],
+      ['bulgarian-split-squat', 3, '8-10', 120],
+      ['seated-leg-curl', 3, '10-12', 90],
+      ['seated-calf-raise', 4, '12-15', 60],
+    ],
+  },
+  fullbodyA: {
+    title: 'Фуллбади A',
+    exercises: [
+      ['squat', 4, '6-8', 150],
+      ['bench-press', 4, '6-8', 150],
+      ['seated-cable-row', 3, '10-12', 90],
+      ['romanian-deadlift', 3, '8-10', 120],
+      ['plank', 3, '30-60 сек', 60],
+    ],
+  },
+  fullbodyB: {
+    title: 'Фуллбади B',
+    exercises: [
+      ['deadlift', 3, '3-5', 180],
+      ['overhead-press', 4, '6-8', 150],
+      ['lat-pulldown', 3, '10-12', 90],
+      ['leg-press', 3, '10-12', 120],
+      ['hanging-leg-raise', 3, '10-15', 60],
+    ],
+  },
+  fullbodyC: {
+    title: 'Фуллбади C',
+    exercises: [
+      ['front-squat', 4, '6-8', 150],
+      ['incline-dumbbell-press', 3, '8-10', 120],
+      ['barbell-row', 4, '6-8', 150],
+      ['hip-thrust', 3, '8-10', 120],
+      ['face-pull', 3, '12-15', 60],
+    ],
+  },
+  fullbodyD: {
+    title: 'Фуллбади D',
+    exercises: [
+      ['leg-press', 3, '10-12', 120],
+      ['machine-chest-press', 3, '10-12', 90],
+      ['chest-supported-row', 3, '10-12', 90],
+      ['dumbbell-lateral-raise', 3, '12-15', 60],
+      ['cable-crunch', 3, '12-15', 60],
+    ],
+  },
+};
+
+const strengthTemplateSequences = {
+  split: {
+    3: ['splitChestTriceps', 'splitBackBiceps', 'splitLegsShoulders'],
+    4: ['splitChest', 'splitBack', 'splitLegs', 'splitShoulders'],
+    5: ['splitChest', 'splitBack', 'splitLegs', 'splitShoulders', 'splitArms'],
+    6: ['splitChest', 'splitBack', 'splitQuads', 'splitShoulders', 'splitHamstringsGlutes', 'splitArms'],
+  },
+  push_pull_legs: {
+    3: ['pushA', 'pullA', 'legsA'],
+    4: ['pushA', 'pullA', 'legsA', 'pplUpperPump'],
+    5: ['pushA', 'pullA', 'legsA', 'pushB', 'pullB'],
+    6: ['pushA', 'pullA', 'legsA', 'pushB', 'pullB', 'legsB'],
+  },
+  upper_lower: {
+    2: ['upperA', 'lowerA'],
+    3: ['upperA', 'lowerA', 'upperB'],
+    4: ['upperA', 'lowerA', 'upperB', 'lowerB'],
+  },
+  fullbody: {
+    2: ['fullbodyA', 'fullbodyB'],
+    3: ['fullbodyA', 'fullbodyB', 'fullbodyC'],
+    4: ['fullbodyA', 'fullbodyB', 'fullbodyC', 'fullbodyD'],
+  },
+};
 
 const devRolePresets = {
   user: {
@@ -1264,16 +1559,20 @@ function renderExerciseCatalog() {
   }
 
   list.innerHTML = state.exercises
-    .map(
-      (ex) => `
+    .map((ex) => {
+      const metadata = [
+        ex.primary_muscle ? `<span class="metric-pill">${escapeHtml(ex.primary_muscle)}</span>` : '',
+        ex.equipment ? `<span class="metric-pill">${escapeHtml(ex.equipment)}</span>` : '',
+        `<span class="metric-pill">${escapeHtml(getExerciseOwnerLabel(ex))}</span>`,
+        ex.is_custom ? '<span class="metric-pill">Личное</span>' : '<span class="metric-pill">Общее</span>',
+        ex.is_personalized ? '<span class="metric-pill">Моё изменение</span>' : '',
+      ].join('');
+
+      return `
           <div class="item-card">
             <strong>${escapeHtml(ex.title)}</strong>
             <div class="exercise-meta">
-              <span class="metric-pill">${escapeHtml(ex.primary_muscle)}</span>
-              <span class="metric-pill">${escapeHtml(ex.equipment)}</span>
-              <span class="metric-pill">${escapeHtml(getExerciseOwnerLabel(ex))}</span>
-              ${ex.is_custom ? '<span class="metric-pill">Личное</span>' : '<span class="metric-pill">Общее</span>'}
-              ${ex.is_personalized ? '<span class="metric-pill">Моё изменение</span>' : ''}
+              ${metadata}
             </div>
             <div class="toolbar wrap top-gap">
               <button class="secondary edit-exercise-btn" type="button" data-exercise-id="${ex.edit_target_id}">
@@ -1284,8 +1583,8 @@ function renderExerciseCatalog() {
               </button>
             </div>
           </div>
-        `
-    )
+        `;
+    })
     .join('');
 
   document.querySelectorAll('.edit-exercise-btn').forEach((btn) => {
@@ -1297,10 +1596,10 @@ function renderExerciseCatalog() {
       const title = prompt('Название упражнения', exercise.title);
       if (title === null) return;
 
-      const primaryMuscle = prompt('Основная мышечная группа', exercise.primary_muscle);
+      const primaryMuscle = prompt('Основная мышечная группа', exercise.primary_muscle || '');
       if (primaryMuscle === null) return;
 
-      const equipment = prompt('Оборудование', exercise.equipment);
+      const equipment = prompt('Оборудование', exercise.equipment || '');
       if (equipment === null) return;
 
       try {
@@ -1369,8 +1668,8 @@ async function createExercise() {
     target_telegram_user_id: ownerValue ? Number(ownerValue) : null,
   };
 
-  if (!payload.title || !payload.primary_muscle || !payload.equipment) {
-    showToast('Заполни все поля упражнения', 'error');
+  if (!payload.title) {
+    showToast('Укажи название упражнения', 'error');
     return;
   }
 
@@ -1425,6 +1724,92 @@ function refreshProgramExerciseOptions() {
     const selectedValue = select.value;
     select.innerHTML = exerciseOptions(selectedValue);
   });
+}
+
+function formatDayCountLabel(count) {
+  if (count === 1) return '1 день';
+  if (count >= 2 && count <= 4) return `${count} дня`;
+  return `${count} дней`;
+}
+
+function syncStrengthTemplateDayOptions() {
+  const typeSelect = $('strengthTemplateType');
+  const daysSelect = $('strengthTemplateDays');
+  if (!typeSelect || !daysSelect) return;
+
+  const type = typeSelect.value || 'upper_lower';
+  const options = strengthTemplateDayOptions[type] || strengthTemplateDayOptions.upper_lower;
+  const current = Number(daysSelect.value || options[options.length - 1]);
+
+  daysSelect.innerHTML = options
+    .map((count) => `<option value="${count}">${formatDayCountLabel(count)}</option>`)
+    .join('');
+
+  daysSelect.value = String(options.includes(current) ? current : options[options.length - 1]);
+}
+
+function resolvePresetExerciseId(slug) {
+  const rows = getBuilderExerciseRows();
+  return rows.find((exercise) => exercise.slug === slug)?.id || null;
+}
+
+function buildStrengthTemplatePreset(type, dayCount) {
+  const normalizedType = strengthTemplateSequences[type] ? type : 'upper_lower';
+  const options = strengthTemplateDayOptions[normalizedType] || strengthTemplateDayOptions.upper_lower;
+  const normalizedDayCount = options.includes(dayCount) ? dayCount : options[options.length - 1];
+  const sequence = strengthTemplateSequences[normalizedType]?.[normalizedDayCount] || [];
+  const label = strengthTemplateTypeLabels[normalizedType] || strengthTemplateTypeLabels.upper_lower;
+
+  return {
+    title: `${label} ${formatDayCountLabel(normalizedDayCount)}`,
+    days: sequence
+      .map((key) => strengthWorkoutDayLibrary[key])
+      .filter(Boolean)
+      .map((day) => ({
+        title: day.title,
+        exercises: day.exercises
+          .map(([slug, prescribed_sets, prescribed_reps, rest_seconds]) => {
+            const exerciseId = resolvePresetExerciseId(slug);
+            if (!exerciseId) return null;
+            return {
+              exercise_id: exerciseId,
+              prescribed_sets,
+              prescribed_reps,
+              rest_seconds,
+            };
+          })
+          .filter(Boolean),
+      }))
+      .filter((day) => day.exercises.length),
+  };
+}
+
+function loadStrengthTemplate(type = null, dayCount = null) {
+  const dayBuilder = $('dayBuilder');
+  if (!dayBuilder) return;
+
+  if (!state.exercises.length) {
+    showToast('Сначала должны загрузиться упражнения', 'error');
+    return;
+  }
+
+  const templateType = type || $('strengthTemplateType')?.value || 'upper_lower';
+  const templateDays = Number(dayCount || $('strengthTemplateDays')?.value || 4);
+  const preset = buildStrengthTemplatePreset(templateType, templateDays);
+
+  if (!preset.days.length) {
+    showToast('Не удалось собрать шаблон из доступных упражнений', 'error');
+    return;
+  }
+
+  resetBuilderEditMode();
+  if ($('program_title')) $('program_title').value = preset.title;
+  if ($('program_goal')) $('program_goal').value = 'muscle_gain';
+  if ($('program_level')) $('program_level').value = templateType === 'fullbody' ? 'beginner' : 'intermediate';
+
+  dayBuilder.innerHTML = '';
+  preset.days.forEach((day) => addDay(day));
+  showToast('Силовой шаблон загружен');
 }
 
 function exerciseTemplate(defaultExerciseId = '', preset = null) {
@@ -1546,33 +1931,7 @@ function renumberDays() {
 }
 
 function fillExample() {
-  const dayBuilder = $('dayBuilder');
-  if (!dayBuilder) return;
-
-  if (!state.exercises.length) {
-    showToast('Сначала должны загрузиться упражнения', 'error');
-    return;
-  }
-
-  dayBuilder.innerHTML = '';
-
-  addDay({
-    title: 'Верх тела A',
-    exercises: [
-      { exercise_id: state.exercises[0]?.id || '', prescribed_sets: 4, prescribed_reps: '6-8', rest_seconds: 120 },
-      { exercise_id: state.exercises[1]?.id || state.exercises[0]?.id || '', prescribed_sets: 4, prescribed_reps: '8-10', rest_seconds: 120 },
-    ],
-  });
-
-  addDay({
-    title: 'Низ тела A',
-    exercises: [
-      { exercise_id: state.exercises[2]?.id || state.exercises[0]?.id || '', prescribed_sets: 4, prescribed_reps: '6-8', rest_seconds: 150 },
-      { exercise_id: state.exercises[3]?.id || state.exercises[1]?.id || '', prescribed_sets: 3, prescribed_reps: '8-10', rest_seconds: 120 },
-    ],
-  });
-
-  showToast('Пример программы заполнен');
+  loadStrengthTemplate('upper_lower', 4);
 }
 
 function collectProgramPayload() {
@@ -2867,6 +3226,16 @@ function bindUI() {
   if ($('builder_mode')) {
     $('builder_mode').addEventListener('change', toggleCoachUI);
   }
+
+  if ($('strengthTemplateType')) {
+    $('strengthTemplateType').addEventListener('change', syncStrengthTemplateDayOptions);
+  }
+
+  if ($('loadStrengthTemplateBtn')) {
+    $('loadStrengthTemplateBtn').onclick = () => loadStrengthTemplate();
+  }
+
+  syncStrengthTemplateDayOptions();
 
   if ($('target_telegram_user_id')) {
     $('target_telegram_user_id').addEventListener('input', refreshProgramExerciseOptions);

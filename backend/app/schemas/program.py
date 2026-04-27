@@ -84,14 +84,14 @@ class ProgramAssignedResponse(BaseModel):
 class ExerciseCatalogItem(BaseModel):
     id: int
     title: str
-    primary_muscle: str
-    equipment: str
+    primary_muscle: str | None = None
+    equipment: str | None = None
 
 
 class ExerciseCatalogCreate(BaseModel):
     title: str
-    primary_muscle: str
-    equipment: str
+    primary_muscle: str | None = None
+    equipment: str | None = None
     target_telegram_user_id: int | None = Field(default=None, ge=1)
 
 

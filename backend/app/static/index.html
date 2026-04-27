@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
     <meta name="theme-color" content="#0f1115"/>
     <title>FitMiniApp</title>
-    <link rel="stylesheet" href="/static/styles.css?v=38"/>
+    <link rel="stylesheet" href="/static/styles.css?v=39"/>
 </head>
 <body>
 <main class="container" id="app-main">
@@ -222,6 +222,23 @@
                 </label>
             </div>
 
+            <div class="grid grid-3 program-template-loader top-gap">
+                <label class="field">
+                    <span>Силовой шаблон</span>
+                    <select id="strengthTemplateType">
+                        <option value="upper_lower" selected>Верх-низ</option>
+                        <option value="push_pull_legs">Тяни-толкай-ноги</option>
+                        <option value="split">Сплит</option>
+                        <option value="fullbody">Фуллбади</option>
+                    </select>
+                </label>
+                <label class="field">
+                    <span>Тренировочных дней</span>
+                    <select id="strengthTemplateDays"></select>
+                </label>
+                <button id="loadStrengthTemplateBtn" class="secondary" type="button">Загрузить шаблон</button>
+            </div>
+
             <div class="toolbar wrap top-gap">
                 <button id="addDayBtn" class="secondary" type="button">+ День</button>
                 <button id="fillExampleBtn" class="secondary" type="button">Заполнить пример</button>
@@ -281,11 +298,11 @@
                 </label>
                 <label class="field">
                     <span>Основная мышечная группа</span>
-                    <input id="newExerciseMuscle" type="text" placeholder="Например, грудь"/>
+                    <input id="newExerciseMuscle" type="text" placeholder="Можно не заполнять"/>
                 </label>
                 <label class="field">
                     <span>Оборудование</span>
-                    <input id="newExerciseEquipment" type="text" placeholder="Например, гантели"/>
+                    <input id="newExerciseEquipment" type="text" placeholder="Можно не заполнять"/>
                 </label>
             </div>
 
@@ -618,6 +635,6 @@
     })();
 </script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script type="module" src="/static/js/main.js?v=36"></script>
+<script type="module" src="/static/js/main.js?v=37"></script>
 </body>
 </html>

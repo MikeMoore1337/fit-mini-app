@@ -804,6 +804,14 @@ button:disabled {
     align-items: center;
 }
 
+.program-template-loader {
+    align-items: end;
+}
+
+.program-template-loader button {
+    min-height: 44px;
+}
+
 .day-title-field {
     flex: 1 1 260px;
 }

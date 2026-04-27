@@ -511,6 +511,41 @@ def test_admin_custom_exercise_is_global(client):
     assert title in coach_titles
 
 
+def test_custom_exercise_metadata_is_optional(client):
+    headers = auth(client, telegram_user_id=31031, is_coach=False)
+
+    created = client.post(
+        "/api/v1/programs/exercises",
+        json={"title": "Minimal Client Move"},
+        headers=headers,
+    )
+
+    assert created.status_code == 201
+    data = created.json()
+    assert data["title"] == "Minimal Client Move"
+    assert data["primary_muscle"] is None
+    assert data["equipment"] is None
+
+
+def test_seeded_catalog_and_strength_templates(client):
+    headers = auth(client, telegram_user_id=31032, is_coach=False)
+
+    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()
+    templates = client.get("/api/v1/programs/templates/mine", headers=headers).json()
+
+    assert len(exercises) >= 140
+    assert "upper-lower-4x" not in {item["slug"] for item in templates}
+    assert {
+        "strength-split-5d",
+        "strength-push-pull-legs-6d",
+        "strength-upper-lower-4d",
+        "strength-fullbody-3d",
+    }.issubset({item["slug"] for item in templates})
+    assert all(
+        template["days"] for template in templates if template["slug"].startswith("strength-")
+    )
+
+
 def test_coach_can_manage_own_client_exercise(client):
     coach_headers = auth(client, telegram_user_id=1107, is_coach=True)
     client_headers = auth(client, telegram_user_id=3109, is_coach=False)

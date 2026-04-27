@@ -47,6 +47,11 @@ def _personal_slug(base: str) -> str:
     return f"{base}-u-{uuid4().hex[:8]}"
 
 
+def _normalize_optional_text(value: str | None) -> str | None:
+    cleaned = (value or "").strip()
+    return cleaned or None
+
+
 def _load_visible_exercise_rows(db: Session, current_user: User) -> list[Exercise]:
     base_rows = (
         db.query(Exercise)
@@ -456,20 +461,16 @@ def create_exercise(
     db: Session,
     current_user: User,
     title: str,
-    primary_muscle: str,
-    equipment: str,
+    primary_muscle: str | None,
+    equipment: str | None,
     target_telegram_user_id: int | None = None,
 ) -> Exercise:
     normalized_title = title.strip()
-    normalized_muscle = primary_muscle.strip()
-    normalized_equipment = equipment.strip()
+    normalized_muscle = _normalize_optional_text(primary_muscle)
+    normalized_equipment = _normalize_optional_text(equipment)
 
     if not normalized_title:
         raise ProgramError("Exercise title is required")
-    if not normalized_muscle:
-        raise ProgramError("Primary muscle is required")
-    if not normalized_equipment:
-        raise ProgramError("Equipment is required")
 
     owner_user = _resolve_manageable_user(db, current_user, target_telegram_user_id)
     is_global_admin_exercise = current_user.is_admin and owner_user.id == current_user.id
@@ -520,8 +521,8 @@ def update_exercise_for_user(
     current_user: User,
     exercise_id: int,
     title: str,
-    primary_muscle: str,
-    equipment: str,
+    primary_muscle: str | None,
+    equipment: str | None,
     target_telegram_user_id: int | None = None,
 ) -> Exercise:
     exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
@@ -529,15 +530,11 @@ def update_exercise_for_user(
         raise ProgramError("Exercise not found")
 
     normalized_title = title.strip()
-    normalized_muscle = primary_muscle.strip()
-    normalized_equipment = equipment.strip()
+    normalized_muscle = _normalize_optional_text(primary_muscle)
+    normalized_equipment = _normalize_optional_text(equipment)
 
     if not normalized_title:
         raise ProgramError("Exercise title is required")
-    if not normalized_muscle:
-        raise ProgramError("Primary muscle is required")
-    if not normalized_equipment:
-        raise ProgramError("Equipment is required")
 
     if exercise.created_by_user_id is not None and not _can_manage_user_id(
         db,

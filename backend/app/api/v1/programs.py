@@ -63,8 +63,8 @@ def add_exercise(
             db=db,
             current_user=current_user,
             title=payload.title.strip(),
-            primary_muscle=payload.primary_muscle.strip(),
-            equipment=payload.equipment.strip(),
+            primary_muscle=payload.primary_muscle,
+            equipment=payload.equipment,
             target_telegram_user_id=payload.target_telegram_user_id,
         )
     except ProgramError as exc:
@@ -89,8 +89,8 @@ def edit_exercise(
             current_user=current_user,
             exercise_id=exercise_id,
             title=payload.title.strip(),
-            primary_muscle=payload.primary_muscle.strip(),
-            equipment=payload.equipment.strip(),
+            primary_muscle=payload.primary_muscle,
+            equipment=payload.equipment,
             target_telegram_user_id=payload.target_telegram_user_id,
         )
     except ProgramError as exc:

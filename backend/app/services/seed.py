@@ -5,6 +5,132 @@ from app.models.exercise import Exercise
 from app.models.notification import NotificationSetting
 from app.models.program import ProgramTemplate, ProgramTemplateDay, ProgramTemplateExercise
 from app.models.user import User, UserProfile
+from app.services.program_seed_data import (
+    EXERCISE_CATALOG,
+    LEGACY_TEMPLATE_SLUGS,
+    STRENGTH_TEMPLATE_SPECS,
+    TemplateDaySeed,
+)
+
+
+def _seed_exercise_catalog(db: Session) -> None:
+    for slug, title, primary_muscle, equipment in EXERCISE_CATALOG:
+        exercise = (
+            db.query(Exercise)
+            .filter(
+                Exercise.slug == slug,
+                Exercise.created_by_user_id.is_(None),
+                Exercise.source_exercise_id.is_(None),
+            )
+            .first()
+        )
+        if exercise:
+            exercise.title = title
+            exercise.primary_muscle = primary_muscle
+            exercise.equipment = equipment
+            continue
+
+        if db.query(Exercise).filter(Exercise.slug == slug).first():
+            continue
+
+        db.add(
+            Exercise(
+                slug=slug,
+                title=title,
+                primary_muscle=primary_muscle,
+                equipment=equipment,
+                created_by_user_id=None,
+                source_exercise_id=None,
+                is_deleted=False,
+            )
+        )
+
+    db.flush()
+
+
+def _clear_template_days(db: Session, template: ProgramTemplate) -> None:
+    day_ids = [
+        row.id
+        for row in db.query(ProgramTemplateDay.id)
+        .filter(ProgramTemplateDay.program_id == template.id)
+        .all()
+    ]
+    if day_ids:
+        db.query(ProgramTemplateExercise).filter(
+            ProgramTemplateExercise.day_id.in_(day_ids)
+        ).delete(synchronize_session=False)
+        db.query(ProgramTemplateDay).filter(ProgramTemplateDay.id.in_(day_ids)).delete(
+            synchronize_session=False
+        )
+    db.flush()
+
+
+def _delete_legacy_templates(db: Session) -> None:
+    for slug in LEGACY_TEMPLATE_SLUGS:
+        template = db.query(ProgramTemplate).filter(ProgramTemplate.slug == slug).first()
+        if not template:
+            continue
+
+        from app.services.programs import delete_template_cascade
+
+        delete_template_cascade(db, template)
+        db.flush()
+
+
+def _seed_strength_templates(db: Session) -> None:
+    exercise_map = {
+        row.slug: row
+        for row in db.query(Exercise)
+        .filter(
+            Exercise.created_by_user_id.is_(None),
+            Exercise.source_exercise_id.is_(None),
+            Exercise.is_deleted.is_(False),
+        )
+        .all()
+    }
+
+    for spec in STRENGTH_TEMPLATE_SPECS:
+        slug = str(spec["slug"])
+        template = db.query(ProgramTemplate).filter(ProgramTemplate.slug == slug).first()
+        if not template:
+            template = ProgramTemplate(slug=slug)
+            db.add(template)
+        else:
+            _clear_template_days(db, template)
+
+        template.title = str(spec["title"])
+        template.goal = str(spec["goal"])
+        template.level = str(spec["level"])
+        template.owner_user_id = None
+        template.created_by_user_id = None
+        template.is_public = True
+        db.flush()
+
+        days: list[TemplateDaySeed] = spec["days"]  # type: ignore[assignment]
+        for day_number, (day_title, exercises) in enumerate(days, start=1):
+            day = ProgramTemplateDay(
+                program_id=template.id,
+                day_number=day_number,
+                title=day_title,
+            )
+            db.add(day)
+            db.flush()
+
+            for sort_order, (exercise_slug, sets, reps, rest) in enumerate(exercises, start=1):
+                exercise = exercise_map.get(exercise_slug)
+                if exercise is None:
+                    raise RuntimeError(f"Seed exercise is missing: {exercise_slug}")
+
+                db.add(
+                    ProgramTemplateExercise(
+                        day_id=day.id,
+                        exercise_id=exercise.id,
+                        sort_order=sort_order,
+                        prescribed_sets=sets,
+                        prescribed_reps=reps,
+                        rest_seconds=rest,
+                    )
+                )
 
 
 def seed_demo_data(db: Session, include_demo_users: bool = True) -> None:
@@ -37,54 +163,7 @@ def seed_demo_data(db: Session, include_demo_users: bool = True) -> None:
             ]
         )
 
-    if db.query(Exercise).count() == 0:
-        db.add_all(
-            [
-                Exercise(
-                    slug="bench-press",
-                    title="Жим лёжа",
-                    primary_muscle="chest",
-                    equipment="barbell",
-                ),
-                Exercise(
-                    slug="barbell-row",
-                    title="Тяга штанги в наклоне",
-                    primary_muscle="back",
-                    equipment="barbell",
-                ),
-                Exercise(
-                    slug="squat", title="Приседания", primary_muscle="legs", equipment="barbell"
-                ),
-                Exercise(
-                    slug="romanian-deadlift",
-                    title="Румынская тяга",
-                    primary_muscle="hamstrings",
-                    equipment="barbell",
-                ),
-                Exercise(
-                    slug="overhead-press",
-                    title="Жим стоя",
-                    primary_muscle="shoulders",
-                    equipment="barbell",
-                ),
-                Exercise(
-                    slug="lat-pulldown",
-                    title="Вертикальная тяга",
-                    primary_muscle="back",
-                    equipment="machine",
-                ),
-                Exercise(
-                    slug="leg-press", title="Жим ногами", primary_muscle="legs", equipment="machine"
-                ),
-                Exercise(
-                    slug="leg-curl",
-                    title="Сгибание ног лёжа",
-                    primary_muscle="hamstrings",
-                    equipment="machine",
-                ),
-            ]
-        )
-        db.flush()
+    _seed_exercise_catalog(db)
 
     if db.query(Plan).count() == 0:
         db.add_all(
@@ -95,55 +174,6 @@ def seed_demo_data(db: Session, include_demo_users: bool = True) -> None:
             ]
         )
 
-    if not db.query(ProgramTemplate).filter(ProgramTemplate.slug == "upper-lower-4x").first():
-        exercise_map = {row.slug: row for row in db.query(Exercise).all()}
-        template = ProgramTemplate(
-            slug="upper-lower-4x",
-            title="Upper/Lower 4x",
-            goal="recomposition",
-            level="intermediate",
-            is_public=True,
-        )
-        db.add(template)
-        db.flush()
-        day1 = ProgramTemplateDay(program_id=template.id, day_number=1, title="Верх тела A")
-        day2 = ProgramTemplateDay(program_id=template.id, day_number=2, title="Низ тела A")
-        db.add_all([day1, day2])
-        db.flush()
-        db.add_all(
-            [
-                ProgramTemplateExercise(
-                    day_id=day1.id,
-                    exercise_id=exercise_map["bench-press"].id,
-                    sort_order=1,
-                    prescribed_sets=4,
-                    prescribed_reps="6-8",
-                    rest_seconds=120,
-                ),
-                ProgramTemplateExercise(
-                    day_id=day1.id,
-                    exercise_id=exercise_map["barbell-row"].id,
-                    sort_order=2,
-                    prescribed_sets=4,
-                    prescribed_reps="8-10",
-                    rest_seconds=120,
-                ),
-                ProgramTemplateExercise(
-                    day_id=day2.id,
-                    exercise_id=exercise_map["squat"].id,
-                    sort_order=1,
-                    prescribed_sets=4,
-                    prescribed_reps="6-8",
-                    rest_seconds=150,
-                ),
-                ProgramTemplateExercise(
-                    day_id=day2.id,
-                    exercise_id=exercise_map["romanian-deadlift"].id,
-                    sort_order=2,
-                    prescribed_sets=3,
-                    prescribed_reps="8-10",
-                    rest_seconds=120,
-                ),
-            ]
-        )
+    _delete_legacy_templates(db)
+    _seed_strength_templates(db)
     db.commit()

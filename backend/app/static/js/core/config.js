@@ -1,4 +1,4 @@
-export const FRONTEND_VERSION = 'v36';
+export const FRONTEND_VERSION = 'v37';
 
 export const accessTokenKey = 'fit_access_token';
 export const refreshTokenKey = 'fit_refresh_token';
