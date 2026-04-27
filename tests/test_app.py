@@ -8,6 +8,9 @@ from urllib.parse import urlencode
 import pytest
 
 from app.core.timezone import to_msk_naive
+from app.db.session import get_session_context
+from app.models.exercise import Exercise
+from app.services.seed import seed_demo_data
 from app.services.telegram_auth import validate_telegram_init_data
 
 
@@ -544,6 +547,31 @@ def test_seeded_catalog_and_strength_templates(client):
     assert all(
         template["days"] for template in templates if template["slug"].startswith("strength-")
     )
+
+
+def test_seed_refreshes_catalog_exercises_for_templates(client):
+    with get_session_context() as session:
+        bench = session.query(Exercise).filter(Exercise.slug == "bench-press").one()
+        bench.is_deleted = True
+        session.add(
+            Exercise(
+                slug="legacy-global-only",
+                title="Legacy Global Only",
+                primary_muscle="old",
+                equipment="old",
+                created_by_user_id=None,
+                source_exercise_id=None,
+                is_deleted=False,
+            )
+        )
+        session.flush()
+        seed_demo_data(session, include_demo_users=False)
+
+        refreshed_bench = session.query(Exercise).filter(Exercise.slug == "bench-press").one()
+        obsolete = session.query(Exercise).filter(Exercise.slug == "legacy-global-only").one()
+
+        assert refreshed_bench.is_deleted is False
+        assert obsolete.is_deleted is True
 
 
 def test_coach_can_manage_own_client_exercise(client):

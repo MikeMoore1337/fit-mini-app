@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from sqlalchemy.orm import Session
 
 from app.models.billing import Plan
@@ -13,7 +15,13 @@ from app.services.program_seed_data import (
 )
 
 
+def _legacy_slug(slug: str) -> str:
+    return f"{slug}-legacy-{uuid4().hex[:8]}"
+
+
 def _seed_exercise_catalog(db: Session) -> None:
+    catalog_slugs = {slug for slug, *_ in EXERCISE_CATALOG}
+
     for slug, title, primary_muscle, equipment in EXERCISE_CATALOG:
         exercise = (
             db.query(Exercise)
@@ -24,26 +32,32 @@ def _seed_exercise_catalog(db: Session) -> None:
             )
             .first()
         )
-        if exercise:
-            exercise.title = title
-            exercise.primary_muscle = primary_muscle
-            exercise.equipment = equipment
-            continue
+        if not exercise:
+            conflicting = db.query(Exercise).filter(Exercise.slug == slug).first()
+            if conflicting is not None:
+                conflicting.slug = _legacy_slug(slug)
+                db.flush()
 
-        if db.query(Exercise).filter(Exercise.slug == slug).first():
-            continue
-
-        db.add(
-            Exercise(
+            exercise = Exercise(
                 slug=slug,
-                title=title,
-                primary_muscle=primary_muscle,
-                equipment=equipment,
                 created_by_user_id=None,
                 source_exercise_id=None,
-                is_deleted=False,
             )
-        )
+            db.add(exercise)
+
+        exercise.title = title
+        exercise.primary_muscle = primary_muscle
+        exercise.equipment = equipment
+        exercise.is_deleted = False
+
+    db.query(Exercise).filter(
+        Exercise.created_by_user_id.is_(None),
+        Exercise.source_exercise_id.is_(None),
+        Exercise.slug.notin_(catalog_slugs),
+    ).update(
+        {Exercise.is_deleted: True},
+        synchronize_session=False,
+    )
 
     db.flush()
 
