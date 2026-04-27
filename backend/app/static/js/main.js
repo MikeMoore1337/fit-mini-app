@@ -1,5 +1,5 @@
-import { API, FRONTEND_VERSION, accessTokenKey, refreshTokenKey } from './core/config.js?v=39';
-import { state } from './core/state.js?v=39';
+import { API, FRONTEND_VERSION, accessTokenKey, refreshTokenKey } from './core/config.js?v=40';
+import { state } from './core/state.js?v=40';
 import {
   $,
   log,
@@ -11,8 +11,8 @@ import {
   expandSectionAndScroll,
   restoreSectionState,
   setSectionCollapsed,
-} from './core/ui.js?v=39';
-import { api, clearTokens, sleep } from './core/http.js?v=39';
+} from './core/ui.js?v=40';
+import { api, clearTokens, sleep } from './core/http.js?v=40';
 
 window.__fitMiniAppBoot = {
   ...(window.__fitMiniAppBoot || {}),
@@ -1582,6 +1582,72 @@ function getFilteredExerciseCatalogRows() {
   });
 }
 
+function getExerciseGroupLabel(exercise) {
+  return exercise.primary_muscle?.trim() || 'Без группы';
+}
+
+function compareExerciseGroupLabels(a, b) {
+  if (a === 'Без группы' && b !== 'Без группы') return 1;
+  if (b === 'Без группы' && a !== 'Без группы') return -1;
+  return a.localeCompare(b, 'ru');
+}
+
+function getExerciseCatalogCardHtml(exercise) {
+  const metadata = [
+    exercise.primary_muscle
+      ? `<span class="metric-pill">${escapeHtml(exercise.primary_muscle)}</span>`
+      : '',
+    exercise.equipment ? `<span class="metric-pill">${escapeHtml(exercise.equipment)}</span>` : '',
+    `<span class="metric-pill">${escapeHtml(getExerciseOwnerLabel(exercise))}</span>`,
+    `<span class="metric-pill">${escapeHtml(getExerciseCatalogBadgeLabel(exercise))}</span>`,
+    exercise.is_personalized ? '<span class="metric-pill">Моё изменение</span>' : '',
+  ].join('');
+
+  return `
+    <div class="item-card exercise-catalog-card">
+      <strong>${escapeHtml(exercise.title)}</strong>
+      <div class="exercise-meta">
+        ${metadata}
+      </div>
+      <div class="toolbar wrap top-gap">
+        <button class="secondary edit-exercise-btn" type="button" data-exercise-id="${exercise.edit_target_id}">
+          Редактировать
+        </button>
+        <button class="secondary delete-exercise-btn" type="button" data-exercise-id="${exercise.edit_target_id}">
+          Удалить
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function getExerciseGroupsHtml(rows, query) {
+  const groups = new Map();
+
+  rows.forEach((exercise) => {
+    const label = getExerciseGroupLabel(exercise);
+    groups.set(label, [...(groups.get(label) || []), exercise]);
+  });
+
+  return [...groups.entries()]
+    .sort(([a], [b]) => compareExerciseGroupLabels(a, b))
+    .map(([label, exercises]) => {
+      const count = exercises.length;
+      return `
+        <details class="exercise-group" ${query ? 'open' : ''}>
+          <summary>
+            <span>${escapeHtml(label)}</span>
+            <span class="metric-pill">${escapeHtml(count)} ${count === 1 ? 'упражнение' : 'упр.'}</span>
+          </summary>
+          <div class="exercise-group__body">
+            ${exercises.map((exercise) => getExerciseCatalogCardHtml(exercise)).join('')}
+          </div>
+        </details>
+      `;
+    })
+    .join('');
+}
+
 function renderExerciseCatalog() {
   const list = $('exerciseCatalogList');
   if (!list) return;
@@ -1618,34 +1684,7 @@ function renderExerciseCatalog() {
     return;
   }
 
-  list.innerHTML = rows
-    .map((ex) => {
-      const metadata = [
-        ex.primary_muscle ? `<span class="metric-pill">${escapeHtml(ex.primary_muscle)}</span>` : '',
-        ex.equipment ? `<span class="metric-pill">${escapeHtml(ex.equipment)}</span>` : '',
-        `<span class="metric-pill">${escapeHtml(getExerciseOwnerLabel(ex))}</span>`,
-        `<span class="metric-pill">${escapeHtml(getExerciseCatalogBadgeLabel(ex))}</span>`,
-        ex.is_personalized ? '<span class="metric-pill">Моё изменение</span>' : '',
-      ].join('');
-
-      return `
-          <div class="item-card">
-            <strong>${escapeHtml(ex.title)}</strong>
-            <div class="exercise-meta">
-              ${metadata}
-            </div>
-            <div class="toolbar wrap top-gap">
-              <button class="secondary edit-exercise-btn" type="button" data-exercise-id="${ex.edit_target_id}">
-                Редактировать
-              </button>
-              <button class="secondary delete-exercise-btn" type="button" data-exercise-id="${ex.edit_target_id}">
-                Удалить
-              </button>
-            </div>
-          </div>
-        `;
-    })
-    .join('');
+  list.innerHTML = getExerciseGroupsHtml(rows, query);
 
   document.querySelectorAll('.edit-exercise-btn').forEach((btn) => {
     btn.onclick = async () => {

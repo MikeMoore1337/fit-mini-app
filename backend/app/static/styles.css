@@ -855,6 +855,68 @@ button:disabled {
     padding: 14px;
 }
 
+.exercise-group {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    overflow: hidden;
+}
+
+.exercise-group + .exercise-group {
+    margin-top: 10px;
+}
+
+.exercise-group summary {
+    cursor: pointer;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto 24px;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    list-style: none;
+    font-weight: 800;
+}
+
+.exercise-group summary::-webkit-details-marker {
+    display: none;
+}
+
+.exercise-group summary::after {
+    content: "+";
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--muted);
+    font-weight: 800;
+}
+
+.exercise-group summary .metric-pill {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+.exercise-group[open] summary {
+    border-bottom: 1px solid var(--border);
+}
+
+.exercise-group[open] summary::after {
+    content: "-";
+}
+
+.exercise-group__body {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+}
+
+.exercise-catalog-card {
+    background: var(--card);
+}
+
 .day-card {
     border-left: 4px solid var(--accent);
 }

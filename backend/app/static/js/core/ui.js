@@ -1,4 +1,4 @@
-import { sectionStoragePrefix } from './config.js?v=39';
+import { sectionStoragePrefix } from './config.js?v=40';
 
 export function $(id) {
   return document.getElementById(id);
