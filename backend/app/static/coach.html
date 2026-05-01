@@ -89,6 +89,14 @@
 
   <div id="toast" class="toast hidden"></div>
 
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script type="module">
+    import { initTelegramTheme } from '/static/js/core/theme.js?v=42';
+
+    initTelegramTheme({
+      onError: (error) => console.warn(`Telegram theme: ${String(error)}`),
+    });
+  </script>
   <script>
     const accessTokenKey = 'fit_access_token';
 
