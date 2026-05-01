@@ -291,6 +291,51 @@ def test_user_can_clear_completed_workout_history(client):
     assert client.get("/api/v1/workouts/today", headers=headers).status_code == 404
 
 
+def test_client_can_save_update_and_delete_body_measurement(client):
+    headers = auth(client, telegram_user_id=6402, is_coach=False)
+
+    created = client.post(
+        "/api/v1/workouts/diary",
+        json={
+            "measured_on": "2026-05-01",
+            "weight_kg": 74.5,
+            "waist_cm": 82.0,
+            "note": "утро",
+        },
+        headers=headers,
+    )
+
+    assert created.status_code == 200
+    data = created.json()
+    assert data["weight_kg"] == 74.5
+    assert data["waist_cm"] == 82.0
+
+    updated = client.post(
+        "/api/v1/workouts/diary",
+        json={
+            "measured_on": "2026-05-01",
+            "weight_kg": 74.0,
+            "chest_cm": 98.5,
+        },
+        headers=headers,
+    )
+
+    assert updated.status_code == 200
+    assert updated.json()["id"] == data["id"]
+    assert updated.json()["weight_kg"] == 74.0
+    assert updated.json()["waist_cm"] == 82.0
+    assert updated.json()["chest_cm"] == 98.5
+
+    rows = client.get("/api/v1/workouts/diary", headers=headers)
+    assert rows.status_code == 200
+    assert len(rows.json()) == 1
+
+    deleted = client.delete(f"/api/v1/workouts/diary/{data['id']}", headers=headers)
+
+    assert deleted.status_code == 204
+    assert client.get("/api/v1/workouts/diary", headers=headers).json() == []
+
+
 def test_workout_set_patch(client):
     headers = auth(client, telegram_user_id=2001, is_coach=False)
     exercises = client.get("/api/v1/programs/exercises", headers=headers).json()

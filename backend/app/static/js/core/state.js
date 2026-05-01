@@ -16,6 +16,7 @@ export const state = {
   historyOffset: 0,
   historyLimit: 4,
   historyHasMore: true,
+  measurementRows: [],
   editingTemplateId: null,
   telegramMainButtonBound: false,
   telegramBackButtonBound: false,

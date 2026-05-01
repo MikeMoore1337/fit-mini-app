@@ -5,8 +5,8 @@ from app.api.dependencies.auth import require_user
 from app.core.timezone import now_for_user_naive, today_for_user
 from app.db.session import get_db
 from app.models.program import UserProgram, UserWorkout, UserWorkoutExercise, UserWorkoutSet
-from app.models.user import User
-from app.schemas.workout import WorkoutSetUpdate
+from app.models.user import BodyMeasurement, User
+from app.schemas.workout import BodyMeasurementResponse, BodyMeasurementSave, WorkoutSetUpdate
 from app.services.programs import get_visible_exercise_display_map
 
 router = APIRouter()
@@ -98,6 +98,21 @@ def _serialize_workout(workout: UserWorkout, db: Session, current_user: User) ->
             }
             for item in sorted(workout.exercises, key=lambda x: x.sort_order)
         ],
+    }
+
+
+def _serialize_body_measurement(row: BodyMeasurement) -> dict:
+    return {
+        "id": row.id,
+        "measured_on": row.measured_on,
+        "weight_kg": row.weight_kg,
+        "chest_cm": row.chest_cm,
+        "waist_cm": row.waist_cm,
+        "hips_cm": row.hips_cm,
+        "biceps_cm": row.biceps_cm,
+        "thigh_cm": row.thigh_cm,
+        "note": row.note,
+        "created_at": row.created_at,
     }
 
 
@@ -286,6 +301,92 @@ def workout_history(
         )
 
     return rows
+
+
+@router.get("/diary", response_model=list[BodyMeasurementResponse])
+def body_measurements(
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+    limit: int = Query(default=12, ge=1, le=60),
+):
+    rows = (
+        db.query(BodyMeasurement)
+        .filter(BodyMeasurement.user_id == current_user.id)
+        .order_by(BodyMeasurement.measured_on.desc(), BodyMeasurement.id.desc())
+        .limit(limit)
+        .all()
+    )
+    return [_serialize_body_measurement(row) for row in rows]
+
+
+@router.post("/diary", response_model=BodyMeasurementResponse)
+def save_body_measurement(
+    payload: BodyMeasurementSave,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    changes = payload.model_dump(exclude_unset=True)
+    note = changes.get("note")
+    if isinstance(note, str):
+        changes["note"] = note.strip() or None
+
+    measurement_keys = [
+        "weight_kg",
+        "chest_cm",
+        "waist_cm",
+        "hips_cm",
+        "biceps_cm",
+        "thigh_cm",
+    ]
+    has_measurement = any(changes.get(key) is not None for key in measurement_keys)
+    if not changes.get("note") and not has_measurement:
+        raise HTTPException(status_code=400, detail="Укажите вес, замер или заметку")
+
+    measured_on = payload.measured_on or today_for_user(current_user)
+    row = (
+        db.query(BodyMeasurement)
+        .filter(
+            BodyMeasurement.user_id == current_user.id,
+            BodyMeasurement.measured_on == measured_on,
+        )
+        .first()
+    )
+
+    if row is None:
+        row = BodyMeasurement(user_id=current_user.id, measured_on=measured_on)
+        db.add(row)
+
+    for key in measurement_keys:
+        if key in changes:
+            setattr(row, key, changes[key])
+    if "note" in changes:
+        row.note = changes["note"]
+
+    db.commit()
+    db.refresh(row)
+    return _serialize_body_measurement(row)
+
+
+@router.delete("/diary/{measurement_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_body_measurement(
+    measurement_id: int,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    row = (
+        db.query(BodyMeasurement)
+        .filter(
+            BodyMeasurement.id == measurement_id,
+            BodyMeasurement.user_id == current_user.id,
+        )
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Запись дневника не найдена")
+
+    db.delete(row)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.delete("/history", status_code=status.HTTP_204_NO_CONTENT)

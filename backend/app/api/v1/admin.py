@@ -15,7 +15,7 @@ from app.models.program import (
     UserWorkoutSet,
 )
 from app.models.token import RefreshToken
-from app.models.user import CoachClient, CoachClientInvite, User, UserProfile
+from app.models.user import BodyMeasurement, CoachClient, CoachClientInvite, User, UserProfile
 from app.schemas.admin import AdminUserRoleUpdate, AdminUserStatusUpdate
 from app.services.programs import delete_template_cascade
 from app.services.token_service import revoke_all_user_refresh_tokens
@@ -124,6 +124,9 @@ def _delete_user_cascade(db: Session, user: User) -> None:
     )
     db.query(Payment).filter(Payment.user_id == user.id).delete(synchronize_session=False)
     db.query(Subscription).filter(Subscription.user_id == user.id).delete(synchronize_session=False)
+    db.query(BodyMeasurement).filter(BodyMeasurement.user_id == user.id).delete(
+        synchronize_session=False
+    )
     db.query(RefreshToken).filter(RefreshToken.user_id == user.id).delete(synchronize_session=False)
     db.query(UserProfile).filter(UserProfile.user_id == user.id).delete(synchronize_session=False)
 

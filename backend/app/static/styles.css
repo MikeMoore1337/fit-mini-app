@@ -142,6 +142,10 @@ body {
     gap: 16px;
 }
 
+.container.narrow {
+    max-width: 760px;
+}
+
 .card {
     background: var(--card-bg);
     border: 1px solid var(--border);
@@ -298,7 +302,8 @@ p {
 
 .toolbar.wrap > button,
 .toolbar.wrap > .button-link {
-    min-width: 0;
+    flex: 1 1 142px;
+    min-width: 112px;
     text-align: center;
 }
 
@@ -308,6 +313,10 @@ p {
     align-items: center;
     gap: 12px;
     margin-bottom: 12px;
+}
+
+.section-head.compact {
+    margin-bottom: 0;
 }
 
 .section-content.hidden {
@@ -377,6 +386,7 @@ button,
     border: none;
     border-radius: var(--radius-sm);
     padding: 11px 15px;
+    min-height: 44px;
     background: var(--accent);
     color: var(--button-text, white);
     font-weight: 600;
@@ -385,6 +395,10 @@ button,
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 6px;
+    line-height: 1.2;
+    text-align: center;
+    white-space: normal;
     transition: transform 0.08s ease, background 0.18s ease, opacity 0.18s ease;
 }
 
@@ -921,6 +935,26 @@ button:disabled {
     border-left: 4px solid var(--accent);
 }
 
+.program-day-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(252px, 0.45fr);
+    align-items: end;
+    gap: 10px;
+}
+
+.program-day-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.program-day-actions button {
+    width: 100%;
+    min-height: 48px;
+    padding-right: 10px;
+    padding-left: 10px;
+}
+
 .program-ex-row {
     align-items: center;
 }
@@ -934,7 +968,57 @@ button:disabled {
 }
 
 .day-title-field {
-    flex: 1 1 260px;
+    min-width: 0;
+}
+
+.diary-grid {
+    display: grid;
+    gap: 12px;
+}
+
+.diary-entry-form,
+.diary-measurements-card {
+    display: grid;
+    gap: 12px;
+}
+
+.diary-form-grid {
+    align-items: end;
+}
+
+.diary-section-title {
+    margin: 14px 0 10px;
+}
+
+.diary-measurement-row {
+    display: grid;
+    gap: 8px;
+    padding: 11px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-subtle);
+}
+
+.diary-measurement-row__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.diary-measurement-row__head button {
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 8px 10px;
+    font-size: 13px;
+}
+
+.diary-note {
+    line-height: 1.45;
+}
+
+.empty-state--compact {
+    padding: 14px 12px;
 }
 
 .kbju-result-grid {
@@ -1200,10 +1284,32 @@ a {
 
     .toolbar.wrap > * {
         flex: 1 1 0;
-        min-width: min(100%, 132px);
+        min-width: min(100%, 96px);
     }
 
     .section-head > .section-toggle {
+        width: 100%;
+    }
+
+    .program-day-head {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .program-day-actions {
+        width: 100%;
+    }
+
+    .diary-section-title {
+        margin: 12px 0 8px;
+    }
+
+    .diary-measurement-row__head {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .diary-measurement-row__head button {
         width: 100%;
     }
 
@@ -1357,6 +1463,7 @@ a {
     color: var(--muted);
     font-size: 11px;
     font-weight: 600;
+    text-decoration: none;
     cursor: pointer;
     transition: color 0.15s ease, background 0.15s ease;
 }

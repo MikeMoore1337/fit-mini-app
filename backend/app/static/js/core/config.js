@@ -1,4 +1,4 @@
-export const FRONTEND_VERSION = 'v40';
+export const FRONTEND_VERSION = 'v41';
 
 export const accessTokenKey = 'fit_access_token';
 export const refreshTokenKey = 'fit_refresh_token';
@@ -34,6 +34,9 @@ export const API = {
   updateSet: (setId) => `/api/v1/workouts/sets/${setId}`,
   workoutHistory: (offset, limit) => `/api/v1/workouts/history?offset=${offset}&limit=${limit}`,
   clearWorkoutHistory: '/api/v1/workouts/history',
+  bodyMeasurements: '/api/v1/workouts/diary',
+  createBodyMeasurement: '/api/v1/workouts/diary',
+  deleteBodyMeasurement: (measurementId) => `/api/v1/workouts/diary/${measurementId}`,
 
   billingPlans: '/api/v1/billing/plans',
   billingSubscription: '/api/v1/billing/subscription',

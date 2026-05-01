@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
     <meta name="theme-color" content="#0f1115"/>
     <title>FitMiniApp</title>
-    <link rel="stylesheet" href="/static/styles.css?v=42"/>
+    <link rel="stylesheet" href="/static/styles.css?v=43"/>
 </head>
 <body>
 <main class="container" id="app-main">
@@ -330,13 +330,68 @@
 
     <div class="card" id="card-history">
         <div class="section-head">
-            <h2>История тренировок</h2>
+            <h2>Дневник тренировок</h2>
             <div class="toolbar wrap">
-                <button id="clearHistoryBtn" class="secondary hidden" type="button">Очистить историю</button>
+                <button id="clearHistoryBtn" class="secondary hidden" type="button">Очистить тренировки</button>
                 <button class="secondary section-toggle" type="button" data-target="section-history">Свернуть</button>
             </div>
         </div>
         <div id="section-history" class="section-content">
+            <div class="diary-grid">
+                <div class="item-card diary-entry-form">
+                    <div class="section-head compact">
+                        <h3>Замеры</h3>
+                    </div>
+                    <div class="grid grid-4 diary-form-grid">
+                        <label class="field">
+                            <span>Дата</span>
+                            <input id="measurementDate" type="date"/>
+                        </label>
+                        <label class="field">
+                            <span>Вес, кг</span>
+                            <input id="measurementWeight" type="text" inputmode="decimal" placeholder="74.5"/>
+                        </label>
+                        <label class="field">
+                            <span>Грудь, см</span>
+                            <input id="measurementChest" type="text" inputmode="decimal" placeholder="98"/>
+                        </label>
+                        <label class="field">
+                            <span>Талия, см</span>
+                            <input id="measurementWaist" type="text" inputmode="decimal" placeholder="82"/>
+                        </label>
+                        <label class="field">
+                            <span>Бёдра, см</span>
+                            <input id="measurementHips" type="text" inputmode="decimal" placeholder="100"/>
+                        </label>
+                        <label class="field">
+                            <span>Бицепс, см</span>
+                            <input id="measurementBiceps" type="text" inputmode="decimal" placeholder="36"/>
+                        </label>
+                        <label class="field">
+                            <span>Бедро, см</span>
+                            <input id="measurementThigh" type="text" inputmode="decimal" placeholder="58"/>
+                        </label>
+                    </div>
+                    <label class="field top-gap">
+                        <span>Заметка</span>
+                        <textarea id="measurementNote" placeholder="Самочувствие, фото, условия замера"></textarea>
+                    </label>
+                    <div class="toolbar top-gap">
+                        <button id="saveMeasurementBtn" type="button">Сохранить замер</button>
+                    </div>
+                </div>
+
+                <div class="item-card diary-measurements-card">
+                    <div class="section-head compact">
+                        <h3>История замеров</h3>
+                    </div>
+                    <div id="bodyMeasurements" class="stack"></div>
+                </div>
+            </div>
+
+            <div class="diary-section-title">
+                <h3>Тренировки</h3>
+            </div>
             <div id="workoutHistory" class="stack"></div>
             <div class="toolbar top-gap">
                 <button id="loadMoreHistoryBtn" class="secondary hidden" type="button">Загрузить ещё</button>
@@ -566,7 +621,7 @@
                 <path d="m19 9-5 5-4-4-3 3"/>
             </svg>
         </span>
-        <span class="app-bottom-nav__label">История</span>
+        <span class="app-bottom-nav__label">Дневник</span>
     </button>
     <button type="button" class="app-bottom-nav__btn" data-nav-section="section-profile" data-nav-card="card-profile">
         <span class="app-bottom-nav__icon" aria-hidden="true">
@@ -649,6 +704,6 @@
     })();
 </script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script type="module" src="/static/js/main.js?v=40"></script>
+<script type="module" src="/static/js/main.js?v=41"></script>
 </body>
 </html>

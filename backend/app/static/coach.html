@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0f1115" />
   <title>Кабинет тренера - FitMiniApp</title>
-  <link rel="stylesheet" href="/static/styles.css?v=23" />
+  <link rel="stylesheet" href="/static/styles.css?v=43" />
 </head>
 <body>
   <main class="container narrow">
@@ -14,7 +14,10 @@
         <h1>Кабинет тренера</h1>
         <p class="muted">Клиенты, закреплённые за вашим тренерским аккаунтом.</p>
       </div>
-      <a href="/app" class="button-link">К Mini App</a>
+      <div class="hero-card__meta">
+        <span class="badge role-badge">Тренер</span>
+        <a href="/app" class="button-link">К Mini App</a>
+      </div>
     </div>
 
     <div class="card">
@@ -52,10 +55,37 @@
     </div>
 
     <div class="card">
-      <h2>Лог</h2>
+      <div class="section-head">
+        <h2>Лог</h2>
+      </div>
       <pre id="coachLog" class="log-box"></pre>
     </div>
   </main>
+
+  <nav class="app-bottom-nav" id="appBottomNav" aria-label="Разделы тренера">
+    <a href="/app" class="app-bottom-nav__btn">
+      <span class="app-bottom-nav__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" role="img">
+          <path d="M8 2v4"/>
+          <path d="M16 2v4"/>
+          <path d="M3 10h18"/>
+          <path d="M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/>
+        </svg>
+      </span>
+      <span class="app-bottom-nav__label">Mini App</span>
+    </a>
+    <a href="/coach" class="app-bottom-nav__btn is-active">
+      <span class="app-bottom-nav__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" role="img">
+          <path d="M16 21v-2a4 4 0 0 0-8 0v2"/>
+          <circle cx="12" cy="7" r="4"/>
+          <path d="M20 8v6"/>
+          <path d="M23 11h-6"/>
+        </svg>
+      </span>
+      <span class="app-bottom-nav__label">Тренер</span>
+    </a>
+  </nav>
 
   <div id="toast" class="toast hidden"></div>
 

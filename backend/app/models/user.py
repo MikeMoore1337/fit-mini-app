@@ -1,6 +1,17 @@
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import BIGINT, Boolean, DateTime, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import (
+    BIGINT,
+    Boolean,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.timezone import DEFAULT_TIMEZONE, now_msk_naive
@@ -48,6 +59,25 @@ class UserProfile(Base):
     )
 
     user = relationship("User", back_populates="profile")
+
+
+class BodyMeasurement(Base):
+    __tablename__ = "body_measurements"
+    __table_args__ = (
+        UniqueConstraint("user_id", "measured_on", name="uq_body_measurement_user_date"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    measured_on: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
+    chest_cm: Mapped[float | None] = mapped_column(Float, nullable=True)
+    waist_cm: Mapped[float | None] = mapped_column(Float, nullable=True)
+    hips_cm: Mapped[float | None] = mapped_column(Float, nullable=True)
+    biceps_cm: Mapped[float | None] = mapped_column(Float, nullable=True)
+    thigh_cm: Mapped[float | None] = mapped_column(Float, nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now_msk_naive)
 
 
 class CoachClient(Base):

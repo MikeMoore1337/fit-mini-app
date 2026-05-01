@@ -1,3 +1,5 @@
+from datetime import date, datetime
+
 from pydantic import BaseModel, Field
 
 
@@ -60,3 +62,27 @@ class WorkoutTodayResponse(BaseModel):
 class WorkoutStatusResponse(BaseModel):
     id: int
     status: str
+
+
+class BodyMeasurementSave(BaseModel):
+    measured_on: date | None = None
+    weight_kg: float | None = Field(default=None, ge=0, le=500)
+    chest_cm: float | None = Field(default=None, ge=0, le=300)
+    waist_cm: float | None = Field(default=None, ge=0, le=300)
+    hips_cm: float | None = Field(default=None, ge=0, le=300)
+    biceps_cm: float | None = Field(default=None, ge=0, le=150)
+    thigh_cm: float | None = Field(default=None, ge=0, le=200)
+    note: str | None = Field(default=None, max_length=500)
+
+
+class BodyMeasurementResponse(BaseModel):
+    id: int
+    measured_on: date
+    weight_kg: float | None = None
+    chest_cm: float | None = None
+    waist_cm: float | None = None
+    hips_cm: float | None = None
+    biceps_cm: float | None = None
+    thigh_cm: float | None = None
+    note: str | None = None
+    created_at: datetime | None = None

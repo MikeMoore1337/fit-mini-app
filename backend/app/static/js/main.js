@@ -1,5 +1,5 @@
-import { API, FRONTEND_VERSION, accessTokenKey, refreshTokenKey } from './core/config.js?v=40';
-import { state } from './core/state.js?v=40';
+import { API, FRONTEND_VERSION, accessTokenKey, refreshTokenKey } from './core/config.js?v=41';
+import { state } from './core/state.js?v=41';
 import {
   $,
   log,
@@ -11,8 +11,8 @@ import {
   expandSectionAndScroll,
   restoreSectionState,
   setSectionCollapsed,
-} from './core/ui.js?v=40';
-import { api, clearTokens, sleep } from './core/http.js?v=40';
+} from './core/ui.js?v=41';
+import { api, clearTokens, sleep } from './core/http.js?v=41';
 
 window.__fitMiniAppBoot = {
   ...(window.__fitMiniAppBoot || {}),
@@ -53,6 +53,24 @@ function dateTimeLocalToUserTimezoneIso(value) {
   const normalized = String(value || '').trim();
   if (!normalized) return '';
   return normalized.length === 16 ? `${normalized}:00` : normalized;
+}
+
+function getTodayInputDateValue() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatDateRu(value) {
+  if (!value) return '';
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) {
+    const [, year, month, day] = match;
+    return `${day}.${month}.${year}`;
+  }
+  return value;
 }
 
 function formatUserDateTime(value, timezone = getCurrentTimezone()) {
@@ -1940,13 +1958,15 @@ function exerciseTemplate(defaultExerciseId = '', preset = null) {
 function programDayTemplate(index, preset = null) {
   return `
     <div class="item-card day-card" data-day-index="${index}">
-      <div class="toolbar wrap">
+      <div class="program-day-head">
         <label class="field day-title-field">
           <span>Название дня</span>
           <input class="day-title" type="text" placeholder="Например, Верх тела" value="${escapeHtml(preset?.title || `День ${index + 1}`)}" />
         </label>
-        <button class="secondary add-ex-btn" type="button">+ Упражнение</button>
-        <button class="secondary remove-day-btn" type="button">Удалить день</button>
+        <div class="program-day-actions">
+          <button class="secondary add-ex-btn" type="button">+ Упражнение</button>
+          <button class="secondary remove-day-btn" type="button">Удалить день</button>
+        </div>
       </div>
       <div class="stack exercises-list">
         ${(preset?.exercises || []).map((ex) => exerciseTemplate(ex.exercise_id, ex)).join('')}
@@ -2936,8 +2956,8 @@ function renderWorkoutHistoryRows(rows, append = false) {
     updateHistoryClearVisibility(false);
     container.innerHTML = `
       <div class="empty-state">
-        <p class="empty-state__title">История пуста</p>
-        <p class="empty-state__text muted">Завершённые тренировки появятся здесь после занятий.</p>
+        <p class="empty-state__title">Тренировок пока нет</p>
+        <p class="empty-state__text muted">Завершённые занятия появятся здесь.</p>
         <div class="toolbar wrap" style="justify-content: center">
           <button type="button" class="secondary empty-state-goto" data-nav-section="section-today-workout" data-nav-card="card-today">
             К тренировке на сегодня
@@ -3036,6 +3056,206 @@ async function clearWorkoutHistory() {
   showToast('История тренировок очищена');
   await loadTodayWorkout();
   await resetHistoryAndReload();
+}
+
+function formatDecimal(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return '';
+  const rounded = Math.round(number * 10) / 10;
+  return String(Number.isInteger(rounded) ? rounded : rounded.toFixed(1)).replace('.', ',');
+}
+
+function formatMeasurementDelta(value, suffix) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return '-';
+  const sign = number > 0 ? '+' : '';
+  return `${sign}${formatDecimal(number)} ${suffix}`;
+}
+
+function getMeasurementFieldPills(row) {
+  const fields = [
+    ['Вес', row.weight_kg, 'кг'],
+    ['Грудь', row.chest_cm, 'см'],
+    ['Талия', row.waist_cm, 'см'],
+    ['Бёдра', row.hips_cm, 'см'],
+    ['Бицепс', row.biceps_cm, 'см'],
+    ['Бедро', row.thigh_cm, 'см'],
+  ];
+
+  return fields
+    .filter(([, value]) => value !== null && value !== undefined)
+    .map(
+      ([label, value, unit]) =>
+        `<span class="metric-pill">${escapeHtml(label)}: ${escapeHtml(formatDecimal(value))} ${escapeHtml(unit)}</span>`
+    )
+    .join('');
+}
+
+function renderBodyMeasurements() {
+  const container = $('bodyMeasurements');
+  if (!container) return;
+
+  const rows = state.measurementRows || [];
+  if (!rows.length) {
+    container.innerHTML = `
+      <div class="empty-state empty-state--compact">
+        <p class="empty-state__title">Замеров пока нет</p>
+        <p class="empty-state__text muted">Сохранённые показатели появятся в дневнике.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const latest = rows[0];
+  const previousWeightRow = rows.slice(1).find((row) => row.weight_kg !== null && row.weight_kg !== undefined);
+  const latestWeight = latest?.weight_kg ?? null;
+  const weightDelta =
+    latestWeight !== null && previousWeightRow?.weight_kg !== null && previousWeightRow?.weight_kg !== undefined
+      ? Number(latestWeight) - Number(previousWeightRow.weight_kg)
+      : null;
+
+  const overview = `
+    <div class="progress-overview diary-overview">
+      <div class="progress-card">
+        <span>Замеров</span>
+        <strong>${escapeHtml(rows.length)}</strong>
+      </div>
+      <div class="progress-card">
+        <span>Последний вес</span>
+        <strong>${latestWeight !== null ? `${escapeHtml(formatDecimal(latestWeight))} кг` : '-'}</strong>
+      </div>
+      <div class="progress-card">
+        <span>Динамика веса</span>
+        <strong>${escapeHtml(weightDelta === null ? '-' : formatMeasurementDelta(weightDelta, 'кг'))}</strong>
+      </div>
+    </div>
+  `;
+
+  const list = rows
+    .map((row) => {
+      const pills = getMeasurementFieldPills(row);
+      return `
+        <div class="diary-measurement-row">
+          <div class="diary-measurement-row__head">
+            <strong>${escapeHtml(formatDateRu(row.measured_on))}</strong>
+            <button
+              class="secondary delete-measurement-btn"
+              type="button"
+              data-measurement-id="${escapeHtml(row.id)}"
+            >
+              Удалить
+            </button>
+          </div>
+          ${pills ? `<div class="exercise-meta">${pills}</div>` : ''}
+          ${row.note ? `<p class="muted diary-note">${escapeHtml(row.note)}</p>` : ''}
+        </div>
+      `;
+    })
+    .join('');
+
+  container.innerHTML = overview + list;
+
+  document.querySelectorAll('.delete-measurement-btn').forEach((btn) => {
+    btn.onclick = async () => {
+      try {
+        await deleteBodyMeasurement(Number(btn.dataset.measurementId));
+      } catch (error) {
+        log(`deleteBodyMeasurement: ${String(error)}`);
+        toastError(error, 'Не удалось удалить замер');
+      }
+    };
+  });
+}
+
+function resetMeasurementForm() {
+  if ($('measurementDate') && !$('measurementDate').value) {
+    $('measurementDate').value = getTodayInputDateValue();
+  }
+  [
+    'measurementWeight',
+    'measurementChest',
+    'measurementWaist',
+    'measurementHips',
+    'measurementBiceps',
+    'measurementThigh',
+    'measurementNote',
+  ].forEach((id) => {
+    const node = $(id);
+    if (node) node.value = '';
+  });
+}
+
+function getBodyMeasurementPayload() {
+  const rawValues = {
+    weight_kg: parseDecimalInput($('measurementWeight')?.value),
+    chest_cm: parseDecimalInput($('measurementChest')?.value),
+    waist_cm: parseDecimalInput($('measurementWaist')?.value),
+    hips_cm: parseDecimalInput($('measurementHips')?.value),
+    biceps_cm: parseDecimalInput($('measurementBiceps')?.value),
+    thigh_cm: parseDecimalInput($('measurementThigh')?.value),
+  };
+  const note = $('measurementNote')?.value?.trim() || null;
+  const payload = {
+    measured_on: $('measurementDate')?.value || getTodayInputDateValue(),
+  };
+
+  Object.entries(rawValues).forEach(([key, value]) => {
+    if (value !== null) payload[key] = value;
+  });
+  if (note) payload.note = note;
+
+  const hasMeasurement = Object.values(rawValues).some((value) => value !== null);
+
+  if (!hasMeasurement && !note) {
+    showToast('Укажите вес, замер или заметку', 'error');
+    return null;
+  }
+
+  return payload;
+}
+
+async function loadBodyMeasurements() {
+  state.measurementRows = await withReauth(() => api(API.bodyMeasurements));
+  if ($('measurementDate') && !$('measurementDate').value) {
+    $('measurementDate').value = getTodayInputDateValue();
+  }
+  renderBodyMeasurements();
+}
+
+async function saveBodyMeasurement() {
+  const payload = getBodyMeasurementPayload();
+  if (!payload) return;
+
+  await withReauth(() =>
+    api(API.createBodyMeasurement, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  );
+
+  showToast('Замер сохранён');
+  resetMeasurementForm();
+  if ($('measurementDate')) $('measurementDate').value = getTodayInputDateValue();
+  await loadBodyMeasurements();
+}
+
+async function deleteBodyMeasurement(measurementId) {
+  const ok = await openConfirmDialog({
+    title: 'Удалить замер?',
+    message: 'Запись с весом и замерами будет удалена из дневника.',
+    okText: 'Удалить',
+    danger: true,
+  });
+  if (!ok) return;
+
+  await withReauth(() =>
+    api(API.deleteBodyMeasurement(measurementId), {
+      method: 'DELETE',
+    })
+  );
+
+  showToast('Замер удалён');
+  await loadBodyMeasurements();
 }
 
 async function loadBilling() {
@@ -3215,6 +3435,7 @@ async function bootstrap() {
     await loadExercises();
     await loadTemplates();
     await loadTodayWorkout();
+    await loadBodyMeasurements();
     await resetHistoryAndReload();
     await loadNotifications();
 
@@ -3483,6 +3704,17 @@ function bindUI() {
       } catch (error) {
         log(`clearHistoryBtn: ${String(error)}`);
         toastError(error, 'Не удалось очистить историю');
+      }
+    };
+  }
+
+  if ($('saveMeasurementBtn')) {
+    $('saveMeasurementBtn').onclick = async () => {
+      try {
+        await saveBodyMeasurement();
+      } catch (error) {
+        log(`saveMeasurementBtn: ${String(error)}`);
+        toastError(error, 'Не удалось сохранить замер');
       }
     };
   }
