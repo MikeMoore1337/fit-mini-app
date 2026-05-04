@@ -49,6 +49,19 @@ services:
     restart: unless-stopped
     profiles: ["direct-https"]
     env_file: .env
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        : "$${APP_DOMAIN:?APP_DOMAIN is required}"
+        cat > /etc/caddy/Caddyfile <<EOF
+        $${APP_DOMAIN} {
+            encode zstd gzip
+
+            reverse_proxy backend:8000
+        }
+        EOF
+        exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
     depends_on:
       backend:
         condition: service_healthy
@@ -57,7 +70,6 @@ services:
       - "443:443"
       - "443:443/udp"
     volumes:
-      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
 
