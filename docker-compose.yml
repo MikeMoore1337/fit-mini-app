@@ -44,11 +44,29 @@ services:
       backend:
         condition: service_started
 
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    profiles: ["direct-https"]
+    env_file: .env
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
+    profiles: ["cloudflare"]
     env_file: .env
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARED_TOKEN}
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARED_TOKEN:-}
     depends_on:
       backend:
         condition: service_healthy
@@ -66,3 +84,5 @@ services:
 
 volumes:
   postgres_data:
+  caddy_data:
+  caddy_config:
