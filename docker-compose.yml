@@ -42,7 +42,7 @@ services:
     env_file: .env
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
 
   caddy:
     image: caddy:2-alpine
@@ -89,7 +89,7 @@ services:
     env_file: .env
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
       db:
         condition: service_healthy
     command: /app/worker-entrypoint.sh

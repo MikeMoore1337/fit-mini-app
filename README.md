@@ -341,10 +341,15 @@ backend связывает pending-приглашение с реальным п
 Backend использует Alembic. Docker-entrypoint ждёт базу данных, применяет миграции
 и затем запускает Uvicorn.
 
-Вручную внутри backend-контейнера:
+После обычного `docker compose up -d --build` отдельно запускать `alembic upgrade head`
+не нужно: backend уже делает это при старте. Если миграции всё же нужно применить вручную,
+остановите сервисы приложения и запустите одноразовый backend-контейнер:
 
 ```bash
-docker compose exec backend alembic upgrade head
+docker compose stop backend worker bot
+docker compose up -d db
+docker compose run --rm --no-deps backend alembic upgrade head
+docker compose up -d backend worker bot
 ```
 
 ## Качество кода
