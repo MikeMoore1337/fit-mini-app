@@ -69,12 +69,6 @@ def web_app_keyboard(url: str) -> InlineKeyboardMarkup:
     )
 
 
-def url_keyboard(url: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[[InlineKeyboardButton(text="Открыть FitMiniApp", url=url)]]
-    )
-
-
 @lru_cache(maxsize=len(TIMEZONE_REGIONS))
 def region_timezones(region: str) -> tuple[str, ...]:
     if region == "Etc":
@@ -204,14 +198,9 @@ async def answer_with_open_button(message: Message) -> None:
     else:
         print(f"Кнопке FitMiniApp нужен HTTPS URL, получено {url}", flush=True)
 
-    try:
-        await message.answer(
-            "Telegram не принял кнопку мини-приложения. Открой приложение по ссылке ниже.",
-            reply_markup=url_keyboard(url),
-        )
-    except Exception as exc:
-        print(f"Не удалось отправить запасную кнопку-ссылку для {url}: {exc!r}", flush=True)
-        await message.answer(f"Открыть FitMiniApp: {url}")
+    await message.answer(
+        "Кнопка FitMiniApp временно недоступна. Попробуйте открыть приложение через меню бота позже."
+    )
 
 
 @dp.message(CommandStart())
