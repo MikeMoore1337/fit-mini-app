@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
     <meta name="theme-color" content="#0f1115"/>
     <title>FitMiniApp</title>
-    <link rel="stylesheet" href="/static/styles.css?v=43"/>
+    <link rel="stylesheet" href="/static/styles.css?v=44"/>
 </head>
 <body>
 <main class="container" id="app-main">
@@ -32,6 +32,7 @@
                 <div id="authState" class="muted" role="status" aria-live="polite" aria-atomic="true">
                     Проверяем авторизацию через Telegram...
                 </div>
+                <div id="telegramLaunchHint" class="auth-notice hidden" role="status"></div>
 
                 <div id="authSummary" class="auth-summary hidden">
                     <div class="auth-summary__item">
@@ -690,7 +691,18 @@
             function (event) {
                 var target = event.target;
                 if (target && target.tagName === 'SCRIPT') {
-                    showBootProblem('Не удалось загрузить скрипт приложения. Обновите страницу и попробуйте снова.');
+                    var src = target.getAttribute('src') || '';
+                    window.__fitMiniAppBoot.failedScript = src;
+
+                    if (src.indexOf('telegram-web-app.js') !== -1) {
+                        window.__fitMiniAppBoot.telegramSdkFailed = true;
+                        showBootProblem(
+                            'Не удалось загрузить Telegram SDK. Откройте приложение из Telegram или проверьте доступ к telegram.org.'
+                        );
+                        return;
+                    }
+
+                    showBootProblem('Не удалось загрузить скрипт интерфейса. Обновите страницу и попробуйте снова.');
                 }
             },
             true
@@ -704,6 +716,6 @@
     })();
 </script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script type="module" src="/static/js/main.js?v=42"></script>
+<script type="module" src="/static/js/main.js?v=43"></script>
 </body>
 </html>

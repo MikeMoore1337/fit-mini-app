@@ -498,6 +498,25 @@ button:disabled {
     line-height: 1.25;
 }
 
+.auth-notice {
+    display: grid;
+    gap: 10px;
+    border: 1px solid var(--warning-line);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    background: var(--warning-soft);
+    color: var(--warning-text);
+}
+
+.auth-notice strong,
+.auth-notice span {
+    display: block;
+}
+
+.auth-notice span {
+    line-height: 1.45;
+}
+
 .dev-auth {
     border: 1px solid var(--accent-line);
     border-radius: var(--radius-sm);

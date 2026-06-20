@@ -134,6 +134,8 @@ BACKEND_INTERNAL_URL=http://backend:8000
 
 CLOUDFLARED_TOKEN=
 TELEGRAM_BOT_TOKEN=change-me
+TELEGRAM_BOT_USERNAME=your_bot_username
+BOT_POLLING_ENABLED=true
 
 PAYMENT_PROVIDER=mock
 PAYMENT_PUBLIC_URL=https://your-domain.example
@@ -257,6 +259,7 @@ curl https://app.your-fitness-coach.ru/health
 Бот использует:
 
 - `TELEGRAM_BOT_TOKEN`;
+- `TELEGRAM_BOT_USERNAME`;
 - `FRONTEND_BASE_URL`;
 - `BACKEND_INTERNAL_URL`.
 
@@ -264,6 +267,11 @@ curl https://app.your-fitness-coach.ru/health
 Telegram не принимает menu button, бот отправляет fallback-сообщение с кнопкой
 `Открыть FitMiniApp`. Для WebApp-кнопки `FRONTEND_BASE_URL` обязан начинаться с
 `https://`.
+
+`BOT_POLLING_ENABLED=false` отключает long polling в конкретном контейнере бота.
+Это полезно, если один и тот же токен временно есть в двух деплоях: Telegram
+разрешает только один активный `getUpdates`, иначе в логах будет
+`TelegramConflictError`.
 
 В BotFather проверь:
 

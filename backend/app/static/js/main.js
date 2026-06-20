@@ -1,5 +1,5 @@
-import { API, FRONTEND_VERSION, accessTokenKey, refreshTokenKey } from './core/config.js?v=42';
-import { state } from './core/state.js?v=42';
+import { API, FRONTEND_VERSION, accessTokenKey, refreshTokenKey } from './core/config.js?v=43';
+import { state } from './core/state.js?v=43';
 import {
   $,
   log,
@@ -11,9 +11,9 @@ import {
   expandSectionAndScroll,
   restoreSectionState,
   setSectionCollapsed,
-} from './core/ui.js?v=42';
-import { api, clearTokens, sleep } from './core/http.js?v=42';
-import { getTelegramWebApp, hapticImpact, hapticNotification, initTelegramTheme } from './core/theme.js?v=42';
+} from './core/ui.js?v=43';
+import { api, clearTokens, sleep } from './core/http.js?v=43';
+import { getTelegramWebApp, hapticImpact, hapticNotification, initTelegramTheme } from './core/theme.js?v=43';
 
 window.__fitMiniAppBoot = {
   ...(window.__fitMiniAppBoot || {}),
@@ -44,6 +44,56 @@ window.onunhandledrejection = function (event) {
 function setAuthState(text) {
   const node = $('authState');
   if (node) node.textContent = text;
+}
+
+function normalizeTelegramBotUsername(value) {
+  const normalized = String(value || '')
+    .trim()
+    .replace(/^@+/, '');
+  return /^[A-Za-z0-9_]{5,32}$/.test(normalized) ? normalized : '';
+}
+
+function getTelegramBotUrl() {
+  const username = normalizeTelegramBotUsername(state.publicConfig?.telegram_bot_username);
+  return username ? `https://t.me/${username}` : '';
+}
+
+function renderTelegramLaunchHint({ visible = false, message = '' } = {}) {
+  const node = $('telegramLaunchHint');
+  if (!node) return;
+
+  if (!visible) {
+    node.classList.add('hidden');
+    node.innerHTML = '';
+    return;
+  }
+
+  const botUrl = getTelegramBotUrl();
+  node.innerHTML = `
+    <strong>Telegram Mini App не обнаружен</strong>
+    <span>${escapeHtml(message || 'Откройте приложение кнопкой внутри Telegram, чтобы передать данные входа.')}</span>
+    ${
+      botUrl
+        ? `<a class="button-link" href="${escapeHtml(botUrl)}" target="_blank" rel="noopener noreferrer">Открыть бота</a>`
+        : ''
+    }
+  `;
+  node.classList.remove('hidden');
+}
+
+function getTelegramUnavailableMessage() {
+  const boot = window.__fitMiniAppBoot || {};
+  const tg = window.Telegram?.WebApp;
+
+  if (boot.telegramSdkFailed) {
+    return 'Не удалось загрузить Telegram SDK. Откройте приложение из Telegram или проверьте доступ к telegram.org.';
+  }
+
+  if (!window.Telegram || !tg) {
+    return 'Откройте приложение из кнопки Mini App в Telegram. Прямая ссылка в браузере не передаёт данные входа.';
+  }
+
+  return 'Telegram не передал данные авторизации. Закройте Mini App и откройте его заново из бота.';
 }
 
 function getCurrentTimezone() {
@@ -969,11 +1019,14 @@ function renderTelegramDebug() {
   if (!node) return;
 
   const tg = window.Telegram?.WebApp;
+  const boot = window.__fitMiniAppBoot || {};
 
   node.textContent = JSON.stringify(
     {
       'Объект Telegram найден': Boolean(window.Telegram),
       'Объект приложения найден': Boolean(tg),
+      'Ошибка загрузки Telegram SDK': Boolean(boot.telegramSdkFailed),
+      'Скрипт с ошибкой': boot.failedScript || null,
       'Данные входа есть': Boolean(tg?.initData),
       'Длина данных входа': tg?.initData?.length || 0,
       'Небезопасные данные есть': Boolean(tg?.initDataUnsafe),
@@ -1067,6 +1120,7 @@ async function devLogin() {
   localStorage.setItem(refreshTokenKey, data.refresh_token);
 
   setAuthState(`Вход в режиме разработки выполнен: ${body.telegram_user_id}`);
+  renderTelegramLaunchHint({ visible: false });
   showToast('Вход в режиме разработки выполнен');
   await bootstrap();
 }
@@ -1095,9 +1149,11 @@ async function telegramLogin({ silent = false } = {}) {
   });
 
   if (!initData) {
-    setAuthState('Telegram не передал данные авторизации');
+    const message = getTelegramUnavailableMessage();
+    setAuthState(message);
+    renderTelegramLaunchHint({ visible: true, message });
     if (!silent) {
-      showToast('Telegram не передал данные входа', 'error');
+      showToast(message, 'error');
     }
     return false;
   }
@@ -1111,6 +1167,7 @@ async function telegramLogin({ silent = false } = {}) {
   localStorage.setItem(refreshTokenKey, data.refresh_token);
 
   setAuthState('Вход через Telegram выполнен');
+  renderTelegramLaunchHint({ visible: false });
   if (!silent) {
     showToast('Вход через Telegram выполнен');
   }
@@ -3634,8 +3691,6 @@ async function init() {
       return;
     }
   }
-
-  setAuthState('Не удалось авторизоваться через Telegram');
 }
 
 let initStarted = false;

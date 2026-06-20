@@ -19,7 +19,7 @@ from aiogram.types import (
 from app.config import settings
 
 dp = Dispatcher()
-MINI_APP_CACHE_VERSION = "34"
+MINI_APP_CACHE_VERSION = "35"
 TIMEZONE_PAGE_SIZE = 8
 TIMEZONE_REGIONS = [
     "Europe",
@@ -279,6 +279,11 @@ async def timezone_callback(callback: CallbackQuery) -> None:
 
 
 async def main() -> None:
+    if not settings.bot_polling_enabled:
+        print("Polling бота отключён: BOT_POLLING_ENABLED=false", flush=True)
+        while True:
+            await asyncio.sleep(3600)
+
     if not settings.bot_token or settings.bot_token == "replace-me":
         print("Токен бота не настроен, бот ожидает", flush=True)
         while True:

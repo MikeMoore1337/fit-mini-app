@@ -25,6 +25,7 @@ class Settings(BaseSettings):
 
     frontend_base_url: str = "https://app.your-fitness-coach.ru"
     telegram_bot_token: str
+    telegram_bot_username: str = ""
 
     payment_provider: str = "mock"
     payment_public_url: str = ""
