@@ -1,12 +1,19 @@
 import asyncio
+import hashlib
+import logging
 import math
 from functools import lru_cache
+from pathlib import Path
+from typing import TextIO
 from urllib.parse import urlparse
 from zoneinfo import available_timezones
 
 import httpx
 from aiogram import Bot, Dispatcher
+from aiogram.dispatcher.dispatcher import DEFAULT_BACKOFF_CONFIG
+from aiogram.exceptions import TelegramConflictError
 from aiogram.filters import Command, CommandStart
+from aiogram.methods import GetUpdates
 from aiogram.types import (
     CallbackQuery,
     InlineKeyboardButton,
@@ -15,10 +22,114 @@ from aiogram.types import (
     Message,
     WebAppInfo,
 )
+from aiogram.utils.backoff import Backoff, BackoffConfig
 
-from app.config import settings
+from .config import settings
 
-dp = Dispatcher()
+try:
+    import fcntl
+except ImportError:  # pragma: no cover - production container runs Linux
+    fcntl = None
+
+
+logger = logging.getLogger(__name__)
+
+
+class PollingConflict(RuntimeError):
+    """Another process is already receiving updates for this Telegram bot."""
+
+
+class StableDispatcher(Dispatcher):
+    @classmethod
+    async def _listen_updates(
+        cls,
+        bot: Bot,
+        polling_timeout: int = 30,
+        backoff_config: BackoffConfig = DEFAULT_BACKOFF_CONFIG,
+        allowed_updates: list[str] | None = None,
+    ):
+        """Retry network errors, but let the supervisor handle polling conflicts."""
+        backoff = Backoff(config=backoff_config)
+        get_updates = GetUpdates(timeout=polling_timeout, allowed_updates=allowed_updates)
+        request_kwargs = {}
+        if bot.session.timeout:
+            request_kwargs["request_timeout"] = int(bot.session.timeout + polling_timeout)
+
+        failed = False
+        while True:
+            try:
+                updates = await bot(get_updates, **request_kwargs)
+            except TelegramConflictError as exc:
+                raise PollingConflict(str(exc)) from exc
+            except Exception as exc:
+                failed = True
+                logger.error(
+                    "Не удалось получить обновления Telegram: %s: %s", type(exc).__name__, exc
+                )
+                logger.warning(
+                    "Повтор получения обновлений через %.1f с (попытка %d, bot id=%d)",
+                    backoff.next_delay,
+                    backoff.counter,
+                    bot.id,
+                )
+                await backoff.asleep()
+                continue
+
+            if failed:
+                logger.info(
+                    "Связь с Telegram восстановлена (попыток: %d, bot id=%d)",
+                    backoff.counter,
+                    bot.id,
+                )
+                backoff.reset()
+                failed = False
+
+            for update in updates:
+                yield update
+                get_updates.offset = update.update_id + 1
+
+
+class PollingFileLock:
+    """Cross-container lock backed by a shared Docker volume."""
+
+    def __init__(self, directory: str, bot_token: str) -> None:
+        token_hash = hashlib.sha256(bot_token.encode("utf-8")).hexdigest()[:24]
+        self.path = Path(directory) / f"polling-{token_hash}.lock"
+        self._file: TextIO | None = None
+
+    async def acquire(self) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._file = self.path.open("a+", encoding="utf-8")
+
+        if fcntl is None:
+            logger.warning("Файловая singleton-блокировка недоступна на этой платформе")
+            return
+
+        waiting_logged = False
+        while True:
+            try:
+                fcntl.flock(self._file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                logger.info("Получена singleton-блокировка Telegram polling: %s", self.path)
+                return
+            except BlockingIOError:
+                if not waiting_logged:
+                    logger.warning(
+                        "Другой контейнер уже обслуживает этого Telegram-бота; ожидаем блокировку %s",
+                        self.path,
+                    )
+                    waiting_logged = True
+                await asyncio.sleep(5)
+
+    def release(self) -> None:
+        if self._file is None:
+            return
+        if fcntl is not None:
+            fcntl.flock(self._file.fileno(), fcntl.LOCK_UN)
+        self._file.close()
+        self._file = None
+
+
+dp = StableDispatcher()
 MINI_APP_CACHE_VERSION = "35"
 TIMEZONE_PAGE_SIZE = 8
 TIMEZONE_REGIONS = [
@@ -278,11 +389,33 @@ async def main() -> None:
         while True:
             await asyncio.sleep(3600)
 
-    bot = Bot(settings.bot_token)
-    print(f"Бот запускает получение сообщений. URL FitMiniApp: {mini_app_url()}", flush=True)
-    await set_mini_app_menu_button(bot)
-    print("Получение сообщений ботом запущено", flush=True)
-    await dp.start_polling(bot)
+    polling_lock = PollingFileLock(settings.bot_polling_lock_dir, settings.bot_token)
+
+    while True:
+        await polling_lock.acquire()
+        bot = Bot(settings.bot_token)
+        conflict = False
+        try:
+            print(
+                f"Бот запускает получение сообщений. URL FitMiniApp: {mini_app_url()}", flush=True
+            )
+            await set_mini_app_menu_button(bot)
+            print("Получение сообщений ботом запущено", flush=True)
+            await dp.start_polling(bot)
+        except PollingConflict as exc:
+            conflict = True
+            logger.critical(
+                "Обнаружен TelegramConflictError: тот же токен используется вне текущей "
+                "singleton-блокировки. Локальный polling остановлен на %d секунд: %s",
+                settings.bot_conflict_retry_seconds,
+                exc,
+            )
+        finally:
+            polling_lock.release()
+
+        if not conflict:
+            return
+        await asyncio.sleep(settings.bot_conflict_retry_seconds)
 
 
 if __name__ == "__main__":

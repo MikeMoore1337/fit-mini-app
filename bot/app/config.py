@@ -17,6 +17,8 @@ class Settings(BaseSettings):
         default=True,
         validation_alias=AliasChoices("BOT_POLLING_ENABLED", "TELEGRAM_BOT_POLLING_ENABLED"),
     )
+    bot_polling_lock_dir: str = "/var/lock/fitminiapp-bot"
+    bot_conflict_retry_seconds: int = Field(default=300, ge=30)
 
 
 settings = Settings()

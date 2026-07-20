@@ -40,9 +40,13 @@ services:
     build: ./bot
     restart: unless-stopped
     env_file: .env
+    environment:
+      BOT_POLLING_LOCK_DIR: /var/lock/fitminiapp-bot
     depends_on:
       backend:
         condition: service_healthy
+    volumes:
+      - bot_polling_lock:/var/lock/fitminiapp-bot
 
   caddy:
     image: caddy:2-alpine
@@ -98,3 +102,7 @@ volumes:
   postgres_data:
   caddy_data:
   caddy_config:
+  bot_polling_lock:
+    # The explicit name makes the lock shared by bot containers started from
+    # different Compose projects on the same Docker host.
+    name: fitminiapp_bot_polling_lock
