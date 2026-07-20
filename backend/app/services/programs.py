@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import date, timedelta
 from uuid import uuid4
 
 from sqlalchemy import func, or_
@@ -881,6 +881,7 @@ def assign_template_to_user(
     template: ProgramTemplate,
     target_user: User,
     assigned_by: User,
+    start_date: date | None = None,
 ) -> tuple[UserProgram, int]:
     db.query(UserProgram).filter(
         UserProgram.user_id == target_user.id,
@@ -897,13 +898,13 @@ def assign_template_to_user(
     db.flush()
 
     workouts: list[UserWorkout] = []
-    start_date = today_for_user(target_user)
+    effective_start_date = start_date or today_for_user(target_user)
     created = 0
 
     for offset, day in enumerate(sorted(template.days, key=lambda row: row.day_number)):
         workout = UserWorkout(
             user_program_id=user_program.id,
-            scheduled_date=start_date + timedelta(days=offset),
+            scheduled_date=effective_start_date + timedelta(days=offset),
             day_number=day.day_number,
             title=day.title,
             status="planned",
@@ -1167,6 +1168,7 @@ def assign_template_to_self(
     db: Session,
     current_user: User,
     template_id: int,
+    start_date: date | None = None,
 ) -> tuple[UserProgram, int]:
     template = (
         db.query(ProgramTemplate)
@@ -1192,7 +1194,9 @@ def assign_template_to_self(
     if not can_use:
         raise ProgramError("No permission to use template")
 
-    program, created = assign_template_to_user(db, template, current_user, current_user)
+    program, created = assign_template_to_user(
+        db, template, current_user, current_user, start_date=start_date
+    )
     db.commit()
     db.refresh(program)
     return program, created

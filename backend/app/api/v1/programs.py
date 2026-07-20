@@ -5,7 +5,12 @@ from app.api.dependencies.auth import require_coach_or_admin, require_user
 from app.db.session import get_db
 from app.models.exercise import Exercise
 from app.models.user import User
-from app.schemas.program import CoachClientCreate, ExerciseCatalogCreate, ProgramTemplateCreate
+from app.schemas.program import (
+    AssignTemplateSelfRequest,
+    CoachClientCreate,
+    ExerciseCatalogCreate,
+    ProgramTemplateCreate,
+)
 from app.services.programs import (
     ProgramError,
     _effective_exercise_id,
@@ -209,6 +214,7 @@ def edit_template(
 @router.post("/templates/{template_id}/assign-to-me")
 def assign_template_me(
     template_id: int,
+    payload: AssignTemplateSelfRequest | None = None,
     current_user: User = Depends(require_user),
     db: Session = Depends(get_db),
 ):
@@ -217,6 +223,7 @@ def assign_template_me(
             db=db,
             current_user=current_user,
             template_id=template_id,
+            start_date=payload.start_date if payload else None,
         )
     except ProgramError as exc:
         detail = str(exc)

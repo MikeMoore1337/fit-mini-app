@@ -4,6 +4,7 @@ export const state = {
   clients: [],
   templates: [],
   todayWorkout: null,
+  weekSchedule: [],
   plans: [],
   publicConfig: null,
   workoutTimer: null,

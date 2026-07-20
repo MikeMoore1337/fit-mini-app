@@ -1,5 +1,5 @@
-import { API, FRONTEND_VERSION, accessTokenKey, refreshTokenKey } from './core/config.js?v=44';
-import { state } from './core/state.js?v=44';
+import { API, FRONTEND_VERSION, accessTokenKey, refreshTokenKey } from './core/config.js?v=46';
+import { state } from './core/state.js?v=46';
 import {
   $,
   log,
@@ -11,9 +11,9 @@ import {
   expandSectionAndScroll,
   restoreSectionState,
   setSectionCollapsed,
-} from './core/ui.js?v=44';
-import { api, clearTokens, sleep } from './core/http.js?v=44';
-import { getTelegramWebApp, hapticImpact, hapticNotification, initTelegramTheme } from './core/theme.js?v=44';
+} from './core/ui.js?v=46';
+import { api, clearTokens, sleep } from './core/http.js?v=46';
+import { getTelegramWebApp, hapticImpact, hapticNotification, initTelegramTheme } from './core/theme.js?v=46';
 
 window.__fitMiniAppBoot = {
   ...(window.__fitMiniAppBoot || {}),
@@ -486,14 +486,41 @@ const devRolePresets = {
   },
 };
 
+const appScreenByCard = {
+  'card-today': 'today',
+  'card-onboarding': 'today',
+  'card-builder': 'program',
+  'card-templates': 'program',
+  'card-exercises': 'program',
+  'card-kbju': 'kbju',
+  'card-history': 'history',
+  'card-profile': 'profile',
+  'card-notifications': 'profile',
+  clientsCard: 'profile',
+};
+
+function getAppScreen(cardId) {
+  return appScreenByCard[cardId] || 'today';
+}
+
+function showAppScreen(cardId) {
+  const screen = getAppScreen(cardId);
+  document.body.dataset.appScreen = screen;
+  document.querySelectorAll('.app-screen-card').forEach((card) => {
+    card.classList.toggle('screen-hidden', card.dataset.appScreen !== screen);
+  });
+}
+
 function setActiveBottomNav(cardId) {
+  const screen = getAppScreen(cardId);
   document.querySelectorAll('.app-bottom-nav__btn').forEach((btn) => {
-    btn.classList.toggle('is-active', btn.getAttribute('data-nav-card') === cardId);
+    btn.classList.toggle('is-active', getAppScreen(btn.getAttribute('data-nav-card')) === screen);
   });
 }
 
 function navigateToSection(sectionId, cardId) {
   state.currentNavCard = cardId;
+  showAppScreen(cardId);
   expandSectionAndScroll(sectionId, cardId);
   setActiveBottomNav(cardId);
   syncTelegramChrome();
@@ -588,10 +615,13 @@ function renderCurrentAccess(user) {
   const userLabel = $('authUserLabel');
   const roleLabel = $('authRoleLabel');
   const roleBadge = $('currentRoleBadge');
+  const accountSummary = $('profileAccountSummary');
 
   if (!user) {
     if (summary) summary.classList.add('hidden');
     if (roleBadge) roleBadge.classList.add('hidden');
+    if (accountSummary) accountSummary.classList.add('hidden');
+    document.body.classList.remove('is-authenticated');
     return;
   }
 
@@ -606,6 +636,20 @@ function renderCurrentAccess(user) {
     roleBadge.textContent = role;
     roleBadge.classList.remove('hidden');
   }
+
+  if (accountSummary) {
+    accountSummary.innerHTML = `
+      <div>
+        <span class="muted">Аккаунт</span>
+        <strong>${escapeHtml(displayName)}</strong>
+      </div>
+      <span class="badge role-badge">${escapeHtml(role)}</span>
+    `;
+    accountSummary.classList.remove('hidden');
+  }
+
+  document.body.classList.add('is-authenticated');
+  showAppScreen(state.currentNavCard || 'card-today');
 }
 
 function getTrainerDisplayName(trainer) {
@@ -854,6 +898,81 @@ function getHistoryStats() {
   };
 }
 
+function renderWeekOverview() {
+  const node = $('weekOverview');
+  if (!node || !state.me) return;
+  const stats = getHistoryStats();
+  const target = Number(state.me.profile?.workouts_per_week || 0);
+  const todayLabel = state.todayWorkout
+    ? `${state.todayWorkout.title} · ${statusLabel(state.todayWorkout.status)}`
+    : 'Свободный день';
+  const goalText = target ? `${stats.completedThisWeek}/${target}` : String(stats.completedThisWeek);
+  const schedule = state.weekSchedule || [];
+  const scheduleHtml = schedule.length
+    ? `<div class="week-schedule">${schedule
+        .map((item) => {
+          const date = new Date(`${item.scheduled_date}T12:00:00`);
+          const weekday = new Intl.DateTimeFormat('ru-RU', { weekday: 'short' }).format(date);
+          return `<div class="week-schedule__item ${item.status === 'completed' ? 'is-completed' : ''}">
+            <span>${escapeHtml(weekday)}</span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(statusLabel(item.status))}</small>
+          </div>`;
+        })
+        .join('')}</div>`
+    : '<p class="muted top-gap">На эту неделю программа ещё не назначена.</p>';
+  node.innerHTML = `
+    <div class="week-overview__head">
+      <div>
+        <span class="muted">Моя неделя</span>
+        <strong>${escapeHtml(todayLabel)}</strong>
+      </div>
+      <button class="secondary empty-state-goto" type="button" data-nav-section="section-history" data-nav-card="card-history">Открыть дневник</button>
+    </div>
+    <div class="progress-overview top-gap">
+      <div class="progress-card"><span>Тренировок</span><strong>${escapeHtml(goalText)}</strong></div>
+      <div class="progress-card"><span>Подходов</span><strong>${escapeHtml(stats.totalSets)}</strong></div>
+      <div class="progress-card"><span>Объём</span><strong>${escapeHtml(Math.round(stats.volume))} кг</strong></div>
+    </div>
+    ${scheduleHtml}
+  `;
+}
+
+function renderMiniBars(rows, valueGetter, labelGetter, emptyText) {
+  const values = rows.map(valueGetter).map((value) => Number(value || 0));
+  const max = Math.max(...values, 1);
+  if (!rows.length) return `<p class="muted">${escapeHtml(emptyText)}</p>`;
+  return `<div class="trend-bars">${rows
+    .map((row, index) => {
+      const value = values[index];
+      const height = Math.max(8, Math.round((value / max) * 100));
+      return `<div class="trend-bar" title="${escapeHtml(labelGetter(row))}: ${escapeHtml(value)}">
+        <span class="trend-bar__value">${escapeHtml(Math.round(value))}</span>
+        <span class="trend-bar__fill" style="height:${escapeHtml(height)}%"></span>
+        <span class="trend-bar__label">${escapeHtml(labelGetter(row))}</span>
+      </div>`;
+    })
+    .join('')}</div>`;
+}
+
+function renderProgressTrends() {
+  const node = $('progressTrends');
+  if (!node) return;
+  const workouts = [...(state.historyRows || [])].slice(0, 6).reverse();
+  const measurements = [...(state.measurementRows || [])]
+    .filter((row) => row.weight_kg !== null && row.weight_kg !== undefined)
+    .slice(0, 6)
+    .reverse();
+  node.innerHTML = `
+    <div class="trend-card">
+      <div class="trend-card__head"><strong>Объём тренировок</strong><span class="muted">последние занятия</span></div>
+      ${renderMiniBars(workouts, (row) => row.volume_kg, (row) => formatDateRu(row.scheduled_date).slice(0, 5), 'Появится после завершённой тренировки.')}
+    </div>
+    <div class="trend-card">
+      <div class="trend-card__head"><strong>Вес</strong><span class="muted">последние замеры</span></div>
+      ${renderMiniBars(measurements, (row) => row.weight_kg, (row) => formatDateRu(row.measured_on).slice(0, 5), 'Добавьте хотя бы один замер веса.')}
+    </div>
+  `;
+}
+
 function isDateInCurrentWeek(value) {
   if (!value) return false;
   const date = new Date(`${value}T12:00:00`);
@@ -874,6 +993,9 @@ function renderOnboarding() {
   if (!root || !card) return;
 
   const profile = state.me?.profile || {};
+  const hasOwnProgram = (state.templates || []).some(
+    (template) => template.owner_user_id === state.me?.id || template.created_by_user_id === state.me?.id
+  );
   const steps = [
     {
       done: isProfileReady(profile),
@@ -892,7 +1014,7 @@ function renderOnboarding() {
       action: 'К расчёту',
     },
     {
-      done: Boolean((state.templates || []).length),
+      done: hasOwnProgram,
       title: 'Создать программу',
       text: 'Собрать шаблон или взять готовый.',
       section: 'section-builder',
@@ -924,29 +1046,34 @@ function renderOnboarding() {
     return;
   }
 
+  const completed = steps.length - pending.length;
+  const nextStep = pending[0];
+  const percent = Math.round((completed / steps.length) * 100);
   card.classList.remove('hidden');
-  root.innerHTML = steps
-    .map(
-      (step, index) => `
-        <div class="onboarding-step ${step.done ? 'is-done' : ''}">
-          <span class="onboarding-step__mark">${step.done ? '✓' : index + 1}</span>
-          <div>
-            <span class="onboarding-step__title">${escapeHtml(step.title)}</span>
-            <span class="onboarding-step__text">${escapeHtml(step.text)}</span>
-          </div>
-          <button
-            class="secondary empty-state-goto"
-            type="button"
-            data-nav-section="${escapeHtml(step.section)}"
-            data-nav-card="${escapeHtml(step.card)}"
-            ${step.done ? 'disabled' : ''}
-          >
-            ${step.done ? 'Готово' : escapeHtml(step.action)}
-          </button>
-        </div>
-      `
-    )
-    .join('');
+  root.innerHTML = `
+    <div class="onboarding-progress" aria-label="Выполнено ${completed} из ${steps.length}">
+      <div class="onboarding-progress__head">
+        <strong>${escapeHtml(completed)} из ${escapeHtml(steps.length)} готово</strong>
+        <span class="muted">${escapeHtml(percent)}%</span>
+      </div>
+      <div class="workout-progress__bar" aria-hidden="true">
+        <div class="workout-progress__fill" style="width:${escapeHtml(percent)}%"></div>
+      </div>
+    </div>
+    <div class="onboarding-step onboarding-step--next">
+      <span class="onboarding-step__mark">${escapeHtml(completed + 1)}</span>
+      <div>
+        <span class="onboarding-step__title">Следующий шаг: ${escapeHtml(nextStep.title)}</span>
+        <span class="onboarding-step__text">${escapeHtml(nextStep.text)}</span>
+      </div>
+      <button
+        class="secondary empty-state-goto"
+        type="button"
+        data-nav-section="${escapeHtml(nextStep.section)}"
+        data-nav-card="${escapeHtml(nextStep.card)}"
+      >${escapeHtml(nextStep.action)}</button>
+    </div>
+  `;
 }
 
 function escapeHtml(value) {
@@ -1049,8 +1176,11 @@ function toggleCoachUI() {
 
   const diagnosticCard = $('diagnosticCard');
   const logCard = $('logCard');
-  if (diagnosticCard) diagnosticCard.classList.toggle('hidden', !isAdmin());
-  if (logCard) logCard.classList.toggle('hidden', !isAdmin());
+  const showDiagnostics = isAdmin() && (
+    state.publicConfig?.app_env === 'dev' || new URLSearchParams(location.search).get('debug') === '1'
+  );
+  if (diagnosticCard) diagnosticCard.classList.toggle('hidden', !showDiagnostics);
+  if (logCard) logCard.classList.toggle('hidden', !showDiagnostics);
 
   syncExerciseOwnerOptions();
   syncKbjuTargetOptions();
@@ -1623,6 +1753,62 @@ function getExerciseGroupsHtml(rows, query) {
     .join('');
 }
 
+function openExerciseEditDialog(exercise) {
+  return new Promise((resolve) => {
+    const root = $('exerciseEditModal');
+    const nameInput = $('exerciseEditName');
+    const muscleInput = $('exerciseEditMuscle');
+    const equipmentInput = $('exerciseEditEquipment');
+    const okButton = $('exerciseEditOk');
+    const cancelButton = $('exerciseEditCancel');
+    const backdrop = root?.querySelector('.modal__backdrop');
+    if (!root || !nameInput || !muscleInput || !equipmentInput || !okButton || !cancelButton) {
+      resolve(null);
+      return;
+    }
+    nameInput.value = exercise.title || '';
+    muscleInput.value = exercise.primary_muscle || '';
+    equipmentInput.value = exercise.equipment || '';
+    root.classList.remove('hidden');
+    root.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+    const previousFocus = document.activeElement;
+    const focusable = [nameInput, muscleInput, equipmentInput, cancelButton, okButton];
+    let settled = false;
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      root.classList.add('hidden');
+      root.setAttribute('aria-hidden', 'true');
+      document.body.classList.remove('modal-open');
+      document.removeEventListener('keydown', onKey);
+      if (previousFocus instanceof HTMLElement) previousFocus.focus();
+      resolve(value);
+    };
+    const onKey = (event) => {
+      if (event.key === 'Escape') finish(null);
+      if (event.key === 'Tab') {
+        const index = focusable.indexOf(document.activeElement);
+        const next = (index + (event.shiftKey ? -1 : 1) + focusable.length) % focusable.length;
+        event.preventDefault();
+        focusable[next].focus();
+      }
+    };
+    cancelButton.onclick = () => finish(null);
+    okButton.onclick = () => {
+      const title = nameInput.value.trim();
+      if (!title) {
+        nameInput.focus();
+        return;
+      }
+      finish({ title, primary_muscle: muscleInput.value.trim(), equipment: equipmentInput.value.trim() });
+    };
+    if (backdrop) backdrop.onclick = () => finish(null);
+    document.addEventListener('keydown', onKey);
+    requestAnimationFrame(() => nameInput.focus());
+  });
+}
+
 function renderExerciseCatalog() {
   const list = $('exerciseCatalogList');
   if (!list) return;
@@ -1667,23 +1853,17 @@ function renderExerciseCatalog() {
       const exercise = state.exercises.find((item) => item.edit_target_id === exerciseId);
       if (!exercise) return;
 
-      const title = prompt('Название упражнения', exercise.title);
-      if (title === null) return;
-
-      const primaryMuscle = prompt('Основная мышечная группа', exercise.primary_muscle || '');
-      if (primaryMuscle === null) return;
-
-      const equipment = prompt('Оборудование', exercise.equipment || '');
-      if (equipment === null) return;
+      const values = await openExerciseEditDialog(exercise);
+      if (!values) return;
 
       try {
         await withReauth(() =>
           api(API.updateExercise(exerciseId), {
             method: 'PATCH',
             body: JSON.stringify({
-              title,
-              primary_muscle: primaryMuscle,
-              equipment,
+              title: values.title,
+              primary_muscle: values.primary_muscle,
+              equipment: values.equipment,
             }),
           })
         );
@@ -1884,6 +2064,7 @@ function loadStrengthTemplate(type = null, dayCount = null) {
 
   dayBuilder.innerHTML = '';
   preset.days.forEach((day) => addDay(day));
+  markBuilderDirty(true);
   showToast('Силовой шаблон загружен');
 }
 
@@ -1907,15 +2088,19 @@ function exerciseTemplate(defaultExerciseId = '', preset = null) {
         <span>Отдых, сек.</span>
         <input class="exercise-rest" type="number" min="15" value="${escapeHtml(preset?.rest_seconds || 90)}" placeholder="90" />
       </label>
-      <button class="secondary remove-ex-btn" type="button">Удалить</button>
+      <button class="secondary remove-ex-btn icon-danger-btn" type="button" aria-label="Удалить упражнение" title="Удалить упражнение">×</button>
     </div>
   `;
 }
 
 function programDayTemplate(index, preset = null) {
   return `
-    <div class="item-card day-card" data-day-index="${index}">
-      <div class="program-day-head">
+    <details class="item-card day-card" data-day-index="${index}" ${index === 0 ? 'open' : ''}>
+      <summary class="program-day-summary">
+        <span><strong>${escapeHtml(preset?.title || `День ${index + 1}`)}</strong><small>${escapeHtml(preset?.exercises?.length || 1)} упр.</small></span>
+      </summary>
+      <div class="day-card__body">
+        <div class="program-day-head">
         <label class="field day-title-field">
           <span>Название дня</span>
           <input class="day-title" type="text" placeholder="Например, Верх тела" value="${escapeHtml(preset?.title || `День ${index + 1}`)}" />
@@ -1924,11 +2109,12 @@ function programDayTemplate(index, preset = null) {
           <button class="secondary add-ex-btn" type="button">+ Упражнение</button>
           <button class="secondary remove-day-btn" type="button">Удалить день</button>
         </div>
+        </div>
+        <div class="stack exercises-list">
+          ${(preset?.exercises || []).map((ex) => exerciseTemplate(ex.exercise_id, ex)).join('')}
+        </div>
       </div>
-      <div class="stack exercises-list">
-        ${(preset?.exercises || []).map((ex) => exerciseTemplate(ex.exercise_id, ex)).join('')}
-      </div>
-    </div>
+    </details>
   `;
 }
 
@@ -1936,12 +2122,20 @@ function bindExerciseRowActions(row) {
   const removeBtn = row.querySelector('.remove-ex-btn');
   if (!removeBtn) return;
 
-  removeBtn.onclick = () => {
+  removeBtn.onclick = async () => {
     if (!canEditSelfBuilder()) {
       showToast('Удаление элементов доступно только для своей программы, тренеру или админу', 'error');
       return;
     }
+    const ok = await openConfirmDialog({
+      title: 'Удалить упражнение?',
+      message: 'Упражнение будет удалено только из этого дня программы.',
+      okText: 'Удалить',
+      danger: true,
+    });
+    if (!ok) return;
     row.remove();
+    markBuilderDirty();
   };
 }
 
@@ -1965,6 +2159,7 @@ function addDay(preset = null) {
   const node = wrapper.firstElementChild;
 
   dayBuilder.appendChild(node);
+  dayBuilder.querySelector('.builder-empty-state')?.remove();
 
   const exercisesList = node.querySelector('.exercises-list');
   const addExBtn = node.querySelector('.add-ex-btn');
@@ -1977,15 +2172,24 @@ function addDay(preset = null) {
     exercisesList.appendChild(row);
     bindExerciseRowActions(row);
     refreshBuilderControls();
+    markBuilderDirty();
   };
 
-  removeDayBtn.onclick = () => {
+  removeDayBtn.onclick = async () => {
     if (!canEditSelfBuilder()) {
       showToast('Удаление дней доступно только для своей программы, тренеру или админу', 'error');
       return;
     }
+    const ok = await openConfirmDialog({
+      title: 'Удалить день программы?',
+      message: 'Все упражнения этого дня будут удалены из черновика.',
+      okText: 'Удалить',
+      danger: true,
+    });
+    if (!ok) return;
     node.remove();
     renumberDays();
+    markBuilderDirty();
   };
 
   node.querySelectorAll('.program-ex-row').forEach(bindExerciseRowActions);
@@ -1994,7 +2198,16 @@ function addDay(preset = null) {
     addExBtn.click();
   }
 
+  const titleInput = node.querySelector('.day-title');
+  const summaryTitle = node.querySelector('.program-day-summary strong');
+  if (titleInput && summaryTitle) {
+    titleInput.addEventListener('input', () => {
+      summaryTitle.textContent = titleInput.value.trim() || `День ${idx + 1}`;
+    });
+  }
+
   refreshBuilderControls();
+  markBuilderDirty();
 }
 
 function renumberDays() {
@@ -2009,6 +2222,25 @@ function renumberDays() {
 
 function fillExample() {
   loadStrengthTemplate('upper_lower', 4);
+}
+
+function markBuilderDirty(dirty = true) {
+  const node = $('builderDirtyState');
+  if (!node) return;
+  node.textContent = dirty ? 'Есть несохранённые изменения' : 'Все изменения сохранены';
+  node.classList.toggle('is-dirty', dirty);
+}
+
+function renderEmptyBuilder() {
+  const dayBuilder = $('dayBuilder');
+  if (!dayBuilder || dayBuilder.querySelector('.day-card')) return;
+  dayBuilder.innerHTML = `
+    <div class="empty-state builder-empty-state">
+      <p class="empty-state__title">Добавьте первый тренировочный день</p>
+      <p class="empty-state__text muted">Начните с пустого дня или выберите готовый силовой шаблон выше.</p>
+    </div>
+  `;
+  markBuilderDirty(false);
 }
 
 function collectProgramPayload() {
@@ -2072,6 +2304,7 @@ async function saveProgram() {
   }
 
   showToast(isEditing ? 'Шаблон обновлён' : 'Программа сохранена');
+  markBuilderDirty(false);
   resetBuilderEditMode();
   await loadTemplates();
   await loadClients();
@@ -2117,16 +2350,71 @@ async function loadTemplateIntoBuilder(templateId) {
 
   toggleCoachUI();
   setBuilderEditMode(template.id, template.title);
+  markBuilderDirty(false);
   showToast('Шаблон загружен в конструктор');
 }
 
-async function assignTemplateToMe(templateId) {
+function openTemplateAssignDialog(template) {
+  return new Promise((resolve) => {
+    const root = $('templateAssignModal');
+    const summary = $('templateAssignSummary');
+    const dateInput = $('templateStartDate');
+    const okButton = $('templateAssignOk');
+    const cancelButton = $('templateAssignCancel');
+    const backdrop = root?.querySelector('.modal__backdrop');
+    if (!root || !summary || !dateInput || !okButton || !cancelButton) {
+      resolve(null);
+      return;
+    }
+    const exerciseCount = (template.days || []).reduce((sum, day) => sum + (day.exercises || []).length, 0);
+    summary.innerHTML = `
+      <strong>${escapeHtml(template.title)}</strong>
+      <p class="muted top-gap">${escapeHtml(template.days?.length || 0)} тренировочных дней · ${escapeHtml(exerciseCount)} упражнений. Текущая активная программа будет заменена.</p>
+    `;
+    dateInput.value = getTodayInputDateValue();
+    dateInput.min = getTodayInputDateValue();
+    root.classList.remove('hidden');
+    root.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+    const previousFocus = document.activeElement;
+    let settled = false;
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      root.classList.add('hidden');
+      root.setAttribute('aria-hidden', 'true');
+      document.body.classList.remove('modal-open');
+      document.removeEventListener('keydown', onKey);
+      if (previousFocus instanceof HTMLElement) previousFocus.focus();
+      resolve(value);
+    };
+    const onKey = (event) => {
+      if (event.key === 'Escape') finish(null);
+      if (event.key === 'Tab') {
+        const focusable = [dateInput, cancelButton, okButton];
+        const index = focusable.indexOf(document.activeElement);
+        const next = (index + (event.shiftKey ? -1 : 1) + focusable.length) % focusable.length;
+        event.preventDefault();
+        focusable[next].focus();
+      }
+    };
+    cancelButton.onclick = () => finish(null);
+    okButton.onclick = () => finish(dateInput.value || getTodayInputDateValue());
+    if (backdrop) backdrop.onclick = () => finish(null);
+    document.addEventListener('keydown', onKey);
+    requestAnimationFrame(() => dateInput.focus());
+  });
+}
+
+async function assignTemplateToMe(templateId, startDate) {
   await withReauth(() =>
     api(API.assignTemplateToMe(templateId), {
       method: 'POST',
+      body: JSON.stringify({ start_date: startDate || null }),
     })
   );
-  showToast('Шаблон загружен в тренировки');
+  showToast('Программа назначена');
+  await loadWeekSchedule();
   await loadTodayWorkout();
   await resetHistoryAndReload();
 }
@@ -2335,7 +2623,7 @@ async function loadTemplates() {
           ? `<button class="secondary edit-template-btn" type="button" data-template-id="${template.id}">Редактировать</button>`
           : '';
 
-        const assignBtn = `<button class="secondary assign-template-btn" type="button" data-template-id="${template.id}">В тренировки</button>`;
+        const assignBtn = `<button class="assign-template-btn" type="button" data-template-id="${template.id}">Назначить себе</button>`;
 
         return `
           <div class="item-card">
@@ -2370,7 +2658,11 @@ async function loadTemplates() {
   document.querySelectorAll('.assign-template-btn').forEach((btn) => {
     btn.onclick = async () => {
       try {
-        await assignTemplateToMe(Number(btn.dataset.templateId));
+        const template = state.templates.find((item) => item.id === Number(btn.dataset.templateId));
+        const startDate = await openTemplateAssignDialog(template);
+        if (!startDate) return;
+        await assignTemplateToMe(Number(btn.dataset.templateId), startDate);
+        navigateToSection('section-today-workout', 'card-today');
       } catch (error) {
         log(`assignTemplateToMe: ${String(error)}`);
         toastError(error, 'Не удалось загрузить шаблон в тренировки');
@@ -2491,6 +2783,21 @@ async function loadClients() {
   });
 }
 
+function applyCoachClientDeepLink() {
+  const params = new URLSearchParams(location.search);
+  const telegramId = Number(params.get('coach_client_id') || 0);
+  const action = params.get('action');
+  if (!telegramId || !['program', 'kbju'].includes(action)) return;
+  const client = (state.clients || []).find((item) => Number(item.telegram_user_id) === telegramId);
+  if (!client) {
+    showToast('Клиент из ссылки не найден или больше не закреплён', 'error');
+    return;
+  }
+  if (action === 'kbju') selectClientForKbju(client);
+  else selectClientForProgram(client);
+  history.replaceState({}, '', location.pathname);
+}
+
 function statusLabel(status) {
   return ({
     planned: 'Запланирована',
@@ -2507,6 +2814,102 @@ function clearWorkoutTimer() {
   state.currentWorkoutTimerStartedAtMs = null;
 }
 
+const pendingSetPayloads = new Map();
+const setSaveTimers = new Map();
+
+function clearPendingSetSaves() {
+  setSaveTimers.forEach((timer) => clearTimeout(timer));
+  setSaveTimers.clear();
+  pendingSetPayloads.clear();
+}
+
+function getWorkoutDraftKey(workoutId) {
+  return `fit_workout_draft_${workoutId}`;
+}
+
+function loadWorkoutDraft(workoutId) {
+  try {
+    return JSON.parse(localStorage.getItem(getWorkoutDraftKey(workoutId)) || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function saveWorkoutDraftValue(workoutId, setId, payload) {
+  const draft = loadWorkoutDraft(workoutId);
+  draft[setId] = payload;
+  localStorage.setItem(getWorkoutDraftKey(workoutId), JSON.stringify(draft));
+}
+
+function clearWorkoutDraftValue(workoutId, setId) {
+  if (!workoutId) return;
+  const draft = loadWorkoutDraft(workoutId);
+  delete draft[setId];
+  if (Object.keys(draft).length) localStorage.setItem(getWorkoutDraftKey(workoutId), JSON.stringify(draft));
+  else localStorage.removeItem(getWorkoutDraftKey(workoutId));
+}
+
+function clearWorkoutDraft(workoutId) {
+  if (workoutId) localStorage.removeItem(getWorkoutDraftKey(workoutId));
+}
+
+function setWorkoutSaveStatus(kind, message) {
+  const root = $('floatingWorkoutStatus');
+  const status = $('workoutSaveStatus');
+  const retry = $('retrySetSaves');
+  if (!root || !status) return;
+  root.classList.remove('hidden', 'is-error', 'is-saving');
+  if (kind === 'error') root.classList.add('is-error');
+  if (kind === 'saving') root.classList.add('is-saving');
+  status.textContent = message;
+  if (retry) retry.classList.toggle('hidden', kind !== 'error');
+}
+
+function getSetPayloadFromDom(setId) {
+  const repsInput = document.querySelector(`.set-reps[data-set-id="${setId}"]`);
+  const weightInput = document.querySelector(`.set-weight[data-set-id="${setId}"]`);
+  const completedInput = document.querySelector(`.set-completed[data-set-id="${setId}"]`);
+  return {
+    actual_reps: repsInput?.value ? Number(repsInput.value) : null,
+    actual_weight: weightInput?.value ? Number(weightInput.value) : null,
+    is_completed: Boolean(completedInput?.checked),
+  };
+}
+
+async function flushSetSave(setId) {
+  const payload = pendingSetPayloads.get(setId);
+  if (!payload) return;
+  setWorkoutSaveStatus('saving', 'Сохраняем изменения…');
+  try {
+    await updateSetRow(setId, payload);
+    if (pendingSetPayloads.get(setId) === payload) {
+      pendingSetPayloads.delete(setId);
+      clearWorkoutDraftValue(state.todayWorkout?.id, setId);
+    }
+    setWorkoutSaveStatus('saved', pendingSetPayloads.size ? 'Сохраняем изменения…' : 'Все изменения сохранены');
+  } catch (error) {
+    log(`save set ${setId}: ${String(error)}`);
+    setWorkoutSaveStatus('error', navigator.onLine ? 'Не удалось сохранить' : 'Нет сети — изменения сохранены на устройстве');
+  }
+}
+
+function queueSetSave(setId, { immediate = false } = {}) {
+  const payload = getSetPayloadFromDom(setId);
+  pendingSetPayloads.set(setId, payload);
+  saveWorkoutDraftValue(state.todayWorkout?.id, setId, payload);
+  setWorkoutSaveStatus('saving', navigator.onLine ? 'Сохраняем изменения…' : 'Нет сети — изменения сохранены на устройстве');
+  if (setSaveTimers.has(setId)) clearTimeout(setSaveTimers.get(setId));
+  const timer = setTimeout(() => {
+    setSaveTimers.delete(setId);
+    flushSetSave(setId);
+  }, immediate ? 0 : 650);
+  setSaveTimers.set(setId, timer);
+}
+
+async function retryPendingSetSaves() {
+  await Promise.allSettled([...pendingSetPayloads.keys()].map((setId) => flushSetSave(setId)));
+}
+
 function clearRestTimer() {
   if (state.restTimer) {
     clearInterval(state.restTimer);
@@ -2514,26 +2917,30 @@ function clearRestTimer() {
   }
   state.restTimerEndsAtMs = null;
   const timerNode = $('restTimer');
+  const floatingTimerNode = $('floatingRestTimer');
   if (timerNode) {
     timerNode.classList.add('hidden');
     timerNode.textContent = '';
   }
+  if (floatingTimerNode) floatingTimerNode.textContent = '';
 }
 
 function startRestTimer(seconds) {
   const durationMs = Math.max(0, Number(seconds || 0)) * 1000;
   const timerNode = $('restTimer');
-  if (!timerNode || !durationMs) return;
+  const floatingTimerNode = $('floatingRestTimer');
+  if ((!timerNode && !floatingTimerNode) || !durationMs) return;
 
   clearRestTimer();
   state.restTimerEndsAtMs = Date.now() + durationMs;
-  timerNode.classList.remove('hidden');
+  if (timerNode) timerNode.classList.remove('hidden');
+  $('floatingWorkoutStatus')?.classList.remove('hidden');
 
   const render = () => {
     const remainingMs = Math.max(0, state.restTimerEndsAtMs - Date.now());
-    timerNode.textContent = remainingMs
-      ? `Отдых: ${formatDurationMs(remainingMs)}`
-      : 'Отдых завершён';
+    const label = remainingMs ? `Отдых: ${formatDurationMs(remainingMs)}` : 'Отдых завершён';
+    if (timerNode) timerNode.textContent = label;
+    if (floatingTimerNode) floatingTimerNode.textContent = label;
     if (!remainingMs) {
       clearInterval(state.restTimer);
       state.restTimer = null;
@@ -2582,9 +2989,7 @@ async function updateSetRow(setId, payload) {
 }
 
 async function deleteTodayWorkout() {
-  if (state.todayWorkout?.id) {
-    clearWorkoutTimerStart(state.todayWorkout.id);
-  }
+  const workoutId = state.todayWorkout?.id;
 
   await withReauth(() =>
     api(API.deleteTodayWorkout, {
@@ -2592,18 +2997,26 @@ async function deleteTodayWorkout() {
     })
   );
 
+  if (workoutId) {
+    clearWorkoutTimerStart(workoutId);
+    clearWorkoutDraft(workoutId);
+  }
+  clearPendingSetSaves();
   showToast('Тренировка на сегодня удалена');
   state.todayWorkout = null;
   clearWorkoutTimer();
   renderTodayWorkout(null);
+  await loadWeekSchedule();
   await resetHistoryAndReload();
 }
 
 function renderTodayWorkout(workout) {
   const container = $('todayWorkout');
   if (!container) return;
+  renderWeekOverview();
 
   if (!workout) {
+    $('floatingWorkoutStatus')?.classList.add('hidden');
     container.innerHTML = `
       <div class="empty-state">
         <p class="empty-state__title">На сегодня тренировка не назначена</p>
@@ -2626,6 +3039,8 @@ function renderTodayWorkout(workout) {
   }
 
   const progress = getWorkoutSetProgress(workout);
+  const workoutDraft = loadWorkoutDraft(workout.id);
+  const hasRecoveredDraft = Object.keys(workoutDraft).length > 0;
   const totalExercises = (workout.exercises || []).length;
   const deleteBtn = `<button id="deleteTodayWorkoutBtn" class="secondary" type="button">Удалить тренировку</button>`;
 
@@ -2635,7 +3050,7 @@ function renderTodayWorkout(workout) {
       : workout.status === 'in_progress'
         ? `<button id="finishWorkoutBtn" type="button">Завершить тренировку</button>${deleteBtn}`
         : deleteBtn;
-  const setInputsDisabled = workout.status === 'completed' ? 'disabled' : '';
+  const setInputsDisabled = workout.status === 'in_progress' ? '' : 'disabled';
 
   container.innerHTML = `
     <div class="item-card today-workout-card">
@@ -2657,6 +3072,7 @@ function renderTodayWorkout(workout) {
           <span id="workoutTimer" class="metric-pill"></span>
           <span id="restTimer" class="rest-timer hidden"></span>
         </div>
+        ${hasRecoveredDraft ? '<div class="auth-notice"><strong>Восстановлены несохранённые значения</strong><span>Приложение повторит сохранение автоматически.</span></div>' : ''}
       </div>
       <div class="toolbar wrap top-gap">
         ${actionButtons}
@@ -2679,33 +3095,29 @@ function renderTodayWorkout(workout) {
           </div>
 
           <div class="stack top-gap">
-            ${(exercise.sets || []).map((setRow) => `
-              <div class="set-row ${setRow.is_completed ? 'is-completed' : ''}">
-                <div class="set-row__number">Подход ${escapeHtml(setRow.set_number)}</div>
+            ${(exercise.sets || []).map((setRow) => {
+              const recovered = workoutDraft[setRow.id] || {};
+              const actualReps = recovered.actual_reps ?? setRow.actual_reps ?? '';
+              const actualWeight = recovered.actual_weight ?? setRow.actual_weight ?? '';
+              const isCompleted = recovered.is_completed ?? setRow.is_completed;
+              return `
+              <div class="set-row ${isCompleted ? 'is-completed' : ''}">
+                <div class="set-row__number"><strong>${escapeHtml(setRow.set_number)}</strong><span>подход</span></div>
                 <label class="field">
-                  <span>Повторы</span>
-                  <input
-                    class="set-reps"
-                    type="number"
-                    min="0"
-                    value="${escapeHtml(setRow.actual_reps ?? '')}"
-                    data-set-id="${setRow.id}"
-                    placeholder="0"
-                    ${setInputsDisabled}
-                  />
+                  <span>Повт.</span>
+                  <span class="set-input-control">
+                    <button class="secondary set-step-btn" type="button" data-target="reps" data-set-id="${setRow.id}" data-delta="-1" aria-label="Уменьшить повторы" ${setInputsDisabled}>−</button>
+                    <input class="set-reps" type="number" min="0" value="${escapeHtml(actualReps)}" data-set-id="${setRow.id}" placeholder="0" ${setInputsDisabled}/>
+                    <button class="secondary set-step-btn" type="button" data-target="reps" data-set-id="${setRow.id}" data-delta="1" aria-label="Увеличить повторы" ${setInputsDisabled}>+</button>
+                  </span>
                 </label>
                 <label class="field">
                   <span>Вес, кг</span>
-                  <input
-                    class="set-weight"
-                    type="number"
-                    min="0"
-                    step="0.1"
-                    value="${escapeHtml(setRow.actual_weight ?? '')}"
-                    data-set-id="${setRow.id}"
-                    placeholder="0"
-                    ${setInputsDisabled}
-                  />
+                  <span class="set-input-control">
+                    <button class="secondary set-step-btn" type="button" data-target="weight" data-set-id="${setRow.id}" data-delta="-2.5" aria-label="Уменьшить вес" ${setInputsDisabled}>−</button>
+                    <input class="set-weight" type="number" min="0" step="0.1" value="${escapeHtml(actualWeight)}" data-set-id="${setRow.id}" placeholder="0" ${setInputsDisabled}/>
+                    <button class="secondary set-step-btn" type="button" data-target="weight" data-set-id="${setRow.id}" data-delta="2.5" aria-label="Увеличить вес" ${setInputsDisabled}>+</button>
+                  </span>
                 </label>
                 <label class="checkbox-row set-done-label">
                   <input
@@ -2713,13 +3125,14 @@ function renderTodayWorkout(workout) {
                     type="checkbox"
                     data-set-id="${setRow.id}"
                     data-rest-seconds="${escapeHtml(exercise.rest_seconds)}"
-                    ${setRow.is_completed ? 'checked' : ''}
+                    ${isCompleted ? 'checked' : ''}
                     ${setInputsDisabled}
                   />
                   <span>Готово</span>
                 </label>
               </div>
-            `).join('')}
+            `;
+            }).join('')}
           </div>
         </div>
       `).join('')}
@@ -2733,7 +3146,13 @@ function renderTodayWorkout(workout) {
       saveWorkoutTimerStart(workout.id, startedAtMs);
     }
     startWorkoutTimerFromMs(startedAtMs);
+    setWorkoutSaveStatus(hasRecoveredDraft ? 'saving' : 'saved', hasRecoveredDraft ? 'Восстановлены изменения — сохраняем…' : 'Все изменения сохранены');
+    if (hasRecoveredDraft) {
+      Object.entries(workoutDraft).forEach(([setId, payload]) => pendingSetPayloads.set(Number(setId), payload));
+      retryPendingSetSaves();
+    }
   } else if (workout.status === 'completed') {
+    $('floatingWorkoutStatus')?.classList.add('hidden');
     clearWorkoutTimer();
     const timerNode = $('workoutTimer');
     const startedAtMs = loadWorkoutTimerStart(workout.id);
@@ -2782,6 +3201,7 @@ function renderTodayWorkout(workout) {
         hapticNotification('success');
         renderTodayWorkout(state.todayWorkout);
         syncTelegramChrome();
+        await loadWeekSchedule();
         await resetHistoryAndReload();
       } catch (error) {
         log(`startWorkout: ${String(error)}`);
@@ -2795,6 +3215,8 @@ function renderTodayWorkout(workout) {
     finishBtn.onclick = async () => {
       try {
         const localStartMs = loadWorkoutTimerStart(workout.id);
+        await retryPendingSetSaves();
+        if (pendingSetPayloads.size) throw new Error('Сначала сохраните изменения подходов');
         state.todayWorkout = await withReauth(() =>
           api(API.finishWorkout(workout.id), { method: 'POST' })
         );
@@ -2808,9 +3230,12 @@ function renderTodayWorkout(workout) {
         }
 
         clearWorkoutTimerStart(workout.id);
+        clearWorkoutDraft(workout.id);
+        clearPendingSetSaves();
         clearWorkoutTimer();
         clearRestTimer();
         syncTelegramChrome();
+        await loadWeekSchedule();
         await resetHistoryAndReload();
       } catch (error) {
         log(`finishWorkout: ${String(error)}`);
@@ -2819,65 +3244,33 @@ function renderTodayWorkout(workout) {
     };
   }
 
-  document.querySelectorAll('.set-reps').forEach((input) => {
-    input.addEventListener('change', async () => {
-      const setId = Number(input.dataset.setId);
-      const weightInput = document.querySelector(`.set-weight[data-set-id="${setId}"]`);
-      const completedInput = document.querySelector(`.set-completed[data-set-id="${setId}"]`);
-
-      try {
-        await updateSetRow(setId, {
-          actual_reps: input.value ? Number(input.value) : null,
-          actual_weight: weightInput?.value ? Number(weightInput.value) : null,
-          is_completed: Boolean(completedInput?.checked),
-        });
-      } catch (error) {
-        log(`update set reps: ${String(error)}`);
-      }
-    });
+  document.querySelectorAll('.set-reps, .set-weight').forEach((input) => {
+    input.addEventListener('input', () => queueSetSave(Number(input.dataset.setId)));
   });
 
-  document.querySelectorAll('.set-weight').forEach((input) => {
-    input.addEventListener('change', async () => {
-      const setId = Number(input.dataset.setId);
-      const repsInput = document.querySelector(`.set-reps[data-set-id="${setId}"]`);
-      const completedInput = document.querySelector(`.set-completed[data-set-id="${setId}"]`);
-
-      try {
-        await updateSetRow(setId, {
-          actual_reps: repsInput?.value ? Number(repsInput.value) : null,
-          actual_weight: input.value ? Number(input.value) : null,
-          is_completed: Boolean(completedInput?.checked),
-        });
-      } catch (error) {
-        log(`update set weight: ${String(error)}`);
-      }
-    });
+  document.querySelectorAll('.set-step-btn').forEach((button) => {
+    button.onclick = () => {
+      const setId = Number(button.dataset.setId);
+      const selector = button.dataset.target === 'weight' ? '.set-weight' : '.set-reps';
+      const input = document.querySelector(`${selector}[data-set-id="${setId}"]`);
+      if (!input || input.disabled) return;
+      const nextValue = Math.max(0, Number(input.value || 0) + Number(button.dataset.delta || 0));
+      input.value = String(Math.round(nextValue * 10) / 10);
+      queueSetSave(setId);
+      hapticImpact('light');
+    };
   });
 
   document.querySelectorAll('.set-completed').forEach((input) => {
-    input.addEventListener('change', async () => {
+    input.addEventListener('change', () => {
       const setId = Number(input.dataset.setId);
-      const repsInput = document.querySelector(`.set-reps[data-set-id="${setId}"]`);
-      const weightInput = document.querySelector(`.set-weight[data-set-id="${setId}"]`);
-
-      try {
-        await updateSetRow(setId, {
-          actual_reps: repsInput?.value ? Number(repsInput.value) : null,
-          actual_weight: weightInput?.value ? Number(weightInput.value) : null,
-          is_completed: input.checked,
-        });
-        input.closest('.set-row')?.classList.toggle('is-completed', input.checked);
-        updateWorkoutProgressFromDom();
-        if (input.checked) {
-          hapticImpact('medium');
-          startRestTimer(input.dataset.restSeconds);
-        }
-        showToast('Подход сохранён');
-      } catch (error) {
-        log(`update set completed: ${String(error)}`);
-        toastError(error, 'Не удалось сохранить подход');
+      input.closest('.set-row')?.classList.toggle('is-completed', input.checked);
+      updateWorkoutProgressFromDom();
+      if (input.checked) {
+        hapticImpact('medium');
+        startRestTimer(input.dataset.restSeconds);
       }
+      queueSetSave(setId, { immediate: true });
     });
   });
 
@@ -2892,15 +3285,24 @@ async function loadTodayWorkout() {
   } catch (error) {
     if (error.status === 404) {
       state.todayWorkout = null;
-    renderTodayWorkout(null);
-    renderOnboarding();
-    return;
-  }
+      renderTodayWorkout(null);
+      renderOnboarding();
+      return;
+    }
 
     log(`loadTodayWorkout: ${String(error)}`);
-    renderTodayWorkout(null);
-    renderOnboarding();
+    const container = $('todayWorkout');
+    if (container) {
+      container.innerHTML = `<div class="empty-state"><p class="empty-state__title">Не удалось загрузить тренировку</p><p class="empty-state__text muted">Проверьте соединение и повторите попытку.</p><button class="secondary" type="button" id="retryTodayWorkoutBtn">Повторить</button></div>`;
+      $('retryTodayWorkoutBtn').onclick = () => loadTodayWorkout();
+    }
+    throw error;
   }
+}
+
+async function loadWeekSchedule() {
+  state.weekSchedule = await withReauth(() => api(API.weekSchedule));
+  renderWeekOverview();
 }
 
 function renderWorkoutHistoryRows(rows, append = false) {
@@ -2921,6 +3323,8 @@ function renderWorkoutHistoryRows(rows, append = false) {
           </button>
         </div>
       </div>`;
+    renderProgressTrends();
+    renderWeekOverview();
     return;
   }
 
@@ -2956,6 +3360,8 @@ function renderWorkoutHistoryRows(rows, append = false) {
     .join('');
 
   container.innerHTML = statsHtml + html;
+  renderProgressTrends();
+  renderWeekOverview();
 }
 
 function updateHistoryClearVisibility(visible) {
@@ -3060,6 +3466,7 @@ function renderBodyMeasurements() {
         <p class="empty-state__text muted">Сохранённые показатели появятся в дневнике.</p>
       </div>
     `;
+    renderProgressTrends();
     return;
   }
 
@@ -3111,6 +3518,7 @@ function renderBodyMeasurements() {
     .join('');
 
   container.innerHTML = overview + list;
+  renderProgressTrends();
 
   document.querySelectorAll('.delete-measurement-btn').forEach((btn) => {
     btn.onclick = async () => {
@@ -3384,24 +3792,49 @@ async function saveNotificationSettings() {
   await loadNotifications();
 }
 
+async function runBootstrapTask(label, action, onError) {
+  try {
+    await action();
+    return true;
+  } catch (error) {
+    log(`bootstrap ${label}: ${String(error)}`);
+    if (typeof onError === 'function') onError(error);
+    return false;
+  }
+}
+
+function renderLoadError(targetId, text) {
+  const node = $(targetId);
+  if (!node) return;
+  node.innerHTML = `<div class="empty-state"><p class="empty-state__title">${escapeHtml(text)}</p><p class="empty-state__text muted">Остальные разделы приложения продолжат работать. Попробуйте обновить этот раздел.</p></div>`;
+}
+
 async function bootstrap() {
   setAppLoading(true);
   try {
     await loadMe();
-    await loadCoachInvites();
-    await loadClients();
-    await loadExercises();
-    await loadTemplates();
-    await loadTodayWorkout();
-    await loadBodyMeasurements();
-    await resetHistoryAndReload();
-    await loadNotifications();
+    const results = [];
+    results.push(await runBootstrapTask('coach invites', loadCoachInvites));
+    results.push(await runBootstrapTask('clients', loadClients, () => renderLoadError('clientsList', 'Не удалось загрузить клиентов')));
+    const sectionResults = await Promise.all([
+      runBootstrapTask('exercises', loadExercises, () => renderLoadError('exerciseCatalogList', 'Не удалось загрузить упражнения')),
+      runBootstrapTask('templates', loadTemplates, () => renderLoadError('templatesList', 'Не удалось загрузить программы')),
+      runBootstrapTask('today workout', loadTodayWorkout),
+      runBootstrapTask('week schedule', loadWeekSchedule, () => {
+        state.weekSchedule = [];
+        renderWeekOverview();
+      }),
+      runBootstrapTask('measurements', loadBodyMeasurements, () => renderLoadError('bodyMeasurements', 'Не удалось загрузить замеры')),
+      runBootstrapTask('history', resetHistoryAndReload, () => renderLoadError('workoutHistory', 'Не удалось загрузить дневник')),
+      runBootstrapTask('notifications', loadNotifications, () => renderLoadError('notificationsList', 'Не удалось загрузить уведомления')),
+    ]);
+    results.push(...sectionResults);
 
-    if (!document.querySelector('.day-card')) {
-      fillExample();
-    }
+    renderEmptyBuilder();
+    applyCoachClientDeepLink();
     renderOnboarding();
     syncTelegramChrome();
+    if (results.some((result) => !result)) showToast('Часть данных не загрузилась. Доступные разделы продолжают работать.', 'error');
     if (!state.initialSectionOpened) {
       state.initialSectionOpened = true;
       requestAnimationFrame(() => navigateToSection('section-today-workout', 'card-today'));
@@ -3412,10 +3845,29 @@ async function bootstrap() {
 }
 
 function bindUI() {
+  if ($('retrySetSaves')) $('retrySetSaves').onclick = () => retryPendingSetSaves();
+  window.addEventListener('online', () => retryPendingSetSaves());
+  window.addEventListener('offline', () => {
+    if (pendingSetPayloads.size) setWorkoutSaveStatus('error', 'Нет сети — изменения сохранены на устройстве');
+  });
+  window.addEventListener('beforeunload', (event) => {
+    if (!pendingSetPayloads.size && !$('builderDirtyState')?.classList.contains('is-dirty')) return;
+    event.preventDefault();
+    event.returnValue = '';
+  });
+
+  $('card-builder')?.addEventListener('input', (event) => {
+    if (event.target.matches('input, select, textarea')) markBuilderDirty(true);
+  });
+  $('card-builder')?.addEventListener('change', (event) => {
+    if (event.target.matches('input, select, textarea')) markBuilderDirty(true);
+  });
+
   document.addEventListener('fit:navigation', (event) => {
     const card = event.detail?.card;
     if (!card) return;
     state.currentNavCard = card;
+    showAppScreen(card);
     setActiveBottomNav(card);
     syncTelegramChrome();
   });

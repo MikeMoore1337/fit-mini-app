@@ -146,6 +146,10 @@ body {
     max-width: 760px;
 }
 
+.container > * {
+    min-width: 0;
+}
+
 .card {
     background: var(--card-bg);
     border: 1px solid var(--border);
@@ -253,11 +257,11 @@ p {
 }
 
 #card-builder {
-    order: 4;
+    order: 5;
 }
 
 #card-templates {
-    order: 5;
+    order: 4;
 }
 
 #card-exercises {
@@ -321,6 +325,29 @@ p {
 
 .section-content.hidden {
     display: none;
+}
+
+.screen-hidden,
+body:not(.is-authenticated) .app-screen-card {
+    display: none !important;
+}
+
+body.is-authenticated #card-hero,
+body.is-authenticated #card-auth {
+    display: none;
+}
+
+.profile-account-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.profile-account-summary strong,
+.profile-account-summary span {
+    display: block;
 }
 
 input,
@@ -430,6 +457,19 @@ button.secondary {
 
 button.secondary:hover {
     background: var(--secondary-hover);
+}
+
+.button-link.secondary-link {
+    background: var(--secondary-bg);
+    color: var(--text);
+}
+
+.button-link.secondary-link:hover {
+    background: var(--secondary-hover);
+}
+
+.danger-text {
+    color: var(--danger) !important;
 }
 
 button:disabled {
@@ -593,6 +633,35 @@ button:disabled {
     background: var(--surface);
     border-radius: var(--radius);
     padding: 14px;
+}
+
+.admin-filters {
+    margin-bottom: 12px;
+}
+
+.admin-actions {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-subtle);
+}
+
+.admin-actions summary {
+    cursor: pointer;
+    padding: 11px 12px;
+    font-weight: 700;
+}
+
+.admin-actions__body {
+    display: grid;
+    gap: 10px;
+    padding: 0 12px 12px;
+}
+
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
 }
 
 .onboarding-list {
@@ -766,7 +835,7 @@ button:disabled {
 
 .set-row {
     display: grid;
-    grid-template-columns: minmax(76px, 0.8fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+    grid-template-columns: 64px minmax(110px, 1fr) minmax(110px, 1fr) minmax(82px, auto);
     align-items: end;
     gap: 10px;
     padding: 11px;
@@ -783,6 +852,46 @@ button:disabled {
 .set-row__number {
     align-self: center;
     font-weight: 800;
+    display: grid;
+    justify-items: center;
+    line-height: 1;
+}
+
+.set-row__number strong {
+    font-size: 20px;
+}
+
+.set-row__number span {
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.set-input-control {
+    display: grid;
+    grid-template-columns: 32px minmax(42px, 1fr) 32px;
+    align-items: stretch;
+}
+
+.set-input-control input {
+    border-radius: 0;
+    padding: 8px 4px;
+    text-align: center;
+}
+
+.set-step-btn {
+    min-width: 32px;
+    min-height: 40px;
+    padding: 4px;
+    border-radius: 0;
+}
+
+.set-step-btn:first-child {
+    border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+
+.set-step-btn:last-child {
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 
 .set-done-label {
@@ -793,6 +902,42 @@ button:disabled {
     border-radius: var(--radius-sm);
     padding: 0 10px;
     background: var(--surface-soft);
+}
+
+.floating-workout-status {
+    position: fixed;
+    z-index: 9200;
+    right: max(10px, env(safe-area-inset-right, 0px));
+    bottom: max(86px, calc(env(safe-area-inset-bottom, 0px) + 72px));
+    left: max(10px, env(safe-area-inset-left, 0px));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 9px 12px;
+    border: 1px solid var(--success-line);
+    border-radius: 999px;
+    background: var(--toast-bg);
+    color: white;
+    box-shadow: var(--shadow);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.floating-workout-status.is-saving {
+    border-color: var(--warning-line);
+}
+
+.floating-workout-status.is-error {
+    border-color: var(--danger-line);
+}
+
+.floating-workout-status button {
+    min-height: 32px;
+    padding: 5px 10px;
+    font-size: 12px;
 }
 
 .set-done-label input {
@@ -959,6 +1104,168 @@ button:disabled {
     grid-template-columns: minmax(0, 1fr) minmax(252px, 0.45fr);
     align-items: end;
     gap: 10px;
+}
+
+.program-day-summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 2px 0;
+}
+
+.program-day-summary::-webkit-details-marker {
+    display: none;
+}
+
+.program-day-summary > span {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.program-day-summary small {
+    color: var(--muted);
+}
+
+.program-day-summary::after {
+    content: "Развернуть";
+    display: block;
+    margin-top: 6px;
+    color: var(--accent-strong);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.day-card[open] .program-day-summary::after {
+    content: "Свернуть";
+}
+
+.day-card__body {
+    display: grid;
+    gap: 12px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+
+.icon-danger-btn {
+    min-width: 44px;
+    color: var(--danger) !important;
+    font-size: 22px;
+}
+
+.builder-sticky-actions {
+    position: sticky;
+    z-index: 20;
+    bottom: 78px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 14px -6px -6px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--nav-bg);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(12px);
+}
+
+.builder-sticky-actions .is-dirty {
+    color: var(--warning-text);
+}
+
+.week-overview {
+    margin-bottom: 12px;
+}
+
+.week-overview__head,
+.trend-card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.week-overview__head strong,
+.week-overview__head span {
+    display: block;
+}
+
+.week-schedule {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(84px, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.week-schedule__item {
+    display: grid;
+    gap: 3px;
+    padding: 9px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+}
+
+.week-schedule__item.is-completed {
+    border-color: var(--success-line);
+    background: var(--success-soft);
+}
+
+.week-schedule__item span,
+.week-schedule__item small {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.progress-trends {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.trend-card {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+}
+
+.trend-bars {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(28px, 1fr));
+    align-items: end;
+    gap: 6px;
+    height: 150px;
+}
+
+.trend-bar {
+    display: grid;
+    grid-template-rows: 20px 1fr 18px;
+    align-items: end;
+    justify-items: center;
+    height: 100%;
+    min-width: 0;
+}
+
+.trend-bar__value,
+.trend-bar__label {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.trend-bar__fill {
+    width: min(28px, 80%);
+    min-height: 8px;
+    border-radius: 6px 6px 2px 2px;
+    background: linear-gradient(180deg, var(--accent-end), var(--accent));
 }
 
 .program-day-actions {
@@ -1333,9 +1640,37 @@ a {
     }
 
     #todayWorkout .grid.item-card,
-    .program-ex-row,
-    .set-row {
+    .program-ex-row {
         grid-template-columns: 1fr !important;
+    }
+
+    .set-row {
+        grid-template-columns: 40px minmax(0, 1fr) minmax(0, 1fr) 72px;
+        align-items: end;
+        gap: 6px;
+        padding: 9px 7px;
+    }
+
+    .set-row .field {
+        gap: 4px;
+    }
+
+    .set-input-control {
+        grid-template-columns: 28px minmax(34px, 1fr) 28px;
+    }
+
+    .set-step-btn {
+        min-width: 28px;
+        min-height: 40px;
+    }
+
+    .set-done-label {
+        min-width: 0;
+        padding: 0 6px;
+    }
+
+    .set-done-label span {
+        font-size: 11px;
     }
 
     .kbju-result-grid {
@@ -1389,8 +1724,30 @@ a {
     }
 
     .set-row {
-        gap: 8px;
-        padding: 10px;
+        min-height: 72px;
+    }
+
+    .builder-sticky-actions {
+        bottom: 72px;
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .builder-sticky-actions button {
+        width: 100%;
+    }
+
+    .progress-trends {
+        grid-template-columns: 1fr;
+    }
+
+    .week-overview__head {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .week-overview__head button {
+        width: 100%;
     }
 
     .exercise-meta {

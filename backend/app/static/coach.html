@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0f1115" />
   <title>Кабинет тренера - FitMiniApp</title>
-  <link rel="stylesheet" href="/static/styles.css?v=44" />
+  <link rel="stylesheet" href="/static/styles.css?v=46" />
 </head>
 <body>
   <main class="container narrow">
@@ -51,10 +51,16 @@
         <h2>Мои клиенты</h2>
         <button id="reloadClientsBtn" class="secondary" type="button">Обновить</button>
       </div>
+      <label class="field">
+        <span>Поиск клиентов</span>
+        <input id="clientSearch" type="search" placeholder="Имя, username или Telegram ID" />
+      </label>
       <div id="coachClientsList" class="stack"></div>
     </div>
 
-    <div class="card">
+    <div id="coachClientDetail" class="card hidden"></div>
+
+    <div id="coachDiagnosticCard" class="card hidden">
       <div class="section-head">
         <h2>Лог</h2>
       </div>
@@ -87,18 +93,33 @@
     </a>
   </nav>
 
-  <div id="toast" class="toast hidden"></div>
+  <div id="confirmModal" class="modal hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="confirmModalTitle">
+    <div class="modal__backdrop"></div>
+    <div class="modal__panel card">
+      <h3 id="confirmModalTitle" class="modal__title"></h3>
+      <p id="confirmModalBody" class="modal__body muted"></p>
+      <div class="modal__actions toolbar wrap">
+        <button type="button" class="secondary" id="confirmModalCancel">Отмена</button>
+        <button type="button" id="confirmModalOk">Подтвердить</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script type="module">
-    import { initTelegramTheme } from '/static/js/core/theme.js?v=43';
+    import { initTelegramTheme } from '/static/js/core/theme.js?v=46';
 
     initTelegramTheme({
       onError: (error) => console.warn(`Telegram theme: ${String(error)}`),
     });
   </script>
-  <script>
+  <script type="module">
+    import { openConfirmDialog } from '/static/js/core/ui.js?v=46';
+
     const accessTokenKey = 'fit_access_token';
+    let coachClients = [];
 
     const $ = (id) => document.getElementById(id);
 
@@ -187,9 +208,43 @@
       }
     }
 
-    async function loadClients() {
-      const rows = await api('/api/v1/coach/clients');
+    function openClientDetail(client) {
+      const node = $('coachClientDetail');
+      if (!node) return;
+      const name = getClientDisplayName(client);
+      const baseParams = new URLSearchParams({
+        coach_client_id: String(client.telegram_user_id || ''),
+        coach_client_name: name,
+      });
+      const kbju = client.kbju;
+      node.innerHTML = `
+        <div class="section-head">
+          <div><h2>${escapeHtml(name)}</h2><p class="muted top-gap">Карточка клиента</p></div>
+          <button id="closeClientDetailBtn" class="secondary" type="button">Закрыть</button>
+        </div>
+        <div class="progress-overview">
+          <div class="progress-card"><span>Цель</span><strong>${escapeHtml(getGoalLabel(client.goal))}</strong></div>
+          <div class="progress-card"><span>Уровень</span><strong>${escapeHtml(getLevelLabel(client.level))}</strong></div>
+          <div class="progress-card"><span>Вес</span><strong>${client.weight_kg ? `${escapeHtml(client.weight_kg)} кг` : '—'}</strong></div>
+        </div>
+        ${kbju ? `<div class="item-card"><strong>КБЖУ: ${escapeHtml(kbju.calories)} ккал</strong><p class="muted top-gap">Б ${escapeHtml(kbju.protein_g)} · Ж ${escapeHtml(kbju.fat_g)} · У ${escapeHtml(kbju.carbs_g)}</p></div>` : '<p class="muted">КБЖУ ещё не назначен.</p>'}
+        <div class="toolbar wrap top-gap">
+          <a class="button-link" href="/app?${escapeHtml(baseParams.toString())}&action=program">Назначить программу</a>
+          <a class="button-link secondary-link" href="/app?${escapeHtml(baseParams.toString())}&action=kbju">Назначить КБЖУ</a>
+        </div>
+      `;
+      node.classList.remove('hidden');
+      $('closeClientDetailBtn').onclick = () => node.classList.add('hidden');
+      node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function renderClients() {
       const list = $('coachClientsList');
+      const query = $('clientSearch')?.value.trim().toLowerCase() || '';
+      const rows = coachClients.filter((client) => {
+        const haystack = [client.full_name, client.username, client.telegram_user_id].filter(Boolean).join(' ').toLowerCase();
+        return !query || haystack.includes(query);
+      });
 
       list.innerHTML = rows.length
         ? rows.map((client) => {
@@ -203,7 +258,7 @@
                 ${!isPending ? ` | цель: ${escapeHtml(getGoalLabel(client.goal))} | уровень: ${escapeHtml(getLevelLabel(client.level))}` : ''}
               </span>
               <div class="toolbar wrap top-gap">
-                ${!isPending ? `<a class="button-link" href="/app">Назначить программу</a>` : ''}
+                ${!isPending ? `<button class="open-client-btn" type="button" data-client='${escapeHtml(JSON.stringify(client))}'>Открыть клиента</button>` : ''}
                 <button
                   class="btn-danger remove-client-btn"
                   type="button"
@@ -223,9 +278,13 @@
       document.querySelectorAll('.remove-client-btn').forEach((button) => {
         button.onclick = async () => {
           const name = button.dataset.clientName || 'клиента';
-          if (!confirm(`Удалить ${name} из моих клиентов? Аккаунт и тренировки клиента сохранятся.`)) {
-            return;
-          }
+          const confirmed = await openConfirmDialog({
+            title: `Удалить ${name} из клиентов?`,
+            message: 'Аккаунт, программа и тренировки клиента сохранятся.',
+            okText: 'Удалить',
+            danger: true,
+          });
+          if (!confirmed) return;
 
           try {
             if (button.dataset.pending === 'true') {
@@ -245,6 +304,15 @@
           }
         };
       });
+
+      document.querySelectorAll('.open-client-btn').forEach((button) => {
+        button.onclick = () => openClientDetail(JSON.parse(button.dataset.client));
+      });
+    }
+
+    async function loadClients() {
+      coachClients = await api('/api/v1/coach/clients');
+      renderClients();
     }
 
     async function addClient() {
@@ -291,6 +359,12 @@
         showToast('Не удалось загрузить клиентов', 'error');
       }
     };
+
+    $('clientSearch').oninput = renderClients;
+
+    if (new URLSearchParams(location.search).get('debug') === '1') {
+      $('coachDiagnosticCard').classList.remove('hidden');
+    }
 
     (async () => {
       try {

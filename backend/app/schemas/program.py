@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -69,6 +70,10 @@ class ProgramTemplateCreateResponse(BaseModel):
 class AssignTemplateRequest(BaseModel):
     target_telegram_user_id: int = Field(ge=1)
     target_full_name: str | None = Field(default=None, max_length=128)
+
+
+class AssignTemplateSelfRequest(BaseModel):
+    start_date: date | None = None
 
 
 class CoachClientCreate(BaseModel):

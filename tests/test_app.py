@@ -291,6 +291,95 @@ def test_create_program_and_today_workout(client):
     assert today.json()["title"] == "День 1"
 
 
+def test_assign_template_to_self_uses_selected_start_date(client):
+    headers = auth(client, telegram_user_id=2002, is_coach=False)
+    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()
+    payload = {
+        "title": "Программа с выбранной датой",
+        "goal": "recomposition",
+        "level": "intermediate",
+        "mode": "self",
+        "assign_after_create": False,
+        "days": [
+            {
+                "title": title,
+                "exercises": [
+                    {
+                        "exercise_id": exercises[0]["id"],
+                        "prescribed_sets": 1,
+                        "prescribed_reps": "8",
+                        "rest_seconds": 90,
+                    }
+                ],
+            }
+            for title in ("День 1", "День 2")
+        ],
+    }
+    created = client.post("/api/v1/programs/templates", json=payload, headers=headers)
+    assert created.status_code == 200
+    template_id = created.json()["template"]["id"]
+
+    assigned = client.post(
+        f"/api/v1/programs/templates/{template_id}/assign-to-me",
+        json={"start_date": "2026-08-10"},
+        headers=headers,
+    )
+    assert assigned.status_code == 200
+    assert assigned.json()["workouts_created"] == 2
+
+    with get_session_context() as db:
+        user = db.query(User).filter(User.telegram_user_id == 2002).one()
+        program = (
+            db.query(UserProgram)
+            .filter(UserProgram.user_id == user.id, UserProgram.is_active.is_(True))
+            .one()
+        )
+        scheduled_dates = [
+            str(row.scheduled_date)
+            for row in (
+                db.query(UserWorkout)
+                .filter(UserWorkout.user_program_id == program.id)
+                .order_by(UserWorkout.scheduled_date.asc())
+                .all()
+            )
+        ]
+
+    assert scheduled_dates == ["2026-08-10", "2026-08-11"]
+
+
+def test_week_schedule_returns_current_active_program(client):
+    headers = auth(client, telegram_user_id=2003, is_coach=False)
+    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()
+    payload = {
+        "title": "Недельная программа",
+        "goal": "recomposition",
+        "level": "beginner",
+        "mode": "self",
+        "assign_after_create": True,
+        "days": [
+            {
+                "title": "Тренировка недели",
+                "exercises": [
+                    {
+                        "exercise_id": exercises[0]["id"],
+                        "prescribed_sets": 1,
+                        "prescribed_reps": "10",
+                        "rest_seconds": 60,
+                    }
+                ],
+            }
+        ],
+    }
+    created = client.post("/api/v1/programs/templates", json=payload, headers=headers)
+    assert created.status_code == 200
+
+    response = client.get("/api/v1/workouts/week", headers=headers)
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]["title"] == "Тренировка недели"
+    assert response.json()[0]["status"] == "planned"
+
+
 def test_user_can_clear_completed_workout_history(client):
     headers = auth(client, telegram_user_id=6401, is_coach=False)
     exercises = client.get("/api/v1/programs/exercises", headers=headers).json()

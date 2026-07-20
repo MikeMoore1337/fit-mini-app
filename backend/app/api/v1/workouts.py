@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session, joinedload
 
@@ -143,6 +145,37 @@ def get_today_workout(
         raise HTTPException(status_code=404, detail="На сегодня тренировка не назначена")
 
     return _serialize_workout(workout, db, current_user)
+
+
+@router.get("/week")
+def get_week_schedule(
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    today = today_for_user(current_user)
+    week_start = today - timedelta(days=today.weekday())
+    week_end = week_start + timedelta(days=6)
+    workouts = (
+        db.query(UserWorkout)
+        .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
+        .filter(
+            UserProgram.user_id == current_user.id,
+            UserProgram.is_active.is_(True),
+            UserWorkout.scheduled_date.between(week_start, week_end),
+        )
+        .order_by(UserWorkout.scheduled_date.asc(), UserWorkout.id.asc())
+        .all()
+    )
+    return [
+        {
+            "id": workout.id,
+            "scheduled_date": str(workout.scheduled_date),
+            "title": workout.title,
+            "status": workout.status,
+            "day_number": workout.day_number,
+        }
+        for workout in workouts
+    ]
 
 
 @router.delete("/today", status_code=status.HTTP_204_NO_CONTENT)

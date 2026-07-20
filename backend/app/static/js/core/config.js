@@ -1,4 +1,4 @@
-export const FRONTEND_VERSION = 'v44';
+export const FRONTEND_VERSION = 'v46';
 
 export const accessTokenKey = 'fit_access_token';
 export const refreshTokenKey = 'fit_refresh_token';
@@ -31,6 +31,7 @@ export const API = {
   createClient: '/api/v1/programs/clients',
 
   todayWorkout: '/api/v1/workouts/today',
+  weekSchedule: '/api/v1/workouts/week',
   deleteTodayWorkout: '/api/v1/workouts/today',
   startWorkout: (workoutId) => `/api/v1/workouts/${workoutId}/start`,
   finishWorkout: (workoutId) => `/api/v1/workouts/${workoutId}/finish`,

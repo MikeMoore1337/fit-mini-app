@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
     <meta name="theme-color" content="#0f1115"/>
     <title>FitMiniApp</title>
-    <link rel="stylesheet" href="/static/styles.css?v=44"/>
+    <link rel="stylesheet" href="/static/styles.css?v=46"/>
 </head>
 <body>
 <main class="container" id="app-main">
-    <div class="card hero-card">
+    <div class="card hero-card" id="card-hero">
         <div>
             <h1>FitMiniApp</h1>
             <p class="muted">
@@ -98,25 +98,26 @@
         </div>
     </div>
 
-    <div class="card" id="card-onboarding">
+    <div class="card app-screen-card" id="card-onboarding" data-app-screen="today">
         <div class="section-head">
             <div>
                 <h2>План запуска</h2>
                 <p class="muted top-gap">Короткий путь до первой тренировки.</p>
             </div>
-            <button class="secondary section-toggle" type="button" data-target="section-onboarding">Свернуть</button>
+            <button class="secondary section-toggle" type="button" data-target="section-onboarding" aria-expanded="true">Свернуть</button>
         </div>
         <div id="section-onboarding" class="section-content">
             <div id="onboardingChecklist" class="onboarding-list"></div>
         </div>
     </div>
 
-    <div class="card" id="card-profile">
+    <div class="card app-screen-card" id="card-profile" data-app-screen="profile">
         <div class="section-head">
             <h2>Профиль</h2>
-            <button class="secondary section-toggle" type="button" data-target="section-profile">Свернуть</button>
+            <button class="secondary section-toggle" type="button" data-target="section-profile" aria-expanded="true">Свернуть</button>
         </div>
         <div id="section-profile" class="section-content">
+            <div id="profileAccountSummary" class="item-card profile-account-summary hidden"></div>
             <div id="coachInvites" class="stack hidden"></div>
             <div id="trainerInfo" class="item-card hidden"></div>
             <div id="profileKbju" class="item-card hidden"></div>
@@ -163,13 +164,13 @@
         </div>
     </div>
 
-    <div class="card" id="card-builder">
+    <div class="card app-screen-card" id="card-builder" data-app-screen="program">
         <div class="section-head">
             <div>
                 <h2>Конструктор программы</h2>
                 <div id="builderModeInfo" class="muted top-gap">Создание нового шаблона</div>
             </div>
-            <button class="secondary section-toggle" type="button" data-target="section-builder">Свернуть</button>
+            <button class="secondary section-toggle" type="button" data-target="section-builder" aria-expanded="true">Свернуть</button>
         </div>
         <div id="section-builder" class="section-content">
             <div id="coachModeBanner" class="coach-mode-banner hidden">
@@ -241,36 +242,40 @@
                 <button id="loadStrengthTemplateBtn" class="secondary" type="button">Загрузить шаблон</button>
             </div>
 
-            <div class="toolbar wrap top-gap">
+            <div class="toolbar wrap top-gap builder-setup-actions">
                 <button id="addDayBtn" class="secondary" type="button">+ День</button>
-                <button id="fillExampleBtn" class="secondary" type="button">Заполнить пример</button>
-                <button id="saveProgramBtn" type="button">Сохранить</button>
+                <button id="fillExampleBtn" class="secondary" type="button">Добавить пример</button>
                 <button id="cancelTemplateEditBtn" class="secondary hidden" type="button">Отменить редактирование</button>
             </div>
 
             <div id="builderResult" class="muted top-gap"></div>
             <div id="dayBuilder" class="stack top-gap"></div>
+            <div class="builder-sticky-actions">
+                <span id="builderDirtyState" class="muted" role="status" aria-live="polite">Изменений нет</span>
+                <button id="saveProgramBtn" type="button">Сохранить программу</button>
+            </div>
         </div>
     </div>
 
-    <div class="card" id="card-today">
+    <div class="card app-screen-card" id="card-today" data-app-screen="today">
         <div class="section-head">
             <h2>Тренировка на сегодня</h2>
-            <button class="secondary section-toggle" type="button" data-target="section-today-workout">Свернуть</button>
+            <button class="secondary section-toggle" type="button" data-target="section-today-workout" aria-expanded="true">Свернуть</button>
         </div>
         <div id="section-today-workout" class="section-content">
+            <div id="weekOverview" class="week-overview"></div>
             <div id="todayWorkout" class="today-workout-root">
                 <p class="muted">Загрузка…</p>
             </div>
         </div>
     </div>
 
-    <div class="card" id="card-templates">
+    <div class="card app-screen-card" id="card-templates" data-app-screen="program">
         <div class="section-head">
-            <h2>Шаблоны</h2>
+            <h2>Мои программы и шаблоны</h2>
             <div class="toolbar wrap">
                 <button id="reloadTemplatesBtn" class="secondary" type="button">Обновить</button>
-                <button class="secondary section-toggle" type="button" data-target="section-templates">Свернуть</button>
+                <button class="secondary section-toggle" type="button" data-target="section-templates" aria-expanded="true">Свернуть</button>
             </div>
         </div>
         <div id="section-templates" class="section-content">
@@ -278,12 +283,12 @@
         </div>
     </div>
 
-    <div class="card" id="card-exercises">
+    <div class="card app-screen-card" id="card-exercises" data-app-screen="program">
         <div class="section-head">
             <h2>Список упражнений</h2>
             <div class="toolbar wrap">
                 <button id="reloadExercisesBtn" class="secondary" type="button">Обновить</button>
-                <button class="secondary section-toggle" type="button" data-target="section-exercises">Свернуть</button>
+                <button class="secondary section-toggle" type="button" data-target="section-exercises" aria-expanded="true">Свернуть</button>
             </div>
         </div>
         <div id="section-exercises" class="section-content">
@@ -330,12 +335,12 @@
         </div>
     </div>
 
-    <div class="card" id="card-history">
+    <div class="card app-screen-card" id="card-history" data-app-screen="history">
         <div class="section-head">
             <h2>Дневник тренировок</h2>
             <div class="toolbar wrap">
                 <button id="clearHistoryBtn" class="secondary hidden" type="button">Очистить тренировки</button>
-                <button class="secondary section-toggle" type="button" data-target="section-history">Свернуть</button>
+                <button class="secondary section-toggle" type="button" data-target="section-history" aria-expanded="true">Свернуть</button>
             </div>
         </div>
         <div id="section-history" class="section-content">
@@ -394,6 +399,7 @@
             <div class="diary-section-title">
                 <h3>Тренировки</h3>
             </div>
+            <div id="progressTrends" class="progress-trends"></div>
             <div id="workoutHistory" class="stack"></div>
             <div class="toolbar top-gap">
                 <button id="loadMoreHistoryBtn" class="secondary hidden" type="button">Загрузить ещё</button>
@@ -401,12 +407,12 @@
         </div>
     </div>
 
-    <div id="clientsCard" class="card hidden">
+    <div id="clientsCard" class="card app-screen-card hidden" data-app-screen="profile">
         <div class="section-head">
             <h2>Клиенты</h2>
             <div class="toolbar wrap">
                 <button id="reloadClientsBtn" class="secondary" type="button">Обновить</button>
-                <button class="secondary section-toggle" type="button" data-target="section-clients">Свернуть</button>
+                <button class="secondary section-toggle" type="button" data-target="section-clients" aria-expanded="true">Свернуть</button>
             </div>
         </div>
         <div id="section-clients" class="section-content">
@@ -435,12 +441,12 @@
         </div>
     </div>
 
-    <div id="card-notifications" class="card">
+    <div id="card-notifications" class="card app-screen-card" data-app-screen="profile">
         <div class="section-head">
             <h2>Уведомления</h2>
             <div class="toolbar wrap">
                 <button id="reloadNotificationsBtn" class="secondary" type="button">Обновить</button>
-                <button class="secondary section-toggle" type="button" data-target="section-notifications">Свернуть</button>
+                <button class="secondary section-toggle" type="button" data-target="section-notifications" aria-expanded="true">Свернуть</button>
             </div>
         </div>
         <div id="section-notifications" class="section-content">
@@ -495,11 +501,11 @@
         </div>
     </div>
 
-    <div id="card-kbju" class="card">
+    <div id="card-kbju" class="card app-screen-card" data-app-screen="kbju">
         <div class="section-head">
             <h2>Калькулятор КБЖУ</h2>
             <div class="toolbar wrap">
-                <button class="secondary section-toggle" type="button" data-target="section-kbju">Свернуть</button>
+                <button class="secondary section-toggle" type="button" data-target="section-kbju" aria-expanded="true">Свернуть</button>
             </div>
         </div>
         <div id="section-kbju" class="section-content">
@@ -594,7 +600,7 @@
         </span>
         <span class="app-bottom-nav__label">Сегодня</span>
     </button>
-    <button type="button" class="app-bottom-nav__btn" data-nav-section="section-builder" data-nav-card="card-builder">
+    <button type="button" class="app-bottom-nav__btn" data-nav-section="section-templates" data-nav-card="card-templates">
         <span class="app-bottom-nav__icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" role="img">
                 <path d="M8 6h13"/>
@@ -650,6 +656,52 @@
 </div>
 
 <div
+    id="exerciseEditModal"
+    class="modal hidden"
+    role="dialog"
+    aria-modal="true"
+    aria-hidden="true"
+    aria-labelledby="exerciseEditTitle"
+>
+    <div class="modal__backdrop"></div>
+    <div class="modal__panel card">
+        <h3 id="exerciseEditTitle" class="modal__title">Редактировать упражнение</h3>
+        <div class="stack">
+            <label class="field"><span>Название</span><input id="exerciseEditName" type="text"/></label>
+            <label class="field"><span>Основная мышечная группа</span><input id="exerciseEditMuscle" type="text"/></label>
+            <label class="field"><span>Оборудование</span><input id="exerciseEditEquipment" type="text"/></label>
+        </div>
+        <div class="modal__actions toolbar wrap top-gap">
+            <button type="button" class="secondary" id="exerciseEditCancel">Отмена</button>
+            <button type="button" id="exerciseEditOk">Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<div
+    id="templateAssignModal"
+    class="modal hidden"
+    role="dialog"
+    aria-modal="true"
+    aria-hidden="true"
+    aria-labelledby="templateAssignTitle"
+>
+    <div class="modal__backdrop"></div>
+    <div class="modal__panel card">
+        <h3 id="templateAssignTitle" class="modal__title">Назначить программу</h3>
+        <div id="templateAssignSummary" class="modal__body"></div>
+        <label class="field">
+            <span>Дата первой тренировки</span>
+            <input id="templateStartDate" type="date"/>
+        </label>
+        <div class="modal__actions toolbar wrap top-gap">
+            <button type="button" class="secondary" id="templateAssignCancel">Отмена</button>
+            <button type="button" id="templateAssignOk">Назначить</button>
+        </div>
+    </div>
+</div>
+
+<div
     id="confirmModal"
     class="modal hidden"
     role="dialog"
@@ -669,6 +721,12 @@
 </div>
 
 <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true"></div>
+
+<div id="floatingWorkoutStatus" class="floating-workout-status hidden" aria-live="polite">
+    <span id="floatingRestTimer"></span>
+    <span id="workoutSaveStatus">Все изменения сохранены</span>
+    <button id="retrySetSaves" class="secondary hidden" type="button">Повторить</button>
+</div>
 
 <script>
     (function () {
@@ -717,6 +775,6 @@
     })();
 </script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script type="module" src="/static/js/main.js?v=44"></script>
+<script type="module" src="/static/js/main.js?v=46"></script>
 </body>
 </html>

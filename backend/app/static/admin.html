@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0f1115" />
   <title>Панель управления - FitMiniApp</title>
-  <link rel="stylesheet" href="/static/styles.css?v=44" />
+  <link rel="stylesheet" href="/static/styles.css?v=46" />
 </head>
 <body>
   <main class="container narrow">
@@ -23,15 +23,21 @@
     <div class="card">
       <div class="section-head">
         <h2>Пользователи</h2>
-        <button id="loadUsersBtn" class="secondary" type="button">Загрузить</button>
+        <button id="loadUsersBtn" class="secondary" type="button">Обновить</button>
+      </div>
+      <div class="grid grid-3 admin-filters">
+        <label class="field"><span>Поиск</span><input id="adminUserSearch" type="search" placeholder="Имя или Telegram ID" /></label>
+        <label class="field"><span>Роль</span><select id="adminRoleFilter"><option value="">Все роли</option><option value="client">Клиенты</option><option value="coach">Тренеры</option><option value="admin">Администраторы</option></select></label>
+        <label class="field"><span>Статус</span><select id="adminStatusFilter"><option value="">Все статусы</option><option value="active">Активные</option><option value="blocked">Заблокированные</option></select></label>
       </div>
       <div id="usersList" class="stack"></div>
+      <div id="usersPagination" class="pagination top-gap"></div>
     </div>
 
     <div class="card">
       <div class="section-head">
         <h2>Платежи</h2>
-        <button id="loadPaymentsBtn" class="secondary" type="button">Загрузить</button>
+        <button id="loadPaymentsBtn" class="secondary" type="button">Обновить</button>
       </div>
       <div id="paymentsList" class="stack"></div>
     </div>
@@ -39,7 +45,7 @@
     <div class="card">
       <div class="section-head">
         <h2>Уведомления</h2>
-        <button id="loadNotificationsBtn" class="secondary" type="button">Загрузить</button>
+        <button id="loadNotificationsBtn" class="secondary" type="button">Обновить</button>
       </div>
       <div id="adminNotificationsList" class="stack"></div>
     </div>
@@ -47,12 +53,12 @@
     <div class="card">
       <div class="section-head">
         <h2>Шаблоны программ</h2>
-        <button id="loadTemplatesBtn" class="secondary" type="button">Загрузить</button>
+        <button id="loadTemplatesBtn" class="secondary" type="button">Обновить</button>
       </div>
       <div id="adminTemplatesList" class="stack"></div>
     </div>
 
-    <div class="card">
+    <div id="adminDiagnosticCard" class="card hidden">
       <div class="section-head">
         <h2>Лог</h2>
       </div>
@@ -94,18 +100,35 @@
     </a>
   </nav>
 
-  <div id="toast" class="toast hidden"></div>
+  <div id="confirmModal" class="modal hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="confirmModalTitle">
+    <div class="modal__backdrop"></div>
+    <div class="modal__panel card">
+      <h3 id="confirmModalTitle" class="modal__title"></h3>
+      <p id="confirmModalBody" class="modal__body muted"></p>
+      <div class="modal__actions toolbar wrap">
+        <button type="button" class="secondary" id="confirmModalCancel">Отмена</button>
+        <button type="button" id="confirmModalOk">Подтвердить</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script type="module">
-    import { initTelegramTheme } from '/static/js/core/theme.js?v=43';
+    import { initTelegramTheme } from '/static/js/core/theme.js?v=46';
 
     initTelegramTheme({
       onError: (error) => console.warn(`Telegram theme: ${String(error)}`),
     });
   </script>
-  <script>
+  <script type="module">
+    import { openConfirmDialog } from '/static/js/core/ui.js?v=46';
+
     const accessTokenKey = 'fit_access_token';
+    let adminUsers = [];
+    let adminUsersPage = 1;
+    const adminUsersPageSize = 10;
 
     const $ = (id) => document.getElementById(id);
 
@@ -148,6 +171,10 @@
 
     function getRoleValue(user) {
       return user?.role || (user?.is_admin ? 'admin' : user?.is_coach ? 'coach' : 'client');
+    }
+
+    function getRoleValueLabel(value) {
+      return ({ client: 'Клиент', coach: 'Тренер', admin: 'Администратор' }[value] || value);
     }
 
     function getGoalLabel(goal) {
@@ -238,44 +265,63 @@
       return res.json();
     }
 
-    async function loadUsers() {
-      const rows = await api('/api/v1/admin/users');
+    async function ensureAdminAccess() {
+      const me = await api('/api/v1/me');
+      if (!me.is_admin) throw new Error('Недостаточно прав администратора');
+    }
+
+    function renderUsers() {
+      const search = $('adminUserSearch').value.trim().toLowerCase();
+      const role = $('adminRoleFilter').value;
+      const status = $('adminStatusFilter').value;
+      const filtered = adminUsers.filter((user) => {
+        const haystack = [user.full_name, user.username, user.telegram_user_id].filter(Boolean).join(' ').toLowerCase();
+        if (search && !haystack.includes(search)) return false;
+        if (role && getRoleValue(user) !== role) return false;
+        if (status === 'active' && !user.is_active) return false;
+        if (status === 'blocked' && user.is_active) return false;
+        return true;
+      });
+      const pageCount = Math.max(1, Math.ceil(filtered.length / adminUsersPageSize));
+      adminUsersPage = Math.min(adminUsersPage, pageCount);
+      const rows = filtered.slice((adminUsersPage - 1) * adminUsersPageSize, adminUsersPage * adminUsersPageSize);
       $('usersList').innerHTML = rows.map(user => `
         <div class="item-card">
           <strong>${escapeHtml(user.full_name || user.telegram_user_id)}</strong><br>
           <span class="muted">
-            № ${escapeHtml(user.telegram_user_id)} |
-            Роль: ${escapeHtml(getRoleLabel(user))} |
+            № ${escapeHtml(user.telegram_user_id)} ·
+            ${escapeHtml(getRoleLabel(user))} ·
             ${user.is_active ? 'Активен' : 'Заблокирован'}
           </span>
-          <div class="toolbar wrap top-gap">
-            <select class="user-role-select" data-user-id="${escapeHtml(user.id)}">
-              ${roleOption('client', 'Клиент', getRoleValue(user))}
-              ${roleOption('coach', 'Тренер', getRoleValue(user))}
-              ${roleOption('admin', 'Администратор', getRoleValue(user))}
-            </select>
-            <button
-              class="secondary user-status-btn"
-              type="button"
-              data-user-id="${escapeHtml(user.id)}"
-              data-next-active="${user.is_active ? 'false' : 'true'}"
-            >
-              ${user.is_active ? 'Заблокировать' : 'Разблокировать'}
-            </button>
-            <button
-              class="btn-danger delete-user-btn"
-              type="button"
-              data-user-id="${escapeHtml(user.id)}"
-              data-user-name="${escapeHtml(user.full_name || user.telegram_user_id)}"
-            >
-              Удалить
-            </button>
-          </div>
+          <details class="admin-actions top-gap">
+            <summary>Управление пользователем</summary>
+            <div class="admin-actions__body">
+              <label class="field"><span>Роль</span><select class="user-role-select" data-user-id="${escapeHtml(user.id)}">
+                ${roleOption('client', 'Клиент', getRoleValue(user))}
+                ${roleOption('coach', 'Тренер', getRoleValue(user))}
+                ${roleOption('admin', 'Администратор', getRoleValue(user))}
+              </select></label>
+              <div class="toolbar wrap">
+                <button class="secondary save-user-role-btn" type="button" data-user-id="${escapeHtml(user.id)}" data-current-role="${escapeHtml(getRoleValue(user))}" data-user-name="${escapeHtml(user.full_name || user.telegram_user_id)}">Сохранить роль</button>
+                <button class="secondary user-status-btn" type="button" data-user-id="${escapeHtml(user.id)}" data-user-name="${escapeHtml(user.full_name || user.telegram_user_id)}" data-next-active="${user.is_active ? 'false' : 'true'}">${user.is_active ? 'Заблокировать' : 'Разблокировать'}</button>
+                <button class="secondary danger-text delete-user-btn" type="button" data-user-id="${escapeHtml(user.id)}" data-user-name="${escapeHtml(user.full_name || user.telegram_user_id)}">Удалить аккаунт</button>
+              </div>
+            </div>
+          </details>
         </div>
       `).join('') || '<p class="muted">Пользователей нет</p>';
 
-      document.querySelectorAll('.user-role-select').forEach(select => {
-        select.onchange = async () => {
+      document.querySelectorAll('.save-user-role-btn').forEach(button => {
+        button.onclick = async () => {
+          const select = document.querySelector(`.user-role-select[data-user-id="${button.dataset.userId}"]`);
+          if (!select || select.value === button.dataset.currentRole) return;
+          const confirmed = await openConfirmDialog({
+            title: 'Изменить роль пользователя?',
+            message: `${button.dataset.userName}: новая роль — ${getRoleValueLabel(select.value)}. Права доступа изменятся сразу.`,
+            okText: 'Изменить роль',
+            danger: select.value === 'admin' || button.dataset.currentRole === 'admin',
+          });
+          if (!confirmed) return;
           try {
             await api(`/api/v1/admin/users/${select.dataset.userId}/role`, {
               method: 'PATCH',
@@ -294,6 +340,13 @@
       document.querySelectorAll('.user-status-btn').forEach(button => {
         button.onclick = async () => {
           const nextActive = button.dataset.nextActive === 'true';
+          const confirmed = await openConfirmDialog({
+            title: nextActive ? 'Разблокировать пользователя?' : 'Заблокировать пользователя?',
+            message: nextActive ? `${button.dataset.userName} снова получит доступ к приложению.` : `${button.dataset.userName} потеряет доступ до ручной разблокировки.`,
+            okText: nextActive ? 'Разблокировать' : 'Заблокировать',
+            danger: !nextActive,
+          });
+          if (!confirmed) return;
           try {
             await api(`/api/v1/admin/users/${button.dataset.userId}/status`, {
               method: 'PATCH',
@@ -311,9 +364,13 @@
       document.querySelectorAll('.delete-user-btn').forEach(button => {
         button.onclick = async () => {
           const name = button.dataset.userName || 'пользователя';
-          if (!confirm(`Удалить ${name}? Связанные тренировки, уведомления и платежи будут удалены.`)) {
-            return;
-          }
+          const confirmed = await openConfirmDialog({
+            title: `Удалить ${name}?`,
+            message: 'Связанные тренировки, уведомления и платежи будут удалены без возможности восстановления.',
+            okText: 'Удалить аккаунт',
+            danger: true,
+          });
+          if (!confirmed) return;
 
           try {
             await api(`/api/v1/admin/users/${button.dataset.userId}`, {
@@ -328,10 +385,23 @@
         };
       });
 
-      showToast('Пользователи загружены');
+      $('usersPagination').innerHTML = pageCount > 1 ? `
+        <button id="usersPrevPage" class="secondary" type="button" ${adminUsersPage === 1 ? 'disabled' : ''}>Назад</button>
+        <span class="muted">${adminUsersPage} из ${pageCount} · найдено ${filtered.length}</span>
+        <button id="usersNextPage" class="secondary" type="button" ${adminUsersPage === pageCount ? 'disabled' : ''}>Далее</button>
+      ` : `<span class="muted">Найдено: ${filtered.length}</span>`;
+      if ($('usersPrevPage')) $('usersPrevPage').onclick = () => { adminUsersPage -= 1; renderUsers(); };
+      if ($('usersNextPage')) $('usersNextPage').onclick = () => { adminUsersPage += 1; renderUsers(); };
     }
 
-    async function loadPayments() {
+    async function loadUsers(silent = false) {
+      adminUsers = await api('/api/v1/admin/users');
+      renderUsers();
+
+      if (!silent) showToast('Пользователи загружены');
+    }
+
+    async function loadPayments(silent = false) {
       const rows = await api('/api/v1/admin/payments');
       $('paymentsList').innerHTML = rows.map(row => `
         <div class="item-card">
@@ -343,10 +413,10 @@
           </span>
         </div>
       `).join('') || '<p class="muted">Платежей нет</p>';
-      showToast('Платежи загружены');
+      if (!silent) showToast('Платежи загружены');
     }
 
-    async function loadNotifications() {
+    async function loadNotifications(silent = false) {
       const rows = await api('/api/v1/admin/notifications');
       $('adminNotificationsList').innerHTML = rows.map(row => `
         <div class="item-card">
@@ -355,10 +425,10 @@
           <div>${escapeHtml(row.body)}</div>
         </div>
       `).join('') || '<p class="muted">Уведомлений нет</p>';
-      showToast('Уведомления загружены');
+      if (!silent) showToast('Уведомления загружены');
     }
 
-    async function loadTemplates() {
+    async function loadTemplates(silent = false) {
       const rows = await api('/api/v1/admin/templates');
       $('adminTemplatesList').innerHTML = rows.map(row => `
         <div class="item-card">
@@ -380,9 +450,13 @@
       document.querySelectorAll('.delete-template-btn').forEach(button => {
         button.onclick = async () => {
           const title = button.dataset.templateTitle || 'шаблон';
-          if (!confirm(`Удалить шаблон «${title}» и связанные назначения?`)) {
-            return;
-          }
+          const confirmed = await openConfirmDialog({
+            title: `Удалить шаблон «${title}»?`,
+            message: 'Связанные назначения и тренировки будут удалены без возможности восстановления.',
+            okText: 'Удалить шаблон',
+            danger: true,
+          });
+          if (!confirmed) return;
 
           try {
             await api(`/api/v1/admin/templates/${button.dataset.templateId}`, {
@@ -397,7 +471,7 @@
         };
       });
 
-      showToast('Шаблоны загружены');
+      if (!silent) showToast('Шаблоны загружены');
     }
 
     async function withLoading(button, action, successText, errorText) {
@@ -427,6 +501,36 @@
 
     $('loadTemplatesBtn').onclick = (e) =>
       withLoading(e.currentTarget, loadTemplates, null, 'Не удалось загрузить шаблоны');
+
+    ['adminUserSearch', 'adminRoleFilter', 'adminStatusFilter'].forEach((id) => {
+      $(id).addEventListener(id === 'adminUserSearch' ? 'input' : 'change', () => {
+        adminUsersPage = 1;
+        renderUsers();
+      });
+    });
+
+    if (new URLSearchParams(location.search).get('debug') === '1') {
+      $('adminDiagnosticCard').classList.remove('hidden');
+    }
+
+    (async () => {
+      try {
+        await ensureAdminAccess();
+      } catch (error) {
+        $('usersList').innerHTML = '<div class="empty-state"><p class="empty-state__title">Недостаточно прав администратора</p><p class="empty-state__text muted">Вернитесь в Mini App под аккаунтом администратора.</p></div>';
+        showToast('Недостаточно прав администратора', 'error');
+        return;
+      }
+      const results = await Promise.allSettled([
+        loadUsers(true),
+        loadPayments(true),
+        loadNotifications(true),
+        loadTemplates(true),
+      ]);
+      if (results.some((result) => result.status === 'rejected')) {
+        showToast('Часть данных не загрузилась. Используйте «Обновить» в нужном разделе.', 'error');
+      }
+    })();
   </script>
 </body>
 </html>

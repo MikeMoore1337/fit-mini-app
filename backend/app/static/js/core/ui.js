@@ -1,4 +1,4 @@
-import { sectionStoragePrefix } from './config.js?v=44';
+import { sectionStoragePrefix } from './config.js?v=46';
 
 export function $(id) {
   return document.getElementById(id);
@@ -64,6 +64,7 @@ export function setSectionCollapsed(sectionContentId, collapsed, { persist = tru
   if (body && btn) {
     body.classList.toggle('hidden', collapsed);
     btn.textContent = collapsed ? 'Развернуть' : 'Свернуть';
+    btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
     if (persist) setStoredSectionState(sectionContentId, collapsed ? 'collapsed' : 'expanded');
   }
 }
@@ -77,16 +78,18 @@ export function restoreSectionState(sectionContentId) {
 export function expandSectionAndScroll(sectionContentId, cardId) {
   setSectionCollapsed(sectionContentId, false);
 
-  const card = document.getElementById(cardId);
-  if (card) {
-    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
   document.dispatchEvent(
     new CustomEvent('fit:navigation', {
       detail: { section: sectionContentId, card: cardId },
     })
   );
+
+  requestAnimationFrame(() => {
+    const card = document.getElementById(cardId);
+    if (card) {
+      card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
 }
 
 /**
@@ -119,6 +122,8 @@ export function openConfirmDialog({ title, message, okText = 'Подтверди
     if (danger) okBtn.classList.add('btn-danger');
 
     let settled = false;
+    const previousFocus = document.activeElement;
+    const focusable = [cancelBtn, okBtn];
     const finish = (value) => {
       if (settled) return;
       settled = true;
@@ -126,11 +131,19 @@ export function openConfirmDialog({ title, message, okText = 'Подтверди
       root.setAttribute('aria-hidden', 'true');
       document.body.classList.remove('modal-open');
       document.removeEventListener('keydown', onKey);
+      if (previousFocus instanceof HTMLElement) previousFocus.focus();
       resolve(value);
     };
 
     const onKey = (e) => {
       if (e.key === 'Escape') finish(false);
+      if (e.key === 'Tab') {
+        const currentIndex = focusable.indexOf(document.activeElement);
+        const direction = e.shiftKey ? -1 : 1;
+        const nextIndex = (currentIndex + direction + focusable.length) % focusable.length;
+        e.preventDefault();
+        focusable[nextIndex].focus();
+      }
     };
 
     const onOk = () => finish(true);
@@ -158,9 +171,6 @@ export function bindGlobalNavHandlers() {
     if (section && card) {
       e.preventDefault();
       expandSectionAndScroll(section, card);
-      document.querySelectorAll('.app-bottom-nav__btn').forEach((btn) => {
-        btn.classList.toggle('is-active', btn.getAttribute('data-nav-card') === card);
-      });
     }
   });
 }
