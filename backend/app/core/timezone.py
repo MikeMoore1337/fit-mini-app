@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from zoneinfo import ZoneInfo
 
 DEFAULT_TIMEZONE = "Europe/Moscow"
@@ -75,3 +75,14 @@ def to_timezone_naive(value: datetime, timezone_name: str | None) -> datetime:
 
 def to_user_timezone_naive(value: datetime, user) -> datetime:
     return to_timezone_naive(value, get_user_timezone_name(user))
+
+
+def local_naive_to_utc_naive(value: datetime, timezone_name: str | None) -> datetime:
+    """Convert a local wall time in the selected IANA timezone to naive UTC."""
+    if value.tzinfo is not None:
+        return value.astimezone(UTC).replace(tzinfo=None)
+    return value.replace(tzinfo=get_timezone(timezone_name)).astimezone(UTC).replace(tzinfo=None)
+
+
+def user_local_naive_to_utc_naive(value: datetime, user) -> datetime:
+    return local_naive_to_utc_naive(value, get_user_timezone_name(user))

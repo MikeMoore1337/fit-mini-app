@@ -24,4 +24,5 @@ export const state = {
   telegramMainButtonTargetId: null,
   initialSectionOpened: false,
   isReauthInProgress: false,
+  reauthPromise: null,
 };

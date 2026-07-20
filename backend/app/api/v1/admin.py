@@ -167,6 +167,12 @@ def update_user_role(
         )
 
     if payload.role == "client":
+        db.query(CoachClient).filter(CoachClient.coach_user_id == user.id).delete(
+            synchronize_session=False
+        )
+        db.query(CoachClientInvite).filter(CoachClientInvite.coach_user_id == user.id).delete(
+            synchronize_session=False
+        )
         user.is_coach = False
         user.is_admin = False
     elif payload.role == "coach":
@@ -200,7 +206,13 @@ def update_user_status(
 
     user.is_active = payload.is_active
     if not user.is_active:
-        revoke_all_user_refresh_tokens(db, user.id)
+        revoke_all_user_refresh_tokens(db, user.id, commit=False)
+        db.query(CoachClient).filter(CoachClient.coach_user_id == user.id).delete(
+            synchronize_session=False
+        )
+        db.query(CoachClientInvite).filter(CoachClientInvite.coach_user_id == user.id).delete(
+            synchronize_session=False
+        )
 
     db.commit()
     profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()

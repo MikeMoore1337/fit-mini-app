@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from app.api.dependencies.auth import require_user
-from app.core.timezone import to_user_timezone_naive
+from app.core.timezone import to_user_timezone_naive, user_local_naive_to_utc_naive
 from app.db.session import get_db
 from app.models.notification import Notification
 from app.models.user import User
@@ -91,6 +91,7 @@ def create_notification(
         title=title,
         body=body,
         scheduled_for=scheduled_for,
+        scheduled_for_utc=user_local_naive_to_utc_naive(scheduled_for, current_user),
         status="queued",
     )
     db.add(row)

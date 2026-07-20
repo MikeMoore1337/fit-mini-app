@@ -130,7 +130,7 @@ class PollingFileLock:
 
 
 dp = StableDispatcher()
-MINI_APP_CACHE_VERSION = "35"
+MINI_APP_CACHE_VERSION = "47"
 TIMEZONE_PAGE_SIZE = 8
 TIMEZONE_REGIONS = [
     "Europe",
@@ -258,7 +258,7 @@ async def save_timezone_from_bot(telegram_user, timezone: str) -> bool:
         async with httpx.AsyncClient(timeout=10) as client:
             response = await client.post(
                 url,
-                headers={"X-Bot-Token": settings.bot_token},
+                headers={"X-Bot-Token": settings.bot_internal_token},
                 json=payload,
             )
             response.raise_for_status()

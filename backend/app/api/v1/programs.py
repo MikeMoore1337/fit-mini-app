@@ -7,9 +7,14 @@ from app.models.exercise import Exercise
 from app.models.user import User
 from app.schemas.program import (
     AssignTemplateSelfRequest,
+    ClientResponse,
     CoachClientCreate,
     ExerciseCatalogCreate,
+    ExerciseCatalogItem,
+    ProgramAssignmentResponse,
     ProgramTemplateCreate,
+    ProgramTemplateCreateResponse,
+    ProgramTemplateResponse,
 )
 from app.services.programs import (
     ProgramError,
@@ -48,7 +53,7 @@ def _serialize_exercise(exercise: Exercise, current_user: User) -> dict:
     }
 
 
-@router.get("/exercises")
+@router.get("/exercises", response_model=list[ExerciseCatalogItem])
 def get_exercises(
     current_user: User = Depends(require_user),
     db: Session = Depends(get_db),
@@ -57,7 +62,11 @@ def get_exercises(
     return [_serialize_exercise(ex, current_user) for ex in exercises]
 
 
-@router.post("/exercises", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/exercises",
+    response_model=ExerciseCatalogItem,
+    status_code=status.HTTP_201_CREATED,
+)
 def add_exercise(
     payload: ExerciseCatalogCreate,
     current_user: User = Depends(require_user),
@@ -81,7 +90,7 @@ def add_exercise(
     return _serialize_exercise(exercise, current_user)
 
 
-@router.patch("/exercises/{exercise_id}")
+@router.patch("/exercises/{exercise_id}", response_model=ExerciseCatalogItem)
 def edit_exercise(
     exercise_id: int,
     payload: ExerciseCatalogCreate,
@@ -132,7 +141,7 @@ def remove_exercise(
         raise HTTPException(status_code=400, detail=detail)
 
 
-@router.post("/templates")
+@router.post("/templates", response_model=ProgramTemplateCreateResponse)
 def create_template(
     payload: ProgramTemplateCreate,
     current_user: User = Depends(require_user),
@@ -160,7 +169,7 @@ def create_template(
     }
 
 
-@router.get("/templates/mine")
+@router.get("/templates/mine", response_model=list[ProgramTemplateResponse])
 def my_templates(
     current_user: User = Depends(require_user),
     db: Session = Depends(get_db),
@@ -169,7 +178,7 @@ def my_templates(
     return [build_template_response(item, db, current_user) for item in items]
 
 
-@router.get("/templates/{template_id}")
+@router.get("/templates/{template_id}", response_model=ProgramTemplateResponse)
 def get_template(
     template_id: int,
     current_user: User = Depends(require_user),
@@ -186,7 +195,7 @@ def get_template(
     return build_template_response(template, db, current_user)
 
 
-@router.patch("/templates/{template_id}")
+@router.patch("/templates/{template_id}", response_model=ProgramTemplateResponse)
 def edit_template(
     template_id: int,
     payload: ProgramTemplateCreate,
@@ -211,7 +220,10 @@ def edit_template(
     return build_template_response(template, db, current_user)
 
 
-@router.post("/templates/{template_id}/assign-to-me")
+@router.post(
+    "/templates/{template_id}/assign-to-me",
+    response_model=ProgramAssignmentResponse,
+)
 def assign_template_me(
     template_id: int,
     payload: AssignTemplateSelfRequest | None = None,
@@ -252,7 +264,7 @@ def delete_template(
         raise HTTPException(status_code=403, detail=detail)
 
 
-@router.get("/clients")
+@router.get("/clients", response_model=list[ClientResponse])
 def clients(
     current_user: User = Depends(require_coach_or_admin),
     db: Session = Depends(get_db),
@@ -260,7 +272,11 @@ def clients(
     return list_clients(db, current_user)
 
 
-@router.post("/clients", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/clients",
+    response_model=ClientResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 def add_client(
     payload: CoachClientCreate,
     current_user: User = Depends(require_coach_or_admin),

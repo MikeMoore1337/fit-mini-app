@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
     <meta name="theme-color" content="#0f1115"/>
     <title>FitMiniApp</title>
-    <link rel="stylesheet" href="/static/styles.css?v=46"/>
+    <link rel="stylesheet" href="/static/styles.css?v=47"/>
 </head>
 <body>
 <main class="container" id="app-main">
@@ -25,7 +25,7 @@
     <div class="card" id="card-auth">
         <div class="section-head">
             <h2>Вход</h2>
-            <button class="secondary section-toggle" type="button" data-target="section-auth">Свернуть</button>
+            <button class="secondary section-toggle" type="button" data-target="section-auth" aria-expanded="true">Свернуть</button>
         </div>
         <div id="section-auth" class="section-content">
             <div class="stack">
@@ -86,9 +86,9 @@
 
                 <input id="debugRole" type="hidden" value="user"/>
                 <div class="segmented-control top-gap" role="group" aria-label="Роль демо-аккаунта">
-                    <button class="is-active" type="button" data-dev-role-option="user">Клиент</button>
-                    <button type="button" data-dev-role-option="coach">Тренер</button>
-                    <button type="button" data-dev-role-option="admin">Админ</button>
+                    <button class="is-active" type="button" data-dev-role-option="user" aria-pressed="true">Клиент</button>
+                    <button type="button" data-dev-role-option="coach" aria-pressed="false">Тренер</button>
+                    <button type="button" data-dev-role-option="admin" aria-pressed="false">Админ</button>
                 </div>
 
                 <div class="toolbar wrap top-gap">
@@ -124,7 +124,7 @@
             <div class="grid grid-4">
                 <label class="field">
                     <span>Имя</span>
-                    <input id="full_name" type="text" placeholder="Как к вам обращаться"/>
+                    <input id="full_name" type="text" maxlength="128" autocomplete="name" placeholder="Как к вам обращаться"/>
                 </label>
                 <label class="field">
                     <span>Цель</span>
@@ -147,15 +147,15 @@
                 </label>
                 <label class="field">
                     <span>Рост, см</span>
-                    <input id="height_cm" type="number" placeholder="Например, 178"/>
+                    <input id="height_cm" type="number" min="50" max="280" inputmode="numeric" placeholder="Например, 178"/>
                 </label>
                 <label class="field">
                     <span>Вес, кг</span>
-                    <input id="weight_kg" type="number" placeholder="Например, 74"/>
+                    <input id="weight_kg" type="number" min="20" max="500" inputmode="decimal" placeholder="Например, 74"/>
                 </label>
                 <label class="field">
                     <span>Тренировок в неделю</span>
-                    <input id="workouts_per_week" type="number" placeholder="Например, 3"/>
+                    <input id="workouts_per_week" type="number" min="0" max="14" inputmode="numeric" placeholder="Например, 3"/>
                 </label>
             </div>
             <div class="toolbar top-gap">
@@ -191,7 +191,7 @@
 
                 <label class="field">
                     <span>Название программы</span>
-                    <input id="program_title" type="text" placeholder="Например, Силовая база" value="Моя программа"/>
+                    <input id="program_title" type="text" maxlength="128" required placeholder="Например, Силовая база" value="Моя программа"/>
                 </label>
 
                 <label class="field">
@@ -584,7 +584,7 @@
 </main>
 
 <nav class="app-bottom-nav" id="appBottomNav" aria-label="Основные разделы">
-    <button type="button" class="app-bottom-nav__btn is-active" data-nav-section="section-today-workout" data-nav-card="card-today">
+    <button type="button" class="app-bottom-nav__btn is-active" data-nav-section="section-today-workout" data-nav-card="card-today" aria-current="page">
         <span class="app-bottom-nav__icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" role="img">
                 <path d="M8 2v4"/>
@@ -775,6 +775,6 @@
     })();
 </script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script type="module" src="/static/js/main.js?v=46"></script>
+<script type="module" src="/static/js/main.js?v=47"></script>
 </body>
 </html>

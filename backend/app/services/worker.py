@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from time import monotonic
 
 import httpx
 
@@ -31,9 +32,10 @@ async def send_telegram_message(chat_id: int, text: str) -> None:
         response.raise_for_status()
 
 
-async def run_once() -> None:
+async def run_once(*, sync_reminders: bool = True) -> None:
     with get_session_context() as db:
-        sync_workout_reminders(db)
+        if sync_reminders:
+            sync_workout_reminders(db)
         rows = claim_due_notifications(db)
         for row in rows:
             user = db.query(User).filter(User.id == row.user_id).first()
@@ -51,8 +53,13 @@ async def run_once() -> None:
 
 
 async def main() -> None:
+    next_reminder_sync = 0.0
     while True:
-        await run_once()
+        current = monotonic()
+        should_sync = current >= next_reminder_sync
+        await run_once(sync_reminders=should_sync)
+        if should_sync:
+            next_reminder_sync = current + settings.reminder_sync_seconds
         await asyncio.sleep(settings.worker_poll_seconds)
 
 

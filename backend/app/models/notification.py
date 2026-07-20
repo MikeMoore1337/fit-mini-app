@@ -27,7 +27,10 @@ class Notification(Base):
     channel: Mapped[str] = mapped_column(String(32), default="telegram")
     title: Mapped[str] = mapped_column(String(128))
     body: Mapped[str] = mapped_column(Text)
+    # scheduled_for остаётся локальным wall time для показа пользователю.
+    # UTC-колонка используется worker-ом для индексируемого поиска срока доставки.
     scheduled_for: Mapped[datetime] = mapped_column(DateTime, index=True)
+    scheduled_for_utc: Mapped[datetime] = mapped_column(DateTime, index=True)
     status: Mapped[str] = mapped_column(String(32), default="queued")
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(

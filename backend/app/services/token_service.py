@@ -79,7 +79,12 @@ def is_refresh_token_valid(row: RefreshToken, raw_token: str) -> bool:
     return hmac.compare_digest(row.token_hash, hash_token(raw_token))
 
 
-def revoke_all_user_refresh_tokens(db: Session, user_id: int) -> None:
+def revoke_all_user_refresh_tokens(
+    db: Session,
+    user_id: int,
+    *,
+    commit: bool = True,
+) -> None:
     rows = (
         db.query(RefreshToken)
         .filter(
@@ -93,4 +98,7 @@ def revoke_all_user_refresh_tokens(db: Session, user_id: int) -> None:
         row.is_revoked = True
         row.revoked_at = now
         db.add(row)
-    db.commit()
+    if commit:
+        db.commit()
+    else:
+        db.flush()

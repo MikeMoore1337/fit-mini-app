@@ -1,8 +1,11 @@
+import base64
 import hashlib
 import hmac
 import json
+import re
 import time
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from urllib.parse import urlencode
 
 import pytest
@@ -113,6 +116,25 @@ def test_production_settings_reject_placeholder_secret():
             database_url="postgresql+psycopg://app:password@db/app",
             enable_dev_auth=False,
             telegram_bot_token="123456:configured-token",
+            frontend_base_url="https://example.test",
+        )
+
+
+def test_production_settings_reject_placeholder_bot_internal_token():
+    with pytest.raises(ValidationError, match="BOT_INTERNAL_TOKEN"):
+        Settings(
+            app_env="prod",
+            app_name="FitMiniApp",
+            app_host="0.0.0.0",
+            app_port=8000,
+            app_debug=False,
+            secret_key="a-production-secret-that-is-long-enough",
+            access_token_expire_minutes=60,
+            refresh_token_expire_days=30,
+            database_url="postgresql+psycopg://app:password@db/app",
+            enable_dev_auth=False,
+            telegram_bot_token="123456:configured-token",
+            bot_internal_token="replace-with-a-separate-random-secret-at-least-32-characters",
             frontend_base_url="https://example.test",
         )
 
@@ -408,6 +430,15 @@ def test_user_can_clear_completed_workout_history(client):
 
     assert client.get("/api/v1/workouts/history", headers=headers).json() == []
     today = client.get("/api/v1/workouts/today", headers=headers).json()
+    started = client.post(f"/api/v1/workouts/{today['id']}/start", headers=headers)
+    assert started.status_code == 200
+    set_id = today["exercises"][0]["sets"][0]["id"]
+    saved = client.patch(
+        f"/api/v1/workouts/sets/{set_id}",
+        json={"actual_reps": 8, "actual_weight": 20, "is_completed": True},
+        headers=headers,
+    )
+    assert saved.status_code == 200
     finished = client.post(f"/api/v1/workouts/{today['id']}/finish", headers=headers)
     assert finished.status_code == 200
 
@@ -494,6 +525,8 @@ def test_workout_set_patch(client):
     today = client.get("/api/v1/workouts/today", headers=headers).json()
     exercise = today["exercises"][0]
     set_id = exercise["sets"][0]["id"]
+    started = client.post(f"/api/v1/workouts/{today['id']}/start", headers=headers)
+    assert started.status_code == 200
 
     unknown = client.patch(
         "/api/v1/workouts/sets/999999",
@@ -537,6 +570,8 @@ def test_workout_set_validation(client):
     assert create_res.status_code == 200
     today = client.get("/api/v1/workouts/today", headers=headers).json()
     set_id = today["exercises"][0]["sets"][0]["id"]
+    started = client.post(f"/api/v1/workouts/{today['id']}/start", headers=headers)
+    assert started.status_code == 200
 
     invalid = client.patch(
         f"/api/v1/workouts/sets/{set_id}",
@@ -1299,11 +1334,13 @@ def test_refresh_token_rotation(client):
     )
     assert login.status_code == 200
 
-    refresh_token = login.json()["refresh_token"]
-    refreshed = client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
+    refresh_token = client.cookies.get("fit_refresh_token")
+    assert refresh_token
+    refreshed = client.post("/api/v1/auth/refresh", json={})
     assert refreshed.status_code == 200
     assert refreshed.json()["access_token"]
-    assert refreshed.json()["refresh_token"] != refresh_token
+    assert "refresh_token" not in refreshed.json()
+    assert client.cookies.get("fit_refresh_token") != refresh_token
 
     reused = client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
     assert reused.status_code == 401
@@ -1613,6 +1650,32 @@ def test_bot_rejects_invalid_timezone(client):
     assert response.status_code == 400
 
 
+def test_bot_internal_api_does_not_accept_telegram_bot_token(client, monkeypatch):
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "telegram_bot_token", "telegram-api-token")
+    monkeypatch.setattr(settings, "bot_internal_token", "separate-internal-token")
+    payload = {
+        "telegram_user_id": 6504,
+        "timezone": "Europe/Moscow",
+        "first_name": "Internal",
+    }
+
+    rejected = client.post(
+        "/api/v1/bot/timezone",
+        headers={"X-Bot-Token": "telegram-api-token"},
+        json=payload,
+    )
+    accepted = client.post(
+        "/api/v1/bot/timezone",
+        headers={"X-Bot-Token": "separate-internal-token"},
+        json=payload,
+    )
+
+    assert rejected.status_code == 403
+    assert accepted.status_code == 200
+
+
 def test_to_msk_naive_converts_aware_utc_datetime():
     converted = to_msk_naive(datetime(2026, 4, 25, 7, 30, tzinfo=UTC))
 
@@ -1677,3 +1740,218 @@ def test_billing_checkout_falls_back_to_frontend_base_url(client, monkeypatch):
 
     assert checkout.status_code == 200
     assert checkout.json()["checkout_url"].startswith("https://app.your-fitness-coach.ru/app?")
+
+
+def test_auth_uses_httponly_refresh_cookie(client):
+    response = client.post(
+        "/api/v1/auth/dev-login",
+        json={"telegram_user_id": 4050, "is_coach": False},
+    )
+
+    assert response.status_code == 200
+    assert "refresh_token" not in response.json()
+    cookie = response.headers["set-cookie"].lower()
+    assert "fit_refresh_token=" in cookie
+    assert "httponly" in cookie
+    assert "samesite=strict" in cookie
+
+
+def test_workout_state_machine_rejects_invalid_transitions(client):
+    headers = auth(client, telegram_user_id=2050, is_coach=False)
+    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()
+    payload = {
+        "title": "Проверка состояний",
+        "goal": "recomposition",
+        "level": "beginner",
+        "mode": "self",
+        "assign_after_create": True,
+        "days": [
+            {
+                "title": "Сегодня",
+                "exercises": [
+                    {
+                        "exercise_id": exercises[0]["id"],
+                        "prescribed_sets": 1,
+                        "prescribed_reps": "8",
+                        "rest_seconds": 60,
+                    }
+                ],
+            }
+        ],
+    }
+    assert (
+        client.post("/api/v1/programs/templates", json=payload, headers=headers).status_code == 200
+    )
+    workout = client.get("/api/v1/workouts/today", headers=headers).json()
+
+    assert (
+        client.post(f"/api/v1/workouts/{workout['id']}/finish", headers=headers).status_code == 409
+    )
+    assert (
+        client.post(f"/api/v1/workouts/{workout['id']}/start", headers=headers).status_code == 200
+    )
+    assert (
+        client.post(f"/api/v1/workouts/{workout['id']}/finish", headers=headers).status_code == 409
+    )
+
+    set_id = workout["exercises"][0]["sets"][0]["id"]
+    saved = client.patch(
+        f"/api/v1/workouts/sets/{set_id}",
+        json={"actual_reps": 8, "is_completed": True},
+        headers=headers,
+    )
+    assert saved.status_code == 200
+    assert (
+        client.post(f"/api/v1/workouts/{workout['id']}/finish", headers=headers).status_code == 200
+    )
+    assert (
+        client.post(f"/api/v1/workouts/{workout['id']}/finish", headers=headers).status_code == 409
+    )
+
+
+def test_invites_do_not_mutate_profile_or_delete_other_coach_invites(client):
+    client_headers = auth(
+        client,
+        telegram_user_id=5250,
+        is_coach=False,
+        username="@real_client",
+        full_name="Настоящее имя",
+    )
+    coach_one = auth(client, telegram_user_id=1250, is_coach=True)
+    coach_two = auth(client, telegram_user_id=1251, is_coach=True)
+
+    for coach_headers, supplied_name in (
+        (coach_one, "Имя от первого тренера"),
+        (coach_two, "Имя от второго тренера"),
+    ):
+        invited = client.post(
+            "/api/v1/coach/clients",
+            json={"username": "real_client", "full_name": supplied_name},
+            headers=coach_headers,
+        )
+        assert invited.status_code == 201
+
+    me = client.get("/api/v1/me", headers=client_headers).json()
+    assert me["profile"]["full_name"] == "Настоящее имя"
+    assert me["username"] == "real_client"
+    invites = client.get("/api/v1/me/coach-invites", headers=client_headers).json()
+    assert len(invites) == 2
+
+
+def test_deleting_template_preserves_assigned_program_and_workouts(client):
+    headers = auth(client, telegram_user_id=4051, is_coach=True, is_admin=True)
+    user = client.get("/api/v1/me", headers=headers).json()
+    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()
+    payload = {
+        "title": "Архивируемый шаблон",
+        "goal": "maintenance",
+        "level": "beginner",
+        "mode": "self",
+        "assign_after_create": True,
+        "days": [
+            {
+                "title": "Сохранённая тренировка",
+                "exercises": [
+                    {
+                        "exercise_id": exercises[0]["id"],
+                        "prescribed_sets": 1,
+                        "prescribed_reps": "8",
+                        "rest_seconds": 60,
+                    }
+                ],
+            }
+        ],
+    }
+    created = client.post("/api/v1/programs/templates", json=payload, headers=headers)
+    assert created.status_code == 200
+    template_id = created.json()["template"]["id"]
+    program_id = created.json()["assigned_program_id"]
+
+    assert (
+        client.delete(f"/api/v1/admin/templates/{template_id}", headers=headers).status_code == 204
+    )
+
+    with get_session_context() as db:
+        program = db.query(UserProgram).filter(UserProgram.id == program_id).one()
+        assert program.user_id == user["id"]
+        assert program.template_id is None
+        assert db.query(UserWorkout).filter(UserWorkout.user_program_id == program.id).count() == 1
+
+
+def test_deleting_coach_preserves_client_program_and_workouts(client):
+    admin_headers = auth(client, telegram_user_id=4052, is_coach=True, is_admin=True)
+    coach_headers = auth(client, telegram_user_id=1352, is_coach=True)
+    client_headers = auth(client, telegram_user_id=5352, is_coach=False)
+    coach_user = client.get("/api/v1/me", headers=coach_headers).json()
+
+    invited = client.post(
+        "/api/v1/coach/clients",
+        json={"telegram_user_id": 5352},
+        headers=coach_headers,
+    )
+    assert invited.status_code == 201
+    accept_latest_coach_invite(client, client_headers)
+
+    exercises = client.get("/api/v1/programs/exercises", headers=coach_headers).json()
+    created = client.post(
+        "/api/v1/programs/templates",
+        json={
+            "title": "Программа, переживающая удаление тренера",
+            "goal": "maintenance",
+            "level": "beginner",
+            "mode": "coach",
+            "target_telegram_user_id": 5352,
+            "assign_after_create": True,
+            "days": [
+                {
+                    "title": "День клиента",
+                    "exercises": [
+                        {
+                            "exercise_id": exercises[0]["id"],
+                            "prescribed_sets": 1,
+                            "prescribed_reps": "8",
+                            "rest_seconds": 60,
+                        }
+                    ],
+                }
+            ],
+        },
+        headers=coach_headers,
+    )
+    assert created.status_code == 200
+    program_id = created.json()["assigned_program_id"]
+
+    deleted = client.delete(
+        f"/api/v1/admin/users/{coach_user['id']}",
+        headers=admin_headers,
+    )
+    assert deleted.status_code == 204
+    assert client.get("/api/v1/workouts/today", headers=client_headers).status_code == 200
+
+    with get_session_context() as db:
+        program = db.query(UserProgram).filter(UserProgram.id == program_id).one()
+        assert program.template_id is None
+        assert program.assigned_by_user_id is None
+        assert db.query(UserWorkout).filter(UserWorkout.user_program_id == program.id).count() == 1
+
+
+def test_csp_blocks_unhashed_inline_scripts(client):
+    response = client.get("/app")
+    policy = response.headers["content-security-policy"]
+    script_policy = policy.split("script-src", 1)[1].split(";", 1)[0]
+
+    assert "'unsafe-inline'" not in script_policy
+    assert "'sha256-" in script_policy
+
+    static_dir = Path(__file__).resolve().parents[1] / "backend" / "app" / "static"
+    for filename in ("index.html", "admin.html", "coach.html"):
+        html = (static_dir / filename).read_text(encoding="utf-8")
+        for source in re.findall(r"<script(?:\s+[^>]*)?>([\s\S]*?)</script>", html):
+            if not source:
+                continue
+            digest = base64.b64encode(hashlib.sha256(source.encode()).digest()).decode()
+            assert f"'sha256-{digest}'" in script_policy
+
+    main_js = (static_dir / "js" / "main.js").read_text(encoding="utf-8")
+    assert "localStorage.setItem(accessTokenKey" not in main_js
+    assert "localStorage.setItem('fit_refresh_token'" not in main_js

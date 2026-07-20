@@ -1,9 +1,10 @@
-import { accessTokenKey, refreshTokenKey } from './config.js?v=46';
-import { log } from './ui.js?v=46';
+import { accessTokenKey } from './config.js?v=47';
+import { log } from './ui.js?v=47';
 
 export function clearTokens() {
+  sessionStorage.removeItem(accessTokenKey);
   localStorage.removeItem(accessTokenKey);
-  localStorage.removeItem(refreshTokenKey);
+  localStorage.removeItem('fit_refresh_token');
 }
 
 export function sleep(ms) {
@@ -55,7 +56,7 @@ export function formatApiErrorMessage(text, status) {
 }
 
 function authHeaders(extra = {}) {
-  const token = localStorage.getItem(accessTokenKey);
+  const token = sessionStorage.getItem(accessTokenKey);
   return {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -106,6 +107,7 @@ export async function api(path, options = {}) {
   try {
     const fetchPromise = fetch(path, {
       ...fetchOptions,
+      credentials: 'same-origin',
       ...(requestSignal ? { signal: requestSignal } : {}),
       headers: authHeaders(headers),
     });

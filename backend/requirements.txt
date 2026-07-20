@@ -101,11 +101,11 @@ psycopg[binary]==3.2.1
     # via -r backend/requirements.in
 psycopg-binary==3.2.1
     # via psycopg
-pydantic==2.12.5
+pydantic==2.9.2
     # via
     #   fastapi
     #   pydantic-settings
-pydantic-core==2.41.5
+pydantic-core==2.23.4
     # via pydantic
 pydantic-settings==2.5.2
     # via -r backend/requirements.in

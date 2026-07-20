@@ -2,7 +2,20 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.timezone import now_msk_naive
@@ -74,10 +87,22 @@ class ProgramTemplateExercise(Base):
 
 class UserProgram(Base):
     __tablename__ = "user_programs"
+    __table_args__ = (
+        Index(
+            "uq_user_programs_one_active_per_user",
+            "user_id",
+            unique=True,
+            postgresql_where=text("is_active"),
+            sqlite_where=text("is_active = 1"),
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
-    template_id: Mapped[int] = mapped_column(ForeignKey("program_templates.id"), index=True)
+    # Назначение и история должны переживать архивирование исходного шаблона.
+    template_id: Mapped[int | None] = mapped_column(
+        ForeignKey("program_templates.id"), index=True, nullable=True
+    )
     assigned_by_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id"), index=True, nullable=True
     )
@@ -88,7 +113,7 @@ class UserProgram(Base):
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    template: Mapped[ProgramTemplate] = relationship("ProgramTemplate")
+    template: Mapped[ProgramTemplate | None] = relationship("ProgramTemplate")
     workouts: Mapped[list[UserWorkout]] = relationship(
         "UserWorkout", back_populates="user_program", cascade="all, delete-orphan"
     )
@@ -138,6 +163,13 @@ class UserWorkoutExercise(Base):
 
 class UserWorkoutSet(Base):
     __tablename__ = "user_workout_sets"
+    __table_args__ = (
+        UniqueConstraint(
+            "workout_exercise_id",
+            "set_number",
+            name="uq_user_workout_sets_exercise_number",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     workout_exercise_id: Mapped[int] = mapped_column(

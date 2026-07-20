@@ -61,6 +61,18 @@ jobs:
           python -m pip install -r backend/requirements.txt
           python -m pip install -r bot/requirements.txt
 
+      - name: Dependency consistency
+        run: python -m pip check
+
+      - name: Frontend JavaScript syntax
+        run: |
+          node --check backend/app/static/js/main.js
+          node --check backend/app/static/js/core/config.js
+          node --check backend/app/static/js/core/http.js
+          node --check backend/app/static/js/core/state.js
+          node --check backend/app/static/js/core/theme.js
+          node --check backend/app/static/js/core/ui.js
+
       - name: Pre-commit
         run: pre-commit run --all-files --show-diff-on-failure
 

@@ -5,6 +5,13 @@ from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+def _is_placeholder_secret(value: str) -> bool:
+    normalized = value.strip().lower()
+    return normalized in {"", "change-me", "replace-me", "secret", "test-secret"} or (
+        normalized.startswith(("change-", "replace-"))
+    )
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         case_sensitive=False,
@@ -22,6 +29,7 @@ class Settings(BaseSettings):
     secret_key: str
     access_token_expire_minutes: int = Field(gt=0, le=24 * 60)
     refresh_token_expire_days: int = Field(gt=0, le=365)
+    refresh_cookie_name: str = "fit_refresh_token"
 
     database_url: str
     enable_dev_auth: bool = False
@@ -30,24 +38,29 @@ class Settings(BaseSettings):
     frontend_base_url: str = "https://app.your-fitness-coach.ru"
     telegram_bot_token: str
     telegram_bot_username: str = ""
+    bot_internal_token: str = ""
 
     payment_provider: str = "mock"
     payment_public_url: str = ""
 
     worker_poll_seconds: int = Field(default=10, ge=1, le=3600)
+    reminder_sync_seconds: int = Field(default=60, ge=10, le=3600)
 
     @model_validator(mode="after")
     def validate_production_safety(self) -> "Settings":
         if self.app_env != "prod":
             return self
 
-        placeholders = {"", "change-me", "replace-me", "secret", "test-secret"}
-        if self.secret_key.strip().lower() in placeholders or len(self.secret_key) < 32:
+        if _is_placeholder_secret(self.secret_key) or len(self.secret_key) < 32:
             raise ValueError(
                 "SECRET_KEY must be at least 32 characters and non-placeholder in prod"
             )
-        if self.telegram_bot_token.strip().lower() in placeholders:
+        if _is_placeholder_secret(self.telegram_bot_token):
             raise ValueError("TELEGRAM_BOT_TOKEN must be configured in prod")
+        if _is_placeholder_secret(self.bot_internal_token) or len(self.bot_internal_token) < 32:
+            raise ValueError(
+                "BOT_INTERNAL_TOKEN must be at least 32 characters and non-placeholder in prod"
+            )
         if self.enable_dev_auth:
             raise ValueError("ENABLE_DEV_AUTH must be false in prod")
         if self.app_debug:

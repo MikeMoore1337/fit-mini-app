@@ -125,6 +125,9 @@ APP_DEBUG=false
 APP_DOMAIN=your-domain.example
 
 SECRET_KEY=change-me
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+REFRESH_TOKEN_EXPIRE_DAYS=30
+REFRESH_COOKIE_NAME=fit_refresh_token
 DATABASE_URL=postgresql+psycopg://fitminiapp:change-me@db:5432/fitminiapp
 
 ENABLE_DEV_AUTH=false
@@ -135,11 +138,13 @@ BACKEND_INTERNAL_URL=http://backend:8000
 CLOUDFLARED_TOKEN=
 TELEGRAM_BOT_TOKEN=change-me
 TELEGRAM_BOT_USERNAME=your_bot_username
+BOT_INTERNAL_TOKEN=replace-with-a-separate-random-secret-at-least-32-characters
 BOT_POLLING_ENABLED=true
 
 PAYMENT_PROVIDER=mock
 PAYMENT_PUBLIC_URL=https://your-domain.example
 WORKER_POLL_SECONDS=10
+REMINDER_SYNC_SECONDS=60
 ```
 
 Запусти приложение:
@@ -259,6 +264,7 @@ curl https://app.your-fitness-coach.ru/health
 Бот использует:
 
 - `TELEGRAM_BOT_TOKEN`;
+- `BOT_INTERNAL_TOKEN` — отдельный секрет для запросов bot → backend;
 - `TELEGRAM_BOT_USERNAME`;
 - `FRONTEND_BASE_URL`;
 - `BACKEND_INTERNAL_URL`.
@@ -318,8 +324,11 @@ ADMIN_TELEGRAM_USER_IDS=123456789,987654321
 | `admin` | Управлять ролями, пользователями, блокировками, платежами, уведомлениями и шаблонами |
 
 Заблокированный пользователь не проходит авторизацию и не может пользоваться API.
-Удаление пользователя удаляет связанные программы, связи с тренерами, pending-инвайты,
-уведомления, платежные записи и refresh-токены.
+При блокировке или снятии роли тренера его активные связи и pending-приглашения
+закрываются, но назначенные клиентам программы и история тренировок сохраняются.
+Удаление пользователя удаляет его собственные данные, связи, pending-инвайты,
+уведомления, платежные записи и refresh-токены. Шаблоны отвязываются от уже
+назначенных программ: история других пользователей при этом не удаляется.
 
 ## Клиенты тренера
 
@@ -364,9 +373,9 @@ Telegram ID: username в Telegram может измениться.
 Backend использует Alembic. Docker-entrypoint ждёт базу данных, применяет миграции
 и затем запускает Uvicorn.
 
-После обычного `docker compose up -d --build` отдельно запускать `alembic upgrade head`
-не нужно: backend уже делает это при старте. Если миграции всё же нужно применить вручную,
-остановите сервисы приложения и запустите одноразовый backend-контейнер:
+Текущий head — `0014_hardening_data_integrity`. Перед обновлением существующей базы обязательно сделайте резервную копию PostgreSQL.
+
+После обычного `docker compose up -d --build` отдельно запускать `alembic upgrade head` не нужно: backend уже делает это при старте. Если миграции всё же нужно применить вручную, остановите сервисы приложения и запустите одноразовый backend-контейнер:
 
 ```bash
 docker compose stop backend worker bot
@@ -419,6 +428,8 @@ CI запускается на:
 CI делает:
 
 - установку backend и bot зависимостей;
+- проверку совместимости установленных зависимостей через `pip check`;
+- синтаксическую проверку frontend JavaScript через `node --check`;
 - `pre-commit run --all-files --show-diff-on-failure`;
 - применение всей цепочки Alembic к PostgreSQL 16;
 - `pytest tests -q` на PostgreSQL.
@@ -427,11 +438,15 @@ CI делает:
 
 - Не коммить `.env`.
 - Используй сильный `SECRET_KEY`.
+- Используй отдельный сильный `BOT_INTERNAL_TOKEN`; не переиспользуй Telegram bot token.
 - В production держи `ENABLE_DEV_AUTH=false`.
 - Первый админ должен быть задан через `ADMIN_TELEGRAM_USER_IDS`.
 - Для Telegram Mini App используй только HTTPS `FRONTEND_BASE_URL`.
 - Не открывай backend напрямую наружу без HTTPS и контроля инфраструктуры.
 - Production-конфигурация проверяется при старте: placeholder-секреты, debug,
   dev-auth и не-HTTPS публичные URL приводят к отказу запуска.
+- Refresh-токен хранится только в `HttpOnly Secure SameSite=Strict` cookie, а
+  короткоживущий access-токен — в `sessionStorage`. CSP разрешает inline-скрипты
+  только по явно зафиксированным SHA-256 хешам.
 - Endpoint завершения mock-платежа требует авторизацию и разрешён только владельцу
   checkout, когда `PAYMENT_PROVIDER=mock`.

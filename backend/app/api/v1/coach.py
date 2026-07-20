@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.api.dependencies.auth import require_coach_or_admin
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.program import CoachClientCreate
+from app.schemas.program import ClientResponse, CoachClientCreate
 from app.services.programs import (
     ProgramError,
     add_client_for_coach,
@@ -16,7 +16,7 @@ from app.services.programs import (
 router = APIRouter()
 
 
-@router.get("/clients")
+@router.get("/clients", response_model=list[ClientResponse])
 def coach_clients(
     current_user: User = Depends(require_coach_or_admin),
     db: Session = Depends(get_db),
@@ -24,7 +24,11 @@ def coach_clients(
     return list_clients(db, current_user)
 
 
-@router.post("/clients", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/clients",
+    response_model=ClientResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 def add_coach_client(
     payload: CoachClientCreate,
     current_user: User = Depends(require_coach_or_admin),

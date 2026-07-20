@@ -213,8 +213,12 @@ def start_workout(
 ):
     workout = _get_user_workout_or_404(db, current_user, workout_id)
 
+    if workout.scheduled_date != today_for_user(current_user):
+        raise HTTPException(status_code=409, detail="Можно начать только тренировку на сегодня")
     if workout.status == "completed":
-        raise HTTPException(status_code=400, detail="Тренировка уже завершена")
+        raise HTTPException(status_code=409, detail="Тренировка уже завершена")
+    if workout.status not in {"planned", "in_progress"}:
+        raise HTTPException(status_code=409, detail="Недопустимое состояние тренировки")
 
     if not workout.started_at:
         workout.started_at = now_for_user_naive(current_user)
@@ -234,8 +238,31 @@ def finish_workout(
 ):
     workout = _get_user_workout_or_404(db, current_user, workout_id)
 
-    if not workout.started_at:
-        workout.started_at = now_for_user_naive(current_user)
+    if workout.scheduled_date != today_for_user(current_user):
+        raise HTTPException(status_code=409, detail="Можно завершить только тренировку на сегодня")
+    if workout.status == "completed":
+        raise HTTPException(status_code=409, detail="Тренировка уже завершена")
+    if workout.status != "in_progress":
+        raise HTTPException(status_code=409, detail="Сначала начните тренировку")
+
+    completed_sets = (
+        db.query(UserWorkoutSet.id)
+        .join(
+            UserWorkoutExercise,
+            UserWorkoutExercise.id == UserWorkoutSet.workout_exercise_id,
+        )
+        .filter(
+            UserWorkoutExercise.workout_id == workout.id,
+            UserWorkoutSet.is_completed.is_(True),
+        )
+        .first()
+    )
+    if not completed_sets:
+        raise HTTPException(
+            status_code=409,
+            detail="Отметьте хотя бы один выполненный подход",
+        )
+
     workout.completed_at = now_for_user_naive(current_user)
     workout.status = "completed"
 
@@ -269,8 +296,11 @@ def update_workout_set(
         raise HTTPException(status_code=404, detail="Подход не найден")
 
     set_row, workout = result
-    if workout.status == "completed":
-        raise HTTPException(status_code=400, detail="Нельзя изменять завершённую тренировку")
+    if workout.status != "in_progress":
+        raise HTTPException(
+            status_code=409,
+            detail="Подходы можно изменять только во время тренировки",
+        )
 
     changes = payload.model_dump(exclude_unset=True)
     if "actual_reps" in changes:

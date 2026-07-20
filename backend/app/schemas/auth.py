@@ -14,10 +14,9 @@ class TelegramInitRequest(BaseModel):
 
 
 class RefreshRequest(BaseModel):
-    refresh_token: str = Field(min_length=1, max_length=4096)
+    refresh_token: str | None = Field(default=None, min_length=1, max_length=4096)
 
 
 class TokenPairResponse(BaseModel):
     access_token: str
-    refresh_token: str
     token_type: str = "bearer"

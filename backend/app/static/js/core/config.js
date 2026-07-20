@@ -1,13 +1,14 @@
-export const FRONTEND_VERSION = 'v46';
+export const FRONTEND_VERSION = 'v47';
 
 export const accessTokenKey = 'fit_access_token';
-export const refreshTokenKey = 'fit_refresh_token';
 export const sectionStoragePrefix = 'fit_section_';
 
 export const API = {
   publicConfig: '/api/v1/public/config',
   telegramInit: '/api/v1/auth/telegram/init',
   devLogin: '/api/v1/auth/dev-login',
+  refresh: '/api/v1/auth/refresh',
+  logout: '/api/v1/auth/logout',
   me: '/api/v1/me',
   meProfile: '/api/v1/me/profile',
   detachTrainer: '/api/v1/me/trainer',

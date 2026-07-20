@@ -32,7 +32,11 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         )
         response.headers.setdefault(
             "Content-Security-Policy",
-            "default-src 'self'; script-src 'self' 'unsafe-inline' https://telegram.org; "
+            "default-src 'self'; script-src 'self' https://telegram.org "
+            "'sha256-3m1gKcj65gT2KV/P9rZQ5zLb6LcF9QxmPKwUThveNeU=' "
+            "'sha256-w+SoYpK8BvsqYpHeOkmkyMAVjznFJesDnyaa7MXPJcE=' "
+            "'sha256-IhR9LI5auG7rssnWFs5yOAMKXOGr8Ract51Byz4quhc=' "
+            "'sha256-qZ9Yq8gtZkgu5ry8phv1nJ9TDNKl5ITFOiv5Danv/DE='; "
             "style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; "
             "font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; "
             "frame-ancestors 'self' https://web.telegram.org https://*.telegram.org",

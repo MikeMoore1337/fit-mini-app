@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0f1115" />
   <title>Кабинет тренера - FitMiniApp</title>
-  <link rel="stylesheet" href="/static/styles.css?v=46" />
+  <link rel="stylesheet" href="/static/styles.css?v=47" />
 </head>
 <body>
   <main class="container narrow">
@@ -30,15 +30,15 @@
       <div class="grid grid-3 top-gap">
         <label class="field">
           <span>Telegram ID</span>
-          <input id="clientTelegramId" type="number" placeholder="Если известен" />
+          <input id="clientTelegramId" type="number" min="1" inputmode="numeric" placeholder="Если известен" />
         </label>
         <label class="field">
           <span>Telegram @username</span>
-          <input id="clientUsername" type="text" placeholder="Если есть" />
+          <input id="clientUsername" type="text" maxlength="64" autocomplete="off" placeholder="Если есть" />
         </label>
         <label class="field">
           <span>Имя клиента</span>
-          <input id="clientFullName" type="text" placeholder="Для списка клиентов" />
+          <input id="clientFullName" type="text" maxlength="128" autocomplete="off" placeholder="Для списка клиентов" />
         </label>
       </div>
       <div class="toolbar top-gap">
@@ -109,16 +109,22 @@
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script type="module">
-    import { initTelegramTheme } from '/static/js/core/theme.js?v=46';
+    import { initTelegramTheme } from '/static/js/core/theme.js?v=47';
 
     initTelegramTheme({
       onError: (error) => console.warn(`Telegram theme: ${String(error)}`),
     });
   </script>
   <script type="module">
-    import { openConfirmDialog } from '/static/js/core/ui.js?v=46';
+    import { openConfirmDialog } from '/static/js/core/ui.js?v=47';
 
     const accessTokenKey = 'fit_access_token';
+    const legacyToken = localStorage.getItem(accessTokenKey);
+    if (legacyToken && !sessionStorage.getItem(accessTokenKey)) {
+      sessionStorage.setItem(accessTokenKey, legacyToken);
+    }
+    localStorage.removeItem(accessTokenKey);
+    localStorage.removeItem('fit_refresh_token');
     let coachClients = [];
 
     const $ = (id) => document.getElementById(id);
@@ -155,21 +161,39 @@
     }
 
     function authHeaders() {
-      const token = localStorage.getItem(accessTokenKey);
+      const token = sessionStorage.getItem(accessTokenKey);
       return {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       };
     }
 
-    async function api(path, options = {}) {
+    async function refreshAccessToken() {
+      const response = await fetch('/api/v1/auth/refresh', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      if (!response.ok) return false;
+      const data = await response.json();
+      sessionStorage.setItem(accessTokenKey, data.access_token);
+      return true;
+    }
+
+    async function api(path, options = {}, allowRefresh = true) {
       const res = await fetch(path, {
         ...options,
+        credentials: 'same-origin',
         headers: {
           ...authHeaders(),
           ...(options.headers || {}),
         },
       });
+
+      if (res.status === 401 && allowRefresh && await refreshAccessToken()) {
+        return api(path, options, false);
+      }
 
       if (!res.ok) {
         const text = await res.text();

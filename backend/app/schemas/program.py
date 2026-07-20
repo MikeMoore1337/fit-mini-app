@@ -1,7 +1,11 @@
+from __future__ import annotations
+
 from datetime import date
 from typing import Literal
 
 from pydantic import BaseModel, Field
+
+from app.schemas.nutrition import NutritionTargetResponse
 
 
 class ProgramTemplateExerciseCreate(BaseModel):
@@ -59,12 +63,22 @@ class ProgramTemplateResponse(BaseModel):
     days: list[ProgramTemplateDayResponse]
 
 
+class ProgramTargetUserResponse(BaseModel):
+    id: int
+    telegram_user_id: int
+    full_name: str | None = None
+
+
 class ProgramTemplateCreateResponse(BaseModel):
     template: ProgramTemplateResponse
     assigned_program_id: int | None = None
-    assigned_to_telegram_user_id: int | None = None
-    assigned_to_name: str | None = None
     workouts_created: int = 0
+    target_user: ProgramTargetUserResponse
+
+
+class ProgramAssignmentResponse(BaseModel):
+    user_program_id: int
+    workouts_created: int
 
 
 class AssignTemplateRequest(BaseModel):
@@ -93,6 +107,12 @@ class ExerciseCatalogItem(BaseModel):
     title: str
     primary_muscle: str | None = None
     equipment: str | None = None
+    edit_target_id: int | None = None
+    slug: str | None = None
+    is_custom: bool = False
+    is_personalized: bool = False
+    created_by_user_id: int | None = None
+    source_exercise_id: int | None = None
 
 
 class ExerciseCatalogCreate(BaseModel):
@@ -107,9 +127,14 @@ class ExerciseCatalogCreateResponse(ExerciseCatalogItem):
 
 
 class ClientResponse(BaseModel):
-    user_id: int
-    telegram_user_id: int
+    id: int | None = None
+    telegram_user_id: int | None = None
+    username: str | None = None
     full_name: str | None = None
     goal: str | None = None
     level: str | None = None
-    is_coach: bool = False
+    height_cm: int | None = None
+    weight_kg: int | None = None
+    workouts_per_week: int | None = None
+    kbju: NutritionTargetResponse | None = None
+    status: Literal["active", "pending"]

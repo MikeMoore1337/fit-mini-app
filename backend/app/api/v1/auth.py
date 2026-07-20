@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -25,7 +25,36 @@ from app.services.token_service import (
 router = APIRouter()
 
 
-def issue_token_pair(db: Session, user: User, *, commit: bool = True) -> TokenPairResponse:
+def _set_refresh_cookie(response: Response, raw_token: str) -> None:
+    response.set_cookie(
+        key=settings.refresh_cookie_name,
+        value=raw_token,
+        max_age=settings.refresh_token_expire_days * 24 * 60 * 60,
+        path="/api/v1/auth",
+        secure=settings.app_env == "prod",
+        httponly=True,
+        samesite="strict",
+    )
+    response.headers["Cache-Control"] = "no-store"
+
+
+def _clear_refresh_cookie(response: Response) -> None:
+    response.delete_cookie(
+        key=settings.refresh_cookie_name,
+        path="/api/v1/auth",
+        secure=settings.app_env == "prod",
+        httponly=True,
+        samesite="strict",
+    )
+
+
+def issue_token_pair(
+    db: Session,
+    user: User,
+    response: Response,
+    *,
+    commit: bool = True,
+) -> TokenPairResponse:
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Пользователь заблокирован")
 
@@ -40,10 +69,10 @@ def issue_token_pair(db: Session, user: User, *, commit: bool = True) -> TokenPa
         expires_at=refresh_expires_at,
         commit=commit,
     )
+    _set_refresh_cookie(response, refresh_token)
 
     return TokenPairResponse(
         access_token=access_token,
-        refresh_token=refresh_token,
     )
 
 
@@ -51,6 +80,7 @@ def issue_token_pair(db: Session, user: User, *, commit: bool = True) -> TokenPa
 @limiter.limit("20/minute")
 def telegram_init_auth(
     request: Request,
+    response: Response,
     payload: TelegramInitRequest,
     db: Session = Depends(get_db),
 ):
@@ -68,13 +98,14 @@ def telegram_init_auth(
         raise HTTPException(status_code=401, detail=str(exc))
 
     user = get_or_create_user_from_init_data(db, validated_init_data)
-    return issue_token_pair(db, user)
+    return issue_token_pair(db, user, response)
 
 
 @router.post("/dev-login", response_model=TokenPairResponse)
 @limiter.limit("30/minute")
 def dev_login(
     request: Request,
+    response: Response,
     payload: DevLoginRequest,
     db: Session = Depends(get_db),
 ):
@@ -119,18 +150,26 @@ def dev_login(
 
     db.commit()
     db.refresh(user)
-    return issue_token_pair(db, user)
+    return issue_token_pair(db, user, response)
 
 
 @router.post("/refresh", response_model=TokenPairResponse)
 @limiter.limit("10/minute")
 def refresh_tokens(
     request: Request,
-    payload: RefreshRequest,
+    response: Response,
+    payload: RefreshRequest | None = None,
     db: Session = Depends(get_db),
 ):
+    raw_refresh_token = (
+        payload.refresh_token
+        if payload is not None and payload.refresh_token
+        else request.cookies.get(settings.refresh_cookie_name, "")
+    )
+    if not raw_refresh_token:
+        raise HTTPException(status_code=401, detail="Refresh token отсутствует")
     try:
-        token_payload = decode_token(payload.refresh_token, expected_type="refresh")
+        token_payload = decode_token(raw_refresh_token, expected_type="refresh")
     except AuthError:
         raise HTTPException(status_code=401, detail="Невалидный refresh token")
 
@@ -152,7 +191,7 @@ def refresh_tokens(
         revoke_all_user_refresh_tokens(db, user_id)
         raise HTTPException(status_code=401, detail="Refresh token уже использован")
 
-    if not is_refresh_token_valid(row, payload.refresh_token):
+    if not is_refresh_token_valid(row, raw_refresh_token):
         raise HTTPException(status_code=401, detail="Refresh token недействителен")
 
     if not consume_refresh_token(db, row, commit=False):
@@ -164,18 +203,28 @@ def refresh_tokens(
     if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="Пользователь не найден")
 
-    token_pair = issue_token_pair(db, user, commit=False)
+    token_pair = issue_token_pair(db, user, response, commit=False)
     db.commit()
     return token_pair
 
 
 @router.post("/logout")
 def logout(
-    payload: RefreshRequest,
+    request: Request,
+    response: Response,
+    payload: RefreshRequest | None = None,
     db: Session = Depends(get_db),
 ):
+    raw_refresh_token = (
+        payload.refresh_token
+        if payload is not None and payload.refresh_token
+        else request.cookies.get(settings.refresh_cookie_name, "")
+    )
+    _clear_refresh_cookie(response)
+    if not raw_refresh_token:
+        return {"status": "ok"}
     try:
-        token_payload = decode_token(payload.refresh_token, expected_type="refresh")
+        token_payload = decode_token(raw_refresh_token, expected_type="refresh")
     except AuthError:
         return {"status": "ok"}
 

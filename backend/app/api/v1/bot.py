@@ -15,9 +15,9 @@ router = APIRouter()
 
 
 def _check_bot_token(x_bot_token: str | None) -> None:
-    expected = settings.telegram_bot_token
-    if not expected or expected == "replace-me":
-        raise HTTPException(status_code=503, detail="Bot token is not configured")
+    expected = settings.bot_internal_token
+    if not expected:
+        raise HTTPException(status_code=503, detail="Bot internal token is not configured")
     if not x_bot_token or not hmac.compare_digest(x_bot_token, expected):
         raise HTTPException(status_code=403, detail="Forbidden")
 

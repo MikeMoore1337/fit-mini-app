@@ -264,27 +264,21 @@ def add_client_for_coach(
         raise ProgramError("Cannot add yourself as a client")
 
     if telegram_user_id:
-        client = get_or_create_user_by_telegram_id(db, telegram_user_id, normalized_name)
-        if normalized_username:
-            client.username = normalized_username
-        _set_profile_name(db, client, normalized_name)
-        existing_link = (
-            db.query(CoachClient)
-            .filter(
-                CoachClient.coach_user_id == coach.id,
-                CoachClient.client_user_id == client.id,
+        client = _get_existing_user_by_telegram_id(db, telegram_user_id)
+        if client:
+            existing_link = (
+                db.query(CoachClient)
+                .filter(
+                    CoachClient.coach_user_id == coach.id,
+                    CoachClient.client_user_id == client.id,
+                )
+                .first()
             )
-            .first()
-        )
-        if existing_link:
-            db.commit()
-            db.refresh(client)
-            return _client_entry_from_user(db, client)
+            if existing_link:
+                return _client_entry_from_user(db, client)
 
-        invite_username = (
-            normalized_username
-            or normalize_telegram_username(client.username)
-            or f"user_{telegram_user_id}"
+        invite_username = (normalize_telegram_username(client.username) if client else None) or (
+            normalized_username or f"user_{telegram_user_id}"
         )
         invite = (
             db.query(CoachClientInvite)
@@ -321,7 +315,6 @@ def add_client_for_coach(
     if client:
         if client.id == coach.id:
             raise ProgramError("Cannot add yourself as a client")
-        _set_profile_name(db, client, normalized_name)
         existing_link = (
             db.query(CoachClient)
             .filter(
@@ -331,8 +324,6 @@ def add_client_for_coach(
             .first()
         )
         if existing_link:
-            db.commit()
-            db.refresh(client)
             return _client_entry_from_user(db, client)
 
         invite = (
@@ -369,10 +360,6 @@ def add_client_for_coach(
     if invite:
         invite.full_name = normalized_name or invite.full_name
     else:
-        db.query(CoachClientInvite).filter(
-            CoachClientInvite.username == normalized_username,
-            CoachClientInvite.coach_user_id != coach.id,
-        ).delete(synchronize_session=False)
         invite = CoachClientInvite(
             coach_user_id=coach.id,
             telegram_user_id=None,
@@ -426,7 +413,11 @@ def get_current_trainer(db: Session, client: User) -> dict | None:
         db.query(User)
         .join(CoachClient, CoachClient.coach_user_id == User.id)
         .options(joinedload(User.profile))
-        .filter(CoachClient.client_user_id == client.id)
+        .filter(
+            CoachClient.client_user_id == client.id,
+            User.is_active.is_(True),
+            or_(User.is_coach.is_(True), User.is_admin.is_(True)),
+        )
         .order_by(CoachClient.id.desc())
         .first()
     )
@@ -883,6 +874,9 @@ def assign_template_to_user(
     assigned_by: User,
     start_date: date | None = None,
 ) -> tuple[UserProgram, int]:
+    # Сериализуем конкурирующие назначения для одного пользователя. Частичный
+    # unique index остаётся последней линией защиты на уровне БД.
+    db.query(User).filter(User.id == target_user.id).with_for_update().one()
     db.query(UserProgram).filter(
         UserProgram.user_id == target_user.id,
         UserProgram.is_active.is_(True),
@@ -963,7 +957,6 @@ def create_and_optionally_assign_program(
                 current_user,
                 payload.target_telegram_user_id,
             )
-            _set_profile_name(db, target_user, payload.target_full_name)
 
     template = create_template(db, current_user, payload, target_user)
     assigned_program = None
@@ -1203,39 +1196,12 @@ def assign_template_to_self(
 
 
 def delete_template_cascade(db: Session, template: ProgramTemplate) -> None:
-    user_programs = db.query(UserProgram).filter(UserProgram.template_id == template.id).all()
-    user_program_ids = [item.id for item in user_programs]
-
-    if user_program_ids:
-        workouts = (
-            db.query(UserWorkout).filter(UserWorkout.user_program_id.in_(user_program_ids)).all()
-        )
-        workout_ids = [item.id for item in workouts]
-
-        if workout_ids:
-            workout_exercises = (
-                db.query(UserWorkoutExercise)
-                .filter(UserWorkoutExercise.workout_id.in_(workout_ids))
-                .all()
-            )
-            workout_exercise_ids = [item.id for item in workout_exercises]
-
-            if workout_exercise_ids:
-                db.query(UserWorkoutSet).filter(
-                    UserWorkoutSet.workout_exercise_id.in_(workout_exercise_ids)
-                ).delete(synchronize_session=False)
-
-                db.query(UserWorkoutExercise).filter(
-                    UserWorkoutExercise.id.in_(workout_exercise_ids)
-                ).delete(synchronize_session=False)
-
-            db.query(UserWorkout).filter(UserWorkout.id.in_(workout_ids)).delete(
-                synchronize_session=False
-            )
-
-        db.query(UserProgram).filter(UserProgram.id.in_(user_program_ids)).delete(
-            synchronize_session=False
-        )
+    # Назначения уже содержат snapshot тренировок. Отвязываем их от шаблона,
+    # чтобы удаление шаблона/тренера не уничтожало историю других пользователей.
+    db.query(UserProgram).filter(UserProgram.template_id == template.id).update(
+        {"template_id": None},
+        synchronize_session=False,
+    )
 
     days = db.query(ProgramTemplateDay).filter(ProgramTemplateDay.program_id == template.id).all()
     day_ids = [item.id for item in days]

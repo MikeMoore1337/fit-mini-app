@@ -1,5 +1,5 @@
-import { API, FRONTEND_VERSION, accessTokenKey, refreshTokenKey } from './core/config.js?v=46';
-import { state } from './core/state.js?v=46';
+import { API, FRONTEND_VERSION, accessTokenKey } from './core/config.js?v=47';
+import { state } from './core/state.js?v=47';
 import {
   $,
   log,
@@ -11,9 +11,9 @@ import {
   expandSectionAndScroll,
   restoreSectionState,
   setSectionCollapsed,
-} from './core/ui.js?v=46';
-import { api, clearTokens, sleep } from './core/http.js?v=46';
-import { getTelegramWebApp, hapticImpact, hapticNotification, initTelegramTheme } from './core/theme.js?v=46';
+} from './core/ui.js?v=47';
+import { api, clearTokens, sleep } from './core/http.js?v=47';
+import { getTelegramWebApp, hapticImpact, hapticNotification, initTelegramTheme } from './core/theme.js?v=47';
 
 window.__fitMiniAppBoot = {
   ...(window.__fitMiniAppBoot || {}),
@@ -514,7 +514,10 @@ function showAppScreen(cardId) {
 function setActiveBottomNav(cardId) {
   const screen = getAppScreen(cardId);
   document.querySelectorAll('.app-bottom-nav__btn').forEach((btn) => {
-    btn.classList.toggle('is-active', getAppScreen(btn.getAttribute('data-nav-card')) === screen);
+    const active = getAppScreen(btn.getAttribute('data-nav-card')) === screen;
+    btn.classList.toggle('is-active', active);
+    if (active) btn.setAttribute('aria-current', 'page');
+    else btn.removeAttribute('aria-current');
   });
 }
 
@@ -596,7 +599,9 @@ function setDevRole(role) {
   if (roleInput) roleInput.value = normalizedRole;
 
   document.querySelectorAll('[data-dev-role-option]').forEach((button) => {
-    button.classList.toggle('is-active', button.dataset.devRoleOption === normalizedRole);
+    const active = button.dataset.devRoleOption === normalizedRole;
+    button.classList.toggle('is-active', active);
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
   });
 }
 
@@ -1298,8 +1303,7 @@ async function devLogin() {
     body: JSON.stringify(body),
   });
 
-  localStorage.setItem(accessTokenKey, data.access_token);
-  localStorage.setItem(refreshTokenKey, data.refresh_token);
+  sessionStorage.setItem(accessTokenKey, data.access_token);
 
   setAuthState(`Вход в режиме разработки выполнен: ${body.telegram_user_id}`);
   renderTelegramLaunchHint({ visible: false });
@@ -1345,8 +1349,7 @@ async function telegramLogin({ silent = false } = {}) {
     body: JSON.stringify({ init_data: initData }),
   });
 
-  localStorage.setItem(accessTokenKey, data.access_token);
-  localStorage.setItem(refreshTokenKey, data.refresh_token);
+  sessionStorage.setItem(accessTokenKey, data.access_token);
 
   setAuthState('Вход через Telegram выполнен');
   renderTelegramLaunchHint({ visible: false });
@@ -1357,25 +1360,38 @@ async function telegramLogin({ silent = false } = {}) {
 }
 
 async function reauthenticateViaTelegram() {
-  if (state.isReauthInProgress) {
-    return false;
-  }
-
+  if (state.reauthPromise) return state.reauthPromise;
   state.isReauthInProgress = true;
-  try {
-    clearTokens();
-    const ok = await telegramLogin({ silent: true });
-    if (!ok) {
-      setAuthState('Не удалось обновить авторизацию через Telegram');
-      return false;
+
+  state.reauthPromise = (async () => {
+    try {
+      const data = await api(API.refresh, {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+      sessionStorage.setItem(accessTokenKey, data.access_token);
+      setAuthState('Сессия обновлена');
+      return true;
+    } catch (refreshError) {
+      log(`refresh session: ${String(refreshError)}`);
+      clearTokens();
+      try {
+        const ok = await telegramLogin({ silent: true });
+        if (!ok) setAuthState('Не удалось обновить авторизацию через Telegram');
+        return ok;
+      } catch (telegramError) {
+        log(`reauthenticateViaTelegram: ${String(telegramError)}`);
+        setAuthState('Не удалось обновить авторизацию через Telegram');
+        return false;
+      }
     }
-    return true;
-  } catch (error) {
-    log(`reauthenticateViaTelegram: ${String(error)}`);
-    setAuthState('Не удалось обновить авторизацию через Telegram');
-    return false;
+  })();
+
+  try {
+    return await state.reauthPromise;
   } finally {
     state.isReauthInProgress = false;
+    state.reauthPromise = null;
   }
 }
 
@@ -2685,7 +2701,7 @@ async function loadTemplates() {
     btn.onclick = async () => {
       const ok = await openConfirmDialog({
         title: 'Удалить шаблон?',
-        message: 'Шаблон и связанные данные для тебя будут удалены. Это действие нельзя отменить.',
+        message: 'Шаблон будет удалён, но назначенная программа и история тренировок сохранятся.',
         okText: 'Удалить',
         danger: true,
       });
@@ -3845,6 +3861,22 @@ async function bootstrap() {
 }
 
 function bindUI() {
+  const enterActions = {
+    full_name: 'saveProfileBtn',
+    program_title: 'saveProgramBtn',
+    newExerciseTitle: 'createExerciseBtn',
+    clientTelegramId: 'addClientBtn',
+    clientUsername: 'addClientBtn',
+    manualNotifDateTime: 'createNotificationBtn',
+  };
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
+    const buttonId = enterActions[event.target?.id];
+    if (!buttonId) return;
+    event.preventDefault();
+    $(buttonId)?.click();
+  });
+
   if ($('retrySetSaves')) $('retrySetSaves').onclick = () => retryPendingSetSaves();
   window.addEventListener('online', () => retryPendingSetSaves());
   window.addEventListener('offline', () => {
@@ -4159,7 +4191,13 @@ async function init() {
   setAuthState('Проверяем авторизацию через Telegram...');
   renderCurrentAccess(null);
 
-  const token = localStorage.getItem(accessTokenKey);
+  const legacyToken = localStorage.getItem(accessTokenKey);
+  if (legacyToken && !sessionStorage.getItem(accessTokenKey)) {
+    sessionStorage.setItem(accessTokenKey, legacyToken);
+  }
+  localStorage.removeItem(accessTokenKey);
+  localStorage.removeItem('fit_refresh_token');
+  const token = sessionStorage.getItem(accessTokenKey);
 
   if (token) {
     try {
