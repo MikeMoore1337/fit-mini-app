@@ -17,6 +17,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: fitminiapp_test
+          POSTGRES_USER: fitminiapp
+          POSTGRES_PASSWORD: test-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fitminiapp -d fitminiapp_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     env:
       PIP_DISABLE_PIP_VERSION_CHECK: "1"
       PYTHONUNBUFFERED: "1"
@@ -49,10 +64,26 @@ jobs:
       - name: Pre-commit
         run: pre-commit run --all-files --show-diff-on-failure
 
-      - name: Pytest
+      - name: Alembic migrations
+        working-directory: backend
+        run: alembic upgrade head
+        env:
+          APP_ENV: test
+          APP_NAME: FitMiniApp CI
+          APP_HOST: 127.0.0.1
+          APP_PORT: "8000"
+          APP_DEBUG: "false"
+          ACCESS_TOKEN_EXPIRE_MINUTES: "60"
+          REFRESH_TOKEN_EXPIRE_DAYS: "30"
+          DATABASE_URL: postgresql+psycopg://fitminiapp:test-password@127.0.0.1:5432/fitminiapp_test
+          ENABLE_DEV_AUTH: "true"
+          TELEGRAM_BOT_TOKEN: test-token
+          SECRET_KEY: test-secret-ci
+
+      - name: Pytest on PostgreSQL
         run: pytest tests -q
         env:
-          DATABASE_URL: sqlite:///./test_fitminiapp_ci.db
+          TEST_DATABASE_URL: postgresql+psycopg://fitminiapp:test-password@127.0.0.1:5432/fitminiapp_test
           ENABLE_DEV_AUTH: "true"
           TELEGRAM_BOT_TOKEN: test-token
           SECRET_KEY: test-secret-ci

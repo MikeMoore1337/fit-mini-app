@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class PlanResponse(BaseModel):
@@ -13,7 +13,7 @@ class PlanResponse(BaseModel):
 
 
 class CheckoutRequest(BaseModel):
-    plan_code: str
+    plan_code: str = Field(min_length=1, max_length=32)
 
 
 class CheckoutResponse(BaseModel):

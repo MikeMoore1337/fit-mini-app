@@ -123,25 +123,6 @@ def get_or_create_user_by_telegram_id(
     return user
 
 
-def ensure_coach_link(db: Session, coach: User, client: User) -> None:
-    db.query(CoachClient).filter(
-        CoachClient.client_user_id == client.id,
-        CoachClient.coach_user_id != coach.id,
-    ).delete(synchronize_session=False)
-
-    link = (
-        db.query(CoachClient)
-        .filter(
-            CoachClient.coach_user_id == coach.id,
-            CoachClient.client_user_id == client.id,
-        )
-        .first()
-    )
-    if not link:
-        db.add(CoachClient(coach_user_id=coach.id, client_user_id=client.id))
-        db.flush()
-
-
 def _coach_client_ids(db: Session, coach: User) -> list[int]:
     return [
         row.client_user_id
@@ -229,7 +210,7 @@ def _client_entry_from_user(db: Session, user: User) -> dict:
 def _client_entry_from_invite(invite: CoachClientInvite) -> dict:
     return {
         "id": None,
-        "telegram_user_id": None,
+        "telegram_user_id": invite.telegram_user_id,
         "username": invite.username,
         "full_name": invite.full_name,
         "goal": None,
@@ -284,15 +265,49 @@ def add_client_for_coach(
         if normalized_username:
             client.username = normalized_username
         _set_profile_name(db, client, normalized_name)
-        ensure_coach_link(db, coach, client)
-        invite_username = normalized_username or normalize_telegram_username(client.username)
-        if invite_username:
-            db.query(CoachClientInvite).filter(
-                CoachClientInvite.username == invite_username,
-            ).delete(synchronize_session=False)
+        existing_link = (
+            db.query(CoachClient)
+            .filter(
+                CoachClient.coach_user_id == coach.id,
+                CoachClient.client_user_id == client.id,
+            )
+            .first()
+        )
+        if existing_link:
+            db.commit()
+            db.refresh(client)
+            return _client_entry_from_user(db, client)
+
+        invite_username = (
+            normalized_username
+            or normalize_telegram_username(client.username)
+            or f"user_{telegram_user_id}"
+        )
+        invite = (
+            db.query(CoachClientInvite)
+            .filter(
+                CoachClientInvite.coach_user_id == coach.id,
+                or_(
+                    CoachClientInvite.telegram_user_id == telegram_user_id,
+                    CoachClientInvite.username == invite_username,
+                ),
+            )
+            .first()
+        )
+        if invite:
+            invite.username = invite_username
+            invite.full_name = normalized_name or invite.full_name
+        else:
+            invite = CoachClientInvite(
+                coach_user_id=coach.id,
+                telegram_user_id=telegram_user_id,
+                username=invite_username,
+                full_name=normalized_name,
+            )
+            db.add(invite)
         db.commit()
-        db.refresh(client)
-        return _client_entry_from_user(db, client)
+        db.refresh(invite)
+        return _client_entry_from_invite(invite)
 
     client = (
         db.query(User)
@@ -304,13 +319,41 @@ def add_client_for_coach(
         if client.id == coach.id:
             raise ProgramError("Cannot add yourself as a client")
         _set_profile_name(db, client, normalized_name)
-        ensure_coach_link(db, coach, client)
-        db.query(CoachClientInvite).filter(
-            CoachClientInvite.username == normalized_username,
-        ).delete(synchronize_session=False)
+        existing_link = (
+            db.query(CoachClient)
+            .filter(
+                CoachClient.coach_user_id == coach.id,
+                CoachClient.client_user_id == client.id,
+            )
+            .first()
+        )
+        if existing_link:
+            db.commit()
+            db.refresh(client)
+            return _client_entry_from_user(db, client)
+
+        invite = (
+            db.query(CoachClientInvite)
+            .filter(
+                CoachClientInvite.coach_user_id == coach.id,
+                CoachClientInvite.username == normalized_username,
+            )
+            .first()
+        )
+        if invite:
+            invite.telegram_user_id = client.telegram_user_id
+            invite.full_name = normalized_name or invite.full_name
+        else:
+            invite = CoachClientInvite(
+                coach_user_id=coach.id,
+                telegram_user_id=client.telegram_user_id,
+                username=normalized_username,
+                full_name=normalized_name,
+            )
+            db.add(invite)
         db.commit()
-        db.refresh(client)
-        return _client_entry_from_user(db, client)
+        db.refresh(invite)
+        return _client_entry_from_invite(invite)
 
     invite = (
         db.query(CoachClientInvite)
@@ -329,6 +372,7 @@ def add_client_for_coach(
         ).delete(synchronize_session=False)
         invite = CoachClientInvite(
             coach_user_id=coach.id,
+            telegram_user_id=None,
             username=normalized_username,
             full_name=normalized_name,
         )
@@ -392,6 +436,66 @@ def remove_current_trainer(db: Session, client: User) -> None:
     db.query(CoachClient).filter(CoachClient.client_user_id == client.id).delete(
         synchronize_session=False
     )
+    db.commit()
+
+
+def list_coach_invites_for_client(db: Session, client: User) -> list[dict]:
+    username = normalize_telegram_username(client.username)
+    filters = [CoachClientInvite.telegram_user_id == client.telegram_user_id]
+    if username:
+        filters.append(CoachClientInvite.username == username)
+
+    invites = (
+        db.query(CoachClientInvite)
+        .filter(or_(*filters))
+        .order_by(CoachClientInvite.id.desc())
+        .all()
+    )
+    result: list[dict] = []
+    for invite in invites:
+        coach = db.query(User).filter(User.id == invite.coach_user_id).first()
+        if not coach or not coach.is_active or not (coach.is_coach or coach.is_admin):
+            continue
+        result.append(
+            {
+                "id": invite.id,
+                "coach": _trainer_entry_from_user(coach),
+                "created_at": invite.created_at,
+            }
+        )
+    return result
+
+
+def respond_to_coach_invite(
+    db: Session,
+    client: User,
+    invite_id: int,
+    *,
+    accept: bool,
+) -> None:
+    username = normalize_telegram_username(client.username)
+    filters = [CoachClientInvite.telegram_user_id == client.telegram_user_id]
+    if username:
+        filters.append(CoachClientInvite.username == username)
+
+    invite = (
+        db.query(CoachClientInvite).filter(CoachClientInvite.id == invite_id, or_(*filters)).first()
+    )
+    if not invite:
+        raise ProgramError("Client invite not found")
+
+    if accept:
+        coach = db.query(User).filter(User.id == invite.coach_user_id).first()
+        if not coach or not coach.is_active or not (coach.is_coach or coach.is_admin):
+            raise ProgramError("Coach is not available")
+        db.query(User).filter(User.id == client.id).with_for_update().one()
+        db.query(CoachClient).filter(CoachClient.client_user_id == client.id).delete(
+            synchronize_session=False
+        )
+        db.add(CoachClient(coach_user_id=coach.id, client_user_id=client.id))
+        db.query(CoachClientInvite).filter(or_(*filters)).delete(synchronize_session=False)
+    else:
+        db.delete(invite)
     db.commit()
 
 

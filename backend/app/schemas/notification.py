@@ -14,8 +14,8 @@ class NotificationSettingResponse(BaseModel):
 
 
 class NotificationCreateRequest(BaseModel):
-    title: str
-    body: str
+    title: str = Field(min_length=1, max_length=128)
+    body: str = Field(min_length=1, max_length=2000)
     scheduled_for: datetime
 
 

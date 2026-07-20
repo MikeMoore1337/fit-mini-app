@@ -4,10 +4,11 @@ import json
 import time
 from urllib.parse import parse_qsl
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.models.user import CoachClient, CoachClientInvite, User, UserProfile
+from app.models.user import CoachClientInvite, User, UserProfile
 
 
 def build_secret_key(bot_token: str) -> bytes:
@@ -90,33 +91,16 @@ def _apply_bootstrap_admin_role(user: User) -> None:
 
 
 def _link_pending_client_invites(db: Session, user: User) -> None:
+    """Attach a verified Telegram identity to invitations without accepting them."""
     username = normalize_telegram_username(user.username)
-    if not username:
-        return
-
-    invites = (
-        db.query(CoachClientInvite)
-        .filter(CoachClientInvite.username == username)
-        .order_by(CoachClientInvite.id.desc())
-        .all()
-    )
-    if not invites:
-        return
-
-    accepted_invite = next((invite for invite in invites if invite.coach_user_id != user.id), None)
-    if accepted_invite:
-        db.query(CoachClient).filter(CoachClient.client_user_id == user.id).delete(
-            synchronize_session=False
-        )
-        db.add(
-            CoachClient(
-                coach_user_id=accepted_invite.coach_user_id,
-                client_user_id=user.id,
-            )
-        )
-
+    filters = [CoachClientInvite.telegram_user_id == user.telegram_user_id]
+    if username:
+        filters.append(CoachClientInvite.username == username)
+    invites = db.query(CoachClientInvite).filter(or_(*filters)).all()
     for invite in invites:
-        db.delete(invite)
+        invite.telegram_user_id = user.telegram_user_id
+        if username:
+            invite.username = username
 
 
 def get_or_create_user_from_init_data(db: Session, init_data: dict) -> User:

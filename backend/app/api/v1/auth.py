@@ -14,9 +14,9 @@ from app.services.telegram_auth import (
     validate_telegram_init_data,
 )
 from app.services.token_service import (
+    consume_refresh_token,
     get_refresh_token_by_jti,
     is_refresh_token_valid,
-    mark_refresh_token_used,
     revoke_all_user_refresh_tokens,
     revoke_refresh_token,
     save_refresh_token,
@@ -154,7 +154,9 @@ def refresh_tokens(
     if not is_refresh_token_valid(row, payload.refresh_token):
         raise HTTPException(status_code=401, detail="Refresh token недействителен")
 
-    mark_refresh_token_used(db, row)
+    if not consume_refresh_token(db, row):
+        revoke_all_user_refresh_tokens(db, user_id)
+        raise HTTPException(status_code=401, detail="Refresh token уже использован")
 
     user = db.query(User).filter(User.id == user_id).first()
     if not user or not user.is_active:

@@ -8,11 +8,12 @@ from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from sqlalchemy import text
 
 from app.api.router import api_router
 from app.core.config import settings
 from app.core.rate_limit import limiter
-from app.db.session import get_session_context
+from app.db.session import engine, get_session_context
 from app.middleware.request_context import RequestContextMiddleware
 from app.services.seed import seed_demo_data
 
@@ -65,12 +66,26 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> Respo
 
 @app.get("/health")
 def health() -> dict[str, str]:
+    with engine.connect() as connection:
+        connection.execute(text("SELECT 1"))
     return {"status": "ok"}
 
 
 @app.head("/health")
 def health_head() -> Response:
+    with engine.connect() as connection:
+        connection.execute(text("SELECT 1"))
     return Response(status_code=200)
+
+
+@app.get("/health/live")
+def health_live() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@app.get("/health/ready")
+def health_ready() -> dict[str, str]:
+    return health()
 
 
 @app.get("/app")

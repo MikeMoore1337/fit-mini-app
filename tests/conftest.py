@@ -10,6 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 _TEST_DB = Path(tempfile.gettempdir()) / "fitmini_pytest.db"
+_TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL") or f"sqlite:///{_TEST_DB.as_posix()}"
 os.environ.setdefault("APP_ENV", "dev")
 os.environ.setdefault("APP_NAME", "FitMiniApp Test")
 os.environ.setdefault("APP_HOST", "127.0.0.1")
@@ -18,7 +19,7 @@ os.environ.setdefault("APP_DEBUG", "false")
 os.environ.setdefault("SECRET_KEY", "test-secret")
 os.environ.setdefault("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
 os.environ.setdefault("REFRESH_TOKEN_EXPIRE_DAYS", "30")
-os.environ["DATABASE_URL"] = f"sqlite:///{_TEST_DB.as_posix()}"
+os.environ["DATABASE_URL"] = _TEST_DATABASE_URL
 os.environ.setdefault("ENABLE_DEV_AUTH", "true")
 os.environ.setdefault("TELEGRAM_BOT_TOKEN", "test-token")
 os.environ.setdefault("FRONTEND_BASE_URL", "https://app.your-fitness-coach.ru")

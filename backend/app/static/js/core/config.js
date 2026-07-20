@@ -1,4 +1,4 @@
-export const FRONTEND_VERSION = 'v43';
+export const FRONTEND_VERSION = 'v44';
 
 export const accessTokenKey = 'fit_access_token';
 export const refreshTokenKey = 'fit_refresh_token';
@@ -11,6 +11,9 @@ export const API = {
   me: '/api/v1/me',
   meProfile: '/api/v1/me/profile',
   detachTrainer: '/api/v1/me/trainer',
+  coachInvites: '/api/v1/me/coach-invites',
+  acceptCoachInvite: (inviteId) => `/api/v1/me/coach-invites/${inviteId}/accept`,
+  declineCoachInvite: (inviteId) => `/api/v1/me/coach-invites/${inviteId}/decline`,
   saveNutritionTarget: '/api/v1/nutrition/targets',
 
   exercises: '/api/v1/programs/exercises',

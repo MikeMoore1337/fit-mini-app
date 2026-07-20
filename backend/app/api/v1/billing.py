@@ -52,11 +52,17 @@ def checkout(
 
 
 @router.post("/mock/complete/{checkout_id}")
-def mock_complete(checkout_id: str, db: Session = Depends(get_db)):
+def mock_complete(
+    checkout_id: str,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
     try:
-        payment = complete_mock_payment(db, checkout_id)
+        payment = complete_mock_payment(db, checkout_id, user)
     except BillingError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        detail = str(exc)
+        status_code = 400 if detail == "Mock payments are disabled" else 404
+        raise HTTPException(status_code=status_code, detail=detail) from exc
     return {"status": payment.status}
 
 

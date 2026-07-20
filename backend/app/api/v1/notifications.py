@@ -87,7 +87,7 @@ def create_notification(
 
     row = Notification(
         user_id=current_user.id,
-        channel="app",
+        channel="telegram",
         title=title,
         body=body,
         scheduled_for=scheduled_for,

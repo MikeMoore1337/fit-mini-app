@@ -1,27 +1,29 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
 class ProgramTemplateExerciseCreate(BaseModel):
-    exercise_id: int
+    exercise_id: int = Field(ge=1)
     prescribed_sets: int = Field(ge=1, le=12)
-    prescribed_reps: str
+    prescribed_reps: str = Field(min_length=1, max_length=32)
     rest_seconds: int = Field(default=90, ge=15, le=600)
-    notes: str | None = None
+    notes: str | None = Field(default=None, max_length=2000)
 
 
 class ProgramTemplateDayCreate(BaseModel):
-    title: str
-    exercises: list[ProgramTemplateExerciseCreate]
+    title: str = Field(min_length=1, max_length=128)
+    exercises: list[ProgramTemplateExerciseCreate] = Field(min_length=1, max_length=30)
 
 
 class ProgramTemplateCreate(BaseModel):
-    title: str
-    goal: str
-    level: str
-    mode: str = "self"
-    target_telegram_user_id: int | None = None
-    target_full_name: str | None = None
-    days: list[ProgramTemplateDayCreate]
+    title: str = Field(min_length=1, max_length=128)
+    goal: Literal["muscle_gain", "fat_loss", "maintenance", "recomposition"]
+    level: Literal["beginner", "intermediate", "advanced"]
+    mode: Literal["self", "coach"] = "self"
+    target_telegram_user_id: int | None = Field(default=None, ge=1)
+    target_full_name: str | None = Field(default=None, max_length=128)
+    days: list[ProgramTemplateDayCreate] = Field(min_length=1, max_length=14)
     assign_after_create: bool = True
 
 
@@ -65,14 +67,14 @@ class ProgramTemplateCreateResponse(BaseModel):
 
 
 class AssignTemplateRequest(BaseModel):
-    target_telegram_user_id: int
-    target_full_name: str | None = None
+    target_telegram_user_id: int = Field(ge=1)
+    target_full_name: str | None = Field(default=None, max_length=128)
 
 
 class CoachClientCreate(BaseModel):
     telegram_user_id: int | None = Field(default=None, ge=1)
-    username: str | None = None
-    full_name: str | None = None
+    username: str | None = Field(default=None, max_length=64)
+    full_name: str | None = Field(default=None, max_length=128)
 
 
 class ProgramAssignedResponse(BaseModel):
@@ -89,9 +91,9 @@ class ExerciseCatalogItem(BaseModel):
 
 
 class ExerciseCatalogCreate(BaseModel):
-    title: str
-    primary_muscle: str | None = None
-    equipment: str | None = None
+    title: str = Field(min_length=1, max_length=128)
+    primary_muscle: str | None = Field(default=None, max_length=64)
+    equipment: str | None = Field(default=None, max_length=64)
     target_telegram_user_id: int | None = Field(default=None, ge=1)
 
 

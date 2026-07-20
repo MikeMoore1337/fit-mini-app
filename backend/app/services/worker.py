@@ -6,10 +6,14 @@ import logging
 import httpx
 
 from app.core.config import settings
-from app.core.timezone import now_for_user_naive
 from app.db.session import get_session_context
 from app.models.user import User
-from app.services.notifications import get_due_notifications
+from app.services.notifications import (
+    claim_due_notifications,
+    mark_delivery_failed,
+    mark_delivery_succeeded,
+    sync_workout_reminders,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -29,17 +33,20 @@ async def send_telegram_message(chat_id: int, text: str) -> None:
 
 async def run_once() -> None:
     with get_session_context() as db:
-        rows = get_due_notifications(db)
+        sync_workout_reminders(db)
+        rows = claim_due_notifications(db)
         for row in rows:
             user = db.query(User).filter(User.id == row.user_id).first()
+            if not user or not user.is_active:
+                row.status = "cancelled"
+                row.processing_started_at = None
+                db.commit()
+                continue
             try:
                 await send_telegram_message(user.telegram_user_id, f"{row.title}\n\n{row.body}")
-                row.status = "sent"
-                row.sent_at = now_for_user_naive(user)
-                row.last_error = None
+                mark_delivery_succeeded(db, row, user)
             except Exception as exc:
-                row.status = "failed"
-                row.last_error = str(exc)
+                mark_delivery_failed(db, row, exc)
                 logger.exception("Failed to send notification %s", row.id)
 
 

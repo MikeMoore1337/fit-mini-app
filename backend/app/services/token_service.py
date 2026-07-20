@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hmac
 from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
@@ -50,12 +51,34 @@ def mark_refresh_token_used(db: Session, row: RefreshToken) -> None:
     db.commit()
 
 
+def consume_refresh_token(db: Session, row: RefreshToken) -> bool:
+    now = utcnow()
+    updated = (
+        db.query(RefreshToken)
+        .filter(
+            RefreshToken.id == row.id,
+            RefreshToken.is_used.is_(False),
+            RefreshToken.is_revoked.is_(False),
+            RefreshToken.expires_at >= now,
+        )
+        .update(
+            {
+                RefreshToken.is_used: True,
+                RefreshToken.used_at: now,
+            },
+            synchronize_session=False,
+        )
+    )
+    db.commit()
+    return updated == 1
+
+
 def is_refresh_token_valid(row: RefreshToken, raw_token: str) -> bool:
     if row.is_revoked or row.is_used:
         return False
     if row.expires_at < utcnow():
         return False
-    return row.token_hash == hash_token(raw_token)
+    return hmac.compare_digest(row.token_hash, hash_token(raw_token))
 
 
 def revoke_all_user_refresh_tokens(db: Session, user_id: int) -> None:

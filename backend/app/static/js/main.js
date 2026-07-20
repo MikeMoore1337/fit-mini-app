@@ -1,5 +1,5 @@
-import { API, FRONTEND_VERSION, accessTokenKey, refreshTokenKey } from './core/config.js?v=43';
-import { state } from './core/state.js?v=43';
+import { API, FRONTEND_VERSION, accessTokenKey, refreshTokenKey } from './core/config.js?v=44';
+import { state } from './core/state.js?v=44';
 import {
   $,
   log,
@@ -11,9 +11,9 @@ import {
   expandSectionAndScroll,
   restoreSectionState,
   setSectionCollapsed,
-} from './core/ui.js?v=43';
-import { api, clearTokens, sleep } from './core/http.js?v=43';
-import { getTelegramWebApp, hapticImpact, hapticNotification, initTelegramTheme } from './core/theme.js?v=43';
+} from './core/ui.js?v=44';
+import { api, clearTokens, sleep } from './core/http.js?v=44';
+import { getTelegramWebApp, hapticImpact, hapticNotification, initTelegramTheme } from './core/theme.js?v=44';
 
 window.__fitMiniAppBoot = {
   ...(window.__fitMiniAppBoot || {}),
@@ -662,6 +662,58 @@ function renderTrainerInfo(trainer) {
       }
     };
   }
+}
+
+function renderCoachInvites(invites) {
+  const node = $('coachInvites');
+  if (!node) return;
+
+  if (!invites?.length) {
+    node.classList.add('hidden');
+    node.innerHTML = '';
+    return;
+  }
+
+  node.innerHTML = invites
+    .map((invite) => `
+      <div class="item-card">
+        <strong>Приглашение от тренера: ${escapeHtml(getTrainerDisplayName(invite.coach))}</strong>
+        <p class="muted top-gap">Подтвердите связь, чтобы тренер получил доступ к назначению программ и КБЖУ.</p>
+        <div class="toolbar wrap top-gap">
+          <button class="accept-coach-invite-btn" data-invite-id="${escapeHtml(invite.id)}" type="button">Принять</button>
+          <button class="secondary decline-coach-invite-btn" data-invite-id="${escapeHtml(invite.id)}" type="button">Отклонить</button>
+        </div>
+      </div>
+    `)
+    .join('');
+  node.classList.remove('hidden');
+
+  node.querySelectorAll('.accept-coach-invite-btn, .decline-coach-invite-btn').forEach((button) => {
+    button.onclick = async () => {
+      const inviteId = Number(button.dataset.inviteId);
+      const accept = button.classList.contains('accept-coach-invite-btn');
+      try {
+        await withReauth(() =>
+          api(accept ? API.acceptCoachInvite(inviteId) : API.declineCoachInvite(inviteId), {
+            method: 'POST',
+          })
+        );
+        showToast(accept ? 'Тренер привязан' : 'Приглашение отклонено');
+        await loadMe();
+        await loadCoachInvites();
+        await loadClients();
+        await loadExercises();
+        await loadTemplates();
+      } catch (error) {
+        toastError(error, 'Не удалось обработать приглашение');
+      }
+    };
+  });
+}
+
+async function loadCoachInvites() {
+  const invites = await withReauth(() => api(API.coachInvites));
+  renderCoachInvites(invites);
 }
 
 function getKbjuGoalLabel(goal) {
@@ -3336,6 +3388,7 @@ async function bootstrap() {
   setAppLoading(true);
   try {
     await loadMe();
+    await loadCoachInvites();
     await loadClients();
     await loadExercises();
     await loadTemplates();

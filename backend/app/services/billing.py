@@ -52,8 +52,18 @@ def create_checkout(db: Session, user: User, plan_code: str) -> Payment:
     return payment
 
 
-def complete_mock_payment(db: Session, checkout_id: str) -> Payment:
-    payment = db.query(Payment).filter(Payment.provider_payment_id == checkout_id).first()
+def complete_mock_payment(db: Session, checkout_id: str, user: User) -> Payment:
+    if settings.payment_provider != "mock":
+        raise BillingError("Mock payments are disabled")
+    payment = (
+        db.query(Payment)
+        .filter(
+            Payment.provider_payment_id == checkout_id,
+            Payment.user_id == user.id,
+            Payment.provider == "mock",
+        )
+        .first()
+    )
     if not payment:
         raise BillingError("Payment not found")
     if payment.status == "paid":

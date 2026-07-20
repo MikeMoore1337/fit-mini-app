@@ -24,6 +24,19 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
 
         response = await call_next(request)
         response.headers["X-Request-ID"] = rid
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault(
+            "Permissions-Policy",
+            "camera=(), microphone=(), geolocation=()",
+        )
+        response.headers.setdefault(
+            "Content-Security-Policy",
+            "default-src 'self'; script-src 'self' 'unsafe-inline' https://telegram.org; "
+            "style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; "
+            "font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; "
+            "frame-ancestors 'self' https://web.telegram.org https://*.telegram.org",
+        )
 
         path = request.url.path
         if not path.startswith("/static") and path != "/health":

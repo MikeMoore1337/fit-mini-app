@@ -82,7 +82,10 @@ class BodyMeasurement(Base):
 
 class CoachClient(Base):
     __tablename__ = "coach_clients"
-    __table_args__ = (UniqueConstraint("coach_user_id", "client_user_id", name="uq_coach_client"),)
+    __table_args__ = (
+        UniqueConstraint("coach_user_id", "client_user_id", name="uq_coach_client"),
+        UniqueConstraint("client_user_id", name="uq_coach_clients_client_user_id"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     coach_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
@@ -94,10 +97,16 @@ class CoachClientInvite(Base):
     __tablename__ = "coach_client_invites"
     __table_args__ = (
         UniqueConstraint("coach_user_id", "username", name="uq_coach_client_invite_username"),
+        UniqueConstraint(
+            "coach_user_id",
+            "telegram_user_id",
+            name="uq_coach_client_invite_telegram_id",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     coach_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    telegram_user_id: Mapped[int | None] = mapped_column(BIGINT, nullable=True, index=True)
     username: Mapped[str] = mapped_column(String(64), nullable=False)
     full_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now_msk_naive)

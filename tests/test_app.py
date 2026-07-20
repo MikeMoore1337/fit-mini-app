@@ -6,10 +6,20 @@ from datetime import UTC, datetime, timedelta
 from urllib.parse import urlencode
 
 import pytest
+from pydantic import ValidationError
 
+from app.core.config import Settings
 from app.core.timezone import to_msk_naive
 from app.db.session import get_session_context
 from app.models.exercise import Exercise
+from app.models.notification import Notification, NotificationSetting
+from app.models.program import ProgramTemplate, UserProgram, UserWorkout
+from app.models.user import User
+from app.services.notifications import (
+    claim_due_notifications,
+    mark_delivery_failed,
+    sync_workout_reminders,
+)
 from app.services.seed import seed_demo_data
 from app.services.telegram_auth import validate_telegram_init_data
 
@@ -68,6 +78,18 @@ def auth(
     return {"Authorization": f"Bearer {token}"}
 
 
+def accept_latest_coach_invite(client, headers):
+    invites = client.get("/api/v1/me/coach-invites", headers=headers)
+    assert invites.status_code == 200
+    assert invites.json()
+    invite_id = invites.json()[0]["id"]
+    accepted = client.post(
+        f"/api/v1/me/coach-invites/{invite_id}/accept",
+        headers=headers,
+    )
+    assert accepted.status_code == 204
+
+
 def test_dev_login_and_me(client):
     headers = auth(client)
     response = client.get("/api/v1/me", headers=headers)
@@ -75,6 +97,24 @@ def test_dev_login_and_me(client):
     data = response.json()
     assert data["telegram_user_id"] == 1001
     assert data["is_coach"] is True
+
+
+def test_production_settings_reject_placeholder_secret():
+    with pytest.raises(ValidationError, match="SECRET_KEY"):
+        Settings(
+            app_env="prod",
+            app_name="FitMiniApp",
+            app_host="0.0.0.0",
+            app_port=8000,
+            app_debug=False,
+            secret_key="change-me",
+            access_token_expire_minutes=60,
+            refresh_token_expire_days=30,
+            database_url="postgresql+psycopg://app:password@db/app",
+            enable_dev_auth=False,
+            telegram_bot_token="123456:configured-token",
+            frontend_base_url="https://example.test",
+        )
 
 
 def test_dev_login_can_set_admin_role(client):
@@ -128,6 +168,7 @@ def test_coach_can_assign_kbju_to_own_client(client):
         json={"telegram_user_id": 6102},
         headers=coach_headers,
     )
+    accept_latest_coach_invite(client, client_headers)
 
     saved = client.post(
         "/api/v1/nutrition/targets",
@@ -631,6 +672,8 @@ def test_coach_can_manage_own_client_exercise(client):
         headers=coach_headers,
     )
     assert linked.status_code == 201
+    assert linked.json()["status"] == "pending"
+    accept_latest_coach_invite(client, client_headers)
 
     created = client.post(
         "/api/v1/programs/exercises",
@@ -800,6 +843,7 @@ def test_coach_can_manage_program_for_own_client(client):
         headers=coach_headers,
     )
     assert linked.status_code == 201
+    accept_latest_coach_invite(client, client_headers)
 
     exercises = client.get("/api/v1/programs/exercises", headers=client_headers).json()
     payload = {
@@ -929,6 +973,7 @@ def test_deleted_user_custom_exercises_do_not_become_global(client):
 
 def test_coach_can_add_client_by_telegram_id(client):
     headers = auth(client, telegram_user_id=1002, is_coach=True)
+    client_headers = auth(client, telegram_user_id=2001, is_coach=False)
 
     created = client.post(
         "/api/v1/programs/clients",
@@ -937,15 +982,17 @@ def test_coach_can_add_client_by_telegram_id(client):
     )
 
     assert created.status_code == 201
-    assert created.json()["status"] == "active"
+    assert created.json()["status"] == "pending"
     assert created.json()["telegram_user_id"] == 2001
+
+    accept_latest_coach_invite(client, client_headers)
 
     listed = client.get("/api/v1/programs/clients", headers=headers)
     assert listed.status_code == 200
     assert any(row["telegram_user_id"] == 2001 for row in listed.json())
 
 
-def test_client_has_only_one_active_coach_and_trainer_info(client):
+def test_client_approves_coach_change_and_has_only_one_active_coach(client):
     coach_one_headers = auth(
         client,
         telegram_user_id=1201,
@@ -969,6 +1016,8 @@ def test_client_has_only_one_active_coach_and_trainer_info(client):
         headers=coach_one_headers,
     )
     assert first_link.status_code == 201
+    assert client.get("/api/v1/me", headers=client_headers).json()["trainer"] is None
+    accept_latest_coach_invite(client, client_headers)
 
     trainer = client.get("/api/v1/me", headers=client_headers).json()["trainer"]
     assert trainer["username"] == "coach_one"
@@ -983,6 +1032,10 @@ def test_client_has_only_one_active_coach_and_trainer_info(client):
     )
     assert second_link.status_code == 201
 
+    trainer_before_accept = client.get("/api/v1/me", headers=client_headers).json()["trainer"]
+    assert trainer_before_accept["username"] == "coach_one"
+    accept_latest_coach_invite(client, client_headers)
+
     first_clients = client.get("/api/v1/coach/clients", headers=coach_one_headers).json()
     second_clients = client.get("/api/v1/coach/clients", headers=coach_two_headers).json()
     assert not any(row["id"] == client_user["id"] for row in first_clients)
@@ -991,6 +1044,34 @@ def test_client_has_only_one_active_coach_and_trainer_info(client):
         client.get("/api/v1/me", headers=client_headers).json()["trainer"]["username"]
         == "coach_two"
     )
+
+
+def test_only_invited_client_can_respond_to_coach_invite(client):
+    coach_headers = auth(client, telegram_user_id=1210, is_coach=True)
+    client_headers = auth(client, telegram_user_id=5210, is_coach=False)
+    other_headers = auth(client, telegram_user_id=5211, is_coach=False)
+
+    invited = client.post(
+        "/api/v1/coach/clients",
+        json={"telegram_user_id": 5210},
+        headers=coach_headers,
+    )
+    assert invited.status_code == 201
+
+    invite_id = client.get("/api/v1/me/coach-invites", headers=client_headers).json()[0]["id"]
+    assert client.get("/api/v1/me/coach-invites", headers=other_headers).json() == []
+    forbidden = client.post(
+        f"/api/v1/me/coach-invites/{invite_id}/accept",
+        headers=other_headers,
+    )
+    assert forbidden.status_code == 404
+
+    declined = client.post(
+        f"/api/v1/me/coach-invites/{invite_id}/decline",
+        headers=client_headers,
+    )
+    assert declined.status_code == 204
+    assert client.get("/api/v1/me", headers=client_headers).json()["trainer"] is None
 
 
 def test_coach_can_remove_client_link(client):
@@ -1004,6 +1085,7 @@ def test_coach_can_remove_client_link(client):
         headers=coach_headers,
     )
     assert linked.status_code == 201
+    accept_latest_coach_invite(client, client_headers)
     assert client.get("/api/v1/me", headers=client_headers).json()["trainer"]
 
     removed = client.delete(f"/api/v1/coach/clients/{client_user['id']}", headers=coach_headers)
@@ -1025,6 +1107,7 @@ def test_client_can_detach_trainer(client):
         headers=coach_headers,
     )
     assert linked.status_code == 201
+    accept_latest_coach_invite(client, client_headers)
 
     detached = client.delete("/api/v1/me/trainer", headers=client_headers)
 
@@ -1050,6 +1133,7 @@ def test_trainer_info_without_username_is_not_clickable(client):
         headers=coach_headers,
     )
     assert linked.status_code == 201
+    accept_latest_coach_invite(client, client_headers)
 
     trainer = client.get("/api/v1/me", headers=client_headers).json()["trainer"]
     assert trainer["full_name"] == "Тренер Без Username"
@@ -1058,7 +1142,7 @@ def test_trainer_info_without_username_is_not_clickable(client):
     assert "username" in trainer["chat_unavailable_reason"]
 
 
-def test_coach_can_invite_client_by_username_and_link_on_login(client):
+def test_coach_can_invite_client_by_username_and_client_accepts_on_login(client):
     coach_headers = auth(client, telegram_user_id=1002, is_coach=True)
 
     invited = client.post(
@@ -1079,6 +1163,15 @@ def test_coach_can_invite_client_by_username_and_link_on_login(client):
     )
     login = client.post("/api/v1/auth/telegram/init", json={"init_data": init_data})
     assert login.status_code == 200
+    client_headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    listed = client.get("/api/v1/programs/clients", headers=coach_headers)
+    assert listed.status_code == 200
+    assert any(
+        row["telegram_user_id"] == 5001 and row["status"] == "pending" for row in listed.json()
+    )
+
+    accept_latest_coach_invite(client, client_headers)
 
     listed = client.get("/api/v1/programs/clients", headers=coach_headers)
     assert listed.status_code == 200
@@ -1346,6 +1439,48 @@ def test_notification_scheduled_for_is_stored_as_msk_wall_time(client):
     assert response.json()["scheduled_for"] == "2026-04-25T10:30:00"
 
 
+def test_workout_reminders_are_deduplicated_claimed_and_retried(client):
+    auth(client, telegram_user_id=6510, is_coach=False)
+    with get_session_context() as session:
+        user = session.query(User).filter(User.telegram_user_id == 6510).one()
+        template = session.query(ProgramTemplate).first()
+        program = UserProgram(user_id=user.id, template_id=template.id, is_active=True)
+        session.add(program)
+        session.flush()
+        workout = UserWorkout(
+            user_program_id=program.id,
+            scheduled_date=datetime.now(UTC).date(),
+            day_number=1,
+            title="Тестовая тренировка",
+            status="planned",
+        )
+        session.add(workout)
+        session.flush()
+        user_id = user.id
+        workout_id = workout.id
+
+        setting = session.query(NotificationSetting).filter_by(user_id=user.id).one()
+        setting.workout_reminders_enabled = True
+        setting.reminder_hour = 0
+
+    with get_session_context() as session:
+        assert sync_workout_reminders(session) == 1
+        assert sync_workout_reminders(session) == 0
+        rows = session.query(Notification).filter(Notification.user_id == user_id).all()
+        assert len(rows) == 1
+        assert rows[0].dedupe_key == f"workout:{workout_id}:reminder"
+
+        claimed = claim_due_notifications(session)
+        assert [row.id for row in claimed] == [rows[0].id]
+        assert claim_due_notifications(session) == []
+
+        mark_delivery_failed(session, claimed[0], RuntimeError("temporary"))
+        session.refresh(claimed[0])
+        assert claimed[0].status == "queued"
+        assert claimed[0].attempt_count == 1
+        assert claimed[0].next_attempt_at is not None
+
+
 def test_bot_can_set_user_timezone_and_notifications_use_it(client):
     updated = client.post(
         "/api/v1/bot/timezone",
@@ -1400,6 +1535,8 @@ def test_health_includes_request_id(client):
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
     assert "x-request-id" in {k.lower(): v for k, v in response.headers.items()}
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert "default-src 'self'" in response.headers["content-security-policy"]
 
 
 def test_health_supports_head(client):
@@ -1418,7 +1555,15 @@ def test_mock_billing_activation(client):
     )
     assert checkout.status_code == 200
     checkout_id = checkout.json()["checkout_id"]
-    complete = client.post(f"/api/v1/billing/mock/complete/{checkout_id}")
+    assert client.post(f"/api/v1/billing/mock/complete/{checkout_id}").status_code == 401
+    other_headers = auth(client, telegram_user_id=2999, is_coach=False)
+    assert (
+        client.post(
+            f"/api/v1/billing/mock/complete/{checkout_id}", headers=other_headers
+        ).status_code
+        == 404
+    )
+    complete = client.post(f"/api/v1/billing/mock/complete/{checkout_id}", headers=headers)
     assert complete.status_code == 200
     sub = client.get("/api/v1/billing/subscription", headers=headers)
     assert sub.status_code == 200
