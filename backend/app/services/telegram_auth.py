@@ -96,8 +96,21 @@ def _link_pending_client_invites(db: Session, user: User) -> None:
     filters = [CoachClientInvite.telegram_user_id == user.telegram_user_id]
     if username:
         filters.append(CoachClientInvite.username == username)
-    invites = db.query(CoachClientInvite).filter(or_(*filters)).all()
+    invites = (
+        db.query(CoachClientInvite)
+        .filter(or_(*filters))
+        .order_by(CoachClientInvite.id.desc())
+        .all()
+    )
+    keep_by_coach: dict[int, CoachClientInvite] = {}
     for invite in invites:
+        if invite.coach_user_id in keep_by_coach:
+            db.delete(invite)
+        else:
+            keep_by_coach[invite.coach_user_id] = invite
+    db.flush()
+
+    for invite in keep_by_coach.values():
         invite.telegram_user_id = user.telegram_user_id
         if username:
             invite.username = username

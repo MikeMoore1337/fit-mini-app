@@ -208,10 +208,13 @@ def _client_entry_from_user(db: Session, user: User) -> dict:
 
 
 def _client_entry_from_invite(invite: CoachClientInvite) -> dict:
+    synthetic_username = (
+        invite.telegram_user_id is not None and invite.username == f"user_{invite.telegram_user_id}"
+    )
     return {
         "id": None,
         "telegram_user_id": invite.telegram_user_id,
-        "username": invite.username,
+        "username": None if synthetic_username else invite.username,
         "full_name": invite.full_name,
         "goal": None,
         "level": None,

@@ -20,6 +20,7 @@ def save_refresh_token(
     jti: str,
     raw_token: str,
     expires_at: datetime,
+    commit: bool = True,
 ) -> RefreshToken:
     row = RefreshToken(
         user_id=user_id,
@@ -28,8 +29,11 @@ def save_refresh_token(
         expires_at=expires_at,
     )
     db.add(row)
-    db.commit()
-    db.refresh(row)
+    if commit:
+        db.commit()
+        db.refresh(row)
+    else:
+        db.flush()
     return row
 
 
@@ -44,14 +48,7 @@ def revoke_refresh_token(db: Session, row: RefreshToken) -> None:
     db.commit()
 
 
-def mark_refresh_token_used(db: Session, row: RefreshToken) -> None:
-    row.is_used = True
-    row.used_at = utcnow()
-    db.add(row)
-    db.commit()
-
-
-def consume_refresh_token(db: Session, row: RefreshToken) -> bool:
+def consume_refresh_token(db: Session, row: RefreshToken, *, commit: bool = True) -> bool:
     now = utcnow()
     updated = (
         db.query(RefreshToken)
@@ -69,7 +66,8 @@ def consume_refresh_token(db: Session, row: RefreshToken) -> bool:
             synchronize_session=False,
         )
     )
-    db.commit()
+    if commit:
+        db.commit()
     return updated == 1
 
 

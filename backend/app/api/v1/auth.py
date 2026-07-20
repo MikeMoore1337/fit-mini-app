@@ -25,7 +25,7 @@ from app.services.token_service import (
 router = APIRouter()
 
 
-def issue_token_pair(db: Session, user: User) -> TokenPairResponse:
+def issue_token_pair(db: Session, user: User, *, commit: bool = True) -> TokenPairResponse:
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Пользователь заблокирован")
 
@@ -38,6 +38,7 @@ def issue_token_pair(db: Session, user: User) -> TokenPairResponse:
         jti=refresh_jti,
         raw_token=refresh_token,
         expires_at=refresh_expires_at,
+        commit=commit,
     )
 
     return TokenPairResponse(
@@ -154,7 +155,8 @@ def refresh_tokens(
     if not is_refresh_token_valid(row, payload.refresh_token):
         raise HTTPException(status_code=401, detail="Refresh token недействителен")
 
-    if not consume_refresh_token(db, row):
+    if not consume_refresh_token(db, row, commit=False):
+        db.rollback()
         revoke_all_user_refresh_tokens(db, user_id)
         raise HTTPException(status_code=401, detail="Refresh token уже использован")
 
@@ -162,7 +164,9 @@ def refresh_tokens(
     if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="Пользователь не найден")
 
-    return issue_token_pair(db, user)
+    token_pair = issue_token_pair(db, user, commit=False)
+    db.commit()
+    return token_pair
 
 
 @router.post("/logout")

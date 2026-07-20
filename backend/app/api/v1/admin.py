@@ -114,6 +114,7 @@ def _delete_user_cascade(db: Session, user: User) -> None:
     db.query(CoachClientInvite).filter(
         or_(
             CoachClientInvite.coach_user_id == user.id,
+            CoachClientInvite.telegram_user_id == user.telegram_user_id,
             CoachClientInvite.username == user.username,
         )
     ).delete(synchronize_session=False)

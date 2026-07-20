@@ -15,6 +15,10 @@ depends_on = None
 
 
 def upgrade() -> None:
+    op.execute(
+        "DELETE FROM coach_clients WHERE id NOT IN "
+        "(SELECT MAX(id) FROM coach_clients GROUP BY client_user_id)"
+    )
     op.create_unique_constraint(
         "uq_coach_clients_client_user_id",
         "coach_clients",
