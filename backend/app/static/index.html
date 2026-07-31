@@ -48,7 +48,7 @@
                 <div class="toolbar wrap">
                     <button id="telegramLoginBtn" class="secondary" type="button">Повторить вход через Telegram</button>
                     <a href="/coach" id="coachLink" class="button-link hidden">Кабинет тренера</a>
-                    <a href="/admin" id="adminLink" class="button-link hidden">Панель управления</a>
+                    <a href="/admin" id="adminLink" class="button-link hidden">Админка</a>
                 </div>
             </div>
 
@@ -634,6 +634,15 @@
         </span>
         <span class="app-bottom-nav__label">Дневник</span>
     </button>
+    <a href="/admin" id="adminBottomNavLink" class="app-bottom-nav__btn hidden">
+        <span class="app-bottom-nav__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="img">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <path d="m9 12 2 2 4-4"/>
+            </svg>
+        </span>
+        <span class="app-bottom-nav__label">Админка</span>
+    </a>
     <button type="button" class="app-bottom-nav__btn" data-nav-section="section-profile" data-nav-card="card-profile">
         <span class="app-bottom-nav__icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" role="img">
@@ -799,6 +808,6 @@
     })();
 </script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script type="module" src="/static/js/main.js?v=48"></script>
+<script type="module" src="/static/js/main.js?v=49"></script>
 </body>
 </html>

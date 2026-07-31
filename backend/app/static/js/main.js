@@ -514,7 +514,8 @@ function showAppScreen(cardId) {
 function setActiveBottomNav(cardId) {
   const screen = getAppScreen(cardId);
   document.querySelectorAll('.app-bottom-nav__btn').forEach((btn) => {
-    const active = getAppScreen(btn.getAttribute('data-nav-card')) === screen;
+    const navCard = btn.getAttribute('data-nav-card');
+    const active = Boolean(navCard) && getAppScreen(navCard) === screen;
     btn.classList.toggle('is-active', active);
     if (active) btn.setAttribute('aria-current', 'page');
     else btn.removeAttribute('aria-current');
@@ -1152,6 +1153,9 @@ function setBuilderEditMode(templateId, title) {
 function toggleCoachUI() {
   const adminLink = $('adminLink');
   if (adminLink) adminLink.classList.toggle('hidden', !isAdmin());
+
+  const adminBottomNavLink = $('adminBottomNavLink');
+  if (adminBottomNavLink) adminBottomNavLink.classList.toggle('hidden', !isAdmin());
 
   const coachLink = $('coachLink');
   if (coachLink) coachLink.classList.toggle('hidden', !isCoachOrAdmin());

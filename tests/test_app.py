@@ -1991,3 +1991,14 @@ def test_csp_blocks_unhashed_inline_scripts(client):
     main_js = (static_dir / "js" / "main.js").read_text(encoding="utf-8")
     assert "localStorage.setItem(accessTokenKey" not in main_js
     assert "localStorage.setItem('fit_refresh_token'" not in main_js
+
+
+def test_miniapp_has_role_gated_admin_navigation():
+    static_dir = Path(__file__).resolve().parents[1] / "backend" / "app" / "static"
+    html = (static_dir / "index.html").read_text(encoding="utf-8")
+    main_js = (static_dir / "js" / "main.js").read_text(encoding="utf-8")
+
+    assert 'id="adminBottomNavLink"' in html
+    assert 'href="/admin"' in html
+    assert '<span class="app-bottom-nav__label">Админка</span>' in html
+    assert "adminBottomNavLink.classList.toggle('hidden', !isAdmin())" in main_js
