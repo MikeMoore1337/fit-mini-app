@@ -237,6 +237,17 @@ html {
     font-size: 15px;
 }
 
+.client-code-qr {
+    display: block;
+    width: 220px;
+    max-width: 100%;
+    height: auto;
+    margin: 16px auto 0;
+    padding: 8px;
+    background: #fff;
+    border-radius: 12px;
+}
+
 .status-dot {
     flex: 0 0 8px;
     width: 8px;

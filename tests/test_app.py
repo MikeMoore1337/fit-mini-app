@@ -18,6 +18,7 @@ from app.models.exercise import Exercise
 from app.models.notification import Notification, NotificationSetting
 from app.models.program import ProgramTemplate, UserProgram, UserWorkout
 from app.models.user import CoachClient, CoachClientInvite, User
+from app.services import notifications as notifications_service
 from app.services.notifications import (
     claim_due_notifications,
     mark_delivery_failed,
@@ -1939,7 +1940,16 @@ def test_notification_scheduled_for_is_stored_as_msk_wall_time(client):
     assert response.json()["scheduled_for"] == "2026-04-25T10:30:00"
 
 
-def test_workout_reminders_are_deduplicated_claimed_and_retried(client):
+def test_workout_reminders_are_deduplicated_claimed_and_retried(client, monkeypatch):
+    fixed_local_now = datetime(2026, 4, 25, 12)
+    fixed_utc_now = datetime(2026, 4, 25, 9)
+    monkeypatch.setattr(
+        notifications_service,
+        "now_for_user_naive",
+        lambda _user: fixed_local_now,
+    )
+    monkeypatch.setattr(notifications_service, "utcnow", lambda: fixed_utc_now)
+
     auth(client, telegram_user_id=6510, is_coach=False)
     with get_session_context() as session:
         user = session.query(User).filter(User.telegram_user_id == 6510).one()
@@ -1949,7 +1959,7 @@ def test_workout_reminders_are_deduplicated_claimed_and_retried(client):
         session.flush()
         workout = UserWorkout(
             user_program_id=program.id,
-            scheduled_date=datetime.now(UTC).date(),
+            scheduled_date=fixed_local_now.date(),
             day_number=1,
             title="Тестовая тренировка",
             status="planned",
@@ -2314,6 +2324,7 @@ def test_csp_blocks_unhashed_inline_scripts(client):
     policy = response.headers["content-security-policy"]
     script_policy = policy.split("script-src", 1)[1].split(";", 1)[0]
 
+    assert "img-src 'self' data: blob:" in policy
     assert "'unsafe-inline'" not in script_policy
     assert "'sha256-" in script_policy
 

@@ -37,7 +37,7 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
             "'sha256-w+SoYpK8BvsqYpHeOkmkyMAVjznFJesDnyaa7MXPJcE=' "
             "'sha256-IhR9LI5auG7rssnWFs5yOAMKXOGr8Ract51Byz4quhc=' "
             "'sha256-qZ9Yq8gtZkgu5ry8phv1nJ9TDNKl5ITFOiv5Danv/DE='; "
-            "style-src 'self' 'unsafe-inline'; img-src 'self' data: https://t.me "
+            "style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://t.me "
             "https://*.telegram.org; connect-src 'self'; "
             "font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; "
             "frame-ancestors 'self' https://web.telegram.org https://*.telegram.org",
