@@ -1095,6 +1095,211 @@ button:disabled {
     background: var(--card);
 }
 
+.metric-pill--guide {
+    color: var(--success-text);
+    border-color: var(--success-line);
+    background: var(--success-soft);
+}
+
+.exercise-guide-modal {
+    align-items: stretch;
+}
+
+.exercise-guide-modal__panel {
+    max-width: 900px;
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.exercise-guide-modal__head {
+    position: sticky;
+    top: -20px;
+    z-index: 2;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin: -20px -20px 0;
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--card);
+}
+
+.exercise-guide-modal__head .modal__title {
+    margin: 3px 0 0;
+    font-size: clamp(20px, 4vw, 28px);
+}
+
+.exercise-guide-modal__close {
+    flex: 0 0 auto;
+    width: 42px;
+    min-height: 42px;
+    padding: 0;
+    border-radius: 999px;
+    font-size: 26px;
+    line-height: 1;
+}
+
+.eyebrow {
+    color: var(--accent-end);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.exercise-guide-modal__body {
+    padding-top: 16px;
+}
+
+.exercise-guide-meta {
+    margin: 0 0 14px;
+}
+
+.exercise-guide-images {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.exercise-guide-image {
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+}
+
+.exercise-guide-image__frame {
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    background: var(--bg-soft);
+}
+
+.exercise-guide-image img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.exercise-guide-image figcaption {
+    padding: 10px 12px;
+    font-weight: 800;
+    text-align: center;
+}
+
+.exercise-guide-section {
+    margin-top: 22px;
+}
+
+.exercise-guide-section h4,
+.exercise-guide-note h4 {
+    margin: 0 0 10px;
+    font-size: 16px;
+}
+
+.exercise-guide-section ol,
+.exercise-guide-note ul {
+    margin: 0;
+    padding-left: 22px;
+    line-height: 1.55;
+}
+
+.exercise-guide-section li + li,
+.exercise-guide-note li + li {
+    margin-top: 7px;
+}
+
+.exercise-guide-muscles {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.exercise-guide-muscle {
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-subtle);
+}
+
+.exercise-guide-muscle__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.exercise-guide-muscle__head span {
+    color: var(--muted);
+    font-size: 12px;
+    text-align: right;
+}
+
+.exercise-guide-muscle p,
+.exercise-guide-note p {
+    margin: 7px 0 0;
+    color: var(--muted);
+    line-height: 1.45;
+}
+
+.exercise-guide-notes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 22px;
+}
+
+.exercise-guide-note {
+    padding: 14px;
+    border: 1px solid var(--accent-line);
+    border-radius: var(--radius-sm);
+    background: var(--accent-soft);
+}
+
+.exercise-guide-note--warning {
+    border-color: var(--warning-line);
+    background: var(--warning-soft);
+}
+
+.exercise-guide-disclaimer {
+    margin: 18px 0 0;
+    padding: 12px;
+    border-left: 3px solid var(--warning);
+    line-height: 1.45;
+}
+
+.exercise-guide-source {
+    margin: 14px 0 0;
+    font-size: 12px;
+}
+
+.exercise-guide-source a {
+    color: var(--link-color);
+}
+
+@media (max-width: 620px) {
+    .exercise-guide-modal {
+        align-items: flex-end;
+        padding: max(8px, env(safe-area-inset-top, 0px)) 0 0;
+    }
+
+    .exercise-guide-modal__panel {
+        max-height: calc(100dvh - max(8px, env(safe-area-inset-top, 0px)));
+        border-radius: var(--radius) var(--radius) 0 0;
+        border-bottom: 0;
+    }
+
+    .exercise-guide-images,
+    .exercise-guide-muscles,
+    .exercise-guide-notes {
+        grid-template-columns: 1fr;
+    }
+}
+
 .day-card {
     border-left: 4px solid var(--accent);
 }

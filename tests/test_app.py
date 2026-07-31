@@ -759,6 +759,42 @@ def test_seeded_catalog_and_strength_templates(client):
     )
 
 
+def test_every_seeded_exercise_has_complete_guide_and_local_images(client):
+    headers = auth(client, telegram_user_id=31033, is_coach=False)
+    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()
+    standard_exercises = [item for item in exercises if not item["is_custom"]]
+    static_dir = Path(__file__).resolve().parents[1] / "backend" / "app" / "static"
+
+    assert len(standard_exercises) == 149
+    for exercise in standard_exercises:
+        guide = exercise["guide"]
+        assert guide is not None, exercise["slug"]
+        assert len(guide["technique_steps"]) >= 3
+        assert guide["breathing"]
+        assert len(guide["common_mistakes"]) >= 3
+        assert guide["muscles"]
+        assert len(guide["images"]) == 2
+        assert [image["phase"] for image in guide["images"]] == [
+            "Исходное положение",
+            "Активная фаза",
+        ]
+        for image in guide["images"]:
+            asset = static_dir / image["url"].removeprefix("/static/")
+            assert asset.is_file(), asset
+
+
+def test_custom_exercise_has_no_incorrect_stock_guide(client):
+    headers = auth(client, telegram_user_id=31034, is_coach=False)
+    created = client.post(
+        "/api/v1/programs/exercises",
+        json={"title": "Авторское движение", "primary_muscle": "Кор"},
+        headers=headers,
+    )
+
+    assert created.status_code == 201
+    assert created.json()["guide"] is None
+
+
 def test_seed_refreshes_catalog_exercises_for_templates(client):
     with get_session_context() as session:
         bench = session.query(Exercise).filter(Exercise.slug == "bench-press").one()

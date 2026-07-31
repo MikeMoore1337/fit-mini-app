@@ -16,6 +16,7 @@ from app.schemas.program import (
     ProgramTemplateCreateResponse,
     ProgramTemplateResponse,
 )
+from app.services.exercise_guides import get_exercise_guide
 from app.services.programs import (
     ProgramError,
     _effective_exercise_id,
@@ -50,6 +51,7 @@ def _serialize_exercise(exercise: Exercise, current_user: User) -> dict:
         "is_personalized": exercise.created_by_user_id == current_user.id,
         "created_by_user_id": exercise.created_by_user_id,
         "source_exercise_id": exercise.source_exercise_id,
+        "guide": get_exercise_guide(exercise),
     }
 
 

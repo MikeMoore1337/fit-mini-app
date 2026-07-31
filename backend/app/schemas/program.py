@@ -102,6 +102,29 @@ class ProgramAssignedResponse(BaseModel):
     workouts_created: int
 
 
+class ExerciseGuideMuscle(BaseModel):
+    name: str
+    role: str
+    function: str
+
+
+class ExerciseGuideImage(BaseModel):
+    phase: str
+    url: str
+    alt: str
+
+
+class ExerciseGuide(BaseModel):
+    technique_steps: list[str]
+    breathing: str
+    common_mistakes: list[str]
+    muscles: list[ExerciseGuideMuscle]
+    images: list[ExerciseGuideImage]
+    source_name: str
+    source_url: str
+    source_license: str
+
+
 class ExerciseCatalogItem(BaseModel):
     id: int
     title: str
@@ -113,6 +136,7 @@ class ExerciseCatalogItem(BaseModel):
     is_personalized: bool = False
     created_by_user_id: int | None = None
     source_exercise_id: int | None = None
+    guide: ExerciseGuide | None = None
 
 
 class ExerciseCatalogCreate(BaseModel):

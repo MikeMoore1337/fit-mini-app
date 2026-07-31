@@ -1,5 +1,5 @@
-import { API, FRONTEND_VERSION, accessTokenKey } from './core/config.js?v=47';
-import { state } from './core/state.js?v=47';
+import { API, FRONTEND_VERSION, accessTokenKey } from './core/config.js?v=48';
+import { state } from './core/state.js?v=48';
 import {
   $,
   log,
@@ -11,9 +11,9 @@ import {
   expandSectionAndScroll,
   restoreSectionState,
   setSectionCollapsed,
-} from './core/ui.js?v=47';
-import { api, clearTokens, sleep } from './core/http.js?v=47';
-import { getTelegramWebApp, hapticImpact, hapticNotification, initTelegramTheme } from './core/theme.js?v=47';
+} from './core/ui.js?v=48';
+import { api, clearTokens, sleep } from './core/http.js?v=48';
+import { getTelegramWebApp, hapticImpact, hapticNotification, initTelegramTheme } from './core/theme.js?v=48';
 
 window.__fitMiniAppBoot = {
   ...(window.__fitMiniAppBoot || {}),
@@ -1722,6 +1722,7 @@ function getExerciseCatalogCardHtml(exercise) {
     `<span class="metric-pill">${escapeHtml(getExerciseOwnerLabel(exercise))}</span>`,
     `<span class="metric-pill">${escapeHtml(getExerciseCatalogBadgeLabel(exercise))}</span>`,
     exercise.is_personalized ? '<span class="metric-pill">Моё изменение</span>' : '',
+    exercise.guide ? '<span class="metric-pill metric-pill--guide">Есть техника</span>' : '',
   ].join('');
 
   return `
@@ -1731,6 +1732,13 @@ function getExerciseCatalogCardHtml(exercise) {
         ${metadata}
       </div>
       <div class="toolbar wrap top-gap">
+        ${
+          exercise.guide
+            ? `<button class="exercise-guide-btn" type="button" data-exercise-id="${exercise.id}">
+                Техника
+              </button>`
+            : ''
+        }
         <button class="secondary edit-exercise-btn" type="button" data-exercise-id="${exercise.edit_target_id}">
           Редактировать
         </button>
@@ -1740,6 +1748,94 @@ function getExerciseCatalogCardHtml(exercise) {
       </div>
     </div>
   `;
+}
+
+let exerciseGuidePreviousFocus = null;
+
+function closeExerciseGuide() {
+  const root = $('exerciseGuideModal');
+  if (!root || root.classList.contains('hidden')) return;
+  root.classList.add('hidden');
+  root.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('modal-open');
+  if (exerciseGuidePreviousFocus instanceof HTMLElement) exerciseGuidePreviousFocus.focus();
+  exerciseGuidePreviousFocus = null;
+}
+
+function openExerciseGuide(exercise) {
+  const guide = exercise?.guide;
+  const root = $('exerciseGuideModal');
+  const title = $('exerciseGuideTitle');
+  const body = $('exerciseGuideBody');
+  if (!guide || !root || !title || !body) {
+    showToast('Для этого упражнения техника пока не заполнена', 'error');
+    return;
+  }
+
+  const metadata = [exercise.primary_muscle, exercise.equipment]
+    .filter(Boolean)
+    .map((value) => `<span class="metric-pill">${escapeHtml(value)}</span>`)
+    .join('');
+  const images = (guide.images || [])
+    .map(
+      (item) => `
+        <figure class="exercise-guide-image">
+          <div class="exercise-guide-image__frame">
+            <img src="${escapeHtml(item.url)}" alt="${escapeHtml(item.alt)}" loading="eager" decoding="async"/>
+          </div>
+          <figcaption>${escapeHtml(item.phase)}</figcaption>
+        </figure>`
+    )
+    .join('');
+  const muscles = (guide.muscles || [])
+    .map(
+      (muscle) => `
+        <div class="exercise-guide-muscle">
+          <div class="exercise-guide-muscle__head">
+            <strong>${escapeHtml(muscle.name)}</strong>
+            <span>${escapeHtml(muscle.role)}</span>
+          </div>
+          <p>${escapeHtml(muscle.function)}</p>
+        </div>`
+    )
+    .join('');
+
+  title.textContent = exercise.title;
+  body.innerHTML = `
+    <div class="exercise-meta exercise-guide-meta">${metadata}</div>
+    <div class="exercise-guide-images">${images}</div>
+    <section class="exercise-guide-section">
+      <h4>Техника выполнения</h4>
+      <ol>${(guide.technique_steps || []).map((step) => `<li>${escapeHtml(step)}</li>`).join('')}</ol>
+    </section>
+    <section class="exercise-guide-section">
+      <h4>Работа мышц</h4>
+      <div class="exercise-guide-muscles">${muscles}</div>
+    </section>
+    <div class="exercise-guide-notes">
+      <section class="exercise-guide-note">
+        <h4>Дыхание</h4>
+        <p>${escapeHtml(guide.breathing)}</p>
+      </section>
+      <section class="exercise-guide-note exercise-guide-note--warning">
+        <h4>Частые ошибки</h4>
+        <ul>${(guide.common_mistakes || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+      </section>
+    </div>
+    <p class="exercise-guide-disclaimer muted">
+      Остановись при острой боли. При травмах и ограничениях согласуй упражнение с врачом или тренером.
+    </p>
+    <p class="exercise-guide-source muted">
+      Иллюстрации: <a href="${escapeHtml(guide.source_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(guide.source_name)}</a>
+      · ${escapeHtml(guide.source_license)}
+    </p>
+  `;
+
+  exerciseGuidePreviousFocus = document.activeElement;
+  root.classList.remove('hidden');
+  root.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('modal-open');
+  requestAnimationFrame(() => $('exerciseGuideClose')?.focus());
 }
 
 function getExerciseGroupsHtml(rows, query) {
@@ -3110,6 +3206,16 @@ function renderTodayWorkout(workout) {
             </span>
           </div>
 
+          ${
+            state.exercises.some((item) => item.id === exercise.exercise_id && item.guide)
+              ? `<div class="toolbar wrap top-gap">
+                  <button class="secondary exercise-guide-btn" type="button" data-exercise-id="${exercise.exercise_id}">
+                    Техника упражнения
+                  </button>
+                </div>`
+              : ''
+          }
+
           <div class="stack top-gap">
             ${(exercise.sets || []).map((setRow) => {
               const recovered = workoutDraft[setRow.id] || {};
@@ -3845,6 +3951,7 @@ async function bootstrap() {
       runBootstrapTask('notifications', loadNotifications, () => renderLoadError('notificationsList', 'Не удалось загрузить уведомления')),
     ]);
     results.push(...sectionResults);
+    if (state.todayWorkout) renderTodayWorkout(state.todayWorkout);
 
     renderEmptyBuilder();
     applyCoachClientDeepLink();
@@ -3870,12 +3977,27 @@ function bindUI() {
     manualNotifDateTime: 'createNotificationBtn',
   };
   document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !$('exerciseGuideModal')?.classList.contains('hidden')) {
+      closeExerciseGuide();
+      return;
+    }
     if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
     const buttonId = enterActions[event.target?.id];
     if (!buttonId) return;
     event.preventDefault();
     $(buttonId)?.click();
   });
+
+  document.addEventListener('click', (event) => {
+    const button = event.target.closest?.('.exercise-guide-btn');
+    if (!button) return;
+    const exerciseId = Number(button.dataset.exerciseId);
+    const exercise = state.exercises.find((item) => item.id === exerciseId);
+    openExerciseGuide(exercise);
+  });
+  if ($('exerciseGuideClose')) $('exerciseGuideClose').onclick = closeExerciseGuide;
+  const exerciseGuideBackdrop = $('exerciseGuideModal')?.querySelector('.modal__backdrop');
+  if (exerciseGuideBackdrop) exerciseGuideBackdrop.onclick = closeExerciseGuide;
 
   if ($('retrySetSaves')) $('retrySetSaves').onclick = () => retryPendingSetSaves();
   window.addEventListener('online', () => retryPendingSetSaves());

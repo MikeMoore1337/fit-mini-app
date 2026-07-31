@@ -188,3 +188,5 @@ Thumbs.db
 .tmp_pycache_codex/
 .tmp_pytest_cache_codex/
 pytest-cache-files-*/
+.tmp*
+*codex*

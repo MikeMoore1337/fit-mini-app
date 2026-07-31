@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
     <meta name="theme-color" content="#0f1115"/>
     <title>FitMiniApp</title>
-    <link rel="stylesheet" href="/static/styles.css?v=47"/>
+    <link rel="stylesheet" href="/static/styles.css?v=48"/>
 </head>
 <body>
 <main class="container" id="app-main">
@@ -285,7 +285,10 @@
 
     <div class="card app-screen-card" id="card-exercises" data-app-screen="program">
         <div class="section-head">
-            <h2>Список упражнений</h2>
+            <div>
+                <h2>Справочник упражнений</h2>
+                <p class="muted top-gap">Техника, работа мышц и две фазы каждого движения.</p>
+            </div>
             <div class="toolbar wrap">
                 <button id="reloadExercisesBtn" class="secondary" type="button">Обновить</button>
                 <button class="secondary section-toggle" type="button" data-target="section-exercises" aria-expanded="true">Свернуть</button>
@@ -679,6 +682,27 @@
 </div>
 
 <div
+    id="exerciseGuideModal"
+    class="modal exercise-guide-modal hidden"
+    role="dialog"
+    aria-modal="true"
+    aria-hidden="true"
+    aria-labelledby="exerciseGuideTitle"
+>
+    <div class="modal__backdrop"></div>
+    <div class="modal__panel card exercise-guide-modal__panel">
+        <div class="exercise-guide-modal__head">
+            <div>
+                <span class="eyebrow">Справочник упражнений</span>
+                <h3 id="exerciseGuideTitle" class="modal__title"></h3>
+            </div>
+            <button type="button" class="secondary exercise-guide-modal__close" id="exerciseGuideClose" aria-label="Закрыть справочник">×</button>
+        </div>
+        <div id="exerciseGuideBody" class="exercise-guide-modal__body"></div>
+    </div>
+</div>
+
+<div
     id="templateAssignModal"
     class="modal hidden"
     role="dialog"
@@ -775,6 +799,6 @@
     })();
 </script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script type="module" src="/static/js/main.js?v=47"></script>
+<script type="module" src="/static/js/main.js?v=48"></script>
 </body>
 </html>
