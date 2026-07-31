@@ -451,9 +451,11 @@ async function createClientExercise() {
   await api('/api/v1/programs/exercises', { method: 'POST', body: JSON.stringify({
     title, primary_muscle: $('customExerciseMuscle').value.trim() || null,
     equipment: $('customExerciseEquipment').value.trim() || null,
+    difficulty_level: $('customExerciseDifficulty').value,
     target_telegram_user_id: state.selectedClient.telegram_user_id,
   }) });
   ['customExerciseTitle', 'customExerciseMuscle', 'customExerciseEquipment'].forEach((id) => { $(id).value = ''; });
+  $('customExerciseDifficulty').value = 'intermediate';
   state.exercises = await api('/api/v1/programs/exercises');
   refreshExerciseSelects();
   showToast('Персональное упражнение добавлено клиенту');

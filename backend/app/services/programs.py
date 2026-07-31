@@ -605,6 +605,7 @@ def create_exercise(
     title: str,
     primary_muscle: str | None,
     equipment: str | None,
+    difficulty_level: str = "intermediate",
     target_telegram_user_id: int | None = None,
 ) -> Exercise:
     normalized_title = title.strip()
@@ -635,6 +636,7 @@ def create_exercise(
         title=normalized_title,
         primary_muscle=normalized_muscle,
         equipment=normalized_equipment,
+        difficulty_level=difficulty_level,
         created_by_user_id=None if is_global_admin_exercise else owner_user.id,
         source_exercise_id=None,
         is_deleted=False,
@@ -665,6 +667,7 @@ def update_exercise_for_user(
     title: str,
     primary_muscle: str | None,
     equipment: str | None,
+    difficulty_level: str = "intermediate",
     target_telegram_user_id: int | None = None,
 ) -> Exercise:
     exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
@@ -715,6 +718,7 @@ def update_exercise_for_user(
         exercise.title = normalized_title
         exercise.primary_muscle = normalized_muscle
         exercise.equipment = normalized_equipment
+        exercise.difficulty_level = difficulty_level
         exercise.is_deleted = False
         db.commit()
         db.refresh(exercise)
@@ -728,6 +732,7 @@ def update_exercise_for_user(
                 title=normalized_title,
                 primary_muscle=normalized_muscle,
                 equipment=normalized_equipment,
+                difficulty_level=difficulty_level,
                 created_by_user_id=owner_user.id,
                 source_exercise_id=exercise.id,
                 is_deleted=False,
@@ -737,6 +742,7 @@ def update_exercise_for_user(
             override.title = normalized_title
             override.primary_muscle = normalized_muscle
             override.equipment = normalized_equipment
+            override.difficulty_level = difficulty_level
             override.is_deleted = False
 
         db.commit()
@@ -778,6 +784,7 @@ def delete_exercise_for_user(
                 title=exercise.title,
                 primary_muscle=exercise.primary_muscle,
                 equipment=exercise.equipment,
+                difficulty_level=exercise.difficulty_level,
                 created_by_user_id=owner_user.id,
                 source_exercise_id=exercise.id,
                 is_deleted=True,

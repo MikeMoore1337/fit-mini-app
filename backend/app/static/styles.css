@@ -1526,6 +1526,20 @@ button:disabled {
     min-height: 44px;
 }
 
+.strength-template-guidance {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-soft);
+    color: var(--muted);
+}
+
+.strength-template-guidance.is-warning {
+    border-color: var(--warning-line);
+    background: var(--warning-soft);
+    color: var(--warning-text);
+}
+
 .day-title-field {
     min-width: 0;
 }

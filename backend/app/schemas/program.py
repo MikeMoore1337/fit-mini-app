@@ -139,6 +139,7 @@ class ExerciseCatalogItem(BaseModel):
     title: str
     primary_muscle: str | None = None
     equipment: str | None = None
+    difficulty_level: Literal["beginner", "intermediate", "advanced"]
     edit_target_id: int | None = None
     slug: str | None = None
     is_custom: bool = False
@@ -152,6 +153,7 @@ class ExerciseCatalogCreate(BaseModel):
     title: str = Field(min_length=1, max_length=128)
     primary_muscle: str | None = Field(default=None, max_length=64)
     equipment: str | None = Field(default=None, max_length=64)
+    difficulty_level: Literal["beginner", "intermediate", "advanced"] = "intermediate"
     target_telegram_user_id: int | None = Field(default=None, ge=1)
 
 

@@ -12,6 +12,7 @@ from app.services.program_seed_data import (
     LEGACY_TEMPLATE_SLUGS,
     STRENGTH_TEMPLATE_SPECS,
     TemplateDaySeed,
+    exercise_difficulty_level,
 )
 
 
@@ -48,6 +49,7 @@ def _seed_exercise_catalog(db: Session) -> None:
         exercise.title = title
         exercise.primary_muscle = primary_muscle
         exercise.equipment = equipment
+        exercise.difficulty_level = exercise_difficulty_level(slug)
         exercise.is_deleted = False
 
     db.query(Exercise).filter(

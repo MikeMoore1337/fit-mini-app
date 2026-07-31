@@ -48,6 +48,7 @@ def _serialize_exercise(exercise: Exercise, current_user: User) -> dict:
         "title": exercise.title,
         "primary_muscle": exercise.primary_muscle,
         "equipment": exercise.equipment,
+        "difficulty_level": exercise.difficulty_level,
         "is_custom": exercise.created_by_user_id is not None
         and exercise.source_exercise_id is None,
         "is_personalized": exercise.created_by_user_id == current_user.id,
@@ -83,6 +84,7 @@ def add_exercise(
             title=payload.title.strip(),
             primary_muscle=payload.primary_muscle,
             equipment=payload.equipment,
+            difficulty_level=payload.difficulty_level,
             target_telegram_user_id=payload.target_telegram_user_id,
         )
     except ProgramError as exc:
@@ -109,6 +111,7 @@ def edit_exercise(
             title=payload.title.strip(),
             primary_muscle=payload.primary_muscle,
             equipment=payload.equipment,
+            difficulty_level=payload.difficulty_level,
             target_telegram_user_id=payload.target_telegram_user_id,
         )
     except ProgramError as exc:

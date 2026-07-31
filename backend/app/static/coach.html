@@ -161,10 +161,13 @@
 
         <div class="item-card top-gap">
           <h3>Персональное упражнение</h3>
-          <div class="grid grid-3 top-gap">
+          <div class="grid grid-4 top-gap">
             <label class="field"><span>Название</span><input id="customExerciseTitle" maxlength="128" placeholder="Например, Тяга с паузой" /></label>
             <label class="field"><span>Группа мышц</span><input id="customExerciseMuscle" maxlength="64" /></label>
             <label class="field"><span>Оборудование</span><input id="customExerciseEquipment" maxlength="64" /></label>
+            <label class="field"><span>Уровень сложности</span><select id="customExerciseDifficulty">
+              <option value="beginner">Начальный</option><option value="intermediate" selected>Средний</option><option value="advanced">Продвинутый</option>
+            </select></label>
           </div>
           <div class="toolbar top-gap"><button id="createClientExerciseBtn" class="secondary" type="button">Добавить клиенту</button></div>
         </div>
@@ -206,6 +209,6 @@
   </div>
   <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script type="module" src="/static/js/coach.js?v=51"></script>
+  <script type="module" src="/static/js/coach.js?v=52"></script>
 </body>
 </html>

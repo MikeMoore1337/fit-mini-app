@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
     <meta name="theme-color" content="#0f1115"/>
     <title>FitMiniApp</title>
-    <link rel="stylesheet" href="/static/styles.css?v=51"/>
+    <link rel="stylesheet" href="/static/styles.css?v=52"/>
 </head>
 <body>
 <main class="container" id="app-main">
@@ -245,10 +245,10 @@
                 </label>
                 <button id="loadStrengthTemplateBtn" class="secondary" type="button">Загрузить шаблон</button>
             </div>
+            <div id="strengthTemplateGuidance" class="strength-template-guidance top-gap" role="status" aria-live="polite"></div>
 
             <div class="toolbar wrap top-gap builder-setup-actions">
                 <button id="addDayBtn" class="secondary" type="button">+ День</button>
-                <button id="fillExampleBtn" class="secondary" type="button">Добавить пример</button>
                 <button id="cancelTemplateEditBtn" class="secondary hidden" type="button">Отменить редактирование</button>
             </div>
 
@@ -345,6 +345,14 @@
                         <label class="field">
                             <span>Оборудование</span>
                             <input id="newExerciseEquipment" type="text" placeholder="Можно не заполнять"/>
+                        </label>
+                        <label class="field">
+                            <span>Уровень сложности</span>
+                            <select id="newExerciseDifficulty">
+                                <option value="beginner">Начальный</option>
+                                <option value="intermediate" selected>Средний</option>
+                                <option value="advanced">Продвинутый</option>
+                            </select>
                         </label>
                     </div>
 
@@ -710,6 +718,11 @@
             <label class="field"><span>Название</span><input id="exerciseEditName" type="text"/></label>
             <label class="field"><span>Основная мышечная группа</span><input id="exerciseEditMuscle" type="text"/></label>
             <label class="field"><span>Оборудование</span><input id="exerciseEditEquipment" type="text"/></label>
+            <label class="field"><span>Уровень сложности</span><select id="exerciseEditDifficulty">
+                <option value="beginner">Начальный</option>
+                <option value="intermediate">Средний</option>
+                <option value="advanced">Продвинутый</option>
+            </select></label>
         </div>
         <div class="modal__actions toolbar wrap top-gap">
             <button type="button" class="secondary" id="exerciseEditCancel">Отмена</button>
@@ -836,6 +849,6 @@
     })();
 </script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script type="module" src="/static/js/main.js?v=53"></script>
+<script type="module" src="/static/js/main.js?v=55"></script>
 </body>
 </html>

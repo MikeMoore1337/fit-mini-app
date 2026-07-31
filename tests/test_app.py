@@ -867,6 +867,27 @@ def test_custom_exercise_metadata_is_optional(client):
     assert data["title"] == "Minimal Client Move"
     assert data["primary_muscle"] is None
     assert data["equipment"] is None
+    assert data["difficulty_level"] == "intermediate"
+
+
+def test_custom_exercise_can_be_marked_with_difficulty(client):
+    headers = auth(client, telegram_user_id=31036, is_coach=False)
+
+    created = client.post(
+        "/api/v1/programs/exercises",
+        json={"title": "Technical Client Move", "difficulty_level": "advanced"},
+        headers=headers,
+    )
+
+    assert created.status_code == 201
+    assert created.json()["difficulty_level"] == "advanced"
+
+    invalid = client.post(
+        "/api/v1/programs/exercises",
+        json={"title": "Invalid Level Move", "difficulty_level": "expert"},
+        headers=headers,
+    )
+    assert invalid.status_code == 422
 
 
 def test_seeded_catalog_and_strength_templates(client):
@@ -876,6 +897,11 @@ def test_seeded_catalog_and_strength_templates(client):
     templates = client.get("/api/v1/programs/templates/mine", headers=headers).json()
 
     assert len(exercises) >= 140
+    assert {item["difficulty_level"] for item in exercises} == {
+        "beginner",
+        "intermediate",
+        "advanced",
+    }
     assert "upper-lower-4x" not in {item["slug"] for item in templates}
     assert {
         "strength-split-5d",
@@ -2201,3 +2227,23 @@ def test_exercise_catalog_can_add_exercises_to_program_builder():
     assert "function addCatalogExerciseToProgram(exerciseId)" in main_js
     assert "appendExerciseToProgramDay(targetDay, exercise.id)" in main_js
     assert "Первое упражнение автоматически создаст первый день программы." in main_js
+
+
+def test_program_builder_uses_difficulty_and_level_specific_day_limits():
+    static_dir = Path(__file__).resolve().parents[1] / "backend" / "app" / "static"
+    html = (static_dir / "index.html").read_text(encoding="utf-8")
+    main_js = (static_dir / "js" / "main.js").read_text(encoding="utf-8")
+
+    assert 'id="fillExampleBtn"' not in html
+    assert 'id="strengthTemplateGuidance"' in html
+    assert "fullbody: { min: 2, max: 3, recommended: 3" in main_js
+    assert "upper_lower: { min: 4, max: 5, recommended: 4" in main_js
+    assert "push_pull_legs: { min: 5, max: 6, recommended: 6" in main_js
+    assert "split: { min: 5, max: 6, recommended: 5" in main_js
+    assert "function resolveStrengthTemplateSelection(" in main_js
+    assert "function getStrengthTemplateCycleNote(" in main_js
+    assert "fullbodyE" in main_js
+    assert "upperSpecialization" in main_js
+    assert "exercise.difficulty_level === difficultyLevel" in main_js
+    assert "buildStrengthTemplatePreset(templateType, templateDays, difficultyLevel)" in main_js
+    assert "$('program_level').value = templateType" not in main_js

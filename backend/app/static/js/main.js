@@ -191,11 +191,31 @@ const strengthTemplateTypeLabels = {
   fullbody: 'Фуллбади',
 };
 
-const strengthTemplateDayOptions = {
-  split: [3, 4, 5, 6],
-  push_pull_legs: [3, 4, 5, 6],
-  upper_lower: [2, 3, 4],
-  fullbody: [2, 3, 4],
+const exerciseDifficultyLabels = {
+  beginner: 'Начальный',
+  intermediate: 'Средний',
+  advanced: 'Продвинутый',
+};
+
+const strengthTemplateRules = {
+  beginner: {
+    fullbody: { min: 2, max: 3, recommended: 3, status: 'recommended' },
+    upper_lower: { min: 3, max: 4, recommended: 3, status: 'recommended' },
+    push_pull_legs: { min: 3, max: 4, recommended: 3, status: 'conditionally_recommended' },
+    split: { min: 3, max: 4, recommended: 4, status: 'not_recommended' },
+  },
+  intermediate: {
+    fullbody: { min: 3, max: 4, recommended: 3, status: 'recommended' },
+    upper_lower: { min: 4, max: 5, recommended: 4, status: 'recommended' },
+    push_pull_legs: { min: 4, max: 6, recommended: 5, status: 'recommended' },
+    split: { min: 4, max: 5, recommended: 5, status: 'recommended' },
+  },
+  advanced: {
+    fullbody: { min: 3, max: 5, recommended: 4, status: 'recommended' },
+    upper_lower: { min: 4, max: 6, recommended: 4, status: 'recommended' },
+    push_pull_legs: { min: 5, max: 6, recommended: 6, status: 'recommended' },
+    split: { min: 5, max: 6, recommended: 5, status: 'recommended' },
+  },
 };
 
 const strengthWorkoutDayLibrary = {
@@ -413,7 +433,7 @@ const strengthWorkoutDayLibrary = {
     ],
   },
   fullbodyA: {
-    title: 'Фуллбади A',
+    title: 'Фуллбади A · грудь и квадрицепс',
     exercises: [
       ['squat', 4, '6-8', 150],
       ['bench-press', 4, '6-8', 150],
@@ -423,7 +443,7 @@ const strengthWorkoutDayLibrary = {
     ],
   },
   fullbodyB: {
-    title: 'Фуллбади B',
+    title: 'Фуллбади B · спина и задняя поверхность бедра',
     exercises: [
       ['deadlift', 3, '3-5', 180],
       ['overhead-press', 4, '6-8', 150],
@@ -433,7 +453,7 @@ const strengthWorkoutDayLibrary = {
     ],
   },
   fullbodyC: {
-    title: 'Фуллбади C',
+    title: 'Фуллбади C · ягодицы и спина',
     exercises: [
       ['front-squat', 4, '6-8', 150],
       ['incline-dumbbell-press', 3, '8-10', 120],
@@ -443,13 +463,45 @@ const strengthWorkoutDayLibrary = {
     ],
   },
   fullbodyD: {
-    title: 'Фуллбади D',
+    title: 'Фуллбади D · облегчённая',
     exercises: [
       ['leg-press', 3, '10-12', 120],
       ['machine-chest-press', 3, '10-12', 90],
       ['chest-supported-row', 3, '10-12', 90],
       ['dumbbell-lateral-raise', 3, '12-15', 60],
       ['cable-crunch', 3, '12-15', 60],
+    ],
+  },
+  fullbodyE: {
+    title: 'Фуллбади E · плечи и руки',
+    exercises: [
+      ['goblet-squat', 3, '10-12', 90],
+      ['dumbbell-bench-press', 3, '8-10', 90],
+      ['seated-cable-row', 3, '10-12', 90],
+      ['machine-shoulder-press', 3, '10-12', 90],
+      ['cable-curl', 3, '12-15', 60],
+      ['rope-pushdown', 3, '12-15', 60],
+    ],
+  },
+  upperSpecialization: {
+    title: 'Верх · специализация плеч и рук',
+    exercises: [
+      ['machine-chest-press', 3, '10-12', 90],
+      ['chest-supported-row', 3, '10-12', 90],
+      ['machine-shoulder-press', 4, '8-10', 120],
+      ['dumbbell-lateral-raise', 3, '12-15', 60],
+      ['rope-pushdown', 3, '10-12', 75],
+      ['hammer-curl', 3, '10-12', 75],
+    ],
+  },
+  lowerSpecialization: {
+    title: 'Низ · специализация ягодиц и бёдер',
+    exercises: [
+      ['hip-thrust', 4, '8-10', 120],
+      ['bulgarian-split-squat', 3, '8-10', 120],
+      ['seated-leg-curl', 3, '10-12', 90],
+      ['hip-abduction', 3, '12-15', 60],
+      ['seated-calf-raise', 4, '12-15', 60],
     ],
   },
 };
@@ -471,11 +523,14 @@ const strengthTemplateSequences = {
     2: ['upperA', 'lowerA'],
     3: ['upperA', 'lowerA', 'upperB'],
     4: ['upperA', 'lowerA', 'upperB', 'lowerB'],
+    5: ['upperA', 'lowerA', 'upperB', 'lowerB', 'upperSpecialization'],
+    6: ['upperA', 'lowerA', 'upperB', 'lowerB', 'upperSpecialization', 'lowerSpecialization'],
   },
   fullbody: {
     2: ['fullbodyA', 'fullbodyB'],
     3: ['fullbodyA', 'fullbodyB', 'fullbodyC'],
     4: ['fullbodyA', 'fullbodyB', 'fullbodyC', 'fullbodyD'],
+    5: ['fullbodyA', 'fullbodyB', 'fullbodyC', 'fullbodyD', 'fullbodyE'],
   },
 };
 
@@ -1758,6 +1813,7 @@ function getExerciseSearchText(exercise) {
       exercise.title,
       exercise.primary_muscle,
       exercise.equipment,
+      exerciseDifficultyLabels[exercise.difficulty_level],
       getExerciseOwnerLabel(exercise),
       getExerciseCatalogBadgeLabel(exercise),
       exercise.is_custom ? 'личное' : '',
@@ -1793,6 +1849,7 @@ function getExerciseCatalogCardHtml(exercise) {
       ? `<span class="metric-pill">${escapeHtml(exercise.primary_muscle)}</span>`
       : '',
     exercise.equipment ? `<span class="metric-pill">${escapeHtml(exercise.equipment)}</span>` : '',
+    `<span class="metric-pill">Уровень: ${escapeHtml(exerciseDifficultyLabels[exercise.difficulty_level] || exercise.difficulty_level)}</span>`,
     `<span class="metric-pill">${escapeHtml(getExerciseOwnerLabel(exercise))}</span>`,
     `<span class="metric-pill">${escapeHtml(getExerciseCatalogBadgeLabel(exercise))}</span>`,
     exercise.is_personalized ? '<span class="metric-pill">Моё изменение</span>' : '',
@@ -1849,7 +1906,11 @@ function openExerciseGuide(exercise) {
     return;
   }
 
-  const metadata = [exercise.primary_muscle, exercise.equipment]
+  const metadata = [
+    exercise.primary_muscle,
+    exercise.equipment,
+    `Уровень: ${exerciseDifficultyLabels[exercise.difficulty_level] || exercise.difficulty_level}`,
+  ]
     .filter(Boolean)
     .map((value) => `<span class="metric-pill">${escapeHtml(value)}</span>`)
     .join('');
@@ -1948,21 +2009,23 @@ function openExerciseEditDialog(exercise) {
     const nameInput = $('exerciseEditName');
     const muscleInput = $('exerciseEditMuscle');
     const equipmentInput = $('exerciseEditEquipment');
+    const difficultyInput = $('exerciseEditDifficulty');
     const okButton = $('exerciseEditOk');
     const cancelButton = $('exerciseEditCancel');
     const backdrop = root?.querySelector('.modal__backdrop');
-    if (!root || !nameInput || !muscleInput || !equipmentInput || !okButton || !cancelButton) {
+    if (!root || !nameInput || !muscleInput || !equipmentInput || !difficultyInput || !okButton || !cancelButton) {
       resolve(null);
       return;
     }
     nameInput.value = exercise.title || '';
     muscleInput.value = exercise.primary_muscle || '';
     equipmentInput.value = exercise.equipment || '';
+    difficultyInput.value = exercise.difficulty_level || 'intermediate';
     root.classList.remove('hidden');
     root.setAttribute('aria-hidden', 'false');
     document.body.classList.add('modal-open');
     const previousFocus = document.activeElement;
-    const focusable = [nameInput, muscleInput, equipmentInput, cancelButton, okButton];
+    const focusable = [nameInput, muscleInput, equipmentInput, difficultyInput, cancelButton, okButton];
     let settled = false;
     const finish = (value) => {
       if (settled) return;
@@ -1990,7 +2053,12 @@ function openExerciseEditDialog(exercise) {
         nameInput.focus();
         return;
       }
-      finish({ title, primary_muscle: muscleInput.value.trim(), equipment: equipmentInput.value.trim() });
+      finish({
+        title,
+        primary_muscle: muscleInput.value.trim(),
+        equipment: equipmentInput.value.trim(),
+        difficulty_level: difficultyInput.value,
+      });
     };
     if (backdrop) backdrop.onclick = () => finish(null);
     document.addEventListener('keydown', onKey);
@@ -2054,6 +2122,7 @@ function renderExerciseCatalog() {
               title: values.title,
               primary_muscle: values.primary_muscle,
               equipment: values.equipment,
+              difficulty_level: values.difficulty_level,
             }),
           })
         );
@@ -2109,6 +2178,7 @@ async function createExercise() {
     title: $('newExerciseTitle')?.value?.trim() || '',
     primary_muscle: $('newExerciseMuscle')?.value?.trim() || '',
     equipment: $('newExerciseEquipment')?.value?.trim() || '',
+    difficulty_level: $('newExerciseDifficulty')?.value || 'intermediate',
     target_telegram_user_id: ownerValue ? Number(ownerValue) : null,
   };
 
@@ -2127,6 +2197,7 @@ async function createExercise() {
   $('newExerciseTitle').value = '';
   $('newExerciseMuscle').value = '';
   $('newExerciseEquipment').value = '';
+  $('newExerciseDifficulty').value = 'intermediate';
   if ($('addExerciseDetails')) $('addExerciseDetails').open = false;
 
   showToast(`Упражнение "${exercise.title}" добавлено`);
@@ -2159,7 +2230,7 @@ function getBuilderExerciseRows() {
 function exerciseOptions(defaultExerciseId = '') {
   return getBuilderExerciseRows()
     .map(
-      (ex) => `<option value="${escapeHtml(ex.id)}" ${String(ex.id) === String(defaultExerciseId) ? 'selected' : ''}>${escapeHtml(ex.title)}</option>`
+      (ex) => `<option value="${escapeHtml(ex.id)}" ${String(ex.id) === String(defaultExerciseId) ? 'selected' : ''}>${escapeHtml(ex.title)} · ${escapeHtml(exerciseDifficultyLabels[ex.difficulty_level] || ex.difficulty_level)}</option>`
     )
     .join('');
 }
@@ -2303,54 +2374,166 @@ function formatDayCountLabel(count) {
   return `${count} дней`;
 }
 
+function resolveStrengthTemplateSelection(athleteLevel, trainingSplit, requestedDays = null) {
+  const level = strengthTemplateRules[athleteLevel] ? athleteLevel : 'intermediate';
+  const split = strengthTemplateRules[level][trainingSplit] ? trainingSplit : 'upper_lower';
+  const rule = strengthTemplateRules[level][split];
+  const hasRequestedDays = Number.isInteger(requestedDays);
+  const trainingDays = hasRequestedDays ? requestedDays : rule.recommended;
+  const isValid = trainingDays >= rule.min && trainingDays <= rule.max;
+  let warning = null;
+
+  if (!isValid) {
+    warning = `Для шаблона «${strengthTemplateTypeLabels[split]}» уровня «${exerciseDifficultyLabels[level]}» допустимо от ${rule.min} до ${rule.max} тренировок в неделю. Выберите ${rule.recommended} тренировок или другой шаблон.`;
+  } else if (rule.status === 'not_recommended') {
+    warning = 'Классический сплит по отдельным мышечным группам обычно не является оптимальным выбором для начального уровня. Full Body или Upper/Lower позволяют чаще отрабатывать технику и равномернее распределять нагрузку.';
+  } else if (rule.status === 'conditionally_recommended') {
+    warning = 'Push/Pull/Legs для начального уровня требует уверенной техники и контролируемого объёма. Full Body или Upper/Lower обычно предпочтительнее.';
+  }
+
+  const suggestedEntry = !isValid
+    ? Object.entries(strengthTemplateRules[level]).find(
+        ([candidateSplit, candidateRule]) =>
+          candidateSplit !== split &&
+          trainingDays >= candidateRule.min &&
+          trainingDays <= candidateRule.max
+      )
+    : null;
+
+  return {
+    athlete_level: level,
+    training_split: split,
+    training_days: isValid ? trainingDays : null,
+    recommended_days: rule.recommended,
+    allowed_days: { min: rule.min, max: rule.max },
+    is_valid: isValid,
+    is_optimal: isValid && rule.status === 'recommended',
+    warning,
+    suggested_split: suggestedEntry?.[0] || null,
+    suggested_days: !isValid ? (suggestedEntry ? trainingDays : rule.recommended) : null,
+    status: rule.status,
+  };
+}
+
+function getStrengthTemplateCycleNote(type, dayCount) {
+  if (type === 'upper_lower' && dayCount === 3) {
+    return 'Используйте скользящее чередование: Верх / Низ / Верх, затем Низ / Верх / Низ.';
+  }
+  if (type === 'push_pull_legs' && dayCount < 6) {
+    return 'Продолжайте последовательность Push / Pull / Legs между неделями, не начиная цикл заново.';
+  }
+  if (type === 'fullbody' && dayCount >= 4) {
+    return 'Дни будут различаться акцентами и нагрузкой, чтобы не повторять одинаковые тяжёлые тренировки.';
+  }
+  if (type === 'upper_lower' && dayCount === 5) {
+    return 'Пятый день будет специализацией на плечах и руках, а не дубликатом тренировки верха.';
+  }
+  return '';
+}
+
+function renderStrengthTemplateGuidance(selection, dayCount) {
+  const node = $('strengthTemplateGuidance');
+  if (!node) return;
+
+  const range = selection.allowed_days.min === selection.allowed_days.max
+    ? formatDayCountLabel(selection.allowed_days.min)
+    : `${selection.allowed_days.min}–${selection.allowed_days.max} дней`;
+  const parts = [
+    `Допустимо: ${range}. Рекомендуется: ${formatDayCountLabel(selection.recommended_days)}.`,
+  ];
+  if (selection.warning) parts.push(selection.warning);
+  if (selection.suggested_split) {
+    parts.push(
+      `Альтернатива: «${strengthTemplateTypeLabels[selection.suggested_split]}», ${formatDayCountLabel(selection.suggested_days)}.`
+    );
+  }
+  const cycleNote = getStrengthTemplateCycleNote(selection.training_split, dayCount);
+  if (cycleNote) parts.push(cycleNote);
+
+  node.textContent = parts.join(' ');
+  node.classList.toggle('is-warning', Boolean(selection.warning));
+}
+
 function syncStrengthTemplateDayOptions() {
   const typeSelect = $('strengthTemplateType');
   const daysSelect = $('strengthTemplateDays');
-  if (!typeSelect || !daysSelect) return;
+  const levelSelect = $('program_level');
+  if (!typeSelect || !daysSelect || !levelSelect) return;
 
   const type = typeSelect.value || 'upper_lower';
-  const options = strengthTemplateDayOptions[type] || strengthTemplateDayOptions.upper_lower;
-  const current = Number(daysSelect.value || options[options.length - 1]);
+  const requestedDays = daysSelect.value ? Number(daysSelect.value) : null;
+  const selection = resolveStrengthTemplateSelection(levelSelect.value, type, requestedDays);
+  const options = Array.from(
+    { length: selection.allowed_days.max - selection.allowed_days.min + 1 },
+    (_, index) => selection.allowed_days.min + index
+  );
+  const selectedDays = selection.is_valid
+    ? selection.training_days
+    : selection.recommended_days;
 
   daysSelect.innerHTML = options
-    .map((count) => `<option value="${count}">${formatDayCountLabel(count)}</option>`)
+    .map(
+      (count) =>
+        `<option value="${count}">${formatDayCountLabel(count)}${count === selection.recommended_days ? ' · рекомендуется' : ''}</option>`
+    )
     .join('');
 
-  daysSelect.value = String(options.includes(current) ? current : options[options.length - 1]);
+  daysSelect.value = String(selectedDays);
+  renderStrengthTemplateGuidance(selection, selectedDays);
 }
 
-function resolvePresetExerciseId(slug) {
+function resolvePresetExerciseId(slug, difficultyLevel, usedExerciseIds = new Set(), slotIndex = 0) {
   const rows = getBuilderExerciseRows();
-  return rows.find((exercise) => exercise.slug === slug)?.id || null;
+  const source = rows.find((exercise) => exercise.slug === slug);
+  const levelRows = rows.filter((exercise) => exercise.difficulty_level === difficultyLevel);
+  if (!levelRows.length) return null;
+
+  const sameMuscleRows = source?.primary_muscle
+    ? levelRows.filter((exercise) => exercise.primary_muscle === source.primary_muscle)
+    : [];
+  const preferredRows = sameMuscleRows.length ? sameMuscleRows : levelRows;
+  const unusedRows = preferredRows.filter((exercise) => !usedExerciseIds.has(exercise.id));
+  const candidates = unusedRows.length ? unusedRows : preferredRows;
+  return candidates[slotIndex % candidates.length]?.id || null;
 }
 
-function buildStrengthTemplatePreset(type, dayCount) {
+function buildStrengthTemplatePreset(type, dayCount, difficultyLevel) {
   const normalizedType = strengthTemplateSequences[type] ? type : 'upper_lower';
-  const options = strengthTemplateDayOptions[normalizedType] || strengthTemplateDayOptions.upper_lower;
-  const normalizedDayCount = options.includes(dayCount) ? dayCount : options[options.length - 1];
-  const sequence = strengthTemplateSequences[normalizedType]?.[normalizedDayCount] || [];
+  const selection = resolveStrengthTemplateSelection(difficultyLevel, normalizedType, dayCount);
+  const sequence = selection.is_valid
+    ? strengthTemplateSequences[normalizedType]?.[dayCount] || []
+    : [];
   const label = strengthTemplateTypeLabels[normalizedType] || strengthTemplateTypeLabels.upper_lower;
 
   return {
-    title: `${label} ${formatDayCountLabel(normalizedDayCount)}`,
+    title: `${label} ${formatDayCountLabel(dayCount)}`,
     days: sequence
       .map((key) => strengthWorkoutDayLibrary[key])
       .filter(Boolean)
-      .map((day) => ({
-        title: day.title,
-        exercises: day.exercises
-          .map(([slug, prescribed_sets, prescribed_reps, rest_seconds]) => {
-            const exerciseId = resolvePresetExerciseId(slug);
-            if (!exerciseId) return null;
-            return {
-              exercise_id: exerciseId,
-              prescribed_sets,
-              prescribed_reps,
-              rest_seconds,
-            };
-          })
-          .filter(Boolean),
-      }))
+      .map((day) => {
+        const usedExerciseIds = new Set();
+        return {
+          title: day.title,
+          exercises: day.exercises
+            .map(([slug, prescribed_sets, prescribed_reps, rest_seconds], slotIndex) => {
+              const exerciseId = resolvePresetExerciseId(
+                slug,
+                difficultyLevel,
+                usedExerciseIds,
+                slotIndex
+              );
+              if (!exerciseId) return null;
+              usedExerciseIds.add(exerciseId);
+              return {
+                exercise_id: exerciseId,
+                prescribed_sets,
+                prescribed_reps,
+                rest_seconds,
+              };
+            })
+            .filter(Boolean),
+        };
+      })
       .filter((day) => day.exercises.length),
   };
 }
@@ -2366,7 +2549,18 @@ function loadStrengthTemplate(type = null, dayCount = null) {
 
   const templateType = type || $('strengthTemplateType')?.value || 'upper_lower';
   const templateDays = Number(dayCount || $('strengthTemplateDays')?.value || 4);
-  const preset = buildStrengthTemplatePreset(templateType, templateDays);
+  const difficultyLevel = $('program_level')?.value || 'intermediate';
+  const selection = resolveStrengthTemplateSelection(
+    difficultyLevel,
+    templateType,
+    templateDays
+  );
+  if (!selection.is_valid) {
+    renderStrengthTemplateGuidance(selection, selection.recommended_days);
+    showToast(selection.warning || 'Выберите допустимое количество тренировочных дней', 'error');
+    return;
+  }
+  const preset = buildStrengthTemplatePreset(templateType, templateDays, difficultyLevel);
 
   if (!preset.days.length) {
     showToast('Не удалось собрать шаблон из доступных упражнений', 'error');
@@ -2376,12 +2570,10 @@ function loadStrengthTemplate(type = null, dayCount = null) {
   resetBuilderEditMode();
   if ($('program_title')) $('program_title').value = preset.title;
   if ($('program_goal')) $('program_goal').value = 'muscle_gain';
-  if ($('program_level')) $('program_level').value = templateType === 'fullbody' ? 'beginner' : 'intermediate';
-
   dayBuilder.innerHTML = '';
   preset.days.forEach((day) => addDay(day));
   markBuilderDirty(true);
-  showToast('Силовой шаблон загружен');
+  showToast(`Силовой шаблон загружен · ${exerciseDifficultyLabels[difficultyLevel]}`);
 }
 
 function exerciseTemplate(defaultExerciseId = '', preset = null) {
@@ -2546,10 +2738,6 @@ function renumberDays() {
     }
   });
   syncExerciseAssignmentTarget();
-}
-
-function fillExample() {
-  loadStrengthTemplate('upper_lower', 4);
 }
 
 function markBuilderDirty(dirty = true) {
@@ -4317,6 +4505,14 @@ function bindUI() {
     $('strengthTemplateType').addEventListener('change', syncStrengthTemplateDayOptions);
   }
 
+  if ($('program_level')) {
+    $('program_level').addEventListener('change', syncStrengthTemplateDayOptions);
+  }
+
+  if ($('strengthTemplateDays')) {
+    $('strengthTemplateDays').addEventListener('change', syncStrengthTemplateDayOptions);
+  }
+
   if ($('loadStrengthTemplateBtn')) {
     $('loadStrengthTemplateBtn').onclick = () => loadStrengthTemplate();
   }
@@ -4336,10 +4532,6 @@ function bindUI() {
 
   if ($('addDayBtn')) {
     $('addDayBtn').onclick = () => addDay();
-  }
-
-  if ($('fillExampleBtn')) {
-    $('fillExampleBtn').onclick = () => fillExample();
   }
 
   if ($('saveProgramBtn')) {
