@@ -1437,13 +1437,25 @@ function fillKbjuFormFromUser(user) {
   if ($('kbjuHeight')) $('kbjuHeight').value = kbju?.height_cm ?? profile.height_cm ?? '';
   if ($('kbjuAge')) $('kbjuAge').value = kbju?.age ?? '';
   if ($('kbjuGoal')) $('kbjuGoal').value = kbju?.goal || profile.goal || 'maintenance';
+  if ($('kbjuDailyActivity')) {
+    $('kbjuDailyActivity').value = kbju?.daily_activity_level || 'sedentary';
+  }
   if ($('kbjuStrength')) {
     $('kbjuStrength').value =
       kbju?.strength_trainings_per_week ?? profile.workouts_per_week ?? '';
   }
+  if ($('kbjuStrengthDuration')) {
+    $('kbjuStrengthDuration').value = kbju?.strength_training_duration_minutes ?? 60;
+  }
   if ($('kbjuCardio')) {
     $('kbjuCardio').value =
       kbju?.cardio_trainings_per_week ?? profile.cardio_trainings_per_week ?? '';
+  }
+  if ($('kbjuCardioDuration')) {
+    $('kbjuCardioDuration').value = kbju?.cardio_training_duration_minutes ?? 30;
+  }
+  if ($('kbjuCardioIntensity')) {
+    $('kbjuCardioIntensity').value = kbju?.cardio_intensity || 'moderate';
   }
 
   calculateKbju({ silent: true });
@@ -1516,9 +1528,17 @@ function parseDecimalInput(value) {
 
 function parseTrainingCount(value) {
   const normalized = String(value || '').trim();
-  if (!normalized) return 0;
+  if (!normalized) return null;
   const parsed = Number(normalized);
-  if (!Number.isInteger(parsed) || parsed < 0) return null;
+  if (!Number.isInteger(parsed) || parsed < 0 || parsed > 14) return null;
+  return parsed;
+}
+
+function parseDuration(value) {
+  const normalized = String(value || '').trim();
+  if (!normalized) return null;
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed) || parsed < 10 || parsed > 300) return null;
   return parsed;
 }
 
@@ -1526,19 +1546,14 @@ function roundNumber(value) {
   return Math.max(0, Math.round(value));
 }
 
-function getActivityFactor(strengthSessions, cardioSessions) {
-  const sessions = strengthSessions + cardioSessions;
-  if (sessions <= 0) return 1.2;
-  if (sessions <= 2) return 1.375;
-  if (sessions <= 4) return 1.55;
-  if (sessions <= 6) return 1.725;
-  return 1.9;
+function roundToTen(value) {
+  return Math.max(0, Math.round(value / 10) * 10);
 }
 
-function getGoalCalories(tdee, goal) {
-  return roundNumber(tdee * ({
+function getGoalCalories(maintenanceCalories, goal) {
+  return roundToTen(maintenanceCalories * ({
     fat_loss: 0.85,
-    muscle_gain: 1.1,
+    muscle_gain: 1.05,
     maintenance: 1,
     recomposition: 0.95,
   }[goal] || 1));
@@ -1554,9 +1569,10 @@ function calculateMacros(weightKg, targetCalories, goal) {
   const fatPerKg = goal === 'muscle_gain' ? 0.9 : 0.8;
   const protein = roundNumber(weightKg * proteinPerKg);
   const fat = roundNumber(weightKg * fatPerKg);
-  const carbs = roundNumber((targetCalories - protein * 4 - fat * 9) / 4);
+  const remainingCalories = targetCalories - protein * 4 - fat * 9;
+  const carbs = roundNumber(remainingCalories / 4);
 
-  return { protein, fat, carbs };
+  return { protein, fat, carbs, hasWarning: remainingCalories < 0 };
 }
 
 function calculateKbju({ silent = false } = {}) {
@@ -1567,15 +1583,25 @@ function calculateKbju({ silent = false } = {}) {
   const weight = parseDecimalInput($('kbjuWeight')?.value);
   const height = parseDecimalInput($('kbjuHeight')?.value);
   const age = parseDecimalInput($('kbjuAge')?.value);
+  const dailyActivityLevel = $('kbjuDailyActivity')?.value || 'sedentary';
   const strength = parseTrainingCount($('kbjuStrength')?.value);
+  const strengthDuration = parseDuration($('kbjuStrengthDuration')?.value);
   const cardio = parseTrainingCount($('kbjuCardio')?.value);
+  const cardioDuration = parseDuration($('kbjuCardioDuration')?.value);
+  const cardioIntensity = $('kbjuCardioIntensity')?.value || 'moderate';
   const goal = $('kbjuGoal')?.value || 'maintenance';
+  const activityCoefficient = ({ sedentary: 1.2, low: 1.3, moderate: 1.4, high: 1.5 })[dailyActivityLevel];
+  const cardioMet = ({ low: 4, moderate: 6, high: 8 })[cardioIntensity];
 
-  if (!weight || !height || !age || strength == null || cardio == null) {
+  const invalidBodyValues = !weight || weight < 20 || weight > 500
+    || !height || height < 50 || height > 280
+    || !age || age < 12 || age > 120;
+  if (invalidBodyValues || strength == null || cardio == null || strengthDuration == null
+    || cardioDuration == null || !activityCoefficient || !cardioMet) {
     state.currentKbjuResult = null;
     if (!silent) {
       result.classList.remove('hidden');
-      result.innerHTML = '<div class="item-card muted">Заполни вес, рост, возраст и тренировки.</div>';
+      result.innerHTML = '<div class="nutrition-warning">Проверь поля: вес 20–500 кг, рост 50–280 см, возраст 12–120 лет, тренировки 0–14 в неделю, продолжительность 10–300 минут.</div>';
     } else {
       result.classList.add('hidden');
       result.innerHTML = '';
@@ -1585,19 +1611,26 @@ function calculateKbju({ silent = false } = {}) {
 
   const sexConstant = sex === 'female' ? -161 : 5;
   const bmr = 10 * weight + 6.25 * height - 5 * age + sexConstant;
-  const tdee = bmr * getActivityFactor(strength, cardio);
-  const targetCalories = getGoalCalories(tdee, goal);
+  const baseTdee = bmr * activityCoefficient;
+  const strengthDailyCalories = 5 * weight * (strengthDuration / 60) * strength / 7;
+  const cardioDailyCalories = cardioMet * weight * (cardioDuration / 60) * cardio / 7;
+  const maintenanceCalories = baseTdee + strengthDailyCalories + cardioDailyCalories;
+  const targetCalories = getGoalCalories(maintenanceCalories, goal);
   const macros = calculateMacros(weight, targetCalories, goal);
   const calculation = {
     sex,
     weight_kg: weight,
     height_cm: height,
     age,
+    daily_activity_level: dailyActivityLevel,
     strength_trainings_per_week: strength,
+    strength_training_duration_minutes: strengthDuration,
     cardio_trainings_per_week: cardio,
+    cardio_training_duration_minutes: cardioDuration,
+    cardio_intensity: cardioIntensity,
     goal,
     bmr: roundNumber(bmr),
-    tdee: roundNumber(tdee),
+    tdee: roundNumber(maintenanceCalories),
     calories: targetCalories,
     protein_g: macros.protein,
     fat_g: macros.fat,
@@ -1605,6 +1638,13 @@ function calculateKbju({ silent = false } = {}) {
   };
 
   state.currentKbjuResult = calculation;
+
+  const goalDetails = ({
+    fat_loss: 'Цель «Снижение веса»: дефицит 15%.',
+    recomposition: 'Цель «Рекомпозиция»: дефицит 5%.',
+    maintenance: 'Цель «Поддержание»: без поправки.',
+    muscle_gain: 'Цель «Набор мышечной массы»: профицит 5%.',
+  })[goal];
 
   result.classList.remove('hidden');
   result.innerHTML = `
@@ -1626,10 +1666,18 @@ function calculateKbju({ silent = false } = {}) {
         <strong>${macros.carbs} г</strong>
       </div>
     </div>
+    ${macros.hasWarning ? '<div class="nutrition-warning top-gap">Выбранная калорийность слишком мала для установленных норм белка и жиров. Углеводы показаны как 0 г.</div>' : ''}
     <details class="nutrition-details top-gap">
       <summary>Подробнее о расчёте</summary>
       <div class="muted top-gap">
-        Основной обмен: ${roundNumber(bmr)} ккал. Активность и цель уже учтены в целевых калориях.
+        <p>Основной обмен: ${roundNumber(bmr)} ккал.</p>
+        <p>Коэффициент повседневной активности: ×${activityCoefficient}.</p>
+        <p>Расход без тренировок: ${roundNumber(baseTdee)} ккал.</p>
+        <p>Силовые тренировки: в среднем ${roundNumber(strengthDailyCalories)} ккал в день.</p>
+        <p>Кардио: в среднем ${roundNumber(cardioDailyCalories)} ккал в день.</p>
+        <p>Поддерживающая калорийность: ${roundNumber(maintenanceCalories)} ккал.</p>
+        <p>${goalDetails}</p>
+        <p>Целевая калорийность: ${targetCalories} ккал.</p>
       </div>
     </details>
   `;
@@ -1647,8 +1695,12 @@ function buildKbjuSavePayload() {
     weight_kg: calculation.weight_kg,
     height_cm: calculation.height_cm,
     age: calculation.age,
+    daily_activity_level: calculation.daily_activity_level,
     strength_trainings_per_week: calculation.strength_trainings_per_week,
+    strength_training_duration_minutes: calculation.strength_training_duration_minutes,
     cardio_trainings_per_week: calculation.cardio_trainings_per_week,
+    cardio_training_duration_minutes: calculation.cardio_training_duration_minutes,
+    cardio_intensity: calculation.cardio_intensity,
     goal: calculation.goal,
   };
 }
@@ -4164,8 +4216,12 @@ function bindUI() {
     'kbjuWeight',
     'kbjuHeight',
     'kbjuAge',
+    'kbjuDailyActivity',
     'kbjuStrength',
+    'kbjuStrengthDuration',
     'kbjuCardio',
+    'kbjuCardioDuration',
+    'kbjuCardioIntensity',
     'kbjuGoal',
   ].forEach((id) => {
     const node = $(id);

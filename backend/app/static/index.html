@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
     <meta name="theme-color" content="#0f1115"/>
     <title>FitMiniApp</title>
-    <link rel="stylesheet" href="/static/styles.css?v=49"/>
+    <link rel="stylesheet" href="/static/styles.css?v=51"/>
 </head>
 <body>
 <main class="container" id="app-main">
@@ -525,12 +525,37 @@
                     <input id="kbjuAge" type="text" inputmode="decimal" placeholder="Например, 32"/>
                 </label>
                 <label class="field">
+                    <span>Повседневная активность без учёта тренировок</span>
+                    <select id="kbjuDailyActivity">
+                        <option value="sedentary">Малоподвижная, менее 5000 шагов (×1.2)</option>
+                        <option value="low">Низкая, 5000–8000 шагов (×1.3)</option>
+                        <option value="moderate">Средняя, 8000–12000 шагов (×1.4)</option>
+                        <option value="high">Высокая, более 12000 шагов или физическая работа (×1.5)</option>
+                    </select>
+                </label>
+                <label class="field">
                     <span>Силовых тренировок в неделю</span>
-                    <input id="kbjuStrength" type="number" min="0" step="1" placeholder="Например, 3"/>
+                    <input id="kbjuStrength" type="number" min="0" max="14" step="1" value="0"/>
+                </label>
+                <label class="field">
+                    <span>Средняя продолжительность силовой тренировки, минут</span>
+                    <input id="kbjuStrengthDuration" type="number" min="10" max="300" step="1" value="60"/>
                 </label>
                 <label class="field">
                     <span>Кардио в неделю</span>
-                    <input id="kbjuCardio" type="number" min="0" step="1" placeholder="Например, 1"/>
+                    <input id="kbjuCardio" type="number" min="0" max="14" step="1" value="0"/>
+                </label>
+                <label class="field">
+                    <span>Средняя продолжительность кардио, минут</span>
+                    <input id="kbjuCardioDuration" type="number" min="10" max="300" step="1" value="30"/>
+                </label>
+                <label class="field">
+                    <span>Интенсивность кардио</span>
+                    <select id="kbjuCardioIntensity">
+                        <option value="low">Низкая (4 MET)</option>
+                        <option value="moderate" selected>Средняя (6 MET)</option>
+                        <option value="high">Высокая (8 MET)</option>
+                    </select>
                 </label>
                 <label class="field">
                     <span>Цель питания</span>
@@ -544,6 +569,12 @@
             </div>
 
             <div id="kbjuResult" class="kbju-result hidden top-gap"></div>
+
+            <div class="nutrition-reality-check top-gap">
+                <strong>Важна проверка по реальной динамике</strong>
+                <p>Нужно 14–21 день: ежедневно взвешиваться утром в одинаковых условиях, считать среднюю массу за каждую неделю, поддерживать примерно одинаковую активность и считать среднее фактическое потребление калорий.</p>
+                <p>Если средняя масса стабильна — это твоя реальная поддерживающая калорийность. Если снижается слишком быстро — добавь 100–200 ккал. Если стоит — убери 100–150 ккал.</p>
+            </div>
 
             <div class="toolbar top-gap">
                 <button id="saveKbjuBtn" type="button">Сохранить КБЖУ</button>
@@ -805,6 +836,6 @@
     })();
 </script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script type="module" src="/static/js/main.js?v=50"></script>
+<script type="module" src="/static/js/main.js?v=51"></script>
 </body>
 </html>

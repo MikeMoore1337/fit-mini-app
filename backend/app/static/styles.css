@@ -1628,6 +1628,24 @@ button:disabled {
     font-weight: 750;
 }
 
+.nutrition-details p {
+    margin: 6px 0 0;
+}
+
+.nutrition-warning,
+.nutrition-reality-check {
+    border: 1px solid var(--warning-line);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    background: var(--warning-soft);
+    color: var(--warning-text);
+    line-height: 1.45;
+}
+
+.nutrition-reality-check p {
+    margin: 6px 0 0;
+}
+
 .log-box {
     background: var(--log-bg);
     color: var(--log-text);

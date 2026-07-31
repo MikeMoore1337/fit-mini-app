@@ -1,4 +1,5 @@
 import math
+from typing import TypedDict
 
 from sqlalchemy.orm import Session, joinedload
 
@@ -14,40 +15,55 @@ from app.services.profile import ensure_profile
 
 VALID_SEXES = {"male", "female"}
 VALID_GOALS = {"fat_loss", "muscle_gain", "maintenance", "recomposition"}
+ACTIVITY_COEFFICIENTS = {
+    "sedentary": 1.2,
+    "low": 1.3,
+    "moderate": 1.4,
+    "high": 1.5,
+}
+CARDIO_MET_VALUES = {"low": 4, "moderate": 6, "high": 8}
+GOAL_MULTIPLIERS = {
+    "fat_loss": 0.85,
+    "recomposition": 0.95,
+    "maintenance": 1.0,
+    "muscle_gain": 1.05,
+}
 
 
 class NutritionError(Exception):
     pass
 
 
+class NutritionMacros(TypedDict):
+    protein_g: int
+    fat_g: int
+    carbs_g: int
+    macro_warning: bool
+
+
+class NutritionCalculation(NutritionMacros):
+    bmr: int
+    base_tdee: int
+    strength_daily_calories: int
+    cardio_daily_calories: int
+    tdee: int
+    goal_multiplier: float
+    calories: int
+
+
 def _round_number(value: float) -> int:
     return max(0, math.floor(value + 0.5))
 
 
-def _activity_factor(strength_sessions: int, cardio_sessions: int) -> float:
-    sessions = strength_sessions + cardio_sessions
-    if sessions <= 0:
-        return 1.2
-    if sessions <= 2:
-        return 1.375
-    if sessions <= 4:
-        return 1.55
-    if sessions <= 6:
-        return 1.725
-    return 1.9
+def _round_to_ten(value: float) -> int:
+    return max(0, math.floor(value / 10 + 0.5) * 10)
 
 
-def _target_calories(tdee: float, goal: str) -> int:
-    multiplier = {
-        "fat_loss": 0.85,
-        "muscle_gain": 1.1,
-        "maintenance": 1,
-        "recomposition": 0.95,
-    }.get(goal, 1)
-    return _round_number(tdee * multiplier)
+def _target_calories(maintenance_calories: float, goal: str) -> int:
+    return _round_to_ten(maintenance_calories * GOAL_MULTIPLIERS[goal])
 
 
-def _macros(weight_kg: float, target_calories: int, goal: str) -> dict[str, int]:
+def _macros(weight_kg: float, target_calories: int, goal: str) -> NutritionMacros:
     protein_per_kg = {
         "fat_loss": 2,
         "muscle_gain": 1.8,
@@ -57,29 +73,55 @@ def _macros(weight_kg: float, target_calories: int, goal: str) -> dict[str, int]
     fat_per_kg = 0.9 if goal == "muscle_gain" else 0.8
     protein = _round_number(weight_kg * protein_per_kg)
     fat = _round_number(weight_kg * fat_per_kg)
-    carbs = _round_number((target_calories - protein * 4 - fat * 9) / 4)
-    return {"protein_g": protein, "fat_g": fat, "carbs_g": carbs}
+    remaining_calories = target_calories - protein * 4 - fat * 9
+    carbs = _round_number(remaining_calories / 4)
+    return {
+        "protein_g": protein,
+        "fat_g": fat,
+        "carbs_g": carbs,
+        "macro_warning": remaining_calories < 0,
+    }
 
 
-def calculate_nutrition(payload: NutritionTargetSave) -> dict[str, int]:
+def calculate_nutrition(payload: NutritionTargetSave) -> NutritionCalculation:
     sex = payload.sex.strip().lower()
     goal = payload.goal.strip()
     if sex not in VALID_SEXES:
         raise NutritionError("Invalid sex")
     if goal not in VALID_GOALS:
         raise NutritionError("Invalid goal")
+    if payload.daily_activity_level not in ACTIVITY_COEFFICIENTS:
+        raise NutritionError("Invalid daily activity level")
+    if payload.cardio_intensity not in CARDIO_MET_VALUES:
+        raise NutritionError("Invalid cardio intensity")
 
     sex_constant = -161 if sex == "female" else 5
     bmr = 10 * payload.weight_kg + 6.25 * payload.height_cm - 5 * payload.age + sex_constant
-    tdee = bmr * _activity_factor(
-        payload.strength_trainings_per_week,
-        payload.cardio_trainings_per_week,
+    base_tdee = bmr * ACTIVITY_COEFFICIENTS[payload.daily_activity_level]
+    strength_weekly_calories = (
+        5
+        * payload.weight_kg
+        * (payload.strength_training_duration_minutes / 60)
+        * payload.strength_trainings_per_week
     )
-    calories = _target_calories(tdee, goal)
+    cardio_weekly_calories = (
+        CARDIO_MET_VALUES[payload.cardio_intensity]
+        * payload.weight_kg
+        * (payload.cardio_training_duration_minutes / 60)
+        * payload.cardio_trainings_per_week
+    )
+    strength_daily_calories = strength_weekly_calories / 7
+    cardio_daily_calories = cardio_weekly_calories / 7
+    maintenance_calories = base_tdee + strength_daily_calories + cardio_daily_calories
+    calories = _target_calories(maintenance_calories, goal)
 
     return {
         "bmr": _round_number(bmr),
-        "tdee": _round_number(tdee),
+        "base_tdee": _round_number(base_tdee),
+        "strength_daily_calories": _round_number(strength_daily_calories),
+        "cardio_daily_calories": _round_number(cardio_daily_calories),
+        "tdee": _round_number(maintenance_calories),
+        "goal_multiplier": GOAL_MULTIPLIERS[goal],
         "calories": calories,
         **_macros(payload.weight_kg, calories, goal),
     }
@@ -153,8 +195,12 @@ def build_nutrition_target_response(
         weight_kg=target.weight_kg,
         height_cm=target.height_cm,
         age=target.age,
+        daily_activity_level=target.daily_activity_level,
         strength_trainings_per_week=target.strength_trainings_per_week,
+        strength_training_duration_minutes=target.strength_training_duration_minutes,
         cardio_trainings_per_week=target.cardio_trainings_per_week,
+        cardio_training_duration_minutes=target.cardio_training_duration_minutes,
+        cardio_intensity=target.cardio_intensity,
         goal=target.goal,
         bmr=target.bmr,
         tdee=target.tdee,
@@ -194,8 +240,12 @@ def save_nutrition_target(
     target.weight_kg = payload.weight_kg
     target.height_cm = payload.height_cm
     target.age = payload.age
+    target.daily_activity_level = payload.daily_activity_level
     target.strength_trainings_per_week = payload.strength_trainings_per_week
+    target.strength_training_duration_minutes = payload.strength_training_duration_minutes
     target.cardio_trainings_per_week = payload.cardio_trainings_per_week
+    target.cardio_training_duration_minutes = payload.cardio_training_duration_minutes
+    target.cardio_intensity = payload.cardio_intensity
     target.goal = payload.goal.strip()
     target.bmr = calculations["bmr"]
     target.tdee = calculations["tdee"]

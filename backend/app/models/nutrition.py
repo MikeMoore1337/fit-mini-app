@@ -21,8 +21,18 @@ class NutritionTarget(Base):
     weight_kg: Mapped[float] = mapped_column(Float, nullable=False)
     height_cm: Mapped[float] = mapped_column(Float, nullable=False)
     age: Mapped[float] = mapped_column(Float, nullable=False)
+    daily_activity_level: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="sedentary"
+    )
     strength_trainings_per_week: Mapped[int] = mapped_column(Integer, nullable=False)
+    strength_training_duration_minutes: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=60
+    )
     cardio_trainings_per_week: Mapped[int] = mapped_column(Integer, nullable=False)
+    cardio_training_duration_minutes: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=30
+    )
+    cardio_intensity: Mapped[str] = mapped_column(String(16), nullable=False, default="moderate")
     goal: Mapped[str] = mapped_column(String(32), nullable=False)
 
     bmr: Mapped[int] = mapped_column(Integer, nullable=False)
