@@ -1725,6 +1725,7 @@ function calculateKbju({ silent = false } = {}) {
   const cardioIntensity = $('kbjuCardioIntensity')?.value || 'moderate';
   const goal = $('kbjuGoal')?.value || 'maintenance';
   const activityCoefficient = ({ sedentary: 1.2, low: 1.3, moderate: 1.4, high: 1.5 })[dailyActivityLevel];
+  const strengthMet = 5;
   const cardioMet = ({ low: 4, moderate: 6, high: 8 })[cardioIntensity];
 
   const invalidBodyValues = !weight || weight < 20 || weight > 500
@@ -1746,8 +1747,8 @@ function calculateKbju({ silent = false } = {}) {
   const sexConstant = sex === 'female' ? -161 : 5;
   const bmr = 10 * weight + 6.25 * height - 5 * age + sexConstant;
   const baseTdee = bmr * activityCoefficient;
-  const strengthDailyCalories = 5 * weight * (strengthDuration / 60) * strength / 7;
-  const cardioDailyCalories = cardioMet * weight * (cardioDuration / 60) * cardio / 7;
+  const strengthDailyCalories = (strengthMet - 1) * weight * (strengthDuration / 60) * strength / 7;
+  const cardioDailyCalories = (cardioMet - 1) * weight * (cardioDuration / 60) * cardio / 7;
   const maintenanceCalories = baseTdee + strengthDailyCalories + cardioDailyCalories;
   const targetCalories = getGoalCalories(maintenanceCalories, goal);
   const macros = calculateMacros(weight, targetCalories, goal);

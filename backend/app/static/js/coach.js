@@ -487,11 +487,12 @@ function nutritionPayload() {
 function calculateNutrition() {
   const payload = nutritionPayload();
   const activityCoefficient = ({ sedentary: 1.2, low: 1.3, moderate: 1.4, high: 1.5 })[payload.daily_activity_level];
+  const strengthMet = 5;
   const cardioMet = ({ low: 4, moderate: 6, high: 8 })[payload.cardio_intensity];
   const bmr = 10 * payload.weight_kg + 6.25 * payload.height_cm - 5 * payload.age + (payload.sex === 'female' ? -161 : 5);
   const baseTdee = bmr * activityCoefficient;
-  const strengthDaily = 5 * payload.weight_kg * (payload.strength_training_duration_minutes / 60) * payload.strength_trainings_per_week / 7;
-  const cardioDaily = cardioMet * payload.weight_kg * (payload.cardio_training_duration_minutes / 60) * payload.cardio_trainings_per_week / 7;
+  const strengthDaily = (strengthMet - 1) * payload.weight_kg * (payload.strength_training_duration_minutes / 60) * payload.strength_trainings_per_week / 7;
+  const cardioDaily = (cardioMet - 1) * payload.weight_kg * (payload.cardio_training_duration_minutes / 60) * payload.cardio_trainings_per_week / 7;
   const maintenanceCalories = baseTdee + strengthDaily + cardioDaily;
   const calories = Math.round(maintenanceCalories * ({ fat_loss: .85, muscle_gain: 1.05, maintenance: 1, recomposition: .95 }[payload.goal] || 1) / 10) * 10;
   const protein = Math.round(payload.weight_kg * ({ fat_loss: 2, muscle_gain: 1.8, maintenance: 1.6, recomposition: 2 }[payload.goal] || 1.6));
