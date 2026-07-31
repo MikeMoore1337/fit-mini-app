@@ -181,7 +181,7 @@ function fillKbju(client) {
   $('kbjuHeight').value = kbju?.height_cm ?? client.height_cm ?? '';
   $('kbjuAge').value = kbju?.age ?? '';
   $('kbjuStrength').value = kbju?.strength_trainings_per_week ?? client.workouts_per_week ?? '';
-  $('kbjuCardio').value = kbju?.cardio_trainings_per_week ?? 0;
+  $('kbjuCardio').value = kbju?.cardio_trainings_per_week ?? client.cardio_trainings_per_week ?? 0;
   $('kbjuGoal').value = kbju?.goal || client.goal || 'maintenance';
   $('kbjuResult').classList.add('hidden');
 }
@@ -224,6 +224,7 @@ function fillClientDetail() {
   $('profileHeight').value = client.height_cm || '';
   $('profileWeight').value = client.weight_kg || '';
   $('profileWorkouts').value = client.workouts_per_week ?? '';
+  $('profileCardio').value = client.cardio_trainings_per_week ?? '';
   $('programGoal').value = client.goal || 'maintenance';
   $('programLevel').value = client.level || 'beginner';
   fillKbju(client);
@@ -255,6 +256,9 @@ async function saveProfile() {
       height_cm: $('profileHeight').value ? Number($('profileHeight').value) : null,
       weight_kg: $('profileWeight').value ? Number($('profileWeight').value) : null,
       workouts_per_week: $('profileWorkouts').value ? Number($('profileWorkouts').value) : null,
+      cardio_trainings_per_week: $('profileCardio').value
+        ? Number($('profileCardio').value)
+        : null,
     }),
   });
   state.selectedClient = updated;

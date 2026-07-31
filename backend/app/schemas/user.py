@@ -13,6 +13,7 @@ class UserProfileUpdate(BaseModel):
     height_cm: int | None = Field(default=None, ge=50, le=280)
     weight_kg: int | None = Field(default=None, ge=20, le=500)
     workouts_per_week: int | None = Field(default=None, ge=0, le=14)
+    cardio_trainings_per_week: int | None = Field(default=None, ge=0, le=14)
     timezone: str | None = Field(default=None, max_length=64)
 
     @field_validator("timezone")
@@ -30,6 +31,7 @@ class UserProfileResponse(BaseModel):
     height_cm: int | None = None
     weight_kg: int | None = None
     workouts_per_week: int | None = None
+    cardio_trainings_per_week: int | None = None
     timezone: str = "Europe/Moscow"
     kbju: NutritionTargetResponse | None = None
 

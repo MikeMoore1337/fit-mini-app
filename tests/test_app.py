@@ -241,12 +241,15 @@ def test_coach_can_update_own_client_profile_and_measurements(client):
             "height_cm": 176,
             "weight_kg": 74,
             "workouts_per_week": 4,
+            "cardio_trainings_per_week": 2,
         },
         headers=coach_headers,
     )
     assert profile.status_code == 200
     assert profile.json()["height_cm"] == 176
     assert profile.json()["goal"] == "recomposition"
+    assert profile.json()["workouts_per_week"] == 4
+    assert profile.json()["cardio_trainings_per_week"] == 2
 
     measurement = client.post(
         f"/api/v1/coach/clients/{client_user['id']}/measurements",
@@ -273,6 +276,7 @@ def test_coach_can_update_own_client_profile_and_measurements(client):
     me = client.get("/api/v1/me", headers=client_headers).json()
     assert me["profile"]["full_name"] == "Клиент с анкетой"
     assert me["profile"]["weight_kg"] == 74
+    assert me["profile"]["cardio_trainings_per_week"] == 2
 
 
 def test_coach_can_assign_existing_template_to_own_client(client):

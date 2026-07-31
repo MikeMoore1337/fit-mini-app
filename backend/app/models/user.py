@@ -51,6 +51,7 @@ class UserProfile(Base):
     height_cm: Mapped[int | None] = mapped_column(Integer, nullable=True)
     weight_kg: Mapped[int | None] = mapped_column(Integer, nullable=True)
     workouts_per_week: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    cardio_trainings_per_week: Mapped[int | None] = mapped_column(Integer, nullable=True)
     timezone: Mapped[str] = mapped_column(
         String(64),
         nullable=False,

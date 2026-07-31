@@ -165,5 +165,6 @@ class ClientResponse(BaseModel):
     height_cm: int | None = None
     weight_kg: int | None = None
     workouts_per_week: int | None = None
+    cardio_trainings_per_week: int | None = None
     kbju: NutritionTargetResponse | None = None
     status: Literal["active", "pending"]

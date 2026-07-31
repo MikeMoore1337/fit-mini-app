@@ -221,6 +221,7 @@ def _client_entry_from_user(db: Session, user: User) -> dict:
         "height_cm": profile.height_cm if profile else None,
         "weight_kg": profile.weight_kg if profile else None,
         "workouts_per_week": profile.workouts_per_week if profile else None,
+        "cardio_trainings_per_week": (profile.cardio_trainings_per_week if profile else None),
         "kbju": get_nutrition_target_for_user(db, user),
         "status": "active",
     }
@@ -241,6 +242,7 @@ def _client_entry_from_invite(invite: CoachClientInvite) -> dict:
         "height_cm": None,
         "weight_kg": None,
         "workouts_per_week": None,
+        "cardio_trainings_per_week": None,
         "kbju": None,
         "status": "pending",
     }

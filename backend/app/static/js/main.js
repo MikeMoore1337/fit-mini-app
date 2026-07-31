@@ -1441,7 +1441,10 @@ function fillKbjuFormFromUser(user) {
     $('kbjuStrength').value =
       kbju?.strength_trainings_per_week ?? profile.workouts_per_week ?? '';
   }
-  if ($('kbjuCardio')) $('kbjuCardio').value = kbju?.cardio_trainings_per_week ?? '';
+  if ($('kbjuCardio')) {
+    $('kbjuCardio').value =
+      kbju?.cardio_trainings_per_week ?? profile.cardio_trainings_per_week ?? '';
+  }
 
   calculateKbju({ silent: true });
 }
@@ -1455,7 +1458,12 @@ async function loadMe() {
   if ($('level')) $('level').value = profile.level || '';
   if ($('height_cm')) $('height_cm').value = profile.height_cm || '';
   if ($('weight_kg')) $('weight_kg').value = profile.weight_kg || '';
-  if ($('workouts_per_week')) $('workouts_per_week').value = profile.workouts_per_week || '';
+  if ($('workouts_per_week')) {
+    $('workouts_per_week').value = profile.workouts_per_week ?? '';
+  }
+  if ($('cardio_trainings_per_week')) {
+    $('cardio_trainings_per_week').value = profile.cardio_trainings_per_week ?? '';
+  }
 
   renderProfileKbju(profile.kbju);
   if (!$('kbjuTarget')?.value) {
@@ -1482,6 +1490,9 @@ async function saveProfile() {
     height_cm: $('height_cm')?.value ? Number($('height_cm').value) : null,
     weight_kg: $('weight_kg')?.value ? Number($('weight_kg').value) : null,
     workouts_per_week: $('workouts_per_week')?.value ? Number($('workouts_per_week').value) : null,
+    cardio_trainings_per_week: $('cardio_trainings_per_week')?.value
+      ? Number($('cardio_trainings_per_week').value)
+      : null,
   };
 
   await withReauth(() =>
@@ -2782,6 +2793,7 @@ function fillKbjuFormFromSelectedTarget() {
       height_cm: selectedClient.height_cm,
       weight_kg: selectedClient.weight_kg,
       workouts_per_week: selectedClient.workouts_per_week,
+      cardio_trainings_per_week: selectedClient.cardio_trainings_per_week,
     },
   });
   updateSaveKbjuButton();
