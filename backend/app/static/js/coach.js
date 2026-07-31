@@ -16,6 +16,7 @@ const state = {
   clients: [],
   selectedClient: null,
   measurements: [],
+  assignedPrograms: [],
   exercises: [],
   templates: [],
   daySequence: 0,
@@ -93,6 +94,21 @@ function levelLabel(value) {
   return ({ beginner: 'Начальный', intermediate: 'Средний', advanced: 'Продвинутый' }[value] || 'Не указан');
 }
 
+function clientInitials(client) {
+  const parts = displayName(client).trim().split(/\s+/).filter(Boolean);
+  return parts.slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'К';
+}
+
+function formatDate(value) {
+  if (!value) return '—';
+  const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString('ru-RU');
+}
+
+function programForClient(clientId) {
+  return state.assignedPrograms.find((program) => program.client_id === Number(clientId) && program.is_active);
+}
+
 function decimalValue(id) {
   const raw = $(id)?.value?.trim().replace(',', '.');
   if (!raw) return null;
@@ -125,17 +141,62 @@ function renderClients() {
   ].join('');
   if (active.some((client) => String(client.id) === previous)) $('clientSelect').value = previous;
 
+  const pendingCount = state.clients.filter((client) => client.status === 'pending').length;
+  $('clientsCount').textContent = String(active.length);
+  $('clientsSummary').textContent = `${active.length} ${active.length === 1 ? 'активный клиент' : 'активных клиентов'}${pendingCount ? ` · ${pendingCount} ожидают подтверждения` : ''}`;
+
   $('coachClientsList').innerHTML = visible.length ? visible.map((client) => {
     const pending = client.status === 'pending';
-    return `<div class="item-card">
-      <strong>${escapeHtml(displayName(client))}</strong><br>
-      <span class="muted">${pending ? 'Ожидает подтверждения' : `Telegram ID: ${escapeHtml(client.telegram_user_id)}`}${client.username ? ` · @${escapeHtml(client.username)}` : ''}</span>
-      <div class="toolbar wrap top-gap">
-        ${pending ? '' : `<button type="button" data-open-client="${client.id}">Открыть карточку</button>`}
-        <button class="btn-danger" type="button" data-remove-client="${client.id || ''}" data-invite-id="${client.invite_id || ''}" data-pending="${pending}" data-username="${escapeHtml(client.username || '')}">Удалить</button>
+    const program = pending ? null : programForClient(client.id);
+    return `<div class="coach-client-card ${pending ? 'is-pending' : ''}">
+      <div class="coach-client-card__main">
+        <div class="client-avatar">${escapeHtml(clientInitials(client))}</div>
+        <div class="coach-client-card__copy"><strong>${escapeHtml(displayName(client))}</strong><span>${pending ? 'Ожидает подтверждения' : (client.username ? `@${escapeHtml(client.username)}` : `ID ${escapeHtml(client.telegram_user_id)}`)}</span></div>
+        <span class="status-dot ${pending ? 'is-pending' : ''}" title="${pending ? 'Приглашение отправлено' : 'Активный клиент'}"></span>
+      </div>
+      ${pending ? '<p class="muted coach-client-card__program">Приглашение отправлено</p>' : `<p class="muted coach-client-card__program">${program ? `Активна: ${escapeHtml(program.title)}` : 'Программа не назначена'}</p>`}
+      <div class="coach-client-card__actions">
+        ${pending ? '' : `<button type="button" data-open-client="${client.id}">Открыть</button>`}
+        <button class="ghost-danger" type="button" data-remove-client="${client.id || ''}" data-invite-id="${client.invite_id || ''}" data-pending="${pending}" data-username="${escapeHtml(client.username || '')}">Удалить</button>
       </div>
     </div>`;
-  }).join('') : '<p class="muted">Клиенты не найдены.</p>';
+  }).join('') : '<div class="coach-empty-state"><strong>Клиенты не найдены</strong><p class="muted top-gap">Измените запрос или пригласите нового клиента.</p></div>';
+}
+
+function programCard(program, compact = false) {
+  const total = program.workouts_total || 0;
+  const completed = program.workouts_completed || 0;
+  const progress = total ? Math.round(completed / total * 100) : 0;
+  const client = program.client_full_name || program.client_username || program.client_telegram_user_id;
+  return `<div class="assigned-program-card ${program.is_active ? 'is-active' : ''}">
+    <div class="assigned-program-card__head"><div><span class="program-status">${program.is_active ? 'Активна' : 'Завершена'}</span><h3>${escapeHtml(program.title)}</h3></div><span class="muted">${formatDate(program.assigned_at)}</span></div>
+    ${compact ? '' : `<button class="program-client-link" type="button" data-open-program-client="${program.client_id}">${escapeHtml(client)}</button>`}
+    <div class="program-progress" aria-label="Выполнено ${completed} из ${total}"><span style="width:${progress}%"></span></div>
+    <div class="assigned-program-card__meta"><span>${completed} из ${total} тренировок</span><span>${program.next_workout_date ? `Следующая: ${formatDate(program.next_workout_date)}` : 'Нет предстоящих'}</span></div>
+  </div>`;
+}
+
+function renderClientPrograms() {
+  const programs = state.assignedPrograms.filter((program) => program.client_id === state.selectedClient?.id);
+  $('clientAssignedPrograms').innerHTML = programs.length
+    ? programs.map((program) => programCard(program, true)).join('')
+    : '<div class="coach-empty-state"><strong>Программ пока нет</strong><p class="muted top-gap">Назначьте шаблон или соберите персональную программу ниже.</p></div>';
+}
+
+function renderAssignedPrograms() {
+  const query = $('programSearch').value.trim().toLowerCase();
+  const visible = state.assignedPrograms.filter((program) => [program.title, program.client_full_name, program.client_username, program.client_telegram_user_id].filter(Boolean).join(' ').toLowerCase().includes(query));
+  $('programsCount').textContent = String(state.assignedPrograms.length);
+  $('assignedProgramsList').innerHTML = visible.length
+    ? visible.map((program) => programCard(program)).join('')
+    : '<div class="coach-empty-state"><strong>Назначений пока нет</strong><p class="muted top-gap">Откройте клиента и назначьте ему готовую или персональную программу.</p></div>';
+  renderClientPrograms();
+}
+
+async function loadAssignedPrograms() {
+  state.assignedPrograms = await api('/api/v1/coach/assigned-programs');
+  renderAssignedPrograms();
+  renderClients();
 }
 
 async function loadClients() {
@@ -167,11 +228,45 @@ async function addClient() {
 function renderOverview() {
   const client = state.selectedClient;
   const kbju = client?.kbju;
+  const program = programForClient(client?.id);
   $('clientOverview').innerHTML = `
     <div class="progress-card"><span>Цель</span><strong>${escapeHtml(goalLabel(client.goal))}</strong></div>
-    <div class="progress-card"><span>Уровень</span><strong>${escapeHtml(levelLabel(client.level))}</strong></div>
     <div class="progress-card"><span>Вес</span><strong>${client.weight_kg ? `${escapeHtml(client.weight_kg)} кг` : '—'}</strong></div>
-    <div class="progress-card"><span>КБЖУ</span><strong>${kbju ? `${escapeHtml(kbju.calories)} ккал` : 'Не назначен'}</strong></div>`;
+    <div class="progress-card"><span>КБЖУ</span><strong>${kbju ? `${escapeHtml(kbju.calories)} ккал` : 'Не назначен'}</strong></div>
+    <div class="progress-card"><span>Программа</span><strong>${program ? escapeHtml(program.title) : 'Не назначена'}</strong></div>`;
+  $('clientFacts').innerHTML = [
+    ['Имя', displayName(client)],
+    ['Telegram', client.username ? `@${client.username}` : `ID ${client.telegram_user_id}`],
+    ['Цель', goalLabel(client.goal)],
+    ['Уровень', levelLabel(client.level)],
+    ['Рост', client.height_cm ? `${client.height_cm} см` : 'Не указан'],
+    ['Вес', client.weight_kg ? `${client.weight_kg} кг` : 'Не указан'],
+    ['Силовые тренировки', client.workouts_per_week != null ? `${client.workouts_per_week} в неделю` : 'Не указаны'],
+    ['Кардио', client.cardio_trainings_per_week != null ? `${client.cardio_trainings_per_week} в неделю` : 'Не указано'],
+    ['Калории', kbju ? `${kbju.calories} ккал` : 'Не назначены'],
+    ['Белки / жиры / углеводы', kbju ? `${kbju.protein_g} / ${kbju.fat_g} / ${kbju.carbs_g} г` : 'Не назначены'],
+    ['Активная программа', program?.title || 'Не назначена'],
+    ['Последний замер', state.measurements[0]?.measured_on ? formatDate(state.measurements[0].measured_on) : 'Нет данных'],
+  ].map(([label, value]) => `<div class="client-fact"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
+}
+
+function showClientTab(name, shouldScroll = false) {
+  document.querySelectorAll('[data-client-tab]').forEach((button) => {
+    const active = button.dataset.clientTab === name;
+    button.classList.toggle('is-active', active);
+    button.setAttribute('aria-selected', String(active));
+  });
+  document.querySelectorAll('[data-client-pane]').forEach((pane) => pane.classList.toggle('hidden', pane.dataset.clientPane !== name));
+  if (shouldScroll) $('coachClientDetail').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function showCoachView(name) {
+  document.querySelectorAll('[data-coach-view]').forEach((button) => {
+    const active = button.dataset.coachView === name;
+    button.classList.toggle('is-active', active);
+    button.setAttribute('aria-selected', String(active));
+  });
+  document.querySelectorAll('[data-coach-panel]').forEach((panel) => panel.classList.toggle('hidden', panel.dataset.coachPanel !== name));
 }
 
 function fillKbju(client) {
@@ -222,6 +317,7 @@ function fillClientDetail() {
   if (!client) return;
   $('detailClientName').textContent = displayName(client);
   $('detailClientMeta').textContent = `Telegram ID: ${client.telegram_user_id}${client.username ? ` · @${client.username}` : ''}`;
+  $('detailClientAvatar').textContent = clientInitials(client);
   $('profileFullName').value = client.full_name || '';
   $('profileGoal').value = client.goal || '';
   $('profileLevel').value = client.level || '';
@@ -233,6 +329,7 @@ function fillClientDetail() {
   $('programLevel').value = client.level || 'beginner';
   fillKbju(client);
   renderOverview();
+  renderClientPrograms();
   syncTemplateOptions();
   refreshExerciseSelects();
   $('coachClientDetail').classList.remove('hidden');
@@ -245,6 +342,7 @@ async function openClient(clientId) {
   $('clientSelect').value = String(client.id);
   fillClientDetail();
   await loadMeasurements();
+  renderOverview();
   if (!$('programDays').children.length) addProgramDay();
   $('coachClientDetail').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -292,6 +390,7 @@ function renderMeasurements() {
 async function loadMeasurements() {
   state.measurements = await api(`/api/v1/coach/clients/${state.selectedClient.id}/measurements`);
   renderMeasurements();
+  renderOverview();
 }
 
 async function saveMeasurement() {
@@ -443,6 +542,7 @@ async function saveProgram() {
   showToast(`Программа назначена: создано тренировок — ${result.workouts_created}`);
   state.templates = await api('/api/v1/programs/templates/mine');
   syncTemplateOptions();
+  await loadAssignedPrograms();
 }
 
 async function createClientExercise() {
@@ -468,6 +568,7 @@ async function assignTemplate() {
     method: 'POST', body: JSON.stringify({ start_date: $('templateStartDate').value || null }),
   });
   showToast(`Шаблон назначен: создано тренировок — ${result.workouts_created}`);
+  await loadAssignedPrograms();
 }
 
 async function run(action, fallback) {
@@ -476,7 +577,9 @@ async function run(action, fallback) {
 
 $('addClientBtn').onclick = () => run(addClient, 'Не удалось добавить клиента');
 $('reloadClientsBtn').onclick = () => run(loadClients, 'Не удалось загрузить клиентов');
+$('reloadProgramsBtn').onclick = () => run(loadAssignedPrograms, 'Не удалось загрузить программы');
 $('clientSearch').oninput = renderClients;
+$('programSearch').oninput = renderAssignedPrograms;
 $('clientSelect').onchange = () => $('clientSelect').value && run(() => openClient($('clientSelect').value), 'Не удалось открыть клиента');
 $('closeClientDetailBtn').onclick = () => $('coachClientDetail').classList.add('hidden');
 $('saveClientProfileBtn').onclick = () => run(saveProfile, 'Не удалось сохранить анкету');
@@ -495,6 +598,18 @@ $('saveClientProgramBtn').onclick = () => run(saveProgram, 'Не удалось 
 $('createClientExerciseBtn').onclick = () => run(createClientExercise, 'Не удалось добавить упражнение');
 $('assignTemplateBtn').onclick = () => run(assignTemplate, 'Не удалось назначить шаблон');
 
+document.querySelectorAll('[data-coach-view]').forEach((button) => {
+  button.onclick = () => showCoachView(button.dataset.coachView);
+});
+
+document.querySelectorAll('[data-client-tab]').forEach((button) => {
+  button.onclick = () => showClientTab(button.dataset.clientTab);
+});
+
+document.querySelectorAll('[data-client-tab-target]').forEach((button) => {
+  button.onclick = () => showClientTab(button.dataset.clientTabTarget, true);
+});
+
 $('coachClientsList').onclick = (event) => {
   const open = event.target.closest('[data-open-client]');
   if (open) return run(() => openClient(open.dataset.openClient), 'Не удалось открыть клиента');
@@ -510,8 +625,18 @@ $('coachClientsList').onclick = (event) => {
     if (state.selectedClient?.id === Number(remove.dataset.removeClient)) {
       state.selectedClient = null; $('coachClientDetail').classList.add('hidden');
     }
-    await loadClients(); showToast('Клиент удалён из списка');
+    await Promise.all([loadClients(), loadAssignedPrograms()]); showToast('Клиент удалён из списка');
   }, 'Не удалось удалить клиента');
+};
+
+$('assignedProgramsList').onclick = (event) => {
+  const button = event.target.closest('[data-open-program-client]');
+  if (!button) return;
+  showCoachView('clients');
+  run(async () => {
+    await openClient(button.dataset.openProgramClient);
+    showClientTab('programs', true);
+  }, 'Не удалось открыть клиента');
 };
 
 $('clientMeasurements').onclick = (event) => {
@@ -540,9 +665,10 @@ $('templateStartDate').value = todayIso();
 
 run(async () => {
   await ensureCoachAccess();
-  [state.exercises, state.templates, state.clients] = await Promise.all([
-    api('/api/v1/programs/exercises'), api('/api/v1/programs/templates/mine'), api('/api/v1/coach/clients'),
+  [state.exercises, state.templates, state.clients, state.assignedPrograms] = await Promise.all([
+    api('/api/v1/programs/exercises'), api('/api/v1/programs/templates/mine'), api('/api/v1/coach/clients'), api('/api/v1/coach/assigned-programs'),
   ]);
+  renderAssignedPrograms();
   renderClients();
   addProgramDay();
 }, 'Не удалось загрузить кабинет тренера');

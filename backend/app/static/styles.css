@@ -3,6 +3,486 @@ html {
     scroll-behavior: smooth;
 }
 
+/* Coach workspace */
+.coach-workspace {
+    padding-bottom: 84px;
+}
+
+.eyebrow {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--accent-strong);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+}
+
+.coach-hero h1 {
+    margin-bottom: 5px;
+}
+
+.coach-view-tabs {
+    position: sticky;
+    z-index: 12;
+    top: max(8px, env(safe-area-inset-top, 0px));
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+    padding: 5px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--nav-bg);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(14px);
+}
+
+.coach-view-tabs button {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    padding: 11px;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--muted);
+}
+
+.coach-view-tabs button.is-active {
+    background: var(--accent);
+    color: var(--button-text);
+}
+
+.tab-count {
+    display: inline-grid;
+    place-items: center;
+    min-width: 21px;
+    height: 21px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--surface-active);
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.coach-view-tabs button.is-active .tab-count {
+    background: rgba(255, 255, 255, .2);
+}
+
+.coach-view,
+.coach-client-detail {
+    display: grid;
+    gap: 16px;
+}
+
+.coach-view.hidden,
+.coach-client-detail.hidden {
+    display: none;
+}
+
+.icon-button {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    font-size: 24px;
+    line-height: 1;
+}
+
+.coach-invite-disclosure,
+.coach-tool-disclosure {
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-subtle);
+}
+
+.coach-invite-disclosure {
+    margin-bottom: 14px;
+    border-color: var(--accent-line);
+    background: var(--accent-soft);
+}
+
+.coach-invite-disclosure summary,
+.coach-tool-disclosure summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 13px 14px;
+    cursor: pointer;
+    font-weight: 750;
+    list-style: none;
+}
+
+.coach-invite-disclosure summary::-webkit-details-marker,
+.coach-tool-disclosure summary::-webkit-details-marker {
+    display: none;
+}
+
+.coach-tool-disclosure summary::after {
+    content: '+';
+    margin-left: auto;
+    color: var(--muted);
+    font-size: 20px;
+}
+
+.coach-tool-disclosure[open] summary::after {
+    content: '−';
+}
+
+.summary-plus {
+    display: inline-grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: white;
+    font-size: 18px;
+}
+
+.coach-invite-body,
+.coach-tool-body {
+    padding: 2px 14px 14px;
+}
+
+.coach-list-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(180px, .8fr);
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.coach-client-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.coach-client-card {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    transition: border-color .18s ease, transform .18s ease;
+}
+
+.coach-client-card:hover {
+    border-color: var(--accent-line);
+    transform: translateY(-1px);
+}
+
+.coach-client-card.is-pending {
+    border-style: dashed;
+}
+
+.coach-client-card__main,
+.client-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.coach-client-card__copy {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+    flex: 1;
+}
+
+.coach-client-card__copy strong,
+.coach-client-card__copy span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.coach-client-card__copy span,
+.coach-client-card__program {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.coach-client-card__program {
+    overflow: hidden;
+    margin: 0;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.client-avatar {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 38px;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: linear-gradient(145deg, var(--accent), var(--accent-alt));
+    color: white;
+    font-size: 13px;
+    font-weight: 850;
+}
+
+.client-avatar--large {
+    flex-basis: 48px;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    font-size: 15px;
+}
+
+.status-dot {
+    flex: 0 0 8px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 0 4px var(--success-soft);
+}
+
+.status-dot.is-pending {
+    background: var(--warning);
+    box-shadow: 0 0 0 4px var(--warning-soft);
+}
+
+.coach-client-card__actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.coach-client-card__actions button {
+    padding: 8px 11px;
+    font-size: 12px;
+}
+
+button.ghost-danger {
+    margin-left: auto;
+    background: transparent;
+    color: var(--muted);
+}
+
+button.ghost-danger:hover {
+    background: var(--danger-line);
+    color: var(--danger);
+}
+
+.coach-empty-state {
+    grid-column: 1 / -1;
+    padding: 28px 16px;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    text-align: center;
+}
+
+.coach-client-header {
+    position: sticky;
+    z-index: 10;
+    top: 66px;
+    padding-bottom: 0;
+    background: var(--nav-bg);
+    backdrop-filter: blur(14px);
+}
+
+.coach-client-header .progress-overview {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-bottom: 14px;
+}
+
+.coach-client-header .progress-card strong {
+    overflow: hidden;
+    font-size: 14px;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.client-detail-tabs {
+    display: flex;
+    gap: 2px;
+    overflow-x: auto;
+    margin: 0 -18px;
+    padding: 0 18px;
+    scrollbar-width: none;
+}
+
+.client-detail-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.client-detail-tabs button {
+    flex: 0 0 auto;
+    padding: 11px 9px 12px;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    background: transparent;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.client-detail-tabs button.is-active {
+    border-bottom-color: var(--accent);
+    color: var(--text);
+}
+
+.client-detail-pane.hidden {
+    display: none;
+}
+
+.client-facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.client-fact {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+}
+
+.client-fact:nth-child(odd) {
+    border-right: 1px solid var(--border);
+}
+
+.client-fact:nth-last-child(-n + 2) {
+    border-bottom: 0;
+}
+
+.client-fact span {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.client-fact strong {
+    overflow: hidden;
+    font-size: 14px;
+    text-overflow: ellipsis;
+}
+
+.assigned-program-card {
+    display: grid;
+    gap: 11px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+}
+
+.assigned-program-card.is-active {
+    border-color: var(--success-line);
+    background: linear-gradient(135deg, var(--success-soft), var(--surface));
+}
+
+.assigned-program-card__head,
+.assigned-program-card__meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.assigned-program-card__head h3 {
+    margin-top: 4px;
+}
+
+.program-status {
+    color: var(--success-text);
+    font-size: 10px;
+    font-weight: 850;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.assigned-program-card:not(.is-active) .program-status {
+    color: var(--muted);
+}
+
+button.program-client-link {
+    justify-self: start;
+    padding: 0;
+    background: transparent;
+    color: var(--link-color);
+    font-size: 13px;
+}
+
+.program-progress {
+    overflow: hidden;
+    height: 5px;
+    border-radius: 999px;
+    background: var(--surface-active);
+}
+
+.program-progress span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--accent), var(--success));
+}
+
+.assigned-program-card__meta {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+@media (max-width: 640px) {
+    .coach-hero {
+        padding: 17px;
+    }
+
+    .coach-hero .hero-card__meta .badge {
+        display: none;
+    }
+
+    .coach-list-controls,
+    .coach-client-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .coach-client-header {
+        top: 64px;
+        padding: 14px 14px 0;
+    }
+
+    .coach-client-header .progress-overview {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .client-detail-tabs {
+        margin: 0 -14px;
+        padding: 0 14px;
+    }
+
+    .client-facts {
+        grid-template-columns: 1fr;
+    }
+
+    .client-fact:nth-child(odd) {
+        border-right: 0;
+    }
+
+    .client-fact:nth-last-child(2) {
+        border-bottom: 1px solid var(--border);
+    }
+
+    .assigned-program-card__meta {
+        display: grid;
+        gap: 4px;
+    }
+}
+
 :root {
     color-scheme: dark;
     --bg: #0f1115;

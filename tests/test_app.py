@@ -286,6 +286,7 @@ def test_coach_can_update_own_client_profile_and_measurements(client):
 def test_coach_can_assign_existing_template_to_own_client(client):
     coach_headers = auth(client, telegram_user_id=6120, is_coach=True)
     client_headers = auth(client, telegram_user_id=6121, is_coach=False)
+    other_coach_headers = auth(client, telegram_user_id=6122, is_coach=True)
     client_user = client.get("/api/v1/me", headers=client_headers).json()
     client.post(
         "/api/v1/coach/clients",
@@ -336,6 +337,29 @@ def test_coach_can_assign_existing_template_to_own_client(client):
     assert assigned_template["is_assigned_to_current_user"] is True
     assert assigned_template["is_active_for_current_user"] is True
     assert assigned_template["assigned_by_user_id"] == created.json()["template"]["owner_user_id"]
+
+    coach_programs = client.get("/api/v1/coach/assigned-programs", headers=coach_headers)
+    assert coach_programs.status_code == 200
+    assert coach_programs.json() == [
+        {
+            "id": assigned.json()["user_program_id"],
+            "client_id": client_user["id"],
+            "client_telegram_user_id": 6121,
+            "client_username": client_user["username"],
+            "client_full_name": client_user["profile"]["full_name"],
+            "template_id": template_id,
+            "title": "Шаблон тренера",
+            "goal": "maintenance",
+            "level": "beginner",
+            "assigned_at": coach_programs.json()[0]["assigned_at"],
+            "is_active": True,
+            "workouts_total": 1,
+            "workouts_completed": 0,
+            "workouts_planned": 1,
+            "next_workout_date": coach_programs.json()[0]["next_workout_date"],
+        }
+    ]
+    assert client.get("/api/v1/coach/assigned-programs", headers=other_coach_headers).json() == []
 
 
 def test_coach_cannot_assign_kbju_to_non_client(client):

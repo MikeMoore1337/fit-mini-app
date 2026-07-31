@@ -8,6 +8,7 @@ from app.models.user import BodyMeasurement, CoachClientInvite, User
 from app.schemas.program import (
     AssignTemplateToClientRequest,
     ClientResponse,
+    CoachAssignedProgramResponse,
     CoachClientCreate,
     ProgramAssignmentResponse,
 )
@@ -22,6 +23,7 @@ from app.services.programs import (
     get_client_managed_by_coach,
     get_template_for_user,
     list_clients,
+    list_coach_assigned_programs,
     list_exercises,
     remove_client_for_coach,
     remove_pending_client_invite,
@@ -62,6 +64,17 @@ def coach_clients(
     db: Session = Depends(get_db),
 ):
     return list_clients(db, current_user)
+
+
+@router.get(
+    "/assigned-programs",
+    response_model=list[CoachAssignedProgramResponse],
+)
+def coach_assigned_programs(
+    current_user: User = Depends(require_coach_or_admin),
+    db: Session = Depends(get_db),
+):
+    return list_coach_assigned_programs(db, current_user)
 
 
 @router.post(

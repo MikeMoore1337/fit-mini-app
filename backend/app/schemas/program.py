@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -84,6 +84,24 @@ class ProgramTemplateCreateResponse(BaseModel):
 class ProgramAssignmentResponse(BaseModel):
     user_program_id: int
     workouts_created: int
+
+
+class CoachAssignedProgramResponse(BaseModel):
+    id: int
+    client_id: int
+    client_telegram_user_id: int
+    client_username: str | None = None
+    client_full_name: str | None = None
+    template_id: int | None = None
+    title: str
+    goal: str | None = None
+    level: str | None = None
+    assigned_at: datetime
+    is_active: bool
+    workouts_total: int
+    workouts_completed: int
+    workouts_planned: int
+    next_workout_date: date | None = None
 
 
 class AssignTemplateRequest(BaseModel):

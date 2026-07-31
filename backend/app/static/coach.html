@@ -5,14 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0f1115" />
   <title>Кабинет тренера — FitMiniApp</title>
-  <link rel="stylesheet" href="/static/styles.css?v=51" />
+  <link rel="stylesheet" href="/static/styles.css?v=52" />
 </head>
 <body>
-  <main class="container narrow">
-    <div class="card hero-card">
+  <main class="container narrow coach-workspace">
+    <div class="card hero-card coach-hero">
       <div>
+        <span class="eyebrow">Рабочее пространство</span>
         <h1>Кабинет тренера</h1>
-        <p class="muted">Анкеты, замеры, питание и персональные программы клиентов.</p>
+        <p class="muted">Клиенты, прогресс и назначения — в одном месте.</p>
       </div>
       <div class="hero-card__meta">
         <span class="badge role-badge">Тренер</span>
@@ -20,195 +21,169 @@
       </div>
     </div>
 
-    <div class="card">
-      <div class="section-head">
-        <div>
-          <h2>Добавить клиента</h2>
-          <p class="muted top-gap">Клиент подтвердит приглашение в своём профиле.</p>
-        </div>
-      </div>
-      <div class="grid grid-3 top-gap">
-        <label class="field">
-          <span>Telegram ID</span>
-          <input id="clientTelegramId" type="number" min="1" inputmode="numeric" placeholder="Если известен" />
-        </label>
-        <label class="field">
-          <span>Telegram @username</span>
-          <input id="clientUsername" type="text" maxlength="64" autocomplete="off" placeholder="Если есть" />
-        </label>
-        <label class="field">
-          <span>Имя клиента</span>
-          <input id="clientFullName" type="text" maxlength="128" autocomplete="off" placeholder="Для списка клиентов" />
-        </label>
-      </div>
-      <div class="toolbar top-gap">
-        <button id="addClientBtn" type="button">Добавить клиента</button>
-      </div>
+    <div class="coach-view-tabs" role="tablist" aria-label="Разделы кабинета">
+      <button class="is-active" type="button" role="tab" aria-selected="true" data-coach-view="clients">
+        Клиенты <span id="clientsCount" class="tab-count">0</span>
+      </button>
+      <button type="button" role="tab" aria-selected="false" data-coach-view="programs">
+        Программы <span id="programsCount" class="tab-count">0</span>
+      </button>
     </div>
 
-    <div class="card">
-      <div class="section-head">
-        <h2>Мои клиенты</h2>
-        <button id="reloadClientsBtn" class="secondary" type="button">Обновить</button>
-      </div>
-      <label class="field">
-        <span>Выбрать клиента</span>
-        <select id="clientSelect"><option value="">Сначала загрузите клиентов</option></select>
-      </label>
-      <label class="field top-gap">
-        <span>Поиск</span>
-        <input id="clientSearch" type="search" placeholder="Имя, username или Telegram ID" />
-      </label>
-      <div id="coachClientsList" class="stack"></div>
-    </div>
-
-    <div id="coachClientDetail" class="hidden">
-      <div class="card">
+    <section id="coachClientsView" class="coach-view" data-coach-panel="clients">
+      <div class="card coach-list-card">
         <div class="section-head">
           <div>
-            <h2 id="detailClientName">Клиент</h2>
-            <p id="detailClientMeta" class="muted top-gap"></p>
+            <h2>Мои клиенты</h2>
+            <p id="clientsSummary" class="muted top-gap">Загрузка списка…</p>
           </div>
-          <button id="closeClientDetailBtn" class="secondary" type="button">Закрыть</button>
+          <button id="reloadClientsBtn" class="icon-button secondary" type="button" aria-label="Обновить клиентов" title="Обновить">↻</button>
         </div>
-        <div id="clientOverview" class="progress-overview"></div>
+
+        <details class="coach-invite-disclosure">
+          <summary><span class="summary-plus">+</span> Пригласить клиента</summary>
+          <div class="coach-invite-body">
+            <p class="muted">Клиент подтвердит приглашение в своём профиле.</p>
+            <div class="grid grid-3 top-gap">
+              <label class="field"><span>Telegram ID</span><input id="clientTelegramId" type="number" min="1" inputmode="numeric" placeholder="Если известен" /></label>
+              <label class="field"><span>Telegram @username</span><input id="clientUsername" type="text" maxlength="64" autocomplete="off" placeholder="Если есть" /></label>
+              <label class="field"><span>Имя клиента</span><input id="clientFullName" type="text" maxlength="128" autocomplete="off" placeholder="Для списка" /></label>
+            </div>
+            <div class="toolbar top-gap"><button id="addClientBtn" type="button">Отправить приглашение</button></div>
+          </div>
+        </details>
+
+        <div class="coach-list-controls">
+          <label class="field coach-search-field"><span>Поиск</span><input id="clientSearch" type="search" placeholder="Имя, username или Telegram ID" /></label>
+          <label class="field"><span>Быстрый переход</span><select id="clientSelect"><option value="">Сначала загрузите клиентов</option></select></label>
+        </div>
+        <div id="coachClientsList" class="coach-client-grid"></div>
       </div>
 
-      <div class="card">
-        <div class="section-head">
-          <div><h2>Анкета клиента</h2><p class="muted top-gap">Заполните недостающие данные или актуализируйте их.</p></div>
-        </div>
-        <div class="grid grid-3">
-          <label class="field"><span>Имя</span><input id="profileFullName" maxlength="128" /></label>
-          <label class="field"><span>Цель</span><select id="profileGoal">
-            <option value="">Не выбрана</option><option value="fat_loss">Похудение</option>
-            <option value="muscle_gain">Набор мышц</option><option value="maintenance">Поддержание</option>
-            <option value="recomposition">Рекомпозиция</option>
-          </select></label>
-          <label class="field"><span>Уровень</span><select id="profileLevel">
-            <option value="">Не выбран</option><option value="beginner">Начальный</option>
-            <option value="intermediate">Средний</option><option value="advanced">Продвинутый</option>
-          </select></label>
-          <label class="field"><span>Рост, см</span><input id="profileHeight" type="number" min="50" max="280" /></label>
-          <label class="field"><span>Вес, кг</span><input id="profileWeight" type="number" min="20" max="500" /></label>
-          <label class="field"><span>Силовых тренировок в неделю</span><input id="profileWorkouts" type="number" min="0" max="14" /></label>
-          <label class="field"><span>Кардио в неделю</span><input id="profileCardio" type="number" min="0" max="14" /></label>
-        </div>
-        <div class="toolbar top-gap"><button id="saveClientProfileBtn" type="button">Сохранить анкету</button></div>
-      </div>
-
-      <div class="card">
-        <div class="section-head"><div><h2>Замеры</h2><p class="muted top-gap">Одна запись на дату; повторное сохранение обновит её.</p></div></div>
-        <div class="grid grid-4">
-          <label class="field"><span>Дата</span><input id="measurementDate" type="date" /></label>
-          <label class="field"><span>Вес, кг</span><input id="measurementWeight" type="text" inputmode="decimal" /></label>
-          <label class="field"><span>Грудь, см</span><input id="measurementChest" type="text" inputmode="decimal" /></label>
-          <label class="field"><span>Талия, см</span><input id="measurementWaist" type="text" inputmode="decimal" /></label>
-          <label class="field"><span>Бёдра, см</span><input id="measurementHips" type="text" inputmode="decimal" /></label>
-          <label class="field"><span>Бицепс, см</span><input id="measurementBiceps" type="text" inputmode="decimal" /></label>
-          <label class="field"><span>Бедро, см</span><input id="measurementThigh" type="text" inputmode="decimal" /></label>
-          <label class="field"><span>Комментарий</span><input id="measurementNote" maxlength="500" /></label>
-        </div>
-        <div class="toolbar top-gap"><button id="saveMeasurementBtn" type="button">Сохранить замер</button></div>
-        <div id="clientMeasurements" class="stack top-gap"></div>
-      </div>
-
-      <div class="card">
-        <div class="section-head"><div><h2>Расчёт и назначение КБЖУ</h2><p class="muted top-gap">Расчёт по Миффлину — Сан Жеору с учётом активности и цели.</p></div></div>
-        <div class="grid grid-4">
-          <label class="field"><span>Пол</span><select id="kbjuSex"><option value="male">Мужской</option><option value="female">Женский</option></select></label>
-          <label class="field"><span>Вес, кг</span><input id="kbjuWeight" type="text" inputmode="decimal" /></label>
-          <label class="field"><span>Рост, см</span><input id="kbjuHeight" type="text" inputmode="decimal" /></label>
-          <label class="field"><span>Возраст</span><input id="kbjuAge" type="number" min="12" max="120" /></label>
-          <label class="field"><span>Повседневная активность без учёта тренировок</span><select id="kbjuDailyActivity">
-            <option value="sedentary">Малоподвижная, менее 5000 шагов (×1.2)</option><option value="low">Низкая, 5000–8000 шагов (×1.3)</option>
-            <option value="moderate">Средняя, 8000–12000 шагов (×1.4)</option><option value="high">Высокая, более 12000 шагов или физическая работа (×1.5)</option>
-          </select></label>
-          <label class="field"><span>Силовых в неделю</span><input id="kbjuStrength" type="number" min="0" max="14" value="0" /></label>
-          <label class="field"><span>Продолжительность силовой, минут</span><input id="kbjuStrengthDuration" type="number" min="10" max="300" value="60" /></label>
-          <label class="field"><span>Кардио в неделю</span><input id="kbjuCardio" type="number" min="0" max="14" value="0" /></label>
-          <label class="field"><span>Продолжительность кардио, минут</span><input id="kbjuCardioDuration" type="number" min="10" max="300" value="30" /></label>
-          <label class="field"><span>Интенсивность кардио</span><select id="kbjuCardioIntensity">
-            <option value="low">Низкая (4 MET)</option><option value="moderate" selected>Средняя (6 MET)</option><option value="high">Высокая (8 MET)</option>
-          </select></label>
-          <label class="field"><span>Цель питания</span><select id="kbjuGoal">
-            <option value="fat_loss">Похудение</option><option value="muscle_gain">Набор</option>
-            <option value="maintenance">Поддержание</option><option value="recomposition">Рекомпозиция</option>
-          </select></label>
-        </div>
-        <div id="kbjuResult" class="kbju-result hidden top-gap"></div>
-        <div class="nutrition-reality-check top-gap">
-          <strong>Важна проверка по реальной динамике</strong>
-          <p>Нужно 14–21 день: ежедневно взвешиваться утром в одинаковых условиях, считать среднюю массу за каждую неделю, поддерживать примерно одинаковую активность и считать среднее фактическое потребление калорий.</p>
-          <p>Если средняя масса стабильна — это реальная поддерживающая калорийность. Если снижается слишком быстро — добавьте 100–200 ккал. Если стоит — уберите 100–150 ккал.</p>
-        </div>
-        <div class="toolbar wrap top-gap">
-          <button id="calculateKbjuBtn" class="secondary" type="button">Рассчитать</button>
-          <button id="saveKbjuBtn" type="button">Рассчитать и назначить</button>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="section-head"><div><h2>Программа тренировок</h2><p class="muted top-gap">Назначьте готовую или соберите персональную программу.</p></div></div>
-        <div class="item-card">
-          <h3>Готовая программа</h3>
-          <div class="grid grid-2 top-gap">
-            <label class="field"><span>Шаблон</span><select id="templateSelect"><option value="">Нет доступных шаблонов</option></select></label>
-            <label class="field"><span>Дата начала</span><input id="templateStartDate" type="date" /></label>
+      <section id="coachClientDetail" class="coach-client-detail hidden" aria-live="polite">
+        <div class="card coach-client-header">
+          <div class="section-head">
+            <div class="client-heading">
+              <div id="detailClientAvatar" class="client-avatar client-avatar--large">К</div>
+              <div><h2 id="detailClientName">Клиент</h2><p id="detailClientMeta" class="muted top-gap"></p></div>
+            </div>
+            <button id="closeClientDetailBtn" class="icon-button secondary" type="button" aria-label="Закрыть карточку">×</button>
           </div>
-          <div class="toolbar top-gap"><button id="assignTemplateBtn" type="button">Назначить шаблон</button></div>
+          <div id="clientOverview" class="progress-overview"></div>
+          <div class="client-detail-tabs" role="tablist" aria-label="Данные клиента">
+            <button class="is-active" type="button" role="tab" aria-selected="true" data-client-tab="overview">Обзор</button>
+            <button type="button" role="tab" aria-selected="false" data-client-tab="profile">Анкета</button>
+            <button type="button" role="tab" aria-selected="false" data-client-tab="measurements">Замеры</button>
+            <button type="button" role="tab" aria-selected="false" data-client-tab="nutrition">Питание</button>
+            <button type="button" role="tab" aria-selected="false" data-client-tab="programs">Программы</button>
+          </div>
         </div>
 
-        <div class="item-card top-gap">
-          <h3>Персональное упражнение</h3>
-          <div class="grid grid-4 top-gap">
-            <label class="field"><span>Название</span><input id="customExerciseTitle" maxlength="128" placeholder="Например, Тяга с паузой" /></label>
-            <label class="field"><span>Группа мышц</span><input id="customExerciseMuscle" maxlength="64" /></label>
-            <label class="field"><span>Оборудование</span><input id="customExerciseEquipment" maxlength="64" /></label>
-            <label class="field"><span>Уровень сложности</span><select id="customExerciseDifficulty">
-              <option value="beginner">Начальный</option><option value="intermediate" selected>Средний</option><option value="advanced">Продвинутый</option>
-            </select></label>
-          </div>
-          <div class="toolbar top-gap"><button id="createClientExerciseBtn" class="secondary" type="button">Добавить клиенту</button></div>
-        </div>
-
-        <div class="item-card top-gap">
-          <h3>Персональная программа</h3>
-          <div class="grid grid-3 top-gap">
-            <label class="field"><span>Название</span><input id="programTitle" maxlength="128" value="Персональная программа" /></label>
-            <label class="field"><span>Цель</span><select id="programGoal">
-              <option value="fat_loss">Похудение</option><option value="muscle_gain">Набор мышц</option>
-              <option value="maintenance">Поддержание</option><option value="recomposition">Рекомпозиция</option>
-            </select></label>
-            <label class="field"><span>Уровень</span><select id="programLevel">
-              <option value="beginner">Начальный</option><option value="intermediate">Средний</option><option value="advanced">Продвинутый</option>
-            </select></label>
-          </div>
-          <div id="programDays" class="stack top-gap"></div>
+        <div class="card client-detail-pane" data-client-pane="overview">
+          <div class="section-head"><div><h2>Данные клиента</h2><p class="muted top-gap">Полная сводка без переходов между формами.</p></div></div>
+          <div id="clientFacts" class="client-facts"></div>
           <div class="toolbar wrap top-gap">
-            <button id="addProgramDayBtn" class="secondary" type="button">Добавить день</button>
-            <button id="saveClientProgramBtn" type="button">Создать и назначить</button>
+            <button class="secondary" type="button" data-client-tab-target="profile">Редактировать анкету</button>
+            <button class="secondary" type="button" data-client-tab-target="nutrition">Настроить питание</button>
           </div>
         </div>
+
+        <div class="card client-detail-pane hidden" data-client-pane="profile">
+          <div class="section-head"><div><h2>Анкета</h2><p class="muted top-gap">Основные параметры, цель и нагрузка клиента.</p></div></div>
+          <div class="grid grid-3">
+            <label class="field"><span>Имя</span><input id="profileFullName" maxlength="128" /></label>
+            <label class="field"><span>Цель</span><select id="profileGoal"><option value="">Не выбрана</option><option value="fat_loss">Похудение</option><option value="muscle_gain">Набор мышц</option><option value="maintenance">Поддержание</option><option value="recomposition">Рекомпозиция</option></select></label>
+            <label class="field"><span>Уровень</span><select id="profileLevel"><option value="">Не выбран</option><option value="beginner">Начальный</option><option value="intermediate">Средний</option><option value="advanced">Продвинутый</option></select></label>
+            <label class="field"><span>Рост, см</span><input id="profileHeight" type="number" min="50" max="280" /></label>
+            <label class="field"><span>Вес, кг</span><input id="profileWeight" type="number" min="20" max="500" /></label>
+            <label class="field"><span>Силовых в неделю</span><input id="profileWorkouts" type="number" min="0" max="14" /></label>
+            <label class="field"><span>Кардио в неделю</span><input id="profileCardio" type="number" min="0" max="14" /></label>
+          </div>
+          <div class="toolbar top-gap"><button id="saveClientProfileBtn" type="button">Сохранить изменения</button></div>
+        </div>
+
+        <div class="card client-detail-pane hidden" data-client-pane="measurements">
+          <div class="section-head"><div><h2>Замеры</h2><p class="muted top-gap">Новая запись и история динамики.</p></div></div>
+          <details class="coach-tool-disclosure" open>
+            <summary>Добавить замер</summary>
+            <div class="coach-tool-body">
+              <div class="grid grid-4">
+                <label class="field"><span>Дата</span><input id="measurementDate" type="date" /></label>
+                <label class="field"><span>Вес, кг</span><input id="measurementWeight" type="text" inputmode="decimal" /></label>
+                <label class="field"><span>Грудь, см</span><input id="measurementChest" type="text" inputmode="decimal" /></label>
+                <label class="field"><span>Талия, см</span><input id="measurementWaist" type="text" inputmode="decimal" /></label>
+                <label class="field"><span>Бёдра, см</span><input id="measurementHips" type="text" inputmode="decimal" /></label>
+                <label class="field"><span>Бицепс, см</span><input id="measurementBiceps" type="text" inputmode="decimal" /></label>
+                <label class="field"><span>Бедро, см</span><input id="measurementThigh" type="text" inputmode="decimal" /></label>
+                <label class="field"><span>Комментарий</span><input id="measurementNote" maxlength="500" /></label>
+              </div>
+              <div class="toolbar top-gap"><button id="saveMeasurementBtn" type="button">Сохранить замер</button></div>
+            </div>
+          </details>
+          <div id="clientMeasurements" class="stack top-gap"></div>
+        </div>
+
+        <div class="card client-detail-pane hidden" data-client-pane="nutrition">
+          <div class="section-head"><div><h2>Питание и КБЖУ</h2><p class="muted top-gap">Расчёт по Миффлину — Сан Жеору с учётом нагрузки.</p></div></div>
+          <div class="grid grid-4">
+            <label class="field"><span>Пол</span><select id="kbjuSex"><option value="male">Мужской</option><option value="female">Женский</option></select></label>
+            <label class="field"><span>Вес, кг</span><input id="kbjuWeight" type="text" inputmode="decimal" /></label>
+            <label class="field"><span>Рост, см</span><input id="kbjuHeight" type="text" inputmode="decimal" /></label>
+            <label class="field"><span>Возраст</span><input id="kbjuAge" type="number" min="12" max="120" /></label>
+            <label class="field"><span>Активность без тренировок</span><select id="kbjuDailyActivity"><option value="sedentary">Менее 5000 шагов (×1.2)</option><option value="low">5000–8000 шагов (×1.3)</option><option value="moderate">8000–12000 шагов (×1.4)</option><option value="high">Более 12000 шагов (×1.5)</option></select></label>
+            <label class="field"><span>Силовых в неделю</span><input id="kbjuStrength" type="number" min="0" max="14" value="0" /></label>
+            <label class="field"><span>Силовая, минут</span><input id="kbjuStrengthDuration" type="number" min="10" max="300" value="60" /></label>
+            <label class="field"><span>Кардио в неделю</span><input id="kbjuCardio" type="number" min="0" max="14" value="0" /></label>
+            <label class="field"><span>Кардио, минут</span><input id="kbjuCardioDuration" type="number" min="10" max="300" value="30" /></label>
+            <label class="field"><span>Интенсивность кардио</span><select id="kbjuCardioIntensity"><option value="low">Низкая</option><option value="moderate" selected>Средняя</option><option value="high">Высокая</option></select></label>
+            <label class="field"><span>Цель питания</span><select id="kbjuGoal"><option value="fat_loss">Похудение</option><option value="muscle_gain">Набор</option><option value="maintenance">Поддержание</option><option value="recomposition">Рекомпозиция</option></select></label>
+          </div>
+          <div id="kbjuResult" class="kbju-result hidden top-gap"></div>
+          <details class="nutrition-details top-gap"><summary>Как проверить расчёт по реальной динамике</summary><div class="muted top-gap"><p>Наблюдайте 14–21 день: взвешивайтесь утром, сравнивайте среднюю массу по неделям и учитывайте фактическое потребление.</p><p>При слишком быстром снижении добавьте 100–200 ккал, при отсутствии динамики уберите 100–150 ккал.</p></div></details>
+          <div class="toolbar wrap top-gap"><button id="calculateKbjuBtn" class="secondary" type="button">Пересчитать</button><button id="saveKbjuBtn" type="button">Назначить клиенту</button></div>
+        </div>
+
+        <div class="card client-detail-pane hidden" data-client-pane="programs">
+          <div class="section-head"><div><h2>Программы клиента</h2><p class="muted top-gap">История назначений этого тренера и инструменты программы.</p></div></div>
+          <div id="clientAssignedPrograms" class="stack"></div>
+
+          <details class="coach-tool-disclosure top-gap">
+            <summary>Назначить готовую программу</summary>
+            <div class="coach-tool-body"><div class="grid grid-2"><label class="field"><span>Шаблон</span><select id="templateSelect"><option value="">Нет доступных шаблонов</option></select></label><label class="field"><span>Дата начала</span><input id="templateStartDate" type="date" /></label></div><div class="toolbar top-gap"><button id="assignTemplateBtn" type="button">Назначить шаблон</button></div></div>
+          </details>
+
+          <details class="coach-tool-disclosure top-gap">
+            <summary>Добавить персональное упражнение</summary>
+            <div class="coach-tool-body"><div class="grid grid-4"><label class="field"><span>Название</span><input id="customExerciseTitle" maxlength="128" placeholder="Например, Тяга с паузой" /></label><label class="field"><span>Группа мышц</span><input id="customExerciseMuscle" maxlength="64" /></label><label class="field"><span>Оборудование</span><input id="customExerciseEquipment" maxlength="64" /></label><label class="field"><span>Сложность</span><select id="customExerciseDifficulty"><option value="beginner">Начальная</option><option value="intermediate" selected>Средняя</option><option value="advanced">Продвинутая</option></select></label></div><div class="toolbar top-gap"><button id="createClientExerciseBtn" class="secondary" type="button">Добавить клиенту</button></div></div>
+          </details>
+
+          <details class="coach-tool-disclosure top-gap">
+            <summary>Собрать персональную программу</summary>
+            <div class="coach-tool-body">
+              <div class="grid grid-3"><label class="field"><span>Название</span><input id="programTitle" maxlength="128" value="Персональная программа" /></label><label class="field"><span>Цель</span><select id="programGoal"><option value="fat_loss">Похудение</option><option value="muscle_gain">Набор мышц</option><option value="maintenance">Поддержание</option><option value="recomposition">Рекомпозиция</option></select></label><label class="field"><span>Уровень</span><select id="programLevel"><option value="beginner">Начальный</option><option value="intermediate">Средний</option><option value="advanced">Продвинутый</option></select></label></div>
+              <div id="programDays" class="stack top-gap"></div>
+              <div class="toolbar wrap top-gap"><button id="addProgramDayBtn" class="secondary" type="button">Добавить день</button><button id="saveClientProgramBtn" type="button">Создать и назначить</button></div>
+            </div>
+          </details>
+        </div>
+      </section>
+    </section>
+
+    <section id="coachProgramsView" class="coach-view hidden" data-coach-panel="programs">
+      <div class="card">
+        <div class="section-head"><div><h2>Назначенные программы</h2><p class="muted top-gap">Все программы, которые вы назначали текущим клиентам.</p></div><button id="reloadProgramsBtn" class="icon-button secondary" type="button" aria-label="Обновить программы" title="Обновить">↻</button></div>
+        <label class="field coach-search-field"><span>Поиск</span><input id="programSearch" type="search" placeholder="Программа или клиент" /></label>
+        <div id="assignedProgramsList" class="stack top-gap"></div>
       </div>
-    </div>
+    </section>
 
     <div id="coachDiagnosticCard" class="card hidden"><h2>Лог</h2><pre id="coachLog" class="log-box"></pre></div>
   </main>
 
-  <nav class="app-bottom-nav" aria-label="Разделы тренера">
-    <a href="/app" class="app-bottom-nav__btn"><span class="app-bottom-nav__label">Mini App</span></a>
-    <a href="/coach" class="app-bottom-nav__btn is-active"><span class="app-bottom-nav__label">Тренер</span></a>
-  </nav>
-
-  <div id="confirmModal" class="modal hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="confirmModalTitle">
-    <div class="modal__backdrop"></div><div class="modal__panel card">
-      <h3 id="confirmModalTitle" class="modal__title"></h3><p id="confirmModalBody" class="modal__body muted"></p>
-      <div class="modal__actions toolbar wrap"><button type="button" class="secondary" id="confirmModalCancel">Отмена</button><button type="button" id="confirmModalOk">Подтвердить</button></div>
-    </div>
-  </div>
+  <nav class="app-bottom-nav" aria-label="Разделы тренера"><a href="/app" class="app-bottom-nav__btn"><span class="app-bottom-nav__label">Mini App</span></a><a href="/coach" class="app-bottom-nav__btn is-active"><span class="app-bottom-nav__label">Тренер</span></a></nav>
+  <div id="confirmModal" class="modal hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="confirmModalTitle"><div class="modal__backdrop"></div><div class="modal__panel card"><h3 id="confirmModalTitle" class="modal__title"></h3><p id="confirmModalBody" class="modal__body muted"></p><div class="modal__actions toolbar wrap"><button type="button" class="secondary" id="confirmModalCancel">Отмена</button><button type="button" id="confirmModalOk">Подтвердить</button></div></div></div>
   <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script type="module" src="/static/js/coach.js?v=52"></script>
+  <script type="module" src="/static/js/coach.js?v=53"></script>
 </body>
 </html>

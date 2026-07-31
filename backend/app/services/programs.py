@@ -1257,6 +1257,63 @@ def list_clients(db: Session, coach: User) -> list[dict]:
     ]
 
 
+def list_coach_assigned_programs(db: Session, coach: User) -> list[dict]:
+    """Return programs this coach assigned to clients they currently manage."""
+    rows = (
+        db.query(UserProgram, User)
+        .join(User, User.id == UserProgram.user_id)
+        .join(
+            CoachClient,
+            CoachClient.client_user_id == UserProgram.user_id,
+        )
+        .options(
+            joinedload(UserProgram.template),
+            joinedload(UserProgram.workouts),
+            joinedload(User.profile),
+        )
+        .filter(
+            CoachClient.coach_user_id == coach.id,
+            UserProgram.assigned_by_user_id == coach.id,
+        )
+        .order_by(UserProgram.assigned_at.desc(), UserProgram.id.desc())
+        .all()
+    )
+
+    result: list[dict] = []
+    for program, client in rows:
+        workouts = list(program.workouts)
+        completed = sum(workout.status == "completed" for workout in workouts)
+        planned = sum(workout.status == "planned" for workout in workouts)
+        today = today_for_user(client)
+        upcoming_dates = [
+            workout.scheduled_date
+            for workout in workouts
+            if workout.status != "completed" and workout.scheduled_date >= today
+        ]
+        profile = client.profile
+        template = program.template
+        result.append(
+            {
+                "id": program.id,
+                "client_id": client.id,
+                "client_telegram_user_id": client.telegram_user_id,
+                "client_username": client.username,
+                "client_full_name": profile.full_name if profile else None,
+                "template_id": program.template_id,
+                "title": template.title if template else "Архивная программа",
+                "goal": template.goal if template else None,
+                "level": template.level if template else None,
+                "assigned_at": program.assigned_at,
+                "is_active": program.is_active,
+                "workouts_total": len(workouts),
+                "workouts_completed": completed,
+                "workouts_planned": planned,
+                "next_workout_date": min(upcoming_dates) if upcoming_dates else None,
+            }
+        )
+    return result
+
+
 def assign_template_to_self(
     db: Session,
     current_user: User,
