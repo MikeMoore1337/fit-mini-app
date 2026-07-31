@@ -1,5 +1,5 @@
-import { initTelegramTheme } from './core/theme.js?v=50';
-import { openConfirmDialog } from './core/ui.js?v=50';
+import { initTelegramTheme } from './core/theme.js?v=57';
+import { openConfirmDialog } from './core/ui.js?v=57';
 
 initTelegramTheme({ onError: (error) => console.warn(`Telegram theme: ${String(error)}`) });
 
@@ -298,7 +298,10 @@ function showClientTab(name, shouldScroll = false) {
     button.setAttribute('aria-selected', String(active));
   });
   document.querySelectorAll('[data-client-pane]').forEach((pane) => pane.classList.toggle('hidden', pane.dataset.clientPane !== name));
-  if (shouldScroll) $('coachClientDetail').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (shouldScroll) $('coachClientDetail').scrollIntoView({
+    behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ? 'auto' : 'smooth',
+    block: 'start',
+  });
 }
 
 function showCoachView(name) {
@@ -385,7 +388,10 @@ async function openClient(clientId) {
   await loadMeasurements();
   renderOverview();
   if (!$('programDays').children.length) addProgramDay();
-  $('coachClientDetail').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  $('coachClientDetail').scrollIntoView({
+    behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ? 'auto' : 'smooth',
+    block: 'start',
+  });
 }
 
 async function saveProfile() {

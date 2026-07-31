@@ -166,6 +166,7 @@ class ExerciseCatalogItem(BaseModel):
     is_personalized: bool = False
     created_by_user_id: int | None = None
     source_exercise_id: int | None = None
+    has_guide: bool = False
     guide: ExerciseGuide | None = None
 
 

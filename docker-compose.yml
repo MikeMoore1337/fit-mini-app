@@ -20,9 +20,13 @@ services:
     build: ./backend
     restart: unless-stopped
     env_file: .env
+    environment:
+      FORWARDED_ALLOW_IPS: 172.28.0.10,172.28.0.11
     depends_on:
       db:
         condition: service_healthy
+      setup:
+        condition: service_completed_successfully
     ports:
       - "127.0.0.1:8000:8000"
     healthcheck:
@@ -35,6 +39,18 @@ services:
       timeout: 6s
       retries: 3
       start_period: 60s
+    networks:
+      - default
+      - proxy_net
+
+  setup:
+    build: ./backend
+    restart: "no"
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    command: /app/setup-entrypoint.sh
 
   bot:
     build: ./bot
@@ -82,6 +98,9 @@ services:
     volumes:
       - caddy_data:/data
       - caddy_config:/config
+    networks:
+      proxy_net:
+        ipv4_address: 172.28.0.10
 
   cloudflared:
     image: cloudflare/cloudflared:latest
@@ -92,6 +111,9 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    networks:
+      proxy_net:
+        ipv4_address: 172.28.0.11
 
   worker:
     build: ./backend
@@ -112,3 +134,9 @@ volumes:
     # The explicit name makes the lock shared by bot containers started from
     # different Compose projects on the same Docker host.
     name: fitminiapp_bot_polling_lock
+
+networks:
+  proxy_net:
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24

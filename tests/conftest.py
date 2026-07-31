@@ -16,7 +16,7 @@ os.environ.setdefault("APP_NAME", "FitMiniApp Test")
 os.environ.setdefault("APP_HOST", "127.0.0.1")
 os.environ.setdefault("APP_PORT", "8000")
 os.environ.setdefault("APP_DEBUG", "false")
-os.environ.setdefault("SECRET_KEY", "test-secret")
+os.environ.setdefault("SECRET_KEY", "test-secret-key-at-least-thirty-two-characters")
 os.environ.setdefault("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
 os.environ.setdefault("REFRESH_TOKEN_EXPIRE_DAYS", "30")
 os.environ["DATABASE_URL"] = _TEST_DATABASE_URL

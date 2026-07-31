@@ -97,6 +97,7 @@ class CoachClient(Base):
             postgresql_where=text("status = 'active'"),
             sqlite_where=text("status = 'active'"),
         ),
+        Index("ix_coach_clients_coach_status", "coach_user_id", "status"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

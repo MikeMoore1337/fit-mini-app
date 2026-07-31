@@ -13,9 +13,8 @@ from sqlalchemy import text
 from app.api.router import api_router
 from app.core.config import settings
 from app.core.rate_limit import limiter
-from app.db.session import engine, get_session_context
+from app.db.session import engine
 from app.middleware.request_context import RequestContextMiddleware
-from app.services.seed import seed_demo_data
 
 APP_DIR = Path(__file__).resolve().parent
 STATIC_DIR = APP_DIR / "static"
@@ -29,8 +28,6 @@ async def lifespan(app: FastAPI):
         level=logging.DEBUG if settings.app_debug else logging.INFO,
         format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
     )
-    with get_session_context() as session:
-        seed_demo_data(session, include_demo_users=settings.app_env == "dev")
     yield
 
 
@@ -38,6 +35,9 @@ app = FastAPI(
     title=settings.app_name,
     debug=settings.app_debug,
     lifespan=lifespan,
+    docs_url=None if settings.app_env == "prod" else "/docs",
+    redoc_url=None if settings.app_env == "prod" else "/redoc",
+    openapi_url=None if settings.app_env == "prod" else "/openapi.json",
 )
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")

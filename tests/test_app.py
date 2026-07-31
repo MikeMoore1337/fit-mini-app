@@ -19,6 +19,7 @@ from app.models.notification import Notification, NotificationSetting
 from app.models.program import ProgramTemplate, UserProgram, UserWorkout
 from app.models.user import CoachClient, CoachClientInvite, User
 from app.services import notifications as notifications_service
+from app.services.exercise_guides import get_exercise_guide
 from app.services.notifications import (
     claim_due_notifications,
     mark_delivery_failed,
@@ -975,9 +976,29 @@ def test_every_seeded_exercise_has_complete_guide_and_local_images(client):
     static_dir = Path(__file__).resolve().parents[1] / "backend" / "app" / "static"
 
     assert len(standard_exercises) == 149
-    for exercise in standard_exercises:
-        guide = exercise["guide"]
-        assert guide is not None, exercise["slug"]
+    assert len(client.get("/api/v1/programs/exercises", headers=headers).content) < 100_000
+    assert all(
+        exercise["has_guide"] and exercise["guide"] is None for exercise in standard_exercises
+    )
+
+    sample = client.get(
+        f"/api/v1/programs/exercises/{standard_exercises[0]['id']}/guide",
+        headers=headers,
+    )
+    assert sample.status_code == 200
+    assert len(sample.json()["images"]) == 2
+
+    with get_session_context() as session:
+        seeded_guides = [
+            (row.slug, get_exercise_guide(row))
+            for row in (
+                session.query(Exercise)
+                .filter(Exercise.created_by_user_id.is_(None), Exercise.is_deleted.is_(False))
+                .all()
+            )
+        ]
+    for slug, guide in seeded_guides:
+        assert guide is not None, slug
         assert len(guide["technique_steps"]) >= 3
         assert guide["breathing"]
         assert len(guide["common_mistakes"]) >= 3
@@ -1002,6 +1023,7 @@ def test_custom_exercise_has_no_incorrect_stock_guide(client):
 
     assert created.status_code == 201
     assert created.json()["guide"] is None
+    assert created.json()["has_guide"] is False
 
 
 def test_seed_refreshes_catalog_exercises_for_templates(client):
@@ -1742,6 +1764,25 @@ def test_admin_users_ok_for_admin(client):
     assert len(data) >= 1
 
 
+def test_admin_users_supports_server_side_filters_and_pagination(client):
+    headers = auth(client, telegram_user_id=1001, is_coach=True, is_admin=True)
+    auth(client, telegram_user_id=6011, is_coach=False, full_name="Искомый клиент")
+    auth(client, telegram_user_id=6012, is_coach=True, full_name="Другой тренер")
+
+    page = client.get("/api/v1/admin/users?limit=1&offset=0", headers=headers)
+    assert page.status_code == 200
+    assert len(page.json()) == 1
+    assert int(page.headers["X-Total-Count"]) >= 3
+
+    filtered = client.get(
+        "/api/v1/admin/users?search=6011&role=client&active=true",
+        headers=headers,
+    )
+    assert filtered.status_code == 200
+    assert filtered.headers["X-Total-Count"] == "1"
+    assert filtered.json()[0]["telegram_user_id"] == 6011
+
+
 def test_admin_can_change_user_role(client):
     admin_headers = auth(client, telegram_user_id=1001, is_coach=True, is_admin=True)
     client_headers = auth(client, telegram_user_id=2001, is_coach=False)
@@ -2342,22 +2383,27 @@ def test_csp_blocks_unhashed_inline_scripts(client):
     assert "localStorage.setItem('fit_refresh_token'" not in main_js
 
 
+def test_versioned_static_assets_are_cached_but_html_is_not(client):
+    asset = client.get("/static/styles.css?v=57")
+    assert asset.status_code == 200
+    assert asset.headers["cache-control"] == "public, max-age=31536000, immutable"
+
+    page = client.get("/app")
+    assert page.status_code == 200
+    assert "no-store" in page.headers["cache-control"]
+
+
 def test_miniapp_has_role_gated_coach_and_admin_navigation():
     static_dir = Path(__file__).resolve().parents[1] / "backend" / "app" / "static"
     html = (static_dir / "index.html").read_text(encoding="utf-8")
     main_js = (static_dir / "js" / "main.js").read_text(encoding="utf-8")
 
-    profile_nav_position = html.index('<span class="app-bottom-nav__label">Профиль</span>')
-    coach_nav_position = html.index('id="coachBottomNavLink"')
-    admin_nav_position = html.index('id="adminBottomNavLink"')
-
-    assert profile_nav_position < coach_nav_position < admin_nav_position
-    assert '<a href="/coach" id="coachBottomNavLink" class="app-bottom-nav__btn hidden">' in html
-    assert '<span class="app-bottom-nav__label">Тренер</span>' in html
-    assert "coachBottomNavLink.classList.toggle('hidden', !isCoachOrAdmin())" in main_js
-    assert '<a href="/admin" id="adminBottomNavLink" class="app-bottom-nav__btn hidden">' in html
-    assert '<span class="app-bottom-nav__label">Админка</span>' in html
-    assert "adminBottomNavLink.classList.toggle('hidden', !isAdmin())" in main_js
+    bottom_nav = re.search(r'<nav class="app-bottom-nav"[\s\S]*?</nav>', html).group()
+    assert bottom_nav.count("app-bottom-nav__btn") == 5
+    assert 'id="profileCoachLink"' in html
+    assert 'id="profileAdminLink"' in html
+    assert "profileCoachLink.classList.toggle('hidden', !isCoachOrAdmin())" in main_js
+    assert "profileAdminLink.classList.toggle('hidden', !isAdmin())" in main_js
 
 
 def test_client_management_is_consolidated_in_coach_section():

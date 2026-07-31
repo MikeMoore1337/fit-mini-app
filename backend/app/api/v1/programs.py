@@ -11,6 +11,7 @@ from app.schemas.program import (
     CoachClientCreate,
     ExerciseCatalogCreate,
     ExerciseCatalogItem,
+    ExerciseGuide,
     ProgramAssignmentResponse,
     ProgramTemplateCreate,
     ProgramTemplateCreateResponse,
@@ -23,6 +24,7 @@ from app.services.programs import (
     add_client_for_coach,
     assign_template_to_self,
     build_template_response,
+    build_template_responses,
     create_and_optionally_assign_program,
     create_exercise,
     delete_exercise_for_user,
@@ -40,7 +42,13 @@ from app.services.programs import (
 router = APIRouter()
 
 
-def _serialize_exercise(exercise: Exercise, current_user: User) -> dict:
+def _serialize_exercise(
+    exercise: Exercise,
+    current_user: User,
+    *,
+    include_guide: bool = False,
+) -> dict:
+    guide = get_exercise_guide(exercise)
     return {
         "id": _effective_exercise_id(exercise),
         "edit_target_id": exercise.id,
@@ -54,7 +62,8 @@ def _serialize_exercise(exercise: Exercise, current_user: User) -> dict:
         "is_personalized": exercise.created_by_user_id == current_user.id,
         "created_by_user_id": exercise.created_by_user_id,
         "source_exercise_id": exercise.source_exercise_id,
-        "guide": get_exercise_guide(exercise),
+        "has_guide": guide is not None,
+        "guide": guide if include_guide else None,
     }
 
 
@@ -65,6 +74,28 @@ def get_exercises(
 ):
     exercises = list_exercises(db, current_user)
     return [_serialize_exercise(ex, current_user) for ex in exercises]
+
+
+@router.get("/exercises/{exercise_id}/guide", response_model=ExerciseGuide)
+def get_exercise_guide_details(
+    exercise_id: int,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    exercise = next(
+        (
+            row
+            for row in list_exercises(db, current_user)
+            if _effective_exercise_id(row) == exercise_id
+        ),
+        None,
+    )
+    if exercise is None:
+        raise HTTPException(status_code=404, detail="Упражнение не найдено")
+    guide = get_exercise_guide(exercise)
+    if guide is None:
+        raise HTTPException(status_code=404, detail="Техника упражнения не заполнена")
+    return guide
 
 
 @router.post(
@@ -182,7 +213,7 @@ def my_templates(
     db: Session = Depends(get_db),
 ):
     items = list_user_templates(db, current_user)
-    return [build_template_response(item, db, current_user) for item in items]
+    return build_template_responses(items, db, current_user)
 
 
 @router.get("/templates/hidden", response_model=list[ProgramTemplateResponse])
@@ -191,7 +222,7 @@ def hidden_templates(
     db: Session = Depends(get_db),
 ):
     items = list_hidden_example_templates(db, current_user)
-    return [build_template_response(item, db, current_user) for item in items]
+    return build_template_responses(items, db, current_user)
 
 
 @router.post("/templates/{template_id}/restore", status_code=status.HTTP_204_NO_CONTENT)

@@ -5,6 +5,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.models.program import UserProgram, UserWorkout
 from app.schemas.user import TrainerResponse, UserProfileResponse, UserProfileUpdate, UserResponse
 from app.services.client_codes import ensure_client_code, rotate_client_code
 from app.services.nutrition import get_nutrition_target_for_user
@@ -28,6 +29,19 @@ def _build_user_response(db: Session, user) -> UserResponse:
         db.commit()
     kbju = get_nutrition_target_for_user(db, user)
     trainer = get_current_trainer(db, user)
+    has_active_program = (
+        db.query(UserProgram.id)
+        .filter(UserProgram.user_id == user.id, UserProgram.is_active.is_(True))
+        .first()
+        is not None
+    )
+    has_workout_history = (
+        db.query(UserWorkout.id)
+        .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
+        .filter(UserProgram.user_id == user.id, UserWorkout.status == "completed")
+        .first()
+        is not None
+    )
     return UserResponse(
         id=user.id,
         telegram_user_id=user.telegram_user_id,
@@ -38,6 +52,8 @@ def _build_user_response(db: Session, user) -> UserResponse:
         client_code=user.client_code,
         is_coach=user.is_coach,
         is_admin=user.is_admin,
+        has_active_program=has_active_program,
+        has_workout_history=has_workout_history,
         profile=UserProfileResponse(
             full_name=user.profile.full_name if user.profile else None,
             goal=user.profile.goal if user.profile else None,

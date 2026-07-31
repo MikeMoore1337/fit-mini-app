@@ -203,16 +203,29 @@ def claim_due_notifications(db: Session, limit: int = 100) -> list[Notification]
     return db.query(Notification).filter(Notification.id.in_(claimed_ids)).all()
 
 
-def mark_delivery_succeeded(db: Session, notification: Notification, user: User) -> None:
+def mark_delivery_succeeded(
+    db: Session,
+    notification: Notification,
+    user: User,
+    *,
+    commit: bool = True,
+) -> None:
     notification.status = "sent"
     notification.sent_at = now_for_user_naive(user)
     notification.last_error = None
     notification.processing_started_at = None
     notification.next_attempt_at = None
-    db.commit()
+    if commit:
+        db.commit()
 
 
-def mark_delivery_failed(db: Session, notification: Notification, error: Exception) -> None:
+def mark_delivery_failed(
+    db: Session,
+    notification: Notification,
+    error: Exception,
+    *,
+    commit: bool = True,
+) -> None:
     notification.attempt_count += 1
     notification.last_error = str(error)[:2000]
     notification.processing_started_at = None
@@ -223,7 +236,8 @@ def mark_delivery_failed(db: Session, notification: Notification, error: Excepti
         notification.status = "queued"
         delay_minutes = min(60, 2 ** (notification.attempt_count - 1))
         notification.next_attempt_at = utcnow() + timedelta(minutes=delay_minutes)
-    db.commit()
+    if commit:
+        db.commit()
 
 
 def mark_notification_sent(db: Session, notification: Notification) -> Notification:

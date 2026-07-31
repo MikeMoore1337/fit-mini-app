@@ -9,6 +9,7 @@ from app.db.session import get_db
 from app.models.program import UserProgram, UserWorkout, UserWorkoutExercise, UserWorkoutSet
 from app.models.user import BodyMeasurement, User
 from app.schemas.workout import BodyMeasurementResponse, BodyMeasurementSave, WorkoutSetUpdate
+from app.services.exercise_guides import get_exercise_guide
 from app.services.programs import get_visible_exercise_display_map
 
 router = APIRouter()
@@ -87,6 +88,10 @@ def _serialize_workout(workout: UserWorkout, db: Session, current_user: User) ->
                 "prescribed_sets": item.prescribed_sets,
                 "prescribed_reps": item.prescribed_reps,
                 "rest_seconds": item.rest_seconds,
+                "has_guide": bool(
+                    (visible_map.get(item.exercise_id) or item.exercise)
+                    and get_exercise_guide(visible_map.get(item.exercise_id) or item.exercise)
+                ),
                 "sets": [
                     {
                         "id": set_item.id,

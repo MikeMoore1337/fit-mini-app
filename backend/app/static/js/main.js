@@ -1,5 +1,5 @@
-import { API, FRONTEND_VERSION, accessTokenKey } from './core/config.js?v=56';
-import { state } from './core/state.js?v=50';
+import { API, FRONTEND_VERSION, accessTokenKey } from './core/config.js?v=57';
+import { state } from './core/state.js?v=57';
 import {
   $,
   log,
@@ -11,9 +11,9 @@ import {
   expandSectionAndScroll,
   restoreSectionState,
   setSectionCollapsed,
-} from './core/ui.js?v=48';
-import { api, clearTokens, sleep } from './core/http.js?v=48';
-import { getTelegramWebApp, hapticImpact, hapticNotification, initTelegramTheme } from './core/theme.js?v=48';
+} from './core/ui.js?v=57';
+import { api, clearTokens, sleep } from './core/http.js?v=57';
+import { getTelegramWebApp, hapticImpact, hapticNotification, initTelegramTheme } from './core/theme.js?v=57';
 
 window.__fitMiniAppBoot = {
   ...(window.__fitMiniAppBoot || {}),
@@ -1131,7 +1131,7 @@ function renderOnboarding() {
   if (!root || !card) return;
 
   const profile = state.me?.profile || {};
-  const hasOwnProgram = (state.templates || []).some(
+  const hasOwnProgram = state.me?.has_active_program || (state.templates || []).some(
     (template) => template.owner_user_id === state.me?.id || template.created_by_user_id === state.me?.id
   );
   const steps = [
@@ -1168,7 +1168,7 @@ function renderOnboarding() {
       action: 'К шаблонам',
     },
     {
-      done: Boolean((state.historyRows || []).length),
+      done: Boolean(state.me?.has_workout_history || (state.historyRows || []).length),
       title: 'Завершить первую тренировку',
       text: 'После завершения здесь появится прогресс.',
       section: 'section-today-workout',
@@ -1286,14 +1286,19 @@ function toggleCoachUI() {
   const adminLink = $('adminLink');
   if (adminLink) adminLink.classList.toggle('hidden', !isAdmin());
 
-  const adminBottomNavLink = $('adminBottomNavLink');
-  if (adminBottomNavLink) adminBottomNavLink.classList.toggle('hidden', !isAdmin());
+  const profileAdminLink = $('profileAdminLink');
+  if (profileAdminLink) profileAdminLink.classList.toggle('hidden', !isAdmin());
 
   const coachLink = $('coachLink');
   if (coachLink) coachLink.classList.toggle('hidden', !isCoachOrAdmin());
 
-  const coachBottomNavLink = $('coachBottomNavLink');
-  if (coachBottomNavLink) coachBottomNavLink.classList.toggle('hidden', !isCoachOrAdmin());
+  const profileCoachLink = $('profileCoachLink');
+  if (profileCoachLink) profileCoachLink.classList.toggle('hidden', !isCoachOrAdmin());
+
+  const roleWorkspaceLinks = $('roleWorkspaceLinks');
+  if (roleWorkspaceLinks) {
+    roleWorkspaceLinks.classList.toggle('hidden', !isCoachOrAdmin() && !isAdmin());
+  }
 
   const coachFields = $('coachFields');
   const builderMode = $('builder_mode');
@@ -1368,6 +1373,7 @@ function initSectionToggles() {
     const body = document.getElementById(targetId);
     if (!body) return;
 
+    button.setAttribute('aria-controls', targetId);
     restoreSectionState(targetId);
 
     button.onclick = () => {
@@ -1925,7 +1931,7 @@ function getExerciseCatalogCardHtml(exercise) {
     `<span class="metric-pill">${escapeHtml(getExerciseOwnerLabel(exercise))}</span>`,
     `<span class="metric-pill">${escapeHtml(getExerciseCatalogBadgeLabel(exercise))}</span>`,
     exercise.is_personalized ? '<span class="metric-pill">Моё изменение</span>' : '',
-    exercise.guide ? '<span class="metric-pill metric-pill--guide">Есть техника</span>' : '',
+    exercise.has_guide ? '<span class="metric-pill metric-pill--guide">Есть техника</span>' : '',
   ].join('');
 
   return `
@@ -1939,7 +1945,7 @@ function getExerciseCatalogCardHtml(exercise) {
           + Добавить в программу
         </button>
         ${
-          exercise.guide
+          exercise.has_guide
             ? `<button class="exercise-guide-btn" type="button" data-exercise-id="${exercise.id}">
                 Техника
               </button>`
@@ -1968,7 +1974,10 @@ function closeExerciseGuide() {
   exerciseGuidePreviousFocus = null;
 }
 
-function openExerciseGuide(exercise) {
+async function openExerciseGuide(exercise) {
+  if (exercise?.has_guide && !exercise.guide) {
+    exercise.guide = await withReauth(() => api(API.exerciseGuide(exercise.id)));
+  }
   const guide = exercise?.guide;
   const root = $('exerciseGuideModal');
   const title = $('exerciseGuideTitle');
@@ -3377,6 +3386,7 @@ function clearWorkoutTimer() {
 
 const pendingSetPayloads = new Map();
 const setSaveTimers = new Map();
+const setSaveInFlight = new Map();
 
 function clearPendingSetSaves() {
   setSaveTimers.forEach((timer) => clearTimeout(timer));
@@ -3438,20 +3448,29 @@ function getSetPayloadFromDom(setId) {
 }
 
 async function flushSetSave(setId) {
-  const payload = pendingSetPayloads.get(setId);
-  if (!payload) return;
-  setWorkoutSaveStatus('saving', 'Сохраняем изменения…');
-  try {
-    await updateSetRow(setId, payload);
-    if (pendingSetPayloads.get(setId) === payload) {
-      pendingSetPayloads.delete(setId);
-      clearWorkoutDraftValue(state.todayWorkout?.id, setId);
+  if (setSaveInFlight.has(setId)) return setSaveInFlight.get(setId);
+
+  const savePromise = (async () => {
+    while (pendingSetPayloads.has(setId)) {
+      const payload = pendingSetPayloads.get(setId);
+      setWorkoutSaveStatus('saving', 'Сохраняем изменения…');
+      try {
+        await updateSetRow(setId, payload);
+        if (pendingSetPayloads.get(setId) === payload) {
+          pendingSetPayloads.delete(setId);
+          clearWorkoutDraftValue(state.todayWorkout?.id, setId);
+        }
+      } catch (error) {
+        log(`save set ${setId}: ${String(error)}`);
+        setWorkoutSaveStatus('error', navigator.onLine ? 'Не удалось сохранить' : 'Нет сети — изменения сохранены на устройстве');
+        return;
+      }
     }
     setWorkoutSaveStatus('saved', pendingSetPayloads.size ? 'Сохраняем изменения…' : 'Все изменения сохранены');
-  } catch (error) {
-    log(`save set ${setId}: ${String(error)}`);
-    setWorkoutSaveStatus('error', navigator.onLine ? 'Не удалось сохранить' : 'Нет сети — изменения сохранены на устройстве');
-  }
+  })().finally(() => setSaveInFlight.delete(setId));
+
+  setSaveInFlight.set(setId, savePromise);
+  return savePromise;
 }
 
 function queueSetSave(setId, { immediate = false } = {}) {
@@ -3656,7 +3675,7 @@ function renderTodayWorkout(workout) {
           </div>
 
           ${
-            state.exercises.some((item) => item.id === exercise.exercise_id && item.guide)
+            exercise.has_guide
               ? `<div class="toolbar wrap top-gap">
                   <button class="secondary exercise-guide-btn" type="button" data-exercise-id="${exercise.exercise_id}">
                     Техника упражнения
@@ -4384,27 +4403,58 @@ function renderLoadError(targetId, text) {
   node.innerHTML = `<div class="empty-state"><p class="empty-state__title">${escapeHtml(text)}</p><p class="empty-state__text muted">Остальные разделы приложения продолжат работать. Попробуйте обновить этот раздел.</p></div>`;
 }
 
-async function bootstrap() {
-  setAppLoading(true);
-  try {
-    await loadMe();
-    const results = [];
-    results.push(await runBootstrapTask('invite link', claimStartParamInvite));
-    results.push(await runBootstrapTask('coach invites', loadCoachInvites));
-    results.push(await runBootstrapTask('clients', loadClients, () => renderLoadError('clientsList', 'Не удалось загрузить клиентов')));
-    const sectionResults = await Promise.all([
-      runBootstrapTask('exercises', loadExercises, () => renderLoadError('exerciseCatalogList', 'Не удалось загрузить упражнения')),
-      runBootstrapTask('templates', loadTemplates, () => renderLoadError('templatesList', 'Не удалось загрузить программы')),
+const screenLoadPromises = new Map();
+
+async function loadScreenData(screen) {
+  if (state.loadedScreens.has(screen)) return;
+  if (screenLoadPromises.has(screen)) return screenLoadPromises.get(screen);
+
+  const loaders = {
+    today: () => Promise.all([
       runBootstrapTask('today workout', loadTodayWorkout),
       runBootstrapTask('week schedule', loadWeekSchedule, () => {
         state.weekSchedule = [];
         renderWeekOverview();
       }),
+    ]),
+    program: () => Promise.all([
+      runBootstrapTask('clients', loadClients, () => renderLoadError('clientsList', 'Не удалось загрузить клиентов')),
+      runBootstrapTask('exercises', loadExercises, () => renderLoadError('exerciseCatalogList', 'Не удалось загрузить упражнения')),
+      runBootstrapTask('templates', loadTemplates, () => renderLoadError('templatesList', 'Не удалось загрузить программы')),
+    ]),
+    history: () => Promise.all([
       runBootstrapTask('measurements', loadBodyMeasurements, () => renderLoadError('bodyMeasurements', 'Не удалось загрузить замеры')),
       runBootstrapTask('history', resetHistoryAndReload, () => renderLoadError('workoutHistory', 'Не удалось загрузить дневник')),
+    ]),
+    profile: () => Promise.all([
+      runBootstrapTask('coach invites', loadCoachInvites),
       runBootstrapTask('notifications', loadNotifications, () => renderLoadError('notificationsList', 'Не удалось загрузить уведомления')),
-    ]);
-    results.push(...sectionResults);
+    ]),
+    kbju: async () => [],
+  };
+
+  const loader = loaders[screen];
+  if (!loader) return;
+  const promise = loader()
+    .then((results) => {
+      if (!results.some((result) => !result)) state.loadedScreens.add(screen);
+      renderOnboarding();
+      return results;
+    })
+    .finally(() => screenLoadPromises.delete(screen));
+  screenLoadPromises.set(screen, promise);
+  return promise;
+}
+
+async function bootstrap() {
+  setAppLoading(true);
+  try {
+    state.loadedScreens.clear();
+    screenLoadPromises.clear();
+    await loadMe();
+    const results = [await runBootstrapTask('invite link', claimStartParamInvite)];
+    const sectionResults = await loadScreenData('today');
+    results.push(...(sectionResults || []));
     if (state.todayWorkout) renderTodayWorkout(state.todayWorkout);
 
     renderEmptyBuilder();
@@ -4444,8 +4494,22 @@ function bindUI() {
     const button = event.target.closest?.('.exercise-guide-btn');
     if (!button) return;
     const exerciseId = Number(button.dataset.exerciseId);
-    const exercise = state.exercises.find((item) => item.id === exerciseId);
-    openExerciseGuide(exercise);
+    const catalogExercise = state.exercises.find((item) => item.id === exerciseId);
+    const workoutExercise = (state.todayWorkout?.exercises || []).find(
+      (item) => item.exercise_id === exerciseId
+    );
+    const exercise = catalogExercise || (workoutExercise
+      ? {
+          id: exerciseId,
+          title: workoutExercise.exercise_title,
+          has_guide: workoutExercise.has_guide,
+          guide: null,
+        }
+      : null);
+    openExerciseGuide(exercise).catch((error) => {
+      log(`exercise guide: ${String(error)}`);
+      toastError(error, 'Не удалось загрузить технику упражнения');
+    });
   });
   document.addEventListener('click', (event) => {
     const button = event.target.closest?.('.assign-exercise-btn');
@@ -4482,6 +4546,9 @@ function bindUI() {
     showAppScreen(card);
     setActiveBottomNav(card);
     syncTelegramChrome();
+    loadScreenData(getAppScreen(card)).catch((error) => {
+      log(`screen load ${getAppScreen(card)}: ${String(error)}`);
+    });
   });
 
   if ($('telegramLoginBtn')) {

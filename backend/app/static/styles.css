@@ -505,8 +505,8 @@ button.program-client-link {
     --muted: #9ca3af;
     --field-label: #cbd5e1;
     --placeholder: #7f8793;
-    --accent: #4f8cff;
-    --accent-hover: #3d78e6;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
     --accent-soft: rgba(79, 140, 255, 0.12);
     --accent-line: rgba(79, 140, 255, 0.28);
     --accent-strong: #cfe0ff;
@@ -520,6 +520,7 @@ button.program-client-link {
     --success-line: rgba(34, 197, 94, 0.35);
     --success-text: #bbf7d0;
     --danger: #ef4444;
+    --danger-button: #b91c1c;
     --danger-line: rgba(239, 68, 68, 0.35);
     --danger-hover: #dc2626;
     --danger-toast-bg: rgba(45, 17, 17, 0.96);
@@ -563,8 +564,8 @@ button.program-client-link {
     --muted: #687385;
     --field-label: #475569;
     --placeholder: #8993a3;
-    --accent: #2481cc;
-    --accent-hover: #1f6fac;
+    --accent: #1565a8;
+    --accent-hover: #0f4f86;
     --accent-soft: rgba(36, 129, 204, 0.12);
     --accent-line: rgba(36, 129, 204, 0.24);
     --accent-strong: #0f4f86;
@@ -576,6 +577,7 @@ button.program-client-link {
     --success-line: rgba(34, 197, 94, 0.28);
     --success-text: #166534;
     --danger-toast-bg: rgba(255, 238, 238, 0.98);
+    --danger-button: #b91c1c;
     --warning-soft: rgba(245, 158, 11, 0.12);
     --warning-text: #8a5200;
     --link-color: #2481cc;
@@ -2811,7 +2813,7 @@ body.modal-open {
 }
 
 button.btn-danger {
-    background: var(--danger);
+    background: var(--danger-button);
 }
 
 button.btn-danger:hover {

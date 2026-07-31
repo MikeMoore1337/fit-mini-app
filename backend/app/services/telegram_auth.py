@@ -166,18 +166,18 @@ def get_or_create_user_from_init_data(db: Session, init_data: dict) -> User:
     _apply_bootstrap_admin_role(user)
     ensure_client_code(db, user)
 
-    profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
-    if not profile:
+    existing_profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
+    if not existing_profile:
         full_name = (
             " ".join(part for part in [first_name, last_name] if part).strip()
             or username
             or f"User {telegram_user_id}"
         )
-        profile = UserProfile(
+        existing_profile = UserProfile(
             user_id=user.id,
             full_name=full_name,
         )
-        db.add(profile)
+        db.add(existing_profile)
 
     _link_pending_client_invites(db, user)
     db.commit()

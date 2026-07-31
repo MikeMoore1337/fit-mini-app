@@ -141,6 +141,14 @@ class UserProgram(Base):
 
 class UserWorkout(Base):
     __tablename__ = "user_workouts"
+    __table_args__ = (
+        Index(
+            "ix_user_workouts_program_date_status",
+            "user_program_id",
+            "scheduled_date",
+            "status",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_program_id: Mapped[int] = mapped_column(ForeignKey("user_programs.id"), index=True)

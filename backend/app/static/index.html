@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
     <meta name="theme-color" content="#0f1115"/>
     <title>FitMiniApp</title>
-    <link rel="stylesheet" href="/static/styles.css?v=53"/>
+    <link rel="stylesheet" href="/static/styles.css?v=57"/>
 </head>
 <body>
 <main class="container" id="app-main">
@@ -120,6 +120,13 @@
             <div id="profileAccountSummary" class="item-card profile-account-summary hidden"></div>
             <div id="coachInvites" class="stack hidden"></div>
             <div id="trainerInfo" class="item-card hidden"></div>
+            <div id="roleWorkspaceLinks" class="item-card hidden">
+                <strong>Рабочие разделы</strong>
+                <div class="toolbar wrap top-gap">
+                    <a href="/coach" id="profileCoachLink" class="button-link hidden">Кабинет тренера</a>
+                    <a href="/admin" id="profileAdminLink" class="button-link secondary-link hidden">Админка</a>
+                </div>
+            </div>
             <div id="clientCodeCard" class="item-card">
                 <strong>Мой код клиента</strong>
                 <p id="clientCodeValue" class="top-gap">—</p>
@@ -680,26 +687,6 @@
         </span>
         <span class="app-bottom-nav__label">Профиль</span>
     </button>
-    <a href="/coach" id="coachBottomNavLink" class="app-bottom-nav__btn hidden">
-        <span class="app-bottom-nav__icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" role="img">
-                <path d="M16 21v-2a4 4 0 0 0-8 0v2"/>
-                <circle cx="12" cy="7" r="4"/>
-                <path d="M20 8v6"/>
-                <path d="M23 11h-6"/>
-            </svg>
-        </span>
-        <span class="app-bottom-nav__label">Тренер</span>
-    </a>
-    <a href="/admin" id="adminBottomNavLink" class="app-bottom-nav__btn hidden">
-        <span class="app-bottom-nav__icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" role="img">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                <path d="m9 12 2 2 4-4"/>
-            </svg>
-        </span>
-        <span class="app-bottom-nav__label">Админка</span>
-    </a>
 </nav>
 
 <div
@@ -861,6 +848,6 @@
     })();
 </script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script type="module" src="/static/js/main.js?v=56"></script>
+<script type="module" src="/static/js/main.js?v=57"></script>
 </body>
 </html>

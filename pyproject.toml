@@ -78,6 +78,14 @@ disallow_incomplete_defs = false
 check_untyped_defs = false
 no_implicit_optional = false
 
+[tool.pytest.ini_options]
+cache_dir = ".tmp_pytest_cache"
+filterwarnings = [
+    "error",
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated:starlette.exceptions.StarletteDeprecationWarning",
+    "ignore:'asyncio.iscoroutinefunction' is deprecated:DeprecationWarning:slowapi.extension",
+]
+
 [[tool.mypy.overrides]]
 module = ["alembic", "alembic.*"]
 ignore_errors = true
@@ -86,14 +94,3 @@ ignore_errors = true
 [[tool.mypy.overrides]]
 module = ["app.core.config"]
 disable_error_code = ["call-arg"]
-
-# Постепенно ужесточать типизацию; пока не блокируем CI.
-[[tool.mypy.overrides]]
-module = [
-    "app.services.telegram_auth",
-    "app.services.programs",
-    "app.services.billing",
-    "app.api.v1.auth",
-    "app.api.v1.admin",
-]
-ignore_errors = true

@@ -370,17 +370,18 @@ Telegram ID: username в Telegram может измениться.
 
 ## Миграции
 
-Backend использует Alembic. Docker-entrypoint ждёт базу данных, применяет миграции
-и затем запускает Uvicorn.
+Backend использует Alembic. Одноразовый Compose-сервис `setup` ждёт базу данных,
+применяет миграции и синхронизирует системный каталог до запуска backend. Поэтому
+реплики API не выполняют миграции и seed одновременно.
 
-Текущий head — `0014_hardening_data_integrity`. Перед обновлением существующей базы обязательно сделайте резервную копию PostgreSQL.
+Текущий head — `0020_add_query_performance_indexes`. Перед обновлением существующей базы обязательно сделайте резервную копию PostgreSQL.
 
-После обычного `docker compose up -d --build` отдельно запускать `alembic upgrade head` не нужно: backend уже делает это при старте. Если миграции всё же нужно применить вручную, остановите сервисы приложения и запустите одноразовый backend-контейнер:
+После обычного `docker compose up -d --build` отдельно запускать `alembic upgrade head` не нужно: это делает сервис `setup`. Если миграции всё же нужно применить вручную, остановите сервисы приложения и запустите одноразовый setup-контейнер:
 
 ```bash
 docker compose stop backend worker bot
 docker compose up -d db
-docker compose run --rm --no-deps backend alembic upgrade head
+docker compose run --rm setup
 docker compose up -d backend worker bot
 ```
 
@@ -430,6 +431,8 @@ CI делает:
 - установку backend и bot зависимостей;
 - проверку совместимости установленных зависимостей через `pip check`;
 - синтаксическую проверку frontend JavaScript через `node --check`;
+- проверки frontend-контрактов, навигации и WCAG-контраста через `node --test`;
+- аудит runtime-зависимостей через `pip-audit`;
 - `pre-commit run --all-files --show-diff-on-failure`;
 - применение всей цепочки Alembic к PostgreSQL 16;
 - `pytest tests -q` на PostgreSQL.

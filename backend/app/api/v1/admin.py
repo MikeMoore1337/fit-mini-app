@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import or_
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from sqlalchemy import String, cast, func, or_
 from sqlalchemy.orm import Session
 
 from app.api.dependencies.auth import require_admin
@@ -141,15 +141,36 @@ def _delete_user_cascade(db: Session, user: User) -> None:
 
 @router.get("/users")
 def admin_users(
+    response: Response,
+    search: str | None = Query(default=None, max_length=128),
+    role: str | None = Query(default=None, pattern="^(client|coach|admin)$"),
+    active: bool | None = None,
+    limit: int = Query(default=100, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
 ) -> list[dict]:
-    rows = (
-        db.query(User, UserProfile)
-        .outerjoin(UserProfile, UserProfile.user_id == User.id)
-        .order_by(User.id.desc())
-        .all()
-    )
+    query = db.query(User, UserProfile).outerjoin(UserProfile, UserProfile.user_id == User.id)
+    if search:
+        pattern = f"%{search.strip().lower()}%"
+        query = query.filter(
+            or_(
+                func.lower(func.coalesce(UserProfile.full_name, "")).like(pattern),
+                func.lower(func.coalesce(User.username, "")).like(pattern),
+                cast(User.telegram_user_id, String).like(pattern),
+            )
+        )
+    if role == "admin":
+        query = query.filter(User.is_admin.is_(True))
+    elif role == "coach":
+        query = query.filter(User.is_coach.is_(True), User.is_admin.is_(False))
+    elif role == "client":
+        query = query.filter(User.is_coach.is_(False), User.is_admin.is_(False))
+    if active is not None:
+        query = query.filter(User.is_active.is_(active))
+    total = query.count()
+    response.headers["X-Total-Count"] = str(total)
+    rows = query.order_by(User.id.desc()).offset(offset).limit(limit).all()
 
     return [_serialize_user_row(user, profile) for user, profile in rows]
 
@@ -246,16 +267,19 @@ def delete_user(
 
 @router.get("/payments")
 def admin_payments(
+    response: Response,
+    limit: int = Query(default=100, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
 ) -> list[dict]:
-    rows = (
+    query = (
         db.query(Payment, Plan, User)
         .outerjoin(Plan, Plan.id == Payment.plan_id)
         .outerjoin(User, User.id == Payment.user_id)
-        .order_by(Payment.id.desc())
-        .all()
     )
+    response.headers["X-Total-Count"] = str(query.count())
+    rows = query.order_by(Payment.id.desc()).offset(offset).limit(limit).all()
 
     result = []
     for payment, plan, user in rows:
@@ -277,16 +301,17 @@ def admin_payments(
 
 @router.get("/notifications")
 def admin_notifications(
+    response: Response,
+    limit: int = Query(default=100, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
 ) -> list[dict]:
-    rows = (
-        db.query(Notification, UserProfile.timezone)
-        .outerjoin(UserProfile, UserProfile.user_id == Notification.user_id)
-        .order_by(Notification.id.desc())
-        .limit(200)
-        .all()
+    query = db.query(Notification, UserProfile.timezone).outerjoin(
+        UserProfile, UserProfile.user_id == Notification.user_id
     )
+    response.headers["X-Total-Count"] = str(query.count())
+    rows = query.order_by(Notification.id.desc()).offset(offset).limit(limit).all()
 
     return [
         {
@@ -305,10 +330,15 @@ def admin_notifications(
 
 @router.get("/templates")
 def admin_templates(
+    response: Response,
+    limit: int = Query(default=100, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
 ) -> list[dict]:
-    rows = db.query(ProgramTemplate).order_by(ProgramTemplate.id.desc()).all()
+    query = db.query(ProgramTemplate)
+    response.headers["X-Total-Count"] = str(query.count())
+    rows = query.order_by(ProgramTemplate.id.desc()).offset(offset).limit(limit).all()
 
     return [
         {

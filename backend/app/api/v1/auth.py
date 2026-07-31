@@ -232,7 +232,7 @@ def logout(
         return {"status": "ok"}
 
     jti = token_payload.get("jti")
-    row = get_refresh_token_by_jti(db, jti)
+    row = get_refresh_token_by_jti(db, jti) if isinstance(jti, str) else None
     if row:
         revoke_refresh_token(db, row)
 

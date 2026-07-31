@@ -70,11 +70,15 @@ def complete_mock_payment(db: Session, checkout_id: str, user: User) -> Payment:
         return payment
 
     payment.status = "paid"
-    user = db.query(User).filter(User.id == payment.user_id).first()
-    paid_at = now_for_user_naive(user)
+    payment_user = db.query(User).filter(User.id == payment.user_id).first()
+    if payment_user is None:
+        raise BillingError("Payment user not found")
+    paid_at = now_for_user_naive(payment_user)
     payment.paid_at = paid_at
 
     plan = db.query(Plan).filter(Plan.id == payment.plan_id).first()
+    if plan is None:
+        raise BillingError("Payment plan not found")
     db.query(Subscription).filter(
         Subscription.user_id == payment.user_id, Subscription.status == "active"
     ).update({"status": "replaced"})

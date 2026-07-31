@@ -1,4 +1,4 @@
-import { sectionStoragePrefix } from './config.js?v=47';
+import { sectionStoragePrefix } from './config.js?v=57';
 
 export function $(id) {
   return document.getElementById(id);
@@ -87,7 +87,8 @@ export function expandSectionAndScroll(sectionContentId, cardId) {
   requestAnimationFrame(() => {
     const card = document.getElementById(cardId);
     if (card) {
-      card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+      card.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
     }
   });
 }

@@ -26,4 +26,5 @@ export const state = {
   initialSectionOpened: false,
   isReauthInProgress: false,
   reauthPromise: null,
+  loadedScreens: new Set(),
 };

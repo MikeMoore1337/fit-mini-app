@@ -1,4 +1,4 @@
-export const FRONTEND_VERSION = 'v56';
+export const FRONTEND_VERSION = 'v57';
 
 export const accessTokenKey = 'fit_access_token';
 export const sectionStoragePrefix = 'fit_section_';
@@ -21,6 +21,7 @@ export const API = {
   saveNutritionTarget: '/api/v1/nutrition/targets',
 
   exercises: '/api/v1/programs/exercises',
+  exerciseGuide: (exerciseId) => `/api/v1/programs/exercises/${exerciseId}/guide`,
   createExercise: '/api/v1/programs/exercises',
   updateExercise: (exerciseId) => `/api/v1/programs/exercises/${exerciseId}`,
   deleteExercise: (exerciseId) => `/api/v1/programs/exercises/${exerciseId}`,

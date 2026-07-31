@@ -1,6 +1,6 @@
 # pip install uv
-# uv pip compile --upgrade --python-version 3.14 --universal --output-file requirements.txt requirements.in
-# pip install -r requirements.txt
+# uv pip compile --upgrade --python-version 3.14 --universal --output-file requirements-runtime.txt requirements.in
+# pip install -r requirements-runtime.txt
 fastapi
 uvicorn[standard]
 sqlalchemy
@@ -12,10 +12,4 @@ PyJWT
 httpx
 python-multipart
 qrcode[pil]
-pytest
-pre-commit
-colorlog
-ruff
-black
-mypy
 slowapi

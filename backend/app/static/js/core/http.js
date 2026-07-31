@@ -1,5 +1,5 @@
-import { accessTokenKey } from './config.js?v=47';
-import { log } from './ui.js?v=47';
+import { accessTokenKey } from './config.js?v=57';
+import { log } from './ui.js?v=57';
 
 export function clearTokens() {
   sessionStorage.removeItem(accessTokenKey);

@@ -2,6 +2,8 @@ from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
+from app.db.session import get_session_context
 from app.models.billing import Plan
 from app.models.exercise import Exercise
 from app.models.notification import NotificationSetting
@@ -22,19 +24,18 @@ def _legacy_slug(slug: str) -> str:
 
 def _seed_exercise_catalog(db: Session) -> None:
     catalog_slugs = {slug for slug, *_ in EXERCISE_CATALOG}
+    catalog_rows = db.query(Exercise).filter(Exercise.slug.in_(catalog_slugs)).all()
+    base_by_slug = {
+        row.slug: row
+        for row in catalog_rows
+        if row.created_by_user_id is None and row.source_exercise_id is None
+    }
+    conflict_by_slug = {row.slug: row for row in catalog_rows}
 
     for slug, title, primary_muscle, equipment in EXERCISE_CATALOG:
-        exercise = (
-            db.query(Exercise)
-            .filter(
-                Exercise.slug == slug,
-                Exercise.created_by_user_id.is_(None),
-                Exercise.source_exercise_id.is_(None),
-            )
-            .first()
-        )
+        exercise = base_by_slug.get(slug)
         if not exercise:
-            conflicting = db.query(Exercise).filter(Exercise.slug == slug).first()
+            conflicting = conflict_by_slug.get(slug)
             if conflicting is not None:
                 conflicting.slug = _legacy_slug(slug)
                 db.flush()
@@ -45,6 +46,7 @@ def _seed_exercise_catalog(db: Session) -> None:
                 source_exercise_id=None,
             )
             db.add(exercise)
+            base_by_slug[slug] = exercise
 
         exercise.title = title
         exercise.primary_muscle = primary_muscle
@@ -64,29 +66,11 @@ def _seed_exercise_catalog(db: Session) -> None:
     db.flush()
 
 
-def _clear_template_days(db: Session, template: ProgramTemplate) -> None:
-    day_ids = [
-        row.id
-        for row in db.query(ProgramTemplateDay.id)
-        .filter(ProgramTemplateDay.program_id == template.id)
-        .all()
-    ]
-    if day_ids:
-        db.query(ProgramTemplateExercise).filter(
-            ProgramTemplateExercise.day_id.in_(day_ids)
-        ).delete(synchronize_session=False)
-        db.query(ProgramTemplateDay).filter(ProgramTemplateDay.id.in_(day_ids)).delete(
-            synchronize_session=False
-        )
-    db.flush()
-
-
 def _delete_legacy_templates(db: Session) -> None:
-    for slug in LEGACY_TEMPLATE_SLUGS:
-        template = db.query(ProgramTemplate).filter(ProgramTemplate.slug == slug).first()
-        if not template:
-            continue
-
+    templates = (
+        db.query(ProgramTemplate).filter(ProgramTemplate.slug.in_(LEGACY_TEMPLATE_SLUGS)).all()
+    )
+    for template in templates:
         from app.services.programs import delete_template_cascade
 
         delete_template_cascade(db, template)
@@ -105,14 +89,34 @@ def _seed_strength_templates(db: Session) -> None:
         .all()
     }
 
+    spec_slugs = {str(spec["slug"]) for spec in STRENGTH_TEMPLATE_SPECS}
+    templates_by_slug = {
+        row.slug: row
+        for row in db.query(ProgramTemplate).filter(ProgramTemplate.slug.in_(spec_slugs)).all()
+    }
+    existing_template_ids = [row.id for row in templates_by_slug.values()]
+    if existing_template_ids:
+        existing_day_ids = [
+            row.id
+            for row in db.query(ProgramTemplateDay.id)
+            .filter(ProgramTemplateDay.program_id.in_(existing_template_ids))
+            .all()
+        ]
+        if existing_day_ids:
+            db.query(ProgramTemplateExercise).filter(
+                ProgramTemplateExercise.day_id.in_(existing_day_ids)
+            ).delete(synchronize_session=False)
+            db.query(ProgramTemplateDay).filter(ProgramTemplateDay.id.in_(existing_day_ids)).delete(
+                synchronize_session=False
+            )
+            db.flush()
+
     for spec in STRENGTH_TEMPLATE_SPECS:
         slug = str(spec["slug"])
-        template = db.query(ProgramTemplate).filter(ProgramTemplate.slug == slug).first()
+        template = templates_by_slug.get(slug)
         if not template:
             template = ProgramTemplate(slug=slug)
             db.add(template)
-        else:
-            _clear_template_days(db, template)
 
         template.title = str(spec["title"])
         template.goal = str(spec["goal"])
@@ -193,3 +197,12 @@ def seed_demo_data(db: Session, include_demo_users: bool = True) -> None:
     _delete_legacy_templates(db)
     _seed_strength_templates(db)
     db.commit()
+
+
+def main() -> None:
+    with get_session_context() as db:
+        seed_demo_data(db, include_demo_users=settings.app_env == "dev")
+
+
+if __name__ == "__main__":
+    main()

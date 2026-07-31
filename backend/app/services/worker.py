@@ -8,6 +8,7 @@ import httpx
 
 from app.core.config import settings
 from app.db.session import get_session_context
+from app.models.notification import Notification
 from app.models.user import User
 from app.services.notifications import (
     claim_due_notifications,
@@ -20,28 +21,33 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-async def send_telegram_message(chat_id: int, text: str, *, open_app: bool = False) -> None:
+async def send_telegram_message(
+    client: httpx.AsyncClient,
+    chat_id: int,
+    text: str,
+    *,
+    open_app: bool = False,
+) -> None:
     if not settings.telegram_bot_token or settings.telegram_bot_token == "replace-me":
         logger.info("BOT token not configured - skip Telegram delivery to %s", chat_id)
         return
-    async with httpx.AsyncClient(timeout=20) as client:
-        payload: dict = {"chat_id": chat_id, "text": text}
-        if open_app:
-            payload["reply_markup"] = {
-                "inline_keyboard": [
-                    [
-                        {
-                            "text": "Открыть приложение",
-                            "web_app": {"url": f"{settings.frontend_base_url.rstrip('/')}/app"},
-                        }
-                    ]
+    payload: dict = {"chat_id": chat_id, "text": text}
+    if open_app:
+        payload["reply_markup"] = {
+            "inline_keyboard": [
+                [
+                    {
+                        "text": "Открыть приложение",
+                        "web_app": {"url": f"{settings.frontend_base_url.rstrip('/')}/app"},
+                    }
                 ]
-            }
-        response = await client.post(
-            f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage",
-            json=payload,
-        )
-        response.raise_for_status()
+            ]
+        }
+    response = await client.post(
+        f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage",
+        json=payload,
+    )
+    response.raise_for_status()
 
 
 async def run_once(*, sync_reminders: bool = True) -> None:
@@ -49,23 +55,71 @@ async def run_once(*, sync_reminders: bool = True) -> None:
         if sync_reminders:
             sync_workout_reminders(db)
         rows = claim_due_notifications(db)
+        users = {
+            user.id: user
+            for user in db.query(User).filter(User.id.in_({row.user_id for row in rows})).all()
+        }
+        deliveries: list[tuple[int, int, str, bool]] = []
         for row in rows:
-            user = db.query(User).filter(User.id == row.user_id).first()
+            user = users.get(row.user_id)
             if not user or not user.is_active:
                 row.status = "cancelled"
                 row.processing_started_at = None
-                db.commit()
                 continue
-            try:
-                await send_telegram_message(
+            deliveries.append(
+                (
+                    row.id,
                     user.telegram_user_id,
                     f"{row.title}\n\n{row.body}",
-                    open_app=bool(row.dedupe_key and row.dedupe_key.startswith("trainer_request:")),
+                    bool(row.dedupe_key and row.dedupe_key.startswith("trainer_request:")),
                 )
-                mark_delivery_succeeded(db, row, user)
-            except Exception as exc:
-                mark_delivery_failed(db, row, exc)
-                logger.exception("Failed to send notification %s", row.id)
+            )
+        db.commit()
+
+        if not deliveries:
+            return
+
+        semaphore = asyncio.Semaphore(settings.notification_delivery_concurrency)
+
+        async with httpx.AsyncClient(timeout=20) as client:
+
+            async def deliver(item: tuple[int, int, str, bool]) -> tuple[int, Exception | None]:
+                notification_id, chat_id, text, open_app = item
+                try:
+                    async with semaphore:
+                        await send_telegram_message(client, chat_id, text, open_app=open_app)
+                    return notification_id, None
+                except Exception as exc:
+                    return notification_id, exc
+
+            results = await asyncio.gather(*(deliver(item) for item in deliveries))
+
+        result_by_id = dict(results)
+        delivered_rows: dict[int, Notification] = {
+            row.id: row
+            for row in db.query(Notification).filter(Notification.id.in_(result_by_id)).all()
+        }
+        delivered_users = {
+            user.id: user
+            for user in db.query(User)
+            .filter(User.id.in_({row.user_id for row in delivered_rows.values()}))
+            .all()
+        }
+        for notification_id, error in results:
+            delivered_row = delivered_rows.get(notification_id)
+            if delivered_row is None:
+                continue
+            if error is None:
+                user = delivered_users.get(delivered_row.user_id)
+                if user is not None and user.is_active:
+                    mark_delivery_succeeded(db, delivered_row, user, commit=False)
+                else:
+                    delivered_row.status = "cancelled"
+                    delivered_row.processing_started_at = None
+            else:
+                mark_delivery_failed(db, delivered_row, error, commit=False)
+                logger.error("Failed to send notification %s: %s", delivered_row.id, error)
+        db.commit()
 
 
 async def main() -> None:

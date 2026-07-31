@@ -56,5 +56,7 @@ class UserResponse(BaseModel):
     client_code: str | None = None
     is_coach: bool = False
     is_admin: bool = False
+    has_active_program: bool = False
+    has_workout_history: bool = False
     profile: UserProfileResponse | None = None
     trainer: TrainerResponse | None = None

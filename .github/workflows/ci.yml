@@ -47,6 +47,7 @@ jobs:
           cache: pip
           cache-dependency-path: |
             backend/requirements.txt
+            backend/requirements-runtime.txt
             bot/requirements.txt
 
       - name: Cache pre-commit
@@ -66,15 +67,19 @@ jobs:
 
       - name: Frontend JavaScript syntax
         run: |
-          node --check backend/app/static/js/main.js
-          node --check backend/app/static/js/core/config.js
-          node --check backend/app/static/js/core/http.js
-          node --check backend/app/static/js/core/state.js
-          node --check backend/app/static/js/core/theme.js
-          node --check backend/app/static/js/core/ui.js
+          find backend/app/static/js -name '*.js' -print0 | xargs -0 -n1 node --check
+
+      - name: Frontend behavior and accessibility checks
+        run: node --test tests/frontend.test.mjs
 
       - name: Pre-commit
         run: pre-commit run --all-files --show-diff-on-failure
+
+      - name: Dependency vulnerability audit
+        run: |
+          python -m pip install pip-audit
+          pip-audit -r backend/requirements-runtime.txt
+          pip-audit -r bot/requirements.txt
 
       - name: Alembic migrations
         working-directory: backend

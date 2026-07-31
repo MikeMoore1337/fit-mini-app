@@ -682,23 +682,19 @@ def claim_coach_invite_link(db: Session, client: User, raw_token: str) -> dict:
     }
 
 
-def build_template_response(item: ProgramTemplate, db: Session, current_user: User) -> dict:
-    visible_map = get_visible_exercise_display_map(db, current_user)
-    owner = (
-        db.query(User).filter(User.id == item.owner_user_id).first() if item.owner_user_id else None
-    )
-    assignment = (
-        db.query(UserProgram)
-        .filter(
-            UserProgram.user_id == current_user.id,
-            UserProgram.template_id == item.id,
-        )
-        .order_by(UserProgram.is_active.desc(), UserProgram.id.desc())
-        .first()
-    )
+def _serialize_template_with_context(
+    item: ProgramTemplate,
+    *,
+    visible_map: dict[int, Exercise],
+    owners: dict[int, User],
+    assignments: dict[int, UserProgram],
+    assigners: dict[int, User],
+) -> dict:
+    owner = owners.get(item.owner_user_id) if item.owner_user_id else None
+    assignment = assignments.get(item.id)
     assigned_by = (
-        db.query(User).filter(User.id == assignment.assigned_by_user_id).first()
-        if assignment and assignment.assigned_by_user_id
+        assigners.get(assignment.assigned_by_user_id)
+        if assignment and assignment.assigned_by_user_id is not None
         else None
     )
 
@@ -745,6 +741,71 @@ def build_template_response(item: ProgramTemplate, db: Session, current_user: Us
             for day in sorted(item.days, key=lambda row: row.day_number)
         ],
     }
+
+
+def build_template_responses(
+    items: list[ProgramTemplate],
+    db: Session,
+    current_user: User,
+) -> list[dict]:
+    if not items:
+        return []
+
+    visible_map = get_visible_exercise_display_map(db, current_user)
+    owner_ids = {item.owner_user_id for item in items if item.owner_user_id is not None}
+    owners = {
+        user.id: user
+        for user in db.query(User)
+        .options(joinedload(User.profile))
+        .filter(User.id.in_(owner_ids))
+        .all()
+    }
+
+    template_ids = [item.id for item in items]
+    assignment_rows = (
+        db.query(UserProgram)
+        .filter(
+            UserProgram.user_id == current_user.id,
+            UserProgram.template_id.in_(template_ids),
+        )
+        .order_by(
+            UserProgram.template_id.asc(),
+            UserProgram.is_active.desc(),
+            UserProgram.id.desc(),
+        )
+        .all()
+    )
+    assignments: dict[int, UserProgram] = {}
+    for assignment in assignment_rows:
+        if assignment.template_id is not None:
+            assignments.setdefault(assignment.template_id, assignment)
+
+    assigner_ids = {
+        assignment.assigned_by_user_id
+        for assignment in assignments.values()
+        if assignment.assigned_by_user_id is not None
+    }
+    assigners = {
+        user.id: user
+        for user in db.query(User)
+        .options(joinedload(User.profile))
+        .filter(User.id.in_(assigner_ids))
+        .all()
+    }
+    return [
+        _serialize_template_with_context(
+            item,
+            visible_map=visible_map,
+            owners=owners,
+            assignments=assignments,
+            assigners=assigners,
+        )
+        for item in items
+    ]
+
+
+def build_template_response(item: ProgramTemplate, db: Session, current_user: User) -> dict:
+    return build_template_responses([item], db, current_user)[0]
 
 
 def list_exercises(db: Session, current_user: User) -> list[Exercise]:
@@ -1045,6 +1106,8 @@ def create_template(
 
     is_public = current_user.is_admin
     owner_user = target_user if payload.mode == "coach" else current_user
+    if owner_user is None:
+        raise ProgramError("Target user is required in coach mode")
     template = ProgramTemplate(
         slug=f"custom-{uuid4().hex[:10]}",
         title=payload.title,
@@ -1176,6 +1239,8 @@ def create_and_optionally_assign_program(
         if not current_user.is_coach and not current_user.is_admin:
             raise ProgramError("No permission to assign program as coach")
 
+        if payload.target_telegram_user_id is None:
+            raise ProgramError("Target Telegram user id is required in coach mode")
         if current_user.is_admin:
             target_user = get_or_create_user_by_telegram_id(
                 db,
@@ -1203,7 +1268,7 @@ def create_and_optionally_assign_program(
 
     db.commit()
 
-    template = (
+    loaded_template = (
         db.query(ProgramTemplate)
         .options(
             joinedload(ProgramTemplate.days)
@@ -1213,6 +1278,8 @@ def create_and_optionally_assign_program(
         .filter(ProgramTemplate.id == template.id)
         .first()
     )
+    if loaded_template is None:
+        raise ProgramError("Template not found after creation")
 
     target_profile = db.query(UserProfile).filter(UserProfile.user_id == target_user.id).first()
     target_user_data = {
@@ -1221,7 +1288,7 @@ def create_and_optionally_assign_program(
         "full_name": target_profile.full_name if target_profile else None,
     }
 
-    return template, assigned_program, workouts_created, target_user_data
+    return loaded_template, assigned_program, workouts_created, target_user_data
 
 
 def list_user_templates(db: Session, current_user: User) -> list[ProgramTemplate]:
@@ -1257,7 +1324,32 @@ def list_user_templates(db: Session, current_user: User) -> list[ProgramTemplate
         .order_by(ProgramTemplate.id.desc())
         .all()
     )
-    return [template for template in templates if _can_view_template(db, current_user, template)]
+    client_id_set = set(client_ids)
+    assigned_id_set = {
+        template_id
+        for (template_id,) in db.query(UserProgram.template_id)
+        .filter(
+            UserProgram.user_id == current_user.id,
+            UserProgram.template_id.is_not(None),
+        )
+        .all()
+        if template_id is not None
+    }
+    return [
+        template
+        for template in templates
+        if (
+            current_user.is_admin
+            or template.is_public
+            or template.owner_user_id == current_user.id
+            or (
+                template.created_by_user_id == current_user.id
+                and template.owner_user_id in ({None, current_user.id} | client_id_set)
+            )
+            or (current_user.is_coach and template.owner_user_id in client_id_set)
+            or template.id in assigned_id_set
+        )
+    ]
 
 
 def list_hidden_example_templates(db: Session, current_user: User) -> list[ProgramTemplate]:

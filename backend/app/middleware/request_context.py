@@ -33,10 +33,7 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         response.headers.setdefault(
             "Content-Security-Policy",
             "default-src 'self'; script-src 'self' https://telegram.org "
-            "'sha256-3m1gKcj65gT2KV/P9rZQ5zLb6LcF9QxmPKwUThveNeU=' "
-            "'sha256-w+SoYpK8BvsqYpHeOkmkyMAVjznFJesDnyaa7MXPJcE=' "
-            "'sha256-IhR9LI5auG7rssnWFs5yOAMKXOGr8Ract51Byz4quhc=' "
-            "'sha256-qZ9Yq8gtZkgu5ry8phv1nJ9TDNKl5ITFOiv5Danv/DE='; "
+            "'sha256-3m1gKcj65gT2KV/P9rZQ5zLb6LcF9QxmPKwUThveNeU='; "
             "style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://t.me "
             "https://*.telegram.org; connect-src 'self'; "
             "font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; "
@@ -44,6 +41,11 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         )
 
         path = request.url.path
+        if path.startswith("/static/"):
+            if request.query_params.get("v"):
+                response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            elif path.startswith("/static/exercise-guides/"):
+                response.headers["Cache-Control"] = "public, max-age=2592000"
         if not path.startswith("/static") and path != "/health":
             logger.info(
                 "%s %s -> %s",
