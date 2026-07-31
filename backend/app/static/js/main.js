@@ -496,7 +496,6 @@ const appScreenByCard = {
   'card-history': 'history',
   'card-profile': 'profile',
   'card-notifications': 'profile',
-  clientsCard: 'profile',
 };
 
 function getAppScreen(cardId) {
@@ -1179,9 +1178,6 @@ function toggleCoachUI() {
       if ($('target_full_name')) $('target_full_name').value = '';
     }
   }
-
-  const clientsCard = $('clientsCard');
-  if (clientsCard) clientsCard.classList.toggle('hidden', !isCoachOrAdmin());
 
   const coachModeBanner = $('coachModeBanner');
   if (coachModeBanner) coachModeBanner.classList.toggle('hidden', !isCoachOrAdmin());
@@ -2825,35 +2821,6 @@ function selectClientForProgram(client) {
   showToast(`Клиент выбран: ${getClientDisplayName(client)}`);
 }
 
-async function addClient() {
-  const telegramIdValue = $('clientTelegramId')?.value?.trim() || '';
-  const username = $('clientUsername')?.value?.trim() || '';
-  const fullName = $('clientFullName')?.value?.trim() || '';
-
-  if (!telegramIdValue && !username) {
-    showToast('Укажи идентификатор Telegram или имя пользователя клиента', 'error');
-    return;
-  }
-
-  const client = await withReauth(() =>
-    api(API.createClient, {
-      method: 'POST',
-      body: JSON.stringify({
-        telegram_user_id: telegramIdValue ? Number(telegramIdValue) : null,
-        username: username || null,
-        full_name: fullName || null,
-      }),
-    })
-  );
-
-  if ($('clientTelegramId')) $('clientTelegramId').value = '';
-  if ($('clientUsername')) $('clientUsername').value = '';
-  if ($('clientFullName')) $('clientFullName').value = '';
-
-  showToast(client.status === 'pending' ? 'Клиент добавлен в ожидание' : 'Клиент добавлен');
-  await loadClients();
-}
-
 async function loadTemplates() {
   state.templates = await withReauth(() => api(API.myTemplates));
   const list = $('templatesList');
@@ -2964,9 +2931,6 @@ async function loadTemplates() {
 }
 
 async function loadClients() {
-  const card = $('clientsCard');
-  if (card) card.classList.toggle('hidden', !isCoachOrAdmin());
-
   if (!isCoachOrAdmin()) {
     state.clients = [];
     syncExerciseOwnerOptions();
@@ -2978,72 +2942,6 @@ async function loadClients() {
   state.clients = rows;
   syncExerciseOwnerOptions();
   syncKbjuTargetOptions();
-  const list = $('clientsList');
-  if (!list) return;
-
-  list.innerHTML = rows.length
-    ? rows
-        .map(
-          (c) => {
-            const isPending = c.status === 'pending';
-            return `
-          <div class="item-card">
-            <strong>${escapeHtml(getClientDisplayName(c))}</strong><br>
-            <span class="muted">
-              ${escapeHtml(getClientStatusLabel(c.status))}${isPending ? '' : ` · № ${escapeHtml(c.telegram_user_id)}`}
-              ${c.username ? ` | @${escapeHtml(c.username)}` : ''}
-              ${!isPending ? ` | цель: ${escapeHtml(getKbjuGoalLabel(c.goal))} | уровень: ${escapeHtml(getLevelLabel(c.level))}` : ''}
-            </span>
-            ${
-              isPending
-                ? ''
-                : `<div class="toolbar wrap top-gap">
-                    <button
-                      class="secondary assign-client-btn"
-                      type="button"
-                      data-client='${escapeHtml(JSON.stringify(c))}'
-                    >
-                      Назначить программу
-                    </button>
-                    <button
-                      class="secondary assign-kbju-client-btn"
-                      type="button"
-                      data-client='${escapeHtml(JSON.stringify(c))}'
-                    >
-                      Назначить КБЖУ
-                    </button>
-                  </div>`
-            }
-          </div>`;
-          }
-        )
-        .join('')
-    : `<div class="empty-state">
-        <p class="empty-state__title">Клиентов пока нет</p>
-        <p class="empty-state__text muted">Добавь клиента по идентификатору Telegram или имени пользователя.</p>
-      </div>`;
-
-  document.querySelectorAll('.assign-client-btn').forEach((btn) => {
-    btn.onclick = () => {
-      try {
-        selectClientForProgram(JSON.parse(btn.dataset.client));
-      } catch (error) {
-        log(`selectClientForProgram: ${String(error)}`);
-        showToast('Не удалось выбрать клиента', 'error');
-      }
-    };
-  });
-
-  document.querySelectorAll('.assign-kbju-client-btn').forEach((btn) => {
-    btn.onclick = () => {
-      try {
-        selectClientForKbju(JSON.parse(btn.dataset.client));
-      } catch (error) {
-        log(`selectClientForKbju: ${String(error)}`);
-        showToast('Не удалось выбрать клиента', 'error');
-      }
-    };
-  });
 }
 
 function applyCoachClientDeepLink() {
@@ -4123,8 +4021,6 @@ function bindUI() {
     full_name: 'saveProfileBtn',
     program_title: 'saveProgramBtn',
     newExerciseTitle: 'createExerciseBtn',
-    clientTelegramId: 'addClientBtn',
-    clientUsername: 'addClientBtn',
     manualNotifDateTime: 'createNotificationBtn',
   };
   document.addEventListener('keydown', (event) => {
@@ -4322,27 +4218,6 @@ function bindUI() {
         await loadTemplates();
       } catch (error) {
         log(`reloadTemplates: ${String(error)}`);
-      }
-    };
-  }
-
-  if ($('reloadClientsBtn')) {
-    $('reloadClientsBtn').onclick = async () => {
-      try {
-        await loadClients();
-      } catch (error) {
-        log(`reloadClients: ${String(error)}`);
-      }
-    };
-  }
-
-  if ($('addClientBtn')) {
-    $('addClientBtn').onclick = async () => {
-      try {
-        await addClient();
-      } catch (error) {
-        log(`addClientBtn: ${String(error)}`);
-        toastError(error, 'Не удалось добавить клиента');
       }
     };
   }

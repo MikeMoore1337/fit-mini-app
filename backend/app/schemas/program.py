@@ -90,6 +90,10 @@ class AssignTemplateSelfRequest(BaseModel):
     start_date: date | None = None
 
 
+class AssignTemplateToClientRequest(BaseModel):
+    start_date: date | None = None
+
+
 class CoachClientCreate(BaseModel):
     telegram_user_id: int | None = Field(default=None, ge=1)
     username: str | None = Field(default=None, max_length=64)
@@ -152,6 +156,7 @@ class ExerciseCatalogCreateResponse(ExerciseCatalogItem):
 
 class ClientResponse(BaseModel):
     id: int | None = None
+    invite_id: int | None = None
     telegram_user_id: int | None = None
     username: str | None = None
     full_name: str | None = None

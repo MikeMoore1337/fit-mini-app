@@ -176,9 +176,9 @@
             <div id="coachModeBanner" class="coach-mode-banner hidden">
                 <div>
                     <strong>Режим тренера</strong>
-                    <span class="muted">Выберите клиента перед назначением программы или КБЖУ.</span>
+                    <span class="muted">Работа с клиентами собрана в разделе «Тренер».</span>
                 </div>
-                <button class="secondary empty-state-goto" type="button" data-nav-section="section-clients" data-nav-card="clientsCard">К клиентам</button>
+                <a class="button-link secondary-link" href="/coach">Открыть раздел</a>
             </div>
 
             <div class="grid grid-4">
@@ -423,40 +423,6 @@
             <div class="toolbar top-gap">
                 <button id="loadMoreHistoryBtn" class="secondary hidden" type="button">Загрузить ещё</button>
             </div>
-        </div>
-    </div>
-
-    <div id="clientsCard" class="card app-screen-card hidden" data-app-screen="profile">
-        <div class="section-head">
-            <h2>Клиенты</h2>
-            <div class="toolbar wrap">
-                <button id="reloadClientsBtn" class="secondary" type="button">Обновить</button>
-                <button class="secondary section-toggle" type="button" data-target="section-clients" aria-expanded="true">Свернуть</button>
-            </div>
-        </div>
-        <div id="section-clients" class="section-content">
-            <div class="item-card">
-                <h3>Добавить клиента</h3>
-                <div class="grid grid-3 top-gap">
-                    <label class="field">
-                        <span>Telegram ID</span>
-                        <input id="clientTelegramId" type="number" placeholder="Если известен"/>
-                    </label>
-                    <label class="field">
-                        <span>Telegram @username</span>
-                        <input id="clientUsername" type="text" placeholder="Если есть"/>
-                    </label>
-                    <label class="field">
-                        <span>Имя клиента</span>
-                        <input id="clientFullName" type="text" placeholder="Для списка клиентов"/>
-                    </label>
-                </div>
-                <div class="toolbar top-gap">
-                    <button id="addClientBtn" type="button">Добавить клиента</button>
-                </div>
-            </div>
-
-            <div id="clientsList" class="stack top-gap"></div>
         </div>
     </div>
 

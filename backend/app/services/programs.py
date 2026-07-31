@@ -144,6 +144,24 @@ def _is_coach_client(db: Session, coach: User, client: User) -> bool:
     )
 
 
+def get_client_managed_by_coach(db: Session, coach: User, client_id: int) -> User:
+    """Return an active client from this coach's own client list."""
+    client = (
+        db.query(User)
+        .options(joinedload(User.profile))
+        .join(CoachClient, CoachClient.client_user_id == User.id)
+        .filter(
+            CoachClient.coach_user_id == coach.id,
+            CoachClient.client_user_id == client_id,
+            User.is_active.is_(True),
+        )
+        .first()
+    )
+    if not client:
+        raise ProgramError("Client link not found")
+    return client
+
+
 def _get_existing_user_by_telegram_id(db: Session, telegram_user_id: int) -> User | None:
     return db.query(User).filter(User.telegram_user_id == telegram_user_id).first()
 
@@ -194,6 +212,7 @@ def _client_entry_from_user(db: Session, user: User) -> dict:
     profile = user.profile
     return {
         "id": user.id,
+        "invite_id": None,
         "telegram_user_id": user.telegram_user_id,
         "username": user.username,
         "full_name": profile.full_name if profile else None,
@@ -213,6 +232,7 @@ def _client_entry_from_invite(invite: CoachClientInvite) -> dict:
     )
     return {
         "id": None,
+        "invite_id": invite.id,
         "telegram_user_id": invite.telegram_user_id,
         "username": None if synthetic_username else invite.username,
         "full_name": invite.full_name,

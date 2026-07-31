@@ -218,6 +218,112 @@ def test_coach_can_assign_kbju_to_own_client(client):
     assert kbju["assigned_by"]["full_name"] == "КБЖУ Тренер"
 
 
+def test_coach_can_update_own_client_profile_and_measurements(client):
+    coach_headers = auth(client, telegram_user_id=6110, is_coach=True)
+    client_headers = auth(client, telegram_user_id=6111, is_coach=False)
+    other_coach_headers = auth(client, telegram_user_id=6112, is_coach=True)
+    client_user = client.get("/api/v1/me", headers=client_headers).json()
+
+    invited = client.post(
+        "/api/v1/coach/clients",
+        json={"telegram_user_id": 6111, "full_name": "Новый клиент"},
+        headers=coach_headers,
+    )
+    assert invited.status_code == 201
+    accept_latest_coach_invite(client, client_headers)
+
+    profile = client.patch(
+        f"/api/v1/coach/clients/{client_user['id']}/profile",
+        json={
+            "full_name": "Клиент с анкетой",
+            "goal": "recomposition",
+            "level": "intermediate",
+            "height_cm": 176,
+            "weight_kg": 74,
+            "workouts_per_week": 4,
+        },
+        headers=coach_headers,
+    )
+    assert profile.status_code == 200
+    assert profile.json()["height_cm"] == 176
+    assert profile.json()["goal"] == "recomposition"
+
+    measurement = client.post(
+        f"/api/v1/coach/clients/{client_user['id']}/measurements",
+        json={"measured_on": "2026-07-31", "weight_kg": 73.5, "waist_cm": 81.2},
+        headers=coach_headers,
+    )
+    assert measurement.status_code == 200
+    assert measurement.json()["waist_cm"] == 81.2
+
+    rows = client.get(
+        f"/api/v1/coach/clients/{client_user['id']}/measurements",
+        headers=coach_headers,
+    )
+    assert rows.status_code == 200
+    assert rows.json()[0]["weight_kg"] == 73.5
+
+    forbidden = client.patch(
+        f"/api/v1/coach/clients/{client_user['id']}/profile",
+        json={"weight_kg": 90},
+        headers=other_coach_headers,
+    )
+    assert forbidden.status_code == 404
+
+    me = client.get("/api/v1/me", headers=client_headers).json()
+    assert me["profile"]["full_name"] == "Клиент с анкетой"
+    assert me["profile"]["weight_kg"] == 74
+
+
+def test_coach_can_assign_existing_template_to_own_client(client):
+    coach_headers = auth(client, telegram_user_id=6120, is_coach=True)
+    client_headers = auth(client, telegram_user_id=6121, is_coach=False)
+    client_user = client.get("/api/v1/me", headers=client_headers).json()
+    client.post(
+        "/api/v1/coach/clients",
+        json={"telegram_user_id": 6121},
+        headers=coach_headers,
+    )
+    accept_latest_coach_invite(client, client_headers)
+
+    exercise = client.get("/api/v1/programs/exercises", headers=coach_headers).json()[0]
+    created = client.post(
+        "/api/v1/programs/templates",
+        json={
+            "title": "Шаблон тренера",
+            "goal": "maintenance",
+            "level": "beginner",
+            "mode": "self",
+            "assign_after_create": False,
+            "days": [
+                {
+                    "title": "День 1",
+                    "exercises": [
+                        {
+                            "exercise_id": exercise["id"],
+                            "prescribed_sets": 2,
+                            "prescribed_reps": "10",
+                            "rest_seconds": 60,
+                        }
+                    ],
+                }
+            ],
+        },
+        headers=coach_headers,
+    )
+    assert created.status_code == 200
+    template_id = created.json()["template"]["id"]
+
+    assigned = client.post(
+        f"/api/v1/coach/clients/{client_user['id']}/templates/{template_id}/assign",
+        json={"start_date": "2026-07-31"},
+        headers=coach_headers,
+    )
+    assert assigned.status_code == 200
+    assert assigned.json()["workouts_created"] == 1
+    assert client.get("/api/v1/workouts/week", headers=client_headers).status_code == 200
+
+
 def test_coach_cannot_assign_kbju_to_non_client(client):
     coach_headers = auth(client, telegram_user_id=6201, is_coach=True)
     auth(client, telegram_user_id=6202, is_coach=False)
@@ -2009,6 +2115,26 @@ def test_miniapp_has_role_gated_coach_and_admin_navigation():
     assert '<a href="/admin" id="adminBottomNavLink" class="app-bottom-nav__btn hidden">' in html
     assert '<span class="app-bottom-nav__label">Админка</span>' in html
     assert "adminBottomNavLink.classList.toggle('hidden', !isAdmin())" in main_js
+
+
+def test_client_management_is_consolidated_in_coach_section():
+    static_dir = Path(__file__).resolve().parents[1] / "backend" / "app" / "static"
+    index_html = (static_dir / "index.html").read_text(encoding="utf-8")
+    coach_html = (static_dir / "coach.html").read_text(encoding="utf-8")
+    coach_js = (static_dir / "js" / "coach.js").read_text(encoding="utf-8")
+
+    assert 'id="clientsCard"' not in index_html
+    assert 'id="addClientBtn"' not in index_html
+    assert 'id="clientSelect"' in coach_html
+    assert 'id="saveClientProfileBtn"' in coach_html
+    assert 'id="saveMeasurementBtn"' in coach_html
+    assert 'id="saveKbjuBtn"' in coach_html
+    assert 'id="saveClientProgramBtn"' in coach_html
+    assert 'id="createClientExerciseBtn"' in coach_html
+    assert "/profile`" in coach_js
+    assert "/measurements`" in coach_js
+    assert "/api/v1/nutrition/targets" in coach_js
+    assert "/api/v1/programs/templates" in coach_js
 
 
 def test_exercise_catalog_can_add_exercises_to_program_builder():
