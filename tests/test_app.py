@@ -1993,12 +1993,19 @@ def test_csp_blocks_unhashed_inline_scripts(client):
     assert "localStorage.setItem('fit_refresh_token'" not in main_js
 
 
-def test_miniapp_has_role_gated_admin_navigation():
+def test_miniapp_has_role_gated_coach_and_admin_navigation():
     static_dir = Path(__file__).resolve().parents[1] / "backend" / "app" / "static"
     html = (static_dir / "index.html").read_text(encoding="utf-8")
     main_js = (static_dir / "js" / "main.js").read_text(encoding="utf-8")
 
-    assert 'id="adminBottomNavLink"' in html
-    assert 'href="/admin"' in html
+    profile_nav_position = html.index('<span class="app-bottom-nav__label">Профиль</span>')
+    coach_nav_position = html.index('id="coachBottomNavLink"')
+    admin_nav_position = html.index('id="adminBottomNavLink"')
+
+    assert profile_nav_position < coach_nav_position < admin_nav_position
+    assert '<a href="/coach" id="coachBottomNavLink" class="app-bottom-nav__btn hidden">' in html
+    assert '<span class="app-bottom-nav__label">Тренер</span>' in html
+    assert "coachBottomNavLink.classList.toggle('hidden', !isCoachOrAdmin())" in main_js
+    assert '<a href="/admin" id="adminBottomNavLink" class="app-bottom-nav__btn hidden">' in html
     assert '<span class="app-bottom-nav__label">Админка</span>' in html
     assert "adminBottomNavLink.classList.toggle('hidden', !isAdmin())" in main_js

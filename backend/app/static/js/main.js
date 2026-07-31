@@ -1160,6 +1160,9 @@ function toggleCoachUI() {
   const coachLink = $('coachLink');
   if (coachLink) coachLink.classList.toggle('hidden', !isCoachOrAdmin());
 
+  const coachBottomNavLink = $('coachBottomNavLink');
+  if (coachBottomNavLink) coachBottomNavLink.classList.toggle('hidden', !isCoachOrAdmin());
+
   const coachFields = $('coachFields');
   const builderMode = $('builder_mode');
   const canAssignClients = isCoachOrAdmin();
