@@ -124,6 +124,14 @@ function formatDateRu(value) {
   return value;
 }
 
+function sortDiaryRowsNewestFirst(rows, dateKey) {
+  return [...(rows || [])].sort((left, right) => {
+    const byDate = String(right?.[dateKey] || '').localeCompare(String(left?.[dateKey] || ''));
+    if (byDate !== 0) return byDate;
+    return Number(right?.id || 0) - Number(left?.id || 0);
+  });
+}
+
 function formatUserDateTime(value, timezone = getCurrentTimezone()) {
   if (!value) return '';
   const raw = String(value);
@@ -3617,9 +3625,12 @@ async function loadWorkoutHistory(append = false) {
 
   if (!append) {
     state.historyOffset = 0;
-    state.historyRows = rows;
+    state.historyRows = sortDiaryRowsNewestFirst(rows, 'scheduled_date');
   } else {
-    state.historyRows = [...(state.historyRows || []), ...rows];
+    state.historyRows = sortDiaryRowsNewestFirst(
+      [...(state.historyRows || []), ...rows],
+      'scheduled_date'
+    );
   }
 
   renderWorkoutHistoryRows(state.historyRows, false);
@@ -3815,7 +3826,8 @@ function getBodyMeasurementPayload() {
 }
 
 async function loadBodyMeasurements() {
-  state.measurementRows = await withReauth(() => api(API.bodyMeasurements));
+  const rows = await withReauth(() => api(API.bodyMeasurements));
+  state.measurementRows = sortDiaryRowsNewestFirst(rows, 'measured_on');
   if ($('measurementDate') && !$('measurementDate').value) {
     $('measurementDate').value = getTodayInputDateValue();
   }

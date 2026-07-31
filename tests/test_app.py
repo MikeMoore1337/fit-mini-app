@@ -601,13 +601,22 @@ def test_client_can_save_update_and_delete_body_measurement(client):
     assert updated.json()["waist_cm"] == 82.0
     assert updated.json()["chest_cm"] == 98.5
 
+    newer = client.post(
+        "/api/v1/workouts/diary",
+        json={"measured_on": "2026-05-03", "weight_kg": 73.8},
+        headers=headers,
+    )
+    assert newer.status_code == 200
+
     rows = client.get("/api/v1/workouts/diary", headers=headers)
     assert rows.status_code == 200
-    assert len(rows.json()) == 1
+    assert [row["measured_on"] for row in rows.json()] == ["2026-05-03", "2026-05-01"]
 
     deleted = client.delete(f"/api/v1/workouts/diary/{data['id']}", headers=headers)
 
     assert deleted.status_code == 204
+    deleted_newer = client.delete(f"/api/v1/workouts/diary/{newer.json()['id']}", headers=headers)
+    assert deleted_newer.status_code == 204
     assert client.get("/api/v1/workouts/diary", headers=headers).json() == []
 
 
