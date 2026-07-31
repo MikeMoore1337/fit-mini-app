@@ -52,6 +52,26 @@ class ProgramTemplate(Base):
     )
 
 
+class HiddenProgramTemplate(Base):
+    """A system example hidden from one user's personal library."""
+
+    __tablename__ = "hidden_program_templates"
+    __table_args__ = (
+        UniqueConstraint("user_id", "template_id", name="uq_hidden_program_template"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    template_id: Mapped[int] = mapped_column(
+        ForeignKey("program_templates.id"), nullable=False, index=True
+    )
+    hidden_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=now_msk_naive,
+        server_default=func.now(),
+    )
+
+
 class ProgramTemplateDay(Base):
     __tablename__ = "program_template_days"
 

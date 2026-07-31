@@ -1,5 +1,5 @@
-import { API, FRONTEND_VERSION, accessTokenKey } from './core/config.js?v=48';
-import { state } from './core/state.js?v=48';
+import { API, FRONTEND_VERSION, accessTokenKey } from './core/config.js?v=50';
+import { state } from './core/state.js?v=50';
 import {
   $,
   log,
@@ -2759,6 +2759,16 @@ async function deleteTemplate(templateId) {
   await loadTemplates();
 }
 
+async function restoreTemplate(templateId) {
+  await withReauth(() =>
+    api(API.restoreTemplate(templateId), {
+      method: 'POST',
+    })
+  );
+  showToast('Пример восстановлен');
+  await loadTemplates();
+}
+
 function getClientDisplayName(client) {
   return client.full_name || client.username || client.telegram_user_id || 'Клиент';
 }
@@ -2894,12 +2904,15 @@ function selectClientForProgram(client) {
 }
 
 async function loadTemplates() {
-  state.templates = await withReauth(() => api(API.myTemplates));
+  [state.templates, state.hiddenTemplates] = await Promise.all([
+    withReauth(() => api(API.myTemplates)),
+    withReauth(() => api(API.hiddenTemplates)),
+  ]);
   const list = $('templatesList');
   if (!list) return;
   renderOnboarding();
 
-  if (!state.templates.length) {
+  if (!state.templates.length && !state.hiddenTemplates.length) {
     list.innerHTML = `
       <div class="empty-state">
         <p class="empty-state__title">Шаблонов пока нет</p>
@@ -2915,22 +2928,42 @@ async function loadTemplates() {
     return;
   }
 
-  list.innerHTML = state.templates
+  const visibleTemplates = state.templates
     .map((template) => {
-        const deleteBtn = canDeleteTemplate(template)
-          ? `<button class="secondary delete-template-btn" type="button" data-template-id="${template.id}">Удалить</button>`
-          : '';
+        const deleteBtn = template.is_example
+          ? `<button class="secondary delete-template-btn" type="button" data-template-id="${template.id}">Убрать пример</button>`
+          : canDeleteTemplate(template)
+            ? `<button class="secondary delete-template-btn" type="button" data-template-id="${template.id}">Удалить</button>`
+            : '';
 
-        const editBtn = canDeleteTemplate(template)
+        const editBtn = canDeleteTemplate(template) && !template.is_example
           ? `<button class="secondary edit-template-btn" type="button" data-template-id="${template.id}">Редактировать</button>`
           : '';
 
-        const assignBtn = `<button class="assign-template-btn" type="button" data-template-id="${template.id}">Назначить себе</button>`;
+        const assignBtn = template.is_active_for_current_user
+          ? '<span class="metric-pill">Уже назначена</span>'
+          : `<button class="assign-template-btn" type="button" data-template-id="${template.id}">Назначить себе</button>`;
+
+        let originLabel = 'Личный шаблон';
+        if (template.is_example) {
+          originLabel = 'Пример';
+        } else if (
+          template.is_assigned_to_current_user &&
+          template.assigned_by_user_id &&
+          template.assigned_by_user_id !== state.me?.id
+        ) {
+          originLabel = template.assigned_by_full_name
+            ? `Назначил тренер: ${template.assigned_by_full_name}`
+            : 'Назначено тренером';
+        } else if (template.created_by_user_id === state.me?.id) {
+          originLabel = 'Создано вами';
+        }
 
         return `
           <div class="item-card">
             <strong>${escapeHtml(template.title)}</strong><br>
             <span class="muted">${escapeHtml(getKbjuGoalLabel(template.goal))} · ${escapeHtml(getLevelLabel(template.level))}</span>
+            <div class="exercise-meta"><span class="metric-pill">${escapeHtml(originLabel)}</span></div>
             <div class="top-gap">
               ${
                 template.days?.length
@@ -2956,6 +2989,27 @@ async function loadTemplates() {
         `;
       })
     .join('');
+
+  const hiddenTemplates = state.hiddenTemplates.length
+    ? `
+      <details class="item-card top-gap">
+        <summary>Удалённые примеры (${state.hiddenTemplates.length})</summary>
+        <p class="muted top-gap">Их можно вернуть в общий список в любой момент.</p>
+        <div class="stack top-gap">
+          ${state.hiddenTemplates
+            .map(
+              (template) => `
+                <div class="toolbar wrap">
+                  <span>${escapeHtml(template.title)}</span>
+                  <button class="secondary restore-template-btn" type="button" data-template-id="${template.id}">Восстановить</button>
+                </div>`
+            )
+            .join('')}
+        </div>
+      </details>`
+    : '';
+
+  list.innerHTML = visibleTemplates + hiddenTemplates;
 
   document.querySelectorAll('.assign-template-btn').forEach((btn) => {
     btn.onclick = async () => {
@@ -2985,11 +3039,14 @@ async function loadTemplates() {
 
   document.querySelectorAll('.delete-template-btn').forEach((btn) => {
     btn.onclick = async () => {
+      const template = state.templates.find((item) => item.id === Number(btn.dataset.templateId));
       const ok = await openConfirmDialog({
-        title: 'Удалить шаблон?',
-        message: 'Шаблон будет удалён, но назначенная программа и история тренировок сохранятся.',
-        okText: 'Удалить',
-        danger: true,
+        title: template?.is_example ? 'Убрать пример?' : 'Удалить шаблон?',
+        message: template?.is_example
+          ? 'Пример исчезнет только из вашего списка. Его можно будет восстановить.'
+          : 'Шаблон будет удалён, но назначенная программа и история тренировок сохранятся.',
+        okText: template?.is_example ? 'Убрать' : 'Удалить',
+        danger: !template?.is_example,
       });
       if (!ok) return;
       try {
@@ -2997,6 +3054,17 @@ async function loadTemplates() {
       } catch (error) {
         log(`deleteTemplate: ${String(error)}`);
         toastError(error, 'Не удалось удалить шаблон');
+      }
+    };
+  });
+
+  document.querySelectorAll('.restore-template-btn').forEach((btn) => {
+    btn.onclick = async () => {
+      try {
+        await restoreTemplate(Number(btn.dataset.templateId));
+      } catch (error) {
+        log(`restoreTemplate: ${String(error)}`);
+        toastError(error, 'Не удалось восстановить пример');
       }
     };
   });

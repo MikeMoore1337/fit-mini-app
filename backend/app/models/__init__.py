@@ -3,6 +3,7 @@ from app.models.exercise import Exercise
 from app.models.notification import Notification, NotificationSetting
 from app.models.nutrition import NutritionTarget
 from app.models.program import (
+    HiddenProgramTemplate,
     ProgramTemplate,
     ProgramTemplateDay,
     ProgramTemplateExercise,
@@ -19,6 +20,7 @@ __all__ = [
     "CoachClient",
     "CoachClientInvite",
     "Exercise",
+    "HiddenProgramTemplate",
     "Notification",
     "NotificationSetting",
     "NutritionTarget",

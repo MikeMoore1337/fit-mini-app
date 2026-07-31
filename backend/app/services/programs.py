@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.core.timezone import today_for_user
 from app.models.exercise import Exercise
 from app.models.program import (
+    HiddenProgramTemplate,
     ProgramTemplate,
     ProgramTemplateDay,
     ProgramTemplateExercise,
@@ -520,6 +521,20 @@ def build_template_response(item: ProgramTemplate, db: Session, current_user: Us
     owner = (
         db.query(User).filter(User.id == item.owner_user_id).first() if item.owner_user_id else None
     )
+    assignment = (
+        db.query(UserProgram)
+        .filter(
+            UserProgram.user_id == current_user.id,
+            UserProgram.template_id == item.id,
+        )
+        .order_by(UserProgram.is_active.desc(), UserProgram.id.desc())
+        .first()
+    )
+    assigned_by = (
+        db.query(User).filter(User.id == assignment.assigned_by_user_id).first()
+        if assignment and assignment.assigned_by_user_id
+        else None
+    )
 
     return {
         "id": item.id,
@@ -532,6 +547,13 @@ def build_template_response(item: ProgramTemplate, db: Session, current_user: Us
         "owner_full_name": owner.profile.full_name if owner and owner.profile else None,
         "created_by_user_id": item.created_by_user_id,
         "is_public": item.is_public,
+        "is_example": _is_example_template(item),
+        "is_assigned_to_current_user": assignment is not None,
+        "is_active_for_current_user": bool(assignment and assignment.is_active),
+        "assigned_by_user_id": assignment.assigned_by_user_id if assignment else None,
+        "assigned_by_full_name": (
+            assigned_by.profile.full_name if assigned_by and assigned_by.profile else None
+        ),
         "days": [
             {
                 "id": day.id,
@@ -821,6 +843,13 @@ def _can_view_template(db: Session, current_user: User, template: ProgramTemplat
         or template.owner_user_id == current_user.id
         or _created_by_current_user_with_manageable_owner(db, current_user, template)
         or (current_user.is_coach and template.owner_user_id in _coach_client_ids(db, current_user))
+        or db.query(UserProgram.id)
+        .filter(
+            UserProgram.user_id == current_user.id,
+            UserProgram.template_id == template.id,
+        )
+        .first()
+        is not None
     )
 
 
@@ -903,6 +932,13 @@ def assign_template_to_user(
         UserProgram.user_id == target_user.id,
         UserProgram.is_active.is_(True),
     ).update({"is_active": False})
+
+    # A fresh coach assignment should put a previously hidden example back into
+    # the client's library, where the client can hide it again if desired.
+    db.query(HiddenProgramTemplate).filter(
+        HiddenProgramTemplate.user_id == target_user.id,
+        HiddenProgramTemplate.template_id == template.id,
+    ).delete(synchronize_session=False)
 
     user_program = UserProgram(
         user_id=target_user.id,
@@ -1025,6 +1061,16 @@ def list_user_templates(db: Session, current_user: User) -> list[ProgramTemplate
     if client_ids:
         visibility_filters.append(ProgramTemplate.owner_user_id.in_(client_ids))
 
+    assigned_template_ids = db.query(UserProgram.template_id).filter(
+        UserProgram.user_id == current_user.id,
+        UserProgram.template_id.is_not(None),
+    )
+    visibility_filters.append(ProgramTemplate.id.in_(assigned_template_ids))
+
+    hidden_template_ids = db.query(HiddenProgramTemplate.template_id).filter(
+        HiddenProgramTemplate.user_id == current_user.id
+    )
+
     templates = (
         db.query(ProgramTemplate)
         .options(
@@ -1033,11 +1079,33 @@ def list_user_templates(db: Session, current_user: User) -> list[ProgramTemplate
             .joinedload(ProgramTemplateExercise.exercise)
         )
         .filter(or_(*visibility_filters))
+        .filter(ProgramTemplate.id.not_in(hidden_template_ids))
         .filter(ProgramTemplate.slug != LEGACY_DEMO_TEMPLATE_SLUG)
         .order_by(ProgramTemplate.id.desc())
         .all()
     )
     return [template for template in templates if _can_view_template(db, current_user, template)]
+
+
+def list_hidden_example_templates(db: Session, current_user: User) -> list[ProgramTemplate]:
+    return (
+        db.query(ProgramTemplate)
+        .join(HiddenProgramTemplate, HiddenProgramTemplate.template_id == ProgramTemplate.id)
+        .options(
+            joinedload(ProgramTemplate.days)
+            .joinedload(ProgramTemplateDay.exercises)
+            .joinedload(ProgramTemplateExercise.exercise)
+        )
+        .filter(
+            HiddenProgramTemplate.user_id == current_user.id,
+            ProgramTemplate.is_public.is_(True),
+            ProgramTemplate.owner_user_id.is_(None),
+            ProgramTemplate.created_by_user_id.is_(None),
+            ProgramTemplate.slug != LEGACY_DEMO_TEMPLATE_SLUG,
+        )
+        .order_by(HiddenProgramTemplate.hidden_at.desc())
+        .all()
+    )
 
 
 def get_template_for_user(
@@ -1059,6 +1127,9 @@ def get_template_for_user(
         .first()
     )
     if not template:
+        raise ProgramError("Template not found")
+
+    if _is_template_hidden(db, current_user, template.id):
         raise ProgramError("Template not found")
 
     if not _can_view_template(db, current_user, template):
@@ -1197,6 +1268,9 @@ def assign_template_to_self(
     if not template:
         raise ProgramError("Template not found")
 
+    if _is_template_hidden(db, current_user, template.id):
+        raise ProgramError("Template not found")
+
     can_use = (
         current_user.is_admin
         or template.is_public
@@ -1205,6 +1279,13 @@ def assign_template_to_self(
             template.created_by_user_id == current_user.id
             and template.owner_user_id in (None, current_user.id)
         )
+        or db.query(UserProgram.id)
+        .filter(
+            UserProgram.user_id == current_user.id,
+            UserProgram.template_id == template.id,
+        )
+        .first()
+        is not None
     )
     if not can_use:
         raise ProgramError("No permission to use template")
@@ -1223,6 +1304,9 @@ def delete_template_cascade(db: Session, template: ProgramTemplate) -> None:
     db.query(UserProgram).filter(UserProgram.template_id == template.id).update(
         {"template_id": None},
         synchronize_session=False,
+    )
+    db.query(HiddenProgramTemplate).filter(HiddenProgramTemplate.template_id == template.id).delete(
+        synchronize_session=False
     )
 
     days = db.query(ProgramTemplateDay).filter(ProgramTemplateDay.program_id == template.id).all()
@@ -1256,8 +1340,63 @@ def delete_template_for_user(
     if not template:
         raise ProgramError("Template not found")
 
+    if _is_example_template(template):
+        if not _can_view_template(db, current_user, template):
+            raise ProgramError("No permission to delete template")
+        if not _is_template_hidden(db, current_user, template.id):
+            db.add(HiddenProgramTemplate(user_id=current_user.id, template_id=template.id))
+        db.commit()
+        return
+
     if not _can_manage_template(db, current_user, template):
         raise ProgramError("No permission to delete template")
 
     delete_template_cascade(db, template)
     db.commit()
+
+
+def restore_example_template_for_user(
+    db: Session,
+    current_user: User,
+    template_id: int,
+) -> None:
+    hidden = (
+        db.query(HiddenProgramTemplate)
+        .join(ProgramTemplate, ProgramTemplate.id == HiddenProgramTemplate.template_id)
+        .filter(
+            HiddenProgramTemplate.user_id == current_user.id,
+            HiddenProgramTemplate.template_id == template_id,
+            ProgramTemplate.is_public.is_(True),
+            ProgramTemplate.owner_user_id.is_(None),
+            ProgramTemplate.created_by_user_id.is_(None),
+        )
+        .first()
+    )
+    if not hidden:
+        raise ProgramError("Hidden template not found")
+    db.delete(hidden)
+    db.commit()
+
+
+def _is_example_template(template: ProgramTemplate) -> bool:
+    return bool(
+        template.is_public
+        and template.owner_user_id is None
+        and template.created_by_user_id is None
+    )
+
+
+def _is_template_hidden(
+    db: Session,
+    current_user: User,
+    template_id: int,
+) -> bool:
+    return (
+        db.query(HiddenProgramTemplate.id)
+        .filter(
+            HiddenProgramTemplate.user_id == current_user.id,
+            HiddenProgramTemplate.template_id == template_id,
+        )
+        .first()
+        is not None
+    )

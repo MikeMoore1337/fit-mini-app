@@ -8,6 +8,7 @@ from app.models.billing import Payment, Plan, Subscription
 from app.models.exercise import Exercise
 from app.models.notification import Notification, NotificationSetting
 from app.models.program import (
+    HiddenProgramTemplate,
     ProgramTemplate,
     UserProgram,
     UserWorkout,
@@ -79,6 +80,9 @@ def _delete_user_programs(db: Session, user_program_ids: list[int]) -> None:
 
 
 def _delete_user_cascade(db: Session, user: User) -> None:
+    db.query(HiddenProgramTemplate).filter(HiddenProgramTemplate.user_id == user.id).delete(
+        synchronize_session=False
+    )
     owned_templates = (
         db.query(ProgramTemplate)
         .filter(

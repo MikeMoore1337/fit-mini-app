@@ -1,4 +1,4 @@
-export const FRONTEND_VERSION = 'v49';
+export const FRONTEND_VERSION = 'v50';
 
 export const accessTokenKey = 'fit_access_token';
 export const sectionStoragePrefix = 'fit_section_';
@@ -24,10 +24,12 @@ export const API = {
 
   saveTemplate: '/api/v1/programs/templates',
   myTemplates: '/api/v1/programs/templates/mine',
+  hiddenTemplates: '/api/v1/programs/templates/hidden',
   getTemplate: (templateId) => `/api/v1/programs/templates/${templateId}`,
   updateTemplate: (templateId) => `/api/v1/programs/templates/${templateId}`,
   assignTemplateToMe: (templateId) => `/api/v1/programs/templates/${templateId}/assign-to-me`,
   deleteTemplate: (templateId) => `/api/v1/programs/templates/${templateId}`,
+  restoreTemplate: (templateId) => `/api/v1/programs/templates/${templateId}/restore`,
   clients: '/api/v1/programs/clients',
   createClient: '/api/v1/programs/clients',
 

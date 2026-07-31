@@ -331,6 +331,12 @@ def test_coach_can_assign_existing_template_to_own_client(client):
     assert assigned.json()["workouts_created"] == 1
     assert client.get("/api/v1/workouts/week", headers=client_headers).status_code == 200
 
+    client_templates = client.get("/api/v1/programs/templates/mine", headers=client_headers).json()
+    assigned_template = next(item for item in client_templates if item["id"] == template_id)
+    assert assigned_template["is_assigned_to_current_user"] is True
+    assert assigned_template["is_active_for_current_user"] is True
+    assert assigned_template["assigned_by_user_id"] == created.json()["template"]["owner_user_id"]
+
 
 def test_coach_cannot_assign_kbju_to_non_client(client):
     coach_headers = auth(client, telegram_user_id=6201, is_coach=True)
@@ -880,6 +886,35 @@ def test_seeded_catalog_and_strength_templates(client):
     assert all(
         template["days"] for template in templates if template["slug"].startswith("strength-")
     )
+
+
+def test_client_can_hide_and_restore_seeded_program_example(client):
+    headers = auth(client, telegram_user_id=31034, is_coach=False)
+    other_headers = auth(client, telegram_user_id=31035, is_coach=False)
+    templates = client.get("/api/v1/programs/templates/mine", headers=headers).json()
+    example = next(item for item in templates if item["slug"] == "strength-fullbody-3d")
+    assert example["is_example"] is True
+
+    hidden = client.delete(f"/api/v1/programs/templates/{example['id']}", headers=headers)
+    assert hidden.status_code == 204
+    assert example["id"] not in {
+        item["id"] for item in client.get("/api/v1/programs/templates/mine", headers=headers).json()
+    }
+    assert example["id"] in {
+        item["id"]
+        for item in client.get("/api/v1/programs/templates/hidden", headers=headers).json()
+    }
+    assert example["id"] in {
+        item["id"]
+        for item in client.get("/api/v1/programs/templates/mine", headers=other_headers).json()
+    }
+
+    restored = client.post(f"/api/v1/programs/templates/{example['id']}/restore", headers=headers)
+    assert restored.status_code == 204
+    assert example["id"] in {
+        item["id"] for item in client.get("/api/v1/programs/templates/mine", headers=headers).json()
+    }
+    assert client.get("/api/v1/programs/templates/hidden", headers=headers).json() == []
 
 
 def test_every_seeded_exercise_has_complete_guide_and_local_images(client):

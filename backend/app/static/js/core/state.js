@@ -3,6 +3,7 @@ export const state = {
   exercises: [],
   clients: [],
   templates: [],
+  hiddenTemplates: [],
   todayWorkout: null,
   weekSchedule: [],
   plans: [],

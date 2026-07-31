@@ -60,6 +60,11 @@ class ProgramTemplateResponse(BaseModel):
     owner_full_name: str | None = None
     created_by_user_id: int | None = None
     is_public: bool = False
+    is_example: bool = False
+    is_assigned_to_current_user: bool = False
+    is_active_for_current_user: bool = False
+    assigned_by_user_id: int | None = None
+    assigned_by_full_name: str | None = None
     days: list[ProgramTemplateDayResponse]
 
 

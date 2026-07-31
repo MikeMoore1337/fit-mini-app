@@ -30,7 +30,9 @@ from app.services.programs import (
     get_template_for_user,
     list_clients,
     list_exercises,
+    list_hidden_example_templates,
     list_user_templates,
+    restore_example_template_for_user,
     update_exercise_for_user,
     update_template_for_user,
 )
@@ -178,6 +180,27 @@ def my_templates(
 ):
     items = list_user_templates(db, current_user)
     return [build_template_response(item, db, current_user) for item in items]
+
+
+@router.get("/templates/hidden", response_model=list[ProgramTemplateResponse])
+def hidden_templates(
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    items = list_hidden_example_templates(db, current_user)
+    return [build_template_response(item, db, current_user) for item in items]
+
+
+@router.post("/templates/{template_id}/restore", status_code=status.HTTP_204_NO_CONTENT)
+def restore_template(
+    template_id: int,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        restore_example_template_for_user(db, current_user, template_id)
+    except ProgramError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/templates/{template_id}", response_model=ProgramTemplateResponse)
