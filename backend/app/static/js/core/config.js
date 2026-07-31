@@ -1,4 +1,4 @@
-export const FRONTEND_VERSION = 'v48';
+export const FRONTEND_VERSION = 'v49';
 
 export const accessTokenKey = 'fit_access_token';
 export const sectionStoragePrefix = 'fit_section_';

@@ -1739,6 +1739,9 @@ function getExerciseCatalogCardHtml(exercise) {
         ${metadata}
       </div>
       <div class="toolbar wrap top-gap">
+        <button class="assign-exercise-btn" type="button" data-exercise-id="${exercise.id}">
+          + Добавить в программу
+        </button>
         ${
           exercise.guide
             ? `<button class="exercise-guide-btn" type="button" data-exercise-id="${exercise.id}">
@@ -1965,6 +1968,7 @@ function renderExerciseCatalog() {
   }
 
   list.innerHTML = getExerciseGroupsHtml(rows, query);
+  updateExerciseCatalogAssignmentState();
 
   document.querySelectorAll('.edit-exercise-btn').forEach((btn) => {
     btn.onclick = async () => {
@@ -2098,6 +2102,132 @@ function refreshProgramExerciseOptions() {
     const selectedValue = select.value;
     select.innerHTML = exerciseOptions(selectedValue);
   });
+  updateExerciseCatalogAssignmentState();
+}
+
+let builderDaySequence = 0;
+
+function getProgramDayCards() {
+  return [...($('dayBuilder')?.querySelectorAll('.day-card') || [])];
+}
+
+function getProgramDayTitle(day, index) {
+  return day.querySelector('.day-title')?.value?.trim() || `День ${index + 1}`;
+}
+
+function syncExerciseAssignmentTarget({ selectLast = false } = {}) {
+  const select = $('exerciseProgramDay');
+  const hint = $('exerciseAssignHint');
+  if (!select) return;
+
+  const days = getProgramDayCards();
+  const currentValue = select.value;
+  select.innerHTML = [
+    ...days.map(
+      (day, index) =>
+        `<option value="${escapeHtml(day.dataset.dayKey)}">${escapeHtml(getProgramDayTitle(day, index))}</option>`
+    ),
+    '<option value="new">+ Новый тренировочный день</option>',
+  ].join('');
+
+  const hasCurrentValue = [...select.options].some((option) => option.value === currentValue);
+  if (selectLast && days.length) select.value = days[days.length - 1].dataset.dayKey;
+  else if (hasCurrentValue) select.value = currentValue;
+  else select.value = days.length ? days[days.length - 1].dataset.dayKey : 'new';
+
+  if (hint) {
+    hint.textContent = days.length
+      ? 'Выбирай упражнения ниже — они добавятся в указанный день конструктора.'
+      : 'Первое упражнение автоматически создаст первый день программы.';
+  }
+}
+
+function updateProgramDaySummary(day) {
+  const countNode = day?.querySelector('.program-day-summary small');
+  if (!countNode) return;
+  const count = day.querySelectorAll('.program-ex-row').length;
+  countNode.textContent = `${count} упр.`;
+}
+
+function getExerciseProgramCount(exerciseId) {
+  return [...document.querySelectorAll('.program-ex-row .exercise-id')].filter(
+    (select) => String(select.value) === String(exerciseId)
+  ).length;
+}
+
+function canAddExerciseToCurrentBuilder(exerciseId) {
+  return getBuilderExerciseRows().some((exercise) => Number(exercise.id) === Number(exerciseId));
+}
+
+function updateExerciseCatalogAssignmentState() {
+  document.querySelectorAll('.assign-exercise-btn').forEach((button) => {
+    const exerciseId = Number(button.dataset.exerciseId);
+    const count = getExerciseProgramCount(exerciseId);
+    const canAdd = canAddExerciseToCurrentBuilder(exerciseId);
+    button.disabled = !canAdd;
+    button.classList.toggle('is-added', count > 0);
+    button.textContent = count > 0 ? `Добавить ещё · уже ${count}` : '+ Добавить в программу';
+    button.title = canAdd
+      ? 'Добавить упражнение в выбранный тренировочный день'
+      : 'Это упражнение недоступно для выбранного получателя программы';
+  });
+}
+
+function appendExerciseToProgramDay(day, exerciseId) {
+  const exercisesList = day.querySelector('.exercises-list');
+  if (!exercisesList) return false;
+
+  const rowWrapper = document.createElement('div');
+  rowWrapper.innerHTML = exerciseTemplate(exerciseId);
+  const row = rowWrapper.firstElementChild;
+  exercisesList.appendChild(row);
+  bindExerciseRowActions(row);
+  updateProgramDaySummary(day);
+  refreshBuilderControls();
+  markBuilderDirty();
+  return true;
+}
+
+function addCatalogExerciseToProgram(exerciseId) {
+  const exercise = state.exercises.find((item) => Number(item.id) === Number(exerciseId));
+  if (!exercise) return;
+
+  if (!canAddExerciseToCurrentBuilder(exerciseId)) {
+    showToast('Упражнение недоступно для выбранного получателя программы', 'error');
+    return;
+  }
+
+  const targetValue = $('exerciseProgramDay')?.value || 'new';
+  let days = getProgramDayCards();
+  let targetDay =
+    targetValue === 'new' ? null : days.find((day) => day.dataset.dayKey === targetValue);
+
+  if (!targetDay) {
+    addDay({
+      title: `День ${days.length + 1}`,
+      exercises: [
+        {
+          exercise_id: exercise.id,
+          prescribed_sets: 3,
+          prescribed_reps: '8-10',
+          rest_seconds: 90,
+        },
+      ],
+    });
+    days = getProgramDayCards();
+    targetDay = days[days.length - 1];
+    syncExerciseAssignmentTarget({ selectLast: true });
+  } else {
+    appendExerciseToProgramDay(targetDay, exercise.id);
+  }
+
+  targetDay.open = true;
+  updateProgramDaySummary(targetDay);
+  updateExerciseCatalogAssignmentState();
+  hapticImpact('light');
+  showToast(
+    `«${exercise.title}» добавлено: ${getProgramDayTitle(targetDay, days.indexOf(targetDay))}`
+  );
 }
 
 function formatDayCountLabel(count) {
@@ -2253,7 +2383,10 @@ function bindExerciseRowActions(row) {
       danger: true,
     });
     if (!ok) return;
+    const day = row.closest('.day-card');
     row.remove();
+    updateProgramDaySummary(day);
+    updateExerciseCatalogAssignmentState();
     markBuilderDirty();
   };
 }
@@ -2276,6 +2409,7 @@ function addDay(preset = null) {
   const wrapper = document.createElement('div');
   wrapper.innerHTML = programDayTemplate(idx, preset);
   const node = wrapper.firstElementChild;
+  node.dataset.dayKey = String(++builderDaySequence);
 
   dayBuilder.appendChild(node);
   dayBuilder.querySelector('.builder-empty-state')?.remove();
@@ -2290,6 +2424,8 @@ function addDay(preset = null) {
     const row = rowWrapper.firstElementChild;
     exercisesList.appendChild(row);
     bindExerciseRowActions(row);
+    updateProgramDaySummary(node);
+    updateExerciseCatalogAssignmentState();
     refreshBuilderControls();
     markBuilderDirty();
   };
@@ -2308,6 +2444,7 @@ function addDay(preset = null) {
     if (!ok) return;
     node.remove();
     renumberDays();
+    updateExerciseCatalogAssignmentState();
     markBuilderDirty();
   };
 
@@ -2322,9 +2459,13 @@ function addDay(preset = null) {
   if (titleInput && summaryTitle) {
     titleInput.addEventListener('input', () => {
       summaryTitle.textContent = titleInput.value.trim() || `День ${idx + 1}`;
+      syncExerciseAssignmentTarget();
     });
   }
 
+  updateProgramDaySummary(node);
+  syncExerciseAssignmentTarget({ selectLast: true });
+  updateExerciseCatalogAssignmentState();
   refreshBuilderControls();
   markBuilderDirty();
 }
@@ -2337,6 +2478,7 @@ function renumberDays() {
       titleInput.value = `День ${index + 1}`;
     }
   });
+  syncExerciseAssignmentTarget();
 }
 
 function fillExample() {
@@ -2359,6 +2501,8 @@ function renderEmptyBuilder() {
       <p class="empty-state__text muted">Начните с пустого дня или выберите готовый силовой шаблон выше.</p>
     </div>
   `;
+  syncExerciseAssignmentTarget();
+  updateExerciseCatalogAssignmentState();
   markBuilderDirty(false);
 }
 
@@ -4002,6 +4146,11 @@ function bindUI() {
     const exercise = state.exercises.find((item) => item.id === exerciseId);
     openExerciseGuide(exercise);
   });
+  document.addEventListener('click', (event) => {
+    const button = event.target.closest?.('.assign-exercise-btn');
+    if (!button) return;
+    addCatalogExerciseToProgram(Number(button.dataset.exerciseId));
+  });
   if ($('exerciseGuideClose')) $('exerciseGuideClose').onclick = closeExerciseGuide;
   const exerciseGuideBackdrop = $('exerciseGuideModal')?.querySelector('.modal__backdrop');
   if (exerciseGuideBackdrop) exerciseGuideBackdrop.onclick = closeExerciseGuide;
@@ -4022,6 +4171,7 @@ function bindUI() {
   });
   $('card-builder')?.addEventListener('change', (event) => {
     if (event.target.matches('input, select, textarea')) markBuilderDirty(true);
+    if (event.target.matches('.exercise-id')) updateExerciseCatalogAssignmentState();
   });
 
   document.addEventListener('fit:navigation', (event) => {
@@ -4130,7 +4280,14 @@ function bindUI() {
   syncStrengthTemplateDayOptions();
 
   if ($('target_telegram_user_id')) {
-    $('target_telegram_user_id').addEventListener('input', refreshProgramExerciseOptions);
+    $('target_telegram_user_id').addEventListener('input', () => {
+      refreshProgramExerciseOptions();
+      updateExerciseCatalogAssignmentState();
+    });
+  }
+
+  if ($('exerciseProgramDay')) {
+    $('exerciseProgramDay').addEventListener('change', updateExerciseCatalogAssignmentState);
   }
 
   if ($('addDayBtn')) {

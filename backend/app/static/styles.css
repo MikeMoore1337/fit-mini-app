@@ -985,6 +985,34 @@ button:disabled {
     align-items: center;
 }
 
+.exercise-assign-bar {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) minmax(200px, 1.2fr) auto;
+    align-items: end;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding: 12px;
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-sm);
+    background: var(--accent-soft);
+}
+
+.exercise-assign-bar p {
+    align-self: center;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.exercise-assign-bar button {
+    min-height: 44px;
+}
+
+.assign-exercise-btn.is-added {
+    border-color: var(--success-line);
+    background: var(--success-soft);
+    color: var(--success-text);
+}
+
 .exercise-create-panel {
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
@@ -1825,6 +1853,15 @@ a {
     .program-day-head {
         grid-template-columns: 1fr;
         gap: 8px;
+    }
+
+    .exercise-assign-bar {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+    }
+
+    .exercise-assign-bar button {
+        width: 100%;
     }
 
     .program-day-actions {

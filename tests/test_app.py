@@ -2009,3 +2009,17 @@ def test_miniapp_has_role_gated_coach_and_admin_navigation():
     assert '<a href="/admin" id="adminBottomNavLink" class="app-bottom-nav__btn hidden">' in html
     assert '<span class="app-bottom-nav__label">Админка</span>' in html
     assert "adminBottomNavLink.classList.toggle('hidden', !isAdmin())" in main_js
+
+
+def test_exercise_catalog_can_add_exercises_to_program_builder():
+    static_dir = Path(__file__).resolve().parents[1] / "backend" / "app" / "static"
+    html = (static_dir / "index.html").read_text(encoding="utf-8")
+    main_js = (static_dir / "js" / "main.js").read_text(encoding="utf-8")
+
+    assert 'id="exerciseProgramDay"' in html
+    assert 'data-nav-section="section-builder"' in html
+    assert 'class="assign-exercise-btn"' in main_js
+    assert "+ Добавить в программу" in main_js
+    assert "function addCatalogExerciseToProgram(exerciseId)" in main_js
+    assert "appendExerciseToProgramDay(targetDay, exercise.id)" in main_js
+    assert "Первое упражнение автоматически создаст первый день программы." in main_js
