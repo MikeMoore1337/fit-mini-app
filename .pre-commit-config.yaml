@@ -5,7 +5,7 @@
 # и форматирование (black-совместимый ruff-format). Настройки живут в pyproject.toml.
 
 default_language_version:
-  python: python3.12
+  python: python3.14
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -21,7 +21,7 @@ repos:
       - id: debug-statements
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.9
+    rev: v0.16.1
     hooks:
       - id: ruff
         args: ["--fix", "--no-cache"]
@@ -37,6 +37,6 @@ repos:
         entry: python scripts/run_mypy.py
         language: python
         additional_dependencies:
-          - mypy>=1.10
+          - mypy>=2.3
         pass_filenames: false
         files: ^(backend/app|scripts/run_mypy\.py|pyproject\.toml)

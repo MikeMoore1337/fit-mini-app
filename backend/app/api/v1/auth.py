@@ -183,7 +183,7 @@ def refresh_tokens(
 
     try:
         user_id = int(sub)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         raise HTTPException(status_code=401, detail="Невалидный refresh token")
 
     row = get_refresh_token_by_jti(db, jti)

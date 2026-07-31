@@ -92,7 +92,7 @@ FastAPI backend
 
 ## Стек
 
-- Python 3.12;
+- Python 3.14;
 - FastAPI, SQLAlchemy, Alembic, Pydantic Settings;
 - PostgreSQL, SQLite для тестов;
 - Vanilla JS, HTML и CSS для Telegram Mini App;

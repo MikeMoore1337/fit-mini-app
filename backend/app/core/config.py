@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     reminder_sync_seconds: int = Field(default=60, ge=10, le=3600)
 
     @model_validator(mode="after")
-    def validate_production_safety(self) -> "Settings":
+    def validate_production_safety(self) -> Settings:
         if self.app_env != "prod":
             return self
 

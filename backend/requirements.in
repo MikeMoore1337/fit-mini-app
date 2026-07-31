@@ -1,13 +1,12 @@
-# pip install pip-tools
-# pip-compile requirements.in
+# pip install uv
+# uv pip compile --upgrade --python-version 3.14 --universal --output-file requirements.txt requirements.in
 # pip install -r requirements.txt
-# pip-compile --upgrade
 fastapi
 uvicorn[standard]
 sqlalchemy
 psycopg[binary]
 pydantic-settings
-pydantic<2.10
+pydantic
 alembic
 PyJWT
 httpx

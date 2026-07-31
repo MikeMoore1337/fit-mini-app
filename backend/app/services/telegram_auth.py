@@ -53,7 +53,7 @@ def validate_telegram_init_data(
 
     try:
         auth_date = int(auth_date_raw)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         raise ValueError("Некорректный auth_date в init_data")
 
     now = int(time.time())
