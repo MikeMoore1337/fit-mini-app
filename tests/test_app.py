@@ -2393,6 +2393,15 @@ def test_versioned_static_assets_are_cached_but_html_is_not(client):
     assert "no-store" in page.headers["cache-control"]
 
 
+def test_alembic_revision_ids_fit_version_table_column():
+    versions_dir = Path(__file__).resolve().parents[1] / "backend" / "alembic" / "versions"
+    for migration in versions_dir.glob("*.py"):
+        source = migration.read_text(encoding="utf-8")
+        match = re.search(r'^revision\s*=\s*["\']([^"\']+)["\']', source, re.MULTILINE)
+        assert match, f"Revision id not found in {migration.name}"
+        assert len(match.group(1)) <= 32, f"Revision id is too long in {migration.name}"
+
+
 def test_miniapp_has_role_gated_coach_and_admin_navigation():
     static_dir = Path(__file__).resolve().parents[1] / "backend" / "app" / "static"
     html = (static_dir / "index.html").read_text(encoding="utf-8")

@@ -1,6 +1,6 @@
 """add indexes for common queue, coach and workout lookups
 
-Revision ID: 0020_add_query_performance_indexes
+Revision ID: 0020_query_performance_indexes
 Revises: 0019_client_invitation_workflow
 Create Date: 2026-08-01
 """
@@ -9,7 +9,7 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision = "0020_add_query_performance_indexes"
+revision = "0020_query_performance_indexes"
 down_revision = "0019_client_invitation_workflow"
 branch_labels = None
 depends_on = None
