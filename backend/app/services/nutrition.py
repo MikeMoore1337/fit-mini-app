@@ -148,6 +148,7 @@ def _resolve_target_user(
             .filter(
                 CoachClient.coach_user_id == current_user.id,
                 CoachClient.client_user_id == target_user.id,
+                CoachClient.status == "active",
             )
             .first()
         )

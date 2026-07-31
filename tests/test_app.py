@@ -17,7 +17,7 @@ from app.db.session import get_session_context
 from app.models.exercise import Exercise
 from app.models.notification import Notification, NotificationSetting
 from app.models.program import ProgramTemplate, UserProgram, UserWorkout
-from app.models.user import User
+from app.models.user import CoachClient, CoachClientInvite, User
 from app.services.notifications import (
     claim_due_notifications,
     mark_delivery_failed,
@@ -1412,6 +1412,136 @@ def test_client_approves_coach_change_and_has_only_one_active_coach(client):
         client.get("/api/v1/me", headers=client_headers).json()["trainer"]["username"]
         == "coach_two"
     )
+
+    with get_session_context() as db:
+        relations = (
+            db.query(CoachClient)
+            .filter(CoachClient.client_user_id == client_user["id"])
+            .order_by(CoachClient.id)
+            .all()
+        )
+        assert [relation.status for relation in relations] == ["ended", "active"]
+        assert relations[0].ended_at is not None
+        assert relations[0].ended_reason == "client_switched_trainer"
+
+
+def test_client_code_request_rotation_and_qr(client):
+    coach_headers = auth(client, telegram_user_id=1220, is_coach=True)
+    client_headers = auth(client, telegram_user_id=5220, is_coach=False)
+    me = client.get("/api/v1/me", headers=client_headers).json()
+    original_code = me["client_code"]
+    assert re.fullmatch(r"[A-Z2-9]{4}-[A-Z2-9]{3}", original_code)
+
+    requested = client.post(
+        "/api/v1/coach/clients",
+        json={"client_code": original_code, "source": "client_code"},
+        headers=coach_headers,
+    )
+    assert requested.status_code == 201
+    assert requested.json()["status"] == "pending"
+    invites = client.get("/api/v1/me/coach-invites", headers=client_headers).json()
+    assert invites[0]["source"] == "client_code"
+    with get_session_context() as db:
+        notification = (
+            db.query(Notification)
+            .filter(Notification.dedupe_key == f"trainer_request:{invites[0]['id']}")
+            .one()
+        )
+        assert notification.status == "queued"
+        assert "хочет добавить вас" in notification.title
+
+    qr = client.get("/api/v1/me/client-code/qr", headers=client_headers)
+    assert qr.status_code == 200
+    assert qr.headers["content-type"] == "image/png"
+    assert qr.content.startswith(b"\x89PNG")
+
+    rotated = client.post("/api/v1/me/client-code/rotate", headers=client_headers)
+    assert rotated.status_code == 200
+    assert rotated.json()["client_code"] != original_code
+    old_code = client.post(
+        "/api/v1/coach/clients",
+        json={"client_code": original_code, "source": "client_code"},
+        headers=coach_headers,
+    )
+    assert old_code.status_code == 400
+
+
+def test_invite_link_claim_is_bound_to_verified_existing_user_and_idempotent(client):
+    coach_headers = auth(client, telegram_user_id=1230, is_coach=True)
+    first_client_headers = auth(client, telegram_user_id=5230, is_coach=False)
+    first_user_id = client.get("/api/v1/me", headers=first_client_headers).json()["id"]
+
+    created = client.post("/api/v1/coach/invite-links", headers=coach_headers)
+    assert created.status_code == 201
+    start_param = created.json()["start_param"]
+    assert start_param.startswith("trainer_")
+    token = start_param.removeprefix("trainer_")
+
+    for _ in range(2):
+        claimed = client.post(
+            f"/api/v1/me/coach-invites/link/{token}/claim",
+            headers=first_client_headers,
+        )
+        assert claimed.status_code == 200
+
+    invite_id = client.get("/api/v1/me/coach-invites", headers=first_client_headers).json()[0]["id"]
+    for _ in range(2):
+        accepted = client.post(
+            f"/api/v1/me/coach-invites/{invite_id}/accept",
+            headers=first_client_headers,
+        )
+        assert accepted.status_code == 204
+
+    relogged_headers = auth(client, telegram_user_id=5230, is_coach=False)
+    assert client.get("/api/v1/me", headers=relogged_headers).json()["id"] == first_user_id
+    with get_session_context() as db:
+        assert db.query(User).filter(User.telegram_user_id == 5230).count() == 1
+        assert (
+            db.query(CoachClient)
+            .filter(
+                CoachClient.client_user_id == first_user_id,
+                CoachClient.status == "active",
+            )
+            .count()
+            == 1
+        )
+        assert (
+            db.query(CoachClientInvite).filter(CoachClientInvite.id == invite_id).one().status
+            == "accepted"
+        )
+
+
+def test_username_search_only_finds_registered_local_users(client):
+    coach_headers = auth(client, telegram_user_id=1240, is_coach=True)
+    missing = client.get(
+        "/api/v1/coach/client-search?username=not_registered",
+        headers=coach_headers,
+    )
+    assert missing.status_code == 404
+    rejected = client.post(
+        "/api/v1/coach/clients",
+        json={"username": "not_registered", "source": "username_search"},
+        headers=coach_headers,
+    )
+    assert rejected.status_code == 400
+
+    auth(
+        client,
+        telegram_user_id=5240,
+        is_coach=False,
+        username="registered_client",
+        full_name="Зарегистрированный клиент",
+    )
+    found = client.get(
+        "/api/v1/coach/client-search?username=@registered_client",
+        headers=coach_headers,
+    )
+    assert found.status_code == 200
+    assert found.json() == {
+        "username": "registered_client",
+        "full_name": "Зарегистрированный клиент",
+        "photo_url": None,
+    }
 
 
 def test_only_invited_client_can_respond_to_coach_invite(client):

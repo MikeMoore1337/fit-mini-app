@@ -7,6 +7,7 @@ from app.db.session import get_db
 from app.models.notification import NotificationSetting
 from app.models.user import User, UserProfile
 from app.schemas.auth import DevLoginRequest, RefreshRequest, TelegramInitRequest, TokenPairResponse
+from app.services.client_codes import ensure_client_code
 from app.services.jwt import AuthError, build_access_token, build_refresh_token, decode_token
 from app.services.telegram_auth import (
     get_or_create_user_from_init_data,
@@ -133,6 +134,7 @@ def dev_login(
             )
         )
         db.add(NotificationSetting(user_id=user.id))
+        ensure_client_code(db, user)
     else:
         if not user.is_active:
             raise HTTPException(status_code=403, detail="Пользователь заблокирован")
@@ -147,6 +149,7 @@ def dev_login(
                 profile.full_name = payload.full_name
             else:
                 db.add(UserProfile(user_id=user.id, full_name=payload.full_name))
+        ensure_client_code(db, user)
 
     db.commit()
     db.refresh(user)

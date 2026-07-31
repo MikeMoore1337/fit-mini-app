@@ -41,15 +41,32 @@
         </div>
 
         <details class="coach-invite-disclosure">
-          <summary><span class="summary-plus">+</span> Пригласить клиента</summary>
+          <summary><span class="summary-plus">+</span> Добавить клиента</summary>
           <div class="coach-invite-body">
-            <p class="muted">Клиент подтвердит приглашение в своём профиле.</p>
-            <div class="grid grid-3 top-gap">
-              <label class="field"><span>Telegram ID</span><input id="clientTelegramId" type="number" min="1" inputmode="numeric" placeholder="Если известен" /></label>
-              <label class="field"><span>Telegram @username</span><input id="clientUsername" type="text" maxlength="64" autocomplete="off" placeholder="Если есть" /></label>
-              <label class="field"><span>Имя клиента</span><input id="clientFullName" type="text" maxlength="128" autocomplete="off" placeholder="Для списка" /></label>
+            <p class="muted">Закрепление произойдёт только после подтверждения клиента.</p>
+            <div class="stack top-gap">
+              <div class="item-card">
+                <strong>Персональная ссылка</strong>
+                <p class="muted top-gap">Подходит новому и уже зарегистрированному клиенту.</p>
+                <div class="toolbar wrap top-gap">
+                  <button id="createInviteLinkBtn" type="button">Создать ссылку</button>
+                  <button id="copyInviteLinkBtn" class="secondary hidden" type="button">Копировать</button>
+                </div>
+                <input id="inviteLinkOutput" class="top-gap hidden" type="text" readonly aria-label="Ссылка-приглашение" />
+              </div>
+              <div class="item-card">
+                <strong>Добавить по коду клиента</strong>
+                <label class="field top-gap"><span>Код</span><input id="clientCode" type="text" maxlength="8" autocomplete="off" placeholder="M7K9-2QF" /></label>
+                <div class="toolbar top-gap"><button id="addClientByCodeBtn" type="button">Отправить запрос</button></div>
+              </div>
+              <div class="item-card">
+                <strong>Найти по username</strong>
+                <p class="muted top-gap">Поиск выполняется только среди пользователей FitMiniApp.</p>
+                <label class="field top-gap"><span>Telegram @username</span><input id="clientUsername" type="text" maxlength="64" autocomplete="off" placeholder="username" /></label>
+                <div id="clientSearchPreview" class="muted top-gap hidden"></div>
+                <div class="toolbar top-gap"><button id="findClientBtn" type="button">Найти</button><button id="addClientByUsernameBtn" class="hidden" type="button">Отправить запрос</button></div>
+              </div>
             </div>
-            <div class="toolbar top-gap"><button id="addClientBtn" type="button">Отправить приглашение</button></div>
           </div>
         </details>
 
@@ -184,6 +201,6 @@
   <div id="confirmModal" class="modal hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="confirmModalTitle"><div class="modal__backdrop"></div><div class="modal__panel card"><h3 id="confirmModalTitle" class="modal__title"></h3><p id="confirmModalBody" class="modal__body muted"></p><div class="modal__actions toolbar wrap"><button type="button" class="secondary" id="confirmModalCancel">Отмена</button><button type="button" id="confirmModalOk">Подтвердить</button></div></div></div>
   <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script type="module" src="/static/js/coach.js?v=53"></script>
+  <script type="module" src="/static/js/coach.js?v=54"></script>
 </body>
 </html>

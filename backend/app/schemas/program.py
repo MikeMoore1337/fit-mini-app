@@ -120,6 +120,8 @@ class AssignTemplateToClientRequest(BaseModel):
 class CoachClientCreate(BaseModel):
     telegram_user_id: int | None = Field(default=None, ge=1)
     username: str | None = Field(default=None, max_length=64)
+    client_code: str | None = Field(default=None, min_length=7, max_length=16)
+    source: Literal["client_code", "username_search", "telegram_user_picker"] | None = None
     full_name: str | None = Field(default=None, max_length=128)
 
 

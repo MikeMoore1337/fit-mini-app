@@ -1,4 +1,4 @@
-import { API, FRONTEND_VERSION, accessTokenKey } from './core/config.js?v=50';
+import { API, FRONTEND_VERSION, accessTokenKey } from './core/config.js?v=56';
 import { state } from './core/state.js?v=50';
 import {
   $,
@@ -786,31 +786,42 @@ function renderCoachInvites(invites) {
     return;
   }
 
-  node.innerHTML = invites
+  node.innerHTML = `<div><h3>Запросы от тренеров</h3></div>${invites
     .map((invite) => `
       <div class="item-card">
         <strong>Приглашение от тренера: ${escapeHtml(getTrainerDisplayName(invite.coach))}</strong>
-        <p class="muted top-gap">Подтвердите связь, чтобы тренер получил доступ к назначению программ и КБЖУ.</p>
+        <p class="muted top-gap">${invite.already_current_trainer ? 'Вы уже закреплены за этим тренером.' : 'Подтвердите связь, чтобы тренер получил доступ к назначению программ и КБЖУ.'}</p>
         <div class="toolbar wrap top-gap">
-          <button class="accept-coach-invite-btn" data-invite-id="${escapeHtml(invite.id)}" type="button">Принять</button>
+          <button class="accept-coach-invite-btn" data-invite-id="${escapeHtml(invite.id)}" type="button">${invite.requires_trainer_change ? 'Сменить тренера' : 'Принять'}</button>
           <button class="secondary decline-coach-invite-btn" data-invite-id="${escapeHtml(invite.id)}" type="button">Отклонить</button>
         </div>
       </div>
     `)
-    .join('');
+    .join('')}`;
   node.classList.remove('hidden');
 
   node.querySelectorAll('.accept-coach-invite-btn, .decline-coach-invite-btn').forEach((button) => {
     button.onclick = async () => {
       const inviteId = Number(button.dataset.inviteId);
       const accept = button.classList.contains('accept-coach-invite-btn');
+      const invite = invites.find((item) => Number(item.id) === inviteId);
       try {
+        if (accept && invite?.requires_trainer_change) {
+          const currentName = getTrainerDisplayName(invite.current_trainer);
+          const confirmed = await openConfirmDialog({
+            title: 'Сменить тренера?',
+            message: `Сейчас вы закреплены за тренером ${currentName}. Предыдущая связь будет завершена.`,
+            okText: 'Сменить тренера',
+            danger: true,
+          });
+          if (!confirmed) return;
+        }
         await withReauth(() =>
           api(accept ? API.acceptCoachInvite(inviteId) : API.declineCoachInvite(inviteId), {
             method: 'POST',
           })
         );
-        showToast(accept ? 'Тренер привязан' : 'Приглашение отклонено');
+        showToast(accept ? (invite?.already_current_trainer ? 'Вы уже закреплены за этим тренером' : 'Тренер привязан') : 'Приглашение отклонено');
         await loadMe();
         await loadCoachInvites();
         await loadClients();
@@ -826,6 +837,65 @@ function renderCoachInvites(invites) {
 async function loadCoachInvites() {
   const invites = await withReauth(() => api(API.coachInvites));
   renderCoachInvites(invites);
+}
+
+async function claimStartParamInvite() {
+  const tg = getTelegramWebApp();
+  const params = new URLSearchParams(window.location.search);
+  const startParam = tg?.initDataUnsafe?.start_param || params.get('tgWebAppStartParam') || params.get('startapp');
+  if (!startParam?.startsWith('trainer_')) return;
+  const consumedKey = `fit_claimed_${startParam}`;
+  if (sessionStorage.getItem(consumedKey)) return;
+  const token = startParam.slice('trainer_'.length);
+  await withReauth(() => api(API.claimCoachInviteLink(token), { method: 'POST' }));
+  sessionStorage.setItem(consumedKey, '1');
+  showToast('Приглашение тренера открыто — подтвердите запрос в профиле');
+  navigateToSection('section-profile', 'card-profile');
+}
+
+function renderClientCode() {
+  const code = state.me?.client_code || '—';
+  if ($('clientCodeValue')) $('clientCodeValue').textContent = code;
+  if ($('clientCodeQr')) {
+    $('clientCodeQr').classList.add('hidden');
+    $('clientCodeQr').removeAttribute('src');
+  }
+}
+
+async function copyClientCode() {
+  const code = state.me?.client_code;
+  if (!code) throw new Error('Код клиента ещё не создан');
+  if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(code);
+  else {
+    const field = document.createElement('textarea');
+    field.value = code;
+    document.body.appendChild(field);
+    field.select();
+    document.execCommand('copy');
+    field.remove();
+  }
+  showToast('Код клиента скопирован');
+}
+
+async function showClientCodeQr() {
+  const image = $('clientCodeQr');
+  if (!image) return;
+  if (image.src) {
+    image.classList.toggle('hidden');
+    return;
+  }
+  const fetchQr = () => fetch(API.clientCodeQr, {
+    credentials: 'same-origin',
+    headers: { Authorization: `Bearer ${sessionStorage.getItem(accessTokenKey) || ''}` },
+  });
+  let response = await fetchQr();
+  if (response.status === 401) {
+    await withReauth(() => api(API.me));
+    response = await fetchQr();
+  }
+  if (!response.ok) throw new Error('Не удалось загрузить QR-код');
+  image.src = URL.createObjectURL(await response.blob());
+  image.classList.remove('hidden');
 }
 
 function getKbjuGoalLabel(goal) {
@@ -1549,6 +1619,7 @@ async function loadMe() {
 
   renderCurrentAccess(state.me);
   renderTrainerInfo(state.me.trainer);
+  renderClientCode();
   setAuthState('Вход выполнен');
 
   toggleCoachUI();
@@ -4317,6 +4388,7 @@ async function bootstrap() {
   try {
     await loadMe();
     const results = [];
+    results.push(await runBootstrapTask('invite link', claimStartParamInvite));
     results.push(await runBootstrapTask('coach invites', loadCoachInvites));
     results.push(await runBootstrapTask('clients', loadClients, () => renderLoadError('clientsList', 'Не удалось загрузить клиентов')));
     const sectionResults = await Promise.all([
@@ -4474,6 +4546,26 @@ function bindUI() {
       }
     };
   }
+
+  if ($('copyClientCodeBtn')) $('copyClientCodeBtn').onclick = () => copyClientCode().catch((error) => toastError(error));
+  if ($('showClientCodeQrBtn')) $('showClientCodeQrBtn').onclick = () => showClientCodeQr().catch((error) => toastError(error));
+  if ($('rotateClientCodeBtn')) $('rotateClientCodeBtn').onclick = async () => {
+    const confirmed = await openConfirmDialog({
+      title: 'Перевыпустить код?',
+      message: 'Старый код сразу перестанет работать.',
+      okText: 'Перевыпустить',
+      danger: true,
+    });
+    if (!confirmed) return;
+    try {
+      const result = await withReauth(() => api(API.rotateClientCode, { method: 'POST' }));
+      state.me.client_code = result.client_code;
+      renderClientCode();
+      showToast('Код клиента перевыпущен');
+    } catch (error) {
+      toastError(error, 'Не удалось перевыпустить код');
+    }
+  };
 
   if ($('kbjuTarget')) {
     $('kbjuTarget').addEventListener('change', fillKbjuFormFromSelectedTarget);

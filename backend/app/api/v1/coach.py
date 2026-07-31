@@ -20,6 +20,8 @@ from app.services.programs import (
     _effective_exercise_id,
     add_client_for_coach,
     assign_template_to_user,
+    cancel_client_request_notification,
+    create_coach_invite_link,
     get_client_managed_by_coach,
     get_template_for_user,
     list_clients,
@@ -93,10 +95,40 @@ def add_coach_client(
             coach=current_user,
             telegram_user_id=payload.telegram_user_id,
             username=payload.username,
+            client_code=payload.client_code,
+            source=payload.source,
             full_name=payload.full_name,
+            allow_unregistered_username=False,
         )
     except ProgramError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.post("/invite-links", status_code=status.HTTP_201_CREATED)
+def create_invite_link(
+    current_user: User = Depends(require_coach_or_admin),
+    db: Session = Depends(get_db),
+) -> dict:
+    return create_coach_invite_link(db, current_user)
+
+
+@router.get("/client-search")
+def search_registered_client(
+    username: str = Query(min_length=1, max_length=64),
+    current_user: User = Depends(require_coach_or_admin),
+    db: Session = Depends(get_db),
+) -> dict:
+    from app.services.telegram_auth import normalize_telegram_username
+
+    normalized = normalize_telegram_username(username)
+    client = db.query(User).filter(User.username == normalized, User.is_active.is_(True)).first()
+    if not client or client.id == current_user.id:
+        raise HTTPException(status_code=404, detail="Пользователь не найден в приложении")
+    return {
+        "username": client.username,
+        "full_name": client.profile.full_name if client.profile else None,
+        "photo_url": client.photo_url,
+    }
 
 
 @router.patch("/clients/{client_id}/profile", response_model=ClientResponse)
@@ -295,5 +327,6 @@ def remove_coach_client_invite_by_id(
     )
     if not invite:
         raise HTTPException(status_code=404, detail="Client invite not found")
-    db.delete(invite)
+    invite.status = "revoked"
+    cancel_client_request_notification(db, invite.id)
     db.commit()

@@ -1,13 +1,17 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+import hashlib
+import secrets
+from datetime import UTC, date, datetime, timedelta
 from uuid import uuid4
 
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, joinedload
 
-from app.core.timezone import today_for_user
+from app.core.config import settings
+from app.core.timezone import now_msk_naive, today_for_user
 from app.models.exercise import Exercise
+from app.models.notification import Notification
 from app.models.program import (
     HiddenProgramTemplate,
     ProgramTemplate,
@@ -20,6 +24,7 @@ from app.models.program import (
 )
 from app.models.user import CoachClient, CoachClientInvite, User, UserProfile
 from app.schemas.program import ProgramTemplateCreate
+from app.services.client_codes import ensure_client_code
 from app.services.nutrition import get_nutrition_target_for_user
 from app.services.telegram_auth import normalize_telegram_username
 
@@ -119,6 +124,7 @@ def get_or_create_user_by_telegram_id(
                 full_name=full_name or f"Клиент {telegram_user_id}",
             )
         )
+        ensure_client_code(db, user)
         db.commit()
         db.refresh(user)
     return user
@@ -128,7 +134,7 @@ def _coach_client_ids(db: Session, coach: User) -> list[int]:
     return [
         row.client_user_id
         for row in db.query(CoachClient.client_user_id)
-        .filter(CoachClient.coach_user_id == coach.id)
+        .filter(CoachClient.coach_user_id == coach.id, CoachClient.status == "active")
         .all()
     ]
 
@@ -139,6 +145,7 @@ def _is_coach_client(db: Session, coach: User, client: User) -> bool:
         .filter(
             CoachClient.coach_user_id == coach.id,
             CoachClient.client_user_id == client.id,
+            CoachClient.status == "active",
         )
         .first()
         is not None
@@ -154,6 +161,7 @@ def get_client_managed_by_coach(db: Session, coach: User, client_id: int) -> Use
         .filter(
             CoachClient.coach_user_id == coach.id,
             CoachClient.client_user_id == client_id,
+            CoachClient.status == "active",
             User.is_active.is_(True),
         )
         .first()
@@ -268,73 +276,78 @@ def _trainer_entry_from_user(user: User) -> dict:
     }
 
 
+def _queue_client_request_notification(
+    db: Session, coach: User, client: User, invite: CoachClientInvite
+) -> None:
+    db.flush()
+    coach_name = _trainer_entry_from_user(coach)["full_name"] or coach.username or "Тренер"
+    db.add(
+        Notification(
+            user_id=client.id,
+            channel="telegram",
+            title=f"Тренер {coach_name} хочет добавить вас в качестве клиента",
+            body="Откройте приложение, чтобы принять или отклонить запрос.",
+            scheduled_for=now_msk_naive(),
+            scheduled_for_utc=datetime.now(UTC).replace(tzinfo=None),
+            status="queued",
+            dedupe_key=f"trainer_request:{invite.id}",
+        )
+    )
+
+
+def cancel_client_request_notification(db: Session, invite_id: int) -> None:
+    db.query(Notification).filter(
+        Notification.dedupe_key == f"trainer_request:{invite_id}",
+        Notification.status == "queued",
+    ).update({Notification.status: "cancelled"}, synchronize_session=False)
+
+
 def add_client_for_coach(
     db: Session,
     coach: User,
     telegram_user_id: int | None = None,
     username: str | None = None,
+    client_code: str | None = None,
+    source: str | None = None,
     full_name: str | None = None,
+    allow_unregistered_username: bool = True,
 ) -> dict:
     normalized_username = normalize_telegram_username(username)
     normalized_name = full_name.strip() if full_name else None
+    normalized_code = client_code.strip().upper() if client_code else None
 
-    if not telegram_user_id and not normalized_username:
-        raise ProgramError("Telegram ID or username is required")
+    if not telegram_user_id and not normalized_username and not normalized_code:
+        raise ProgramError("Укажите код клиента или username")
 
     if telegram_user_id == coach.telegram_user_id or (
         normalized_username and normalized_username == coach.username
     ):
         raise ProgramError("Cannot add yourself as a client")
 
-    if telegram_user_id:
-        client = _get_existing_user_by_telegram_id(db, telegram_user_id)
-        if client:
-            existing_link = (
-                db.query(CoachClient)
-                .filter(
-                    CoachClient.coach_user_id == coach.id,
-                    CoachClient.client_user_id == client.id,
-                )
-                .first()
-            )
-            if existing_link:
-                return _client_entry_from_user(db, client)
+    db.query(User).filter(User.id == coach.id).with_for_update().one()
 
-        invite_username = (normalize_telegram_username(client.username) if client else None) or (
-            normalized_username or f"user_{telegram_user_id}"
-        )
-        invite = (
-            db.query(CoachClientInvite)
-            .filter(
-                CoachClientInvite.coach_user_id == coach.id,
-                or_(
-                    CoachClientInvite.telegram_user_id == telegram_user_id,
-                    CoachClientInvite.username == invite_username,
-                ),
-            )
+    if normalized_code:
+        client = (
+            db.query(User)
+            .options(joinedload(User.profile))
+            .filter(User.client_code == normalized_code, User.is_active.is_(True))
             .first()
         )
-        if invite:
-            invite.username = invite_username
-            invite.full_name = normalized_name or invite.full_name
-        else:
-            invite = CoachClientInvite(
-                coach_user_id=coach.id,
-                telegram_user_id=telegram_user_id,
-                username=invite_username,
-                full_name=normalized_name,
-            )
-            db.add(invite)
-        db.commit()
-        db.refresh(invite)
-        return _client_entry_from_invite(invite)
+        if not client:
+            raise ProgramError("Клиент с таким кодом не найден")
+        request_source = "client_code"
+    elif telegram_user_id:
+        client = _get_existing_user_by_telegram_id(db, telegram_user_id)
+        request_source = source or "telegram_user_picker"
+    else:
+        client = (
+            db.query(User)
+            .options(joinedload(User.profile))
+            .filter(func.lower(User.username) == normalized_username, User.is_active.is_(True))
+            .first()
+        )
+        request_source = "username_search"
 
-    client = (
-        db.query(User)
-        .options(joinedload(User.profile))
-        .filter(func.lower(User.username) == normalized_username)
-        .first()
-    )
     if client:
         if client.id == coach.id:
             raise ProgramError("Cannot add yourself as a client")
@@ -343,6 +356,7 @@ def add_client_for_coach(
             .filter(
                 CoachClient.coach_user_id == coach.id,
                 CoachClient.client_user_id == client.id,
+                CoachClient.status == "active",
             )
             .first()
         )
@@ -353,30 +367,42 @@ def add_client_for_coach(
             db.query(CoachClientInvite)
             .filter(
                 CoachClientInvite.coach_user_id == coach.id,
-                CoachClientInvite.username == normalized_username,
+                CoachClientInvite.client_user_id == client.id,
+                CoachClientInvite.status == "pending",
             )
             .first()
         )
         if invite:
             invite.telegram_user_id = client.telegram_user_id
-            invite.full_name = normalized_name or invite.full_name
+            invite.username = normalize_telegram_username(client.username)
         else:
             invite = CoachClientInvite(
                 coach_user_id=coach.id,
+                client_user_id=client.id,
                 telegram_user_id=client.telegram_user_id,
-                username=normalized_username,
-                full_name=normalized_name,
+                username=normalize_telegram_username(client.username),
+                full_name=client.profile.full_name if client.profile else None,
+                source=request_source,
+                status="pending",
+                expires_at=now_msk_naive() + timedelta(days=14),
             )
             db.add(invite)
+            _queue_client_request_notification(db, coach, client, invite)
         db.commit()
         db.refresh(invite)
         return _client_entry_from_invite(invite)
+
+    if telegram_user_id:
+        raise ProgramError("Пользователь ещё не зарегистрирован в приложении")
+    if not allow_unregistered_username:
+        raise ProgramError("Пользователь с таким username не найден в приложении")
 
     invite = (
         db.query(CoachClientInvite)
         .filter(
             CoachClientInvite.coach_user_id == coach.id,
             CoachClientInvite.username == normalized_username,
+            CoachClientInvite.status == "pending",
         )
         .first()
     )
@@ -388,6 +414,9 @@ def add_client_for_coach(
             telegram_user_id=None,
             username=normalized_username,
             full_name=normalized_name,
+            source="username_search",
+            status="pending",
+            expires_at=now_msk_naive() + timedelta(days=14),
         )
         db.add(invite)
 
@@ -402,13 +431,16 @@ def remove_client_for_coach(db: Session, coach: User, client_id: int) -> None:
         .filter(
             CoachClient.coach_user_id == coach.id,
             CoachClient.client_user_id == client_id,
+            CoachClient.status == "active",
         )
         .first()
     )
     if not link:
         raise ProgramError("Client link not found")
 
-    db.delete(link)
+    link.status = "ended"
+    link.ended_at = now_msk_naive()
+    link.ended_reason = "removed_by_trainer"
     db.commit()
 
 
@@ -438,6 +470,7 @@ def get_current_trainer(db: Session, client: User) -> dict | None:
         .options(joinedload(User.profile))
         .filter(
             CoachClient.client_user_id == client.id,
+            CoachClient.status == "active",
             User.is_active.is_(True),
             or_(User.is_coach.is_(True), User.is_admin.is_(True)),
         )
@@ -450,26 +483,40 @@ def get_current_trainer(db: Session, client: User) -> dict | None:
 
 
 def remove_current_trainer(db: Session, client: User) -> None:
-    db.query(CoachClient).filter(CoachClient.client_user_id == client.id).delete(
-        synchronize_session=False
+    relation = (
+        db.query(CoachClient)
+        .filter(CoachClient.client_user_id == client.id, CoachClient.status == "active")
+        .first()
     )
+    if relation:
+        relation.status = "ended"
+        relation.ended_at = now_msk_naive()
+        relation.ended_reason = "removed_by_client"
     db.commit()
 
 
 def list_coach_invites_for_client(db: Session, client: User) -> list[dict]:
     username = normalize_telegram_username(client.username)
-    filters = [CoachClientInvite.telegram_user_id == client.telegram_user_id]
+    filters = [CoachClientInvite.client_user_id == client.id]
+    filters.append(CoachClientInvite.telegram_user_id == client.telegram_user_id)
     if username:
         filters.append(CoachClientInvite.username == username)
 
     invites = (
         db.query(CoachClientInvite)
-        .filter(or_(*filters))
+        .filter(CoachClientInvite.status == "pending", or_(*filters))
         .order_by(CoachClientInvite.id.desc())
         .all()
     )
     result: list[dict] = []
+    expired = False
+    current_trainer = get_current_trainer(db, client)
     for invite in invites:
+        if invite.expires_at and invite.expires_at < now_msk_naive():
+            invite.status = "expired"
+            cancel_client_request_notification(db, invite.id)
+            expired = True
+            continue
         coach = db.query(User).filter(User.id == invite.coach_user_id).first()
         if not coach or not coach.is_active or not (coach.is_coach or coach.is_admin):
             continue
@@ -478,8 +525,19 @@ def list_coach_invites_for_client(db: Session, client: User) -> list[dict]:
                 "id": invite.id,
                 "coach": _trainer_entry_from_user(coach),
                 "created_at": invite.created_at,
+                "source": invite.source,
+                "expires_at": invite.expires_at,
+                "requires_trainer_change": bool(
+                    current_trainer and current_trainer["id"] != coach.id
+                ),
+                "already_current_trainer": bool(
+                    current_trainer and current_trainer["id"] == coach.id
+                ),
+                "current_trainer": current_trainer,
             }
         )
+    if expired:
+        db.commit()
     return result
 
 
@@ -491,7 +549,8 @@ def respond_to_coach_invite(
     accept: bool,
 ) -> None:
     username = normalize_telegram_username(client.username)
-    filters = [CoachClientInvite.telegram_user_id == client.telegram_user_id]
+    filters = [CoachClientInvite.client_user_id == client.id]
+    filters.append(CoachClientInvite.telegram_user_id == client.telegram_user_id)
     if username:
         filters.append(CoachClientInvite.username == username)
 
@@ -501,19 +560,126 @@ def respond_to_coach_invite(
     if not invite:
         raise ProgramError("Client invite not found")
 
+    if invite.status == "accepted" and accept:
+        return
+    if invite.status != "pending":
+        raise ProgramError("Client invite not found")
+    if invite.expires_at and invite.expires_at < now_msk_naive():
+        invite.status = "expired"
+        cancel_client_request_notification(db, invite.id)
+        db.commit()
+        raise ProgramError("Срок действия приглашения истёк")
+
     if accept:
         coach = db.query(User).filter(User.id == invite.coach_user_id).first()
         if not coach or not coach.is_active or not (coach.is_coach or coach.is_admin):
             raise ProgramError("Coach is not available")
         db.query(User).filter(User.id == client.id).with_for_update().one()
-        db.query(CoachClient).filter(CoachClient.client_user_id == client.id).delete(
-            synchronize_session=False
+        active_relation = (
+            db.query(CoachClient)
+            .filter(CoachClient.client_user_id == client.id, CoachClient.status == "active")
+            .first()
         )
-        db.add(CoachClient(coach_user_id=coach.id, client_user_id=client.id))
-        db.query(CoachClientInvite).filter(or_(*filters)).delete(synchronize_session=False)
+        if active_relation and active_relation.coach_user_id != coach.id:
+            active_relation.status = "ended"
+            active_relation.ended_at = now_msk_naive()
+            active_relation.ended_reason = "client_switched_trainer"
+        if not active_relation or active_relation.coach_user_id != coach.id:
+            db.add(
+                CoachClient(
+                    coach_user_id=coach.id,
+                    client_user_id=client.id,
+                    status="active",
+                    accepted_at=now_msk_naive(),
+                )
+            )
+        invite.status = "accepted"
+        invite.accepted_at = now_msk_naive()
+        invite.client_user_id = client.id
     else:
-        db.delete(invite)
+        invite.status = "declined"
+        invite.declined_at = now_msk_naive()
+    cancel_client_request_notification(db, invite.id)
     db.commit()
+
+
+def create_coach_invite_link(db: Session, coach: User) -> dict:
+    raw_token = secrets.token_urlsafe(24)
+    invite = CoachClientInvite(
+        coach_user_id=coach.id,
+        source="invite_link",
+        status="pending",
+        token_hash=hashlib.sha256(raw_token.encode()).hexdigest(),
+        expires_at=now_msk_naive() + timedelta(days=14),
+    )
+    db.add(invite)
+    db.commit()
+    db.refresh(invite)
+    start_param = f"trainer_{raw_token}"
+    bot_username = settings.telegram_bot_username.strip().lstrip("@")
+    return {
+        "invite_id": invite.id,
+        "start_param": start_param,
+        "url": f"https://t.me/{bot_username}?startapp={start_param}" if bot_username else None,
+        "expires_at": invite.expires_at,
+    }
+
+
+def claim_coach_invite_link(db: Session, client: User, raw_token: str) -> dict:
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    invite = (
+        db.query(CoachClientInvite)
+        .filter(CoachClientInvite.token_hash == token_hash)
+        .with_for_update()
+        .first()
+    )
+    if not invite or invite.status not in {"pending", "accepted"}:
+        raise ProgramError("Приглашение не найдено или уже недействительно")
+    if invite.expires_at and invite.expires_at < now_msk_naive():
+        invite.status = "expired"
+        db.commit()
+        raise ProgramError("Срок действия приглашения истёк")
+    if invite.client_user_id and invite.client_user_id != client.id:
+        raise ProgramError("Это приглашение уже использовано другим клиентом")
+    if invite.coach_user_id == client.id:
+        raise ProgramError("Нельзя принять собственное приглашение")
+
+    db.query(User).filter(User.id == client.id).with_for_update().one()
+
+    duplicate = (
+        db.query(CoachClientInvite)
+        .filter(
+            CoachClientInvite.coach_user_id == invite.coach_user_id,
+            CoachClientInvite.client_user_id == client.id,
+            CoachClientInvite.status == "pending",
+            CoachClientInvite.id != invite.id,
+        )
+        .first()
+    )
+    if duplicate:
+        invite.status = "revoked"
+        invite = duplicate
+    else:
+        invite.client_user_id = client.id
+        invite.telegram_user_id = client.telegram_user_id
+        invite.username = normalize_telegram_username(client.username)
+        invite.full_name = client.profile.full_name if client.profile else None
+    db.commit()
+    coach = (
+        db.query(User)
+        .options(joinedload(User.profile))
+        .filter(User.id == invite.coach_user_id)
+        .first()
+    )
+    if not coach or not coach.is_active or not (coach.is_coach or coach.is_admin):
+        raise ProgramError("Тренер недоступен")
+    return {
+        "id": invite.id,
+        "coach": _trainer_entry_from_user(coach),
+        "created_at": invite.created_at,
+        "source": invite.source,
+        "expires_at": invite.expires_at,
+    }
 
 
 def build_template_response(item: ProgramTemplate, db: Session, current_user: User) -> dict:
@@ -1241,13 +1407,20 @@ def list_clients(db: Session, coach: User) -> list[dict]:
         db.query(User)
         .join(CoachClient, CoachClient.client_user_id == User.id)
         .options(joinedload(User.profile))
-        .filter(CoachClient.coach_user_id == coach.id)
+        .filter(CoachClient.coach_user_id == coach.id, CoachClient.status == "active")
         .order_by(User.id.desc())
         .all()
     )
     invites = (
         db.query(CoachClientInvite)
-        .filter(CoachClientInvite.coach_user_id == coach.id)
+        .filter(
+            CoachClientInvite.coach_user_id == coach.id,
+            CoachClientInvite.status == "pending",
+            or_(
+                CoachClientInvite.expires_at.is_(None),
+                CoachClientInvite.expires_at >= now_msk_naive(),
+            ),
+        )
         .order_by(CoachClientInvite.id.desc())
         .all()
     )
@@ -1273,6 +1446,7 @@ def list_coach_assigned_programs(db: Session, coach: User) -> list[dict]:
         )
         .filter(
             CoachClient.coach_user_id == coach.id,
+            CoachClient.status == "active",
             UserProgram.assigned_by_user_id == coach.id,
         )
         .order_by(UserProgram.assigned_at.desc(), UserProgram.id.desc())

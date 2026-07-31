@@ -316,6 +316,8 @@ def add_client(
             coach=current_user,
             telegram_user_id=payload.telegram_user_id,
             username=payload.username,
+            client_code=payload.client_code,
+            source=payload.source,
             full_name=payload.full_name,
         )
     except ProgramError as exc:

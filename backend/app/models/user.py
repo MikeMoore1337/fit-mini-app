@@ -7,10 +7,12 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -26,6 +28,10 @@ class User(Base):
     username: Mapped[str | None] = mapped_column(String(64), nullable=True)
     first_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
     last_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    photo_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    client_code: Mapped[str | None] = mapped_column(
+        String(8), unique=True, index=True, nullable=True
+    )
     is_coach: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
@@ -84,30 +90,60 @@ class BodyMeasurement(Base):
 class CoachClient(Base):
     __tablename__ = "coach_clients"
     __table_args__ = (
-        UniqueConstraint("coach_user_id", "client_user_id", name="uq_coach_client"),
-        UniqueConstraint("client_user_id", name="uq_coach_clients_client_user_id"),
-    )
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    coach_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
-    client_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now_msk_naive)
-
-
-class CoachClientInvite(Base):
-    __tablename__ = "coach_client_invites"
-    __table_args__ = (
-        UniqueConstraint("coach_user_id", "username", name="uq_coach_client_invite_username"),
-        UniqueConstraint(
-            "coach_user_id",
-            "telegram_user_id",
-            name="uq_coach_client_invite_telegram_id",
+        Index(
+            "uq_coach_clients_one_active_per_client",
+            "client_user_id",
+            unique=True,
+            postgresql_where=text("status = 'active'"),
+            sqlite_where=text("status = 'active'"),
         ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     coach_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
-    telegram_user_id: Mapped[int | None] = mapped_column(BIGINT, nullable=True, index=True)
-    username: Mapped[str] = mapped_column(String(64), nullable=False)
-    full_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    client_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="active", server_default="active"
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now_msk_naive)
+    accepted_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True, default=now_msk_naive
+    )
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    ended_reason: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+
+class CoachClientInvite(Base):
+    __tablename__ = "coach_client_invites"
+    __table_args__ = (
+        Index(
+            "uq_coach_client_invites_pending_pair",
+            "coach_user_id",
+            "client_user_id",
+            unique=True,
+            postgresql_where=text("status = 'pending' AND client_user_id IS NOT NULL"),
+            sqlite_where=text("status = 'pending' AND client_user_id IS NOT NULL"),
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    coach_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    client_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True, index=True
+    )
+    telegram_user_id: Mapped[int | None] = mapped_column(BIGINT, nullable=True, index=True)
+    username: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    full_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    token_hash: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, unique=True, index=True
+    )
+    source: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="username_search", server_default="username_search"
+    )
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="pending", server_default="pending"
+    )
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now_msk_naive)
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    declined_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

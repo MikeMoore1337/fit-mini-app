@@ -12,6 +12,7 @@ alembic
 PyJWT
 httpx
 python-multipart
+qrcode[pil]
 pytest
 pre-commit
 colorlog

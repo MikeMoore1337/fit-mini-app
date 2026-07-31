@@ -20,6 +20,7 @@ const state = {
   exercises: [],
   templates: [],
   daySequence: 0,
+  foundUsername: null,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -208,20 +209,60 @@ async function loadClients() {
   if (state.selectedClient) fillClientDetail();
 }
 
-async function addClient() {
-  const telegramId = $('clientTelegramId').value.trim();
-  const username = $('clientUsername').value.trim();
-  if (!telegramId && !username) throw new Error('Укажите Telegram ID или @username клиента');
+async function createInviteLink() {
+  const result = await api('/api/v1/coach/invite-links', { method: 'POST', body: '{}' });
+  if (!result.url) throw new Error('Укажите TELEGRAM_BOT_USERNAME в настройках приложения');
+  $('inviteLinkOutput').value = result.url;
+  $('inviteLinkOutput').classList.remove('hidden');
+  $('copyInviteLinkBtn').classList.remove('hidden');
+  showToast('Ссылка-приглашение создана');
+}
+
+async function copyText(value) {
+  if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(value);
+  else {
+    const field = $('inviteLinkOutput');
+    field.select();
+    document.execCommand('copy');
+  }
+}
+
+async function addClientByCode() {
+  const clientCode = $('clientCode').value.trim().toUpperCase();
+  if (!clientCode) throw new Error('Укажите код клиента');
   const client = await api('/api/v1/coach/clients', {
     method: 'POST',
     body: JSON.stringify({
-      telegram_user_id: telegramId ? Number(telegramId) : null,
-      username: username || null,
-      full_name: $('clientFullName').value.trim() || null,
+      client_code: clientCode,
+      source: 'client_code',
     }),
   });
-  ['clientTelegramId', 'clientUsername', 'clientFullName'].forEach((id) => { $(id).value = ''; });
-  showToast(client.status === 'pending' ? 'Приглашение клиенту создано' : 'Клиент добавлен');
+  $('clientCode').value = '';
+  showToast(client.status === 'pending' ? 'Запрос клиенту отправлен' : 'Клиент уже добавлен');
+  await loadClients();
+}
+
+async function findClientByUsername() {
+  const username = $('clientUsername').value.trim();
+  if (!username) throw new Error('Укажите @username клиента');
+  const result = await api(`/api/v1/coach/client-search?username=${encodeURIComponent(username)}`);
+  state.foundUsername = result.username;
+  $('clientSearchPreview').innerHTML = `${result.photo_url ? `<img class="client-avatar" src="${escapeHtml(result.photo_url)}" alt="" /> ` : ''}<strong>${escapeHtml(result.full_name || `@${result.username}`)}</strong>${result.username ? ` · @${escapeHtml(result.username)}` : ''}`;
+  $('clientSearchPreview').classList.remove('hidden');
+  $('addClientByUsernameBtn').classList.remove('hidden');
+}
+
+async function addClientByUsername() {
+  if (!state.foundUsername) throw new Error('Сначала найдите клиента');
+  const client = await api('/api/v1/coach/clients', {
+    method: 'POST',
+    body: JSON.stringify({ username: state.foundUsername, source: 'username_search' }),
+  });
+  $('clientUsername').value = '';
+  $('clientSearchPreview').classList.add('hidden');
+  $('addClientByUsernameBtn').classList.add('hidden');
+  state.foundUsername = null;
+  showToast(client.status === 'pending' ? 'Запрос клиенту отправлен' : 'Клиент уже добавлен');
   await loadClients();
 }
 
@@ -575,7 +616,18 @@ async function run(action, fallback) {
   try { await action(); } catch (error) { log(error); showToast(error.message || fallback, 'error'); }
 }
 
-$('addClientBtn').onclick = () => run(addClient, 'Не удалось добавить клиента');
+$('createInviteLinkBtn').onclick = () => run(createInviteLink, 'Не удалось создать ссылку');
+$('copyInviteLinkBtn').onclick = () => run(async () => {
+  await copyText($('inviteLinkOutput').value); showToast('Ссылка скопирована');
+}, 'Не удалось скопировать ссылку');
+$('addClientByCodeBtn').onclick = () => run(addClientByCode, 'Не удалось отправить запрос');
+$('findClientBtn').onclick = () => run(findClientByUsername, 'Клиент не найден');
+$('addClientByUsernameBtn').onclick = () => run(addClientByUsername, 'Не удалось отправить запрос');
+$('clientUsername').oninput = () => {
+  state.foundUsername = null;
+  $('clientSearchPreview').classList.add('hidden');
+  $('addClientByUsernameBtn').classList.add('hidden');
+};
 $('reloadClientsBtn').onclick = () => run(loadClients, 'Не удалось загрузить клиентов');
 $('reloadProgramsBtn').onclick = () => run(loadAssignedPrograms, 'Не удалось загрузить программы');
 $('clientSearch').oninput = renderClients;

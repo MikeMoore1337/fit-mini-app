@@ -9,6 +9,7 @@ from app.db.session import get_session_context
 from app.models.notification import NotificationSetting
 from app.models.user import User, UserProfile
 from app.schemas.bot import BotTimezoneUpdateRequest, BotTimezoneUpdateResponse
+from app.services.client_codes import ensure_client_code
 from app.services.telegram_auth import normalize_telegram_username
 
 router = APIRouter()
@@ -44,6 +45,8 @@ def _get_or_create_user(db: Session, payload: BotTimezoneUpdateRequest) -> User:
             user.first_name = payload.first_name
         if payload.last_name is not None:
             user.last_name = payload.last_name
+
+    ensure_client_code(db, user)
 
     return user
 

@@ -52,6 +52,8 @@ class UserResponse(BaseModel):
     username: str | None = None
     first_name: str | None = None
     last_name: str | None = None
+    photo_url: str | None = None
+    client_code: str | None = None
     is_coach: bool = False
     is_admin: bool = False
     profile: UserProfileResponse | None = None

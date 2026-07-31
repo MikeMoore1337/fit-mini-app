@@ -120,6 +120,17 @@
             <div id="profileAccountSummary" class="item-card profile-account-summary hidden"></div>
             <div id="coachInvites" class="stack hidden"></div>
             <div id="trainerInfo" class="item-card hidden"></div>
+            <div id="clientCodeCard" class="item-card">
+                <strong>Мой код клиента</strong>
+                <p id="clientCodeValue" class="top-gap">—</p>
+                <p class="muted top-gap">Передайте этот код своему тренеру.</p>
+                <div class="toolbar wrap top-gap">
+                    <button id="copyClientCodeBtn" type="button">Скопировать код</button>
+                    <button id="showClientCodeQrBtn" class="secondary" type="button">Показать QR-код</button>
+                    <button id="rotateClientCodeBtn" class="secondary" type="button">Перевыпустить</button>
+                </div>
+                <img id="clientCodeQr" class="hidden top-gap" alt="QR-код клиента" width="220" height="220" />
+            </div>
             <div id="profileKbju" class="item-card hidden"></div>
             <div class="grid grid-4">
                 <label class="field">
@@ -849,6 +860,6 @@
     })();
 </script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script type="module" src="/static/js/main.js?v=55"></script>
+<script type="module" src="/static/js/main.js?v=56"></script>
 </body>
 </html>

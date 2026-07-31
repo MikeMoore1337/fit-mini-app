@@ -20,14 +20,26 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-async def send_telegram_message(chat_id: int, text: str) -> None:
+async def send_telegram_message(chat_id: int, text: str, *, open_app: bool = False) -> None:
     if not settings.telegram_bot_token or settings.telegram_bot_token == "replace-me":
         logger.info("BOT token not configured - skip Telegram delivery to %s", chat_id)
         return
     async with httpx.AsyncClient(timeout=20) as client:
+        payload: dict = {"chat_id": chat_id, "text": text}
+        if open_app:
+            payload["reply_markup"] = {
+                "inline_keyboard": [
+                    [
+                        {
+                            "text": "Открыть приложение",
+                            "web_app": {"url": f"{settings.frontend_base_url.rstrip('/')}/app"},
+                        }
+                    ]
+                ]
+            }
         response = await client.post(
             f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage",
-            json={"chat_id": chat_id, "text": text},
+            json=payload,
         )
         response.raise_for_status()
 
@@ -45,7 +57,11 @@ async def run_once(*, sync_reminders: bool = True) -> None:
                 db.commit()
                 continue
             try:
-                await send_telegram_message(user.telegram_user_id, f"{row.title}\n\n{row.body}")
+                await send_telegram_message(
+                    user.telegram_user_id,
+                    f"{row.title}\n\n{row.body}",
+                    open_app=bool(row.dedupe_key and row.dedupe_key.startswith("trainer_request:")),
+                )
                 mark_delivery_succeeded(db, row, user)
             except Exception as exc:
                 mark_delivery_failed(db, row, exc)

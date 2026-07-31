@@ -130,7 +130,7 @@ class PollingFileLock:
 
 
 dp = StableDispatcher()
-MINI_APP_CACHE_VERSION = "47"
+MINI_APP_CACHE_VERSION = "56"
 TIMEZONE_PAGE_SIZE = 8
 TIMEZONE_REGIONS = [
     "Europe",

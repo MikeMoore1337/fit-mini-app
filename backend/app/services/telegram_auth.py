@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.models.user import CoachClientInvite, User, UserProfile
+from app.services.client_codes import ensure_client_code
 
 
 def build_secret_key(bot_token: str) -> bytes:
@@ -98,7 +99,7 @@ def _link_pending_client_invites(db: Session, user: User) -> None:
         filters.append(CoachClientInvite.username == username)
     invites = (
         db.query(CoachClientInvite)
-        .filter(or_(*filters))
+        .filter(CoachClientInvite.status == "pending", or_(*filters))
         .order_by(CoachClientInvite.id.desc())
         .all()
     )
@@ -112,6 +113,7 @@ def _link_pending_client_invites(db: Session, user: User) -> None:
 
     for invite in keep_by_coach.values():
         invite.telegram_user_id = user.telegram_user_id
+        invite.client_user_id = user.id
         if username:
             invite.username = username
 
@@ -123,6 +125,7 @@ def get_or_create_user_from_init_data(db: Session, init_data: dict) -> User:
     username = normalize_telegram_username(user_data.get("username"))
     first_name = user_data.get("first_name")
     last_name = user_data.get("last_name")
+    photo_url = user_data.get("photo_url")
 
     user = db.query(User).filter(User.telegram_user_id == telegram_user_id).first()
 
@@ -132,6 +135,7 @@ def get_or_create_user_from_init_data(db: Session, init_data: dict) -> User:
             username=username,
             first_name=first_name,
             last_name=last_name,
+            photo_url=photo_url,
             is_admin=telegram_user_id in settings.admin_telegram_id_set,
             is_active=True,
         )
@@ -149,6 +153,7 @@ def get_or_create_user_from_init_data(db: Session, init_data: dict) -> User:
             full_name=full_name,
         )
         db.add(profile)
+        ensure_client_code(db, user)
         _link_pending_client_invites(db, user)
         db.commit()
         db.refresh(user)
@@ -157,7 +162,9 @@ def get_or_create_user_from_init_data(db: Session, init_data: dict) -> User:
     user.username = username
     user.first_name = first_name
     user.last_name = last_name
+    user.photo_url = photo_url
     _apply_bootstrap_admin_role(user)
+    ensure_client_code(db, user)
 
     profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
     if not profile:

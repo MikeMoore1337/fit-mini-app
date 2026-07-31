@@ -1,4 +1,4 @@
-export const FRONTEND_VERSION = 'v50';
+export const FRONTEND_VERSION = 'v56';
 
 export const accessTokenKey = 'fit_access_token';
 export const sectionStoragePrefix = 'fit_section_';
@@ -15,6 +15,9 @@ export const API = {
   coachInvites: '/api/v1/me/coach-invites',
   acceptCoachInvite: (inviteId) => `/api/v1/me/coach-invites/${inviteId}/accept`,
   declineCoachInvite: (inviteId) => `/api/v1/me/coach-invites/${inviteId}/decline`,
+  claimCoachInviteLink: (token) => `/api/v1/me/coach-invites/link/${encodeURIComponent(token)}/claim`,
+  rotateClientCode: '/api/v1/me/client-code/rotate',
+  clientCodeQr: '/api/v1/me/client-code/qr',
   saveNutritionTarget: '/api/v1/nutrition/targets',
 
   exercises: '/api/v1/programs/exercises',

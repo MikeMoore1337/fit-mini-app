@@ -1,12 +1,17 @@
+from io import BytesIO
+
 from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.schemas.user import TrainerResponse, UserProfileResponse, UserProfileUpdate, UserResponse
+from app.services.client_codes import ensure_client_code, rotate_client_code
 from app.services.nutrition import get_nutrition_target_for_user
 from app.services.profile import update_profile
 from app.services.programs import (
     ProgramError,
+    claim_coach_invite_link,
     get_current_trainer,
     list_coach_invites_for_client,
     remove_current_trainer,
@@ -18,6 +23,9 @@ router = APIRouter()
 
 
 def _build_user_response(db: Session, user) -> UserResponse:
+    if not user.client_code:
+        ensure_client_code(db, user)
+        db.commit()
     kbju = get_nutrition_target_for_user(db, user)
     trainer = get_current_trainer(db, user)
     return UserResponse(
@@ -26,6 +34,8 @@ def _build_user_response(db: Session, user) -> UserResponse:
         username=user.username,
         first_name=user.first_name,
         last_name=user.last_name,
+        photo_url=user.photo_url,
+        client_code=user.client_code,
         is_coach=user.is_coach,
         is_admin=user.is_admin,
         profile=UserProfileResponse(
@@ -69,6 +79,41 @@ def detach_trainer(db: Session = Depends(get_db), user=Depends(get_current_user)
 @router.get("/coach-invites")
 def coach_invites(db: Session = Depends(get_db), user=Depends(get_current_user)) -> list[dict]:
     return list_coach_invites_for_client(db, user)
+
+
+@router.post("/coach-invites/link/{token}/claim")
+def claim_invite_link(
+    token: str,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+) -> dict:
+    try:
+        return claim_coach_invite_link(db, user, token)
+    except ProgramError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/client-code/rotate")
+def rotate_my_client_code(
+    db: Session = Depends(get_db), user=Depends(get_current_user)
+) -> dict[str, str]:
+    return {"client_code": rotate_client_code(db, user)}
+
+
+@router.get("/client-code/qr")
+def client_code_qr(db: Session = Depends(get_db), user=Depends(get_current_user)):
+    try:
+        import qrcode
+    except ImportError as exc:  # pragma: no cover - deployment dependency guard
+        raise HTTPException(status_code=503, detail="Генератор QR-кода недоступен") from exc
+
+    code = ensure_client_code(db, user)
+    db.commit()
+    image = qrcode.make(code)
+    buffer = BytesIO()
+    image.save(buffer, format="PNG")
+    buffer.seek(0)
+    return StreamingResponse(buffer, media_type="image/png")
 
 
 @router.post("/coach-invites/{invite_id}/accept", status_code=status.HTTP_204_NO_CONTENT)
