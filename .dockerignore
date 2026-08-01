@@ -169,6 +169,17 @@ cython_debug/
 frontend/node_modules/
 frontend/dist/
 frontend/openapi.json
+frontend/test-results/
+frontend/playwright-report/
+
+# Keep the root build context small even when developer artifacts exist locally.
+**/node_modules/
+**/.mypy_cache/
+**/.pytest_cache/
+**/.ruff_cache/
+**/__pycache__/
+.git/
+.tmp*/
 
 # VCS, CI metadata, tests and local tooling are not runtime build inputs.
 .git/
