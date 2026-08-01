@@ -4,12 +4,19 @@ from sqlalchemy.orm import Session
 from fitminiapp_api.api.dependencies.auth import require_coach_or_admin
 from fitminiapp_api.core.timezone import today_for_user
 from fitminiapp_api.db.session import get_db
+from fitminiapp_api.models.program import (
+    UserProgram,
+    UserWorkoutExercise,
+    UserWorkoutSet,
+)
 from fitminiapp_api.models.user import BodyMeasurement, CoachClientInvite, User
 from fitminiapp_api.schemas.program import (
     AssignTemplateToClientRequest,
     ClientResponse,
     CoachAssignedProgramResponse,
     CoachClientCreate,
+    CoachProgramExerciseAssignmentResponse,
+    CoachProgramExerciseCreate,
     ProgramAssignmentResponse,
 )
 from fitminiapp_api.schemas.user import UserProfileUpdate
@@ -78,6 +85,83 @@ def coach_assigned_programs(
     db: Session = Depends(get_db),
 ):
     return list_coach_assigned_programs(db, current_user)
+
+
+@router.post(
+    "/clients/{client_id}/programs/{program_id}/exercises",
+    response_model=CoachProgramExerciseAssignmentResponse,
+)
+def add_exercise_to_client_program(
+    client_id: int,
+    program_id: int,
+    payload: CoachProgramExerciseCreate,
+    current_user: User = Depends(require_coach_or_admin),
+    db: Session = Depends(get_db),
+):
+    """Add or update an exercise in every planned workout of a coach-owned assignment."""
+    managed_client = _managed_client(db, current_user, client_id)
+    program = (
+        db.query(UserProgram)
+        .filter(
+            UserProgram.id == program_id,
+            UserProgram.user_id == managed_client.id,
+            UserProgram.assigned_by_user_id == current_user.id,
+        )
+        .first()
+    )
+    if not program:
+        raise HTTPException(status_code=404, detail="Программа клиента не найдена")
+
+    visible_exercise_ids = {
+        _effective_exercise_id(exercise) for exercise in list_exercises(db, managed_client)
+    }
+    if payload.exercise_id not in visible_exercise_ids:
+        raise HTTPException(status_code=404, detail="Упражнение недоступно клиенту")
+
+    planned_workouts = [workout for workout in program.workouts if workout.status == "planned"]
+    if not planned_workouts:
+        raise HTTPException(
+            status_code=409,
+            detail="В программе нет предстоящих тренировок",
+        )
+
+    for workout in planned_workouts:
+        workout_exercise = next(
+            (row for row in workout.exercises if row.exercise_id == payload.exercise_id),
+            None,
+        )
+        if workout_exercise is None:
+            workout_exercise = UserWorkoutExercise(
+                workout_id=workout.id,
+                exercise_id=payload.exercise_id,
+                sort_order=max((row.sort_order for row in workout.exercises), default=0) + 1,
+                prescribed_sets=payload.prescribed_sets,
+                prescribed_reps=payload.prescribed_reps,
+                rest_seconds=payload.rest_seconds,
+            )
+            db.add(workout_exercise)
+            db.flush()
+        else:
+            workout_exercise.prescribed_sets = payload.prescribed_sets
+            workout_exercise.prescribed_reps = payload.prescribed_reps
+            workout_exercise.rest_seconds = payload.rest_seconds
+            db.query(UserWorkoutSet).filter(
+                UserWorkoutSet.workout_exercise_id == workout_exercise.id
+            ).delete(synchronize_session=False)
+
+        for set_number in range(1, payload.prescribed_sets + 1):
+            db.add(
+                UserWorkoutSet(
+                    workout_exercise_id=workout_exercise.id,
+                    set_number=set_number,
+                    actual_reps=None,
+                    actual_weight=None,
+                    is_completed=False,
+                )
+            )
+
+    db.commit()
+    return {"workouts_updated": len(planned_workouts)}
 
 
 @router.post(

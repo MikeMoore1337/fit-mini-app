@@ -104,6 +104,17 @@ class CoachAssignedProgramResponse(BaseModel):
     next_workout_date: date | None = None
 
 
+class CoachProgramExerciseCreate(BaseModel):
+    exercise_id: int = Field(ge=1)
+    prescribed_sets: int = Field(ge=1, le=12)
+    prescribed_reps: str = Field(min_length=1, max_length=32)
+    rest_seconds: int = Field(default=90, ge=15, le=600)
+
+
+class CoachProgramExerciseAssignmentResponse(BaseModel):
+    workouts_updated: int
+
+
 class AssignTemplateRequest(BaseModel):
     target_telegram_user_id: int = Field(ge=1)
     target_full_name: str | None = Field(default=None, max_length=128)

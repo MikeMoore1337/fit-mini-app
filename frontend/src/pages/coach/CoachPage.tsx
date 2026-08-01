@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AppShell } from '../../app/AppShell';
 import { useAuth } from '../../app/AuthProvider';
@@ -13,6 +13,30 @@ import { Badge, Card, EmptyState, ErrorState, LoadingState } from '../../shared/
 import { Redirect } from '../../shared/navigation/router';
 
 type CoachTab = 'clients' | 'programs' | 'catalog';
+
+function ClientDataSection({
+  title,
+  description,
+  children,
+  open = false,
+}: {
+  title: string;
+  description: string;
+  children: ReactNode;
+  open?: boolean;
+}) {
+  return (
+    <details className="coach-data-disclosure" open={open}>
+      <summary>
+        <span>
+          <strong>{title}</strong>
+          <small>{description}</small>
+        </span>
+      </summary>
+      <div className="coach-data-disclosure__body">{children}</div>
+    </details>
+  );
+}
 
 function ClientProfileEditor({ client }: { client: Client }) {
   const queryClient = useQueryClient();
@@ -278,7 +302,7 @@ export default function CoachPage() {
                 <div className="list-grid top-gap">
                   {clients.data.map((client) => (
                     <article
-                      className={`list-row${selected?.id === client.id ? ' selected' : ''}`}
+                      className={`list-row coach-client-row${selected?.id === client.id ? ' selected' : ''}`}
                       key={client.id || `invite-${client.invite_id}`}
                     >
                       <button
@@ -324,19 +348,37 @@ export default function CoachPage() {
             </Card>
             {selected?.id && selected.status === 'active' && (
               <>
-                <ClientProfileEditor key={`profile-${selected.id}`} client={selected} />
-                <Diary clientId={selected.id} />
-                <NutritionForm
-                  key={`nutrition-${selected.id}`}
-                  targetTelegramId={selected.telegram_user_id}
-                  initial={selected.kbju}
-                  onSaved={() => void clients.refetch()}
-                />
-                <ProgramBuilder
-                  key={`program-${selected.id}`}
-                  targetTelegramId={selected.telegram_user_id}
-                  targetName={selected.full_name || selected.username}
-                />
+                <ClientDataSection
+                  title="Профиль клиента"
+                  description="Анкета, цель и параметры"
+                  open
+                >
+                  <ClientProfileEditor key={`profile-${selected.id}`} client={selected} />
+                </ClientDataSection>
+                <ClientDataSection
+                  title="Прогресс и замеры"
+                  description="Дневник клиента и динамика"
+                >
+                  <Diary clientId={selected.id} />
+                </ClientDataSection>
+                <ClientDataSection title="Питание" description="Расчёт и целевые КБЖУ">
+                  <NutritionForm
+                    key={`nutrition-${selected.id}`}
+                    targetTelegramId={selected.telegram_user_id}
+                    initial={selected.kbju}
+                    onSaved={() => void clients.refetch()}
+                  />
+                </ClientDataSection>
+                <ClientDataSection
+                  title="Программа тренировок"
+                  description="Создание и назначение программы"
+                >
+                  <ProgramBuilder
+                    key={`program-${selected.id}`}
+                    targetTelegramId={selected.telegram_user_id}
+                    targetName={selected.full_name || selected.username}
+                  />
+                </ClientDataSection>
               </>
             )}
           </>
@@ -383,7 +425,7 @@ export default function CoachPage() {
           </Card>
         )}
         {tab === 'catalog' && (
-          <ExerciseCatalog canCreate targetTelegramId={selected?.telegram_user_id} />
+          <ExerciseCatalog canCreate canAssign targetTelegramId={selected?.telegram_user_id} />
         )}
       </div>
     </AppShell>

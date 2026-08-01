@@ -15,7 +15,13 @@ from fitminiapp_api.core.timezone import to_msk_naive
 from fitminiapp_api.db.session import get_session_context
 from fitminiapp_api.models.exercise import Exercise
 from fitminiapp_api.models.notification import Notification, NotificationSetting
-from fitminiapp_api.models.program import ProgramTemplate, UserProgram, UserWorkout
+from fitminiapp_api.models.program import (
+    ProgramTemplate,
+    UserProgram,
+    UserWorkout,
+    UserWorkoutExercise,
+    UserWorkoutSet,
+)
 from fitminiapp_api.models.user import CoachClient, CoachClientInvite, User
 from fitminiapp_api.services import notifications as notifications_service
 from fitminiapp_api.services.exercise_guides import get_exercise_guide
@@ -363,6 +369,39 @@ def test_coach_can_assign_existing_template_to_own_client(client):
             "next_workout_date": coach_programs.json()[0]["next_workout_date"],
         }
     ]
+
+    second_exercise = client.get("/api/v1/programs/exercises", headers=coach_headers).json()[1]
+    exercise_assignment = client.post(
+        f"/api/v1/coach/clients/{client_user['id']}/programs/"
+        f"{assigned.json()['user_program_id']}/exercises",
+        json={
+            "exercise_id": second_exercise["id"],
+            "prescribed_sets": 4,
+            "prescribed_reps": "12",
+            "rest_seconds": 75,
+        },
+        headers=coach_headers,
+    )
+    assert exercise_assignment.status_code == 200
+    assert exercise_assignment.json() == {"workouts_updated": 1}
+    with get_session_context() as db:
+        added = (
+            db.query(UserWorkoutExercise)
+            .join(UserWorkout)
+            .filter(
+                UserWorkout.user_program_id == assigned.json()["user_program_id"],
+                UserWorkoutExercise.exercise_id == second_exercise["id"],
+            )
+            .one()
+        )
+        assert added.prescribed_sets == 4
+        assert added.prescribed_reps == "12"
+        assert added.rest_seconds == 75
+        assert (
+            db.query(UserWorkoutSet).filter(UserWorkoutSet.workout_exercise_id == added.id).count()
+            == 4
+        )
+
     assert client.get("/api/v1/coach/assigned-programs", headers=other_coach_headers).json() == []
 
 

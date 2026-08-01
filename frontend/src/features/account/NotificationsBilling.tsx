@@ -63,8 +63,8 @@ export function NotificationsPanel() {
                       body: { ...settings.data, workout_reminders_enabled: e.target.checked },
                     })
                   }
-                />{' '}
-                Включить напоминания
+                />
+                <span>Включить напоминания</span>
               </label>
               <label className="field">
                 <span>Час отправки</span>
@@ -86,86 +86,94 @@ export function NotificationsPanel() {
           )
         )}
       </Card>
-      <Card title="Личное уведомление">
-        <form
-          className="stack top-gap"
-          onSubmit={(e) => {
-            e.preventDefault();
-            mutation.mutate({
-              path: '/api/v1/notifications',
-              method: 'POST',
-              body: {
-                title,
-                body,
-                scheduled_for: scheduled.length === 16 ? `${scheduled}:00` : scheduled,
-              },
-            });
-          }}
-        >
-          <div className="form-grid">
+      <details className="card profile-disclosure">
+        <summary>
+          <span>
+            <strong>Личные уведомления</strong>
+            <small>Создание и история уведомлений</small>
+          </span>
+        </summary>
+        <div className="profile-disclosure__body">
+          <form
+            className="stack"
+            onSubmit={(e) => {
+              e.preventDefault();
+              mutation.mutate({
+                path: '/api/v1/notifications',
+                method: 'POST',
+                body: {
+                  title,
+                  body,
+                  scheduled_for: scheduled.length === 16 ? `${scheduled}:00` : scheduled,
+                },
+              });
+            }}
+          >
+            <div className="form-grid">
+              <label className="field">
+                <span>Заголовок</span>
+                <input value={title} onChange={(e) => setTitle(e.target.value)} required />
+              </label>
+              <label className="field">
+                <span>Когда</span>
+                <input
+                  type="datetime-local"
+                  value={scheduled}
+                  onChange={(e) => setScheduled(e.target.value)}
+                  required
+                />
+              </label>
+            </div>
             <label className="field">
-              <span>Заголовок</span>
-              <input value={title} onChange={(e) => setTitle(e.target.value)} required />
+              <span>Текст</span>
+              <textarea value={body} onChange={(e) => setBody(e.target.value)} required />
             </label>
-            <label className="field">
-              <span>Когда</span>
-              <input
-                type="datetime-local"
-                value={scheduled}
-                onChange={(e) => setScheduled(e.target.value)}
-                required
-              />
-            </label>
-          </div>
-          <label className="field">
-            <span>Текст</span>
-            <textarea value={body} onChange={(e) => setBody(e.target.value)} required />
-          </label>
-          <button>Создать уведомление</button>
-        </form>
-        {notifications.isLoading ? (
-          <LoadingState />
-        ) : notifications.error ? (
-          <ErrorState message={(notifications.error as Error).message} />
-        ) : !notifications.data?.length ? (
-          <EmptyState title="Уведомлений пока нет" />
-        ) : (
-          <div className="list-grid top-gap">
-            {notifications.data.map((item) => (
-              <article className="list-row" key={item.id}>
-                <div>
-                  <strong>{item.title}</strong>
-                  <p>{item.body}</p>
-                  <span className="muted">
-                    {new Date(item.scheduled_for).toLocaleString('ru-RU')}
-                  </span>
-                </div>
-                <div className="list-row__actions">
-                  <Badge>{item.status}</Badge>
-                  <button
-                    className="btn-danger"
-                    onClick={async () => {
-                      if (
-                        await confirm({
-                          title: 'Удалить уведомление?',
-                          message: item.title,
-                          confirmText: 'Удалить',
-                        })
-                      )
-                        mutation.mutate({
-                          path: `/api/v1/notifications/${item.id}`,
-                          method: 'DELETE',
-                        });
-                    }}
-                  >
-                    Удалить
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </Card>
+            <button>Создать уведомление</button>
+          </form>
+          {notifications.isLoading ? (
+            <LoadingState />
+          ) : notifications.error ? (
+            <ErrorState message={(notifications.error as Error).message} />
+          ) : !notifications.data?.length ? (
+            <EmptyState title="Уведомлений пока нет" />
+          ) : (
+            <div className="list-grid">
+              {notifications.data.map((item) => (
+                <article className="list-row" key={item.id}>
+                  <div>
+                    <strong>{item.title}</strong>
+                    <p>{item.body}</p>
+                    <span className="muted">
+                      {new Date(item.scheduled_for).toLocaleString('ru-RU')}
+                    </span>
+                  </div>
+                  <div className="list-row__actions">
+                    <Badge>{item.status}</Badge>
+                    <button
+                      className="btn-danger"
+                      onClick={async () => {
+                        if (
+                          await confirm({
+                            title: 'Удалить уведомление?',
+                            message: item.title,
+                            confirmText: 'Удалить',
+                          })
+                        )
+                          mutation.mutate({
+                            path: `/api/v1/notifications/${item.id}`,
+                            method: 'DELETE',
+                          });
+                      }}
+                    >
+                      Удалить
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+      </details>
     </div>
   );
 }

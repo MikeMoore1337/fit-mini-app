@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type { Exercise, ProgramTemplateCreate } from '../../shared/api/types';
@@ -15,6 +15,84 @@ const blankExercise = (): Day['exercises'][number] => ({
   notes: '',
 });
 const blankDay = (index: number): Day => ({ title: `День ${index}`, exercises: [blankExercise()] });
+
+function ExercisePicker({
+  exercises,
+  value,
+  onChange,
+}: {
+  exercises: Exercise[];
+  value: number;
+  onChange: (id: number) => void;
+}) {
+  const selected = exercises.find((exercise) => exercise.id === value);
+  const resultsId = useId();
+  const [query, setQuery] = useState(selected?.title ?? '');
+  const [open, setOpen] = useState(false);
+  const results = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return exercises
+      .filter(
+        (exercise) =>
+          !normalized ||
+          `${exercise.title} ${exercise.primary_muscle || ''} ${exercise.equipment || ''}`
+            .toLowerCase()
+            .includes(normalized),
+      )
+      .slice(0, 12);
+  }, [exercises, query]);
+
+  return (
+    <div className="exercise-picker">
+      <input
+        type="search"
+        role="combobox"
+        aria-label="Поиск упражнения"
+        aria-expanded={open}
+        aria-controls={resultsId}
+        autoComplete="off"
+        value={query}
+        placeholder="Начните вводить название"
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        onChange={(event) => {
+          setQuery(event.target.value);
+          setOpen(true);
+          if (value) onChange(0);
+        }}
+      />
+      {open && (
+        <div className="exercise-picker__results" id={resultsId} role="listbox">
+          {results.length ? (
+            results.map((exercise) => (
+              <button
+                type="button"
+                role="option"
+                aria-selected={exercise.id === value}
+                className="exercise-picker__option"
+                key={exercise.id}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  onChange(exercise.id);
+                  setQuery(exercise.title);
+                  setOpen(false);
+                }}
+              >
+                <strong>{exercise.title}</strong>
+                <small>
+                  {exercise.primary_muscle || 'Все мышцы'} ·{' '}
+                  {exercise.equipment || 'Без оборудования'}
+                </small>
+              </button>
+            ))
+          ) : (
+            <span className="exercise-picker__empty">Ничего не найдено</span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function ProgramBuilder({
   targetTelegramId,
@@ -187,26 +265,19 @@ export function ProgramBuilder({
                 <div className="program-exercise-row" key={exerciseIndex}>
                   <label className="field exercise-select">
                     <span>Упражнение</span>
-                    <select
+                    <ExercisePicker
+                      key={`${exerciseIndex}-${item.exercise_id}`}
+                      exercises={exercises.data ?? []}
                       value={item.exercise_id}
-                      onChange={(e) =>
+                      onChange={(exerciseId) =>
                         updateDay(dayIndex, {
                           ...day,
                           exercises: day.exercises.map((row, index) =>
-                            index === exerciseIndex
-                              ? { ...row, exercise_id: Number(e.target.value) }
-                              : row,
+                            index === exerciseIndex ? { ...row, exercise_id: exerciseId } : row,
                           ),
                         })
                       }
-                    >
-                      <option value="0">Выберите</option>
-                      {exercises.data?.map((exercise) => (
-                        <option value={exercise.id} key={exercise.id}>
-                          {exercise.title}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </label>
                   {(
                     [

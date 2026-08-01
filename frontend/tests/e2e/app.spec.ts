@@ -35,6 +35,54 @@ async function mockApi(page: Page) {
       });
     if (path.endsWith('/workouts/today'))
       return route.fulfill({ status: 404, json: { detail: 'На сегодня тренировка не назначена' } });
+    if (path.endsWith('/notifications/settings'))
+      return route.fulfill({
+        json: { workout_reminders_enabled: true, reminder_hour: 9 },
+      });
+    if (path.endsWith('/notifications')) return route.fulfill({ json: [] });
+    if (path.endsWith('/programs/exercises/1/guide'))
+      return route.fulfill({
+        json: {
+          technique_steps: ['Зафиксируйте корпус', 'Выполните движение под контролем'],
+          breathing: 'Выдох в фазе усилия, вдох при возврате.',
+          common_mistakes: ['Раскачивание корпусом'],
+          muscles: [
+            { name: 'Спина', role: 'Основная', function: 'Тянет плечевой пояс назад.' },
+            { name: 'Бицепс', role: 'Вспомогательная', function: 'Сгибает локоть.' },
+          ],
+          images: [
+            {
+              phase: 'Исходное положение',
+              url: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>',
+              alt: 'Исходное положение',
+            },
+            {
+              phase: 'Активная фаза',
+              url: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>',
+              alt: 'Активная фаза',
+            },
+          ],
+          source_name: 'Test source',
+          source_url: 'https://example.com',
+          source_license: 'Public domain',
+        },
+      });
+    if (path.endsWith('/programs/exercises'))
+      return route.fulfill({
+        json: [
+          {
+            id: 1,
+            title: 'Тяга блока',
+            primary_muscle: 'Спина',
+            equipment: 'Блок',
+            difficulty_level: 'beginner',
+            is_custom: false,
+            is_personalized: false,
+            has_guide: true,
+            guide: null,
+          },
+        ],
+      });
     if (path.endsWith('/admin/users')) return route.fulfill({ json: [] });
     if (path.endsWith('/coach/clients')) return route.fulfill({ json: [] });
     return route.fulfill({ json: [] });
@@ -74,6 +122,33 @@ test('мобильный интерфейс не обрезает навигац
     true,
   );
   await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeInViewport();
+});
+
+test('профиль содержит уведомления, а карточка упражнения открывает полное описание', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 780 });
+  await mockApi(page);
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Клиент' }).click();
+
+  await page.getByRole('tab', { name: 'Профиль' }).click();
+  await expect(page.getByRole('heading', { name: 'Напоминания о тренировках' })).toBeVisible();
+  await expect(page.getByText('Личные уведомления')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Подписка' })).toHaveCount(0);
+
+  await page.getByRole('tab', { name: 'Питание' }).click();
+  await expect(page.getByRole('heading', { name: 'Напоминания о тренировках' })).toHaveCount(0);
+
+  await page.getByRole('tab', { name: 'Упражнения' }).click();
+  await page.getByRole('button', { name: 'Техника' }).click();
+  await expect(page.getByRole('heading', { name: 'Для чего это упражнение' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Какие мышцы работают' })).toBeVisible();
+  await expect(page.getByText('Тянет плечевой пояс назад.')).toBeVisible();
+  await page.getByRole('button', { name: 'Увеличить: Исходное положение' }).click();
+  await expect(page.locator('.exercise-lightbox')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.exercise-lightbox')).toHaveCount(0);
 });
 
 test('администратор открывает React-панель', async ({ page }) => {

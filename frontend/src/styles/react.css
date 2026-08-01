@@ -292,3 +292,361 @@
     height: 28px;
   }
 }
+
+/* Профиль и уведомления */
+.switch-row {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 28px;
+  cursor: pointer;
+}
+.switch-row input[type='checkbox'] {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+.profile-disclosure,
+.coach-data-disclosure {
+  overflow: visible;
+}
+.profile-disclosure > summary,
+.coach-data-disclosure > summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  list-style: none;
+}
+.profile-disclosure > summary::-webkit-details-marker,
+.coach-data-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+.profile-disclosure > summary > span,
+.coach-data-disclosure > summary > span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.profile-disclosure > summary strong,
+.coach-data-disclosure > summary strong {
+  font-size: 1.1rem;
+}
+.profile-disclosure > summary small,
+.coach-data-disclosure > summary small {
+  color: var(--muted);
+}
+.profile-disclosure > summary::after,
+.coach-data-disclosure > summary::after {
+  content: '+';
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-left: auto;
+  border-radius: 50%;
+  background: var(--bg-soft);
+  color: var(--muted);
+  font-size: 1.25rem;
+}
+.profile-disclosure[open] > summary::after,
+.coach-data-disclosure[open] > summary::after {
+  content: '−';
+}
+.profile-disclosure__body,
+.coach-data-disclosure__body {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+/* Компактные карточки */
+.exercise-catalog-row,
+.coach-client-row {
+  align-items: center;
+  padding: 10px 11px;
+}
+.exercise-catalog-row .list-row__main {
+  gap: 2px;
+}
+.exercise-catalog-row .list-row__actions button,
+.coach-client-row > .btn-danger {
+  min-height: 34px;
+  padding: 7px 10px;
+  font-size: 0.78rem;
+}
+.coach-client-row .list-row__main {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  width: 100%;
+}
+.coach-client-row .list-row__main > strong,
+.coach-client-row .list-row__main > .muted {
+  grid-column: 1;
+}
+.coach-client-row .list-row__main > .badge {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+.coach-client-row.selected {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+.coach-data-disclosure {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  background: var(--card-bg);
+  box-shadow: var(--shadow);
+}
+.coach-data-disclosure__body > .card {
+  box-shadow: none;
+}
+
+/* Поиск упражнения прямо в конструкторе */
+.exercise-picker {
+  position: relative;
+}
+.exercise-picker__results {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 80;
+  display: grid;
+  max-height: 280px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+}
+.exercise-picker__option {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  min-height: 0;
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+}
+.exercise-picker__option:hover,
+.exercise-picker__option[aria-selected='true'] {
+  background: var(--accent-soft);
+}
+.exercise-picker__option small,
+.exercise-picker__empty {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.exercise-picker__empty {
+  padding: 12px;
+}
+
+/* Полноценное описание упражнения */
+.exercise-guide-modal__panel {
+  width: min(900px, 100%);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.exercise-guide-intro {
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-subtle);
+}
+.exercise-guide-intro h3,
+.exercise-guide-note h3,
+.exercise-guide-section h3 {
+  margin: 0 0 9px;
+  font-size: 1rem;
+}
+.exercise-guide-intro p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.exercise-guide-image__frame {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--bg-soft);
+}
+.exercise-guide-image__zoom {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(15, 17, 21, 0.78);
+  color: white;
+}
+.exercise-guide-note:first-child {
+  grid-column: 1 / -1;
+}
+.exercise-guide-note ol,
+.exercise-guide-note ul {
+  margin: 0;
+  padding-left: 21px;
+  line-height: 1.55;
+}
+.exercise-guide-note li + li {
+  margin-top: 6px;
+}
+.exercise-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 11000;
+  display: grid;
+  place-items: center;
+  padding: 54px 46px;
+}
+.exercise-lightbox__backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: rgba(0, 0, 0, 0.9);
+}
+.exercise-lightbox figure {
+  position: relative;
+  z-index: 1;
+  max-width: min(100%, 1000px);
+  max-height: 100%;
+  margin: 0;
+  text-align: center;
+}
+.exercise-lightbox img {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100dvh - 125px);
+  margin: auto;
+  border-radius: 12px;
+  object-fit: contain;
+}
+.exercise-lightbox figcaption {
+  margin-top: 10px;
+  color: white;
+  font-weight: 700;
+}
+.exercise-lightbox__close,
+.exercise-lightbox__arrow {
+  position: fixed;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  min-height: 42px;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  color: white;
+  font-size: 1.75rem;
+}
+.exercise-lightbox__close {
+  top: max(10px, env(safe-area-inset-top, 0px));
+  right: 12px;
+}
+.exercise-lightbox__arrow {
+  top: 50%;
+  transform: translateY(-50%);
+}
+.exercise-lightbox__arrow--prev {
+  left: 8px;
+}
+.exercise-lightbox__arrow--next {
+  right: 8px;
+}
+.assignment-modal {
+  max-width: 520px;
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.assignment-modal__hint {
+  margin: 0;
+  font-size: 0.8rem;
+}
+.assignment-prescription {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Более компактная нижняя навигация */
+.app-bottom-nav {
+  padding-top: 4px;
+  padding-bottom: max(4px, env(safe-area-inset-bottom, 0px));
+}
+.app-bottom-nav__btn {
+  gap: 1px;
+  padding: 3px 5px;
+}
+.app-bottom-nav__icon {
+  width: 26px;
+  height: 26px;
+}
+.app-bottom-nav__icon svg {
+  width: 16px;
+  height: 16px;
+}
+.app-bottom-nav__label {
+  font-size: 10px;
+}
+body:has(#appBottomNav) {
+  padding-bottom: max(72px, calc(env(safe-area-inset-bottom, 0px) + 58px));
+}
+
+@media (max-width: 640px) {
+  .exercise-catalog-row,
+  .coach-client-row {
+    flex-direction: row;
+  }
+  .exercise-catalog-row .list-row__actions {
+    flex: 0 0 auto;
+    justify-content: flex-end;
+  }
+  .exercise-catalog-row .list-row__actions button {
+    padding-inline: 8px;
+  }
+  .exercise-guide-images {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .exercise-guide-image figcaption {
+    padding: 8px 4px;
+    font-size: 0.78rem;
+  }
+  .exercise-guide-notes,
+  .exercise-guide-muscles {
+    grid-template-columns: 1fr;
+  }
+  .exercise-guide-note:first-child {
+    grid-column: auto;
+  }
+  .assignment-prescription {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+  }
+  .assignment-prescription input {
+    padding-inline: 8px;
+  }
+}

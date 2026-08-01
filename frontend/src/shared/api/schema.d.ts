@@ -452,6 +452,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/coach/clients/{client_id}/programs/{program_id}/exercises": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Exercise To Client Program
+         * @description Add or update an exercise in every planned workout of a coach-owned assignment.
+         */
+        post: operations["add_exercise_to_client_program_api_v1_coach_clients__client_id__programs__program_id__exercises_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/coach/invite-links": {
         parameters: {
             query?: never;
@@ -1405,6 +1425,25 @@ export interface components {
             source?: ("client_code" | "username_search" | "telegram_user_picker") | null;
             /** Full Name */
             full_name?: string | null;
+        };
+        /** CoachProgramExerciseAssignmentResponse */
+        CoachProgramExerciseAssignmentResponse: {
+            /** Workouts Updated */
+            workouts_updated: number;
+        };
+        /** CoachProgramExerciseCreate */
+        CoachProgramExerciseCreate: {
+            /** Exercise Id */
+            exercise_id: number;
+            /** Prescribed Sets */
+            prescribed_sets: number;
+            /** Prescribed Reps */
+            prescribed_reps: string;
+            /**
+             * Rest Seconds
+             * @default 90
+             */
+            rest_seconds: number;
         };
         /** DevLoginRequest */
         DevLoginRequest: {
@@ -3010,6 +3049,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CoachAssignedProgramResponse"][];
+                };
+            };
+        };
+    };
+    add_exercise_to_client_program_api_v1_coach_clients__client_id__programs__program_id__exercises_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: number;
+                program_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoachProgramExerciseCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachProgramExerciseAssignmentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

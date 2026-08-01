@@ -18,6 +18,9 @@ import { Badge, Card } from '../../shared/ui/common';
 
 type Tab = 'today' | 'progress' | 'programs' | 'catalog' | 'nutrition' | 'profile';
 
+// Биллинг уже относится к профилю, но не показывается, пока подписка не запущена.
+const SUBSCRIPTIONS_ENABLED = false;
+
 export default function MiniAppPage() {
   const { user, logout } = useAuth();
   const { toast } = useFeedback();
@@ -70,7 +73,7 @@ export default function MiniAppPage() {
             `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`,
           );
           await queryClient.invalidateQueries({ queryKey: ['billing'] });
-          setTab('nutrition');
+          setTab('profile');
           toast('Подписка активирована');
         } catch (reason) {
           toast((reason as Error).message, 'error');
@@ -178,17 +181,13 @@ export default function MiniAppPage() {
         {tab === 'catalog' && (
           <ExerciseCatalog canCreate={Boolean(user?.is_coach || user?.is_admin)} />
         )}
-        {tab === 'nutrition' && (
-          <>
-            <NutritionForm initial={user?.profile?.kbju} />
-            <NotificationsPanel />
-            <BillingPanel />
-          </>
-        )}
+        {tab === 'nutrition' && <NutritionForm initial={user?.profile?.kbju} />}
         {tab === 'profile' && (
           <>
             <ProfileForm />
             <CoachInvites />
+            <NotificationsPanel />
+            {SUBSCRIPTIONS_ENABLED && <BillingPanel />}
           </>
         )}
       </div>
