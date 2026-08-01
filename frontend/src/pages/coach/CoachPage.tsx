@@ -64,10 +64,10 @@ function ClientProfileEditor({ client }: { client: Client }) {
           full_name: form.full_name,
           goal: form.goal || null,
           level: form.level || null,
-          height_cm: form.height_cm || null,
-          weight_kg: form.weight_kg || null,
-          workouts_per_week: form.workouts_per_week || null,
-          cardio_trainings_per_week: form.cardio_trainings_per_week || null,
+          height_cm: form.height_cm ?? null,
+          weight_kg: form.weight_kg ?? null,
+          workouts_per_week: form.workouts_per_week ?? null,
+          cardio_trainings_per_week: form.cardio_trainings_per_week ?? null,
         },
       }),
     onSuccess: async (updatedClient) => {
@@ -79,6 +79,7 @@ function ClientProfileEditor({ client }: { client: Client }) {
     },
     onError: (reason) => toast((reason as Error).message, 'error'),
   });
+  const numberValue = (value: string) => (value === '' ? null : Number(value));
   return (
     <form
       className="stack"
@@ -92,6 +93,7 @@ function ClientProfileEditor({ client }: { client: Client }) {
           <span>Имя у тренера</span>
           <input
             value={form.full_name || ''}
+            maxLength={128}
             onChange={(e) => setForm({ ...form, full_name: e.target.value })}
           />
           <small className="field-hint">Это имя видите только вы.</small>
@@ -99,12 +101,11 @@ function ClientProfileEditor({ client }: { client: Client }) {
         <label className="field">
           <span>Цель</span>
           <select
-            value={form.goal || ''}
+            value={form.goal || 'maintenance'}
             onChange={(e) => setForm({ ...form, goal: e.target.value })}
           >
-            <option value="">Не указана</option>
             <option value="fat_loss">Похудение</option>
-            <option value="muscle_gain">Набор</option>
+            <option value="muscle_gain">Набор мышц</option>
             <option value="maintenance">Поддержание</option>
             <option value="recomposition">Рекомпозиция</option>
           </select>
@@ -112,44 +113,61 @@ function ClientProfileEditor({ client }: { client: Client }) {
         <label className="field">
           <span>Уровень</span>
           <select
-            value={form.level || ''}
+            value={form.level || 'beginner'}
             onChange={(e) => setForm({ ...form, level: e.target.value })}
           >
-            <option value="">Не указан</option>
             <option value="beginner">Начальный</option>
             <option value="intermediate">Средний</option>
             <option value="advanced">Продвинутый</option>
           </select>
         </label>
         <label className="field">
-          <span>Рост</span>
+          <span>Рост, см</span>
           <input
             type="number"
-            value={form.height_cm || ''}
-            onChange={(e) => setForm({ ...form, height_cm: Number(e.target.value) || null })}
+            min="80"
+            max="250"
+            value={form.height_cm ?? ''}
+            onChange={(e) => setForm({ ...form, height_cm: numberValue(e.target.value) })}
           />
         </label>
         <label className="field">
-          <span>Вес</span>
+          <span>Вес, кг</span>
           <input
             type="number"
-            step=".1"
-            value={form.weight_kg || ''}
-            onChange={(e) => setForm({ ...form, weight_kg: Number(e.target.value) || null })}
+            min="25"
+            max="500"
+            step="0.1"
+            value={form.weight_kg ?? ''}
+            onChange={(e) => setForm({ ...form, weight_kg: numberValue(e.target.value) })}
           />
         </label>
         <label className="field">
-          <span>Тренировок</span>
+          <span>Силовых в неделю</span>
           <input
             type="number"
-            value={form.workouts_per_week || ''}
+            min="0"
+            max="14"
+            value={form.workouts_per_week ?? ''}
+            onChange={(e) => setForm({ ...form, workouts_per_week: numberValue(e.target.value) })}
+          />
+        </label>
+        <label className="field">
+          <span>Кардио в неделю</span>
+          <input
+            type="number"
+            min="0"
+            max="14"
+            value={form.cardio_trainings_per_week ?? ''}
             onChange={(e) =>
-              setForm({ ...form, workouts_per_week: Number(e.target.value) || null })
+              setForm({ ...form, cardio_trainings_per_week: numberValue(e.target.value) })
             }
           />
         </label>
       </div>
-      <button disabled={mutation.isPending}>Сохранить профиль</button>
+      <button type="submit" disabled={mutation.isPending}>
+        {mutation.isPending ? 'Сохраняем…' : 'Сохранить профиль'}
+      </button>
     </form>
   );
 }
