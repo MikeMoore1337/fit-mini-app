@@ -84,7 +84,7 @@ FastAPI backend
 Сервисы в `docker-compose.yml`:
 
 - `db` - PostgreSQL 16;
-- `backend` - FastAPI, API, статика Mini App, coach UI и admin UI;
+- `backend` - FastAPI API и production-доставка собранного React-приложения;
 - `bot` - aiogram-бот для открытия Mini App и выбора timezone;
 - `worker` - фоновые уведомления;
 - `caddy` - прямой HTTPS reverse proxy на 80/443, profile `direct-https`;
@@ -95,12 +95,31 @@ FastAPI backend
 - Python 3.14;
 - FastAPI, SQLAlchemy, Alembic, Pydantic Settings;
 - PostgreSQL, SQLite для тестов;
-- Vanilla JS, HTML и CSS для Telegram Mini App;
+- React 19, TypeScript, Vite, лёгкий внутренний SPA-router и TanStack Query;
+- Vitest, Testing Library и Playwright для frontend-тестов;
 - Telegram WebApp init data, JWT access/refresh tokens;
 - aiogram для Telegram-бота;
 - Docker Compose, Caddy и Cloudflare Tunnel;
 - Ruff, ruff-format, mypy, pytest, pre-commit;
 - GitHub Actions CI.
+
+Ключевые директории:
+
+```text
+frontend/                     React/TypeScript SPA и frontend-тесты
+backend/fitminiapp_api/       FastAPI package
+backend/assets/               доменные статические данные и изображения
+backend/alembic/              миграции базы данных
+bot/fitminiapp_bot/           Telegram bot package
+backend/tests/                backend pytest-сценарии
+bot/tests/                    тесты Telegram bot
+tests/integration/            межсервисные интеграционные сценарии
+scripts/                      генерация OpenAPI и служебные команды
+```
+
+Docker использует multi-stage build: Node.js собирает `frontend/dist`, после чего
+только результат сборки копируется в итоговый Python-образ. Node.js в production
+контейнер backend не попадает.
 
 ## Быстрый старт
 
@@ -207,6 +226,27 @@ curl https://app.your-fitness-coach.ru/health
 ```
 
 ## Локальная разработка
+
+Исходники интерфейса находятся в `frontend/`. Vite проксирует `/api` и изображения
+упражнений на локальный FastAPI, поэтому CORS для разработки не требуется.
+
+В первом терминале запусти backend:
+
+```bash
+uvicorn fitminiapp_api.main:app --app-dir backend --reload --port 8000
+```
+
+Во втором терминале запусти frontend:
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+Открывай `http://127.0.0.1:5173/app`. Маршруты `/coach` и `/admin` обслуживаются
+тем же React SPA и защищены проверкой роли; окончательное решение о доступе всегда
+остаётся за backend.
 
 Для входа без Telegram включи dev-auth:
 
@@ -392,6 +432,7 @@ docker compose up -d backend worker bot
 ```bash
 python -m pip install -r backend/requirements.txt
 python -m pip install -r bot/requirements.txt
+cd frontend && npm ci
 ```
 
 Установить pre-commit hook:
@@ -404,7 +445,9 @@ pre-commit install
 
 ```bash
 pre-commit run --all-files
-pytest tests -q
+pytest backend/tests bot/tests tests/integration -q
+cd frontend && npm run check
+cd frontend && npm run e2e
 ```
 
 `pre-commit` запускает:
@@ -412,7 +455,11 @@ pytest tests -q
 - базовые проверки YAML/TOML, trailing whitespace, merge conflict markers и крупных файлов;
 - `ruff --fix` для lint и автоисправлений;
 - `ruff-format` для форматирования;
-- `mypy` для backend-пакета `app`.
+- `mypy` для backend-пакета `fitminiapp_api`.
+
+Frontend-проверки включают TypeScript, ESLint, Prettier, Vitest, production build и
+Playwright smoke-сценарии для клиента, тренера и администратора. Типы API
+генерируются из FastAPI OpenAPI командой `npm run api:types` в `frontend/`.
 
 Ruff закрывает сортировку импортов, flake8-подобные правила и black-совместимое
 форматирование. Отдельные `isort`, `black` и `flake8` в pipeline не запускаются.
@@ -430,12 +477,13 @@ CI делает:
 
 - установку backend и bot зависимостей;
 - проверку совместимости установленных зависимостей через `pip check`;
-- синтаксическую проверку frontend JavaScript через `node --check`;
-- проверки frontend-контрактов, навигации и WCAG-контраста через `node --test`;
+- TypeScript, ESLint, Vitest и production-сборку Vite;
+- Playwright smoke-тесты клиентского, тренерского и административного маршрутов;
+- аудит production-зависимостей npm;
 - аудит runtime-зависимостей через `pip-audit`;
 - `pre-commit run --all-files --show-diff-on-failure`;
 - применение всей цепочки Alembic к PostgreSQL 16;
-- `pytest tests -q` на PostgreSQL.
+- `pytest backend/tests bot/tests tests/integration -q` на PostgreSQL.
 
 ## Безопасность
 
@@ -449,7 +497,7 @@ CI делает:
 - Production-конфигурация проверяется при старте: placeholder-секреты, debug,
   dev-auth и не-HTTPS публичные URL приводят к отказу запуска.
 - Refresh-токен хранится только в `HttpOnly Secure SameSite=Strict` cookie, а
-  короткоживущий access-токен — в `sessionStorage`. CSP разрешает inline-скрипты
-  только по явно зафиксированным SHA-256 хешам.
+  короткоживущий access-токен — в `sessionStorage`. CSP полностью запрещает
+  inline-скрипты; frontend поставляется как хешированные Vite-ресурсы.
 - Endpoint завершения mock-платежа требует авторизацию и разрешён только владельцу
   checkout, когда `PAYMENT_PROVIDER=mock`.

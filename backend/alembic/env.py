@@ -8,9 +8,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from alembic import context
 from sqlalchemy import engine_from_config, pool, text
 
-from app.core.config import settings
-from app.db.base import Base
-from app.models import *  # noqa: F403
+from fitminiapp_api.core.config import settings
+from fitminiapp_api.db.base import Base
+from fitminiapp_api.models import *  # noqa: F403
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

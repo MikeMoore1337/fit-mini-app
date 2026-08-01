@@ -9,4 +9,4 @@ RUN useradd --create-home --uid 10001 appuser \
     && mkdir -p /var/lock/fitminiapp-bot \
     && chown -R appuser:appuser /app /var/lock/fitminiapp-bot
 USER appuser
-CMD ["python", "-m", "app.bot"]
+CMD ["python", "-m", "fitminiapp_bot.bot"]

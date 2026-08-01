@@ -4,7 +4,7 @@ set -e
 python - <<'PY'
 import time
 from sqlalchemy import create_engine, text
-from app.core.config import settings
+from fitminiapp_api.core.config import settings
 
 for attempt in range(60):
     try:
@@ -21,4 +21,4 @@ else:
 PY
 
 alembic upgrade head
-python -m app.services.seed
+python -m fitminiapp_api.services.seed

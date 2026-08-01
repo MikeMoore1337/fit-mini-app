@@ -15,7 +15,7 @@ concurrency:
 jobs:
   checks:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     services:
       postgres:
@@ -38,6 +38,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Set up Python
         id: setup-python
@@ -65,12 +72,25 @@ jobs:
       - name: Dependency consistency
         run: python -m pip check
 
-      - name: Frontend JavaScript syntax
-        run: |
-          find backend/app/static/js -name '*.js' -print0 | xargs -0 -n1 node --check
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
 
-      - name: Frontend behavior and accessibility checks
-        run: node --test tests/frontend.test.mjs
+      - name: Frontend checks and production build
+        working-directory: frontend
+        run: npm run check
+
+      - name: Install Playwright Chromium
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Frontend smoke tests
+        working-directory: frontend
+        run: npm run e2e
+
+      - name: Frontend production dependency audit
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Pre-commit
         run: pre-commit run --all-files --show-diff-on-failure
@@ -98,7 +118,7 @@ jobs:
           SECRET_KEY: test-secret-ci
 
       - name: Pytest on PostgreSQL
-        run: python -m pytest tests -q
+        run: python -m pytest backend/tests bot/tests tests/integration -q
         env:
           TEST_DATABASE_URL: postgresql+psycopg://fitminiapp:test-password@127.0.0.1:5432/fitminiapp_test
           ENABLE_DEV_AUTH: "true"

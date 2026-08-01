@@ -1,0 +1,14 @@
+import { AppLink } from '../shared/navigation/router';
+import { Card } from '../shared/ui/common';
+
+export default function NotFoundPage() {
+  return (
+    <main className="container">
+      <Card title="Страница не найдена">
+        <AppLink className="button-link" to="/app">
+          Вернуться в FitMiniApp
+        </AppLink>
+      </Card>
+    </main>
+  );
+}

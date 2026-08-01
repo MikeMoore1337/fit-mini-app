@@ -1,0 +1,1 @@
+"""FitMiniApp backend package."""

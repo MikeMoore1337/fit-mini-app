@@ -1,0 +1,172 @@
+.page-stack {
+  display: grid;
+  gap: 16px;
+  padding-bottom: 92px;
+}
+.hero-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.hero-title-row h1 {
+  margin: 0;
+}
+.react-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 0;
+  scrollbar-width: none;
+}
+.react-tabs button {
+  white-space: nowrap;
+}
+.react-tabs button.is-active {
+  background: var(--accent);
+  color: var(--button-text, #fff);
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+.list-grid {
+  display: grid;
+  gap: 10px;
+}
+.list-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-soft);
+}
+.list-row__main {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.list-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.list-row__actions button {
+  width: auto;
+}
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+.metric {
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--bg-soft);
+  display: grid;
+  gap: 4px;
+}
+.metric strong {
+  font-size: 1.25rem;
+}
+.auth-panel {
+  max-width: 620px;
+  margin: 12vh auto 0;
+}
+.auth-presets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.spinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.error-state {
+  border-color: var(--danger-line);
+}
+.modal__backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+.modal__panel {
+  position: relative;
+  z-index: 1;
+}
+.exercise-guide-images {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.exercise-guide-images img {
+  width: 100%;
+  border-radius: 12px;
+}
+.workout-set-row {
+  display: grid;
+  grid-template-columns: 48px 1fr 1fr auto;
+  align-items: end;
+  gap: 8px;
+}
+.workout-set-row label span {
+  font-size: 0.75rem;
+}
+.program-day {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+}
+.program-exercise-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 2fr) repeat(3, minmax(75px, 1fr)) auto;
+  gap: 8px;
+  align-items: end;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+@media (max-width: 640px) {
+  .list-row {
+    flex-direction: column;
+  }
+  .list-row__actions {
+    justify-content: flex-start;
+  }
+  .workout-set-row {
+    grid-template-columns: 34px 1fr 1fr;
+  }
+  .workout-set-row button {
+    grid-column: 2 / -1;
+  }
+  .program-exercise-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .program-exercise-row .exercise-select {
+    grid-column: 1 / -1;
+  }
+}

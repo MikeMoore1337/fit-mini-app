@@ -25,18 +25,18 @@ repos:
     hooks:
       - id: ruff
         args: ["--fix", "--no-cache"]
-        files: ^(backend/app|bot/app|tests|scripts)/.*\.py$
+        files: ^(backend/(fitminiapp_api|tests)|bot|tests|scripts)/.*\.py$
       - id: ruff-format
         args: ["--no-cache"]
-        files: ^(backend/app|bot/app|tests|scripts)/.*\.py$
+        files: ^(backend/(fitminiapp_api|tests)|bot|tests|scripts)/.*\.py$
 
   - repo: local
     hooks:
       - id: mypy-backend
-        name: mypy (backend app)
+        name: mypy (backend package)
         entry: python scripts/run_mypy.py
         language: python
         additional_dependencies:
           - mypy>=2.3
         pass_filenames: false
-        files: ^(backend/app|scripts/run_mypy\.py|pyproject\.toml)
+        files: ^(backend/fitminiapp_api|scripts/run_mypy\.py|pyproject\.toml)

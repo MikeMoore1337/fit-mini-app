@@ -19,9 +19,8 @@ dev = [
     "mypy>=2.3",
 ]
 
-# Ruff запускается по backend/app, bot/app, tests и scripts.
-# Mypy пока проверяет backend/app: backend и bot оба используют пакет app, поэтому их типизацию
-# лучше разводить отдельной настройкой, когда будем ужесточать проверки бота.
+# Backend и bot имеют уникальные имена пакетов, чтобы локальные инструменты типизации
+# не зависели от порядка PYTHONPATH.
 
 [tool.ruff]
 target-version = "py314"
@@ -53,10 +52,10 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/conftest.py" = ["E402"]
+"backend/tests/conftest.py" = ["E402"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["app"]
+known-first-party = ["fitminiapp_api", "fitminiapp_bot"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -67,7 +66,7 @@ python_version = "3.14"
 strict = false
 mypy_path = "backend"
 explicit_package_bases = true
-packages = ["app"]
+packages = ["fitminiapp_api"]
 exclude = ["^backend/alembic/"]
 ignore_missing_imports = true
 warn_return_any = false
@@ -92,5 +91,5 @@ ignore_errors = true
 
 # pydantic-settings: значения приходят из env при рантайме.
 [[tool.mypy.overrides]]
-module = ["app.core.config"]
+module = ["fitminiapp_api.core.config"]
 disable_error_code = ["call-arg"]

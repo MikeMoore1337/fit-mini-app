@@ -1,0 +1,1 @@
+"""FitMiniApp Telegram bot package."""

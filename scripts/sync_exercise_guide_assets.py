@@ -195,7 +195,7 @@ def main() -> None:
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("backend/app/static/exercise-guides"),
+        default=Path("backend/assets/exercise-guides"),
     )
     parser.add_argument("--slug", choices=sorted(SOURCE_EXERCISES))
     parser.add_argument("--force", action="store_true")

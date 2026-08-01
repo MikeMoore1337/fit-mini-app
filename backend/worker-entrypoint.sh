@@ -3,7 +3,7 @@ set -e
 python - <<'PY'
 import time
 from sqlalchemy import create_engine, text
-from app.core.config import settings
+from fitminiapp_api.core.config import settings
 
 for attempt in range(60):
     try:
@@ -18,4 +18,4 @@ for attempt in range(60):
 else:
     raise SystemExit('Database did not become ready in time')
 PY
-exec python -m app.services.worker
+exec python -m fitminiapp_api.services.worker

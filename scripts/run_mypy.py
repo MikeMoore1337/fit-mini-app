@@ -1,4 +1,4 @@
-"""Запуск mypy для пакета app из каталога backend (корректный PYTHONPATH)."""
+"""Запуск mypy для пакета fitminiapp_api из каталога backend."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ def main() -> int:
         sys.executable,
         "-m",
         "mypy",
-        "app",
+        "fitminiapp_api",
         "--config-file",
         str(cfg),
     ]
