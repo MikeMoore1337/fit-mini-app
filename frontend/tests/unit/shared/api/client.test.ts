@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { api, clearAccessToken, getAccessToken, setAccessToken } from './client';
+import {
+  api,
+  clearAccessToken,
+  getAccessToken,
+  setAccessToken,
+} from '../../../../src/shared/api/client';
 
 describe('api client', () => {
   beforeEach(() => {

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { Exercise } from '../../shared/api/types';
-import { buildStrengthPreset, resolveStrengthRule } from './strengthPresets';
+import type { Exercise } from '../../../../src/shared/api/types';
+import {
+  buildStrengthPreset,
+  resolveStrengthRule,
+} from '../../../../src/features/programs/strengthPresets';
 
 const exercises = Array.from(
   { length: 12 },
