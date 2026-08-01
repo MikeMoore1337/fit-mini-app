@@ -166,3 +166,21 @@ cython_debug/
 frontend/node_modules/
 frontend/dist/
 frontend/openapi.json
+
+# VCS, CI metadata, tests and local tooling are not runtime build inputs.
+.git/
+.github/
+.agents/
+.vscode/
+backend/tests/
+bot/tests/
+tests/
+
+# Local caches and audit/build artifacts can otherwise make the context very large.
+.mypy_cache/
+.ruff_cache/
+.tmp*/
+frontend/.npm-cache*/
+frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/

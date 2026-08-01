@@ -33,9 +33,12 @@ def signed_init_data(
     auth_date: int,
     telegram_user_id: int = 555001,
     username: str | None = None,
+    user_data: object | None = None,
 ) -> str:
-    user = {"id": telegram_user_id, "first_name": "Telegram"}
-    if username:
+    user = (
+        user_data if user_data is not None else {"id": telegram_user_id, "first_name": "Telegram"}
+    )
+    if username and isinstance(user, dict):
         user["username"] = username
     data = {
         "auth_date": str(auth_date),
@@ -1723,6 +1726,35 @@ def test_telegram_init_data_rejects_stale_auth_date():
         validate_telegram_init_data(stale_init_data, bot_token)
 
 
+def test_telegram_init_data_rejects_non_object_user():
+    init_data = signed_init_data(
+        bot_token="test-token",
+        auth_date=int(time.time()),
+        user_data=[],
+    )
+
+    with pytest.raises(ValueError, match="Некорректный user"):
+        validate_telegram_init_data(init_data, "test-token")
+
+
+@pytest.mark.parametrize("invalid_id", [True, 0, -1, "555001", 2**63])
+def test_telegram_init_data_rejects_invalid_user_id(invalid_id):
+    init_data = signed_init_data(
+        bot_token="test-token",
+        auth_date=int(time.time()),
+        user_data={"id": invalid_id, "first_name": "Telegram"},
+    )
+
+    with pytest.raises(ValueError, match="Некорректный id пользователя"):
+        validate_telegram_init_data(init_data, "test-token")
+
+
+def test_telegram_init_endpoint_rejects_oversized_payload(client):
+    response = client.post("/api/v1/auth/telegram/init", json={"init_data": "x" * 16_385})
+
+    assert response.status_code == 422
+
+
 def test_refresh_token_rotation(client):
     login = client.post(
         "/api/v1/auth/dev-login",
@@ -2113,6 +2145,15 @@ def test_health_includes_request_id(client):
     assert "x-request-id" in {k.lower(): v for k, v in response.headers.items()}
     assert response.headers["x-content-type-options"] == "nosniff"
     assert "default-src 'self'" in response.headers["content-security-policy"]
+
+
+def test_request_id_accepts_safe_value_and_replaces_untrusted_value(client):
+    accepted = client.get("/health/live", headers={"X-Request-ID": "edge-request_123.abc"})
+    replaced = client.get("/health/live", headers={"X-Request-ID": "x" * 129})
+
+    assert accepted.headers["x-request-id"] == "edge-request_123.abc"
+    assert replaced.headers["x-request-id"] != "x" * 129
+    assert re.fullmatch(r"[0-9a-f-]{36}", replaced.headers["x-request-id"])
 
 
 def test_health_supports_head(client):

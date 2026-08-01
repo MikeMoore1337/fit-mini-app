@@ -66,7 +66,18 @@ def validate_telegram_init_data(
     if not user_raw:
         raise ValueError("В init_data отсутствует user")
 
-    user_data = json.loads(user_raw)
+    try:
+        user_data = json.loads(user_raw)
+    except json.JSONDecodeError as exc:
+        raise ValueError("Некорректный user в init_data") from exc
+    if not isinstance(user_data, dict):
+        raise ValueError("Некорректный user в init_data")
+
+    telegram_user_id = user_data.get("id")
+    if not isinstance(telegram_user_id, int) or isinstance(telegram_user_id, bool):
+        raise ValueError("Некорректный id пользователя в init_data")
+    if telegram_user_id <= 0 or telegram_user_id > 2**63 - 1:
+        raise ValueError("Некорректный id пользователя в init_data")
 
     return {
         "auth_date": data.get("auth_date"),
@@ -121,7 +132,7 @@ def _link_pending_client_invites(db: Session, user: User) -> None:
 def get_or_create_user_from_init_data(db: Session, init_data: dict) -> User:
     user_data = init_data["user"]
 
-    telegram_user_id = int(user_data["id"])
+    telegram_user_id = user_data["id"]
     username = normalize_telegram_username(user_data.get("username"))
     first_name = user_data.get("first_name")
     last_name = user_data.get("last_name")

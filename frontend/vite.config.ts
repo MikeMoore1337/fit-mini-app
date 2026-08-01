@@ -6,7 +6,8 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
-    sourcemap: true,
+    // Source maps are not consumed by an error tracker and should not be shipped publicly.
+    sourcemap: false,
     manifest: true,
   },
   server: {

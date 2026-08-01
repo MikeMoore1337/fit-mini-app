@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from collections.abc import Awaitable, Callable
 
@@ -9,6 +10,14 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 logger = logging.getLogger("app.http")
+REQUEST_ID_PATTERN = re.compile(r"[A-Za-z0-9._:-]{1,128}\Z")
+
+
+def _request_id(request: Request) -> str:
+    supplied = request.headers.get("x-request-id", "")
+    if REQUEST_ID_PATTERN.fullmatch(supplied):
+        return supplied
+    return str(uuid.uuid4())
 
 
 class RequestContextMiddleware(BaseHTTPMiddleware):
@@ -19,7 +28,7 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         request: Request,
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
-        rid = request.headers.get("x-request-id") or str(uuid.uuid4())
+        rid = _request_id(request)
         request.state.request_id = rid
 
         response = await call_next(request)

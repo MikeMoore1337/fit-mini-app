@@ -10,7 +10,7 @@ class DevLoginRequest(BaseModel):
 
 
 class TelegramInitRequest(BaseModel):
-    init_data: str = Field(..., min_length=1)
+    init_data: str = Field(..., min_length=1, max_length=16_384)
 
 
 class RefreshRequest(BaseModel):

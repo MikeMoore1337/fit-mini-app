@@ -59,9 +59,14 @@ services:
   bot:
     build: ./bot
     restart: unless-stopped
-    env_file: .env
     environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-https://app.your-fitness-coach.ru}
+      BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:-http://backend:8000}
+      BOT_INTERNAL_TOKEN: ${BOT_INTERNAL_TOKEN}
+      BOT_POLLING_ENABLED: ${BOT_POLLING_ENABLED:-true}
       BOT_POLLING_LOCK_DIR: /var/lock/fitminiapp-bot
+      BOT_CONFLICT_RETRY_SECONDS: ${BOT_CONFLICT_RETRY_SECONDS:-300}
     depends_on:
       backend:
         condition: service_healthy
@@ -72,7 +77,8 @@ services:
     image: caddy:2-alpine
     restart: unless-stopped
     profiles: ["direct-https"]
-    env_file: .env
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:-}
     entrypoint:
       - /bin/sh
       - -ec
@@ -110,8 +116,10 @@ services:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
     profiles: ["cloudflare"]
-    env_file: .env
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARED_TOKEN:-}
+    environment:
+      # Keep the tunnel secret out of command arguments and process listings.
+      TUNNEL_TOKEN: ${CLOUDFLARED_TOKEN:-}
+    command: tunnel --no-autoupdate run
     depends_on:
       backend:
         condition: service_healthy

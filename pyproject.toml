@@ -26,6 +26,9 @@ dev = [
 target-version = "py314"
 line-length = 100
 src = ["backend", "bot", "tests", "scripts"]
+# Historical Alembic revisions are immutable deployment artifacts. New application
+# code and tests remain covered by Ruff through pre-commit and CI.
+extend-exclude = ["backend/alembic/versions"]
 
 [tool.ruff.lint]
 select = [
@@ -74,7 +77,7 @@ warn_unused_ignores = false
 warn_redundant_casts = true
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
-check_untyped_defs = false
+check_untyped_defs = true
 no_implicit_optional = false
 
 [tool.pytest.ini_options]
