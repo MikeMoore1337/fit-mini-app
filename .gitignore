@@ -184,15 +184,6 @@ cython_debug/
 .DS_Store
 Thumbs.db
 .ruff_cache/
-.tmp_pre_commit_cache/
-.tmp_pre_commit_cache_verify/
-.tmp_ruff_cache/
-.tmp_ruff_cache_codex/
-.tmp_pycache_codex/
-.tmp_pytest_cache_codex/
-pytest-cache-files-*/
-.tmp*
-*codex*
 
 # frontend
 frontend/node_modules/
