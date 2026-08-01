@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type { CoachAssignedProgram, Exercise, ExerciseGuide } from '../../shared/api/types';
@@ -22,7 +22,9 @@ export function ExerciseCatalog({
 }) {
   const { toast, confirm } = useFeedback();
   const queryClient = useQueryClient();
+  const searchResultsId = useId();
   const [search, setSearch] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
   const [muscle, setMuscle] = useState('');
   const [guide, setGuide] = useState<{ exercise: Exercise; data: ExerciseGuide } | null>(null);
   const [largeImage, setLargeImage] = useState<number | null>(null);
@@ -155,12 +157,57 @@ export function ExerciseCatalog({
         <div className="form-grid top-gap">
           <label className="field">
             <span>Поиск</span>
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Упражнение, мышца или инвентарь"
-            />
+            <div className="exercise-picker">
+              <input
+                type="search"
+                role="combobox"
+                aria-label="Поиск в каталоге упражнений"
+                aria-expanded={searchOpen}
+                aria-controls={searchResultsId}
+                autoComplete="off"
+                value={search}
+                onFocus={() => setSearchOpen(true)}
+                onBlur={() => setSearchOpen(false)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setSearchOpen(true);
+                }}
+                placeholder="Упражнение, мышца или инвентарь"
+              />
+              {searchOpen && (
+                <div className="exercise-picker__results" id={searchResultsId} role="listbox">
+                  {filtered.length ? (
+                    filtered.map((exercise) => (
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={search === exercise.title}
+                        className="exercise-picker__option"
+                        key={exercise.id}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => {
+                          setSearch(exercise.title);
+                          setSearchOpen(false);
+                        }}
+                      >
+                        <strong>{exercise.title}</strong>
+                        <span className="exercise-picker__meta">
+                          <small>
+                            {exercise.primary_muscle || 'Все мышцы'} ·{' '}
+                            {exercise.equipment || 'Без оборудования'}
+                          </small>
+                          <span className="badge">
+                            {difficultyLabels[exercise.difficulty_level]}
+                          </span>
+                        </span>
+                      </button>
+                    ))
+                  ) : (
+                    <span className="exercise-picker__empty">Ничего не найдено</span>
+                  )}
+                </div>
+              )}
+            </div>
           </label>
           <label className="field">
             <span>Группа мышц</span>

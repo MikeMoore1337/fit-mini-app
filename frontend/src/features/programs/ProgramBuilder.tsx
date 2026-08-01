@@ -43,7 +43,7 @@ function ExercisePicker({
             .includes(normalized),
       ),
       level,
-    ).slice(0, 12);
+    );
   }, [exercises, level, query]);
 
   return (
