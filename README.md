@@ -445,10 +445,16 @@ pre-commit install
 
 ```bash
 pre-commit run --all-files
-pytest backend/tests bot/tests tests/integration -q
+python scripts/run_pytest.py backend/tests bot/tests tests/integration -q
 cd frontend && npm run check
 cd frontend && npm run e2e
 ```
+
+Все создаваемые внутри репозитория кэши хранятся в `.artifacts/cache`, а временные
+файлы и результаты тестов — в `.artifacts/tests`. Каталог `.artifacts` можно
+безопасно удалить целиком: при следующем запуске инструменты создадут его заново.
+Локальные SQLite-базы для разовых dev-запусков следует сохранять в
+`.artifacts/tests/dev-db`.
 
 `pre-commit` запускает:
 

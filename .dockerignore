@@ -1,4 +1,7 @@
 ### Python template
+# Local tool caches and test output are never Docker build inputs.
+.artifacts/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

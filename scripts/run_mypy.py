@@ -12,7 +12,13 @@ def main() -> int:
     root = Path(__file__).resolve().parent.parent
     backend = root / "backend"
     cfg = root / "pyproject.toml"
-    env = {**os.environ, "PYTHONPATH": str(backend)}
+    cache_dir = root / ".artifacts" / "cache" / "mypy"
+    env = {
+        **os.environ,
+        "MYPY_CACHE_DIR": str(cache_dir),
+        "PYTHONPATH": str(backend),
+        "PYTHONDONTWRITEBYTECODE": "1",
+    }
     cmd = [
         sys.executable,
         "-m",
@@ -20,6 +26,8 @@ def main() -> int:
         "fitminiapp_api",
         "--config-file",
         str(cfg),
+        "--cache-dir",
+        str(cache_dir),
     ]
     return subprocess.call(cmd, cwd=backend, env=env)
 

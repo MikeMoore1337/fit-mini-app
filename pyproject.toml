@@ -26,6 +26,7 @@ dev = [
 target-version = "py314"
 line-length = 100
 src = ["backend", "bot", "tests", "scripts"]
+cache-dir = ".artifacts/cache/ruff"
 # Historical Alembic revisions are immutable deployment artifacts. New application
 # code and tests remain covered by Ruff through pre-commit and CI.
 extend-exclude = ["backend/alembic/versions"]
@@ -67,6 +68,7 @@ indent-style = "space"
 [tool.mypy]
 python_version = "3.14"
 strict = false
+cache_dir = ".artifacts/cache/mypy"
 mypy_path = "backend"
 explicit_package_bases = true
 packages = ["fitminiapp_api"]
@@ -81,7 +83,8 @@ check_untyped_defs = true
 no_implicit_optional = false
 
 [tool.pytest.ini_options]
-cache_dir = ".tmp_pytest_cache"
+cache_dir = ".artifacts/cache/pytest"
+addopts = "--basetemp=.artifacts/tests/pytest-tmp"
 filterwarnings = [
     "error",
     "ignore:Using `httpx` with `starlette.testclient` is deprecated:starlette.exceptions.StarletteDeprecationWarning",

@@ -1,6 +1,5 @@
 import os
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -9,7 +8,8 @@ sys.path.insert(0, str(ROOT / "backend"))
 import pytest
 from fastapi.testclient import TestClient
 
-_TEST_DB = Path(tempfile.gettempdir()) / "fitmini_pytest.db"
+_TEST_DB = ROOT / ".artifacts" / "tests" / "backend" / "fitmini_pytest.db"
+_TEST_DB.parent.mkdir(parents=True, exist_ok=True)
 _TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL") or f"sqlite:///{_TEST_DB.as_posix()}"
 os.environ.setdefault("APP_ENV", "dev")
 os.environ.setdefault("APP_NAME", "FitMiniApp Test")
