@@ -34,7 +34,9 @@ def upgrade() -> None:
         sa.Column("protein_g", sa.Integer(), nullable=False),
         sa.Column("fat_g", sa.Integer(), nullable=False),
         sa.Column("carbs_g", sa.Integer(), nullable=False),
-        sa.Column("saved_at", sa.DateTime(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.Column(
+            "saved_at", sa.DateTime(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")
+        ),
         sa.UniqueConstraint("user_id", name="uq_nutrition_targets_user_id"),
     )
 

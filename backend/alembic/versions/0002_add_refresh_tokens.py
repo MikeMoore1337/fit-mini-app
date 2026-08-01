@@ -1,6 +1,7 @@
 """add refresh_tokens table"""
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "0002_add_refresh_tokens"

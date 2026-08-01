@@ -6,6 +6,7 @@ Create Date: 2026-07-20
 """
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "0013_notification_delivery_state"

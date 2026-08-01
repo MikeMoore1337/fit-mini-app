@@ -6,6 +6,7 @@ Create Date: 2026-05-01
 """
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "0011_add_body_measurements"
@@ -27,7 +28,9 @@ def upgrade() -> None:
         sa.Column("biceps_cm", sa.Float(), nullable=True),
         sa.Column("thigh_cm", sa.Float(), nullable=True),
         sa.Column("note", sa.Text(), nullable=True),
-        sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.Column(
+            "created_at", sa.DateTime(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")
+        ),
         sa.UniqueConstraint("user_id", "measured_on", name="uq_body_measurement_user_date"),
     )
     op.create_index("ix_body_measurements_user_id", "body_measurements", ["user_id"])

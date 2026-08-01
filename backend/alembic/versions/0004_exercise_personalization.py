@@ -6,6 +6,7 @@ Create Date: 2026-04-04
 """
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "0004_exercise_personalization"
