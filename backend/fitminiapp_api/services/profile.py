@@ -19,15 +19,43 @@ def ensure_profile(db: Session, user: User) -> UserProfile:
     return profile
 
 
-def update_profile(db: Session, user: User, payload: UserProfileUpdate) -> User:
+def update_profile(
+    db: Session,
+    user: User,
+    payload: UserProfileUpdate,
+    *,
+    changed_by: User | None = None,
+) -> User:
     profile = ensure_profile(db, user)
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    changes = payload.model_dump(exclude_unset=True)
+    nutrition_field_map = {
+        "goal": "goal",
+        "height_cm": "height_cm",
+        "weight_kg": "weight_kg",
+        "workouts_per_week": "strength_trainings_per_week",
+        "cardio_trainings_per_week": "cardio_trainings_per_week",
+    }
+    nutrition_updates: dict[str, object] = {}
+    for field, value in changes.items():
         if field == "timezone":
             if not value:
                 value = DEFAULT_TIMEZONE
             elif not is_valid_timezone(value):
                 continue
+        if field in nutrition_field_map and value is not None and getattr(profile, field) != value:
+            nutrition_updates[nutrition_field_map[field]] = value
         setattr(profile, field, value)
+
+    if nutrition_updates:
+        # Local import avoids a module cycle: nutrition uses ensure_profile on first save.
+        from fitminiapp_api.services.nutrition import recalculate_nutrition_target
+
+        recalculate_nutrition_target(
+            db,
+            user,
+            nutrition_updates,
+            changed_by or user,
+        )
     db.commit()
     db.refresh(user)
     return user

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type { NutritionTarget, NutritionTargetSave } from '../../shared/api/types';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
@@ -41,9 +41,10 @@ export function NutritionForm({
 }: {
   targetTelegramId?: number | null;
   initial?: NutritionTarget | null;
-  onSaved?: () => void;
+  onSaved?: () => void | Promise<void>;
 }) {
   const { toast } = useFeedback();
+  const queryClient = useQueryClient();
   const [form, setForm] = useState<NutritionTargetSave>(() =>
     initial
       ? {
@@ -73,9 +74,10 @@ export function NutritionForm({
         method: 'POST',
         body: { ...form, target_telegram_user_id: targetTelegramId || null },
       }),
-    onSuccess: () => {
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      await onSaved?.();
       toast('Ориентиры КБЖУ сохранены');
-      onSaved?.();
     },
     onError: (reason) => toast((reason as Error).message, 'error'),
   });

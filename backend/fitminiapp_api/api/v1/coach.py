@@ -30,6 +30,7 @@ from fitminiapp_api.services.coach_clients import (
     remove_pending_client_invite,
 )
 from fitminiapp_api.services.exercise_catalog import _effective_exercise_id, list_exercises
+from fitminiapp_api.services.nutrition import recalculate_nutrition_target
 from fitminiapp_api.services.profile import update_profile
 from fitminiapp_api.services.program_common import ProgramError
 from fitminiapp_api.services.programs import (
@@ -224,7 +225,7 @@ def update_coach_client_profile(
     db: Session = Depends(get_db),
 ):
     client = _managed_client(db, current_user, client_id)
-    update_profile(db, client, payload)
+    update_profile(db, client, payload, changed_by=current_user)
     return _client_list_entry(db, current_user, client_id)
 
 
@@ -296,6 +297,14 @@ def save_coach_client_measurement(
             setattr(row, key, changes[key])
     if "note" in changes:
         row.note = changes["note"]
+
+    if changes.get("weight_kg") is not None:
+        recalculate_nutrition_target(
+            db,
+            client,
+            {"weight_kg": changes["weight_kg"]},
+            current_user,
+        )
 
     db.commit()
     db.refresh(row)

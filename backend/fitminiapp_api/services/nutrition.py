@@ -3,7 +3,8 @@ from typing import TypedDict
 
 from sqlalchemy.orm import Session, joinedload
 
-from fitminiapp_api.core.timezone import now_for_user_naive
+from fitminiapp_api.core.timezone import now_for_user_naive, user_local_naive_to_utc_naive
+from fitminiapp_api.models.notification import Notification
 from fitminiapp_api.models.nutrition import NutritionTarget
 from fitminiapp_api.models.user import CoachClient, User
 from fitminiapp_api.schemas.nutrition import (
@@ -29,6 +30,19 @@ GOAL_MULTIPLIERS = {
     "maintenance": 1.0,
     "muscle_gain": 1.05,
 }
+NUTRITION_INPUT_FIELDS = (
+    "sex",
+    "weight_kg",
+    "height_cm",
+    "age",
+    "daily_activity_level",
+    "strength_trainings_per_week",
+    "strength_training_duration_minutes",
+    "cardio_trainings_per_week",
+    "cardio_training_duration_minutes",
+    "cardio_intensity",
+    "goal",
+)
 
 
 class NutritionError(Exception):
@@ -223,6 +237,90 @@ def get_nutrition_target_for_user(
     return build_nutrition_target_response(db, target)
 
 
+def _target_payload(target: NutritionTarget) -> NutritionTargetSave:
+    return NutritionTargetSave(
+        sex=target.sex,
+        weight_kg=target.weight_kg,
+        height_cm=target.height_cm,
+        age=target.age,
+        daily_activity_level=target.daily_activity_level,
+        strength_trainings_per_week=target.strength_trainings_per_week,
+        strength_training_duration_minutes=target.strength_training_duration_minutes,
+        cardio_trainings_per_week=target.cardio_trainings_per_week,
+        cardio_training_duration_minutes=target.cardio_training_duration_minutes,
+        cardio_intensity=target.cardio_intensity,
+        goal=target.goal,
+    )
+
+
+def _apply_calculation(target: NutritionTarget, calculations: NutritionCalculation) -> None:
+    target.bmr = calculations["bmr"]
+    target.tdee = calculations["tdee"]
+    target.calories = calculations["calories"]
+    target.protein_g = calculations["protein_g"]
+    target.fat_g = calculations["fat_g"]
+    target.carbs_g = calculations["carbs_g"]
+
+
+def _queue_nutrition_updated_notification(
+    db: Session,
+    target_user: User,
+    target: NutritionTarget,
+    changed_by: User,
+) -> None:
+    scheduled_for = now_for_user_naive(target_user)
+    actor_text = (
+        "Тренер обновил параметры питания."
+        if changed_by.id != target_user.id
+        else "Ваши параметры питания изменились."
+    )
+    db.add(
+        Notification(
+            user_id=target_user.id,
+            channel="telegram",
+            title="КБЖУ пересчитаны",
+            body=(
+                f"{actor_text} Новые ориентиры: {target.calories} ккал · "
+                f"Б {target.protein_g} г · Ж {target.fat_g} г · У {target.carbs_g} г. "
+                "Проверьте раздел «КБЖУ»."
+            ),
+            scheduled_for=scheduled_for,
+            scheduled_for_utc=user_local_naive_to_utc_naive(scheduled_for, target_user),
+            status="queued",
+        )
+    )
+
+
+def recalculate_nutrition_target(
+    db: Session,
+    target_user: User,
+    updates: dict[str, object],
+    changed_by: User,
+) -> bool:
+    """Update stored calculation inputs and queue an immediate client notification."""
+    target = db.query(NutritionTarget).filter(NutritionTarget.user_id == target_user.id).first()
+    if target is None:
+        return False
+
+    changed = False
+    for field in NUTRITION_INPUT_FIELDS:
+        value = updates.get(field)
+        if value is None or getattr(target, field) == value:
+            continue
+        setattr(target, field, value)
+        changed = True
+
+    if not changed:
+        return False
+
+    calculations = calculate_nutrition(_target_payload(target))
+    _apply_calculation(target, calculations)
+    target.assigned_by_user_id = changed_by.id
+    target.saved_at = now_for_user_naive(target_user)
+    _queue_nutrition_updated_notification(db, target_user, target, changed_by)
+    return True
+
+
 def save_nutrition_target(
     db: Session,
     current_user: User,
@@ -233,6 +331,9 @@ def save_nutrition_target(
     ensure_profile(db, target_user)
 
     target = db.query(NutritionTarget).filter(NutritionTarget.user_id == target_user.id).first()
+    previous_inputs = (
+        {field: getattr(target, field) for field in NUTRITION_INPUT_FIELDS} if target else None
+    )
     if not target:
         target = NutritionTarget(user_id=target_user.id)
         db.add(target)
@@ -249,13 +350,12 @@ def save_nutrition_target(
     target.cardio_training_duration_minutes = payload.cardio_training_duration_minutes
     target.cardio_intensity = payload.cardio_intensity
     target.goal = payload.goal.strip()
-    target.bmr = calculations["bmr"]
-    target.tdee = calculations["tdee"]
-    target.calories = calculations["calories"]
-    target.protein_g = calculations["protein_g"]
-    target.fat_g = calculations["fat_g"]
-    target.carbs_g = calculations["carbs_g"]
+    _apply_calculation(target, calculations)
     target.saved_at = now_for_user_naive(target_user)
+
+    current_inputs = {field: getattr(target, field) for field in NUTRITION_INPUT_FIELDS}
+    if previous_inputs is None or previous_inputs != current_inputs:
+        _queue_nutrition_updated_notification(db, target_user, target, current_user)
 
     db.commit()
     db.refresh(target)

@@ -232,6 +232,125 @@ def test_coach_can_assign_kbju_to_own_client(client):
     assert kbju["assigned_by"]["full_name"] == "КБЖУ Тренер"
 
 
+def test_client_parameter_and_weight_changes_recalculate_kbju_and_notify(client):
+    headers = auth(client, telegram_user_id=6103, is_coach=False)
+    payload = {
+        "sex": "male",
+        "weight_kg": 80,
+        "height_cm": 180,
+        "age": 30,
+        "strength_trainings_per_week": 3,
+        "cardio_trainings_per_week": 1,
+        "goal": "muscle_gain",
+    }
+    initial = client.post(
+        "/api/v1/nutrition/targets",
+        json=payload,
+        headers=headers,
+    ).json()
+
+    profile = client.patch(
+        "/api/v1/me/profile",
+        json={"goal": "fat_loss"},
+        headers=headers,
+    )
+    assert profile.status_code == 200
+    assert profile.json()["profile"]["kbju"]["goal"] == "fat_loss"
+    assert profile.json()["profile"]["kbju"]["calories"] != initial["calories"]
+
+    measurement = client.post(
+        "/api/v1/workouts/diary",
+        json={"measured_on": "2026-08-01", "weight_kg": 75.5},
+        headers=headers,
+    )
+    assert measurement.status_code == 200
+
+    kbju = client.get("/api/v1/me", headers=headers).json()["profile"]["kbju"]
+    assert kbju["weight_kg"] == 75.5
+    notifications = client.get("/api/v1/notifications", headers=headers).json()
+    assert len(notifications) == 3
+    assert notifications[0]["title"] == "КБЖУ пересчитаны"
+    assert "Новые ориентиры" in notifications[0]["body"]
+    assert notifications[0]["status"] == "queued"
+
+    client.post(
+        "/api/v1/workouts/diary",
+        json={"measured_on": "2026-08-01", "weight_kg": 75.5},
+        headers=headers,
+    )
+    assert len(client.get("/api/v1/notifications", headers=headers).json()) == 3
+
+
+def test_coach_profile_and_measurement_changes_recalculate_and_notify_client(client):
+    coach_headers = auth(client, telegram_user_id=6104, is_coach=True)
+    client_headers = auth(client, telegram_user_id=6105, is_coach=False)
+    client_user = client.get("/api/v1/me", headers=client_headers).json()
+    client.post(
+        "/api/v1/coach/clients",
+        json={"telegram_user_id": 6105},
+        headers=coach_headers,
+    )
+    accept_latest_coach_invite(client, client_headers)
+    client.post(
+        "/api/v1/nutrition/targets",
+        json={
+            "target_telegram_user_id": 6105,
+            "sex": "female",
+            "weight_kg": 64.5,
+            "height_cm": 168,
+            "age": 28,
+            "strength_trainings_per_week": 2,
+            "cardio_trainings_per_week": 2,
+            "goal": "fat_loss",
+        },
+        headers=coach_headers,
+    )
+
+    profile = client.patch(
+        f"/api/v1/coach/clients/{client_user['id']}/profile",
+        json={"height_cm": 170},
+        headers=coach_headers,
+    )
+    assert profile.status_code == 200
+    assert profile.json()["kbju"]["height_cm"] == 170
+
+    measurement = client.post(
+        f"/api/v1/coach/clients/{client_user['id']}/measurements",
+        json={"measured_on": "2026-08-01", "weight_kg": 63.5},
+        headers=coach_headers,
+    )
+    assert measurement.status_code == 200
+
+    kbju = client.get("/api/v1/me", headers=client_headers).json()["profile"]["kbju"]
+    assert kbju["weight_kg"] == 63.5
+    assert kbju["assigned_by"]["telegram_user_id"] == 6104
+    notifications = client.get("/api/v1/notifications", headers=client_headers).json()
+    nutrition_notifications = [row for row in notifications if row["title"] == "КБЖУ пересчитаны"]
+    assert len(nutrition_notifications) == 3
+    assert "Тренер обновил параметры питания" in nutrition_notifications[0]["body"]
+
+
+def test_nutrition_form_only_notifies_when_calculation_inputs_change(client):
+    headers = auth(client, telegram_user_id=6106, is_coach=False)
+    payload = {
+        "sex": "male",
+        "weight_kg": 80,
+        "height_cm": 180,
+        "age": 30,
+        "strength_trainings_per_week": 3,
+        "cardio_trainings_per_week": 1,
+        "goal": "maintenance",
+    }
+    client.post("/api/v1/nutrition/targets", json=payload, headers=headers)
+    client.post("/api/v1/nutrition/targets", json=payload, headers=headers)
+    assert len(client.get("/api/v1/notifications", headers=headers).json()) == 1
+
+    payload["daily_activity_level"] = "high"
+    changed = client.post("/api/v1/nutrition/targets", json=payload, headers=headers)
+    assert changed.status_code == 200
+    assert len(client.get("/api/v1/notifications", headers=headers).json()) == 2
+
+
 def test_coach_can_update_own_client_profile_and_measurements(client):
     coach_headers = auth(client, telegram_user_id=6110, is_coach=True)
     client_headers = auth(client, telegram_user_id=6111, is_coach=False)

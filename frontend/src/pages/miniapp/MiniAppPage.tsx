@@ -22,7 +22,7 @@ type Tab = 'today' | 'progress' | 'programs' | 'catalog' | 'nutrition' | 'profil
 const SUBSCRIPTIONS_ENABLED = false;
 
 export default function MiniAppPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, reloadUser } = useAuth();
   const { toast } = useFeedback();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>('today');
@@ -169,7 +169,7 @@ export default function MiniAppPage() {
         {tab === 'progress' && (
           <>
             <WorkoutHistory />
-            <Diary />
+            <Diary onSaved={async () => void (await reloadUser())} />
           </>
         )}
         {tab === 'programs' && (
@@ -181,7 +181,12 @@ export default function MiniAppPage() {
         {tab === 'catalog' && (
           <ExerciseCatalog canCreate={Boolean(user?.is_coach || user?.is_admin)} />
         )}
-        {tab === 'nutrition' && <NutritionForm initial={user?.profile?.kbju} />}
+        {tab === 'nutrition' && (
+          <NutritionForm
+            initial={user?.profile?.kbju}
+            onSaved={async () => void (await reloadUser())}
+          />
+        )}
         {tab === 'profile' && (
           <>
             <ProfileForm />

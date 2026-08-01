@@ -24,6 +24,7 @@ from fitminiapp_api.schemas.workout import (
 )
 from fitminiapp_api.services.exercise_catalog import get_visible_exercise_display_map
 from fitminiapp_api.services.exercise_guides import get_exercise_guide
+from fitminiapp_api.services.nutrition import recalculate_nutrition_target
 
 router = APIRouter()
 
@@ -442,6 +443,14 @@ def save_body_measurement(
             setattr(row, key, changes[key])
     if "note" in changes:
         row.note = changes["note"]
+
+    if changes.get("weight_kg") is not None:
+        recalculate_nutrition_target(
+            db,
+            current_user,
+            {"weight_kg": changes["weight_kg"]},
+            current_user,
+        )
 
     db.commit()
     db.refresh(row)

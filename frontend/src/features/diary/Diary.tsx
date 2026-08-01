@@ -5,7 +5,13 @@ import type { BodyMeasurement, BodyMeasurementSave } from '../../shared/api/type
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
 
-export function Diary({ clientId }: { clientId?: number }) {
+export function Diary({
+  clientId,
+  onSaved,
+}: {
+  clientId?: number;
+  onSaved?: () => void | Promise<void>;
+}) {
   const queryClient = useQueryClient();
   const { toast, confirm } = useFeedback();
   const [form, setForm] = useState<BodyMeasurementSave>({
@@ -22,7 +28,11 @@ export function Diary({ clientId }: { clientId?: number }) {
     mutationFn: ({ path, method, body }: { path: string; method: string; body?: unknown }) =>
       api(path, { method, body }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['measurements', clientId || 'me'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['measurements', clientId || 'me'] }),
+        ...(!clientId ? [queryClient.invalidateQueries({ queryKey: ['notifications'] })] : []),
+      ]);
+      await onSaved?.();
       toast('Дневник обновлён');
     },
     onError: (reason) => toast((reason as Error).message, 'error'),
