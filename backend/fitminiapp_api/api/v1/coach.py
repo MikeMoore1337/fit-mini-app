@@ -9,7 +9,7 @@ from fitminiapp_api.models.program import (
     UserWorkoutExercise,
     UserWorkoutSet,
 )
-from fitminiapp_api.models.user import BodyMeasurement, CoachClientInvite, User
+from fitminiapp_api.models.user import BodyMeasurement, CoachClient, CoachClientInvite, User
 from fitminiapp_api.schemas.program import (
     AssignTemplateToClientRequest,
     ClientResponse,
@@ -225,7 +225,29 @@ def update_coach_client_profile(
     db: Session = Depends(get_db),
 ):
     client = _managed_client(db, current_user, client_id)
-    update_profile(db, client, payload, changed_by=current_user)
+    profile_changes = payload.model_dump(exclude_unset=True)
+    if "full_name" in profile_changes:
+        relation = (
+            db.query(CoachClient)
+            .filter(
+                CoachClient.coach_user_id == current_user.id,
+                CoachClient.client_user_id == client.id,
+                CoachClient.status == "active",
+            )
+            .one()
+        )
+        private_name = profile_changes.pop("full_name")
+        relation.private_name = (private_name.strip() or None) if private_name else None
+
+    if profile_changes:
+        update_profile(
+            db,
+            client,
+            UserProfileUpdate.model_validate(profile_changes),
+            changed_by=current_user,
+        )
+    else:
+        db.commit()
     return _client_list_entry(db, current_user, client_id)
 
 

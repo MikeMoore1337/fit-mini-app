@@ -130,14 +130,18 @@ def _set_profile_name(db: Session, user: User, full_name: str | None) -> None:
         db.add(UserProfile(user_id=user.id, full_name=full_name))
 
 
-def _client_entry_from_user(db: Session, user: User) -> dict:
+def _client_entry_from_user(
+    db: Session,
+    user: User,
+    private_name: str | None,
+) -> dict:
     profile = user.profile
     return {
         "id": user.id,
         "invite_id": None,
         "telegram_user_id": user.telegram_user_id,
         "username": user.username,
-        "full_name": profile.full_name if profile else None,
+        "full_name": private_name,
         "goal": profile.goal if profile else None,
         "level": profile.level if profile else None,
         "height_cm": profile.height_cm if profile else None,
@@ -274,7 +278,7 @@ def add_client_for_coach(
             .first()
         )
         if existing_link:
-            return _client_entry_from_user(db, client)
+            return _client_entry_from_user(db, client, existing_link.private_name)
 
         invite = (
             db.query(CoachClientInvite)
@@ -288,13 +292,15 @@ def add_client_for_coach(
         if invite:
             invite.telegram_user_id = client.telegram_user_id
             invite.username = normalize_telegram_username(client.username)
+            if normalized_name:
+                invite.full_name = normalized_name
         else:
             invite = CoachClientInvite(
                 coach_user_id=coach.id,
                 client_user_id=client.id,
                 telegram_user_id=client.telegram_user_id,
                 username=normalize_telegram_username(client.username),
-                full_name=client.profile.full_name if client.profile else None,
+                full_name=normalized_name or (client.profile.full_name if client.profile else None),
                 source=request_source,
                 status="pending",
                 expires_at=now_msk_naive() + timedelta(days=14),
@@ -502,6 +508,7 @@ def respond_to_coach_invite(
                 CoachClient(
                     coach_user_id=coach.id,
                     client_user_id=client.id,
+                    private_name=invite.full_name,
                     status="active",
                     accepted_at=now_msk_naive(),
                 )

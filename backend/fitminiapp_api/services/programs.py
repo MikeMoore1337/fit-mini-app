@@ -637,7 +637,7 @@ def update_template_for_user(
 
 def list_clients(db: Session, coach: User) -> list[dict]:
     clients = (
-        db.query(User)
+        db.query(User, CoachClient.private_name)
         .join(CoachClient, CoachClient.client_user_id == User.id)
         .options(joinedload(User.profile))
         .filter(CoachClient.coach_user_id == coach.id, CoachClient.status == "active")
@@ -658,7 +658,7 @@ def list_clients(db: Session, coach: User) -> list[dict]:
         .all()
     )
 
-    return [_client_entry_from_user(db, user) for user in clients] + [
+    return [_client_entry_from_user(db, user, private_name) for user, private_name in clients] + [
         _client_entry_from_invite(invite) for invite in invites
     ]
 
@@ -666,7 +666,7 @@ def list_clients(db: Session, coach: User) -> list[dict]:
 def list_coach_assigned_programs(db: Session, coach: User) -> list[dict]:
     """Return programs this coach assigned to clients they currently manage."""
     rows = (
-        db.query(UserProgram, User)
+        db.query(UserProgram, User, CoachClient.private_name)
         .join(User, User.id == UserProgram.user_id)
         .join(
             CoachClient,
@@ -687,7 +687,7 @@ def list_coach_assigned_programs(db: Session, coach: User) -> list[dict]:
     )
 
     result: list[dict] = []
-    for program, client in rows:
+    for program, client, private_name in rows:
         workouts = list(program.workouts)
         completed = sum(workout.status == "completed" for workout in workouts)
         planned = sum(workout.status == "planned" for workout in workouts)
@@ -697,7 +697,6 @@ def list_coach_assigned_programs(db: Session, coach: User) -> list[dict]:
             for workout in workouts
             if workout.status != "completed" and workout.scheduled_date >= today
         ]
-        profile = client.profile
         template = program.template
         result.append(
             {
@@ -705,7 +704,7 @@ def list_coach_assigned_programs(db: Session, coach: User) -> list[dict]:
                 "client_id": client.id,
                 "client_telegram_user_id": client.telegram_user_id,
                 "client_username": client.username,
-                "client_full_name": profile.full_name if profile else None,
+                "client_full_name": private_name,
                 "template_id": program.template_id,
                 "title": template.title if template else "Архивная программа",
                 "goal": template.goal if template else None,

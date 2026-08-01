@@ -353,7 +353,12 @@ def test_nutrition_form_only_notifies_when_calculation_inputs_change(client):
 
 def test_coach_can_update_own_client_profile_and_measurements(client):
     coach_headers = auth(client, telegram_user_id=6110, is_coach=True)
-    client_headers = auth(client, telegram_user_id=6111, is_coach=False)
+    client_headers = auth(
+        client,
+        telegram_user_id=6111,
+        is_coach=False,
+        full_name="Имя клиента",
+    )
     other_coach_headers = auth(client, telegram_user_id=6112, is_coach=True)
     client_user = client.get("/api/v1/me", headers=client_headers).json()
 
@@ -407,7 +412,7 @@ def test_coach_can_update_own_client_profile_and_measurements(client):
     assert forbidden.status_code == 404
 
     me = client.get("/api/v1/me", headers=client_headers).json()
-    assert me["profile"]["full_name"] == "Клиент с анкетой"
+    assert me["profile"]["full_name"] == "Имя клиента"
     assert me["profile"]["weight_kg"] == 74
     assert me["profile"]["cardio_trainings_per_week"] == 2
 
@@ -428,12 +433,15 @@ def test_coach_can_update_own_client_profile_and_measurements(client):
     coach_view = client.get("/api/v1/coach/clients", headers=coach_headers)
     assert coach_view.status_code == 200
     synced_client = next(row for row in coach_view.json() if row["id"] == client_user["id"])
-    assert synced_client["full_name"] == "Клиент обновил себя"
+    assert synced_client["full_name"] == "Клиент с анкетой"
     assert synced_client["goal"] == "fat_loss"
     assert synced_client["height_cm"] == 174
     assert synced_client["weight_kg"] == 72
     assert synced_client["workouts_per_week"] == 3
     assert synced_client["cardio_trainings_per_week"] == 4
+
+    me_after_client_update = client.get("/api/v1/me", headers=client_headers).json()
+    assert me_after_client_update["profile"]["full_name"] == "Клиент обновил себя"
 
 
 def test_coach_can_assign_existing_template_to_own_client(client):
@@ -447,6 +455,12 @@ def test_coach_can_assign_existing_template_to_own_client(client):
         headers=coach_headers,
     )
     accept_latest_coach_invite(client, client_headers)
+    alias = client.patch(
+        f"/api/v1/coach/clients/{client_user['id']}/profile",
+        json={"full_name": "Клиент в программах"},
+        headers=coach_headers,
+    )
+    assert alias.status_code == 200
 
     exercise = client.get("/api/v1/programs/exercises", headers=coach_headers).json()[0]
     created = client.post(
@@ -499,7 +513,7 @@ def test_coach_can_assign_existing_template_to_own_client(client):
             "client_id": client_user["id"],
             "client_telegram_user_id": 6121,
             "client_username": client_user["username"],
-            "client_full_name": client_user["profile"]["full_name"],
+            "client_full_name": "Клиент в программах",
             "template_id": template_id,
             "title": "Шаблон тренера",
             "goal": "maintenance",

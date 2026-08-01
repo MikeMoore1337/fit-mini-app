@@ -80,78 +80,77 @@ function ClientProfileEditor({ client }: { client: Client }) {
     onError: (reason) => toast((reason as Error).message, 'error'),
   });
   return (
-    <Card title="Профиль клиента">
-      <form
-        className="stack top-gap"
-        onSubmit={(e) => {
-          e.preventDefault();
-          mutation.mutate();
-        }}
-      >
-        <div className="form-grid">
-          <label className="field">
-            <span>Имя</span>
-            <input
-              value={form.full_name || ''}
-              onChange={(e) => setForm({ ...form, full_name: e.target.value })}
-            />
-          </label>
-          <label className="field">
-            <span>Цель</span>
-            <select
-              value={form.goal || ''}
-              onChange={(e) => setForm({ ...form, goal: e.target.value })}
-            >
-              <option value="">Не указана</option>
-              <option value="fat_loss">Похудение</option>
-              <option value="muscle_gain">Набор</option>
-              <option value="maintenance">Поддержание</option>
-              <option value="recomposition">Рекомпозиция</option>
-            </select>
-          </label>
-          <label className="field">
-            <span>Уровень</span>
-            <select
-              value={form.level || ''}
-              onChange={(e) => setForm({ ...form, level: e.target.value })}
-            >
-              <option value="">Не указан</option>
-              <option value="beginner">Начальный</option>
-              <option value="intermediate">Средний</option>
-              <option value="advanced">Продвинутый</option>
-            </select>
-          </label>
-          <label className="field">
-            <span>Рост</span>
-            <input
-              type="number"
-              value={form.height_cm || ''}
-              onChange={(e) => setForm({ ...form, height_cm: Number(e.target.value) || null })}
-            />
-          </label>
-          <label className="field">
-            <span>Вес</span>
-            <input
-              type="number"
-              step=".1"
-              value={form.weight_kg || ''}
-              onChange={(e) => setForm({ ...form, weight_kg: Number(e.target.value) || null })}
-            />
-          </label>
-          <label className="field">
-            <span>Тренировок</span>
-            <input
-              type="number"
-              value={form.workouts_per_week || ''}
-              onChange={(e) =>
-                setForm({ ...form, workouts_per_week: Number(e.target.value) || null })
-              }
-            />
-          </label>
-        </div>
-        <button disabled={mutation.isPending}>Сохранить профиль</button>
-      </form>
-    </Card>
+    <form
+      className="stack"
+      onSubmit={(e) => {
+        e.preventDefault();
+        mutation.mutate();
+      }}
+    >
+      <div className="form-grid">
+        <label className="field">
+          <span>Имя у тренера</span>
+          <input
+            value={form.full_name || ''}
+            onChange={(e) => setForm({ ...form, full_name: e.target.value })}
+          />
+          <small className="field-hint">Это имя видите только вы.</small>
+        </label>
+        <label className="field">
+          <span>Цель</span>
+          <select
+            value={form.goal || ''}
+            onChange={(e) => setForm({ ...form, goal: e.target.value })}
+          >
+            <option value="">Не указана</option>
+            <option value="fat_loss">Похудение</option>
+            <option value="muscle_gain">Набор</option>
+            <option value="maintenance">Поддержание</option>
+            <option value="recomposition">Рекомпозиция</option>
+          </select>
+        </label>
+        <label className="field">
+          <span>Уровень</span>
+          <select
+            value={form.level || ''}
+            onChange={(e) => setForm({ ...form, level: e.target.value })}
+          >
+            <option value="">Не указан</option>
+            <option value="beginner">Начальный</option>
+            <option value="intermediate">Средний</option>
+            <option value="advanced">Продвинутый</option>
+          </select>
+        </label>
+        <label className="field">
+          <span>Рост</span>
+          <input
+            type="number"
+            value={form.height_cm || ''}
+            onChange={(e) => setForm({ ...form, height_cm: Number(e.target.value) || null })}
+          />
+        </label>
+        <label className="field">
+          <span>Вес</span>
+          <input
+            type="number"
+            step=".1"
+            value={form.weight_kg || ''}
+            onChange={(e) => setForm({ ...form, weight_kg: Number(e.target.value) || null })}
+          />
+        </label>
+        <label className="field">
+          <span>Тренировок</span>
+          <input
+            type="number"
+            value={form.workouts_per_week || ''}
+            onChange={(e) =>
+              setForm({ ...form, workouts_per_week: Number(e.target.value) || null })
+            }
+          />
+        </label>
+      </div>
+      <button disabled={mutation.isPending}>Сохранить профиль</button>
+    </form>
   );
 }
 

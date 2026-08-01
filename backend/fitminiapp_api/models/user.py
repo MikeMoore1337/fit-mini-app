@@ -103,6 +103,7 @@ class CoachClient(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     coach_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     client_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    private_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
     status: Mapped[str] = mapped_column(
         String(16), nullable=False, default="active", server_default="active"
     )
