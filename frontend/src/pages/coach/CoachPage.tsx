@@ -197,7 +197,7 @@ export default function CoachPage() {
           </div>
           <Badge>Тренер</Badge>
         </header>
-        <div className="react-tabs">
+        <div className="react-tabs react-tabs--coach" role="tablist" aria-label="Разделы тренера">
           {(
             [
               ['clients', 'Клиенты'],
@@ -206,6 +206,9 @@ export default function CoachPage() {
             ] as const
           ).map(([key, label]) => (
             <button
+              type="button"
+              role="tab"
+              aria-selected={tab === key}
               className={tab === key ? 'is-active' : 'secondary'}
               onClick={() => setTab(key)}
               key={key}

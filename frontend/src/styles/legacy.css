@@ -549,8 +549,8 @@ button.program-client-link {
     --nav-bg: rgba(15, 17, 21, 0.92);
     --modal-backdrop: rgba(0, 0, 0, 0.55);
     --shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
-    --radius: 8px;
-    --radius-sm: 8px;
+    --radius: 16px;
+    --radius-sm: 12px;
 }
 
 :root[data-color-scheme="light"] {
@@ -2589,7 +2589,7 @@ a {
     justify-content: space-around;
     align-items: stretch;
     gap: 4px;
-    padding: 8px max(10px, env(safe-area-inset-left, 0px)) max(8px, env(safe-area-inset-bottom, 0px))
+    padding: 7px max(10px, env(safe-area-inset-left, 0px)) max(7px, env(safe-area-inset-bottom, 0px))
         max(10px, env(safe-area-inset-right, 0px));
     background: var(--nav-bg);
     border-top: 1px solid var(--border);
@@ -2603,8 +2603,8 @@ a {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
-    padding: 8px 6px;
+    gap: 3px;
+    padding: 6px;
     margin: 0;
     border: none;
     border-radius: var(--radius-sm);
@@ -2623,8 +2623,8 @@ a {
 }
 
 .app-bottom-nav__btn.is-active {
-    color: var(--accent-strong);
-    background: var(--accent-soft);
+    color: var(--text);
+    background: transparent;
 }
 
 .app-bottom-nav__btn.is-active .app-bottom-nav__icon {
@@ -2635,12 +2635,12 @@ a {
 .app-bottom-nav__icon {
     display: inline-grid;
     place-items: center;
-    width: 28px;
-    height: 28px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     background: var(--surface-active);
     line-height: 1;
-    opacity: 0.95;
+    opacity: 1;
 }
 
 .app-bottom-nav__icon svg {
@@ -2686,10 +2686,10 @@ body:has(#appBottomNav) .toast:not(.hidden) {
     }
 
     .app-bottom-nav__btn {
-        min-height: 54px;
-        gap: 1px;
-        padding: 6px 4px;
-        font-size: 10px;
+        min-height: 56px;
+        gap: 2px;
+        padding: 5px 4px;
+        font-size: 11px;
     }
 
     .app-bottom-nav__icon {

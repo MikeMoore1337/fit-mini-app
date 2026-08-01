@@ -117,7 +117,11 @@ export default function AdminPage() {
           </div>
           <Badge>Администратор</Badge>
         </header>
-        <div className="react-tabs" role="tablist">
+        <div
+          className="react-tabs react-tabs--admin"
+          role="tablist"
+          aria-label="Разделы администратора"
+        >
           {(
             [
               ['users', 'Пользователи'],
@@ -128,6 +132,8 @@ export default function AdminPage() {
           ).map(([key, label]) => (
             <button
               type="button"
+              role="tab"
+              aria-selected={tab === key}
               className={tab === key ? 'is-active' : 'secondary'}
               onClick={() => {
                 setTab(key);

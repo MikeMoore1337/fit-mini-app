@@ -96,29 +96,51 @@ export default function MiniAppPage() {
         </header>
         {(!profileReady || !user?.has_active_program || !user?.has_workout_history) && (
           <Card title="План запуска" description="Три шага до регулярных тренировок">
-            <div className="list-grid top-gap">
-              <button className="list-row text-button" onClick={() => setTab('profile')}>
-                <span>
-                  <strong>{profileReady ? '✓' : '1.'} Заполнить профиль</strong>
-                  <span className="muted">Цель, уровень и текущий вес</span>
+            <div className="onboarding-actions top-gap">
+              <button className="onboarding-action" onClick={() => setTab('profile')}>
+                <span className={`onboarding-action__mark${profileReady ? ' is-done' : ''}`}>
+                  {profileReady ? '✓' : '1'}
+                </span>
+                <span className="onboarding-action__copy">
+                  <strong>Заполнить профиль</strong>
+                  <span>Цель, уровень и текущий вес</span>
+                </span>
+                <span className="onboarding-action__arrow" aria-hidden="true">
+                  ›
                 </span>
               </button>
-              <button className="list-row text-button" onClick={() => setTab('programs')}>
-                <span>
-                  <strong>{user?.has_active_program ? '✓' : '2.'} Выбрать программу</strong>
-                  <span className="muted">Создайте свою или назначьте шаблон</span>
+              <button className="onboarding-action" onClick={() => setTab('programs')}>
+                <span
+                  className={`onboarding-action__mark${user?.has_active_program ? ' is-done' : ''}`}
+                >
+                  {user?.has_active_program ? '✓' : '2'}
+                </span>
+                <span className="onboarding-action__copy">
+                  <strong>Выбрать программу</strong>
+                  <span>Создайте свою или назначьте шаблон</span>
+                </span>
+                <span className="onboarding-action__arrow" aria-hidden="true">
+                  ›
                 </span>
               </button>
-              <button className="list-row text-button" onClick={() => setTab('today')}>
-                <span>
-                  <strong>{user?.has_workout_history ? '✓' : '3.'} Завершить тренировку</strong>
-                  <span className="muted">Результат появится в разделе прогресса</span>
+              <button className="onboarding-action" onClick={() => setTab('today')}>
+                <span
+                  className={`onboarding-action__mark${user?.has_workout_history ? ' is-done' : ''}`}
+                >
+                  {user?.has_workout_history ? '✓' : '3'}
+                </span>
+                <span className="onboarding-action__copy">
+                  <strong>Завершить тренировку</strong>
+                  <span>Результат появится в разделе прогресса</span>
+                </span>
+                <span className="onboarding-action__arrow" aria-hidden="true">
+                  ›
                 </span>
               </button>
             </div>
           </Card>
         )}
-        <div className="react-tabs" role="tablist">
+        <div className="react-tabs react-tabs--mini" role="tablist" aria-label="Разделы приложения">
           {(
             [
               ['today', 'Сегодня'],

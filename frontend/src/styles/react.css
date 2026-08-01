@@ -1,7 +1,7 @@
 .page-stack {
   display: grid;
-  gap: 16px;
-  padding-bottom: 92px;
+  gap: 14px;
+  padding-bottom: 28px;
 }
 .hero-title-row {
   display: flex;
@@ -13,18 +13,97 @@
   margin: 0;
 }
 .react-tabs {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding: 4px 0;
-  scrollbar-width: none;
+  position: sticky;
+  top: max(8px, env(safe-area-inset-top, 0px));
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--nav-bg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(16px);
 }
 .react-tabs button {
-  white-space: nowrap;
+  min-width: 0;
+  min-height: 42px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  line-height: 1.2;
+  white-space: normal;
 }
 .react-tabs button.is-active {
   background: var(--accent);
   color: var(--button-text, #fff);
+  box-shadow: 0 4px 12px var(--accent-soft);
+}
+.react-tabs--mini {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+.react-tabs--coach {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.react-tabs--admin {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.onboarding-actions {
+  display: grid;
+  gap: 8px;
+}
+.onboarding-action {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-soft);
+  color: var(--text);
+  text-align: left;
+}
+.onboarding-action:hover {
+  border-color: var(--accent-line);
+  background: var(--surface-hover);
+}
+.onboarding-action__mark {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+.onboarding-action__mark.is-done {
+  background: var(--success-strong);
+  color: var(--success-text);
+}
+.onboarding-action__copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.onboarding-action__copy strong {
+  line-height: 1.3;
+}
+.onboarding-action__copy > span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+.onboarding-action__arrow {
+  color: var(--muted);
+  font-size: 1.5rem;
+  font-weight: 400;
+  line-height: 1;
 }
 .form-grid {
   display: grid;
@@ -58,6 +137,17 @@
 }
 .list-row__actions button {
   width: auto;
+}
+.text-button {
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  justify-content: flex-start;
+}
+.text-button:hover {
+  background: transparent;
 }
 .metric-grid {
   display: grid;
@@ -151,6 +241,23 @@
   white-space: nowrap;
 }
 @media (max-width: 640px) {
+  .page-stack {
+    gap: 12px;
+  }
+  .hero-card h1 {
+    overflow-wrap: anywhere;
+  }
+  .react-tabs--mini,
+  .react-tabs--coach {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .react-tabs--admin {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .react-tabs button {
+    padding-inline: 6px;
+    font-size: 0.8rem;
+  }
   .list-row {
     flex-direction: column;
   }
@@ -168,5 +275,20 @@
   }
   .program-exercise-row .exercise-select {
     grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 360px) {
+  .react-tabs--coach {
+    grid-template-columns: 1fr;
+  }
+  .onboarding-action {
+    grid-template-columns: 28px minmax(0, 1fr) 14px;
+    gap: 9px;
+    padding: 10px;
+  }
+  .onboarding-action__mark {
+    width: 28px;
+    height: 28px;
   }
 }

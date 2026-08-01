@@ -49,6 +49,33 @@ test('клиент входит и видит экран тренировки', 
   await expect(page.getByText('Сегодня отдых')).toBeVisible();
 });
 
+test('мобильный интерфейс не обрезает навигацию и текст плана', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 780 });
+  await mockApi(page);
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Клиент' }).click();
+
+  const tabs = page.getByRole('tab');
+  await expect(tabs).toHaveCount(6);
+  for (const tab of await tabs.all()) await expect(tab).toBeInViewport();
+
+  const firstStep = page.getByRole('button', { name: /Заполнить профиль/ });
+  const title = firstStep.getByText('Заполнить профиль', { exact: true });
+  const description = firstStep.getByText('Цель, уровень и текущий вес', { exact: true });
+  const [titleBox, descriptionBox] = await Promise.all([
+    title.boundingBox(),
+    description.boundingBox(),
+  ]);
+  expect(titleBox).not.toBeNull();
+  expect(descriptionBox).not.toBeNull();
+  expect(titleBox!.y + titleBox!.height).toBeLessThanOrEqual(descriptionBox!.y);
+
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeInViewport();
+});
+
 test('администратор открывает React-панель', async ({ page }) => {
   await mockApi(page);
   await page.goto('/admin');
