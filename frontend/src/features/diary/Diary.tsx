@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type { BodyMeasurement, BodyMeasurementSave } from '../../shared/api/types';
+import { LIVE_DATA_REFETCH_INTERVAL_MS } from '../../shared/sync';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
 
@@ -23,6 +24,8 @@ export function Diary({
   const rows = useQuery({
     queryKey: ['measurements', clientId || 'me'],
     queryFn: () => api<BodyMeasurement[]>(base),
+    refetchInterval: LIVE_DATA_REFETCH_INTERVAL_MS,
+    refetchOnWindowFocus: true,
   });
   const mutation = useMutation({
     mutationFn: ({ path, method, body }: { path: string; method: string; body?: unknown }) =>

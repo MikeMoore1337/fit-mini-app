@@ -411,6 +411,30 @@ def test_coach_can_update_own_client_profile_and_measurements(client):
     assert me["profile"]["weight_kg"] == 74
     assert me["profile"]["cardio_trainings_per_week"] == 2
 
+    client_update = client.patch(
+        "/api/v1/me/profile",
+        json={
+            "full_name": "Клиент обновил себя",
+            "goal": "fat_loss",
+            "height_cm": 174,
+            "weight_kg": 72,
+            "workouts_per_week": 3,
+            "cardio_trainings_per_week": 4,
+        },
+        headers=client_headers,
+    )
+    assert client_update.status_code == 200
+
+    coach_view = client.get("/api/v1/coach/clients", headers=coach_headers)
+    assert coach_view.status_code == 200
+    synced_client = next(row for row in coach_view.json() if row["id"] == client_user["id"])
+    assert synced_client["full_name"] == "Клиент обновил себя"
+    assert synced_client["goal"] == "fat_loss"
+    assert synced_client["height_cm"] == 174
+    assert synced_client["weight_kg"] == 72
+    assert synced_client["workouts_per_week"] == 3
+    assert synced_client["cardio_trainings_per_week"] == 4
+
 
 def test_coach_can_assign_existing_template_to_own_client(client):
     coach_headers = auth(client, telegram_user_id=6120, is_coach=True)

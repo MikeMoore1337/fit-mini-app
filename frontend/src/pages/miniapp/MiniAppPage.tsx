@@ -31,6 +31,16 @@ export default function MiniAppPage() {
   const profileReady = Boolean(
     user?.profile?.full_name && user.profile.goal && user.profile.level && user.profile.weight_kg,
   );
+  const profileFormKey = JSON.stringify([
+    user?.profile?.full_name,
+    user?.profile?.goal,
+    user?.profile?.level,
+    user?.profile?.height_cm,
+    user?.profile?.weight_kg,
+    user?.profile?.workouts_per_week,
+    user?.profile?.cardio_trainings_per_week,
+    user?.profile?.timezone,
+  ]);
 
   useEffect(() => {
     if (!user || launchActionsStarted.current) return;
@@ -183,13 +193,14 @@ export default function MiniAppPage() {
         )}
         {tab === 'nutrition' && (
           <NutritionForm
+            key={JSON.stringify(user?.profile?.kbju ?? null)}
             initial={user?.profile?.kbju}
             onSaved={async () => void (await reloadUser())}
           />
         )}
         {tab === 'profile' && (
           <>
-            <ProfileForm />
+            <ProfileForm key={profileFormKey} />
             <CoachInvites />
             <NotificationsPanel />
             {SUBSCRIPTIONS_ENABLED && <BillingPanel />}

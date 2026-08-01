@@ -11,8 +11,22 @@ import type { Client, CoachAssignedProgram, InviteLink } from '../../shared/api/
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Badge, Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
 import { Redirect } from '../../shared/navigation/router';
+import { LIVE_DATA_REFETCH_INTERVAL_MS } from '../../shared/sync';
 
 type CoachTab = 'clients' | 'programs' | 'catalog';
+
+function clientProfileKey(client: Client): string {
+  return JSON.stringify([
+    client.id,
+    client.full_name,
+    client.goal,
+    client.level,
+    client.height_cm,
+    client.weight_kg,
+    client.workouts_per_week,
+    client.cardio_trainings_per_week,
+  ]);
+}
 
 function ClientDataSection({
   title,
@@ -44,7 +58,7 @@ function ClientProfileEditor({ client }: { client: Client }) {
   const [form, setForm] = useState(client);
   const mutation = useMutation({
     mutationFn: () =>
-      api(`/api/v1/coach/clients/${client.id}/profile`, {
+      api<Client>(`/api/v1/coach/clients/${client.id}/profile`, {
         method: 'PATCH',
         body: {
           full_name: form.full_name,
@@ -56,7 +70,10 @@ function ClientProfileEditor({ client }: { client: Client }) {
           cardio_trainings_per_week: form.cardio_trainings_per_week || null,
         },
       }),
-    onSuccess: async () => {
+    onSuccess: async (updatedClient) => {
+      queryClient.setQueryData<Client[]>(['coach', 'clients'], (clients) =>
+        clients?.map((item) => (item.id === updatedClient.id ? updatedClient : item)),
+      );
       await queryClient.invalidateQueries({ queryKey: ['coach', 'clients'] });
       toast('Профиль клиента сохранён');
     },
@@ -153,11 +170,15 @@ export default function CoachPage() {
   const clients = useQuery({
     queryKey: ['coach', 'clients'],
     queryFn: () => api<Client[]>('/api/v1/coach/clients'),
+    refetchInterval: LIVE_DATA_REFETCH_INTERVAL_MS,
+    refetchOnWindowFocus: true,
   });
   const programs = useQuery({
     queryKey: ['coach', 'programs'],
     queryFn: () => api<CoachAssignedProgram[]>('/api/v1/coach/assigned-programs'),
     enabled: tab === 'programs',
+    refetchInterval: tab === 'programs' ? LIVE_DATA_REFETCH_INTERVAL_MS : false,
+    refetchOnWindowFocus: true,
   });
   const selected =
     clients.data?.find((item) => item.id === selectedId) ??
@@ -353,7 +374,7 @@ export default function CoachPage() {
                   description="Анкета, цель и параметры"
                   open
                 >
-                  <ClientProfileEditor key={`profile-${selected.id}`} client={selected} />
+                  <ClientProfileEditor key={clientProfileKey(selected)} client={selected} />
                 </ClientDataSection>
                 <ClientDataSection
                   title="Прогресс и замеры"
@@ -363,7 +384,7 @@ export default function CoachPage() {
                 </ClientDataSection>
                 <ClientDataSection title="Питание" description="Расчёт и целевые КБЖУ">
                   <NutritionForm
-                    key={`nutrition-${selected.id}`}
+                    key={JSON.stringify([selected.id, selected.kbju])}
                     targetTelegramId={selected.telegram_user_id}
                     initial={selected.kbju}
                     onSaved={() => void clients.refetch()}

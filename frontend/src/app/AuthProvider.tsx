@@ -1,12 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
   api,
+  ApiError,
   clearAccessToken,
   getAccessToken,
   refreshAccessToken,
   setAccessToken,
 } from '../shared/api/client';
 import type { PublicConfig, User } from '../shared/api/types';
+import { LIVE_DATA_REFETCH_INTERVAL_MS } from '../shared/sync';
 import type { TelegramWebApp } from '../shared/telegram/types';
 
 interface DevLoginInput {
@@ -48,6 +50,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return null;
     }
   }, []);
+
+  const syncUser = useCallback(async (): Promise<void> => {
+    try {
+      const current = await api<User>('/api/v1/me');
+      setUser(current);
+      setError(null);
+    } catch (reason) {
+      // A temporary connection error must not log the user out. An expired session should.
+      if (reason instanceof ApiError && reason.status === 401) setUser(null);
+    }
+  }, []);
+
+  const userId = user?.id;
+  useEffect(() => {
+    if (!userId) return;
+
+    const syncVisibleUser = () => {
+      if (document.visibilityState === 'visible') void syncUser();
+    };
+    const interval = window.setInterval(syncVisibleUser, LIVE_DATA_REFETCH_INTERVAL_MS);
+    window.addEventListener('focus', syncVisibleUser);
+    document.addEventListener('visibilitychange', syncVisibleUser);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', syncVisibleUser);
+      document.removeEventListener('visibilitychange', syncVisibleUser);
+    };
+  }, [syncUser, userId]);
 
   const telegramLogin = useCallback(
     async (telegram: TelegramWebApp | null = window.Telegram?.WebApp ?? null) => {
