@@ -26,25 +26,19 @@ def nutrition_payload(**overrides) -> NutritionTargetSave:
 
 
 def test_kbju_verification_example() -> None:
-    result = calculate_nutrition(
-        nutrition_payload(
-            daily_activity_level="high",
-            strength_training_duration_minutes=90,
-            cardio_training_duration_minutes=45,
-        )
-    )
+    result = calculate_nutrition(nutrition_payload())
 
     assert result == {
         "bmr": 1646,
-        "base_tdee": 2469,
-        "strength_daily_calories": 267,
-        "cardio_daily_calories": 125,
-        "tdee": 2862,
+        "base_tdee": 2140,
+        "strength_daily_calories": 223,
+        "cardio_daily_calories": 100,
+        "tdee": 2463,
         "goal_multiplier": 0.95,
-        "calories": 2720,
+        "calories": 2340,
         "protein_g": 156,
         "fat_g": 62,
-        "carbs_g": 385,
+        "carbs_g": 290,
         "macro_warning": False,
     }
 
@@ -91,18 +85,24 @@ def test_daily_activity_coefficients(level: str, coefficient: float) -> None:
 )
 def test_goal_multipliers_and_ten_calorie_rounding(goal: str, multiplier: float) -> None:
     result = calculate_nutrition(nutrition_payload(goal=goal))
-    expected = math.floor((2401.9821428571427 * multiplier) / 10 + 0.5) * 10
+    expected = math.floor((2463.2678571428573 * multiplier) / 10 + 0.5) * 10
 
     assert result["goal_multiplier"] == multiplier
     assert result["calories"] == expected
     assert result["calories"] % 10 == 0
 
 
-@pytest.mark.parametrize(("intensity", "expected"), [("low", 50), ("moderate", 84), ("high", 117)])
+@pytest.mark.parametrize(("intensity", "expected"), [("low", 67), ("moderate", 100), ("high", 134)])
 def test_cardio_met_values(intensity: str, expected: int) -> None:
     result = calculate_nutrition(nutrition_payload(cardio_intensity=intensity))
 
     assert result["cardio_daily_calories"] == expected
+
+
+def test_strength_uses_five_met_and_averages_weekly_calories() -> None:
+    result = calculate_nutrition(nutrition_payload())
+
+    assert result["strength_daily_calories"] == round(5 * 78 * 1 * 4 / 7)
 
 
 def test_negative_carbohydrate_result_is_clamped_and_warned() -> None:

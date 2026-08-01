@@ -4,6 +4,7 @@ import { api } from '../../shared/api/client';
 import type { Exercise, ProgramTemplateCreate } from '../../shared/api/types';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Card, LoadingState } from '../../shared/ui/common';
+import { difficultyLabels, orderExercisesForLevel } from './exerciseOrdering';
 import { buildStrengthPreset, resolveStrengthRule, type StrengthSplit } from './strengthPresets';
 
 type Day = ProgramTemplateCreate['days'][number];
@@ -18,10 +19,12 @@ const blankDay = (index: number): Day => ({ title: `День ${index}`, exercise
 
 function ExercisePicker({
   exercises,
+  level,
   value,
   onChange,
 }: {
   exercises: Exercise[];
+  level: ProgramTemplateCreate['level'];
   value: number;
   onChange: (id: number) => void;
 }) {
@@ -31,16 +34,17 @@ function ExercisePicker({
   const [open, setOpen] = useState(false);
   const results = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    return exercises
-      .filter(
+    return orderExercisesForLevel(
+      exercises.filter(
         (exercise) =>
           !normalized ||
           `${exercise.title} ${exercise.primary_muscle || ''} ${exercise.equipment || ''}`
             .toLowerCase()
             .includes(normalized),
-      )
-      .slice(0, 12);
-  }, [exercises, query]);
+      ),
+      level,
+    ).slice(0, 12);
+  }, [exercises, level, query]);
 
   return (
     <div className="exercise-picker">
@@ -79,10 +83,13 @@ function ExercisePicker({
                 }}
               >
                 <strong>{exercise.title}</strong>
-                <small>
-                  {exercise.primary_muscle || 'Все мышцы'} ·{' '}
-                  {exercise.equipment || 'Без оборудования'}
-                </small>
+                <span className="exercise-picker__meta">
+                  <small>
+                    {exercise.primary_muscle || 'Все мышцы'} ·{' '}
+                    {exercise.equipment || 'Без оборудования'}
+                  </small>
+                  <span className="badge">{difficultyLabels[exercise.difficulty_level]}</span>
+                </span>
               </button>
             ))
           ) : (
@@ -268,6 +275,7 @@ export function ProgramBuilder({
                     <ExercisePicker
                       key={`${exerciseIndex}-${item.exercise_id}`}
                       exercises={exercises.data ?? []}
+                      level={level}
                       value={item.exercise_id}
                       onChange={(exerciseId) =>
                         updateDay(dayIndex, {

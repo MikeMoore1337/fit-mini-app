@@ -175,10 +175,10 @@ def test_client_can_save_kbju_and_see_it_in_profile(client):
 
     assert saved.status_code == 200
     data = saved.json()
-    assert data["calories"] == 2420
+    assert data["calories"] == 2460
     assert data["protein_g"] == 144
     assert data["fat_g"] == 72
-    assert data["carbs_g"] == 299
+    assert data["carbs_g"] == 309
     assert data["daily_activity_level"] == "sedentary"
     assert data["strength_training_duration_minutes"] == 60
     assert data["cardio_training_duration_minutes"] == 30
@@ -186,7 +186,7 @@ def test_client_can_save_kbju_and_see_it_in_profile(client):
 
     me = client.get("/api/v1/me", headers=headers).json()
     kbju = me["profile"]["kbju"]
-    assert kbju["calories"] == 2420
+    assert kbju["calories"] == 2460
     assert kbju["assigned_by"]["telegram_user_id"] == 6001
 
 

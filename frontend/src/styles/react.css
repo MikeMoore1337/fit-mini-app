@@ -437,6 +437,33 @@
   background: transparent;
   color: var(--text);
   text-align: left;
+  justify-content: stretch;
+  justify-items: start;
+  align-items: start;
+  line-height: 1.2;
+}
+.exercise-picker__option strong {
+  width: 100%;
+  overflow-wrap: anywhere;
+  font-size: 0.86rem;
+  text-align: left;
+}
+.exercise-picker__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+}
+.exercise-picker__meta small {
+  min-width: 0;
+  line-height: 1.25;
+}
+.exercise-picker__meta .badge {
+  flex: 0 0 auto;
+  padding: 3px 6px;
+  font-size: 0.64rem;
 }
 .exercise-picker__option:hover,
 .exercise-picker__option[aria-selected='true'] {
@@ -593,26 +620,43 @@
 
 /* Более компактная нижняя навигация */
 .app-bottom-nav {
-  padding-top: 4px;
-  padding-bottom: max(4px, env(safe-area-inset-bottom, 0px));
+  padding-top: 2px;
+  padding-bottom: max(2px, env(safe-area-inset-bottom, 0px));
 }
 .app-bottom-nav__btn {
+  min-height: 42px;
   gap: 1px;
-  padding: 3px 5px;
+  padding: 2px 5px;
 }
 .app-bottom-nav__icon {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
 }
 .app-bottom-nav__icon svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 .app-bottom-nav__label {
-  font-size: 10px;
+  font-size: 9px;
 }
 body:has(#appBottomNav) {
-  padding-bottom: max(72px, calc(env(safe-area-inset-bottom, 0px) + 58px));
+  padding-bottom: max(58px, calc(env(safe-area-inset-bottom, 0px) + 48px));
+}
+
+.nutrition-form-grid__wide {
+  grid-column: span 2;
+}
+.nutrition-warning ul,
+.nutrition-reality-check ul {
+  margin: 7px 0 0;
+  padding-left: 19px;
+}
+.nutrition-warning li + li,
+.nutrition-reality-check li + li {
+  margin-top: 3px;
+}
+.nutrition-metrics .metric strong {
+  white-space: nowrap;
 }
 
 @media (max-width: 640px) {
@@ -626,6 +670,53 @@ body:has(#appBottomNav) {
   }
   .exercise-catalog-row .list-row__actions button {
     padding-inline: 8px;
+  }
+  .exercise-catalog-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 7px;
+    padding: 8px 9px;
+  }
+  .exercise-catalog-row .list-row__main {
+    justify-items: start;
+    text-align: left;
+  }
+  .exercise-catalog-row .list-row__main > strong {
+    overflow-wrap: anywhere;
+    font-size: 0.9rem;
+    line-height: 1.2;
+  }
+  .exercise-catalog-row .list-row__main > .muted {
+    font-size: 0.72rem;
+    line-height: 1.25;
+  }
+  .exercise-catalog-row .badge {
+    padding: 3px 6px;
+    font-size: 0.65rem;
+  }
+  .exercise-catalog-row .list-row__actions button {
+    min-height: 30px;
+    padding: 5px 7px;
+    font-size: 0.72rem;
+  }
+  .exercise-picker__results {
+    max-height: min(240px, 48dvh);
+  }
+  .exercise-picker__option {
+    padding: 7px 8px;
+  }
+  .nutrition-form-grid__wide {
+    grid-column: auto;
+  }
+  .nutrition-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+  .nutrition-metrics .metric {
+    padding: 9px;
+  }
+  .nutrition-metrics .metric strong {
+    font-size: 1rem;
   }
   .exercise-guide-images {
     grid-template-columns: repeat(2, minmax(0, 1fr));

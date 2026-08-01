@@ -100,13 +100,13 @@ def calculate_nutrition(payload: NutritionTargetSave) -> NutritionCalculation:
     bmr = 10 * payload.weight_kg + 6.25 * payload.height_cm - 5 * payload.age + sex_constant
     base_tdee = bmr * ACTIVITY_COEFFICIENTS[payload.daily_activity_level]
     strength_weekly_calories = (
-        (STRENGTH_MET_VALUE - 1)
+        STRENGTH_MET_VALUE
         * payload.weight_kg
         * (payload.strength_training_duration_minutes / 60)
         * payload.strength_trainings_per_week
     )
     cardio_weekly_calories = (
-        (CARDIO_MET_VALUES[payload.cardio_intensity] - 1)
+        CARDIO_MET_VALUES[payload.cardio_intensity]
         * payload.weight_kg
         * (payload.cardio_training_duration_minutes / 60)
         * payload.cardio_trainings_per_week

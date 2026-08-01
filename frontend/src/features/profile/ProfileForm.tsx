@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
 import { api } from '../../shared/api/client';
 import type { User, UserProfileUpdate } from '../../shared/api/types';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Card } from '../../shared/ui/common';
+import { getTimezoneOptions } from './timezones';
 
 const emptyProfile: UserProfileUpdate = {
   full_name: '',
@@ -20,6 +21,7 @@ const emptyProfile: UserProfileUpdate = {
 export function ProfileForm() {
   const { user, reloadUser } = useAuth();
   const { toast } = useFeedback();
+  const queryClient = useQueryClient();
   const [form, setForm] = useState<UserProfileUpdate>(() =>
     user?.profile
       ? {
@@ -30,11 +32,16 @@ export function ProfileForm() {
         }
       : emptyProfile,
   );
+  const timezoneOptions = getTimezoneOptions(form.timezone);
 
   const mutation = useMutation({
     mutationFn: () => api<User>('/api/v1/me/profile', { method: 'PATCH', body: form }),
     onSuccess: async () => {
       await reloadUser();
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['workout'] }),
+        queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+      ]);
       toast('Профиль сохранён');
     },
     onError: (reason) => toast((reason as Error).message, 'error'),
@@ -134,11 +141,19 @@ export function ProfileForm() {
           </label>
           <label className="field">
             <span>Часовой пояс</span>
-            <input
+            <select
               value={form.timezone ?? ''}
               onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-              placeholder="Europe/Moscow"
-            />
+            >
+              {timezoneOptions.map((timezone) => (
+                <option value={timezone} key={timezone}>
+                  {timezone}
+                </option>
+              ))}
+            </select>
+            <small className="field-hint">
+              Даты тренировок и время уведомлений рассчитываются в этом часовом поясе.
+            </small>
           </label>
         </div>
         <button type="submit" disabled={mutation.isPending}>
