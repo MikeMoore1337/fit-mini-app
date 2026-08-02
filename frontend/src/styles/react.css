@@ -1,7 +1,18 @@
 .page-stack {
   display: grid;
   gap: 14px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   padding-bottom: 28px;
+}
+.page-stack > *,
+.card > *,
+.stack > *,
+.form-grid,
+.form-grid > * {
+  min-width: 0;
+  max-width: 100%;
 }
 .hero-title-row {
   display: flex;
@@ -759,6 +770,19 @@ body:has(#appBottomNav) {
 .nutrition-form-grid__wide {
   grid-column: span 2;
 }
+.nutrition-form-grid select {
+  inline-size: 100%;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  text-overflow: ellipsis;
+}
+.nutrition-warning,
+.nutrition-reality-check,
+.nutrition-details {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
 .nutrition-warning ul,
 .nutrition-reality-check ul {
   margin: 7px 0 0;
@@ -888,5 +912,12 @@ body:has(#appBottomNav) {
   .diary-form-grid input {
     min-width: 0;
     max-width: 100%;
+  }
+  .diary-form-grid input[type='date'] {
+    display: block;
+    inline-size: 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow: hidden;
   }
 }

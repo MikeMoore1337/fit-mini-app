@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-async function mockApi(page: Page) {
+async function mockApi(page: Page, { withCoachClient = false } = {}) {
   let role: 'client' | 'coach' | 'admin' = 'client';
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request();
@@ -125,7 +125,28 @@ async function mockApi(page: Page) {
       });
     if (path.endsWith('/programs/templates/hidden')) return route.fulfill({ json: [] });
     if (path.endsWith('/admin/users')) return route.fulfill({ json: [] });
-    if (path.endsWith('/coach/clients')) return route.fulfill({ json: [] });
+    if (path.endsWith('/coach/clients'))
+      return route.fulfill({
+        json: withCoachClient
+          ? [
+              {
+                id: 2,
+                invite_id: null,
+                telegram_user_id: 3002,
+                username: 'client',
+                full_name: 'Тестовый клиент',
+                goal: 'maintenance',
+                level: 'beginner',
+                height_cm: 175,
+                weight_kg: 75,
+                workouts_per_week: 3,
+                cardio_trainings_per_week: 1,
+                kbju: null,
+                status: 'active',
+              },
+            ]
+          : [],
+      });
     return route.fulfill({ json: [] });
   });
 }
@@ -201,14 +222,28 @@ test('поля адаптируются к разным iPhone, а пример 
   await page.getByRole('tab', { name: 'Прогресс' }).click();
   const dateField = page.getByLabel('Дата');
   const weightField = page.getByLabel('Вес, кг');
-  const [dateBox, weightBox] = await Promise.all([
+  const diaryGrid = page.locator('.diary-form-grid');
+  const [dateBox, weightBox, diaryGridBox] = await Promise.all([
     dateField.boundingBox(),
     weightField.boundingBox(),
+    diaryGrid.boundingBox(),
   ]);
   expect(dateBox).not.toBeNull();
   expect(weightBox).not.toBeNull();
+  expect(diaryGridBox).not.toBeNull();
   expect(dateBox!.y + dateBox!.height).toBeLessThanOrEqual(weightBox!.y);
-  expect(dateBox!.x + dateBox!.width).toBeLessThanOrEqual(440);
+  expect(dateBox!.x).toBeGreaterThanOrEqual(diaryGridBox!.x);
+  expect(dateBox!.x + dateBox!.width).toBeLessThanOrEqual(diaryGridBox!.x + diaryGridBox!.width);
+
+  await page.getByRole('tab', { name: 'Питание' }).click();
+  expect(
+    await page.evaluate(() => ({
+      viewport: document.documentElement.clientWidth,
+      content: document.documentElement.scrollWidth,
+    })),
+  ).toEqual({ viewport: 440, content: 440 });
+  await page.evaluate(() => window.scrollTo({ left: 1000 }));
+  expect(await page.evaluate(() => window.scrollX)).toBe(0);
 
   await page.getByRole('tab', { name: 'Упражнения' }).click();
   const search = page.getByRole('combobox', { name: 'Поиск в каталоге упражнений' });
@@ -247,6 +282,22 @@ test('администратор открывает React-панель', async (
   await page.getByRole('button', { name: 'Админ' }).click();
   await expect(page.getByRole('heading', { name: 'Панель администратора' })).toBeVisible();
   await expect(page.getByText('Пользователи не найдены')).toBeVisible();
+});
+
+test('дата остаётся внутри анкеты клиента в кабинете тренера', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockApi(page, { withCoachClient: true });
+  await page.goto('/coach');
+  await page.getByRole('button', { name: 'Тренер' }).click();
+  await page.getByText('Прогресс и замеры', { exact: true }).click();
+
+  const dateBox = await page.getByLabel('Дата').boundingBox();
+  const diaryGridBox = await page.locator('.diary-form-grid').boundingBox();
+  expect(dateBox).not.toBeNull();
+  expect(diaryGridBox).not.toBeNull();
+  expect(dateBox!.x).toBeGreaterThanOrEqual(diaryGridBox!.x);
+  expect(dateBox!.x + dateBox!.width).toBeLessThanOrEqual(diaryGridBox!.x + diaryGridBox!.width);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
 });
 
 test('тренер открывает кабинет', async ({ page }) => {
