@@ -10,6 +10,13 @@ import type {
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Badge, Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
 
+function toDateInputValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function NotificationsPanel() {
   const queryClient = useQueryClient();
   const { toast, confirm } = useFeedback();
@@ -23,9 +30,11 @@ export function NotificationsPanel() {
   });
   const [title, setTitle] = useState('Тренировка');
   const [body, setBody] = useState('Пора выполнить тренировку по плану');
-  const [scheduled, setScheduled] = useState(() =>
-    new Date(Date.now() + 3600_000).toISOString().slice(0, 16),
-  );
+  const [scheduledDate, setScheduledDate] = useState(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return toDateInputValue(tomorrow);
+  });
   const mutation = useMutation({
     mutationFn: ({
       path,
@@ -104,7 +113,9 @@ export function NotificationsPanel() {
                 body: {
                   title,
                   body,
-                  scheduled_for: scheduled.length === 16 ? `${scheduled}:00` : scheduled,
+                  scheduled_for: `${scheduledDate}T${String(
+                    settings.data?.reminder_hour ?? 9,
+                  ).padStart(2, '0')}:00:00`,
                 },
               });
             }}
@@ -115,13 +126,19 @@ export function NotificationsPanel() {
                 <input value={title} onChange={(e) => setTitle(e.target.value)} required />
               </label>
               <label className="field">
-                <span>Когда</span>
-                <input
-                  type="datetime-local"
-                  value={scheduled}
-                  onChange={(e) => setScheduled(e.target.value)}
-                  required
-                />
+                <span>Дата</span>
+                <div className="date-control notification-date-control">
+                  <input
+                    type="date"
+                    min={toDateInputValue(new Date())}
+                    value={scheduledDate}
+                    onChange={(e) => setScheduledDate(e.target.value)}
+                    required
+                  />
+                </div>
+                <small className="field-hint">
+                  Отправка в {String(settings.data?.reminder_hour ?? 9).padStart(2, '0')}:00
+                </small>
               </label>
             </div>
             <label className="field">

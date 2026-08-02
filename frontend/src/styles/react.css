@@ -796,7 +796,7 @@ body:has(#appBottomNav) {
   white-space: nowrap;
 }
 
-.diary-date-control {
+.date-control {
   width: 100%;
   min-width: 0;
   max-width: 100%;
@@ -809,11 +809,11 @@ body:has(#appBottomNav) {
     box-shadow 0.18s ease,
     background 0.18s ease;
 }
-.diary-date-control:focus-within {
+.date-control:focus-within {
   border-color: var(--accent);
   box-shadow: 0 0 0 4px var(--accent-soft);
 }
-.diary-date-control input[type='date'] {
+.date-control input[type='date'] {
   display: block;
   inline-size: 100%;
   min-inline-size: 0;

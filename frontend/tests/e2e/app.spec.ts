@@ -199,6 +199,31 @@ test('профиль содержит уведомления, а карточк�
   await expect(page.getByText('Личные уведомления')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Подписка' })).toHaveCount(0);
 
+  await page.getByText('Личные уведомления').click();
+  const notificationDate = page.locator('.notification-date-control input');
+  await expect(notificationDate).toHaveAttribute('type', 'date');
+  await expect(page.locator('input[type="datetime-local"]')).toHaveCount(0);
+  const [notificationDateBox, notificationDateControlBox] = await Promise.all([
+    notificationDate.boundingBox(),
+    page.locator('.notification-date-control').boundingBox(),
+  ]);
+  expect(notificationDateBox).not.toBeNull();
+  expect(notificationDateControlBox).not.toBeNull();
+  expect(notificationDateBox!.x).toBeGreaterThanOrEqual(notificationDateControlBox!.x);
+  expect(notificationDateBox!.x + notificationDateBox!.width).toBeLessThanOrEqual(
+    notificationDateControlBox!.x + notificationDateControlBox!.width,
+  );
+
+  const notificationRequest = page.waitForRequest(
+    (request) =>
+      new URL(request.url()).pathname.endsWith('/notifications') && request.method() === 'POST',
+  );
+  await page.getByRole('button', { name: 'Создать уведомление' }).click();
+  const notificationPayload = (await notificationRequest).postDataJSON() as {
+    scheduled_for: string;
+  };
+  expect(notificationPayload.scheduled_for).toMatch(/^\d{4}-\d{2}-\d{2}T09:00:00$/);
+
   await page.getByRole('tab', { name: 'Питание' }).click();
   await expect(page.getByRole('heading', { name: 'Напоминания о тренировках' })).toHaveCount(0);
 

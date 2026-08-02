@@ -60,7 +60,7 @@ export function Diary({
         <div className="form-grid diary-form-grid">
           <label className="field">
             <span>Дата</span>
-            <div className="diary-date-control">
+            <div className="date-control diary-date-control">
               <input
                 type="date"
                 value={form.measured_on || ''}
