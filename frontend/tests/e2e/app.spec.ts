@@ -202,6 +202,7 @@ test('профиль содержит уведомления, а карточк�
   await page.getByText('Личные уведомления').click();
   const notificationDate = page.locator('.notification-date-control input');
   await expect(notificationDate).toHaveAttribute('type', 'date');
+  await expect(notificationDate).toHaveCSS('text-align', 'center');
   await expect(page.locator('input[type="datetime-local"]')).toHaveCount(0);
   const [notificationDateBox, notificationDateControlBox] = await Promise.all([
     notificationDate.boundingBox(),
@@ -326,6 +327,7 @@ test('дата остаётся внутри анкеты клиента в ка
   await page.getByText('Прогресс и замеры', { exact: true }).click();
 
   const dateBox = await page.getByLabel('Дата').boundingBox();
+  await expect(page.getByLabel('Дата')).toHaveCSS('text-align', 'center');
   const dateControlBox = await page.locator('.diary-date-control').boundingBox();
   const diaryGridBox = await page.locator('.diary-form-grid').boundingBox();
   expect(dateBox).not.toBeNull();

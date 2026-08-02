@@ -823,6 +823,13 @@ body:has(#appBottomNav) {
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+  text-align: center;
+  text-align-last: center;
+}
+.date-control input[type='date']::-webkit-date-and-time-value {
+  width: 100%;
+  margin: 0;
+  text-align: center;
 }
 
 @media (max-width: 640px) {
