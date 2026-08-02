@@ -57,7 +57,7 @@ export function Diary({
           mutation.mutate({ path: base, method: 'POST', body: form });
         }}
       >
-        <div className="form-grid">
+        <div className="form-grid diary-form-grid">
           <label className="field">
             <span>Дата</span>
             <input

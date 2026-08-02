@@ -154,7 +154,7 @@ export function ExerciseCatalog({
   return (
     <>
       <Card title="Каталог упражнений" actions={<Badge>{filtered.length}</Badge>}>
-        <div className="form-grid top-gap">
+        <div className="form-grid exercise-filter-grid top-gap">
           <label className="field">
             <span>Поиск</span>
             <div className="exercise-picker">
@@ -263,7 +263,7 @@ export function ExerciseCatalog({
                     {exercise.primary_muscle || 'Все мышцы'} ·{' '}
                     {exercise.equipment || 'Без оборудования'}
                   </span>
-                  <div>
+                  <div className="exercise-catalog-row__badges">
                     <Badge>{difficultyLabels[exercise.difficulty_level]}</Badge>{' '}
                     {exercise.is_custom && <Badge>Своё</Badge>}
                   </div>

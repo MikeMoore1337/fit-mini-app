@@ -410,6 +410,8 @@
 /* Поиск упражнения прямо в конструкторе */
 .exercise-picker {
   position: relative;
+  width: 100%;
+  min-width: 0;
 }
 .exercise-picker__results {
   position: absolute;
@@ -476,6 +478,117 @@
 }
 .exercise-picker__empty {
   padding: 12px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  line-height: 1.2;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.exercise-catalog-row__badges,
+.program-template-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.program-example-trigger {
+  flex: 1 1 auto;
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+  width: auto;
+  min-width: 0;
+  color: var(--text);
+}
+.program-example-trigger > strong,
+.program-example-trigger > .muted {
+  overflow-wrap: anywhere;
+}
+.program-example-trigger__hint {
+  color: var(--accent-strong);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.program-example-modal__panel {
+  width: min(680px, 100%);
+  max-width: 680px;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.program-example-modal__head {
+  position: sticky;
+  top: -20px;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -20px -20px 0;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card-bg);
+}
+.program-example-modal__head > div {
+  min-width: 0;
+}
+.program-example-modal__head h2 {
+  overflow-wrap: anywhere;
+}
+.program-example-modal__head p {
+  margin-top: 5px;
+  line-height: 1.35;
+}
+.program-example-modal__close {
+  flex: 0 0 auto;
+  width: 42px;
+  min-height: 42px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 1.6rem;
+  line-height: 1;
+}
+.program-example-days {
+  display: grid;
+  gap: 12px;
+  padding-top: 16px;
+}
+.program-example-day {
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-soft);
+}
+.program-example-day ol {
+  display: grid;
+  gap: 9px;
+  margin: 11px 0 0;
+  padding-left: 23px;
+}
+.program-example-day li {
+  padding-left: 2px;
+}
+.program-example-day li > strong,
+.program-example-day li > span,
+.program-example-day li > small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.program-example-day li > span,
+.program-example-day li > small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
 }
 
 /* Полноценное описание упражнения */
@@ -739,5 +852,41 @@ body:has(#appBottomNav) {
   }
   .assignment-prescription input {
     padding-inline: 8px;
+  }
+  .program-example-row {
+    gap: 10px;
+  }
+  .program-example-trigger,
+  .program-example-row .list-row__actions {
+    width: 100%;
+  }
+  .program-example-row .list-row__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .program-example-row .list-row__actions button {
+    width: 100%;
+  }
+  .program-example-modal {
+    align-items: flex-end;
+    padding: max(8px, env(safe-area-inset-top, 0px)) 0 0;
+  }
+  .program-example-modal__panel {
+    max-height: calc(100dvh - max(8px, env(safe-area-inset-top, 0px)));
+    border-radius: var(--radius) var(--radius) 0 0;
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .exercise-filter-grid,
+  .diary-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .exercise-filter-grid input,
+  .exercise-filter-grid select,
+  .diary-form-grid input {
+    min-width: 0;
+    max-width: 100%;
   }
 }

@@ -83,6 +83,47 @@ async function mockApi(page: Page) {
           },
         ],
       });
+    if (path.endsWith('/programs/templates/mine'))
+      return route.fulfill({
+        json: [
+          {
+            id: 10,
+            title: 'Программа на всё тело — 3 дня',
+            slug: 'full-body-3-days',
+            goal: 'recomposition',
+            level: 'beginner',
+            owner_user_id: null,
+            owner_telegram_user_id: null,
+            owner_full_name: null,
+            created_by_user_id: null,
+            is_public: true,
+            is_example: true,
+            is_assigned_to_current_user: false,
+            is_active_for_current_user: false,
+            assigned_by_user_id: null,
+            assigned_by_full_name: null,
+            days: [
+              {
+                id: 100,
+                day_number: 1,
+                title: 'Всё тело',
+                exercises: [
+                  {
+                    id: 1000,
+                    exercise_id: 1,
+                    exercise_title: 'Тяга блока',
+                    prescribed_sets: 3,
+                    prescribed_reps: '10–12',
+                    rest_seconds: 90,
+                    notes: null,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+    if (path.endsWith('/programs/templates/hidden')) return route.fulfill({ json: [] });
     if (path.endsWith('/admin/users')) return route.fulfill({ json: [] });
     if (path.endsWith('/coach/clients')) return route.fulfill({ json: [] });
     return route.fulfill({ json: [] });
@@ -149,6 +190,55 @@ test('профиль содержит уведомления, а карточк�
   await expect(page.locator('.exercise-lightbox')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.locator('.exercise-lightbox')).toHaveCount(0);
+});
+
+test('поля адаптируются к разным iPhone, а пример программы открывает состав', async ({ page }) => {
+  await page.setViewportSize({ width: 440, height: 956 });
+  await mockApi(page);
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Клиент' }).click();
+
+  await page.getByRole('tab', { name: 'Прогресс' }).click();
+  const dateField = page.getByLabel('Дата');
+  const weightField = page.getByLabel('Вес, кг');
+  const [dateBox, weightBox] = await Promise.all([
+    dateField.boundingBox(),
+    weightField.boundingBox(),
+  ]);
+  expect(dateBox).not.toBeNull();
+  expect(weightBox).not.toBeNull();
+  expect(dateBox!.y + dateBox!.height).toBeLessThanOrEqual(weightBox!.y);
+  expect(dateBox!.x + dateBox!.width).toBeLessThanOrEqual(440);
+
+  await page.getByRole('tab', { name: 'Упражнения' }).click();
+  const search = page.getByRole('combobox', { name: 'Поиск в каталоге упражнений' });
+  await search.focus();
+  await expect(page.getByRole('option', { name: /Тяга блока/ })).toBeVisible();
+  const searchBox = await search.boundingBox();
+  expect(searchBox).not.toBeNull();
+  expect(searchBox!.x + searchBox!.width).toBeLessThanOrEqual(440);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+
+  await page.getByRole('tab', { name: 'Программы' }).click();
+  const example = page.getByRole('button', {
+    name: 'Посмотреть пример программы «Программа на всё тело — 3 дня»',
+  });
+  await expect(example).toContainText('Рекомпозиция · Начальный уровень · 1 дн.');
+  await expect(example).toContainText('Пример программы');
+  await expect(example).not.toContainText('recomposition');
+  await expect(example).not.toContainText('beginner');
+  await example.click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'День 1. Всё тело' })).toBeVisible();
+  await expect(page.getByRole('dialog').getByText('Тяга блока')).toBeVisible();
+  await expect(page.getByRole('dialog').getByText('3 подх. × 10–12 · отдых 90 сек.')).toBeVisible();
 });
 
 test('администратор открывает React-панель', async ({ page }) => {
