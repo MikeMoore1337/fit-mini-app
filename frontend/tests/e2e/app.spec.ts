@@ -223,17 +223,26 @@ test('поля адаптируются к разным iPhone, а пример 
   const dateField = page.getByLabel('Дата');
   const weightField = page.getByLabel('Вес, кг');
   const diaryGrid = page.locator('.diary-form-grid');
-  const [dateBox, weightBox, diaryGridBox] = await Promise.all([
+  const dateControl = page.locator('.diary-date-control');
+  const [dateBox, dateControlBox, weightBox, diaryGridBox] = await Promise.all([
     dateField.boundingBox(),
+    dateControl.boundingBox(),
     weightField.boundingBox(),
     diaryGrid.boundingBox(),
   ]);
   expect(dateBox).not.toBeNull();
+  expect(dateControlBox).not.toBeNull();
   expect(weightBox).not.toBeNull();
   expect(diaryGridBox).not.toBeNull();
   expect(dateBox!.y + dateBox!.height).toBeLessThanOrEqual(weightBox!.y);
-  expect(dateBox!.x).toBeGreaterThanOrEqual(diaryGridBox!.x);
-  expect(dateBox!.x + dateBox!.width).toBeLessThanOrEqual(diaryGridBox!.x + diaryGridBox!.width);
+  expect(dateControlBox!.x).toBeGreaterThanOrEqual(diaryGridBox!.x);
+  expect(dateControlBox!.x + dateControlBox!.width).toBeLessThanOrEqual(
+    diaryGridBox!.x + diaryGridBox!.width,
+  );
+  expect(dateBox!.x).toBeGreaterThanOrEqual(dateControlBox!.x);
+  expect(dateBox!.x + dateBox!.width).toBeLessThanOrEqual(
+    dateControlBox!.x + dateControlBox!.width,
+  );
 
   await page.getByRole('tab', { name: 'Питание' }).click();
   expect(
@@ -292,11 +301,19 @@ test('дата остаётся внутри анкеты клиента в ка
   await page.getByText('Прогресс и замеры', { exact: true }).click();
 
   const dateBox = await page.getByLabel('Дата').boundingBox();
+  const dateControlBox = await page.locator('.diary-date-control').boundingBox();
   const diaryGridBox = await page.locator('.diary-form-grid').boundingBox();
   expect(dateBox).not.toBeNull();
+  expect(dateControlBox).not.toBeNull();
   expect(diaryGridBox).not.toBeNull();
-  expect(dateBox!.x).toBeGreaterThanOrEqual(diaryGridBox!.x);
-  expect(dateBox!.x + dateBox!.width).toBeLessThanOrEqual(diaryGridBox!.x + diaryGridBox!.width);
+  expect(dateControlBox!.x).toBeGreaterThanOrEqual(diaryGridBox!.x);
+  expect(dateControlBox!.x + dateControlBox!.width).toBeLessThanOrEqual(
+    diaryGridBox!.x + diaryGridBox!.width,
+  );
+  expect(dateBox!.x).toBeGreaterThanOrEqual(dateControlBox!.x);
+  expect(dateBox!.x + dateBox!.width).toBeLessThanOrEqual(
+    dateControlBox!.x + dateControlBox!.width,
+  );
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
 });
 

@@ -796,6 +796,35 @@ body:has(#appBottomNav) {
   white-space: nowrap;
 }
 
+.diary-date-control {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-soft);
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
+}
+.diary-date-control:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+.diary-date-control input[type='date'] {
+  display: block;
+  inline-size: 100%;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 @media (max-width: 640px) {
   .exercise-catalog-row,
   .coach-client-row {
@@ -912,12 +941,5 @@ body:has(#appBottomNav) {
   .diary-form-grid input {
     min-width: 0;
     max-width: 100%;
-  }
-  .diary-form-grid input[type='date'] {
-    display: block;
-    inline-size: 100%;
-    min-inline-size: 0;
-    max-inline-size: 100%;
-    overflow: hidden;
   }
 }

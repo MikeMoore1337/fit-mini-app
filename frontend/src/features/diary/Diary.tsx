@@ -60,11 +60,13 @@ export function Diary({
         <div className="form-grid diary-form-grid">
           <label className="field">
             <span>Дата</span>
-            <input
-              type="date"
-              value={form.measured_on || ''}
-              onChange={(e) => setForm({ ...form, measured_on: e.target.value })}
-            />
+            <div className="diary-date-control">
+              <input
+                type="date"
+                value={form.measured_on || ''}
+                onChange={(e) => setForm({ ...form, measured_on: e.target.value })}
+              />
+            </div>
           </label>
           {numeric.map((key) => (
             <label className="field" key={key}>
