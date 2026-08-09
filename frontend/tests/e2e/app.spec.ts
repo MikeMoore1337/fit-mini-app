@@ -375,6 +375,62 @@ test('поля адаптируются к разным iPhone, а пример 
   await expect(page.getByRole('dialog').getByText('3 подх. × 10–12 · отдых 90 сек.')).toBeVisible();
 });
 
+test('сенсорное поле даты сохраняет нативный пикер и показывает иконку календаря', async ({
+  browser,
+}) => {
+  const context = await browser.newContext({
+    baseURL: 'http://127.0.0.1:4173',
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+  });
+  const page = await context.newPage();
+
+  try {
+    await mockApi(page);
+    await page.goto('/app');
+    await page.getByRole('button', { name: 'Клиент' }).click();
+    await page.getByRole('tab', { name: 'Прогресс' }).click();
+
+    const dateField = page.getByLabel('Дата');
+    const dateControl = page.locator('.diary-date-control');
+    await expect(dateField).toHaveAttribute('type', 'date');
+    const fallbackIcon = await dateControl.evaluate((element) => {
+      const style = getComputedStyle(element, '::after');
+      return {
+        content: style.content,
+        height: style.height,
+        mask: style.maskImage || style.getPropertyValue('-webkit-mask-image'),
+        pointerEvents: style.pointerEvents,
+        width: style.width,
+      };
+    });
+    expect(fallbackIcon).toMatchObject({
+      content: '""',
+      height: '18px',
+      pointerEvents: 'none',
+      width: '18px',
+    });
+    expect(fallbackIcon.mask).toContain('svg');
+
+    await dateControl.scrollIntoViewIfNeeded();
+    const dateControlBox = await dateControl.boundingBox();
+    expect(dateControlBox).not.toBeNull();
+    await dateField.evaluate((element) => {
+      element.addEventListener('click', () => element.setAttribute('data-picker-clicked', 'true'), {
+        once: true,
+      });
+    });
+    await page.mouse.click(
+      dateControlBox!.x + dateControlBox!.width - 14,
+      dateControlBox!.y + dateControlBox!.height / 2,
+    );
+    await expect(dateField).toHaveAttribute('data-picker-clicked', 'true');
+  } finally {
+    await context.close();
+  }
+});
+
 test('администратор открывает React-панель', async ({ page }) => {
   await mockApi(page);
   await page.goto('/admin');
