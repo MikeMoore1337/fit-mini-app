@@ -12,7 +12,6 @@ from fitminiapp_api.schemas.auth import (
     TelegramInitRequest,
     TokenPairResponse,
 )
-from fitminiapp_api.services.client_codes import ensure_client_code
 from fitminiapp_api.services.jwt import (
     AuthError,
     build_access_token,
@@ -144,7 +143,6 @@ def dev_login(
             )
         )
         db.add(NotificationSetting(user_id=user.id))
-        ensure_client_code(db, user)
     else:
         if not user.is_active:
             raise HTTPException(status_code=403, detail="Пользователь заблокирован")
@@ -159,7 +157,6 @@ def dev_login(
                 profile.full_name = payload.full_name
             else:
                 db.add(UserProfile(user_id=user.id, full_name=payload.full_name))
-        ensure_client_code(db, user)
 
     db.commit()
     db.refresh(user)

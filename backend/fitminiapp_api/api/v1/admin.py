@@ -4,25 +4,10 @@ from sqlalchemy.orm import Session
 
 from fitminiapp_api.api.dependencies.auth import require_admin
 from fitminiapp_api.db.session import get_db
-from fitminiapp_api.models.billing import Payment, Plan, Subscription
-from fitminiapp_api.models.exercise import Exercise
-from fitminiapp_api.models.notification import Notification, NotificationSetting
-from fitminiapp_api.models.program import (
-    HiddenProgramTemplate,
-    ProgramTemplate,
-    UserProgram,
-    UserWorkout,
-    UserWorkoutExercise,
-    UserWorkoutSet,
-)
-from fitminiapp_api.models.token import RefreshToken
-from fitminiapp_api.models.user import (
-    BodyMeasurement,
-    CoachClient,
-    CoachClientInvite,
-    User,
-    UserProfile,
-)
+from fitminiapp_api.models.billing import Payment, Plan
+from fitminiapp_api.models.notification import Notification
+from fitminiapp_api.models.program import ProgramTemplate
+from fitminiapp_api.models.user import User, UserProfile
 from fitminiapp_api.schemas.admin import (
     AdminNotificationRow,
     AdminPaymentRow,
@@ -31,6 +16,9 @@ from fitminiapp_api.schemas.admin import (
     AdminUserRow,
     AdminUserStatusUpdate,
 )
+from fitminiapp_api.services.accounts import delete_user_cascade
+from fitminiapp_api.services.audit import record_audit_event
+from fitminiapp_api.services.coach_clients import close_user_coaching_relationships
 from fitminiapp_api.services.programs import delete_template_cascade
 from fitminiapp_api.services.token_service import revoke_all_user_refresh_tokens
 
@@ -58,98 +46,6 @@ def _serialize_user_row(user: User, profile: UserProfile | None) -> dict:
         "goal": profile.goal if profile else None,
         "level": profile.level if profile else None,
     }
-
-
-def _delete_user_programs(db: Session, user_program_ids: list[int]) -> None:
-    if not user_program_ids:
-        return
-
-    workouts = db.query(UserWorkout).filter(UserWorkout.user_program_id.in_(user_program_ids)).all()
-    workout_ids = [item.id for item in workouts]
-
-    if workout_ids:
-        workout_exercises = (
-            db.query(UserWorkoutExercise)
-            .filter(UserWorkoutExercise.workout_id.in_(workout_ids))
-            .all()
-        )
-        workout_exercise_ids = [item.id for item in workout_exercises]
-
-        if workout_exercise_ids:
-            db.query(UserWorkoutSet).filter(
-                UserWorkoutSet.workout_exercise_id.in_(workout_exercise_ids)
-            ).delete(synchronize_session=False)
-            db.query(UserWorkoutExercise).filter(
-                UserWorkoutExercise.id.in_(workout_exercise_ids)
-            ).delete(synchronize_session=False)
-
-        db.query(UserWorkout).filter(UserWorkout.id.in_(workout_ids)).delete(
-            synchronize_session=False
-        )
-
-    db.query(UserProgram).filter(UserProgram.id.in_(user_program_ids)).delete(
-        synchronize_session=False
-    )
-
-
-def _delete_user_cascade(db: Session, user: User) -> None:
-    db.query(HiddenProgramTemplate).filter(HiddenProgramTemplate.user_id == user.id).delete(
-        synchronize_session=False
-    )
-    owned_templates = (
-        db.query(ProgramTemplate)
-        .filter(
-            or_(
-                ProgramTemplate.owner_user_id == user.id,
-                ProgramTemplate.created_by_user_id == user.id,
-            )
-        )
-        .all()
-    )
-    for template in owned_templates:
-        delete_template_cascade(db, template)
-        db.flush()
-
-    own_program_ids = [
-        item.id for item in db.query(UserProgram.id).filter(UserProgram.user_id == user.id).all()
-    ]
-    _delete_user_programs(db, own_program_ids)
-
-    db.query(UserProgram).filter(UserProgram.assigned_by_user_id == user.id).update(
-        {"assigned_by_user_id": None},
-        synchronize_session=False,
-    )
-    db.query(Exercise).filter(Exercise.created_by_user_id == user.id).update(
-        {"created_by_user_id": None, "is_deleted": True},
-        synchronize_session=False,
-    )
-
-    db.query(CoachClient).filter(
-        or_(CoachClient.coach_user_id == user.id, CoachClient.client_user_id == user.id)
-    ).delete(synchronize_session=False)
-
-    db.query(CoachClientInvite).filter(
-        or_(
-            CoachClientInvite.coach_user_id == user.id,
-            CoachClientInvite.client_user_id == user.id,
-            CoachClientInvite.telegram_user_id == user.telegram_user_id,
-            CoachClientInvite.username == user.username,
-        )
-    ).delete(synchronize_session=False)
-
-    db.query(Notification).filter(Notification.user_id == user.id).delete(synchronize_session=False)
-    db.query(NotificationSetting).filter(NotificationSetting.user_id == user.id).delete(
-        synchronize_session=False
-    )
-    db.query(Payment).filter(Payment.user_id == user.id).delete(synchronize_session=False)
-    db.query(Subscription).filter(Subscription.user_id == user.id).delete(synchronize_session=False)
-    db.query(BodyMeasurement).filter(BodyMeasurement.user_id == user.id).delete(
-        synchronize_session=False
-    )
-    db.query(RefreshToken).filter(RefreshToken.user_id == user.id).delete(synchronize_session=False)
-    db.query(UserProfile).filter(UserProfile.user_id == user.id).delete(synchronize_session=False)
-
-    db.delete(user)
 
 
 @router.get("/users", response_model=list[AdminUserRow])
@@ -206,11 +102,12 @@ def update_user_role(
         )
 
     if payload.role == "client":
-        db.query(CoachClient).filter(CoachClient.coach_user_id == user.id).delete(
-            synchronize_session=False
-        )
-        db.query(CoachClientInvite).filter(CoachClientInvite.coach_user_id == user.id).delete(
-            synchronize_session=False
+        close_user_coaching_relationships(
+            db,
+            user,
+            include_as_client=False,
+            reason="coach_role_removed",
+            actor_user_id=current_user.id,
         )
         user.is_coach = False
         user.is_admin = False
@@ -220,6 +117,16 @@ def update_user_role(
     else:
         user.is_coach = True
         user.is_admin = True
+
+    record_audit_event(
+        db,
+        action="admin.user_role_updated",
+        resource_type="user",
+        actor_user_id=current_user.id,
+        target_user_id=user.id,
+        resource_id=user.id,
+        details={"role": payload.role},
+    )
 
     db.commit()
     profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
@@ -246,12 +153,26 @@ def update_user_status(
     user.is_active = payload.is_active
     if not user.is_active:
         revoke_all_user_refresh_tokens(db, user.id, commit=False)
-        db.query(CoachClient).filter(CoachClient.coach_user_id == user.id).delete(
-            synchronize_session=False
+        close_user_coaching_relationships(
+            db,
+            user,
+            include_as_client=True,
+            reason="user_deactivated",
+            actor_user_id=current_user.id,
         )
-        db.query(CoachClientInvite).filter(CoachClientInvite.coach_user_id == user.id).delete(
-            synchronize_session=False
-        )
+
+    record_audit_event(
+        db,
+        action="admin.user_status_updated",
+        resource_type="user",
+        actor_user_id=current_user.id,
+        target_user_id=user.id,
+        resource_id=user.id,
+        details={
+            "status": "active" if user.is_active else "inactive",
+            "reason": "admin_update",
+        },
+    )
 
     db.commit()
     profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
@@ -274,7 +195,7 @@ def delete_user(
             detail="Нельзя удалить текущего администратора",
         )
 
-    _delete_user_cascade(db, user)
+    delete_user_cascade(db, user)
     db.commit()
 
 

@@ -123,6 +123,40 @@ export interface paths {
         patch: operations["patch_profile_api_v1_me_profile_patch"];
         trace?: never;
     };
+    "/api/v1/me/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Account Data */
+        get: operations["export_account_data_api_v1_me_export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Own Account */
+        delete: operations["delete_own_account_api_v1_me_account_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/trainer": {
         parameters: {
             query?: never;
@@ -140,24 +174,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/me/coach-invites": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Coach Invites */
-        get: operations["coach_invites_api_v1_me_coach_invites_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/me/coach-invites/link/{token}/claim": {
+    "/api/v1/me/coach-invites/link/preview": {
         parameters: {
             query?: never;
             header?: never;
@@ -166,15 +183,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Claim Invite Link */
-        post: operations["claim_invite_link_api_v1_me_coach_invites_link__token__claim_post"];
+        /** Preview Invite Link */
+        post: operations["preview_invite_link_api_v1_me_coach_invites_link_preview_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/me/client-code/rotate": {
+    "/api/v1/me/coach-invites/link/confirm": {
         parameters: {
             query?: never;
             header?: never;
@@ -183,59 +200,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Rotate My Client Code */
-        post: operations["rotate_my_client_code_api_v1_me_client_code_rotate_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/me/client-code/qr": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Client Code Qr */
-        get: operations["client_code_qr_api_v1_me_client_code_qr_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/me/coach-invites/{invite_id}/accept": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Accept Coach Invite */
-        post: operations["accept_coach_invite_api_v1_me_coach_invites__invite_id__accept_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/me/coach-invites/{invite_id}/decline": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Decline Coach Invite */
-        post: operations["decline_coach_invite_api_v1_me_coach_invites__invite_id__decline_post"];
+        /** Confirm Invite Link */
+        post: operations["confirm_invite_link_api_v1_me_coach_invites_link_confirm_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -409,8 +375,7 @@ export interface paths {
         /** Clients */
         get: operations["clients_api_v1_programs_clients_get"];
         put?: never;
-        /** Add Client */
-        post: operations["add_client_api_v1_programs_clients_post"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -427,8 +392,7 @@ export interface paths {
         /** Coach Clients */
         get: operations["coach_clients_api_v1_coach_clients_get"];
         put?: never;
-        /** Add Coach Client */
-        post: operations["add_coach_client_api_v1_coach_clients_post"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -452,6 +416,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/coach/clients/{client_id}/analytics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Coach Client Analytics */
+        get: operations["coach_client_analytics_api_v1_coach_clients__client_id__analytics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/coach/clients/{client_id}/workouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Coach Client Workout Timeline */
+        get: operations["coach_client_workout_timeline_api_v1_coach_clients__client_id__workouts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/coach/clients/{client_id}/programs/{program_id}/exercises": {
         parameters: {
             query?: never;
@@ -463,7 +461,7 @@ export interface paths {
         put?: never;
         /**
          * Add Exercise To Client Program
-         * @description Add or update an exercise in every planned workout of a coach-owned assignment.
+         * @description Add or update an exercise in future occurrences of one selected program day.
          */
         post: operations["add_exercise_to_client_program_api_v1_coach_clients__client_id__programs__program_id__exercises_post"];
         delete?: never;
@@ -483,23 +481,6 @@ export interface paths {
         put?: never;
         /** Create Invite Link */
         post: operations["create_invite_link_api_v1_coach_invite_links_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/coach/client-search": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Search Registered Client */
-        get: operations["search_registered_client_api_v1_coach_client_search_get"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -592,23 +573,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/coach/client-invites/{username}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Remove Coach Client Invite */
-        delete: operations["remove_coach_client_invite_api_v1_coach_client_invites__username__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/coach/client-invites/id/{invite_id}": {
         parameters: {
             query?: never;
@@ -653,6 +617,40 @@ export interface paths {
         };
         /** Get Week Schedule */
         get: operations["get_week_schedule_api_v1_workouts_week_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Schedule */
+        get: operations["get_schedule_api_v1_workouts_schedule_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Workout Progress */
+        get: operations["workout_progress_api_v1_workouts_progress_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -712,6 +710,40 @@ export interface paths {
         patch: operations["update_workout_set_api_v1_workouts_sets__set_id__patch"];
         trace?: never;
     };
+    "/api/v1/workouts/{workout_id}/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Reschedule Workout */
+        patch: operations["reschedule_workout_api_v1_workouts__workout_id__schedule_patch"];
+        trace?: never;
+    };
+    "/api/v1/workouts/{workout_id}/skip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Skip Workout */
+        post: operations["skip_workout_api_v1_workouts__workout_id__skip_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workouts/history": {
         parameters: {
             query?: never;
@@ -725,6 +757,23 @@ export interface paths {
         post?: never;
         /** Clear Workout History */
         delete: operations["clear_workout_history_api_v1_workouts_history_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/history/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Workout History Summary */
+        get: operations["workout_history_summary_api_v1_workouts_history_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1163,6 +1212,14 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AccountDeleteRequest */
+        AccountDeleteRequest: {
+            /**
+             * Confirmation
+             * @constant
+             */
+            confirmation: "DELETE";
+        };
         /** AdminNotificationRow */
         AdminNotificationRow: {
             /** Id */
@@ -1261,11 +1318,35 @@ export interface components {
         AssignTemplateSelfRequest: {
             /** Start Date */
             start_date?: string | null;
+            /**
+             * Duration Weeks
+             * @default 1
+             */
+            duration_weeks: number;
+            /** Schedule Weekdays */
+            schedule_weekdays?: number[] | null;
+            /**
+             * Replace Active
+             * @default false
+             */
+            replace_active: boolean;
         };
         /** AssignTemplateToClientRequest */
         AssignTemplateToClientRequest: {
             /** Start Date */
             start_date?: string | null;
+            /**
+             * Duration Weeks
+             * @default 1
+             */
+            duration_weeks: number;
+            /** Schedule Weekdays */
+            schedule_weekdays?: number[] | null;
+            /**
+             * Replace Active
+             * @default false
+             */
+            replace_active: boolean;
         };
         /** BodyMeasurementResponse */
         BodyMeasurementResponse: {
@@ -1404,6 +1485,22 @@ export interface components {
             assigned_at: string;
             /** Is Active */
             is_active: boolean;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "scheduled" | "active" | "completed" | "archived";
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /** Duration Weeks */
+            duration_weeks: number;
+            /** Schedule Weekdays */
+            schedule_weekdays: number[];
+            /** Completed At */
+            completed_at?: string | null;
             /** Workouts Total */
             workouts_total: number;
             /** Workouts Completed */
@@ -1413,18 +1510,50 @@ export interface components {
             /** Next Workout Date */
             next_workout_date?: string | null;
         };
-        /** CoachClientCreate */
-        CoachClientCreate: {
-            /** Telegram User Id */
-            telegram_user_id?: number | null;
-            /** Username */
-            username?: string | null;
-            /** Client Code */
-            client_code?: string | null;
-            /** Source */
-            source?: ("client_code" | "username_search" | "telegram_user_picker") | null;
-            /** Full Name */
-            full_name?: string | null;
+        /** CoachInviteLinkResponse */
+        CoachInviteLinkResponse: {
+            /** Invite Id */
+            invite_id: number;
+            /** Code */
+            code: string;
+            /** Start Param */
+            start_param: string;
+            /** Url */
+            url?: string | null;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+        };
+        /** CoachInvitePreviewResponse */
+        CoachInvitePreviewResponse: {
+            /** Invite Id */
+            invite_id: number;
+            coach: components["schemas"]["TrainerResponse"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Expires At */
+            expires_at?: string | null;
+            /**
+             * Requires Trainer Change
+             * @default false
+             */
+            requires_trainer_change: boolean;
+            /**
+             * Already Current Trainer
+             * @default false
+             */
+            already_current_trainer: boolean;
+            current_trainer?: components["schemas"]["TrainerResponse"] | null;
+        };
+        /** CoachInviteTokenRequest */
+        CoachInviteTokenRequest: {
+            /** Token */
+            token: string;
         };
         /** CoachProgramExerciseAssignmentResponse */
         CoachProgramExerciseAssignmentResponse: {
@@ -1435,6 +1564,8 @@ export interface components {
         CoachProgramExerciseCreate: {
             /** Exercise Id */
             exercise_id: number;
+            /** Day Number */
+            day_number?: number | null;
             /** Prescribed Sets */
             prescribed_sets: number;
             /** Prescribed Reps */
@@ -1444,6 +1575,8 @@ export interface components {
              * @default 90
              */
             rest_seconds: number;
+            /** Notes */
+            notes?: string | null;
         };
         /** DevLoginRequest */
         DevLoginRequest: {
@@ -1557,6 +1690,22 @@ export interface components {
             role: string;
             /** Function */
             function: string;
+        };
+        /** ExerciseProgressItem */
+        ExerciseProgressItem: {
+            /** Exercise Id */
+            exercise_id: number;
+            /** Exercise Title */
+            exercise_title: string;
+            /** Max Weight Kg */
+            max_weight_kg?: number | null;
+            /** Best Set Volume Kg */
+            best_set_volume_kg: number;
+            /**
+             * Last Performed On
+             * Format: date
+             */
+            last_performed_on: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -1749,6 +1898,18 @@ export interface components {
             user_program_id: number;
             /** Workouts Created */
             workouts_created: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "scheduled" | "active" | "completed" | "archived";
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /** Duration Weeks */
+            duration_weeks: number;
         };
         /** ProgramTargetUserResponse */
         ProgramTargetUserResponse: {
@@ -1790,6 +1951,20 @@ export interface components {
              * @default true
              */
             assign_after_create: boolean;
+            /** Start Date */
+            start_date?: string | null;
+            /**
+             * Duration Weeks
+             * @default 1
+             */
+            duration_weeks: number;
+            /** Schedule Weekdays */
+            schedule_weekdays?: number[] | null;
+            /**
+             * Replace Active
+             * @default false
+             */
+            replace_active: boolean;
         };
         /** ProgramTemplateCreateResponse */
         ProgramTemplateCreateResponse: {
@@ -1900,6 +2075,28 @@ export interface components {
             assigned_by_full_name?: string | null;
             /** Days */
             days: components["schemas"]["ProgramTemplateDayResponse"][];
+        };
+        /** ProgressVolumePoint */
+        ProgressVolumePoint: {
+            /**
+             * Week Start
+             * Format: date
+             */
+            week_start: string;
+            /** Completed Workouts */
+            completed_workouts: number;
+            /** Volume Kg */
+            volume_kg: number;
+        };
+        /** ProgressWeightPoint */
+        ProgressWeightPoint: {
+            /**
+             * Measured On
+             * Format: date
+             */
+            measured_on: string;
+            /** Weight Kg */
+            weight_kg: number;
         };
         /** RefreshRequest */
         RefreshRequest: {
@@ -2012,8 +2209,6 @@ export interface components {
             last_name?: string | null;
             /** Photo Url */
             photo_url?: string | null;
-            /** Client Code */
-            client_code?: string | null;
             /**
              * Is Coach
              * @default false
@@ -2066,6 +2261,8 @@ export interface components {
             prescribed_reps: string;
             /** Rest Seconds */
             rest_seconds: number;
+            /** Notes */
+            notes?: string | null;
             /**
              * Has Guide
              * @default false
@@ -2073,6 +2270,14 @@ export interface components {
             has_guide: boolean;
             /** Sets */
             sets: components["schemas"]["LoggedSetItem"][];
+        };
+        /** WorkoutFinishRequest */
+        WorkoutFinishRequest: {
+            /**
+             * Confirm Incomplete
+             * @default false
+             */
+            confirm_incomplete: boolean;
         };
         /** WorkoutHistoryItem */
         WorkoutHistoryItem: {
@@ -2096,6 +2301,46 @@ export interface components {
             /** Volume Kg */
             volume_kg: number;
         };
+        /** WorkoutHistorySummary */
+        WorkoutHistorySummary: {
+            /** Workouts Completed */
+            workouts_completed: number;
+            /** Completed Sets */
+            completed_sets: number;
+            /** Volume Kg */
+            volume_kg: number;
+        };
+        /** WorkoutProgressResponse */
+        WorkoutProgressResponse: {
+            /** Workouts Total */
+            workouts_total: number;
+            /** Workouts Completed */
+            workouts_completed: number;
+            /** Workouts Skipped */
+            workouts_skipped: number;
+            /** Workouts Missed */
+            workouts_missed: number;
+            /** Adherence Percent */
+            adherence_percent: number;
+            /** Current Streak */
+            current_streak: number;
+            /** Weight Change Kg */
+            weight_change_kg?: number | null;
+            /** Weights */
+            weights: components["schemas"]["ProgressWeightPoint"][];
+            /** Weekly Volume */
+            weekly_volume: components["schemas"]["ProgressVolumePoint"][];
+            /** Personal Records */
+            personal_records: components["schemas"]["ExerciseProgressItem"][];
+        };
+        /** WorkoutRescheduleRequest */
+        WorkoutRescheduleRequest: {
+            /**
+             * Scheduled Date
+             * Format: date
+             */
+            scheduled_date: string;
+        };
         /** WorkoutScheduleItem */
         WorkoutScheduleItem: {
             /** Id */
@@ -2111,6 +2356,11 @@ export interface components {
             status: string;
             /** Day Number */
             day_number: number;
+            /**
+             * Week Number
+             * @default 1
+             */
+            week_number: number;
         };
         /** WorkoutSetUpdate */
         WorkoutSetUpdate: {
@@ -2125,6 +2375,50 @@ export interface components {
         WorkoutStatusResponse: {
             /** Id */
             id: number;
+            /** Set Number */
+            set_number: number;
+            /** Actual Reps */
+            actual_reps?: number | null;
+            /** Actual Weight */
+            actual_weight?: number | null;
+            /** Is Completed */
+            is_completed: boolean;
+        };
+        /** WorkoutTimelineExercise */
+        WorkoutTimelineExercise: {
+            /** Exercise Id */
+            exercise_id: number;
+            /** Exercise Title */
+            exercise_title: string;
+            /** Notes */
+            notes?: string | null;
+            /** Sets */
+            sets: components["schemas"]["WorkoutTimelineSet"][];
+        };
+        /** WorkoutTimelineItem */
+        WorkoutTimelineItem: {
+            /** Id */
+            id: number;
+            /**
+             * Scheduled Date
+             * Format: date
+             */
+            scheduled_date: string;
+            /** Title */
+            title: string;
+            /** Status */
+            status: string;
+            /** Completed At */
+            completed_at?: string | null;
+            /** Completed Sets */
+            completed_sets: number;
+            /** Volume Kg */
+            volume_kg: number;
+            /** Exercises */
+            exercises: components["schemas"]["WorkoutTimelineExercise"][];
+        };
+        /** WorkoutTimelineSet */
+        WorkoutTimelineSet: {
             /** Set Number */
             set_number: number;
             /** Actual Reps */
@@ -2149,6 +2443,11 @@ export interface components {
             status: string;
             /** Day Number */
             day_number: number;
+            /**
+             * Week Number
+             * @default 1
+             */
+            week_number: number;
             /** Started At */
             started_at?: string | null;
             /** Completed At */
@@ -2372,102 +2671,7 @@ export interface operations {
             };
         };
     };
-    detach_trainer_api_v1_me_trainer_delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    coach_invites_api_v1_me_coach_invites_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[];
-                };
-            };
-        };
-    };
-    claim_invite_link_api_v1_me_coach_invites_link__token__claim_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                token: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    rotate_my_client_code_api_v1_me_client_code_rotate_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
-                };
-            };
-        };
-    };
-    client_code_qr_api_v1_me_client_code_qr_get: {
+    export_account_data_api_v1_me_export_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -2487,16 +2691,18 @@ export interface operations {
             };
         };
     };
-    accept_coach_invite_api_v1_me_coach_invites__invite_id__accept_post: {
+    delete_own_account_api_v1_me_account_delete: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                invite_id: number;
-            };
+            path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountDeleteRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             204: {
@@ -2516,16 +2722,69 @@ export interface operations {
             };
         };
     };
-    decline_coach_invite_api_v1_me_coach_invites__invite_id__decline_post: {
+    detach_trainer_api_v1_me_trainer_delete: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                invite_id: number;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    preview_invite_link_api_v1_me_coach_invites_link_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoachInviteTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachInvitePreviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_invite_link_api_v1_me_coach_invites_link_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoachInviteTokenRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             204: {
@@ -2947,39 +3206,6 @@ export interface operations {
             };
         };
     };
-    add_client_api_v1_programs_clients_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CoachClientCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ClientResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     coach_clients_api_v1_coach_clients_get: {
         parameters: {
             query?: never;
@@ -3000,39 +3226,6 @@ export interface operations {
             };
         };
     };
-    add_coach_client_api_v1_coach_clients_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CoachClientCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ClientResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     coach_assigned_programs_api_v1_coach_assigned_programs_get: {
         parameters: {
             query?: never;
@@ -3049,6 +3242,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CoachAssignedProgramResponse"][];
+                };
+            };
+        };
+    };
+    coach_client_analytics_api_v1_coach_clients__client_id__analytics_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkoutProgressResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    coach_client_workout_timeline_api_v1_coach_clients__client_id__workouts_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                client_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkoutTimelineItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -3104,42 +3361,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-        };
-    };
-    search_registered_client_api_v1_coach_client_search_get: {
-        parameters: {
-            query: {
-                username: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["CoachInviteLinkResponse"];
                 };
             };
         };
@@ -3342,35 +3564,6 @@ export interface operations {
             };
         };
     };
-    remove_coach_client_invite_api_v1_coach_client_invites__username__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                username: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     remove_coach_client_invite_by_id_api_v1_coach_client_invites_id__invite_id__delete: {
         parameters: {
             query?: never;
@@ -3458,6 +3651,58 @@ export interface operations {
             };
         };
     };
+    get_schedule_api_v1_workouts_schedule_get: {
+        parameters: {
+            query?: {
+                date_from?: string | null;
+                date_to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkoutScheduleItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    workout_progress_api_v1_workouts_progress_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkoutProgressResponse"];
+                };
+            };
+        };
+    };
     start_workout_api_v1_workouts__workout_id__start_post: {
         parameters: {
             query?: never;
@@ -3498,7 +3743,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["WorkoutFinishRequest"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -3542,6 +3791,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkoutStatusResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reschedule_workout_api_v1_workouts__workout_id__schedule_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workout_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkoutRescheduleRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkoutScheduleItem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    skip_workout_api_v1_workouts__workout_id__skip_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workout_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkoutScheduleItem"];
                 };
             };
             /** @description Validation Error */
@@ -3602,6 +3917,26 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    workout_history_summary_api_v1_workouts_history_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkoutHistorySummary"];
+                };
             };
         };
     };

@@ -9,30 +9,35 @@ from fitminiapp_api.models.program import (
     UserWorkoutExercise,
     UserWorkoutSet,
 )
-from fitminiapp_api.models.user import BodyMeasurement, CoachClient, CoachClientInvite, User
+from fitminiapp_api.models.user import BodyMeasurement, CoachClient, User
+from fitminiapp_api.schemas.invite import CoachInviteLinkResponse
 from fitminiapp_api.schemas.program import (
     AssignTemplateToClientRequest,
     ClientResponse,
     CoachAssignedProgramResponse,
-    CoachClientCreate,
     CoachProgramExerciseAssignmentResponse,
     CoachProgramExerciseCreate,
     ProgramAssignmentResponse,
 )
 from fitminiapp_api.schemas.user import UserProfileUpdate
-from fitminiapp_api.schemas.workout import BodyMeasurementResponse, BodyMeasurementSave
+from fitminiapp_api.schemas.workout import (
+    BodyMeasurementResponse,
+    BodyMeasurementSave,
+    WorkoutProgressResponse,
+    WorkoutTimelineItem,
+)
+from fitminiapp_api.services.analytics import build_user_progress, build_workout_timeline
+from fitminiapp_api.services.audit import record_audit_event
 from fitminiapp_api.services.coach_clients import (
-    add_client_for_coach,
-    cancel_client_request_notification,
     create_coach_invite_link,
     get_client_managed_by_coach,
     remove_client_for_coach,
-    remove_pending_client_invite,
+    revoke_coach_invite,
 )
 from fitminiapp_api.services.exercise_catalog import _effective_exercise_id, list_exercises
-from fitminiapp_api.services.nutrition import recalculate_nutrition_target
+from fitminiapp_api.services.nutrition import NutritionError, recalculate_nutrition_target
 from fitminiapp_api.services.profile import update_profile
-from fitminiapp_api.services.program_common import ProgramError
+from fitminiapp_api.services.program_common import ProgramError, assignment_error_status
 from fitminiapp_api.services.programs import (
     assign_template_to_user,
     get_template_for_user,
@@ -88,6 +93,33 @@ def coach_assigned_programs(
     return list_coach_assigned_programs(db, current_user)
 
 
+@router.get(
+    "/clients/{client_id}/analytics",
+    response_model=WorkoutProgressResponse,
+)
+def coach_client_analytics(
+    client_id: int,
+    current_user: User = Depends(require_coach_or_admin),
+    db: Session = Depends(get_db),
+):
+    client = _managed_client(db, current_user, client_id)
+    return build_user_progress(db, client)
+
+
+@router.get(
+    "/clients/{client_id}/workouts",
+    response_model=list[WorkoutTimelineItem],
+)
+def coach_client_workout_timeline(
+    client_id: int,
+    limit: int = Query(default=30, ge=1, le=100),
+    current_user: User = Depends(require_coach_or_admin),
+    db: Session = Depends(get_db),
+):
+    client = _managed_client(db, current_user, client_id)
+    return build_workout_timeline(db, client, limit=limit)
+
+
 @router.post(
     "/clients/{client_id}/programs/{program_id}/exercises",
     response_model=CoachProgramExerciseAssignmentResponse,
@@ -99,7 +131,7 @@ def add_exercise_to_client_program(
     current_user: User = Depends(require_coach_or_admin),
     db: Session = Depends(get_db),
 ):
-    """Add or update an exercise in every planned workout of a coach-owned assignment."""
+    """Add or update an exercise in future occurrences of one selected program day."""
     managed_client = _managed_client(db, current_user, client_id)
     program = (
         db.query(UserProgram)
@@ -107,6 +139,7 @@ def add_exercise_to_client_program(
             UserProgram.id == program_id,
             UserProgram.user_id == managed_client.id,
             UserProgram.assigned_by_user_id == current_user.id,
+            UserProgram.is_active.is_(True),
         )
         .first()
     )
@@ -119,11 +152,34 @@ def add_exercise_to_client_program(
     if payload.exercise_id not in visible_exercise_ids:
         raise HTTPException(status_code=404, detail="Упражнение недоступно клиенту")
 
-    planned_workouts = [workout for workout in program.workouts if workout.status == "planned"]
+    available_days = sorted(
+        {
+            workout.day_number
+            for workout in program.workouts
+            if workout.status == "planned"
+            and workout.scheduled_date >= today_for_user(managed_client)
+        }
+    )
+    selected_day = payload.day_number
+    if selected_day is None:
+        if len(available_days) != 1:
+            raise HTTPException(
+                status_code=422,
+                detail="Выберите день программы для добавления упражнения",
+            )
+        selected_day = available_days[0]
+
+    planned_workouts = [
+        workout
+        for workout in program.workouts
+        if workout.status == "planned"
+        and workout.day_number == selected_day
+        and workout.scheduled_date >= today_for_user(managed_client)
+    ]
     if not planned_workouts:
         raise HTTPException(
             status_code=409,
-            detail="В программе нет предстоящих тренировок",
+            detail="Для выбранного дня нет предстоящих тренировок",
         )
 
     for workout in planned_workouts:
@@ -139,6 +195,7 @@ def add_exercise_to_client_program(
                 prescribed_sets=payload.prescribed_sets,
                 prescribed_reps=payload.prescribed_reps,
                 rest_seconds=payload.rest_seconds,
+                notes=payload.notes,
             )
             db.add(workout_exercise)
             db.flush()
@@ -146,6 +203,7 @@ def add_exercise_to_client_program(
             workout_exercise.prescribed_sets = payload.prescribed_sets
             workout_exercise.prescribed_reps = payload.prescribed_reps
             workout_exercise.rest_seconds = payload.rest_seconds
+            workout_exercise.notes = payload.notes
             db.query(UserWorkoutSet).filter(
                 UserWorkoutSet.workout_exercise_id == workout_exercise.id
             ).delete(synchronize_session=False)
@@ -161,60 +219,33 @@ def add_exercise_to_client_program(
                 )
             )
 
+    record_audit_event(
+        db,
+        actor_user_id=current_user.id,
+        target_user_id=managed_client.id,
+        action="coach.program_exercise_upserted",
+        resource_type="user_program",
+        resource_id=program.id,
+        details={
+            "day_number": selected_day,
+            "exercise_id": payload.exercise_id,
+            "workouts_updated": len(planned_workouts),
+        },
+    )
     db.commit()
     return {"workouts_updated": len(planned_workouts)}
 
 
 @router.post(
-    "/clients",
-    response_model=ClientResponse,
+    "/invite-links",
+    response_model=CoachInviteLinkResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def add_coach_client(
-    payload: CoachClientCreate,
-    current_user: User = Depends(require_coach_or_admin),
-    db: Session = Depends(get_db),
-):
-    try:
-        return add_client_for_coach(
-            db=db,
-            coach=current_user,
-            telegram_user_id=payload.telegram_user_id,
-            username=payload.username,
-            client_code=payload.client_code,
-            source=payload.source,
-            full_name=payload.full_name,
-            allow_unregistered_username=False,
-        )
-    except ProgramError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-
-
-@router.post("/invite-links", status_code=status.HTTP_201_CREATED)
 def create_invite_link(
     current_user: User = Depends(require_coach_or_admin),
     db: Session = Depends(get_db),
 ) -> dict:
     return create_coach_invite_link(db, current_user)
-
-
-@router.get("/client-search")
-def search_registered_client(
-    username: str = Query(min_length=1, max_length=64),
-    current_user: User = Depends(require_coach_or_admin),
-    db: Session = Depends(get_db),
-) -> dict:
-    from fitminiapp_api.services.telegram_auth import normalize_telegram_username
-
-    normalized = normalize_telegram_username(username)
-    client = db.query(User).filter(User.username == normalized, User.is_active.is_(True)).first()
-    if not client or client.id == current_user.id:
-        raise HTTPException(status_code=404, detail="Пользователь не найден в приложении")
-    return {
-        "username": client.username,
-        "full_name": client.profile.full_name if client.profile else None,
-        "photo_url": client.photo_url,
-    }
 
 
 @router.patch("/clients/{client_id}/profile", response_model=ClientResponse)
@@ -226,6 +257,7 @@ def update_coach_client_profile(
 ):
     client = _managed_client(db, current_user, client_id)
     profile_changes = payload.model_dump(exclude_unset=True)
+    changed_fields = sorted(profile_changes)
     if "full_name" in profile_changes:
         relation = (
             db.query(CoachClient)
@@ -245,9 +277,18 @@ def update_coach_client_profile(
             client,
             UserProfileUpdate.model_validate(profile_changes),
             changed_by=current_user,
+            commit=False,
         )
-    else:
-        db.commit()
+    record_audit_event(
+        db,
+        actor_user_id=current_user.id,
+        target_user_id=client.id,
+        action="coach.client_profile_updated",
+        resource_type="user_profile",
+        resource_id=client.profile.id if client.profile else None,
+        details={"fields": changed_fields},
+    )
+    db.commit()
     return _client_list_entry(db, current_user, client_id)
 
 
@@ -321,13 +362,26 @@ def save_coach_client_measurement(
         row.note = changes["note"]
 
     if changes.get("weight_kg") is not None:
-        recalculate_nutrition_target(
-            db,
-            client,
-            {"weight_kg": changes["weight_kg"]},
-            current_user,
-        )
+        try:
+            recalculate_nutrition_target(
+                db,
+                client,
+                {"weight_kg": changes["weight_kg"]},
+                current_user,
+            )
+        except NutritionError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    db.flush()
+    record_audit_event(
+        db,
+        actor_user_id=current_user.id,
+        target_user_id=client.id,
+        action="coach.measurement_saved",
+        resource_type="body_measurement",
+        resource_id=row.id,
+        details={"measured_on": measured_on.isoformat(), "fields": sorted(changes)},
+    )
     db.commit()
     db.refresh(row)
     return _serialize_measurement(row)
@@ -354,6 +408,15 @@ def delete_coach_client_measurement(
     )
     if not row:
         raise HTTPException(status_code=404, detail="Запись дневника не найдена")
+    record_audit_event(
+        db,
+        actor_user_id=current_user.id,
+        target_user_id=client.id,
+        action="coach.measurement_deleted",
+        resource_type="body_measurement",
+        resource_id=row.id,
+        details={"measured_on": row.measured_on.isoformat()},
+    )
     db.delete(row)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -387,14 +450,39 @@ def assign_template_to_coach_client(
             client,
             current_user,
             start_date=payload.start_date if payload else None,
+            duration_weeks=payload.duration_weeks if payload else 1,
+            schedule_weekdays=payload.schedule_weekdays if payload else None,
+            replace_active=payload.replace_active if payload else False,
+        )
+        record_audit_event(
+            db,
+            actor_user_id=current_user.id,
+            target_user_id=client.id,
+            action="coach.program_assigned",
+            resource_type="user_program",
+            resource_id=program.id,
+            details={
+                "template_id": template.id,
+                "workouts_created": created,
+                "duration_weeks": program.duration_weeks,
+            },
         )
         db.commit()
     except ProgramError as exc:
         detail = str(exc)
         if detail == "Template not found":
             raise HTTPException(status_code=404, detail=detail) from exc
+        error_status = assignment_error_status(detail)
+        if error_status != 400:
+            raise HTTPException(status_code=error_status, detail=detail) from exc
         raise HTTPException(status_code=403, detail=detail) from exc
-    return {"user_program_id": program.id, "workouts_created": created}
+    return {
+        "user_program_id": program.id,
+        "workouts_created": created,
+        "status": program.status,
+        "start_date": program.start_date,
+        "duration_weeks": program.duration_weeks,
+    }
 
 
 @router.delete("/clients/{client_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -412,37 +500,13 @@ def remove_coach_client(
         raise HTTPException(status_code=400, detail=detail)
 
 
-@router.delete("/client-invites/{username}", status_code=status.HTTP_204_NO_CONTENT)
-def remove_coach_client_invite(
-    username: str,
-    current_user: User = Depends(require_coach_or_admin),
-    db: Session = Depends(get_db),
-):
-    try:
-        remove_pending_client_invite(db, current_user, username)
-    except ProgramError as exc:
-        detail = str(exc)
-        if detail == "Client invite not found":
-            raise HTTPException(status_code=404, detail=detail)
-        raise HTTPException(status_code=400, detail=detail)
-
-
 @router.delete("/client-invites/id/{invite_id}", status_code=status.HTTP_204_NO_CONTENT)
 def remove_coach_client_invite_by_id(
     invite_id: int,
     current_user: User = Depends(require_coach_or_admin),
     db: Session = Depends(get_db),
 ):
-    invite = (
-        db.query(CoachClientInvite)
-        .filter(
-            CoachClientInvite.id == invite_id,
-            CoachClientInvite.coach_user_id == current_user.id,
-        )
-        .first()
-    )
-    if not invite:
-        raise HTTPException(status_code=404, detail="Client invite not found")
-    invite.status = "revoked"
-    cancel_client_request_notification(db, invite.id)
-    db.commit()
+    try:
+        revoke_coach_invite(db, current_user, invite_id)
+    except ProgramError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc

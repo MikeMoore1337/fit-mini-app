@@ -3,7 +3,9 @@ from __future__ import annotations
 from datetime import date, datetime
 
 from sqlalchemy import (
+    JSON,
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     Float,
@@ -115,6 +117,11 @@ class UserProgram(Base):
             postgresql_where=text("is_active"),
             sqlite_where=text("is_active = 1"),
         ),
+        CheckConstraint(
+            "status IN ('scheduled', 'active', 'completed', 'archived')",
+            name="ck_user_programs_status",
+        ),
+        CheckConstraint("duration_weeks >= 1", name="ck_user_programs_duration_weeks"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -131,7 +138,21 @@ class UserProgram(Base):
         default=now_msk_naive,
         server_default=func.now(),
     )
+    start_date: Mapped[date] = mapped_column(
+        Date, nullable=False, default=date.today, server_default=func.current_date()
+    )
+    duration_weeks: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1, server_default="1"
+    )
+    schedule_weekdays: Mapped[list[int]] = mapped_column(
+        JSON, nullable=False, default=list, server_default="[]"
+    )
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="active", server_default="active"
+    )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     template: Mapped[ProgramTemplate | None] = relationship("ProgramTemplate")
     workouts: Mapped[list[UserWorkout]] = relationship(
@@ -154,6 +175,9 @@ class UserWorkout(Base):
     user_program_id: Mapped[int] = mapped_column(ForeignKey("user_programs.id"), index=True)
     scheduled_date: Mapped[date] = mapped_column(Date, index=True)
     day_number: Mapped[int] = mapped_column(Integer)
+    week_number: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1, server_default="1"
+    )
     title: Mapped[str] = mapped_column(String(128))
     status: Mapped[str] = mapped_column(String(32), default="planned")
     started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -178,6 +202,7 @@ class UserWorkoutExercise(Base):
     prescribed_sets: Mapped[int] = mapped_column(Integer)
     prescribed_reps: Mapped[str] = mapped_column(String(32))
     rest_seconds: Mapped[int] = mapped_column(Integer, default=90)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     workout: Mapped[UserWorkout] = relationship("UserWorkout", back_populates="exercises")
     exercise: Mapped[Exercise] = relationship("Exercise")

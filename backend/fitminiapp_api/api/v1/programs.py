@@ -8,7 +8,6 @@ from fitminiapp_api.models.user import User
 from fitminiapp_api.schemas.program import (
     AssignTemplateSelfRequest,
     ClientResponse,
-    CoachClientCreate,
     ExerciseCatalogCreate,
     ExerciseCatalogItem,
     ExerciseGuide,
@@ -17,7 +16,6 @@ from fitminiapp_api.schemas.program import (
     ProgramTemplateCreateResponse,
     ProgramTemplateResponse,
 )
-from fitminiapp_api.services.coach_clients import add_client_for_coach
 from fitminiapp_api.services.exercise_catalog import (
     _effective_exercise_id,
     create_exercise,
@@ -26,7 +24,7 @@ from fitminiapp_api.services.exercise_catalog import (
     update_exercise_for_user,
 )
 from fitminiapp_api.services.exercise_guides import get_exercise_guide
-from fitminiapp_api.services.program_common import ProgramError
+from fitminiapp_api.services.program_common import ProgramError, assignment_error_status
 from fitminiapp_api.services.programs import (
     assign_template_to_self,
     build_template_response,
@@ -124,7 +122,7 @@ def add_exercise(
         detail = str(exc)
         if detail == "No permission to manage this user":
             raise HTTPException(status_code=403, detail=detail)
-        raise HTTPException(status_code=400, detail=detail)
+        raise HTTPException(status_code=assignment_error_status(detail), detail=detail)
 
     return _serialize_exercise(exercise, current_user)
 
@@ -297,16 +295,25 @@ def assign_template_me(
             current_user=current_user,
             template_id=template_id,
             start_date=payload.start_date if payload else None,
+            duration_weeks=payload.duration_weeks if payload else 1,
+            schedule_weekdays=payload.schedule_weekdays if payload else None,
+            replace_active=payload.replace_active if payload else False,
         )
     except ProgramError as exc:
         detail = str(exc)
         if detail == "Template not found":
             raise HTTPException(status_code=404, detail=detail)
-        raise HTTPException(status_code=403, detail=detail)
+        error_status = assignment_error_status(detail)
+        if error_status != 400:
+            raise HTTPException(status_code=error_status, detail=detail) from exc
+        raise HTTPException(status_code=403, detail=detail) from exc
 
     return {
         "user_program_id": program.id,
         "workouts_created": created,
+        "status": program.status,
+        "start_date": program.start_date,
+        "duration_weeks": program.duration_weeks,
     }
 
 
@@ -331,27 +338,3 @@ def clients(
     db: Session = Depends(get_db),
 ):
     return list_clients(db, current_user)
-
-
-@router.post(
-    "/clients",
-    response_model=ClientResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-def add_client(
-    payload: CoachClientCreate,
-    current_user: User = Depends(require_coach_or_admin),
-    db: Session = Depends(get_db),
-):
-    try:
-        return add_client_for_coach(
-            db=db,
-            coach=current_user,
-            telegram_user_id=payload.telegram_user_id,
-            username=payload.username,
-            client_code=payload.client_code,
-            source=payload.source,
-            full_name=payload.full_name,
-        )
-    except ProgramError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))

@@ -6,15 +6,23 @@ from fitminiapp_api.models.user import User, UserProfile
 from fitminiapp_api.schemas.user import UserProfileUpdate
 
 
-def ensure_profile(db: Session, user: User) -> UserProfile:
-    if user.profile:
-        return user.profile
-    profile = UserProfile(user_id=user.id)
-    db.add(profile)
-    db.flush()
-    setting = NotificationSetting(user_id=user.id)
-    db.add(setting)
-    db.commit()
+def ensure_profile(db: Session, user: User, *, commit: bool = True) -> UserProfile:
+    profile = user.profile
+    if profile is None:
+        profile = UserProfile(user_id=user.id)
+        db.add(profile)
+        db.flush()
+
+    setting = (
+        db.query(NotificationSetting).filter(NotificationSetting.user_id == user.id).first()
+    )
+    if setting is None:
+        db.add(NotificationSetting(user_id=user.id))
+
+    if commit:
+        db.commit()
+    else:
+        db.flush()
     db.refresh(profile)
     return profile
 
@@ -25,8 +33,9 @@ def update_profile(
     payload: UserProfileUpdate,
     *,
     changed_by: User | None = None,
+    commit: bool = True,
 ) -> User:
-    profile = ensure_profile(db, user)
+    profile = ensure_profile(db, user, commit=commit)
     changes = payload.model_dump(exclude_unset=True)
     nutrition_field_map = {
         "goal": "goal",
@@ -56,6 +65,9 @@ def update_profile(
             nutrition_updates,
             changed_by or user,
         )
-    db.commit()
+    if commit:
+        db.commit()
+    else:
+        db.flush()
     db.refresh(user)
     return user

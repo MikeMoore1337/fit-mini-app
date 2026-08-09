@@ -1,26 +1,28 @@
-from io import BytesIO
-
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from fastapi.responses import StreamingResponse
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
+from fitminiapp_api.core.config import settings
 from fitminiapp_api.db.session import get_db
 from fitminiapp_api.models.program import UserProgram, UserWorkout
+from fitminiapp_api.schemas.invite import CoachInvitePreviewResponse, CoachInviteTokenRequest
 from fitminiapp_api.schemas.user import (
+    AccountDeleteRequest,
     TrainerResponse,
     UserProfileResponse,
     UserProfileUpdate,
     UserResponse,
 )
-from fitminiapp_api.services.client_codes import ensure_client_code, rotate_client_code
+from fitminiapp_api.services.accounts import build_account_export, delete_user_cascade
+from fitminiapp_api.services.audit import record_audit_event
 from fitminiapp_api.services.coach_clients import (
-    claim_coach_invite_link,
+    confirm_coach_invite_link,
     get_current_trainer,
-    list_coach_invites_for_client,
+    preview_coach_invite_link,
     remove_current_trainer,
-    respond_to_coach_invite,
 )
-from fitminiapp_api.services.nutrition import get_nutrition_target_for_user
+from fitminiapp_api.services.nutrition import NutritionError, get_nutrition_target_for_user
 from fitminiapp_api.services.profile import update_profile
 from fitminiapp_api.services.program_common import ProgramError
 from fitminiapp_api.services.security import get_current_user
@@ -29,9 +31,6 @@ router = APIRouter()
 
 
 def _build_user_response(db: Session, user) -> UserResponse:
-    if not user.client_code:
-        ensure_client_code(db, user)
-        db.commit()
     kbju = get_nutrition_target_for_user(db, user)
     trainer = get_current_trainer(db, user)
     has_active_program = (
@@ -54,7 +53,6 @@ def _build_user_response(db: Session, user) -> UserResponse:
         first_name=user.first_name,
         last_name=user.last_name,
         photo_url=user.photo_url,
-        client_code=user.client_code,
         is_coach=user.is_coach,
         is_admin=user.is_admin,
         has_active_program=has_active_program,
@@ -87,8 +85,54 @@ def read_me(user=Depends(get_current_user), db: Session = Depends(get_db)):
 def patch_profile(
     payload: UserProfileUpdate, db: Session = Depends(get_db), user=Depends(get_current_user)
 ):
-    user = update_profile(db, user, payload)
+    try:
+        user = update_profile(db, user, payload)
+    except NutritionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return _build_user_response(db, user)
+
+
+@router.get("/export")
+def export_account_data(
+    user=Depends(get_current_user), db: Session = Depends(get_db)
+) -> JSONResponse:
+    payload = jsonable_encoder(build_account_export(db, user))
+    return JSONResponse(
+        content=payload,
+        headers={
+            "Cache-Control": "no-store",
+            "Content-Disposition": f'attachment; filename="fitmini-account-{user.id}.json"',
+        },
+    )
+
+
+@router.delete("/account", status_code=status.HTTP_204_NO_CONTENT)
+def delete_own_account(
+    payload: AccountDeleteRequest,
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    record_audit_event(
+        db,
+        action="account.self_deleted",
+        resource_type="user",
+        actor_user_id=user.id,
+        target_user_id=user.id,
+        resource_id=user.id,
+    )
+    db.flush()
+    delete_user_cascade(db, user)
+    db.commit()
+    response = Response(status_code=status.HTTP_204_NO_CONTENT)
+    response.delete_cookie(
+        key=settings.refresh_cookie_name,
+        path="/api/v1/auth",
+        secure=settings.app_env == "prod",
+        httponly=True,
+        samesite="strict",
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @router.delete("/trainer", status_code=status.HTTP_204_NO_CONTENT)
@@ -97,67 +141,32 @@ def detach_trainer(db: Session = Depends(get_db), user=Depends(get_current_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.get("/coach-invites")
-def coach_invites(db: Session = Depends(get_db), user=Depends(get_current_user)) -> list[dict]:
-    return list_coach_invites_for_client(db, user)
-
-
-@router.post("/coach-invites/link/{token}/claim")
-def claim_invite_link(
-    token: str,
+@router.post(
+    "/coach-invites/link/preview",
+    response_model=CoachInvitePreviewResponse,
+)
+def preview_invite_link(
+    payload: CoachInviteTokenRequest,
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
-) -> dict:
+) -> CoachInvitePreviewResponse:
     try:
-        return claim_coach_invite_link(db, user, token)
+        return CoachInvitePreviewResponse(**preview_coach_invite_link(db, user, payload.token))
     except ProgramError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@router.post("/client-code/rotate")
-def rotate_my_client_code(
-    db: Session = Depends(get_db), user=Depends(get_current_user)
-) -> dict[str, str]:
-    return {"client_code": rotate_client_code(db, user)}
-
-
-@router.get("/client-code/qr")
-def client_code_qr(db: Session = Depends(get_db), user=Depends(get_current_user)):
-    try:
-        import qrcode
-    except ImportError as exc:  # pragma: no cover - deployment dependency guard
-        raise HTTPException(status_code=503, detail="Генератор QR-кода недоступен") from exc
-
-    code = ensure_client_code(db, user)
-    db.commit()
-    image = qrcode.make(code)
-    buffer = BytesIO()
-    image.save(buffer, format="PNG")
-    buffer.seek(0)
-    return StreamingResponse(buffer, media_type="image/png")
-
-
-@router.post("/coach-invites/{invite_id}/accept", status_code=status.HTTP_204_NO_CONTENT)
-def accept_coach_invite(
-    invite_id: int,
+@router.post(
+    "/coach-invites/link/confirm",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def confirm_invite_link(
+    payload: CoachInviteTokenRequest,
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ) -> Response:
     try:
-        respond_to_coach_invite(db, user, invite_id, accept=True)
+        confirm_coach_invite_link(db, user, payload.token)
     except ProgramError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-@router.post("/coach-invites/{invite_id}/decline", status_code=status.HTTP_204_NO_CONTENT)
-def decline_coach_invite(
-    invite_id: int,
-    db: Session = Depends(get_db),
-    user=Depends(get_current_user),
-) -> Response:
-    try:
-        respond_to_coach_invite(db, user, invite_id, accept=False)
-    except ProgramError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     return Response(status_code=status.HTTP_204_NO_CONTENT)

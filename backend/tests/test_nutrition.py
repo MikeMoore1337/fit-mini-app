@@ -108,9 +108,9 @@ def test_strength_uses_five_met_and_averages_weekly_calories() -> None:
 def test_negative_carbohydrate_result_is_clamped_and_warned() -> None:
     result = calculate_nutrition(
         nutrition_payload(
-            weight_kg=500,
-            height_cm=50,
-            age=120,
+            weight_kg=350,
+            height_cm=100,
+            age=100,
             daily_activity_level="sedentary",
             strength_trainings_per_week=0,
             cardio_trainings_per_week=0,
@@ -120,6 +120,7 @@ def test_negative_carbohydrate_result_is_clamped_and_warned() -> None:
 
     assert result["carbs_g"] == 0
     assert result["macro_warning"] is True
+    assert result["calories"] == result["protein_g"] * 4 + result["fat_g"] * 9
 
 
 @pytest.mark.parametrize(

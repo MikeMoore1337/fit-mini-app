@@ -4,12 +4,14 @@ import json
 import time
 from urllib.parse import parse_qsl
 
-from sqlalchemy import or_
+from sqlalchemy.dialects.postgresql import insert as postgresql_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from fitminiapp_api.core.config import settings
-from fitminiapp_api.models.user import CoachClientInvite, User, UserProfile
-from fitminiapp_api.services.client_codes import ensure_client_code
+from fitminiapp_api.models.notification import NotificationSetting
+from fitminiapp_api.models.user import User, UserProfile
 
 
 def build_secret_key(bot_token: str) -> bytes:
@@ -102,31 +104,69 @@ def _apply_bootstrap_admin_role(user: User) -> None:
         user.is_admin = True
 
 
-def _link_pending_client_invites(db: Session, user: User) -> None:
-    """Attach a verified Telegram identity to invitations without accepting them."""
-    username = normalize_telegram_username(user.username)
-    filters = [CoachClientInvite.telegram_user_id == user.telegram_user_id]
-    if username:
-        filters.append(CoachClientInvite.username == username)
-    invites = (
-        db.query(CoachClientInvite)
-        .filter(CoachClientInvite.status == "pending", or_(*filters))
-        .order_by(CoachClientInvite.id.desc())
-        .all()
+def _display_name(
+    telegram_user_id: int,
+    username: str | None,
+    first_name: str | None,
+    last_name: str | None,
+) -> str:
+    return (
+        " ".join(part for part in [first_name, last_name] if part).strip()
+        or username
+        or f"User {telegram_user_id}"
     )
-    keep_by_coach: dict[int, CoachClientInvite] = {}
-    for invite in invites:
-        if invite.coach_user_id in keep_by_coach:
-            db.delete(invite)
-        else:
-            keep_by_coach[invite.coach_user_id] = invite
-    db.flush()
 
-    for invite in keep_by_coach.values():
-        invite.telegram_user_id = user.telegram_user_id
-        invite.client_user_id = user.id
-        if username:
-            invite.username = username
+
+def get_or_insert_telegram_user(
+    db: Session,
+    *,
+    telegram_user_id: int,
+    username: str | None,
+    first_name: str | None,
+    last_name: str | None,
+    photo_url: str | None,
+) -> User:
+    values = {
+        "telegram_user_id": telegram_user_id,
+        "username": username,
+        "first_name": first_name,
+        "last_name": last_name,
+        "photo_url": photo_url,
+        "is_admin": telegram_user_id in settings.admin_telegram_id_set,
+        "is_active": True,
+    }
+    dialect_name = db.get_bind().dialect.name
+    if dialect_name == "postgresql":
+        db.execute(
+            postgresql_insert(User)
+            .values(**values)
+            .on_conflict_do_nothing(index_elements=["telegram_user_id"])
+        )
+        return db.query(User).filter(User.telegram_user_id == telegram_user_id).one()
+    if dialect_name == "sqlite":
+        db.execute(
+            sqlite_insert(User)
+            .values(**values)
+            .on_conflict_do_nothing(index_elements=["telegram_user_id"])
+        )
+        return db.query(User).filter(User.telegram_user_id == telegram_user_id).one()
+
+    user = db.query(User).filter(User.telegram_user_id == telegram_user_id).first()
+    if user:
+        return user
+    candidate = User(**values)
+    try:
+        # The savepoint keeps the outer request transaction usable when two
+        # first-login requests race on the unique Telegram id.
+        with db.begin_nested():
+            db.add(candidate)
+            db.flush()
+    except IntegrityError:
+        user = db.query(User).filter(User.telegram_user_id == telegram_user_id).first()
+        if user is None:  # pragma: no cover - defensive against a failed competing tx
+            raise
+        return user
+    return candidate
 
 
 def get_or_create_user_from_init_data(db: Session, init_data: dict) -> User:
@@ -138,59 +178,44 @@ def get_or_create_user_from_init_data(db: Session, init_data: dict) -> User:
     last_name = user_data.get("last_name")
     photo_url = user_data.get("photo_url")
 
-    user = db.query(User).filter(User.telegram_user_id == telegram_user_id).first()
+    user = get_or_insert_telegram_user(
+        db,
+        telegram_user_id=telegram_user_id,
+        username=username,
+        first_name=first_name,
+        last_name=last_name,
+        photo_url=photo_url,
+    )
 
-    if not user:
-        user = User(
-            telegram_user_id=telegram_user_id,
-            username=username,
-            first_name=first_name,
-            last_name=last_name,
-            photo_url=photo_url,
-            is_admin=telegram_user_id in settings.admin_telegram_id_set,
-            is_active=True,
-        )
-        db.add(user)
-        db.flush()
-
-        full_name = (
-            " ".join(part for part in [first_name, last_name] if part).strip()
-            or username
-            or f"User {telegram_user_id}"
-        )
-
-        profile = UserProfile(
-            user_id=user.id,
-            full_name=full_name,
-        )
-        db.add(profile)
-        ensure_client_code(db, user)
-        _link_pending_client_invites(db, user)
-        db.commit()
-        db.refresh(user)
-        return user
+    # Serialise profile/settings provisioning for existing and new
+    # accounts alike. This also makes retries after a partially provisioned
+    # historical account safe and idempotent.
+    user = db.query(User).filter(User.telegram_user_id == telegram_user_id).with_for_update().one()
 
     user.username = username
     user.first_name = first_name
     user.last_name = last_name
     user.photo_url = photo_url
     _apply_bootstrap_admin_role(user)
-    ensure_client_code(db, user)
-
     existing_profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
     if not existing_profile:
-        full_name = (
-            " ".join(part for part in [first_name, last_name] if part).strip()
-            or username
-            or f"User {telegram_user_id}"
-        )
         existing_profile = UserProfile(
             user_id=user.id,
-            full_name=full_name,
+            full_name=_display_name(
+                telegram_user_id,
+                username,
+                first_name,
+                last_name,
+            ),
         )
         db.add(existing_profile)
 
-    _link_pending_client_invites(db, user)
+    notification_settings = (
+        db.query(NotificationSetting).filter(NotificationSetting.user_id == user.id).first()
+    )
+    if notification_settings is None:
+        db.add(NotificationSetting(user_id=user.id))
+
     db.commit()
     db.refresh(user)
     return user

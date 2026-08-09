@@ -20,6 +20,7 @@ from fitminiapp_api.models.program import (
 )
 from fitminiapp_api.models.user import CoachClient, CoachClientInvite, User, UserProfile
 from fitminiapp_api.schemas.program import ProgramTemplateCreate
+from fitminiapp_api.services.audit import record_audit_event
 from fitminiapp_api.services.coach_clients import (
     _can_manage_user_id,
     _client_entry_from_invite,
@@ -39,6 +40,8 @@ GOALS = {"muscle_gain", "fat_loss", "maintenance", "recomposition"}
 LEVELS = {"beginner", "intermediate", "advanced"}
 MODES = {"self", "coach"}
 LEGACY_DEMO_TEMPLATE_SLUG = "upper-lower-4x"
+MAX_PROGRAM_DURATION_WEEKS = 24
+MAX_GENERATED_SETS = 20_000
 
 
 def _serialize_template_with_context(
@@ -301,14 +304,38 @@ def assign_template_to_user(
     target_user: User,
     assigned_by: User,
     start_date: date | None = None,
+    duration_weeks: int = 1,
+    schedule_weekdays: list[int] | None = None,
+    replace_active: bool = False,
 ) -> tuple[UserProgram, int]:
     # Сериализуем конкурирующие назначения для одного пользователя. Частичный
     # unique index остаётся последней линией защиты на уровне БД.
     db.query(User).filter(User.id == target_user.id).with_for_update().one()
-    db.query(UserProgram).filter(
-        UserProgram.user_id == target_user.id,
-        UserProgram.is_active.is_(True),
-    ).update({"is_active": False})
+    if duration_weeks < 1 or duration_weeks > MAX_PROGRAM_DURATION_WEEKS:
+        raise ProgramError(
+            f"Program duration must be between 1 and {MAX_PROGRAM_DURATION_WEEKS} weeks"
+        )
+    active_program = (
+        db.query(UserProgram)
+        .filter(
+            UserProgram.user_id == target_user.id,
+            UserProgram.is_active.is_(True),
+        )
+        .with_for_update()
+        .first()
+    )
+    if active_program is not None:
+        if not replace_active:
+            raise ProgramError("Active program replacement requires confirmation")
+        if any(workout.status == "in_progress" for workout in active_program.workouts):
+            raise ProgramError("Cannot replace a program while a workout is in progress")
+        for workout in active_program.workouts:
+            if workout.status == "planned":
+                workout.status = "cancelled"
+        active_program.is_active = False
+        active_program.status = "archived"
+        active_program.archived_at = now_msk_naive()
+        db.flush()
 
     # A fresh coach assignment should put a previously hidden example back into
     # the client's library, where the client can hide it again if desired.
@@ -317,55 +344,104 @@ def assign_template_to_user(
         HiddenProgramTemplate.template_id == template.id,
     ).delete(synchronize_session=False)
 
+    ordered_days = sorted(template.days, key=lambda row: row.day_number)
+    if len(ordered_days) > 7:
+        raise ProgramError("A weekly program supports at most seven training days")
+    generated_sets = (
+        sum(
+            exercise.prescribed_sets
+            for day in ordered_days
+            for exercise in day.exercises
+        )
+        * duration_weeks
+    )
+    if generated_sets > MAX_GENERATED_SETS:
+        raise ProgramError("Program is too large to assign in one operation")
+    if schedule_weekdays is not None:
+        if len(schedule_weekdays) != len(ordered_days):
+            raise ProgramError("Choose one weekday for every program day")
+        if any(day < 0 or day > 6 for day in schedule_weekdays):
+            raise ProgramError("Weekdays must be between 0 and 6")
+        if len(set(schedule_weekdays)) != len(schedule_weekdays):
+            raise ProgramError("Program weekdays must be unique")
+
+    today = today_for_user(target_user)
+    requested_start_date = start_date or today
+    if requested_start_date < today:
+        raise ProgramError("Program start date cannot be in the past")
+    if schedule_weekdays:
+        first_weekday = schedule_weekdays[0]
+        effective_start_date = requested_start_date + timedelta(
+            days=(first_weekday - requested_start_date.weekday()) % 7
+        )
+        day_offsets = [(weekday - first_weekday) % 7 for weekday in schedule_weekdays]
+        if day_offsets != sorted(day_offsets):
+            raise ProgramError("Program weekdays must follow the order of program days")
+        normalized_weekdays = list(schedule_weekdays)
+        cycle_span_days = 7
+    else:
+        effective_start_date = requested_start_date
+        day_offsets = list(range(len(ordered_days)))
+        normalized_weekdays = [
+            (effective_start_date.weekday() + offset) % 7 for offset in day_offsets
+        ]
+        cycle_span_days = max(7, len(ordered_days))
+
+    program_status = (
+        "scheduled" if effective_start_date > today else "active"
+    )
     user_program = UserProgram(
         user_id=target_user.id,
         template_id=template.id,
         assigned_by_user_id=assigned_by.id,
+        start_date=effective_start_date,
+        duration_weeks=duration_weeks,
+        schedule_weekdays=normalized_weekdays,
+        status=program_status,
         is_active=True,
     )
     db.add(user_program)
     db.flush()
 
-    workouts: list[UserWorkout] = []
-    effective_start_date = start_date or today_for_user(target_user)
     created = 0
 
-    for offset, day in enumerate(sorted(template.days, key=lambda row: row.day_number)):
-        workout = UserWorkout(
-            user_program_id=user_program.id,
-            scheduled_date=effective_start_date + timedelta(days=offset),
-            day_number=day.day_number,
-            title=day.title,
-            status="planned",
-        )
-        db.add(workout)
-        db.flush()
-        workouts.append(workout)
-
-        for exercise_item in sorted(day.exercises, key=lambda row: row.sort_order):
-            workout_exercise = UserWorkoutExercise(
-                workout_id=workout.id,
-                exercise_id=exercise_item.exercise_id,
-                sort_order=exercise_item.sort_order,
-                prescribed_sets=exercise_item.prescribed_sets,
-                prescribed_reps=exercise_item.prescribed_reps,
-                rest_seconds=exercise_item.rest_seconds,
+    for week_index in range(duration_weeks):
+        for day, day_offset in zip(ordered_days, day_offsets, strict=True):
+            workout = UserWorkout(
+                user_program_id=user_program.id,
+                scheduled_date=effective_start_date
+                + timedelta(days=week_index * cycle_span_days + day_offset),
+                day_number=day.day_number,
+                week_number=week_index + 1,
+                title=day.title,
+                status="planned",
             )
-            db.add(workout_exercise)
-            db.flush()
+            db.add(workout)
 
-            for set_number in range(1, exercise_item.prescribed_sets + 1):
-                db.add(
-                    UserWorkoutSet(
-                        workout_exercise_id=workout_exercise.id,
-                        set_number=set_number,
-                        actual_reps=None,
-                        actual_weight=None,
-                        is_completed=False,
-                    )
+            for exercise_item in sorted(day.exercises, key=lambda row: row.sort_order):
+                workout_exercise = UserWorkoutExercise(
+                    workout=workout,
+                    exercise_id=exercise_item.exercise_id,
+                    sort_order=exercise_item.sort_order,
+                    prescribed_sets=exercise_item.prescribed_sets,
+                    prescribed_reps=exercise_item.prescribed_reps,
+                    rest_seconds=exercise_item.rest_seconds,
+                    notes=exercise_item.notes,
                 )
+                db.add(workout_exercise)
 
-        created += 1
+                for set_number in range(1, exercise_item.prescribed_sets + 1):
+                    db.add(
+                        UserWorkoutSet(
+                            workout_exercise=workout_exercise,
+                            set_number=set_number,
+                            actual_reps=None,
+                            actual_weight=None,
+                            is_completed=False,
+                        )
+                    )
+
+            created += 1
 
     db.flush()
     return user_program, created
@@ -405,6 +481,25 @@ def create_and_optionally_assign_program(
             template,
             target_user,
             current_user,
+            start_date=payload.start_date,
+            duration_weeks=payload.duration_weeks,
+            schedule_weekdays=payload.schedule_weekdays,
+            replace_active=payload.replace_active,
+        )
+
+    if target_user.id != current_user.id:
+        record_audit_event(
+            db,
+            actor_user_id=current_user.id,
+            target_user_id=target_user.id,
+            action="coach.program_template_created",
+            resource_type="program_template",
+            resource_id=template.id,
+            details={
+                "assigned": assigned_program is not None,
+                "user_program_id": assigned_program.id if assigned_program else None,
+                "workouts_created": workouts_created,
+            },
         )
 
     db.commit()
@@ -640,7 +735,11 @@ def list_clients(db: Session, coach: User) -> list[dict]:
         db.query(User, CoachClient.private_name)
         .join(CoachClient, CoachClient.client_user_id == User.id)
         .options(joinedload(User.profile))
-        .filter(CoachClient.coach_user_id == coach.id, CoachClient.status == "active")
+        .filter(
+            CoachClient.coach_user_id == coach.id,
+            CoachClient.status == "active",
+            User.is_active.is_(True),
+        )
         .order_by(User.id.desc())
         .all()
     )
@@ -680,6 +779,7 @@ def list_coach_assigned_programs(db: Session, coach: User) -> list[dict]:
         .filter(
             CoachClient.coach_user_id == coach.id,
             CoachClient.status == "active",
+            User.is_active.is_(True),
             UserProgram.assigned_by_user_id == coach.id,
         )
         .order_by(UserProgram.assigned_at.desc(), UserProgram.id.desc())
@@ -695,7 +795,9 @@ def list_coach_assigned_programs(db: Session, coach: User) -> list[dict]:
         upcoming_dates = [
             workout.scheduled_date
             for workout in workouts
-            if workout.status != "completed" and workout.scheduled_date >= today
+            if program.is_active
+            and workout.status in {"planned", "in_progress"}
+            and workout.scheduled_date >= today
         ]
         template = program.template
         result.append(
@@ -711,6 +813,11 @@ def list_coach_assigned_programs(db: Session, coach: User) -> list[dict]:
                 "level": template.level if template else None,
                 "assigned_at": program.assigned_at,
                 "is_active": program.is_active,
+                "status": program.status,
+                "start_date": program.start_date,
+                "duration_weeks": program.duration_weeks,
+                "schedule_weekdays": program.schedule_weekdays,
+                "completed_at": program.completed_at,
                 "workouts_total": len(workouts),
                 "workouts_completed": completed,
                 "workouts_planned": planned,
@@ -725,6 +832,9 @@ def assign_template_to_self(
     current_user: User,
     template_id: int,
     start_date: date | None = None,
+    duration_weeks: int = 1,
+    schedule_weekdays: list[int] | None = None,
+    replace_active: bool = False,
 ) -> tuple[UserProgram, int]:
     template = (
         db.query(ProgramTemplate)
@@ -761,7 +871,14 @@ def assign_template_to_self(
         raise ProgramError("No permission to use template")
 
     program, created = assign_template_to_user(
-        db, template, current_user, current_user, start_date=start_date
+        db,
+        template,
+        current_user,
+        current_user,
+        start_date=start_date,
+        duration_weeks=duration_weeks,
+        schedule_weekdays=schedule_weekdays,
+        replace_active=replace_active,
     )
     db.commit()
     db.refresh(program)

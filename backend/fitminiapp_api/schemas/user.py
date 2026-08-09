@@ -10,8 +10,8 @@ class UserProfileUpdate(BaseModel):
     full_name: str | None = Field(default=None, max_length=128)
     goal: Literal["muscle_gain", "fat_loss", "maintenance", "recomposition"] | None = None
     level: Literal["beginner", "intermediate", "advanced"] | None = None
-    height_cm: int | None = Field(default=None, ge=50, le=280)
-    weight_kg: int | None = Field(default=None, ge=20, le=500)
+    height_cm: int | None = Field(default=None, ge=100, le=250)
+    weight_kg: float | None = Field(default=None, ge=20, le=350, allow_inf_nan=False)
     workouts_per_week: int | None = Field(default=None, ge=0, le=14)
     cardio_trainings_per_week: int | None = Field(default=None, ge=0, le=14)
     timezone: str | None = Field(default=None, max_length=64)
@@ -24,12 +24,16 @@ class UserProfileUpdate(BaseModel):
         return value
 
 
+class AccountDeleteRequest(BaseModel):
+    confirmation: Literal["DELETE"]
+
+
 class UserProfileResponse(BaseModel):
     full_name: str | None = None
     goal: str | None = None
     level: str | None = None
     height_cm: int | None = None
-    weight_kg: int | None = None
+    weight_kg: float | None = None
     workouts_per_week: int | None = None
     cardio_trainings_per_week: int | None = None
     timezone: str = "Europe/Moscow"
@@ -53,7 +57,6 @@ class UserResponse(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
     photo_url: str | None = None
-    client_code: str | None = None
     is_coach: bool = False
     is_admin: bool = False
     has_active_program: bool = False

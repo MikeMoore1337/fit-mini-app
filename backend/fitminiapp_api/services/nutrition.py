@@ -1,6 +1,7 @@
 import math
 from typing import TypedDict
 
+from pydantic import ValidationError
 from sqlalchemy.orm import Session, joinedload
 
 from fitminiapp_api.core.timezone import now_for_user_naive, user_local_naive_to_utc_naive
@@ -74,6 +75,10 @@ def _round_to_ten(value: float) -> int:
     return max(0, math.floor(value / 10 + 0.5) * 10)
 
 
+def _round_up_to_ten(value: float) -> int:
+    return max(0, math.ceil(value / 10) * 10)
+
+
 def _target_calories(maintenance_calories: float, goal: str) -> int:
     return _round_to_ten(maintenance_calories * GOAL_MULTIPLIERS[goal])
 
@@ -129,6 +134,14 @@ def calculate_nutrition(payload: NutritionTargetSave) -> NutritionCalculation:
     cardio_daily_calories = cardio_weekly_calories / 7
     maintenance_calories = base_tdee + strength_daily_calories + cardio_daily_calories
     calories = _target_calories(maintenance_calories, goal)
+    macros = _macros(payload.weight_kg, calories, goal)
+    if macros["macro_warning"]:
+        # A calorie target below its own protein/fat allocation is internally
+        # inconsistent and could previously become zero for accepted edge
+        # inputs. Raise it only as far as needed to make every macro nonnegative.
+        calories = _round_up_to_ten(macros["protein_g"] * 4 + macros["fat_g"] * 9)
+        macros = _macros(payload.weight_kg, calories, goal)
+        macros["macro_warning"] = True
 
     return {
         "bmr": _round_number(bmr),
@@ -138,7 +151,7 @@ def calculate_nutrition(payload: NutritionTargetSave) -> NutritionCalculation:
         "tdee": _round_number(maintenance_calories),
         "goal_multiplier": GOAL_MULTIPLIERS[goal],
         "calories": calories,
-        **_macros(payload.weight_kg, calories, goal),
+        **macros,
     }
 
 
@@ -238,18 +251,20 @@ def get_nutrition_target_for_user(
 
 
 def _target_payload(target: NutritionTarget) -> NutritionTargetSave:
-    return NutritionTargetSave(
-        sex=target.sex,
-        weight_kg=target.weight_kg,
-        height_cm=target.height_cm,
-        age=target.age,
-        daily_activity_level=target.daily_activity_level,
-        strength_trainings_per_week=target.strength_trainings_per_week,
-        strength_training_duration_minutes=target.strength_training_duration_minutes,
-        cardio_trainings_per_week=target.cardio_trainings_per_week,
-        cardio_training_duration_minutes=target.cardio_training_duration_minutes,
-        cardio_intensity=target.cardio_intensity,
-        goal=target.goal,
+    return NutritionTargetSave.model_validate(
+        {
+            "sex": target.sex,
+            "weight_kg": target.weight_kg,
+            "height_cm": target.height_cm,
+            "age": target.age,
+            "daily_activity_level": target.daily_activity_level,
+            "strength_trainings_per_week": target.strength_trainings_per_week,
+            "strength_training_duration_minutes": (target.strength_training_duration_minutes),
+            "cardio_trainings_per_week": target.cardio_trainings_per_week,
+            "cardio_training_duration_minutes": target.cardio_training_duration_minutes,
+            "cardio_intensity": target.cardio_intensity,
+            "goal": target.goal,
+        }
     )
 
 
@@ -313,7 +328,11 @@ def recalculate_nutrition_target(
     if not changed:
         return False
 
-    calculations = calculate_nutrition(_target_payload(target))
+    try:
+        payload = _target_payload(target)
+    except ValidationError as exc:
+        raise NutritionError("Nutrition inputs are outside supported ranges") from exc
+    calculations = calculate_nutrition(payload)
     _apply_calculation(target, calculations)
     target.assigned_by_user_id = changed_by.id
     target.saved_at = now_for_user_naive(target_user)

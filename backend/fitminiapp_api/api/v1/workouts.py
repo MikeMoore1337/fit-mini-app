@@ -1,6 +1,7 @@
-from datetime import timedelta
+from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from fitminiapp_api.api.dependencies.auth import require_user
@@ -16,15 +17,20 @@ from fitminiapp_api.models.user import BodyMeasurement, User
 from fitminiapp_api.schemas.workout import (
     BodyMeasurementResponse,
     BodyMeasurementSave,
+    WorkoutFinishRequest,
     WorkoutHistoryItem,
+    WorkoutHistorySummary,
+    WorkoutProgressResponse,
+    WorkoutRescheduleRequest,
     WorkoutScheduleItem,
     WorkoutSetUpdate,
     WorkoutStatusResponse,
     WorkoutTodayResponse,
 )
+from fitminiapp_api.services.analytics import build_user_progress
 from fitminiapp_api.services.exercise_catalog import get_visible_exercise_display_map
 from fitminiapp_api.services.exercise_guides import get_exercise_guide
-from fitminiapp_api.services.nutrition import recalculate_nutrition_target
+from fitminiapp_api.services.nutrition import NutritionError, recalculate_nutrition_target
 
 router = APIRouter()
 
@@ -34,6 +40,7 @@ def _get_user_workout_or_404(db: Session, current_user: User, workout_id: int) -
         db.query(UserWorkout)
         .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
         .options(
+            joinedload(UserWorkout.user_program),
             joinedload(UserWorkout.exercises).joinedload(UserWorkoutExercise.exercise),
             joinedload(UserWorkout.exercises).joinedload(UserWorkoutExercise.sets),
         )
@@ -46,6 +53,37 @@ def _get_user_workout_or_404(db: Session, current_user: User, workout_id: int) -
     if not workout:
         raise HTTPException(status_code=404, detail="Тренировка не найдена")
     return workout
+
+
+def _lock_program(db: Session, program_id: int) -> UserProgram:
+    return (
+        db.query(UserProgram)
+        .filter(UserProgram.id == program_id)
+        .populate_existing()
+        .with_for_update()
+        .one()
+    )
+
+
+def _require_active_program(program: UserProgram) -> None:
+    if not program.is_active:
+        raise HTTPException(status_code=409, detail="Программа уже завершена или архивирована")
+
+
+def _reconcile_program_completion(db: Session, program: UserProgram, current_user: User) -> None:
+    db.flush()
+    remaining_workout = (
+        db.query(UserWorkout.id)
+        .filter(
+            UserWorkout.user_program_id == program.id,
+            UserWorkout.status.notin_({"completed", "skipped", "cancelled"}),
+        )
+        .first()
+    )
+    if remaining_workout is None:
+        program.status = "completed"
+        program.is_active = False
+        program.completed_at = now_for_user_naive(current_user)
 
 
 def _delete_workouts(db: Session, workout_ids: list[int]) -> int:
@@ -83,6 +121,7 @@ def _serialize_workout(workout: UserWorkout, db: Session, current_user: User) ->
         "id": workout.id,
         "scheduled_date": str(workout.scheduled_date),
         "day_number": workout.day_number,
+        "week_number": workout.week_number,
         "title": workout.title,
         "status": workout.status,
         "started_at": workout.started_at.isoformat() if workout.started_at else None,
@@ -102,6 +141,7 @@ def _serialize_workout(workout: UserWorkout, db: Session, current_user: User) ->
                 "prescribed_sets": item.prescribed_sets,
                 "prescribed_reps": item.prescribed_reps,
                 "rest_seconds": item.rest_seconds,
+                "notes": item.notes,
                 "has_guide": bool(
                     (visible_map.get(item.exercise_id) or item.exercise)
                     and get_exercise_guide(visible_map.get(item.exercise_id) or item.exercise)
@@ -155,6 +195,7 @@ def get_today_workout(
             UserProgram.user_id == current_user.id,
             UserProgram.is_active.is_(True),
             UserWorkout.scheduled_date == today,
+            UserWorkout.status.in_({"planned", "in_progress"}),
         )
         .order_by(UserWorkout.id.asc())
         .first()
@@ -192,9 +233,56 @@ def get_week_schedule(
             "title": workout.title,
             "status": workout.status,
             "day_number": workout.day_number,
+            "week_number": workout.week_number,
         }
         for workout in workouts
     ]
+
+
+@router.get("/schedule", response_model=list[WorkoutScheduleItem])
+def get_schedule(
+    date_from: date | None = Query(default=None),
+    date_to: date | None = Query(default=None),
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    start = date_from or today_for_user(current_user)
+    end = date_to or (start + timedelta(days=55))
+    if end < start:
+        raise HTTPException(status_code=422, detail="date_to must not be before date_from")
+    if (end - start).days > 92:
+        raise HTTPException(status_code=422, detail="Диапазон расписания не может быть больше 93 дней")
+
+    workouts = (
+        db.query(UserWorkout)
+        .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
+        .filter(
+            UserProgram.user_id == current_user.id,
+            UserProgram.is_active.is_(True),
+            UserWorkout.scheduled_date.between(start, end),
+        )
+        .order_by(UserWorkout.scheduled_date.asc(), UserWorkout.id.asc())
+        .all()
+    )
+    return [
+        {
+            "id": workout.id,
+            "scheduled_date": workout.scheduled_date,
+            "title": workout.title,
+            "status": workout.status,
+            "day_number": workout.day_number,
+            "week_number": workout.week_number,
+        }
+        for workout in workouts
+    ]
+
+
+@router.get("/progress", response_model=WorkoutProgressResponse)
+def workout_progress(
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    return build_user_progress(db, current_user)
 
 
 @router.delete("/today", status_code=status.HTTP_204_NO_CONTENT)
@@ -211,6 +299,7 @@ def delete_today_workout(
             UserProgram.user_id == current_user.id,
             UserProgram.is_active.is_(True),
             UserWorkout.scheduled_date == today,
+            UserWorkout.status.in_({"planned", "in_progress"}),
         )
         .order_by(UserWorkout.id.asc())
         .first()
@@ -219,7 +308,18 @@ def delete_today_workout(
     if not workout:
         raise HTTPException(status_code=404, detail="На сегодня тренировка не назначена")
 
-    _delete_workouts(db, [workout.id])
+    program = _lock_program(db, workout.user_program_id)
+    db.refresh(workout)
+    _require_active_program(program)
+    if workout.status == "in_progress":
+        raise HTTPException(
+            status_code=409,
+            detail="Начатую тренировку нельзя удалить — сначала завершите её",
+        )
+    if workout.status != "planned":
+        raise HTTPException(status_code=409, detail="Недопустимое состояние тренировки")
+    workout.status = "skipped"
+    _reconcile_program_completion(db, program, current_user)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -231,17 +331,22 @@ def start_workout(
     db: Session = Depends(get_db),
 ):
     workout = _get_user_workout_or_404(db, current_user, workout_id)
+    program = _lock_program(db, workout.user_program_id)
+    db.refresh(workout)
 
     if workout.scheduled_date != today_for_user(current_user):
         raise HTTPException(status_code=409, detail="Можно начать только тренировку на сегодня")
     if workout.status == "completed":
         raise HTTPException(status_code=409, detail="Тренировка уже завершена")
+    _require_active_program(program)
     if workout.status not in {"planned", "in_progress"}:
         raise HTTPException(status_code=409, detail="Недопустимое состояние тренировки")
 
     if not workout.started_at:
         workout.started_at = now_for_user_naive(current_user)
     workout.status = "in_progress"
+    if program.status == "scheduled":
+        program.status = "active"
     db.commit()
     db.refresh(workout)
 
@@ -252,43 +357,52 @@ def start_workout(
 @router.post("/{workout_id}/finish", response_model=WorkoutTodayResponse)
 def finish_workout(
     workout_id: int,
+    payload: WorkoutFinishRequest | None = None,
     current_user: User = Depends(require_user),
     db: Session = Depends(get_db),
 ):
     workout = _get_user_workout_or_404(db, current_user, workout_id)
+    program = _lock_program(db, workout.user_program_id)
+    db.refresh(workout)
 
     if workout.scheduled_date != today_for_user(current_user):
         raise HTTPException(status_code=409, detail="Можно завершить только тренировку на сегодня")
     if workout.status == "completed":
         raise HTTPException(status_code=409, detail="Тренировка уже завершена")
+    _require_active_program(program)
     if workout.status != "in_progress":
         raise HTTPException(status_code=409, detail="Сначала начните тренировку")
 
-    completed_sets = (
-        db.query(UserWorkoutSet.id)
+    all_sets = (
+        db.query(UserWorkoutSet)
         .join(
             UserWorkoutExercise,
             UserWorkoutExercise.id == UserWorkoutSet.workout_exercise_id,
         )
         .filter(
             UserWorkoutExercise.workout_id == workout.id,
-            UserWorkoutSet.is_completed.is_(True),
         )
-        .first()
+        .all()
     )
+    completed_sets = [row for row in all_sets if row.is_completed]
     if not completed_sets:
         raise HTTPException(
             status_code=409,
             detail="Отметьте хотя бы один выполненный подход",
         )
+    if len(completed_sets) < len(all_sets) and not (payload and payload.confirm_incomplete):
+        raise HTTPException(
+            status_code=409,
+            detail="Есть незаполненные подходы. Подтвердите досрочное завершение",
+        )
 
     workout.completed_at = now_for_user_naive(current_user)
     workout.status = "completed"
 
+    _reconcile_program_completion(db, program, current_user)
+
     db.commit()
     db.refresh(workout)
-
-    workout = _get_user_workout_or_404(db, current_user, workout_id)
     return _serialize_workout(workout, db, current_user)
 
 
@@ -300,7 +414,7 @@ def update_workout_set(
     db: Session = Depends(get_db),
 ):
     result = (
-        db.query(UserWorkoutSet, UserWorkout)
+        db.query(UserWorkoutSet, UserWorkout, UserProgram)
         .join(UserWorkoutExercise, UserWorkoutExercise.id == UserWorkoutSet.workout_exercise_id)
         .join(UserWorkout, UserWorkout.id == UserWorkoutExercise.workout_id)
         .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
@@ -314,7 +428,11 @@ def update_workout_set(
     if not result:
         raise HTTPException(status_code=404, detail="Подход не найден")
 
-    set_row, workout = result
+    set_row, workout, _ = result
+    program = _lock_program(db, workout.user_program_id)
+    db.refresh(workout)
+    db.refresh(set_row)
+    _require_active_program(program)
     if workout.status != "in_progress":
         raise HTTPException(
             status_code=409,
@@ -338,6 +456,82 @@ def update_workout_set(
         "actual_reps": set_row.actual_reps,
         "actual_weight": set_row.actual_weight,
         "is_completed": set_row.is_completed,
+    }
+
+
+@router.patch("/{workout_id}/schedule", response_model=WorkoutScheduleItem)
+def reschedule_workout(
+    workout_id: int,
+    payload: WorkoutRescheduleRequest,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    workout = _get_user_workout_or_404(db, current_user, workout_id)
+    program = _lock_program(db, workout.user_program_id)
+    db.refresh(workout)
+    _require_active_program(program)
+    if workout.status != "planned":
+        raise HTTPException(
+            status_code=409,
+            detail="Перенести можно только запланированную тренировку",
+        )
+    if payload.scheduled_date < today_for_user(current_user):
+        raise HTTPException(status_code=422, detail="Нельзя перенести тренировку в прошлое")
+
+    collision = (
+        db.query(UserWorkout.id)
+        .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
+        .filter(
+            UserProgram.user_id == current_user.id,
+            UserProgram.is_active.is_(True),
+            UserWorkout.id != workout.id,
+            UserWorkout.scheduled_date == payload.scheduled_date,
+            UserWorkout.status.notin_({"completed", "skipped", "cancelled"}),
+        )
+        .first()
+    )
+    if collision is not None:
+        raise HTTPException(status_code=409, detail="На эту дату уже назначена тренировка")
+
+    workout.scheduled_date = payload.scheduled_date
+    db.commit()
+    return {
+        "id": workout.id,
+        "scheduled_date": workout.scheduled_date,
+        "title": workout.title,
+        "status": workout.status,
+        "day_number": workout.day_number,
+        "week_number": workout.week_number,
+    }
+
+
+@router.post("/{workout_id}/skip", response_model=WorkoutScheduleItem)
+def skip_workout(
+    workout_id: int,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    workout = _get_user_workout_or_404(db, current_user, workout_id)
+    program = _lock_program(db, workout.user_program_id)
+    db.refresh(workout)
+    _require_active_program(program)
+    if workout.status != "planned":
+        raise HTTPException(
+            status_code=409,
+            detail="Пропустить можно только запланированную тренировку",
+        )
+    workout.status = "skipped"
+
+    _reconcile_program_completion(db, program, current_user)
+
+    db.commit()
+    return {
+        "id": workout.id,
+        "scheduled_date": workout.scheduled_date,
+        "title": workout.title,
+        "status": workout.status,
+        "day_number": workout.day_number,
+        "week_number": workout.week_number,
     }
 
 
@@ -383,6 +577,42 @@ def workout_history(
         )
 
     return rows
+
+
+@router.get("/history/summary", response_model=WorkoutHistorySummary)
+def workout_history_summary(
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    row = (
+        db.query(
+            func.count(func.distinct(UserWorkout.id)),
+            func.count(UserWorkoutSet.id).filter(UserWorkoutSet.is_completed.is_(True)),
+            func.coalesce(
+                func.sum(
+                    func.coalesce(UserWorkoutSet.actual_reps, 0)
+                    * func.coalesce(UserWorkoutSet.actual_weight, 0)
+                ).filter(UserWorkoutSet.is_completed.is_(True)),
+                0,
+            ),
+        )
+        .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
+        .outerjoin(UserWorkoutExercise, UserWorkoutExercise.workout_id == UserWorkout.id)
+        .outerjoin(
+            UserWorkoutSet,
+            UserWorkoutSet.workout_exercise_id == UserWorkoutExercise.id,
+        )
+        .filter(
+            UserProgram.user_id == current_user.id,
+            UserWorkout.status == "completed",
+        )
+        .one()
+    )
+    return {
+        "workouts_completed": int(row[0] or 0),
+        "completed_sets": int(row[1] or 0),
+        "volume_kg": round(float(row[2] or 0), 2),
+    }
 
 
 @router.get("/diary", response_model=list[BodyMeasurementResponse])
@@ -445,12 +675,15 @@ def save_body_measurement(
         row.note = changes["note"]
 
     if changes.get("weight_kg") is not None:
-        recalculate_nutrition_target(
-            db,
-            current_user,
-            {"weight_kg": changes["weight_kg"]},
-            current_user,
-        )
+        try:
+            recalculate_nutrition_target(
+                db,
+                current_user,
+                {"weight_kg": changes["weight_kg"]},
+                current_user,
+            )
+        except NutritionError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     db.commit()
     db.refresh(row)

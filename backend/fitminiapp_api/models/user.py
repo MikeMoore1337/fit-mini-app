@@ -3,6 +3,7 @@ from datetime import date, datetime
 from sqlalchemy import (
     BIGINT,
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     Float,
@@ -29,9 +30,6 @@ class User(Base):
     first_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
     last_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
     photo_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
-    client_code: Mapped[str | None] = mapped_column(
-        String(8), unique=True, index=True, nullable=True
-    )
     is_coach: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
@@ -55,7 +53,7 @@ class UserProfile(Base):
     goal: Mapped[str | None] = mapped_column(String(32), nullable=True)
     level: Mapped[str | None] = mapped_column(String(32), nullable=True)
     height_cm: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    weight_kg: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
     workouts_per_week: Mapped[int | None] = mapped_column(Integer, nullable=True)
     cardio_trainings_per_week: Mapped[int | None] = mapped_column(Integer, nullable=True)
     timezone: Mapped[str] = mapped_column(
@@ -125,6 +123,10 @@ class CoachClientInvite(Base):
             unique=True,
             postgresql_where=text("status = 'pending' AND client_user_id IS NOT NULL"),
             sqlite_where=text("status = 'pending' AND client_user_id IS NOT NULL"),
+        ),
+        CheckConstraint(
+            "status <> 'pending' OR token_hash IS NOT NULL",
+            name="ck_coach_client_invites_pending_token",
         ),
     )
 

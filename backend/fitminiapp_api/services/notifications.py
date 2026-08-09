@@ -9,15 +9,18 @@ from sqlalchemy.orm import Session
 from fitminiapp_api.core.timezone import (
     local_naive_to_utc_naive,
     now_for_user_naive,
+    now_msk_naive,
     to_user_timezone_naive,
     user_local_naive_to_utc_naive,
 )
 from fitminiapp_api.models.notification import Notification, NotificationSetting
 from fitminiapp_api.models.program import UserProgram, UserWorkout
-from fitminiapp_api.models.user import User, UserProfile
+from fitminiapp_api.models.user import CoachClientInvite, User, UserProfile
 
 MAX_DELIVERY_ATTEMPTS = 5
 PROCESSING_TIMEOUT = timedelta(minutes=5)
+TERMINAL_RETENTION = timedelta(days=90)
+RETENTION_BATCH_SIZE = 1000
 
 
 def utcnow() -> datetime:
@@ -27,14 +30,19 @@ def utcnow() -> datetime:
 def get_or_create_settings(db: Session, user: User) -> NotificationSetting:
     setting = db.query(NotificationSetting).filter(NotificationSetting.user_id == user.id).first()
     if not setting:
-        setting = NotificationSetting(
-            user_id=user.id,
-            workout_reminders_enabled=True,
-            reminder_hour=9,
+        db.query(User).filter(User.id == user.id).with_for_update().one()
+        setting = (
+            db.query(NotificationSetting).filter(NotificationSetting.user_id == user.id).first()
         )
-        db.add(setting)
-        db.commit()
-        db.refresh(setting)
+        if not setting:
+            setting = NotificationSetting(
+                user_id=user.id,
+                workout_reminders_enabled=True,
+                reminder_hour=9,
+            )
+            db.add(setting)
+            db.commit()
+            db.refresh(setting)
     return setting
 
 
@@ -46,6 +54,45 @@ def list_my_notifications(db: Session, user: User, limit: int = 100) -> list[Not
         .limit(limit)
         .all()
     )
+
+
+def prune_terminal_records(db: Session) -> int:
+    """Bound terminal operational history while preserving relation/audit rows."""
+    cutoff = now_msk_naive() - TERMINAL_RETENTION
+    notification_ids = [
+        row.id
+        for row in db.query(Notification.id)
+        .filter(
+            Notification.status.in_(("sent", "cancelled", "failed")),
+            Notification.created_at < cutoff,
+        )
+        .order_by(Notification.id.asc())
+        .limit(RETENTION_BATCH_SIZE)
+        .all()
+    ]
+    invite_ids = [
+        row.id
+        for row in db.query(CoachClientInvite.id)
+        .filter(
+            CoachClientInvite.status.in_(("expired", "revoked")),
+            CoachClientInvite.created_at < cutoff,
+        )
+        .order_by(CoachClientInvite.id.asc())
+        .limit(RETENTION_BATCH_SIZE)
+        .all()
+    ]
+    if notification_ids:
+        db.query(Notification).filter(Notification.id.in_(notification_ids)).delete(
+            synchronize_session=False
+        )
+    if invite_ids:
+        db.query(CoachClientInvite).filter(CoachClientInvite.id.in_(invite_ids)).delete(
+            synchronize_session=False
+        )
+    deleted = len(notification_ids) + len(invite_ids)
+    if deleted:
+        db.commit()
+    return deleted
 
 
 def get_due_notifications(
@@ -71,6 +118,7 @@ def get_due_notifications(
 
 
 def sync_workout_reminders(db: Session) -> int:
+    prune_terminal_records(db)
     created = 0
     rows = (
         db.query(NotificationSetting, User, UserProfile.timezone)
@@ -97,20 +145,7 @@ def sync_workout_reminders(db: Session) -> int:
         )
         .all()
     )
-    reminders = (
-        db.query(Notification)
-        .filter(
-            Notification.user_id.in_(user_ids),
-            Notification.dedupe_key.like("workout:%"),
-        )
-        .all()
-    )
-    reminders_by_key = {row.dedupe_key: row for row in reminders}
-    queued_by_user: dict[int, list[Notification]] = {}
-    for notification in reminders:
-        if notification.status == "queued":
-            queued_by_user.setdefault(notification.user_id, []).append(notification)
-
+    scheduled_workouts: list[tuple[UserWorkout, User, str | None, datetime]] = []
     active_keys: set[str] = set()
     for workout, user_id in workouts:
         setting, user, timezone = settings_by_user[user_id]
@@ -120,18 +155,50 @@ def sync_workout_reminders(db: Session) -> int:
             continue
         dedupe_key = f"workout:{workout.id}:reminder"
         active_keys.add(dedupe_key)
-        scheduled_for = datetime.combine(
-            workout.scheduled_date,
-            time(hour=setting.reminder_hour),
+        scheduled_workouts.append(
+            (
+                workout,
+                user,
+                timezone,
+                datetime.combine(workout.scheduled_date, time(hour=setting.reminder_hour)),
+            )
         )
+
+    reminder_scope = [Notification.status == "queued"]
+    if active_keys:
+        reminder_scope.append(Notification.dedupe_key.in_(active_keys))
+    reminders = (
+        db.query(Notification)
+        .filter(
+            Notification.user_id.in_(user_ids),
+            Notification.dedupe_key.like("workout:%"),
+            or_(*reminder_scope),
+        )
+        .all()
+    )
+    reminders_by_key = {row.dedupe_key: row for row in reminders}
+    queued_by_user: dict[int, list[Notification]] = {}
+    for notification in reminders:
+        if notification.status == "queued":
+            queued_by_user.setdefault(notification.user_id, []).append(notification)
+
+    for workout, user, timezone, scheduled_for in scheduled_workouts:
+        dedupe_key = f"workout:{workout.id}:reminder"
         existing_notification = reminders_by_key.get(dedupe_key)
         if existing_notification:
-            if existing_notification.status == "queued":
+            if existing_notification.status in {"queued", "cancelled"}:
+                was_cancelled = existing_notification.status == "cancelled"
+                existing_notification.status = "queued"
                 existing_notification.scheduled_for = scheduled_for
                 existing_notification.scheduled_for_utc = local_naive_to_utc_naive(
                     scheduled_for,
                     timezone,
                 )
+                if was_cancelled:
+                    existing_notification.attempt_count = 0
+                    existing_notification.last_error = None
+                    existing_notification.next_attempt_at = None
+                    existing_notification.processing_started_at = None
             continue
         notification = Notification(
             user_id=user.id,

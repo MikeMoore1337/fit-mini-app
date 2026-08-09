@@ -9,8 +9,10 @@ from fitminiapp_api.db.session import get_session_context
 from fitminiapp_api.models.notification import NotificationSetting
 from fitminiapp_api.models.user import User, UserProfile
 from fitminiapp_api.schemas.bot import BotTimezoneUpdateRequest, BotTimezoneUpdateResponse
-from fitminiapp_api.services.client_codes import ensure_client_code
-from fitminiapp_api.services.telegram_auth import normalize_telegram_username
+from fitminiapp_api.services.telegram_auth import (
+    get_or_insert_telegram_user,
+    normalize_telegram_username,
+)
 
 router = APIRouter()
 
@@ -24,29 +26,22 @@ def _check_bot_token(x_bot_token: str | None) -> None:
 
 
 def _get_or_create_user(db: Session, payload: BotTimezoneUpdateRequest) -> User:
-    user = db.query(User).filter(User.telegram_user_id == payload.telegram_user_id).first()
     username = normalize_telegram_username(payload.username)
-
-    if not user:
-        user = User(
-            telegram_user_id=payload.telegram_user_id,
-            username=username,
-            first_name=payload.first_name,
-            last_name=payload.last_name,
-            is_admin=payload.telegram_user_id in settings.admin_telegram_id_set,
-            is_active=True,
-        )
-        db.add(user)
-        db.flush()
-    else:
-        if payload.username is not None:
-            user.username = username
-        if payload.first_name is not None:
-            user.first_name = payload.first_name
-        if payload.last_name is not None:
-            user.last_name = payload.last_name
-
-    ensure_client_code(db, user)
+    user = get_or_insert_telegram_user(
+        db,
+        telegram_user_id=payload.telegram_user_id,
+        username=username,
+        first_name=payload.first_name,
+        last_name=payload.last_name,
+        photo_url=None,
+    )
+    user = db.query(User).filter(User.id == user.id).with_for_update().one()
+    if payload.username is not None:
+        user.username = username
+    if payload.first_name is not None:
+        user.first_name = payload.first_name
+    if payload.last_name is not None:
+        user.last_name = payload.last_name
 
     return user
 

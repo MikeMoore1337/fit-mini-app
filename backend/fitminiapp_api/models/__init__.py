@@ -1,3 +1,4 @@
+from fitminiapp_api.models.audit import AuditEvent
 from fitminiapp_api.models.billing import Payment, Plan, Subscription
 from fitminiapp_api.models.exercise import Exercise
 from fitminiapp_api.models.notification import Notification, NotificationSetting
@@ -22,6 +23,7 @@ from fitminiapp_api.models.user import (
 )
 
 __all__ = [
+    "AuditEvent",
     "BodyMeasurement",
     "CoachClient",
     "CoachClientInvite",

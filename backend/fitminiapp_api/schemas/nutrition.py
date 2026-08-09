@@ -7,9 +7,9 @@ from pydantic import BaseModel, Field
 class NutritionTargetSave(BaseModel):
     target_telegram_user_id: int | None = Field(default=None, ge=1)
     sex: Literal["male", "female"]
-    weight_kg: float = Field(ge=20, le=500, allow_inf_nan=False)
-    height_cm: float = Field(ge=50, le=280, allow_inf_nan=False)
-    age: float = Field(ge=12, le=120, allow_inf_nan=False)
+    weight_kg: float = Field(ge=20, le=350, allow_inf_nan=False)
+    height_cm: float = Field(ge=100, le=250, allow_inf_nan=False)
+    age: float = Field(ge=18, le=100, allow_inf_nan=False)
     daily_activity_level: Literal["sedentary", "low", "moderate", "high"] = "sedentary"
     strength_trainings_per_week: int = Field(ge=0, le=14)
     strength_training_duration_minutes: int = Field(default=60, ge=10, le=300)

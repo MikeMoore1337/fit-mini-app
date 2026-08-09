@@ -3,14 +3,14 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from fitminiapp_api.schemas.nutrition import NutritionTargetResponse
 
 
 class ProgramTemplateExerciseCreate(BaseModel):
     exercise_id: int = Field(ge=1)
-    prescribed_sets: int = Field(ge=1, le=12)
+    prescribed_sets: int = Field(ge=1, le=10)
     prescribed_reps: str = Field(min_length=1, max_length=32)
     rest_seconds: int = Field(default=90, ge=15, le=600)
     notes: str | None = Field(default=None, max_length=2000)
@@ -18,7 +18,7 @@ class ProgramTemplateExerciseCreate(BaseModel):
 
 class ProgramTemplateDayCreate(BaseModel):
     title: str = Field(min_length=1, max_length=128)
-    exercises: list[ProgramTemplateExerciseCreate] = Field(min_length=1, max_length=30)
+    exercises: list[ProgramTemplateExerciseCreate] = Field(min_length=1, max_length=20)
 
 
 class ProgramTemplateCreate(BaseModel):
@@ -28,8 +28,24 @@ class ProgramTemplateCreate(BaseModel):
     mode: Literal["self", "coach"] = "self"
     target_telegram_user_id: int | None = Field(default=None, ge=1)
     target_full_name: str | None = Field(default=None, max_length=128)
-    days: list[ProgramTemplateDayCreate] = Field(min_length=1, max_length=14)
+    days: list[ProgramTemplateDayCreate] = Field(min_length=1, max_length=7)
     assign_after_create: bool = True
+    start_date: date | None = None
+    duration_weeks: int = Field(default=1, ge=1, le=24)
+    schedule_weekdays: list[int] | None = Field(default=None, min_length=1, max_length=7)
+    replace_active: bool = False
+
+    @model_validator(mode="after")
+    def validate_assignment_schedule(self):
+        if self.schedule_weekdays is None:
+            return self
+        if len(self.schedule_weekdays) != len(self.days):
+            raise ValueError("schedule_weekdays must contain one weekday per program day")
+        if any(day < 0 or day > 6 for day in self.schedule_weekdays):
+            raise ValueError("schedule_weekdays values must be between 0 and 6")
+        if len(set(self.schedule_weekdays)) != len(self.schedule_weekdays):
+            raise ValueError("schedule_weekdays must be unique")
+        return self
 
 
 class ProgramTemplateExerciseResponse(BaseModel):
@@ -84,6 +100,9 @@ class ProgramTemplateCreateResponse(BaseModel):
 class ProgramAssignmentResponse(BaseModel):
     user_program_id: int
     workouts_created: int
+    status: Literal["scheduled", "active", "completed", "archived"]
+    start_date: date
+    duration_weeks: int
 
 
 class CoachAssignedProgramResponse(BaseModel):
@@ -98,6 +117,11 @@ class CoachAssignedProgramResponse(BaseModel):
     level: str | None = None
     assigned_at: datetime
     is_active: bool
+    status: Literal["scheduled", "active", "completed", "archived"]
+    start_date: date
+    duration_weeks: int
+    schedule_weekdays: list[int]
+    completed_at: datetime | None = None
     workouts_total: int
     workouts_completed: int
     workouts_planned: int
@@ -106,9 +130,11 @@ class CoachAssignedProgramResponse(BaseModel):
 
 class CoachProgramExerciseCreate(BaseModel):
     exercise_id: int = Field(ge=1)
-    prescribed_sets: int = Field(ge=1, le=12)
+    day_number: int | None = Field(default=None, ge=1, le=14)
+    prescribed_sets: int = Field(ge=1, le=10)
     prescribed_reps: str = Field(min_length=1, max_length=32)
     rest_seconds: int = Field(default=90, ge=15, le=600)
+    notes: str | None = Field(default=None, max_length=2000)
 
 
 class CoachProgramExerciseAssignmentResponse(BaseModel):
@@ -120,20 +146,30 @@ class AssignTemplateRequest(BaseModel):
     target_full_name: str | None = Field(default=None, max_length=128)
 
 
-class AssignTemplateSelfRequest(BaseModel):
+class AssignmentScheduleRequest(BaseModel):
     start_date: date | None = None
+    duration_weeks: int = Field(default=1, ge=1, le=24)
+    schedule_weekdays: list[int] | None = Field(default=None, min_length=1, max_length=7)
+    replace_active: bool = False
+
+    @model_validator(mode="after")
+    def validate_weekdays(self):
+        weekdays = self.schedule_weekdays
+        if weekdays is None:
+            return self
+        if any(day < 0 or day > 6 for day in weekdays):
+            raise ValueError("schedule_weekdays values must be between 0 and 6")
+        if len(set(weekdays)) != len(weekdays):
+            raise ValueError("schedule_weekdays must be unique")
+        return self
 
 
-class AssignTemplateToClientRequest(BaseModel):
-    start_date: date | None = None
+class AssignTemplateSelfRequest(AssignmentScheduleRequest):
+    pass
 
 
-class CoachClientCreate(BaseModel):
-    telegram_user_id: int | None = Field(default=None, ge=1)
-    username: str | None = Field(default=None, max_length=64)
-    client_code: str | None = Field(default=None, min_length=7, max_length=16)
-    source: Literal["client_code", "username_search", "telegram_user_picker"] | None = None
-    full_name: str | None = Field(default=None, max_length=128)
+class AssignTemplateToClientRequest(AssignmentScheduleRequest):
+    pass
 
 
 class ProgramAssignedResponse(BaseModel):
