@@ -721,6 +721,9 @@
 }
 
 /* Полноценное описание упражнения */
+.exercise-guide-modal__head {
+  max-width: none;
+}
 .exercise-guide-modal__panel {
   width: min(900px, 100%);
   overflow-y: auto;

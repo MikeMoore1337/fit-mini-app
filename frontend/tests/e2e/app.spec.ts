@@ -287,6 +287,16 @@ test('профиль содержит уведомления, а карточк�
   await expect(page.getByRole('heading', { name: 'Для чего это упражнение' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Какие мышцы работают' })).toBeVisible();
   await expect(page.getByText('Тянет плечевой пояс назад.')).toBeVisible();
+  const [guidePanelBox, guideHeadBox] = await Promise.all([
+    page.locator('.exercise-guide-modal__panel').boundingBox(),
+    page.locator('.exercise-guide-modal__head').boundingBox(),
+  ]);
+  expect(guidePanelBox).not.toBeNull();
+  expect(guideHeadBox).not.toBeNull();
+  expect(Math.abs(guideHeadBox!.x - guidePanelBox!.x)).toBeLessThanOrEqual(2);
+  expect(
+    Math.abs(guideHeadBox!.x + guideHeadBox!.width - (guidePanelBox!.x + guidePanelBox!.width)),
+  ).toBeLessThanOrEqual(2);
   await page.getByRole('button', { name: 'Увеличить: Исходное положение' }).click();
   await expect(page.locator('.exercise-lightbox')).toBeVisible();
   await page.keyboard.press('Escape');
