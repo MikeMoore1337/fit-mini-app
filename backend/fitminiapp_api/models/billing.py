@@ -1,3 +1,10 @@
+"""Legacy table mappings retained only for account deletion compatibility.
+
+The billing API is intentionally absent. Existing installations may still have
+rows referencing users through the original non-cascading foreign keys, so the
+mappings remain registered until those legacy tables can be retired safely.
+"""
+
 from __future__ import annotations
 
 from datetime import datetime

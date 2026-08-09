@@ -22,8 +22,6 @@ class Settings(BaseSettings):
 
     app_env: Literal["dev", "test", "prod"]
     app_name: str
-    app_host: str
-    app_port: int
     app_debug: bool
 
     secret_key: str
@@ -43,9 +41,6 @@ class Settings(BaseSettings):
     telegram_bot_token: str
     telegram_bot_username: str = ""
     bot_internal_token: str = ""
-
-    payment_provider: str = "mock"
-    payment_public_url: str = ""
 
     worker_poll_seconds: int = Field(default=10, ge=1, le=3600)
     reminder_sync_seconds: int = Field(default=60, ge=10, le=3600)
@@ -72,13 +67,9 @@ class Settings(BaseSettings):
             raise ValueError("APP_DEBUG must be false in prod")
         _ = self.admin_telegram_id_set
 
-        for name, value in {
-            "FRONTEND_BASE_URL": self.frontend_base_url,
-            "PAYMENT_PUBLIC_URL": self.payment_public_url or self.frontend_base_url,
-        }.items():
-            parsed = urlparse(value)
-            if parsed.scheme != "https" or not parsed.netloc:
-                raise ValueError(f"{name} must be an absolute HTTPS URL in prod")
+        parsed = urlparse(self.frontend_base_url)
+        if parsed.scheme != "https" or not parsed.netloc:
+            raise ValueError("FRONTEND_BASE_URL must be an absolute HTTPS URL in prod")
         return self
 
     @property

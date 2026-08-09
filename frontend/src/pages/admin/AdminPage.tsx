@@ -3,18 +3,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AppShell } from '../../app/AppShell';
 import { useAuth } from '../../app/AuthProvider';
 import { api } from '../../shared/api/client';
-import type {
-  AdminNotification,
-  AdminPayment,
-  AdminTemplate,
-  AdminUser,
-} from '../../shared/api/types';
+import type { AdminNotification, AdminTemplate, AdminUser } from '../../shared/api/types';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Badge, Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
 import { Redirect } from '../../shared/navigation/router';
 import { handleTabKeyDown } from '../../shared/ui/tabs';
 
-type AdminTab = 'users' | 'payments' | 'notifications' | 'templates';
+type AdminTab = 'users' | 'notifications' | 'templates';
 const PAGE_SIZE = 50;
 
 function Pagination({
@@ -63,12 +58,6 @@ export default function AdminPage() {
     queryKey: ['admin', 'users', page, search, role],
     queryFn: () => api<AdminUser[]>(`/api/v1/admin/users?${userParams}`),
   });
-  const payments = useQuery({
-    queryKey: ['admin', 'payments', page],
-    queryFn: () =>
-      api<AdminPayment[]>(`/api/v1/admin/payments?limit=${PAGE_SIZE}&offset=${offset}`),
-    enabled: tab === 'payments',
-  });
   const notifications = useQuery({
     queryKey: ['admin', 'notifications', page],
     queryFn: () =>
@@ -114,7 +103,7 @@ export default function AdminPage() {
           <div>
             <span className="eyebrow">Управление</span>
             <h1>Панель администратора</h1>
-            <p className="muted">Пользователи, платежи, уведомления и шаблоны.</p>
+            <p className="muted">Пользователи, уведомления и шаблоны.</p>
           </div>
           <Badge>Администратор</Badge>
         </header>
@@ -126,7 +115,6 @@ export default function AdminPage() {
           {(
             [
               ['users', 'Пользователи'],
-              ['payments', 'Платежи'],
               ['notifications', 'Уведомления'],
               ['templates', 'Шаблоны'],
             ] as const
@@ -263,43 +251,6 @@ export default function AdminPage() {
               <Pagination
                 page={page}
                 hasNext={(users.data?.length ?? 0) === PAGE_SIZE}
-                onPage={setPage}
-              />
-            </Card>
-          )}
-
-          {tab === 'payments' && (
-            <Card title="Платежи">
-              {payments.isLoading ? (
-                <LoadingState />
-              ) : payments.error ? (
-                <ErrorState message={(payments.error as Error).message} />
-              ) : !payments.data?.length ? (
-                <EmptyState title="Платежей пока нет" />
-              ) : (
-                <div className="list-grid top-gap">
-                  {payments.data.map((item) => (
-                    <article className="list-row" key={item.id}>
-                      <div className="list-row__main">
-                        <strong>{item.plan_title || item.plan_code || 'План'}</strong>
-                        <span className="muted">
-                          Telegram {item.telegram_user_id || '—'} ·{' '}
-                          {new Date(item.created_at || '').toLocaleString('ru-RU')}
-                        </span>
-                      </div>
-                      <div>
-                        <strong>
-                          {item.amount} {item.currency}
-                        </strong>{' '}
-                        <Badge>{item.status}</Badge>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              )}
-              <Pagination
-                page={page}
-                hasNext={(payments.data?.length ?? 0) === PAGE_SIZE}
                 onPage={setPage}
               />
             </Card>

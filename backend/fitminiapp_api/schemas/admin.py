@@ -17,17 +17,6 @@ class AdminUserRow(BaseModel):
     level: str | None = None
 
 
-class AdminPaymentRow(BaseModel):
-    id: int
-    telegram_user_id: int | None = None
-    plan_code: str | None = None
-    plan_title: str | None = None
-    status: str
-    amount: float
-    currency: str
-    created_at: datetime | None = None
-
-
 class AdminNotificationRow(BaseModel):
     id: int
     user_id: int

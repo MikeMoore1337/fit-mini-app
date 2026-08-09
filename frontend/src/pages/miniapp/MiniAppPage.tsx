@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { AppShell } from '../../app/AppShell';
 import { useAuth } from '../../app/AuthProvider';
-import { NotificationsPanel } from '../../features/account/NotificationsBilling';
+import { NotificationsPanel } from '../../features/account/NotificationsPanel';
 import { AccountPrivacy } from '../../features/account/AccountPrivacy';
 import { Diary } from '../../features/diary/Diary';
 import { ExerciseCatalog } from '../../features/exercises/ExerciseCatalog';

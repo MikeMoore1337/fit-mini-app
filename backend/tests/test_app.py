@@ -2090,21 +2090,23 @@ def test_coach_cannot_use_admin_delete_template(client):
     assert response.status_code == 403
 
 
-def test_admin_payments_ok_for_admin(client):
+def test_billing_and_admin_payment_routes_are_not_exposed(client):
     headers = auth(client, telegram_user_id=1001, is_coach=True, is_admin=True)
-    plans = client.get("/api/v1/billing/plans", headers=headers).json()
-    premium = next(p for p in plans if p["code"] == "premium")
-    checkout = client.post(
-        "/api/v1/billing/checkout",
-        json={"plan_code": premium["code"]},
-        headers=headers,
-    )
-    assert checkout.status_code == 200
+    routes = [
+        ("GET", "/api/v1/billing/plans"),
+        ("POST", "/api/v1/billing/checkout"),
+        ("POST", "/api/v1/billing/mock/complete/legacy-checkout"),
+        ("GET", "/api/v1/billing/subscription"),
+        ("GET", "/api/v1/admin/payments"),
+    ]
 
-    response = client.get("/api/v1/admin/payments", headers=headers)
-    assert response.status_code == 200
-    rows = response.json()
-    assert any(row["plan_code"] == "premium" for row in rows)
+    for method, path in routes:
+        response = client.request(method, path, headers=headers)
+        assert response.status_code == 404
+
+    openapi_paths = client.get("/openapi.json").json()["paths"]
+    assert not any("billing" in path for path in openapi_paths)
+    assert "/api/v1/admin/payments" not in openapi_paths
 
 
 def test_notification_reminder_hour_validation(client):
@@ -2310,50 +2312,6 @@ def test_health_supports_head(client):
     assert response.status_code == 200
     assert response.content == b""
     assert "x-request-id" in {k.lower(): v for k, v in response.headers.items()}
-
-
-def test_mock_billing_activation(client):
-    headers = auth(client, telegram_user_id=2001, is_coach=False)
-    plans = client.get("/api/v1/billing/plans", headers=headers).json()
-    premium = next(p for p in plans if p["code"] == "premium")
-    checkout = client.post(
-        "/api/v1/billing/checkout", json={"plan_code": premium["code"]}, headers=headers
-    )
-    assert checkout.status_code == 200
-    checkout_id = checkout.json()["checkout_id"]
-    assert client.post(f"/api/v1/billing/mock/complete/{checkout_id}").status_code == 401
-    other_headers = auth(client, telegram_user_id=2999, is_coach=False)
-    assert (
-        client.post(
-            f"/api/v1/billing/mock/complete/{checkout_id}", headers=other_headers
-        ).status_code
-        == 404
-    )
-    complete = client.post(f"/api/v1/billing/mock/complete/{checkout_id}", headers=headers)
-    assert complete.status_code == 200
-    sub = client.get("/api/v1/billing/subscription", headers=headers)
-    assert sub.status_code == 200
-    assert sub.json()["plan_code"] == "premium"
-
-
-def test_billing_checkout_falls_back_to_frontend_base_url(client, monkeypatch):
-    from fitminiapp_api.core.config import settings
-
-    monkeypatch.setattr(settings, "payment_public_url", "")
-    monkeypatch.setattr(settings, "frontend_base_url", "https://app.your-fitness-coach.ru")
-
-    headers = auth(client, telegram_user_id=2001, is_coach=False)
-    plans = client.get("/api/v1/billing/plans", headers=headers).json()
-    premium = next(p for p in plans if p["code"] == "premium")
-
-    checkout = client.post(
-        "/api/v1/billing/checkout",
-        json={"plan_code": premium["code"]},
-        headers=headers,
-    )
-
-    assert checkout.status_code == 200
-    assert checkout.json()["checkout_url"].startswith("https://app.your-fitness-coach.ru/app?")
 
 
 def test_auth_uses_httponly_refresh_cookie(client):

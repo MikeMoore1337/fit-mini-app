@@ -4,13 +4,11 @@ from sqlalchemy.orm import Session
 
 from fitminiapp_api.api.dependencies.auth import require_admin
 from fitminiapp_api.db.session import get_db
-from fitminiapp_api.models.billing import Payment, Plan
 from fitminiapp_api.models.notification import Notification
 from fitminiapp_api.models.program import ProgramTemplate
 from fitminiapp_api.models.user import User, UserProfile
 from fitminiapp_api.schemas.admin import (
     AdminNotificationRow,
-    AdminPaymentRow,
     AdminTemplateRow,
     AdminUserRoleUpdate,
     AdminUserRow,
@@ -197,40 +195,6 @@ def delete_user(
 
     delete_user_cascade(db, user)
     db.commit()
-
-
-@router.get("/payments", response_model=list[AdminPaymentRow])
-def admin_payments(
-    response: Response,
-    limit: int = Query(default=100, ge=1, le=200),
-    offset: int = Query(default=0, ge=0),
-    db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
-) -> list[dict]:
-    query = (
-        db.query(Payment, Plan, User)
-        .outerjoin(Plan, Plan.id == Payment.plan_id)
-        .outerjoin(User, User.id == Payment.user_id)
-    )
-    response.headers["X-Total-Count"] = str(query.count())
-    rows = query.order_by(Payment.id.desc()).offset(offset).limit(limit).all()
-
-    result = []
-    for payment, plan, user in rows:
-        plan_code = plan.code if plan else None
-        result.append(
-            {
-                "id": payment.id,
-                "telegram_user_id": user.telegram_user_id if user else None,
-                "plan_code": plan_code,
-                "plan_title": plan.title if plan else plan_code,
-                "status": payment.status,
-                "amount": float(payment.amount),
-                "currency": payment.currency,
-                "created_at": payment.created_at.isoformat() if payment.created_at else None,
-            }
-        )
-    return result
 
 
 @router.get("/notifications", response_model=list[AdminNotificationRow])

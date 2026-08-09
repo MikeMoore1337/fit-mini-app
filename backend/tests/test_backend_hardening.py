@@ -6,6 +6,7 @@ from threading import Barrier
 from fitminiapp_api.core.timezone import now_msk_naive
 from fitminiapp_api.db.session import SessionLocal, get_session_context
 from fitminiapp_api.models.audit import AuditEvent
+from fitminiapp_api.models.billing import Payment, Plan, Subscription
 from fitminiapp_api.models.notification import Notification, NotificationSetting
 from fitminiapp_api.models.user import CoachClient, CoachClientInvite, User, UserProfile
 from fitminiapp_api.services.notifications import prune_terminal_records
@@ -277,3 +278,49 @@ def test_account_export_omits_secrets_and_self_delete_removes_account(client):
     assert client.get("/api/v1/me", headers=headers).status_code == 401
     with get_session_context() as db:
         assert db.query(User).filter(User.id == me["id"]).first() is None
+
+
+def test_account_deletion_cleans_legacy_billing_foreign_keys(client):
+    headers = _auth(client, 883_002, is_coach=False)
+    user_id = client.get("/api/v1/me", headers=headers).json()["id"]
+
+    with get_session_context() as db:
+        plan = Plan(
+            code="legacy-account-delete",
+            title="Legacy",
+            price=1,
+            currency="RUB",
+            period_days=1,
+        )
+        db.add(plan)
+        db.flush()
+        db.add_all(
+            [
+                Payment(
+                    user_id=user_id,
+                    plan_id=plan.id,
+                    provider="legacy",
+                    provider_payment_id="legacy-account-delete",
+                    amount=1,
+                    currency="RUB",
+                    status="legacy",
+                ),
+                Subscription(
+                    user_id=user_id,
+                    plan_id=plan.id,
+                    status="legacy",
+                ),
+            ]
+        )
+
+    deleted = client.request(
+        "DELETE",
+        "/api/v1/me/account",
+        headers=headers,
+        json={"confirmation": "DELETE"},
+    )
+    assert deleted.status_code == 204
+
+    with get_session_context() as db:
+        assert db.query(Payment).filter(Payment.user_id == user_id).count() == 0
+        assert db.query(Subscription).filter(Subscription.user_id == user_id).count() == 0

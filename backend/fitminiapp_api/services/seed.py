@@ -4,7 +4,6 @@ from sqlalchemy.orm import Session
 
 from fitminiapp_api.core.config import settings
 from fitminiapp_api.db.session import get_session_context
-from fitminiapp_api.models.billing import Plan
 from fitminiapp_api.models.exercise import Exercise
 from fitminiapp_api.models.notification import NotificationSetting
 from fitminiapp_api.models.program import (
@@ -188,15 +187,6 @@ def seed_demo_data(db: Session, include_demo_users: bool = True) -> None:
         )
 
     _seed_exercise_catalog(db)
-
-    if db.query(Plan).count() == 0:
-        db.add_all(
-            [
-                Plan(code="free", title="Free", price=0, currency="RUB", period_days=3650),
-                Plan(code="premium", title="Premium", price=990, currency="RUB", period_days=30),
-                Plan(code="coach", title="Coach", price=2490, currency="RUB", period_days=30),
-            ]
-        )
 
     _delete_legacy_templates(db)
     _seed_strength_templates(db)

@@ -2268,13 +2268,6 @@ button:disabled {
     font-weight: 600;
 }
 
-#subscriptionInfo {
-    padding: 10px 12px;
-    border-radius: var(--radius-sm);
-    background: var(--success-soft);
-    border: 1px solid var(--success-line);
-}
-
 a {
     color: var(--link-color);
 }

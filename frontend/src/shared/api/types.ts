@@ -21,7 +21,6 @@ export type NutritionTargetSave = ApiSchemas['NutritionTargetSave'];
 export type NotificationItem = ApiSchemas['NotificationResponse'];
 export type NotificationSetting = ApiSchemas['NotificationSettingResponse'];
 export type AdminUser = ApiSchemas['AdminUserRow'];
-export type AdminPayment = ApiSchemas['AdminPaymentRow'];
 export type AdminNotification = ApiSchemas['AdminNotificationRow'];
 export type AdminTemplate = ApiSchemas['AdminTemplateRow'];
 export type InviteLink = ApiSchemas['CoachInviteLinkResponse'];

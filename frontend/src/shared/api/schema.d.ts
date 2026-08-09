@@ -831,74 +831,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/billing/plans": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Plans */
-        get: operations["plans_api_v1_billing_plans_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/billing/checkout": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Checkout */
-        post: operations["checkout_api_v1_billing_checkout_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/billing/mock/complete/{checkout_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Mock Complete */
-        post: operations["mock_complete_api_v1_billing_mock_complete__checkout_id__post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/billing/subscription": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** My Subscription */
-        get: operations["my_subscription_api_v1_billing_subscription_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/notifications/settings": {
         parameters: {
             query?: never;
@@ -1015,23 +947,6 @@ export interface paths {
         post?: never;
         /** Delete User */
         delete: operations["delete_user_api_v1_admin_users__user_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/payments": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Admin Payments */
-        get: operations["admin_payments_api_v1_admin_payments_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1239,25 +1154,6 @@ export interface components {
             /** Sent At */
             sent_at?: string | null;
         };
-        /** AdminPaymentRow */
-        AdminPaymentRow: {
-            /** Id */
-            id: number;
-            /** Telegram User Id */
-            telegram_user_id?: number | null;
-            /** Plan Code */
-            plan_code?: string | null;
-            /** Plan Title */
-            plan_title?: string | null;
-            /** Status */
-            status: string;
-            /** Amount */
-            amount: number;
-            /** Currency */
-            currency: string;
-            /** Created At */
-            created_at?: string | null;
-        };
         /** AdminTemplateRow */
         AdminTemplateRow: {
             /** Id */
@@ -1412,20 +1308,6 @@ export interface components {
             telegram_user_id: number;
             /** Timezone */
             timezone: string;
-        };
-        /** CheckoutRequest */
-        CheckoutRequest: {
-            /** Plan Code */
-            plan_code: string;
-        };
-        /** CheckoutResponse */
-        CheckoutResponse: {
-            /** Checkout Id */
-            checkout_id: string;
-            /** Checkout Url */
-            checkout_url: string;
-            /** Status */
-            status: string;
         };
         /** ClientResponse */
         ClientResponse: {
@@ -1877,21 +1759,6 @@ export interface components {
              */
             goal: "fat_loss" | "muscle_gain" | "maintenance" | "recomposition";
         };
-        /** PlanResponse */
-        PlanResponse: {
-            /** Id */
-            id: number;
-            /** Code */
-            code: string;
-            /** Title */
-            title: string;
-            /** Price */
-            price: number;
-            /** Currency */
-            currency: string;
-            /** Period Days */
-            period_days: number;
-        };
         /** ProgramAssignmentResponse */
         ProgramAssignmentResponse: {
             /** User Program Id */
@@ -2102,21 +1969,6 @@ export interface components {
         RefreshRequest: {
             /** Refresh Token */
             refresh_token?: string | null;
-        };
-        /** SubscriptionResponse */
-        SubscriptionResponse: {
-            /** Id */
-            id: number;
-            /** Plan Code */
-            plan_code: string;
-            /** Plan Title */
-            plan_title: string;
-            /** Status */
-            status: string;
-            /** Starts At */
-            starts_at?: string | null;
-            /** Ends At */
-            ends_at?: string | null;
         };
         /** TelegramInitRequest */
         TelegramInitRequest: {
@@ -4066,110 +3918,6 @@ export interface operations {
             };
         };
     };
-    plans_api_v1_billing_plans_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PlanResponse"][];
-                };
-            };
-        };
-    };
-    checkout_api_v1_billing_checkout_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CheckoutRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CheckoutResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    mock_complete_api_v1_billing_mock_complete__checkout_id__post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                checkout_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    my_subscription_api_v1_billing_subscription_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SubscriptionResponse"] | null;
-                };
-            };
-        };
-    };
     get_notification_settings_api_v1_notifications_settings_get: {
         parameters: {
             query?: never;
@@ -4427,38 +4175,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    admin_payments_api_v1_admin_payments_get: {
-        parameters: {
-            query?: {
-                limit?: number;
-                offset?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AdminPaymentRow"][];
-                };
             };
             /** @description Validation Error */
             422: {
