@@ -1,3 +1,4 @@
+import { useEffect, useMemo } from 'react';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type {
@@ -7,16 +8,21 @@ import type {
 } from '../../shared/api/types';
 import { Badge, Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
+import { workoutStatusLabel } from '../../shared/statusLabels';
+import { dateInputValue, detectedTimeZone } from '../../shared/dateTime';
 
 const HISTORY_PAGE_SIZE = 10;
-const statusLabels: Record<string, string> = {
-  planned: 'Запланирована',
-  in_progress: 'В процессе',
-  completed: 'Завершена',
-  skipped: 'Пропущена',
-};
+export type WorkoutNavigationTarget = 'schedule' | 'history';
 
-export function WorkoutHistory() {
+export function WorkoutHistory({
+  focusedWorkoutId,
+  onWorkoutSelect,
+  timeZone,
+}: {
+  focusedWorkoutId?: number | null;
+  onWorkoutSelect?: (workoutId: number, target: WorkoutNavigationTarget) => void;
+  timeZone?: string | null;
+}) {
   const queryClient = useQueryClient();
   const { confirm, toast } = useFeedback();
   const week = useQuery({
@@ -37,7 +43,8 @@ export function WorkoutHistory() {
     queryKey: ['workout', 'history', 'summary'],
     queryFn: () => api<WorkoutHistorySummary>('/api/v1/workouts/history/summary'),
   });
-  const rows = history.data?.pages.flat() ?? [];
+  const rows = useMemo(() => history.data?.pages.flat() ?? [], [history.data?.pages]);
+  const today = dateInputValue(new Date(), timeZone || detectedTimeZone());
   const clearHistory = useMutation({
     mutationFn: () => api('/api/v1/workouts/history', { method: 'DELETE' }),
     onSuccess: async () => {
@@ -46,6 +53,14 @@ export function WorkoutHistory() {
     },
     onError: (reason) => toast((reason as Error).message, 'error'),
   });
+
+  useEffect(() => {
+    if (!focusedWorkoutId || !rows.some((item) => item.id === focusedWorkoutId)) return;
+    const row = document.getElementById(`workout-history-${focusedWorkoutId}`);
+    row?.focus({ preventScroll: true });
+    row?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+  }, [focusedWorkoutId, rows]);
+
   return (
     <div className="stack">
       <Card title="Неделя">
@@ -57,15 +72,44 @@ export function WorkoutHistory() {
           <EmptyState title="На этой неделе нет тренировок" />
         ) : (
           <div className="list-grid top-gap">
-            {week.data.map((item) => (
-              <article className="list-row" key={item.id}>
-                <div>
-                  <strong>{item.title}</strong>
-                  <p className="muted">{item.scheduled_date}</p>
-                </div>
-                <Badge>{statusLabels[item.status] ?? item.status}</Badge>
-              </article>
-            ))}
+            {week.data.map((item) => {
+              const target: WorkoutNavigationTarget | null =
+                item.status === 'completed'
+                  ? rows.some((row) => row.id === item.id)
+                    ? 'history'
+                    : null
+                  : item.scheduled_date >= today
+                    ? 'schedule'
+                    : null;
+              const content = (
+                <>
+                  <div>
+                    <strong>{item.title}</strong>
+                    <p className="muted">{item.scheduled_date}</p>
+                  </div>
+                  <Badge>{workoutStatusLabel(item.status)}</Badge>
+                </>
+              );
+              if (!target) {
+                return (
+                  <article className="list-row" key={item.id}>
+                    {content}
+                  </article>
+                );
+              }
+              const targetId = `workout-${target}-${item.id}`;
+              return (
+                <a
+                  className="list-row workout-day-link"
+                  href={`#${targetId}`}
+                  key={item.id}
+                  aria-label={`Открыть тренировочный день: ${item.title}`}
+                  onClick={() => onWorkoutSelect?.(item.id, target)}
+                >
+                  {content}
+                </a>
+              );
+            })}
           </div>
         )}
       </Card>
@@ -116,7 +160,13 @@ export function WorkoutHistory() {
             </div>
             <div className="list-grid top-gap">
               {rows.map((item) => (
-                <article className="list-row" key={item.id}>
+                <article
+                  className="list-row"
+                  id={`workout-history-${item.id}`}
+                  key={item.id}
+                  tabIndex={-1}
+                  aria-label={`Тренировка ${item.title} в истории`}
+                >
                   <div>
                     <strong>{item.title}</strong>
                     <p className="muted">
