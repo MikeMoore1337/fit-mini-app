@@ -167,7 +167,9 @@ def test_finish_requires_explicit_incomplete_confirmation_and_completes_program(
     workout = today.json()
     assert workout["exercises"][0]["notes"] == "Без боли"
 
-    assert client.post(f"/api/v1/workouts/{workout['id']}/start", headers=headers).status_code == 200
+    assert (
+        client.post(f"/api/v1/workouts/{workout['id']}/start", headers=headers).status_code == 200
+    )
     first_set = workout["exercises"][0]["sets"][0]
     updated = client.patch(
         f"/api/v1/workouts/sets/{first_set['id']}",

@@ -7,6 +7,7 @@ from time import monotonic
 import httpx
 
 from fitminiapp_api.core.config import settings
+from fitminiapp_api.core.logging_config import configure_logging
 from fitminiapp_api.db.session import get_session_context
 from fitminiapp_api.models.notification import Notification
 from fitminiapp_api.models.user import User
@@ -14,11 +15,21 @@ from fitminiapp_api.services.notifications import (
     claim_due_notifications,
     mark_delivery_failed,
     mark_delivery_succeeded,
+    safe_delivery_error,
     sync_workout_reminders,
 )
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def _log_delivery_failure(notification_id: int, error: Exception) -> None:
+    logger.error(
+        "notification_delivery_failed",
+        extra={
+            "notification_id": notification_id,
+            "delivery_error": safe_delivery_error(error),
+        },
+    )
 
 
 async def send_telegram_message(
@@ -118,11 +129,22 @@ async def run_once(*, sync_reminders: bool = True) -> None:
                     delivered_row.processing_started_at = None
             else:
                 mark_delivery_failed(db, delivered_row, error, commit=False)
-                logger.error("Failed to send notification %s: %s", delivered_row.id, error)
+                _log_delivery_failure(delivered_row.id, error)
         db.commit()
 
 
 async def main() -> None:
+    configure_logging(
+        debug=settings.app_debug,
+        service="notification-worker",
+        sensitive_values=(
+            settings.secret_key,
+            settings.telegram_bot_token,
+            settings.bot_internal_token,
+            settings.database_url,
+        ),
+    )
+    logger.info("worker_started")
     next_reminder_sync = 0.0
     while True:
         current = monotonic()

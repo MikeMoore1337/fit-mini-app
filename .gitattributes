@@ -1,0 +1,4 @@
+* text=auto
+
+# Container entrypoints must remain executable POSIX shell text on Windows clones.
+*.sh text eol=lf

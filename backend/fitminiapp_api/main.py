@@ -12,6 +12,7 @@ from sqlalchemy import text
 
 from fitminiapp_api.api.router import api_router
 from fitminiapp_api.core.config import settings
+from fitminiapp_api.core.logging_config import configure_logging
 from fitminiapp_api.core.rate_limit import limiter
 from fitminiapp_api.db.session import engine
 from fitminiapp_api.middleware.request_context import RequestContextMiddleware
@@ -30,11 +31,22 @@ logger = logging.getLogger("app")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logging.basicConfig(
-        level=logging.DEBUG if settings.app_debug else logging.INFO,
-        format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+    del app
+    configure_logging(
+        debug=settings.app_debug,
+        service="api",
+        sensitive_values=(
+            settings.secret_key,
+            settings.telegram_bot_token,
+            settings.bot_internal_token,
+            settings.database_url,
+        ),
     )
-    yield
+    logger.info("application_started")
+    try:
+        yield
+    finally:
+        logger.info("application_stopped")
 
 
 app = FastAPI(
@@ -77,6 +89,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> Respo
             "detail": "Внутренняя ошибка сервера",
             "request_id": rid,
         },
+        headers={"X-Request-ID": rid} if rid else None,
     )
 
 

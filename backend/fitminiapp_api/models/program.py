@@ -175,9 +175,7 @@ class UserWorkout(Base):
     user_program_id: Mapped[int] = mapped_column(ForeignKey("user_programs.id"), index=True)
     scheduled_date: Mapped[date] = mapped_column(Date, index=True)
     day_number: Mapped[int] = mapped_column(Integer)
-    week_number: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=1, server_default="1"
-    )
+    week_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
     title: Mapped[str] = mapped_column(String(128))
     status: Mapped[str] = mapped_column(String(32), default="planned")
     started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

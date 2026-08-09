@@ -12,6 +12,14 @@ updates:
     directory: /bot
     schedule:
       interval: weekly
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    groups:
+      frontend-dependencies:
+        patterns:
+          - "*"
   - package-ecosystem: docker
     directory: /
     schedule:

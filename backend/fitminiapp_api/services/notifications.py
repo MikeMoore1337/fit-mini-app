@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, time, timedelta
 
+import httpx
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -25,6 +26,17 @@ RETENTION_BATCH_SIZE = 1000
 
 def utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
+
+
+def safe_delivery_error(error: Exception) -> str:
+    """Return a bounded diagnostic code without serializing request URLs or secrets."""
+    if isinstance(error, httpx.HTTPStatusError):
+        return f"http_status:{error.response.status_code}"
+    if isinstance(error, httpx.TimeoutException):
+        return "timeout"
+    if isinstance(error, httpx.RequestError):
+        return "transport_error"
+    return f"unexpected:{type(error).__name__}"[:2000]
 
 
 def get_or_create_settings(db: Session, user: User) -> NotificationSetting:
@@ -294,7 +306,7 @@ def mark_delivery_failed(
     commit: bool = True,
 ) -> None:
     notification.attempt_count += 1
-    notification.last_error = str(error)[:2000]
+    notification.last_error = safe_delivery_error(error)
     notification.processing_started_at = None
     if notification.attempt_count >= MAX_DELIVERY_ATTEMPTS:
         notification.status = "failed"
@@ -305,28 +317,6 @@ def mark_delivery_failed(
         notification.next_attempt_at = utcnow() + timedelta(minutes=delay_minutes)
     if commit:
         db.commit()
-
-
-def mark_notification_sent(db: Session, notification: Notification) -> Notification:
-    user = db.query(User).filter(User.id == notification.user_id).first()
-    notification.status = "sent"
-    notification.sent_at = now_for_user_naive(user)
-    notification.last_error = None
-    db.commit()
-    db.refresh(notification)
-    return notification
-
-
-def mark_notification_failed(
-    db: Session,
-    notification: Notification,
-    error_message: str,
-) -> Notification:
-    notification.status = "failed"
-    notification.last_error = error_message[:2000] if error_message else "unknown error"
-    db.commit()
-    db.refresh(notification)
-    return notification
 
 
 def create_manual_notification(
