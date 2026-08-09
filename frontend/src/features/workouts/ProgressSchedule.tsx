@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type {
@@ -7,16 +7,9 @@ import type {
   WorkoutScheduleItem,
 } from '../../shared/api/types';
 import { dateInputValue, detectedTimeZone } from '../../shared/dateTime';
+import { workoutStatusLabel } from '../../shared/statusLabels';
 import { Badge, Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
-
-const statusLabels: Record<string, string> = {
-  planned: 'Запланирована',
-  in_progress: 'В процессе',
-  completed: 'Завершена',
-  skipped: 'Пропущена',
-  cancelled: 'Отменена',
-};
 
 function formatDate(value: string): string {
   return new Date(`${value}T12:00:00`).toLocaleDateString('ru-RU', {
@@ -153,13 +146,18 @@ function ScheduleRow({
 }) {
   const [scheduledDate, setScheduledDate] = useState(item.scheduled_date);
   return (
-    <article className="list-row">
+    <article
+      className="list-row"
+      id={`workout-schedule-${item.id}`}
+      tabIndex={-1}
+      aria-label={`Тренировка ${item.title} в расписании`}
+    >
       <div className="list-row__main">
         <strong>{item.title}</strong>
         <span className="muted">
           {formatDate(item.scheduled_date)} · неделя {item.week_number}
         </span>
-        <Badge>{statusLabels[item.status] ?? item.status}</Badge>
+        <Badge>{workoutStatusLabel(item.status)}</Badge>
       </div>
       {item.status === 'planned' && (
         <form
@@ -195,7 +193,13 @@ function ScheduleRow({
   );
 }
 
-function SchedulePanel({ timeZone }: { timeZone?: string | null }) {
+function SchedulePanel({
+  timeZone,
+  focusedWorkoutId,
+}: {
+  timeZone?: string | null;
+  focusedWorkoutId?: number | null;
+}) {
   const { toast, confirm } = useFeedback();
   const queryClient = useQueryClient();
   const schedule = useQuery({
@@ -227,6 +231,14 @@ function SchedulePanel({ timeZone }: { timeZone?: string | null }) {
     onError: (reason) => toast((reason as Error).message, 'error'),
   });
   const today = dateInputValue(new Date(), timeZone || detectedTimeZone());
+
+  useEffect(() => {
+    if (!focusedWorkoutId || !schedule.data?.some((item) => item.id === focusedWorkoutId)) return;
+    const row = document.getElementById(`workout-schedule-${focusedWorkoutId}`);
+    row?.focus({ preventScroll: true });
+    row?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+  }, [focusedWorkoutId, schedule.data]);
+
   return (
     <Card title="Расписание" description="Ближайшие восемь недель">
       {schedule.isLoading ? (
@@ -267,11 +279,17 @@ function SchedulePanel({ timeZone }: { timeZone?: string | null }) {
   );
 }
 
-export function ProgressSchedule({ timeZone }: { timeZone?: string | null }) {
+export function ProgressSchedule({
+  timeZone,
+  focusedWorkoutId,
+}: {
+  timeZone?: string | null;
+  focusedWorkoutId?: number | null;
+}) {
   return (
     <div className="stack">
       <ProgressPanel />
-      <SchedulePanel timeZone={timeZone} />
+      <SchedulePanel timeZone={timeZone} focusedWorkoutId={focusedWorkoutId} />
     </div>
   );
 }

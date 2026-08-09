@@ -75,6 +75,8 @@ describe('ProgressSchedule', () => {
 
     expect(await screen.findByText('80%')).toBeInTheDocument();
     expect(screen.getByText('Тренировка A')).toBeInTheDocument();
+    expect(screen.getByText('Запланирована')).toBeInTheDocument();
+    expect(screen.queryByText('planned')).not.toBeInTheDocument();
 
     const input = screen.getByLabelText('Новая дата для Тренировка A');
     fireEvent.change(input, { target: { value: '2030-01-12' } });

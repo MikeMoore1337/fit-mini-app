@@ -1,0 +1,113 @@
+import { fireEvent, render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { WorkoutHistory } from '../../../../src/features/workouts/WorkoutHistory';
+import { FeedbackProvider } from '../../../../src/shared/ui/FeedbackProvider';
+
+const week = [
+  {
+    id: 42,
+    scheduled_date: '2030-01-10',
+    title: 'Тренировка A',
+    status: 'planned',
+    day_number: 1,
+    week_number: 1,
+  },
+  {
+    id: 43,
+    scheduled_date: '2030-01-09',
+    title: 'Тренировка B',
+    status: 'completed',
+    day_number: 2,
+    week_number: 1,
+  },
+  {
+    id: 44,
+    scheduled_date: '2020-01-08',
+    title: 'Прошедшая пропущенная тренировка',
+    status: 'skipped',
+    day_number: 3,
+    week_number: 1,
+  },
+];
+
+const history = [
+  {
+    id: 43,
+    scheduled_date: '2030-01-09',
+    title: 'Тренировка B',
+    status: 'completed',
+    started_at: '2030-01-09T09:00:00',
+    completed_at: '2030-01-09T10:00:00',
+    completed_sets: 4,
+    volume_kg: 1200,
+  },
+];
+
+function renderHistory(onWorkoutSelect = vi.fn()) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={queryClient}>
+      <FeedbackProvider>
+        <WorkoutHistory onWorkoutSelect={onWorkoutSelect} />
+      </FeedbackProvider>
+    </QueryClientProvider>,
+  );
+  return onWorkoutSelect;
+}
+
+describe('WorkoutHistory', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2030-01-08T12:00:00Z'));
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const path = String(input);
+      if (path === '/api/v1/workouts/week') {
+        return new Response(JSON.stringify(week), { status: 200 });
+      }
+      if (path.startsWith('/api/v1/workouts/history?')) {
+        return new Response(JSON.stringify(history), { status: 200 });
+      }
+      if (path === '/api/v1/workouts/history/summary') {
+        return new Response(
+          JSON.stringify({ workouts_completed: 1, completed_sets: 4, volume_kg: 1200 }),
+          { status: 200 },
+        );
+      }
+      return new Response(JSON.stringify({ detail: 'Unexpected request' }), { status: 500 });
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('показывает русские статусы и выбирает корректную цель для дня', async () => {
+    const onWorkoutSelect = renderHistory();
+
+    expect(await screen.findByText('Запланирована')).toBeInTheDocument();
+    expect(screen.getByText('Завершена')).toBeInTheDocument();
+    expect(screen.queryByText('planned')).not.toBeInTheDocument();
+    expect(screen.queryByText('completed')).not.toBeInTheDocument();
+    expect(screen.getByText('Прошедшая пропущенная тренировка').closest('a')).toBeNull();
+
+    const plannedDay = screen.getByRole('link', {
+      name: 'Открыть тренировочный день: Тренировка A',
+    });
+    expect(plannedDay).toHaveAttribute('href', '#workout-schedule-42');
+    fireEvent.click(plannedDay);
+    expect(onWorkoutSelect).toHaveBeenLastCalledWith(42, 'schedule');
+    fireEvent.click(plannedDay);
+    expect(onWorkoutSelect).toHaveBeenCalledTimes(2);
+
+    const completedDay = screen.getByRole('link', {
+      name: 'Открыть тренировочный день: Тренировка B',
+    });
+    expect(completedDay).toHaveAttribute('href', '#workout-history-43');
+    fireEvent.click(completedDay);
+    expect(onWorkoutSelect).toHaveBeenLastCalledWith(43, 'history');
+  });
+});

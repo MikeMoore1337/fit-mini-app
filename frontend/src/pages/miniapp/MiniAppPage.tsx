@@ -12,7 +12,10 @@ import { ProgramBuilder } from '../../features/programs/ProgramBuilder';
 import { TemplatesList } from '../../features/programs/TemplatesList';
 import { TodayWorkout } from '../../features/workouts/TodayWorkout';
 import { ProgressSchedule } from '../../features/workouts/ProgressSchedule';
-import { WorkoutHistory } from '../../features/workouts/WorkoutHistory';
+import {
+  WorkoutHistory,
+  type WorkoutNavigationTarget,
+} from '../../features/workouts/WorkoutHistory';
 import { Badge, Card } from '../../shared/ui/common';
 import { handleTabKeyDown } from '../../shared/ui/tabs';
 
@@ -31,6 +34,10 @@ export default function MiniAppPage() {
   const { user, logout, reloadUser } = useAuth();
   const [initialInviteToken] = useState(launchInviteToken);
   const [tab, setTab] = useState<Tab>(initialInviteToken ? 'profile' : 'today');
+  const [focusedWorkout, setFocusedWorkout] = useState<{
+    id: number;
+    target: WorkoutNavigationTarget;
+  } | null>(null);
   const [inviteToken, setInviteToken] = useState<string | null>(initialInviteToken);
   const role = user?.is_admin ? 'Администратор' : user?.is_coach ? 'Тренер' : 'Клиент';
   const profileReady = Boolean(
@@ -144,8 +151,15 @@ export default function MiniAppPage() {
           {tab === 'today' && <TodayWorkout />}
           {tab === 'progress' && (
             <>
-              <ProgressSchedule timeZone={user?.profile?.timezone} />
-              <WorkoutHistory />
+              <ProgressSchedule
+                timeZone={user?.profile?.timezone}
+                focusedWorkoutId={focusedWorkout?.target === 'schedule' ? focusedWorkout.id : null}
+              />
+              <WorkoutHistory
+                timeZone={user?.profile?.timezone}
+                focusedWorkoutId={focusedWorkout?.target === 'history' ? focusedWorkout.id : null}
+                onWorkoutSelect={(id, target) => setFocusedWorkout({ id, target })}
+              />
               <Diary onSaved={async () => void (await reloadUser())} />
             </>
           )}
@@ -172,7 +186,12 @@ export default function MiniAppPage() {
                 initialToken={inviteToken}
                 onInitialTokenHandled={() => setInviteToken(null)}
               />
-              <NotificationsPanel />
+              <NotificationsPanel
+                onNavigate={(destination) => {
+                  setFocusedWorkout(null);
+                  setTab(destination);
+                }}
+              />
               <AccountPrivacy />
             </>
           )}

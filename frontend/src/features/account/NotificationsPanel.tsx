@@ -7,8 +7,21 @@ import { Badge, Card, EmptyState, ErrorState, LoadingState } from '../../shared/
 import { useAuth } from '../../app/AuthProvider';
 import { addCalendarDays, dateInputValue, detectedTimeZone } from '../../shared/dateTime';
 import { usePersistentState } from '../../shared/storage';
+import { notificationStatusLabel } from '../../shared/statusLabels';
 
-export function NotificationsPanel() {
+type NotificationDestination = 'today' | 'nutrition';
+
+function notificationDestination(item: NotificationItem): NotificationDestination | null {
+  if (item.title === 'Тренировка сегодня') return 'today';
+  if (item.title === 'КБЖУ пересчитаны') return 'nutrition';
+  return null;
+}
+
+export function NotificationsPanel({
+  onNavigate,
+}: {
+  onNavigate?: (destination: NotificationDestination) => void;
+}) {
   const queryClient = useQueryClient();
   const { toast, confirm } = useFeedback();
   const { user } = useAuth();
@@ -202,38 +215,59 @@ export function NotificationsPanel() {
             <EmptyState title="Уведомлений пока нет" />
           ) : (
             <div className="list-grid">
-              {notifications.data.map((item) => (
-                <article className="list-row" key={item.id}>
-                  <div>
+              {notifications.data.map((item) => {
+                const destination = notificationDestination(item);
+                const notificationCopy = (
+                  <>
                     <strong>{item.title}</strong>
-                    <p>{item.body}</p>
+                    <span>{item.body}</span>
                     <span className="muted">
                       {new Date(item.scheduled_for).toLocaleString('ru-RU')}
                     </span>
-                  </div>
-                  <div className="list-row__actions">
-                    <Badge>{item.status}</Badge>
-                    <button
-                      className="btn-danger"
-                      onClick={async () => {
-                        if (
-                          await confirm({
-                            title: 'Удалить уведомление?',
-                            message: item.title,
-                            confirmText: 'Удалить',
-                          })
-                        )
-                          mutation.mutate({
-                            path: `/api/v1/notifications/${item.id}`,
-                            method: 'DELETE',
-                          });
-                      }}
-                    >
-                      Удалить
-                    </button>
-                  </div>
-                </article>
-              ))}
+                  </>
+                );
+                return (
+                  <article className="list-row" key={item.id}>
+                    {destination && onNavigate ? (
+                      <button
+                        type="button"
+                        className="list-row__main text-button notification-action"
+                        aria-label={
+                          destination === 'today'
+                            ? `Открыть тренировку: ${item.title}`
+                            : `Открыть раздел питания: ${item.title}`
+                        }
+                        onClick={() => onNavigate(destination)}
+                      >
+                        {notificationCopy}
+                      </button>
+                    ) : (
+                      <div className="list-row__main">{notificationCopy}</div>
+                    )}
+                    <div className="list-row__actions">
+                      <Badge>{notificationStatusLabel(item.status)}</Badge>
+                      <button
+                        className="btn-danger"
+                        onClick={async () => {
+                          if (
+                            await confirm({
+                              title: 'Удалить уведомление?',
+                              message: item.title,
+                              confirmText: 'Удалить',
+                            })
+                          )
+                            mutation.mutate({
+                              path: `/api/v1/notifications/${item.id}`,
+                              method: 'DELETE',
+                            });
+                        }}
+                      >
+                        Удалить
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           )}
         </div>

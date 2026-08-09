@@ -135,6 +135,27 @@
   border-radius: 14px;
   background: var(--bg-soft);
 }
+.workout-day-link {
+  color: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease;
+}
+.workout-day-link:hover,
+.workout-day-link:focus-visible {
+  border-color: var(--accent-line);
+  background: var(--surface-hover);
+}
+.workout-day-link:focus-visible,
+.notification-action:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.workout-day-link:active {
+  background: var(--surface-active);
+}
 .list-row__main {
   min-width: 0;
   display: grid;
@@ -159,6 +180,13 @@
 }
 .text-button:hover {
   background: transparent;
+}
+.notification-action {
+  flex: 1;
+}
+.notification-action:hover strong,
+.notification-action:focus-visible strong {
+  color: var(--accent-strong);
 }
 .metric-grid {
   display: grid;
