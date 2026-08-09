@@ -1,42 +1,46 @@
-import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
 import { api } from '../../shared/api/client';
 import type { User, UserProfileUpdate } from '../../shared/api/types';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Card } from '../../shared/ui/common';
+import { detectedTimeZone } from '../../shared/dateTime';
+import { usePersistentState } from '../../shared/storage';
 import { getTimezoneOptions } from './timezones';
 
 const emptyProfile: UserProfileUpdate = {
   full_name: '',
-  goal: 'maintenance',
-  level: 'beginner',
+  goal: null,
+  level: null,
   height_cm: null,
   weight_kg: null,
   workouts_per_week: 3,
   cardio_trainings_per_week: 0,
-  timezone: 'Europe/Moscow',
+  timezone: detectedTimeZone(),
 };
 
 export function ProfileForm() {
   const { user, reloadUser } = useAuth();
   const { toast } = useFeedback();
   const queryClient = useQueryClient();
-  const [form, setForm] = useState<UserProfileUpdate>(() =>
-    user?.profile
-      ? {
-          ...emptyProfile,
-          ...user.profile,
-          goal: (user.profile.goal as UserProfileUpdate['goal']) ?? null,
-          level: (user.profile.level as UserProfileUpdate['level']) ?? null,
-        }
-      : emptyProfile,
+  const [form, setForm, clearDraft] = usePersistentState<UserProfileUpdate>(
+    `fit_profile_draft_${user?.id ?? 'anonymous'}`,
+    () =>
+      user?.profile
+        ? {
+            ...emptyProfile,
+            ...user.profile,
+            goal: (user.profile.goal as UserProfileUpdate['goal']) ?? null,
+            level: (user.profile.level as UserProfileUpdate['level']) ?? null,
+          }
+        : emptyProfile,
   );
   const timezoneOptions = getTimezoneOptions(form.timezone);
 
   const mutation = useMutation({
     mutationFn: () => api<User>('/api/v1/me/profile', { method: 'PATCH', body: form }),
     onSuccess: async () => {
+      clearDraft();
       await reloadUser();
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['workout'] }),
@@ -72,11 +76,15 @@ export function ProfileForm() {
           <label className="field">
             <span>Цель</span>
             <select
-              value={form.goal ?? 'maintenance'}
+              value={form.goal ?? ''}
+              required
               onChange={(e) =>
                 setForm({ ...form, goal: e.target.value as UserProfileUpdate['goal'] })
               }
             >
+              <option value="" disabled>
+                Выберите цель
+              </option>
               <option value="fat_loss">Похудение</option>
               <option value="muscle_gain">Набор мышц</option>
               <option value="maintenance">Поддержание</option>
@@ -86,11 +94,15 @@ export function ProfileForm() {
           <label className="field">
             <span>Уровень</span>
             <select
-              value={form.level ?? 'beginner'}
+              value={form.level ?? ''}
+              required
               onChange={(e) =>
                 setForm({ ...form, level: e.target.value as UserProfileUpdate['level'] })
               }
             >
+              <option value="" disabled>
+                Выберите уровень
+              </option>
               <option value="beginner">Начальный</option>
               <option value="intermediate">Средний</option>
               <option value="advanced">Продвинутый</option>
@@ -100,7 +112,7 @@ export function ProfileForm() {
             <span>Рост, см</span>
             <input
               type="number"
-              min="80"
+              min="100"
               max="250"
               value={form.height_cm ?? ''}
               onChange={(e) => setForm({ ...form, height_cm: numberValue(e.target.value) })}
@@ -110,8 +122,8 @@ export function ProfileForm() {
             <span>Вес, кг</span>
             <input
               type="number"
-              min="25"
-              max="500"
+              min="20"
+              max="350"
               step="0.1"
               value={form.weight_kg ?? ''}
               onChange={(e) => setForm({ ...form, weight_kg: numberValue(e.target.value) })}

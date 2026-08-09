@@ -69,9 +69,9 @@ describe('nutrition calculator', () => {
   it('clamps negative carbohydrates and reports the macro warning', () => {
     const result = calculateNutritionEstimate(
       payload({
-        weight_kg: 500,
-        height_cm: 50,
-        age: 120,
+        weight_kg: 350,
+        height_cm: 100,
+        age: 100,
         daily_activity_level: 'sedentary',
         strength_trainings_per_week: 0,
         cardio_trainings_per_week: 0,
@@ -81,5 +81,9 @@ describe('nutrition calculator', () => {
 
     expect(result.valid && result.estimate.carbs).toBe(0);
     expect(result.valid && result.estimate.macroWarning).toBe(true);
+    expect(
+      result.valid &&
+        result.estimate.calories === result.estimate.protein * 4 + result.estimate.fat * 9,
+    ).toBe(true);
   });
 });

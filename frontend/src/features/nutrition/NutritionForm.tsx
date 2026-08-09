@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type { NutritionTarget, NutritionTargetSave } from '../../shared/api/types';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Card } from '../../shared/ui/common';
 import { calculateNutritionEstimate } from './nutritionCalculator';
+import { usePersistentState } from '../../shared/storage';
+import { useAuth } from '../../app/AuthProvider';
 
 const defaults: NutritionTargetSave = {
   sex: 'male',
@@ -44,25 +46,28 @@ export function NutritionForm({
   onSaved?: () => void | Promise<void>;
 }) {
   const { toast } = useFeedback();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [form, setForm] = useState<NutritionTargetSave>(() =>
-    initial
-      ? {
-          target_telegram_user_id: targetTelegramId,
-          sex: initial.sex as 'male' | 'female',
-          weight_kg: initial.weight_kg,
-          height_cm: initial.height_cm,
-          age: initial.age,
-          daily_activity_level:
-            initial.daily_activity_level as NutritionTargetSave['daily_activity_level'],
-          strength_trainings_per_week: initial.strength_trainings_per_week,
-          strength_training_duration_minutes: initial.strength_training_duration_minutes,
-          cardio_trainings_per_week: initial.cardio_trainings_per_week,
-          cardio_training_duration_minutes: initial.cardio_training_duration_minutes,
-          cardio_intensity: initial.cardio_intensity as NutritionTargetSave['cardio_intensity'],
-          goal: initial.goal as NutritionTargetSave['goal'],
-        }
-      : { ...defaults, target_telegram_user_id: targetTelegramId },
+  const [form, setForm, clearDraft] = usePersistentState<NutritionTargetSave>(
+    `fit_nutrition_draft_${targetTelegramId ? `client_${targetTelegramId}` : `user_${user?.id ?? 'me'}`}`,
+    () =>
+      initial
+        ? {
+            target_telegram_user_id: targetTelegramId,
+            sex: initial.sex as 'male' | 'female',
+            weight_kg: initial.weight_kg,
+            height_cm: initial.height_cm,
+            age: initial.age,
+            daily_activity_level:
+              initial.daily_activity_level as NutritionTargetSave['daily_activity_level'],
+            strength_trainings_per_week: initial.strength_trainings_per_week,
+            strength_training_duration_minutes: initial.strength_training_duration_minutes,
+            cardio_trainings_per_week: initial.cardio_trainings_per_week,
+            cardio_training_duration_minutes: initial.cardio_training_duration_minutes,
+            cardio_intensity: initial.cardio_intensity as NutritionTargetSave['cardio_intensity'],
+            goal: initial.goal as NutritionTargetSave['goal'],
+          }
+        : { ...defaults, target_telegram_user_id: targetTelegramId },
   );
 
   const calculation = useMemo(() => calculateNutritionEstimate(form), [form]);
@@ -75,6 +80,7 @@ export function NutritionForm({
         body: { ...form, target_telegram_user_id: targetTelegramId || null },
       }),
     onSuccess: async () => {
+      clearDraft();
       await queryClient.invalidateQueries({ queryKey: ['notifications'] });
       await onSaved?.();
       toast('Ориентиры КБЖУ сохранены');
@@ -110,8 +116,8 @@ export function NutritionForm({
             <span>Возраст</span>
             <input
               type="number"
-              min="12"
-              max="120"
+              min="18"
+              max="100"
               required
               value={form.age || ''}
               onChange={(event) => setNumber('age', event.target.value)}
@@ -122,7 +128,7 @@ export function NutritionForm({
             <input
               type="number"
               min="20"
-              max="500"
+              max="350"
               step="0.1"
               required
               value={form.weight_kg || ''}
@@ -133,8 +139,8 @@ export function NutritionForm({
             <span>Рост, см</span>
             <input
               type="number"
-              min="50"
-              max="280"
+              min="100"
+              max="250"
               step="0.1"
               required
               value={form.height_cm || ''}
@@ -279,8 +285,8 @@ export function NutritionForm({
 
             {estimate.macroWarning && (
               <div className="nutrition-warning" role="alert">
-                Выбранная калорийность слишком мала для установленных норм белка и жиров. Углеводы
-                показаны как 0 г — скорректируйте входные данные или цель.
+                Исходная калорийность была ниже норм белка и жиров, поэтому ориентир автоматически
+                повышен до минимально согласованного значения, а углеводы показаны как 0 г.
               </div>
             )}
 

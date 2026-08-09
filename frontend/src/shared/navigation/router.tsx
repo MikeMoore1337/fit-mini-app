@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type AriaAttributes,
+} from 'react';
 
 interface NavigationContextValue {
   path: string;
@@ -23,6 +31,22 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, []);
 
+  useEffect(() => {
+    const backButton = window.Telegram?.WebApp?.BackButton;
+    if (!backButton) return;
+    if (path === '/app' || path === '/') {
+      backButton.hide();
+      return;
+    }
+    const goBack = () => navigate('/app');
+    backButton.onClick(goBack);
+    backButton.show();
+    return () => {
+      backButton.offClick(goBack);
+      backButton.hide();
+    };
+  }, [navigate, path]);
+
   const value = useMemo(() => ({ path, navigate }), [navigate, path]);
   return <NavigationContext.Provider value={value}>{children}</NavigationContext.Provider>;
 }
@@ -37,16 +61,18 @@ export function AppLink({
   to,
   className,
   children,
+  ...ariaAttributes
 }: {
   to: string;
   className?: string;
   children: React.ReactNode;
-}) {
+} & AriaAttributes) {
   const { navigate } = useNavigation();
   return (
     <a
       href={to}
       className={className}
+      {...ariaAttributes}
       onClick={(event) => {
         if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
           return;

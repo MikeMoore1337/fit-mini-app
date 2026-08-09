@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AppShell } from '../../app/AppShell';
 import { useAuth } from '../../app/AuthProvider';
 import { Diary } from '../../features/diary/Diary';
+import { ClientAnalytics } from '../../features/coach/ClientAnalytics';
 import { ExerciseCatalog } from '../../features/exercises/ExerciseCatalog';
 import { NutritionForm } from '../../features/nutrition/NutritionForm';
 import { ProgramBuilder } from '../../features/programs/ProgramBuilder';
@@ -12,6 +13,8 @@ import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Badge, Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
 import { Redirect } from '../../shared/navigation/router';
 import { LIVE_DATA_REFETCH_INTERVAL_MS } from '../../shared/sync';
+import { usePersistentState } from '../../shared/storage';
+import { handleTabKeyDown } from '../../shared/ui/tabs';
 
 type CoachTab = 'clients' | 'programs' | 'catalog';
 
@@ -39,15 +42,20 @@ function ClientDataSection({
   children: ReactNode;
   open?: boolean;
 }) {
+  const [expanded, setExpanded] = useState(open);
   return (
-    <details className="coach-data-disclosure" open={open}>
+    <details
+      className="coach-data-disclosure"
+      open={expanded}
+      onToggle={(event) => setExpanded(event.currentTarget.open)}
+    >
       <summary>
         <span>
           <strong>{title}</strong>
           <small>{description}</small>
         </span>
       </summary>
-      <div className="coach-data-disclosure__body">{children}</div>
+      {expanded && <div className="coach-data-disclosure__body">{children}</div>}
     </details>
   );
 }
@@ -55,7 +63,10 @@ function ClientDataSection({
 function ClientProfileEditor({ client }: { client: Client }) {
   const queryClient = useQueryClient();
   const { toast } = useFeedback();
-  const [form, setForm] = useState(client);
+  const [form, setForm, clearDraft] = usePersistentState(
+    `fit_coach_client_profile_draft_${client.id}`,
+    client,
+  );
   const mutation = useMutation({
     mutationFn: () =>
       api<Client>(`/api/v1/coach/clients/${client.id}/profile`, {
@@ -71,6 +82,7 @@ function ClientProfileEditor({ client }: { client: Client }) {
         },
       }),
     onSuccess: async (updatedClient) => {
+      clearDraft();
       queryClient.setQueryData<Client[]>(['coach', 'clients'], (clients) =>
         clients?.map((item) => (item.id === updatedClient.id ? updatedClient : item)),
       );
@@ -101,9 +113,13 @@ function ClientProfileEditor({ client }: { client: Client }) {
         <label className="field">
           <span>Цель</span>
           <select
-            value={form.goal || 'maintenance'}
+            value={form.goal || ''}
+            required
             onChange={(e) => setForm({ ...form, goal: e.target.value })}
           >
+            <option value="" disabled>
+              Выберите цель
+            </option>
             <option value="fat_loss">Похудение</option>
             <option value="muscle_gain">Набор мышц</option>
             <option value="maintenance">Поддержание</option>
@@ -113,9 +129,13 @@ function ClientProfileEditor({ client }: { client: Client }) {
         <label className="field">
           <span>Уровень</span>
           <select
-            value={form.level || 'beginner'}
+            value={form.level || ''}
+            required
             onChange={(e) => setForm({ ...form, level: e.target.value })}
           >
+            <option value="" disabled>
+              Выберите уровень
+            </option>
             <option value="beginner">Начальный</option>
             <option value="intermediate">Средний</option>
             <option value="advanced">Продвинутый</option>
@@ -125,7 +145,7 @@ function ClientProfileEditor({ client }: { client: Client }) {
           <span>Рост, см</span>
           <input
             type="number"
-            min="80"
+            min="100"
             max="250"
             value={form.height_cm ?? ''}
             onChange={(e) => setForm({ ...form, height_cm: numberValue(e.target.value) })}
@@ -135,8 +155,8 @@ function ClientProfileEditor({ client }: { client: Client }) {
           <span>Вес, кг</span>
           <input
             type="number"
-            min="25"
-            max="500"
+            min="20"
+            max="350"
             step="0.1"
             value={form.weight_kg ?? ''}
             onChange={(e) => setForm({ ...form, weight_kg: numberValue(e.target.value) })}
@@ -178,12 +198,9 @@ export default function CoachPage() {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<CoachTab>('clients');
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [clientInput, setClientInput] = useState('');
-  const [clientMode, setClientMode] = useState<'client_code' | 'username' | 'telegram_id'>(
-    'client_code',
-  );
   const [programSearch, setProgramSearch] = useState('');
-  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [inviteLink, setInviteLink] = useState<InviteLink | null>(null);
+  const [inviteCreating, setInviteCreating] = useState(false);
   const clients = useQuery({
     queryKey: ['coach', 'clients'],
     queryFn: () => api<Client[]>('/api/v1/coach/clients'),
@@ -219,32 +236,27 @@ export default function CoachPage() {
     );
   }, [programs.data, programSearch]);
   if (!user?.is_coach && !user?.is_admin) return <Redirect to="/app" />;
-  const addClient = () => {
-    const body =
-      clientMode === 'client_code'
-        ? { client_code: clientInput, source: 'client_code' }
-        : clientMode === 'username'
-          ? { username: clientInput.replace(/^@/, ''), source: 'username_search' }
-          : { telegram_user_id: Number(clientInput) };
-    mutation.mutate({ path: '/api/v1/coach/clients', method: 'POST', body });
-    setClientInput('');
+  const copyInvite = async (value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast('Приглашение скопировано');
+    } catch {
+      toast('Не удалось скопировать автоматически — выделите значение вручную.', 'error');
+    }
   };
   const createInvite = async () => {
+    setInviteCreating(true);
     try {
       const result = await api<InviteLink>('/api/v1/coach/invite-links', {
         method: 'POST',
-        body: {},
       });
-      const value = result.url || result.start_param;
-      setInviteLink(value);
-      if (navigator.clipboard) {
-        await navigator.clipboard.writeText(value);
-        toast('Ссылка приглашения скопирована');
-      } else {
-        toast('Приглашение создано');
-      }
+      setInviteLink(result);
+      if (result.url) await copyInvite(result.url);
+      else toast('Приглашение создано');
     } catch (reason) {
       toast((reason as Error).message, 'error');
+    } finally {
+      setInviteCreating(false);
     }
   };
 
@@ -271,200 +283,234 @@ export default function CoachPage() {
               type="button"
               role="tab"
               aria-selected={tab === key}
+              id={`coach-tab-${key}`}
+              aria-controls={`coach-panel-${key}`}
+              tabIndex={tab === key ? 0 : -1}
               className={tab === key ? 'is-active' : 'secondary'}
               onClick={() => setTab(key)}
+              onKeyDown={handleTabKeyDown}
               key={key}
             >
               {label}
             </button>
           ))}
         </div>
-        {tab === 'clients' && (
-          <>
-            <Card
-              title="Добавить клиента"
-              actions={
-                <button className="secondary" onClick={() => void createInvite()}>
-                  Ссылка-приглашение
-                </button>
-              }
-            >
-              <form
-                className="toolbar wrap top-gap"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  addClient();
-                }}
+        <section
+          className="page-stack"
+          role="tabpanel"
+          id={`coach-panel-${tab}`}
+          aria-labelledby={`coach-tab-${tab}`}
+        >
+          {tab === 'clients' && (
+            <>
+              <Card
+                title="Пригласить клиента"
+                description="Отправьте персональную ссылку. Клиент сначала увидит ваше имя и сам подтвердит подключение."
+                actions={
+                  <button
+                    className="secondary"
+                    disabled={inviteCreating}
+                    onClick={() => void createInvite()}
+                  >
+                    {inviteCreating ? 'Создаём…' : 'Создать приглашение'}
+                  </button>
+                }
               >
-                <select
-                  value={clientMode}
-                  onChange={(e) => setClientMode(e.target.value as typeof clientMode)}
-                >
-                  <option value="client_code">По коду</option>
-                  <option value="username">По username</option>
-                  <option value="telegram_id">По Telegram ID</option>
-                </select>
-                <input
-                  value={clientInput}
-                  onChange={(e) => setClientInput(e.target.value)}
-                  placeholder={
-                    clientMode === 'client_code'
-                      ? 'Код клиента'
-                      : clientMode === 'username'
-                        ? '@username'
-                        : 'Telegram ID'
-                  }
-                  required
-                />
-                <button disabled={mutation.isPending}>Добавить</button>
-              </form>
-              {inviteLink && (
-                <label className="field top-gap">
-                  <span>Последнее приглашение</span>
-                  <input
-                    readOnly
-                    value={inviteLink}
-                    onFocus={(event) => event.currentTarget.select()}
-                  />
-                </label>
+                {inviteLink && (
+                  <div className="auth-notice stack top-gap">
+                    {inviteLink.url && (
+                      <label className="field">
+                        <span>Ссылка</span>
+                        <input
+                          readOnly
+                          value={inviteLink.url}
+                          onFocus={(event) => event.currentTarget.select()}
+                        />
+                      </label>
+                    )}
+                    {inviteLink.code && (
+                      <label className="field">
+                        <span>Код приглашения — если ссылка не открывается</span>
+                        <input
+                          readOnly
+                          value={inviteLink.code}
+                          onFocus={(event) => event.currentTarget.select()}
+                        />
+                      </label>
+                    )}
+                    <p className="muted">
+                      Действует до {new Date(inviteLink.expires_at).toLocaleString('ru-RU')}.
+                    </p>
+                    <div className="toolbar wrap">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void copyInvite(
+                            inviteLink.url || inviteLink.code || inviteLink.start_param,
+                          )
+                        }
+                      >
+                        Копировать
+                      </button>
+                      {inviteLink.url && typeof navigator.share === 'function' && (
+                        <button
+                          type="button"
+                          className="secondary"
+                          onClick={() =>
+                            void navigator
+                              .share({
+                                title: 'Приглашение тренера',
+                                text: 'Откройте FitMiniApp и подтвердите подключение к тренеру.',
+                                url: inviteLink.url ?? undefined,
+                              })
+                              .catch(() => undefined)
+                          }
+                        >
+                          Поделиться
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </Card>
+              <Card title="Клиенты">
+                {clients.isLoading ? (
+                  <LoadingState />
+                ) : clients.error ? (
+                  <ErrorState message={(clients.error as Error).message} />
+                ) : !clients.data?.length ? (
+                  <EmptyState title="Клиентов пока нет" />
+                ) : (
+                  <div className="list-grid top-gap">
+                    {clients.data.map((client) => (
+                      <article
+                        className={`list-row coach-client-row${selected?.id === client.id ? ' selected' : ''}`}
+                        key={client.id || `invite-${client.invite_id}`}
+                      >
+                        <button
+                          className="list-row__main text-button"
+                          onClick={() => client.id && setSelectedId(client.id)}
+                        >
+                          <strong>
+                            {client.full_name ||
+                              client.username ||
+                              client.telegram_user_id ||
+                              'Приглашённый клиент'}
+                          </strong>
+                          <span className="muted">
+                            {client.username ? `@${client.username}` : ''}{' '}
+                            {client.telegram_user_id ? `· ${client.telegram_user_id}` : ''}
+                          </span>
+                          <Badge>{client.status === 'active' ? 'Активен' : 'Ожидает входа'}</Badge>
+                        </button>
+                        <button
+                          className="btn-danger"
+                          onClick={async () => {
+                            if (
+                              await confirm({
+                                title: 'Удалить клиента?',
+                                message: client.full_name || client.username || 'Приглашение',
+                                confirmText: 'Удалить',
+                              })
+                            )
+                              mutation.mutate({
+                                path: client.id
+                                  ? `/api/v1/coach/clients/${client.id}`
+                                  : `/api/v1/coach/client-invites/id/${client.invite_id}`,
+                                method: 'DELETE',
+                              });
+                          }}
+                        >
+                          Удалить
+                        </button>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </Card>
+              {selected?.id && selected.status === 'active' && (
+                <>
+                  <ClientDataSection
+                    title="Профиль клиента"
+                    description="Анкета, цель и параметры"
+                    open
+                  >
+                    <ClientProfileEditor key={clientProfileKey(selected)} client={selected} />
+                  </ClientDataSection>
+                  <ClientDataSection
+                    title="Прогресс и замеры"
+                    description="Соблюдение плана, рекорды и лента тренировок"
+                  >
+                    <ClientAnalytics clientId={selected.id} />
+                    <Diary key={`diary-${selected.id}`} clientId={selected.id} />
+                  </ClientDataSection>
+                  <ClientDataSection title="Питание" description="Расчёт и целевые КБЖУ">
+                    <NutritionForm
+                      key={JSON.stringify([selected.id, selected.kbju])}
+                      targetTelegramId={selected.telegram_user_id}
+                      initial={selected.kbju}
+                      onSaved={() => void clients.refetch()}
+                    />
+                  </ClientDataSection>
+                  <ClientDataSection
+                    title="Программа тренировок"
+                    description="Создание и назначение программы"
+                  >
+                    <ProgramBuilder
+                      key={`program-${selected.id}`}
+                      targetTelegramId={selected.telegram_user_id}
+                      targetName={selected.full_name || selected.username}
+                    />
+                  </ClientDataSection>
+                </>
               )}
-            </Card>
-            <Card title="Клиенты">
-              {clients.isLoading ? (
+            </>
+          )}
+          {tab === 'programs' && (
+            <Card title="Назначенные программы">
+              <label className="field top-gap">
+                <span>Поиск</span>
+                <input
+                  type="search"
+                  value={programSearch}
+                  onChange={(e) => setProgramSearch(e.target.value)}
+                />
+              </label>
+              {programs.isLoading ? (
                 <LoadingState />
-              ) : clients.error ? (
-                <ErrorState message={(clients.error as Error).message} />
-              ) : !clients.data?.length ? (
-                <EmptyState title="Клиентов пока нет" />
+              ) : programs.error ? (
+                <ErrorState message={(programs.error as Error).message} />
+              ) : !filteredPrograms.length ? (
+                <EmptyState title="Назначений не найдено" />
               ) : (
                 <div className="list-grid top-gap">
-                  {clients.data.map((client) => (
-                    <article
-                      className={`list-row coach-client-row${selected?.id === client.id ? ' selected' : ''}`}
-                      key={client.id || `invite-${client.invite_id}`}
-                    >
-                      <button
-                        className="list-row__main text-button"
-                        onClick={() => client.id && setSelectedId(client.id)}
-                      >
-                        <strong>
-                          {client.full_name ||
-                            client.username ||
-                            client.telegram_user_id ||
-                            'Приглашённый клиент'}
-                        </strong>
-                        <span className="muted">
-                          {client.username ? `@${client.username}` : ''}{' '}
-                          {client.telegram_user_id ? `· ${client.telegram_user_id}` : ''}
-                        </span>
-                        <Badge>{client.status === 'active' ? 'Активен' : 'Ожидает входа'}</Badge>
-                      </button>
-                      <button
-                        className="btn-danger"
-                        onClick={async () => {
-                          if (
-                            await confirm({
-                              title: 'Удалить клиента?',
-                              message: client.full_name || client.username || 'Приглашение',
-                              confirmText: 'Удалить',
-                            })
-                          )
-                            mutation.mutate({
-                              path: client.id
-                                ? `/api/v1/coach/clients/${client.id}`
-                                : `/api/v1/coach/client-invites/id/${client.invite_id}`,
-                              method: 'DELETE',
-                            });
-                        }}
-                      >
-                        Удалить
-                      </button>
+                  {filteredPrograms.map((item) => (
+                    <article className="list-row" key={item.id}>
+                      <div>
+                        <strong>{item.title}</strong>
+                        <p className="muted">
+                          {item.client_full_name ||
+                            item.client_username ||
+                            item.client_telegram_user_id}{' '}
+                          · {new Date(item.assigned_at).toLocaleDateString('ru-RU')}
+                        </p>
+                      </div>
+                      <div>
+                        <Badge>{item.is_active ? 'Активна' : 'Архив'}</Badge>
+                        <p>
+                          {item.workouts_completed}/{item.workouts_total} тренировок
+                        </p>
+                      </div>
                     </article>
                   ))}
                 </div>
               )}
             </Card>
-            {selected?.id && selected.status === 'active' && (
-              <>
-                <ClientDataSection
-                  title="Профиль клиента"
-                  description="Анкета, цель и параметры"
-                  open
-                >
-                  <ClientProfileEditor key={clientProfileKey(selected)} client={selected} />
-                </ClientDataSection>
-                <ClientDataSection
-                  title="Прогресс и замеры"
-                  description="Дневник клиента и динамика"
-                >
-                  <Diary clientId={selected.id} />
-                </ClientDataSection>
-                <ClientDataSection title="Питание" description="Расчёт и целевые КБЖУ">
-                  <NutritionForm
-                    key={JSON.stringify([selected.id, selected.kbju])}
-                    targetTelegramId={selected.telegram_user_id}
-                    initial={selected.kbju}
-                    onSaved={() => void clients.refetch()}
-                  />
-                </ClientDataSection>
-                <ClientDataSection
-                  title="Программа тренировок"
-                  description="Создание и назначение программы"
-                >
-                  <ProgramBuilder
-                    key={`program-${selected.id}`}
-                    targetTelegramId={selected.telegram_user_id}
-                    targetName={selected.full_name || selected.username}
-                  />
-                </ClientDataSection>
-              </>
-            )}
-          </>
-        )}
-        {tab === 'programs' && (
-          <Card title="Назначенные программы">
-            <label className="field top-gap">
-              <span>Поиск</span>
-              <input
-                type="search"
-                value={programSearch}
-                onChange={(e) => setProgramSearch(e.target.value)}
-              />
-            </label>
-            {programs.isLoading ? (
-              <LoadingState />
-            ) : programs.error ? (
-              <ErrorState message={(programs.error as Error).message} />
-            ) : !filteredPrograms.length ? (
-              <EmptyState title="Назначений не найдено" />
-            ) : (
-              <div className="list-grid top-gap">
-                {filteredPrograms.map((item) => (
-                  <article className="list-row" key={item.id}>
-                    <div>
-                      <strong>{item.title}</strong>
-                      <p className="muted">
-                        {item.client_full_name ||
-                          item.client_username ||
-                          item.client_telegram_user_id}{' '}
-                        · {new Date(item.assigned_at).toLocaleDateString('ru-RU')}
-                      </p>
-                    </div>
-                    <div>
-                      <Badge>{item.is_active ? 'Активна' : 'Архив'}</Badge>
-                      <p>
-                        {item.workouts_completed}/{item.workouts_total} тренировок
-                      </p>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </Card>
-        )}
-        {tab === 'catalog' && (
-          <ExerciseCatalog canCreate canAssign targetTelegramId={selected?.telegram_user_id} />
-        )}
+          )}
+          {tab === 'catalog' && (
+            <ExerciseCatalog canCreate canAssign targetTelegramId={selected?.telegram_user_id} />
+          )}
+        </section>
       </div>
     </AppShell>
   );

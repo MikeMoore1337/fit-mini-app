@@ -10,6 +10,7 @@ import {
 import type { PublicConfig, User } from '../shared/api/types';
 import { LIVE_DATA_REFETCH_INTERVAL_MS } from '../shared/sync';
 import type { TelegramWebApp } from '../shared/telegram/types';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface DevLoginInput {
   telegram_user_id: number;
@@ -33,6 +34,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [config, setConfig] = useState<PublicConfig | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setError(null);
       return current;
     } catch (reason) {
-      setUser(null);
+      if (reason instanceof ApiError && [401, 403].includes(reason.status)) setUser(null);
       setError(reason instanceof Error ? reason.message : 'Не удалось загрузить профиль');
       return null;
     }
@@ -89,10 +91,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: { init_data: initData },
         retryAuth: false,
       });
+      setUser(null);
+      setError(null);
+      queryClient.clear();
       setAccessToken(token.access_token);
       await reloadUser();
     },
-    [reloadUser],
+    [queryClient, reloadUser],
   );
 
   const devLogin = useCallback(
@@ -102,20 +107,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: input,
         retryAuth: false,
       });
+      setUser(null);
+      setError(null);
+      queryClient.clear();
       setAccessToken(token.access_token);
       await reloadUser();
     },
-    [reloadUser],
+    [queryClient, reloadUser],
   );
 
   const logout = useCallback(async () => {
-    try {
-      await api('/api/v1/auth/logout', { method: 'POST', body: {}, retryAuth: false });
-    } finally {
-      clearAccessToken();
-      setUser(null);
-    }
-  }, []);
+    const serverLogout = api('/api/v1/auth/logout', {
+      method: 'POST',
+      body: {},
+      retryAuth: false,
+      timeoutMs: 3_000,
+    }).catch(() => undefined);
+    clearAccessToken();
+    setUser(null);
+    queryClient.clear();
+    await serverLogout;
+  }, [queryClient]);
 
   useEffect(() => {
     let cancelled = false;

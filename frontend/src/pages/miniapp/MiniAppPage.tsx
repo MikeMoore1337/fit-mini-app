@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { AppShell } from '../../app/AppShell';
 import { useAuth } from '../../app/AuthProvider';
-import { BillingPanel, NotificationsPanel } from '../../features/account/NotificationsBilling';
+import { NotificationsPanel } from '../../features/account/NotificationsBilling';
+import { AccountPrivacy } from '../../features/account/AccountPrivacy';
 import { Diary } from '../../features/diary/Diary';
 import { ExerciseCatalog } from '../../features/exercises/ExerciseCatalog';
 import { NutritionForm } from '../../features/nutrition/NutritionForm';
@@ -11,22 +11,27 @@ import { ProfileForm } from '../../features/profile/ProfileForm';
 import { ProgramBuilder } from '../../features/programs/ProgramBuilder';
 import { TemplatesList } from '../../features/programs/TemplatesList';
 import { TodayWorkout } from '../../features/workouts/TodayWorkout';
+import { ProgressSchedule } from '../../features/workouts/ProgressSchedule';
 import { WorkoutHistory } from '../../features/workouts/WorkoutHistory';
-import { api } from '../../shared/api/client';
-import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Badge, Card } from '../../shared/ui/common';
+import { handleTabKeyDown } from '../../shared/ui/tabs';
 
 type Tab = 'today' | 'progress' | 'programs' | 'catalog' | 'nutrition' | 'profile';
 
-// Биллинг уже относится к профилю, но не показывается, пока подписка не запущена.
-const SUBSCRIPTIONS_ENABLED = false;
+function launchInviteToken(): string | null {
+  const params = new URLSearchParams(window.location.search);
+  const startParam =
+    window.Telegram?.WebApp?.initDataUnsafe?.start_param ||
+    params.get('tgWebAppStartParam') ||
+    params.get('startapp');
+  return startParam?.startsWith('trainer_') ? startParam.slice('trainer_'.length) : null;
+}
 
 export default function MiniAppPage() {
   const { user, logout, reloadUser } = useAuth();
-  const { toast } = useFeedback();
-  const queryClient = useQueryClient();
-  const [tab, setTab] = useState<Tab>('today');
-  const launchActionsStarted = useRef(false);
+  const [initialInviteToken] = useState(launchInviteToken);
+  const [tab, setTab] = useState<Tab>(initialInviteToken ? 'profile' : 'today');
+  const [inviteToken, setInviteToken] = useState<string | null>(initialInviteToken);
   const role = user?.is_admin ? 'Администратор' : user?.is_coach ? 'Тренер' : 'Клиент';
   const profileReady = Boolean(
     user?.profile?.full_name && user.profile.goal && user.profile.level && user.profile.weight_kg,
@@ -42,55 +47,6 @@ export default function MiniAppPage() {
     user?.profile?.timezone,
   ]);
 
-  useEffect(() => {
-    if (!user || launchActionsStarted.current) return;
-    launchActionsStarted.current = true;
-    void (async () => {
-      const params = new URLSearchParams(window.location.search);
-      const startParam =
-        window.Telegram?.WebApp?.initDataUnsafe?.start_param ||
-        params.get('tgWebAppStartParam') ||
-        params.get('startapp');
-      if (startParam?.startsWith('trainer_')) {
-        const consumedKey = `fit_claimed_${startParam}`;
-        if (!sessionStorage.getItem(consumedKey)) {
-          try {
-            await api(
-              `/api/v1/me/coach-invites/link/${encodeURIComponent(startParam.slice('trainer_'.length))}/claim`,
-              { method: 'POST' },
-            );
-            sessionStorage.setItem(consumedKey, '1');
-            await queryClient.invalidateQueries({ queryKey: ['coach-invites'] });
-            setTab('profile');
-            toast('Приглашение тренера открыто — подтвердите его в профиле');
-          } catch (reason) {
-            toast((reason as Error).message, 'error');
-          }
-        }
-      }
-
-      const checkoutId = params.get('checkout_id');
-      if (checkoutId) {
-        try {
-          await api(`/api/v1/billing/mock/complete/${encodeURIComponent(checkoutId)}`, {
-            method: 'POST',
-          });
-          params.delete('checkout_id');
-          const query = params.toString();
-          window.history.replaceState(
-            {},
-            '',
-            `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`,
-          );
-          await queryClient.invalidateQueries({ queryKey: ['billing'] });
-          setTab('profile');
-          toast('Подписка активирована');
-        } catch (reason) {
-          toast((reason as Error).message, 'error');
-        }
-      }
-    })();
-  }, [queryClient, toast, user]);
   return (
     <AppShell>
       <div className="page-stack">
@@ -167,45 +123,60 @@ export default function MiniAppPage() {
             <button
               role="tab"
               aria-selected={tab === key}
+              id={`mini-tab-${key}`}
+              aria-controls={`mini-panel-${key}`}
+              tabIndex={tab === key ? 0 : -1}
               className={tab === key ? 'is-active' : 'secondary'}
               key={key}
               onClick={() => setTab(key)}
+              onKeyDown={handleTabKeyDown}
             >
               {label}
             </button>
           ))}
         </div>
-        {tab === 'today' && <TodayWorkout />}
-        {tab === 'progress' && (
-          <>
-            <WorkoutHistory />
-            <Diary onSaved={async () => void (await reloadUser())} />
-          </>
-        )}
-        {tab === 'programs' && (
-          <>
-            <TemplatesList />
-            <ProgramBuilder />
-          </>
-        )}
-        {tab === 'catalog' && (
-          <ExerciseCatalog canCreate={Boolean(user?.is_coach || user?.is_admin)} />
-        )}
-        {tab === 'nutrition' && (
-          <NutritionForm
-            key={JSON.stringify(user?.profile?.kbju ?? null)}
-            initial={user?.profile?.kbju}
-            onSaved={async () => void (await reloadUser())}
-          />
-        )}
-        {tab === 'profile' && (
-          <>
-            <ProfileForm key={profileFormKey} />
-            <CoachInvites />
-            <NotificationsPanel />
-            {SUBSCRIPTIONS_ENABLED && <BillingPanel />}
-          </>
-        )}
+        <section
+          className="page-stack"
+          role="tabpanel"
+          id={`mini-panel-${tab}`}
+          aria-labelledby={`mini-tab-${tab}`}
+        >
+          {tab === 'today' && <TodayWorkout />}
+          {tab === 'progress' && (
+            <>
+              <ProgressSchedule timeZone={user?.profile?.timezone} />
+              <WorkoutHistory />
+              <Diary onSaved={async () => void (await reloadUser())} />
+            </>
+          )}
+          {tab === 'programs' && (
+            <>
+              <TemplatesList />
+              <ProgramBuilder />
+            </>
+          )}
+          {tab === 'catalog' && (
+            <ExerciseCatalog canCreate={Boolean(user?.is_coach || user?.is_admin)} />
+          )}
+          {tab === 'nutrition' && (
+            <NutritionForm
+              key={JSON.stringify(user?.profile?.kbju ?? null)}
+              initial={user?.profile?.kbju}
+              onSaved={async () => void (await reloadUser())}
+            />
+          )}
+          {tab === 'profile' && (
+            <>
+              <ProfileForm key={profileFormKey} />
+              <CoachInvites
+                initialToken={inviteToken}
+                onInitialTokenHandled={() => setInviteToken(null)}
+              />
+              <NotificationsPanel />
+              <AccountPrivacy />
+            </>
+          )}
+        </section>
       </div>
     </AppShell>
   );

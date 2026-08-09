@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../shared/api/client';
-import type { Workout } from '../../shared/api/types';
+import type { ExerciseGuide, Workout } from '../../shared/api/types';
 import { haptic } from '../../shared/telegram/useTelegram';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Badge, Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
+import { readStorage, removeStorage, writeStorage } from '../../shared/storage';
+import { useModalA11y } from '../../shared/ui/useModalA11y';
 
 type WorkoutSet = Workout['exercises'][number]['sets'][number];
 
@@ -12,21 +14,20 @@ function WorkoutSetRow({
   set,
   disabled,
   restSeconds,
+  workoutId,
+  exerciseTitle,
 }: {
   set: WorkoutSet;
   disabled: boolean;
   restSeconds: number;
+  workoutId: number;
+  exerciseTitle: string;
 }) {
   const { toast } = useFeedback();
   const queryClient = useQueryClient();
   const draftKey = `fit_workout_set_${set.id}`;
-  const stored = (() => {
-    try {
-      return JSON.parse(localStorage.getItem(draftKey) || '{}') as Partial<WorkoutSet>;
-    } catch {
-      return {};
-    }
-  })();
+  const pendingKey = `fit_workout_pending_${set.id}`;
+  const stored = readStorage<Partial<WorkoutSet>>(draftKey, {});
   const [reps, setReps] = useState<string>(String(stored.actual_reps ?? set.actual_reps ?? ''));
   const [weight, setWeight] = useState<string>(
     String(stored.actual_weight ?? set.actual_weight ?? ''),
@@ -38,13 +39,9 @@ function WorkoutSetRow({
     is_completed: boolean;
   } | null>(null);
   const inFlight = useRef<Promise<void> | null>(null);
-  const enqueueSave = (completed: boolean) => {
-    pending.current = {
-      actual_reps: reps === '' ? null : Number(reps),
-      actual_weight: weight === '' ? null : Number(weight),
-      is_completed: completed,
-    };
-    if (inFlight.current) return;
+  const dirty = useRef(false);
+  const processQueue = useCallback(() => {
+    if (inFlight.current || !pending.current) return;
     setSaving(true);
     inFlight.current = (async () => {
       try {
@@ -52,29 +49,63 @@ function WorkoutSetRow({
           const payload = pending.current;
           pending.current = null;
           await api(`/api/v1/workouts/sets/${set.id}`, { method: 'PATCH', body: payload });
-          if (payload.is_completed) {
-            haptic('success');
-            window.dispatchEvent(new CustomEvent('fit:rest', { detail: restSeconds }));
-          }
         }
-        localStorage.removeItem(draftKey);
+        removeStorage(pendingKey);
+        removeStorage(draftKey);
         await queryClient.invalidateQueries({ queryKey: ['workout', 'today'] });
       } catch (reason) {
-        toast((reason as Error).message, 'error');
+        const retryable =
+          !(reason instanceof ApiError) ||
+          reason.status === 0 ||
+          reason.status === 429 ||
+          reason.status >= 500;
+        if (!retryable) removeStorage(pendingKey);
+        toast(
+          navigator.onLine
+            ? (reason as Error).message
+            : 'Нет сети. Подход сохранён на устройстве и будет отправлен позже.',
+          'error',
+        );
       } finally {
         inFlight.current = null;
         setSaving(false);
       }
     })();
+  }, [draftKey, pendingKey, queryClient, set.id, toast]);
+
+  const enqueueSave = (completed: boolean, startRest = false) => {
+    const payload = {
+      actual_reps: reps === '' ? null : Number(reps),
+      actual_weight: weight === '' ? null : Number(weight),
+      is_completed: completed,
+    };
+    pending.current = payload;
+    writeStorage(pendingKey, payload);
+    if (startRest && completed) {
+      haptic('success');
+      window.dispatchEvent(
+        new CustomEvent('fit:rest', { detail: { workoutId, seconds: restSeconds } }),
+      );
+    }
+    processQueue();
   };
   const saveDraft = (nextReps: string, nextWeight: string) =>
-    localStorage.setItem(
-      draftKey,
-      JSON.stringify({
-        actual_reps: nextReps === '' ? null : Number(nextReps),
-        actual_weight: nextWeight === '' ? null : Number(nextWeight),
-      }),
-    );
+    writeStorage(draftKey, {
+      actual_reps: nextReps === '' ? null : Number(nextReps),
+      actual_weight: nextWeight === '' ? null : Number(nextWeight),
+    });
+
+  useEffect(() => {
+    const flush = () => {
+      const saved = readStorage<NonNullable<typeof pending.current> | null>(pendingKey, null);
+      if (!saved) return;
+      pending.current = saved;
+      processQueue();
+    };
+    flush();
+    window.addEventListener('online', flush);
+    return () => window.removeEventListener('online', flush);
+  }, [pendingKey, processQueue]);
   return (
     <div className="workout-set-row">
       <strong>#{set.set_number}</strong>
@@ -82,16 +113,21 @@ function WorkoutSetRow({
         <span>Повторы</span>
         <input
           disabled={disabled}
+          aria-label={`Повторы, ${exerciseTitle}, подход ${set.set_number}`}
           inputMode="numeric"
           type="number"
           min="0"
           value={reps}
           onChange={(e) => {
             setReps(e.target.value);
+            dirty.current = true;
             saveDraft(e.target.value, weight);
           }}
           onBlur={() => {
-            if (!disabled && (reps || weight)) enqueueSave(set.is_completed);
+            if (!disabled && dirty.current) {
+              dirty.current = false;
+              enqueueSave(set.is_completed);
+            }
           }}
         />
       </label>
@@ -99,6 +135,7 @@ function WorkoutSetRow({
         <span>Вес, кг</span>
         <input
           disabled={disabled}
+          aria-label={`Вес, ${exerciseTitle}, подход ${set.set_number}`}
           inputMode="decimal"
           type="number"
           min="0"
@@ -106,18 +143,26 @@ function WorkoutSetRow({
           value={weight}
           onChange={(e) => {
             setWeight(e.target.value);
+            dirty.current = true;
             saveDraft(reps, e.target.value);
           }}
           onBlur={() => {
-            if (!disabled && (reps || weight)) enqueueSave(set.is_completed);
+            if (!disabled && dirty.current) {
+              dirty.current = false;
+              enqueueSave(set.is_completed);
+            }
           }}
         />
       </label>
       <button
         type="button"
         disabled={disabled || saving}
+        aria-label={`${set.is_completed ? 'Отметить невыполненным' : 'Завершить'}: ${exerciseTitle}, подход ${set.set_number}`}
         className={set.is_completed ? 'secondary' : ''}
-        onClick={() => enqueueSave(!set.is_completed)}
+        onClick={() => {
+          dirty.current = false;
+          enqueueSave(!set.is_completed, true);
+        }}
       >
         {saving ? 'Сохраняем…' : set.is_completed ? 'Отменить' : 'Готово'}
       </button>
@@ -125,27 +170,128 @@ function WorkoutSetRow({
   );
 }
 
-function RestTimer() {
-  const [seconds, setSeconds] = useState(0);
+function RestTimer({ workoutId }: { workoutId: number }) {
+  const storageKey = `fit_workout_rest_deadline_${workoutId}`;
+  const [deadline, setDeadline] = useState(() => readStorage<number>(storageKey, 0));
+  const [now, setNow] = useState(() => Date.now());
+  const seconds = Math.max(0, Math.ceil((deadline - now) / 1000));
   useEffect(() => {
-    const handler = (event: Event) => setSeconds((event as CustomEvent<number>).detail || 0);
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ workoutId: number; seconds: number }>).detail;
+      if (!detail || detail.workoutId !== workoutId) return;
+      const nextDeadline = Date.now() + detail.seconds * 1000;
+      setNow(Date.now());
+      setDeadline(nextDeadline);
+      writeStorage(storageKey, nextDeadline);
+    };
     window.addEventListener('fit:rest', handler);
     return () => window.removeEventListener('fit:rest', handler);
-  }, []);
+  }, [storageKey, workoutId]);
   useEffect(() => {
-    if (seconds <= 0) return;
-    const timer = window.setInterval(() => setSeconds((value) => Math.max(0, value - 1)), 1000);
-    return () => window.clearInterval(timer);
-  }, [seconds]);
+    if (!deadline) return;
+    const update = () => {
+      const currentTime = Date.now();
+      setNow(currentTime);
+      if (deadline <= currentTime) {
+        removeStorage(storageKey);
+        setDeadline(0);
+        haptic('success');
+      }
+    };
+    const timer = window.setInterval(update, 1000);
+    document.addEventListener('visibilitychange', update);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', update);
+    };
+  }, [deadline, storageKey]);
   if (!seconds) return null;
   return (
-    <div className="floating-workout-status">
+    <div className="floating-workout-status" role="timer" aria-live="polite">
       <strong>
         Отдых: {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}
       </strong>
-      <button className="secondary" onClick={() => setSeconds(0)}>
+      <button
+        className="secondary"
+        onClick={() => {
+          removeStorage(storageKey);
+          setDeadline(0);
+        }}
+      >
         Пропустить
       </button>
+    </div>
+  );
+}
+
+function WorkoutExerciseGuide({
+  exerciseId,
+  exerciseTitle,
+  onClose,
+}: {
+  exerciseId: number;
+  exerciseTitle: string;
+  onClose: () => void;
+}) {
+  const panelRef = useModalA11y<HTMLDivElement>(true, onClose);
+  const guide = useQuery({
+    queryKey: ['exercises', exerciseId, 'guide'],
+    queryFn: () => api<ExerciseGuide>(`/api/v1/programs/exercises/${exerciseId}/guide`),
+  });
+  return (
+    <div className="modal" role="dialog" aria-modal="true" aria-labelledby="workout-guide-title">
+      <button
+        type="button"
+        className="modal__backdrop"
+        aria-label="Закрыть технику"
+        onClick={onClose}
+      />
+      <div className="modal__panel card exercise-guide-modal__panel" ref={panelRef} tabIndex={-1}>
+        <div className="exercise-guide-modal__head">
+          <div>
+            <span className="eyebrow">Техника упражнения</span>
+            <h2 className="modal__title" id="workout-guide-title">
+              {exerciseTitle}
+            </h2>
+          </div>
+          <button className="secondary" aria-label="Закрыть технику" onClick={onClose}>
+            ×
+          </button>
+        </div>
+        <div className="exercise-guide-modal__body">
+          {guide.isLoading && <LoadingState />}
+          {guide.error && (
+            <ErrorState
+              message={(guide.error as Error).message}
+              retry={() => void guide.refetch()}
+            />
+          )}
+          {guide.data && (
+            <div className="exercise-guide-notes">
+              <section className="exercise-guide-note">
+                <h3>Техника выполнения</h3>
+                <ol>
+                  {guide.data.technique_steps.map((step) => (
+                    <li key={step}>{step}</li>
+                  ))}
+                </ol>
+              </section>
+              <section className="exercise-guide-note">
+                <h3>Дыхание</h3>
+                <p>{guide.data.breathing}</p>
+              </section>
+              <section className="exercise-guide-note exercise-guide-note--warning">
+                <h3>Частые ошибки</h3>
+                <ul>
+                  {guide.data.common_mistakes.map((mistake) => (
+                    <li key={mistake}>{mistake}</li>
+                  ))}
+                </ul>
+              </section>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -153,14 +299,15 @@ function RestTimer() {
 export function TodayWorkout() {
   const { toast, confirm } = useFeedback();
   const queryClient = useQueryClient();
+  const [guide, setGuide] = useState<{ id: number; title: string } | null>(null);
   const workout = useQuery({
     queryKey: ['workout', 'today'],
     queryFn: () => api<Workout>('/api/v1/workouts/today'),
     retry: (count, error) => !(error instanceof ApiError && error.status === 404) && count < 1,
   });
   const mutation = useMutation({
-    mutationFn: ({ path, method }: { path: string; method: string }) =>
-      api<Workout | void>(path, { method }),
+    mutationFn: ({ path, method, body }: { path: string; method: string; body?: unknown }) =>
+      api<Workout | void>(path, { method, body }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['workout'] });
     },
@@ -225,6 +372,7 @@ export function TodayWorkout() {
           </div>
           {data.status === 'planned' && (
             <button
+              disabled={mutation.isPending}
               onClick={() =>
                 mutation.mutate({ path: `/api/v1/workouts/${data.id}/start`, method: 'POST' })
               }
@@ -241,8 +389,19 @@ export function TodayWorkout() {
                     {exercise.prescribed_sets} × {exercise.prescribed_reps} · отдых{' '}
                     {exercise.rest_seconds} сек
                   </p>
+                  {exercise.notes && <p className="exercise-note">{exercise.notes}</p>}
                 </div>
-                {exercise.has_guide && <Badge>Есть техника</Badge>}
+                {exercise.has_guide && (
+                  <button
+                    type="button"
+                    className="secondary compact"
+                    onClick={() =>
+                      setGuide({ id: exercise.exercise_id, title: exercise.exercise_title })
+                    }
+                  >
+                    Техника
+                  </button>
+                )}
               </div>
               {exercise.sets.map((set) => (
                 <WorkoutSetRow
@@ -250,16 +409,33 @@ export function TodayWorkout() {
                   set={set}
                   restSeconds={exercise.rest_seconds}
                   disabled={!started}
+                  workoutId={data.id}
+                  exerciseTitle={exercise.exercise_title}
                 />
               ))}
             </article>
           ))}
           {started && (
             <button
-              disabled={!completed || mutation.isPending}
-              onClick={() =>
-                mutation.mutate({ path: `/api/v1/workouts/${data.id}/finish`, method: 'POST' })
-              }
+              disabled={mutation.isPending}
+              onClick={async () => {
+                const incomplete = total - completed;
+                if (
+                  incomplete > 0 &&
+                  !(await confirm({
+                    title: 'Завершить неполную тренировку?',
+                    message: `Не отмечено подходов: ${incomplete}. Их можно оставить незаполненными и завершить тренировку.`,
+                    confirmText: 'Завершить',
+                    danger: false,
+                  }))
+                )
+                  return;
+                mutation.mutate({
+                  path: `/api/v1/workouts/${data.id}/finish`,
+                  method: 'POST',
+                  body: incomplete > 0 ? { confirm_incomplete: true } : undefined,
+                });
+              }}
             >
               Завершить тренировку
             </button>
@@ -270,20 +446,31 @@ export function TodayWorkout() {
               onClick={async () => {
                 if (
                   await confirm({
-                    title: 'Удалить тренировку на сегодня?',
-                    message: 'Вернуть её можно будет только повторным назначением программы.',
-                    confirmText: 'Удалить',
+                    title: 'Пропустить тренировку?',
+                    message:
+                      'Она останется в истории как пропущенная. Если хотите выполнить её позже, перенесите дату в разделе «Прогресс».',
+                    confirmText: 'Пропустить',
                   })
                 )
-                  mutation.mutate({ path: '/api/v1/workouts/today', method: 'DELETE' });
+                  mutation.mutate({
+                    path: `/api/v1/workouts/${data.id}/skip`,
+                    method: 'POST',
+                  });
               }}
             >
-              Удалить тренировку
+              Пропустить тренировку
             </button>
           )}
         </div>
       </Card>
-      <RestTimer />
+      <RestTimer workoutId={data.id} />
+      {guide && (
+        <WorkoutExerciseGuide
+          exerciseId={guide.id}
+          exerciseTitle={guide.title}
+          onClose={() => setGuide(null)}
+        />
+      )}
     </>
   );
 }

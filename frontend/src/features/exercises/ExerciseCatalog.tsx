@@ -1,15 +1,17 @@
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type { CoachAssignedProgram, Exercise, ExerciseGuide } from '../../shared/api/types';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Badge, Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
+import { useModalA11y } from '../../shared/ui/useModalA11y';
 
 const difficultyLabels = {
   beginner: 'Начальный',
   intermediate: 'Средний',
   advanced: 'Продвинутый',
 };
+const weekdayLabels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
 export function ExerciseCatalog({
   canCreate = false,
@@ -25,6 +27,7 @@ export function ExerciseCatalog({
   const searchResultsId = useId();
   const [search, setSearch] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
+  const [activeSearchIndex, setActiveSearchIndex] = useState(0);
   const [muscle, setMuscle] = useState('');
   const [guide, setGuide] = useState<{ exercise: Exercise; data: ExerciseGuide } | null>(null);
   const [largeImage, setLargeImage] = useState<number | null>(null);
@@ -34,7 +37,16 @@ export function ExerciseCatalog({
   const [assignmentSets, setAssignmentSets] = useState(3);
   const [assignmentReps, setAssignmentReps] = useState('8-12');
   const [assignmentRest, setAssignmentRest] = useState(90);
+  const [assignmentDay, setAssignmentDay] = useState(1);
+  const [assignmentNotes, setAssignmentNotes] = useState('');
   const [newTitle, setNewTitle] = useState('');
+  const guidePanelRef = useModalA11y<HTMLDivElement>(Boolean(guide) && largeImage === null, () =>
+    setGuide(null),
+  );
+  const assignmentPanelRef = useModalA11y<HTMLDivElement>(Boolean(assignment), () =>
+    setAssignment(null),
+  );
+  const lightboxRef = useModalA11y<HTMLDivElement>(largeImage !== null, () => setLargeImage(null));
   const rows = useQuery({
     queryKey: ['exercises'],
     queryFn: () => api<Exercise[]>('/api/v1/programs/exercises'),
@@ -64,9 +76,11 @@ export function ExerciseCatalog({
           method: 'POST',
           body: {
             exercise_id: assignment.id,
+            day_number: assignmentDay,
             prescribed_sets: assignmentSets,
             prescribed_reps: assignmentReps,
             rest_seconds: assignmentRest,
+            notes: assignmentNotes || null,
           },
         },
       );
@@ -75,6 +89,7 @@ export function ExerciseCatalog({
       await queryClient.invalidateQueries({ queryKey: ['coach', 'programs'] });
       toast(`Упражнение добавлено в ${result.workouts_updated} предстоящих тренировок`);
       setAssignment(null);
+      setAssignmentNotes('');
     },
     onError: (reason) => toast((reason as Error).message, 'error'),
   });
@@ -115,30 +130,27 @@ export function ExerciseCatalog({
   );
   const activeAssignmentClientId = assignmentClients.some((item) => item.id === assignmentClientId)
     ? assignmentClientId
-    : (assignmentClients[0]?.id ?? 0);
+    : (assignablePrograms.find((item) => item.client_telegram_user_id === targetTelegramId)
+        ?.client_id ??
+      assignmentClients[0]?.id ??
+      0);
   const clientPrograms = assignablePrograms.filter(
     (item) => item.client_id === activeAssignmentClientId,
   );
   const activeAssignmentProgramId = clientPrograms.some((item) => item.id === assignmentProgramId)
     ? assignmentProgramId
     : (clientPrograms[0]?.id ?? 0);
+  const activeAssignmentProgram = clientPrograms.find(
+    (item) => item.id === activeAssignmentProgramId,
+  );
+  const activeAssignmentSchedule = (
+    activeAssignmentProgram as (CoachAssignedProgram & { schedule_weekdays?: number[] }) | undefined
+  )?.schedule_weekdays;
 
-  useEffect(() => {
-    if (!guide && !assignment) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      if (largeImage !== null) setLargeImage(null);
-      else if (assignment) setAssignment(null);
-      else setGuide(null);
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener('keydown', onKeyDown);
-    };
-  }, [assignment, guide, largeImage]);
+  const chooseSearchResult = (exercise: Exercise) => {
+    setSearch(exercise.title);
+    setSearchOpen(false);
+  };
 
   const openGuide = async (exercise: Exercise) => {
     try {
@@ -153,7 +165,15 @@ export function ExerciseCatalog({
 
   return (
     <>
-      <Card title="Каталог упражнений" actions={<Badge>{filtered.length}</Badge>}>
+      <Card
+        title="Каталог упражнений"
+        description={
+          canCreate && targetTelegramId
+            ? `Новые упражнения создаются персонально для клиента Telegram ${targetTelegramId}.`
+            : undefined
+        }
+        actions={<Badge>{filtered.length}</Badge>}
+      >
         <div className="form-grid exercise-filter-grid top-gap">
           <label className="field">
             <span>Поиск</span>
@@ -164,13 +184,35 @@ export function ExerciseCatalog({
                 aria-label="Поиск в каталоге упражнений"
                 aria-expanded={searchOpen}
                 aria-controls={searchResultsId}
+                aria-activedescendant={
+                  searchOpen && filtered[activeSearchIndex]
+                    ? `${searchResultsId}-${filtered[activeSearchIndex].id}`
+                    : undefined
+                }
                 autoComplete="off"
                 value={search}
                 onFocus={() => setSearchOpen(true)}
                 onBlur={() => setSearchOpen(false)}
                 onChange={(e) => {
                   setSearch(e.target.value);
+                  setActiveSearchIndex(0);
                   setSearchOpen(true);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    setSearchOpen(true);
+                    setActiveSearchIndex((index) => Math.min(filtered.length - 1, index + 1));
+                  } else if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    setSearchOpen(true);
+                    setActiveSearchIndex((index) => Math.max(0, index - 1));
+                  } else if (event.key === 'Enter' && searchOpen && filtered[activeSearchIndex]) {
+                    event.preventDefault();
+                    chooseSearchResult(filtered[activeSearchIndex]);
+                  } else if (event.key === 'Escape') {
+                    setSearchOpen(false);
+                  }
                 }}
                 placeholder="Упражнение, мышца или инвентарь"
               />
@@ -181,14 +223,14 @@ export function ExerciseCatalog({
                       <button
                         type="button"
                         role="option"
+                        id={`${searchResultsId}-${exercise.id}`}
+                        tabIndex={-1}
                         aria-selected={search === exercise.title}
                         className="exercise-picker__option"
                         key={exercise.id}
                         onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => {
-                          setSearch(exercise.title);
-                          setSearchOpen(false);
-                        }}
+                        onPointerDown={(event) => event.preventDefault()}
+                        onClick={() => chooseSearchResult(exercise)}
                       >
                         <strong>{exercise.title}</strong>
                         <span className="exercise-picker__meta">
@@ -211,7 +253,13 @@ export function ExerciseCatalog({
           </label>
           <label className="field">
             <span>Группа мышц</span>
-            <select value={muscle} onChange={(e) => setMuscle(e.target.value)}>
+            <select
+              value={muscle}
+              onChange={(e) => {
+                setMuscle(e.target.value);
+                setActiveSearchIndex(0);
+              }}
+            >
               <option value="">Все</option>
               {muscles.map((value) => (
                 <option value={value!} key={value}>
@@ -240,6 +288,7 @@ export function ExerciseCatalog({
             <input
               aria-label="Новое упражнение"
               value={newTitle}
+              maxLength={128}
               onChange={(e) => setNewTitle(e.target.value)}
               placeholder="Название нового упражнения"
               required
@@ -318,7 +367,11 @@ export function ExerciseCatalog({
           aria-labelledby="guide-title"
         >
           <button className="modal__backdrop" aria-label="Закрыть" onClick={() => setGuide(null)} />
-          <div className="modal__panel card exercise-guide-modal__panel">
+          <div
+            className="modal__panel card exercise-guide-modal__panel"
+            ref={guidePanelRef}
+            tabIndex={-1}
+          >
             <div className="exercise-guide-modal__head">
               <div>
                 <span className="eyebrow">Описание упражнения</span>
@@ -415,7 +468,13 @@ export function ExerciseCatalog({
               </p>
             </div>
             {largeImage !== null && guide.data.images[largeImage] && (
-              <div className="exercise-lightbox" role="dialog" aria-modal="true">
+              <div
+                className="exercise-lightbox"
+                role="dialog"
+                aria-modal="true"
+                ref={lightboxRef}
+                tabIndex={-1}
+              >
                 <button
                   className="exercise-lightbox__backdrop"
                   aria-label="Закрыть увеличенное изображение"
@@ -472,18 +531,31 @@ export function ExerciseCatalog({
             aria-label="Закрыть"
             onClick={() => setAssignment(null)}
           />
-          <div className="modal__panel card assignment-modal">
+          <div
+            className="modal__panel card assignment-modal"
+            ref={assignmentPanelRef}
+            tabIndex={-1}
+          >
             <div className="section-head">
               <div>
                 <span className="eyebrow">Назначение упражнения</span>
                 <h2 id="assign-title">{assignment.title}</h2>
               </div>
-              <button className="secondary" onClick={() => setAssignment(null)}>
+              <button
+                className="secondary"
+                aria-label="Закрыть назначение упражнения"
+                onClick={() => setAssignment(null)}
+              >
                 ×
               </button>
             </div>
             {coachPrograms.isLoading ? (
               <LoadingState />
+            ) : coachPrograms.error ? (
+              <ErrorState
+                message={(coachPrograms.error as Error).message}
+                retry={() => void coachPrograms.refetch()}
+              />
             ) : assignmentClients.length === 0 ? (
               <EmptyState
                 title="Нет подходящих программ"
@@ -507,6 +579,7 @@ export function ExerciseCatalog({
                       setAssignmentProgramId(
                         assignablePrograms.find((item) => item.client_id === nextClientId)?.id ?? 0,
                       );
+                      setAssignmentDay(1);
                     }}
                   >
                     {assignmentClients.map((client) => (
@@ -520,7 +593,10 @@ export function ExerciseCatalog({
                   <span>В какую программу</span>
                   <select
                     value={activeAssignmentProgramId}
-                    onChange={(event) => setAssignmentProgramId(Number(event.target.value))}
+                    onChange={(event) => {
+                      setAssignmentProgramId(Number(event.target.value));
+                      setAssignmentDay(1);
+                    }}
                   >
                     {clientPrograms.map((program) => (
                       <option value={program.id} key={program.id}>
@@ -529,8 +605,22 @@ export function ExerciseCatalog({
                     ))}
                   </select>
                 </label>
+                <label className="field">
+                  <span>В какой день программы</span>
+                  <select
+                    value={assignmentDay}
+                    onChange={(event) => setAssignmentDay(Number(event.target.value))}
+                  >
+                    {(activeAssignmentSchedule ?? []).map((weekday, index) => (
+                      <option value={index + 1} key={`${weekday}-${index}`}>
+                        День {index + 1} · {weekdayLabels[weekday] ?? `день недели ${weekday + 1}`}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <p className="muted assignment-modal__hint">
-                  Упражнение появится во всех предстоящих тренировках выбранной программы.
+                  Упражнение появится только в будущих тренировках выбранного дня. Уже завершённые
+                  тренировки не изменятся.
                 </p>
                 <div className="form-grid assignment-prescription">
                   <label className="field">
@@ -538,7 +628,7 @@ export function ExerciseCatalog({
                     <input
                       type="number"
                       min="1"
-                      max="12"
+                      max="10"
                       value={assignmentSets}
                       onChange={(event) => setAssignmentSets(Number(event.target.value))}
                     />
@@ -562,6 +652,15 @@ export function ExerciseCatalog({
                     />
                   </label>
                 </div>
+                <label className="field">
+                  <span>Заметка клиенту (необязательно)</span>
+                  <textarea
+                    maxLength={2000}
+                    value={assignmentNotes}
+                    placeholder="Например: выполнять медленно, без рывков"
+                    onChange={(event) => setAssignmentNotes(event.target.value)}
+                  />
+                </label>
                 <button disabled={assignmentMutation.isPending || !activeAssignmentProgramId}>
                   {assignmentMutation.isPending ? 'Добавляем…' : 'Добавить в программу'}
                 </button>

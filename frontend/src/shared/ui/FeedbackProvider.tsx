@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import { useModalA11y } from './useModalA11y';
 
 interface ConfirmOptions {
   title: string;
@@ -26,7 +27,10 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
   const toast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
     if (toastTimer.current) window.clearTimeout(toastTimer.current);
     setToastState({ message, type });
-    toastTimer.current = window.setTimeout(() => setToastState(null), 3200);
+    toastTimer.current = window.setTimeout(
+      () => setToastState(null),
+      type === 'error' ? 7000 : 3200,
+    );
   }, []);
 
   const confirm = useCallback(
@@ -39,28 +43,51 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
     confirmState?.resolve(value);
     setConfirmState(null);
   };
+  const confirmPanelRef = useModalA11y<HTMLDivElement>(Boolean(confirmState), () =>
+    finishConfirm(false),
+  );
 
   const value = useMemo(() => ({ toast, confirm }), [toast, confirm]);
   return (
     <FeedbackContext.Provider value={value}>
       {children}
       {toastState && (
-        <div className={`toast${toastState.type === 'error' ? ' error' : ''}`} role="status">
-          {toastState.message}
+        <div
+          className={`toast${toastState.type === 'error' ? ' error' : ''}`}
+          role={toastState.type === 'error' ? 'alert' : 'status'}
+          aria-live={toastState.type === 'error' ? 'assertive' : 'polite'}
+        >
+          <span>{toastState.message}</span>
+          <button
+            type="button"
+            className="toast__close"
+            aria-label="Закрыть сообщение"
+            onClick={() => setToastState(null)}
+          >
+            ×
+          </button>
         </div>
       )}
       {confirmState && (
-        <div className="modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+        <div
+          className="modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-title"
+          aria-describedby="confirm-message"
+        >
           <button
             className="modal__backdrop"
             aria-label="Закрыть"
             onClick={() => finishConfirm(false)}
           />
-          <div className="modal__panel card">
+          <div ref={confirmPanelRef} className="modal__panel card" tabIndex={-1}>
             <h3 id="confirm-title" className="modal__title">
               {confirmState.title}
             </h3>
-            <p className="modal__body muted">{confirmState.message}</p>
+            <p id="confirm-message" className="modal__body muted">
+              {confirmState.message}
+            </p>
             <div className="modal__actions toolbar wrap">
               <button type="button" className="secondary" onClick={() => finishConfirm(false)}>
                 Отмена

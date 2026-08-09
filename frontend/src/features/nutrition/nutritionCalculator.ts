@@ -36,6 +36,7 @@ export type NutritionCalculationResult =
 
 const roundNumber = (value: number) => Math.max(0, Math.floor(value + 0.5));
 const roundToTen = (value: number) => Math.max(0, Math.floor(value / 10 + 0.5) * 10);
+const roundUpToTen = (value: number) => Math.max(0, Math.ceil(value / 10) * 10);
 
 export function calculateNutritionEstimate(form: NutritionTargetSave): NutritionCalculationResult {
   const errors: string[] = [];
@@ -45,9 +46,9 @@ export function calculateNutritionEstimate(form: NutritionTargetSave): Nutrition
     }
   };
 
-  inRange(form.weight_kg, 20, 500, 'Вес');
-  inRange(form.height_cm, 50, 280, 'Рост');
-  inRange(form.age, 12, 120, 'Возраст');
+  inRange(form.weight_kg, 20, 350, 'Вес');
+  inRange(form.height_cm, 100, 250, 'Рост');
+  inRange(form.age, 18, 100, 'Возраст');
   inRange(form.strength_trainings_per_week, 0, 14, 'Силовые тренировки');
   inRange(form.cardio_trainings_per_week, 0, 14, 'Кардиотренировки');
   inRange(form.strength_training_duration_minutes, 10, 300, 'Длительность силовой');
@@ -79,7 +80,7 @@ export function calculateNutritionEstimate(form: NutritionTargetSave): Nutrition
     7;
   const maintenanceExact = baseTdeeExact + strengthDailyExact + cardioDailyExact;
   const goalMultiplier = goalMultipliers[form.goal];
-  const calories = roundToTen(maintenanceExact * goalMultiplier);
+  let calories = roundToTen(maintenanceExact * goalMultiplier);
 
   const proteinPerKg = {
     fat_loss: 2,
@@ -90,7 +91,12 @@ export function calculateNutritionEstimate(form: NutritionTargetSave): Nutrition
   const fatPerKg = form.goal === 'muscle_gain' ? 0.9 : 0.8;
   const protein = roundNumber(form.weight_kg * proteinPerKg);
   const fat = roundNumber(form.weight_kg * fatPerKg);
-  const remainingCalories = calories - protein * 4 - fat * 9;
+  let remainingCalories = calories - protein * 4 - fat * 9;
+  const macroWarning = remainingCalories < 0;
+  if (macroWarning) {
+    calories = roundUpToTen(protein * 4 + fat * 9);
+    remainingCalories = calories - protein * 4 - fat * 9;
+  }
 
   return {
     valid: true,
@@ -107,7 +113,7 @@ export function calculateNutritionEstimate(form: NutritionTargetSave): Nutrition
       protein,
       fat,
       carbs: roundNumber(remainingCalories / 4),
-      macroWarning: remainingCalories < 0,
+      macroWarning,
     },
   };
 }

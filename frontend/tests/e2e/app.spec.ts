@@ -2,6 +2,18 @@ import { expect, test, type Page } from '@playwright/test';
 
 async function mockApi(page: Page, { withCoachClient = false } = {}) {
   let role: 'client' | 'coach' | 'admin' = 'client';
+  const emptyProgress = {
+    workouts_total: 0,
+    workouts_completed: 0,
+    workouts_skipped: 0,
+    workouts_missed: 0,
+    adherence_percent: 0,
+    current_streak: 0,
+    weight_change_kg: null,
+    weights: [],
+    weekly_volume: [],
+    personal_records: [],
+  };
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -24,7 +36,6 @@ async function mockApi(page: Page, { withCoachClient = false } = {}) {
           telegram_user_id: 2001,
           username: 'demo',
           first_name: 'Демо',
-          client_code: 'ABC123',
           is_coach: role !== 'client',
           is_admin: role === 'admin',
           has_active_program: false,
@@ -35,6 +46,36 @@ async function mockApi(page: Page, { withCoachClient = false } = {}) {
       });
     if (path.endsWith('/workouts/today'))
       return route.fulfill({ status: 404, json: { detail: 'На сегодня тренировка не назначена' } });
+    if (path.endsWith('/workouts/progress')) return route.fulfill({ json: emptyProgress });
+    if (path.endsWith('/workouts/schedule')) return route.fulfill({ json: [] });
+    if (path.endsWith('/workouts/history/summary'))
+      return route.fulfill({
+        json: { workouts_completed: 0, completed_sets: 0, volume_kg: 0 },
+      });
+    if (path.endsWith('/workouts/history') || path.endsWith('/workouts/week'))
+      return route.fulfill({ json: [] });
+    if (path.endsWith('/me/coach-invites/link/preview'))
+      return route.fulfill({
+        json: {
+          invite_id: 77,
+          coach: {
+            id: 9,
+            telegram_user_id: 9009,
+            username: 'test_coach',
+            full_name: 'Тестовый тренер',
+            can_open_chat: true,
+            chat_url: 'https://t.me/test_coach',
+            chat_unavailable_reason: null,
+          },
+          created_at: '2030-01-01T10:00:00',
+          expires_at: '2030-01-15T10:00:00',
+          requires_trainer_change: false,
+          already_current_trainer: false,
+          current_trainer: null,
+        },
+      });
+    if (path.endsWith('/me/coach-invites/link/confirm'))
+      return route.fulfill({ status: 204, body: '' });
     if (path.endsWith('/notifications/settings'))
       return route.fulfill({
         json: { workout_reminders_enabled: true, reminder_hour: 9 },
@@ -125,6 +166,9 @@ async function mockApi(page: Page, { withCoachClient = false } = {}) {
       });
     if (path.endsWith('/programs/templates/hidden')) return route.fulfill({ json: [] });
     if (path.endsWith('/admin/users')) return route.fulfill({ json: [] });
+    if (/\/coach\/clients\/\d+\/analytics$/.test(path))
+      return route.fulfill({ json: emptyProgress });
+    if (/\/coach\/clients\/\d+\/workouts$/.test(path)) return route.fulfill({ json: [] });
     if (path.endsWith('/coach/clients'))
       return route.fulfill({
         json: withCoachClient
@@ -157,6 +201,16 @@ test('клиент входит и видит экран тренировки', 
   await page.getByRole('button', { name: 'Клиент' }).click();
   await expect(page.getByRole('heading', { name: 'Демо пользователь' })).toBeVisible();
   await expect(page.getByText('Сегодня отдых')).toBeVisible();
+});
+
+test('deep link показывает тренера до явного подтверждения', async ({ page }) => {
+  await mockApi(page);
+  await page.goto('/app?startapp=trainer_test-invite-token');
+  await page.getByRole('button', { name: 'Клиент' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Тестовый тренер' })).toBeVisible();
+  await page.getByRole('button', { name: 'Подтвердить подключение' }).click();
+  await expect(page.getByText('Тренер подключён')).toBeVisible();
 });
 
 test('мобильный интерфейс не обрезает навигацию и текст плана', async ({ page }) => {

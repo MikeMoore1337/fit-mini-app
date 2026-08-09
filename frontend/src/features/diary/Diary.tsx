@@ -1,10 +1,12 @@
-import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type { BodyMeasurement, BodyMeasurementSave } from '../../shared/api/types';
 import { LIVE_DATA_REFETCH_INTERVAL_MS } from '../../shared/sync';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
+import { useAuth } from '../../app/AuthProvider';
+import { dateInputValue, detectedTimeZone } from '../../shared/dateTime';
+import { usePersistentState } from '../../shared/storage';
 
 export function Diary({
   clientId,
@@ -14,10 +16,13 @@ export function Diary({
   onSaved?: () => void | Promise<void>;
 }) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const { toast, confirm } = useFeedback();
-  const [form, setForm] = useState<BodyMeasurementSave>({
-    measured_on: new Date().toISOString().slice(0, 10),
-  });
+  const timeZone = clientId ? detectedTimeZone() : user?.profile?.timezone || detectedTimeZone();
+  const [form, setForm, clearDraft] = usePersistentState<BodyMeasurementSave>(
+    `fit_measurement_draft_${clientId ? `client_${clientId}` : `user_${user?.id ?? 'me'}`}`,
+    { measured_on: dateInputValue(new Date(), timeZone) },
+  );
   const base = clientId
     ? `/api/v1/coach/clients/${clientId}/measurements`
     : '/api/v1/workouts/diary';
@@ -31,6 +36,7 @@ export function Diary({
     mutationFn: ({ path, method, body }: { path: string; method: string; body?: unknown }) =>
       api(path, { method, body }),
     onSuccess: async () => {
+      clearDraft({ measured_on: dateInputValue(new Date(), timeZone) });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['measurements', clientId || 'me'] }),
         ...(!clientId ? [queryClient.invalidateQueries({ queryKey: ['notifications'] })] : []),
@@ -48,6 +54,14 @@ export function Diary({
     'biceps_cm',
     'thigh_cm',
   ] as const;
+  const numericLimits: Record<(typeof numeric)[number], { min: number; max: number }> = {
+    weight_kg: { min: 20, max: 350 },
+    chest_cm: { min: 0.1, max: 300 },
+    waist_cm: { min: 0.1, max: 300 },
+    hips_cm: { min: 0.1, max: 300 },
+    biceps_cm: { min: 0.1, max: 150 },
+    thigh_cm: { min: 0.1, max: 200 },
+  };
   return (
     <Card title="Дневник замеров">
       <form
@@ -85,6 +99,8 @@ export function Diary({
               <input
                 type="number"
                 step="0.1"
+                min={numericLimits[key].min}
+                max={numericLimits[key].max}
                 value={form[key] ?? ''}
                 onChange={(e) =>
                   setForm({ ...form, [key]: e.target.value === '' ? null : Number(e.target.value) })
@@ -97,6 +113,7 @@ export function Diary({
           <span>Заметка</span>
           <textarea
             value={form.note || ''}
+            maxLength={500}
             onChange={(e) => setForm({ ...form, note: e.target.value })}
           />
         </label>

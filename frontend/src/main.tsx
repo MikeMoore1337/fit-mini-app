@@ -3,7 +3,9 @@ import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './app/AuthProvider';
 import { AuthGate } from './app/AuthGate';
+import { ErrorBoundary } from './app/ErrorBoundary';
 import { FeedbackProvider } from './shared/ui/FeedbackProvider';
+import { OnlineStatus } from './shared/ui/OnlineStatus';
 import { LoadingState } from './shared/ui/common';
 import { useTelegram } from './shared/telegram/useTelegram';
 import { NavigationProvider, Redirect, useNavigation } from './shared/navigation/router';
@@ -51,19 +53,22 @@ function Root() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <FeedbackProvider>
-          <NavigationProvider>
-            <Suspense
-              fallback={
-                <main className="container">
-                  <LoadingState />
-                </main>
-              }
-            >
-              <AppRoutes />
-            </Suspense>
-          </NavigationProvider>
-        </FeedbackProvider>
+        <ErrorBoundary>
+          <FeedbackProvider>
+            <NavigationProvider>
+              <OnlineStatus />
+              <Suspense
+                fallback={
+                  <main className="container">
+                    <LoadingState />
+                  </main>
+                }
+              >
+                <AppRoutes />
+              </Suspense>
+            </NavigationProvider>
+          </FeedbackProvider>
+        </ErrorBoundary>
       </AuthProvider>
     </QueryClientProvider>
   );

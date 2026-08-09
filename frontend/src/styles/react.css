@@ -39,7 +39,7 @@
 }
 .react-tabs button {
   min-width: 0;
-  min-height: 42px;
+  min-height: 44px;
   padding: 9px 10px;
   border-radius: 10px;
   font-size: 0.875rem;
@@ -291,7 +291,8 @@
 
 @media (max-width: 360px) {
   .react-tabs--coach {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(104px, 1fr));
+    overflow-x: auto;
   }
   .onboarding-action {
     grid-template-columns: 28px minmax(0, 1fr) 14px;
@@ -386,9 +387,60 @@
 }
 .exercise-catalog-row .list-row__actions button,
 .coach-client-row > .btn-danger {
-  min-height: 34px;
+  min-height: 44px;
   padding: 7px 10px;
   font-size: 0.78rem;
+}
+
+.toast > span {
+  flex: 1;
+  min-width: 0;
+}
+.toast__close {
+  flex: 0 0 auto;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 6px;
+  border-radius: 9px;
+  background: transparent;
+  color: inherit;
+}
+.offline-status {
+  position: fixed;
+  z-index: 11000;
+  top: max(8px, env(safe-area-inset-top, 0px));
+  left: 50%;
+  width: min(calc(100% - 24px), 540px);
+  transform: translateX(-50%);
+  border: 1px solid var(--warning-line);
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: var(--warning-soft);
+  color: var(--warning-text);
+  box-shadow: var(--shadow);
+  text-align: center;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.fatal-error {
+  margin: max(24px, env(safe-area-inset-top, 0px)) auto;
+  max-width: 620px;
+}
+.field-error {
+  margin: 0;
+  color: var(--danger);
+  font-weight: 700;
+  line-height: 1.4;
+}
+.modal__panel:focus-visible {
+  outline: 3px solid var(--accent-line);
+  outline-offset: 3px;
+}
+.floating-workout-status button {
+  min-height: 44px;
+}
+.exercise-notes {
+  grid-column: 1 / -2;
 }
 .coach-client-row .list-row__main {
   grid-template-columns: minmax(0, 1fr) auto;
@@ -416,6 +468,44 @@
 }
 .coach-data-disclosure__body > .card {
   box-shadow: none;
+}
+.compact-disclosure {
+  padding: 11px 12px;
+  box-shadow: none;
+}
+.compact-disclosure > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  list-style: none;
+}
+.compact-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+.compact-disclosure > summary > span {
+  display: grid;
+  flex: 1;
+  gap: 3px;
+  min-width: 0;
+}
+.compact-disclosure > summary small {
+  color: var(--muted);
+}
+.compact-disclosure > summary::after {
+  content: '+';
+  color: var(--muted);
+  font-size: 1.2rem;
+}
+.compact-disclosure[open] > summary::after {
+  content: '−';
+}
+.compact-field {
+  min-width: 145px;
+  margin: 0;
+}
+.compact-field input {
+  min-height: 40px;
 }
 
 /* Поиск упражнения прямо в конструкторе */

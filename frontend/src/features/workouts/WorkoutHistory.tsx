@@ -1,10 +1,20 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
-import type { WorkoutHistoryItem, WorkoutScheduleItem } from '../../shared/api/types';
+import type {
+  WorkoutHistoryItem,
+  WorkoutHistorySummary,
+  WorkoutScheduleItem,
+} from '../../shared/api/types';
 import { Badge, Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 
 const HISTORY_PAGE_SIZE = 10;
+const statusLabels: Record<string, string> = {
+  planned: 'Запланирована',
+  in_progress: 'В процессе',
+  completed: 'Завершена',
+  skipped: 'Пропущена',
+};
 
 export function WorkoutHistory() {
   const queryClient = useQueryClient();
@@ -23,23 +33,19 @@ export function WorkoutHistory() {
     getNextPageParam: (lastPage, pages) =>
       lastPage.length === HISTORY_PAGE_SIZE ? pages.flat().length : undefined,
   });
+  const summary = useQuery({
+    queryKey: ['workout', 'history', 'summary'],
+    queryFn: () => api<WorkoutHistorySummary>('/api/v1/workouts/history/summary'),
+  });
   const rows = history.data?.pages.flat() ?? [];
   const clearHistory = useMutation({
     mutationFn: () => api('/api/v1/workouts/history', { method: 'DELETE' }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['workout', 'history'] });
+      await queryClient.invalidateQueries({ queryKey: ['workout'] });
       toast('История тренировок очищена');
     },
     onError: (reason) => toast((reason as Error).message, 'error'),
   });
-  const stats = rows.reduce(
-    (result, item) => ({
-      workouts: result.workouts + 1,
-      sets: result.sets + item.completed_sets,
-      volume: result.volume + item.volume_kg,
-    }),
-    { workouts: 0, sets: 0, volume: 0 },
-  );
   return (
     <div className="stack">
       <Card title="Неделя">
@@ -57,7 +63,7 @@ export function WorkoutHistory() {
                   <strong>{item.title}</strong>
                   <p className="muted">{item.scheduled_date}</p>
                 </div>
-                <Badge>{item.status}</Badge>
+                <Badge>{statusLabels[item.status] ?? item.status}</Badge>
               </article>
             ))}
           </div>
@@ -86,10 +92,10 @@ export function WorkoutHistory() {
           ) : undefined
         }
       >
-        {history.isLoading ? (
+        {history.isLoading || summary.isLoading ? (
           <LoadingState />
-        ) : history.error ? (
-          <ErrorState message={(history.error as Error).message} />
+        ) : history.error || summary.error ? (
+          <ErrorState message={((history.error || summary.error) as Error).message} />
         ) : !rows.length ? (
           <EmptyState title="История пока пуста" />
         ) : (
@@ -97,15 +103,15 @@ export function WorkoutHistory() {
             <div className="metric-grid top-gap">
               <div className="metric">
                 <span>Тренировок</span>
-                <strong>{stats.workouts}</strong>
+                <strong>{summary.data?.workouts_completed ?? 0}</strong>
               </div>
               <div className="metric">
                 <span>Подходов</span>
-                <strong>{stats.sets}</strong>
+                <strong>{summary.data?.completed_sets ?? 0}</strong>
               </div>
               <div className="metric">
                 <span>Объём</span>
-                <strong>{Math.round(stats.volume)} кг</strong>
+                <strong>{Math.round(summary.data?.volume_kg ?? 0)} кг</strong>
               </div>
             </div>
             <div className="list-grid top-gap">

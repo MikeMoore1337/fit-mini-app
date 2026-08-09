@@ -1,62 +1,95 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef, useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
-import type { CoachInvite } from '../../shared/api/types';
+import type { CoachInvitePreview } from '../../shared/api/types';
 import { useAuth } from '../../app/AuthProvider';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
-import { Badge, Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
+import { Badge, Card } from '../../shared/ui/common';
 
-export function CoachInvites() {
+function tokenFromInvite(value: string): string {
+  const trimmed = value.trim();
+  try {
+    const parsed = new URL(trimmed);
+    const startParam =
+      parsed.searchParams.get('startapp') ||
+      parsed.searchParams.get('start') ||
+      parsed.searchParams.get('tgWebAppStartParam');
+    if (startParam) return startParam.replace(/^trainer_/, '');
+  } catch {
+    // A copied fallback code is expected not to be a URL.
+  }
+  return trimmed.replace(/^trainer_/, '');
+}
+
+export function CoachInvites({
+  initialToken,
+  onInitialTokenHandled,
+}: {
+  initialToken?: string | null;
+  onInitialTokenHandled?: () => void;
+}) {
   const { user, reloadUser } = useAuth();
   const { toast, confirm } = useFeedback();
-  const queryClient = useQueryClient();
-  const invites = useQuery({
-    queryKey: ['coach-invites'],
-    queryFn: () => api<CoachInvite[]>('/api/v1/me/coach-invites'),
-  });
+  const handledInitialToken = useRef<string | null>(null);
+  const [inviteInput, setInviteInput] = useState('');
+  const [preview, setPreview] = useState<{ token: string; data: CoachInvitePreview } | null>(null);
   const mutation = useMutation({
     mutationFn: ({ path, method }: { path: string; method: string }) => api(path, { method }),
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['coach-invites'] }),
-        reloadUser(),
-      ]);
+      await reloadUser();
       toast('Связь с тренером обновлена');
     },
     onError: (reason) => toast((reason as Error).message, 'error'),
   });
+  const previewMutation = useMutation({
+    mutationFn: (value: string) => {
+      const token = tokenFromInvite(value);
+      if (!token) throw new Error('Введите код или ссылку приглашения');
+      return api<CoachInvitePreview>('/api/v1/me/coach-invites/link/preview', {
+        method: 'POST',
+        body: { token },
+      }).then((data) => ({ token, data }));
+    },
+    onSuccess: (result) => {
+      setInviteInput('');
+      setPreview(result);
+    },
+    onError: (reason) => toast((reason as Error).message, 'error'),
+  });
+  const confirmMutation = useMutation({
+    mutationFn: (token: string) =>
+      api('/api/v1/me/coach-invites/link/confirm', {
+        method: 'POST',
+        body: { token },
+      }),
+    onSuccess: async () => {
+      setPreview(null);
+      setInviteInput('');
+      await reloadUser();
+      toast('Тренер подключён');
+    },
+    onError: (reason) => toast((reason as Error).message, 'error'),
+  });
+
+  useEffect(() => {
+    if (!initialToken || handledInitialToken.current === initialToken) return;
+    handledInitialToken.current = initialToken;
+    onInitialTokenHandled?.();
+    previewMutation.mutate(initialToken);
+    // The launch token is consumed in memory once per mounted profile panel.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialToken, onInitialTokenHandled]);
+
   return (
-    <Card title="Тренер и код клиента">
-      <div className="metric-grid top-gap">
-        <div className="metric">
-          <span>Код клиента</span>
-          <strong>{user?.client_code || '—'}</strong>
-        </div>
-        <div className="metric">
-          <span>Тренер</span>
-          <strong>{user?.trainer?.full_name || user?.trainer?.username || 'Не назначен'}</strong>
-        </div>
+    <Card
+      title="Мой тренер"
+      description="Подключение происходит только после того, как вы проверите имя и подтвердите приглашение."
+    >
+      <div className="metric top-gap">
+        <span>Текущий тренер</span>
+        <strong>{user?.trainer?.full_name || user?.trainer?.username || 'Не назначен'}</strong>
       </div>
       <div className="toolbar wrap top-gap">
-        <button
-          className="secondary"
-          onClick={async () => {
-            if (!user?.client_code) return;
-            try {
-              await navigator.clipboard.writeText(user.client_code);
-              toast('Код клиента скопирован');
-            } catch {
-              toast('Не удалось скопировать код', 'error');
-            }
-          }}
-        >
-          Копировать код
-        </button>
-        <button
-          className="secondary"
-          onClick={() => mutation.mutate({ path: '/api/v1/me/client-code/rotate', method: 'POST' })}
-        >
-          Обновить код
-        </button>
         {user?.trainer?.chat_url && (
           <a className="button-link" href={user.trainer.chat_url} target="_blank" rel="noreferrer">
             Написать тренеру
@@ -64,6 +97,7 @@ export function CoachInvites() {
         )}
         {user?.trainer && (
           <button
+            type="button"
             className="btn-danger"
             onClick={async () => {
               if (
@@ -80,51 +114,81 @@ export function CoachInvites() {
           </button>
         )}
       </div>
-      <h3 className="top-gap">Приглашения</h3>
-      {invites.isLoading ? (
-        <LoadingState />
-      ) : invites.error ? (
-        <ErrorState message={(invites.error as Error).message} />
-      ) : !invites.data?.length ? (
-        <EmptyState title="Новых приглашений нет" />
-      ) : (
-        <div className="list-grid">
-          {invites.data.map((invite) => (
-            <article className="list-row" key={invite.id}>
-              <div>
-                <strong>
-                  {invite.coach_full_name ||
-                    invite.coach_username ||
-                    `Тренер ${invite.coach_user_id}`}
-                </strong>
-                <br />
-                <Badge>Ожидает ответа</Badge>
-              </div>
-              <div className="list-row__actions">
-                <button
-                  onClick={() =>
-                    mutation.mutate({
-                      path: `/api/v1/me/coach-invites/${invite.id}/accept`,
-                      method: 'POST',
-                    })
-                  }
-                >
-                  Принять
-                </button>
-                <button
-                  className="secondary"
-                  onClick={() =>
-                    mutation.mutate({
-                      path: `/api/v1/me/coach-invites/${invite.id}/decline`,
-                      method: 'POST',
-                    })
-                  }
-                >
-                  Отклонить
-                </button>
-              </div>
-            </article>
-          ))}
+      <form
+        className="stack top-gap auth-notice"
+        onSubmit={(event) => {
+          event.preventDefault();
+          previewMutation.mutate(inviteInput);
+        }}
+      >
+        <label className="field">
+          <span>Ссылка или код приглашения</span>
+          <input
+            value={inviteInput}
+            onChange={(event) => setInviteInput(event.target.value)}
+            placeholder="Вставьте приглашение от тренера"
+            autoComplete="off"
+            required
+          />
+        </label>
+        <button disabled={previewMutation.isPending}>
+          {previewMutation.isPending ? 'Проверяем…' : 'Проверить приглашение'}
+        </button>
+      </form>
+      {preview && (
+        <div className="auth-notice stack top-gap" role="status">
+          <div>
+            <span className="eyebrow">Приглашает тренер</span>
+            <h3>
+              {preview.data.coach.full_name ||
+                (preview.data.coach.username ? `@${preview.data.coach.username}` : 'Тренер')}
+            </h3>
+          </div>
+          {preview.data.expires_at && (
+            <p className="muted">
+              Приглашение действует до {new Date(preview.data.expires_at).toLocaleString('ru-RU')}.
+            </p>
+          )}
+          {preview.data.requires_trainer_change && (
+            <p className="field-error" role="alert">
+              Сейчас у вас подключён{' '}
+              {preview.data.current_trainer?.full_name ||
+                preview.data.current_trainer?.username ||
+                'другой тренер'}
+              . После подтверждения он потеряет доступ к вашему профилю.
+            </p>
+          )}
+          {preview.data.already_current_trainer ? (
+            <Badge>Этот тренер уже подключён</Badge>
+          ) : (
+            <div className="toolbar wrap">
+              <button
+                type="button"
+                disabled={confirmMutation.isPending}
+                onClick={async () => {
+                  if (
+                    preview.data.requires_trainer_change &&
+                    !(await confirm({
+                      title: 'Сменить тренера?',
+                      message: 'Предыдущий тренер потеряет доступ к профилю и назначениям.',
+                      confirmText: 'Сменить тренера',
+                    }))
+                  )
+                    return;
+                  confirmMutation.mutate(preview.token);
+                }}
+              >
+                {confirmMutation.isPending
+                  ? 'Подключаем…'
+                  : preview.data.requires_trainer_change
+                    ? 'Сменить тренера'
+                    : 'Подтвердить подключение'}
+              </button>
+              <button type="button" className="secondary" onClick={() => setPreview(null)}>
+                Отмена
+              </button>
+            </div>
+          )}
         </div>
       )}
     </Card>

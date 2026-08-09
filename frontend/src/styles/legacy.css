@@ -524,6 +524,7 @@ button.program-client-link {
     --danger-line: rgba(239, 68, 68, 0.35);
     --danger-hover: #dc2626;
     --danger-toast-bg: rgba(45, 17, 17, 0.96);
+    --danger-toast-text: #fecaca;
     --warning: #f59e0b;
     --warning-soft: rgba(245, 158, 11, 0.08);
     --warning-line: rgba(245, 158, 11, 0.28);
@@ -577,6 +578,7 @@ button.program-client-link {
     --success-line: rgba(34, 197, 94, 0.28);
     --success-text: #166534;
     --danger-toast-bg: rgba(255, 238, 238, 0.98);
+    --danger-toast-text: #991b1b;
     --danger-button: #b91c1c;
     --warning-soft: rgba(245, 158, 11, 0.12);
     --warning-text: #8a5200;
@@ -2190,7 +2192,7 @@ button:disabled {
     position: fixed;
     right: 18px;
     bottom: 18px;
-    z-index: 9999;
+    z-index: 12000;
     max-width: 360px;
     background: var(--toast-bg);
     color: white;
@@ -2198,11 +2200,15 @@ button:disabled {
     border-radius: var(--radius-sm);
     padding: 12px 14px;
     box-shadow: var(--shadow);
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .toast.error {
     border-color: var(--danger-line);
     background: var(--danger-toast-bg);
+    color: var(--danger-toast-text);
 }
 
 .toast:not(.hidden) {

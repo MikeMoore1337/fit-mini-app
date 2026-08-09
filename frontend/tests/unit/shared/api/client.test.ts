@@ -31,4 +31,13 @@ describe('api client', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(getAccessToken()).toBe('new');
   });
+
+  it('turns a fetch failure into a readable offline error', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new TypeError('Failed to fetch'));
+
+    await expect(api('/api/v1/me')).rejects.toMatchObject({
+      status: 0,
+      message: 'Нет соединения с сервером. Проверьте интернет и попробуйте снова.',
+    });
+  });
 });

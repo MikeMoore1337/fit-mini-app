@@ -126,6 +126,9 @@ export async function api<T>(path: string, options: ApiOptions = {}): Promise<T>
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw new ApiError('Сервер не ответил вовремя. Попробуйте снова.', 0);
     }
+    if (error instanceof TypeError) {
+      throw new ApiError('Нет соединения с сервером. Проверьте интернет и попробуйте снова.', 0);
+    }
     throw error;
   } finally {
     window.clearTimeout(timer);
