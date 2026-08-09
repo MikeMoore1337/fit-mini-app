@@ -25,6 +25,7 @@ from aiogram.types import (
 from aiogram.utils.backoff import Backoff, BackoffConfig
 
 from .config import settings
+from .logging_config import configure_logging
 
 try:
     import fcntl
@@ -33,6 +34,16 @@ except ImportError:  # pragma: no cover - production container runs Linux
 
 
 logger = logging.getLogger(__name__)
+
+
+def safe_error_code(error: Exception) -> str:
+    if isinstance(error, httpx.HTTPStatusError):
+        return f"http_status:{error.response.status_code}"
+    if isinstance(error, httpx.TimeoutException):
+        return "timeout"
+    if isinstance(error, httpx.RequestError):
+        return "transport_error"
+    return f"unexpected:{type(error).__name__}"
 
 
 class PollingConflict(RuntimeError):
@@ -60,26 +71,27 @@ class StableDispatcher(Dispatcher):
             try:
                 updates = await bot(get_updates, **request_kwargs)
             except TelegramConflictError as exc:
-                raise PollingConflict(str(exc)) from exc
+                raise PollingConflict("telegram_polling_conflict") from exc
             except Exception as exc:
                 failed = True
                 logger.error(
-                    "Не удалось получить обновления Telegram: %s: %s", type(exc).__name__, exc
+                    "telegram_polling_failed",
+                    extra={"error_code": safe_error_code(exc)},
                 )
                 logger.warning(
-                    "Повтор получения обновлений через %.1f с (попытка %d, bot id=%d)",
-                    backoff.next_delay,
-                    backoff.counter,
-                    bot.id,
+                    "telegram_polling_retry_scheduled",
+                    extra={
+                        "retry_seconds": backoff.next_delay,
+                        "retry_attempt": backoff.counter,
+                    },
                 )
                 await backoff.asleep()
                 continue
 
             if failed:
                 logger.info(
-                    "Связь с Telegram восстановлена (попыток: %d, bot id=%d)",
-                    backoff.counter,
-                    bot.id,
+                    "telegram_polling_recovered",
+                    extra={"retry_attempt": backoff.counter},
                 )
                 backoff.reset()
                 failed = False
@@ -102,20 +114,19 @@ class PollingFileLock:
         self._file = self.path.open("a+", encoding="utf-8")
 
         if fcntl is None:
-            logger.warning("Файловая singleton-блокировка недоступна на этой платформе")
+            logger.warning("polling_file_lock_unavailable")
             return
 
         waiting_logged = False
         while True:
             try:
                 fcntl.flock(self._file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-                logger.info("Получена singleton-блокировка Telegram polling: %s", self.path)
+                logger.info("polling_file_lock_acquired")
                 return
             except BlockingIOError:
                 if not waiting_logged:
                     logger.warning(
-                        "Другой контейнер уже обслуживает этого Telegram-бота; ожидаем блокировку %s",
-                        self.path,
+                        "polling_file_lock_waiting",
                     )
                     waiting_logged = True
                 await asyncio.sleep(5)
@@ -264,8 +275,9 @@ async def save_timezone_from_bot(telegram_user, timezone: str) -> bool:
             response.raise_for_status()
         return True
     except Exception as exc:
-        print(
-            f"Не удалось сохранить часовой пояс {timezone} через backend {url}: {exc!r}", flush=True
+        logger.error(
+            "timezone_backend_update_failed",
+            extra={"error_code": safe_error_code(exc)},
         )
         return False
 
@@ -273,10 +285,7 @@ async def save_timezone_from_bot(telegram_user, timezone: str) -> bool:
 async def set_mini_app_menu_button(bot: Bot, chat_id: int | None = None) -> bool:
     url = mini_app_url()
     if not is_https_url(url):
-        print(
-            f"Кнопка меню FitMiniApp пропущена: FRONTEND_BASE_URL должен быть HTTPS, получено {url}",
-            flush=True,
-        )
+        logger.error("frontend_url_invalid")
         return False
 
     try:
@@ -287,10 +296,13 @@ async def set_mini_app_menu_button(bot: Bot, chat_id: int | None = None) -> bool
                 web_app=WebAppInfo(url=url),
             ),
         )
-        print(f"Кнопка меню FitMiniApp настроена для {url}", flush=True)
+        logger.info("menu_button_configured")
         return True
     except Exception as exc:
-        print(f"Не удалось настроить кнопку меню FitMiniApp для {url}: {exc!r}", flush=True)
+        logger.error(
+            "menu_button_configuration_failed",
+            extra={"error_code": safe_error_code(exc)},
+        )
         return False
 
 
@@ -305,9 +317,12 @@ async def answer_with_open_button(message: Message) -> None:
             )
             return
         except Exception as exc:
-            print(f"Не удалось отправить кнопку FitMiniApp для {url}: {exc!r}", flush=True)
+            logger.error(
+                "open_button_delivery_failed",
+                extra={"error_code": safe_error_code(exc)},
+            )
     else:
-        print(f"Кнопке FitMiniApp нужен HTTPS URL, получено {url}", flush=True)
+        logger.error("frontend_url_invalid")
 
     await message.answer(
         "Кнопка FitMiniApp временно недоступна. Попробуйте открыть приложение через меню бота позже."
@@ -379,13 +394,17 @@ async def timezone_callback(callback: CallbackQuery) -> None:
 
 
 async def main() -> None:
+    configure_logging(
+        bot_token=settings.bot_token,
+        internal_token=settings.bot_internal_token,
+    )
     if not settings.bot_polling_enabled:
-        print("Polling бота отключён: BOT_POLLING_ENABLED=false", flush=True)
+        logger.warning("polling_disabled")
         while True:
             await asyncio.sleep(3600)
 
     if not settings.bot_token or settings.bot_token == "replace-me":
-        print("Токен бота не настроен, бот ожидает", flush=True)
+        logger.warning("bot_token_not_configured")
         while True:
             await asyncio.sleep(3600)
 
@@ -396,19 +415,15 @@ async def main() -> None:
         bot = Bot(settings.bot_token)
         conflict = False
         try:
-            print(
-                f"Бот запускает получение сообщений. URL FitMiniApp: {mini_app_url()}", flush=True
-            )
+            logger.info("telegram_polling_starting")
             await set_mini_app_menu_button(bot)
-            print("Получение сообщений ботом запущено", flush=True)
+            logger.info("telegram_polling_started")
             await dp.start_polling(bot)
-        except PollingConflict as exc:
+        except PollingConflict:
             conflict = True
             logger.critical(
-                "Обнаружен TelegramConflictError: тот же токен используется вне текущей "
-                "singleton-блокировки. Локальный polling остановлен на %d секунд: %s",
-                settings.bot_conflict_retry_seconds,
-                exc,
+                "telegram_polling_conflict",
+                extra={"retry_seconds": settings.bot_conflict_retry_seconds},
             )
         finally:
             polling_lock.release()

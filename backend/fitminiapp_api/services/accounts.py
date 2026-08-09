@@ -121,9 +121,7 @@ def delete_user_cascade(db: Session, user: User) -> None:
     db.query(BodyMeasurement).filter(BodyMeasurement.user_id == user.id).delete(
         synchronize_session=False
     )
-    db.query(RefreshToken).filter(RefreshToken.user_id == user.id).delete(
-        synchronize_session=False
-    )
+    db.query(RefreshToken).filter(RefreshToken.user_id == user.id).delete(synchronize_session=False)
     db.query(UserProfile).filter(UserProfile.user_id == user.id).delete(synchronize_session=False)
     db.query(AuditEvent).filter(AuditEvent.actor_user_id == user.id).update(
         {"actor_user_id": None}, synchronize_session=False

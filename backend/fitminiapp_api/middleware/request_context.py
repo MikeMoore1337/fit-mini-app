@@ -4,6 +4,7 @@ import logging
 import re
 import uuid
 from collections.abc import Awaitable, Callable
+from time import perf_counter
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -20,6 +21,26 @@ def _request_id(request: Request) -> str:
     return str(uuid.uuid4())
 
 
+def _is_health_probe(path: str) -> bool:
+    return path == "/health" or path.startswith("/health/")
+
+
+def _log_request(request: Request, *, status_code: int, started_at: float, rid: str) -> None:
+    path = request.url.path
+    if _is_health_probe(path):
+        return
+    logger.info(
+        "http_request_completed",
+        extra={
+            "request_id": rid,
+            "method": request.method,
+            "path": path,
+            "status_code": status_code,
+            "duration_ms": round((perf_counter() - started_at) * 1000, 3),
+        },
+    )
+
+
 class RequestContextMiddleware(BaseHTTPMiddleware):
     """X-Request-ID на запрос и в ответ; базовое логирование после обработки."""
 
@@ -30,8 +51,13 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
     ) -> Response:
         rid = _request_id(request)
         request.state.request_id = rid
+        started_at = perf_counter()
 
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except Exception:
+            _log_request(request, status_code=500, started_at=started_at, rid=rid)
+            raise
         response.headers["X-Request-ID"] = rid
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
@@ -53,12 +79,11 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
             response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
         elif path.startswith("/static/exercise-guides/"):
             response.headers["Cache-Control"] = "public, max-age=2592000"
-        if not path.startswith("/static") and path != "/health":
-            logger.info(
-                "%s %s -> %s",
-                request.method,
-                path,
-                response.status_code,
-                extra={"request_id": rid},
+        if not path.startswith("/static"):
+            _log_request(
+                request,
+                status_code=response.status_code,
+                started_at=started_at,
+                rid=rid,
             )
         return response

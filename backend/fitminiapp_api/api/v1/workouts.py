@@ -251,7 +251,9 @@ def get_schedule(
     if end < start:
         raise HTTPException(status_code=422, detail="date_to must not be before date_from")
     if (end - start).days > 92:
-        raise HTTPException(status_code=422, detail="Диапазон расписания не может быть больше 93 дней")
+        raise HTTPException(
+            status_code=422, detail="Диапазон расписания не может быть больше 93 дней"
+        )
 
     workouts = (
         db.query(UserWorkout)

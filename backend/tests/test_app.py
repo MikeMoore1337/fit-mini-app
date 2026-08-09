@@ -1652,10 +1652,7 @@ def test_invite_link_preview_is_nonmutating_and_confirm_is_one_time(client):
         assert preview.status_code == 200
         assert preview.json()["invite_id"] == invite_id
 
-    assert (
-        client.get("/api/v1/me/coach-invites", headers=first_client_headers).status_code
-        == 404
-    )
+    assert client.get("/api/v1/me/coach-invites", headers=first_client_headers).status_code == 404
     with get_session_context() as db:
         invite = db.query(CoachClientInvite).filter(CoachClientInvite.id == invite_id).one()
         assert invite.status == "pending"

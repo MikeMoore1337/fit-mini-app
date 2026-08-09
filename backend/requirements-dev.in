@@ -1,5 +1,7 @@
 -r requirements.in
 
+# uv pip compile --python-version 3.14 --universal --output-file requirements.txt requirements-dev.in
+
 httpx
 mypy
 pip-audit

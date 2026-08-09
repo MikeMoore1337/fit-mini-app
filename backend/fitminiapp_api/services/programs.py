@@ -348,11 +348,7 @@ def assign_template_to_user(
     if len(ordered_days) > 7:
         raise ProgramError("A weekly program supports at most seven training days")
     generated_sets = (
-        sum(
-            exercise.prescribed_sets
-            for day in ordered_days
-            for exercise in day.exercises
-        )
+        sum(exercise.prescribed_sets for day in ordered_days for exercise in day.exercises)
         * duration_weeks
     )
     if generated_sets > MAX_GENERATED_SETS:
@@ -387,9 +383,7 @@ def assign_template_to_user(
         ]
         cycle_span_days = max(7, len(ordered_days))
 
-    program_status = (
-        "scheduled" if effective_start_date > today else "active"
-    )
+    program_status = "scheduled" if effective_start_date > today else "active"
     user_program = UserProgram(
         user_id=target_user.id,
         template_id=template.id,

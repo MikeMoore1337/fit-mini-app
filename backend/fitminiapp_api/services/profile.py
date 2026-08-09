@@ -13,9 +13,7 @@ def ensure_profile(db: Session, user: User, *, commit: bool = True) -> UserProfi
         db.add(profile)
         db.flush()
 
-    setting = (
-        db.query(NotificationSetting).filter(NotificationSetting.user_id == user.id).first()
-    )
+    setting = db.query(NotificationSetting).filter(NotificationSetting.user_id == user.id).first()
     if setting is None:
         db.add(NotificationSetting(user_id=user.id))
 
