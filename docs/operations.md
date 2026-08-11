@@ -76,6 +76,13 @@ The server checkout is deployment-only: each run resets tracked application code
 to the tested commit. Do not edit tracked files there. Ignored runtime state such
 as `.env`, `.artifacts/` and Docker volumes is not removed by the reset.
 
+Compose evaluates the backend, worker and bot build targets on every deployment.
+Docker layer caching avoids rebuilding unchanged layers, and Compose recreates a
+running container only when its resulting image or service configuration changed.
+Because the frontend is compiled into the backend image, frontend changes update
+the backend automatically; backend changes also update the worker, while bot-only
+changes update the bot image.
+
 Create a GitHub environment named `production` and add these environment secrets:
 
 - `PROD_SSH_KEY`: the private half of a dedicated key that may SSH to the
