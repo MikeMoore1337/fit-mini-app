@@ -359,17 +359,19 @@ export function TemplatesList() {
               <div className="form-grid">
                 <label className="field">
                   <span>Начать не раньше</span>
-                  <input
-                    type="date"
-                    min={defaultStartDate}
-                    value={assignmentStartDate}
-                    onChange={(event) => {
-                      const nextStartDate = event.target.value;
-                      setAssignmentStartDate(nextStartDate);
-                      setAssignmentWeekdays(defaultWeekdays(assignmentTemplate, nextStartDate));
-                    }}
-                    required
-                  />
+                  <div className="date-control">
+                    <input
+                      type="date"
+                      min={defaultStartDate}
+                      value={assignmentStartDate}
+                      onChange={(event) => {
+                        const nextStartDate = event.target.value;
+                        setAssignmentStartDate(nextStartDate);
+                        setAssignmentWeekdays(defaultWeekdays(assignmentTemplate, nextStartDate));
+                      }}
+                      required
+                    />
+                  </div>
                 </label>
                 <label className="field">
                   <span>Длительность, недель</span>

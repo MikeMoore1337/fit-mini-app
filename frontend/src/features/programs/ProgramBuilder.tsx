@@ -385,16 +385,18 @@ export function ProgramBuilder({
             <div className="form-grid">
               <label className="field">
                 <span>Начать не раньше</span>
-                <input
-                  type="date"
-                  min={defaultStartDate}
-                  value={startDate}
-                  onChange={(event) => {
-                    setStartDate(event.target.value);
-                    setScheduleWeekdays(scheduleForDays(days.length, event.target.value));
-                  }}
-                  required
-                />
+                <div className="date-control">
+                  <input
+                    type="date"
+                    min={defaultStartDate}
+                    value={startDate}
+                    onChange={(event) => {
+                      setStartDate(event.target.value);
+                      setScheduleWeekdays(scheduleForDays(days.length, event.target.value));
+                    }}
+                    required
+                  />
+                </div>
               </label>
               <label className="field">
                 <span>Длительность, недель</span>
