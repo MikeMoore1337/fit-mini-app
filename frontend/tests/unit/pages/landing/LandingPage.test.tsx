@@ -22,7 +22,8 @@ describe('LandingPage', () => {
     expect(screen.getByRole('heading', { name: /всё необходимое/i })).toBeInTheDocument();
     expect(screen.queryByText(/тариф/i)).not.toBeInTheDocument();
 
-    const contact = screen.getByRole('link', { name: /@mikhail_murzaev/i });
+    expect(screen.queryByText('@mikhail_murzaev')).not.toBeInTheDocument();
+    const contact = screen.getByRole('link', { name: /связаться в telegram/i });
     expect(contact).toHaveAttribute('href', 'https://t.me/mikhail_murzaev');
     expect(contact).toHaveAttribute('target', '_blank');
   });

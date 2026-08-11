@@ -552,28 +552,33 @@ body.landing-mode #root {
 }
 
 .landing-contact__link {
-  display: grid;
-  grid-template-columns: 1fr auto;
+  display: flex;
   align-items: center;
-  gap: 8px 20px;
-  padding: 24px 0;
-  border-top: 1px solid #bfc7bc;
-  border-bottom: 1px solid #bfc7bc;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 58px;
+  padding: 0 20px;
+  border: 1px solid var(--landing-dark);
+  border-radius: 14px;
+  background: var(--landing-dark);
+  color: #fff !important;
   text-decoration: none;
+  box-shadow: 0 12px 30px rgba(23, 32, 24, 0.13);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
-.landing-contact__link span:first-child {
-  color: var(--landing-muted);
-  font-size: 0.78rem;
+.landing-contact__link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px rgba(23, 32, 24, 0.2);
 }
 
 .landing-contact__link strong {
-  font-size: 1.3rem;
+  font-size: 0.9rem;
 }
 
-.landing-contact__link span:last-child {
-  grid-column: 2;
-  grid-row: 1 / span 2;
+.landing-contact__link span {
   font-size: 1.5rem;
 }
 
@@ -787,7 +792,8 @@ body.landing-mode #root {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .landing-button {
+  .landing-button,
+  .landing-contact__link {
     transition: none;
   }
 }

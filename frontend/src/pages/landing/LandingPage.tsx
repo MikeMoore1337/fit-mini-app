@@ -217,8 +217,7 @@ export default function LandingPage() {
             target="_blank"
             rel="noreferrer"
           >
-            <span>Написать в Telegram</span>
-            <strong>@mikhail_murzaev</strong>
+            <strong>Связаться в Telegram</strong>
             <span aria-hidden="true">↗</span>
           </a>
         </section>
