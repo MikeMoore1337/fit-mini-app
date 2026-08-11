@@ -7,6 +7,7 @@ import type { AdminNotification, AdminTemplate, AdminUser } from '../../shared/a
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Badge, Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
 import { Redirect } from '../../shared/navigation/router';
+import { notificationStatusLabel } from '../../shared/statusLabels';
 import { handleTabKeyDown } from '../../shared/ui/tabs';
 
 type AdminTab = 'users' | 'notifications' | 'templates';
@@ -275,7 +276,7 @@ export default function AdminPage() {
                           Пользователь {item.user_id} · {item.timezone}
                         </span>
                       </div>
-                      <Badge>{item.status}</Badge>
+                      <Badge>{notificationStatusLabel(item.status)}</Badge>
                     </article>
                   ))}
                 </div>
