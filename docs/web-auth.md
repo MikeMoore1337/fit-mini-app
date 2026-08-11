@@ -13,6 +13,10 @@ enabled independently of `ENABLE_WEB_AUTH` and all OAuth credentials.
 5. Set `ENABLE_WEB_AUTH=true`, keep `ENABLE_EMAIL_AUTH=false`, and restart the
    backend. Email/password endpoints and forms remain unavailable.
 
+The production deployment script enforces the two values from step 5 in the
+existing server `.env` before validating Compose and starting containers. It
+does not alter OAuth credentials or any other secrets.
+
 The public config exposes only providers that have both a client ID and client
 secret. A partially configured provider never appears on the login screen.
 

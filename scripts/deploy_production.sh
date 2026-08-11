@@ -28,6 +28,9 @@ if [[ "$CURRENT_SHA" != "$TARGET_SHA" ]]; then
   exit 1
 fi
 
+echo "Enabling browser OAuth and keeping email registration disabled"
+python3 scripts/configure_production_auth.py .env
+
 echo "Validating Compose configuration for $TARGET_SHA"
 docker compose config --quiet
 
