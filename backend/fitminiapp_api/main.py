@@ -136,6 +136,11 @@ def miniapp() -> FileResponse:
     return _frontend_index()
 
 
+@app.get("/")
+def landing_page() -> FileResponse:
+    return _frontend_index()
+
+
 @app.get("/admin")
 def admin_page() -> FileResponse:
     return _frontend_index()

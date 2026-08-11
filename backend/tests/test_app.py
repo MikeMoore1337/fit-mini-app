@@ -2766,6 +2766,14 @@ def test_versioned_static_assets_are_cached_but_html_is_not(client):
     assert "no-store" in page.headers["cache-control"]
 
 
+def test_root_serves_public_landing_spa(client):
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert '<div id="root"></div>' in response.text
+    assert "no-store" in response.headers["cache-control"]
+
+
 def test_alembic_revision_ids_fit_version_table_column():
     versions_dir = Path(__file__).resolve().parents[2] / "backend" / "alembic" / "versions"
     for migration in versions_dir.glob("*.py"):

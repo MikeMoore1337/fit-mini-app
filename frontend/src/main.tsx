@@ -8,13 +8,14 @@ import { FeedbackProvider } from './shared/ui/FeedbackProvider';
 import { OnlineStatus } from './shared/ui/OnlineStatus';
 import { LoadingState } from './shared/ui/common';
 import { useTelegram } from './shared/telegram/useTelegram';
-import { NavigationProvider, Redirect, useNavigation } from './shared/navigation/router';
+import { NavigationProvider, useNavigation } from './shared/navigation/router';
 import './styles/legacy.css';
 import './styles/react.css';
 
 const MiniAppPage = lazy(() => import('./pages/miniapp/MiniAppPage'));
 const CoachPage = lazy(() => import('./pages/coach/CoachPage'));
 const AdminPage = lazy(() => import('./pages/admin/AdminPage'));
+const LandingPage = lazy(() => import('./pages/landing/LandingPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 const queryClient = new QueryClient({
@@ -26,7 +27,7 @@ const queryClient = new QueryClient({
 
 function AppRoutes() {
   const { path } = useNavigation();
-  if (path === '/') return <Redirect to="/app" />;
+  if (path === '/') return <LandingPage />;
   if (path === '/app')
     return (
       <AuthGate>
