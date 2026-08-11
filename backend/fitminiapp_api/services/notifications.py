@@ -346,6 +346,30 @@ def create_manual_notification(
     return notification
 
 
+def queue_telegram_notification(
+    db: Session,
+    user: User,
+    *,
+    title: str,
+    body: str,
+    dedupe_key: str | None = None,
+) -> Notification:
+    """Add an immediate Telegram notification to the current transaction."""
+    scheduled_for = now_for_user_naive(user)
+    notification = Notification(
+        user_id=user.id,
+        channel="telegram",
+        title=title.strip(),
+        body=body.strip(),
+        scheduled_for=scheduled_for,
+        scheduled_for_utc=user_local_naive_to_utc_naive(scheduled_for, user),
+        status="queued",
+        dedupe_key=dedupe_key,
+    )
+    db.add(notification)
+    return notification
+
+
 def delete_notification_for_user(
     db: Session,
     user: User,

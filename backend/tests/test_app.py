@@ -488,6 +488,18 @@ def test_coach_can_assign_existing_template_to_own_client(client):
     )
     assert assigned.status_code == 200
     assert assigned.json()["workouts_created"] == 1
+    with get_session_context() as db:
+        assignment_notice = (
+            db.query(Notification)
+            .filter(
+                Notification.dedupe_key
+                == f"program_assignment:{assigned.json()['user_program_id']}"
+            )
+            .one()
+        )
+        assert assignment_notice.user_id == client_user["id"]
+        assert assignment_notice.status == "queued"
+        assert "Шаблон тренера" in assignment_notice.body
     assert client.get("/api/v1/workouts/week", headers=client_headers).status_code == 200
 
     client_templates = client.get("/api/v1/programs/templates/mine", headers=client_headers).json()
@@ -1479,6 +1491,16 @@ def test_coach_can_manage_program_for_own_client(client):
     assert updated.status_code == 200
     assert updated.json()["title"] == "Client Managed Program Updated"
     assert updated.json()["can_edit"] is True
+    with get_session_context() as db:
+        update_notice = (
+            db.query(Notification)
+            .filter(
+                Notification.user_id == client_user["id"],
+                Notification.title == "Программа тренировок изменена",
+            )
+            .one()
+        )
+        assert "Client Managed Program Updated" in update_notice.body
 
     blocked_delete = client.delete(
         f"/api/v1/programs/templates/{template_id}",
