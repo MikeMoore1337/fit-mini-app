@@ -150,8 +150,6 @@ async def main() -> None:
 
     if not settings.support_bot_token or settings.support_bot_token in {"change-me", "replace-me"}:
         raise RuntimeError("SUPPORT_BOT_TOKEN must be configured")
-    if not settings.admin_telegram_id_set:
-        raise RuntimeError("SUPPORT_ADMIN_TELEGRAM_USER_IDS must be configured")
 
     bot = Bot(settings.support_bot_token)
     await bot.set_my_commands(

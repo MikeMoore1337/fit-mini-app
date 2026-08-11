@@ -97,3 +97,15 @@ def test_support_admin_ids_accept_commas_and_semicolons(monkeypatch):
     )
 
     assert support_bot.settings.admin_telegram_id_set == {7001, 7002}
+
+
+def test_id_command_works_before_support_admin_is_configured(monkeypatch):
+    monkeypatch.setattr(support_bot.settings, "support_admin_telegram_user_ids", "")
+    message = SimpleNamespace(
+        from_user=SimpleNamespace(id=7001),
+        answer=AsyncMock(),
+    )
+
+    asyncio.run(support_bot.show_telegram_id(message))
+
+    message.answer.assert_awaited_once_with("Ваш Telegram ID: 7001")
