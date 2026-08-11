@@ -949,7 +949,8 @@ body:has(#appBottomNav) {
   line-height: 1.45;
 }
 
-.date-control {
+.date-control,
+.time-control {
   width: 100%;
   min-width: 0;
   max-width: 100%;
@@ -962,11 +963,13 @@ body:has(#appBottomNav) {
     box-shadow 0.18s ease,
     background 0.18s ease;
 }
-.date-control:focus-within {
+.date-control:focus-within,
+.time-control:focus-within {
   border-color: var(--accent);
   box-shadow: 0 0 0 4px var(--accent-soft);
 }
-.date-control input[type='date'] {
+.date-control input[type='date'],
+.time-control input[type='time'] {
   display: block;
   inline-size: 100%;
   min-inline-size: 0;
@@ -979,7 +982,8 @@ body:has(#appBottomNav) {
   text-align: center;
   text-align-last: center;
 }
-.date-control input[type='date']::-webkit-date-and-time-value {
+.date-control input[type='date']::-webkit-date-and-time-value,
+.time-control input[type='time']::-webkit-date-and-time-value {
   width: 100%;
   margin: 0;
   text-align: center;
