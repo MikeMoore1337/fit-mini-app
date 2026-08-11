@@ -3237,6 +3237,115 @@ def test_telegram_user_cannot_create_another_link(client):
     assert response.status_code == 409
 
 
+def test_telegram_account_explicitly_links_google_login(client, monkeypatch):
+    from fastapi.responses import RedirectResponse
+
+    from fitminiapp_api.api.v1 import auth as auth_api
+    from fitminiapp_api.services.oauth_login import get_or_create_oauth_user
+
+    google_claims = {
+        "sub": "google-explicit-link-001",
+        "email": "telegram-owner@example.com",
+        "email_verified": True,
+        "name": "Telegram Owner",
+    }
+
+    class FakeGoogleClient:
+        async def authorize_redirect(self, request, callback_url):
+            del request, callback_url
+            return RedirectResponse("https://accounts.example/authorize")
+
+        async def authorize_access_token(self, request):
+            del request
+            return {"userinfo": google_claims}
+
+    monkeypatch.setattr(settings, "enable_web_auth", True)
+    monkeypatch.setattr(settings, "google_oauth_client_id", "google-client")
+    monkeypatch.setattr(settings, "google_oauth_client_secret", "google-secret")
+    monkeypatch.setattr(
+        auth_api,
+        "configured_oauth_client",
+        lambda provider: FakeGoogleClient() if provider == "google" else None,
+    )
+    telegram_headers = auth(client, telegram_user_id=8_820_005, username="oauth_link_owner")
+    telegram_id = client.get("/api/v1/me", headers=telegram_headers).json()["id"]
+
+    created = client.post("/api/v1/me/auth/oauth-link/google", headers=telegram_headers)
+    assert created.status_code == 200
+    assert created.json()["expires_in_seconds"] == 600
+    assert created.json()["oauth_url"].startswith("/api/v1/auth/oauth/google/link/start?token=")
+
+    started = client.get(created.json()["oauth_url"], follow_redirects=False)
+    assert started.status_code in {302, 307}
+    assert started.headers["location"] == "https://accounts.example/authorize"
+
+    callback = client.get("/api/v1/auth/oauth/google/callback", follow_redirects=False)
+    assert callback.status_code == 303
+    assert callback.headers["location"] == "/app?auth_linked=google"
+
+    me = client.get("/api/v1/me", headers=telegram_headers)
+    assert me.json()["id"] == telegram_id
+    assert me.json()["auth_providers"] == ["google", "telegram"]
+
+    with get_session_context() as db:
+        reused = get_or_create_oauth_user(db, provider="google", raw_claims=google_claims)
+        assert reused.id == telegram_id
+
+
+def test_oauth_link_refuses_identity_owned_by_another_account(client, monkeypatch):
+    from fastapi.responses import RedirectResponse
+
+    from fitminiapp_api.api.v1 import auth as auth_api
+    from fitminiapp_api.services.oauth_login import get_or_create_oauth_user
+
+    google_claims = {
+        "sub": "google-explicit-link-conflict",
+        "email": "owned@example.com",
+        "email_verified": True,
+        "name": "Existing Google Owner",
+    }
+    with get_session_context() as db:
+        existing_google = get_or_create_oauth_user(
+            db,
+            provider="google",
+            raw_claims=google_claims,
+        )
+        existing_google_id = existing_google.id
+
+    class FakeGoogleClient:
+        async def authorize_redirect(self, request, callback_url):
+            del request, callback_url
+            return RedirectResponse("https://accounts.example/authorize")
+
+        async def authorize_access_token(self, request):
+            del request
+            return {"userinfo": google_claims}
+
+    monkeypatch.setattr(settings, "enable_web_auth", True)
+    monkeypatch.setattr(settings, "google_oauth_client_id", "google-client")
+    monkeypatch.setattr(settings, "google_oauth_client_secret", "google-secret")
+    monkeypatch.setattr(
+        auth_api,
+        "configured_oauth_client",
+        lambda provider: FakeGoogleClient() if provider == "google" else None,
+    )
+    telegram_headers = auth(client, telegram_user_id=8_820_006)
+    telegram_id = client.get("/api/v1/me", headers=telegram_headers).json()["id"]
+
+    created = client.post("/api/v1/me/auth/oauth-link/google", headers=telegram_headers)
+    client.get(created.json()["oauth_url"], follow_redirects=False)
+    callback = client.get("/api/v1/auth/oauth/google/callback", follow_redirects=False)
+
+    assert callback.status_code == 303
+    assert callback.headers["location"] == "/app?auth_error=oauth_link_conflict"
+    me = client.get("/api/v1/me", headers=telegram_headers).json()
+    assert me["id"] == telegram_id
+    assert me["auth_providers"] == ["telegram"]
+    with get_session_context() as db:
+        owner = get_or_create_oauth_user(db, provider="google", raw_claims=google_claims)
+        assert owner.id == existing_google_id
+
+
 def test_alembic_revision_ids_fit_version_table_column():
     versions_dir = Path(__file__).resolve().parents[2] / "backend" / "alembic" / "versions"
     for migration in versions_dir.glob("*.py"):

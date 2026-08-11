@@ -115,3 +115,19 @@ def consume_action_token(db: Session, raw_token: str, *, purpose: str) -> AuthAc
         raise PasswordAuthError("Ссылка недействительна или срок её действия истёк")
     row.consumed_at = now
     return row
+
+
+def validate_action_token(db: Session, raw_token: str, *, purpose: str) -> AuthActionToken:
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    row = (
+        db.query(AuthActionToken)
+        .filter(
+            AuthActionToken.token_hash == token_hash,
+            AuthActionToken.purpose == purpose,
+        )
+        .first()
+    )
+    now = utcnow()
+    if row is None or row.consumed_at is not None or row.expires_at < now:
+        raise PasswordAuthError("Ссылка недействительна или срок её действия истёк")
+    return row
