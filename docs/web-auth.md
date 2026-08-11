@@ -54,6 +54,33 @@ Configure credentials through the matching variables in `.env.example`.
 
 Never put provider secrets in frontend variables or commit them to Git.
 
+## Explicit account linking
+
+Logging in with a new provider does not merge accounts by matching email. An
+email address returned by Google, Yandex or Apple is not sufficient proof that
+an existing Telegram profile belongs to the same person.
+
+Link an additional login method only from the already authenticated account:
+
+1. Open **Profile → Login methods** in the account whose training history must
+   be preserved.
+2. Choose **Link Telegram**, **Link Google**, **Link Yandex** or **Link Apple**.
+3. Complete the provider confirmation within 10 minutes.
+4. Return to the profile and confirm that both login methods are marked as
+   linked.
+
+For Telegram, the browser creates a one-time bot deep link. For Google, Yandex
+and Apple, the application creates a one-time OAuth link. The token is
+single-use, a newer token replaces the previous one, and a conflict consumes
+the token without merging data. If the selected Telegram or OAuth identity is
+already owned by another account, the operation is rejected and both accounts
+remain unchanged. Resolving such a conflict requires a separate, audited
+support procedure; there is no automatic data merge.
+
+After a successful link, both login methods resolve to the same internal user
+ID. Profile data, coach relationships, programs, workouts, nutrition records
+and progress therefore remain identical in Telegram and the browser.
+
 ## Optional email/password authentication
 
 Email/password registration is controlled independently by
