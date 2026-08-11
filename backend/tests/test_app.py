@@ -2812,8 +2812,8 @@ def test_versioned_static_assets_are_cached_but_html_is_not(client):
     assert asset.headers["cache-control"] == "public, max-age=31536000, immutable"
 
     for brand_asset_path in (
-        "/assets/brand/fitness-logo-v1.png",
-        "/assets/brand/favicon-v1.png",
+        "/assets/brand/fitness-logo-v2.png",
+        "/assets/brand/favicon-v2.png",
     ):
         brand_asset = client.get(brand_asset_path)
         assert brand_asset.status_code == 200
