@@ -315,7 +315,7 @@ export function TodayWorkout() {
     <>
       <Card
         title={data.title}
-        description={`${data.scheduled_date} · День ${data.day_number}`}
+        description={`${data.scheduled_date}${data.scheduled_time ? ` в ${data.scheduled_time.slice(0, 5)}` : ''} · День ${data.day_number}`}
         actions={
           <Badge>
             {data.status === 'completed' ? 'Завершена' : started ? 'В процессе' : 'Запланирована'}

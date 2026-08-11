@@ -30,6 +30,7 @@ from fitminiapp_api.schemas.workout import (
 from fitminiapp_api.services.analytics import build_user_progress
 from fitminiapp_api.services.exercise_catalog import get_visible_exercise_display_map
 from fitminiapp_api.services.exercise_guides import get_exercise_guide
+from fitminiapp_api.services.notifications import queue_telegram_notification
 from fitminiapp_api.services.nutrition import NutritionError, recalculate_nutrition_target
 
 router = APIRouter()
@@ -120,6 +121,7 @@ def _serialize_workout(workout: UserWorkout, db: Session, current_user: User) ->
     return {
         "id": workout.id,
         "scheduled_date": str(workout.scheduled_date),
+        "scheduled_time": workout.scheduled_time,
         "day_number": workout.day_number,
         "week_number": workout.week_number,
         "title": workout.title,
@@ -230,6 +232,7 @@ def get_week_schedule(
         {
             "id": workout.id,
             "scheduled_date": str(workout.scheduled_date),
+            "scheduled_time": workout.scheduled_time,
             "title": workout.title,
             "status": workout.status,
             "day_number": workout.day_number,
@@ -270,6 +273,7 @@ def get_schedule(
         {
             "id": workout.id,
             "scheduled_date": workout.scheduled_date,
+            "scheduled_time": workout.scheduled_time,
             "title": workout.title,
             "status": workout.status,
             "day_number": workout.day_number,
@@ -479,6 +483,13 @@ def reschedule_workout(
         )
     if payload.scheduled_date < today_for_user(current_user):
         raise HTTPException(status_code=422, detail="Нельзя перенести тренировку в прошлое")
+    now = now_for_user_naive(current_user)
+    if (
+        payload.scheduled_date == now.date()
+        and payload.scheduled_time is not None
+        and payload.scheduled_time < now.time()
+    ):
+        raise HTTPException(status_code=422, detail="Нельзя назначить время в прошлом")
 
     collision = (
         db.query(UserWorkout.id)
@@ -496,10 +507,27 @@ def reschedule_workout(
         raise HTTPException(status_code=409, detail="На эту дату уже назначена тренировка")
 
     workout.scheduled_date = payload.scheduled_date
+    workout.scheduled_time = payload.scheduled_time
+    if program.assigned_by_user_id and program.assigned_by_user_id != current_user.id:
+        trainer = db.query(User).filter(User.id == program.assigned_by_user_id).first()
+        if trainer is not None and trainer.is_active:
+            time_text = (
+                f" в {payload.scheduled_time.strftime('%H:%M')}" if payload.scheduled_time else ""
+            )
+            queue_telegram_notification(
+                db,
+                trainer,
+                title="Клиент изменил тренировку",
+                body=(
+                    f"Клиент перенёс тренировку «{workout.title}» на "
+                    f"{payload.scheduled_date:%d.%m.%Y}{time_text}."
+                ),
+            )
     db.commit()
     return {
         "id": workout.id,
         "scheduled_date": workout.scheduled_date,
+        "scheduled_time": workout.scheduled_time,
         "title": workout.title,
         "status": workout.status,
         "day_number": workout.day_number,
@@ -530,6 +558,7 @@ def skip_workout(
     return {
         "id": workout.id,
         "scheduled_date": workout.scheduled_date,
+        "scheduled_time": workout.scheduled_time,
         "title": workout.title,
         "status": workout.status,
         "day_number": workout.day_number,
@@ -569,6 +598,7 @@ def workout_history(
             {
                 "id": item.id,
                 "scheduled_date": str(item.scheduled_date),
+                "scheduled_time": item.scheduled_time,
                 "title": item.title,
                 "status": item.status,
                 "started_at": item.started_at.isoformat() if item.started_at else None,

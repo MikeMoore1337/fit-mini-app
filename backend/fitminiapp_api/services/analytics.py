@@ -183,6 +183,7 @@ def build_workout_timeline(db: Session, user: User, limit: int = 30) -> list[dic
             {
                 "id": workout.id,
                 "scheduled_date": workout.scheduled_date,
+                "scheduled_time": workout.scheduled_time,
                 "title": workout.title,
                 "status": workout.status,
                 "completed_at": workout.completed_at,

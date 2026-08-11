@@ -1,8 +1,10 @@
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type { WorkoutProgress, WorkoutTimelineItem } from '../../shared/api/types';
 import { workoutStatusLabel } from '../../shared/statusLabels';
 import { Badge, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
+import { useFeedback } from '../../shared/ui/FeedbackProvider';
 
 function formatDate(value: string): string {
   return new Date(`${value}T12:00:00`).toLocaleDateString('ru-RU', {
@@ -12,7 +14,56 @@ function formatDate(value: string): string {
   });
 }
 
+function CoachScheduleForm({
+  workout,
+  pending,
+  onSave,
+}: {
+  workout: WorkoutTimelineItem;
+  pending: boolean;
+  onSave(date: string, time: string): void;
+}) {
+  const [date, setDate] = useState(workout.scheduled_date);
+  const [time, setTime] = useState(workout.scheduled_time?.slice(0, 5) ?? '');
+  return (
+    <form
+      className="toolbar wrap"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSave(date, time);
+      }}
+    >
+      <label className="field compact-field">
+        <span>Дата</span>
+        <input
+          type="date"
+          value={date}
+          min={new Date().toISOString().slice(0, 10)}
+          onChange={(event) => setDate(event.target.value)}
+          required
+        />
+      </label>
+      <label className="field compact-field">
+        <span>Время</span>
+        <input type="time" value={time} onChange={(event) => setTime(event.target.value)} />
+      </label>
+      <button
+        type="submit"
+        className="secondary"
+        disabled={
+          pending ||
+          (date === workout.scheduled_date && time === (workout.scheduled_time?.slice(0, 5) ?? ''))
+        }
+      >
+        {pending ? 'Сохраняем…' : 'Изменить дату и время'}
+      </button>
+    </form>
+  );
+}
+
 export function ClientAnalytics({ clientId }: { clientId: number }) {
+  const { toast } = useFeedback();
+  const queryClient = useQueryClient();
   const progress = useQuery({
     queryKey: ['coach', 'client', clientId, 'analytics'],
     queryFn: () => api<WorkoutProgress>(`/api/v1/coach/clients/${clientId}/analytics`),
@@ -21,6 +72,21 @@ export function ClientAnalytics({ clientId }: { clientId: number }) {
     queryKey: ['coach', 'client', clientId, 'workouts'],
     queryFn: () =>
       api<WorkoutTimelineItem[]>(`/api/v1/coach/clients/${clientId}/workouts?limit=30`),
+  });
+  const scheduleMutation = useMutation({
+    mutationFn: ({ workoutId, date, time }: { workoutId: number; date: string; time: string }) =>
+      api(`/api/v1/coach/clients/${clientId}/workouts/${workoutId}/schedule`, {
+        method: 'PATCH',
+        body: { scheduled_date: date, scheduled_time: time || null },
+      }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['coach', 'client', clientId, 'workouts'] }),
+        queryClient.invalidateQueries({ queryKey: ['coach', 'client', clientId, 'analytics'] }),
+      ]);
+      toast('Дата и время тренировки изменены');
+    },
+    onError: (reason) => toast((reason as Error).message, 'error'),
   });
 
   return (
@@ -102,13 +168,27 @@ export function ClientAnalytics({ clientId }: { clientId: number }) {
                   <span>
                     <strong>{workout.title}</strong>
                     <small>
-                      {formatDate(workout.scheduled_date)} · {workout.completed_sets} подх. ·{' '}
-                      {Math.round(workout.volume_kg)} кг
+                      {formatDate(workout.scheduled_date)}
+                      {workout.scheduled_time
+                        ? ` в ${workout.scheduled_time.slice(0, 5)}`
+                        : ''} · {workout.completed_sets} подх. · {Math.round(workout.volume_kg)} кг
                     </small>
                   </span>
                   <Badge>{workoutStatusLabel(workout.status)}</Badge>
                 </summary>
                 <div className="stack top-gap">
+                  {workout.status === 'planned' && (
+                    <CoachScheduleForm
+                      workout={workout}
+                      pending={
+                        scheduleMutation.isPending &&
+                        scheduleMutation.variables?.workoutId === workout.id
+                      }
+                      onSave={(date, time) =>
+                        scheduleMutation.mutate({ workoutId: workout.id, date, time })
+                      }
+                    />
+                  )}
                   {!workout.exercises.length ? (
                     <p className="muted">Упражнения не добавлены.</p>
                   ) : (

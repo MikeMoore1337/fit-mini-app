@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, time
 
 from sqlalchemy import (
     JSON,
@@ -14,6 +14,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    Time,
     UniqueConstraint,
     func,
     text,
@@ -174,6 +175,7 @@ class UserWorkout(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_program_id: Mapped[int] = mapped_column(ForeignKey("user_programs.id"), index=True)
     scheduled_date: Mapped[date] = mapped_column(Date, index=True)
+    scheduled_time: Mapped[time | None] = mapped_column(Time, nullable=True)
     day_number: Mapped[int] = mapped_column(Integer)
     week_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
     title: Mapped[str] = mapped_column(String(128))
