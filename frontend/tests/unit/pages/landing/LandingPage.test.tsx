@@ -52,7 +52,7 @@ describe('LandingPage', () => {
       2,
     );
     const contact = screen.getByRole('link', { name: /связаться в telegram/i });
-    expect(contact).toHaveAttribute('href', 'https://t.me/mikhail_murzaev');
+    expect(contact).toHaveAttribute('href', 'https://t.me/your_fitness_support_bot');
     expect(contact).toHaveAttribute('target', '_blank');
   });
 
