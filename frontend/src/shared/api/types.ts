@@ -26,6 +26,7 @@ export type AdminTemplate = ApiSchemas['AdminTemplateRow'];
 export type InviteLink = ApiSchemas['CoachInviteLinkResponse'];
 export type CoachInvitePreview = ApiSchemas['CoachInvitePreviewResponse'];
 export type TelegramLinkCreate = ApiSchemas['TelegramLinkCreateResponse'];
+export type OAuthLinkCreate = ApiSchemas['OAuthLinkCreateResponse'];
 export type ProgressVolumePoint = ApiSchemas['ProgressVolumePoint'];
 export type WorkoutProgress = ApiSchemas['WorkoutProgressResponse'];
 export type WorkoutTimelineItem = ApiSchemas['WorkoutTimelineItem'];
