@@ -73,6 +73,15 @@ services:
     volumes:
       - bot_polling_lock:/var/lock/fitminiapp-bot
 
+  support-bot:
+    build: ./bot
+    restart: unless-stopped
+    command: ["python", "-m", "fitminiapp_bot.support_bot"]
+    environment:
+      SUPPORT_BOT_TOKEN: ${SUPPORT_BOT_TOKEN:-}
+      SUPPORT_ADMIN_TELEGRAM_USER_IDS: ${SUPPORT_ADMIN_TELEGRAM_USER_IDS:-}
+      SUPPORT_BOT_ENABLED: ${SUPPORT_BOT_ENABLED:-false}
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
