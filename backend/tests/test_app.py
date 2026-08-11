@@ -1191,6 +1191,8 @@ def test_seeded_catalog_and_strength_templates(client):
         "strength-fullbody-3d",
         "strength-pplf-4d",
         "strength-pplf-8d",
+        "strength-pull-legs-push-legs-4d",
+        "strength-pull-legs-push-legs-8d",
     }.issubset({item["slug"] for item in templates})
     pplf_templates = {item["slug"]: item for item in templates if "pplf" in item["slug"]}
     assert len(pplf_templates["strength-pplf-4d"]["days"]) == 4
@@ -1202,6 +1204,14 @@ def test_seeded_catalog_and_strength_templates(client):
     )
     assert assigned.status_code == 200
     assert assigned.json()["workouts_created"] == 8
+    pull_legs_templates = {
+        item["slug"]: item for item in templates if "pull-legs-push-legs" in item["slug"]
+    }
+    assert [
+        day["title"].split(" · ")[0]
+        for day in pull_legs_templates["strength-pull-legs-push-legs-4d"]["days"]
+    ] == ["Тяни", "Ноги A", "Толкай", "Ноги B"]
+    assert len(pull_legs_templates["strength-pull-legs-push-legs-8d"]["days"]) == 8
     assert all(
         template["days"] for template in templates if template["slug"].startswith("strength-")
     )
