@@ -8,13 +8,22 @@ export function AppShell({
   children: React.ReactNode;
   narrow?: boolean;
 }) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { path } = useNavigation();
+  const displayName =
+    user?.profile?.full_name || user?.first_name || user?.username || 'Пользователь';
   return (
     <>
       <main className={`container${narrow ? ' narrow' : ''}`}>{children}</main>
       {user && (
         <nav id="appBottomNav" className="app-bottom-nav" aria-label="Основная навигация">
+          <div className="app-bottom-nav__brand" aria-hidden="true">
+            <span className="app-bottom-nav__brand-mark">YF</span>
+            <span>
+              <strong>Your Fitness</strong>
+              <small>Coach</small>
+            </span>
+          </div>
           <AppLink
             to="/app"
             className={`app-bottom-nav__btn${path === '/app' ? ' is-active' : ''}`}
@@ -57,6 +66,26 @@ export function AppShell({
               <span className="app-bottom-nav__label">Админ</span>
             </AppLink>
           )}
+          <div className="app-bottom-nav__account">
+            <span className="app-bottom-nav__avatar" aria-hidden="true">
+              {displayName.charAt(0).toLocaleUpperCase('ru-RU')}
+            </span>
+            <span className="app-bottom-nav__account-copy">
+              <strong>{displayName}</strong>
+              <small>{user.is_admin ? 'Администратор' : user.is_coach ? 'Тренер' : 'Клиент'}</small>
+            </span>
+            <button
+              type="button"
+              className="app-bottom-nav__logout"
+              onClick={() => void logout()}
+              aria-label="Выйти из аккаунта"
+              title="Выйти"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M10 5H5v14h5M14 8l4 4-4 4M8 12h10" />
+              </svg>
+            </button>
+          </div>
         </nav>
       )}
     </>

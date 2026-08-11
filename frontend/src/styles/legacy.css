@@ -2673,6 +2673,11 @@ a {
     max-width: 100%;
 }
 
+.app-bottom-nav__brand,
+.app-bottom-nav__account {
+    display: none;
+}
+
 body:has(#appBottomNav) {
     padding-bottom: max(96px, calc(env(safe-area-inset-bottom, 0px) + 80px));
 }
