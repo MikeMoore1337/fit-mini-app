@@ -1,5 +1,5 @@
 import math
-from typing import TypedDict
+from typing import TypedDict, cast
 
 from pydantic import ValidationError
 from sqlalchemy.orm import Session, joinedload
@@ -9,6 +9,8 @@ from fitminiapp_api.models.notification import Notification
 from fitminiapp_api.models.nutrition import NutritionTarget
 from fitminiapp_api.models.user import CoachClient, User
 from fitminiapp_api.schemas.nutrition import (
+    CardioIntensity,
+    CardioTraining,
     NutritionAssignedByResponse,
     NutritionTargetResponse,
     NutritionTargetSave,
@@ -17,17 +19,88 @@ from fitminiapp_api.services.profile import ensure_profile
 
 VALID_SEXES = {"male", "female"}
 VALID_GOALS = {"fat_loss", "muscle_gain", "maintenance", "recomposition"}
-ACTIVITY_COEFFICIENTS = {
+LEGACY_ACTIVITY_COEFFICIENTS = {
     "sedentary": 1.2,
     "low": 1.3,
     "moderate": 1.4,
     "high": 1.5,
 }
-CARDIO_MET_VALUES = {"low": 4, "moderate": 6, "high": 8}
-STRENGTH_MET_VALUE = 5
+ACTIVITY_COEFFICIENTS = {
+    "mostly_sitting": {
+        "up_to_4000": 1.2,
+        "from_4000_to_7000": 1.25,
+        "from_7000_to_10000": 1.3,
+        "from_10000_to_14000": 1.35,
+        "over_14000": 1.4,
+        "unknown": 1.2,
+    },
+    "mixed": {
+        "up_to_4000": 1.25,
+        "from_4000_to_7000": 1.3,
+        "from_7000_to_10000": 1.35,
+        "from_10000_to_14000": 1.4,
+        "over_14000": 1.45,
+        "unknown": 1.3,
+    },
+    "mostly_on_feet": {
+        "up_to_4000": 1.3,
+        "from_4000_to_7000": 1.35,
+        "from_7000_to_10000": 1.4,
+        "from_10000_to_14000": 1.45,
+        "over_14000": 1.5,
+        "unknown": 1.4,
+    },
+    "physical_work": {
+        "up_to_4000": 1.4,
+        "from_4000_to_7000": 1.45,
+        "from_7000_to_10000": 1.5,
+        "from_10000_to_14000": 1.55,
+        "over_14000": 1.6,
+        "unknown": 1.5,
+    },
+}
+LEGACY_DAILY_ROUTINES = {
+    "sedentary": "mostly_sitting",
+    "low": "mixed",
+    "moderate": "mostly_on_feet",
+    "high": "physical_work",
+}
+STRENGTH_MET_VALUES = {
+    "calm": 3.5,
+    "regular": 5.0,
+    "heavy": 5.0,
+    "dense": 6.0,
+    "circuit": 7.0,
+}
+STRENGTH_REST_ADJUSTMENTS = {
+    "under_60": 0.5,
+    "one_to_two": 0.25,
+    "two_to_three": 0.0,
+    "over_three": -0.5,
+    "varied": 0.0,
+}
+CARDIO_BASE_MET_VALUES = {
+    "walking": 3.5,
+    "running": 8.0,
+    "elliptical": 5.0,
+    "stationary_bike": 5.5,
+    "cycling": 6.0,
+    "rowing": 6.0,
+    "stepper": 6.0,
+    "swimming": 6.0,
+    "other": 5.0,
+}
+CARDIO_INTENSITY_MULTIPLIERS = {
+    "very_light": 0.7,
+    "light": 0.85,
+    "moderate": 1.0,
+    "hard": 1.2,
+    "very_hard": 1.4,
+}
+LEGACY_CARDIO_INTENSITIES = {"low": "light", "moderate": "moderate", "high": "hard"}
 GOAL_MULTIPLIERS = {
     "fat_loss": 0.85,
-    "recomposition": 0.95,
+    "recomposition": 1.0,
     "maintenance": 1.0,
     "muscle_gain": 1.05,
 }
@@ -36,12 +109,13 @@ NUTRITION_INPUT_FIELDS = (
     "weight_kg",
     "height_cm",
     "age",
-    "daily_activity_level",
+    "daily_routine",
+    "steps_range",
     "strength_trainings_per_week",
     "strength_training_duration_minutes",
-    "cardio_trainings_per_week",
-    "cardio_training_duration_minutes",
-    "cardio_intensity",
+    "strength_training_type",
+    "strength_rest",
+    "cardio_trainings",
     "goal",
 )
 
@@ -85,12 +159,12 @@ def _target_calories(maintenance_calories: float, goal: str) -> int:
 
 def _macros(weight_kg: float, target_calories: int, goal: str) -> NutritionMacros:
     protein_per_kg = {
-        "fat_loss": 2,
+        "fat_loss": 2.2,
         "muscle_gain": 1.8,
-        "maintenance": 1.6,
+        "maintenance": 1.8,
         "recomposition": 2,
-    }.get(goal, 1.6)
-    fat_per_kg = 0.9 if goal == "muscle_gain" else 0.8
+    }.get(goal, 1.8)
+    fat_per_kg = 0.9 if goal in {"maintenance", "muscle_gain"} else 0.8
     protein = _round_number(weight_kg * protein_per_kg)
     fat = _round_number(weight_kg * fat_per_kg)
     remaining_calories = target_calories - protein * 4 - fat * 9
@@ -103,6 +177,43 @@ def _macros(weight_kg: float, target_calories: int, goal: str) -> NutritionMacro
     }
 
 
+def _daily_activity(payload: NutritionTargetSave) -> tuple[str, str, float]:
+    if payload.daily_routine is not None and payload.steps_range is not None:
+        return (
+            payload.daily_routine,
+            payload.steps_range,
+            ACTIVITY_COEFFICIENTS[payload.daily_routine][payload.steps_range],
+        )
+    routine = LEGACY_DAILY_ROUTINES[payload.daily_activity_level]
+    return routine, "unknown", LEGACY_ACTIVITY_COEFFICIENTS[payload.daily_activity_level]
+
+
+def _cardio_trainings(payload: NutritionTargetSave) -> list[CardioTraining]:
+    if payload.cardio_trainings is not None:
+        return payload.cardio_trainings
+    if payload.cardio_trainings_per_week == 0:
+        return []
+    return [
+        CardioTraining(
+            kind="other",
+            trainings_per_week=payload.cardio_trainings_per_week,
+            duration_minutes=payload.cardio_training_duration_minutes,
+            intensity=cast(
+                CardioIntensity,
+                LEGACY_CARDIO_INTENSITIES[payload.cardio_intensity],
+            ),
+        )
+    ]
+
+
+def _net_exercise_kcal(
+    met_value: float,
+    weight_kg: float,
+    duration_minutes: int,
+) -> float:
+    return max(0, (met_value - 1) * 3.5 * weight_kg / 200 * duration_minutes)
+
+
 def calculate_nutrition(payload: NutritionTargetSave) -> NutritionCalculation:
     sex = payload.sex.strip().lower()
     goal = payload.goal.strip()
@@ -110,25 +221,29 @@ def calculate_nutrition(payload: NutritionTargetSave) -> NutritionCalculation:
         raise NutritionError("Invalid sex")
     if goal not in VALID_GOALS:
         raise NutritionError("Invalid goal")
-    if payload.daily_activity_level not in ACTIVITY_COEFFICIENTS:
-        raise NutritionError("Invalid daily activity level")
-    if payload.cardio_intensity not in CARDIO_MET_VALUES:
-        raise NutritionError("Invalid cardio intensity")
-
     sex_constant = -161 if sex == "female" else 5
     bmr = 10 * payload.weight_kg + 6.25 * payload.height_cm - 5 * payload.age + sex_constant
-    base_tdee = bmr * ACTIVITY_COEFFICIENTS[payload.daily_activity_level]
+    _, _, activity_coefficient = _daily_activity(payload)
+    base_tdee = bmr * activity_coefficient
+    strength_met = STRENGTH_MET_VALUES[payload.strength_training_type or "regular"]
+    strength_met += STRENGTH_REST_ADJUSTMENTS.get(payload.strength_rest or "varied", 0)
     strength_weekly_calories = (
-        STRENGTH_MET_VALUE
-        * payload.weight_kg
-        * (payload.strength_training_duration_minutes / 60)
+        _net_exercise_kcal(
+            strength_met,
+            payload.weight_kg,
+            payload.strength_training_duration_minutes,
+        )
         * payload.strength_trainings_per_week
     )
-    cardio_weekly_calories = (
-        CARDIO_MET_VALUES[payload.cardio_intensity]
-        * payload.weight_kg
-        * (payload.cardio_training_duration_minutes / 60)
-        * payload.cardio_trainings_per_week
+    cardio_weekly_calories = sum(
+        _net_exercise_kcal(
+            CARDIO_BASE_MET_VALUES[training.kind]
+            * CARDIO_INTENSITY_MULTIPLIERS[training.intensity],
+            payload.weight_kg,
+            training.duration_minutes,
+        )
+        * training.trainings_per_week
+        for training in _cardio_trainings(payload)
     )
     strength_daily_calories = strength_weekly_calories / 7
     cardio_daily_calories = cardio_weekly_calories / 7
@@ -224,9 +339,14 @@ def build_nutrition_target_response(
         weight_kg=target.weight_kg,
         height_cm=target.height_cm,
         age=target.age,
+        daily_routine=target.daily_routine,
+        steps_range=target.steps_range,
         daily_activity_level=target.daily_activity_level,
         strength_trainings_per_week=target.strength_trainings_per_week,
         strength_training_duration_minutes=target.strength_training_duration_minutes,
+        strength_training_type=target.strength_training_type,
+        strength_rest=target.strength_rest,
+        cardio_trainings=[CardioTraining.model_validate(row) for row in target.cardio_trainings],
         cardio_trainings_per_week=target.cardio_trainings_per_week,
         cardio_training_duration_minutes=target.cardio_training_duration_minutes,
         cardio_intensity=target.cardio_intensity,
@@ -257,12 +377,13 @@ def _target_payload(target: NutritionTarget) -> NutritionTargetSave:
             "weight_kg": target.weight_kg,
             "height_cm": target.height_cm,
             "age": target.age,
-            "daily_activity_level": target.daily_activity_level,
+            "daily_routine": target.daily_routine,
+            "steps_range": target.steps_range,
             "strength_trainings_per_week": target.strength_trainings_per_week,
             "strength_training_duration_minutes": (target.strength_training_duration_minutes),
-            "cardio_trainings_per_week": target.cardio_trainings_per_week,
-            "cardio_training_duration_minutes": target.cardio_training_duration_minutes,
-            "cardio_intensity": target.cardio_intensity,
+            "strength_training_type": target.strength_training_type,
+            "strength_rest": target.strength_rest,
+            "cardio_trainings": target.cardio_trainings,
             "goal": target.goal,
         }
     )
@@ -358,15 +479,27 @@ def save_nutrition_target(
         db.add(target)
 
     target.assigned_by_user_id = current_user.id
+    daily_routine, steps_range, _ = _daily_activity(payload)
+    cardio_trainings = _cardio_trainings(payload)
     target.sex = payload.sex.strip().lower()
     target.weight_kg = payload.weight_kg
     target.height_cm = payload.height_cm
     target.age = payload.age
+    target.daily_routine = daily_routine
+    target.steps_range = steps_range
     target.daily_activity_level = payload.daily_activity_level
     target.strength_trainings_per_week = payload.strength_trainings_per_week
     target.strength_training_duration_minutes = payload.strength_training_duration_minutes
-    target.cardio_trainings_per_week = payload.cardio_trainings_per_week
-    target.cardio_training_duration_minutes = payload.cardio_training_duration_minutes
+    target.strength_training_type = payload.strength_training_type or "regular"
+    target.strength_rest = payload.strength_rest
+    target.cardio_trainings = [training.model_dump() for training in cardio_trainings]
+    target.cardio_trainings_per_week = sum(
+        training.trainings_per_week for training in cardio_trainings
+    )
+    first_cardio = cardio_trainings[0] if cardio_trainings else None
+    target.cardio_training_duration_minutes = (
+        first_cardio.duration_minutes if first_cardio else payload.cardio_training_duration_minutes
+    )
     target.cardio_intensity = payload.cardio_intensity
     target.goal = payload.goal.strip()
     _apply_calculation(target, calculations)

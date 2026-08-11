@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from fitminiapp_api.core.timezone import now_msk_naive
@@ -26,15 +26,24 @@ class NutritionTarget(Base):
     daily_activity_level: Mapped[str] = mapped_column(
         String(16), nullable=False, default="sedentary"
     )
+    daily_routine: Mapped[str] = mapped_column(String(24), nullable=False, default="mostly_sitting")
+    steps_range: Mapped[str] = mapped_column(String(32), nullable=False, default="unknown")
     strength_trainings_per_week: Mapped[int] = mapped_column(Integer, nullable=False)
     strength_training_duration_minutes: Mapped[int] = mapped_column(
         Integer, nullable=False, default=60
     )
+    strength_training_type: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="regular"
+    )
+    strength_rest: Mapped[str | None] = mapped_column(String(16), nullable=True)
     cardio_trainings_per_week: Mapped[int] = mapped_column(Integer, nullable=False)
     cardio_training_duration_minutes: Mapped[int] = mapped_column(
         Integer, nullable=False, default=30
     )
     cardio_intensity: Mapped[str] = mapped_column(String(16), nullable=False, default="moderate")
+    cardio_trainings: Mapped[list[dict[str, object]]] = mapped_column(
+        JSON, nullable=False, default=list
+    )
     goal: Mapped[str] = mapped_column(String(32), nullable=False)
 
     bmr: Mapped[int] = mapped_column(Integer, nullable=False)
