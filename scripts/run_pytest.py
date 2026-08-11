@@ -14,6 +14,7 @@ def main() -> int:
     pytest_cache = artifacts / "cache" / "pytest-runner"
     pytest_tmp = artifacts / "tests" / "pytest-runner-tmp"
     process_tmp = artifacts / "tmp" / "python"
+    pytest_tmp.parent.mkdir(parents=True, exist_ok=True)
     process_tmp.mkdir(parents=True, exist_ok=True)
     env = {
         **os.environ,
