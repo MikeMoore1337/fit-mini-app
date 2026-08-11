@@ -73,8 +73,9 @@ application containers and runs the external smoke check. The active Caddy or
 Cloudflare profile is left unchanged.
 
 The server checkout is deployment-only: each run resets tracked application code
-to the tested commit. Do not edit tracked files there. Ignored runtime state such
-as `.env`, `.artifacts/` and Docker volumes is not removed by the reset.
+to the tested commit and removes non-ignored untracked files. Do not edit project
+files there. Ignored runtime state such as `.env`, `.artifacts/` and Docker volumes
+is preserved.
 
 Compose evaluates the backend, worker and bot build targets on every deployment.
 Docker layer caching avoids rebuilding unchanged layers, and Compose recreates a
