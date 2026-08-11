@@ -7,6 +7,7 @@ import { Badge, Card, EmptyState, ErrorState, LoadingState } from '../../shared/
 import { useAuth } from '../../app/AuthProvider';
 import { dateInputValue, detectedTimeZone } from '../../shared/dateTime';
 import { useModalA11y } from '../../shared/ui/useModalA11y';
+import { ExerciseGuideDialog } from '../exercises/ExerciseGuideDialog';
 
 const goalLabels: Record<string, string> = {
   muscle_gain: 'Набор мышечной массы',
@@ -49,6 +50,7 @@ export function TemplatesList() {
   const { user, reloadUser } = useAuth();
   const queryClient = useQueryClient();
   const [selectedExample, setSelectedExample] = useState<ProgramTemplate | null>(null);
+  const [guide, setGuide] = useState<{ id: number; title: string } | null>(null);
   const [assignmentTemplate, setAssignmentTemplate] = useState<ProgramTemplate | null>(null);
   const defaultStartDate = dateInputValue(
     new Date(),
@@ -176,7 +178,12 @@ export function TemplatesList() {
                     <span className="program-example-trigger__hint">Посмотреть упражнения</span>
                   </button>
                 ) : (
-                  <div className="list-row__main">
+                  <button
+                    type="button"
+                    className="text-button program-example-trigger"
+                    aria-label={`Посмотреть программу «${item.title}»`}
+                    onClick={() => setSelectedExample(item)}
+                  >
                     <strong>{item.title}</strong>
                     <span className="muted">{programMeta(item)}</span>
                     {item.is_active_for_current_user && (
@@ -184,7 +191,8 @@ export function TemplatesList() {
                         <Badge>Активна</Badge>
                       </span>
                     )}
-                  </div>
+                    <span className="program-example-trigger__hint">Посмотреть упражнения</span>
+                  </button>
                 )}
                 <div className="list-row__actions">
                   {!item.is_active_for_current_user && (
@@ -266,7 +274,9 @@ export function TemplatesList() {
           >
             <div className="program-example-modal__head">
               <div>
-                <span className="eyebrow">Пример программы</span>
+                <span className="eyebrow">
+                  {selectedExample.is_example ? 'Пример программы' : 'Моя программа'}
+                </span>
                 <h2 id="program-example-title">{selectedExample.title}</h2>
                 <p className="muted">{programMeta(selectedExample)}</p>
               </div>
@@ -294,6 +304,20 @@ export function TemplatesList() {
                           {exercise.rest_seconds} сек.
                         </span>
                         {exercise.notes && <small>{exercise.notes}</small>}
+                        {exercise.has_guide && (
+                          <button
+                            type="button"
+                            className="text-button"
+                            onClick={() =>
+                              setGuide({
+                                id: exercise.exercise_id,
+                                title: exercise.exercise_title,
+                              })
+                            }
+                          >
+                            Есть техника — посмотреть
+                          </button>
+                        )}
                       </li>
                     ))}
                   </ol>
@@ -427,6 +451,13 @@ export function TemplatesList() {
             </form>
           </div>
         </div>
+      )}
+      {guide && (
+        <ExerciseGuideDialog
+          exerciseId={guide.id}
+          exerciseTitle={guide.title}
+          onClose={() => setGuide(null)}
+        />
       )}
     </>
   );

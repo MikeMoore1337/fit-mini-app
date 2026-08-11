@@ -10,6 +10,7 @@ import { usePersistentState } from '../../shared/storage';
 import { useAuth } from '../../app/AuthProvider';
 import { dateInputValue, detectedTimeZone } from '../../shared/dateTime';
 import { applyRestSeconds } from './programRest';
+import { ExerciseGuideDialog } from '../exercises/ExerciseGuideDialog';
 
 type Day = ProgramTemplateCreate['days'][number];
 type ProgramTemplateAssignmentCreate = ProgramTemplateCreate & {
@@ -207,6 +208,7 @@ export function ProgramBuilder({
     [],
   );
   const [split, setSplit] = useState<StrengthSplit>('upper_lower');
+  const [guide, setGuide] = useState<{ id: number; title: string } | null>(null);
   const exercises = useQuery({
     queryKey: ['exercises'],
     queryFn: () => api<Exercise[]>('/api/v1/programs/exercises'),
@@ -557,6 +559,21 @@ export function ProgramBuilder({
                         })
                       }
                     />
+                    {exercises.data?.find((exercise) => exercise.id === item.exercise_id)
+                      ?.has_guide && (
+                      <button
+                        type="button"
+                        className="text-button"
+                        onClick={() => {
+                          const selected = exercises.data?.find(
+                            (exercise) => exercise.id === item.exercise_id,
+                          );
+                          if (selected) setGuide({ id: selected.id, title: selected.title });
+                        }}
+                      >
+                        Есть техника — посмотреть
+                      </button>
+                    )}
                   </label>
                   {(
                     [
@@ -683,6 +700,13 @@ export function ProgramBuilder({
             </button>
           </div>
         </form>
+      )}
+      {guide && (
+        <ExerciseGuideDialog
+          exerciseId={guide.id}
+          exerciseTitle={guide.title}
+          onClose={() => setGuide(null)}
+        />
       )}
     </Card>
   );
