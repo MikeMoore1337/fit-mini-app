@@ -10,7 +10,7 @@ from urllib.parse import urlencode
 import pytest
 from pydantic import ValidationError
 
-from fitminiapp_api.core.config import Settings
+from fitminiapp_api.core.config import Settings, settings
 from fitminiapp_api.core.timezone import to_msk_naive
 from fitminiapp_api.db.session import get_session_context
 from fitminiapp_api.models.exercise import Exercise
@@ -2432,7 +2432,7 @@ def test_workout_reminders_are_deduplicated_claimed_and_retried(client, monkeypa
 def test_bot_can_set_user_timezone_and_notifications_use_it(client):
     updated = client.post(
         "/api/v1/bot/timezone",
-        headers={"X-Bot-Token": "test-token"},
+        headers={"X-Bot-Token": settings.bot_internal_token},
         json={
             "telegram_user_id": 6502,
             "timezone": "Asia/Tokyo",
@@ -2465,7 +2465,7 @@ def test_bot_can_set_user_timezone_and_notifications_use_it(client):
 def test_bot_rejects_invalid_timezone(client):
     response = client.post(
         "/api/v1/bot/timezone",
-        headers={"X-Bot-Token": "test-token"},
+        headers={"X-Bot-Token": settings.bot_internal_token},
         json={"telegram_user_id": 6503, "timezone": "Mars/Olympus"},
     )
 
