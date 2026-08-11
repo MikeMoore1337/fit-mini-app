@@ -1,40 +1,182 @@
 import { useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../../app/AuthProvider';
 import { api } from '../../shared/api/client';
-import type { NutritionTarget, NutritionTargetSave } from '../../shared/api/types';
+import type { NutritionTarget } from '../../shared/api/types';
+import { usePersistentState } from '../../shared/storage';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Card } from '../../shared/ui/common';
-import { calculateNutritionEstimate } from './nutritionCalculator';
-import { usePersistentState } from '../../shared/storage';
-import { useAuth } from '../../app/AuthProvider';
+import { calculateNutritionEstimate, type NutritionCalculatorInput } from './nutritionCalculator';
 
-const defaults: NutritionTargetSave = {
+type CardioTraining = NutritionCalculatorInput['cardio_trainings'][number];
+
+const defaults: NutritionCalculatorInput = {
   sex: 'male',
   weight_kg: 75,
   height_cm: 175,
   age: 30,
-  daily_activity_level: 'moderate',
+  daily_routine: 'mixed',
+  steps_range: 'from_7000_to_10000',
   strength_trainings_per_week: 3,
   strength_training_duration_minutes: 60,
-  cardio_trainings_per_week: 1,
-  cardio_training_duration_minutes: 30,
-  cardio_intensity: 'moderate',
+  strength_training_type: 'regular',
+  strength_rest: 'one_to_two',
+  cardio_trainings: [],
   goal: 'maintenance',
 };
 
-const goalLabels = {
-  fat_loss: 'Снижение веса',
-  muscle_gain: 'Набор мышечной массы',
-  maintenance: 'Поддержание',
-  recomposition: 'Рекомпозиция',
-};
+const goalOptions = {
+  fat_loss: {
+    label: 'Снижение жира',
+    description: 'Постепенно снижать вес и максимально сохранять мышцы.',
+  },
+  recomposition: {
+    label: 'Рекомпозиция',
+    description:
+      'Снижать количество жира и сохранять или набирать мышцы без выраженного изменения веса.',
+  },
+  maintenance: {
+    label: 'Поддержание',
+    description: 'Сохранять текущий вес и форму.',
+  },
+  muscle_gain: {
+    label: 'Набор мышечной массы',
+    description: 'Постепенно увеличивать массу с минимальным набором жира.',
+  },
+} as const;
+
+const routineOptions = {
+  mostly_sitting: {
+    label: 'В основном сижу',
+    description: 'Офис, удалённая работа, учёба, мало перемещений.',
+  },
+  mixed: {
+    label: 'Периодически хожу и стою',
+    description: 'Часть дня сижу, часть дня нахожусь на ногах.',
+  },
+  mostly_on_feet: {
+    label: 'Большую часть дня на ногах',
+    description: 'Много хожу по работе, редко сижу.',
+  },
+  physical_work: {
+    label: 'Физическая работа',
+    description: 'Регулярно переношу тяжести или выполняю физическую работу.',
+  },
+} as const;
+
+const stepsOptions = {
+  up_to_4000: 'До 4 000',
+  from_4000_to_7000: '4 000–7 000',
+  from_7000_to_10000: '7 000–10 000',
+  from_10000_to_14000: '10 000–14 000',
+  over_14000: 'Более 14 000',
+  unknown: 'Не знаю',
+} as const;
+
+const strengthTypeOptions = {
+  calm: {
+    label: 'Спокойная',
+    description: 'Небольшие веса, тренажёры и изолирующие упражнения, длинные паузы.',
+  },
+  regular: {
+    label: 'Обычная силовая',
+    description: 'Рабочие подходы, отдых преимущественно 1–3 минуты.',
+  },
+  heavy: {
+    label: 'Тяжёлая силовая с длинными паузами',
+    description: 'Тяжёлые базовые упражнения, мало повторений, отдых от 3 минут.',
+  },
+  dense: {
+    label: 'Плотная силовая',
+    description: 'Короткие паузы, суперсеты, высокая плотность работы.',
+  },
+  circuit: {
+    label: 'Круговая тренировка',
+    description: 'Упражнения выполняются последовательно с минимальным отдыхом.',
+  },
+} as const;
+
+const strengthRestOptions = {
+  under_60: 'До 60 секунд',
+  one_to_two: '1–2 минуты',
+  two_to_three: '2–3 минуты',
+  over_three: 'Более 3 минут',
+  varied: 'По-разному',
+} as const;
+
+const cardioKindOptions = {
+  walking: 'Ходьба',
+  running: 'Бег',
+  elliptical: 'Эллипсоид',
+  stationary_bike: 'Велотренажёр',
+  cycling: 'Велосипед',
+  rowing: 'Гребной тренажёр',
+  stepper: 'Степпер',
+  swimming: 'Плавание',
+  other: 'Другое',
+} as const;
+
+const cardioIntensityOptions = {
+  very_light: {
+    label: 'Очень легко',
+    description: 'Дышу спокойно, могу свободно разговаривать.',
+  },
+  light: {
+    label: 'Легко',
+    description: 'Дыхание немного учащено, могу говорить длинными предложениями.',
+  },
+  moderate: {
+    label: 'Умеренно',
+    description: 'Дышу заметно чаще, могу говорить короткими предложениями.',
+  },
+  hard: {
+    label: 'Тяжело',
+    description: 'Могу произнести только несколько слов подряд.',
+  },
+  very_hard: {
+    label: 'Очень тяжело',
+    description: 'Разговаривать почти невозможно.',
+  },
+} as const;
 
 const goalAdjustmentLabels = {
-  fat_loss: 'дефицит 15%',
-  muscle_gain: 'профицит 5%',
-  maintenance: 'без поправки',
-  recomposition: 'дефицит 5%',
-};
+  fat_loss: '−15%',
+  recomposition: '0%',
+  maintenance: '0%',
+  muscle_gain: '+5%',
+} as const;
+
+const accuracyLabels = { high: 'высокая', medium: 'средняя', low: 'низкая' } as const;
+
+const newCardioTraining = (): CardioTraining => ({
+  kind: 'walking',
+  trainings_per_week: 2,
+  duration_minutes: 30,
+  intensity: 'moderate',
+});
+
+function fromInitial(
+  initial: NutritionTarget | null | undefined,
+  targetTelegramId: number | null | undefined,
+): NutritionCalculatorInput {
+  if (!initial) return { ...defaults, target_telegram_user_id: targetTelegramId };
+  return {
+    target_telegram_user_id: targetTelegramId,
+    sex: initial.sex as NutritionCalculatorInput['sex'],
+    weight_kg: initial.weight_kg,
+    height_cm: initial.height_cm,
+    age: initial.age,
+    daily_routine: initial.daily_routine as NutritionCalculatorInput['daily_routine'],
+    steps_range: initial.steps_range as NutritionCalculatorInput['steps_range'],
+    strength_trainings_per_week: initial.strength_trainings_per_week,
+    strength_training_duration_minutes: initial.strength_training_duration_minutes,
+    strength_training_type:
+      initial.strength_training_type as NutritionCalculatorInput['strength_training_type'],
+    strength_rest: initial.strength_rest as NutritionCalculatorInput['strength_rest'],
+    cardio_trainings: initial.cardio_trainings,
+    goal: initial.goal as NutritionCalculatorInput['goal'],
+  };
+}
 
 export function NutritionForm({
   targetTelegramId,
@@ -48,26 +190,9 @@ export function NutritionForm({
   const { toast } = useFeedback();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [form, setForm, clearDraft] = usePersistentState<NutritionTargetSave>(
-    `fit_nutrition_draft_${targetTelegramId ? `client_${targetTelegramId}` : `user_${user?.id ?? 'me'}`}`,
-    () =>
-      initial
-        ? {
-            target_telegram_user_id: targetTelegramId,
-            sex: initial.sex as 'male' | 'female',
-            weight_kg: initial.weight_kg,
-            height_cm: initial.height_cm,
-            age: initial.age,
-            daily_activity_level:
-              initial.daily_activity_level as NutritionTargetSave['daily_activity_level'],
-            strength_trainings_per_week: initial.strength_trainings_per_week,
-            strength_training_duration_minutes: initial.strength_training_duration_minutes,
-            cardio_trainings_per_week: initial.cardio_trainings_per_week,
-            cardio_training_duration_minutes: initial.cardio_training_duration_minutes,
-            cardio_intensity: initial.cardio_intensity as NutritionTargetSave['cardio_intensity'],
-            goal: initial.goal as NutritionTargetSave['goal'],
-          }
-        : { ...defaults, target_telegram_user_id: targetTelegramId },
+  const [form, setForm, clearDraft] = usePersistentState<NutritionCalculatorInput>(
+    `fit_nutrition_draft_v2_${targetTelegramId ? `client_${targetTelegramId}` : `user_${user?.id ?? 'me'}`}`,
+    () => fromInitial(initial, targetTelegramId),
   );
 
   const calculation = useMemo(() => calculateNutritionEstimate(form), [form]);
@@ -77,7 +202,14 @@ export function NutritionForm({
     mutationFn: () =>
       api<NutritionTarget>('/api/v1/nutrition/targets', {
         method: 'POST',
-        body: { ...form, target_telegram_user_id: targetTelegramId || null },
+        body: {
+          ...form,
+          strength_training_duration_minutes:
+            form.strength_trainings_per_week > 0
+              ? form.strength_training_duration_minutes
+              : form.strength_training_duration_minutes || 60,
+          target_telegram_user_id: targetTelegramId || null,
+        },
       }),
     onSuccess: async () => {
       clearDraft();
@@ -87,8 +219,24 @@ export function NutritionForm({
     },
     onError: (reason) => toast((reason as Error).message, 'error'),
   });
-  const setNumber = (key: keyof NutritionTargetSave, value: string) =>
-    setForm({ ...form, [key]: value === '' ? 0 : Number(value) });
+
+  const setNumber = (
+    key:
+      | 'age'
+      | 'weight_kg'
+      | 'height_cm'
+      | 'strength_trainings_per_week'
+      | 'strength_training_duration_minutes',
+    value: string,
+  ) => setForm({ ...form, [key]: value === '' ? 0 : Number(value) });
+
+  const updateCardio = (index: number, updates: Partial<CardioTraining>) =>
+    setForm({
+      ...form,
+      cardio_trainings: form.cardio_trainings.map((training, trainingIndex) =>
+        trainingIndex === index ? { ...training, ...updates } : training,
+      ),
+    });
 
   return (
     <Card title="КБЖУ" description="Расчёт является ориентиром и может корректироваться тренером.">
@@ -105,7 +253,7 @@ export function NutritionForm({
             <select
               value={form.sex}
               onChange={(event) =>
-                setForm({ ...form, sex: event.target.value as 'male' | 'female' })
+                setForm({ ...form, sex: event.target.value as NutritionCalculatorInput['sex'] })
               }
             >
               <option value="male">Мужской</option>
@@ -148,39 +296,65 @@ export function NutritionForm({
             />
           </label>
           <label className="field nutrition-form-grid__wide">
-            <span>Повседневная активность без учёта тренировок</span>
-            <select
-              value={form.daily_activity_level ?? 'sedentary'}
-              onChange={(event) =>
-                setForm({
-                  ...form,
-                  daily_activity_level: event.target
-                    .value as NutritionTargetSave['daily_activity_level'],
-                })
-              }
-            >
-              <option value="sedentary">
-                Малоподвижная: сидячая работа, менее 5000 шагов (×1.2)
-              </option>
-              <option value="low">Низкая: примерно 5000–8000 шагов (×1.3)</option>
-              <option value="moderate">Средняя: примерно 8000–12000 шагов (×1.4)</option>
-              <option value="high">Высокая: более 12000 шагов или физическая работа (×1.5)</option>
-            </select>
-          </label>
-          <label className="field">
             <span>Цель</span>
             <select
               value={form.goal}
               onChange={(event) =>
-                setForm({ ...form, goal: event.target.value as NutritionTargetSave['goal'] })
+                setForm({ ...form, goal: event.target.value as NutritionCalculatorInput['goal'] })
               }
             >
-              <option value="fat_loss">Снижение веса</option>
-              <option value="recomposition">Рекомпозиция</option>
-              <option value="maintenance">Поддержание</option>
-              <option value="muscle_gain">Набор мышечной массы</option>
+              {Object.entries(goalOptions).map(([value, option]) => (
+                <option key={value} value={value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
+            <small className="field-hint">{goalOptions[form.goal].description}</small>
           </label>
+
+          <label className="field nutrition-form-grid__wide">
+            <span>Как проходит большая часть вашего дня?</span>
+            <select
+              value={form.daily_routine}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  daily_routine: event.target.value as NutritionCalculatorInput['daily_routine'],
+                })
+              }
+            >
+              {Object.entries(routineOptions).map(([value, option]) => (
+                <option key={value} value={value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <small className="field-hint">{routineOptions[form.daily_routine].description}</small>
+          </label>
+
+          <label className="field nutrition-form-grid__wide">
+            <span>Сколько шагов вы обычно проходите вне тренировок?</span>
+            <select
+              value={form.steps_range}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  steps_range: event.target.value as NutritionCalculatorInput['steps_range'],
+                })
+              }
+            >
+              {Object.entries(stepsOptions).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <small className="field-hint">
+              Не учитывайте здесь отдельную ходьбу, бег или другое кардио, которое добавите ниже как
+              тренировку.
+            </small>
+          </label>
+
           <label className="field">
             <span>Силовых тренировок в неделю</span>
             <input
@@ -194,62 +368,184 @@ export function NutritionForm({
             />
           </label>
           <label className="field">
-            <span>Средняя продолжительность силовой, минут</span>
+            <span>Средняя продолжительность, минут</span>
             <input
               type="number"
               min="10"
               max="300"
               step="1"
-              required
+              required={form.strength_trainings_per_week > 0}
               value={form.strength_training_duration_minutes || ''}
               onChange={(event) =>
                 setNumber('strength_training_duration_minutes', event.target.value)
               }
             />
           </label>
-          <label className="field">
-            <span>Кардиотренировок в неделю</span>
-            <input
-              type="number"
-              min="0"
-              max="14"
-              step="1"
-              required
-              value={form.cardio_trainings_per_week ?? 0}
-              onChange={(event) => setNumber('cardio_trainings_per_week', event.target.value)}
-            />
-          </label>
-          <label className="field">
-            <span>Средняя продолжительность кардио, минут</span>
-            <input
-              type="number"
-              min="10"
-              max="300"
-              step="1"
-              required
-              value={form.cardio_training_duration_minutes || ''}
-              onChange={(event) =>
-                setNumber('cardio_training_duration_minutes', event.target.value)
-              }
-            />
-          </label>
-          <label className="field">
-            <span>Интенсивность кардио</span>
+          <label className="field nutrition-form-grid__wide">
+            <span>Как обычно проходит силовая тренировка?</span>
             <select
-              value={form.cardio_intensity ?? 'moderate'}
+              required
+              value={form.strength_training_type}
               onChange={(event) =>
                 setForm({
                   ...form,
-                  cardio_intensity: event.target.value as NutritionTargetSave['cardio_intensity'],
+                  strength_training_type: event.target
+                    .value as NutritionCalculatorInput['strength_training_type'],
                 })
               }
             >
-              <option value="low">Низкая (4 MET)</option>
-              <option value="moderate">Средняя (6 MET)</option>
-              <option value="high">Высокая (8 MET)</option>
+              {Object.entries(strengthTypeOptions).map(([value, option]) => (
+                <option key={value} value={value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <small className="field-hint">
+              {strengthTypeOptions[form.strength_training_type].description}
+            </small>
+          </label>
+          <label className="field nutrition-form-grid__wide">
+            <span>Средний отдых между подходами (необязательно)</span>
+            <select
+              value={form.strength_rest ?? ''}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  strength_rest: (event.target.value ||
+                    null) as NutritionCalculatorInput['strength_rest'],
+                })
+              }
+            >
+              <option value="">Не выбран</option>
+              {Object.entries(strengthRestOptions).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
             </select>
           </label>
         </div>
+
+        <section className="stack nutrition-cardio-section" aria-labelledby="cardio-heading">
+          <div className="nutrition-section-heading">
+            <div>
+              <strong id="cardio-heading">Кардиотренировки</strong>
+              <p className="muted">Добавьте каждый обычный вид кардио отдельно.</p>
+            </div>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() =>
+                setForm({
+                  ...form,
+                  cardio_trainings: [...form.cardio_trainings, newCardioTraining()],
+                })
+              }
+            >
+              Добавить кардио
+            </button>
+          </div>
+
+          {form.cardio_trainings.length === 0 && (
+            <p className="muted">Если кардио нет, ничего добавлять не нужно.</p>
+          )}
+
+          {form.cardio_trainings.map((training, index) => (
+            <div className="nutrition-cardio-item" key={index}>
+              <div className="nutrition-section-heading">
+                <strong>Кардио {index + 1}</strong>
+                <button
+                  type="button"
+                  className="secondary"
+                  aria-label={`Удалить кардио ${index + 1}`}
+                  onClick={() =>
+                    setForm({
+                      ...form,
+                      cardio_trainings: form.cardio_trainings.filter(
+                        (_, trainingIndex) => trainingIndex !== index,
+                      ),
+                    })
+                  }
+                >
+                  Удалить
+                </button>
+              </div>
+              <div className="form-grid nutrition-form-grid">
+                <label className="field">
+                  <span>Вид</span>
+                  <select
+                    required
+                    value={training.kind}
+                    onChange={(event) =>
+                      updateCardio(index, { kind: event.target.value as CardioTraining['kind'] })
+                    }
+                  >
+                    {Object.entries(cardioKindOptions).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field">
+                  <span>Тренировок в неделю</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="14"
+                    step="1"
+                    required
+                    value={training.trainings_per_week}
+                    onChange={(event) =>
+                      updateCardio(index, {
+                        trainings_per_week:
+                          event.target.value === '' ? 0 : Number(event.target.value),
+                      })
+                    }
+                  />
+                </label>
+                <label className="field">
+                  <span>Средняя продолжительность, минут</span>
+                  <input
+                    type="number"
+                    min="10"
+                    max="300"
+                    step="1"
+                    required
+                    value={training.duration_minutes || ''}
+                    onChange={(event) =>
+                      updateCardio(index, {
+                        duration_minutes:
+                          event.target.value === '' ? 0 : Number(event.target.value),
+                      })
+                    }
+                  />
+                </label>
+                <label className="field">
+                  <span>Интенсивность</span>
+                  <select
+                    required
+                    value={training.intensity}
+                    onChange={(event) =>
+                      updateCardio(index, {
+                        intensity: event.target.value as CardioTraining['intensity'],
+                      })
+                    }
+                  >
+                    {Object.entries(cardioIntensityOptions).map(([value, option]) => (
+                      <option key={value} value={value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <small className="field-hint">
+                    {cardioIntensityOptions[training.intensity].description}
+                  </small>
+                </label>
+              </div>
+            </div>
+          ))}
+        </section>
 
         {!calculation.valid && (
           <div className="nutrition-warning" role="alert">
@@ -266,7 +562,7 @@ export function NutritionForm({
           <>
             <div className="metric-grid nutrition-metrics" aria-live="polite">
               <div className="metric">
-                <span>Калории</span>
+                <span>Целевая калорийность</span>
                 <strong>{estimate.calories} ккал</strong>
               </div>
               <div className="metric">
@@ -282,6 +578,9 @@ export function NutritionForm({
                 <strong>{estimate.carbs} г</strong>
               </div>
             </div>
+            <p className="muted nutrition-result-note">
+              Стартовый ориентир. Проверьте результат по динамике за 14–21 день.
+            </p>
 
             {estimate.macroWarning && (
               <div className="nutrition-warning" role="alert">
@@ -293,16 +592,22 @@ export function NutritionForm({
             <details className="nutrition-details">
               <summary>Подробнее о расчёте</summary>
               <p>Основной обмен: {estimate.bmr} ккал.</p>
-              <p>Повседневная активность: ×{estimate.activityCoefficient}.</p>
-              <p>Расход без тренировок: {estimate.baseTdee} ккал.</p>
-              <p>Силовые тренировки: в среднем {estimate.strengthDailyCalories} ккал в день.</p>
-              <p>Кардио: в среднем {estimate.cardioDailyCalories} ккал в день.</p>
-              <p>Поддерживающая калорийность: {estimate.maintenanceCalories} ккал.</p>
-              <p>
-                Цель «{goalLabels[form.goal]}»: {goalAdjustmentLabels[form.goal]}.
-              </p>
+              <p>Расход в обычный день без тренировок: {estimate.baseTdee} ккал.</p>
+              <p>Силовые тренировки: в среднем +{estimate.strengthDailyCalories} ккал в день.</p>
+              <p>Кардио: в среднем +{estimate.cardioDailyCalories} ккал в день.</p>
+              <p>Калории для поддержания: {estimate.maintenanceCalories} ккал.</p>
+              <p>Поправка под цель: {goalAdjustmentLabels[form.goal]}.</p>
               <p>Целевая калорийность: {estimate.calories} ккал.</p>
+              <p>
+                <strong>Точность стартовой оценки: {accuracyLabels[estimate.accuracy]}.</strong>
+              </p>
             </details>
+
+            <aside className="nutrition-watch-note">
+              Смарт-часы и фитнес-браслеты оценивают расход калорий приблизительно и могут заметно
+              завышать или занижать его. Не прибавляйте показанные ими калории к рассчитанной норме:
+              указанные тренировки уже учтены приложением.
+            </aside>
           </>
         )}
 
