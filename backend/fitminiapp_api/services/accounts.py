@@ -193,6 +193,7 @@ def build_account_export(db: Session, user: User) -> dict:
         "profile": (
             {
                 "full_name": profile.full_name,
+                "birth_date": profile.birth_date,
                 "goal": profile.goal,
                 "level": profile.level,
                 "height_cm": profile.height_cm,

@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
@@ -8,6 +9,7 @@ from fitminiapp_api.schemas.nutrition import NutritionTargetResponse
 
 class UserProfileUpdate(BaseModel):
     full_name: str | None = Field(default=None, max_length=128)
+    birth_date: date | None = None
     goal: Literal["muscle_gain", "fat_loss", "maintenance", "recomposition"] | None = None
     level: Literal["beginner", "intermediate", "advanced"] | None = None
     height_cm: int | None = Field(default=None, ge=100, le=250)
@@ -23,13 +25,32 @@ class UserProfileUpdate(BaseModel):
             raise ValueError("Unsupported timezone")
         return value
 
+    @field_validator("birth_date")
+    @classmethod
+    def validate_birth_date(cls, value: date | None) -> date | None:
+        if value is None:
+            return value
+        today = date.today()
+        age = today.year - value.year - ((today.month, today.day) < (value.month, value.day))
+        if age < 10 or age > 100:
+            raise ValueError("Age must be between 10 and 100 years")
+        return value
+
 
 class AccountDeleteRequest(BaseModel):
     confirmation: Literal["DELETE"]
 
 
+class HeartRateZoneResponse(BaseModel):
+    zone: int
+    title: str
+    min_bpm: int
+    max_bpm: int
+
+
 class UserProfileResponse(BaseModel):
     full_name: str | None = None
+    birth_date: date | None = None
     goal: str | None = None
     level: str | None = None
     height_cm: int | None = None
@@ -37,6 +58,8 @@ class UserProfileResponse(BaseModel):
     workouts_per_week: int | None = None
     cardio_trainings_per_week: int | None = None
     timezone: str = "Europe/Moscow"
+    estimated_max_heart_rate: int | None = None
+    heart_rate_zones: list[HeartRateZoneResponse] = Field(default_factory=list)
     kbju: NutritionTargetResponse | None = None
 
 

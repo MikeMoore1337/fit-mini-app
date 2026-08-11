@@ -7,9 +7,11 @@ import { Card } from '../../shared/ui/common';
 import { detectedTimeZone } from '../../shared/dateTime';
 import { usePersistentState } from '../../shared/storage';
 import { getTimezoneOptions } from './timezones';
+import { calculateTanakaZones } from './heartRateZones';
 
 const emptyProfile: UserProfileUpdate = {
   full_name: '',
+  birth_date: null,
   goal: null,
   level: null,
   height_cm: null,
@@ -36,6 +38,9 @@ export function ProfileForm() {
         : emptyProfile,
   );
   const timezoneOptions = getTimezoneOptions(form.timezone);
+  const heartRate = calculateTanakaZones(form.birth_date);
+  const latestBirthDate = new Date();
+  latestBirthDate.setFullYear(latestBirthDate.getFullYear() - 10);
 
   const mutation = useMutation({
     mutationFn: () => api<User>('/api/v1/me/profile', { method: 'PATCH', body: form }),
@@ -72,6 +77,16 @@ export function ProfileForm() {
               maxLength={128}
               onChange={(e) => setForm({ ...form, full_name: e.target.value })}
             />
+          </label>
+          <label className="field">
+            <span>Дата рождения</span>
+            <input
+              type="date"
+              max={latestBirthDate.toISOString().slice(0, 10)}
+              value={form.birth_date ?? ''}
+              onChange={(event) => setForm({ ...form, birth_date: event.target.value || null })}
+            />
+            <small className="field-hint">Нужна для расчёта пульсовых зон по Танаки.</small>
           </label>
           <label className="field">
             <span>Цель</span>
@@ -168,6 +183,31 @@ export function ProfileForm() {
             </small>
           </label>
         </div>
+        {heartRate && (
+          <section className="auth-notice stack" aria-labelledby="heart-rate-zones-title">
+            <div>
+              <strong id="heart-rate-zones-title">Пульсовые зоны по формуле Танаки</strong>
+              <p className="muted">
+                Возраст: {heartRate.age} · расчётный максимальный пульс: {heartRate.maximum} уд/мин
+              </p>
+            </div>
+            <div className="list-grid">
+              {heartRate.zones.map((zone) => (
+                <div className="list-row" key={zone.zone}>
+                  <span>
+                    Зона {zone.zone}. {zone.title}
+                  </span>
+                  <strong>
+                    {zone.min_bpm}–{zone.max_bpm} уд/мин
+                  </strong>
+                </div>
+              ))}
+            </div>
+            <small className="muted">
+              Это ориентировочный расчёт для планирования кардио, а не медицинская рекомендация.
+            </small>
+          </section>
+        )}
         <button type="submit" disabled={mutation.isPending}>
           {mutation.isPending ? 'Сохраняем…' : 'Сохранить профиль'}
         </button>

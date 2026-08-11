@@ -41,10 +41,15 @@ export default function MiniAppPage() {
   const [inviteToken, setInviteToken] = useState<string | null>(initialInviteToken);
   const role = user?.is_admin ? 'Администратор' : user?.is_coach ? 'Тренер' : 'Клиент';
   const profileReady = Boolean(
-    user?.profile?.full_name && user.profile.goal && user.profile.level && user.profile.weight_kg,
+    user?.profile?.full_name &&
+    user.profile.birth_date &&
+    user.profile.goal &&
+    user.profile.level &&
+    user.profile.weight_kg,
   );
   const profileFormKey = JSON.stringify([
     user?.profile?.full_name,
+    user?.profile?.birth_date,
     user?.profile?.goal,
     user?.profile?.level,
     user?.profile?.height_cm,
@@ -79,7 +84,7 @@ export default function MiniAppPage() {
                 </span>
                 <span className="onboarding-action__copy">
                   <strong>Заполнить профиль</strong>
-                  <span>Цель, уровень и текущий вес</span>
+                  <span>Дата рождения, цель, уровень и текущий вес</span>
                 </span>
                 <span className="onboarding-action__arrow" aria-hidden="true">
                   ›

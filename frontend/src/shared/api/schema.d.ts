@@ -1338,6 +1338,8 @@ export interface components {
             username?: string | null;
             /** Full Name */
             full_name?: string | null;
+            /** Birth Date */
+            birth_date?: string | null;
             /** Goal */
             goal?: string | null;
             /** Level */
@@ -1610,6 +1612,17 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HeartRateZoneResponse */
+        HeartRateZoneResponse: {
+            /** Zone */
+            zone: number;
+            /** Title */
+            title: string;
+            /** Min Bpm */
+            min_bpm: number;
+            /** Max Bpm */
+            max_bpm: number;
         };
         /** LoggedSetItem */
         LoggedSetItem: {
@@ -2036,6 +2049,8 @@ export interface components {
         UserProfileResponse: {
             /** Full Name */
             full_name?: string | null;
+            /** Birth Date */
+            birth_date?: string | null;
             /** Goal */
             goal?: string | null;
             /** Level */
@@ -2053,12 +2068,18 @@ export interface components {
              * @default Europe/Moscow
              */
             timezone: string;
+            /** Estimated Max Heart Rate */
+            estimated_max_heart_rate?: number | null;
+            /** Heart Rate Zones */
+            heart_rate_zones?: components["schemas"]["HeartRateZoneResponse"][];
             kbju?: components["schemas"]["NutritionTargetResponse"] | null;
         };
         /** UserProfileUpdate */
         UserProfileUpdate: {
             /** Full Name */
             full_name?: string | null;
+            /** Birth Date */
+            birth_date?: string | null;
             /** Goal */
             goal?: ("muscle_gain" | "fat_loss" | "maintenance" | "recomposition") | null;
             /** Level */
