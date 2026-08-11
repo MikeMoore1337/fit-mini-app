@@ -185,10 +185,10 @@ def test_client_can_save_kbju_and_see_it_in_profile(client):
 
     assert saved.status_code == 200
     data = saved.json()
-    assert data["calories"] == 2460
+    assert data["calories"] == 2420
     assert data["protein_g"] == 144
     assert data["fat_g"] == 72
-    assert data["carbs_g"] == 309
+    assert data["carbs_g"] == 299
     assert data["daily_activity_level"] == "sedentary"
     assert data["strength_training_duration_minutes"] == 60
     assert data["cardio_training_duration_minutes"] == 30
@@ -196,8 +196,54 @@ def test_client_can_save_kbju_and_see_it_in_profile(client):
 
     me = client.get("/api/v1/me", headers=headers).json()
     kbju = me["profile"]["kbju"]
-    assert kbju["calories"] == 2460
+    assert kbju["calories"] == 2420
     assert kbju["assigned_by"]["telegram_user_id"] == 6001
+
+
+def test_client_can_save_detailed_activity_and_multiple_cardio_trainings(client):
+    headers = auth(client, telegram_user_id=6002, is_coach=False)
+    payload = {
+        "sex": "female",
+        "weight_kg": 64,
+        "height_cm": 168,
+        "age": 28,
+        "daily_routine": "mixed",
+        "steps_range": "from_7000_to_10000",
+        "strength_trainings_per_week": 2,
+        "strength_training_duration_minutes": 70,
+        "strength_training_type": "heavy",
+        "strength_rest": "over_three",
+        "cardio_trainings": [
+            {
+                "kind": "walking",
+                "trainings_per_week": 2,
+                "duration_minutes": 45,
+                "intensity": "light",
+            },
+            {
+                "kind": "swimming",
+                "trainings_per_week": 1,
+                "duration_minutes": 40,
+                "intensity": "hard",
+            },
+        ],
+        "goal": "recomposition",
+    }
+
+    saved = client.post("/api/v1/nutrition/targets", json=payload, headers=headers)
+
+    assert saved.status_code == 200
+    data = saved.json()
+    assert data["daily_routine"] == "mixed"
+    assert data["steps_range"] == "from_7000_to_10000"
+    assert data["strength_training_type"] == "heavy"
+    assert data["strength_rest"] == "over_three"
+    assert data["cardio_trainings"] == payload["cardio_trainings"]
+    assert data["cardio_trainings_per_week"] == 3
+    assert (
+        abs(data["protein_g"] * 4 + data["fat_g"] * 9 + data["carbs_g"] * 4 - data["calories"])
+        <= 10
+    )
 
 
 def test_coach_can_assign_kbju_to_own_client(client):
