@@ -117,17 +117,19 @@ export function NotificationsPanel({
                 </label>
                 <label className="field">
                   <span>Час отправки</span>
-                  <input
-                    type="time"
-                    step="3600"
-                    value={`${String(visibleSettings.reminder_hour).padStart(2, '0')}:00`}
-                    onChange={(e) =>
-                      setSettingsDraft({
-                        ...visibleSettings,
-                        reminder_hour: Number(e.target.value.split(':')[0]),
-                      })
-                    }
-                  />
+                  <div className="time-control reminder-time-control">
+                    <input
+                      type="time"
+                      step="3600"
+                      value={`${String(visibleSettings.reminder_hour).padStart(2, '0')}:00`}
+                      onChange={(e) =>
+                        setSettingsDraft({
+                          ...visibleSettings,
+                          reminder_hour: Number(e.target.value.split(':')[0]),
+                        })
+                      }
+                    />
+                  </div>
                 </label>
               </div>
               <button type="submit" disabled={!settingsDirty || settingsMutation.isPending}>

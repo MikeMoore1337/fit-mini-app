@@ -268,6 +268,19 @@ test('профиль содержит уведомления, а карточк�
   expect(birthDateBox!.x + birthDateBox!.width).toBeLessThanOrEqual(
     birthDateControlBox!.x + birthDateControlBox!.width,
   );
+
+  const reminderTime = page.getByLabel('Час отправки');
+  const reminderTimeControl = page.locator('.reminder-time-control');
+  const [reminderTimeBox, reminderTimeControlBox] = await Promise.all([
+    reminderTime.boundingBox(),
+    reminderTimeControl.boundingBox(),
+  ]);
+  expect(reminderTimeBox).not.toBeNull();
+  expect(reminderTimeControlBox).not.toBeNull();
+  expect(reminderTimeBox!.x).toBeGreaterThanOrEqual(reminderTimeControlBox!.x);
+  expect(reminderTimeBox!.x + reminderTimeBox!.width).toBeLessThanOrEqual(
+    reminderTimeControlBox!.x + reminderTimeControlBox!.width,
+  );
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
 
   await page.getByText('Личные уведомления').click();
