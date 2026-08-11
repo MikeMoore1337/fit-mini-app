@@ -34,23 +34,34 @@ python3 scripts/configure_production_auth.py .env
 echo "Validating Compose configuration for $TARGET_SHA"
 docker compose config --quiet
 
+stage_started=$SECONDS
+echo "Pulling tested application images"
+docker compose pull backend bot
+echo "Application images pulled in $((SECONDS - stage_started))s"
+
+stage_started=$SECONDS
 echo "Creating a pre-deploy database backup"
 python3 scripts/db_maintenance.py backup
+echo "Database backup completed in $((SECONDS - stage_started))s"
 
-echo "Building and starting application services"
+stage_started=$SECONDS
+echo "Starting application services"
 # Target application services explicitly so the currently selected HTTPS/tunnel
 # profile keeps running unchanged.
 docker compose up \
   -d \
-  --build \
+  --no-build \
   --wait \
   --wait-timeout 180 \
-  backend worker bot
+  backend worker bot support-bot
+echo "Application services became ready in $((SECONDS - stage_started))s"
 
 docker compose ps
 
+stage_started=$SECONDS
 echo "Running the external deployment smoke check"
 python3 scripts/check_deployment.py "$BASE_URL"
+echo "External smoke check completed in $((SECONDS - stage_started))s"
 
 install -d -m 700 .artifacts/deployments
 printf '%s\n' "$TARGET_SHA" > .artifacts/deployments/last-successful-revision

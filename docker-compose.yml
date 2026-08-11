@@ -1,3 +1,13 @@
+x-backend-image: &backend-image
+  image: ${BACKEND_IMAGE:-fit-mini-app-backend:local}
+  build:
+    context: .
+    dockerfile: backend/Dockerfile
+
+x-bot-image: &bot-image
+  image: ${BOT_IMAGE:-fit-mini-app-bot:local}
+  build: ./bot
+
 services:
   db:
     image: postgres:16-alpine
@@ -17,9 +27,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   backend:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
+    <<: *backend-image
     restart: unless-stopped
     env_file: .env
     environment:
@@ -41,14 +49,13 @@ services:
       timeout: 6s
       retries: 3
       start_period: 60s
+      start_interval: 2s
     networks:
       - default
       - proxy_net
 
   setup:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
+    <<: *backend-image
     restart: "no"
     env_file: .env
     depends_on:
@@ -57,7 +64,7 @@ services:
     command: /app/setup-entrypoint.sh
 
   bot:
-    build: ./bot
+    <<: *bot-image
     restart: unless-stopped
     environment:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
@@ -74,7 +81,7 @@ services:
       - bot_polling_lock:/var/lock/fitminiapp-bot
 
   support-bot:
-    build: ./bot
+    <<: *bot-image
     restart: unless-stopped
     command: ["python", "-m", "fitminiapp_bot.support_bot"]
     environment:
@@ -145,9 +152,7 @@ services:
         ipv4_address: 172.28.0.11
 
   worker:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
+    <<: *backend-image
     restart: unless-stopped
     env_file: .env
     depends_on:
