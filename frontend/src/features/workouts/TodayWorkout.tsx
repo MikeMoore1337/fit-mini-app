@@ -10,6 +10,43 @@ import { useModalA11y } from '../../shared/ui/useModalA11y';
 
 type WorkoutSet = Workout['exercises'][number]['sets'][number];
 
+export function formatWorkoutDuration(totalSeconds: number): string {
+  const safeSeconds = Math.max(0, Math.floor(totalSeconds));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const seconds = safeSeconds % 60;
+  return hours > 0
+    ? `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+    : `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
+
+function WorkoutDuration({ startedAt, completedAt }: { startedAt: string; completedAt?: string }) {
+  const [now, setNow] = useState(() => Date.now());
+  const startTime = new Date(startedAt).getTime();
+  const endTime = completedAt ? new Date(completedAt).getTime() : now;
+  const elapsedSeconds = Number.isFinite(startTime)
+    ? Math.max(0, Math.floor((endTime - startTime) / 1000))
+    : 0;
+
+  useEffect(() => {
+    if (completedAt) return;
+    const update = () => setNow(Date.now());
+    const timer = window.setInterval(update, 1000);
+    document.addEventListener('visibilitychange', update);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', update);
+    };
+  }, [completedAt]);
+
+  return (
+    <div className="metric" role="timer" aria-label="Длительность тренировки">
+      <span>Длительность</span>
+      <strong>{formatWorkoutDuration(elapsedSeconds)}</strong>
+    </div>
+  );
+}
+
 function WorkoutSetRow({
   set,
   disabled,
@@ -369,6 +406,12 @@ export function TodayWorkout() {
               <span>Упражнений</span>
               <strong>{data.exercises.length}</strong>
             </div>
+            {data.started_at && (
+              <WorkoutDuration
+                startedAt={data.started_at}
+                completedAt={data.completed_at ?? undefined}
+              />
+            )}
           </div>
           {data.status === 'planned' && (
             <button
