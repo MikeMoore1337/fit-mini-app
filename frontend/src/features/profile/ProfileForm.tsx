@@ -80,12 +80,14 @@ export function ProfileForm() {
           </label>
           <label className="field">
             <span>Дата рождения</span>
-            <input
-              type="date"
-              max={latestBirthDate.toISOString().slice(0, 10)}
-              value={form.birth_date ?? ''}
-              onChange={(event) => setForm({ ...form, birth_date: event.target.value || null })}
-            />
+            <div className="date-control profile-birth-date-control">
+              <input
+                type="date"
+                max={latestBirthDate.toISOString().slice(0, 10)}
+                value={form.birth_date ?? ''}
+                onChange={(event) => setForm({ ...form, birth_date: event.target.value || null })}
+              />
+            </div>
             <small className="field-hint">Нужна для расчёта пульсовых зон по Танаки.</small>
           </label>
           <label className="field">

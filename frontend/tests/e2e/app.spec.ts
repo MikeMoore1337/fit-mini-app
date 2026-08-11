@@ -256,6 +256,20 @@ test('профиль содержит уведомления, а карточк�
   await expect(page.getByText('Личные уведомления')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Подписка' })).toHaveCount(0);
 
+  const birthDate = page.getByLabel('Дата рождения');
+  const birthDateControl = page.locator('.profile-birth-date-control');
+  const [birthDateBox, birthDateControlBox] = await Promise.all([
+    birthDate.boundingBox(),
+    birthDateControl.boundingBox(),
+  ]);
+  expect(birthDateBox).not.toBeNull();
+  expect(birthDateControlBox).not.toBeNull();
+  expect(birthDateBox!.x).toBeGreaterThanOrEqual(birthDateControlBox!.x);
+  expect(birthDateBox!.x + birthDateBox!.width).toBeLessThanOrEqual(
+    birthDateControlBox!.x + birthDateControlBox!.width,
+  );
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
+
   await page.getByText('Личные уведомления').click();
   const notificationDate = page.locator('.notification-date-control input');
   await expect(notificationDate).toHaveAttribute('type', 'date');
