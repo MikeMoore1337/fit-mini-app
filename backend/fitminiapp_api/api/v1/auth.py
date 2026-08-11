@@ -1,23 +1,45 @@
+import logging
+from datetime import timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from fitminiapp_api.core.config import settings
 from fitminiapp_api.core.rate_limit import limiter
 from fitminiapp_api.db.session import get_db
+from fitminiapp_api.models.auth_identity import AuthIdentity, LocalCredential
 from fitminiapp_api.models.notification import NotificationSetting
 from fitminiapp_api.models.user import User, UserProfile
 from fitminiapp_api.schemas.auth import (
+    AuthTokenRequest,
     DevLoginRequest,
+    EmailLoginRequest,
+    EmailRegisterRequest,
+    EmailRequest,
+    MessageResponse,
+    PasswordResetConfirmRequest,
     RefreshRequest,
+    RegistrationResponse,
     TelegramInitRequest,
     TokenPairResponse,
 )
-from fitminiapp_api.services.auth_identities import ensure_telegram_identity
+from fitminiapp_api.services.auth_email import password_reset_email, verification_email
+from fitminiapp_api.services.auth_identities import ensure_auth_identity, ensure_telegram_identity
 from fitminiapp_api.services.jwt import (
     AuthError,
     build_access_token,
     build_refresh_token,
     decode_token,
+)
+from fitminiapp_api.services.password_auth import (
+    PasswordAuthError,
+    authenticate_local_user,
+    consume_action_token,
+    create_action_token,
+    hash_password,
+    local_identity_by_email,
+    utcnow,
 )
 from fitminiapp_api.services.telegram_auth import (
     get_or_create_user_from_init_data,
@@ -34,6 +56,29 @@ from fitminiapp_api.services.token_service import (
 )
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+def _require_web_auth() -> None:
+    if not settings.enable_web_auth:
+        raise HTTPException(status_code=404, detail="Web-авторизация отключена")
+
+
+def _development_action_token(raw_token: str) -> str | None:
+    return raw_token if settings.app_env in {"dev", "test"} else None
+
+
+def _send_auth_message(sender, email: str, raw_token: str) -> None:
+    try:
+        delivered = sender(email, raw_token)
+    except Exception as exc:
+        logger.error("auth_email_delivery_failed", exc_info=exc)
+        delivered = False
+    if not delivered and settings.app_env == "prod":
+        raise HTTPException(
+            status_code=503,
+            detail="Аккаунт сохранён, но письмо пока не отправлено. Повторите отправку позже.",
+        )
 
 
 def _set_refresh_cookie(response: Response, raw_token: str) -> None:
@@ -110,6 +155,188 @@ def telegram_init_auth(
 
     user = get_or_create_user_from_init_data(db, validated_init_data)
     return issue_token_pair(db, user, response)
+
+
+@router.post("/email/register", response_model=RegistrationResponse, status_code=201)
+@limiter.limit("5/hour")
+def email_register(
+    request: Request,
+    payload: EmailRegisterRequest,
+    db: Session = Depends(get_db),
+) -> RegistrationResponse:
+    _require_web_auth()
+    existing_email = local_identity_by_email(db, payload.email)
+    existing_username = (
+        db.query(LocalCredential)
+        .filter(LocalCredential.username_normalized == payload.username)
+        .first()
+    )
+    if existing_email is not None or existing_username is not None:
+        raise HTTPException(status_code=409, detail="Email или имя пользователя уже заняты")
+
+    try:
+        user = User(
+            telegram_user_id=None,
+            username=payload.username,
+            is_active=True,
+        )
+        db.add(user)
+        db.flush()
+        ensure_auth_identity(
+            db,
+            user,
+            provider="password",
+            subject=payload.email,
+            email=payload.email,
+            email_verified=False,
+            mark_login=False,
+        )
+        db.add(
+            LocalCredential(
+                user_id=user.id,
+                username_normalized=payload.username,
+                password_hash=hash_password(payload.password),
+            )
+        )
+        db.add(UserProfile(user_id=user.id, full_name=payload.username))
+        db.add(NotificationSetting(user_id=user.id))
+        raw_token = create_action_token(
+            db,
+            user.id,
+            purpose="verify_email",
+            lifetime=timedelta(hours=24),
+        )
+        db.commit()
+    except PasswordAuthError as exc:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=409, detail="Email или имя пользователя уже заняты"
+        ) from exc
+
+    _send_auth_message(verification_email, payload.email, raw_token)
+    return RegistrationResponse(verification_token=_development_action_token(raw_token))
+
+
+@router.post("/email/verify", response_model=TokenPairResponse)
+@limiter.limit("10/hour")
+def verify_email(
+    request: Request,
+    response: Response,
+    payload: AuthTokenRequest,
+    db: Session = Depends(get_db),
+) -> TokenPairResponse:
+    _require_web_auth()
+    try:
+        token = consume_action_token(db, payload.token, purpose="verify_email")
+    except PasswordAuthError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    identity = (
+        db.query(AuthIdentity)
+        .filter(AuthIdentity.user_id == token.user_id, AuthIdentity.provider == "password")
+        .first()
+    )
+    user = db.query(User).filter(User.id == token.user_id).first()
+    if identity is None or user is None or not user.is_active:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Аккаунт недоступен")
+    identity.email_verified = True
+    identity.last_login_at = utcnow()
+    token_pair = issue_token_pair(db, user, response, commit=False)
+    db.commit()
+    return token_pair
+
+
+@router.post("/email/login", response_model=TokenPairResponse)
+@limiter.limit("10/minute")
+def email_login(
+    request: Request,
+    response: Response,
+    payload: EmailLoginRequest,
+    db: Session = Depends(get_db),
+) -> TokenPairResponse:
+    _require_web_auth()
+    try:
+        user = authenticate_local_user(db, payload.email, payload.password)
+    except PasswordAuthError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+    return issue_token_pair(db, user, response)
+
+
+@router.post("/email/verification/resend", response_model=MessageResponse)
+@limiter.limit("3/hour")
+def resend_verification(
+    request: Request,
+    payload: EmailRequest,
+    db: Session = Depends(get_db),
+) -> MessageResponse:
+    _require_web_auth()
+    identity = local_identity_by_email(db, payload.email)
+    raw_token: str | None = None
+    if identity is not None and not identity.email_verified:
+        raw_token = create_action_token(
+            db,
+            identity.user_id,
+            purpose="verify_email",
+            lifetime=timedelta(hours=24),
+        )
+        db.commit()
+        _send_auth_message(verification_email, payload.email, raw_token)
+    return MessageResponse(
+        message="Если аккаунт существует, письмо с подтверждением отправлено",
+        action_token=_development_action_token(raw_token) if raw_token else None,
+    )
+
+
+@router.post("/password/reset/request", response_model=MessageResponse)
+@limiter.limit("3/hour")
+def request_password_reset(
+    request: Request,
+    payload: EmailRequest,
+    db: Session = Depends(get_db),
+) -> MessageResponse:
+    _require_web_auth()
+    identity = local_identity_by_email(db, payload.email)
+    raw_token: str | None = None
+    if identity is not None and identity.email_verified:
+        raw_token = create_action_token(
+            db,
+            identity.user_id,
+            purpose="reset_password",
+            lifetime=timedelta(hours=1),
+        )
+        db.commit()
+        _send_auth_message(password_reset_email, payload.email, raw_token)
+    return MessageResponse(
+        message="Если аккаунт существует, письмо для восстановления отправлено",
+        action_token=_development_action_token(raw_token) if raw_token else None,
+    )
+
+
+@router.post("/password/reset/confirm", response_model=MessageResponse)
+@limiter.limit("10/hour")
+def confirm_password_reset(
+    request: Request,
+    payload: PasswordResetConfirmRequest,
+    db: Session = Depends(get_db),
+) -> MessageResponse:
+    _require_web_auth()
+    try:
+        token = consume_action_token(db, payload.token, purpose="reset_password")
+        new_hash = hash_password(payload.password)
+    except PasswordAuthError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    credential = db.query(LocalCredential).filter(LocalCredential.user_id == token.user_id).first()
+    if credential is None:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Аккаунт недоступен")
+    credential.password_hash = new_hash
+    credential.password_changed_at = utcnow()
+    revoke_all_user_refresh_tokens(db, token.user_id, commit=False)
+    db.commit()
+    return MessageResponse(message="Пароль обновлён. Теперь можно войти.")
 
 
 @router.post("/dev-login", response_model=TokenPairResponse)

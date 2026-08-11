@@ -10,6 +10,7 @@ pydantic-settings
 pydantic
 alembic
 PyJWT
+pwdlib[argon2]
 httpx
 python-multipart
 qrcode[pil]

@@ -1,5 +1,5 @@
 from fitminiapp_api.models.audit import AuditEvent
-from fitminiapp_api.models.auth_identity import AuthIdentity
+from fitminiapp_api.models.auth_identity import AuthActionToken, AuthIdentity, LocalCredential
 from fitminiapp_api.models.billing import Payment, Plan, Subscription
 from fitminiapp_api.models.exercise import Exercise
 from fitminiapp_api.models.notification import Notification, NotificationSetting
@@ -25,12 +25,14 @@ from fitminiapp_api.models.user import (
 
 __all__ = [
     "AuditEvent",
+    "AuthActionToken",
     "AuthIdentity",
     "BodyMeasurement",
     "CoachClient",
     "CoachClientInvite",
     "Exercise",
     "HiddenProgramTemplate",
+    "LocalCredential",
     "Notification",
     "NotificationSetting",
     "NutritionTarget",

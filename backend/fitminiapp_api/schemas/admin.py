@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 class AdminUserRow(BaseModel):
     id: int
-    telegram_user_id: int
+    telegram_user_id: int | None = None
     username: str | None = None
     role: Literal["client", "coach", "admin"]
     is_coach: bool

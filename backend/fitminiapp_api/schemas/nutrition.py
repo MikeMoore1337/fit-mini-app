@@ -80,14 +80,14 @@ class NutritionTargetSave(BaseModel):
 
 class NutritionAssignedByResponse(BaseModel):
     id: int
-    telegram_user_id: int
+    telegram_user_id: int | None = None
     username: str | None = None
     full_name: str | None = None
 
 
 class NutritionTargetResponse(BaseModel):
     user_id: int
-    telegram_user_id: int
+    telegram_user_id: int | None = None
     sex: str
     weight_kg: float
     height_cm: float

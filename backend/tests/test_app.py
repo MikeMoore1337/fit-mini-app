@@ -2774,6 +2774,15 @@ def test_root_serves_public_landing_spa(client):
     assert "no-store" in response.headers["cache-control"]
 
 
+@pytest.mark.parametrize("path", ["/verify-email", "/reset-password"])
+def test_browser_auth_routes_serve_spa(client, path):
+    response = client.get(path)
+
+    assert response.status_code == 200
+    assert '<div id="root"></div>' in response.text
+    assert "no-store" in response.headers["cache-control"]
+
+
 def test_dev_login_provisions_one_idempotent_telegram_identity(client):
     from fitminiapp_api.models.auth_identity import AuthIdentity
 
@@ -2796,6 +2805,146 @@ def test_dev_login_provisions_one_idempotent_telegram_identity(client):
         )
         assert len(identities) == 1
         assert identities[0].user.telegram_user_id == payload["telegram_user_id"]
+
+
+def test_web_auth_is_disabled_by_default(client):
+    response = client.post(
+        "/api/v1/auth/email/register",
+        json={
+            "username": "browser_user",
+            "email": "browser@example.com",
+            "password": "a-long-browser-password",
+        },
+    )
+
+    assert response.status_code == 404
+
+
+def test_email_registration_verification_and_login_share_internal_account(client, monkeypatch):
+    from fitminiapp_api.core.config import settings
+
+    monkeypatch.setattr(settings, "enable_web_auth", True)
+    payload = {
+        "username": "browser_user",
+        "email": "Browser@Example.com",
+        "password": "a-long-browser-password",
+    }
+    registered = client.post("/api/v1/auth/email/register", json=payload)
+    assert registered.status_code == 201
+    verification_token = registered.json()["verification_token"]
+    assert verification_token
+
+    before_verification = client.post(
+        "/api/v1/auth/email/login",
+        json={"email": payload["email"], "password": payload["password"]},
+    )
+    assert before_verification.status_code == 401
+    assert "Подтвердите email" in before_verification.json()["detail"]
+
+    verified = client.post(
+        "/api/v1/auth/email/verify",
+        json={"token": verification_token},
+    )
+    assert verified.status_code == 200
+    headers = {"Authorization": f"Bearer {verified.json()['access_token']}"}
+    me = client.get("/api/v1/me", headers=headers)
+    assert me.status_code == 200
+    assert me.json()["telegram_user_id"] is None
+    assert me.json()["username"] == payload["username"]
+
+    reused_token = client.post(
+        "/api/v1/auth/email/verify",
+        json={"token": verification_token},
+    )
+    assert reused_token.status_code == 400
+
+    logged_in = client.post(
+        "/api/v1/auth/email/login",
+        json={"email": payload["email"].lower(), "password": payload["password"]},
+    )
+    assert logged_in.status_code == 200
+
+
+def test_email_registration_rejects_duplicate_identity_and_weak_password(client, monkeypatch):
+    from fitminiapp_api.core.config import settings
+
+    monkeypatch.setattr(settings, "enable_web_auth", True)
+    weak = client.post(
+        "/api/v1/auth/email/register",
+        json={
+            "username": "weak_user",
+            "email": "weak@example.com",
+            "password": "password1234",
+        },
+    )
+    assert weak.status_code == 422
+
+    payload = {
+        "username": "unique_user",
+        "email": "unique@example.com",
+        "password": "correct horse battery staple",
+    }
+    assert client.post("/api/v1/auth/email/register", json=payload).status_code == 201
+    duplicate = client.post(
+        "/api/v1/auth/email/register",
+        json={**payload, "username": "another_user"},
+    )
+    assert duplicate.status_code == 409
+
+
+def test_password_reset_revokes_old_password_and_tokens(client, monkeypatch):
+    from fitminiapp_api.core.config import settings
+
+    monkeypatch.setattr(settings, "enable_web_auth", True)
+    email = "reset@example.com"
+    old_password = "old-password-for-browser"
+    registered = client.post(
+        "/api/v1/auth/email/register",
+        json={"username": "reset_user", "email": email, "password": old_password},
+    )
+    verified = client.post(
+        "/api/v1/auth/email/verify",
+        json={"token": registered.json()["verification_token"]},
+    )
+    assert verified.status_code == 200
+
+    requested = client.post("/api/v1/auth/password/reset/request", json={"email": email})
+    reset_token = requested.json()["action_token"]
+    assert reset_token
+    new_password = "new-password-for-browser"
+    confirmed = client.post(
+        "/api/v1/auth/password/reset/confirm",
+        json={"token": reset_token, "password": new_password},
+    )
+    assert confirmed.status_code == 200
+
+    assert (
+        client.post(
+            "/api/v1/auth/email/login",
+            json={"email": email, "password": old_password},
+        ).status_code
+        == 401
+    )
+    assert (
+        client.post(
+            "/api/v1/auth/email/login",
+            json={"email": email, "password": new_password},
+        ).status_code
+        == 200
+    )
+
+
+def test_password_reset_request_does_not_reveal_unknown_email(client, monkeypatch):
+    from fitminiapp_api.core.config import settings
+
+    monkeypatch.setattr(settings, "enable_web_auth", True)
+    response = client.post(
+        "/api/v1/auth/password/reset/request",
+        json={"email": "missing@example.com"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["action_token"] is None
 
 
 def test_alembic_revision_ids_fit_version_table_column():

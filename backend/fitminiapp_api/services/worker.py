@@ -77,6 +77,11 @@ async def run_once(*, sync_reminders: bool = True) -> None:
                 row.status = "cancelled"
                 row.processing_started_at = None
                 continue
+            if row.channel == "telegram" and user.telegram_user_id is None:
+                row.status = "cancelled"
+                row.last_error = "telegram_identity_not_linked"
+                row.processing_started_at = None
+                continue
             deliveries.append(
                 (
                     row.id,
@@ -141,6 +146,7 @@ async def main() -> None:
             settings.secret_key,
             settings.telegram_bot_token,
             settings.bot_internal_token,
+            settings.smtp_password,
             settings.database_url,
         ),
     )

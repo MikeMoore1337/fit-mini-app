@@ -32,5 +32,6 @@ export type WorkoutTimelineItem = ApiSchemas['WorkoutTimelineItem'];
 export interface PublicConfig {
   app_env: string;
   enable_dev_auth: boolean;
+  enable_web_auth: boolean;
   telegram_bot_username: string;
 }

@@ -25,7 +25,9 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    telegram_user_id: Mapped[int] = mapped_column(BIGINT, unique=True, index=True, nullable=False)
+    telegram_user_id: Mapped[int | None] = mapped_column(
+        BIGINT, unique=True, index=True, nullable=True
+    )
     username: Mapped[str | None] = mapped_column(String(64), nullable=True)
     first_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
     last_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
