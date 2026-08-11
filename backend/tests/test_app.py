@@ -11,7 +11,7 @@ import pytest
 from pydantic import ValidationError
 
 from fitminiapp_api.core.config import Settings, settings
-from fitminiapp_api.core.timezone import to_msk_naive
+from fitminiapp_api.core.timezone import to_msk_naive, today_msk
 from fitminiapp_api.db.session import get_session_context
 from fitminiapp_api.models.exercise import Exercise
 from fitminiapp_api.models.notification import Notification, NotificationSetting
@@ -574,7 +574,7 @@ def test_coach_can_assign_existing_template_to_own_client(client):
     assert created.status_code == 200
     assert created.json()["template"]["days"][0]["exercises"][0]["has_guide"] is True
     template_id = created.json()["template"]["id"]
-    assignment_start = datetime.now(UTC).date() + timedelta(days=1)
+    assignment_start = today_msk() + timedelta(days=1)
 
     assigned = client.post(
         f"/api/v1/coach/clients/{client_user['id']}/templates/{template_id}/assign",
