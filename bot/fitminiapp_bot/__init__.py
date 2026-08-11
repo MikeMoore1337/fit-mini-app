@@ -1,1 +1,1 @@
-"""FitMiniApp Telegram bot package."""
+"""Your Fitness Coach Telegram bot package."""

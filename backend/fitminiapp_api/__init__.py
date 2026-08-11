@@ -1,1 +1,1 @@
-"""FitMiniApp backend package."""
+"""Your Fitness Coach backend package."""

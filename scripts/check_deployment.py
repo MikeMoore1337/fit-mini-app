@@ -1,4 +1,4 @@
-"""Read-only smoke check for a deployed FitMiniApp instance."""
+"""Read-only smoke check for a deployed Your Fitness Coach instance."""
 
 from __future__ import annotations
 
