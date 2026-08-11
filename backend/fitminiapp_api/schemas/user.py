@@ -41,6 +41,11 @@ class AccountDeleteRequest(BaseModel):
     confirmation: Literal["DELETE"]
 
 
+class TelegramLinkCreateResponse(BaseModel):
+    telegram_url: str
+    expires_in_seconds: int
+
+
 class HeartRateZoneResponse(BaseModel):
     zone: int
     title: str

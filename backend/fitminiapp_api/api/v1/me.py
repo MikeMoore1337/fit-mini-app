@@ -9,10 +9,16 @@ from fitminiapp_api.models.program import UserProgram, UserWorkout
 from fitminiapp_api.schemas.invite import CoachInvitePreviewResponse, CoachInviteTokenRequest
 from fitminiapp_api.schemas.user import (
     AccountDeleteRequest,
+    TelegramLinkCreateResponse,
     TrainerResponse,
     UserProfileResponse,
     UserProfileUpdate,
     UserResponse,
+)
+from fitminiapp_api.services.account_linking import (
+    TelegramLinkConflictError,
+    TelegramLinkError,
+    create_telegram_link_url,
 )
 from fitminiapp_api.services.accounts import build_account_export, delete_user_cascade
 from fitminiapp_api.services.audit import record_audit_event
@@ -85,6 +91,27 @@ def _build_user_response(db: Session, user) -> UserResponse:
 @router.get("", response_model=UserResponse)
 def read_me(user=Depends(get_current_user), db: Session = Depends(get_db)):
     return _build_user_response(db, user)
+
+
+@router.post("/auth/telegram-link", response_model=TelegramLinkCreateResponse)
+def create_telegram_link(
+    user=Depends(get_current_user), db: Session = Depends(get_db)
+) -> TelegramLinkCreateResponse:
+    try:
+        telegram_url, expires_in_seconds = create_telegram_link_url(
+            db,
+            user,
+            settings.telegram_bot_username,
+        )
+    except TelegramLinkConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except TelegramLinkError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    db.commit()
+    return TelegramLinkCreateResponse(
+        telegram_url=telegram_url,
+        expires_in_seconds=expires_in_seconds,
+    )
 
 
 @router.patch("/profile", response_model=UserResponse)

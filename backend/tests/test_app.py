@@ -5,7 +5,7 @@ import re
 import time
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode, urlparse
 
 import pytest
 from pydantic import ValidationError
@@ -3116,6 +3116,125 @@ def test_social_login_does_not_auto_link_only_by_matching_email(client, monkeypa
             },
         )
         assert google_user.id != local_id
+
+
+def test_web_account_explicitly_links_telegram_and_keeps_its_data(client, monkeypatch):
+    from fitminiapp_api.services.oauth_login import get_or_create_oauth_user
+    from fitminiapp_api.services.security import create_access_token
+
+    monkeypatch.setattr(settings, "telegram_bot_username", "your_fitness_coach_bot")
+    with get_session_context() as db:
+        web_user = get_or_create_oauth_user(
+            db,
+            provider="google",
+            raw_claims={
+                "sub": "google-link-subject-001",
+                "email": "link-owner@example.com",
+                "email_verified": True,
+                "name": "Web Link Owner",
+            },
+        )
+        web_user_id = web_user.id
+
+    web_headers = {"Authorization": f"Bearer {create_access_token(web_user_id)}"}
+    profile = client.patch(
+        "/api/v1/me/profile",
+        headers=web_headers,
+        json={"goal": "muscle_gain"},
+    )
+    assert profile.status_code == 200
+
+    created = client.post("/api/v1/me/auth/telegram-link", headers=web_headers)
+    assert created.status_code == 200
+    assert created.json()["expires_in_seconds"] == 600
+    parsed = urlparse(created.json()["telegram_url"])
+    assert parsed.netloc == "t.me"
+    assert parsed.path == "/your_fitness_coach_bot"
+    start_payload = parse_qs(parsed.query)["start"][0]
+    assert start_payload.startswith("link_")
+
+    linked = client.post(
+        "/api/v1/bot/link-telegram",
+        headers={"X-Bot-Token": settings.bot_internal_token},
+        json={
+            "token": start_payload.removeprefix("link_"),
+            "telegram_user_id": 8_820_001,
+            "username": "linked_telegram",
+            "first_name": "Linked",
+            "last_name": "Telegram",
+        },
+    )
+    assert linked.status_code == 200
+    assert linked.json() == {"status": "linked"}
+
+    me = client.get("/api/v1/me", headers=web_headers)
+    assert me.status_code == 200
+    assert me.json()["id"] == web_user_id
+    assert me.json()["telegram_user_id"] == 8_820_001
+    assert me.json()["profile"]["goal"] == "muscle_gain"
+
+    telegram_headers = auth(client, telegram_user_id=8_820_001, username="linked_telegram")
+    telegram_me = client.get("/api/v1/me", headers=telegram_headers)
+    assert telegram_me.json()["id"] == web_user_id
+    assert telegram_me.json()["profile"]["goal"] == "muscle_gain"
+
+    repeated = client.post(
+        "/api/v1/bot/link-telegram",
+        headers={"X-Bot-Token": settings.bot_internal_token},
+        json={
+            "token": start_payload.removeprefix("link_"),
+            "telegram_user_id": 8_820_001,
+        },
+    )
+    assert repeated.status_code == 400
+
+
+def test_telegram_link_rejects_existing_account_and_consumes_token(client, monkeypatch):
+    from fitminiapp_api.services.oauth_login import get_or_create_oauth_user
+    from fitminiapp_api.services.security import create_access_token
+
+    monkeypatch.setattr(settings, "telegram_bot_username", "your_fitness_coach_bot")
+    existing_headers = auth(client, telegram_user_id=8_820_002, username="existing_owner")
+    existing_id = client.get("/api/v1/me", headers=existing_headers).json()["id"]
+    with get_session_context() as db:
+        web_user = get_or_create_oauth_user(
+            db,
+            provider="yandex",
+            raw_claims={
+                "id": "yandex-link-subject-002",
+                "default_email": "conflict@example.com",
+                "display_name": "Conflict Target",
+            },
+        )
+        web_user_id = web_user.id
+
+    web_headers = {"Authorization": f"Bearer {create_access_token(web_user_id)}"}
+    created = client.post("/api/v1/me/auth/telegram-link", headers=web_headers)
+    start_payload = parse_qs(urlparse(created.json()["telegram_url"]).query)["start"][0]
+    raw_token = start_payload.removeprefix("link_")
+    conflict = client.post(
+        "/api/v1/bot/link-telegram",
+        headers={"X-Bot-Token": settings.bot_internal_token},
+        json={"token": raw_token, "telegram_user_id": 8_820_002},
+    )
+    assert conflict.status_code == 409
+
+    burned = client.post(
+        "/api/v1/bot/link-telegram",
+        headers={"X-Bot-Token": settings.bot_internal_token},
+        json={"token": raw_token, "telegram_user_id": 8_820_003},
+    )
+    assert burned.status_code == 400
+    assert client.get("/api/v1/me", headers=web_headers).json()["telegram_user_id"] is None
+    assert client.get("/api/v1/me", headers=existing_headers).json()["id"] == existing_id
+
+
+def test_telegram_user_cannot_create_another_link(client):
+    telegram_headers = auth(client, telegram_user_id=8_820_004)
+
+    response = client.post("/api/v1/me/auth/telegram-link", headers=telegram_headers)
+
+    assert response.status_code == 409
 
 
 def test_alembic_revision_ids_fit_version_table_column():

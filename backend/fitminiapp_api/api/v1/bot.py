@@ -8,7 +8,18 @@ from fitminiapp_api.core.timezone import is_valid_timezone
 from fitminiapp_api.db.session import get_session_context
 from fitminiapp_api.models.notification import NotificationSetting
 from fitminiapp_api.models.user import User, UserProfile
-from fitminiapp_api.schemas.bot import BotTimezoneUpdateRequest, BotTimezoneUpdateResponse
+from fitminiapp_api.schemas.bot import (
+    BotTelegramLinkRequest,
+    BotTelegramLinkResponse,
+    BotTimezoneUpdateRequest,
+    BotTimezoneUpdateResponse,
+)
+from fitminiapp_api.services.account_linking import (
+    TelegramLinkConflictError,
+    TelegramLinkError,
+    link_telegram_account,
+)
+from fitminiapp_api.services.password_auth import PasswordAuthError
 from fitminiapp_api.services.telegram_auth import (
     get_or_insert_telegram_user,
     normalize_telegram_username,
@@ -84,3 +95,36 @@ def update_timezone_from_bot(
             telegram_user_id=payload.telegram_user_id,
             timezone=profile.timezone,
         )
+
+
+@router.post("/link-telegram", response_model=BotTelegramLinkResponse)
+def link_telegram_from_bot(
+    payload: BotTelegramLinkRequest,
+    x_bot_token: str | None = Header(default=None),
+) -> BotTelegramLinkResponse:
+    _check_bot_token(x_bot_token)
+    conflict: TelegramLinkConflictError | None = None
+    try:
+        with get_session_context() as db:
+            try:
+                result = link_telegram_account(
+                    db,
+                    raw_token=payload.token,
+                    telegram_user_id=payload.telegram_user_id,
+                    username=payload.username,
+                    first_name=payload.first_name,
+                    last_name=payload.last_name,
+                )
+            except TelegramLinkConflictError as exc:
+                # The token stays consumed even on a conflict, so a leaked link
+                # cannot be tried against another Telegram account.
+                conflict = exc
+                result = None
+        if conflict is not None:
+            raise HTTPException(status_code=409, detail=str(conflict))
+        assert result is not None
+        return BotTelegramLinkResponse(status=result.status)
+    except PasswordAuthError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except TelegramLinkError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
