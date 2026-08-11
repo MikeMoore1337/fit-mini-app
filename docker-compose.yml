@@ -79,13 +79,21 @@ services:
     profiles: ["direct-https"]
     environment:
       APP_DOMAIN: ${APP_DOMAIN:-}
+      # Optional for backward compatibility. When set, Caddy serves the same
+      # backend on the public landing hostname as well as the app hostname.
+      LANDING_DOMAIN: ${LANDING_DOMAIN:-}
     entrypoint:
       - /bin/sh
       - -ec
       - |
         : "$${APP_DOMAIN:?APP_DOMAIN is required}"
+        if [ -n "$${LANDING_DOMAIN}" ] && [ "$${LANDING_DOMAIN}" != "$${APP_DOMAIN}" ]; then
+            SITE_ADDRESSES="$${APP_DOMAIN}, $${LANDING_DOMAIN}"
+        else
+            SITE_ADDRESSES="$${APP_DOMAIN}"
+        fi
         cat > /etc/caddy/Caddyfile <<EOF
-        $${APP_DOMAIN} {
+        $${SITE_ADDRESSES} {
             encode zstd gzip
 
             header {

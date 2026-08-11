@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import LandingPage from '../../../../src/pages/landing/LandingPage';
+import LandingPage, { appUrlForHostname } from '../../../../src/pages/landing/LandingPage';
 import { NavigationProvider } from '../../../../src/shared/navigation/router';
 
 describe('LandingPage', () => {
@@ -38,6 +38,9 @@ describe('LandingPage', () => {
     expect(screen.getByRole('link', { name: /открыть приложение/i })).toHaveAttribute(
       'href',
       '/app',
+    );
+    expect(appUrlForHostname('your-fitness-coach.ru')).toBe(
+      'https://app.your-fitness-coach.ru/app',
     );
   });
 });
