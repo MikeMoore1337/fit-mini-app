@@ -9,12 +9,13 @@ from __future__ import annotations
 import argparse
 import subprocess
 import sys
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 ARTIFACTS = ROOT / ".artifacts"
 BACKUP_DIR = ARTIFACTS / "backups"
+UTC = timezone.utc  # noqa: UP017 - deployment hosts can still run Python 3.10.
 BACKUP_SCRIPT = (
     "exec pg_dump --format=custom --no-owner --no-privileges "
     '--dbname="$POSTGRES_DB" --username="$POSTGRES_USER"'
