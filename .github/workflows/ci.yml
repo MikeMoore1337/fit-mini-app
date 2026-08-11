@@ -125,7 +125,7 @@ jobs:
           alembic check
         env:
           APP_ENV: test
-          APP_NAME: FitMiniApp CI
+          APP_NAME: Your Fitness Coach CI
           APP_DEBUG: "false"
           ACCESS_TOKEN_EXPIRE_MINUTES: "60"
           REFRESH_TOKEN_EXPIRE_DAYS: "30"
@@ -139,7 +139,7 @@ jobs:
         env:
           RUN_MIGRATED_STACK_TEST: "1"
           APP_ENV: test
-          APP_NAME: FitMiniApp CI
+          APP_NAME: Your Fitness Coach CI
           APP_DEBUG: "false"
           ACCESS_TOKEN_EXPIRE_MINUTES: "60"
           REFRESH_TOKEN_EXPIRE_DAYS: "30"

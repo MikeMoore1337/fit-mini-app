@@ -10,7 +10,7 @@ from pathlib import Path
 
 SCHEMA_ENV_DEFAULTS = {
     "APP_ENV": "test",
-    "APP_NAME": "FitMiniApp OpenAPI",
+    "APP_NAME": "Your Fitness Coach OpenAPI",
     "APP_DEBUG": "false",
     "SECRET_KEY": "schema-generation-secret-at-least-32-characters",
     "ACCESS_TOKEN_EXPIRE_MINUTES": "60",
