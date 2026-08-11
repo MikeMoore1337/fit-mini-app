@@ -270,7 +270,7 @@ export default function LandingPage() {
           </div>
           <a
             className="landing-contact__link"
-            href="https://t.me/mikhail_murzaev"
+            href="https://t.me/your_fitness_support_bot"
             target="_blank"
             rel="noreferrer"
           >
