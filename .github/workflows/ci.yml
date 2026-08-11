@@ -90,6 +90,14 @@ jobs:
         working-directory: frontend
         run: npm run check
 
+      - name: Upload frontend production build
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-dist-${{ github.sha }}
+          path: frontend/dist
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Install Playwright Chromium
         working-directory: frontend
         run: npx playwright install --with-deps chromium
@@ -110,6 +118,7 @@ jobs:
 
   python-tests:
     name: Python tests
+    needs: frontend
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -130,6 +139,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Download frontend production build
+        uses: actions/download-artifact@v7
+        with:
+          name: frontend-dist-${{ github.sha }}
+          path: frontend/dist
 
       - name: Set up Python
         uses: actions/setup-python@v5
