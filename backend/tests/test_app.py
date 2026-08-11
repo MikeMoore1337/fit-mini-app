@@ -1246,6 +1246,63 @@ def test_client_can_hide_and_restore_seeded_program_example(client):
     assert client.get("/api/v1/programs/templates/hidden", headers=headers).json() == []
 
 
+def test_every_seeded_template_can_be_customized_with_a_personal_exercise(client):
+    headers = auth(client, telegram_user_id=31037, is_coach=False)
+    custom_exercise = client.post(
+        "/api/v1/programs/exercises",
+        json={
+            "title": "Моё упражнение для шаблона",
+            "primary_muscle": "Все тело",
+            "equipment": "Своё оборудование",
+        },
+        headers=headers,
+    ).json()
+    templates = client.get("/api/v1/programs/templates/mine", headers=headers).json()
+    examples = [template for template in templates if template["is_example"]]
+
+    assert examples
+    for example in examples:
+        days = [
+            {
+                "title": day["title"],
+                "exercises": [
+                    {
+                        "exercise_id": (
+                            custom_exercise["id"]
+                            if day_index == 0 and exercise_index == 0
+                            else exercise["exercise_id"]
+                        ),
+                        "prescribed_sets": exercise["prescribed_sets"],
+                        "prescribed_reps": exercise["prescribed_reps"],
+                        "rest_seconds": exercise["rest_seconds"],
+                        "notes": exercise["notes"],
+                    }
+                    for exercise_index, exercise in enumerate(day["exercises"])
+                ],
+            }
+            for day_index, day in enumerate(example["days"])
+        ]
+        response = client.post(
+            "/api/v1/programs/templates",
+            json={
+                "title": f"{example['title']} — моя",
+                "goal": example["goal"],
+                "level": example["level"],
+                "mode": "self",
+                "assign_after_create": False,
+                "schedule_weekdays": None,
+                "days": days,
+            },
+            headers=headers,
+        )
+
+        assert response.status_code == 200, (example["slug"], response.text)
+        personalized = response.json()["template"]
+        assert personalized["is_example"] is False
+        assert personalized["can_edit"] is True
+        assert personalized["days"][0]["exercises"][0]["exercise_id"] == custom_exercise["id"]
+
+
 def test_every_seeded_exercise_has_complete_guide_and_local_images(client):
     headers = auth(client, telegram_user_id=31033, is_coach=False)
     exercises = client.get("/api/v1/programs/exercises", headers=headers).json()
