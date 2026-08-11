@@ -495,6 +495,7 @@ def test_coach_can_assign_existing_template_to_own_client(client):
     assert assigned_template["is_assigned_to_current_user"] is True
     assert assigned_template["is_active_for_current_user"] is True
     assert assigned_template["assigned_by_user_id"] == created.json()["template"]["owner_user_id"]
+    assert assigned_template["can_edit"] is False
 
     coach_programs = client.get("/api/v1/coach/assigned-programs", headers=coach_headers)
     assert coach_programs.status_code == 200
@@ -1477,6 +1478,7 @@ def test_coach_can_manage_program_for_own_client(client):
     )
     assert updated.status_code == 200
     assert updated.json()["title"] == "Client Managed Program Updated"
+    assert updated.json()["can_edit"] is True
 
     blocked_delete = client.delete(
         f"/api/v1/programs/templates/{template_id}",

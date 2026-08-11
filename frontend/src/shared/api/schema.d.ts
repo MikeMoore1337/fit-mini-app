@@ -1941,6 +1941,11 @@ export interface components {
              * @default false
              */
             is_active_for_current_user: boolean;
+            /**
+             * Can Edit
+             * @default false
+             */
+            can_edit: boolean;
             /** Assigned By User Id */
             assigned_by_user_id?: number | null;
             /** Assigned By Full Name */
