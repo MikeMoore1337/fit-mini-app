@@ -81,6 +81,6 @@ def update_timezone_from_bot(
         db.flush()
 
         return BotTimezoneUpdateResponse(
-            telegram_user_id=user.telegram_user_id,
+            telegram_user_id=payload.telegram_user_id,
             timezone=profile.timezone,
         )

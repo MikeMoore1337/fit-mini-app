@@ -67,6 +67,8 @@ def ensure_auth_identity(
 
 
 def ensure_telegram_identity(db: Session, user: User, *, mark_login: bool = True) -> AuthIdentity:
+    if user.telegram_user_id is None:
+        raise ValueError("Telegram identity requires telegram_user_id")
     return ensure_auth_identity(
         db,
         user,

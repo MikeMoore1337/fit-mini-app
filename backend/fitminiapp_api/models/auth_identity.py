@@ -30,3 +30,34 @@ class AuthIdentity(Base):
     last_login_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now_msk_naive)
 
     user = relationship("User", back_populates="auth_identities")
+
+
+class LocalCredential(Base):
+    __tablename__ = "local_credentials"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True
+    )
+    username_normalized: Mapped[str] = mapped_column(
+        String(32), nullable=False, unique=True, index=True
+    )
+    password_hash: Mapped[str] = mapped_column(String(512), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now_msk_naive)
+    password_changed_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=now_msk_naive
+    )
+
+
+class AuthActionToken(Base):
+    __tablename__ = "auth_action_tokens"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    purpose: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now_msk_naive)

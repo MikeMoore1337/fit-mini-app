@@ -38,6 +38,108 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/email/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Email Register */
+        post: operations["email_register_api_v1_auth_email_register_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/email/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify Email */
+        post: operations["verify_email_api_v1_auth_email_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/email/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Email Login */
+        post: operations["email_login_api_v1_auth_email_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/email/verification/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resend Verification */
+        post: operations["resend_verification_api_v1_auth_email_verification_resend_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/password/reset/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request Password Reset */
+        post: operations["request_password_reset_api_v1_auth_password_reset_request_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/password/reset/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Password Reset */
+        post: operations["confirm_password_reset_api_v1_auth_password_reset_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/dev-login": {
         parameters: {
             query?: never;
@@ -1106,6 +1208,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Landing Page */
+        get: operations["landing_page__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin": {
         parameters: {
             query?: never;
@@ -1132,6 +1251,40 @@ export interface paths {
         };
         /** Coach Page */
         get: operations["coach_page_coach_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/verify-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Verify Email Page */
+        get: operations["verify_email_page_verify_email_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Reset Password Page */
+        get: operations["reset_password_page_reset_password_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1201,7 +1354,7 @@ export interface components {
             /** Id */
             id: number;
             /** Telegram User Id */
-            telegram_user_id: number;
+            telegram_user_id?: number | null;
             /** Username */
             username?: string | null;
             /**
@@ -1260,6 +1413,11 @@ export interface components {
              * @default false
              */
             replace_active: boolean;
+        };
+        /** AuthTokenRequest */
+        AuthTokenRequest: {
+            /** Token */
+            token: string;
         };
         /** BodyMeasurementResponse */
         BodyMeasurementResponse: {
@@ -1383,7 +1541,7 @@ export interface components {
             /** Client Id */
             client_id: number;
             /** Client Telegram User Id */
-            client_telegram_user_id: number;
+            client_telegram_user_id?: number | null;
             /** Client Username */
             client_username?: string | null;
             /** Client Full Name */
@@ -1514,6 +1672,27 @@ export interface components {
             username?: string | null;
             /** Full Name */
             full_name?: string | null;
+        };
+        /** EmailLoginRequest */
+        EmailLoginRequest: {
+            /** Email */
+            email: string;
+            /** Password */
+            password: string;
+        };
+        /** EmailRegisterRequest */
+        EmailRegisterRequest: {
+            /** Username */
+            username: string;
+            /** Email */
+            email: string;
+            /** Password */
+            password: string;
+        };
+        /** EmailRequest */
+        EmailRequest: {
+            /** Email */
+            email: string;
         };
         /** ExerciseCatalogCreate */
         ExerciseCatalogCreate: {
@@ -1657,6 +1836,13 @@ export interface components {
              */
             is_completed: boolean;
         };
+        /** MessageResponse */
+        MessageResponse: {
+            /** Message */
+            message: string;
+            /** Action Token */
+            action_token?: string | null;
+        };
         /** NotificationCreateRequest */
         NotificationCreateRequest: {
             /** Title */
@@ -1706,7 +1892,7 @@ export interface components {
             /** Id */
             id: number;
             /** Telegram User Id */
-            telegram_user_id: number;
+            telegram_user_id?: number | null;
             /** Username */
             username?: string | null;
             /** Full Name */
@@ -1717,7 +1903,7 @@ export interface components {
             /** User Id */
             user_id: number;
             /** Telegram User Id */
-            telegram_user_id: number;
+            telegram_user_id?: number | null;
             /** Sex */
             sex: string;
             /** Weight Kg */
@@ -1827,6 +2013,13 @@ export interface components {
              */
             cardio_intensity: ("low" | "moderate" | "high") | null;
         };
+        /** PasswordResetConfirmRequest */
+        PasswordResetConfirmRequest: {
+            /** Token */
+            token: string;
+            /** Password */
+            password: string;
+        };
         /** ProgramAssignmentResponse */
         ProgramAssignmentResponse: {
             /** User Program Id */
@@ -1851,7 +2044,7 @@ export interface components {
             /** Id */
             id: number;
             /** Telegram User Id */
-            telegram_user_id: number;
+            telegram_user_id?: number | null;
             /** Full Name */
             full_name?: string | null;
         };
@@ -2048,6 +2241,16 @@ export interface components {
             /** Refresh Token */
             refresh_token?: string | null;
         };
+        /** RegistrationResponse */
+        RegistrationResponse: {
+            /**
+             * Verification Required
+             * @default true
+             */
+            verification_required: boolean;
+            /** Verification Token */
+            verification_token?: string | null;
+        };
         /** TelegramInitRequest */
         TelegramInitRequest: {
             /** Init Data */
@@ -2068,7 +2271,7 @@ export interface components {
             /** Id */
             id: number;
             /** Telegram User Id */
-            telegram_user_id: number;
+            telegram_user_id?: number | null;
             /** Username */
             username?: string | null;
             /** Full Name */
@@ -2138,7 +2341,7 @@ export interface components {
             /** Id */
             id: number;
             /** Telegram User Id */
-            telegram_user_id: number;
+            telegram_user_id?: number | null;
             /** Username */
             username?: string | null;
             /** First Name */
@@ -2454,6 +2657,204 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TokenPairResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    email_register_api_v1_auth_email_register_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailRegisterRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistrationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_email_api_v1_auth_email_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenPairResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    email_login_api_v1_auth_email_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailLoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenPairResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resend_verification_api_v1_auth_email_verification_resend_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_password_reset_api_v1_auth_password_reset_request_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_password_reset_api_v1_auth_password_reset_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetConfirmRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageResponse"];
                 };
             };
             /** @description Validation Error */
@@ -4553,6 +4954,26 @@ export interface operations {
             };
         };
     };
+    landing_page__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
     admin_page_admin_get: {
         parameters: {
             query?: never;
@@ -4574,6 +4995,46 @@ export interface operations {
         };
     };
     coach_page_coach_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    verify_email_page_verify_email_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    reset_password_page_reset_password_get: {
         parameters: {
             query?: never;
             header?: never;

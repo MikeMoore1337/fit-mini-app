@@ -88,7 +88,7 @@ class ProgramTemplateResponse(BaseModel):
 
 class ProgramTargetUserResponse(BaseModel):
     id: int
-    telegram_user_id: int
+    telegram_user_id: int | None = None
     full_name: str | None = None
 
 
@@ -110,7 +110,7 @@ class ProgramAssignmentResponse(BaseModel):
 class CoachAssignedProgramResponse(BaseModel):
     id: int
     client_id: int
-    client_telegram_user_id: int
+    client_telegram_user_id: int | None = None
     client_username: str | None = None
     client_full_name: str | None = None
     template_id: int | None = None

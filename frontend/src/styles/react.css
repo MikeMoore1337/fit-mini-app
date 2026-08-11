@@ -212,6 +212,56 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
+.email-auth {
+  display: grid;
+  gap: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.email-auth__tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--bg-soft);
+}
+.email-auth__tabs button {
+  min-height: 40px;
+  background: transparent;
+}
+.email-auth__tabs button.is-active {
+  background: var(--accent);
+  color: var(--button-text, #fff);
+}
+.email-auth label {
+  display: grid;
+  gap: 6px;
+}
+.email-auth label small {
+  line-height: 1.35;
+}
+.text-link-button {
+  width: fit-content;
+  min-height: 36px;
+  padding: 0;
+  background: transparent;
+  color: var(--link-color);
+  font-size: 0.86rem;
+}
+.text-link-button:hover {
+  background: transparent;
+  text-decoration: underline;
+}
+.auth-success {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--success-strong);
+  border-radius: 12px;
+  background: var(--success-soft);
+  color: var(--text);
+  line-height: 1.5;
+}
 .spinner {
   width: 22px;
   height: 22px;

@@ -10,5 +10,6 @@ def public_config() -> dict[str, str | bool]:
     return {
         "app_env": settings.app_env,
         "enable_dev_auth": settings.enable_dev_auth,
+        "enable_web_auth": settings.enable_web_auth,
         "telegram_bot_username": settings.telegram_bot_username,
     }

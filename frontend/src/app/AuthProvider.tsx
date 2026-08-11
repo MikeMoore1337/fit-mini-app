@@ -20,6 +20,11 @@ interface DevLoginInput {
   is_admin: boolean;
 }
 
+interface EmailRegistrationResult {
+  verification_required: boolean;
+  verification_token?: string | null;
+}
+
 interface AuthContextValue {
   user: User | null;
   config: PublicConfig | null;
@@ -28,6 +33,15 @@ interface AuthContextValue {
   reloadUser(): Promise<User | null>;
   devLogin(input: DevLoginInput): Promise<void>;
   telegramLogin(telegram?: TelegramWebApp | null): Promise<void>;
+  emailLogin(email: string, password: string): Promise<void>;
+  emailRegister(
+    username: string,
+    email: string,
+    password: string,
+  ): Promise<EmailRegistrationResult>;
+  verifyEmail(token: string): Promise<void>;
+  requestPasswordReset(email: string): Promise<void>;
+  confirmPasswordReset(token: string, password: string): Promise<void>;
   logout(): Promise<void>;
 }
 
@@ -116,6 +130,67 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [queryClient, reloadUser],
   );
 
+  const acceptToken = useCallback(
+    async (token: { access_token: string }) => {
+      setUser(null);
+      setError(null);
+      queryClient.clear();
+      setAccessToken(token.access_token);
+      await reloadUser();
+    },
+    [queryClient, reloadUser],
+  );
+
+  const emailLogin = useCallback(
+    async (email: string, password: string) => {
+      const token = await api<{ access_token: string }>('/api/v1/auth/email/login', {
+        method: 'POST',
+        body: { email, password },
+        retryAuth: false,
+      });
+      await acceptToken(token);
+    },
+    [acceptToken],
+  );
+
+  const emailRegister = useCallback(
+    (username: string, email: string, password: string) =>
+      api<EmailRegistrationResult>('/api/v1/auth/email/register', {
+        method: 'POST',
+        body: { username, email, password },
+        retryAuth: false,
+      }),
+    [],
+  );
+
+  const verifyEmail = useCallback(
+    async (verificationToken: string) => {
+      const token = await api<{ access_token: string }>('/api/v1/auth/email/verify', {
+        method: 'POST',
+        body: { token: verificationToken },
+        retryAuth: false,
+      });
+      await acceptToken(token);
+    },
+    [acceptToken],
+  );
+
+  const requestPasswordReset = useCallback(async (email: string) => {
+    await api('/api/v1/auth/password/reset/request', {
+      method: 'POST',
+      body: { email },
+      retryAuth: false,
+    });
+  }, []);
+
+  const confirmPasswordReset = useCallback(async (token: string, password: string) => {
+    await api('/api/v1/auth/password/reset/confirm', {
+      method: 'POST',
+      body: { token, password },
+      retryAuth: false,
+    });
+  }, []);
+
   const logout = useCallback(async () => {
     const serverLogout = api('/api/v1/auth/logout', {
       method: 'POST',
@@ -177,8 +252,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [reloadUser, telegramLogin]);
 
   const value = useMemo(
-    () => ({ user, config, loading, error, reloadUser, devLogin, telegramLogin, logout }),
-    [user, config, loading, error, reloadUser, devLogin, telegramLogin, logout],
+    () => ({
+      user,
+      config,
+      loading,
+      error,
+      reloadUser,
+      devLogin,
+      telegramLogin,
+      emailLogin,
+      emailRegister,
+      verifyEmail,
+      requestPasswordReset,
+      confirmPasswordReset,
+      logout,
+    }),
+    [
+      user,
+      config,
+      loading,
+      error,
+      reloadUser,
+      devLogin,
+      telegramLogin,
+      emailLogin,
+      emailRegister,
+      verifyEmail,
+      requestPasswordReset,
+      confirmPasswordReset,
+      logout,
+    ],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

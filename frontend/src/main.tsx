@@ -16,6 +16,8 @@ const MiniAppPage = lazy(() => import('./pages/miniapp/MiniAppPage'));
 const CoachPage = lazy(() => import('./pages/coach/CoachPage'));
 const AdminPage = lazy(() => import('./pages/admin/AdminPage'));
 const LandingPage = lazy(() => import('./pages/landing/LandingPage'));
+const VerifyEmailPage = lazy(() => import('./pages/auth/VerifyEmailPage'));
+const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 const queryClient = new QueryClient({
@@ -28,6 +30,8 @@ const queryClient = new QueryClient({
 function AppRoutes() {
   const { path } = useNavigation();
   if (path === '/') return <LandingPage />;
+  if (path === '/verify-email') return <VerifyEmailPage />;
+  if (path === '/reset-password') return <ResetPasswordPage />;
   if (path === '/app')
     return (
       <AuthGate>

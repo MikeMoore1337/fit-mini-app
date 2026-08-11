@@ -39,6 +39,7 @@ async def lifespan(app: FastAPI):
             settings.secret_key,
             settings.telegram_bot_token,
             settings.bot_internal_token,
+            settings.smtp_password,
             settings.database_url,
         ),
     )
@@ -148,4 +149,14 @@ def admin_page() -> FileResponse:
 
 @app.get("/coach")
 def coach_page() -> FileResponse:
+    return _frontend_index()
+
+
+@app.get("/verify-email")
+def verify_email_page() -> FileResponse:
+    return _frontend_index()
+
+
+@app.get("/reset-password")
+def reset_password_page() -> FileResponse:
     return _frontend_index()
