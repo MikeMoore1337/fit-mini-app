@@ -8,7 +8,7 @@ import { useAuth } from '../../app/AuthProvider';
 import { addCalendarDays, dateInputValue, detectedTimeZone } from '../../shared/dateTime';
 import { usePersistentState } from '../../shared/storage';
 import { notificationStatusLabel } from '../../shared/statusLabels';
-import { DateInput } from '../../shared/ui/PickerInput';
+import { DateInput, TimeInput } from '../../shared/ui/PickerInput';
 
 type NotificationDestination = 'today' | 'nutrition';
 
@@ -118,19 +118,17 @@ export function NotificationsPanel({
                 </label>
                 <label className="field">
                   <span>Час отправки</span>
-                  <div className="time-control reminder-time-control">
-                    <input
-                      type="time"
-                      step="3600"
-                      value={`${String(visibleSettings.reminder_hour).padStart(2, '0')}:00`}
-                      onChange={(e) =>
-                        setSettingsDraft({
-                          ...visibleSettings,
-                          reminder_hour: Number(e.target.value.split(':')[0]),
-                        })
-                      }
-                    />
-                  </div>
+                  <TimeInput
+                    controlClassName="reminder-time-control"
+                    step="3600"
+                    value={`${String(visibleSettings.reminder_hour).padStart(2, '0')}:00`}
+                    onChange={(e) =>
+                      setSettingsDraft({
+                        ...visibleSettings,
+                        reminder_hour: Number(e.target.value.split(':')[0]),
+                      })
+                    }
+                  />
                 </label>
               </div>
               <button type="submit" disabled={!settingsDirty || settingsMutation.isPending}>

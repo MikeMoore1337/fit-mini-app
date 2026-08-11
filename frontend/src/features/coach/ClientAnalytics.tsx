@@ -5,7 +5,7 @@ import type { WorkoutProgress, WorkoutTimelineItem } from '../../shared/api/type
 import { workoutStatusLabel } from '../../shared/statusLabels';
 import { Badge, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
-import { DateInput } from '../../shared/ui/PickerInput';
+import { DateInput, TimeInput } from '../../shared/ui/PickerInput';
 
 function formatDate(value: string): string {
   return new Date(`${value}T12:00:00`).toLocaleDateString('ru-RU', {
@@ -45,7 +45,7 @@ function CoachScheduleForm({
       </label>
       <label className="field compact-field">
         <span>Время</span>
-        <input type="time" value={time} onChange={(event) => setTime(event.target.value)} />
+        <TimeInput value={time} onChange={(event) => setTime(event.target.value)} />
       </label>
       <button
         type="submit"
