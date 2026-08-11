@@ -380,6 +380,85 @@ PPLF_8_DAYS: list[TemplateDaySeed] = [
     ),
 ]
 
+PLPL_4_DAYS: list[TemplateDaySeed] = [
+    (
+        "Тяни",
+        [
+            ("pull-up", 4, "6-10", 120),
+            ("barbell-row", 4, "6-8", 150),
+            ("lat-pulldown", 3, "10-12", 90),
+            ("barbell-curl", 3, "8-10", 90),
+        ],
+    ),
+    (
+        "Ноги A · акцент на квадрицепс",
+        [
+            ("squat", 4, "5-8", 180),
+            ("leg-press", 3, "10-12", 150),
+            ("leg-extension", 3, "12-15", 75),
+            ("standing-calf-raise", 4, "12-15", 60),
+        ],
+    ),
+    (
+        "Толкай",
+        [
+            ("bench-press", 4, "5-8", 150),
+            ("incline-dumbbell-press", 3, "8-10", 120),
+            ("overhead-press", 3, "6-8", 150),
+            ("rope-pushdown", 3, "10-12", 75),
+        ],
+    ),
+    (
+        "Ноги B · акцент на заднюю цепь",
+        [
+            ("romanian-deadlift", 4, "6-8", 180),
+            ("hip-thrust", 4, "8-10", 120),
+            ("seated-leg-curl", 3, "10-12", 90),
+            ("seated-calf-raise", 4, "12-15", 60),
+        ],
+    ),
+]
+
+PLPL_8_DAYS: list[TemplateDaySeed] = [
+    *PLPL_4_DAYS,
+    (
+        "Тяни B",
+        [
+            ("deadlift", 3, "3-5", 180),
+            ("chest-supported-row", 4, "8-10", 120),
+            ("close-grip-lat-pulldown", 3, "10-12", 90),
+            ("hammer-curl", 3, "10-12", 75),
+        ],
+    ),
+    (
+        "Ноги C · односторонняя работа",
+        [
+            ("front-squat", 4, "6-8", 150),
+            ("bulgarian-split-squat", 3, "8-10", 120),
+            ("step-up", 3, "10-12", 90),
+            ("single-leg-calf-raise", 3, "12-15", 60),
+        ],
+    ),
+    (
+        "Толкай B",
+        [
+            ("incline-bench-press", 4, "6-8", 150),
+            ("machine-chest-press", 3, "10-12", 90),
+            ("seated-dumbbell-press", 3, "8-10", 120),
+            ("overhead-triceps-extension", 3, "10-12", 75),
+        ],
+    ),
+    (
+        "Ноги D · ягодицы и бицепс бедра",
+        [
+            ("sumo-deadlift", 4, "5-8", 180),
+            ("single-leg-rdl", 3, "8-10", 120),
+            ("single-leg-hip-thrust", 3, "10-12", 90),
+            ("leg-curl", 3, "10-12", 90),
+        ],
+    ),
+]
+
 STRENGTH_TEMPLATE_SPECS: list[dict[str, object]] = [
     {
         "slug": "strength-pplf-4d",
@@ -394,6 +473,20 @@ STRENGTH_TEMPLATE_SPECS: list[dict[str, object]] = [
         "goal": "muscle_gain",
         "level": "advanced",
         "days": PPLF_8_DAYS,
+    },
+    {
+        "slug": "strength-pull-legs-push-legs-4d",
+        "title": "Тяни/Ноги/Толкай/Ноги · 4 дня",
+        "goal": "recomposition",
+        "level": "intermediate",
+        "days": PLPL_4_DAYS,
+    },
+    {
+        "slug": "strength-pull-legs-push-legs-8d",
+        "title": "Тяни/Ноги/Толкай/Ноги · 8 дней",
+        "goal": "muscle_gain",
+        "level": "advanced",
+        "days": PLPL_8_DAYS,
     },
     {
         "slug": "strength-split-5d",
