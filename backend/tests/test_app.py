@@ -2774,6 +2774,30 @@ def test_root_serves_public_landing_spa(client):
     assert "no-store" in response.headers["cache-control"]
 
 
+def test_dev_login_provisions_one_idempotent_telegram_identity(client):
+    from fitminiapp_api.models.auth_identity import AuthIdentity
+
+    payload = {
+        "telegram_user_id": 8_800_101,
+        "username": "identity_client",
+        "full_name": "Identity Client",
+    }
+    assert client.post("/api/v1/auth/dev-login", json=payload).status_code == 200
+    assert client.post("/api/v1/auth/dev-login", json=payload).status_code == 200
+
+    with get_session_context() as db:
+        identities = (
+            db.query(AuthIdentity)
+            .filter(
+                AuthIdentity.provider == "telegram",
+                AuthIdentity.subject == str(payload["telegram_user_id"]),
+            )
+            .all()
+        )
+        assert len(identities) == 1
+        assert identities[0].user.telegram_user_id == payload["telegram_user_id"]
+
+
 def test_alembic_revision_ids_fit_version_table_column():
     versions_dir = Path(__file__).resolve().parents[2] / "backend" / "alembic" / "versions"
     for migration in versions_dir.glob("*.py"):

@@ -12,6 +12,7 @@ from fitminiapp_api.core.timezone import now_msk_naive
 from fitminiapp_api.models.notification import Notification
 from fitminiapp_api.models.user import CoachClient, CoachClientInvite, User, UserProfile
 from fitminiapp_api.services.audit import record_audit_event
+from fitminiapp_api.services.auth_identities import ensure_telegram_identity
 from fitminiapp_api.services.nutrition import get_nutrition_target_for_user
 from fitminiapp_api.services.program_common import ProgramError
 from fitminiapp_api.services.telegram_auth import normalize_telegram_username
@@ -37,6 +38,7 @@ def get_or_create_user_by_telegram_id(
                 full_name=full_name or f"Клиент {telegram_user_id}",
             )
         )
+        ensure_telegram_identity(db, user, mark_login=False)
         db.commit()
         db.refresh(user)
     return user

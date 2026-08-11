@@ -12,6 +12,7 @@ from fitminiapp_api.schemas.auth import (
     TelegramInitRequest,
     TokenPairResponse,
 )
+from fitminiapp_api.services.auth_identities import ensure_telegram_identity
 from fitminiapp_api.services.jwt import (
     AuthError,
     build_access_token,
@@ -158,6 +159,7 @@ def dev_login(
             else:
                 db.add(UserProfile(user_id=user.id, full_name=payload.full_name))
 
+    ensure_telegram_identity(db, user)
     db.commit()
     db.refresh(user)
     return issue_token_pair(db, user, response)
