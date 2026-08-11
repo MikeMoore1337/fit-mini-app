@@ -24,6 +24,9 @@ https://app.your-fitness-coach.ru
 
 Keep `FRONTEND_BASE_URL` equal to that origin. Browser sessions use same-origin
 HttpOnly refresh cookies; no CORS configuration is required.
+The public landing page is served at `https://your-fitness-coach.ru`; it may use
+the same backend, but login, invitations and OAuth callbacks should stay on the
+canonical `app` origin.
 
 ## Provider callbacks
 

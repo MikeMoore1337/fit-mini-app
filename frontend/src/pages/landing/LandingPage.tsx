@@ -1,6 +1,11 @@
 import { useEffect } from 'react';
-import { AppLink } from '../../shared/navigation/router';
 import './landing.css';
+
+export function appUrlForHostname(hostname: string): string {
+  return ['your-fitness-coach.ru', 'www.your-fitness-coach.ru'].includes(hostname)
+    ? 'https://app.your-fitness-coach.ru/app'
+    : '/app';
+}
 
 const features = [
   {
@@ -36,6 +41,7 @@ const workflow = [
 ];
 
 export default function LandingPage() {
+  const appUrl = appUrlForHostname(window.location.hostname);
   useEffect(() => {
     const previousTitle = document.title;
     document.title = 'Your Fitness Coach — персональные тренировки с поддержкой тренера';
@@ -60,9 +66,9 @@ export default function LandingPage() {
           <a href="#how-it-works">Как это работает</a>
           <a href="#contact">Контакты</a>
         </nav>
-        <AppLink className="landing-button landing-button--compact" to="/app">
+        <a className="landing-button landing-button--compact" href={appUrl}>
           Войти
-        </AppLink>
+        </a>
       </header>
 
       <main id="top">
@@ -79,10 +85,10 @@ export default function LandingPage() {
               приложении без таблиц и разрозненных заметок.
             </p>
             <div className="landing-hero__actions">
-              <AppLink className="landing-button" to="/app">
+              <a className="landing-button" href={appUrl}>
                 Открыть приложение
                 <span aria-hidden="true">↗</span>
-              </AppLink>
+              </a>
               <a className="landing-text-link" href="#how-it-works">
                 Посмотреть, как всё устроено
               </a>

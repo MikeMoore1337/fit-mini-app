@@ -49,7 +49,7 @@ the idempotent seed command.
 ```console
 docker compose up -d --build
 docker compose ps
-py scripts/check_deployment.py https://your-domain.example
+py scripts/check_deployment.py https://app.your-fitness-coach.ru
 ```
 
 For direct HTTPS use the `direct-https` profile; for Cloudflare Tunnel use the
@@ -59,6 +59,44 @@ For direct HTTPS use the `direct-https` profile; for Cloudflare Tunnel use the
 docker compose --profile direct-https up -d
 docker compose --profile cloudflare up -d
 ```
+
+### Public website and web application domains
+
+The intended production layout uses two hostnames backed by the same API and
+database:
+
+- `https://your-fitness-coach.ru` — public landing page;
+- `https://app.your-fitness-coach.ru/app` — authenticated web application and
+  Telegram Mini App;
+- `https://app.your-fitness-coach.ru/join/<token>` — universal coach invitation.
+
+Set the following non-secret values in the production `.env`:
+
+```dotenv
+APP_DOMAIN=app.your-fitness-coach.ru
+LANDING_DOMAIN=your-fitness-coach.ru
+FRONTEND_BASE_URL=https://app.your-fitness-coach.ru
+```
+
+`LANDING_DOMAIN` is optional so an existing single-host deployment remains valid.
+For direct HTTPS, point the apex and `app` DNS records to the server and recreate
+the Caddy service once to apply the additional host:
+
+```console
+docker compose --profile direct-https up -d --force-recreate caddy
+```
+
+For the remotely managed Cloudflare Tunnel, add both public hostnames and route
+both to `http://backend:8000` on the Compose network. Do not expose PostgreSQL or
+the backend container port publicly. Keep the Telegram Mini App URL and all OAuth
+callback URLs on the `app` hostname; the exact callbacks are listed in
+[`web-auth.md`](web-auth.md).
+
+Before changing DNS, verify the landing and application hosts locally or through
+a temporary protected hostname. After the change, smoke-test `/`, `/app`,
+`/health/ready`, one Telegram login and one browser login. DNS and proxy changes
+are operational actions and are not performed by the repository deployment
+script.
 
 After deployment, inspect backend, worker and bot errors and confirm that due
 notifications leave the queue. Keep the pre-deploy backup and previous image for
@@ -152,7 +190,7 @@ automatically creates a fresh safety dump before changing anything.
    ```console
    docker compose run --rm setup
    docker compose up -d backend worker bot
-   py scripts/check_deployment.py https://your-domain.example
+   py scripts/check_deployment.py https://app.your-fitness-coach.ru
    ```
 
 If restore fails, keep writers stopped. The script prints the path of the automatic
