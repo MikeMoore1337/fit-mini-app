@@ -150,7 +150,7 @@ export function NutritionForm({
           <label className="field nutrition-form-grid__wide">
             <span>Повседневная активность без учёта тренировок</span>
             <select
-              value={form.daily_activity_level}
+              value={form.daily_activity_level ?? 'sedentary'}
               onChange={(event) =>
                 setForm({
                   ...form,
@@ -215,7 +215,7 @@ export function NutritionForm({
               max="14"
               step="1"
               required
-              value={form.cardio_trainings_per_week}
+              value={form.cardio_trainings_per_week ?? 0}
               onChange={(event) => setNumber('cardio_trainings_per_week', event.target.value)}
             />
           </label>
@@ -236,7 +236,7 @@ export function NutritionForm({
           <label className="field">
             <span>Интенсивность кардио</span>
             <select
-              value={form.cardio_intensity}
+              value={form.cardio_intensity ?? 'moderate'}
               onChange={(event) =>
                 setForm({
                   ...form,

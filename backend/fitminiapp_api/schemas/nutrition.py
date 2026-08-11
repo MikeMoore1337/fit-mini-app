@@ -52,10 +52,10 @@ class NutritionTargetSave(BaseModel):
 
     # Transitional fields keep already deployed clients compatible while the
     # form migrates to the more expressive inputs above.
-    daily_activity_level: Literal["sedentary", "low", "moderate", "high"] = "sedentary"
-    cardio_trainings_per_week: int = Field(default=0, ge=0, le=14)
-    cardio_training_duration_minutes: int = Field(default=30, ge=10, le=300)
-    cardio_intensity: Literal["low", "moderate", "high"] = "moderate"
+    daily_activity_level: Literal["sedentary", "low", "moderate", "high"] | None = "sedentary"
+    cardio_trainings_per_week: int | None = Field(default=0, ge=0, le=14)
+    cardio_training_duration_minutes: int | None = Field(default=30, ge=10, le=300)
+    cardio_intensity: Literal["low", "moderate", "high"] | None = "moderate"
 
     @model_validator(mode="after")
     def validate_activity_details(self) -> NutritionTargetSave:

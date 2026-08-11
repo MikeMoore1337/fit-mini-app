@@ -1326,6 +1326,23 @@ export interface components {
             /** Timezone */
             timezone: string;
         };
+        /** CardioTraining */
+        CardioTraining: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "walking" | "running" | "elliptical" | "stationary_bike" | "cycling" | "rowing" | "stepper" | "swimming" | "other";
+            /** Trainings Per Week */
+            trainings_per_week: number;
+            /** Duration Minutes */
+            duration_minutes: number;
+            /**
+             * Intensity
+             * @enum {string}
+             */
+            intensity: "very_light" | "light" | "moderate" | "hard" | "very_hard";
+        };
         /** ClientResponse */
         ClientResponse: {
             /** Id */
@@ -1709,18 +1726,20 @@ export interface components {
             height_cm: number;
             /** Age */
             age: number;
-            /** Daily Activity Level */
-            daily_activity_level: string;
+            /** Daily Routine */
+            daily_routine: string;
+            /** Steps Range */
+            steps_range: string;
             /** Strength Trainings Per Week */
             strength_trainings_per_week: number;
             /** Strength Training Duration Minutes */
             strength_training_duration_minutes: number;
-            /** Cardio Trainings Per Week */
-            cardio_trainings_per_week: number;
-            /** Cardio Training Duration Minutes */
-            cardio_training_duration_minutes: number;
-            /** Cardio Intensity */
-            cardio_intensity: string;
+            /** Strength Training Type */
+            strength_training_type: string;
+            /** Strength Rest */
+            strength_rest: string | null;
+            /** Cardio Trainings */
+            cardio_trainings: components["schemas"]["CardioTraining"][];
             /** Goal */
             goal: string;
             /** Bmr */
@@ -1741,6 +1760,14 @@ export interface components {
              */
             saved_at: string;
             assigned_by?: components["schemas"]["NutritionAssignedByResponse"] | null;
+            /** Daily Activity Level */
+            daily_activity_level: string;
+            /** Cardio Trainings Per Week */
+            cardio_trainings_per_week: number;
+            /** Cardio Training Duration Minutes */
+            cardio_training_duration_minutes: number;
+            /** Cardio Intensity */
+            cardio_intensity: string;
         };
         /** NutritionTargetSave */
         NutritionTargetSave: {
@@ -1757,12 +1784,10 @@ export interface components {
             height_cm: number;
             /** Age */
             age: number;
-            /**
-             * Daily Activity Level
-             * @default sedentary
-             * @enum {string}
-             */
-            daily_activity_level: "sedentary" | "low" | "moderate" | "high";
+            /** Daily Routine */
+            daily_routine?: ("mostly_sitting" | "mixed" | "mostly_on_feet" | "physical_work") | null;
+            /** Steps Range */
+            steps_range?: ("up_to_4000" | "from_4000_to_7000" | "from_7000_to_10000" | "from_10000_to_14000" | "over_14000" | "unknown") | null;
             /** Strength Trainings Per Week */
             strength_trainings_per_week: number;
             /**
@@ -1770,24 +1795,37 @@ export interface components {
              * @default 60
              */
             strength_training_duration_minutes: number;
-            /** Cardio Trainings Per Week */
-            cardio_trainings_per_week: number;
-            /**
-             * Cardio Training Duration Minutes
-             * @default 30
-             */
-            cardio_training_duration_minutes: number;
-            /**
-             * Cardio Intensity
-             * @default moderate
-             * @enum {string}
-             */
-            cardio_intensity: "low" | "moderate" | "high";
+            /** Strength Training Type */
+            strength_training_type?: ("calm" | "regular" | "heavy" | "dense" | "circuit") | null;
+            /** Strength Rest */
+            strength_rest?: ("under_60" | "one_to_two" | "two_to_three" | "over_three" | "varied") | null;
+            /** Cardio Trainings */
+            cardio_trainings?: components["schemas"]["CardioTraining"][] | null;
             /**
              * Goal
              * @enum {string}
              */
             goal: "fat_loss" | "muscle_gain" | "maintenance" | "recomposition";
+            /**
+             * Daily Activity Level
+             * @default sedentary
+             */
+            daily_activity_level: ("sedentary" | "low" | "moderate" | "high") | null;
+            /**
+             * Cardio Trainings Per Week
+             * @default 0
+             */
+            cardio_trainings_per_week: number | null;
+            /**
+             * Cardio Training Duration Minutes
+             * @default 30
+             */
+            cardio_training_duration_minutes: number | null;
+            /**
+             * Cardio Intensity
+             * @default moderate
+             */
+            cardio_intensity: ("low" | "moderate" | "high") | null;
         };
         /** ProgramAssignmentResponse */
         ProgramAssignmentResponse: {
