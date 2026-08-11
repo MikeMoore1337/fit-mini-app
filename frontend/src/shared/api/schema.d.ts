@@ -243,6 +243,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/auth/telegram-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Telegram Link */
+        post: operations["create_telegram_link_api_v1_me_auth_telegram_link_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/profile": {
         parameters: {
             query?: never;
@@ -1174,6 +1191,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/bot/link-telegram": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Link Telegram From Bot */
+        post: operations["link_telegram_from_bot_api_v1_bot_link_telegram_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -1515,6 +1549,27 @@ export interface components {
             thigh_cm?: number | null;
             /** Note */
             note?: string | null;
+        };
+        /** BotTelegramLinkRequest */
+        BotTelegramLinkRequest: {
+            /** Token */
+            token: string;
+            /** Telegram User Id */
+            telegram_user_id: number;
+            /** Username */
+            username?: string | null;
+            /** First Name */
+            first_name?: string | null;
+            /** Last Name */
+            last_name?: string | null;
+        };
+        /** BotTelegramLinkResponse */
+        BotTelegramLinkResponse: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "linked" | "already_linked";
         };
         /** BotTimezoneUpdateRequest */
         BotTimezoneUpdateRequest: {
@@ -2313,6 +2368,13 @@ export interface components {
         TelegramInitRequest: {
             /** Init Data */
             init_data: string;
+        };
+        /** TelegramLinkCreateResponse */
+        TelegramLinkCreateResponse: {
+            /** Telegram Url */
+            telegram_url: string;
+            /** Expires In Seconds */
+            expires_in_seconds: number;
         };
         /** TokenPairResponse */
         TokenPairResponse: {
@@ -3136,6 +3198,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+        };
+    };
+    create_telegram_link_api_v1_me_auth_telegram_link_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelegramLinkCreateResponse"];
                 };
             };
         };
@@ -4988,6 +5070,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BotTimezoneUpdateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    link_telegram_from_bot_api_v1_bot_link_telegram_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-bot-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BotTelegramLinkRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BotTelegramLinkResponse"];
                 };
             };
             /** @description Validation Error */
