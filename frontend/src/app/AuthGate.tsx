@@ -3,6 +3,7 @@ import { useAuth } from './AuthProvider';
 import { Card, ErrorState, LoadingState } from '../shared/ui/common';
 import { EmailAuthPanel } from '../features/auth/EmailAuthPanel';
 import { OAuthButtons } from '../features/auth/OAuthButtons';
+import { AppThemeToggle } from '../shared/ui/AppThemeToggle';
 
 export function telegramMiniAppUrl(username: string): string {
   const normalized = username.trim().replace(/^@/, '');
@@ -51,6 +52,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         }
       >
         <div className="stack top-gap">
+          <div className="auth-theme-row">
+            <AppThemeToggle />
+          </div>
           {(localError || error) && <ErrorState message={localError || error || ''} />}
           {window.Telegram?.WebApp?.initData && (
             <button disabled={busy} onClick={() => void run(() => telegramLogin())}>

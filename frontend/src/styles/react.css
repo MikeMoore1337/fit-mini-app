@@ -207,6 +207,31 @@
   max-width: 620px;
   margin: 12vh auto 0;
 }
+.auth-theme-row {
+  display: flex;
+  justify-content: flex-end;
+}
+.app-theme-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-soft);
+  color: var(--text);
+}
+.app-theme-toggle:hover {
+  background: var(--surface-hover);
+}
+.app-theme-toggle__icon {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+.app-theme-toggle--nav {
+  font-family: inherit;
+}
 .auth-presets {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
