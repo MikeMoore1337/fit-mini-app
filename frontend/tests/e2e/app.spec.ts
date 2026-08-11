@@ -157,6 +157,7 @@ async function mockApi(page: Page, { withCoachClient = false } = {}) {
                     prescribed_reps: '10–12',
                     rest_seconds: 90,
                     notes: null,
+                    has_guide: true,
                   },
                 ],
               },
@@ -389,6 +390,12 @@ test('поля адаптируются к разным iPhone, а пример 
       programHeadBox!.x + programHeadBox!.width - (programPanelBox!.x + programPanelBox!.width),
     ),
   ).toBeLessThanOrEqual(2);
+  await page.getByRole('button', { name: 'Есть техника — посмотреть' }).click();
+  const exerciseGuide = page.locator('.exercise-guide-modal__panel');
+  await expect(exerciseGuide.getByRole('img', { name: 'Исходное положение' })).toBeVisible();
+  await expect(exerciseGuide.getByRole('img', { name: 'Активная фаза' })).toBeVisible();
+  await expect(exerciseGuide.getByText('Исходное положение', { exact: true })).toBeVisible();
+  await expect(exerciseGuide.getByText('Активная фаза', { exact: true })).toBeVisible();
 });
 
 test('сенсорное поле даты сохраняет нативный пикер и показывает иконку календаря', async ({
