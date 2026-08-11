@@ -916,6 +916,37 @@ body:has(#appBottomNav) {
 .nutrition-metrics .metric strong {
   white-space: nowrap;
 }
+.nutrition-cardio-section {
+  padding-top: 4px;
+}
+.nutrition-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.nutrition-section-heading p {
+  margin: 4px 0 0;
+}
+.nutrition-cardio-item {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-subtle);
+}
+.nutrition-cardio-item .form-grid {
+  margin-top: 10px;
+}
+.nutrition-result-note {
+  margin: -4px 0 0;
+  text-align: center;
+}
+.nutrition-watch-note {
+  padding: 10px 12px;
+  border-left: 3px solid var(--border);
+  color: var(--muted);
+  line-height: 1.45;
+}
 
 .date-control {
   width: 100%;
