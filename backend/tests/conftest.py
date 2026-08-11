@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -7,10 +8,33 @@ sys.path.insert(0, str(ROOT / "backend"))
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.engine import URL, make_url
 
-_TEST_DB = ROOT / ".artifacts" / "tests" / "backend" / "fitmini_pytest.db"
+_WORKER_ID = os.environ.get("PYTEST_XDIST_WORKER", "main")
+if re.fullmatch(r"[A-Za-z0-9_]+", _WORKER_ID) is None:
+    raise RuntimeError(f"unsafe pytest worker id: {_WORKER_ID!r}")
+
+_TEST_DB = ROOT / ".artifacts" / "tests" / "backend" / f"fitmini_pytest-{_WORKER_ID}.db"
 _TEST_DB.parent.mkdir(parents=True, exist_ok=True)
-_TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL") or f"sqlite:///{_TEST_DB.as_posix()}"
+_BASE_TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL")
+_WORKER_DATABASE_NAME: str | None = None
+
+if _BASE_TEST_DATABASE_URL:
+    _parsed_test_database_url = make_url(_BASE_TEST_DATABASE_URL)
+    if _WORKER_ID != "main" and _parsed_test_database_url.get_backend_name() == "postgresql":
+        if not _parsed_test_database_url.database:
+            raise RuntimeError("PostgreSQL TEST_DATABASE_URL must include a database name")
+        _WORKER_DATABASE_NAME = f"{_parsed_test_database_url.database}_{_WORKER_ID}"
+        _TEST_DATABASE_URL = _parsed_test_database_url.set(
+            database=_WORKER_DATABASE_NAME
+        ).render_as_string(hide_password=False)
+    else:
+        _TEST_DATABASE_URL = _BASE_TEST_DATABASE_URL
+else:
+    _parsed_test_database_url = None
+    _TEST_DATABASE_URL = f"sqlite:///{_TEST_DB.as_posix()}"
+
 os.environ.setdefault("APP_ENV", "dev")
 os.environ.setdefault("APP_NAME", "Your Fitness Coach Test")
 os.environ.setdefault("APP_DEBUG", "false")
@@ -30,16 +54,67 @@ from fitminiapp_api.main import app
 from fitminiapp_api.services.seed import seed_demo_data
 
 
-@pytest.fixture(autouse=True)
-def reset_db():
-    limiter.reset()
+def _admin_database_url(url: URL) -> URL:
+    return url.set(database="postgres")
+
+
+def _create_worker_database() -> None:
+    if _WORKER_DATABASE_NAME is None or _parsed_test_database_url is None:
+        return
+    admin_engine = create_engine(
+        _admin_database_url(_parsed_test_database_url),
+        isolation_level="AUTOCOMMIT",
+    )
+    quoted_name = admin_engine.dialect.identifier_preparer.quote(_WORKER_DATABASE_NAME)
+    try:
+        with admin_engine.connect() as connection:
+            connection.exec_driver_sql(f"DROP DATABASE IF EXISTS {quoted_name} WITH (FORCE)")
+            connection.exec_driver_sql(f"CREATE DATABASE {quoted_name}")
+    finally:
+        admin_engine.dispose()
+
+
+def _drop_worker_database() -> None:
+    if _WORKER_DATABASE_NAME is None or _parsed_test_database_url is None:
+        return
+    admin_engine = create_engine(
+        _admin_database_url(_parsed_test_database_url),
+        isolation_level="AUTOCOMMIT",
+    )
+    quoted_name = admin_engine.dialect.identifier_preparer.quote(_WORKER_DATABASE_NAME)
+    try:
+        with admin_engine.connect() as connection:
+            connection.exec_driver_sql(f"DROP DATABASE IF EXISTS {quoted_name} WITH (FORCE)")
+    finally:
+        admin_engine.dispose()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def database_schema():
+    _create_worker_database()
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
-    with get_session_context() as session:
-        seed_demo_data(session)
     yield
     Base.metadata.drop_all(bind=engine)
     engine.dispose()
+    _drop_worker_database()
+
+
+def _clear_database() -> None:
+    with engine.begin() as connection:
+        for table in reversed(Base.metadata.sorted_tables):
+            connection.execute(table.delete())
+
+
+@pytest.fixture(autouse=True)
+def reset_db(database_schema):
+    del database_schema
+    limiter.reset()
+    _clear_database()
+    with get_session_context() as session:
+        seed_demo_data(session)
+    yield
+    _clear_database()
 
 
 @pytest.fixture()

@@ -7,4 +7,5 @@ mypy
 pip-audit
 pre-commit
 pytest
+pytest-xdist
 ruff
