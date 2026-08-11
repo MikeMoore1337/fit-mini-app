@@ -151,15 +151,11 @@ body.landing-mode #root {
 }
 
 .landing-brand__mark {
-  display: inline-grid;
-  place-items: center;
+  display: block;
   width: 36px;
   height: 36px;
   border-radius: 11px;
-  background: var(--landing-dark);
-  color: var(--landing-green);
-  font-size: 0.72rem;
-  letter-spacing: -0.04em;
+  object-fit: cover;
 }
 
 .landing-nav {

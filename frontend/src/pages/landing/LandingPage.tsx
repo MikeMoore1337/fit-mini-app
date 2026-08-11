@@ -98,9 +98,13 @@ export default function LandingPage() {
     <div className={`landing-page landing-page--${theme}`}>
       <header className="landing-header">
         <a className="landing-brand" href="#top" aria-label="Your Fitness Coach — на главную">
-          <span className="landing-brand__mark" aria-hidden="true">
-            YF
-          </span>
+          <img
+            className="landing-brand__mark"
+            src="/fitness-logo.png"
+            alt=""
+            width="36"
+            height="36"
+          />
           <span>Your Fitness Coach</span>
         </a>
         <nav className="landing-nav" aria-label="Навигация по странице">
@@ -278,9 +282,13 @@ export default function LandingPage() {
 
       <footer className="landing-footer">
         <a className="landing-brand" href="#top">
-          <span className="landing-brand__mark" aria-hidden="true">
-            YF
-          </span>
+          <img
+            className="landing-brand__mark"
+            src="/fitness-logo.png"
+            alt=""
+            width="36"
+            height="36"
+          />
           <span>Your Fitness Coach</span>
         </a>
         <p>Персональные тренировки и связь с тренером в единой системе.</p>
