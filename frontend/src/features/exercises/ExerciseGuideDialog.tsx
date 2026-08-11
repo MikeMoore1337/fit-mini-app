@@ -47,28 +47,40 @@ export function ExerciseGuideDialog({
             />
           )}
           {guide.data && (
-            <div className="exercise-guide-notes">
-              <section className="exercise-guide-note">
-                <h3>Техника выполнения</h3>
-                <ol>
-                  {guide.data.technique_steps.map((step) => (
-                    <li key={step}>{step}</li>
-                  ))}
-                </ol>
-              </section>
-              <section className="exercise-guide-note">
-                <h3>Дыхание</h3>
-                <p>{guide.data.breathing}</p>
-              </section>
-              <section className="exercise-guide-note exercise-guide-note--warning">
-                <h3>Частые ошибки</h3>
-                <ul>
-                  {guide.data.common_mistakes.map((mistake) => (
-                    <li key={mistake}>{mistake}</li>
-                  ))}
-                </ul>
-              </section>
-            </div>
+            <>
+              <div className="exercise-guide-images">
+                {guide.data.images.map((image) => (
+                  <figure className="exercise-guide-image" key={image.url}>
+                    <div className="exercise-guide-image__frame">
+                      <img src={image.url} alt={image.alt} />
+                    </div>
+                    <figcaption>{image.phase}</figcaption>
+                  </figure>
+                ))}
+              </div>
+              <div className="exercise-guide-notes">
+                <section className="exercise-guide-note">
+                  <h3>Техника выполнения</h3>
+                  <ol>
+                    {guide.data.technique_steps.map((step) => (
+                      <li key={step}>{step}</li>
+                    ))}
+                  </ol>
+                </section>
+                <section className="exercise-guide-note">
+                  <h3>Дыхание</h3>
+                  <p>{guide.data.breathing}</p>
+                </section>
+                <section className="exercise-guide-note exercise-guide-note--warning">
+                  <h3>Частые ошибки</h3>
+                  <ul>
+                    {guide.data.common_mistakes.map((mistake) => (
+                      <li key={mistake}>{mistake}</li>
+                    ))}
+                  </ul>
+                </section>
+              </div>
+            </>
           )}
         </div>
       </div>
