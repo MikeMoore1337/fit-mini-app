@@ -6,7 +6,7 @@ export default function NotFoundPage() {
     <main className="container">
       <Card title="Страница не найдена">
         <AppLink className="button-link" to="/app">
-          Вернуться в FitMiniApp
+          Вернуться в Your Fitness Coach
         </AppLink>
       </Card>
     </main>

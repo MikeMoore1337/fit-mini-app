@@ -59,7 +59,7 @@ export default function MiniAppPage() {
       <div className="page-stack">
         <header className="card hero-card">
           <div>
-            <span className="eyebrow">FitMiniApp</span>
+            <span className="eyebrow">Your Fitness Coach</span>
             <h1>{user?.profile?.full_name || user?.first_name || 'Мой фитнес'}</h1>
             <p className="muted">Тренировки, питание и прогресс в одном месте.</p>
           </div>

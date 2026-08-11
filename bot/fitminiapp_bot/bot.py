@@ -183,7 +183,7 @@ def web_app_keyboard(url: str) -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="Открыть FitMiniApp",
+                    text="Открыть Your Fitness Coach",
                     web_app=WebAppInfo(url=url),
                 )
             ]
@@ -292,7 +292,7 @@ async def set_mini_app_menu_button(bot: Bot, chat_id: int | None = None) -> bool
         await bot.set_chat_menu_button(
             chat_id=chat_id,
             menu_button=MenuButtonWebApp(
-                text="Открыть FitMiniApp",
+                text="Открыть Your Fitness Coach",
                 web_app=WebAppInfo(url=url),
             ),
         )
@@ -312,7 +312,7 @@ async def answer_with_open_button(message: Message) -> None:
     if is_https_url(url):
         try:
             await message.answer(
-                "Открой FitMiniApp кнопкой ниже.",
+                "Открой Your Fitness Coach кнопкой ниже.",
                 reply_markup=web_app_keyboard(url),
             )
             return
@@ -325,7 +325,8 @@ async def answer_with_open_button(message: Message) -> None:
         logger.error("frontend_url_invalid")
 
     await message.answer(
-        "Кнопка FitMiniApp временно недоступна. Попробуйте открыть приложение через меню бота позже."
+        "Кнопка Your Fitness Coach временно недоступна. "
+        "Попробуйте открыть приложение через меню бота позже."
     )
 
 
@@ -336,7 +337,7 @@ async def start(message: Message) -> None:
         chat_id=message.from_user.id if message.from_user else None,
     )
     if menu_button_ok:
-        await message.answer("Кнопка FitMiniApp закреплена внизу. Часовой пояс: /timezone")
+        await message.answer("Кнопка Your Fitness Coach закреплена внизу. Часовой пояс: /timezone")
         return
 
     await answer_with_open_button(message)

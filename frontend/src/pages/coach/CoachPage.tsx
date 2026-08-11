@@ -360,7 +360,7 @@ export default function CoachPage() {
                             void navigator
                               .share({
                                 title: 'Приглашение тренера',
-                                text: 'Откройте FitMiniApp и подтвердите подключение к тренеру.',
+                                text: 'Откройте Your Fitness Coach и подтвердите подключение к тренеру.',
                                 url: inviteLink.url ?? undefined,
                               })
                               .catch(() => undefined)
