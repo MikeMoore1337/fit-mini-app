@@ -9,6 +9,7 @@ import { dateInputValue, detectedTimeZone } from '../../shared/dateTime';
 import { useModalA11y } from '../../shared/ui/useModalA11y';
 import { ExerciseGuideDialog } from '../exercises/ExerciseGuideDialog';
 import { ProgramBuilder } from './ProgramBuilder';
+import { shouldSaveTemplateAsCopy } from './templateEditing';
 
 const goalLabels: Record<string, string> = {
   muscle_gain: 'Набор мышечной массы',
@@ -54,6 +55,7 @@ export function TemplatesList() {
   const [selectedExample, setSelectedExample] = useState<ProgramTemplate | null>(null);
   const [guide, setGuide] = useState<{ id: number; title: string } | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<ProgramTemplate | null>(null);
+  const [saveAsCopy, setSaveAsCopy] = useState(false);
   const [assignmentTemplate, setAssignmentTemplate] = useState<ProgramTemplate | null>(null);
   const defaultStartDate = dateInputValue(
     new Date(),
@@ -200,15 +202,16 @@ export function TemplatesList() {
                   </button>
                 )}
                 <div className="list-row__actions">
-                  {item.can_edit && !item.is_example && (
-                    <button
-                      type="button"
-                      className="secondary"
-                      onClick={() => setEditingTemplate(item)}
-                    >
-                      Редактировать
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => {
+                      setSaveAsCopy(shouldSaveTemplateAsCopy(item));
+                      setEditingTemplate(item);
+                    }}
+                  >
+                    {shouldSaveTemplateAsCopy(item) ? 'Редактировать копию' : 'Редактировать'}
+                  </button>
                   {!item.is_active_for_current_user && (
                     <button
                       onClick={() => {
@@ -485,7 +488,7 @@ export function TemplatesList() {
           className="modal"
           role="dialog"
           aria-modal="true"
-          aria-label={`Редактирование программы «${editingTemplate.title}»`}
+          aria-label={`${saveAsCopy ? 'Создание копии' : 'Редактирование'} программы «${editingTemplate.title}»`}
         >
           <button
             type="button"
@@ -495,7 +498,9 @@ export function TemplatesList() {
           />
           <div className="modal__panel assignment-modal">
             <div className="section-head">
-              <strong>Редактирование программы</strong>
+              <strong>
+                {saveAsCopy ? 'Редактирование личной копии' : 'Редактирование программы'}
+              </strong>
               <button
                 type="button"
                 className="secondary"
@@ -507,6 +512,7 @@ export function TemplatesList() {
             </div>
             <ProgramBuilder
               editingTemplate={editingTemplate}
+              saveAsCopy={saveAsCopy}
               onSaved={() => setEditingTemplate(null)}
             />
           </div>

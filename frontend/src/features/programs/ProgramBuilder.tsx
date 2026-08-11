@@ -11,12 +11,13 @@ import { useAuth } from '../../app/AuthProvider';
 import { dateInputValue, detectedTimeZone } from '../../shared/dateTime';
 import { applyRestSeconds } from './programRest';
 import { ExerciseGuideDialog } from '../exercises/ExerciseGuideDialog';
+import { scheduleWeekdaysForSave, templateDraftTitle } from './templateEditing';
 
 type Day = ProgramTemplateCreate['days'][number];
 type ProgramTemplateAssignmentCreate = ProgramTemplateCreate & {
   start_date: string;
   duration_weeks: number;
-  schedule_weekdays: number[];
+  schedule_weekdays: number[] | null;
   replace_active: boolean;
 };
 const blankExercise = (restSeconds = 90): Day['exercises'][number] => ({
@@ -148,6 +149,7 @@ function ExercisePicker({
                     {exercise.equipment || 'Без оборудования'}
                   </small>
                   <span className="badge">{difficultyLabels[exercise.difficulty_level]}</span>
+                  {exercise.is_custom && <span className="badge">Своё</span>}
                 </span>
               </button>
             ))
@@ -164,24 +166,26 @@ export function ProgramBuilder({
   targetTelegramId,
   targetName,
   editingTemplate,
+  saveAsCopy = false,
   onSaved,
 }: {
   targetTelegramId?: number | null;
   targetName?: string | null;
   editingTemplate?: ProgramTemplate | null;
+  saveAsCopy?: boolean;
   onSaved?: () => void;
 }) {
   const { toast, confirm } = useFeedback();
   const { user, reloadUser } = useAuth();
   const queryClient = useQueryClient();
   const draftScope = editingTemplate
-    ? `template_${editingTemplate.id}`
+    ? `template_${saveAsCopy ? 'copy_' : ''}${editingTemplate.id}`
     : targetTelegramId
       ? `client_${targetTelegramId}`
       : `user_${user?.id ?? 'me'}`;
   const [title, setTitle, clearTitleDraft] = usePersistentState(
     `fit_program_title_${draftScope}`,
-    editingTemplate?.title ?? 'Персональная программа',
+    editingTemplate ? templateDraftTitle(editingTemplate, saveAsCopy) : 'Персональная программа',
   );
   const [goal, setGoal, clearGoalDraft] = usePersistentState<ProgramTemplateCreate['goal']>(
     `fit_program_goal_${draftScope}`,
@@ -238,48 +242,54 @@ export function ProgramBuilder({
   const scheduleOffsets = effectiveScheduleWeekdays.map(
     (weekday) => (weekday - (effectiveScheduleWeekdays[0] ?? weekday) + 7) % 7,
   );
+  const usesSequentialCycle = days.length > 7;
   const scheduleIsValid =
-    days.length <= 7 &&
-    effectiveScheduleWeekdays.length === days.length &&
-    new Set(effectiveScheduleWeekdays).size === effectiveScheduleWeekdays.length &&
-    scheduleOffsets.every((offset, index) => index === 0 || offset > scheduleOffsets[index - 1]!);
+    usesSequentialCycle ||
+    (effectiveScheduleWeekdays.length === days.length &&
+      new Set(effectiveScheduleWeekdays).size === effectiveScheduleWeekdays.length &&
+      scheduleOffsets.every(
+        (offset, index) => index === 0 || offset > scheduleOffsets[index - 1]!,
+      ));
+  const updateTemplatePath =
+    editingTemplate && !saveAsCopy ? `/api/v1/programs/templates/${editingTemplate.id}` : null;
 
   const mutation = useMutation({
     mutationFn: ({ replaceActive }: { replaceActive: boolean }) =>
-      api(
-        editingTemplate
-          ? `/api/v1/programs/templates/${editingTemplate.id}`
-          : '/api/v1/programs/templates',
-        {
-          method: editingTemplate ? 'PATCH' : 'POST',
-          body: {
-            title,
-            goal,
-            level,
-            mode: targetTelegramId ? 'coach' : 'self',
-            target_telegram_user_id: targetTelegramId || null,
-            target_full_name: targetName || null,
-            assign_after_create: !editingTemplate,
-            start_date: startDate,
-            duration_weeks: durationWeeks,
-            schedule_weekdays: effectiveScheduleWeekdays,
-            replace_active: replaceActive,
-            days: days.map((day) => ({
-              ...day,
-              exercises: day.exercises.filter((item) => item.exercise_id > 0),
-            })),
-          } satisfies ProgramTemplateAssignmentCreate,
-        },
-      ),
+      api(updateTemplatePath ?? '/api/v1/programs/templates', {
+        method: updateTemplatePath ? 'PATCH' : 'POST',
+        body: {
+          title,
+          goal,
+          level,
+          mode: targetTelegramId ? 'coach' : 'self',
+          target_telegram_user_id: targetTelegramId || null,
+          target_full_name: targetName || null,
+          assign_after_create: !editingTemplate,
+          start_date: startDate,
+          duration_weeks: durationWeeks,
+          schedule_weekdays: scheduleWeekdaysForSave(days.length, effectiveScheduleWeekdays),
+          replace_active: replaceActive,
+          days: days.map((day) => ({
+            ...day,
+            exercises: day.exercises.filter((item) => item.exercise_id > 0),
+          })),
+        } satisfies ProgramTemplateAssignmentCreate,
+      }),
     onSuccess: async () => {
       toast(
-        editingTemplate
-          ? 'Изменения программы сохранены'
-          : targetTelegramId
-            ? 'Программа создана и назначена'
-            : 'Программа создана',
+        saveAsCopy
+          ? 'Личная копия программы создана'
+          : editingTemplate
+            ? 'Изменения программы сохранены'
+            : targetTelegramId
+              ? 'Программа создана и назначена'
+              : 'Программа создана',
       );
-      clearTitleDraft(editingTemplate?.title ?? 'Персональная программа');
+      clearTitleDraft(
+        editingTemplate
+          ? templateDraftTitle(editingTemplate, saveAsCopy)
+          : 'Персональная программа',
+      );
       clearGoalDraft(
         (editingTemplate?.goal as ProgramTemplateCreate['goal'] | undefined) ?? 'maintenance',
       );
@@ -366,7 +376,9 @@ export function ProgramBuilder({
       title="Конструктор программы"
       description={
         editingTemplate
-          ? `Редактирование «${editingTemplate.title}»`
+          ? saveAsCopy
+            ? `Настройте личную копию «${editingTemplate.title}»`
+            : `Редактирование «${editingTemplate.title}»`
           : targetTelegramId
             ? `Назначение для ${targetName || targetTelegramId}`
             : 'Создайте программу для себя.'
@@ -395,6 +407,12 @@ export function ProgramBuilder({
             mutation.mutate({ replaceActive });
           }}
         >
+          {saveAsCopy && (
+            <p className="auth-notice">
+              Исходный готовый шаблон останется без изменений. После сохранения появится личная
+              копия, в которой можно использовать свои упражнения.
+            </p>
+          )}
           <div className="form-grid">
             <label className="field">
               <span>Название</span>
@@ -459,29 +477,36 @@ export function ProgramBuilder({
                 />
               </label>
             </div>
-            <div className="form-grid">
-              {days.map((day, dayIndex) => (
-                <label className="field" key={`schedule-${dayIndex}`}>
-                  <span>{day.title || `День ${dayIndex + 1}`}</span>
-                  <select
-                    value={effectiveScheduleWeekdays[dayIndex] ?? ''}
-                    onChange={(event) =>
-                      setScheduleWeekdays(
-                        effectiveScheduleWeekdays.map((value, index) =>
-                          index === dayIndex ? Number(event.target.value) : value,
-                        ),
-                      )
-                    }
-                  >
-                    {weekdayLabels.map((label, weekday) => (
-                      <option value={weekday} key={label}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ))}
-            </div>
+            {usesSequentialCycle ? (
+              <p className="muted">
+                Восьмидневный цикл планируется последовательно и автоматически повторяется после
+                восьмого дня.
+              </p>
+            ) : (
+              <div className="form-grid">
+                {days.map((day, dayIndex) => (
+                  <label className="field" key={`schedule-${dayIndex}`}>
+                    <span>{day.title || `День ${dayIndex + 1}`}</span>
+                    <select
+                      value={effectiveScheduleWeekdays[dayIndex] ?? ''}
+                      onChange={(event) =>
+                        setScheduleWeekdays(
+                          effectiveScheduleWeekdays.map((value, index) =>
+                            index === dayIndex ? Number(event.target.value) : value,
+                          ),
+                        )
+                      }
+                    >
+                      {weekdayLabels.map((label, weekday) => (
+                        <option value={weekday} key={label}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+              </div>
+            )}
             {!scheduleIsValid && (
               <p className="field-error" role="alert">
                 Выберите разные дни недели в порядке тренировок. После воскресенья можно продолжить
@@ -700,7 +725,7 @@ export function ProgramBuilder({
             </div>
           ))}
           <div className="toolbar wrap">
-            {days.length < 7 ? (
+            {days.length < 8 ? (
               <button
                 type="button"
                 className="secondary"
@@ -717,7 +742,7 @@ export function ProgramBuilder({
                 Добавить день
               </button>
             ) : (
-              <span className="muted">В недельном расписании максимум 7 тренировочных дней.</span>
+              <span className="muted">В одном цикле максимум 8 тренировочных дней.</span>
             )}
             <button
               disabled={
@@ -730,11 +755,13 @@ export function ProgramBuilder({
             >
               {mutation.isPending
                 ? 'Сохраняем…'
-                : editingTemplate
-                  ? 'Сохранить изменения'
-                  : targetTelegramId
-                    ? 'Создать и назначить'
-                    : 'Создать программу'}
+                : saveAsCopy
+                  ? 'Сохранить личную копию'
+                  : editingTemplate
+                    ? 'Сохранить изменения'
+                    : targetTelegramId
+                      ? 'Создать и назначить'
+                      : 'Создать программу'}
             </button>
           </div>
         </form>
