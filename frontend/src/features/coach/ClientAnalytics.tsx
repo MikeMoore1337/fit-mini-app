@@ -1,15 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type { WorkoutProgress, WorkoutTimelineItem } from '../../shared/api/types';
+import { workoutStatusLabel } from '../../shared/statusLabels';
 import { Badge, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
-
-const statusLabels: Record<string, string> = {
-  planned: 'По плану',
-  in_progress: 'В процессе',
-  completed: 'Завершена',
-  skipped: 'Пропущена',
-  cancelled: 'Отменена',
-};
 
 function formatDate(value: string): string {
   return new Date(`${value}T12:00:00`).toLocaleDateString('ru-RU', {
@@ -113,7 +106,7 @@ export function ClientAnalytics({ clientId }: { clientId: number }) {
                       {Math.round(workout.volume_kg)} кг
                     </small>
                   </span>
-                  <Badge>{statusLabels[workout.status] ?? workout.status}</Badge>
+                  <Badge>{workoutStatusLabel(workout.status)}</Badge>
                 </summary>
                 <div className="stack top-gap">
                   {!workout.exercises.length ? (
