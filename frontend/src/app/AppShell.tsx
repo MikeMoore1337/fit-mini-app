@@ -1,4 +1,5 @@
 import { AppLink, useNavigation } from '../shared/navigation/router';
+import { AppThemeToggle } from '../shared/ui/AppThemeToggle';
 import { useAuth } from './AuthProvider';
 
 export function AppShell({
@@ -66,6 +67,7 @@ export function AppShell({
               <span className="app-bottom-nav__label">Админ</span>
             </AppLink>
           )}
+          <AppThemeToggle navigation />
           <div className="app-bottom-nav__account">
             <span className="app-bottom-nav__avatar" aria-hidden="true">
               {displayName.charAt(0).toLocaleUpperCase('ru-RU')}
