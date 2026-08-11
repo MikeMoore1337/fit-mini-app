@@ -49,7 +49,7 @@ markupsafe==3.0.3
     # via mako
 msgpack==1.2.1
     # via -r backend/requirements.in
-packaging==26.2
+packaging==26.3
     # via limits
 pillow==12.3.0
     # via qrcode
