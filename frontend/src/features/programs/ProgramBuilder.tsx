@@ -1,7 +1,7 @@
 import { useId, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../shared/api/client';
-import type { Exercise, ProgramTemplateCreate } from '../../shared/api/types';
+import type { Exercise, ProgramTemplate, ProgramTemplateCreate } from '../../shared/api/types';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Card, LoadingState } from '../../shared/ui/common';
 import { difficultyLabels, orderExercisesForLevel } from './exerciseOrdering';
@@ -163,29 +163,46 @@ function ExercisePicker({
 export function ProgramBuilder({
   targetTelegramId,
   targetName,
+  editingTemplate,
+  onSaved,
 }: {
   targetTelegramId?: number | null;
   targetName?: string | null;
+  editingTemplate?: ProgramTemplate | null;
+  onSaved?: () => void;
 }) {
   const { toast, confirm } = useFeedback();
   const { user, reloadUser } = useAuth();
   const queryClient = useQueryClient();
-  const draftScope = targetTelegramId ? `client_${targetTelegramId}` : `user_${user?.id ?? 'me'}`;
+  const draftScope = editingTemplate
+    ? `template_${editingTemplate.id}`
+    : targetTelegramId
+      ? `client_${targetTelegramId}`
+      : `user_${user?.id ?? 'me'}`;
   const [title, setTitle, clearTitleDraft] = usePersistentState(
     `fit_program_title_${draftScope}`,
-    'Персональная программа',
+    editingTemplate?.title ?? 'Персональная программа',
   );
   const [goal, setGoal, clearGoalDraft] = usePersistentState<ProgramTemplateCreate['goal']>(
     `fit_program_goal_${draftScope}`,
-    'maintenance',
+    (editingTemplate?.goal as ProgramTemplateCreate['goal'] | undefined) ?? 'maintenance',
   );
   const [level, setLevel, clearLevelDraft] = usePersistentState<ProgramTemplateCreate['level']>(
     `fit_program_level_${draftScope}`,
-    'beginner',
+    (editingTemplate?.level as ProgramTemplateCreate['level'] | undefined) ?? 'beginner',
   );
   const [days, setDays, clearDaysDraft] = usePersistentState<Day[]>(
     `fit_program_days_${draftScope}`,
-    [blankDay(1)],
+    editingTemplate?.days.map((day) => ({
+      title: day.title,
+      exercises: day.exercises.map((exercise) => ({
+        exercise_id: exercise.exercise_id,
+        prescribed_sets: exercise.prescribed_sets,
+        prescribed_reps: exercise.prescribed_reps,
+        rest_seconds: exercise.rest_seconds,
+        notes: exercise.notes,
+      })),
+    })) ?? [blankDay(1)],
   );
   const [defaultRestSeconds, setDefaultRestSeconds, clearDefaultRestDraft] = usePersistentState(
     `fit_program_rest_${draftScope}`,
@@ -229,31 +246,46 @@ export function ProgramBuilder({
 
   const mutation = useMutation({
     mutationFn: ({ replaceActive }: { replaceActive: boolean }) =>
-      api('/api/v1/programs/templates', {
-        method: 'POST',
-        body: {
-          title,
-          goal,
-          level,
-          mode: targetTelegramId ? 'coach' : 'self',
-          target_telegram_user_id: targetTelegramId || null,
-          target_full_name: targetName || null,
-          assign_after_create: true,
-          start_date: startDate,
-          duration_weeks: durationWeeks,
-          schedule_weekdays: effectiveScheduleWeekdays,
-          replace_active: replaceActive,
-          days: days.map((day) => ({
-            ...day,
-            exercises: day.exercises.filter((item) => item.exercise_id > 0),
-          })),
-        } satisfies ProgramTemplateAssignmentCreate,
-      }),
+      api(
+        editingTemplate
+          ? `/api/v1/programs/templates/${editingTemplate.id}`
+          : '/api/v1/programs/templates',
+        {
+          method: editingTemplate ? 'PATCH' : 'POST',
+          body: {
+            title,
+            goal,
+            level,
+            mode: targetTelegramId ? 'coach' : 'self',
+            target_telegram_user_id: targetTelegramId || null,
+            target_full_name: targetName || null,
+            assign_after_create: !editingTemplate,
+            start_date: startDate,
+            duration_weeks: durationWeeks,
+            schedule_weekdays: effectiveScheduleWeekdays,
+            replace_active: replaceActive,
+            days: days.map((day) => ({
+              ...day,
+              exercises: day.exercises.filter((item) => item.exercise_id > 0),
+            })),
+          } satisfies ProgramTemplateAssignmentCreate,
+        },
+      ),
     onSuccess: async () => {
-      toast(targetTelegramId ? 'Программа создана и назначена' : 'Программа создана');
-      clearTitleDraft('Персональная программа');
-      clearGoalDraft('maintenance');
-      clearLevelDraft('beginner');
+      toast(
+        editingTemplate
+          ? 'Изменения программы сохранены'
+          : targetTelegramId
+            ? 'Программа создана и назначена'
+            : 'Программа создана',
+      );
+      clearTitleDraft(editingTemplate?.title ?? 'Персональная программа');
+      clearGoalDraft(
+        (editingTemplate?.goal as ProgramTemplateCreate['goal'] | undefined) ?? 'maintenance',
+      );
+      clearLevelDraft(
+        (editingTemplate?.level as ProgramTemplateCreate['level'] | undefined) ?? 'beginner',
+      );
       clearDaysDraft([blankDay(1)]);
       clearDefaultRestDraft(90);
       clearStartDateDraft(defaultStartDate);
@@ -265,6 +297,7 @@ export function ProgramBuilder({
         queryClient.invalidateQueries({ queryKey: ['coach', 'programs'] }),
         reloadUser(),
       ]);
+      onSaved?.();
     },
     onError: async (reason, variables) => {
       if (
@@ -332,9 +365,11 @@ export function ProgramBuilder({
     <Card
       title="Конструктор программы"
       description={
-        targetTelegramId
-          ? `Назначение для ${targetName || targetTelegramId}`
-          : 'Создайте программу для себя.'
+        editingTemplate
+          ? `Редактирование «${editingTemplate.title}»`
+          : targetTelegramId
+            ? `Назначение для ${targetName || targetTelegramId}`
+            : 'Создайте программу для себя.'
       }
     >
       {exercises.isLoading ? (
@@ -346,6 +381,7 @@ export function ProgramBuilder({
             e.preventDefault();
             let replaceActive = false;
             if (
+              !editingTemplate &&
               user?.has_active_program &&
               !(await confirm({
                 title: 'Заменить активную программу?',
@@ -694,9 +730,11 @@ export function ProgramBuilder({
             >
               {mutation.isPending
                 ? 'Сохраняем…'
-                : targetTelegramId
-                  ? 'Создать и назначить'
-                  : 'Создать программу'}
+                : editingTemplate
+                  ? 'Сохранить изменения'
+                  : targetTelegramId
+                    ? 'Создать и назначить'
+                    : 'Создать программу'}
             </button>
           </div>
         </form>

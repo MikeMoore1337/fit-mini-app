@@ -8,6 +8,7 @@ import { useAuth } from '../../app/AuthProvider';
 import { dateInputValue, detectedTimeZone } from '../../shared/dateTime';
 import { useModalA11y } from '../../shared/ui/useModalA11y';
 import { ExerciseGuideDialog } from '../exercises/ExerciseGuideDialog';
+import { ProgramBuilder } from './ProgramBuilder';
 
 const goalLabels: Record<string, string> = {
   muscle_gain: 'Набор мышечной массы',
@@ -51,6 +52,7 @@ export function TemplatesList() {
   const queryClient = useQueryClient();
   const [selectedExample, setSelectedExample] = useState<ProgramTemplate | null>(null);
   const [guide, setGuide] = useState<{ id: number; title: string } | null>(null);
+  const [editingTemplate, setEditingTemplate] = useState<ProgramTemplate | null>(null);
   const [assignmentTemplate, setAssignmentTemplate] = useState<ProgramTemplate | null>(null);
   const defaultStartDate = dateInputValue(
     new Date(),
@@ -195,6 +197,15 @@ export function TemplatesList() {
                   </button>
                 )}
                 <div className="list-row__actions">
+                  {item.can_edit && !item.is_example && (
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() => setEditingTemplate(item)}
+                    >
+                      Редактировать
+                    </button>
+                  )}
                   {!item.is_active_for_current_user && (
                     <button
                       onClick={() => {
@@ -458,6 +469,38 @@ export function TemplatesList() {
           exerciseTitle={guide.title}
           onClose={() => setGuide(null)}
         />
+      )}
+      {editingTemplate && (
+        <div
+          className="modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Редактирование программы «${editingTemplate.title}»`}
+        >
+          <button
+            type="button"
+            className="modal__backdrop"
+            aria-label="Закрыть редактирование"
+            onClick={() => setEditingTemplate(null)}
+          />
+          <div className="modal__panel assignment-modal">
+            <div className="section-head">
+              <strong>Редактирование программы</strong>
+              <button
+                type="button"
+                className="secondary"
+                aria-label="Закрыть редактирование"
+                onClick={() => setEditingTemplate(null)}
+              >
+                ×
+              </button>
+            </div>
+            <ProgramBuilder
+              editingTemplate={editingTemplate}
+              onSaved={() => setEditingTemplate(null)}
+            />
+          </div>
+        </div>
       )}
     </>
   );

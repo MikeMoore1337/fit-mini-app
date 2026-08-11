@@ -52,6 +52,7 @@ def _serialize_template_with_context(
     owners: dict[int, User],
     assignments: dict[int, UserProgram],
     assigners: dict[int, User],
+    can_edit: bool,
 ) -> dict:
     owner = owners.get(item.owner_user_id) if item.owner_user_id else None
     assignment = assignments.get(item.id)
@@ -75,6 +76,7 @@ def _serialize_template_with_context(
         "is_example": _is_example_template(item),
         "is_assigned_to_current_user": assignment is not None,
         "is_active_for_current_user": bool(assignment and assignment.is_active),
+        "can_edit": can_edit,
         "assigned_by_user_id": assignment.assigned_by_user_id if assignment else None,
         "assigned_by_full_name": (
             assigned_by.profile.full_name if assigned_by and assigned_by.profile else None
@@ -166,6 +168,7 @@ def build_template_responses(
             owners=owners,
             assignments=assignments,
             assigners=assigners,
+            can_edit=_can_manage_template(db, current_user, item),
         )
         for item in items
     ]
