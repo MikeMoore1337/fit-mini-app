@@ -56,6 +56,7 @@ class ProgramTemplateExerciseResponse(BaseModel):
     prescribed_reps: str
     rest_seconds: int
     notes: str | None = None
+    has_guide: bool = False
 
 
 class ProgramTemplateDayResponse(BaseModel):

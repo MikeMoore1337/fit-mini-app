@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../shared/api/client';
-import type { ExerciseGuide, Workout } from '../../shared/api/types';
+import type { Workout } from '../../shared/api/types';
 import { haptic } from '../../shared/telegram/useTelegram';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Badge, Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
 import { readStorage, removeStorage, writeStorage } from '../../shared/storage';
-import { useModalA11y } from '../../shared/ui/useModalA11y';
+import { ExerciseGuideDialog } from '../exercises/ExerciseGuideDialog';
 
 type WorkoutSet = Workout['exercises'][number]['sets'][number];
 
@@ -261,78 +261,6 @@ function RestTimer({ workoutId }: { workoutId: number }) {
   );
 }
 
-function WorkoutExerciseGuide({
-  exerciseId,
-  exerciseTitle,
-  onClose,
-}: {
-  exerciseId: number;
-  exerciseTitle: string;
-  onClose: () => void;
-}) {
-  const panelRef = useModalA11y<HTMLDivElement>(true, onClose);
-  const guide = useQuery({
-    queryKey: ['exercises', exerciseId, 'guide'],
-    queryFn: () => api<ExerciseGuide>(`/api/v1/programs/exercises/${exerciseId}/guide`),
-  });
-  return (
-    <div className="modal" role="dialog" aria-modal="true" aria-labelledby="workout-guide-title">
-      <button
-        type="button"
-        className="modal__backdrop"
-        aria-label="Закрыть технику"
-        onClick={onClose}
-      />
-      <div className="modal__panel card exercise-guide-modal__panel" ref={panelRef} tabIndex={-1}>
-        <div className="exercise-guide-modal__head">
-          <div>
-            <span className="eyebrow">Техника упражнения</span>
-            <h2 className="modal__title" id="workout-guide-title">
-              {exerciseTitle}
-            </h2>
-          </div>
-          <button className="secondary" aria-label="Закрыть технику" onClick={onClose}>
-            ×
-          </button>
-        </div>
-        <div className="exercise-guide-modal__body">
-          {guide.isLoading && <LoadingState />}
-          {guide.error && (
-            <ErrorState
-              message={(guide.error as Error).message}
-              retry={() => void guide.refetch()}
-            />
-          )}
-          {guide.data && (
-            <div className="exercise-guide-notes">
-              <section className="exercise-guide-note">
-                <h3>Техника выполнения</h3>
-                <ol>
-                  {guide.data.technique_steps.map((step) => (
-                    <li key={step}>{step}</li>
-                  ))}
-                </ol>
-              </section>
-              <section className="exercise-guide-note">
-                <h3>Дыхание</h3>
-                <p>{guide.data.breathing}</p>
-              </section>
-              <section className="exercise-guide-note exercise-guide-note--warning">
-                <h3>Частые ошибки</h3>
-                <ul>
-                  {guide.data.common_mistakes.map((mistake) => (
-                    <li key={mistake}>{mistake}</li>
-                  ))}
-                </ul>
-              </section>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function TodayWorkout() {
   const { toast, confirm } = useFeedback();
   const queryClient = useQueryClient();
@@ -508,7 +436,7 @@ export function TodayWorkout() {
       </Card>
       <RestTimer workoutId={data.id} />
       {guide && (
-        <WorkoutExerciseGuide
+        <ExerciseGuideDialog
           exerciseId={guide.id}
           exerciseTitle={guide.title}
           onClose={() => setGuide(null)}

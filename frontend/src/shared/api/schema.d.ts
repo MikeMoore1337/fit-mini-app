@@ -1895,6 +1895,11 @@ export interface components {
             rest_seconds: number;
             /** Notes */
             notes?: string | null;
+            /**
+             * Has Guide
+             * @default false
+             */
+            has_guide: boolean;
         };
         /** ProgramTemplateResponse */
         ProgramTemplateResponse: {

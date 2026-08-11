@@ -477,6 +477,7 @@ def test_coach_can_assign_existing_template_to_own_client(client):
         headers=coach_headers,
     )
     assert created.status_code == 200
+    assert created.json()["template"]["days"][0]["exercises"][0]["has_guide"] is True
     template_id = created.json()["template"]["id"]
     assignment_start = datetime.now(UTC).date() + timedelta(days=1)
 

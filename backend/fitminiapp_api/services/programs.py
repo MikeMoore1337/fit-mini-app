@@ -34,6 +34,7 @@ from fitminiapp_api.services.exercise_catalog import (
     _load_visible_exercise_rows,
     get_visible_exercise_display_map,
 )
+from fitminiapp_api.services.exercise_guides import get_exercise_guide
 from fitminiapp_api.services.program_common import ProgramError
 
 GOALS = {"muscle_gain", "fat_loss", "maintenance", "recomposition"}
@@ -96,6 +97,10 @@ def _serialize_template_with_context(
                         "prescribed_reps": ex.prescribed_reps,
                         "rest_seconds": ex.rest_seconds,
                         "notes": ex.notes,
+                        "has_guide": get_exercise_guide(
+                            visible_map.get(ex.exercise_id, ex.exercise)
+                        )
+                        is not None,
                     }
                     for ex in sorted(day.exercises, key=lambda row: row.sort_order)
                 ],
