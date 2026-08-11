@@ -12,7 +12,7 @@ _TEST_DB = ROOT / ".artifacts" / "tests" / "backend" / "fitmini_pytest.db"
 _TEST_DB.parent.mkdir(parents=True, exist_ok=True)
 _TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL") or f"sqlite:///{_TEST_DB.as_posix()}"
 os.environ.setdefault("APP_ENV", "dev")
-os.environ.setdefault("APP_NAME", "FitMiniApp Test")
+os.environ.setdefault("APP_NAME", "Your Fitness Coach Test")
 os.environ.setdefault("APP_DEBUG", "false")
 os.environ.setdefault("SECRET_KEY", "test-secret-key-at-least-thirty-two-characters")
 os.environ.setdefault("ACCESS_TOKEN_EXPIRE_MINUTES", "60")

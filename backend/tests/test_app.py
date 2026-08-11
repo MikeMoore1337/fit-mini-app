@@ -130,7 +130,7 @@ def test_production_settings_reject_placeholder_secret():
     with pytest.raises(ValidationError, match="SECRET_KEY"):
         Settings(
             app_env="prod",
-            app_name="FitMiniApp",
+            app_name="Your Fitness Coach",
             app_debug=False,
             secret_key="change-me",
             access_token_expire_minutes=60,
@@ -146,7 +146,7 @@ def test_production_settings_reject_placeholder_bot_internal_token():
     with pytest.raises(ValidationError, match="BOT_INTERNAL_TOKEN"):
         Settings(
             app_env="prod",
-            app_name="FitMiniApp",
+            app_name="Your Fitness Coach",
             app_debug=False,
             secret_key="a-production-secret-that-is-long-enough",
             access_token_expire_minutes=60,
