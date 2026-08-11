@@ -33,6 +33,7 @@ export interface PublicConfig {
   app_env: string;
   enable_dev_auth: boolean;
   enable_web_auth: boolean;
+  enable_email_auth: boolean;
   telegram_bot_username: string;
   oauth_providers: string[];
 }

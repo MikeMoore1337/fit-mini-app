@@ -72,6 +72,11 @@ def _require_web_auth() -> None:
         raise HTTPException(status_code=404, detail="Web-авторизация отключена")
 
 
+def _require_email_auth() -> None:
+    if not settings.enable_email_auth:
+        raise HTTPException(status_code=404, detail="Авторизация по email отключена")
+
+
 def _development_action_token(raw_token: str) -> str | None:
     return raw_token if settings.app_env in {"dev", "test"} else None
 
@@ -249,7 +254,7 @@ def email_register(
     payload: EmailRegisterRequest,
     db: Session = Depends(get_db),
 ) -> RegistrationResponse:
-    _require_web_auth()
+    _require_email_auth()
     existing_email = local_identity_by_email(db, payload.email)
     existing_username = (
         db.query(LocalCredential)
@@ -321,7 +326,7 @@ def verify_email(
     payload: AuthTokenRequest,
     db: Session = Depends(get_db),
 ) -> TokenPairResponse:
-    _require_web_auth()
+    _require_email_auth()
     try:
         token = consume_action_token(db, payload.token, purpose="verify_email")
     except PasswordAuthError as exc:
@@ -350,7 +355,7 @@ def email_login(
     payload: EmailLoginRequest,
     db: Session = Depends(get_db),
 ) -> TokenPairResponse:
-    _require_web_auth()
+    _require_email_auth()
     try:
         user = authenticate_local_user(db, payload.email, payload.password)
     except PasswordAuthError as exc:
@@ -365,7 +370,7 @@ def resend_verification(
     payload: EmailRequest,
     db: Session = Depends(get_db),
 ) -> MessageResponse:
-    _require_web_auth()
+    _require_email_auth()
     identity = local_identity_by_email(db, payload.email)
     raw_token: str | None = None
     if identity is not None and not identity.email_verified:
@@ -390,7 +395,7 @@ def request_password_reset(
     payload: EmailRequest,
     db: Session = Depends(get_db),
 ) -> MessageResponse:
-    _require_web_auth()
+    _require_email_auth()
     identity = local_identity_by_email(db, payload.email)
     raw_token: str | None = None
     if identity is not None and identity.email_verified:
@@ -415,7 +420,7 @@ def confirm_password_reset(
     payload: PasswordResetConfirmRequest,
     db: Session = Depends(get_db),
 ) -> MessageResponse:
-    _require_web_auth()
+    _require_email_auth()
     try:
         token = consume_action_token(db, payload.token, purpose="reset_password")
         new_hash = hash_password(payload.password)
