@@ -7,6 +7,7 @@ import { Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/comm
 import { useAuth } from '../../app/AuthProvider';
 import { dateInputValue, detectedTimeZone } from '../../shared/dateTime';
 import { usePersistentState } from '../../shared/storage';
+import { DateInput } from '../../shared/ui/PickerInput';
 
 export function Diary({
   clientId,
@@ -74,13 +75,11 @@ export function Diary({
         <div className="form-grid diary-form-grid">
           <label className="field">
             <span>Дата</span>
-            <div className="date-control diary-date-control">
-              <input
-                type="date"
-                value={form.measured_on || ''}
-                onChange={(e) => setForm({ ...form, measured_on: e.target.value })}
-              />
-            </div>
+            <DateInput
+              controlClassName="diary-date-control"
+              value={form.measured_on || ''}
+              onChange={(e) => setForm({ ...form, measured_on: e.target.value })}
+            />
           </label>
           {numeric.map((key) => (
             <label className="field" key={key}>

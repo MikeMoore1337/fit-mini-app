@@ -8,6 +8,7 @@ import { detectedTimeZone } from '../../shared/dateTime';
 import { usePersistentState } from '../../shared/storage';
 import { getTimezoneOptions } from './timezones';
 import { calculateTanakaZones } from './heartRateZones';
+import { DateInput } from '../../shared/ui/PickerInput';
 
 const emptyProfile: UserProfileUpdate = {
   full_name: '',
@@ -80,14 +81,12 @@ export function ProfileForm() {
           </label>
           <label className="field">
             <span>Дата рождения</span>
-            <div className="date-control profile-birth-date-control">
-              <input
-                type="date"
-                max={latestBirthDate.toISOString().slice(0, 10)}
-                value={form.birth_date ?? ''}
-                onChange={(event) => setForm({ ...form, birth_date: event.target.value || null })}
-              />
-            </div>
+            <DateInput
+              controlClassName="profile-birth-date-control"
+              max={latestBirthDate.toISOString().slice(0, 10)}
+              value={form.birth_date ?? ''}
+              onChange={(event) => setForm({ ...form, birth_date: event.target.value || null })}
+            />
             <small className="field-hint">Нужна для расчёта пульсовых зон по Танаки.</small>
           </label>
           <label className="field">

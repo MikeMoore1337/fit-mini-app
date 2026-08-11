@@ -10,6 +10,7 @@ import { useModalA11y } from '../../shared/ui/useModalA11y';
 import { ExerciseGuideDialog } from '../exercises/ExerciseGuideDialog';
 import { ProgramBuilder } from './ProgramBuilder';
 import { shouldSaveTemplateAsCopy } from './templateEditing';
+import { DateInput } from '../../shared/ui/PickerInput';
 
 const goalLabels: Record<string, string> = {
   muscle_gain: 'Набор мышечной массы',
@@ -400,19 +401,16 @@ export function TemplatesList() {
               <div className="form-grid">
                 <label className="field">
                   <span>Начать не раньше</span>
-                  <div className="date-control">
-                    <input
-                      type="date"
-                      min={defaultStartDate}
-                      value={assignmentStartDate}
-                      onChange={(event) => {
-                        const nextStartDate = event.target.value;
-                        setAssignmentStartDate(nextStartDate);
-                        setAssignmentWeekdays(defaultWeekdays(assignmentTemplate, nextStartDate));
-                      }}
-                      required
-                    />
-                  </div>
+                  <DateInput
+                    min={defaultStartDate}
+                    value={assignmentStartDate}
+                    onChange={(event) => {
+                      const nextStartDate = event.target.value;
+                      setAssignmentStartDate(nextStartDate);
+                      setAssignmentWeekdays(defaultWeekdays(assignmentTemplate, nextStartDate));
+                    }}
+                    required
+                  />
                 </label>
                 <label className="field">
                   <span>Длительность, недель</span>

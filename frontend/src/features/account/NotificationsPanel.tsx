@@ -8,6 +8,7 @@ import { useAuth } from '../../app/AuthProvider';
 import { addCalendarDays, dateInputValue, detectedTimeZone } from '../../shared/dateTime';
 import { usePersistentState } from '../../shared/storage';
 import { notificationStatusLabel } from '../../shared/statusLabels';
+import { DateInput } from '../../shared/ui/PickerInput';
 
 type NotificationDestination = 'today' | 'nutrition';
 
@@ -178,17 +179,15 @@ export function NotificationsPanel({
               </label>
               <label className="field">
                 <span>Дата</span>
-                <div className="date-control notification-date-control">
-                  <input
-                    type="date"
-                    min={dateInputValue(new Date(), timeZone)}
-                    value={notificationDraft.scheduledDate}
-                    onChange={(e) =>
-                      setNotificationDraft({ ...notificationDraft, scheduledDate: e.target.value })
-                    }
-                    required
-                  />
-                </div>
+                <DateInput
+                  controlClassName="notification-date-control"
+                  min={dateInputValue(new Date(), timeZone)}
+                  value={notificationDraft.scheduledDate}
+                  onChange={(e) =>
+                    setNotificationDraft({ ...notificationDraft, scheduledDate: e.target.value })
+                  }
+                  required
+                />
                 <small className="field-hint">
                   Отправка в {String(settings.data?.reminder_hour ?? 9).padStart(2, '0')}:00
                 </small>
