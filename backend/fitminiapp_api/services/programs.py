@@ -35,6 +35,7 @@ from fitminiapp_api.services.exercise_catalog import (
     get_visible_exercise_display_map,
 )
 from fitminiapp_api.services.exercise_guides import get_exercise_guide
+from fitminiapp_api.services.notifications import queue_telegram_notification
 from fitminiapp_api.services.program_common import ProgramError
 
 GOALS = {"muscle_gain", "fat_loss", "maintenance", "recomposition"}
@@ -446,6 +447,18 @@ def assign_template_to_user(
             created += 1
 
     db.flush()
+    if assigned_by.id != target_user.id:
+        queue_telegram_notification(
+            db,
+            target_user,
+            title="Назначена программа тренировок",
+            body=(
+                f"Тренер назначил вам программу «{template.title}». "
+                f"Первая тренировка — {effective_start_date:%d.%m.%Y}. "
+                "Откройте раздел «Программы», чтобы посмотреть план."
+            ),
+            dedupe_key=f"program_assignment:{user_program.id}",
+        )
     return user_program, created
 
 
@@ -727,6 +740,31 @@ def update_template_for_user(
                     notes=ex.notes,
                 )
             )
+
+    notification_users = {
+        user.id: user
+        for user in db.query(User)
+        .join(UserProgram, UserProgram.user_id == User.id)
+        .filter(
+            UserProgram.template_id == template.id,
+            UserProgram.assigned_by_user_id == current_user.id,
+            UserProgram.is_active.is_(True),
+            User.id != current_user.id,
+        )
+        .all()
+    }
+    if target_user.id != current_user.id:
+        notification_users[target_user.id] = target_user
+    for user in notification_users.values():
+        queue_telegram_notification(
+            db,
+            user,
+            title="Программа тренировок изменена",
+            body=(
+                f"Тренер обновил программу «{template.title}». "
+                "Откройте раздел «Программы», чтобы посмотреть изменения."
+            ),
+        )
 
     db.commit()
     return get_template_for_user(db, current_user, template.id)
