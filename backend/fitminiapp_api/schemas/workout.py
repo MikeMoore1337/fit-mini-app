@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, time
 
 from pydantic import BaseModel, Field
 
@@ -41,6 +41,7 @@ class WorkoutExerciseItem(BaseModel):
 class WorkoutTodayResponse(BaseModel):
     id: int
     scheduled_date: date
+    scheduled_time: time | None = None
     title: str
     status: str
     day_number: int
@@ -61,6 +62,7 @@ class WorkoutStatusResponse(BaseModel):
 class WorkoutScheduleItem(BaseModel):
     id: int
     scheduled_date: date
+    scheduled_time: time | None = None
     title: str
     status: str
     day_number: int
@@ -69,6 +71,7 @@ class WorkoutScheduleItem(BaseModel):
 
 class WorkoutRescheduleRequest(BaseModel):
     scheduled_date: date
+    scheduled_time: time | None = None
 
 
 class WorkoutFinishRequest(BaseModel):
@@ -78,6 +81,7 @@ class WorkoutFinishRequest(BaseModel):
 class WorkoutHistoryItem(BaseModel):
     id: int
     scheduled_date: date
+    scheduled_time: time | None = None
     title: str
     status: str
     started_at: datetime | None = None
@@ -141,6 +145,7 @@ class WorkoutTimelineExercise(BaseModel):
 class WorkoutTimelineItem(BaseModel):
     id: int
     scheduled_date: date
+    scheduled_time: time | None = None
     title: str
     status: str
     completed_at: datetime | None = None

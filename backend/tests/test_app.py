@@ -569,6 +569,44 @@ def test_coach_can_assign_existing_template_to_own_client(client):
             == 4
         )
 
+    workout_id = client.get("/api/v1/workouts/schedule", headers=client_headers).json()[0]["id"]
+    client_date = assignment_start + timedelta(days=1)
+    client_rescheduled = client.patch(
+        f"/api/v1/workouts/{workout_id}/schedule",
+        json={"scheduled_date": client_date.isoformat(), "scheduled_time": "18:30"},
+        headers=client_headers,
+    )
+    assert client_rescheduled.status_code == 200
+    assert client_rescheduled.json()["scheduled_time"] == "18:30:00"
+
+    coach_date = assignment_start + timedelta(days=2)
+    coach_rescheduled = client.patch(
+        f"/api/v1/coach/clients/{client_user['id']}/workouts/{workout_id}/schedule",
+        json={"scheduled_date": coach_date.isoformat(), "scheduled_time": "19:00"},
+        headers=coach_headers,
+    )
+    assert coach_rescheduled.status_code == 200
+    assert coach_rescheduled.json()["scheduled_time"] == "19:00:00"
+    with get_session_context() as db:
+        client_change_notice = (
+            db.query(Notification)
+            .filter(
+                Notification.title == "Клиент изменил тренировку",
+                Notification.user_id == created.json()["template"]["owner_user_id"],
+            )
+            .one()
+        )
+        assert "18:30" in client_change_notice.body
+        trainer_change_notice = (
+            db.query(Notification)
+            .filter(
+                Notification.title == "Тренер изменил тренировку",
+                Notification.user_id == client_user["id"],
+            )
+            .one()
+        )
+        assert "19:00" in trainer_change_notice.body
+
     assert client.get("/api/v1/coach/assigned-programs", headers=other_coach_headers).json() == []
 
 

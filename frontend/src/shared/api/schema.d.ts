@@ -450,6 +450,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/coach/clients/{client_id}/workouts/{workout_id}/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Coach Reschedule Client Workout */
+        patch: operations["coach_reschedule_client_workout_api_v1_coach_clients__client_id__workouts__workout_id__schedule_patch"];
+        trace?: never;
+    };
     "/api/v1/coach/clients/{client_id}/programs/{program_id}/exercises": {
         parameters: {
             query?: never;
@@ -2150,6 +2167,8 @@ export interface components {
              * Format: date
              */
             scheduled_date: string;
+            /** Scheduled Time */
+            scheduled_time?: string | null;
             /** Title */
             title: string;
             /** Status */
@@ -2202,6 +2221,8 @@ export interface components {
              * Format: date
              */
             scheduled_date: string;
+            /** Scheduled Time */
+            scheduled_time?: string | null;
         };
         /** WorkoutScheduleItem */
         WorkoutScheduleItem: {
@@ -2212,6 +2233,8 @@ export interface components {
              * Format: date
              */
             scheduled_date: string;
+            /** Scheduled Time */
+            scheduled_time?: string | null;
             /** Title */
             title: string;
             /** Status */
@@ -2266,6 +2289,8 @@ export interface components {
              * Format: date
              */
             scheduled_date: string;
+            /** Scheduled Time */
+            scheduled_time?: string | null;
             /** Title */
             title: string;
             /** Status */
@@ -2299,6 +2324,8 @@ export interface components {
              * Format: date
              */
             scheduled_date: string;
+            /** Scheduled Time */
+            scheduled_time?: string | null;
             /** Title */
             title: string;
             /** Status */
@@ -3159,6 +3186,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkoutTimelineItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    coach_reschedule_client_workout_api_v1_coach_clients__client_id__workouts__workout_id__schedule_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: number;
+                workout_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkoutRescheduleRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkoutScheduleItem"];
                 };
             };
             /** @description Validation Error */

@@ -2,10 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
 from fitminiapp_api.api.dependencies.auth import require_coach_or_admin
-from fitminiapp_api.core.timezone import today_for_user
+from fitminiapp_api.core.timezone import now_for_user_naive, today_for_user
 from fitminiapp_api.db.session import get_db
 from fitminiapp_api.models.program import (
     UserProgram,
+    UserWorkout,
     UserWorkoutExercise,
     UserWorkoutSet,
 )
@@ -24,6 +25,8 @@ from fitminiapp_api.schemas.workout import (
     BodyMeasurementResponse,
     BodyMeasurementSave,
     WorkoutProgressResponse,
+    WorkoutRescheduleRequest,
+    WorkoutScheduleItem,
     WorkoutTimelineItem,
 )
 from fitminiapp_api.services.analytics import build_user_progress, build_workout_timeline
@@ -35,6 +38,7 @@ from fitminiapp_api.services.coach_clients import (
     revoke_coach_invite,
 )
 from fitminiapp_api.services.exercise_catalog import _effective_exercise_id, list_exercises
+from fitminiapp_api.services.notifications import queue_telegram_notification
 from fitminiapp_api.services.nutrition import NutritionError, recalculate_nutrition_target
 from fitminiapp_api.services.profile import update_profile
 from fitminiapp_api.services.program_common import ProgramError, assignment_error_status
@@ -118,6 +122,84 @@ def coach_client_workout_timeline(
 ):
     client = _managed_client(db, current_user, client_id)
     return build_workout_timeline(db, client, limit=limit)
+
+
+@router.patch(
+    "/clients/{client_id}/workouts/{workout_id}/schedule",
+    response_model=WorkoutScheduleItem,
+)
+def coach_reschedule_client_workout(
+    client_id: int,
+    workout_id: int,
+    payload: WorkoutRescheduleRequest,
+    current_user: User = Depends(require_coach_or_admin),
+    db: Session = Depends(get_db),
+):
+    managed_client = _managed_client(db, current_user, client_id)
+    workout = (
+        db.query(UserWorkout)
+        .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
+        .filter(
+            UserWorkout.id == workout_id,
+            UserProgram.user_id == managed_client.id,
+            UserProgram.is_active.is_(True),
+        )
+        .with_for_update()
+        .first()
+    )
+    if workout is None:
+        raise HTTPException(status_code=404, detail="Тренировка клиента не найдена")
+    if workout.status != "planned":
+        raise HTTPException(
+            status_code=409,
+            detail="Перенести можно только запланированную тренировку",
+        )
+
+    now = now_for_user_naive(managed_client)
+    if payload.scheduled_date < now.date() or (
+        payload.scheduled_date == now.date()
+        and payload.scheduled_time is not None
+        and payload.scheduled_time < now.time()
+    ):
+        raise HTTPException(status_code=422, detail="Нельзя назначить дату и время в прошлом")
+
+    collision = (
+        db.query(UserWorkout.id)
+        .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
+        .filter(
+            UserProgram.user_id == managed_client.id,
+            UserProgram.is_active.is_(True),
+            UserWorkout.id != workout.id,
+            UserWorkout.scheduled_date == payload.scheduled_date,
+            UserWorkout.status.notin_({"completed", "skipped", "cancelled"}),
+        )
+        .first()
+    )
+    if collision is not None:
+        raise HTTPException(status_code=409, detail="На эту дату уже назначена тренировка")
+
+    workout.scheduled_date = payload.scheduled_date
+    workout.scheduled_time = payload.scheduled_time
+    time_text = f" в {payload.scheduled_time.strftime('%H:%M')}" if payload.scheduled_time else ""
+    queue_telegram_notification(
+        db,
+        managed_client,
+        title="Тренер изменил тренировку",
+        body=(
+            f"Тренер перенёс тренировку «{workout.title}» на "
+            f"{payload.scheduled_date:%d.%m.%Y}{time_text}."
+        ),
+    )
+    db.commit()
+    return {
+        "id": workout.id,
+        "scheduled_date": workout.scheduled_date,
+        "scheduled_time": workout.scheduled_time,
+        "title": workout.title,
+        "status": workout.status,
+        "day_number": workout.day_number,
+        "week_number": workout.week_number,
+    }
 
 
 @router.post(

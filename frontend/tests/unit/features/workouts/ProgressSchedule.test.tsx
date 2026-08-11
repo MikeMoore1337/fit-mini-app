@@ -29,6 +29,7 @@ const schedule = [
   {
     id: 42,
     scheduled_date: '2030-01-10',
+    scheduled_time: '18:30:00',
     title: 'Тренировка A',
     status: 'planned',
     day_number: 1,
@@ -80,6 +81,9 @@ describe('ProgressSchedule', () => {
 
     const input = screen.getByLabelText('Новая дата для Тренировка A');
     fireEvent.change(input, { target: { value: '2030-01-12' } });
+    fireEvent.change(screen.getByLabelText('Новое время для Тренировка A'), {
+      target: { value: '19:15' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Перенести' }));
 
     await waitFor(() =>
@@ -87,7 +91,7 @@ describe('ProgressSchedule', () => {
         '/api/v1/workouts/42/schedule',
         expect.objectContaining({
           method: 'PATCH',
-          body: JSON.stringify({ scheduled_date: '2030-01-12' }),
+          body: JSON.stringify({ scheduled_date: '2030-01-12', scheduled_time: '19:15' }),
         }),
       ),
     );

@@ -141,10 +141,11 @@ function ScheduleRow({
   item: WorkoutScheduleItem;
   minDate: string;
   pending: boolean;
-  onReschedule(date: string): void;
+  onReschedule(date: string, time: string): void;
   onSkip(): void;
 }) {
   const [scheduledDate, setScheduledDate] = useState(item.scheduled_date);
+  const [scheduledTime, setScheduledTime] = useState(item.scheduled_time?.slice(0, 5) ?? '');
   return (
     <article
       className="list-row"
@@ -155,7 +156,9 @@ function ScheduleRow({
       <div className="list-row__main">
         <strong>{item.title}</strong>
         <span className="muted">
-          {formatDate(item.scheduled_date)} · неделя {item.week_number}
+          {formatDate(item.scheduled_date)}
+          {item.scheduled_time ? ` в ${item.scheduled_time.slice(0, 5)}` : ''} · неделя{' '}
+          {item.week_number}
         </span>
         <Badge>{workoutStatusLabel(item.status)}</Badge>
       </div>
@@ -164,7 +167,7 @@ function ScheduleRow({
           className="list-row__actions"
           onSubmit={(event) => {
             event.preventDefault();
-            onReschedule(scheduledDate);
+            onReschedule(scheduledDate, scheduledTime);
           }}
         >
           <label className="field compact-field">
@@ -177,10 +180,22 @@ function ScheduleRow({
               required
             />
           </label>
+          <label className="field compact-field">
+            <span className="sr-only">Новое время для {item.title}</span>
+            <input
+              type="time"
+              value={scheduledTime}
+              onChange={(event) => setScheduledTime(event.target.value)}
+            />
+          </label>
           <button
             type="submit"
             className="secondary"
-            disabled={pending || scheduledDate === item.scheduled_date}
+            disabled={
+              pending ||
+              (scheduledDate === item.scheduled_date &&
+                scheduledTime === (item.scheduled_time?.slice(0, 5) ?? ''))
+            }
           >
             Перенести
           </button>
@@ -211,17 +226,22 @@ function SchedulePanel({
       action,
       workoutId,
       scheduledDate,
+      scheduledTime,
     }: {
       action: 'reschedule' | 'skip';
       workoutId: number;
       scheduledDate?: string;
+      scheduledTime?: string;
     }) =>
       api<WorkoutScheduleItem>(
         action === 'reschedule'
           ? `/api/v1/workouts/${workoutId}/schedule`
           : `/api/v1/workouts/${workoutId}/skip`,
         action === 'reschedule'
-          ? { method: 'PATCH', body: { scheduled_date: scheduledDate } }
+          ? {
+              method: 'PATCH',
+              body: { scheduled_date: scheduledDate, scheduled_time: scheduledTime || null },
+            }
           : { method: 'POST' },
       ),
     onSuccess: async (_item, variables) => {
@@ -254,12 +274,17 @@ function SchedulePanel({
         <div className="list-grid top-gap">
           {schedule.data.map((item) => (
             <ScheduleRow
-              key={`${item.id}-${item.scheduled_date}-${item.status}`}
+              key={`${item.id}-${item.scheduled_date}-${item.scheduled_time}-${item.status}`}
               item={item}
               minDate={today}
               pending={mutation.isPending && mutation.variables?.workoutId === item.id}
-              onReschedule={(scheduledDate) =>
-                mutation.mutate({ action: 'reschedule', workoutId: item.id, scheduledDate })
+              onReschedule={(scheduledDate, scheduledTime) =>
+                mutation.mutate({
+                  action: 'reschedule',
+                  workoutId: item.id,
+                  scheduledDate,
+                  scheduledTime,
+                })
               }
               onSkip={async () => {
                 if (
