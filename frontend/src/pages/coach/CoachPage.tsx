@@ -16,6 +16,7 @@ import { LIVE_DATA_REFETCH_INTERVAL_MS } from '../../shared/sync';
 import { usePersistentState } from '../../shared/storage';
 import { handleTabKeyDown } from '../../shared/ui/tabs';
 import { calculateTanakaZones } from '../../features/profile/heartRateZones';
+import { DateInput } from '../../shared/ui/PickerInput';
 
 type CoachTab = 'clients' | 'programs' | 'catalog';
 
@@ -116,8 +117,8 @@ function ClientProfileEditor({ client }: { client: Client }) {
         </label>
         <label className="field">
           <span>Дата рождения</span>
-          <input
-            type="date"
+          <DateInput
+            controlClassName="coach-client-birth-date-control"
             value={form.birth_date ?? ''}
             onChange={(event) => setForm({ ...form, birth_date: event.target.value || null })}
           />

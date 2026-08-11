@@ -12,6 +12,7 @@ import { dateInputValue, detectedTimeZone } from '../../shared/dateTime';
 import { applyRestSeconds } from './programRest';
 import { ExerciseGuideDialog } from '../exercises/ExerciseGuideDialog';
 import { scheduleWeekdaysForSave, templateDraftTitle } from './templateEditing';
+import { DateInput } from '../../shared/ui/PickerInput';
 
 type Day = ProgramTemplateCreate['days'][number];
 type ProgramTemplateAssignmentCreate = ProgramTemplateCreate & {
@@ -452,18 +453,15 @@ export function ProgramBuilder({
             <div className="form-grid">
               <label className="field">
                 <span>Начать не раньше</span>
-                <div className="date-control">
-                  <input
-                    type="date"
-                    min={defaultStartDate}
-                    value={startDate}
-                    onChange={(event) => {
-                      setStartDate(event.target.value);
-                      setScheduleWeekdays(scheduleForDays(days.length, event.target.value));
-                    }}
-                    required
-                  />
-                </div>
+                <DateInput
+                  min={defaultStartDate}
+                  value={startDate}
+                  onChange={(event) => {
+                    setStartDate(event.target.value);
+                    setScheduleWeekdays(scheduleForDays(days.length, event.target.value));
+                  }}
+                  required
+                />
               </label>
               <label className="field">
                 <span>Длительность, недель</span>

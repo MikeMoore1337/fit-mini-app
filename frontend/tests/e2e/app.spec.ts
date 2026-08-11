@@ -489,11 +489,22 @@ test('администратор открывает React-панель', async (
   await expect(page.getByText('Пользователи не найдены')).toBeVisible();
 });
 
-test('дата остаётся внутри анкеты клиента в кабинете тренера', async ({ page }) => {
+test('поля даты остаются внутри анкеты клиента в кабинете тренера', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await mockApi(page, { withCoachClient: true });
   await page.goto('/coach');
   await page.getByRole('button', { name: 'Тренер' }).click();
+
+  const birthDateField = page.getByLabel('Дата рождения');
+  const birthDateBox = await birthDateField.boundingBox();
+  const birthDateControlBox = await page.locator('.coach-client-birth-date-control').boundingBox();
+  expect(birthDateBox).not.toBeNull();
+  expect(birthDateControlBox).not.toBeNull();
+  expect(birthDateBox!.x).toBeGreaterThanOrEqual(birthDateControlBox!.x);
+  expect(birthDateBox!.x + birthDateBox!.width).toBeLessThanOrEqual(
+    birthDateControlBox!.x + birthDateControlBox!.width,
+  );
+
   await page.getByText('Прогресс и замеры', { exact: true }).click();
 
   const dateField = page.getByLabel('Дата', { exact: true });
