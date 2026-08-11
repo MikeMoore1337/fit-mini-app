@@ -1328,6 +1328,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/join/{invite_token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Join Coach Page */
+        get: operations["join_coach_page_join__invite_token__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1631,6 +1648,10 @@ export interface components {
             start_param: string;
             /** Url */
             url?: string | null;
+            /** Web Url */
+            web_url: string;
+            /** Telegram Url */
+            telegram_url?: string | null;
             /**
              * Expires At
              * Format: date-time
@@ -1723,6 +1744,8 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+            /** Next Path */
+            next_path?: string | null;
         };
         /** EmailRequest */
         EmailRequest: {
@@ -2707,7 +2730,9 @@ export interface operations {
     };
     oauth_start_api_v1_auth_oauth__provider__start_get: {
         parameters: {
-            query?: never;
+            query?: {
+                next?: string | null;
+            };
             header?: never;
             path: {
                 provider: string;
@@ -5178,6 +5203,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    join_coach_page_join__invite_token__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invite_token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

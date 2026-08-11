@@ -30,7 +30,10 @@ export function EmailAuthPanel() {
       if (mode === 'login') {
         await emailLogin(email, password);
       } else if (mode === 'register') {
-        await emailRegister(username, email, password);
+        const nextPath = window.location.pathname.startsWith('/join/')
+          ? window.location.pathname
+          : null;
+        await emailRegister(username, email, password, nextPath);
         setMessage('Аккаунт создан. Проверьте почту и подтвердите email.');
         setPassword('');
       } else {

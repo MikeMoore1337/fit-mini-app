@@ -328,11 +328,17 @@ def create_coach_invite_link(db: Session, coach: User) -> dict:
     db.refresh(invite)
     start_param = f"trainer_{raw_token}"
     bot_username = settings.telegram_bot_username.strip().lstrip("@")
+    telegram_url = f"https://t.me/{bot_username}?startapp={start_param}" if bot_username else None
+    web_url = f"{settings.frontend_base_url.rstrip('/')}/join/{raw_token}"
     return {
         "invite_id": invite.id,
         "code": raw_token,
         "start_param": start_param,
-        "url": f"https://t.me/{bot_username}?startapp={start_param}" if bot_username else None,
+        # Keep the legacy field for older Telegram clients while new clients
+        # prefer the universal web URL.
+        "url": telegram_url,
+        "web_url": web_url,
+        "telegram_url": telegram_url,
         "expires_at": invite.expires_at,
     }
 

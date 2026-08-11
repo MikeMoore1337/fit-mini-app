@@ -1,8 +1,9 @@
 import logging
+import re
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
@@ -172,4 +173,11 @@ def verify_email_page() -> FileResponse:
 
 @app.get("/reset-password")
 def reset_password_page() -> FileResponse:
+    return _frontend_index()
+
+
+@app.get("/join/{invite_token}")
+def join_coach_page(invite_token: str) -> FileResponse:
+    if not re.fullmatch(r"[A-Za-z0-9_-]{20,128}", invite_token):
+        raise HTTPException(status_code=404, detail="Invite not found")
     return _frontend_index()

@@ -276,7 +276,7 @@ export default function CoachPage() {
         method: 'POST',
       });
       setInviteLink(result);
-      if (result.url) await copyInvite(result.url);
+      if (result.web_url || result.url) await copyInvite(result.web_url || result.url || '');
       else toast('Приглашение создано');
     } catch (reason) {
       toast((reason as Error).message, 'error');
@@ -343,12 +343,22 @@ export default function CoachPage() {
               >
                 {inviteLink && (
                   <div className="auth-notice stack top-gap">
-                    {inviteLink.url && (
+                    {inviteLink.web_url && (
                       <label className="field">
-                        <span>Ссылка</span>
+                        <span>Универсальная ссылка — для браузера и Telegram</span>
                         <input
                           readOnly
-                          value={inviteLink.url}
+                          value={inviteLink.web_url}
+                          onFocus={(event) => event.currentTarget.select()}
+                        />
+                      </label>
+                    )}
+                    {inviteLink.telegram_url && (
+                      <label className="field">
+                        <span>Открыть сразу внутри Telegram</span>
+                        <input
+                          readOnly
+                          value={inviteLink.telegram_url}
                           onFocus={(event) => event.currentTarget.select()}
                         />
                       </label>
@@ -371,13 +381,16 @@ export default function CoachPage() {
                         type="button"
                         onClick={() =>
                           void copyInvite(
-                            inviteLink.url || inviteLink.code || inviteLink.start_param,
+                            inviteLink.web_url ||
+                              inviteLink.url ||
+                              inviteLink.code ||
+                              inviteLink.start_param,
                           )
                         }
                       >
                         Копировать
                       </button>
-                      {inviteLink.url && typeof navigator.share === 'function' && (
+                      {inviteLink.web_url && typeof navigator.share === 'function' && (
                         <button
                           type="button"
                           className="secondary"
@@ -386,7 +399,7 @@ export default function CoachPage() {
                               .share({
                                 title: 'Приглашение тренера',
                                 text: 'Откройте Your Fitness Coach и подтвердите подключение к тренеру.',
-                                url: inviteLink.url ?? undefined,
+                                url: inviteLink.web_url,
                               })
                               .catch(() => undefined)
                           }

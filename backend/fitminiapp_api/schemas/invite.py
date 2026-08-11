@@ -10,6 +10,8 @@ class CoachInviteLinkResponse(BaseModel):
     code: str
     start_param: str
     url: str | None = None
+    web_url: str
+    telegram_url: str | None = None
     expires_at: datetime
 
 

@@ -1859,6 +1859,11 @@ def test_invite_link_preview_is_nonmutating_and_confirm_is_one_time(client):
     assert start_param.startswith("trainer_")
     token = start_param.removeprefix("trainer_")
     assert created.json()["code"] == token
+    assert created.json()["web_url"] == f"https://app.your-fitness-coach.ru/join/{token}"
+    assert created.json()["telegram_url"] == created.json()["url"]
+    invite_page = client.get(f"/join/{token}")
+    assert invite_page.status_code == 200
+    assert '<div id="root"></div>' in invite_page.text
     invite_id = created.json()["invite_id"]
 
     for _ in range(2):

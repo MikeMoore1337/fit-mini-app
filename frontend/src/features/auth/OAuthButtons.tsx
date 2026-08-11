@@ -16,7 +16,11 @@ export function OAuthButtons({ providers }: { providers: string[] }) {
           <a
             key={provider}
             className={`oauth-button oauth-button--${provider}`}
-            href={`/api/v1/auth/oauth/${provider}/start`}
+            href={`/api/v1/auth/oauth/${provider}/start${
+              window.location.pathname.startsWith('/join/')
+                ? `?next=${encodeURIComponent(window.location.pathname)}`
+                : ''
+            }`}
           >
             <span aria-hidden="true">
               {provider === 'telegram' ? '✦' : (provider[0]?.toUpperCase() ?? '?')}

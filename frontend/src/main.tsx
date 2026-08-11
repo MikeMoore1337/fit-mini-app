@@ -18,6 +18,7 @@ const AdminPage = lazy(() => import('./pages/admin/AdminPage'));
 const LandingPage = lazy(() => import('./pages/landing/LandingPage'));
 const VerifyEmailPage = lazy(() => import('./pages/auth/VerifyEmailPage'));
 const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
+const JoinCoachPage = lazy(() => import('./pages/join/JoinCoachPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 const queryClient = new QueryClient({
@@ -32,6 +33,16 @@ function AppRoutes() {
   if (path === '/') return <LandingPage />;
   if (path === '/verify-email') return <VerifyEmailPage />;
   if (path === '/reset-password') return <ResetPasswordPage />;
+  if (path.startsWith('/join/')) {
+    const token = path.slice('/join/'.length);
+    if (/^[A-Za-z0-9_-]{20,128}$/.test(token)) {
+      return (
+        <AuthGate>
+          <JoinCoachPage token={token} />
+        </AuthGate>
+      );
+    }
+  }
   if (path === '/app')
     return (
       <AuthGate>

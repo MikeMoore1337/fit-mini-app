@@ -3,6 +3,7 @@ from __future__ import annotations
 import smtplib
 import ssl
 from email.message import EmailMessage
+from urllib.parse import urlencode
 
 from fitminiapp_api.core.config import settings
 
@@ -29,8 +30,11 @@ def send_auth_email(recipient: str, *, subject: str, body: str) -> bool:
     return True
 
 
-def verification_email(email: str, raw_token: str) -> bool:
-    url = f"{settings.frontend_base_url.rstrip('/')}/verify-email?token={raw_token}"
+def verification_email(email: str, raw_token: str, *, next_path: str | None = None) -> bool:
+    query = {"token": raw_token}
+    if next_path:
+        query["next"] = next_path
+    url = f"{settings.frontend_base_url.rstrip('/')}/verify-email?{urlencode(query)}"
     return send_auth_email(
         email,
         subject="Подтвердите email — Your Fitness Coach",
