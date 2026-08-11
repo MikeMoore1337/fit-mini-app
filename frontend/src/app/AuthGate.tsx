@@ -31,7 +31,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     <main className="container">
       <Card
         className="auth-panel"
-        title="Вход в FitMiniApp"
+        title="Вход в Your Fitness Coach"
         description="Откройте приложение внутри Telegram для безопасной авторизации."
       >
         <div className="stack top-gap">
