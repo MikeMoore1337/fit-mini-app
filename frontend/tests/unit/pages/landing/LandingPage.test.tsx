@@ -35,7 +35,7 @@ describe('LandingPage', () => {
   });
 
   it('shows the service, features and Telegram contact without publishing tariffs', () => {
-    render(
+    const { container } = render(
       <NavigationProvider>
         <LandingPage />
       </NavigationProvider>,
@@ -48,6 +48,7 @@ describe('LandingPage', () => {
     expect(screen.queryByText(/тариф/i)).not.toBeInTheDocument();
 
     expect(screen.queryByText('@mikhail_murzaev')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('img[src="/fitness-logo.png"]')).toHaveLength(2);
     const contact = screen.getByRole('link', { name: /связаться в telegram/i });
     expect(contact).toHaveAttribute('href', 'https://t.me/mikhail_murzaev');
     expect(contact).toHaveAttribute('target', '_blank');
