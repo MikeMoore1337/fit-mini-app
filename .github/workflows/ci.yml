@@ -17,6 +17,8 @@ env:
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   PYTHONDONTWRITEBYTECODE: "1"
   PYTHONUNBUFFERED: "1"
+  UV_CACHE_DIR: ${{ github.workspace }}/.artifacts/cache/uv
+  UV_SYSTEM_PYTHON: "1"
 
 jobs:
   quality:
@@ -70,11 +72,18 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.14"
-          cache: pip
-          cache-dependency-path: backend/requirements-runtime.txt
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.32"
+          enable-cache: true
+          cache-dependency-glob: backend/requirements-runtime.txt
+          cache-local-path: ${{ env.UV_CACHE_DIR }}
+          cache-suffix: frontend
 
       - name: Install API schema dependencies
-        run: python -m pip install -r backend/requirements-runtime.txt
+        run: uv pip install -r backend/requirements-runtime.txt
 
       - name: Install frontend dependencies
         working-directory: frontend
@@ -86,9 +95,26 @@ jobs:
           npm run api:types
           git diff --exit-code -- src/shared/api/schema.d.ts
 
-      - name: Frontend checks and production build
+      - name: Frontend checks
+        shell: bash
         working-directory: frontend
-        run: npm run check
+        run: |
+          set -uo pipefail
+          npm run typecheck & typecheck_pid=$!
+          npm run lint & lint_pid=$!
+          npm run format:check & format_pid=$!
+          npm run test & test_pid=$!
+
+          status=0
+          wait "$typecheck_pid" || status=1
+          wait "$lint_pid" || status=1
+          wait "$format_pid" || status=1
+          wait "$test_pid" || status=1
+          exit "$status"
+
+      - name: Build frontend for production
+        working-directory: frontend
+        run: npx vite build
 
       - name: Upload frontend production build
         uses: actions/upload-artifact@v7
@@ -169,13 +195,20 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.14"
-          cache: pip
-          cache-dependency-path: |
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.32"
+          enable-cache: true
+          cache-dependency-glob: |
             backend/requirements.txt
             bot/requirements.txt
+          cache-local-path: ${{ env.UV_CACHE_DIR }}
+          cache-suffix: python-tests
 
       - name: Install dependencies
-        run: python -m pip install -r backend/requirements.txt -r bot/requirements.txt
+        run: uv pip install -r backend/requirements.txt -r bot/requirements.txt
 
       - name: Dependency consistency
         run: python -m pip check
@@ -223,11 +256,18 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.14"
-          cache: pip
-          cache-dependency-path: backend/requirements.txt
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.32"
+          enable-cache: true
+          cache-dependency-glob: backend/requirements.txt
+          cache-local-path: ${{ env.UV_CACHE_DIR }}
+          cache-suffix: migrated-stack
 
       - name: Install dependencies
-        run: python -m pip install -r backend/requirements.txt
+        run: uv pip install -r backend/requirements.txt
 
       - name: Dependency consistency
         run: python -m pip check
@@ -278,24 +318,25 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
-          python-version: "3.14"
-          cache: pip
-          cache-dependency-path: backend/requirements.txt
+          version: "0.11.32"
+          enable-cache: true
+          cache-dependency-glob: |
+            backend/requirements-runtime.txt
+            bot/requirements.txt
+          cache-local-path: ${{ env.UV_CACHE_DIR }}
+          cache-suffix: dependency-audit
 
       - name: Frontend production dependency audit
         working-directory: frontend
         run: npm audit --omit=dev --audit-level=high
 
-      - name: Install pip-audit
-        run: python -m pip install pip-audit==2.10.1
-
       - name: Python dependency vulnerability audit
         run: |
-          pip-audit -r backend/requirements-runtime.txt
-          pip-audit -r bot/requirements.txt
+          uvx --from pip-audit==2.10.1 pip-audit -r backend/requirements-runtime.txt
+          uvx --from pip-audit==2.10.1 pip-audit -r bot/requirements.txt
 
   containers:
     name: Container (${{ matrix.image }})
