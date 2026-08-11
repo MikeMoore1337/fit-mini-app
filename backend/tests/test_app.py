@@ -1242,7 +1242,7 @@ def test_every_seeded_exercise_has_complete_guide_and_local_images(client):
     standard_exercises = [item for item in exercises if not item["is_custom"]]
     static_dir = Path(__file__).resolve().parents[2] / "backend" / "assets"
 
-    assert len(standard_exercises) == 149
+    assert len(standard_exercises) == 158
     assert len(client.get("/api/v1/programs/exercises", headers=headers).content) < 100_000
     assert all(
         exercise["has_guide"] and exercise["guide"] is None for exercise in standard_exercises
@@ -1270,14 +1270,39 @@ def test_every_seeded_exercise_has_complete_guide_and_local_images(client):
         assert guide["breathing"]
         assert len(guide["common_mistakes"]) >= 3
         assert guide["muscles"]
-        assert len(guide["images"]) == 2
-        assert [image["phase"] for image in guide["images"]] == [
-            "Исходное положение",
-            "Активная фаза",
-        ]
+        assert guide["images"]
         for image in guide["images"]:
             asset = static_dir / image["url"].removeprefix("/static/")
             assert asset.is_file(), asset
+
+
+def test_cardio_exercises_have_specific_guides_and_generated_images(client):
+    headers = auth(client, telegram_user_id=31036, is_coach=False)
+    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()
+    expected_titles = {
+        "Бег на улице",
+        "Эллиптический тренажёр",
+        "Велосипед",
+        "Велотренажёр",
+        "Ходьба",
+        "Ходьба на дорожке",
+        "Степпер / лестница",
+        "Плавание",
+        "Лыжный тренажёр",
+    }
+    cardio = [exercise for exercise in exercises if exercise["title"] in expected_titles]
+
+    assert {exercise["title"] for exercise in cardio} == expected_titles
+    for exercise in cardio:
+        response = client.get(
+            f"/api/v1/programs/exercises/{exercise['id']}/guide",
+            headers=headers,
+        )
+        assert response.status_code == 200
+        guide = response.json()
+        assert len(guide["technique_steps"]) >= 3
+        assert guide["source_name"] == "Your Fitness Coach"
+        assert guide["images"][0]["phase"] == "Две фазы движения"
 
 
 def test_custom_exercise_has_no_incorrect_stock_guide(client):
