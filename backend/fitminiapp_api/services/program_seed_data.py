@@ -287,7 +287,100 @@ EXERCISE_CATALOG: list[ExerciseSeed] = [
     ("bear-crawl", "Медвежья проходка", "Все тело", "Собственный вес"),
 ]
 
+PPLF_4_DAYS: list[TemplateDaySeed] = [
+    (
+        "Тяни",
+        [
+            ("pull-up", 4, "6-10", 120),
+            ("barbell-row", 4, "6-8", 150),
+            ("lat-pulldown", 3, "10-12", 90),
+            ("barbell-curl", 3, "8-10", 90),
+        ],
+    ),
+    (
+        "Толкай",
+        [
+            ("bench-press", 4, "5-8", 150),
+            ("incline-dumbbell-press", 3, "8-10", 120),
+            ("overhead-press", 3, "6-8", 150),
+            ("rope-pushdown", 3, "10-12", 75),
+        ],
+    ),
+    (
+        "Ноги",
+        [
+            ("squat", 4, "5-8", 180),
+            ("leg-press", 3, "10-12", 150),
+            ("romanian-deadlift", 3, "8-10", 150),
+            ("standing-calf-raise", 4, "12-15", 60),
+        ],
+    ),
+    (
+        "Фуллбади",
+        [
+            ("front-squat", 3, "6-8", 150),
+            ("dumbbell-bench-press", 3, "8-10", 120),
+            ("seated-cable-row", 3, "10-12", 90),
+            ("hip-thrust", 3, "8-10", 120),
+        ],
+    ),
+]
+
+PPLF_8_DAYS: list[TemplateDaySeed] = [
+    *PPLF_4_DAYS,
+    (
+        "Тяни B",
+        [
+            ("deadlift", 3, "3-5", 180),
+            ("chest-supported-row", 4, "8-10", 120),
+            ("close-grip-lat-pulldown", 3, "10-12", 90),
+            ("hammer-curl", 3, "10-12", 75),
+        ],
+    ),
+    (
+        "Толкай B",
+        [
+            ("incline-bench-press", 4, "6-8", 150),
+            ("machine-chest-press", 3, "10-12", 90),
+            ("seated-dumbbell-press", 3, "8-10", 120),
+            ("overhead-triceps-extension", 3, "10-12", 75),
+        ],
+    ),
+    (
+        "Ноги B",
+        [
+            ("front-squat", 4, "6-8", 150),
+            ("bulgarian-split-squat", 3, "8-10", 120),
+            ("hip-thrust", 4, "8-10", 120),
+            ("seated-calf-raise", 4, "12-15", 60),
+        ],
+    ),
+    (
+        "Фуллбади B",
+        [
+            ("goblet-squat", 3, "10-12", 90),
+            ("machine-chest-press", 3, "10-12", 90),
+            ("machine-row", 3, "10-12", 90),
+            ("plank", 3, "30-60 сек", 60),
+        ],
+    ),
+]
+
 STRENGTH_TEMPLATE_SPECS: list[dict[str, object]] = [
+    {
+        "slug": "strength-pplf-4d",
+        "title": "Тяни/Толкай/Ноги/Фуллбади · 4 дня",
+        "goal": "recomposition",
+        "level": "intermediate",
+        "days": PPLF_4_DAYS,
+    },
+    {
+        "slug": "strength-pplf-8d",
+        "title": "Тяни/Толкай/Ноги/Фуллбади · 8 дней",
+        "goal": "muscle_gain",
+        "level": "advanced",
+        "days": PPLF_8_DAYS,
+    },
     {
         "slug": "strength-split-5d",
         "title": "Силовой сплит 5 дней",

@@ -354,8 +354,8 @@ def assign_template_to_user(
     ).delete(synchronize_session=False)
 
     ordered_days = sorted(template.days, key=lambda row: row.day_number)
-    if len(ordered_days) > 7:
-        raise ProgramError("A weekly program supports at most seven training days")
+    if len(ordered_days) > 8:
+        raise ProgramError("A program cycle supports at most eight training days")
     generated_sets = (
         sum(exercise.prescribed_sets for day in ordered_days for exercise in day.exercises)
         * duration_weeks
@@ -363,6 +363,8 @@ def assign_template_to_user(
     if generated_sets > MAX_GENERATED_SETS:
         raise ProgramError("Program is too large to assign in one operation")
     if schedule_weekdays is not None:
+        if len(ordered_days) > 7:
+            raise ProgramError("An eight-day cycle uses automatic sequential scheduling")
         if len(schedule_weekdays) != len(ordered_days):
             raise ProgramError("Choose one weekday for every program day")
         if any(day < 0 or day > 6 for day in schedule_weekdays):

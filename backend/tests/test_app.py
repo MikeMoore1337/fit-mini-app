@@ -1189,7 +1189,19 @@ def test_seeded_catalog_and_strength_templates(client):
         "strength-push-pull-legs-6d",
         "strength-upper-lower-4d",
         "strength-fullbody-3d",
+        "strength-pplf-4d",
+        "strength-pplf-8d",
     }.issubset({item["slug"] for item in templates})
+    pplf_templates = {item["slug"]: item for item in templates if "pplf" in item["slug"]}
+    assert len(pplf_templates["strength-pplf-4d"]["days"]) == 4
+    assert len(pplf_templates["strength-pplf-8d"]["days"]) == 8
+    assigned = client.post(
+        f"/api/v1/programs/templates/{pplf_templates['strength-pplf-8d']['id']}/assign-to-me",
+        json={"start_date": (date.today() + timedelta(days=1)).isoformat()},
+        headers=headers,
+    )
+    assert assigned.status_code == 200
+    assert assigned.json()["workouts_created"] == 8
     assert all(
         template["days"] for template in templates if template["slug"].startswith("strength-")
     )
