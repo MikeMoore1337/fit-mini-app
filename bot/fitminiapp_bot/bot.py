@@ -2,9 +2,10 @@ import asyncio
 import hashlib
 import logging
 import math
+import re
 from functools import lru_cache
 from pathlib import Path
-from typing import TextIO
+from typing import Literal, TextIO
 from urllib.parse import urlparse
 from zoneinfo import available_timezones
 
@@ -12,7 +13,7 @@ import httpx
 from aiogram import Bot, Dispatcher
 from aiogram.dispatcher.dispatcher import DEFAULT_BACKOFF_CONFIG
 from aiogram.exceptions import TelegramConflictError
-from aiogram.filters import Command, CommandStart
+from aiogram.filters import Command, CommandObject, CommandStart
 from aiogram.methods import GetUpdates
 from aiogram.types import (
     CallbackQuery,
@@ -34,6 +35,9 @@ except ImportError:  # pragma: no cover - production container runs Linux
 
 
 logger = logging.getLogger(__name__)
+
+TelegramLinkOutcome = Literal["linked", "already_linked", "invalid", "conflict", "failed"]
+TELEGRAM_LINK_PAYLOAD_PATTERN = re.compile(r"link_([A-Za-z0-9_-]{32,128})\Z")
 
 
 def safe_error_code(error: Exception) -> str:
@@ -282,6 +286,49 @@ async def save_timezone_from_bot(telegram_user, timezone: str) -> bool:
         return False
 
 
+def telegram_link_token(start_payload: str | None) -> str | None:
+    match = TELEGRAM_LINK_PAYLOAD_PATTERN.fullmatch((start_payload or "").strip())
+    return match.group(1) if match else None
+
+
+async def link_telegram_from_bot(telegram_user, raw_token: str) -> TelegramLinkOutcome:
+    if not telegram_user or not raw_token:
+        return "invalid"
+
+    payload = {
+        "token": raw_token,
+        "telegram_user_id": telegram_user.id,
+        "username": telegram_user.username,
+        "first_name": telegram_user.first_name,
+        "last_name": telegram_user.last_name,
+    }
+    url = f"{settings.backend_internal_url.rstrip('/')}/api/v1/bot/link-telegram"
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            response = await client.post(
+                url,
+                headers={"X-Bot-Token": settings.bot_internal_token},
+                json=payload,
+            )
+            if response.status_code == 400:
+                return "invalid"
+            if response.status_code == 409:
+                return "conflict"
+            response.raise_for_status()
+            status = response.json().get("status")
+            if status == "linked":
+                return "linked"
+            if status == "already_linked":
+                return "already_linked"
+            return "failed"
+    except Exception as exc:
+        logger.error(
+            "telegram_account_link_failed",
+            extra={"error_code": safe_error_code(exc)},
+        )
+        return "failed"
+
+
 async def set_mini_app_menu_button(bot: Bot, chat_id: int | None = None) -> bool:
     url = mini_app_url()
     if not is_https_url(url):
@@ -331,7 +378,34 @@ async def answer_with_open_button(message: Message) -> None:
 
 
 @dp.message(CommandStart())
-async def start(message: Message) -> None:
+async def start(message: Message, command: CommandObject) -> None:
+    raw_token = telegram_link_token(command.args)
+    if raw_token is not None:
+        outcome = await link_telegram_from_bot(message.from_user, raw_token)
+        if outcome in {"linked", "already_linked"}:
+            if message.bot is not None:
+                await set_mini_app_menu_button(
+                    message.bot,
+                    chat_id=message.from_user.id if message.from_user else None,
+                )
+            await message.answer(
+                "Telegram успешно привязан к вашему аккаунту. Теперь в браузере и боте доступны одни и те же данные.",
+                reply_markup=web_app_keyboard(mini_app_url()),
+            )
+            return
+        if outcome == "conflict":
+            await message.answer(
+                "Этот Telegram уже связан с другим аккаунтом. Автоматическое объединение данных заблокировано."
+            )
+            return
+        if outcome == "invalid":
+            await message.answer(
+                "Ссылка привязки недействительна или устарела. Создайте новую ссылку в настройках аккаунта."
+            )
+            return
+        await message.answer("Не удалось привязать Telegram. Попробуйте ещё раз позже.")
+        return
+
     menu_button_ok = await set_mini_app_menu_button(
         message.bot,
         chat_id=message.from_user.id if message.from_user else None,

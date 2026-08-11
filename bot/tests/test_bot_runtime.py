@@ -4,6 +4,7 @@ import logging
 import sys
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import httpx
 import pytest
@@ -124,6 +125,82 @@ def test_timezone_delivery_reports_backend_timeout(monkeypatch):
     telegram_user = SimpleNamespace(id=123, username=None, first_name="Test", last_name=None)
 
     assert asyncio.run(bot_module.save_timezone_from_bot(telegram_user, "Europe/Moscow")) is False
+
+
+def test_link_telegram_delivery_sends_identity_to_internal_api(monkeypatch):
+    real_async_client = httpx.AsyncClient
+    captured: dict[str, object] = {}
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        captured["headers"] = dict(request.headers)
+        captured["payload"] = json.loads(request.content)
+        return httpx.Response(200, request=request, json={"status": "linked"})
+
+    transport = httpx.MockTransport(respond)
+
+    def client_factory(*, timeout: int):
+        return real_async_client(timeout=timeout, transport=transport)
+
+    monkeypatch.setattr(bot_module.httpx, "AsyncClient", client_factory)
+    monkeypatch.setattr(bot_module.settings, "bot_internal_token", INTERNAL_TOKEN)
+    telegram_user = SimpleNamespace(
+        id=12345,
+        username="linked_user",
+        first_name="Linked",
+        last_name="User",
+    )
+
+    outcome = asyncio.run(bot_module.link_telegram_from_bot(telegram_user, "a" * 43))
+
+    assert outcome == "linked"
+    assert captured["payload"] == {
+        "token": "a" * 43,
+        "telegram_user_id": 12345,
+        "username": "linked_user",
+        "first_name": "Linked",
+        "last_name": "User",
+    }
+    assert captured["headers"]["x-bot-token"] == INTERNAL_TOKEN
+
+
+@pytest.mark.parametrize(
+    ("status_code", "expected"),
+    [(400, "invalid"), (409, "conflict"), (500, "failed")],
+)
+def test_link_telegram_delivery_maps_safe_outcomes(status_code, expected, monkeypatch):
+    real_async_client = httpx.AsyncClient
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(status_code, request=request, json={"detail": "hidden"})
+
+    transport = httpx.MockTransport(respond)
+
+    def client_factory(*, timeout: int):
+        return real_async_client(timeout=timeout, transport=transport)
+
+    monkeypatch.setattr(bot_module.httpx, "AsyncClient", client_factory)
+    telegram_user = SimpleNamespace(id=12345, username=None, first_name="Test", last_name=None)
+
+    assert asyncio.run(bot_module.link_telegram_from_bot(telegram_user, "b" * 43)) == expected
+
+
+def test_start_link_payload_is_validated_and_reports_success(monkeypatch):
+    assert bot_module.telegram_link_token("trainer_other") is None
+    assert bot_module.telegram_link_token("link_short") is None
+    assert bot_module.telegram_link_token(f"link_{'c' * 43}") == "c" * 43
+
+    message = SimpleNamespace(
+        from_user=SimpleNamespace(id=12345),
+        bot=object(),
+        answer=AsyncMock(),
+    )
+    monkeypatch.setattr(bot_module, "link_telegram_from_bot", AsyncMock(return_value="linked"))
+    monkeypatch.setattr(bot_module, "set_mini_app_menu_button", AsyncMock(return_value=True))
+
+    asyncio.run(bot_module.start(message, SimpleNamespace(args=f"link_{'c' * 43}")))
+
+    assert message.answer.await_count == 1
+    assert "одни и те же данные" in message.answer.await_args.args[0]
 
 
 def test_json_formatter_redacts_secrets_and_urls_from_message_and_exception() -> None:
