@@ -9,6 +9,7 @@ from fitminiapp_api.models.program import UserProgram, UserWorkout
 from fitminiapp_api.schemas.invite import CoachInvitePreviewResponse, CoachInviteTokenRequest
 from fitminiapp_api.schemas.user import (
     AccountDeleteRequest,
+    OAuthLinkCreateResponse,
     TelegramLinkCreateResponse,
     TrainerResponse,
     UserProfileResponse,
@@ -16,8 +17,12 @@ from fitminiapp_api.schemas.user import (
     UserResponse,
 )
 from fitminiapp_api.services.account_linking import (
+    OAUTH_LINK_PROVIDERS,
+    OAuthLinkConflictError,
+    OAuthLinkError,
     TelegramLinkConflictError,
     TelegramLinkError,
+    create_oauth_link_url,
     create_telegram_link_url,
 )
 from fitminiapp_api.services.accounts import build_account_export, delete_user_cascade
@@ -66,6 +71,7 @@ def _build_user_response(db: Session, user) -> UserResponse:
         is_admin=user.is_admin,
         has_active_program=has_active_program,
         has_workout_history=has_workout_history,
+        auth_providers=sorted(identity.provider for identity in user.auth_identities),
         profile=UserProfileResponse(
             full_name=user.profile.full_name if user.profile else None,
             birth_date=user.profile.birth_date if user.profile else None,
@@ -110,6 +116,32 @@ def create_telegram_link(
     db.commit()
     return TelegramLinkCreateResponse(
         telegram_url=telegram_url,
+        expires_in_seconds=expires_in_seconds,
+    )
+
+
+@router.post("/auth/oauth-link/{provider}", response_model=OAuthLinkCreateResponse)
+def create_oauth_link(
+    provider: str,
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> OAuthLinkCreateResponse:
+    normalized_provider = provider.strip().lower()
+    if (
+        not settings.enable_web_auth
+        or normalized_provider not in OAUTH_LINK_PROVIDERS
+        or normalized_provider not in settings.oauth_provider_names
+    ):
+        raise HTTPException(status_code=404, detail="Провайдер входа не настроен")
+    try:
+        oauth_url, expires_in_seconds = create_oauth_link_url(db, user, normalized_provider)
+    except OAuthLinkConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except OAuthLinkError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    db.commit()
+    return OAuthLinkCreateResponse(
+        oauth_url=oauth_url,
         expires_in_seconds=expires_in_seconds,
     )
 

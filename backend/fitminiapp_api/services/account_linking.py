@@ -10,12 +10,15 @@ from sqlalchemy.orm import Session
 from fitminiapp_api.models.auth_identity import AuthIdentity
 from fitminiapp_api.models.user import User
 from fitminiapp_api.services.audit import record_audit_event
-from fitminiapp_api.services.auth_identities import ensure_telegram_identity
+from fitminiapp_api.services.auth_identities import ensure_auth_identity, ensure_telegram_identity
+from fitminiapp_api.services.oauth_login import normalize_oauth_claims
 from fitminiapp_api.services.password_auth import consume_action_token, create_action_token
 from fitminiapp_api.services.telegram_auth import normalize_telegram_username
 
 TELEGRAM_LINK_PURPOSE = "link_telegram"
 TELEGRAM_LINK_LIFETIME = timedelta(minutes=10)
+OAUTH_LINK_LIFETIME = timedelta(minutes=10)
+OAUTH_LINK_PROVIDERS = frozenset({"google", "yandex", "apple"})
 
 
 class TelegramLinkError(RuntimeError):
@@ -26,10 +29,122 @@ class TelegramLinkConflictError(TelegramLinkError):
     pass
 
 
+class OAuthLinkError(RuntimeError):
+    pass
+
+
+class OAuthLinkConflictError(OAuthLinkError):
+    pass
+
+
 @dataclass(frozen=True)
 class TelegramLinkResult:
     user_id: int
     status: Literal["linked", "already_linked"]
+
+
+def oauth_link_purpose(provider: str) -> str:
+    normalized_provider = provider.strip().lower()
+    if normalized_provider not in OAUTH_LINK_PROVIDERS:
+        raise OAuthLinkError("Этот способ входа нельзя привязать")
+    return f"link_oauth_{normalized_provider}"
+
+
+def create_oauth_link_url(db: Session, user: User, provider: str) -> tuple[str, int]:
+    normalized_provider = provider.strip().lower()
+    purpose = oauth_link_purpose(normalized_provider)
+    existing_provider = (
+        db.query(AuthIdentity)
+        .filter(AuthIdentity.user_id == user.id, AuthIdentity.provider == normalized_provider)
+        .first()
+    )
+    if existing_provider is not None:
+        raise OAuthLinkConflictError("Этот способ входа уже привязан")
+
+    raw_token = create_action_token(
+        db,
+        user.id,
+        purpose=purpose,
+        lifetime=OAUTH_LINK_LIFETIME,
+    )
+    encoded_token = quote(raw_token, safe="_-~")
+    return (
+        f"/api/v1/auth/oauth/{normalized_provider}/link/start?token={encoded_token}",
+        int(OAUTH_LINK_LIFETIME.total_seconds()),
+    )
+
+
+def link_oauth_account(
+    db: Session,
+    *,
+    raw_token: str,
+    provider: str,
+    raw_claims: dict[str, object],
+) -> User:
+    normalized_provider = provider.strip().lower()
+    token = consume_action_token(
+        db,
+        raw_token,
+        purpose=oauth_link_purpose(normalized_provider),
+    )
+    target = db.query(User).filter(User.id == token.user_id).with_for_update().first()
+    if target is None or not target.is_active:
+        raise OAuthLinkError("Аккаунт для привязки недоступен")
+
+    claims = normalize_oauth_claims(normalized_provider, raw_claims)
+    subject = claims["subject"]
+    if not subject:
+        raise OAuthLinkError("Провайдер не вернул устойчивый идентификатор")
+
+    identity = (
+        db.query(AuthIdentity)
+        .filter(
+            AuthIdentity.provider == normalized_provider,
+            AuthIdentity.subject == subject,
+        )
+        .with_for_update()
+        .first()
+    )
+    target_provider = (
+        db.query(AuthIdentity)
+        .filter(
+            AuthIdentity.user_id == target.id,
+            AuthIdentity.provider == normalized_provider,
+        )
+        .with_for_update()
+        .first()
+    )
+    if (identity is not None and identity.user_id != target.id) or (
+        target_provider is not None and target_provider.subject != subject
+    ):
+        record_audit_event(
+            db,
+            action="account.oauth_link_conflict",
+            resource_type="user",
+            target_user_id=target.id,
+            resource_id=target.id,
+            details={"provider": normalized_provider},
+        )
+        raise OAuthLinkConflictError("Этот способ входа уже связан с другим аккаунтом")
+
+    ensure_auth_identity(
+        db,
+        target,
+        provider=normalized_provider,
+        subject=subject,
+        email=claims["email"],
+        email_verified=claims["email_verified"],
+    )
+    record_audit_event(
+        db,
+        action="account.oauth_linked",
+        resource_type="user",
+        actor_user_id=target.id,
+        target_user_id=target.id,
+        resource_id=target.id,
+        details={"provider": normalized_provider},
+    )
+    return target
 
 
 def create_telegram_link_url(db: Session, user: User, bot_username: str) -> tuple[str, int]:

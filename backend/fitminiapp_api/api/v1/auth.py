@@ -28,6 +28,13 @@ from fitminiapp_api.schemas.auth import (
     TelegramInitRequest,
     TokenPairResponse,
 )
+from fitminiapp_api.services.account_linking import (
+    OAUTH_LINK_PROVIDERS,
+    OAuthLinkConflictError,
+    OAuthLinkError,
+    link_oauth_account,
+    oauth_link_purpose,
+)
 from fitminiapp_api.services.auth_email import password_reset_email, verification_email
 from fitminiapp_api.services.auth_identities import ensure_auth_identity, ensure_telegram_identity
 from fitminiapp_api.services.jwt import (
@@ -48,6 +55,7 @@ from fitminiapp_api.services.password_auth import (
     hash_password,
     local_identity_by_email,
     utcnow,
+    validate_action_token,
 )
 from fitminiapp_api.services.telegram_auth import (
     get_or_create_user_from_init_data,
@@ -191,6 +199,37 @@ async def oauth_start(request: Request, provider: str, next: str | None = None):
     return await client.authorize_redirect(request, _oauth_callback_url(provider))
 
 
+@router.get("/oauth/{provider}/link/start")
+@limiter.limit("20/minute")
+async def oauth_link_start(
+    request: Request,
+    provider: str,
+    token: str,
+    db: Session = Depends(get_db),
+):
+    _require_web_auth()
+    normalized_provider = provider.strip().lower()
+    if normalized_provider not in OAUTH_LINK_PROVIDERS:
+        raise HTTPException(status_code=404, detail="Провайдер входа не настроен")
+    client = configured_oauth_client(normalized_provider)
+    if client is None:
+        raise HTTPException(status_code=404, detail="Провайдер входа не настроен")
+    try:
+        action_token = validate_action_token(
+            db,
+            token,
+            purpose=oauth_link_purpose(normalized_provider),
+        )
+    except (PasswordAuthError, OAuthLinkError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    target = db.query(User).filter(User.id == action_token.user_id).first()
+    if target is None or not target.is_active:
+        raise HTTPException(status_code=400, detail="Аккаунт для привязки недоступен")
+    request.session["oauth_link_token"] = token
+    request.session["oauth_link_provider"] = normalized_provider
+    return await client.authorize_redirect(request, _oauth_callback_url(normalized_provider))
+
+
 async def _oauth_callback_impl(
     request: Request,
     provider: str,
@@ -201,6 +240,10 @@ async def _oauth_callback_impl(
     if client is None:
         raise HTTPException(status_code=404, detail="Провайдер входа не настроен")
     next_path = _safe_next_path(request.session.pop("oauth_next", None))
+    link_token = request.session.pop("oauth_link_token", None)
+    link_provider = request.session.pop("oauth_link_provider", None)
+    if link_token and link_provider != provider:
+        return RedirectResponse(url="/app?auth_error=oauth_link", status_code=303)
     try:
         token = await client.authorize_access_token(request)
         if provider == "yandex":
@@ -209,14 +252,33 @@ async def _oauth_callback_impl(
             raw_claims = profile_response.json()
         else:
             raw_claims = dict(token.get("userinfo") or {})
-        user = get_or_create_oauth_user(db, provider=provider, raw_claims=raw_claims)
-    except (HTTPError, OAuthError, ValueError) as exc:
+        if link_token:
+            try:
+                user = link_oauth_account(
+                    db,
+                    raw_token=link_token,
+                    provider=provider,
+                    raw_claims=raw_claims,
+                )
+            except OAuthLinkConflictError as exc:
+                db.commit()
+                logger.warning(
+                    "oauth_link_conflict",
+                    extra={"provider": provider, "reason": type(exc).__name__},
+                )
+                return RedirectResponse(url="/app?auth_error=oauth_link_conflict", status_code=303)
+        else:
+            user = get_or_create_oauth_user(db, provider=provider, raw_claims=raw_claims)
+    except (HTTPError, OAuthError, OAuthLinkError, PasswordAuthError, ValueError) as exc:
         logger.warning(
             "oauth_login_failed", extra={"provider": provider, "reason": type(exc).__name__}
         )
         return RedirectResponse(url=next_path or "/app?auth_error=oauth", status_code=303)
 
-    redirect = RedirectResponse(url=next_path or "/app", status_code=303)
+    redirect = RedirectResponse(
+        url=(f"/app?auth_linked={provider}" if link_token else next_path or "/app"),
+        status_code=303,
+    )
     issue_token_pair(db, user, redirect)
     return redirect
 

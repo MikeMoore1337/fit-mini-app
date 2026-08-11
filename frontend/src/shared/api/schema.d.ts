@@ -55,6 +55,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/oauth/{provider}/link/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Oauth Link Start */
+        get: operations["oauth_link_start_api_v1_auth_oauth__provider__link_start_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/oauth/{provider}/callback": {
         parameters: {
             query?: never;
@@ -254,6 +271,23 @@ export interface paths {
         put?: never;
         /** Create Telegram Link */
         post: operations["create_telegram_link_api_v1_me_auth_telegram_link_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/auth/oauth-link/{provider}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Oauth Link */
+        post: operations["create_oauth_link_api_v1_me_auth_oauth_link__provider__post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2126,6 +2160,13 @@ export interface components {
              */
             cardio_intensity: ("low" | "moderate" | "high") | null;
         };
+        /** OAuthLinkCreateResponse */
+        OAuthLinkCreateResponse: {
+            /** Oauth Url */
+            oauth_url: string;
+            /** Expires In Seconds */
+            expires_in_seconds: number;
+        };
         /** PasswordResetConfirmRequest */
         PasswordResetConfirmRequest: {
             /** Token */
@@ -2490,6 +2531,8 @@ export interface components {
              * @default false
              */
             has_workout_history: boolean;
+            /** Auth Providers */
+            auth_providers?: string[];
             profile?: components["schemas"]["UserProfileResponse"] | null;
             trainer?: components["schemas"]["TrainerResponse"] | null;
         };
@@ -2794,6 +2837,39 @@ export interface operations {
         parameters: {
             query?: {
                 next?: string | null;
+            };
+            header?: never;
+            path: {
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    oauth_link_start_api_v1_auth_oauth__provider__link_start_get: {
+        parameters: {
+            query: {
+                token: string;
             };
             header?: never;
             path: {
@@ -3218,6 +3294,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TelegramLinkCreateResponse"];
+                };
+            };
+        };
+    };
+    create_oauth_link_api_v1_me_auth_oauth_link__provider__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthLinkCreateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

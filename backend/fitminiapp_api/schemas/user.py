@@ -46,6 +46,11 @@ class TelegramLinkCreateResponse(BaseModel):
     expires_in_seconds: int
 
 
+class OAuthLinkCreateResponse(BaseModel):
+    oauth_url: str
+    expires_in_seconds: int
+
+
 class HeartRateZoneResponse(BaseModel):
     zone: int
     title: str
@@ -89,5 +94,6 @@ class UserResponse(BaseModel):
     is_admin: bool = False
     has_active_program: bool = False
     has_workout_history: bool = False
+    auth_providers: list[str] = Field(default_factory=list)
     profile: UserProfileResponse | None = None
     trainer: TrainerResponse | None = None
