@@ -1,0 +1,61 @@
+name: Deploy production
+
+on:
+  workflow_run:
+    workflows: [CI]
+    branches: [master]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A deployment must never be cancelled halfway through by a newer push.
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >-
+      (github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/master') ||
+      (github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    env:
+      DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      PROD_HOST: app.your-fitness-coach.ru
+      PROD_PORT: "22"
+      PROD_USER: root
+      PROD_PATH: /root/fit-mini-app
+      PROD_URL: https://app.your-fitness-coach.ru
+
+    steps:
+      - name: Configure production SSH access
+        env:
+          PROD_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+          PROD_SSH_KNOWN_HOSTS: ${{ secrets.PROD_SSH_KNOWN_HOSTS }}
+        run: |
+          test -n "$PROD_SSH_KEY"
+          test -n "$PROD_SSH_KNOWN_HOSTS"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$PROD_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$PROD_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Deploy tested revision
+        run: |
+          ssh \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -p "$PROD_PORT" \
+            "$PROD_USER@$PROD_HOST" \
+            "cd '$PROD_PATH' &&
+             git fetch --prune origin master &&
+             git reset --hard '$DEPLOY_SHA' &&
+             exec bash scripts/deploy_production.sh '$DEPLOY_SHA' '$PROD_URL'"
