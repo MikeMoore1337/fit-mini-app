@@ -1,4 +1,5 @@
 import logging
+import re
 from datetime import timedelta
 
 from authlib.integrations.base_client.errors import OAuthError
@@ -105,6 +106,12 @@ def _set_refresh_cookie(response: Response, raw_token: str) -> None:
     response.headers["Cache-Control"] = "no-store"
 
 
+def _safe_next_path(value: str | None) -> str | None:
+    if value and re.fullmatch(r"/join/[A-Za-z0-9_-]{20,128}", value):
+        return value
+    return None
+
+
 def _clear_refresh_cookie(response: Response) -> None:
     response.delete_cookie(
         key=settings.refresh_cookie_name,
@@ -170,11 +177,12 @@ def telegram_init_auth(
 
 @router.get("/oauth/{provider}/start")
 @limiter.limit("20/minute")
-async def oauth_start(request: Request, provider: str):
+async def oauth_start(request: Request, provider: str, next: str | None = None):
     _require_web_auth()
     client = configured_oauth_client(provider)
     if client is None:
         raise HTTPException(status_code=404, detail="Провайдер входа не настроен")
+    request.session["oauth_next"] = _safe_next_path(next)
     return await client.authorize_redirect(request, _oauth_callback_url(provider))
 
 
@@ -187,6 +195,7 @@ async def _oauth_callback_impl(
     client = configured_oauth_client(provider)
     if client is None:
         raise HTTPException(status_code=404, detail="Провайдер входа не настроен")
+    next_path = _safe_next_path(request.session.pop("oauth_next", None))
     try:
         token = await client.authorize_access_token(request)
         if provider == "yandex":
@@ -200,9 +209,9 @@ async def _oauth_callback_impl(
         logger.warning(
             "oauth_login_failed", extra={"provider": provider, "reason": type(exc).__name__}
         )
-        return RedirectResponse(url="/app?auth_error=oauth", status_code=303)
+        return RedirectResponse(url=next_path or "/app?auth_error=oauth", status_code=303)
 
-    redirect = RedirectResponse(url="/app", status_code=303)
+    redirect = RedirectResponse(url=next_path or "/app", status_code=303)
     issue_token_pair(db, user, redirect)
     return redirect
 
@@ -292,7 +301,15 @@ def email_register(
             status_code=409, detail="Email или имя пользователя уже заняты"
         ) from exc
 
-    _send_auth_message(verification_email, payload.email, raw_token)
+    _send_auth_message(
+        lambda email, token: verification_email(
+            email,
+            token,
+            next_path=payload.next_path,
+        ),
+        payload.email,
+        raw_token,
+    )
     return RegistrationResponse(verification_token=_development_action_token(raw_token))
 
 

@@ -44,10 +44,20 @@ def normalize_local_username(value: str) -> str:
     return normalized
 
 
+def normalize_next_path(value: str | None) -> str | None:
+    if value is None or not value.strip():
+        return None
+    normalized = value.strip()
+    if not re.fullmatch(r"/join/[A-Za-z0-9_-]{20,128}", normalized):
+        raise ValueError("Некорректный адрес возврата")
+    return normalized
+
+
 class EmailRegisterRequest(BaseModel):
     username: str = Field(min_length=3, max_length=32)
     email: str = Field(min_length=5, max_length=320)
     password: str = Field(min_length=12, max_length=128)
+    next_path: str | None = Field(default=None, max_length=160)
 
     @field_validator("username")
     @classmethod
@@ -58,6 +68,11 @@ class EmailRegisterRequest(BaseModel):
     @classmethod
     def validate_email(cls, value: str) -> str:
         return normalize_email(value)
+
+    @field_validator("next_path")
+    @classmethod
+    def validate_next_path(cls, value: str | None) -> str | None:
+        return normalize_next_path(value)
 
 
 class EmailLoginRequest(BaseModel):

@@ -6,7 +6,7 @@ import { useAuth } from '../../app/AuthProvider';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Badge, Card } from '../../shared/ui/common';
 
-function tokenFromInvite(value: string): string {
+export function tokenFromInvite(value: string): string {
   const trimmed = value.trim();
   try {
     const parsed = new URL(trimmed);
@@ -15,6 +15,8 @@ function tokenFromInvite(value: string): string {
       parsed.searchParams.get('start') ||
       parsed.searchParams.get('tgWebAppStartParam');
     if (startParam) return startParam.replace(/^trainer_/, '');
+    const pathToken = parsed.pathname.match(/\/join\/([A-Za-z0-9_-]{20,128})\/?$/)?.[1];
+    if (pathToken) return pathToken;
   } catch {
     // A copied fallback code is expected not to be a URL.
   }

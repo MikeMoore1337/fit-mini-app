@@ -38,6 +38,7 @@ interface AuthContextValue {
     username: string,
     email: string,
     password: string,
+    nextPath?: string | null,
   ): Promise<EmailRegistrationResult>;
   verifyEmail(token: string): Promise<void>;
   requestPasswordReset(email: string): Promise<void>;
@@ -154,10 +155,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const emailRegister = useCallback(
-    (username: string, email: string, password: string) =>
+    (username: string, email: string, password: string, nextPath?: string | null) =>
       api<EmailRegistrationResult>('/api/v1/auth/email/register', {
         method: 'POST',
-        body: { username, email, password },
+        body: { username, email, password, next_path: nextPath || null },
         retryAuth: false,
       }),
     [],

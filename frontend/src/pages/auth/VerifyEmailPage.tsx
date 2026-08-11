@@ -9,13 +9,15 @@ export default function VerifyEmailPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const token = new URLSearchParams(window.location.search).get('token') ?? '';
+  const requestedNext = new URLSearchParams(window.location.search).get('next') ?? '';
+  const nextPath = /^\/join\/[A-Za-z0-9_-]{20,128}$/.test(requestedNext) ? requestedNext : '/app';
 
   const verify = async () => {
     setBusy(true);
     setError(null);
     try {
       await verifyEmail(token);
-      navigate('/app', true);
+      navigate(nextPath, true);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Не удалось подтвердить email');
     } finally {
