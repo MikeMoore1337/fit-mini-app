@@ -9,6 +9,7 @@ import { buildStrengthPreset, resolveStrengthRule, type StrengthSplit } from './
 import { usePersistentState } from '../../shared/storage';
 import { useAuth } from '../../app/AuthProvider';
 import { dateInputValue, detectedTimeZone } from '../../shared/dateTime';
+import { applyRestSeconds } from './programRest';
 
 type Day = ProgramTemplateCreate['days'][number];
 type ProgramTemplateAssignmentCreate = ProgramTemplateCreate & {
@@ -17,11 +18,11 @@ type ProgramTemplateAssignmentCreate = ProgramTemplateCreate & {
   schedule_weekdays: number[];
   replace_active: boolean;
 };
-const blankExercise = (): Day['exercises'][number] => ({
+const blankExercise = (restSeconds = 90): Day['exercises'][number] => ({
   exercise_id: 0,
   prescribed_sets: 3,
   prescribed_reps: '8-12',
-  rest_seconds: 90,
+  rest_seconds: restSeconds,
   notes: '',
 });
 const blankDay = (index: number): Day => ({ title: `День ${index}`, exercises: [blankExercise()] });
@@ -185,6 +186,10 @@ export function ProgramBuilder({
     `fit_program_days_${draftScope}`,
     [blankDay(1)],
   );
+  const [defaultRestSeconds, setDefaultRestSeconds, clearDefaultRestDraft] = usePersistentState(
+    `fit_program_rest_${draftScope}`,
+    90,
+  );
   const defaultStartDate = dateInputValue(
     new Date(),
     user?.profile?.timezone || detectedTimeZone(),
@@ -248,6 +253,7 @@ export function ProgramBuilder({
       clearGoalDraft('maintenance');
       clearLevelDraft('beginner');
       clearDaysDraft([blankDay(1)]);
+      clearDefaultRestDraft(90);
       clearStartDateDraft(defaultStartDate);
       clearDurationDraft(4);
       clearScheduleDraft([]);
@@ -308,7 +314,12 @@ export function ProgramBuilder({
     const nextRule = resolveStrengthRule(level, split);
     const normalizedDays = Math.min(nextRule.max, Math.max(nextRule.min, presetDays));
     setPresetDays(normalizedDays);
-    setDays(buildStrengthPreset(exercises.data ?? [], level, split, normalizedDays));
+    setDays(
+      applyRestSeconds(
+        buildStrengthPreset(exercises.data ?? [], level, split, normalizedDays),
+        defaultRestSeconds,
+      ),
+    );
     setTitle(
       `${{ fullbody: 'Фуллбади', upper_lower: 'Верх/Низ', push_pull_legs: 'Тяни/Толкай/Ноги', split: 'Сплит' }[split]} · ${normalizedDays} дн.`,
     );
@@ -477,6 +488,37 @@ export function ProgramBuilder({
               Заполнить по шаблону
             </button>
           </div>
+          <fieldset className="auth-notice stack">
+            <legend>Отдых между подходами</legend>
+            <p className="muted">
+              Укажите общее время и примените его ко всей программе. При необходимости измените
+              отдых отдельно у любого упражнения ниже.
+            </p>
+            <div className="toolbar wrap">
+              <label className="field">
+                <span>Общий отдых, сек</span>
+                <input
+                  type="number"
+                  min="15"
+                  max="600"
+                  value={defaultRestSeconds}
+                  onChange={(event) => setDefaultRestSeconds(Number(event.target.value))}
+                  required
+                />
+              </label>
+              <button
+                type="button"
+                className="secondary"
+                disabled={defaultRestSeconds < 15 || defaultRestSeconds > 600}
+                onClick={() => {
+                  setDays(applyRestSeconds(days, defaultRestSeconds));
+                  toast('Общее время отдыха применено ко всем упражнениям');
+                }}
+              >
+                Применить ко всем упражнениям
+              </button>
+            </div>
+          </fieldset>
           {days.map((day, dayIndex) => (
             <div className="program-day stack" key={dayIndex}>
               <div className="section-head">
@@ -593,7 +635,7 @@ export function ProgramBuilder({
                   onClick={() =>
                     updateDay(dayIndex, {
                       ...day,
-                      exercises: [...day.exercises, blankExercise()],
+                      exercises: [...day.exercises, blankExercise(defaultRestSeconds)],
                     })
                   }
                 >
@@ -609,7 +651,15 @@ export function ProgramBuilder({
               <button
                 type="button"
                 className="secondary"
-                onClick={() => setDays([...days, blankDay(days.length + 1)])}
+                onClick={() =>
+                  setDays([
+                    ...days,
+                    {
+                      title: `День ${days.length + 1}`,
+                      exercises: [blankExercise(defaultRestSeconds)],
+                    },
+                  ])
+                }
               >
                 Добавить день
               </button>
