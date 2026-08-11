@@ -1,12 +1,37 @@
-import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import LandingPage, { appUrlForHostname } from '../../../../src/pages/landing/LandingPage';
 import { NavigationProvider } from '../../../../src/shared/navigation/router';
 
 describe('LandingPage', () => {
   afterEach(() => {
     cleanup();
+    localStorage.clear();
     window.history.replaceState({}, '', '/');
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('follows the system dark theme and lets the visitor switch it', () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockReturnValue({
+        matches: true,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }),
+    );
+
+    const { container } = render(
+      <NavigationProvider>
+        <LandingPage />
+      </NavigationProvider>,
+    );
+
+    expect(container.firstChild).toHaveClass('landing-page--dark');
+    fireEvent.click(screen.getByRole('button', { name: 'Включить светлую тему' }));
+    expect(container.firstChild).toHaveClass('landing-page--light');
+    expect(localStorage.getItem('landing-theme')).toBe('light');
   });
 
   it('shows the service, features and Telegram contact without publishing tariffs', () => {

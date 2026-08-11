@@ -1,5 +1,18 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import './landing.css';
+
+type LandingTheme = 'light' | 'dark';
+
+const LANDING_THEME_STORAGE_KEY = 'landing-theme';
+
+function storedLandingTheme(): LandingTheme | null {
+  const stored = window.localStorage.getItem(LANDING_THEME_STORAGE_KEY);
+  return stored === 'light' || stored === 'dark' ? stored : null;
+}
+
+function systemPrefersDark(): boolean {
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+}
 
 export function appUrlForHostname(hostname: string): string {
   return ['your-fitness-coach.ru', 'www.your-fitness-coach.ru'].includes(hostname)
@@ -42,6 +55,10 @@ const workflow = [
 
 export default function LandingPage() {
   const appUrl = appUrlForHostname(window.location.hostname);
+  const [manualTheme, setManualTheme] = useState<LandingTheme | null>(storedLandingTheme);
+  const [prefersDark, setPrefersDark] = useState(systemPrefersDark);
+  const theme: LandingTheme = manualTheme ?? (prefersDark ? 'dark' : 'light');
+
   useEffect(() => {
     const previousTitle = document.title;
     document.title = 'Your Fitness Coach — персональные тренировки с поддержкой тренера';
@@ -52,8 +69,33 @@ export default function LandingPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!window.matchMedia) return;
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = (event: MediaQueryListEvent) => setPrefersDark(event.matches);
+    media.addEventListener?.('change', onChange);
+    return () => media.removeEventListener?.('change', onChange);
+  }, []);
+
+  useEffect(() => {
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    const previousColor = meta?.content;
+    document.body.classList.toggle('landing-dark-mode', theme === 'dark');
+    if (meta) meta.content = theme === 'dark' ? '#0d120f' : '#f1f3ec';
+    return () => {
+      document.body.classList.remove('landing-dark-mode');
+      if (meta && previousColor) meta.content = previousColor;
+    };
+  }, [theme]);
+
+  const toggleTheme = () => {
+    const nextTheme: LandingTheme = theme === 'dark' ? 'light' : 'dark';
+    window.localStorage.setItem(LANDING_THEME_STORAGE_KEY, nextTheme);
+    setManualTheme(nextTheme);
+  };
+
   return (
-    <div className="landing-page">
+    <div className={`landing-page landing-page--${theme}`}>
       <header className="landing-header">
         <a className="landing-brand" href="#top" aria-label="Your Fitness Coach — на главную">
           <span className="landing-brand__mark" aria-hidden="true">
@@ -66,9 +108,20 @@ export default function LandingPage() {
           <a href="#how-it-works">Как это работает</a>
           <a href="#contact">Контакты</a>
         </nav>
-        <a className="landing-button landing-button--compact" href={appUrl}>
-          Войти
-        </a>
+        <div className="landing-header__actions">
+          <button
+            type="button"
+            className="landing-theme-toggle"
+            aria-label={theme === 'dark' ? 'Включить светлую тему' : 'Включить тёмную тему'}
+            title={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
+            onClick={toggleTheme}
+          >
+            <span aria-hidden="true">{theme === 'dark' ? '☀' : '☾'}</span>
+          </button>
+          <a className="landing-button landing-button--compact" href={appUrl}>
+            Войти
+          </a>
+        </div>
       </header>
 
       <main id="top">
