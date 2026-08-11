@@ -48,7 +48,9 @@ describe('LandingPage', () => {
     expect(screen.queryByText(/тариф/i)).not.toBeInTheDocument();
 
     expect(screen.queryByText('@mikhail_murzaev')).not.toBeInTheDocument();
-    expect(container.querySelectorAll('img[src="/fitness-logo.png"]')).toHaveLength(2);
+    expect(container.querySelectorAll('img[src="/assets/brand/fitness-logo-v1.png"]')).toHaveLength(
+      2,
+    );
     const contact = screen.getByRole('link', { name: /связаться в telegram/i });
     expect(contact).toHaveAttribute('href', 'https://t.me/mikhail_murzaev');
     expect(contact).toHaveAttribute('target', '_blank');

@@ -100,7 +100,7 @@ export default function LandingPage() {
         <a className="landing-brand" href="#top" aria-label="Your Fitness Coach — на главную">
           <img
             className="landing-brand__mark"
-            src="/fitness-logo.png"
+            src="/assets/brand/fitness-logo-v1.png"
             alt=""
             width="36"
             height="36"
@@ -284,7 +284,7 @@ export default function LandingPage() {
         <a className="landing-brand" href="#top">
           <img
             className="landing-brand__mark"
-            src="/fitness-logo.png"
+            src="/assets/brand/fitness-logo-v1.png"
             alt=""
             width="36"
             height="36"
