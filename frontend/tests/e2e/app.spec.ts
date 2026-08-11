@@ -1,5 +1,26 @@
 import { expect, test, type Page } from '@playwright/test';
 
+test('логотип и кнопки в шапке имеют одинаковую высоту', async ({ page }) => {
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/');
+
+    const logo = await page.locator('.landing-header .landing-brand__mark').boundingBox();
+    const themeButton = await page.locator('.landing-theme-toggle').boundingBox();
+    const loginButton = await page.locator('.landing-button--compact').boundingBox();
+
+    expect(logo).not.toBeNull();
+    expect(themeButton).not.toBeNull();
+    expect(loginButton).not.toBeNull();
+    expect(logo?.height).toBe(44);
+    expect(themeButton?.height).toBe(logo?.height);
+    expect(loginButton?.height).toBe(logo?.height);
+  }
+});
+
 async function mockApi(page: Page, { withCoachClient = false } = {}) {
   let role: 'client' | 'coach' | 'admin' = 'client';
   const emptyProgress = {

@@ -96,6 +96,7 @@ body.landing-mode #root {
 }
 
 .landing-header {
+  --landing-header-control-size: 44px;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
@@ -113,8 +114,8 @@ body.landing-mode #root {
 .landing-theme-toggle {
   display: inline-grid;
   place-items: center;
-  width: 42px;
-  height: 42px;
+  width: var(--landing-header-control-size);
+  height: var(--landing-header-control-size);
   padding: 0;
   border: 1px solid var(--landing-border);
   border-radius: 14px;
@@ -156,6 +157,11 @@ body.landing-mode #root {
   height: 36px;
   border-radius: 11px;
   object-fit: cover;
+}
+
+.landing-header .landing-brand__mark {
+  width: var(--landing-header-control-size);
+  height: var(--landing-header-control-size);
 }
 
 .landing-nav {
@@ -205,7 +211,8 @@ body.landing-mode #root {
 
 .landing-button--compact {
   justify-self: end;
-  min-height: 42px;
+  height: var(--landing-header-control-size);
+  min-height: var(--landing-header-control-size);
   padding-inline: 20px;
   background: transparent;
   color: var(--landing-ink) !important;
@@ -748,7 +755,6 @@ body.landing-mode #root {
   }
 
   .landing-button--compact {
-    min-height: 40px;
     padding-inline: 16px;
   }
 
