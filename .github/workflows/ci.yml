@@ -342,6 +342,9 @@ jobs:
     name: Container (${{ matrix.image }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -382,6 +385,25 @@ jobs:
           ignore-unfixed: true
           trivyignores: .trivyignore.yaml
           exit-code: "1"
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish scanned image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        shell: bash
+        env:
+          IMAGE_KIND: ${{ matrix.image }}
+          LOCAL_TAG: ${{ matrix.tag }}
+        run: |
+          registry_tag="ghcr.io/${GITHUB_REPOSITORY,,}-${IMAGE_KIND}:${GITHUB_SHA}"
+          docker tag "$LOCAL_TAG" "$registry_tag"
+          docker push "$registry_tag"
 
   checks:
     name: checks
