@@ -237,6 +237,7 @@ class ClientResponse(BaseModel):
     telegram_user_id: int | None = None
     username: str | None = None
     full_name: str | None = None
+    birth_date: date | None = None
     goal: str | None = None
     level: str | None = None
     height_cm: int | None = None

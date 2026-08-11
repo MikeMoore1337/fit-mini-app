@@ -15,6 +15,7 @@ import { Redirect } from '../../shared/navigation/router';
 import { LIVE_DATA_REFETCH_INTERVAL_MS } from '../../shared/sync';
 import { usePersistentState } from '../../shared/storage';
 import { handleTabKeyDown } from '../../shared/ui/tabs';
+import { calculateTanakaZones } from '../../features/profile/heartRateZones';
 
 type CoachTab = 'clients' | 'programs' | 'catalog';
 
@@ -22,6 +23,7 @@ function clientProfileKey(client: Client): string {
   return JSON.stringify([
     client.id,
     client.full_name,
+    client.birth_date,
     client.goal,
     client.level,
     client.height_cm,
@@ -67,12 +69,14 @@ function ClientProfileEditor({ client }: { client: Client }) {
     `fit_coach_client_profile_draft_${client.id}`,
     client,
   );
+  const heartRate = calculateTanakaZones(form.birth_date);
   const mutation = useMutation({
     mutationFn: () =>
       api<Client>(`/api/v1/coach/clients/${client.id}/profile`, {
         method: 'PATCH',
         body: {
           full_name: form.full_name,
+          birth_date: form.birth_date ?? null,
           goal: form.goal || null,
           level: form.level || null,
           height_cm: form.height_cm ?? null,
@@ -109,6 +113,14 @@ function ClientProfileEditor({ client }: { client: Client }) {
             onChange={(e) => setForm({ ...form, full_name: e.target.value })}
           />
           <small className="field-hint">Это имя видите только вы.</small>
+        </label>
+        <label className="field">
+          <span>Дата рождения</span>
+          <input
+            type="date"
+            value={form.birth_date ?? ''}
+            onChange={(event) => setForm({ ...form, birth_date: event.target.value || null })}
+          />
         </label>
         <label className="field">
           <span>Цель</span>
@@ -185,6 +197,18 @@ function ClientProfileEditor({ client }: { client: Client }) {
           />
         </label>
       </div>
+      {heartRate && (
+        <div className="auth-notice stack">
+          <strong>Пульсовые зоны · максимум {heartRate.maximum} уд/мин</strong>
+          <div className="toolbar wrap">
+            {heartRate.zones.map((zone) => (
+              <Badge key={zone.zone}>
+                Z{zone.zone}: {zone.min_bpm}–{zone.max_bpm}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
       <button type="submit" disabled={mutation.isPending}>
         {mutation.isPending ? 'Сохраняем…' : 'Сохранить профиль'}
       </button>

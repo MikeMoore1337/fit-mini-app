@@ -23,7 +23,7 @@ from fitminiapp_api.services.coach_clients import (
     remove_current_trainer,
 )
 from fitminiapp_api.services.nutrition import NutritionError, get_nutrition_target_for_user
-from fitminiapp_api.services.profile import update_profile
+from fitminiapp_api.services.profile import calculate_tanaka_heart_rate_zones, update_profile
 from fitminiapp_api.services.program_common import ProgramError
 from fitminiapp_api.services.security import get_current_user
 
@@ -46,6 +46,9 @@ def _build_user_response(db: Session, user) -> UserResponse:
         .first()
         is not None
     )
+    estimated_max_heart_rate, heart_rate_zones = calculate_tanaka_heart_rate_zones(
+        user.profile.birth_date if user.profile else None
+    )
     return UserResponse(
         id=user.id,
         telegram_user_id=user.telegram_user_id,
@@ -59,6 +62,7 @@ def _build_user_response(db: Session, user) -> UserResponse:
         has_workout_history=has_workout_history,
         profile=UserProfileResponse(
             full_name=user.profile.full_name if user.profile else None,
+            birth_date=user.profile.birth_date if user.profile else None,
             goal=user.profile.goal if user.profile else None,
             level=user.profile.level if user.profile else None,
             height_cm=user.profile.height_cm if user.profile else None,
@@ -68,6 +72,8 @@ def _build_user_response(db: Session, user) -> UserResponse:
                 user.profile.cardio_trainings_per_week if user.profile else None
             ),
             timezone=user.profile.timezone if user.profile else "Europe/Moscow",
+            estimated_max_heart_rate=estimated_max_heart_rate,
+            heart_rate_zones=heart_rate_zones,
             kbju=kbju,
         )
         if user.profile or kbju
