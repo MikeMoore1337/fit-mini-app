@@ -5,11 +5,13 @@ enabled independently of `ENABLE_WEB_AUTH` and all OAuth credentials.
 
 ## Safe production order
 
-1. Deploy the database migrations and application with `ENABLE_WEB_AUTH=false`.
+1. Deploy the database migrations and application with `ENABLE_WEB_AUTH=false`
+   and `ENABLE_EMAIL_AUTH=false`.
 2. Confirm `/health/ready` and the existing Telegram Mini App login.
-3. Configure SMTP and only the OAuth providers that are ready.
+3. Configure only the OAuth providers that are ready.
 4. Register the exact callback URLs listed below in provider consoles.
-5. Set `ENABLE_WEB_AUTH=true` and restart backend containers.
+5. Set `ENABLE_WEB_AUTH=true`, keep `ENABLE_EMAIL_AUTH=false`, and restart the
+   backend. Email/password endpoints and forms remain unavailable.
 
 The public config exposes only providers that have both a client ID and client
 secret. A partially configured provider never appears on the login screen.
@@ -52,9 +54,11 @@ Configure credentials through the matching variables in `.env.example`.
 
 Never put provider secrets in frontend variables or commit them to Git.
 
-## SMTP requirement
+## Optional email/password authentication
 
-Production startup rejects `ENABLE_WEB_AUTH=true` unless `SMTP_HOST` and
-`SMTP_FROM_EMAIL` are set. Configure either STARTTLS (normally port 587) or
-implicit TLS, not both. Email verification and password reset links use
-`FRONTEND_BASE_URL`.
+Email/password registration is controlled independently by
+`ENABLE_EMAIL_AUTH` and is disabled by default. Browser OAuth does not require
+SMTP. If email authentication is enabled later, production startup rejects the
+configuration unless `SMTP_HOST` and `SMTP_FROM_EMAIL` are set. Configure either
+STARTTLS (normally port 587) or implicit TLS, not both. Email verification and
+password reset links use `FRONTEND_BASE_URL`.

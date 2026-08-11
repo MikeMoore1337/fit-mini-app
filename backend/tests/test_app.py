@@ -159,6 +159,50 @@ def test_production_settings_reject_placeholder_bot_internal_token():
         )
 
 
+def test_production_oauth_does_not_require_smtp_when_email_auth_is_disabled():
+    configured = Settings(
+        app_env="prod",
+        app_name="Your Fitness Coach",
+        app_debug=False,
+        secret_key="a-production-secret-that-is-long-enough",
+        access_token_expire_minutes=60,
+        refresh_token_expire_days=30,
+        database_url="postgresql+psycopg://app:password@db/app",
+        enable_dev_auth=False,
+        enable_web_auth=True,
+        enable_email_auth=False,
+        telegram_bot_token="123456:configured-token",
+        bot_internal_token="a-separate-production-token-that-is-long-enough",
+        frontend_base_url="https://example.test",
+        smtp_host="",
+        smtp_from_email="",
+    )
+
+    assert configured.enable_web_auth is True
+    assert configured.enable_email_auth is False
+
+
+def test_production_email_auth_requires_smtp():
+    with pytest.raises(ValidationError, match="SMTP_HOST"):
+        Settings(
+            app_env="prod",
+            app_name="Your Fitness Coach",
+            app_debug=False,
+            secret_key="a-production-secret-that-is-long-enough",
+            access_token_expire_minutes=60,
+            refresh_token_expire_days=30,
+            database_url="postgresql+psycopg://app:password@db/app",
+            enable_dev_auth=False,
+            enable_web_auth=True,
+            enable_email_auth=True,
+            telegram_bot_token="123456:configured-token",
+            bot_internal_token="a-separate-production-token-that-is-long-enough",
+            frontend_base_url="https://example.test",
+            smtp_host="",
+            smtp_from_email="",
+        )
+
+
 def test_dev_login_can_set_admin_role(client):
     headers = auth(client, telegram_user_id=4001, is_coach=True, is_admin=True)
     response = client.get("/api/v1/me", headers=headers)
@@ -2812,7 +2856,10 @@ def test_dev_login_provisions_one_idempotent_telegram_identity(client):
         assert identities[0].user.telegram_user_id == payload["telegram_user_id"]
 
 
-def test_web_auth_is_disabled_by_default(client):
+def test_email_auth_stays_disabled_when_browser_oauth_is_enabled(client, monkeypatch):
+    from fitminiapp_api.core.config import settings
+
+    monkeypatch.setattr(settings, "enable_web_auth", True)
     response = client.post(
         "/api/v1/auth/email/register",
         json={
@@ -2828,7 +2875,7 @@ def test_web_auth_is_disabled_by_default(client):
 def test_email_registration_verification_and_login_share_internal_account(client, monkeypatch):
     from fitminiapp_api.core.config import settings
 
-    monkeypatch.setattr(settings, "enable_web_auth", True)
+    monkeypatch.setattr(settings, "enable_email_auth", True)
     payload = {
         "username": "browser_user",
         "email": "Browser@Example.com",
@@ -2873,7 +2920,7 @@ def test_email_registration_verification_and_login_share_internal_account(client
 def test_email_registration_rejects_duplicate_identity_and_weak_password(client, monkeypatch):
     from fitminiapp_api.core.config import settings
 
-    monkeypatch.setattr(settings, "enable_web_auth", True)
+    monkeypatch.setattr(settings, "enable_email_auth", True)
     weak = client.post(
         "/api/v1/auth/email/register",
         json={
@@ -2900,7 +2947,7 @@ def test_email_registration_rejects_duplicate_identity_and_weak_password(client,
 def test_password_reset_revokes_old_password_and_tokens(client, monkeypatch):
     from fitminiapp_api.core.config import settings
 
-    monkeypatch.setattr(settings, "enable_web_auth", True)
+    monkeypatch.setattr(settings, "enable_email_auth", True)
     email = "reset@example.com"
     old_password = "old-password-for-browser"
     registered = client.post(
@@ -2942,7 +2989,7 @@ def test_password_reset_revokes_old_password_and_tokens(client, monkeypatch):
 def test_password_reset_request_does_not_reveal_unknown_email(client, monkeypatch):
     from fitminiapp_api.core.config import settings
 
-    monkeypatch.setattr(settings, "enable_web_auth", True)
+    monkeypatch.setattr(settings, "enable_email_auth", True)
     response = client.post(
         "/api/v1/auth/password/reset/request",
         json={"email": "missing@example.com"},
@@ -2958,6 +3005,7 @@ def test_unconfigured_oauth_provider_is_not_exposed(client, monkeypatch):
     monkeypatch.setattr(settings, "enable_web_auth", True)
     config = client.get("/api/v1/public/config")
     assert config.status_code == 200
+    assert config.json()["enable_email_auth"] is False
     assert config.json()["oauth_providers"] == []
 
     started = client.get("/api/v1/auth/oauth/google/start")
@@ -3030,7 +3078,7 @@ def test_social_login_does_not_auto_link_only_by_matching_email(client, monkeypa
     from fitminiapp_api.core.config import settings
     from fitminiapp_api.services.oauth_login import get_or_create_oauth_user
 
-    monkeypatch.setattr(settings, "enable_web_auth", True)
+    monkeypatch.setattr(settings, "enable_email_auth", True)
     email = "shared@example.com"
     registered = client.post(
         "/api/v1/auth/email/register",

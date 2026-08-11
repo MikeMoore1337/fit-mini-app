@@ -8,6 +8,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, config, loading, error, devLogin, telegramLogin } = useAuth();
   const [busy, setBusy] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const oauthProviders = config?.oauth_providers ?? [];
+  const hasBrowserAuth = Boolean(config?.enable_email_auth || oauthProviders.length);
 
   if (loading)
     return (
@@ -35,8 +37,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         className="auth-panel"
         title="Вход в Your Fitness Coach"
         description={
-          config?.enable_web_auth
-            ? 'Войдите через Telegram или используйте аккаунт с подтверждённым email.'
+          hasBrowserAuth
+            ? 'Выберите доступный безопасный способ входа.'
             : 'Откройте приложение внутри Telegram для безопасной авторизации.'
         }
       >
@@ -49,13 +51,13 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
           )}
           {!window.Telegram?.WebApp?.initData && (
             <p className="auth-notice">
-              {config?.enable_web_auth
-                ? 'Telegram Mini App не обнаружен. Доступен вход через браузер.'
+              {hasBrowserAuth
+                ? 'Telegram Mini App не обнаружен. Выберите способ входа ниже.'
                 : 'Telegram Mini App не обнаружен. Откройте приложение кнопкой внутри бота.'}
             </p>
           )}
-          {config?.enable_web_auth && <OAuthButtons providers={config.oauth_providers ?? []} />}
-          {config?.enable_web_auth && <EmailAuthPanel />}
+          {config?.enable_web_auth && <OAuthButtons providers={oauthProviders} />}
+          {config?.enable_email_auth && <EmailAuthPanel />}
           {config?.enable_dev_auth && (
             <div className="stack">
               <p className="muted">Локальный режим разработки</p>

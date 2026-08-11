@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     db_pool_recycle_seconds: int = Field(default=1800, ge=60, le=86400)
     enable_dev_auth: bool = False
     enable_web_auth: bool = False
+    enable_email_auth: bool = False
     admin_telegram_user_ids: str = ""
 
     frontend_base_url: str = "https://app.your-fitness-coach.ru"
@@ -83,11 +84,11 @@ class Settings(BaseSettings):
             raise ValueError("ENABLE_DEV_AUTH must be false in prod")
         if self.app_debug:
             raise ValueError("APP_DEBUG must be false in prod")
-        if self.enable_web_auth and (
+        if self.enable_email_auth and (
             not self.smtp_host.strip() or not self.smtp_from_email.strip()
         ):
             raise ValueError(
-                "SMTP_HOST and SMTP_FROM_EMAIL must be configured when web auth is enabled in prod"
+                "SMTP_HOST and SMTP_FROM_EMAIL must be configured when email auth is enabled in prod"
             )
         _ = self.admin_telegram_id_set
 
