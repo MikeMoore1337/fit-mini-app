@@ -86,7 +86,9 @@ markupsafe==3.0.3
 mdurl==0.1.2
     # via markdown-it-py
 msgpack==1.2.1
-    # via cachecontrol
+    # via
+    #   -r backend/requirements.in
+    #   cachecontrol
 mypy==2.3.0
     # via -r backend/requirements-dev.in
 mypy-extensions==1.1.0
@@ -169,6 +171,8 @@ rich==15.0.0
     # via pip-audit
 ruff==0.16.1
     # via -r backend/requirements-dev.in
+setuptools==84.0.0
+    # via -r backend/requirements.in
 slowapi==0.1.10
     # via -r backend/requirements.in
 sortedcontainers==2.4.0

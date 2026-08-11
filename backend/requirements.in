@@ -2,6 +2,7 @@
 # uv pip compile --upgrade --python-version 3.14 --universal --output-file requirements-runtime.txt requirements.in
 # pip install -r requirements-runtime.txt
 fastapi
+msgpack>=1.2.1
 uvicorn[standard]
 sqlalchemy
 psycopg[binary]
@@ -12,4 +13,5 @@ PyJWT
 httpx
 python-multipart
 qrcode[pil]
+setuptools>=78.1.1
 slowapi

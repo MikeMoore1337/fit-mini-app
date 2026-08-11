@@ -64,6 +64,50 @@ After deployment, inspect backend, worker and bot errors and confirm that due
 notifications leave the queue. Keep the pre-deploy backup and previous image for
 the retention period defined by the service owner.
 
+## Automated production deployment
+
+The `Deploy production` GitHub Actions workflow deploys successful pushes to
+`master`. It connects to the existing checkout at `/root/fit-mini-app`, checks out
+the exact revision that passed CI, creates a database backup, rebuilds the
+application containers and runs the external smoke check. The active Caddy or
+Cloudflare profile is left unchanged.
+
+The server checkout is deployment-only: each run resets tracked application code
+to the tested commit. Do not edit tracked files there. Ignored runtime state such
+as `.env`, `.artifacts/` and Docker volumes is not removed by the reset.
+
+Compose evaluates the backend, worker and bot build targets on every deployment.
+Docker layer caching avoids rebuilding unchanged layers, and Compose recreates a
+running container only when its resulting image or service configuration changed.
+Because the frontend is compiled into the backend image, frontend changes update
+the backend automatically; backend changes also update the worker, while bot-only
+changes update the bot image.
+
+Create a GitHub environment named `production` and add these environment secrets:
+
+- `PROD_SSH_KEY`: the private half of a dedicated key that may SSH to the
+  production server;
+- `PROD_SSH_KNOWN_HOSTS`: the verified `known_hosts` entry for
+  `app.your-fitness-coach.ru`.
+
+The matching public SSH key must be present in `/root/.ssh/authorized_keys` on the
+server. For a private GitHub repository, the server also needs separate read-only
+GitHub credentials (prefer a repository deploy key) so `git fetch origin master`
+can run non-interactively. Never reuse the production server host key as either
+client key.
+
+Before enabling the workflow, verify once on the server:
+
+```console
+cd /root/fit-mini-app
+test -d .git && test -f .env
+git fetch origin master
+docker compose config --quiet
+```
+
+Manual production runs are available through the workflow's `workflow_dispatch`
+trigger. Deployments are serialized and are not cancelled midway by newer pushes.
+
 ## Application rollback
 
 1. Stop only the application writers, leaving PostgreSQL running:

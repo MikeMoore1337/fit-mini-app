@@ -225,7 +225,9 @@ test('мобильный интерфейс не обрезает навигац
 
   const firstStep = page.getByRole('button', { name: /Заполнить профиль/ });
   const title = firstStep.getByText('Заполнить профиль', { exact: true });
-  const description = firstStep.getByText('Цель, уровень и текущий вес', { exact: true });
+  const description = firstStep.getByText('Дата рождения, цель, уровень и текущий вес', {
+    exact: true,
+  });
   const [titleBox, descriptionBox] = await Promise.all([
     title.boundingBox(),
     description.boundingBox(),
@@ -446,8 +448,9 @@ test('дата остаётся внутри анкеты клиента в ка
   await page.getByRole('button', { name: 'Тренер' }).click();
   await page.getByText('Прогресс и замеры', { exact: true }).click();
 
-  const dateBox = await page.getByLabel('Дата').boundingBox();
-  await expect(page.getByLabel('Дата')).toHaveCSS('text-align', 'center');
+  const dateField = page.getByLabel('Дата', { exact: true });
+  const dateBox = await dateField.boundingBox();
+  await expect(dateField).toHaveCSS('text-align', 'center');
   const dateControlBox = await page.locator('.diary-date-control').boundingBox();
   const diaryGridBox = await page.locator('.diary-form-grid').boundingBox();
   expect(dateBox).not.toBeNull();
