@@ -2947,6 +2947,115 @@ def test_password_reset_request_does_not_reveal_unknown_email(client, monkeypatc
     assert response.json()["action_token"] is None
 
 
+def test_unconfigured_oauth_provider_is_not_exposed(client, monkeypatch):
+    from fitminiapp_api.core.config import settings
+
+    monkeypatch.setattr(settings, "enable_web_auth", True)
+    config = client.get("/api/v1/public/config")
+    assert config.status_code == 200
+    assert config.json()["oauth_providers"] == []
+
+    started = client.get("/api/v1/auth/oauth/google/start")
+    assert started.status_code == 404
+
+
+def test_browser_telegram_login_reuses_existing_telegram_user(client):
+    from fitminiapp_api.models.auth_identity import AuthIdentity
+    from fitminiapp_api.models.user import User
+    from fitminiapp_api.services.oauth_login import get_or_create_oauth_user
+
+    headers = auth(client, telegram_user_id=8_810_001, username="telegram_browser")
+    current_id = client.get("/api/v1/me", headers=headers).json()["id"]
+
+    with get_session_context() as db:
+        user = get_or_create_oauth_user(
+            db,
+            provider="telegram",
+            raw_claims={
+                "id": 8_810_001,
+                "sub": "telegram-oidc-subject",
+                "preferred_username": "telegram_browser",
+                "name": "Telegram Browser",
+            },
+        )
+        assert user.id == current_id
+        assert db.query(User).filter(User.telegram_user_id == 8_810_001).count() == 1
+        assert (
+            db.query(AuthIdentity)
+            .filter(AuthIdentity.user_id == user.id, AuthIdentity.provider == "telegram")
+            .count()
+            == 1
+        )
+
+
+def test_oauth_callback_creates_browser_session_without_exposing_access_token(client, monkeypatch):
+    from fitminiapp_api.api.v1 import auth as auth_api
+    from fitminiapp_api.core.config import settings
+
+    class FakeTelegramClient:
+        async def authorize_access_token(self, request):
+            del request
+            return {
+                "userinfo": {
+                    "id": 8_810_002,
+                    "sub": "telegram-oidc-subject-002",
+                    "preferred_username": "oauth_callback_user",
+                    "name": "OAuth Callback User",
+                }
+            }
+
+    monkeypatch.setattr(settings, "enable_web_auth", True)
+    monkeypatch.setattr(
+        auth_api,
+        "configured_oauth_client",
+        lambda provider: FakeTelegramClient() if provider == "telegram" else None,
+    )
+    response = client.get(
+        "/api/v1/auth/oauth/telegram/callback",
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/app"
+    assert "access_token" not in response.headers["location"]
+    assert "fit_refresh_token=" in response.headers["set-cookie"]
+
+
+def test_social_login_does_not_auto_link_only_by_matching_email(client, monkeypatch):
+    from fitminiapp_api.core.config import settings
+    from fitminiapp_api.services.oauth_login import get_or_create_oauth_user
+
+    monkeypatch.setattr(settings, "enable_web_auth", True)
+    email = "shared@example.com"
+    registered = client.post(
+        "/api/v1/auth/email/register",
+        json={
+            "username": "email_owner",
+            "email": email,
+            "password": "safe-password-for-email-owner",
+        },
+    )
+    verified = client.post(
+        "/api/v1/auth/email/verify",
+        json={"token": registered.json()["verification_token"]},
+    )
+    local_headers = {"Authorization": f"Bearer {verified.json()['access_token']}"}
+    local_id = client.get("/api/v1/me", headers=local_headers).json()["id"]
+
+    with get_session_context() as db:
+        google_user = get_or_create_oauth_user(
+            db,
+            provider="google",
+            raw_claims={
+                "sub": "google-subject-001",
+                "email": email,
+                "email_verified": True,
+                "name": "Google User",
+            },
+        )
+        assert google_user.id != local_id
+
+
 def test_alembic_revision_ids_fit_version_table_column():
     versions_dir = Path(__file__).resolve().parents[2] / "backend" / "alembic" / "versions"
     for migration in versions_dir.glob("*.py"):

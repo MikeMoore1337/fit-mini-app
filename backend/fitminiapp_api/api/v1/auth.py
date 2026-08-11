@@ -1,7 +1,10 @@
 import logging
 from datetime import timedelta
 
+from authlib.integrations.base_client.errors import OAuthError
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi.responses import RedirectResponse
+from httpx import HTTPError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -31,6 +34,10 @@ from fitminiapp_api.services.jwt import (
     build_access_token,
     build_refresh_token,
     decode_token,
+)
+from fitminiapp_api.services.oauth_login import (
+    configured_oauth_client,
+    get_or_create_oauth_user,
 )
 from fitminiapp_api.services.password_auth import (
     PasswordAuthError,
@@ -79,6 +86,10 @@ def _send_auth_message(sender, email: str, raw_token: str) -> None:
             status_code=503,
             detail="Аккаунт сохранён, но письмо пока не отправлено. Повторите отправку позже.",
         )
+
+
+def _oauth_callback_url(provider: str) -> str:
+    return f"{settings.frontend_base_url.rstrip('/')}/api/v1/auth/oauth/{provider}/callback"
 
 
 def _set_refresh_cookie(response: Response, raw_token: str) -> None:
@@ -155,6 +166,71 @@ def telegram_init_auth(
 
     user = get_or_create_user_from_init_data(db, validated_init_data)
     return issue_token_pair(db, user, response)
+
+
+@router.get("/oauth/{provider}/start")
+@limiter.limit("20/minute")
+async def oauth_start(request: Request, provider: str):
+    _require_web_auth()
+    client = configured_oauth_client(provider)
+    if client is None:
+        raise HTTPException(status_code=404, detail="Провайдер входа не настроен")
+    return await client.authorize_redirect(request, _oauth_callback_url(provider))
+
+
+async def _oauth_callback_impl(
+    request: Request,
+    provider: str,
+    db: Session,
+) -> Response:
+    _require_web_auth()
+    client = configured_oauth_client(provider)
+    if client is None:
+        raise HTTPException(status_code=404, detail="Провайдер входа не настроен")
+    try:
+        token = await client.authorize_access_token(request)
+        if provider == "yandex":
+            profile_response = await client.get("info?format=json", token=token)
+            profile_response.raise_for_status()
+            raw_claims = profile_response.json()
+        else:
+            raw_claims = dict(token.get("userinfo") or {})
+        user = get_or_create_oauth_user(db, provider=provider, raw_claims=raw_claims)
+    except (HTTPError, OAuthError, ValueError) as exc:
+        logger.warning(
+            "oauth_login_failed", extra={"provider": provider, "reason": type(exc).__name__}
+        )
+        return RedirectResponse(url="/app?auth_error=oauth", status_code=303)
+
+    redirect = RedirectResponse(url="/app", status_code=303)
+    issue_token_pair(db, user, redirect)
+    return redirect
+
+
+@router.get(
+    "/oauth/{provider}/callback",
+    operation_id="oauth_callback_get",
+)
+@limiter.limit("20/minute")
+async def oauth_callback_get(
+    request: Request,
+    provider: str,
+    db: Session = Depends(get_db),
+) -> Response:
+    return await _oauth_callback_impl(request, provider, db)
+
+
+@router.post(
+    "/oauth/{provider}/callback",
+    operation_id="oauth_callback_post",
+)
+@limiter.limit("20/minute")
+async def oauth_callback_post(
+    request: Request,
+    provider: str,
+    db: Session = Depends(get_db),
+) -> Response:
+    return await _oauth_callback_impl(request, provider, db)
 
 
 @router.post("/email/register", response_model=RegistrationResponse, status_code=201)

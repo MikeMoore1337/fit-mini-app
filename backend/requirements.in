@@ -9,9 +9,11 @@ psycopg[binary]
 pydantic-settings
 pydantic
 alembic
+authlib
 PyJWT
 pwdlib[argon2]
 httpx
+itsdangerous
 python-multipart
 qrcode[pil]
 setuptools>=78.1.1

@@ -147,6 +147,10 @@ async def main() -> None:
             settings.telegram_bot_token,
             settings.bot_internal_token,
             settings.smtp_password,
+            settings.telegram_oauth_client_secret,
+            settings.google_oauth_client_secret,
+            settings.yandex_oauth_client_secret,
+            settings.apple_oauth_client_secret,
             settings.database_url,
         ),
     )
