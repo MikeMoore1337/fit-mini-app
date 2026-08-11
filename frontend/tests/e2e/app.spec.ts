@@ -375,6 +375,20 @@ test('поля адаптируются к разным iPhone, а пример 
   await expect(page.getByRole('heading', { name: 'День 1. Всё тело' })).toBeVisible();
   await expect(page.getByRole('dialog').getByText('Тяга блока')).toBeVisible();
   await expect(page.getByRole('dialog').getByText('3 подх. × 10–12 · отдых 90 сек.')).toBeVisible();
+  const [programPanelBox, programHeadBox] = await Promise.all([
+    page.locator('.program-example-modal__panel').boundingBox(),
+    page.locator('.program-example-modal__head').boundingBox(),
+  ]);
+  expect(programPanelBox).not.toBeNull();
+  expect(programHeadBox).not.toBeNull();
+  expect(programPanelBox!.x).toBeLessThanOrEqual(1);
+  expect(Math.abs(programPanelBox!.width - 390)).toBeLessThanOrEqual(1);
+  expect(Math.abs(programHeadBox!.x - programPanelBox!.x)).toBeLessThanOrEqual(2);
+  expect(
+    Math.abs(
+      programHeadBox!.x + programHeadBox!.width - (programPanelBox!.x + programPanelBox!.width),
+    ),
+  ).toBeLessThanOrEqual(2);
 });
 
 test('сенсорное поле даты сохраняет нативный пикер и показывает иконку календаря', async ({

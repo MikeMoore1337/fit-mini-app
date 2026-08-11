@@ -665,6 +665,7 @@
   padding: 18px 20px 14px;
   border-bottom: 1px solid var(--border);
   background: var(--card-bg);
+  max-width: none;
 }
 .program-example-modal__head > div {
   min-width: 0;
