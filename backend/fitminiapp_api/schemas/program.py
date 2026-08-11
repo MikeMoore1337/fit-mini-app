@@ -28,7 +28,7 @@ class ProgramTemplateCreate(BaseModel):
     mode: Literal["self", "coach"] = "self"
     target_telegram_user_id: int | None = Field(default=None, ge=1)
     target_full_name: str | None = Field(default=None, max_length=128)
-    days: list[ProgramTemplateDayCreate] = Field(min_length=1, max_length=7)
+    days: list[ProgramTemplateDayCreate] = Field(min_length=1, max_length=8)
     assign_after_create: bool = True
     start_date: date | None = None
     duration_weeks: int = Field(default=1, ge=1, le=24)

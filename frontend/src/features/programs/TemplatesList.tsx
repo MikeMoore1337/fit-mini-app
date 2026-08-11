@@ -38,6 +38,7 @@ function weekdayFromDate(value: string): number {
 }
 
 function defaultWeekdays(template: ProgramTemplate, startDate: string): number[] {
+  if (template.days.length > 7) return [];
   const firstWeekday = weekdayFromDate(startDate);
   return template.days.map((_, index) => (firstWeekday + index) % 7);
 }
@@ -96,7 +97,8 @@ export function TemplatesList() {
         body: {
           start_date: assignmentStartDate,
           duration_weeks: assignmentDuration,
-          schedule_weekdays: assignmentWeekdays,
+          schedule_weekdays:
+            assignmentTemplate && assignmentTemplate.days.length > 7 ? null : assignmentWeekdays,
           replace_active: replaceActive,
         },
       }),
@@ -141,12 +143,13 @@ export function TemplatesList() {
   );
   const assignmentScheduleIsValid =
     Boolean(assignmentTemplate) &&
-    (assignmentTemplate?.days.length ?? 0) <= 7 &&
-    assignmentWeekdays.length === assignmentTemplate?.days.length &&
-    new Set(assignmentWeekdays).size === assignmentWeekdays.length &&
-    assignmentOffsets.every(
-      (offset, index) => index === 0 || offset > assignmentOffsets[index - 1]!,
-    );
+    ((assignmentTemplate?.days.length ?? 0) > 7
+      ? assignmentWeekdays.length === 0
+      : assignmentWeekdays.length === assignmentTemplate?.days.length &&
+        new Set(assignmentWeekdays).size === assignmentWeekdays.length &&
+        assignmentOffsets.every(
+          (offset, index) => index === 0 || offset > assignmentOffsets[index - 1]!,
+        ));
 
   return (
     <>
@@ -420,29 +423,36 @@ export function TemplatesList() {
                   />
                 </label>
               </div>
-              <div className="form-grid">
-                {assignmentTemplate.days.map((day, dayIndex) => (
-                  <label className="field" key={day.id}>
-                    <span>{day.title || `День ${dayIndex + 1}`}</span>
-                    <select
-                      value={assignmentWeekdays[dayIndex] ?? ''}
-                      onChange={(event) =>
-                        setAssignmentWeekdays(
-                          assignmentWeekdays.map((value, index) =>
-                            index === dayIndex ? Number(event.target.value) : value,
-                          ),
-                        )
-                      }
-                    >
-                      {weekdayLabels.map((label, weekday) => (
-                        <option value={weekday} key={label}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                ))}
-              </div>
+              {assignmentTemplate.days.length > 7 ? (
+                <p className="auth-notice">
+                  Восьмидневный цикл планируется последовательно: одна тренировка за другой, начиная
+                  с выбранной даты.
+                </p>
+              ) : (
+                <div className="form-grid">
+                  {assignmentTemplate.days.map((day, dayIndex) => (
+                    <label className="field" key={day.id}>
+                      <span>{day.title || `День ${dayIndex + 1}`}</span>
+                      <select
+                        value={assignmentWeekdays[dayIndex] ?? ''}
+                        onChange={(event) =>
+                          setAssignmentWeekdays(
+                            assignmentWeekdays.map((value, index) =>
+                              index === dayIndex ? Number(event.target.value) : value,
+                            ),
+                          )
+                        }
+                      >
+                        {weekdayLabels.map((label, weekday) => (
+                          <option value={weekday} key={label}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ))}
+                </div>
+              )}
               {!assignmentScheduleIsValid && (
                 <p className="field-error" role="alert">
                   Выберите разные дни недели в порядке тренировок. В одной неделе доступно до семи
