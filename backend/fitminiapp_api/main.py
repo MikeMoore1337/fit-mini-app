@@ -9,6 +9,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from sqlalchemy import text
+from starlette.middleware.sessions import SessionMiddleware
 
 from fitminiapp_api.api.router import api_router
 from fitminiapp_api.core.config import settings
@@ -40,6 +41,10 @@ async def lifespan(app: FastAPI):
             settings.telegram_bot_token,
             settings.bot_internal_token,
             settings.smtp_password,
+            settings.telegram_oauth_client_secret,
+            settings.google_oauth_client_secret,
+            settings.yandex_oauth_client_secret,
+            settings.apple_oauth_client_secret,
             settings.database_url,
         ),
     )
@@ -76,6 +81,14 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(RequestContextMiddleware)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.secret_key,
+    session_cookie="fit_oauth_session",
+    max_age=10 * 60,
+    same_site="none" if settings.app_env == "prod" else "lax",
+    https_only=settings.app_env == "prod",
+)
 
 
 @app.exception_handler(Exception)

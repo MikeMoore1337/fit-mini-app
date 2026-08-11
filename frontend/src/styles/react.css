@@ -218,6 +218,63 @@
   padding-top: 14px;
   border-top: 1px solid var(--border);
 }
+.oauth-auth {
+  display: grid;
+  gap: 9px;
+}
+.oauth-auth > p {
+  margin: 0;
+  font-size: 0.82rem;
+}
+.oauth-auth__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.oauth-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--bg-soft);
+  color: var(--text);
+  font-weight: 700;
+  text-decoration: none;
+}
+.oauth-button:hover {
+  border-color: var(--accent-line);
+  background: var(--surface-hover);
+}
+.oauth-button span {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface-active);
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+.oauth-button--telegram span {
+  background: #229ed9;
+  color: white;
+}
+.oauth-button--google span {
+  background: white;
+  color: #4285f4;
+}
+.oauth-button--yandex span {
+  background: #fc3f1d;
+  color: white;
+}
+.oauth-button--apple span {
+  background: #111;
+  color: white;
+}
 .email-auth__tabs {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

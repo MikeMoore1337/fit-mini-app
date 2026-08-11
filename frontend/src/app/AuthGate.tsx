@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from './AuthProvider';
 import { Card, ErrorState, LoadingState } from '../shared/ui/common';
 import { EmailAuthPanel } from '../features/auth/EmailAuthPanel';
+import { OAuthButtons } from '../features/auth/OAuthButtons';
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, config, loading, error, devLogin, telegramLogin } = useAuth();
@@ -53,6 +54,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
                 : 'Telegram Mini App не обнаружен. Откройте приложение кнопкой внутри бота.'}
             </p>
           )}
+          {config?.enable_web_auth && <OAuthButtons providers={config.oauth_providers ?? []} />}
           {config?.enable_web_auth && <EmailAuthPanel />}
           {config?.enable_dev_auth && (
             <div className="stack">

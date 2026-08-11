@@ -51,6 +51,15 @@ class Settings(BaseSettings):
     smtp_starttls: bool = True
     smtp_use_ssl: bool = False
 
+    telegram_oauth_client_id: str = ""
+    telegram_oauth_client_secret: str = ""
+    google_oauth_client_id: str = ""
+    google_oauth_client_secret: str = ""
+    yandex_oauth_client_id: str = ""
+    yandex_oauth_client_secret: str = ""
+    apple_oauth_client_id: str = ""
+    apple_oauth_client_secret: str = ""
+
     worker_poll_seconds: int = Field(default=10, ge=1, le=3600)
     reminder_sync_seconds: int = Field(default=60, ge=10, le=3600)
     notification_delivery_concurrency: int = Field(default=8, ge=1, le=30)
@@ -99,6 +108,20 @@ class Settings(BaseSettings):
             except ValueError as exc:
                 raise ValueError(f"Invalid ADMIN_TELEGRAM_USER_IDS value: {value}") from exc
         return result
+
+    @property
+    def oauth_provider_names(self) -> list[str]:
+        pairs = {
+            "telegram": (self.telegram_oauth_client_id, self.telegram_oauth_client_secret),
+            "google": (self.google_oauth_client_id, self.google_oauth_client_secret),
+            "yandex": (self.yandex_oauth_client_id, self.yandex_oauth_client_secret),
+            "apple": (self.apple_oauth_client_id, self.apple_oauth_client_secret),
+        }
+        return [
+            name
+            for name, credentials in pairs.items()
+            if all(value.strip() for value in credentials)
+        ]
 
 
 settings = Settings()
