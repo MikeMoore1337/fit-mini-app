@@ -48,7 +48,7 @@ describe('LandingPage', () => {
     expect(screen.queryByText(/тариф/i)).not.toBeInTheDocument();
 
     expect(screen.queryByText('@mikhail_murzaev')).not.toBeInTheDocument();
-    expect(container.querySelectorAll('img[src="/assets/brand/fitness-logo-v1.png"]')).toHaveLength(
+    expect(container.querySelectorAll('img[src="/assets/brand/fitness-logo-v2.png"]')).toHaveLength(
       2,
     );
     const contact = screen.getByRole('link', { name: /связаться в telegram/i });
