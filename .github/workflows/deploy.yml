@@ -58,4 +58,5 @@ jobs:
             "cd '$PROD_PATH' &&
              git fetch --prune origin master &&
              git reset --hard '$DEPLOY_SHA' &&
+             git clean -fd &&
              exec bash scripts/deploy_production.sh '$DEPLOY_SHA' '$PROD_URL'"
