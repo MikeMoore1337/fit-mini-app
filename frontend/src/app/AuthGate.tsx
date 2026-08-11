@@ -4,12 +4,20 @@ import { Card, ErrorState, LoadingState } from '../shared/ui/common';
 import { EmailAuthPanel } from '../features/auth/EmailAuthPanel';
 import { OAuthButtons } from '../features/auth/OAuthButtons';
 
+export function telegramMiniAppUrl(username: string): string {
+  const normalized = username.trim().replace(/^@/, '');
+  return `https://t.me/${encodeURIComponent(normalized)}?startapp`;
+}
+
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, config, loading, error, devLogin, telegramLogin } = useAuth();
   const [busy, setBusy] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const oauthProviders = config?.oauth_providers ?? [];
   const hasBrowserAuth = Boolean(config?.enable_email_auth || oauthProviders.length);
+  const telegramAppUrl = config?.telegram_bot_username
+    ? telegramMiniAppUrl(config.telegram_bot_username)
+    : null;
 
   if (loading)
     return (
@@ -50,11 +58,18 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
             </button>
           )}
           {!window.Telegram?.WebApp?.initData && (
-            <p className="auth-notice">
-              {hasBrowserAuth
-                ? 'Telegram Mini App не обнаружен. Выберите способ входа ниже.'
-                : 'Telegram Mini App не обнаружен. Откройте приложение кнопкой внутри бота.'}
-            </p>
+            <div className="auth-notice" role="status">
+              <span>
+                {hasBrowserAuth
+                  ? 'Telegram Mini App не обнаружен. Выберите способ входа ниже.'
+                  : 'Вход через браузер пока недоступен. Сейчас приложение можно открыть через Telegram.'}
+              </span>
+              {!hasBrowserAuth && telegramAppUrl && (
+                <a className="button-link" href={telegramAppUrl} target="_blank" rel="noreferrer">
+                  Открыть в Telegram
+                </a>
+              )}
+            </div>
           )}
           {config?.enable_web_auth && <OAuthButtons providers={oauthProviders} />}
           {config?.enable_email_auth && <EmailAuthPanel />}
