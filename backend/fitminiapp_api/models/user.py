@@ -42,6 +42,9 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now_msk_naive)
 
     profile = relationship("UserProfile", back_populates="user", uselist=False)
+    auth_identities = relationship(
+        "AuthIdentity", back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class UserProfile(Base):

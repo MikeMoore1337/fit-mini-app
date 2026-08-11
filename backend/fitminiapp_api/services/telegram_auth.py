@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from fitminiapp_api.core.config import settings
 from fitminiapp_api.models.notification import NotificationSetting
 from fitminiapp_api.models.user import User, UserProfile
+from fitminiapp_api.services.auth_identities import ensure_telegram_identity
 
 
 def build_secret_key(bot_token: str) -> bytes:
@@ -215,6 +216,8 @@ def get_or_create_user_from_init_data(db: Session, init_data: dict) -> User:
     )
     if notification_settings is None:
         db.add(NotificationSetting(user_id=user.id))
+
+    ensure_telegram_identity(db, user)
 
     db.commit()
     db.refresh(user)

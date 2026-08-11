@@ -12,6 +12,7 @@ from fitminiapp_api.models.program import (
     ProgramTemplateExercise,
 )
 from fitminiapp_api.models.user import User, UserProfile
+from fitminiapp_api.services.auth_identities import ensure_telegram_identity
 from fitminiapp_api.services.program_seed_data import (
     EXERCISE_CATALOG,
     LEGACY_TEMPLATE_SLUGS,
@@ -163,6 +164,8 @@ def seed_demo_data(db: Session, include_demo_users: bool = True) -> None:
         client2 = User(telegram_user_id=2002, username="client_2002")
         db.add_all([coach, client1, client2])
         db.flush()
+        for user in (coach, client1, client2):
+            ensure_telegram_identity(db, user, mark_login=False)
         db.add_all(
             [
                 UserProfile(
