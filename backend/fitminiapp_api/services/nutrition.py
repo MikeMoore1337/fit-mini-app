@@ -184,23 +184,26 @@ def _daily_activity(payload: NutritionTargetSave) -> tuple[str, str, float]:
             payload.steps_range,
             ACTIVITY_COEFFICIENTS[payload.daily_routine][payload.steps_range],
         )
-    routine = LEGACY_DAILY_ROUTINES[payload.daily_activity_level]
-    return routine, "unknown", LEGACY_ACTIVITY_COEFFICIENTS[payload.daily_activity_level]
+    legacy_level = payload.daily_activity_level or "sedentary"
+    routine = LEGACY_DAILY_ROUTINES[legacy_level]
+    return routine, "unknown", LEGACY_ACTIVITY_COEFFICIENTS[legacy_level]
 
 
 def _cardio_trainings(payload: NutritionTargetSave) -> list[CardioTraining]:
     if payload.cardio_trainings is not None:
         return payload.cardio_trainings
-    if payload.cardio_trainings_per_week == 0:
+    trainings_per_week = payload.cardio_trainings_per_week or 0
+    if trainings_per_week == 0:
         return []
+    legacy_intensity = payload.cardio_intensity or "moderate"
     return [
         CardioTraining(
             kind="other",
-            trainings_per_week=payload.cardio_trainings_per_week,
-            duration_minutes=payload.cardio_training_duration_minutes,
+            trainings_per_week=trainings_per_week,
+            duration_minutes=payload.cardio_training_duration_minutes or 30,
             intensity=cast(
                 CardioIntensity,
-                LEGACY_CARDIO_INTENSITIES[payload.cardio_intensity],
+                LEGACY_CARDIO_INTENSITIES[legacy_intensity],
             ),
         )
     ]
@@ -487,7 +490,7 @@ def save_nutrition_target(
     target.age = payload.age
     target.daily_routine = daily_routine
     target.steps_range = steps_range
-    target.daily_activity_level = payload.daily_activity_level
+    target.daily_activity_level = payload.daily_activity_level or "sedentary"
     target.strength_trainings_per_week = payload.strength_trainings_per_week
     target.strength_training_duration_minutes = payload.strength_training_duration_minutes
     target.strength_training_type = payload.strength_training_type or "regular"
@@ -498,9 +501,11 @@ def save_nutrition_target(
     )
     first_cardio = cardio_trainings[0] if cardio_trainings else None
     target.cardio_training_duration_minutes = (
-        first_cardio.duration_minutes if first_cardio else payload.cardio_training_duration_minutes
+        first_cardio.duration_minutes
+        if first_cardio
+        else (payload.cardio_training_duration_minutes or 30)
     )
-    target.cardio_intensity = payload.cardio_intensity
+    target.cardio_intensity = payload.cardio_intensity or "moderate"
     target.goal = payload.goal.strip()
     _apply_calculation(target, calculations)
     target.saved_at = now_for_user_naive(target_user)
