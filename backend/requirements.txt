@@ -11,8 +11,14 @@ anyio==4.14.2
     #   httpx
     #   starlette
     #   watchfiles
+argon2-cffi==25.1.0
+    # via pwdlib
+argon2-cffi-bindings==25.1.0
+    # via argon2-cffi
 ast-serialize==0.6.0
     # via mypy
+authlib==1.7.2
+    # via -r backend/requirements.in
 boolean-py==5.0
     # via license-expression
 cachecontrol==0.14.4
@@ -22,6 +28,10 @@ certifi==2026.7.22
     #   httpcore
     #   httpx
     #   requests
+cffi==2.1.1
+    # via
+    #   argon2-cffi-bindings
+    #   cryptography
 cfgv==3.5.0
     # via pre-commit
 charset-normalizer==3.4.9
@@ -33,6 +43,10 @@ colorama==0.4.6 ; sys_platform == 'win32'
     #   click
     #   pytest
     #   qrcode
+cryptography==50.0.0
+    # via
+    #   authlib
+    #   joserfc
 cyclonedx-python-lib==11.11.0
     # via pip-audit
 defusedxml==0.7.1
@@ -71,6 +85,10 @@ idna==3.18
     #   requests
 iniconfig==2.3.0
     # via pytest
+itsdangerous==2.2.0
+    # via -r backend/requirements.in
+joserfc==1.7.4
+    # via authlib
 librt==0.13.0 ; platform_python_implementation != 'PyPy'
     # via mypy
 license-expression==30.4.4
@@ -128,8 +146,12 @@ psycopg==3.3.4
     # via -r backend/requirements.in
 psycopg-binary==3.3.4 ; implementation_name != 'pypy'
     # via psycopg
+pwdlib==0.3.0
+    # via -r backend/requirements.in
 py-serializable==2.1.0
     # via cyclonedx-python-lib
+pycparser==3.0 ; implementation_name != 'PyPy'
+    # via cffi
 pydantic==2.13.4
     # via
     #   -r backend/requirements.in
