@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
 import { api } from '../../shared/api/client';
-import type { TelegramLinkCreate } from '../../shared/api/types';
+import type { OAuthLinkCreate, TelegramLinkCreate } from '../../shared/api/types';
 import { Badge, Card } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 
@@ -20,7 +20,7 @@ function downloadJson(payload: unknown): void {
 }
 
 export function AccountPrivacy() {
-  const { user, logout } = useAuth();
+  const { user, config, logout } = useAuth();
   const { toast, confirm } = useFeedback();
   const telegramLinkMutation = useMutation({
     mutationFn: () =>
@@ -30,6 +30,25 @@ export function AccountPrivacy() {
       }),
     onError: (reason) => toast((reason as Error).message, 'error'),
   });
+  const oauthLinkMutation = useMutation({
+    mutationFn: async (provider: string) => ({
+      provider,
+      link: await api<OAuthLinkCreate>(`/api/v1/me/auth/oauth-link/${provider}`, {
+        method: 'POST',
+        body: {},
+      }),
+    }),
+    onError: (reason) => toast((reason as Error).message, 'error'),
+  });
+  const providerLabels: Record<string, string> = {
+    google: 'Google',
+    yandex: 'Яндекс',
+    apple: 'Apple',
+  };
+  const availableOAuthProviders = (config?.oauth_providers ?? []).filter(
+    (provider) => provider in providerLabels,
+  );
+  const linkedProviders = new Set(user?.auth_providers ?? []);
   const exportMutation = useMutation({
     mutationFn: () => api<unknown>('/api/v1/me/export'),
     onSuccess: (payload) => {
@@ -96,6 +115,42 @@ export function AccountPrivacy() {
             заблокировано.
           </p>
         )}
+        {availableOAuthProviders.map((provider) => {
+          const label = providerLabels[provider];
+          const pending = oauthLinkMutation.isPending && oauthLinkMutation.variables === provider;
+          const createdLink =
+            oauthLinkMutation.data?.provider === provider ? oauthLinkMutation.data.link : null;
+          return (
+            <div className="list-row top-gap" key={provider}>
+              <div className="list-row__main">
+                <strong>{label}</strong>
+                <span className="muted">
+                  {linkedProviders.has(provider)
+                    ? 'Подключён к текущему аккаунту.'
+                    : 'После подтверждения можно будет входить этим способом в тот же профиль.'}
+                </span>
+              </div>
+              <div className="list-row__actions">
+                {linkedProviders.has(provider) ? (
+                  <Badge>Привязан</Badge>
+                ) : createdLink ? (
+                  <a className="button-link" href={createdLink.oauth_url}>
+                    Продолжить с {label}
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={oauthLinkMutation.isPending}
+                    onClick={() => oauthLinkMutation.mutate(provider)}
+                  >
+                    {pending ? 'Готовим переход…' : `Привязать ${label}`}
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </Card>
 
       <Card title="Данные и аккаунт" description="Скачайте копию данных или удалите аккаунт.">

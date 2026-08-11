@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AppShell } from '../../app/AppShell';
 import { useAuth } from '../../app/AuthProvider';
 import { NotificationsPanel } from '../../features/account/NotificationsPanel';
@@ -17,6 +17,7 @@ import {
   type WorkoutNavigationTarget,
 } from '../../features/workouts/WorkoutHistory';
 import { Badge, Card } from '../../shared/ui/common';
+import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { handleTabKeyDown } from '../../shared/ui/tabs';
 
 type Tab = 'today' | 'progress' | 'programs' | 'catalog' | 'nutrition' | 'profile';
@@ -32,13 +33,48 @@ function launchInviteToken(): string | null {
 
 export default function MiniAppPage() {
   const { user, logout, reloadUser } = useAuth();
+  const { toast } = useFeedback();
   const [initialInviteToken] = useState(launchInviteToken);
-  const [tab, setTab] = useState<Tab>(initialInviteToken ? 'profile' : 'today');
+  const [tab, setTab] = useState<Tab>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return initialInviteToken || params.has('auth_linked') || params.has('auth_error')
+      ? 'profile'
+      : 'today';
+  });
   const [focusedWorkout, setFocusedWorkout] = useState<{
     id: number;
     target: WorkoutNavigationTarget;
   } | null>(null);
   const [inviteToken, setInviteToken] = useState<string | null>(initialInviteToken);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const linkedProvider = params.get('auth_linked');
+    const authError = params.get('auth_error');
+    if (!linkedProvider && !authError) return;
+
+    const labels: Record<string, string> = {
+      google: 'Google',
+      yandex: 'Яндекс',
+      apple: 'Apple',
+    };
+    if (linkedProvider) {
+      toast(`${labels[linkedProvider] ?? linkedProvider} привязан к аккаунту`);
+    } else if (authError === 'oauth_link_conflict') {
+      toast('Этот способ входа уже привязан к другому аккаунту', 'error');
+    } else {
+      toast('Не удалось завершить авторизацию', 'error');
+    }
+
+    params.delete('auth_linked');
+    params.delete('auth_error');
+    const query = params.toString();
+    window.history.replaceState(
+      null,
+      '',
+      `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`,
+    );
+  }, [toast]);
   const role = user?.is_admin ? 'Администратор' : user?.is_coach ? 'Тренер' : 'Клиент';
   const profileReady = Boolean(
     user?.profile?.full_name &&
