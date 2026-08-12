@@ -182,6 +182,7 @@ def test_production_oauth_does_not_require_smtp_when_email_auth_is_disabled():
     assert configured.enable_email_auth is False
     assert configured.oauth_http_timeout_seconds == 15
     assert configured.oauth_force_ipv4 is True
+    assert configured.oauth_proxy_url == ""
 
 
 def test_oauth_http_timeout_is_bounded():
@@ -200,6 +201,10 @@ def test_oauth_http_timeout_is_bounded():
         Settings(**common, oauth_http_timeout_seconds=4.9)
     with pytest.raises(ValidationError, match="oauth_http_timeout_seconds"):
         Settings(**common, oauth_http_timeout_seconds=61)
+    with pytest.raises(ValidationError, match="OAUTH_PROXY_URL"):
+        Settings(**common, oauth_proxy_url="file:///tmp/proxy")
+    with pytest.raises(ValidationError, match="OAUTH_PROXY_URL"):
+        Settings(**common, oauth_proxy_url="socks5://proxy.example/?unsafe=true")
 
 
 def test_oidc_clients_ignore_ambient_proxy_settings(monkeypatch):
@@ -228,7 +233,7 @@ def test_oidc_clients_ignore_ambient_proxy_settings(monkeypatch):
         "timeout": 17,
         "trust_env": False,
     }
-    assert captured["client_cls"] is oauth_login.IPv4StarletteOAuth2App
+    assert captured["client_cls"] is oauth_login.OAuthStarletteOAuth2App
 
 
 def test_oidc_clients_can_use_default_dual_stack_transport(monkeypatch):
@@ -251,7 +256,27 @@ def test_oidc_clients_can_use_default_dual_stack_transport(monkeypatch):
         "openid profile",
     )
 
-    assert captured["client_cls"] is None
+    assert captured["client_cls"] is oauth_login.OAuthStarletteOAuth2App
+
+
+def test_oidc_client_uses_explicit_proxy_before_ipv4_transport(monkeypatch):
+    from fitminiapp_api.services import oauth_login
+
+    monkeypatch.setattr(oauth_login.settings, "oauth_proxy_url", "socks5://proxy.test:1081")
+    monkeypatch.setattr(oauth_login.settings, "oauth_force_ipv4", True)
+
+    assert oauth_login.oauth_transport_options() == {"proxy": "socks5://proxy.test:1081"}
+
+
+def test_oidc_client_uses_ipv4_transport_without_an_explicit_proxy(monkeypatch):
+    from fitminiapp_api.services import oauth_login
+
+    monkeypatch.setattr(oauth_login.settings, "oauth_proxy_url", "")
+    monkeypatch.setattr(oauth_login.settings, "oauth_force_ipv4", True)
+
+    options = oauth_login.oauth_transport_options()
+
+    assert options["transport"].__class__.__name__ == "AsyncHTTPTransport"
 
 
 def test_production_email_auth_requires_smtp():
@@ -3246,6 +3271,8 @@ def test_unconfigured_oauth_provider_is_not_exposed(client, monkeypatch):
     from fitminiapp_api.core.config import settings
 
     monkeypatch.setattr(settings, "enable_web_auth", True)
+    monkeypatch.setattr(settings, "telegram_oauth_client_id", "")
+    monkeypatch.setattr(settings, "telegram_oauth_client_secret", "")
     config = client.get("/api/v1/public/config")
     assert config.status_code == 200
     assert config.json()["enable_email_auth"] is False
