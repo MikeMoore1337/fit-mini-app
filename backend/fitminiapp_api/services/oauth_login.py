@@ -30,7 +30,13 @@ def _register_oidc(
         client_id=client_id,
         client_secret=client_secret,
         server_metadata_url=metadata_url,
-        client_kwargs={"scope": scope},
+        client_kwargs={
+            "scope": scope,
+            # HTTPX defaults to a five-second connect timeout. Telegram's OAuth
+            # endpoint can take longer to establish a connection from production
+            # networks, especially while IPv4/IPv6 routes are being selected.
+            "timeout": settings.oauth_http_timeout_seconds,
+        },
     )
 
 
