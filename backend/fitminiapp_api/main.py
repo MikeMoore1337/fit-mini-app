@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -22,7 +23,9 @@ from fitminiapp_api.middleware.request_context import RequestContextMiddleware
 APP_DIR = Path(__file__).resolve().parent
 BACKEND_DIR = APP_DIR.parent
 EXERCISE_GUIDES_DIR = BACKEND_DIR / "assets" / "exercise-guides"
-LOCAL_FRONTEND_DIST_DIR = BACKEND_DIR.parent / "frontend" / "dist"
+LOCAL_FRONTEND_DIST_DIR = Path(
+    os.environ.get("FRONTEND_DIST_DIR", BACKEND_DIR.parent / "frontend" / "dist")
+)
 CONTAINER_FRONTEND_DIST_DIR = Path("/app/frontend-dist")
 FRONTEND_DIST_DIR = (
     CONTAINER_FRONTEND_DIST_DIR if CONTAINER_FRONTEND_DIST_DIR.exists() else LOCAL_FRONTEND_DIST_DIR

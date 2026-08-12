@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 
+from fitminiapp_api.core.timezone import today_msk
 from fitminiapp_api.db.session import get_session_context
 from fitminiapp_api.models.program import UserProgram, UserWorkout
 from fitminiapp_api.models.user import User
@@ -144,7 +145,7 @@ def test_finish_requires_explicit_incomplete_confirmation_and_completes_program(
             "level": "beginner",
             "mode": "self",
             "assign_after_create": True,
-            "start_date": date.today().isoformat(),
+            "start_date": today_msk().isoformat(),
             "days": [
                 {
                     "title": "Сегодня",

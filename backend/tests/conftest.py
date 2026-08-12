@@ -17,6 +17,23 @@ if re.fullmatch(r"[A-Za-z0-9_]+", _WORKER_ID) is None:
 
 _TEST_DB = ROOT / ".artifacts" / "tests" / "backend" / f"fitmini_pytest-{_WORKER_ID}.db"
 _TEST_DB.parent.mkdir(parents=True, exist_ok=True)
+_TEST_FRONTEND_DIST = ROOT / ".artifacts" / "tests" / f"frontend-dist-{_WORKER_ID}"
+_TEST_FRONTEND_ASSETS = _TEST_FRONTEND_DIST / "assets"
+_TEST_FRONTEND_BRAND_ASSETS = _TEST_FRONTEND_ASSETS / "brand"
+_TEST_FRONTEND_BRAND_ASSETS.mkdir(parents=True, exist_ok=True)
+(_TEST_FRONTEND_DIST / "index.html").write_text(
+    '<!doctype html><html><head><link rel="stylesheet" href="/assets/test.css"></head>'
+    '<body><div id="root"></div><script src="/assets/test.js"></script></body></html>',
+    encoding="utf-8",
+)
+(_TEST_FRONTEND_ASSETS / "test.css").write_text("#root { display: block; }", encoding="utf-8")
+(_TEST_FRONTEND_ASSETS / "test.js").write_text("", encoding="utf-8")
+_TEST_PNG = bytes.fromhex(
+    "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489"
+    "0000000d49444154789c6360f8cff0000004010100cdabcaac0000000049454e44ae426082"
+)
+for _asset_name in ("fitness-logo-v2.png", "favicon-v2.png"):
+    (_TEST_FRONTEND_BRAND_ASSETS / _asset_name).write_bytes(_TEST_PNG)
 _BASE_TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL")
 _WORKER_DATABASE_NAME: str | None = None
 
@@ -46,6 +63,7 @@ os.environ.setdefault("ENABLE_DEV_AUTH", "true")
 os.environ.setdefault("TELEGRAM_BOT_TOKEN", "test-token")
 os.environ.setdefault("BOT_INTERNAL_TOKEN", "test-token")
 os.environ.setdefault("FRONTEND_BASE_URL", "https://app.your-fitness-coach.ru")
+os.environ.setdefault("FRONTEND_DIST_DIR", str(_TEST_FRONTEND_DIST))
 
 from fitminiapp_api.core.rate_limit import limiter
 from fitminiapp_api.db.base import Base
