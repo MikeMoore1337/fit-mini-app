@@ -131,7 +131,7 @@ function ClientProfileEditor({ client }: { client: Client }) {
         mutation.mutate();
       }}
     >
-      <div className="form-grid">
+      <div className="form-grid profile-form-grid">
         <label className="field">
           <span>Имя у тренера</span>
           <input
