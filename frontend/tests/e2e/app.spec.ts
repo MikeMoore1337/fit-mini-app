@@ -23,6 +23,13 @@ test('логотип и кнопки в шапке имеют одинакову
 
 async function mockApi(page: Page, { withCoachClient = false } = {}) {
   let role: 'client' | 'coach' | 'admin' = 'client';
+  const heartRateZones = [
+    { zone: 1, title: 'Восстановление', min_bpm: 130, max_bpm: 140 },
+    { zone: 2, title: 'Лёгкая', min_bpm: 140, max_bpm: 151 },
+    { zone: 3, title: 'Аэробная', min_bpm: 151, max_bpm: 162 },
+    { zone: 4, title: 'Пороговая', min_bpm: 162, max_bpm: 173 },
+    { zone: 5, title: 'Максимальная', min_bpm: 173, max_bpm: 184 },
+  ];
   const emptyProgress = {
     workouts_total: 0,
     workouts_completed: 0,
@@ -49,6 +56,28 @@ async function mockApi(page: Page, { withCoachClient = false } = {}) {
       const body = request.postDataJSON() as { is_admin: boolean; is_coach: boolean };
       role = body.is_admin ? 'admin' : body.is_coach ? 'coach' : 'client';
       return route.fulfill({ json: { access_token: 'test-token', token_type: 'bearer' } });
+    }
+    if (path.endsWith('/me/profile/heart-rates/preview')) {
+      const body = request.postDataJSON() as {
+        resting_heart_rate: number | null;
+        goal: 'fat_loss' | 'recomposition' | 'maintenance' | 'muscle_gain' | null;
+      };
+      const recommendations = {
+        fat_loss: { min_bpm: 130, max_bpm: 140 },
+        recomposition: { min_bpm: 124, max_bpm: 140 },
+        maintenance: { min_bpm: 119, max_bpm: 140 },
+        muscle_gain: { min_bpm: 119, max_bpm: 130 },
+      };
+      return route.fulfill({
+        json: {
+          estimated_max_heart_rate: 184,
+          heart_rate_reserve: body.resting_heart_rate === null ? null : 109,
+          heart_rate_calculation_method:
+            body.resting_heart_rate === null ? 'percent_maximum' : 'heart_rate_reserve',
+          heart_rate_zones: heartRateZones,
+          recommended_cardio_range: body.goal ? recommendations[body.goal] : null,
+        },
+      });
     }
     if (path.endsWith('/me'))
       return route.fulfill({
@@ -352,6 +381,37 @@ test('профиль содержит уведомления, а карточк�
   await expect(page.locator('.exercise-lightbox')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.locator('.exercise-lightbox')).toHaveCount(0);
+});
+
+test('рекомендация кардио меняется с целью, а физиологические зоны остаются прежними', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockApi(page);
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Клиент' }).click();
+  await page.getByRole('tab', { name: 'Профиль' }).click();
+
+  await page.getByLabel('Дата рождения').fill('1992-08-12');
+  await page.getByText('Средний пульс в покое, уд/мин').locator('..').locator('input').fill('75');
+  await page.getByLabel('Цель').selectOption('fat_loss');
+  await expect(page.getByText('130–140 уд/мин')).toHaveCount(2);
+
+  const zones = page.getByText('Пульсовые зоны').locator('..').locator('+ .list-grid');
+  const initialZones = await zones.textContent();
+
+  await page.getByLabel('Цель').selectOption('recomposition');
+  await expect(page.getByText('124–140 уд/мин')).toBeVisible();
+  await page.getByLabel('Цель').selectOption('maintenance');
+  await expect(page.getByText('119–140 уд/мин')).toBeVisible();
+  await page.getByLabel('Цель').selectOption('muscle_gain');
+  await expect(page.getByText('119–130 уд/мин')).toBeVisible();
+
+  await expect(zones).toHaveText(initialZones ?? '');
+  await expect(page.getByText('184 уд/мин', { exact: true })).toBeVisible();
+  await expect(page.locator('body')).not.toContainText('HRR');
+  await expect(page.locator('body')).not.toContainText('MET');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
 });
 
 test('поля адаптируются к разным iPhone, а пример программы открывает состав', async ({ page }) => {

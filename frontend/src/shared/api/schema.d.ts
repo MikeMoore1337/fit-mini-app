@@ -311,6 +311,23 @@ export interface paths {
         patch: operations["patch_profile_api_v1_me_profile_patch"];
         trace?: never;
     };
+    "/api/v1/me/profile/heart-rates/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Heart Rates */
+        post: operations["preview_heart_rates_api_v1_me_profile_heart_rates_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/export": {
         parameters: {
             query?: never;
@@ -1668,6 +1685,8 @@ export interface components {
             workouts_per_week?: number | null;
             /** Cardio Trainings Per Week */
             cardio_trainings_per_week?: number | null;
+            /** Resting Heart Rate */
+            resting_heart_rate?: number | null;
             kbju?: components["schemas"]["NutritionTargetResponse"] | null;
             /**
              * Status
@@ -1955,6 +1974,33 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HeartRatePreviewRequest */
+        HeartRatePreviewRequest: {
+            /**
+             * Birth Date
+             * Format: date
+             */
+            birth_date: string;
+            /** Resting Heart Rate */
+            resting_heart_rate?: number | null;
+            /** Goal */
+            goal?: ("muscle_gain" | "fat_loss" | "maintenance" | "recomposition") | null;
+        };
+        /** HeartRatePreviewResponse */
+        HeartRatePreviewResponse: {
+            /** Estimated Max Heart Rate */
+            estimated_max_heart_rate: number;
+            /** Heart Rate Reserve */
+            heart_rate_reserve?: number | null;
+            /**
+             * Heart Rate Calculation Method
+             * @enum {string}
+             */
+            heart_rate_calculation_method: "heart_rate_reserve" | "percent_maximum";
+            /** Heart Rate Zones */
+            heart_rate_zones: components["schemas"]["HeartRateZoneResponse"][];
+            recommended_cardio_range?: components["schemas"]["HeartRateRangeResponse"] | null;
         };
         /** HeartRateRangeResponse */
         HeartRateRangeResponse: {
@@ -3365,6 +3411,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_heart_rates_api_v1_me_profile_heart_rates_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HeartRatePreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HeartRatePreviewResponse"];
                 };
             };
             /** @description Validation Error */

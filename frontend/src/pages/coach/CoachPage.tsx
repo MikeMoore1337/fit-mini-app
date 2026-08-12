@@ -8,14 +8,13 @@ import { ExerciseCatalog } from '../../features/exercises/ExerciseCatalog';
 import { NutritionForm } from '../../features/nutrition/NutritionForm';
 import { ProgramBuilder } from '../../features/programs/ProgramBuilder';
 import { api } from '../../shared/api/client';
-import type { Client, CoachAssignedProgram, InviteLink } from '../../shared/api/types';
+import type { ApiSchemas, Client, CoachAssignedProgram, InviteLink } from '../../shared/api/types';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Badge, Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
 import { Redirect } from '../../shared/navigation/router';
 import { LIVE_DATA_REFETCH_INTERVAL_MS } from '../../shared/sync';
 import { usePersistentState } from '../../shared/storage';
 import { handleTabKeyDown } from '../../shared/ui/tabs';
-import { calculateTanakaZones } from '../../features/profile/heartRateZones';
 import { DateInput } from '../../shared/ui/PickerInput';
 
 type CoachTab = 'clients' | 'programs' | 'catalog';
@@ -31,6 +30,7 @@ function clientProfileKey(client: Client): string {
     client.weight_kg,
     client.workouts_per_week,
     client.cardio_trainings_per_week,
+    client.resting_heart_rate,
   ]);
 }
 
@@ -70,7 +70,32 @@ function ClientProfileEditor({ client }: { client: Client }) {
     `fit_coach_client_profile_draft_${client.id}`,
     client,
   );
-  const heartRate = calculateTanakaZones(form.birth_date);
+  const validBirthDate = /^\d{4}-\d{2}-\d{2}$/.test(form.birth_date ?? '');
+  const validRestingHeartRate =
+    form.resting_heart_rate == null ||
+    (form.resting_heart_rate >= 30 && form.resting_heart_rate <= 120);
+  const heartRatePreview = useQuery({
+    queryKey: [
+      'heart-rate-preview',
+      form.birth_date,
+      form.resting_heart_rate,
+      form.goal,
+      'coach-client',
+      client.id,
+    ],
+    queryFn: () =>
+      api<ApiSchemas['HeartRatePreviewResponse']>('/api/v1/me/profile/heart-rates/preview', {
+        method: 'POST',
+        body: {
+          birth_date: form.birth_date,
+          resting_heart_rate: form.resting_heart_rate,
+          goal: form.goal || null,
+        },
+      }),
+    enabled: validBirthDate && validRestingHeartRate,
+    retry: false,
+  });
+  const heartRate = heartRatePreview.data;
   const mutation = useMutation({
     mutationFn: () =>
       api<Client>(`/api/v1/coach/clients/${client.id}/profile`, {
@@ -84,6 +109,7 @@ function ClientProfileEditor({ client }: { client: Client }) {
           weight_kg: form.weight_kg ?? null,
           workouts_per_week: form.workouts_per_week ?? null,
           cardio_trainings_per_week: form.cardio_trainings_per_week ?? null,
+          resting_heart_rate: form.resting_heart_rate ?? null,
         },
       }),
     onSuccess: async (updatedClient) => {
@@ -197,12 +223,29 @@ function ClientProfileEditor({ client }: { client: Client }) {
             }
           />
         </label>
+        <label className="field">
+          <span>Средний пульс в покое, уд/мин</span>
+          <input
+            type="number"
+            min="30"
+            max="120"
+            step="1"
+            value={form.resting_heart_rate ?? ''}
+            onChange={(e) => setForm({ ...form, resting_heart_rate: numberValue(e.target.value) })}
+          />
+        </label>
       </div>
       {heartRate && (
         <div className="auth-notice stack">
-          <strong>Пульсовые зоны · максимум {heartRate.maximum} уд/мин</strong>
+          <strong>Пульсовые зоны · максимум {heartRate.estimated_max_heart_rate} уд/мин</strong>
+          {heartRate.recommended_cardio_range && (
+            <span>
+              Рекомендация для кардио: {heartRate.recommended_cardio_range.min_bpm}–
+              {heartRate.recommended_cardio_range.max_bpm} уд/мин
+            </span>
+          )}
           <div className="toolbar wrap">
-            {heartRate.zones.map((zone) => (
+            {heartRate.heart_rate_zones.map((zone) => (
               <Badge key={zone.zone}>
                 Z{zone.zone}: {zone.min_bpm}–{zone.max_bpm}
               </Badge>

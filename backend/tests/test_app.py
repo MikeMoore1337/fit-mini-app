@@ -306,6 +306,28 @@ def test_profile_without_resting_heart_rate_keeps_fallback(client):
     assert len(profile["heart_rate_zones"]) == 5
 
 
+def test_heart_rate_preview_does_not_persist_profile_changes(client):
+    headers = auth(client, telegram_user_id=6013, is_coach=False)
+    today = date.today()
+    birth_date = today.replace(year=today.year - 34)
+
+    response = client.post(
+        "/api/v1/me/profile/heart-rates/preview",
+        headers=headers,
+        json={
+            "birth_date": birth_date.isoformat(),
+            "resting_heart_rate": 75,
+            "goal": "recomposition",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["recommended_cardio_range"] == {"min_bpm": 124, "max_bpm": 140}
+    profile = client.get("/api/v1/me", headers=headers).json()["profile"]
+    assert profile["birth_date"] is None
+    assert profile["resting_heart_rate"] is None
+
+
 @pytest.mark.parametrize("resting_heart_rate", [29, 121])
 def test_profile_rejects_resting_heart_rate_outside_range(client, resting_heart_rate):
     headers = auth(client, telegram_user_id=6011 + resting_heart_rate, is_coach=False)

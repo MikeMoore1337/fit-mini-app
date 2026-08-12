@@ -139,6 +139,7 @@ def _client_entry_from_user(
         "weight_kg": profile.weight_kg if profile else None,
         "workouts_per_week": profile.workouts_per_week if profile else None,
         "cardio_trainings_per_week": (profile.cardio_trainings_per_week if profile else None),
+        "resting_heart_rate": profile.resting_heart_rate if profile else None,
         "kbju": get_nutrition_target_for_user(db, user),
         "status": "active",
     }
@@ -161,6 +162,7 @@ def _client_entry_from_invite(invite: CoachClientInvite) -> dict:
         "weight_kg": None,
         "workouts_per_week": None,
         "cardio_trainings_per_week": None,
+        "resting_heart_rate": None,
         "kbju": None,
         "status": "pending",
     }
