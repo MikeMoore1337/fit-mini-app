@@ -2,6 +2,15 @@ import { AppLink, useNavigation } from '../shared/navigation/router';
 import { AppThemeToggle } from '../shared/ui/AppThemeToggle';
 import { useAuth } from './AuthProvider';
 
+function Avatar({ name, photoUrl }: { name: string; photoUrl?: string | null }) {
+  const initial = name.trim().charAt(0).toLocaleUpperCase('ru-RU') || 'П';
+  return (
+    <span className="app-bottom-nav__avatar" aria-hidden="true">
+      {photoUrl ? <img src={photoUrl} alt="" referrerPolicy="no-referrer" /> : initial}
+    </span>
+  );
+}
+
 export function AppShell({
   children,
   narrow = false,
@@ -19,11 +28,12 @@ export function AppShell({
       {user && (
         <nav id="appBottomNav" className="app-bottom-nav" aria-label="Основная навигация">
           <div className="app-bottom-nav__brand" aria-hidden="true">
-            <span className="app-bottom-nav__brand-mark">YF</span>
-            <span>
-              <strong>Your Fitness</strong>
-              <small>Coach</small>
-            </span>
+            <img
+              className="app-bottom-nav__brand-mark"
+              src="/assets/brand/fitness-logo-v2.png"
+              alt=""
+            />
+            <strong>Your Fitness Coach</strong>
           </div>
           <AppLink
             to="/app"
@@ -69,9 +79,7 @@ export function AppShell({
           )}
           <AppThemeToggle navigation />
           <div className="app-bottom-nav__account">
-            <span className="app-bottom-nav__avatar" aria-hidden="true">
-              {displayName.charAt(0).toLocaleUpperCase('ru-RU')}
-            </span>
+            <Avatar name={displayName} photoUrl={user.photo_url} />
             <span className="app-bottom-nav__account-copy">
               <strong>{displayName}</strong>
               <small>{user.is_admin ? 'Администратор' : user.is_coach ? 'Тренер' : 'Клиент'}</small>
