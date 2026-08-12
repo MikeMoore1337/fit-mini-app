@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
+import httpx
+from authlib.integrations.httpx_client import AsyncOAuth2Client
 from authlib.integrations.starlette_client import OAuth
+from authlib.integrations.starlette_client.apps import StarletteOAuth2App
 from sqlalchemy.orm import Session
 
 from fitminiapp_api.core.config import settings
@@ -14,6 +17,21 @@ from fitminiapp_api.services.password_auth import utcnow
 from fitminiapp_api.services.telegram_auth import normalize_telegram_username
 
 oauth = OAuth()
+
+
+class IPv4AsyncOAuth2Client(AsyncOAuth2Client):
+    """Create a fresh IPv4-bound transport for each short-lived OAuth request."""
+
+    def __init__(self, *args, **kwargs) -> None:
+        kwargs.setdefault(
+            "transport",
+            httpx.AsyncHTTPTransport(local_address="0.0.0.0"),
+        )
+        super().__init__(*args, **kwargs)
+
+
+class IPv4StarletteOAuth2App(StarletteOAuth2App):
+    client_cls = IPv4AsyncOAuth2Client
 
 
 def _register_oidc(
@@ -29,6 +47,7 @@ def _register_oidc(
         name,
         client_id=client_id,
         client_secret=client_secret,
+        client_cls=IPv4StarletteOAuth2App if settings.oauth_force_ipv4 else None,
         server_metadata_url=metadata_url,
         client_kwargs={
             "scope": scope,

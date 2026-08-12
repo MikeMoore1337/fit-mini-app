@@ -181,6 +181,7 @@ def test_production_oauth_does_not_require_smtp_when_email_auth_is_disabled():
     assert configured.enable_web_auth is True
     assert configured.enable_email_auth is False
     assert configured.oauth_http_timeout_seconds == 15
+    assert configured.oauth_force_ipv4 is True
 
 
 def test_oauth_http_timeout_is_bounded():
@@ -227,6 +228,30 @@ def test_oidc_clients_ignore_ambient_proxy_settings(monkeypatch):
         "timeout": 17,
         "trust_env": False,
     }
+    assert captured["client_cls"] is oauth_login.IPv4StarletteOAuth2App
+
+
+def test_oidc_clients_can_use_default_dual_stack_transport(monkeypatch):
+    from fitminiapp_api.services import oauth_login
+
+    captured: dict[str, object] = {}
+
+    def fake_register(name, **kwargs):
+        captured["name"] = name
+        captured.update(kwargs)
+
+    monkeypatch.setattr(oauth_login.oauth, "register", fake_register)
+    monkeypatch.setattr(oauth_login.settings, "oauth_force_ipv4", False)
+
+    oauth_login._register_oidc(
+        "telegram",
+        "client-id",
+        "client-secret",
+        "https://oauth.example/.well-known/openid-configuration",
+        "openid profile",
+    )
+
+    assert captured["client_cls"] is None
 
 
 def test_production_email_auth_requires_smtp():
