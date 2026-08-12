@@ -9,6 +9,8 @@ from fitminiapp_api.models.program import UserProgram, UserWorkout
 from fitminiapp_api.schemas.invite import CoachInvitePreviewResponse, CoachInviteTokenRequest
 from fitminiapp_api.schemas.user import (
     AccountDeleteRequest,
+    HeartRateRangeResponse,
+    HeartRateZoneResponse,
     OAuthLinkCreateResponse,
     TelegramLinkCreateResponse,
     TrainerResponse,
@@ -34,7 +36,11 @@ from fitminiapp_api.services.coach_clients import (
     remove_current_trainer,
 )
 from fitminiapp_api.services.nutrition import NutritionError, get_nutrition_target_for_user
-from fitminiapp_api.services.profile import calculate_tanaka_heart_rate_zones, update_profile
+from fitminiapp_api.services.profile import (
+    ProfileError,
+    calculate_profile_heart_rates,
+    update_profile,
+)
 from fitminiapp_api.services.program_common import ProgramError
 from fitminiapp_api.services.security import get_current_user
 
@@ -57,8 +63,10 @@ def _build_user_response(db: Session, user) -> UserResponse:
         .first()
         is not None
     )
-    estimated_max_heart_rate, heart_rate_zones = calculate_tanaka_heart_rate_zones(
-        user.profile.birth_date if user.profile else None
+    heart_rates = calculate_profile_heart_rates(
+        user.profile.birth_date if user.profile else None,
+        user.profile.resting_heart_rate if user.profile else None,
+        user.profile.goal if user.profile else None,
     )
     return UserResponse(
         id=user.id,
@@ -83,9 +91,27 @@ def _build_user_response(db: Session, user) -> UserResponse:
             cardio_trainings_per_week=(
                 user.profile.cardio_trainings_per_week if user.profile else None
             ),
+            resting_heart_rate=user.profile.resting_heart_rate if user.profile else None,
             timezone=user.profile.timezone if user.profile else "Europe/Moscow",
-            estimated_max_heart_rate=estimated_max_heart_rate,
-            heart_rate_zones=heart_rate_zones,
+            estimated_max_heart_rate=heart_rates.maximum if heart_rates else None,
+            heart_rate_reserve=heart_rates.reserve if heart_rates else None,
+            heart_rate_calculation_method=(
+                "heart_rate_reserve"
+                if heart_rates and heart_rates.is_personalized
+                else "percent_maximum"
+                if heart_rates
+                else None
+            ),
+            heart_rate_zones=(
+                [HeartRateZoneResponse(**vars(zone)) for zone in heart_rates.zones]
+                if heart_rates
+                else []
+            ),
+            recommended_cardio_range=(
+                HeartRateRangeResponse(**vars(heart_rates.recommended_cardio_range))
+                if heart_rates and heart_rates.recommended_cardio_range
+                else None
+            ),
             kbju=kbju,
         )
         if user.profile or kbju
@@ -152,7 +178,7 @@ def patch_profile(
 ):
     try:
         user = update_profile(db, user, payload)
-    except NutritionError as exc:
+    except (NutritionError, ProfileError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return _build_user_response(db, user)
 

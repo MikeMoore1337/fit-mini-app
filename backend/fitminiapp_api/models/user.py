@@ -51,6 +51,12 @@ class User(Base):
 
 class UserProfile(Base):
     __tablename__ = "user_profiles"
+    __table_args__ = (
+        CheckConstraint(
+            "resting_heart_rate IS NULL OR resting_heart_rate BETWEEN 30 AND 120",
+            name="ck_user_profiles_resting_heart_rate_range",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, unique=True)
@@ -62,6 +68,7 @@ class UserProfile(Base):
     weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
     workouts_per_week: Mapped[int | None] = mapped_column(Integer, nullable=True)
     cardio_trainings_per_week: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    resting_heart_rate: Mapped[int | None] = mapped_column(Integer, nullable=True)
     timezone: Mapped[str] = mapped_column(
         String(64),
         nullable=False,

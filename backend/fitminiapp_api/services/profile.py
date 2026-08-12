@@ -5,34 +5,34 @@ from sqlalchemy.orm import Session
 from fitminiapp_api.core.timezone import DEFAULT_TIMEZONE, is_valid_timezone
 from fitminiapp_api.models.notification import NotificationSetting
 from fitminiapp_api.models.user import User, UserProfile
-from fitminiapp_api.schemas.user import HeartRateZoneResponse, UserProfileUpdate
-from fitminiapp_api.services.heart_rate import calculate_heart_rates
+from fitminiapp_api.schemas.user import UserProfileUpdate
+from fitminiapp_api.services.heart_rate import (
+    HeartRateCalculation,
+    calculate_heart_rates,
+    calculate_max_heart_rate,
+)
 
 
-def calculate_tanaka_heart_rate_zones(
+class ProfileError(ValueError):
+    pass
+
+
+def calculate_profile_heart_rates(
     birth_date: date | None,
+    resting_heart_rate: int | None,
+    goal: str | None,
     *,
     today: date | None = None,
-) -> tuple[int | None, list[HeartRateZoneResponse]]:
+) -> HeartRateCalculation | None:
     if birth_date is None:
-        return None, []
+        return None
     reference_date = today or date.today()
     age = (
         reference_date.year
         - birth_date.year
         - ((reference_date.month, reference_date.day) < (birth_date.month, birth_date.day))
     )
-    result = calculate_heart_rates(age, None, None)
-    zones = [
-        HeartRateZoneResponse(
-            zone=zone.zone,
-            title=zone.title,
-            min_bpm=zone.min_bpm,
-            max_bpm=zone.max_bpm,
-        )
-        for zone in result.zones
-    ]
-    return result.maximum, zones
+    return calculate_heart_rates(age, resting_heart_rate, goal)
 
 
 def ensure_profile(db: Session, user: User, *, commit: bool = True) -> UserProfile:
@@ -64,6 +64,17 @@ def update_profile(
 ) -> User:
     profile = ensure_profile(db, user, commit=commit)
     changes = payload.model_dump(exclude_unset=True)
+    birth_date = changes.get("birth_date", profile.birth_date)
+    resting_heart_rate = changes.get("resting_heart_rate", profile.resting_heart_rate)
+    if birth_date is not None and resting_heart_rate is not None:
+        reference_date = date.today()
+        age = (
+            reference_date.year
+            - birth_date.year
+            - ((reference_date.month, reference_date.day) < (birth_date.month, birth_date.day))
+        )
+        if resting_heart_rate >= calculate_max_heart_rate(age):
+            raise ProfileError("Resting heart rate must be below maximum heart rate")
     nutrition_field_map = {
         "goal": "goal",
         "height_cm": "height_cm",
