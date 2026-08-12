@@ -55,6 +55,12 @@ establish that direct outbound HTTPS connection; it does not indicate a
 refresh-cookie or callback URL problem. Verify DNS and HTTPS connectivity from
 the backend container before increasing the timeout further.
 
+`OAUTH_FORCE_IPV4=true` is the safe default for deployments whose DNS resolver
+returns both address families while Docker has no working IPv6 route. It binds
+OAuth clients to IPv4 without pinning provider IP addresses, so DNS rotation and
+TLS hostname verification continue to work. Set it to `false` only when the
+container has a verified IPv6 route or runs in an IPv6-only environment.
+
 - Telegram: create Web Login credentials in BotFather and allow the frontend
   origin plus the callback URL.
 - Google: create a Web OAuth client and request only `openid profile email`.

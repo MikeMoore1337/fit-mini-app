@@ -57,6 +57,7 @@ class Settings(BaseSettings):
     telegram_oauth_client_id: str = ""
     telegram_oauth_client_secret: str = ""
     oauth_http_timeout_seconds: float = Field(default=15, ge=5, le=60)
+    oauth_force_ipv4: bool = True
     google_oauth_client_id: str = ""
     google_oauth_client_secret: str = ""
     yandex_oauth_client_id: str = ""
