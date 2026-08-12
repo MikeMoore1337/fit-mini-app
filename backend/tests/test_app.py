@@ -2832,6 +2832,43 @@ def test_root_serves_public_landing_spa(client):
     assert "no-store" in response.headers["cache-control"]
 
 
+@pytest.mark.parametrize(
+    ("method", "path"),
+    [
+        ("GET", "/app"),
+        ("GET", "/join/abcdefghijklmnopqrstuvwxyz"),
+        ("POST", "/api/v1/auth/refresh"),
+    ],
+)
+def test_landing_host_redirects_application_requests_to_canonical_origin(
+    client, monkeypatch, method, path
+):
+    from fitminiapp_api.core.config import settings
+
+    monkeypatch.setattr(settings, "landing_domain", "your-fitness-coach.ru")
+    monkeypatch.setattr(settings, "frontend_base_url", "https://app.your-fitness-coach.ru")
+
+    response = client.request(
+        method,
+        path,
+        headers={"Host": "your-fitness-coach.ru"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 308
+    assert response.headers["location"] == f"https://app.your-fitness-coach.ru{path}"
+
+
+def test_landing_host_keeps_public_home_on_landing_domain(client, monkeypatch):
+    from fitminiapp_api.core.config import settings
+
+    monkeypatch.setattr(settings, "landing_domain", "your-fitness-coach.ru")
+    response = client.get("/", headers={"Host": "your-fitness-coach.ru"})
+
+    assert response.status_code == 200
+    assert '<div id="root"></div>' in response.text
+
+
 @pytest.mark.parametrize("path", ["/verify-email", "/reset-password"])
 def test_browser_auth_routes_serve_spa(client, path):
     response = client.get(path)

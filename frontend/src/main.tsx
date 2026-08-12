@@ -28,38 +28,56 @@ const queryClient = new QueryClient({
   },
 });
 
+function AuthenticatedRoute({ children }: { children: React.ReactNode }) {
+  return (
+    <AuthProvider>
+      <AuthGate>{children}</AuthGate>
+    </AuthProvider>
+  );
+}
+
 function AppRoutes() {
   const { path } = useNavigation();
   if (path === '/') return <LandingPage />;
-  if (path === '/verify-email') return <VerifyEmailPage />;
-  if (path === '/reset-password') return <ResetPasswordPage />;
+  if (path === '/verify-email')
+    return (
+      <AuthProvider>
+        <VerifyEmailPage />
+      </AuthProvider>
+    );
+  if (path === '/reset-password')
+    return (
+      <AuthProvider>
+        <ResetPasswordPage />
+      </AuthProvider>
+    );
   if (path.startsWith('/join/')) {
     const token = path.slice('/join/'.length);
     if (/^[A-Za-z0-9_-]{20,128}$/.test(token)) {
       return (
-        <AuthGate>
+        <AuthenticatedRoute>
           <JoinCoachPage token={token} />
-        </AuthGate>
+        </AuthenticatedRoute>
       );
     }
   }
   if (path === '/app')
     return (
-      <AuthGate>
+      <AuthenticatedRoute>
         <MiniAppPage />
-      </AuthGate>
+      </AuthenticatedRoute>
     );
   if (path === '/coach')
     return (
-      <AuthGate>
+      <AuthenticatedRoute>
         <CoachPage />
-      </AuthGate>
+      </AuthenticatedRoute>
     );
   if (path === '/admin')
     return (
-      <AuthGate>
+      <AuthenticatedRoute>
         <AdminPage />
-      </AuthGate>
+      </AuthenticatedRoute>
     );
   return <NotFoundPage />;
 }
@@ -68,24 +86,22 @@ function Root() {
   useTelegram();
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ErrorBoundary>
-          <FeedbackProvider>
-            <NavigationProvider>
-              <OnlineStatus />
-              <Suspense
-                fallback={
-                  <main className="container">
-                    <LoadingState />
-                  </main>
-                }
-              >
-                <AppRoutes />
-              </Suspense>
-            </NavigationProvider>
-          </FeedbackProvider>
-        </ErrorBoundary>
-      </AuthProvider>
+      <ErrorBoundary>
+        <FeedbackProvider>
+          <NavigationProvider>
+            <OnlineStatus />
+            <Suspense
+              fallback={
+                <main className="container">
+                  <LoadingState />
+                </main>
+              }
+            >
+              <AppRoutes />
+            </Suspense>
+          </NavigationProvider>
+        </FeedbackProvider>
+      </ErrorBoundary>
     </QueryClientProvider>
   );
 }

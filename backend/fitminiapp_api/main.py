@@ -18,6 +18,7 @@ from fitminiapp_api.core.config import settings
 from fitminiapp_api.core.logging_config import configure_logging
 from fitminiapp_api.core.rate_limit import limiter
 from fitminiapp_api.db.session import engine
+from fitminiapp_api.middleware.canonical_host import redirect_landing_application_requests
 from fitminiapp_api.middleware.request_context import RequestContextMiddleware
 
 APP_DIR = Path(__file__).resolve().parent
@@ -80,6 +81,8 @@ app.mount(
     name="exercise-guides",
 )
 app.include_router(api_router)
+
+app.middleware("http")(redirect_landing_application_requests)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
