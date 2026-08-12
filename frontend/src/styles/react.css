@@ -1297,20 +1297,14 @@ body:has(#appBottomNav) {
     color: var(--text);
   }
   .app-bottom-nav__brand-mark {
-    display: grid;
-    place-items: center;
+    display: block;
     width: 38px;
     height: 38px;
     flex: 0 0 38px;
     border-radius: 12px;
-    background: var(--accent);
-    color: var(--button-text, white);
-    font-size: 0.82rem;
-    font-weight: 800;
-    letter-spacing: -0.02em;
+    object-fit: contain;
   }
   .app-bottom-nav__brand strong,
-  .app-bottom-nav__brand small,
   .app-bottom-nav__account-copy strong,
   .app-bottom-nav__account-copy small {
     display: block;
@@ -1318,11 +1312,8 @@ body:has(#appBottomNav) {
   .app-bottom-nav__brand strong {
     font-size: 0.92rem;
     line-height: 1.15;
-  }
-  .app-bottom-nav__brand small {
-    margin-top: 2px;
-    color: var(--muted);
-    font-size: 0.74rem;
+    font-weight: 800;
+    white-space: nowrap;
   }
   .app-bottom-nav__btn {
     flex: 0 0 auto;
@@ -1362,6 +1353,7 @@ body:has(#appBottomNav) {
     min-width: 0;
   }
   .app-bottom-nav__avatar {
+    overflow: hidden;
     display: grid;
     place-items: center;
     width: 34px;
@@ -1371,6 +1363,11 @@ body:has(#appBottomNav) {
     background: var(--accent-soft);
     color: var(--accent-strong, var(--accent));
     font-weight: 800;
+  }
+  .app-bottom-nav__avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
   .app-bottom-nav__account-copy {
     min-width: 0;
