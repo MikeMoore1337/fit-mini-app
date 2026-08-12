@@ -19,11 +19,15 @@ export function ExerciseGuideDialog({
     queryFn: () => api<ExerciseGuide>(`/api/v1/programs/exercises/${exerciseId}/guide`),
   });
   return (
-    <div className="modal" role="dialog" aria-modal="true" aria-labelledby="exercise-guide-title">
-      <button
-        type="button"
+    <div
+      className="modal exercise-guide-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="exercise-guide-title"
+    >
+      <div
         className="modal__backdrop"
-        aria-label="Закрыть технику"
+        aria-hidden="true"
         onClick={onClose}
       />
       <div className="modal__panel card exercise-guide-modal__panel" ref={panelRef} tabIndex={-1}>
@@ -34,7 +38,12 @@ export function ExerciseGuideDialog({
               {exerciseTitle}
             </h2>
           </div>
-          <button className="secondary" aria-label="Закрыть технику" onClick={onClose}>
+          <button
+            type="button"
+            className="secondary exercise-guide-modal__close"
+            aria-label="Закрыть технику"
+            onClick={onClose}
+          >
             ×
           </button>
         </div>
