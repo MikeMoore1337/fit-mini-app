@@ -187,7 +187,7 @@ def web_app_keyboard(url: str) -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="Открыть Your Fitness Coach",
+                    text="Открыть",
                     web_app=WebAppInfo(url=url),
                 )
             ]
@@ -339,7 +339,7 @@ async def set_mini_app_menu_button(bot: Bot, chat_id: int | None = None) -> bool
         await bot.set_chat_menu_button(
             chat_id=chat_id,
             menu_button=MenuButtonWebApp(
-                text="Открыть Your Fitness Coach",
+                text="Открыть",
                 web_app=WebAppInfo(url=url),
             ),
         )
