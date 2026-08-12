@@ -203,6 +203,8 @@ setuptools==84.0.0
     # via -r backend/requirements.in
 slowapi==0.1.10
     # via -r backend/requirements.in
+socksio==1.0.0
+    # via httpx
 sortedcontainers==2.4.0
     # via cyclonedx-python-lib
 sqlalchemy==2.0.51

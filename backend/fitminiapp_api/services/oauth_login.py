@@ -19,19 +19,30 @@ from fitminiapp_api.services.telegram_auth import normalize_telegram_username
 oauth = OAuth()
 
 
-class IPv4AsyncOAuth2Client(AsyncOAuth2Client):
-    """Create a fresh IPv4-bound transport for each short-lived OAuth request."""
+def oauth_transport_options() -> dict[str, object]:
+    """Return isolated HTTPX options for a short-lived OAuth client."""
+
+    if settings.oauth_proxy_url:
+        # The proxy is an explicit operator-configured route used only for
+        # OAuth. It carries the provider's TLS stream without disabling
+        # certificate or hostname verification.
+        return {"proxy": settings.oauth_proxy_url}
+    if settings.oauth_force_ipv4:
+        return {"transport": httpx.AsyncHTTPTransport(local_address="0.0.0.0")}
+    return {}
+
+
+class OAuthAsyncOAuth2Client(AsyncOAuth2Client):
+    """Create a fresh transport for each short-lived OAuth request."""
 
     def __init__(self, *args, **kwargs) -> None:
-        kwargs.setdefault(
-            "transport",
-            httpx.AsyncHTTPTransport(local_address="0.0.0.0"),
-        )
+        for option, value in oauth_transport_options().items():
+            kwargs.setdefault(option, value)
         super().__init__(*args, **kwargs)
 
 
-class IPv4StarletteOAuth2App(StarletteOAuth2App):
-    client_cls = IPv4AsyncOAuth2Client
+class OAuthStarletteOAuth2App(StarletteOAuth2App):
+    client_cls = OAuthAsyncOAuth2Client
 
 
 def _register_oidc(
@@ -47,7 +58,7 @@ def _register_oidc(
         name,
         client_id=client_id,
         client_secret=client_secret,
-        client_cls=IPv4StarletteOAuth2App if settings.oauth_force_ipv4 else None,
+        client_cls=OAuthStarletteOAuth2App,
         server_metadata_url=metadata_url,
         client_kwargs={
             "scope": scope,

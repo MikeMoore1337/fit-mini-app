@@ -104,6 +104,8 @@ setuptools==84.0.0
     # via -r backend/requirements.in
 slowapi==0.1.10
     # via -r backend/requirements.in
+socksio==1.0.0
+    # via httpx
 sqlalchemy==2.0.51
     # via
     #   -r backend/requirements.in

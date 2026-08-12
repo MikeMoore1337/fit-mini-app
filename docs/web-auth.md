@@ -61,6 +61,21 @@ OAuth clients to IPv4 without pinning provider IP addresses, so DNS rotation and
 TLS hostname verification continue to work. Set it to `false` only when the
 container has a verified IPv6 route or runs in an IPv6-only environment.
 
+When the server's direct route to a provider is blocked or unreliable, configure
+an operator-controlled proxy only for OAuth with `OAUTH_PROXY_URL`. For an SSH
+dynamic SOCKS tunnel running on the Docker host, use
+`socks5://host.docker.internal:1081`; the Compose backend service resolves that
+hostname to the host gateway. Do not use an untrusted public proxy: it handles
+the OAuth authorization code and client secret. An explicit OAuth proxy takes
+precedence over `OAUTH_FORCE_IPV4`.
+
+The SSH tunnel must listen on the Docker host gateway (normally `172.17.0.1`),
+not `127.0.0.1`, so the backend container can reach it while the port remains
+unreachable from the public internet. Create a dedicated unprivileged account
+and SSH key for the tunnel, restrict that key on the egress host, and run the
+tunnel under a supervised system service. The tunnel should not require an
+interactive password at runtime.
+
 - Telegram: create Web Login credentials in BotFather and allow the frontend
   origin plus the callback URL.
 - Google: create a Web OAuth client and request only `openid profile email`.
