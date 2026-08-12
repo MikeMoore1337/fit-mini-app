@@ -176,6 +176,7 @@ def test_production_oauth_does_not_require_smtp_when_email_auth_is_disabled():
         frontend_base_url="https://example.test",
         smtp_host="",
         smtp_from_email="",
+        oauth_proxy_url="",
     )
 
     assert configured.enable_web_auth is True
@@ -297,6 +298,7 @@ def test_production_email_auth_requires_smtp():
             frontend_base_url="https://example.test",
             smtp_host="",
             smtp_from_email="",
+            oauth_proxy_url="",
         )
 
 
@@ -3309,6 +3311,30 @@ def test_browser_telegram_login_reuses_existing_telegram_user(client):
             .count()
             == 1
         )
+
+
+def test_browser_telegram_login_accepts_standard_oidc_subject(client):
+    from fitminiapp_api.services.oauth_login import get_or_create_oauth_user
+
+    with get_session_context() as db:
+        user = get_or_create_oauth_user(
+            db,
+            provider="telegram",
+            raw_claims={
+                "sub": "8810003",
+                "preferred_username": "telegram_oidc_subject",
+                "name": "Telegram OIDC Subject",
+            },
+        )
+        assert user.telegram_user_id == 8_810_003
+        assert user.username == "telegram_oidc_subject"
+
+
+def test_browser_telegram_login_rejects_invalid_oidc_subject(client):
+    from fitminiapp_api.services.oauth_login import normalize_oauth_claims
+
+    with pytest.raises(ValueError, match="valid user id"):
+        normalize_oauth_claims("telegram", {"sub": "not-a-telegram-id"})
 
 
 def test_oauth_callback_creates_browser_session_without_exposing_access_token(client, monkeypatch):
