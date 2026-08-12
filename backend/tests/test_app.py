@@ -201,6 +201,34 @@ def test_oauth_http_timeout_is_bounded():
         Settings(**common, oauth_http_timeout_seconds=61)
 
 
+def test_oidc_clients_ignore_ambient_proxy_settings(monkeypatch):
+    from fitminiapp_api.services import oauth_login
+
+    captured: dict[str, object] = {}
+
+    def fake_register(name, **kwargs):
+        captured["name"] = name
+        captured.update(kwargs)
+
+    monkeypatch.setattr(oauth_login.oauth, "register", fake_register)
+    monkeypatch.setattr(oauth_login.settings, "oauth_http_timeout_seconds", 17)
+
+    oauth_login._register_oidc(
+        "telegram",
+        "client-id",
+        "client-secret",
+        "https://oauth.example/.well-known/openid-configuration",
+        "openid profile",
+    )
+
+    assert captured["name"] == "telegram"
+    assert captured["client_kwargs"] == {
+        "scope": "openid profile",
+        "timeout": 17,
+        "trust_env": False,
+    }
+
+
 def test_production_email_auth_requires_smtp():
     with pytest.raises(ValidationError, match="SMTP_HOST"):
         Settings(

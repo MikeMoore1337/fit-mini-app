@@ -32,6 +32,11 @@ def _register_oidc(
         server_metadata_url=metadata_url,
         client_kwargs={
             "scope": scope,
+            # OAuth credentials and authorization codes must never be routed
+            # through an ambient proxy inherited by the container. On some
+            # hosts HTTPX proxy discovery also makes Telegram connections time
+            # out even though a direct connection succeeds.
+            "trust_env": False,
             # HTTPX defaults to a five-second connect timeout. Telegram's OAuth
             # endpoint can take longer to establish a connection from production
             # networks, especially while IPv4/IPv6 routes are being selected.
