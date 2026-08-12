@@ -1005,8 +1005,12 @@ button:disabled {
 }
 
 .badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
     border-radius: 999px;
-    padding: 8px 12px;
+    padding: 11px 15px;
     background: var(--accent-soft);
     color: var(--accent-strong);
     font-size: 12px;
