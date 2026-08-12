@@ -6,14 +6,7 @@ from fitminiapp_api.core.timezone import DEFAULT_TIMEZONE, is_valid_timezone
 from fitminiapp_api.models.notification import NotificationSetting
 from fitminiapp_api.models.user import User, UserProfile
 from fitminiapp_api.schemas.user import HeartRateZoneResponse, UserProfileUpdate
-
-HEART_RATE_ZONE_RANGES = (
-    ("Восстановление", 0.5, 0.6),
-    ("Лёгкая", 0.6, 0.7),
-    ("Аэробная", 0.7, 0.8),
-    ("Пороговая", 0.8, 0.9),
-    ("Максимальная", 0.9, 1.0),
-)
+from fitminiapp_api.services.heart_rate import calculate_heart_rates
 
 
 def calculate_tanaka_heart_rate_zones(
@@ -29,17 +22,17 @@ def calculate_tanaka_heart_rate_zones(
         - birth_date.year
         - ((reference_date.month, reference_date.day) < (birth_date.month, birth_date.day))
     )
-    maximum = int(208 - 0.7 * age + 0.5)
+    result = calculate_heart_rates(age, None, None)
     zones = [
         HeartRateZoneResponse(
-            zone=index,
-            title=title,
-            min_bpm=int(maximum * lower + 0.5),
-            max_bpm=int(maximum * upper + 0.5),
+            zone=zone.zone,
+            title=zone.title,
+            min_bpm=zone.min_bpm,
+            max_bpm=zone.max_bpm,
         )
-        for index, (title, lower, upper) in enumerate(HEART_RATE_ZONE_RANGES, start=1)
+        for zone in result.zones
     ]
-    return maximum, zones
+    return result.maximum, zones
 
 
 def ensure_profile(db: Session, user: User, *, commit: bool = True) -> UserProfile:
