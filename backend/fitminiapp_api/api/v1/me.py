@@ -9,6 +9,8 @@ from fitminiapp_api.models.program import UserProgram, UserWorkout
 from fitminiapp_api.schemas.invite import CoachInvitePreviewResponse, CoachInviteTokenRequest
 from fitminiapp_api.schemas.user import (
     AccountDeleteRequest,
+    HeartRatePreviewRequest,
+    HeartRatePreviewResponse,
     HeartRateRangeResponse,
     HeartRateZoneResponse,
     OAuthLinkCreateResponse,
@@ -45,6 +47,22 @@ from fitminiapp_api.services.program_common import ProgramError
 from fitminiapp_api.services.security import get_current_user
 
 router = APIRouter()
+
+
+def _heart_rate_response(heart_rates) -> HeartRatePreviewResponse:
+    return HeartRatePreviewResponse(
+        estimated_max_heart_rate=heart_rates.maximum,
+        heart_rate_reserve=heart_rates.reserve,
+        heart_rate_calculation_method=(
+            "heart_rate_reserve" if heart_rates.is_personalized else "percent_maximum"
+        ),
+        heart_rate_zones=[HeartRateZoneResponse(**vars(zone)) for zone in heart_rates.zones],
+        recommended_cardio_range=(
+            HeartRateRangeResponse(**vars(heart_rates.recommended_cardio_range))
+            if heart_rates.recommended_cardio_range
+            else None
+        ),
+    )
 
 
 def _build_user_response(db: Session, user) -> UserResponse:
@@ -181,6 +199,24 @@ def patch_profile(
     except (NutritionError, ProfileError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return _build_user_response(db, user)
+
+
+@router.post("/profile/heart-rates/preview", response_model=HeartRatePreviewResponse)
+def preview_heart_rates(
+    payload: HeartRatePreviewRequest,
+    _user=Depends(get_current_user),
+) -> HeartRatePreviewResponse:
+    try:
+        heart_rates = calculate_profile_heart_rates(
+            payload.birth_date,
+            payload.resting_heart_rate,
+            payload.goal,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if heart_rates is None:  # The request schema requires birth_date.
+        raise HTTPException(status_code=422, detail="Birth date is required")
+    return _heart_rate_response(heart_rates)
 
 
 @router.get("/export")

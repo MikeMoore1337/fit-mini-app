@@ -64,6 +64,29 @@ class HeartRateRangeResponse(BaseModel):
     max_bpm: int
 
 
+class HeartRatePreviewRequest(BaseModel):
+    birth_date: date
+    resting_heart_rate: int | None = Field(default=None, ge=30, le=120)
+    goal: Literal["muscle_gain", "fat_loss", "maintenance", "recomposition"] | None = None
+
+    @field_validator("birth_date")
+    @classmethod
+    def validate_birth_date(cls, value: date) -> date:
+        today = date.today()
+        age = today.year - value.year - ((today.month, today.day) < (value.month, value.day))
+        if age < 10 or age > 100:
+            raise ValueError("Age must be between 10 and 100 years")
+        return value
+
+
+class HeartRatePreviewResponse(BaseModel):
+    estimated_max_heart_rate: int
+    heart_rate_reserve: int | None = None
+    heart_rate_calculation_method: Literal["heart_rate_reserve", "percent_maximum"]
+    heart_rate_zones: list[HeartRateZoneResponse]
+    recommended_cardio_range: HeartRateRangeResponse | None = None
+
+
 class UserProfileResponse(BaseModel):
     full_name: str | None = None
     birth_date: date | None = None
