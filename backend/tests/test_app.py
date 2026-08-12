@@ -244,6 +244,109 @@ def test_client_can_save_kbju_and_see_it_in_profile(client):
     assert kbju["assigned_by"]["telegram_user_id"] == 6001
 
 
+def test_profile_returns_personalized_heart_rates_and_goal_recommendations(client):
+    headers = auth(client, telegram_user_id=6009, is_coach=False)
+    today = date.today()
+    birth_date = today.replace(year=today.year - 34)
+    expected_by_goal = {
+        "fat_loss": {"min_bpm": 130, "max_bpm": 140},
+        "recomposition": {"min_bpm": 124, "max_bpm": 140},
+        "maintenance": {"min_bpm": 119, "max_bpm": 140},
+        "muscle_gain": {"min_bpm": 119, "max_bpm": 130},
+    }
+    zones_by_goal = []
+
+    for goal, expected_range in expected_by_goal.items():
+        response = client.patch(
+            "/api/v1/me/profile",
+            headers=headers,
+            json={
+                "birth_date": birth_date.isoformat(),
+                "resting_heart_rate": 75,
+                "goal": goal,
+            },
+        )
+
+        assert response.status_code == 200
+        profile = response.json()["profile"]
+        assert profile["estimated_max_heart_rate"] == 184
+        assert profile["heart_rate_reserve"] == 109
+        assert profile["heart_rate_calculation_method"] == "heart_rate_reserve"
+        assert profile["recommended_cardio_range"] == expected_range
+        zones_by_goal.append(profile["heart_rate_zones"])
+
+    assert all(zones == zones_by_goal[0] for zones in zones_by_goal[1:])
+    assert zones_by_goal[0] == [
+        {"zone": 1, "title": "Восстановление", "min_bpm": 130, "max_bpm": 140},
+        {"zone": 2, "title": "Лёгкая", "min_bpm": 140, "max_bpm": 151},
+        {"zone": 3, "title": "Аэробная", "min_bpm": 151, "max_bpm": 162},
+        {"zone": 4, "title": "Пороговая", "min_bpm": 162, "max_bpm": 173},
+        {"zone": 5, "title": "Максимальная", "min_bpm": 173, "max_bpm": 184},
+    ]
+
+
+def test_profile_without_resting_heart_rate_keeps_fallback(client):
+    headers = auth(client, telegram_user_id=6010, is_coach=False)
+    today = date.today()
+    birth_date = today.replace(year=today.year - 34)
+
+    response = client.patch(
+        "/api/v1/me/profile",
+        headers=headers,
+        json={"birth_date": birth_date.isoformat(), "goal": "fat_loss"},
+    )
+
+    assert response.status_code == 200
+    profile = response.json()["profile"]
+    assert profile["resting_heart_rate"] is None
+    assert profile["estimated_max_heart_rate"] == 184
+    assert profile["heart_rate_reserve"] is None
+    assert profile["heart_rate_calculation_method"] == "percent_maximum"
+    assert profile["recommended_cardio_range"] is None
+    assert len(profile["heart_rate_zones"]) == 5
+
+
+@pytest.mark.parametrize("resting_heart_rate", [29, 121])
+def test_profile_rejects_resting_heart_rate_outside_range(client, resting_heart_rate):
+    headers = auth(client, telegram_user_id=6011 + resting_heart_rate, is_coach=False)
+
+    response = client.patch(
+        "/api/v1/me/profile",
+        headers=headers,
+        json={"resting_heart_rate": resting_heart_rate},
+    )
+
+    assert response.status_code == 422
+
+
+def test_profile_rejects_resting_heart_rate_at_or_above_maximum(client):
+    headers = auth(client, telegram_user_id=6012, is_coach=False)
+    today = date.today()
+    birth_date = today.replace(year=today.year - 100)
+
+    response = client.patch(
+        "/api/v1/me/profile",
+        headers=headers,
+        json={"birth_date": birth_date.isoformat(), "resting_heart_rate": 138},
+    )
+
+    assert response.status_code == 422
+
+    response = client.patch(
+        "/api/v1/me/profile",
+        headers=headers,
+        json={"birth_date": birth_date.isoformat(), "resting_heart_rate": 120},
+    )
+    assert response.status_code == 200
+
+    response = client.patch(
+        "/api/v1/me/profile",
+        headers=headers,
+        json={"birth_date": birth_date.isoformat(), "resting_heart_rate": 138},
+    )
+    assert response.status_code == 422
+
+
 def test_client_can_save_detailed_activity_and_multiple_cardio_trainings(client):
     headers = auth(client, telegram_user_id=6002, is_coach=False)
     payload = {

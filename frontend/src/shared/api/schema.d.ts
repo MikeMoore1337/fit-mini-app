@@ -1956,6 +1956,13 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** HeartRateRangeResponse */
+        HeartRateRangeResponse: {
+            /** Min Bpm */
+            min_bpm: number;
+            /** Max Bpm */
+            max_bpm: number;
+        };
         /** HeartRateZoneResponse */
         HeartRateZoneResponse: {
             /** Zone */
@@ -2465,6 +2472,8 @@ export interface components {
             workouts_per_week?: number | null;
             /** Cardio Trainings Per Week */
             cardio_trainings_per_week?: number | null;
+            /** Resting Heart Rate */
+            resting_heart_rate?: number | null;
             /**
              * Timezone
              * @default Europe/Moscow
@@ -2472,8 +2481,13 @@ export interface components {
             timezone: string;
             /** Estimated Max Heart Rate */
             estimated_max_heart_rate?: number | null;
+            /** Heart Rate Reserve */
+            heart_rate_reserve?: number | null;
+            /** Heart Rate Calculation Method */
+            heart_rate_calculation_method?: ("heart_rate_reserve" | "percent_maximum") | null;
             /** Heart Rate Zones */
             heart_rate_zones?: components["schemas"]["HeartRateZoneResponse"][];
+            recommended_cardio_range?: components["schemas"]["HeartRateRangeResponse"] | null;
             kbju?: components["schemas"]["NutritionTargetResponse"] | null;
         };
         /** UserProfileUpdate */
@@ -2494,6 +2508,8 @@ export interface components {
             workouts_per_week?: number | null;
             /** Cardio Trainings Per Week */
             cardio_trainings_per_week?: number | null;
+            /** Resting Heart Rate */
+            resting_heart_rate?: number | null;
             /** Timezone */
             timezone?: string | null;
         };

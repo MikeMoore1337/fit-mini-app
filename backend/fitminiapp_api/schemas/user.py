@@ -16,6 +16,7 @@ class UserProfileUpdate(BaseModel):
     weight_kg: float | None = Field(default=None, ge=20, le=350, allow_inf_nan=False)
     workouts_per_week: int | None = Field(default=None, ge=0, le=14)
     cardio_trainings_per_week: int | None = Field(default=None, ge=0, le=14)
+    resting_heart_rate: int | None = Field(default=None, ge=30, le=120)
     timezone: str | None = Field(default=None, max_length=64)
 
     @field_validator("timezone")
@@ -58,6 +59,11 @@ class HeartRateZoneResponse(BaseModel):
     max_bpm: int
 
 
+class HeartRateRangeResponse(BaseModel):
+    min_bpm: int
+    max_bpm: int
+
+
 class UserProfileResponse(BaseModel):
     full_name: str | None = None
     birth_date: date | None = None
@@ -67,9 +73,13 @@ class UserProfileResponse(BaseModel):
     weight_kg: float | None = None
     workouts_per_week: int | None = None
     cardio_trainings_per_week: int | None = None
+    resting_heart_rate: int | None = None
     timezone: str = "Europe/Moscow"
     estimated_max_heart_rate: int | None = None
+    heart_rate_reserve: int | None = None
+    heart_rate_calculation_method: Literal["heart_rate_reserve", "percent_maximum"] | None = None
     heart_rate_zones: list[HeartRateZoneResponse] = Field(default_factory=list)
+    recommended_cardio_range: HeartRateRangeResponse | None = None
     kbju: NutritionTargetResponse | None = None
 
 
