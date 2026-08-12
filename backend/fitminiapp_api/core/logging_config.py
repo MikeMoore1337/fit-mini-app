@@ -17,6 +17,8 @@ STRUCTURED_FIELDS = (
     "notification_id",
     "chat_id",
     "delivery_error",
+    "provider",
+    "reason",
 )
 
 
