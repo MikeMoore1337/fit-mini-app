@@ -47,6 +47,12 @@ Apple     https://app.your-fitness-coach.ru/api/v1/auth/oauth/apple/callback
 
 Configure credentials through the matching variables in `.env.example`.
 
+OAuth discovery and token exchange use `OAUTH_HTTP_TIMEOUT_SECONDS` (15 seconds
+by default). A `ConnectTimeout` in `oauth_login_failed` means the backend
+container could not establish an outbound HTTPS connection to the provider; it
+does not indicate a refresh-cookie or callback URL problem. Verify DNS and HTTPS
+connectivity from the backend container before increasing the timeout further.
+
 - Telegram: create Web Login credentials in BotFather and allow the frontend
   origin plus the callback URL.
 - Google: create a Web OAuth client and request only `openid profile email`.

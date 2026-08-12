@@ -180,6 +180,25 @@ def test_production_oauth_does_not_require_smtp_when_email_auth_is_disabled():
 
     assert configured.enable_web_auth is True
     assert configured.enable_email_auth is False
+    assert configured.oauth_http_timeout_seconds == 15
+
+
+def test_oauth_http_timeout_is_bounded():
+    common = {
+        "app_env": "dev",
+        "app_name": "Your Fitness Coach",
+        "app_debug": False,
+        "secret_key": "test-secret",
+        "access_token_expire_minutes": 60,
+        "refresh_token_expire_days": 30,
+        "database_url": "sqlite://",
+        "telegram_bot_token": "test-token",
+    }
+
+    with pytest.raises(ValidationError, match="oauth_http_timeout_seconds"):
+        Settings(**common, oauth_http_timeout_seconds=4.9)
+    with pytest.raises(ValidationError, match="oauth_http_timeout_seconds"):
+        Settings(**common, oauth_http_timeout_seconds=61)
 
 
 def test_production_email_auth_requires_smtp():
