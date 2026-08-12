@@ -114,11 +114,29 @@ def configured_oauth_client(provider: str):
     return oauth.create_client(provider)
 
 
+def _telegram_oidc_user_id(raw_claims: dict[str, Any]) -> int:
+    """Read Telegram's stable OIDC subject without trusting an arbitrary value."""
+
+    # Telegram Login's OIDC token identifies the account through the standard
+    # ``sub`` claim. Keep accepting ``id`` for compatibility with previously
+    # stored test fixtures and any provider response that includes it.
+    raw_user_id = raw_claims.get("id", raw_claims.get("sub"))
+    if isinstance(raw_user_id, bool):
+        raise ValueError("Telegram did not return a valid user id")
+    if isinstance(raw_user_id, int):
+        telegram_user_id = raw_user_id
+    elif isinstance(raw_user_id, str) and raw_user_id.isascii() and raw_user_id.isdecimal():
+        telegram_user_id = int(raw_user_id)
+    else:
+        raise ValueError("Telegram did not return a valid user id")
+    if telegram_user_id <= 0 or telegram_user_id > 2**63 - 1:
+        raise ValueError("Telegram did not return a valid user id")
+    return telegram_user_id
+
+
 def normalize_oauth_claims(provider: str, raw_claims: dict[str, Any]) -> dict[str, Any]:
     if provider == "telegram":
-        telegram_id = raw_claims.get("id")
-        if not isinstance(telegram_id, int) or isinstance(telegram_id, bool) or telegram_id <= 0:
-            raise ValueError("Telegram did not return a valid user id")
+        telegram_id = _telegram_oidc_user_id(raw_claims)
         return {
             "subject": str(telegram_id),
             "telegram_user_id": telegram_id,
