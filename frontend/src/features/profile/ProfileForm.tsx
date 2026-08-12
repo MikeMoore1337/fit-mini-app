@@ -99,7 +99,7 @@ export function ProfileForm() {
           mutation.mutate();
         }}
       >
-        <div className="form-grid">
+        <div className="form-grid profile-form-grid">
           <label className="field">
             <span>Имя</span>
             <input

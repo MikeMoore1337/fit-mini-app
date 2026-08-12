@@ -448,7 +448,7 @@ export function ProgramBuilder({
               </select>
             </label>
           </div>
-          <fieldset className="auth-notice stack">
+          <fieldset className="program-builder-section stack">
             <legend>Расписание</legend>
             <div className="form-grid">
               <label className="field">
@@ -512,8 +512,8 @@ export function ProgramBuilder({
               </p>
             )}
           </fieldset>
-          <div className="auth-notice stack">
-            <strong>Быстрый силовой шаблон</strong>
+          <section className="program-builder-section stack" aria-labelledby="strength-template-title">
+            <h3 id="strength-template-title">Быстрый силовой шаблон</h3>
             <div className="form-grid">
               <label className="field">
                 <span>Схема</span>
@@ -548,8 +548,8 @@ export function ProgramBuilder({
             <button type="button" className="secondary" onClick={() => void loadPreset()}>
               Заполнить по шаблону
             </button>
-          </div>
-          <fieldset className="auth-notice stack">
+          </section>
+          <fieldset className="program-builder-section stack">
             <legend>Отдых между подходами</legend>
             <p className="muted">
               Укажите общее время и примените его ко всей программе. При необходимости измените
