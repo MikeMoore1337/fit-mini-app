@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     enable_email_auth: bool = False
     admin_telegram_user_ids: str = ""
 
+    app_domain: str = ""
+    landing_domain: str = ""
     frontend_base_url: str = "https://app.your-fitness-coach.ru"
     telegram_bot_token: str
     telegram_bot_username: str = ""
