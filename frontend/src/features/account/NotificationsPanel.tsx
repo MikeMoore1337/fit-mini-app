@@ -3,7 +3,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type { NotificationItem, NotificationSetting } from '../../shared/api/types';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
-import { Badge, Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
+import {
+  Badge,
+  Card,
+  DisclosureIcon,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from '../../shared/ui/common';
 import { useAuth } from '../../app/AuthProvider';
 import { addCalendarDays, dateInputValue, detectedTimeZone } from '../../shared/dateTime';
 import { usePersistentState } from '../../shared/storage';
@@ -144,6 +151,7 @@ export function NotificationsPanel({
             <strong>Личные уведомления</strong>
             <small>Создание и история уведомлений</small>
           </span>
+          <DisclosureIcon />
         </summary>
         <div className="profile-disclosure__body">
           <form

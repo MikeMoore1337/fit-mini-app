@@ -578,9 +578,10 @@
 .coach-data-disclosure > summary::-webkit-details-marker {
   display: none;
 }
-.profile-disclosure > summary > span,
-.coach-data-disclosure > summary > span {
+.profile-disclosure > summary > span:first-child,
+.coach-data-disclosure > summary > span:first-child {
   display: grid;
+  flex: 1;
   gap: 3px;
   min-width: 0;
 }
@@ -592,10 +593,9 @@
 .coach-data-disclosure > summary small {
   color: var(--muted);
 }
-.profile-disclosure > summary::after,
-.coach-data-disclosure > summary::after {
-  content: '+';
+.disclosure-icon {
   display: grid;
+  flex: 0 0 28px;
   place-items: center;
   width: 28px;
   height: 28px;
@@ -603,11 +603,19 @@
   border-radius: 50%;
   background: var(--bg-soft);
   color: var(--muted);
-  font-size: 1.25rem;
 }
-.profile-disclosure[open] > summary::after,
-.coach-data-disclosure[open] > summary::after {
-  content: '−';
+.disclosure-icon svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 1.5;
+}
+.profile-disclosure[open] > summary .disclosure-icon__vertical,
+.coach-data-disclosure[open] > summary .disclosure-icon__vertical {
+  opacity: 0;
 }
 .profile-disclosure__body,
 .coach-data-disclosure__body {
