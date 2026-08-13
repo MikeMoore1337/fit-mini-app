@@ -456,6 +456,11 @@ body.landing-mode #root {
   color: var(--landing-dark);
   font-weight: 900;
 }
+.landing-check .ui-icon {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2;
+}
 
 .landing-proof {
   display: grid;

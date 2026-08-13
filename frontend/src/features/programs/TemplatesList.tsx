@@ -3,7 +3,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../shared/api/client';
 import type { ProgramTemplate } from '../../shared/api/types';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
-import { Badge, Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
+import {
+  Badge,
+  Card,
+  CloseIcon,
+  DisclosureIcon,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from '../../shared/ui/common';
 import { useAuth } from '../../app/AuthProvider';
 import { dateInputValue, detectedTimeZone } from '../../shared/dateTime';
 import { useModalA11y } from '../../shared/ui/useModalA11y';
@@ -249,8 +257,11 @@ export function TemplatesList() {
           </div>
         )}
         {!!hidden.data?.length && (
-          <details className="top-gap">
-            <summary>Скрытые примеры программ ({hidden.data.length})</summary>
+          <details className="compact-disclosure top-gap">
+            <summary>
+              <span>Скрытые примеры программ ({hidden.data.length})</span>
+              <DisclosureIcon />
+            </summary>
             <div className="list-grid top-gap">
               {hidden.data.map((item) => (
                 <article className="list-row" key={item.id}>
@@ -304,7 +315,7 @@ export function TemplatesList() {
                 aria-label="Закрыть состав программы"
                 onClick={() => setSelectedExample(null)}
               >
-                ×
+                <CloseIcon />
               </button>
             </div>
             <div className="program-example-days">
@@ -374,7 +385,7 @@ export function TemplatesList() {
                 aria-label="Закрыть настройку расписания"
                 onClick={() => setAssignmentTemplate(null)}
               >
-                ×
+                <CloseIcon />
               </button>
             </div>
             <form
@@ -505,7 +516,7 @@ export function TemplatesList() {
                 aria-label="Закрыть редактирование"
                 onClick={() => setEditingTemplate(null)}
               >
-                ×
+                <CloseIcon />
               </button>
             </div>
             <ProgramBuilder

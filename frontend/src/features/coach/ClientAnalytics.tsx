@@ -3,7 +3,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type { WorkoutProgress, WorkoutTimelineItem } from '../../shared/api/types';
 import { workoutStatusLabel } from '../../shared/statusLabels';
-import { Badge, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
+import {
+  Badge,
+  DisclosureIcon,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { DateInput, TimeInput } from '../../shared/ui/PickerInput';
 
@@ -175,6 +181,7 @@ export function ClientAnalytics({ clientId }: { clientId: number }) {
                     </small>
                   </span>
                   <Badge>{workoutStatusLabel(workout.status)}</Badge>
+                  <DisclosureIcon />
                 </summary>
                 <div className="stack top-gap">
                   {workout.status === 'planned' && (
