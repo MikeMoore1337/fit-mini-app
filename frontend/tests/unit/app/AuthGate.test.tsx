@@ -42,6 +42,9 @@ describe('AuthGate', () => {
     render(<AuthGate>Приложение</AuthGate>);
 
     expect(screen.getByText('OAUTH:telegram')).toBeInTheDocument();
+    expect(
+      screen.getByText(/вход через Telegram откроет защищённую страницу/i),
+    ).toBeInTheDocument();
     expect(screen.queryByText('EMAIL_AUTH_PANEL')).not.toBeInTheDocument();
   });
 

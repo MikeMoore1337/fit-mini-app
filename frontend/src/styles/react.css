@@ -1444,4 +1444,7 @@ body:has(#appBottomNav) {
     stroke-linecap: round;
     stroke-linejoin: round;
   }
+  .miniapp-hero-logout {
+    display: none;
+  }
 }
