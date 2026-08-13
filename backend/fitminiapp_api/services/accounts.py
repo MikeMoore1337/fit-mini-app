@@ -24,6 +24,7 @@ from fitminiapp_api.models.user import (
     BodyMeasurement,
     CoachClient,
     CoachClientInvite,
+    CoachRoleApplication,
     User,
     UserProfile,
 )
@@ -106,6 +107,12 @@ def delete_user_cascade(db: Session, user: User) -> None:
             CoachClientInvite.username == user.username,
         )
     ).delete(synchronize_session=False)
+    db.query(CoachRoleApplication).filter(
+        CoachRoleApplication.reviewed_by_user_id == user.id
+    ).update({"reviewed_by_user_id": None}, synchronize_session=False)
+    db.query(CoachRoleApplication).filter(CoachRoleApplication.user_id == user.id).delete(
+        synchronize_session=False
+    )
 
     db.query(NutritionTarget).filter(NutritionTarget.user_id == user.id).delete(
         synchronize_session=False
@@ -176,6 +183,12 @@ def build_account_export(db: Session, user: User) -> dict:
         db.query(CoachClient)
         .filter(or_(CoachClient.coach_user_id == user.id, CoachClient.client_user_id == user.id))
         .order_by(CoachClient.created_at.asc(), CoachClient.id.asc())
+        .all()
+    )
+    coach_applications = (
+        db.query(CoachRoleApplication)
+        .filter(CoachRoleApplication.user_id == user.id)
+        .order_by(CoachRoleApplication.created_at.asc(), CoachRoleApplication.id.asc())
         .all()
     )
     audit_events = (
@@ -281,6 +294,16 @@ def build_account_export(db: Session, user: User) -> dict:
                 "ended_reason": relation.ended_reason,
             }
             for relation in relations
+        ],
+        "coach_role_applications": [
+            {
+                "id": application.id,
+                "status": application.status,
+                "source": application.source,
+                "created_at": application.created_at,
+                "reviewed_at": application.reviewed_at,
+            }
+            for application in coach_applications
         ],
         "notification_settings": (
             {

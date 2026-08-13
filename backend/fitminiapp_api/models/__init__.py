@@ -19,6 +19,7 @@ from fitminiapp_api.models.user import (
     BodyMeasurement,
     CoachClient,
     CoachClientInvite,
+    CoachRoleApplication,
     User,
     UserProfile,
 )
@@ -30,6 +31,7 @@ __all__ = [
     "BodyMeasurement",
     "CoachClient",
     "CoachClientInvite",
+    "CoachRoleApplication",
     "Exercise",
     "HiddenProgramTemplate",
     "LocalCredential",

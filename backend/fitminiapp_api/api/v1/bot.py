@@ -9,6 +9,8 @@ from fitminiapp_api.db.session import get_session_context
 from fitminiapp_api.models.notification import NotificationSetting
 from fitminiapp_api.models.user import User, UserProfile
 from fitminiapp_api.schemas.bot import (
+    BotCoachRoleApplicationRequest,
+    BotCoachRoleApplicationResponse,
     BotTelegramLinkRequest,
     BotTelegramLinkResponse,
     BotTimezoneUpdateRequest,
@@ -19,6 +21,7 @@ from fitminiapp_api.services.account_linking import (
     TelegramLinkError,
     link_telegram_account,
 )
+from fitminiapp_api.services.coach_applications import submit_coach_application
 from fitminiapp_api.services.password_auth import PasswordAuthError
 from fitminiapp_api.services.telegram_auth import (
     get_or_insert_telegram_user,
@@ -128,3 +131,23 @@ def link_telegram_from_bot(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except TelegramLinkError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/coach-application", response_model=BotCoachRoleApplicationResponse)
+def create_coach_application_from_bot(
+    payload: BotCoachRoleApplicationRequest,
+    x_bot_token: str | None = Header(default=None),
+) -> BotCoachRoleApplicationResponse:
+    _check_bot_token(x_bot_token)
+    with get_session_context() as db:
+        user = _get_or_create_user(db, payload)
+        _ensure_profile_and_settings(db, user)
+        if user.is_coach or user.is_admin:
+            return BotCoachRoleApplicationResponse(status="already_coach")
+        try:
+            submit_coach_application(db, user, source="telegram")
+        except HTTPException as exc:
+            if exc.status_code == 409:
+                return BotCoachRoleApplicationResponse(status="already_pending")
+            raise
+        return BotCoachRoleApplicationResponse(status="pending")
