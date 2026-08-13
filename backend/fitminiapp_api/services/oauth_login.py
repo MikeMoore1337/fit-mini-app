@@ -1,6 +1,12 @@
 from __future__ import annotations
 
+import base64
+import hashlib
+import json
+import secrets
+from hmac import compare_digest
 from typing import Any
+from urllib.parse import urlencode
 
 import httpx
 from authlib.integrations.httpx_client import AsyncOAuth2Client
@@ -17,6 +23,12 @@ from fitminiapp_api.services.password_auth import utcnow
 from fitminiapp_api.services.telegram_auth import normalize_telegram_username
 
 oauth = OAuth()
+
+VK_AUTHORIZE_URL = "https://id.vk.ru/authorize"
+VK_TOKEN_URL = "https://id.vk.ru/oauth2/auth"
+VK_USER_INFO_URL = "https://id.vk.ru/oauth2/user_info"
+VK_SCOPE = "email"
+VK_SESSION_KEY = "vk_oauth"
 
 
 def oauth_transport_options() -> dict[str, object]:
@@ -108,9 +120,124 @@ if settings.yandex_oauth_client_id.strip() and settings.yandex_oauth_client_secr
     )
 
 
+def _vk_callback_params(request) -> dict[str, str]:
+    """Accept both VK ID's flat callback and its JSON ``payload`` form."""
+
+    params = dict(request.query_params.items())
+    raw_payload = params.get("payload")
+    if raw_payload:
+        payload = json.loads(raw_payload)
+        if not isinstance(payload, dict):
+            raise ValueError("VK ID returned an invalid callback payload")
+        params.update({key: str(value) for key, value in payload.items() if value is not None})
+    return params
+
+
+def _pkce_challenge(code_verifier: str) -> str:
+    digest = hashlib.sha256(code_verifier.encode("ascii")).digest()
+    return base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
+
+
+class VKOAuthClient:
+    """Minimal server-side VK ID OAuth 2.1 client with mandatory PKCE."""
+
+    def __init__(self, client_id: str) -> None:
+        self.client_id = client_id
+
+    async def authorize_redirect(self, request, redirect_uri: str):
+        from starlette.responses import RedirectResponse
+
+        state = secrets.token_urlsafe(32)
+        code_verifier = secrets.token_urlsafe(48)
+        request.session[VK_SESSION_KEY] = {
+            "state": state,
+            "code_verifier": code_verifier,
+            "redirect_uri": redirect_uri,
+        }
+        query = urlencode(
+            {
+                "response_type": "code",
+                "client_id": self.client_id,
+                "redirect_uri": redirect_uri,
+                "scope": VK_SCOPE,
+                "state": state,
+                "code_challenge": _pkce_challenge(code_verifier),
+                "code_challenge_method": "S256",
+            }
+        )
+        return RedirectResponse(f"{VK_AUTHORIZE_URL}?{query}", status_code=302)
+
+    async def authorize_access_token(self, request) -> dict[str, object]:
+        params = _vk_callback_params(request)
+        error = params.get("error")
+        if error:
+            raise ValueError(f"VK ID authorization failed: {error}")
+
+        code = params.get("code")
+        state = params.get("state")
+        device_id = params.get("device_id")
+        if not code or not state or not device_id:
+            raise ValueError("VK ID callback is missing required parameters")
+
+        session_data = request.session.pop(VK_SESSION_KEY, None)
+        if not isinstance(session_data, dict):
+            raise ValueError("VK ID authorization state is invalid or expired")
+        expected_state = session_data.get("state")
+        if not isinstance(expected_state, str) or not compare_digest(expected_state, state):
+            raise ValueError("VK ID authorization state is invalid or expired")
+        code_verifier = session_data.get("code_verifier")
+        redirect_uri = session_data.get("redirect_uri")
+        if not isinstance(code_verifier, str) or not isinstance(redirect_uri, str):
+            raise ValueError("VK ID authorization session is invalid")
+
+        client_options = {
+            "trust_env": False,
+            "timeout": settings.oauth_http_timeout_seconds,
+            **oauth_transport_options(),
+        }
+        async with httpx.AsyncClient(**client_options) as client:
+            token_response = await client.post(
+                VK_TOKEN_URL,
+                params={
+                    "grant_type": "authorization_code",
+                    "redirect_uri": redirect_uri,
+                    "client_id": self.client_id,
+                    "code_verifier": code_verifier,
+                    "device_id": device_id,
+                    "state": state,
+                },
+                data={"code": code},
+            )
+            token_response.raise_for_status()
+            token = token_response.json()
+            if not isinstance(token, dict):
+                raise ValueError("VK ID returned an invalid token response")
+            returned_state = token.get("state")
+            if returned_state is not None and (
+                not isinstance(returned_state, str) or not compare_digest(returned_state, state)
+            ):
+                raise ValueError("VK ID token state does not match")
+            access_token = token.get("access_token")
+            if not isinstance(access_token, str) or not access_token:
+                raise ValueError("VK ID did not return an access token")
+
+            profile_response = await client.post(
+                VK_USER_INFO_URL,
+                params={"client_id": self.client_id},
+                data={"access_token": access_token},
+            )
+            profile_response.raise_for_status()
+            profile = profile_response.json()
+            if not isinstance(profile, dict) or not isinstance(profile.get("user"), dict):
+                raise ValueError("VK ID returned an invalid user profile")
+            return {**token, "userinfo": profile["user"]}
+
+
 def configured_oauth_client(provider: str):
     if provider not in settings.oauth_provider_names:
         return None
+    if provider == "vk":
+        return VKOAuthClient(settings.vk_oauth_client_id)
     return oauth.create_client(provider)
 
 
@@ -159,6 +286,26 @@ def normalize_oauth_claims(provider: str, raw_claims: dict[str, Any]) -> dict[st
             "last_name": raw_claims.get("last_name"),
             "full_name": raw_claims.get("display_name") or raw_claims.get("real_name"),
             "photo_url": None,
+            "email": email,
+            "email_verified": bool(email),
+        }
+    if provider == "vk":
+        subject = raw_claims.get("user_id")
+        if isinstance(subject, bool) or not isinstance(subject, (str, int)):
+            subject = ""
+        email = raw_claims.get("email")
+        first_name = raw_claims.get("first_name")
+        last_name = raw_claims.get("last_name")
+        return {
+            "subject": str(subject),
+            "telegram_user_id": None,
+            "username": None,
+            "first_name": first_name,
+            "last_name": last_name,
+            "full_name": " ".join(
+                part for part in [first_name, last_name] if isinstance(part, str) and part
+            ),
+            "photo_url": raw_claims.get("avatar"),
             "email": email,
             "email_verified": bool(email),
         }

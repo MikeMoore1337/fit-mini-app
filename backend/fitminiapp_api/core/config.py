@@ -63,6 +63,7 @@ class Settings(BaseSettings):
     google_oauth_client_secret: str = ""
     yandex_oauth_client_id: str = ""
     yandex_oauth_client_secret: str = ""
+    vk_oauth_client_id: str = ""
     apple_oauth_client_id: str = ""
     apple_oauth_client_secret: str = ""
 
@@ -136,11 +137,14 @@ class Settings(BaseSettings):
             "yandex": (self.yandex_oauth_client_id, self.yandex_oauth_client_secret),
             "apple": (self.apple_oauth_client_id, self.apple_oauth_client_secret),
         }
-        return [
+        providers = [
             name
             for name, credentials in pairs.items()
             if all(value.strip() for value in credentials)
         ]
+        if self.vk_oauth_client_id.strip():
+            providers.append("vk")
+        return providers
 
 
 settings = Settings()
