@@ -786,7 +786,7 @@ body.landing-mode #root {
 
 .landing-platforms__options {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: stretch;
   gap: 14px;
 }
@@ -805,6 +805,11 @@ body.landing-mode #root {
 .landing-platform-card--telegram {
   background:
     linear-gradient(145deg, rgba(182, 242, 56, 0.16), transparent 62%), var(--landing-card);
+}
+
+.landing-platform-card--mobile {
+  background:
+    linear-gradient(145deg, rgba(118, 148, 53, 0.1), transparent 62%), var(--landing-card);
 }
 
 .landing-platform-card__top {
@@ -854,38 +859,40 @@ body.landing-mode #root {
 }
 
 .landing-platforms__sync {
-  align-self: center;
-  display: grid;
-  place-items: center;
-  gap: 8px;
-  width: 104px;
-  padding: 16px 8px;
-  color: var(--landing-kicker);
-  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 20px 24px;
+  border: 1px solid var(--landing-card-border);
+  border-radius: 20px;
+  background: var(--landing-dark);
+  color: #f5f8ef;
 }
 
 .landing-platforms__sync .landing-flow-icon {
+  flex: 0 0 44px;
   margin-bottom: 0;
 }
 
+.landing-platforms__sync p {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
 .landing-platforms__sync strong {
-  font-size: 0.67rem;
+  color: var(--landing-green);
+  font-size: 0.72rem;
   line-height: 1.25;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
 
-.landing-platforms__note {
-  margin: 20px 0 0;
-  color: var(--landing-muted);
-  font-size: 0.78rem;
-  font-weight: 650;
-  text-align: center;
-}
-
-.landing-platforms__note span {
-  margin-inline: 5px;
-  color: var(--landing-kicker);
+.landing-platforms__sync p > span {
+  color: #bdc7bf;
+  font-size: 0.82rem;
+  line-height: 1.5;
 }
 
 .landing-audience {
@@ -1244,14 +1251,13 @@ body.landing-mode #root {
   }
 
   .landing-platforms__sync {
-    justify-self: center;
-    width: auto;
-    grid-template-columns: auto auto;
-    padding-block: 8px;
+    align-items: flex-start;
+    margin-top: 10px;
+    padding: 18px;
   }
 
   .landing-platforms__sync .landing-flow-icon {
-    transform: rotate(90deg);
+    flex: 0 0 44px;
   }
 
   .landing-feature-grid,
