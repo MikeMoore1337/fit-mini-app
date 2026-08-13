@@ -905,6 +905,9 @@ select:not([multiple]) {
   min-width: 0;
   color: var(--text);
 }
+.program-example-row .list-row__actions .secondary {
+  border: 1px solid var(--border);
+}
 .program-example-trigger > strong,
 .program-example-trigger > .muted {
   overflow-wrap: anywhere;
