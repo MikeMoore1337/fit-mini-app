@@ -6,13 +6,34 @@ export function Card({
   actions,
   children,
   className = '',
+  collapsible = true,
 }: {
   title?: string;
   description?: string;
   actions?: ReactNode;
   children: ReactNode;
   className?: string;
+  /** Application cards start collapsed to keep long pages easy to scan. */
+  collapsible?: boolean;
 }) {
+  if (collapsible && (title || description)) {
+    return (
+      <details className={`card card-disclosure ${className}`.trim()}>
+        <summary>
+          <span>
+            {title && <strong>{title}</strong>}
+            {description && <small>{description}</small>}
+          </span>
+          <DisclosureIcon />
+        </summary>
+        <div className="card-disclosure__body">
+          {actions && <div className="card-disclosure__actions">{actions}</div>}
+          {children}
+        </div>
+      </details>
+    );
+  }
+
   return (
     <section className={`card ${className}`.trim()}>
       {(title || description || actions) && (
