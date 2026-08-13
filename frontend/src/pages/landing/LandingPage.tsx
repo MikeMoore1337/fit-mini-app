@@ -267,6 +267,11 @@ export default function LandingPage() {
               </ul>
             </div>
             <div className="landing-problem__result">
+              <span className="landing-flow-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M5 12h14m-5-5 5 5-5 5" />
+                </svg>
+              </span>
               <span>В Your Fitness Coach</span>
               <strong>Один понятный план действий</strong>
             </div>
@@ -347,7 +352,7 @@ export default function LandingPage() {
             </article>
 
             <div className="landing-platforms__sync" aria-label="Данные синхронизируются">
-              <span aria-hidden="true">
+              <span className="landing-flow-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24">
                   <path d="M4 8h16m-3-3 3 3-3 3M20 16H4m3-3-3 3 3 3" />
                 </svg>
