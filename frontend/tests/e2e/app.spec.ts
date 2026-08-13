@@ -196,6 +196,14 @@ test('сценарии спортсмена и тренера ведут в ве
       'href',
       'https://t.me/your_fitness_support_bot',
     );
+    const contactArrows = page.locator('.landing-contact__arrow');
+    await expect(contactArrows).toHaveCount(2);
+    for (const arrow of await contactArrows.all()) {
+      await expect(arrow).toHaveCSS('width', '28px');
+      await expect(arrow).toHaveCSS('height', '28px');
+      await expect(arrow).toHaveCSS('font-size', '24px');
+      await expect(arrow).toHaveCSS('font-weight', '700');
+    }
 
     const clientCard = await audienceCards.first().boundingBox();
     const coachCard = await audienceCards.last().boundingBox();
