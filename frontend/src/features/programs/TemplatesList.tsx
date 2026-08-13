@@ -175,7 +175,7 @@ export function TemplatesList() {
           <div className="list-grid top-gap">
             {templates.data.map((item) => (
               <article
-                className={`list-row${item.is_example ? ' program-example-row' : ''}`}
+                className={`list-row program-template-row${item.is_example ? ' program-example-row' : ''}`}
                 key={item.id}
               >
                 {item.is_example ? (
@@ -221,7 +221,11 @@ export function TemplatesList() {
                   >
                     {shouldSaveTemplateAsCopy(item) ? 'Редактировать копию' : 'Редактировать'}
                   </button>
-                  {!item.is_active_for_current_user && (
+                  {item.is_active_for_current_user ? (
+                    <button type="button" className="secondary" disabled>
+                      Уже назначена
+                    </button>
+                  ) : (
                     <button
                       onClick={() => {
                         setAssignmentStartDate(defaultStartDate);

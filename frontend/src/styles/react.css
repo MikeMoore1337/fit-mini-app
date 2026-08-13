@@ -905,8 +905,18 @@ select:not([multiple]) {
   min-width: 0;
   color: var(--text);
 }
-.program-example-row .list-row__actions .secondary {
+.program-template-row .list-row__actions .secondary {
   border: 1px solid var(--border);
+}
+.program-template-row .list-row__actions {
+  flex: 0 0 auto;
+  align-items: flex-start;
+}
+.program-template-row .list-row__actions button:not(.btn-danger) {
+  min-width: 198px;
+}
+.program-template-row .list-row__actions .btn-danger {
+  min-width: auto;
 }
 .program-example-trigger > strong,
 .program-example-trigger > .muted {
@@ -1467,8 +1477,9 @@ body:has(#appBottomNav) {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .program-example-row .list-row__actions button {
+  .program-template-row .list-row__actions button {
     width: 100%;
+    min-width: 0;
   }
   .program-example-modal {
     align-items: flex-end;

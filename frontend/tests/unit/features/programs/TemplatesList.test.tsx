@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TemplatesList } from '../../../../src/features/programs/TemplatesList';
@@ -92,6 +92,17 @@ describe('TemplatesList editing', () => {
               is_public: false,
               owner_user_id: 1,
             },
+            {
+              ...templateBase,
+              id: 12,
+              title: 'Активная программа',
+              slug: 'active-template',
+              is_example: false,
+              can_edit: true,
+              is_public: false,
+              owner_user_id: 1,
+              is_active_for_current_user: true,
+            },
           ]),
           { status: 200 },
         );
@@ -103,7 +114,10 @@ describe('TemplatesList editing', () => {
     });
   });
 
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
 
   it('opens a personal copy editor for a ready-made template', async () => {
     renderList();
@@ -116,8 +130,16 @@ describe('TemplatesList editing', () => {
   it('updates an owned template directly', async () => {
     renderList();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Редактировать' }));
+    const programCard = (await screen.findByText('Моя программа')).closest('article');
+    expect(programCard).not.toBeNull();
+    fireEvent.click(within(programCard!).getByRole('button', { name: 'Редактировать' }));
 
     expect(screen.getByText('update:Моя программа')).toBeInTheDocument();
+  });
+
+  it('shows that the active program is already assigned', async () => {
+    renderList();
+
+    expect(await screen.findByRole('button', { name: 'Уже назначена' })).toBeDisabled();
   });
 });
