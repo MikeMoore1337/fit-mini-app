@@ -630,7 +630,7 @@ body.landing-mode #root {
   min-height: 220px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   padding: 22px;
   border: 1px solid var(--landing-card-border);
   border-radius: 22px;
@@ -1168,6 +1168,7 @@ body.landing-mode #root {
   }
 
   .landing-problem__result .landing-flow-icon {
+    margin-inline: auto;
     transform: rotate(90deg);
   }
 
