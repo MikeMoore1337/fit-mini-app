@@ -38,6 +38,7 @@ they exist.
 
 # Workspace hygiene
 
+<<<<<<< HEAD
 - Put caches, temporary files, test artifacts, logs, screenshots, traces, coverage and
   generated reports under `.artifacts/`.
 - Never create ad-hoc scratch paths such as `.tmp*`, `pytest-cache-files-*`, reports,
@@ -461,3 +462,12 @@ For other substantial work, report concisely:
 
 Never list hypothetical checks as completed or claim independent review, QA, real-user,
 Telegram, provider or production validation if it did not actually happen.
+
+# Workflow
+
+- Work on the task in stages. After each completed stage, run only the tests
+  related to that stage so that the changes are checked in isolation, then
+  create a separate Git commit for that stage.
+- Do not leave the project in a knowingly non-working state. If a full test
+  suite or broader verification is needed, report that separately and wait for
+  the user's decision before running it.
