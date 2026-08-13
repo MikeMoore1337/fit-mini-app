@@ -1,24 +1,65 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { AppShell } from '../../app/AppShell';
 import { useAuth } from '../../app/AuthProvider';
-import { NotificationsPanel } from '../../features/account/NotificationsPanel';
-import { AccountPrivacy } from '../../features/account/AccountPrivacy';
-import { Diary } from '../../features/diary/Diary';
-import { ExerciseCatalog } from '../../features/exercises/ExerciseCatalog';
-import { NutritionForm } from '../../features/nutrition/NutritionForm';
-import { CoachInvites } from '../../features/profile/CoachInvites';
-import { ProfileForm } from '../../features/profile/ProfileForm';
-import { ProgramBuilder } from '../../features/programs/ProgramBuilder';
-import { TemplatesList } from '../../features/programs/TemplatesList';
 import { TodayWorkout } from '../../features/workouts/TodayWorkout';
-import { ProgressSchedule } from '../../features/workouts/ProgressSchedule';
-import {
-  WorkoutHistory,
-  type WorkoutNavigationTarget,
-} from '../../features/workouts/WorkoutHistory';
+import type { WorkoutNavigationTarget } from '../../features/workouts/WorkoutHistory';
 import { Badge, Card } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { handleTabKeyDown } from '../../shared/ui/tabs';
+
+const NotificationsPanel = lazy(() =>
+  import('../../features/account/NotificationsPanel').then((module) => ({
+    default: module.NotificationsPanel,
+  })),
+);
+const AccountPrivacy = lazy(() =>
+  import('../../features/account/AccountPrivacy').then((module) => ({
+    default: module.AccountPrivacy,
+  })),
+);
+const Diary = lazy(() =>
+  import('../../features/diary/Diary').then((module) => ({ default: module.Diary })),
+);
+const ExerciseCatalog = lazy(() =>
+  import('../../features/exercises/ExerciseCatalog').then((module) => ({
+    default: module.ExerciseCatalog,
+  })),
+);
+const NutritionForm = lazy(() =>
+  import('../../features/nutrition/NutritionForm').then((module) => ({
+    default: module.NutritionForm,
+  })),
+);
+const CoachInvites = lazy(() =>
+  import('../../features/profile/CoachInvites').then((module) => ({
+    default: module.CoachInvites,
+  })),
+);
+const ProfileForm = lazy(() =>
+  import('../../features/profile/ProfileForm').then((module) => ({
+    default: module.ProfileForm,
+  })),
+);
+const ProgramBuilder = lazy(() =>
+  import('../../features/programs/ProgramBuilder').then((module) => ({
+    default: module.ProgramBuilder,
+  })),
+);
+const TemplatesList = lazy(() =>
+  import('../../features/programs/TemplatesList').then((module) => ({
+    default: module.TemplatesList,
+  })),
+);
+const ProgressSchedule = lazy(() =>
+  import('../../features/workouts/ProgressSchedule').then((module) => ({
+    default: module.ProgressSchedule,
+  })),
+);
+const WorkoutHistory = lazy(() =>
+  import('../../features/workouts/WorkoutHistory').then((module) => ({
+    default: module.WorkoutHistory,
+  })),
+);
 
 type Tab = 'today' | 'progress' | 'programs' | 'catalog' | 'nutrition' | 'profile';
 
@@ -189,53 +230,63 @@ export default function MiniAppPage() {
           id={`mini-panel-${tab}`}
           aria-labelledby={`mini-tab-${tab}`}
         >
-          {tab === 'today' && <TodayWorkout />}
-          {tab === 'progress' && (
-            <>
-              <ProgressSchedule
-                timeZone={user?.profile?.timezone}
-                focusedWorkoutId={focusedWorkout?.target === 'schedule' ? focusedWorkout.id : null}
+          <Suspense
+            fallback={
+              <p className="muted" role="status">
+                Загружаем раздел…
+              </p>
+            }
+          >
+            {tab === 'today' && <TodayWorkout />}
+            {tab === 'progress' && (
+              <>
+                <ProgressSchedule
+                  timeZone={user?.profile?.timezone}
+                  focusedWorkoutId={
+                    focusedWorkout?.target === 'schedule' ? focusedWorkout.id : null
+                  }
+                />
+                <WorkoutHistory
+                  timeZone={user?.profile?.timezone}
+                  focusedWorkoutId={focusedWorkout?.target === 'history' ? focusedWorkout.id : null}
+                  onWorkoutSelect={(id, target) => setFocusedWorkout({ id, target })}
+                />
+                <Diary onSaved={async () => void (await reloadUser())} />
+              </>
+            )}
+            {tab === 'programs' && (
+              <>
+                <TemplatesList />
+                <ProgramBuilder />
+              </>
+            )}
+            {tab === 'catalog' && (
+              <ExerciseCatalog canCreate={Boolean(user?.is_coach || user?.is_admin)} />
+            )}
+            {tab === 'nutrition' && (
+              <NutritionForm
+                key={JSON.stringify(user?.profile?.kbju ?? null)}
+                initial={user?.profile?.kbju}
+                onSaved={async () => void (await reloadUser())}
               />
-              <WorkoutHistory
-                timeZone={user?.profile?.timezone}
-                focusedWorkoutId={focusedWorkout?.target === 'history' ? focusedWorkout.id : null}
-                onWorkoutSelect={(id, target) => setFocusedWorkout({ id, target })}
-              />
-              <Diary onSaved={async () => void (await reloadUser())} />
-            </>
-          )}
-          {tab === 'programs' && (
-            <>
-              <TemplatesList />
-              <ProgramBuilder />
-            </>
-          )}
-          {tab === 'catalog' && (
-            <ExerciseCatalog canCreate={Boolean(user?.is_coach || user?.is_admin)} />
-          )}
-          {tab === 'nutrition' && (
-            <NutritionForm
-              key={JSON.stringify(user?.profile?.kbju ?? null)}
-              initial={user?.profile?.kbju}
-              onSaved={async () => void (await reloadUser())}
-            />
-          )}
-          {tab === 'profile' && (
-            <>
-              <ProfileForm key={profileFormKey} />
-              <CoachInvites
-                initialToken={inviteToken}
-                onInitialTokenHandled={() => setInviteToken(null)}
-              />
-              <NotificationsPanel
-                onNavigate={(destination) => {
-                  setFocusedWorkout(null);
-                  setTab(destination);
-                }}
-              />
-              <AccountPrivacy />
-            </>
-          )}
+            )}
+            {tab === 'profile' && (
+              <>
+                <ProfileForm key={profileFormKey} />
+                <CoachInvites
+                  initialToken={inviteToken}
+                  onInitialTokenHandled={() => setInviteToken(null)}
+                />
+                <NotificationsPanel
+                  onNavigate={(destination) => {
+                    setFocusedWorkout(null);
+                    setTab(destination);
+                  }}
+                />
+                <AccountPrivacy />
+              </>
+            )}
+          </Suspense>
         </section>
       </div>
     </AppShell>
