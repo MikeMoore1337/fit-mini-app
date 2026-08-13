@@ -3014,6 +3014,7 @@ def test_csp_blocks_unhashed_inline_scripts(client):
     script_policy = policy.split("script-src", 1)[1].split(";", 1)[0]
 
     assert "img-src 'self' data: blob:" in policy
+    assert "https://t.me https://*.telegram.org https://*.cdn-telegram.org" in policy
     assert "'unsafe-inline'" not in script_policy
     assert "'sha256-" not in script_policy
 
