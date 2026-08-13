@@ -65,6 +65,56 @@ export function Badge({ children, tone = '' }: { children: ReactNode; tone?: str
   return <span className={`badge ${tone}`.trim()}>{children}</span>;
 }
 
+export function CloseIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      className={`ui-icon ${className}`.trim()}
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="m4 4 8 8M12 4l-8 8" />
+    </svg>
+  );
+}
+
+export function ChevronIcon({
+  direction = 'right',
+  className = '',
+}: {
+  direction?: 'left' | 'right' | 'down';
+  className?: string;
+}) {
+  const path = {
+    left: 'm10 3.5-4.5 4.5 4.5 4.5',
+    right: 'm6 3.5 4.5 4.5L6 12.5',
+    down: 'm3.5 6 4.5 4.5L12.5 6',
+  }[direction];
+  return (
+    <svg
+      className={`ui-icon ${className}`.trim()}
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d={path} />
+    </svg>
+  );
+}
+
+export function CheckIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      className={`ui-icon ${className}`.trim()}
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="m3.5 8 3 3 6-6" />
+    </svg>
+  );
+}
+
 export function DisclosureIcon() {
   return (
     <span className="disclosure-icon" aria-hidden="true">

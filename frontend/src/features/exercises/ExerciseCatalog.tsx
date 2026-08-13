@@ -3,7 +3,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type { CoachAssignedProgram, Exercise, ExerciseGuide } from '../../shared/api/types';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
-import { Badge, Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
+import {
+  Badge,
+  Card,
+  ChevronIcon,
+  CloseIcon,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from '../../shared/ui/common';
 import { useModalA11y } from '../../shared/ui/useModalA11y';
 
 const difficultyLabels = {
@@ -384,7 +392,7 @@ export function ExerciseCatalog({
                 aria-label="Закрыть описание"
                 onClick={() => setGuide(null)}
               >
-                ×
+                <CloseIcon />
               </button>
             </div>
             <div className="exercise-guide-modal__body">
@@ -486,7 +494,7 @@ export function ExerciseCatalog({
                   aria-label="Закрыть"
                   onClick={() => setLargeImage(null)}
                 >
-                  ×
+                  <CloseIcon />
                 </button>
                 {guide.data.images.length > 1 && (
                   <button
@@ -499,7 +507,7 @@ export function ExerciseCatalog({
                       )
                     }
                   >
-                    ‹
+                    <ChevronIcon direction="left" />
                   </button>
                 )}
                 <figure>
@@ -516,7 +524,7 @@ export function ExerciseCatalog({
                     aria-label="Следующее изображение"
                     onClick={() => setLargeImage((largeImage + 1) % guide.data.images.length)}
                   >
-                    ›
+                    <ChevronIcon />
                   </button>
                 )}
               </div>
@@ -546,7 +554,7 @@ export function ExerciseCatalog({
                 aria-label="Закрыть назначение упражнения"
                 onClick={() => setAssignment(null)}
               >
-                ×
+                <CloseIcon />
               </button>
             </div>
             {coachPrograms.isLoading ? (

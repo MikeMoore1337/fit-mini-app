@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import { CloseIcon } from './common';
 import { useModalA11y } from './useModalA11y';
 
 interface ConfirmOptions {
@@ -64,7 +65,7 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
             aria-label="Закрыть сообщение"
             onClick={() => setToastState(null)}
           >
-            ×
+            <CloseIcon />
           </button>
         </div>
       )}

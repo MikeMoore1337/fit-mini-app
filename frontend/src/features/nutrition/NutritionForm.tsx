@@ -5,7 +5,7 @@ import { api } from '../../shared/api/client';
 import type { NutritionTarget } from '../../shared/api/types';
 import { usePersistentState } from '../../shared/storage';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
-import { Card } from '../../shared/ui/common';
+import { Card, DisclosureIcon } from '../../shared/ui/common';
 import { calculateNutritionEstimate, type NutritionCalculatorInput } from './nutritionCalculator';
 
 type CardioTraining = NutritionCalculatorInput['cardio_trainings'][number];
@@ -590,7 +590,10 @@ export function NutritionForm({
             )}
 
             <details className="nutrition-details">
-              <summary>Подробнее о расчёте</summary>
+              <summary>
+                <span>Подробнее о расчёте</span>
+                <DisclosureIcon />
+              </summary>
               <p>Основной обмен: {estimate.bmr} ккал.</p>
               <p>Расход в обычный день без тренировок: {estimate.baseTdee} ккал.</p>
               <p>Силовые тренировки: в среднем +{estimate.strengthDailyCalories} ккал в день.</p>

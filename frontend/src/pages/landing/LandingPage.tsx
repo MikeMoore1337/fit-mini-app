@@ -295,7 +295,6 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-
             <div className="landing-rest-demo" aria-label="Пример таймера отдыха">
               <span>Отдых</span>
               <strong>01:24</strong>

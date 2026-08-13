@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type { ExerciseGuide } from '../../shared/api/types';
-import { ErrorState, LoadingState } from '../../shared/ui/common';
+import { CloseIcon, ErrorState, LoadingState } from '../../shared/ui/common';
 import { useModalA11y } from '../../shared/ui/useModalA11y';
 
 export function ExerciseGuideDialog({
@@ -40,7 +40,7 @@ export function ExerciseGuideDialog({
             aria-label="Закрыть технику"
             onClick={onClose}
           >
-            ×
+            <CloseIcon />
           </button>
         </div>
         <div className="exercise-guide-modal__body">
