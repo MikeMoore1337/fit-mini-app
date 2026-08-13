@@ -12,12 +12,20 @@ body.landing-mode #root {
 }
 
 .landing-page {
-  --landing-ink: #172018;
+  --brand-lime: #b6f238;
+  --brand-lime-hover: #a7e52d;
+  --brand-lime-active: #99d522;
+  --brand-ink: #172018;
+  --brand-deep: #18251d;
+  --landing-ink: var(--brand-ink);
   --landing-muted: #657067;
   --landing-paper: #f1f3ec;
   --landing-card: #fbfcf7;
-  --landing-green: #b6f238;
-  --landing-dark: #18251d;
+  --landing-green: var(--brand-lime);
+  --landing-dark: var(--brand-deep);
+  --landing-primary: var(--brand-deep);
+  --landing-primary-hover: #223229;
+  --landing-primary-text: #fff;
   --landing-border: #cdd3c9;
   --landing-card-border: #d5dbd1;
   --landing-kicker: #4f6725;
@@ -69,6 +77,9 @@ body.landing-mode #root {
   --landing-chart-grid: #29342c;
   --landing-chart-bar: #819f45;
   --landing-chart-accent: var(--landing-green);
+  --landing-primary: var(--brand-lime);
+  --landing-primary-hover: var(--brand-lime-hover);
+  --landing-primary-text: var(--brand-ink);
   background:
     radial-gradient(circle at 85% 5%, rgba(182, 242, 56, 0.12), transparent 26rem),
     var(--landing-paper);
@@ -227,10 +238,10 @@ body.landing-mode #root {
   min-height: 52px;
   width: fit-content;
   padding: 0 22px;
-  border: 1px solid var(--landing-dark);
+  border: 1px solid var(--landing-primary);
   border-radius: 14px;
-  background: var(--landing-dark);
-  color: #fff !important;
+  background: var(--landing-primary);
+  color: var(--landing-primary-text) !important;
   font-size: 0.86rem;
   font-weight: 800;
   text-decoration: none;
@@ -241,6 +252,7 @@ body.landing-mode #root {
 }
 
 .landing-button:hover {
+  background: var(--landing-primary-hover);
   transform: translateY(-2px);
   box-shadow: 0 16px 34px rgba(23, 32, 24, 0.2);
 }
@@ -274,9 +286,14 @@ body.landing-mode #root {
   height: var(--landing-header-control-size);
   min-height: var(--landing-header-control-size);
   padding-inline: 20px;
+  border-color: var(--landing-border);
   background: transparent;
   color: var(--landing-ink) !important;
   box-shadow: none;
+}
+
+.landing-button--compact:hover {
+  background: var(--landing-card);
 }
 
 .landing-hero {

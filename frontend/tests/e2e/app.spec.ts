@@ -160,11 +160,11 @@ test('сценарий и платформы остаются понятными
     ).toBeVisible();
     await expect(
       page.getByRole('heading', {
-        name: /открывайте на компьютере и смартфоне.*telegram.*когда удобнее/i,
+        name: /открывайте в браузере на любом устройстве.*telegram.*когда удобнее/i,
       }),
     ).toBeVisible();
     await expect(
-      page.getByRole('heading', { name: /открывайте в браузере на любом устройстве/i }),
+      page.getByRole('heading', { name: 'Открывайте в браузере на любом устройстве', exact: true }),
     ).toBeVisible();
     await expect(
       page.getByRole('heading', { name: /продолжайте в telegram mini app/i }),
@@ -546,6 +546,38 @@ test('клиент входит и видит экран тренировки', 
   await page.getByRole('button', { name: 'Клиент' }).click();
   await expect(page.getByRole('heading', { name: 'Демо пользователь' })).toBeVisible();
   await expect(page.getByText('Сегодня отдых')).toBeVisible();
+});
+
+test('цветовая система сохраняет иерархию в светлой и тёмной темах', async ({ page }) => {
+  await mockApi(page);
+  await page.goto('/app');
+
+  const clientButton = page.getByRole('button', { name: 'Клиент' });
+  await expect(clientButton).toHaveCSS('background-color', 'rgb(232, 237, 228)');
+  await expect(clientButton).toHaveCSS('color', 'rgb(23, 32, 24)');
+
+  await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
+  await expect(clientButton).toHaveCSS('background-color', 'rgb(32, 42, 35)');
+  await expect(clientButton).toHaveCSS('color', 'rgb(242, 246, 239)');
+
+  await clientButton.click();
+  const selectedTab = page.getByRole('tab', { name: 'Сегодня' });
+  await expect(selectedTab).toHaveCSS('background-color', 'rgb(182, 242, 56)');
+  await expect(selectedTab).toHaveCSS('color', 'rgb(23, 32, 24)');
+  await page.getByRole('button', { name: 'Включить светлую тему' }).click();
+  await expect(selectedTab).toHaveCSS('background-color', 'rgb(24, 37, 29)');
+  await expect(selectedTab).toHaveCSS('color', 'rgb(255, 255, 255)');
+});
+
+test('primary CTA лендинга меняется вместе с темой', async ({ page }) => {
+  await page.goto('/');
+  const primary = page.getByRole('link', { name: /открыть приложение/i });
+
+  await expect(primary).toHaveCSS('background-color', 'rgb(24, 37, 29)');
+  await expect(primary).toHaveCSS('color', 'rgb(255, 255, 255)');
+  await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
+  await expect(primary).toHaveCSS('background-color', 'rgb(182, 242, 56)');
+  await expect(primary).toHaveCSS('color', 'rgb(23, 32, 24)');
 });
 
 test('deep link показывает тренера до явного подтверждения', async ({ page }) => {
