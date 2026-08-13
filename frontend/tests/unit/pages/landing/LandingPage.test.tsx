@@ -42,10 +42,22 @@ describe('LandingPage', () => {
     );
 
     expect(
-      screen.getByRole('heading', { name: /ваш прогресс.*в фокусе тренера/i }),
+      screen.getByRole('heading', {
+        name: /знайте, что делать сегодня.*следите, как растёт прогресс/i,
+      }),
     ).toBeInTheDocument();
+    expect(screen.getByText(/тренировки в браузере и telegram/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/тренируйтесь самостоятельно или вместе с тренером/i),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/пример интерфейса тренировки на сегодня/i)).toBeInTheDocument();
+    expect(screen.getByText('Жим гантелей лёжа')).toBeInTheDocument();
+    expect(screen.getByText('01:24')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /всё необходимое/i })).toBeInTheDocument();
     expect(screen.queryByText(/тариф/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('+18%')).not.toBeInTheDocument();
+    expect(screen.queryByText('12', { exact: true })).not.toBeInTheDocument();
+    expect(screen.queryByText('4 недели', { exact: true })).not.toBeInTheDocument();
 
     expect(screen.queryByText('@mikhail_murzaev')).not.toBeInTheDocument();
     expect(container.querySelectorAll('img[src="/assets/brand/fitness-logo-v2.png"]')).toHaveLength(

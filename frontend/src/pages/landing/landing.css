@@ -251,7 +251,7 @@ body.landing-mode #root {
 
 .landing-hero h1 {
   max-width: 690px;
-  font-size: clamp(3.4rem, 6.7vw, 6rem);
+  font-size: clamp(3.25rem, 5.7vw, 5.25rem);
   font-weight: 870;
 }
 
@@ -272,6 +272,18 @@ body.landing-mode #root {
   align-items: center;
   gap: 24px;
   margin-top: 34px;
+}
+
+.landing-hero__note {
+  margin: 20px 0 0;
+  color: var(--landing-muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.landing-hero__note span {
+  margin-inline: 5px;
+  color: var(--landing-kicker);
 }
 
 .landing-hero__visual {
@@ -310,11 +322,11 @@ body.landing-mode #root {
   transform: rotate(24deg);
 }
 
-.landing-dashboard {
+.landing-workout-demo {
   position: relative;
   z-index: 2;
-  width: min(350px, 78%);
-  min-height: 370px;
+  width: min(390px, 82%);
+  min-height: 390px;
   padding: 24px;
   border: 1px solid var(--landing-panel-border);
   border-radius: 28px;
@@ -324,32 +336,38 @@ body.landing-mode #root {
   backdrop-filter: blur(14px);
 }
 
-.landing-dashboard__top,
-.landing-dashboard__metrics {
+.landing-workout-demo__top {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
 }
 
-.landing-dashboard__top div,
-.landing-dashboard__metrics div {
+.landing-workout-demo__top > div {
   display: grid;
   gap: 5px;
 }
 
-.landing-dashboard span,
-.landing-dashboard small,
-.landing-float-card small {
+.landing-workout-demo span,
+.landing-workout-demo small,
+.landing-rest-demo small,
+.landing-nutrition-demo span,
+.landing-nutrition-demo small {
   color: var(--landing-muted);
   font-size: 0.72rem;
 }
 
-.landing-dashboard strong {
+.landing-workout-demo__top strong {
   font-size: 1.1rem;
 }
 
-.landing-dashboard__status {
+.landing-workout-demo__eyebrow {
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.landing-workout-demo__status {
   padding: 7px 9px;
   border-radius: 99px;
   background: rgba(182, 242, 56, 0.36);
@@ -357,47 +375,72 @@ body.landing-mode #root {
   font-weight: 750;
 }
 
-.landing-dashboard__chart {
-  height: 185px;
+.landing-workout-demo__summary {
   display: flex;
-  align-items: end;
-  gap: 9px;
-  margin: 28px 0 22px;
-  padding: 20px 13px 0;
-  border-bottom: 1px solid var(--landing-chart-axis);
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent 0 44px,
-    var(--landing-chart-grid) 45px
-  );
+  gap: 8px;
+  margin: 20px 0 16px;
 }
 
-.landing-dashboard__chart span {
-  flex: 1;
-  min-width: 12px;
-  border-radius: 6px 6px 0 0;
-  background: var(--landing-chart-bar);
+.landing-workout-demo__summary span {
+  padding: 6px 8px;
+  border: 1px solid var(--landing-card-border);
+  border-radius: 8px;
+  background: var(--landing-card);
+  font-weight: 700;
 }
 
-.landing-dashboard__chart span:nth-child(n + 5) {
-  background: var(--landing-chart-accent);
+.landing-workout-demo__exercise {
+  padding: 16px 0;
+  border-top: 1px solid var(--landing-card-border);
 }
 
-.landing-dashboard__metrics {
-  padding-top: 4px;
+.landing-workout-demo__exercise-head {
+  display: grid;
+  gap: 5px;
 }
 
-.landing-dashboard__metrics strong {
-  font-size: 1.25rem;
+.landing-workout-demo__exercise-head strong {
+  font-size: 0.88rem;
 }
 
-.landing-float-card {
+.landing-workout-demo__sets {
+  display: grid;
+  grid-template-columns: repeat(3, 30px) 1fr;
+  align-items: center;
+  gap: 7px;
+  margin-top: 13px;
+}
+
+.landing-workout-demo__sets > span {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--landing-card-border);
+  border-radius: 9px;
+  background: var(--landing-card);
+  color: var(--landing-ink);
+  font-weight: 800;
+}
+
+.landing-workout-demo__sets > span.is-complete {
+  border-color: rgba(103, 145, 25, 0.3);
+  background: var(--landing-green);
+  color: #273414;
+}
+
+.landing-workout-demo__sets small {
+  justify-self: end;
+  text-align: right;
+}
+
+.landing-rest-demo,
+.landing-nutrition-demo {
   position: absolute;
   z-index: 3;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
+  display: grid;
+  gap: 2px;
+  padding: 13px 15px;
   border: 1px solid var(--landing-float-border);
   border-radius: 16px;
   background: var(--landing-float);
@@ -406,55 +449,28 @@ body.landing-mode #root {
   backdrop-filter: blur(12px);
 }
 
-.landing-float-card--coach {
-  left: -2%;
-  top: 22%;
+.landing-rest-demo {
+  left: -3%;
+  top: 24%;
 }
 
-.landing-float-card--progress {
-  right: -2%;
-  bottom: 19%;
-  display: grid;
-  gap: 2px;
+.landing-rest-demo > span {
+  color: var(--landing-muted);
+  font-size: 0.7rem;
 }
 
-.landing-float-card--progress strong {
+.landing-rest-demo strong {
   color: #527613;
-  font-size: 1.45rem;
+  font-size: 1.35rem;
 }
 
-.landing-avatar,
-.landing-check {
-  display: inline-grid;
-  place-items: center;
-  flex: 0 0 auto;
-  border-radius: 50%;
+.landing-nutrition-demo {
+  right: -3%;
+  bottom: 16%;
 }
 
-.landing-avatar {
-  width: 36px;
-  height: 36px;
-  background: var(--landing-dark);
-  color: white;
-  font-weight: 850;
-}
-
-.landing-float-card--coach div {
-  display: grid;
-  gap: 2px;
-}
-
-.landing-float-card--coach strong {
-  font-size: 0.8rem;
-}
-
-.landing-check {
-  width: 25px;
-  height: 25px;
-  margin-left: 8px;
-  background: var(--landing-green);
-  color: var(--landing-dark);
-  font-weight: 900;
+.landing-nutrition-demo strong {
+  font-size: 0.92rem;
 }
 
 .landing-proof {
@@ -718,11 +734,11 @@ body.landing-mode #root {
     min-height: 520px;
   }
 
-  .landing-float-card--coach {
+  .landing-rest-demo {
     left: 12%;
   }
 
-  .landing-float-card--progress {
+  .landing-nutrition-demo {
     right: 12%;
   }
 
@@ -768,7 +784,7 @@ body.landing-mode #root {
   }
 
   .landing-hero h1 {
-    font-size: clamp(3rem, 15vw, 4.4rem);
+    font-size: clamp(2.75rem, 13vw, 4rem);
   }
 
   .landing-hero__lead {
@@ -798,11 +814,11 @@ body.landing-mode #root {
     width: 430px;
   }
 
-  .landing-float-card--coach {
+  .landing-rest-demo {
     left: 0;
   }
 
-  .landing-float-card--progress {
+  .landing-nutrition-demo {
     right: 0;
   }
 

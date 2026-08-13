@@ -62,7 +62,7 @@ export default function LandingPage() {
 
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = 'Your Fitness Coach — персональные тренировки с поддержкой тренера';
+    document.title = 'Your Fitness Coach — тренировки и прогресс в браузере и Telegram';
     document.body.classList.add('landing-mode');
     return () => {
       document.title = previousTitle;
@@ -132,15 +132,15 @@ export default function LandingPage() {
       <main id="top">
         <section className="landing-hero" aria-labelledby="landing-title">
           <div className="landing-hero__copy">
-            <p className="landing-kicker">Тренировки с понятной системой</p>
+            <p className="landing-kicker">Тренировки в браузере и Telegram</p>
             <h1 id="landing-title">
-              Ваш прогресс.
+              Знайте, что делать сегодня.
               <br />
-              <span>В фокусе тренера.</span>
+              <span>Следите, как растёт прогресс.</span>
             </h1>
             <p className="landing-hero__lead">
-              Персональная программа, дневник результатов, питание и поддержка специалиста — в одном
-              приложении без таблиц и разрозненных заметок.
+              Программа тренировок, занятие на сегодня, ориентиры КБЖУ и история результатов — в
+              одном приложении. Тренируйтесь самостоятельно или вместе с тренером.
             </p>
             <div className="landing-hero__actions">
               <a className="landing-button" href={appUrl}>
@@ -151,51 +151,71 @@ export default function LandingPage() {
                 Посмотреть, как всё устроено
               </a>
             </div>
+            <p className="landing-hero__note">
+              Работает в браузере и Telegram <span aria-hidden="true">·</span> данные сохраняются в
+              одном аккаунте
+            </p>
           </div>
 
           <div
             className="landing-hero__visual"
-            aria-label="Пример контроля тренировочного прогресса"
+            aria-label="Пример интерфейса тренировки на сегодня"
           >
             <div className="landing-orbit landing-orbit--one" />
             <div className="landing-orbit landing-orbit--two" />
-            <div className="landing-dashboard">
-              <div className="landing-dashboard__top">
+            <div className="landing-workout-demo">
+              <div className="landing-workout-demo__top">
                 <div>
-                  <span>Сегодня</span>
+                  <span className="landing-workout-demo__eyebrow">Сегодня · пример интерфейса</span>
                   <strong>Верх тела</strong>
                 </div>
-                <span className="landing-dashboard__status">По плану</span>
+                <span className="landing-workout-demo__status">В процессе</span>
               </div>
-              <div className="landing-dashboard__chart" aria-hidden="true">
-                {[34, 46, 42, 64, 58, 76, 88].map((height, index) => (
-                  <span key={index} style={{ height: `${height}%` }} />
-                ))}
+
+              <div className="landing-workout-demo__summary">
+                <span>3 упражнения</span>
+                <span>4 из 9 подходов</span>
               </div>
-              <div className="landing-dashboard__metrics">
-                <div>
-                  <span>Тренировок</span>
-                  <strong>12</strong>
+
+              <div className="landing-workout-demo__exercise">
+                <div className="landing-workout-demo__exercise-head">
+                  <strong>Жим гантелей лёжа</strong>
+                  <span>3 × 10 · отдых 90 сек.</span>
                 </div>
-                <div>
-                  <span>Серия</span>
-                  <strong>4 недели</strong>
+                <div className="landing-workout-demo__sets" aria-label="Подходы жима гантелей">
+                  <span className="is-complete">1</span>
+                  <span className="is-complete">2</span>
+                  <span>3</span>
+                  <small>10 повторов · 18 кг</small>
+                </div>
+              </div>
+
+              <div className="landing-workout-demo__exercise">
+                <div className="landing-workout-demo__exercise-head">
+                  <strong>Тяга верхнего блока</strong>
+                  <span>3 × 12 · отдых 75 сек.</span>
+                </div>
+                <div
+                  className="landing-workout-demo__sets"
+                  aria-label="Подходы тяги верхнего блока"
+                >
+                  <span className="is-complete">1</span>
+                  <span>2</span>
+                  <span>3</span>
+                  <small>12 повторов · 35 кг</small>
                 </div>
               </div>
             </div>
-            <div className="landing-float-card landing-float-card--coach">
-              <span className="landing-avatar">М</span>
-              <div>
-                <small>Тренер</small>
-                <strong>План обновлён</strong>
-              </div>
-              <span className="landing-check" aria-hidden="true">
-                ✓
-              </span>
+
+            <div className="landing-rest-demo" aria-label="Пример таймера отдыха">
+              <span>Отдых</span>
+              <strong>01:24</strong>
+              <small>Следующий подход</small>
             </div>
-            <div className="landing-float-card landing-float-card--progress">
-              <small>Прогресс за месяц</small>
-              <strong>+18%</strong>
+            <div className="landing-nutrition-demo">
+              <span>Ориентир на день</span>
+              <strong>КБЖУ</strong>
+              <small>Рассчитывается по вашей цели</small>
             </div>
           </div>
         </section>
