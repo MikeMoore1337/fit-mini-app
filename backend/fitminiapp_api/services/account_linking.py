@@ -18,7 +18,7 @@ from fitminiapp_api.services.telegram_auth import normalize_telegram_username
 TELEGRAM_LINK_PURPOSE = "link_telegram"
 TELEGRAM_LINK_LIFETIME = timedelta(minutes=10)
 OAUTH_LINK_LIFETIME = timedelta(minutes=10)
-OAUTH_LINK_PROVIDERS = frozenset({"google", "yandex", "apple"})
+OAUTH_LINK_PROVIDERS = frozenset({"google", "yandex", "vk", "apple"})
 
 
 class TelegramLinkError(RuntimeError):
