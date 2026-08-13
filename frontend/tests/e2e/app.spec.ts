@@ -115,6 +115,8 @@ test('сценарий и платформы остаются понятными
     await expect(problemIcon).toHaveCSS('height', '44px');
     await expect(syncIcon).toHaveCSS('width', '44px');
     await expect(syncIcon).toHaveCSS('height', '44px');
+    await expect(problemIcon.locator('svg')).toHaveCSS('stroke', 'rgb(0, 0, 0)');
+    await expect(syncIcon.locator('svg')).toHaveCSS('stroke', 'rgb(0, 0, 0)');
     const syncIconBox = await syncIcon.boundingBox();
     const syncSvgBox = await syncIcon.locator('svg').boundingBox();
     expect(syncIconBox).not.toBeNull();

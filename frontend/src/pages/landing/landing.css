@@ -569,7 +569,7 @@ body.landing-mode #root {
   margin-bottom: 8px;
   border-radius: 50%;
   background: var(--landing-green);
-  color: #172018;
+  color: #000;
 }
 
 .landing-flow-icon svg {
@@ -577,7 +577,7 @@ body.landing-mode #root {
   width: 22px;
   height: 22px;
   fill: none;
-  stroke: currentColor;
+  stroke: #000;
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
