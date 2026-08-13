@@ -424,7 +424,10 @@ export default function LandingPage() {
           </div>
           <div className="landing-contact__actions">
             <a className="landing-button landing-contact__primary" href={appUrl}>
-              Перейти в веб-приложение <span aria-hidden="true">↗</span>
+              Перейти в веб-приложение{' '}
+              <span className="landing-contact__arrow" aria-hidden="true">
+                ↗
+              </span>
             </a>
             <a
               className="landing-contact__link"
@@ -433,7 +436,9 @@ export default function LandingPage() {
               rel="noreferrer"
             >
               <strong>Задать вопрос в Telegram</strong>
-              <span aria-hidden="true">↗</span>
+              <span className="landing-contact__arrow" aria-hidden="true">
+                ↗
+              </span>
             </a>
           </div>
         </section>

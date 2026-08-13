@@ -992,8 +992,16 @@ body.landing-mode #root {
   font-size: 0.9rem;
 }
 
-.landing-contact__link span {
+.landing-contact__arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
   font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .landing-footer {
