@@ -205,7 +205,9 @@
   font-size: 1.25rem;
 }
 .auth-page {
-  min-height: calc(100dvh - max(60px, env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px)));
+  min-height: calc(
+    100dvh - max(60px, env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px))
+  );
   align-content: center;
 }
 .auth-panel {
