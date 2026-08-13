@@ -996,7 +996,10 @@ select:not([multiple]) {
 }
 .exercise-guide-modal__panel {
   width: min(900px, 100%);
+  max-width: 900px;
+  min-width: 0;
   max-height: calc(100dvh - 32px);
+  overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;

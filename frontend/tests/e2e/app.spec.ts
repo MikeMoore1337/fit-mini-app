@@ -768,6 +768,25 @@ test('профиль содержит уведомления, а карточк�
   await expect(page.locator('.exercise-lightbox')).toHaveCount(0);
 });
 
+test('описание упражнения использует широкую панель в веб-версии', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await mockApi(page);
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Клиент' }).click();
+  await page.getByRole('tab', { name: 'Упражнения' }).click();
+  await page.getByRole('button', { name: 'Техника' }).click();
+
+  const guidePanel = page.locator('.exercise-guide-modal__panel');
+  const guidePanelBox = await guidePanel.boundingBox();
+  expect(guidePanelBox).not.toBeNull();
+  expect(guidePanelBox!.width).toBeGreaterThan(800);
+  await expect(guidePanel).toHaveCSS('overflow-x', 'hidden');
+  const noteColumns = await guidePanel
+    .locator('.exercise-guide-notes')
+    .evaluate((notes) => getComputedStyle(notes).gridTemplateColumns.split(' '));
+  expect(noteColumns).toHaveLength(2);
+});
+
 test('клиент подаёт заявку на роль тренера из профиля', async ({ page }) => {
   await mockApi(page);
   await page.goto('/app');
