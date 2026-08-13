@@ -37,6 +37,12 @@ function renderPrivacy() {
   );
 }
 
+function openLoginMethods() {
+  const summary = screen.getByText('Способы входа').closest('summary');
+  if (!summary) throw new Error('Login methods summary not found');
+  fireEvent.click(summary);
+}
+
 describe('AccountPrivacy Telegram linking', () => {
   beforeEach(() => {
     authState.user.telegram_user_id = null;
@@ -51,12 +57,24 @@ describe('AccountPrivacy Telegram linking', () => {
     vi.restoreAllMocks();
   });
 
+  it('keeps login methods collapsed until the user opens them', () => {
+    renderPrivacy();
+
+    const details = screen.getByText('Способы входа').closest('details');
+    expect(details).not.toHaveAttribute('open');
+
+    openLoginMethods();
+
+    expect(details).toHaveAttribute('open');
+  });
+
   it('creates an explicit short-lived link before opening Telegram', async () => {
     apiMock.mockResolvedValue({
       telegram_url: 'https://t.me/fitness_bot?start=link_safe-token',
       expires_in_seconds: 600,
     });
     renderPrivacy();
+    openLoginMethods();
 
     fireEvent.click(screen.getByRole('button', { name: 'Привязать Telegram' }));
 
@@ -72,6 +90,7 @@ describe('AccountPrivacy Telegram linking', () => {
   it('shows linked status and does not offer another link', () => {
     authState.user.telegram_user_id = 12345;
     renderPrivacy();
+    openLoginMethods();
 
     expect(screen.getByText('Привязан')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Привязать Telegram' })).not.toBeInTheDocument();
@@ -85,6 +104,7 @@ describe('AccountPrivacy Telegram linking', () => {
       expires_in_seconds: 600,
     });
     renderPrivacy();
+    openLoginMethods();
 
     fireEvent.click(screen.getByRole('button', { name: 'Привязать Google' }));
 
@@ -100,6 +120,7 @@ describe('AccountPrivacy Telegram linking', () => {
     authState.user.auth_providers = ['google', 'telegram'];
     authState.config.oauth_providers = ['google'];
     renderPrivacy();
+    openLoginMethods();
 
     const googleRow = screen.getByText('Google').closest('.list-row');
     expect(googleRow).not.toBeNull();
@@ -115,6 +136,7 @@ describe('AccountPrivacy Telegram linking', () => {
       expires_in_seconds: 600,
     });
     renderPrivacy();
+    openLoginMethods();
 
     fireEvent.click(screen.getByRole('button', { name: 'Привязать VK ID' }));
 
