@@ -515,7 +515,7 @@ body.landing-mode #root {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
   align-items: center;
-  gap: 42px;
+  gap: 32px;
   min-height: 430px;
   padding: 30px;
   background: var(--landing-dark);
@@ -524,7 +524,7 @@ body.landing-mode #root {
 
 .landing-problem__sources {
   display: grid;
-  gap: 18px;
+  gap: 10px;
 }
 
 .landing-problem__sources > span,
@@ -566,7 +566,7 @@ body.landing-mode #root {
   height: 42px;
   display: grid;
   place-items: center;
-  margin-bottom: 18px;
+  margin-bottom: 8px;
   border-radius: 50%;
   background: var(--landing-green);
   color: #172018;
@@ -618,9 +618,10 @@ body.landing-mode #root {
 
 .landing-feature {
   grid-column: span 4;
-  min-height: 250px;
+  min-height: 220px;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   padding: 22px;
   border: 1px solid var(--landing-card-border);
   border-radius: 22px;
@@ -629,19 +630,19 @@ body.landing-mode #root {
 
 .landing-feature--wide {
   grid-column: span 7;
-  min-height: 310px;
+  min-height: 250px;
   background:
     linear-gradient(135deg, rgba(182, 242, 56, 0.18), transparent 58%), var(--landing-card);
 }
 
 .landing-feature--wide + .landing-feature--standard {
   grid-column: span 5;
-  min-height: 310px;
+  min-height: 250px;
 }
 
 .landing-feature--coach {
   grid-column: span 12;
-  min-height: 280px;
+  min-height: 230px;
   padding: 32px;
   background: var(--landing-dark);
   color: #f5f8ef;
@@ -671,7 +672,7 @@ body.landing-mode #root {
 }
 
 .landing-feature h3 {
-  margin: auto 0 12px;
+  margin: 28px 0 12px;
   font-size: 1.32rem;
   letter-spacing: -0.035em;
 }
@@ -991,13 +992,14 @@ body.landing-mode #root {
 
   .landing-problem__visual {
     display: flex;
+    flex-direction: column;
     align-items: stretch;
-    gap: 0;
-    min-height: 350px;
+    gap: 30px;
+    min-height: 0;
   }
 
   .landing-problem__sources {
-    gap: 14px;
+    gap: 10px;
   }
 
   .landing-problem__visual ul {
@@ -1012,8 +1014,8 @@ body.landing-mode #root {
   }
 
   .landing-problem__result {
-    margin-top: auto;
-    padding-top: 48px;
+    margin-top: 0;
+    padding-top: 0;
   }
 
   .landing-problem__result::before {
@@ -1044,12 +1046,18 @@ body.landing-mode #root {
     padding: 18px 24px 20px;
   }
 
+  .landing-feature--wide,
+  .landing-feature--wide + .landing-feature--standard,
+  .landing-feature--coach {
+    min-height: 0;
+  }
+
   .landing-feature-grid {
     gap: 10px;
   }
 
   .landing-feature h3 {
-    margin: 18px 0 6px;
+    margin: 22px 0 6px;
     font-size: 1.16rem;
   }
 
@@ -1059,7 +1067,6 @@ body.landing-mode #root {
   }
 
   .landing-feature--coach {
-    min-height: 260px;
     padding: 24px;
   }
 
