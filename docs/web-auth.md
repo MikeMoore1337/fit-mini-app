@@ -42,6 +42,7 @@ Register these exact HTTPS redirect URLs:
 Telegram  https://app.your-fitness-coach.ru/api/v1/auth/oauth/telegram/callback
 Google    https://app.your-fitness-coach.ru/api/v1/auth/oauth/google/callback
 Yandex    https://app.your-fitness-coach.ru/api/v1/auth/oauth/yandex/callback
+VK ID     https://app.your-fitness-coach.ru/api/v1/auth/oauth/vk/callback
 Apple     https://app.your-fitness-coach.ru/api/v1/auth/oauth/apple/callback
 ```
 
@@ -81,6 +82,11 @@ interactive password at runtime.
 - Google: create a Web OAuth client and request only `openid profile email`.
 - Yandex: create an application for third-party user authorization and allow
   the `login:info` and `login:email` scopes.
+- VK ID: create a Web application in the VK ID business console, add the exact
+  callback URL above, and set its application ID as `VK_OAUTH_CLIENT_ID`. The
+  backend implements VK ID OAuth 2.1 with PKCE (S256), requests only the
+  `email` scope, and performs the code exchange and `user_info` request on the
+  server. A VK client secret is not sent or required by this flow.
 - Apple: use a Services ID for the client ID. `APPLE_OAUTH_CLIENT_SECRET` is the
   signed client-secret JWT generated with the Apple private key; rotate it
   before its configured expiry.
@@ -95,15 +101,17 @@ an existing Telegram profile belongs to the same person.
 
 Link an additional login method only from the already authenticated account:
 
-1. Open **Profile → Login methods** in the account whose training history must
-   be preserved.
-2. Choose **Link Telegram**, **Link Google**, **Link Yandex** or **Link Apple**.
+1. First sign in to the account whose training history must be preserved. For
+   a profile created by the Telegram bot, open the Mini App in Telegram and go
+   to **Profile → Login methods**.
+2. Choose **Link Telegram**, **Link Google**, **Link Yandex**, **Link VK ID** or
+   **Link Apple**.
 3. Complete the provider confirmation within 10 minutes.
 4. Return to the profile and confirm that both login methods are marked as
    linked.
 
-For Telegram, the browser creates a one-time bot deep link. For Google, Yandex
-and Apple, the application creates a one-time OAuth link. The token is
+For Telegram, the browser creates a one-time bot deep link. For Google, Yandex,
+VK ID and Apple, the application creates a one-time OAuth link. The token is
 single-use, a newer token replaces the previous one, and a conflict consumes
 the token without merging data. If the selected Telegram or OAuth identity is
 already owned by another account, the operation is rejected and both accounts

@@ -2,7 +2,16 @@ const PROVIDER_LABELS: Record<string, string> = {
   telegram: 'Telegram',
   google: 'Google',
   yandex: 'Яндекс',
+  vk: 'VK ID',
   apple: 'Apple',
+};
+
+const PROVIDER_MARKS: Record<string, string> = {
+  telegram: '✦',
+  google: 'G',
+  yandex: 'Я',
+  vk: 'VK',
+  apple: 'A',
 };
 
 export function OAuthButtons({ providers }: { providers: string[] }) {
@@ -22,9 +31,7 @@ export function OAuthButtons({ providers }: { providers: string[] }) {
                 : ''
             }`}
           >
-            <span aria-hidden="true">
-              {provider === 'telegram' ? '✦' : (provider[0]?.toUpperCase() ?? '?')}
-            </span>
+            <span aria-hidden="true">{PROVIDER_MARKS[provider] ?? '?'}</span>
             {PROVIDER_LABELS[provider] ?? provider}
           </a>
         ))}

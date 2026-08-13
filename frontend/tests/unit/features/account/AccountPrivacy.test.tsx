@@ -106,4 +106,23 @@ describe('AccountPrivacy Telegram linking', () => {
     expect(within(googleRow as HTMLElement).getByText('Привязан')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Привязать Google' })).not.toBeInTheDocument();
   });
+
+  it('offers VK ID linking when the backend exposes it', async () => {
+    authState.user.auth_providers = ['telegram'];
+    authState.config.oauth_providers = ['google', 'yandex', 'vk'];
+    apiMock.mockResolvedValue({
+      oauth_url: '/api/v1/auth/oauth/vk/link/start?token=safe-token',
+      expires_in_seconds: 600,
+    });
+    renderPrivacy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Привязать VK ID' }));
+
+    const link = await screen.findByRole('link', { name: 'Продолжить с VK ID' });
+    expect(apiMock).toHaveBeenCalledWith('/api/v1/me/auth/oauth-link/vk', {
+      method: 'POST',
+      body: {},
+    });
+    expect(link).toHaveAttribute('href', '/api/v1/auth/oauth/vk/link/start?token=safe-token');
+  });
 });

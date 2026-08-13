@@ -297,6 +297,11 @@
   background: #fc3f1d;
   color: white;
 }
+.oauth-button--vk span {
+  background: #07f;
+  color: white;
+  font-size: 0.62rem;
+}
 .oauth-button--apple span {
   background: #111;
   color: white;
