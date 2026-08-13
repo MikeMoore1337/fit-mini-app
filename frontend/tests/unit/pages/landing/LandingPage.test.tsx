@@ -152,6 +152,23 @@ describe('LandingPage', () => {
     );
   });
 
+  it('opens and closes the mobile navigation', () => {
+    const { container } = render(
+      <NavigationProvider>
+        <LandingPage />
+      </NavigationProvider>,
+    );
+
+    const menuButton = container.querySelector<HTMLButtonElement>('.landing-menu-toggle')!;
+    expect(menuButton).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(menuButton);
+    expect(menuButton).toHaveAttribute('aria-label', 'Закрыть меню');
+    expect(menuButton).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.click(screen.getByRole('link', { name: 'Возможности' }));
+    expect(menuButton).toHaveAttribute('aria-label', 'Открыть меню');
+    expect(menuButton).toHaveAttribute('aria-expanded', 'false');
+  });
+
   it('publishes useful metadata and a keyboard skip link', () => {
     const description = document.createElement('meta');
     description.name = 'description';

@@ -18,6 +18,19 @@ test('логотип и кнопки в шапке имеют одинакову
     expect(logo?.height).toBe(44);
     expect(themeButton?.height).toBe(logo?.height);
     expect(loginButton?.height).toBe(logo?.height);
+    const menuButton = page.getByRole('button', { name: 'Открыть меню' });
+    if (viewport.width < 980) {
+      await expect(menuButton).toBeVisible();
+      await menuButton.click();
+      await expect(page.getByRole('navigation', { name: 'Навигация по странице' })).toHaveClass(
+        /is-open/,
+      );
+      await expect(page.getByRole('link', { name: 'Возможности' })).toBeVisible();
+      await page.getByRole('link', { name: 'Возможности' }).click();
+      await expect(menuButton).toHaveAttribute('aria-expanded', 'false');
+    } else {
+      await expect(menuButton).toBeHidden();
+    }
   }
 });
 
@@ -211,6 +224,16 @@ test('сценарий и платформы остаются понятными
     expect(telegramCard).not.toBeNull();
     if (viewport.width >= 768) {
       expect(browserCard!.x + browserCard!.width).toBeLessThan(telegramCard!.x);
+      const platformHeadings = await platformCards
+        .locator('h3')
+        .evaluateAll((items) => items.map((item) => item.getBoundingClientRect().y));
+      const platformDescriptions = await platformCards
+        .locator('p')
+        .evaluateAll((items) => items.map((item) => item.getBoundingClientRect().y));
+      expect(Math.max(...platformHeadings) - Math.min(...platformHeadings)).toBeLessThanOrEqual(1);
+      expect(
+        Math.max(...platformDescriptions) - Math.min(...platformDescriptions),
+      ).toBeLessThanOrEqual(1);
     } else {
       expect(browserCard!.y + browserCard!.height).toBeLessThan(telegramCard!.y);
     }
@@ -282,10 +305,23 @@ test('сценарии спортсмена и тренера ведут в ве
     expect(coachCard).not.toBeNull();
     if (viewport.width >= 768) {
       expect(clientCard!.x + clientCard!.width).toBeLessThan(coachCard!.x);
+      const audienceHeadings = await audienceCards
+        .locator('h2')
+        .evaluateAll((items) => items.map((item) => item.getBoundingClientRect().y));
+      const audienceDescriptions = await audienceCards
+        .locator(':scope > p:last-of-type')
+        .evaluateAll((items) => items.map((item) => item.getBoundingClientRect().y));
+      expect(Math.max(...audienceHeadings) - Math.min(...audienceHeadings)).toBeLessThanOrEqual(1);
+      expect(
+        Math.max(...audienceDescriptions) - Math.min(...audienceDescriptions),
+      ).toBeLessThanOrEqual(1);
     } else {
       expect(clientCard!.y + clientCard!.height).toBeLessThan(coachCard!.y);
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
+    if (viewport.width === 390) {
+      await expect(page.locator('.landing-footer p')).toBeVisible();
+    }
   }
 });
 

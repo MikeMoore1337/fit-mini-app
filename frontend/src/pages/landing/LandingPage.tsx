@@ -83,6 +83,7 @@ export default function LandingPage() {
   const appUrl = appUrlForHostname(window.location.hostname);
   const [manualTheme, setManualTheme] = useState<LandingTheme | null>(storedLandingTheme);
   const [prefersDark, setPrefersDark] = useState(systemPrefersDark);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const theme: LandingTheme = manualTheme ?? (prefersDark ? 'dark' : 'light');
 
   useEffect(() => {
@@ -121,6 +122,15 @@ export default function LandingPage() {
   }, []);
 
   useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileMenuOpen(false);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [mobileMenuOpen]);
+
+  useEffect(() => {
     const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
     const previousColor = meta?.content;
     document.body.classList.toggle('landing-dark-mode', theme === 'dark');
@@ -157,10 +167,20 @@ export default function LandingPage() {
           />
           <span>Your Fitness Coach</span>
         </a>
-        <nav className="landing-nav" aria-label="Навигация по странице">
-          <a href="#features">Возможности</a>
-          <a href="#how-it-works">Как это работает</a>
-          <a href="#contact">Контакты</a>
+        <nav
+          id="landing-navigation"
+          className={`landing-nav${mobileMenuOpen ? ' is-open' : ''}`}
+          aria-label="Навигация по странице"
+        >
+          <a href="#features" onClick={() => setMobileMenuOpen(false)}>
+            Возможности
+          </a>
+          <a href="#how-it-works" onClick={() => setMobileMenuOpen(false)}>
+            Как это работает
+          </a>
+          <a href="#contact" onClick={() => setMobileMenuOpen(false)}>
+            Контакты
+          </a>
         </nav>
         <div className="landing-header__actions">
           <button
@@ -175,6 +195,18 @@ export default function LandingPage() {
           <a className="landing-button landing-button--compact" href={appUrl}>
             Войти
           </a>
+          <button
+            type="button"
+            className={`landing-menu-toggle${mobileMenuOpen ? ' is-open' : ''}`}
+            aria-label={mobileMenuOpen ? 'Закрыть меню' : 'Открыть меню'}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="landing-navigation"
+            onClick={() => setMobileMenuOpen((open) => !open)}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
         </div>
       </header>
 
