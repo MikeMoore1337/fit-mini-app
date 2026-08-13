@@ -379,7 +379,25 @@ def get_nutrition_target_for_user(
     user: User,
 ) -> NutritionTargetResponse | None:
     target = db.query(NutritionTarget).filter(NutritionTarget.user_id == user.id).first()
-    return build_nutrition_target_response(db, target)
+    return build_nutrition_target_response_for_user(db, target, user)
+
+
+def build_nutrition_target_response_for_user(
+    db: Session,
+    target: NutritionTarget | None,
+    user: User,
+) -> NutritionTargetResponse | None:
+    if not target:
+        return None
+    assigned_by = None
+    if target.assigned_by_user_id:
+        assigned_by = (
+            db.query(User)
+            .options(joinedload(User.profile))
+            .filter(User.id == target.assigned_by_user_id)
+            .first()
+        )
+    return build_nutrition_target_response_from_users(target, user, assigned_by)
 
 
 def _target_payload(target: NutritionTarget) -> NutritionTargetSave:

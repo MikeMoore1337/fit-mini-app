@@ -5,7 +5,9 @@ from sqlalchemy.orm import Session
 
 from fitminiapp_api.core.config import settings
 from fitminiapp_api.db.session import get_db
+from fitminiapp_api.models.nutrition import NutritionTarget
 from fitminiapp_api.models.program import UserProgram, UserWorkout
+from fitminiapp_api.models.user import User
 from fitminiapp_api.schemas.invite import CoachInvitePreviewResponse, CoachInviteTokenRequest
 from fitminiapp_api.schemas.user import (
     AccountDeleteRequest,
@@ -37,7 +39,10 @@ from fitminiapp_api.services.coach_clients import (
     preview_coach_invite_link,
     remove_current_trainer,
 )
-from fitminiapp_api.services.nutrition import NutritionError, get_nutrition_target_for_user
+from fitminiapp_api.services.nutrition import (
+    NutritionError,
+    build_nutrition_target_response_for_user,
+)
 from fitminiapp_api.services.profile import (
     ProfileError,
     calculate_profile_heart_rates,
@@ -66,21 +71,28 @@ def _heart_rate_response(heart_rates) -> HeartRatePreviewResponse:
 
 
 def _build_user_response(db: Session, user) -> UserResponse:
-    kbju = get_nutrition_target_for_user(db, user)
-    trainer = get_current_trainer(db, user)
-    has_active_program = (
-        db.query(UserProgram.id)
-        .filter(UserProgram.user_id == user.id, UserProgram.is_active.is_(True))
-        .first()
-        is not None
+    active_program_exists = db.query(UserProgram.id).filter(
+        UserProgram.user_id == user.id,
+        UserProgram.is_active.is_(True),
     )
-    has_workout_history = (
+    workout_history_exists = (
         db.query(UserWorkout.id)
         .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
         .filter(UserProgram.user_id == user.id, UserWorkout.status == "completed")
-        .first()
-        is not None
     )
+    target, has_active_program, has_workout_history = (
+        db.query(
+            NutritionTarget,
+            active_program_exists.exists(),
+            workout_history_exists.exists(),
+        )
+        .select_from(User)
+        .outerjoin(NutritionTarget, NutritionTarget.user_id == User.id)
+        .filter(User.id == user.id)
+        .one()
+    )
+    kbju = build_nutrition_target_response_for_user(db, target, user)
+    trainer = get_current_trainer(db, user)
     heart_rates = calculate_profile_heart_rates(
         user.profile.birth_date if user.profile else None,
         user.profile.resting_heart_rate if user.profile else None,
