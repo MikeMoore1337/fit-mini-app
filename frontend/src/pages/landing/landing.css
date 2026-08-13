@@ -512,26 +512,42 @@ body.landing-mode #root {
 }
 
 .landing-problem__visual {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  align-items: center;
+  gap: 42px;
   min-height: 430px;
   padding: 30px;
   background: var(--landing-dark);
   color: #f5f8ef;
 }
 
+.landing-problem__sources {
+  display: grid;
+  gap: 18px;
+}
+
+.landing-problem__sources > span,
+.landing-problem__result span {
+  color: #aeb9b0;
+  font-size: 0.68rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
 .landing-problem__visual ul {
-  display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  gap: 10px;
+  display: grid;
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .landing-problem__visual li {
-  padding: 10px 13px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 9px 12px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 99px;
   color: #c4cec6;
@@ -542,12 +558,10 @@ body.landing-mode #root {
 .landing-problem__result {
   display: grid;
   gap: 9px;
-  margin-top: auto;
-  padding-top: 70px;
 }
 
 .landing-problem__result::before {
-  content: '↓';
+  content: '→';
   width: 42px;
   height: 42px;
   display: grid;
@@ -558,14 +572,6 @@ body.landing-mode #root {
   color: #172018;
   font-size: 1.15rem;
   font-weight: 900;
-}
-
-.landing-problem__result span {
-  color: #aeb9b0;
-  font-size: 0.76rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
 }
 
 .landing-problem__result strong {
@@ -984,7 +990,20 @@ body.landing-mode #root {
   }
 
   .landing-problem__visual {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
     min-height: 350px;
+  }
+
+  .landing-problem__sources {
+    gap: 14px;
+  }
+
+  .landing-problem__visual ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
   .landing-problem__visual li {
@@ -993,7 +1012,12 @@ body.landing-mode #root {
   }
 
   .landing-problem__result {
+    margin-top: auto;
     padding-top: 48px;
+  }
+
+  .landing-problem__result::before {
+    content: '↓';
   }
 
   .landing-section {
