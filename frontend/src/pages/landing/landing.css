@@ -1052,7 +1052,9 @@ body.landing-mode #root {
 }
 
 .landing-audience article .landing-kicker {
+  min-height: 2.7em;
   margin-bottom: 28px;
+  line-height: 1.35;
 }
 
 .landing-audience h2 {
@@ -1503,6 +1505,10 @@ body.landing-mode #root {
     flex-direction: column;
     min-height: 330px;
     padding: 24px;
+  }
+
+  .landing-audience article .landing-kicker {
+    min-height: 0;
   }
 
   .landing-audience h2 {
