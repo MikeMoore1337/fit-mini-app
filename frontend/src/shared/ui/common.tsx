@@ -64,3 +64,14 @@ export function ErrorState({ message, retry }: { message: string; retry?: () => 
 export function Badge({ children, tone = '' }: { children: ReactNode; tone?: string }) {
   return <span className={`badge ${tone}`.trim()}>{children}</span>;
 }
+
+export function DisclosureIcon() {
+  return (
+    <span className="disclosure-icon" aria-hidden="true">
+      <svg viewBox="0 0 16 16" focusable="false">
+        <path d="M3.5 8h9" />
+        <path className="disclosure-icon__vertical" d="M8 3.5v9" />
+      </svg>
+    </span>
+  );
+}
