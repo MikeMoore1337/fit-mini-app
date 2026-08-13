@@ -177,6 +177,7 @@ def test_production_oauth_does_not_require_smtp_when_email_auth_is_disabled():
         smtp_host="",
         smtp_from_email="",
         oauth_proxy_url="",
+        telegram_oauth_proxy_url="",
     )
 
     assert configured.enable_web_auth is True
@@ -3418,6 +3419,13 @@ def test_unconfigured_oauth_provider_is_not_exposed(client, monkeypatch):
     monkeypatch.setattr(settings, "enable_web_auth", True)
     monkeypatch.setattr(settings, "telegram_oauth_client_id", "")
     monkeypatch.setattr(settings, "telegram_oauth_client_secret", "")
+    monkeypatch.setattr(settings, "google_oauth_client_id", "")
+    monkeypatch.setattr(settings, "google_oauth_client_secret", "")
+    monkeypatch.setattr(settings, "yandex_oauth_client_id", "")
+    monkeypatch.setattr(settings, "yandex_oauth_client_secret", "")
+    monkeypatch.setattr(settings, "vk_oauth_client_id", "")
+    monkeypatch.setattr(settings, "apple_oauth_client_id", "")
+    monkeypatch.setattr(settings, "apple_oauth_client_secret", "")
     config = client.get("/api/v1/public/config")
     assert config.status_code == 200
     assert config.json()["enable_email_auth"] is False
