@@ -38,13 +38,11 @@ describe('AuthGate', () => {
     authConfig.oauth_providers = ['telegram'];
   });
 
-  it('показывает OAuth, но не показывает email-регистрацию при выключенном флаге', () => {
+  it('показывает OAuth без неактуального уведомления про Telegram', () => {
     render(<AuthGate>Приложение</AuthGate>);
 
     expect(screen.getByText('OAUTH:telegram')).toBeInTheDocument();
-    expect(
-      screen.getByText(/вход через Telegram откроет защищённую страницу/i),
-    ).toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
     expect(screen.queryByText('EMAIL_AUTH_PANEL')).not.toBeInTheDocument();
   });
 
