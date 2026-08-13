@@ -83,7 +83,7 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
                 "Content-Security-Policy",
                 "default-src 'self'; script-src 'self' https://telegram.org; "
                 "style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://t.me "
-                "https://*.telegram.org; connect-src 'self'; "
+                "https://*.telegram.org https://*.cdn-telegram.org; connect-src 'self'; "
                 "font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; "
                 "frame-ancestors 'self' https://web.telegram.org https://*.telegram.org",
             )

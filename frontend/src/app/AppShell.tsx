@@ -1,12 +1,34 @@
+import { useState } from 'react';
 import { AppLink, useNavigation } from '../shared/navigation/router';
 import { AppThemeToggle } from '../shared/ui/AppThemeToggle';
 import { useAuth } from './AuthProvider';
 
+const AVATAR_EMOJIS = ['🏋️', '💪', '🏃', '🚴', '🥗', '⚡', '🎯', '🔥'] as const;
+
+function avatarFallback(name: string): string {
+  const hash = Array.from(name.trim()).reduce(
+    (value, character) => (value * 31 + (character.codePointAt(0) ?? 0)) >>> 0,
+    0,
+  );
+  return AVATAR_EMOJIS[hash % AVATAR_EMOJIS.length] ?? AVATAR_EMOJIS[0];
+}
+
 function Avatar({ name, photoUrl }: { name: string; photoUrl?: string | null }) {
-  const initial = name.trim().charAt(0).toLocaleUpperCase('ru-RU') || 'П';
+  const [failedPhotoUrl, setFailedPhotoUrl] = useState<string | null>(null);
+  const photoFailed = Boolean(photoUrl && failedPhotoUrl === photoUrl);
+
   return (
     <span className="app-bottom-nav__avatar" aria-hidden="true">
-      {photoUrl ? <img src={photoUrl} alt="" referrerPolicy="no-referrer" /> : initial}
+      {photoUrl && !photoFailed ? (
+        <img
+          src={photoUrl}
+          alt=""
+          referrerPolicy="no-referrer"
+          onError={() => setFailedPhotoUrl(photoUrl)}
+        />
+      ) : (
+        avatarFallback(name)
+      )}
     </span>
   );
 }
