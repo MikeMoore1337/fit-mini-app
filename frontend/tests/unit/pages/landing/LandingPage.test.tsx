@@ -72,6 +72,18 @@ describe('LandingPage', () => {
     expect(
       screen.getByText(/приглашайте клиентов, назначайте и корректируйте программы/i),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /от цели до понятного следующего шага/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Выберите свой путь' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /один аккаунт.*два способа открыть/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /когда нужен большой экран/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /когда тренировка уже началась/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText('Данные синхронизируются')).toBeInTheDocument();
     expect(screen.queryByText(/тариф/i)).not.toBeInTheDocument();
     expect(screen.queryByText('+18%')).not.toBeInTheDocument();
     expect(screen.queryByText('12', { exact: true })).not.toBeInTheDocument();
