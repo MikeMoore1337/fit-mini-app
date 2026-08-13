@@ -1312,23 +1312,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/bot/coach-application": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Create Coach Application From Bot */
-        post: operations["create_coach_application_from_bot_api_v1_bot_coach_application_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/health": {
         parameters: {
             query?: never;
@@ -1706,25 +1689,6 @@ export interface components {
             thigh_cm?: number | null;
             /** Note */
             note?: string | null;
-        };
-        /** BotCoachRoleApplicationRequest */
-        BotCoachRoleApplicationRequest: {
-            /** Telegram User Id */
-            telegram_user_id: number;
-            /** Username */
-            username?: string | null;
-            /** First Name */
-            first_name?: string | null;
-            /** Last Name */
-            last_name?: string | null;
-        };
-        /** BotCoachRoleApplicationResponse */
-        BotCoachRoleApplicationResponse: {
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "pending" | "already_pending" | "already_coach";
         };
         /** BotTelegramLinkRequest */
         BotTelegramLinkRequest: {
@@ -5580,41 +5544,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BotTelegramLinkResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_coach_application_from_bot_api_v1_bot_coach_application_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                "x-bot-token"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["BotCoachRoleApplicationRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BotCoachRoleApplicationResponse"];
                 };
             };
             /** @description Validation Error */

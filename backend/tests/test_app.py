@@ -2599,38 +2599,6 @@ def test_direct_admin_role_change_resolves_pending_coach_application(client):
         assert saved.reviewed_by_user_id is not None
 
 
-def test_bot_can_submit_coach_role_application_from_telegram(client):
-    payload = {
-        "telegram_user_id": 6028,
-        "username": "telegram_coach",
-        "first_name": "Telegram",
-        "last_name": "Coach",
-    }
-    headers = {"X-Bot-Token": "test-token"}
-
-    created = client.post("/api/v1/bot/coach-application", json=payload, headers=headers)
-    assert created.status_code == 200
-    assert created.json() == {"status": "pending"}
-    duplicate = client.post("/api/v1/bot/coach-application", json=payload, headers=headers)
-    assert duplicate.json() == {"status": "already_pending"}
-
-    admin_headers = auth(client, telegram_user_id=6029, is_coach=True, is_admin=True)
-    listed = client.get("/api/v1/admin/coach-applications", headers=admin_headers).json()
-    assert len(listed) == 1
-    assert listed[0]["source"] == "telegram"
-    assert listed[0]["username"] == "telegram_coach"
-
-    approved = client.patch(
-        f"/api/v1/admin/coach-applications/{listed[0]['id']}",
-        json={"status": "approved"},
-        headers=admin_headers,
-    )
-    assert approved.status_code == 200
-    assert client.post("/api/v1/bot/coach-application", json=payload, headers=headers).json() == {
-        "status": "already_coach"
-    }
-
-
 def test_admin_can_block_and_unblock_user(client):
     admin_headers = auth(client, telegram_user_id=1001, is_coach=True, is_admin=True)
     user_headers = auth(client, telegram_user_id=5010, is_coach=False)
