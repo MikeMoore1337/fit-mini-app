@@ -278,8 +278,18 @@
   background: var(--surface-hover);
 }
 .app-theme-toggle__icon {
-  font-size: 1.35rem;
-  line-height: 1;
+  display: inline-grid;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+}
+.app-theme-toggle__icon svg,
+.landing-theme-toggle svg {
+  width: 100%;
+  height: 100%;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .app-theme-toggle--nav {
   font-family: inherit;
@@ -326,34 +336,36 @@
   border-color: var(--accent-line);
   background: var(--surface-hover);
 }
-.oauth-button span {
+.oauth-button__icon {
   display: inline-grid;
   place-items: center;
   width: 24px;
   height: 24px;
   border-radius: 50%;
   background: var(--surface-active);
-  font-size: 0.75rem;
-  font-weight: 900;
 }
-.oauth-button--telegram span {
+.oauth-button__icon svg {
+  width: 15px;
+  height: 15px;
+  fill: currentColor;
+}
+.oauth-button--telegram .oauth-button__icon {
   background: #229ed9;
   color: white;
 }
-.oauth-button--google span {
+.oauth-button--google .oauth-button__icon {
   background: white;
   color: #4285f4;
 }
-.oauth-button--yandex span {
+.oauth-button--yandex .oauth-button__icon {
   background: #fc3f1d;
   color: white;
 }
-.oauth-button--vk span {
+.oauth-button--vk .oauth-button__icon {
   background: #07f;
   color: white;
-  font-size: 0.62rem;
 }
-.oauth-button--apple span {
+.oauth-button--apple .oauth-button__icon {
   background: #111;
   color: white;
 }

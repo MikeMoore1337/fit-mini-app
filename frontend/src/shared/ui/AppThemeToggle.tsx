@@ -6,6 +6,7 @@ import {
   saveAppTheme,
   type AppColorScheme,
 } from '../theme';
+import { ThemeIcon } from './ThemeIcon';
 
 export function AppThemeToggle({ navigation = false }: { navigation?: boolean }) {
   const [theme, setTheme] = useState<AppColorScheme>(browserAppTheme);
@@ -55,7 +56,7 @@ export function AppThemeToggle({ navigation = false }: { navigation?: boolean })
         className={navigation ? 'app-bottom-nav__icon' : 'app-theme-toggle__icon'}
         aria-hidden="true"
       >
-        {theme === 'dark' ? '☀' : '☾'}
+        <ThemeIcon theme={theme} />
       </span>
       {navigation && (
         <span className="app-bottom-nav__label">{theme === 'dark' ? 'Светлая' : 'Тёмная'}</span>
