@@ -160,11 +160,11 @@ test('сценарий и платформы остаются понятными
     ).toBeVisible();
     await expect(
       page.getByRole('heading', {
-        name: /открывайте в браузере на любом устройстве.*telegram.*когда удобнее/i,
+        name: /открывайте на компьютере или смартфоне.*telegram.*когда удобнее/i,
       }),
     ).toBeVisible();
     await expect(
-      page.getByRole('heading', { name: 'Открывайте в браузере на любом устройстве', exact: true }),
+      page.getByRole('heading', { name: 'Открывайте на компьютере или смартфоне', exact: true }),
     ).toBeVisible();
     await expect(
       page.getByRole('heading', { name: /продолжайте в telegram mini app/i }),
@@ -197,6 +197,14 @@ test('сценарий и платформы остаются понятными
 
     const platformCards = page.locator('.landing-platform-card');
     await expect(platformCards).toHaveCount(2);
+    const platformIcons = page.locator('.landing-platform-card__icon');
+    await expect(platformIcons).toHaveCount(2);
+    for (const icon of await platformIcons.all()) {
+      await expect(icon).toHaveCSS('width', '44px');
+      await expect(icon).toHaveCSS('height', '44px');
+      await expect(icon.locator('svg')).toHaveCSS('width', '22px');
+      await expect(icon.locator('svg')).toHaveCSS('height', '22px');
+    }
     const browserCard = await platformCards.first().boundingBox();
     const telegramCard = await platformCards.last().boundingBox();
     expect(browserCard).not.toBeNull();
@@ -246,18 +254,26 @@ test('сценарии спортсмена и тренера ведут в ве
       await expect(arrow).toHaveCSS('font-size', '13.6px');
       await expect(arrow).toHaveCSS('font-weight', '800');
     }
-    if (viewport.width < 768) {
-      const heroButtons = page.locator('.landing-hero__actions .landing-button');
-      const contactButtons = page.locator('.landing-contact__actions .landing-button');
-      for (const buttons of [heroButtons, contactButtons]) {
-        await expect(buttons).toHaveCount(2);
-        const first = await buttons.first().boundingBox();
-        const second = await buttons.last().boundingBox();
-        expect(first).not.toBeNull();
-        expect(second).not.toBeNull();
-        expect(first!.width).toBeCloseTo(second!.width, 0);
-        expect(first!.height).toBe(second!.height);
-      }
+    const heroButtons = page.locator('.landing-hero__actions .landing-button');
+    const contactButtons = page.locator('.landing-contact__actions .landing-button');
+    const audienceButtons = page.locator('.landing-audience .landing-button');
+    for (const buttons of [heroButtons, contactButtons, audienceButtons]) {
+      await expect(buttons).toHaveCount(2);
+      const first = await buttons.first().boundingBox();
+      const second = await buttons.last().boundingBox();
+      expect(first).not.toBeNull();
+      expect(second).not.toBeNull();
+      expect(first!.width).toBeCloseTo(second!.width, 0);
+      expect(first!.height).toBe(second!.height);
+    }
+    if (viewport.width === 390) {
+      const brand = page.locator('.landing-header .landing-brand');
+      await expect(brand.locator('span')).toHaveCSS('white-space', 'nowrap');
+      const brandBox = await brand.boundingBox();
+      const brandTextBox = await brand.locator('span').boundingBox();
+      expect(brandBox).not.toBeNull();
+      expect(brandTextBox).not.toBeNull();
+      expect(brandTextBox!.height).toBeLessThan(20);
     }
 
     const clientCard = await audienceCards.first().boundingBox();
@@ -552,11 +568,18 @@ test('цветовая система сохраняет иерархию в с�
   await mockApi(page);
   await page.goto('/app');
 
+  const authPanel = page.locator('.auth-panel--branded');
+  await expect(page.getByRole('heading', { name: 'Вход в Your Fitness Coach' })).toBeVisible();
+  await expect(authPanel).toHaveCSS('background-color', 'rgb(251, 252, 247)');
+  await expect(authPanel).toHaveCSS('border-color', 'rgb(205, 211, 201)');
+
   const clientButton = page.getByRole('button', { name: 'Клиент' });
   await expect(clientButton).toHaveCSS('background-color', 'rgb(232, 237, 228)');
   await expect(clientButton).toHaveCSS('color', 'rgb(23, 32, 24)');
 
   await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
+  await expect(authPanel).toHaveCSS('background-color', 'rgb(21, 28, 23)');
+  await expect(authPanel).toHaveCSS('border-color', 'rgb(52, 64, 56)');
   await expect(clientButton).toHaveCSS('background-color', 'rgb(32, 42, 35)');
   await expect(clientButton).toHaveCSS('color', 'rgb(242, 246, 239)');
 
