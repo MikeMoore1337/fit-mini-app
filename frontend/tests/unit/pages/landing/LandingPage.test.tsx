@@ -56,6 +56,8 @@ describe('LandingPage', () => {
     expect(
       screen.getByRole('heading', { name: /тренировки не должны жить в пяти разных местах/i }),
     ).toBeInTheDocument();
+    expect(screen.getByText('Когда всё разрозненно')).toBeInTheDocument();
+    expect(screen.getByText('В Your Fitness Coach')).toBeInTheDocument();
     expect(screen.getByText('Один понятный план действий')).toBeInTheDocument();
     expect(
       screen.getByRole('heading', { name: /понятные действия для спортсмена и тренера/i }),

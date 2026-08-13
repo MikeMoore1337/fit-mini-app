@@ -255,15 +255,18 @@ export default function LandingPage() {
             className="landing-problem__visual"
             aria-label="Один сервис вместо разных инструментов"
           >
-            <ul>
-              <li>Заметки</li>
-              <li>Таблицы</li>
-              <li>Случайные программы</li>
-              <li>Дневник показателей</li>
-              <li>Ручной учёт результатов</li>
-            </ul>
+            <div className="landing-problem__sources">
+              <span>Когда всё разрозненно</span>
+              <ul>
+                <li>Заметки</li>
+                <li>Таблицы</li>
+                <li>Случайные программы</li>
+                <li>Дневник показателей</li>
+                <li>Ручной учёт результатов</li>
+              </ul>
+            </div>
             <div className="landing-problem__result">
-              <span>Вместо пяти инструментов</span>
+              <span>В Your Fitness Coach</span>
               <strong>Один понятный план действий</strong>
             </div>
           </div>

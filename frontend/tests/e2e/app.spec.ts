@@ -56,6 +56,13 @@ test('блок возможностей показывает пользу спо
       page.getByRole('heading', { name: /ведите своих клиентов в одном кабинете/i }),
     ).toBeVisible();
     await expect(page.getByText(/приглашайте клиентов, назначайте и корректируйте/i)).toBeVisible();
+    if (viewport.width >= 768) {
+      const sources = await page.locator('.landing-problem__sources').boundingBox();
+      const result = await page.locator('.landing-problem__result').boundingBox();
+      expect(sources).not.toBeNull();
+      expect(result).not.toBeNull();
+      expect(sources!.x + sources!.width).toBeLessThan(result!.x);
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
   }
 });
