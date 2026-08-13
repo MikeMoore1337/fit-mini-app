@@ -414,6 +414,54 @@ test('рекомендация кардио меняется с целью, а �
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
 });
 
+test('поля профиля и питания выровнены на десктопе и остаются адаптивными', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await mockApi(page);
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Клиент' }).click();
+
+  await page.getByRole('tab', { name: 'Профиль' }).click();
+  const profileControlTops = await page.locator('.profile-form-grid').evaluate((grid) =>
+    Array.from(grid.querySelectorAll<HTMLElement>(':scope > .field'))
+      .slice(6)
+      .map((field) => {
+        const control = field.querySelector<HTMLElement>('input, select, .date-control');
+        return control?.getBoundingClientRect().top ?? 0;
+      }),
+  );
+  expect(new Set(profileControlTops.map(Math.round)).size).toBe(1);
+
+  await page.getByRole('tab', { name: 'Питание' }).click();
+  const nutritionControlTops = await page
+    .locator('.nutrition-form-grid')
+    .first()
+    .evaluate((grid) =>
+      Array.from(grid.querySelectorAll<HTMLElement>(':scope > .field'))
+        .slice(5, 8)
+        .map((field) => {
+          const control = field.querySelector<HTMLElement>('input, select');
+          return control?.getBoundingClientRect().top ?? 0;
+        }),
+    );
+  expect(new Set(nutritionControlTops.map(Math.round)).size).toBe(1);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobileFields = await page
+    .locator('.nutrition-form-grid')
+    .first()
+    .evaluate((grid) =>
+      Array.from(grid.querySelectorAll<HTMLElement>(':scope > .field')).map((field) => {
+        const box = field.getBoundingClientRect();
+        return { left: box.left, right: box.right, top: box.top };
+      }),
+    );
+  expect(mobileFields.every((field) => field.left >= 0 && field.right <= 390)).toBe(true);
+  expect(
+    mobileFields.every((field, index) => index === 0 || field.top > mobileFields[index - 1]!.top),
+  ).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
+});
+
 test('поля адаптируются к разным iPhone, а пример программы открывает состав', async ({ page }) => {
   await page.setViewportSize({ width: 440, height: 956 });
   await mockApi(page);

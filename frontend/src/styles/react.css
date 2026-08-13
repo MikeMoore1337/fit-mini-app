@@ -1031,6 +1031,14 @@ body:has(#appBottomNav) {
 .nutrition-form-grid {
   grid-template-columns: repeat(6, minmax(0, 1fr));
 }
+@media (min-width: 641px) {
+  .profile-form-grid > .field > span:first-child,
+  .nutrition-form-grid > .field > span:first-child {
+    display: flex;
+    align-items: flex-end;
+    min-block-size: 2.5em;
+  }
+}
 .program-builder-section {
   min-inline-size: 0;
   margin: 0;
