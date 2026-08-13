@@ -13,6 +13,9 @@ describe('AppThemeToggle', () => {
   });
 
   it('uses the system theme and remembers a manual choice', () => {
+    const themeColor = document.createElement('meta');
+    themeColor.name = 'theme-color';
+    document.head.append(themeColor);
     vi.stubGlobal(
       'matchMedia',
       vi.fn().mockReturnValue({
@@ -25,9 +28,16 @@ describe('AppThemeToggle', () => {
     render(<AppThemeToggle />);
 
     expect(document.documentElement.dataset.colorScheme).toBe('dark');
+    expect(document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.content).toBe(
+      '#0d120f',
+    );
     expect(screen.getByRole('button').querySelector('svg')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Включить светлую тему' }));
     expect(document.documentElement.dataset.colorScheme).toBe('light');
+    expect(document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.content).toBe(
+      '#f1f3ec',
+    );
     expect(localStorage.getItem(APP_THEME_STORAGE_KEY)).toBe('light');
+    themeColor.remove();
   });
 });

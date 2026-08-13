@@ -28,5 +28,5 @@ export function saveAppTheme(theme: AppColorScheme): void {
 export function applyColorScheme(theme: AppColorScheme, themeColor?: string): void {
   document.documentElement.dataset.colorScheme = theme;
   const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
-  if (meta) meta.content = themeColor ?? (theme === 'dark' ? '#0f1115' : '#ffffff');
+  if (meta) meta.content = themeColor ?? (theme === 'dark' ? '#0d120f' : '#f1f3ec');
 }

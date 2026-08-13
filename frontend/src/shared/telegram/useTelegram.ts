@@ -23,9 +23,6 @@ function applyTheme(tg: TelegramWebApp | null): void {
   setVar('--card-bg', params.section_bg_color ?? params.secondary_bg_color ?? params.bg_color);
   setVar('--text', params.text_color);
   setVar('--muted', params.hint_color ?? params.subtitle_text_color);
-  setVar('--accent', params.button_color ?? params.accent_text_color ?? params.link_color);
-  setVar('--button-text', params.button_text_color);
-  setVar('--link-color', params.link_color ?? params.accent_text_color);
   setVar('--nav-bg', params.bottom_bar_bg_color ?? params.secondary_bg_color);
   setVar('--danger', params.destructive_text_color);
 
