@@ -96,14 +96,21 @@ test('сценарий и платформы остаются понятными
     await page.goto('/');
 
     await expect(page.locator('.landing-workflow li')).toHaveCount(5);
+    await expect(page.getByRole('heading', { name: 'Откройте веб-приложение' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Выберите свой путь' })).toBeVisible();
     await expect(
-      page.getByRole('heading', { name: /один аккаунт.*два способа открыть/i }),
+      page.getByRole('heading', {
+        name: /основная работа.*в браузере.*telegram.*когда удобнее/i,
+      }),
     ).toBeVisible();
-    await expect(page.getByRole('heading', { name: /когда нужен большой экран/i })).toBeVisible();
     await expect(
-      page.getByRole('heading', { name: /когда тренировка уже началась/i }),
+      page.getByRole('heading', { name: /основные функции.*в браузере/i }),
     ).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: /тренировка и общение.*в telegram/i }),
+    ).toBeVisible();
+    await expect(page.getByText(/для самостоятельных тренировок telegram не нужен/i)).toBeVisible();
+    await expect(page.getByText(/общение с тренером происходит в telegram/i)).toBeVisible();
 
     const flowIcons = page.locator('.landing-flow-icon');
     await expect(flowIcons).toHaveCount(2);
