@@ -72,15 +72,34 @@ test('блок возможностей показывает пользу спо
 
     const featureCards = page.locator('.landing-feature');
     for (const card of await featureCards.all()) {
-      const cardBox = await card.boundingBox();
-      const metaBox = await card.locator('.landing-feature__meta').boundingBox();
-      const paragraphBox = await card.locator('p').boundingBox();
-      expect(cardBox).not.toBeNull();
-      expect(metaBox).not.toBeNull();
-      expect(paragraphBox).not.toBeNull();
-      const topSpace = metaBox!.y - cardBox!.y;
-      const bottomSpace = cardBox!.y + cardBox!.height - (paragraphBox!.y + paragraphBox!.height);
-      expect(Math.abs(topSpace - bottomSpace)).toBeLessThanOrEqual(32);
+      await expect(card).toHaveCSS('justify-content', 'flex-start');
+    }
+    if (viewport.width === 1440) {
+      const metaBoxes = await featureCards.locator('.landing-feature__meta').evaluateAll((items) =>
+        items.map((item) => {
+          const box = item.getBoundingClientRect();
+          return { x: box.x, y: box.y };
+        }),
+      );
+      expect(metaBoxes).toHaveLength(6);
+      const firstRow = metaBoxes.slice(0, 2).map(({ y }) => y);
+      expect(Math.max(...firstRow)).toBeLessThanOrEqual(Math.min(...firstRow) + 1);
+      expect(Math.max(...metaBoxes.slice(2, 5).map(({ y }) => y))).toBeLessThanOrEqual(
+        Math.min(...metaBoxes.slice(2, 5).map(({ y }) => y)) + 1,
+      );
+    }
+    if (viewport.width === 390) {
+      const problemVisual = await page.locator('.landing-problem__visual').boundingBox();
+      const problemIcon = await page
+        .locator('.landing-problem__result .landing-flow-icon')
+        .boundingBox();
+      expect(problemVisual).not.toBeNull();
+      expect(problemIcon).not.toBeNull();
+      expect(
+        Math.abs(
+          problemIcon!.x + problemIcon!.width / 2 - (problemVisual!.x + problemVisual!.width / 2),
+        ),
+      ).toBeLessThanOrEqual(1);
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
   }
