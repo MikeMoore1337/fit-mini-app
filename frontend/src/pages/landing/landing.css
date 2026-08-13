@@ -84,6 +84,38 @@ body.landing-mode #root {
   color: inherit;
 }
 
+.landing-skip-link {
+  position: fixed;
+  z-index: 100;
+  top: 10px;
+  left: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--landing-dark);
+  color: #fff !important;
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-decoration: none;
+  transform: translateY(calc(-100% - 16px));
+}
+
+.landing-skip-link:focus {
+  transform: translateY(0);
+}
+
+.landing-page :where(a, button):focus-visible {
+  outline: 3px solid var(--landing-green);
+  outline-offset: 3px;
+}
+
+.landing-page main:focus {
+  outline: none;
+}
+
+.landing-page section[id] {
+  scroll-margin-top: 20px;
+}
+
 .landing-header,
 .landing-hero,
 .landing-problem,
@@ -139,7 +171,7 @@ body.landing-mode #root {
 }
 
 .landing-theme-toggle:focus-visible {
-  outline: 3px solid rgba(182, 242, 56, 0.55);
+  outline: 3px solid var(--landing-green);
   outline-offset: 2px;
 }
 

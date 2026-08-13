@@ -40,6 +40,45 @@ test('первый экран лендинга объясняет продукт
   }
 });
 
+test('лендинг остаётся адаптивным на контрольных ширинах', async ({ page }) => {
+  for (const width of [360, 390, 430, 768, 1024, 1280, 1440]) {
+    await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+    await page.goto('/');
+
+    const pageMetrics = await page.evaluate(() => ({
+      viewport: window.innerWidth,
+      documentWidth: document.documentElement.scrollWidth,
+      bodyWidth: document.body.scrollWidth,
+    }));
+    expect(pageMetrics.documentWidth).toBeLessThanOrEqual(pageMetrics.viewport);
+    expect(pageMetrics.bodyWidth).toBeLessThanOrEqual(pageMetrics.viewport);
+    await expect(page.getByRole('link', { name: /открыть приложение/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /включить .* тему/i })).toBeInViewport();
+    await expect(page.locator('.landing-platform-card')).toHaveCount(3);
+  }
+});
+
+test('лендинг доступен с клавиатуры и содержит метаданные', async ({ page }) => {
+  await page.goto('/');
+
+  const skipLink = page.getByRole('link', { name: 'К содержимому' });
+  await skipLink.focus();
+  await expect(skipLink).toBeFocused();
+  await expect(skipLink).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#landing-content')).toBeFocused();
+
+  await expect(page).toHaveTitle(/тренировки, питание и прогресс в браузере и telegram/i);
+  expect(await page.locator('meta[name="description"]').getAttribute('content')).toMatch(
+    /фиксировать результаты.*ориентиры кбжу/i,
+  );
+  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
+    'content',
+    /в браузере и telegram/i,
+  );
+  await expect(page.locator('meta[property="og:type"]')).toHaveAttribute('content', 'website');
+});
+
 test('блок возможностей показывает пользу спортсмену и инструменты тренеру', async ({ page }) => {
   for (const viewport of [
     { width: 1440, height: 900 },
