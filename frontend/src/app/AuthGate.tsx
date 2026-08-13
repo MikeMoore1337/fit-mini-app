@@ -65,7 +65,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
             <div className="auth-notice" role="status">
               <span>
                 {hasBrowserAuth
-                  ? 'Telegram Mini App не обнаружен. Выберите способ входа ниже.'
+                  ? 'Вы открыли приложение в браузере. Вход через Telegram откроет защищённую страницу авторизации и вернёт вас сюда.'
                   : 'Вход через браузер пока недоступен. Сейчас приложение можно открыть через Telegram.'}
               </span>
               {!hasBrowserAuth && telegramAppUrl && (

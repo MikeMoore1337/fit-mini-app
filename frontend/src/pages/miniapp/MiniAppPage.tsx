@@ -147,7 +147,7 @@ export default function MiniAppPage() {
           </div>
           <div className="hero-card__meta">
             <Badge>{role}</Badge>
-            <button className="secondary" onClick={() => void logout()}>
+            <button className="secondary miniapp-hero-logout" onClick={() => void logout()}>
               Выйти
             </button>
           </div>
