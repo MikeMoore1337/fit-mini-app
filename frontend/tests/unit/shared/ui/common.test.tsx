@@ -5,7 +5,7 @@ import { Card } from '../../../../src/shared/ui/common';
 describe('Card', () => {
   it('keeps application card content collapsed until its header is opened', () => {
     render(
-      <Card collapsible title="Расписание" description="Ближайшие восемь недель">
+      <Card title="Расписание" description="Ближайшие восемь недель">
         <p>Содержимое карточки</p>
       </Card>,
     );
