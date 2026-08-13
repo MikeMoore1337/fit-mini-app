@@ -68,8 +68,8 @@ const features = [
 
 const workflow = [
   [
-    'Откройте приложение',
-    'В браузере или Telegram — используйте тот способ, который удобен сейчас.',
+    'Откройте веб-приложение',
+    'Начните без установки: достаточно браузера на телефоне или компьютере.',
   ],
   ['Расскажите о себе', 'Укажите цель, уровень подготовки и основные параметры.'],
   ['Выберите свой путь', 'Готовая программа, собственный план или работа вместе с тренером.'],
@@ -85,7 +85,7 @@ export default function LandingPage() {
 
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = 'Your Fitness Coach — тренировки и прогресс в браузере и Telegram';
+    document.title = 'Your Fitness Coach — веб-приложение для тренировок и прогресса';
     document.body.classList.add('landing-mode');
     return () => {
       document.title = previousTitle;
@@ -155,7 +155,7 @@ export default function LandingPage() {
       <main id="top">
         <section className="landing-hero" aria-labelledby="landing-title">
           <div className="landing-hero__copy">
-            <p className="landing-kicker">Тренировки в браузере и Telegram</p>
+            <p className="landing-kicker">Веб-приложение для тренировок и прогресса</p>
             <h1 id="landing-title">
               Знайте, что делать сегодня.
               <br />
@@ -163,7 +163,7 @@ export default function LandingPage() {
             </h1>
             <p className="landing-hero__lead">
               Программа тренировок, занятие на сегодня, ориентиры КБЖУ и история результатов — в
-              одном приложении. Тренируйтесь самостоятельно или вместе с тренером.
+              одном веб-приложении. Тренируйтесь самостоятельно или работайте вместе с тренером.
             </p>
             <div className="landing-hero__actions">
               <a className="landing-button" href={appUrl}>
@@ -175,8 +175,8 @@ export default function LandingPage() {
               </a>
             </div>
             <p className="landing-hero__note">
-              Работает в браузере и Telegram <span aria-hidden="true">·</span> данные сохраняются в
-              одном аккаунте
+              Начните в браузере <span aria-hidden="true">·</span> Telegram можно подключить для
+              тренировок в зале и общения с тренером
             </p>
           </div>
 
@@ -328,11 +328,13 @@ export default function LandingPage() {
 
         <section className="landing-platforms" aria-labelledby="landing-platforms-title">
           <div className="landing-platforms__intro">
-            <p className="landing-kicker">Web + Telegram</p>
-            <h2 id="landing-platforms-title">Один аккаунт. Два способа открыть.</h2>
+            <p className="landing-kicker">Продолжайте в Telegram</p>
+            <h2 id="landing-platforms-title">
+              Основная работа — в браузере. Telegram — когда удобнее.
+            </h2>
             <p>
-              План тренировок, история и прогресс не зависят от того, где вы открыли приложение.
-              Выберите подходящий экран для текущей задачи.
+              Тренировки, программы и прогресс доступны в веб-приложении. Telegram дополняет его
+              быстрым доступом к занятию и внешним каналом общения с тренером.
             </p>
           </div>
 
@@ -345,10 +347,13 @@ export default function LandingPage() {
                     <path d="M8 21h8M12 18v3" />
                   </svg>
                 </span>
-                <span>Браузер</span>
+                <span>Основное приложение</span>
               </div>
-              <h3>Когда нужен большой экран</h3>
-              <p>Удобно настраивать программы, заполнять профиль и разбирать динамику.</p>
+              <h3>Основные функции — в браузере</h3>
+              <p>
+                Настраивайте программы, выполняйте тренировки и анализируйте прогресс с телефона или
+                компьютера.
+              </p>
             </article>
 
             <div className="landing-platforms__sync" aria-label="Данные синхронизируются">
@@ -357,7 +362,7 @@ export default function LandingPage() {
                   <path d="M4 8h16m-3-3 3 3-3 3M20 16H4m3-3-3 3 3 3" />
                 </svg>
               </span>
-              <strong>Общие данные</strong>
+              <strong>Один аккаунт</strong>
             </div>
 
             <article className="landing-platform-card landing-platform-card--telegram">
@@ -368,16 +373,19 @@ export default function LandingPage() {
                     <path d="m9.7 12.9 4.8-4.3" />
                   </svg>
                 </span>
-                <span>Telegram</span>
+                <span>Дополнение</span>
               </div>
-              <h3>Когда тренировка уже началась</h3>
-              <p>Удобно открыть занятие в зале, отмечать подходы и следить за отдыхом.</p>
+              <h3>Тренировка и общение — в Telegram</h3>
+              <p>
+                Открывайте занятие в зале, отмечайте подходы и переходите к переписке со своим
+                тренером в Telegram.
+              </p>
             </article>
           </div>
 
           <p className="landing-platforms__note">
-            Отдельная установка не требуется <span aria-hidden="true">·</span> прогресс остаётся в
-            одном аккаунте
+            Для самостоятельных тренировок Telegram не нужен <span aria-hidden="true">·</span>{' '}
+            общение с тренером происходит в Telegram
           </p>
         </section>
 

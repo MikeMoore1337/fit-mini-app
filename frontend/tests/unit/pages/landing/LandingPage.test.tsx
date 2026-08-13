@@ -46,9 +46,9 @@ describe('LandingPage', () => {
         name: /знайте, что делать сегодня.*следите, как растёт прогресс/i,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/тренировки в браузере и telegram/i)).toBeInTheDocument();
+    expect(screen.getByText(/веб-приложение для тренировок и прогресса/i)).toBeInTheDocument();
     expect(
-      screen.getByText(/тренируйтесь самостоятельно или вместе с тренером/i),
+      screen.getByText(/тренируйтесь самостоятельно или работайте вместе с тренером/i),
     ).toBeInTheDocument();
     expect(screen.getByLabelText(/пример интерфейса тренировки на сегодня/i)).toBeInTheDocument();
     expect(screen.getByText('Жим гантелей лёжа')).toBeInTheDocument();
@@ -77,12 +77,20 @@ describe('LandingPage', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Выберите свой путь' })).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { name: /один аккаунт.*два способа открыть/i }),
+      screen.getByRole('heading', {
+        name: /основная работа.*в браузере.*telegram.*когда удобнее/i,
+      }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /когда нужен большой экран/i })).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { name: /когда тренировка уже началась/i }),
+      screen.getByRole('heading', { name: /основные функции.*в браузере/i }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /тренировка и общение.*в telegram/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/для самостоятельных тренировок telegram не нужен/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/общение с тренером происходит в telegram/i)).toBeInTheDocument();
     expect(screen.getByLabelText('Данные синхронизируются')).toBeInTheDocument();
     expect(screen.queryByText(/тариф/i)).not.toBeInTheDocument();
     expect(screen.queryByText('+18%')).not.toBeInTheDocument();
