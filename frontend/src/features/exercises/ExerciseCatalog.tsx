@@ -333,11 +333,12 @@ export function ExerciseCatalog({
                   )}
                   {exercise.has_guide && (
                     <button
-                      className="secondary"
+                      className="exercise-guide-trigger"
                       type="button"
                       onClick={() => void openGuide(exercise)}
                     >
-                      Техника
+                      <span>Техника</span>
+                      <span aria-hidden="true">⌕</span>
                     </button>
                   )}
                   {exercise.is_custom && (

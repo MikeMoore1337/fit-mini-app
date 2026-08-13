@@ -950,6 +950,10 @@ test('поля адаптируются к разным iPhone, а пример 
   await expect(exerciseGuide.getByRole('img', { name: 'Активная фаза' })).toBeVisible();
   await expect(exerciseGuide.getByText('Исходное положение', { exact: true })).toBeVisible();
   await expect(exerciseGuide.getByText('Активная фаза', { exact: true })).toBeVisible();
+  await exerciseGuide.getByRole('button', { name: 'Увеличить: Исходное положение' }).click();
+  await expect(page.locator('.exercise-lightbox')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.exercise-lightbox')).toHaveCount(0);
 });
 
 test('сенсорное поле даты сохраняет нативный пикер и показывает иконку календаря', async ({

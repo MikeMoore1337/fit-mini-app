@@ -365,12 +365,13 @@ export function TodayWorkout() {
                 {exercise.has_guide && (
                   <button
                     type="button"
-                    className="secondary compact"
+                    className="exercise-guide-trigger compact"
                     onClick={() =>
                       setGuide({ id: exercise.exercise_id, title: exercise.exercise_title })
                     }
                   >
-                    Техника
+                    <span>Техника</span>
+                    <span aria-hidden="true">⌕</span>
                   </button>
                 )}
               </div>

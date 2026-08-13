@@ -666,6 +666,26 @@ select:not([multiple]) {
   padding: 7px 10px;
   font-size: 0.78rem;
 }
+.exercise-guide-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-weight: 800;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.exercise-guide-trigger:hover {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--button-text, #fff);
+}
+.exercise-guide-trigger > span:last-child {
+  font-size: 1.05em;
+  line-height: 1;
+}
 
 .toast > span {
   flex: 1;
@@ -1008,6 +1028,16 @@ select:not([multiple]) {
   border: 0;
   border-radius: 0;
   background: var(--bg-soft);
+  cursor: zoom-in;
+  overflow: hidden;
+}
+.exercise-guide-image__frame:hover img,
+.exercise-guide-image__frame:focus-visible img {
+  transform: scale(1.025);
+}
+.exercise-guide-image__frame img {
+  display: block;
+  transition: transform 0.18s ease;
 }
 .exercise-guide-image__zoom {
   position: absolute;
@@ -1339,6 +1369,10 @@ body:has(#appBottomNav) {
   }
   .exercise-catalog-row .list-row__actions button {
     padding-inline: 8px;
+  }
+  .exercise-catalog-row .list-row__actions .exercise-guide-trigger {
+    min-height: 34px;
+    padding-inline: 9px;
   }
   .exercise-catalog-row {
     display: grid;
