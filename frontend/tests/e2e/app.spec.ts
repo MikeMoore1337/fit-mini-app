@@ -105,8 +105,16 @@ test('сценарий и платформы остаются понятными
       page.getByRole('heading', { name: /когда тренировка уже началась/i }),
     ).toBeVisible();
 
-    const syncIcon = page.locator('.landing-platforms__sync > span');
+    const flowIcons = page.locator('.landing-flow-icon');
+    await expect(flowIcons).toHaveCount(2);
+    const problemIcon = page.locator('.landing-problem__result .landing-flow-icon');
+    const syncIcon = page.locator('.landing-platforms__sync .landing-flow-icon');
     await expect(syncIcon.locator('svg')).toBeVisible();
+    await expect(problemIcon.locator('svg')).toBeVisible();
+    await expect(problemIcon).toHaveCSS('width', '44px');
+    await expect(problemIcon).toHaveCSS('height', '44px');
+    await expect(syncIcon).toHaveCSS('width', '44px');
+    await expect(syncIcon).toHaveCSS('height', '44px');
     const syncIconBox = await syncIcon.boundingBox();
     const syncSvgBox = await syncIcon.locator('svg').boundingBox();
     expect(syncIconBox).not.toBeNull();
