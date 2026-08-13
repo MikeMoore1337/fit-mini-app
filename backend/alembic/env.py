@@ -13,7 +13,10 @@ from fitminiapp_api.db.base import Base
 from fitminiapp_api.models import *  # noqa: F403
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# Alembic stores main options in ConfigParser, where ``%`` starts interpolation.
+# Database URLs legitimately contain percent-encoded credentials, so escape the
+# character for ConfigParser while preserving the URL returned by Alembic.
+config.set_main_option("sqlalchemy.url", settings.database_url.replace("%", "%%"))
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
