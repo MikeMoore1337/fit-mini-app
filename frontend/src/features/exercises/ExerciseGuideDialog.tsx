@@ -25,11 +25,7 @@ export function ExerciseGuideDialog({
       aria-modal="true"
       aria-labelledby="exercise-guide-title"
     >
-      <div
-        className="modal__backdrop"
-        aria-hidden="true"
-        onClick={onClose}
-      />
+      <div className="modal__backdrop" aria-hidden="true" onClick={onClose} />
       <div className="modal__panel card exercise-guide-modal__panel" ref={panelRef} tabIndex={-1}>
         <div className="exercise-guide-modal__head">
           <div>
