@@ -62,6 +62,25 @@ test('блок возможностей показывает пользу спо
       expect(sources).not.toBeNull();
       expect(result).not.toBeNull();
       expect(sources!.x + sources!.width).toBeLessThan(result!.x);
+    } else {
+      const sources = await page.locator('.landing-problem__sources').boundingBox();
+      const result = await page.locator('.landing-problem__result').boundingBox();
+      expect(sources).not.toBeNull();
+      expect(result).not.toBeNull();
+      expect(sources!.y + sources!.height).toBeLessThan(result!.y);
+    }
+
+    const featureCards = page.locator('.landing-feature');
+    for (const card of await featureCards.all()) {
+      const cardBox = await card.boundingBox();
+      const metaBox = await card.locator('.landing-feature__meta').boundingBox();
+      const paragraphBox = await card.locator('p').boundingBox();
+      expect(cardBox).not.toBeNull();
+      expect(metaBox).not.toBeNull();
+      expect(paragraphBox).not.toBeNull();
+      const topSpace = metaBox!.y - cardBox!.y;
+      const bottomSpace = cardBox!.y + cardBox!.height - (paragraphBox!.y + paragraphBox!.height);
+      expect(Math.abs(topSpace - bottomSpace)).toBeLessThanOrEqual(32);
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
   }
