@@ -86,7 +86,7 @@ body.landing-mode #root {
 
 .landing-header,
 .landing-hero,
-.landing-proof,
+.landing-problem,
 .landing-section,
 .landing-audience,
 .landing-contact,
@@ -473,27 +473,106 @@ body.landing-mode #root {
   font-size: 0.92rem;
 }
 
-.landing-proof {
+.landing-problem {
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 42px;
-  padding: 27px 30px;
-  border-top: 1px solid var(--landing-border);
-  border-bottom: 1px solid var(--landing-border);
+  grid-template-columns: minmax(0, 0.92fr) minmax(420px, 1.08fr);
+  align-items: stretch;
+  gap: 16px;
+  padding: 24px 0 0;
 }
 
-.landing-proof p {
-  margin: 0;
-  color: var(--landing-muted);
-  font-size: 0.78rem;
+.landing-problem__copy,
+.landing-problem__visual {
+  border: 1px solid var(--landing-card-border);
+  border-radius: 28px;
 }
 
-.landing-proof div {
+.landing-problem__copy {
   display: flex;
-  justify-content: space-between;
-  gap: 20px;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 430px;
+  padding: 42px;
+  background: var(--landing-card);
+}
+
+.landing-problem__copy h2 {
+  max-width: 590px;
+  margin: 0;
+  font-size: clamp(2.35rem, 4.2vw, 4.3rem);
+  line-height: 0.98;
+  letter-spacing: -0.055em;
+}
+
+.landing-problem__copy > p:last-child {
+  max-width: 580px;
+  margin: 26px 0 0;
+  color: var(--landing-muted);
+  line-height: 1.65;
+}
+
+.landing-problem__visual {
+  display: flex;
+  flex-direction: column;
+  min-height: 430px;
+  padding: 30px;
+  background: var(--landing-dark);
+  color: #f5f8ef;
+}
+
+.landing-problem__visual ul {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.landing-problem__visual li {
+  padding: 10px 13px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 99px;
+  color: #c4cec6;
   font-size: 0.78rem;
-  font-weight: 750;
+  font-weight: 700;
+}
+
+.landing-problem__result {
+  display: grid;
+  gap: 9px;
+  margin-top: auto;
+  padding-top: 70px;
+}
+
+.landing-problem__result::before {
+  content: '↓';
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 18px;
+  border-radius: 50%;
+  background: var(--landing-green);
+  color: #172018;
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+.landing-problem__result span {
+  color: #aeb9b0;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.landing-problem__result strong {
+  max-width: 480px;
+  font-size: clamp(1.75rem, 3vw, 2.8rem);
+  line-height: 1.02;
+  letter-spacing: -0.045em;
 }
 
 .landing-section {
@@ -527,12 +606,13 @@ body.landing-mode #root {
 
 .landing-feature-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 14px;
 }
 
 .landing-feature {
-  min-height: 230px;
+  grid-column: span 4;
+  min-height: 250px;
   display: flex;
   flex-direction: column;
   padding: 22px;
@@ -541,10 +621,47 @@ body.landing-mode #root {
   background: var(--landing-card);
 }
 
-.landing-feature > span {
+.landing-feature--wide {
+  grid-column: span 7;
+  min-height: 310px;
+  background:
+    linear-gradient(135deg, rgba(182, 242, 56, 0.18), transparent 58%), var(--landing-card);
+}
+
+.landing-feature--wide + .landing-feature--standard {
+  grid-column: span 5;
+  min-height: 310px;
+}
+
+.landing-feature--coach {
+  grid-column: span 12;
+  min-height: 280px;
+  padding: 32px;
+  background: var(--landing-dark);
+  color: #f5f8ef;
+}
+
+.landing-feature__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.landing-feature__meta span {
   color: #769435;
   font-size: 0.72rem;
   font-weight: 850;
+}
+
+.landing-feature__meta span:last-child {
+  text-align: right;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.landing-feature--coach .landing-feature__meta span {
+  color: var(--landing-green);
 }
 
 .landing-feature h3 {
@@ -553,11 +670,23 @@ body.landing-mode #root {
   letter-spacing: -0.035em;
 }
 
+.landing-feature--wide h3,
+.landing-feature--coach h3 {
+  max-width: 720px;
+  font-size: clamp(1.65rem, 3vw, 2.65rem);
+  line-height: 1.04;
+}
+
 .landing-feature p {
   margin: 0;
   color: var(--landing-muted);
   font-size: 0.87rem;
   line-height: 1.55;
+}
+
+.landing-feature--coach p {
+  max-width: 760px;
+  color: #aeb9b0;
 }
 
 .landing-workflow {
@@ -747,16 +876,22 @@ body.landing-mode #root {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .landing-proof div {
-    flex-wrap: wrap;
-    justify-content: flex-start;
+  .landing-problem {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-feature,
+  .landing-feature--wide,
+  .landing-feature--wide + .landing-feature--standard,
+  .landing-feature--coach {
+    grid-column: auto;
   }
 }
 
 @media (max-width: 680px) {
   .landing-header,
   .landing-hero,
-  .landing-proof,
+  .landing-problem,
   .landing-section,
   .landing-audience,
   .landing-contact,
@@ -822,19 +957,43 @@ body.landing-mode #root {
     right: 0;
   }
 
-  .landing-proof,
+  .landing-problem,
   .landing-section__heading,
   .landing-contact {
     grid-template-columns: 1fr;
   }
 
-  .landing-proof {
-    gap: 16px;
-    padding-inline: 0;
+  .landing-problem {
+    gap: 10px;
+    padding-top: 10px;
   }
 
-  .landing-proof div {
-    gap: 12px 20px;
+  .landing-problem__copy,
+  .landing-problem__visual {
+    min-height: 0;
+    padding: 26px 24px;
+    border-radius: 22px;
+  }
+
+  .landing-problem__copy h2 {
+    font-size: clamp(2.25rem, 11vw, 3.25rem);
+  }
+
+  .landing-problem__copy > p:last-child {
+    margin-top: 20px;
+  }
+
+  .landing-problem__visual {
+    min-height: 350px;
+  }
+
+  .landing-problem__visual li {
+    padding: 8px 10px;
+    font-size: 0.7rem;
+  }
+
+  .landing-problem__result {
+    padding-top: 48px;
   }
 
   .landing-section {
@@ -868,6 +1027,16 @@ body.landing-mode #root {
   .landing-feature h3 {
     margin: 18px 0 6px;
     font-size: 1.16rem;
+  }
+
+  .landing-feature--wide h3,
+  .landing-feature--coach h3 {
+    font-size: 1.5rem;
+  }
+
+  .landing-feature--coach {
+    min-height: 260px;
+    padding: 24px;
   }
 
   .landing-feature p {

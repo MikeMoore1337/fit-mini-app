@@ -24,23 +24,45 @@ export function appUrlForHostname(hostname: string): string {
 const features = [
   {
     number: '01',
-    title: 'План всегда под рукой',
-    text: 'Расписание, упражнения, подходы и рекомендации собраны в одном понятном пространстве.',
+    label: 'Тренировка на сегодня',
+    title: 'Откройте приложение и сразу переходите к делу',
+    text: 'Упражнения, подходы, повторения, рабочий вес и отдых уже собраны в понятном плане занятия.',
+    variant: 'wide',
   },
   {
     number: '02',
-    title: 'Прогресс без догадок',
-    text: 'История тренировок, рабочие веса, замеры и личные результаты помогают видеть движение к цели.',
+    label: 'Программы',
+    title: 'Выберите путь под свою задачу',
+    text: 'Назначьте себе готовую программу, создайте собственную или занимайтесь по плану тренера.',
+    variant: 'standard',
   },
   {
     number: '03',
-    title: 'Тренер видит главное',
-    text: 'Специалист следит за выполнением программы и вовремя корректирует нагрузку и питание.',
+    label: 'Прогресс',
+    title: 'Принимайте решения по своим результатам',
+    text: 'История тренировок, рабочие веса, личные рекорды и показатели тела помогают видеть динамику.',
+    variant: 'standard',
   },
   {
     number: '04',
-    title: 'Удобно на любом устройстве',
-    text: 'Занимайтесь через Telegram, а данные останутся доступны в едином защищённом аккаунте.',
+    label: 'Питание',
+    title: 'Получите ориентиры КБЖУ',
+    text: 'Рассчитайте калории, белки, жиры и углеводы с учётом параметров, активности и цели.',
+    variant: 'standard',
+  },
+  {
+    number: '05',
+    label: 'Упражнения',
+    title: 'Сверяйтесь с техникой в нужный момент',
+    text: 'Каталог и информация об упражнениях доступны прямо во время работы с программой.',
+    variant: 'standard',
+  },
+  {
+    number: '06',
+    label: 'Для тренеров',
+    title: 'Ведите своих клиентов в одном кабинете',
+    text: 'Приглашайте клиентов, назначайте и корректируйте программы, отслеживайте тренировки, прогресс и показатели каждого человека.',
+    variant: 'coach',
   },
 ];
 
@@ -220,29 +242,52 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section className="landing-proof" aria-label="Преимущества сервиса">
-          <p>Один сервис вместо</p>
-          <div>
-            <span>таблиц</span>
-            <span>заметок</span>
-            <span>разрозненных планов</span>
-            <span>потерянных результатов</span>
+        <section className="landing-problem" aria-labelledby="landing-problem-title">
+          <div className="landing-problem__copy">
+            <p className="landing-kicker">Всё связано</p>
+            <h2 id="landing-problem-title">Тренировки не должны жить в пяти разных местах.</h2>
+            <p>
+              Когда план, записи и результаты разделены, сложнее понять, что делать дальше. Your
+              Fitness Coach связывает весь путь в одну систему.
+            </p>
+          </div>
+          <div
+            className="landing-problem__visual"
+            aria-label="Один сервис вместо разных инструментов"
+          >
+            <ul>
+              <li>Заметки</li>
+              <li>Таблицы</li>
+              <li>Случайные программы</li>
+              <li>Дневник показателей</li>
+              <li>Ручной учёт результатов</li>
+            </ul>
+            <div className="landing-problem__result">
+              <span>Вместо пяти инструментов</span>
+              <strong>Один понятный план действий</strong>
+            </div>
           </div>
         </section>
 
         <section id="features" className="landing-section">
           <div className="landing-section__heading">
-            <p className="landing-kicker">Возможности</p>
-            <h2>Всё необходимое, чтобы тренироваться последовательно</h2>
+            <p className="landing-kicker">От возможностей к результату</p>
+            <h2>Понятные действия для спортсмена и тренера</h2>
             <p>
-              Клиент понимает, что делать сегодня. Тренер видит общую картину и принимает решения на
-              основе результатов.
+              Занимающийся видит следующий шаг и фиксирует результат. Тренер управляет программами
+              своих клиентов и получает общую картину без разрозненных отчётов.
             </p>
           </div>
           <div className="landing-feature-grid">
             {features.map((feature) => (
-              <article className="landing-feature" key={feature.number}>
-                <span>{feature.number}</span>
+              <article
+                className={`landing-feature landing-feature--${feature.variant}`}
+                key={feature.number}
+              >
+                <div className="landing-feature__meta">
+                  <span>{feature.number}</span>
+                  <span>{feature.label}</span>
+                </div>
                 <h3>{feature.title}</h3>
                 <p>{feature.text}</p>
               </article>
