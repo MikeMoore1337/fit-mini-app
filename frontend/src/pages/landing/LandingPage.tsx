@@ -67,13 +67,14 @@ const features = [
 ];
 
 const workflow = [
-  ['Заполните профиль', 'Укажите цель, уровень подготовки и актуальные параметры.'],
-  ['Получите программу', 'Тренер составит план и распределит тренировки по расписанию.'],
   [
-    'Фиксируйте результаты',
-    'Отмечайте выполненные подходы, вес и повторения прямо во время занятия.',
+    'Откройте приложение',
+    'В браузере или Telegram — используйте тот способ, который удобен сейчас.',
   ],
-  ['Двигайтесь дальше', 'Следите за динамикой вместе с тренером и адаптируйте план.'],
+  ['Расскажите о себе', 'Укажите цель, уровень подготовки и основные параметры.'],
+  ['Выберите свой путь', 'Готовая программа, собственный план или работа вместе с тренером.'],
+  ['Тренируйтесь и фиксируйте', 'Подходы, повторения и рабочие веса сохраняются по ходу занятия.'],
+  ['Следите за прогрессом', 'История и показатели помогают оценивать динамику и менять план.'],
 ];
 
 export default function LandingPage() {
@@ -301,7 +302,11 @@ export default function LandingPage() {
         <section id="how-it-works" className="landing-section landing-workflow">
           <div className="landing-section__heading landing-section__heading--light">
             <p className="landing-kicker">Как это работает</p>
-            <h2>От цели до измеримого результата</h2>
+            <h2>От цели до понятного следующего шага</h2>
+            <p>
+              Начните самостоятельно или подключите тренера — базовый путь остаётся простым и
+              последовательным.
+            </p>
           </div>
           <ol>
             {workflow.map(([title, text], index) => (
@@ -314,6 +319,57 @@ export default function LandingPage() {
               </li>
             ))}
           </ol>
+        </section>
+
+        <section className="landing-platforms" aria-labelledby="landing-platforms-title">
+          <div className="landing-platforms__intro">
+            <p className="landing-kicker">Web + Telegram</p>
+            <h2 id="landing-platforms-title">Один аккаунт. Два способа открыть.</h2>
+            <p>
+              План тренировок, история и прогресс не зависят от того, где вы открыли приложение.
+              Выберите подходящий экран для текущей задачи.
+            </p>
+          </div>
+
+          <div className="landing-platforms__options">
+            <article className="landing-platform-card">
+              <div className="landing-platform-card__top">
+                <span className="landing-platform-card__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <rect x="3" y="4" width="18" height="14" rx="2" />
+                    <path d="M8 21h8M12 18v3" />
+                  </svg>
+                </span>
+                <span>Браузер</span>
+              </div>
+              <h3>Когда нужен большой экран</h3>
+              <p>Удобно настраивать программы, заполнять профиль и разбирать динамику.</p>
+            </article>
+
+            <div className="landing-platforms__sync" aria-label="Данные синхронизируются">
+              <span aria-hidden="true">↔</span>
+              <strong>Общие данные</strong>
+            </div>
+
+            <article className="landing-platform-card landing-platform-card--telegram">
+              <div className="landing-platform-card__top">
+                <span className="landing-platform-card__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="m21 4-8.2 16-3.1-7.1L3 9.8 21 4Z" />
+                    <path d="m9.7 12.9 4.8-4.3" />
+                  </svg>
+                </span>
+                <span>Telegram</span>
+              </div>
+              <h3>Когда тренировка уже началась</h3>
+              <p>Удобно открыть занятие в зале, отмечать подходы и следить за отдыхом.</p>
+            </article>
+          </div>
+
+          <p className="landing-platforms__note">
+            Отдельная установка не требуется <span aria-hidden="true">·</span> прогресс остаётся в
+            одном аккаунте
+          </p>
         </section>
 
         <section className="landing-audience">

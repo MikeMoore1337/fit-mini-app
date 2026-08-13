@@ -86,6 +86,38 @@ test('блок возможностей показывает пользу спо
   }
 });
 
+test('сценарий и платформы остаются понятными на разных экранах', async ({ page }) => {
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 768, height: 900 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/');
+
+    await expect(page.locator('.landing-workflow li')).toHaveCount(5);
+    await expect(page.getByRole('heading', { name: 'Выберите свой путь' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: /один аккаунт.*два способа открыть/i }),
+    ).toBeVisible();
+    await expect(page.getByRole('heading', { name: /когда нужен большой экран/i })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: /когда тренировка уже началась/i }),
+    ).toBeVisible();
+
+    const browserCard = await page.locator('.landing-platform-card').first().boundingBox();
+    const telegramCard = await page.locator('.landing-platform-card').last().boundingBox();
+    expect(browserCard).not.toBeNull();
+    expect(telegramCard).not.toBeNull();
+    if (viewport.width >= 768) {
+      expect(browserCard!.x + browserCard!.width).toBeLessThan(telegramCard!.x);
+    } else {
+      expect(browserCard!.y + browserCard!.height).toBeLessThan(telegramCard!.y);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
+  }
+});
+
 async function mockApi(page: Page, { withCoachClient = false } = {}) {
   let role: 'client' | 'coach' | 'admin' = 'client';
   const heartRateZones = [
