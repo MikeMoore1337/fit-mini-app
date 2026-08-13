@@ -73,86 +73,94 @@ export function AccountPrivacy() {
 
   return (
     <>
-      <Card
-        title="Способы входа"
-        description="Привяжите дополнительные способы входа, чтобы открывать один профиль в браузере и Telegram."
-      >
-        <div className="list-row top-gap">
-          <div className="list-row__main">
-            <strong>Telegram</strong>
-            <span className="muted">
-              {user?.telegram_user_id
-                ? 'Подключён к текущему аккаунту.'
-                : 'Привязка выполняется одноразовой ссылкой и действует 10 минут.'}
-            </span>
-          </div>
-          <div className="list-row__actions">
-            {user?.telegram_user_id ? (
-              <Badge>Привязан</Badge>
-            ) : telegramLinkMutation.data ? (
-              <a
-                className="button-link"
-                href={telegramLinkMutation.data.telegram_url}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Открыть Telegram
-              </a>
-            ) : (
-              <button
-                type="button"
-                className="secondary"
-                disabled={telegramLinkMutation.isPending}
-                onClick={() => telegramLinkMutation.mutate()}
-              >
-                {telegramLinkMutation.isPending ? 'Создаём ссылку…' : 'Привязать Telegram'}
-              </button>
-            )}
-          </div>
-        </div>
-        {!user?.telegram_user_id && (
-          <p className="muted top-gap">
-            Если Telegram уже принадлежит другому аккаунту, автоматическое объединение будет
-            заблокировано.
-          </p>
-        )}
-        {availableOAuthProviders.map((provider) => {
-          const label = providerLabels[provider];
-          const pending = oauthLinkMutation.isPending && oauthLinkMutation.variables === provider;
-          const createdLink =
-            oauthLinkMutation.data?.provider === provider ? oauthLinkMutation.data.link : null;
-          return (
-            <div className="list-row top-gap" key={provider}>
-              <div className="list-row__main">
-                <strong>{label}</strong>
-                <span className="muted">
-                  {linkedProviders.has(provider)
-                    ? 'Подключён к текущему аккаунту.'
-                    : 'После подтверждения можно будет входить этим способом в тот же профиль.'}
-                </span>
-              </div>
-              <div className="list-row__actions">
-                {linkedProviders.has(provider) ? (
-                  <Badge>Привязан</Badge>
-                ) : createdLink ? (
-                  <a className="button-link" href={createdLink.oauth_url}>
-                    Продолжить с {label}
-                  </a>
-                ) : (
-                  <button
-                    type="button"
-                    className="secondary"
-                    disabled={oauthLinkMutation.isPending}
-                    onClick={() => oauthLinkMutation.mutate(provider)}
-                  >
-                    {pending ? 'Готовим переход…' : `Привязать ${label}`}
-                  </button>
-                )}
-              </div>
+      <details className="card profile-disclosure">
+        <summary>
+          <span>
+            <strong>Способы входа</strong>
+            <small>
+              Привяжите дополнительные способы входа, чтобы открывать один профиль в браузере и
+              Telegram.
+            </small>
+          </span>
+        </summary>
+        <div className="profile-disclosure__body">
+          <div className="list-row">
+            <div className="list-row__main">
+              <strong>Telegram</strong>
+              <span className="muted">
+                {user?.telegram_user_id
+                  ? 'Подключён к текущему аккаунту.'
+                  : 'Привязка выполняется одноразовой ссылкой и действует 10 минут.'}
+              </span>
             </div>
-          );
-        })}
-      </Card>
+            <div className="list-row__actions">
+              {user?.telegram_user_id ? (
+                <Badge>Привязан</Badge>
+              ) : telegramLinkMutation.data ? (
+                <a
+                  className="button-link"
+                  href={telegramLinkMutation.data.telegram_url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Открыть Telegram
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={telegramLinkMutation.isPending}
+                  onClick={() => telegramLinkMutation.mutate()}
+                >
+                  {telegramLinkMutation.isPending ? 'Создаём ссылку…' : 'Привязать Telegram'}
+                </button>
+              )}
+            </div>
+          </div>
+          {!user?.telegram_user_id && (
+            <p className="muted">
+              Если Telegram уже принадлежит другому аккаунту, автоматическое объединение будет
+              заблокировано.
+            </p>
+          )}
+          {availableOAuthProviders.map((provider) => {
+            const label = providerLabels[provider];
+            const pending = oauthLinkMutation.isPending && oauthLinkMutation.variables === provider;
+            const createdLink =
+              oauthLinkMutation.data?.provider === provider ? oauthLinkMutation.data.link : null;
+            return (
+              <div className="list-row" key={provider}>
+                <div className="list-row__main">
+                  <strong>{label}</strong>
+                  <span className="muted">
+                    {linkedProviders.has(provider)
+                      ? 'Подключён к текущему аккаунту.'
+                      : 'После подтверждения можно будет входить этим способом в тот же профиль.'}
+                  </span>
+                </div>
+                <div className="list-row__actions">
+                  {linkedProviders.has(provider) ? (
+                    <Badge>Привязан</Badge>
+                  ) : createdLink ? (
+                    <a className="button-link" href={createdLink.oauth_url}>
+                      Продолжить с {label}
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      className="secondary"
+                      disabled={oauthLinkMutation.isPending}
+                      onClick={() => oauthLinkMutation.mutate(provider)}
+                    >
+                      {pending ? 'Готовим переход…' : `Привязать ${label}`}
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </details>
 
       <Card title="Данные и аккаунт" description="Скачайте копию данных или удалите аккаунт.">
         <div className="toolbar wrap top-gap">
