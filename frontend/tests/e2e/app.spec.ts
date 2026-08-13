@@ -21,6 +21,25 @@ test('логотип и кнопки в шапке имеют одинакову
   }
 });
 
+test('первый экран лендинга объясняет продукт и не создаёт горизонтальный скролл', async ({
+  page,
+}) => {
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/');
+
+    await expect(page.getByRole('heading', { name: /знайте, что делать сегодня/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /открыть приложение/i })).toBeVisible();
+    await expect(page.getByLabel('Пример интерфейса тренировки на сегодня')).toBeVisible();
+    await expect(page.getByText('Жим гантелей лёжа')).toBeVisible();
+    await expect(page.getByText('+18%')).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
+  }
+});
+
 async function mockApi(page: Page, { withCoachClient = false } = {}) {
   let role: 'client' | 'coach' | 'admin' = 'client';
   const heartRateZones = [
