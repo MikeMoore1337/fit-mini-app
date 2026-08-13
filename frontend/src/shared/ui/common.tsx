@@ -6,7 +6,7 @@ export function Card({
   actions,
   children,
   className = '',
-  collapsible = true,
+  collapsible = false,
 }: {
   title?: string;
   description?: string;
