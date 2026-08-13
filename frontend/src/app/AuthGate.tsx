@@ -43,6 +43,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   return (
     <main className="container auth-page">
       <Card
+        collapsible={false}
         className="auth-panel auth-panel--branded"
         title="Вход в Your Fitness Coach"
         description={

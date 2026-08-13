@@ -29,6 +29,7 @@ export default function ResetPasswordPage() {
   return (
     <main className="container narrow">
       <Card
+        collapsible={false}
         className="auth-panel"
         title="Новый пароль"
         description="Создайте новый пароль длиной не менее 12 символов."

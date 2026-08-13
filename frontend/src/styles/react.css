@@ -588,11 +588,13 @@ select:not([multiple]) {
   accent-color: var(--accent);
 }
 .profile-disclosure,
-.coach-data-disclosure {
+.coach-data-disclosure,
+.card-disclosure {
   overflow: visible;
 }
 .profile-disclosure > summary,
-.coach-data-disclosure > summary {
+.coach-data-disclosure > summary,
+.card-disclosure > summary {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -600,22 +602,26 @@ select:not([multiple]) {
   list-style: none;
 }
 .profile-disclosure > summary::-webkit-details-marker,
-.coach-data-disclosure > summary::-webkit-details-marker {
+.coach-data-disclosure > summary::-webkit-details-marker,
+.card-disclosure > summary::-webkit-details-marker {
   display: none;
 }
 .profile-disclosure > summary > span:first-child,
-.coach-data-disclosure > summary > span:first-child {
+.coach-data-disclosure > summary > span:first-child,
+.card-disclosure > summary > span:first-child {
   display: grid;
   flex: 1;
   gap: 3px;
   min-width: 0;
 }
 .profile-disclosure > summary strong,
-.coach-data-disclosure > summary strong {
+.coach-data-disclosure > summary strong,
+.card-disclosure > summary strong {
   font-size: 1.1rem;
 }
 .profile-disclosure > summary small,
-.coach-data-disclosure > summary small {
+.coach-data-disclosure > summary small,
+.card-disclosure > summary small {
   color: var(--muted);
 }
 .disclosure-icon {
@@ -639,16 +645,23 @@ select:not([multiple]) {
   stroke-width: 1.5;
 }
 .profile-disclosure[open] > summary .disclosure-icon__vertical,
-.coach-data-disclosure[open] > summary .disclosure-icon__vertical {
+.coach-data-disclosure[open] > summary .disclosure-icon__vertical,
+.card-disclosure[open] > summary .disclosure-icon__vertical {
   opacity: 0;
 }
 .profile-disclosure__body,
-.coach-data-disclosure__body {
+.coach-data-disclosure__body,
+.card-disclosure__body {
   display: grid;
   gap: 12px;
   margin-top: 14px;
   padding-top: 14px;
   border-top: 1px solid var(--border);
+}
+.card-disclosure__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 12px;
 }
 
 /* Компактные карточки */

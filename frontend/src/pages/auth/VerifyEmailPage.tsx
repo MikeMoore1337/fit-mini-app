@@ -28,6 +28,7 @@ export default function VerifyEmailPage() {
   return (
     <main className="container narrow">
       <Card
+        collapsible={false}
         className="auth-panel"
         title="Подтверждение email"
         description="После подтверждения вы войдёте в Your Fitness Coach."
