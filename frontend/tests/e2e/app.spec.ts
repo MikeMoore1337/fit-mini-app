@@ -1,5 +1,14 @@
 import { expect, test, type Page } from '@playwright/test';
 
+async function openCard(page: Page, title: string) {
+  const card = page
+    .getByRole('heading', { name: title, exact: true })
+    .locator('xpath=ancestor::details[1]');
+  await expect(card).not.toHaveAttribute('open');
+  await card.locator(':scope > summary').click();
+  await expect(card).toHaveAttribute('open');
+}
+
 test('логотип и кнопки в шапке имеют одинаковую высоту', async ({ page }) => {
   for (const viewport of [
     { width: 1440, height: 900 },
@@ -597,6 +606,7 @@ test('клиент входит и видит экран тренировки', 
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
   await expect(page.getByRole('heading', { name: 'Демо пользователь' })).toBeVisible();
+  await openCard(page, 'Тренировка сегодня');
   await expect(page.getByText('Сегодня отдых')).toBeVisible();
 });
 
@@ -644,6 +654,7 @@ test('deep link показывает тренера до явного подтв
   await page.goto('/app?startapp=trainer_test-invite-token');
   await page.getByRole('button', { name: 'Клиент' }).click();
 
+  await openCard(page, 'Мой тренер');
   await expect(page.getByRole('heading', { name: 'Тестовый тренер' })).toBeVisible();
   await page.getByRole('button', { name: 'Подтвердить подключение' }).click();
   await expect(page.getByText('Тренер подключён')).toBeVisible();
@@ -659,6 +670,7 @@ test('мобильный интерфейс не обрезает навигац
   await expect(tabs).toHaveCount(6);
   for (const tab of await tabs.all()) await expect(tab).toBeInViewport();
 
+  await openCard(page, 'План запуска');
   const firstStep = page.getByRole('button', { name: /Заполнить профиль/ });
   const title = firstStep.getByText('Заполнить профиль', { exact: true });
   const description = firstStep.getByText('Дата рождения, цель, уровень и текущий вес', {
@@ -687,6 +699,8 @@ test('профиль содержит уведомления, а карточк�
   await page.getByRole('button', { name: 'Клиент' }).click();
 
   await page.getByRole('tab', { name: 'Профиль' }).click();
+  await openCard(page, 'Профиль');
+  await openCard(page, 'Напоминания о тренировках');
   await expect(page.getByRole('heading', { name: 'Напоминания о тренировках' })).toBeVisible();
   await expect(page.getByText('Личные уведомления')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Подписка' })).toHaveCount(0);
@@ -748,6 +762,7 @@ test('профиль содержит уведомления, а карточк�
   await expect(page.getByRole('heading', { name: 'Напоминания о тренировках' })).toHaveCount(0);
 
   await page.getByRole('tab', { name: 'Упражнения' }).click();
+  await openCard(page, 'Каталог упражнений');
   await page.getByRole('button', { name: 'Техника' }).click();
   await expect(page.getByRole('heading', { name: 'Для чего это упражнение' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Какие мышцы работают' })).toBeVisible();
@@ -774,6 +789,7 @@ test('описание упражнения использует широкую 
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
   await page.getByRole('tab', { name: 'Упражнения' }).click();
+  await openCard(page, 'Каталог упражнений');
   await page.getByRole('button', { name: 'Техника' }).click();
 
   const guidePanel = page.locator('.exercise-guide-modal__panel');
@@ -792,6 +808,7 @@ test('клиент подаёт заявку на роль тренера из �
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
   await page.getByRole('tab', { name: 'Профиль' }).click();
+  await openCard(page, 'Стать тренером');
 
   await page.getByRole('button', { name: 'Стать тренером' }).click();
   await page.getByRole('button', { name: 'Отправить заявку' }).click();
@@ -808,6 +825,7 @@ test('рекомендация кардио меняется с целью, а �
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
   await page.getByRole('tab', { name: 'Профиль' }).click();
+  await openCard(page, 'Профиль');
 
   await page.getByLabel('Дата рождения').fill('1992-08-12');
   await page.getByText('Средний пульс в покое, уд/мин').locator('..').locator('input').fill('75');
@@ -838,6 +856,7 @@ test('поля профиля и питания выровнены на деск
   await page.getByRole('button', { name: 'Клиент' }).click();
 
   await page.getByRole('tab', { name: 'Профиль' }).click();
+  await openCard(page, 'Профиль');
   const profileControlTops = await page.locator('.profile-form-grid').evaluate((grid) =>
     Array.from(grid.querySelectorAll<HTMLElement>(':scope > .field'))
       .slice(6)
@@ -849,6 +868,7 @@ test('поля профиля и питания выровнены на деск
   expect(new Set(profileControlTops.map(Math.round)).size).toBe(1);
 
   await page.getByRole('tab', { name: 'Питание' }).click();
+  await openCard(page, 'КБЖУ');
   const nutritionControlTops = await page
     .locator('.nutrition-form-grid')
     .first()
@@ -886,6 +906,7 @@ test('поля адаптируются к разным iPhone, а пример 
   await page.getByRole('button', { name: 'Клиент' }).click();
 
   await page.getByRole('tab', { name: 'Прогресс' }).click();
+  await openCard(page, 'Дневник замеров');
   const dateField = page.getByLabel('Дата');
   const weightField = page.getByLabel('Вес, кг');
   const diaryGrid = page.locator('.diary-form-grid');
@@ -911,6 +932,7 @@ test('поля адаптируются к разным iPhone, а пример 
   );
 
   await page.getByRole('tab', { name: 'Питание' }).click();
+  await openCard(page, 'КБЖУ');
   expect(
     await page.evaluate(() => ({
       viewport: document.documentElement.clientWidth,
@@ -921,6 +943,7 @@ test('поля адаптируются к разным iPhone, а пример 
   expect(await page.evaluate(() => window.scrollX)).toBe(0);
 
   await page.getByRole('tab', { name: 'Упражнения' }).click();
+  await openCard(page, 'Каталог упражнений');
   const search = page.getByRole('combobox', { name: 'Поиск в каталоге упражнений' });
   await search.focus();
   await expect(page.getByRole('option', { name: /Тяга блока/ })).toBeVisible();
@@ -937,6 +960,7 @@ test('поля адаптируются к разным iPhone, а пример 
   );
 
   await page.getByRole('tab', { name: 'Программы' }).click();
+  await openCard(page, 'Мои программы');
   const example = page.getByRole('button', {
     name: 'Посмотреть пример программы «Программа на всё тело — 3 дня»',
   });
@@ -991,6 +1015,7 @@ test('сенсорное поле даты сохраняет нативный �
     await page.goto('/app');
     await page.getByRole('button', { name: 'Клиент' }).click();
     await page.getByRole('tab', { name: 'Прогресс' }).click();
+    await openCard(page, 'Дневник замеров');
 
     const dateField = page.getByLabel('Дата');
     const dateControl = page.locator('.diary-date-control');
@@ -1021,10 +1046,9 @@ test('сенсорное поле даты сохраняет нативный �
         once: true,
       });
     });
-    await page.mouse.click(
-      dateControlBox!.x + dateControlBox!.width - 14,
-      dateControlBox!.y + dateControlBox!.height / 2,
-    );
+    await dateField.click({
+      position: { x: dateControlBox!.width - 14, y: dateControlBox!.height / 2 },
+    });
     await expect(dateField).toHaveAttribute('data-picker-clicked', 'true');
   } finally {
     await context.close();
@@ -1036,8 +1060,10 @@ test('администратор открывает React-панель', async (
   await page.goto('/admin');
   await page.getByRole('button', { name: 'Админ' }).click();
   await expect(page.getByRole('heading', { name: 'Панель администратора' })).toBeVisible();
+  await openCard(page, 'Пользователи');
   await expect(page.getByText('Пользователи не найдены')).toBeVisible();
   await page.getByRole('tab', { name: 'Заявки тренеров' }).click();
+  await openCard(page, 'Заявки на роль тренера');
   await expect(page.getByText('Будущий тренер')).toBeVisible();
   await page.getByRole('button', { name: 'Одобрить' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Одобрить' }).click();
@@ -1086,5 +1112,6 @@ test('тренер открывает кабинет', async ({ page }) => {
   await page.goto('/coach');
   await page.getByRole('button', { name: 'Тренер' }).click();
   await expect(page.getByRole('heading', { name: 'Кабинет тренера' })).toBeVisible();
+  await openCard(page, 'Клиенты');
   await expect(page.getByText('Клиентов пока нет')).toBeVisible();
 });

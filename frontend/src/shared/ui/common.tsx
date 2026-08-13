@@ -21,7 +21,7 @@ export function Card({
       <details className={`card card-disclosure ${className}`.trim()}>
         <summary>
           <span>
-            {title && <strong>{title}</strong>}
+            {title && <h2>{title}</h2>}
             {description && <small>{description}</small>}
           </span>
           <DisclosureIcon />
