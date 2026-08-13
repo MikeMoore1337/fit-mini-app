@@ -1,3 +1,4 @@
+from fitminiapp_api.api.v1.me import _build_user_response
 from fitminiapp_api.db.performance import (
     begin_sql_metrics,
     current_sql_metrics,
@@ -75,3 +76,18 @@ def test_coach_client_list_query_count_is_constant() -> None:
     assert len(result) == 25
     assert metrics.query_count == 4
     assert result[-1]["kbju"].assigned_by.full_name == "Scale Coach"
+
+
+def test_me_response_needs_four_queries_after_authentication() -> None:
+    with get_session_context() as db:
+        user = db.query(User).filter(User.telegram_user_id == 2001).one()
+        token = begin_sql_metrics()
+        try:
+            response = _build_user_response(db, user)
+            metrics = current_sql_metrics()
+        finally:
+            reset_sql_metrics(token)
+
+    assert response.telegram_user_id == 2001
+    assert response.auth_providers == ["telegram"]
+    assert metrics.query_count == 4
