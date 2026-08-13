@@ -78,14 +78,17 @@ describe('LandingPage', () => {
     expect(screen.getByRole('heading', { name: 'Выберите свой путь' })).toBeInTheDocument();
     expect(
       screen.getByRole('heading', {
-        name: /основная работа.*в браузере.*telegram.*когда удобнее/i,
+        name: /открывайте на компьютере и смартфоне.*telegram.*когда удобнее/i,
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { name: /основные функции.*в браузере/i }),
+      screen.getByRole('heading', { name: /планируйте на большом экране/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { name: /тренировка и общение.*в telegram/i }),
+      screen.getByRole('heading', { name: /тренируйтесь прямо из браузера/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /продолжайте в telegram mini app/i }),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/для самостоятельных тренировок telegram не нужен/i),
@@ -98,9 +101,11 @@ describe('LandingPage', () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/вы тренер/i)).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { name: /приглашайте клиентов и ведите их в одном кабинете/i }),
+      screen.getByRole('heading', { name: /подайте заявку и откройте кабинет тренера/i }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/для старта не нужны установка и telegram/i)).toBeInTheDocument();
+    expect(screen.getByText(/нажмите «стать тренером» в профиле/i)).toBeInTheDocument();
+    expect(screen.getByText(/писать администратору отдельно не нужно/i)).toBeInTheDocument();
+    expect(screen.getByText(/один аккаунт на компьютере и смартфоне/i)).toBeInTheDocument();
     expect(screen.queryByText(/тариф/i)).not.toBeInTheDocument();
     expect(screen.queryByText('+18%')).not.toBeInTheDocument();
     expect(screen.queryByText('12', { exact: true })).not.toBeInTheDocument();
@@ -131,7 +136,7 @@ describe('LandingPage', () => {
       'href',
       '/app',
     );
-    expect(screen.getByRole('link', { name: /открыть кабинет тренера/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /войти и подать заявку/i })).toHaveAttribute(
       'href',
       '/app',
     );

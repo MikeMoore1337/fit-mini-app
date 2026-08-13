@@ -61,7 +61,7 @@ const features = [
     number: '06',
     label: 'Для тренеров',
     title: 'Ведите своих клиентов в одном кабинете',
-    text: 'Приглашайте клиентов, назначайте и корректируйте программы, отслеживайте тренировки, прогресс и показатели каждого человека.',
+    text: 'После одобрения заявки приглашайте клиентов, назначайте и корректируйте программы, отслеживайте тренировки, прогресс и показатели каждого человека.',
     variant: 'coach',
   },
 ];
@@ -175,8 +175,8 @@ export default function LandingPage() {
               </a>
             </div>
             <p className="landing-hero__note">
-              Начните в браузере <span aria-hidden="true">·</span> Telegram можно подключить для
-              тренировок в зале и общения с тренером
+              Один аккаунт на компьютере и смартфоне <span aria-hidden="true">·</span> Telegram
+              можно подключить для тренировок в зале и общения с тренером
             </p>
           </div>
 
@@ -328,13 +328,14 @@ export default function LandingPage() {
 
         <section className="landing-platforms" aria-labelledby="landing-platforms-title">
           <div className="landing-platforms__intro">
-            <p className="landing-kicker">Продолжайте в Telegram</p>
+            <p className="landing-kicker">Работает на ваших устройствах</p>
             <h2 id="landing-platforms-title">
-              Основная работа — в браузере. Telegram — когда удобнее.
+              Открывайте на компьютере и смартфоне. Продолжайте в Telegram, когда удобнее.
             </h2>
             <p>
-              Тренировки, программы и прогресс доступны в веб-приложении. Telegram дополняет его
-              быстрым доступом к занятию и внешним каналом общения с тренером.
+              Устанавливать отдельную программу не нужно: веб-приложение работает в браузере на
+              большом и мобильном экране. Telegram Mini App остаётся дополнительным способом открыть
+              те же данные.
             </p>
           </div>
 
@@ -347,23 +348,31 @@ export default function LandingPage() {
                     <path d="M8 21h8M12 18v3" />
                   </svg>
                 </span>
-                <span>Основное приложение</span>
+                <span>ПК или ноутбук</span>
               </div>
-              <h3>Основные функции — в браузере</h3>
+              <h3>Планируйте на большом экране</h3>
               <p>
-                Настраивайте программы, выполняйте тренировки и анализируйте прогресс с телефона или
-                компьютера.
+                Настраивайте программы, заполняйте профиль и разбирайте динамику в обычном
+                веб-приложении.
               </p>
             </article>
 
-            <div className="landing-platforms__sync" aria-label="Данные синхронизируются">
-              <span className="landing-flow-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M4 8h16m-3-3 3 3-3 3M20 16H4m3-3-3 3 3 3" />
-                </svg>
-              </span>
-              <strong>Один аккаунт</strong>
-            </div>
+            <article className="landing-platform-card landing-platform-card--mobile">
+              <div className="landing-platform-card__top">
+                <span className="landing-platform-card__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <rect x="6" y="2" width="12" height="20" rx="2" />
+                    <path d="M10 18h4" />
+                  </svg>
+                </span>
+                <span>Смартфон</span>
+              </div>
+              <h3>Тренируйтесь прямо из браузера</h3>
+              <p>
+                Открывайте занятие в мобильном браузере, отмечайте подходы и следите за таймером без
+                отдельной установки.
+              </p>
+            </article>
 
             <article className="landing-platform-card landing-platform-card--telegram">
               <div className="landing-platform-card__top">
@@ -375,18 +384,28 @@ export default function LandingPage() {
                 </span>
                 <span>Дополнение</span>
               </div>
-              <h3>Тренировка и общение — в Telegram</h3>
+              <h3>Продолжайте в Telegram Mini App</h3>
               <p>
-                Открывайте занятие в зале, отмечайте подходы и переходите к переписке со своим
-                тренером в Telegram.
+                Открывайте то же занятие внутри Telegram и переходите к переписке со своим тренером.
               </p>
             </article>
           </div>
 
-          <p className="landing-platforms__note">
-            Для самостоятельных тренировок Telegram не нужен <span aria-hidden="true">·</span>{' '}
-            общение с тренером происходит в Telegram
-          </p>
+          <div className="landing-platforms__sync" aria-label="Данные синхронизируются">
+            <span className="landing-flow-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M4 8h16m-3-3 3 3-3 3M20 16H4m3-3-3 3 3 3" />
+              </svg>
+            </span>
+            <p>
+              <strong>Один аккаунт и общие данные</strong>
+              <span>
+                Начните на ноутбуке, продолжите со смартфона — программа и прогресс останутся на
+                месте. Для самостоятельных тренировок Telegram не нужен; общение с тренером
+                происходит в Telegram.
+              </span>
+            </p>
+          </div>
         </section>
 
         <section className="landing-audience" aria-label="Выберите подходящий сценарий">
@@ -403,13 +422,14 @@ export default function LandingPage() {
           </article>
           <article>
             <p className="landing-kicker">Вы тренер?</p>
-            <h2>Приглашайте клиентов и ведите их в одном кабинете</h2>
+            <h2>Подайте заявку и откройте кабинет тренера</h2>
             <p>
-              Клиент подключается по вашей ссылке. Назначайте программы, следите за выполнением и
-              прогрессом, а для переписки переходите в Telegram.
+              Войдите в приложение как обычный пользователь и нажмите «Стать тренером» в профиле.
+              После одобрения заявки сможете приглашать клиентов, назначать программы и следить за
+              прогрессом.
             </p>
             <a className="landing-button landing-audience__link" href={appUrl}>
-              Открыть кабинет тренера <span aria-hidden="true">↗</span>
+              Войти и подать заявку <span aria-hidden="true">↗</span>
             </a>
           </article>
         </section>
@@ -419,7 +439,8 @@ export default function LandingPage() {
             <p className="landing-kicker">Начните в браузере</p>
             <h2>Откройте Your Fitness Coach и выберите свой путь</h2>
             <p>
-              Зарегистрируйтесь как спортсмен или тренер. Для старта не нужны установка и Telegram.
+              Создайте обычный аккаунт и начните тренироваться. Если хотите вести клиентов, подайте
+              заявку на роль тренера в разделе «Профиль» — писать администратору отдельно не нужно.
             </p>
           </div>
           <div className="landing-contact__actions">

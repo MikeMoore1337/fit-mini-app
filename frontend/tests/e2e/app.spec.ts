@@ -116,17 +116,22 @@ test('сценарий и платформы остаются понятными
 
     await expect(page.locator('.landing-workflow li')).toHaveCount(5);
     await expect(page.getByRole('heading', { name: 'Откройте веб-приложение' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Выберите свой путь' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Выберите свой путь', exact: true }),
+    ).toBeVisible();
     await expect(
       page.getByRole('heading', {
-        name: /основная работа.*в браузере.*telegram.*когда удобнее/i,
+        name: /открывайте на компьютере и смартфоне.*telegram.*когда удобнее/i,
       }),
     ).toBeVisible();
     await expect(
-      page.getByRole('heading', { name: /основные функции.*в браузере/i }),
+      page.getByRole('heading', { name: /планируйте на большом экране/i }),
     ).toBeVisible();
     await expect(
-      page.getByRole('heading', { name: /тренировка и общение.*в telegram/i }),
+      page.getByRole('heading', { name: /тренируйтесь прямо из браузера/i }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: /продолжайте в telegram mini app/i }),
     ).toBeVisible();
     await expect(page.getByText(/для самостоятельных тренировок telegram не нужен/i)).toBeVisible();
     await expect(page.getByText(/общение с тренером происходит в telegram/i)).toBeVisible();
@@ -154,14 +159,20 @@ test('сценарий и платформы остаются понятными
       Math.abs(syncSvgBox!.y + syncSvgBox!.height / 2 - (syncIconBox!.y + syncIconBox!.height / 2)),
     ).toBeLessThanOrEqual(1);
 
-    const browserCard = await page.locator('.landing-platform-card').first().boundingBox();
-    const telegramCard = await page.locator('.landing-platform-card').last().boundingBox();
+    const platformCards = page.locator('.landing-platform-card');
+    await expect(platformCards).toHaveCount(3);
+    const browserCard = await platformCards.first().boundingBox();
+    const mobileCard = await platformCards.nth(1).boundingBox();
+    const telegramCard = await platformCards.last().boundingBox();
     expect(browserCard).not.toBeNull();
+    expect(mobileCard).not.toBeNull();
     expect(telegramCard).not.toBeNull();
     if (viewport.width >= 768) {
-      expect(browserCard!.x + browserCard!.width).toBeLessThan(telegramCard!.x);
+      expect(browserCard!.x + browserCard!.width).toBeLessThan(mobileCard!.x);
+      expect(mobileCard!.x + mobileCard!.width).toBeLessThan(telegramCard!.x);
     } else {
-      expect(browserCard!.y + browserCard!.height).toBeLessThan(telegramCard!.y);
+      expect(browserCard!.y + browserCard!.height).toBeLessThan(mobileCard!.y);
+      expect(mobileCard!.y + mobileCard!.height).toBeLessThan(telegramCard!.y);
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
   }
@@ -184,10 +195,11 @@ test('сценарии спортсмена и тренера ведут в ве
       'href',
       '/app',
     );
-    await expect(page.getByRole('link', { name: /открыть кабинет тренера/i })).toHaveAttribute(
+    await expect(page.getByRole('link', { name: /войти и подать заявку/i })).toHaveAttribute(
       'href',
       '/app',
     );
+    await expect(page.getByText(/нажмите «стать тренером» в профиле/i)).toBeVisible();
     await expect(page.getByRole('link', { name: /перейти в веб-приложение/i })).toHaveAttribute(
       'href',
       '/app',
