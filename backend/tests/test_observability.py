@@ -4,8 +4,10 @@ import sys
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 
 from fitminiapp_api.core.logging_config import JsonFormatter
+from fitminiapp_api.db.session import engine
 from fitminiapp_api.middleware.request_context import RequestContextMiddleware
 
 
@@ -24,6 +26,11 @@ def test_json_formatter_includes_request_context() -> None:
     record.path = "/api/v1/me"
     record.status_code = 200
     record.duration_ms = 12.345
+    record.sql_query_count = 7
+    record.sql_duration_ms = 4.321
+    record.db_pool_size = 10
+    record.db_pool_checked_out = 1
+    record.db_pool_overflow = 0
 
     payload = json.loads(JsonFormatter(service="api").format(record))
 
@@ -34,6 +41,11 @@ def test_json_formatter_includes_request_context() -> None:
     assert payload["path"] == "/api/v1/me"
     assert payload["status_code"] == 200
     assert payload["duration_ms"] == 12.345
+    assert payload["sql_query_count"] == 7
+    assert payload["sql_duration_ms"] == 4.321
+    assert payload["db_pool_size"] == 10
+    assert payload["db_pool_checked_out"] == 1
+    assert payload["db_pool_overflow"] == 0
 
 
 def test_json_formatter_redacts_configured_secrets_urls_and_exception() -> None:
@@ -86,3 +98,26 @@ def test_request_log_has_duration_and_health_probes_are_quiet(caplog) -> None:
     assert records[0].path == "/example"
     assert records[0].status_code == 200
     assert records[0].duration_ms >= 0
+    assert records[0].sql_query_count == 0
+    assert records[0].sql_duration_ms == 0
+    assert records[0].db_pool_checked_out >= 0
+
+
+def test_request_log_includes_sql_metrics_from_sync_endpoint(caplog) -> None:
+    test_app = FastAPI()
+    test_app.add_middleware(RequestContextMiddleware)
+
+    @test_app.get("/database-example")
+    def database_example() -> dict[str, str]:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+        return {"status": "ok"}
+
+    with TestClient(test_app) as test_client, caplog.at_level(logging.INFO, logger="app.http"):
+        response = test_client.get("/database-example")
+
+    assert response.status_code == 200
+    records = [record for record in caplog.records if record.name == "app.http"]
+    assert len(records) == 1
+    assert records[0].sql_query_count == 1
+    assert records[0].sql_duration_ms >= 0

@@ -4,6 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from fitminiapp_api.core.config import settings
+from fitminiapp_api.db.performance import install_sql_metrics
 
 is_sqlite = settings.database_url.startswith("sqlite")
 connect_args = {"check_same_thread": False} if is_sqlite else {}
@@ -24,6 +25,7 @@ engine = create_engine(
     connect_args=connect_args,
     **engine_options,
 )
+install_sql_metrics(engine)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
 
 
