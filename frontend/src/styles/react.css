@@ -616,7 +616,7 @@ select:not([multiple]) {
 }
 .profile-disclosure > summary strong,
 .coach-data-disclosure > summary strong,
-.card-disclosure > summary strong {
+.card-disclosure > summary h2 {
   font-size: 1.1rem;
 }
 .profile-disclosure > summary small,
