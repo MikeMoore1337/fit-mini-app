@@ -3,14 +3,19 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AppShell } from '../../app/AppShell';
 import { useAuth } from '../../app/AuthProvider';
 import { api } from '../../shared/api/client';
-import type { AdminNotification, AdminTemplate, AdminUser } from '../../shared/api/types';
+import type {
+  AdminCoachRoleApplication,
+  AdminNotification,
+  AdminTemplate,
+  AdminUser,
+} from '../../shared/api/types';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Badge, Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
 import { Redirect } from '../../shared/navigation/router';
 import { notificationStatusLabel } from '../../shared/statusLabels';
 import { handleTabKeyDown } from '../../shared/ui/tabs';
 
-type AdminTab = 'users' | 'notifications' | 'templates';
+type AdminTab = 'users' | 'coach-applications' | 'notifications' | 'templates';
 const PAGE_SIZE = 50;
 
 function Pagination({
@@ -65,6 +70,14 @@ export default function AdminPage() {
       api<AdminNotification[]>(`/api/v1/admin/notifications?limit=${PAGE_SIZE}&offset=${offset}`),
     enabled: tab === 'notifications',
   });
+  const coachApplications = useQuery({
+    queryKey: ['admin', 'coach-applications', page],
+    queryFn: () =>
+      api<AdminCoachRoleApplication[]>(
+        `/api/v1/admin/coach-applications?status=pending&limit=${PAGE_SIZE}&offset=${offset}`,
+      ),
+    enabled: tab === 'coach-applications',
+  });
   const templates = useQuery({
     queryKey: ['admin', 'templates', page],
     queryFn: () =>
@@ -97,6 +110,28 @@ export default function AdminPage() {
     }
   };
 
+  const reviewCoachApplication = async (
+    item: AdminCoachRoleApplication,
+    status: 'approved' | 'rejected',
+  ) => {
+    const approved = status === 'approved';
+    const accepted = await confirm({
+      title: approved ? 'Одобрить заявку?' : 'Отклонить заявку?',
+      message: approved
+        ? 'Пользователь сразу получит роль тренера и доступ к кабинету.'
+        : 'Пользователь сможет подать новую заявку позже.',
+      confirmText: approved ? 'Одобрить' : 'Отклонить',
+      danger: !approved,
+    });
+    if (accepted) {
+      mutation.mutate({
+        path: `/api/v1/admin/coach-applications/${item.id}`,
+        method: 'PATCH',
+        body: { status },
+      });
+    }
+  };
+
   return (
     <AppShell narrow>
       <div className="page-stack">
@@ -104,7 +139,7 @@ export default function AdminPage() {
           <div>
             <span className="eyebrow">Управление</span>
             <h1>Панель администратора</h1>
-            <p className="muted">Пользователи, уведомления и шаблоны.</p>
+            <p className="muted">Пользователи, заявки тренеров, уведомления и шаблоны.</p>
           </div>
           <Badge>Администратор</Badge>
         </header>
@@ -116,6 +151,7 @@ export default function AdminPage() {
           {(
             [
               ['users', 'Пользователи'],
+              ['coach-applications', 'Заявки тренеров'],
               ['notifications', 'Уведомления'],
               ['templates', 'Шаблоны'],
             ] as const
@@ -284,6 +320,75 @@ export default function AdminPage() {
               <Pagination
                 page={page}
                 hasNext={(notifications.data?.length ?? 0) === PAGE_SIZE}
+                onPage={setPage}
+              />
+            </Card>
+          )}
+
+          {tab === 'coach-applications' && (
+            <Card
+              title="Заявки на роль тренера"
+              actions={
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => void coachApplications.refetch()}
+                >
+                  Обновить
+                </button>
+              }
+            >
+              {coachApplications.isLoading ? (
+                <LoadingState />
+              ) : coachApplications.error ? (
+                <ErrorState
+                  message={(coachApplications.error as Error).message}
+                  retry={() => void coachApplications.refetch()}
+                />
+              ) : !coachApplications.data?.length ? (
+                <EmptyState title="Новых заявок нет" />
+              ) : (
+                <div className="list-grid top-gap">
+                  {coachApplications.data.map((item) => (
+                    <article className="list-row" key={item.id}>
+                      <div className="list-row__main">
+                        <strong>
+                          {item.full_name || item.username || `Пользователь ${item.user_id}`}
+                        </strong>
+                        <span className="muted">
+                          {item.username ? `@${item.username} · ` : ''}ID {item.user_id}
+                        </span>
+                        <span className="muted">
+                          Отправлена {new Date(item.created_at).toLocaleString('ru-RU')}
+                        </span>
+                        <div>
+                          <Badge>На рассмотрении</Badge> <Badge>Из приложения</Badge>
+                        </div>
+                      </div>
+                      <div className="list-row__actions">
+                        <button
+                          type="button"
+                          disabled={mutation.isPending}
+                          onClick={() => void reviewCoachApplication(item, 'approved')}
+                        >
+                          Одобрить
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-danger"
+                          disabled={mutation.isPending}
+                          onClick={() => void reviewCoachApplication(item, 'rejected')}
+                        >
+                          Отклонить
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+              <Pagination
+                page={page}
+                hasNext={(coachApplications.data?.length ?? 0) === PAGE_SIZE}
                 onPage={setPage}
               />
             </Card>

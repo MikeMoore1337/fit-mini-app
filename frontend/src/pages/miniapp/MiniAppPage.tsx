@@ -35,6 +35,11 @@ const CoachInvites = lazy(() =>
     default: module.CoachInvites,
   })),
 );
+const CoachRoleApplicationCard = lazy(() =>
+  import('../../features/profile/CoachRoleApplication').then((module) => ({
+    default: module.CoachRoleApplicationCard,
+  })),
+);
 const ProfileForm = lazy(() =>
   import('../../features/profile/ProfileForm').then((module) => ({
     default: module.ProfileForm,
@@ -274,6 +279,7 @@ export default function MiniAppPage() {
             {tab === 'profile' && (
               <>
                 <ProfileForm key={profileFormKey} />
+                <CoachRoleApplicationCard />
                 <CoachInvites
                   initialToken={inviteToken}
                   onInitialTokenHandled={() => setInviteToken(null)}

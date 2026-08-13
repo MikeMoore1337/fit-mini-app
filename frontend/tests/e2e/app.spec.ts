@@ -218,8 +218,20 @@ test('сценарии спортсмена и тренера ведут в ве
   }
 });
 
-async function mockApi(page: Page, { withCoachClient = false } = {}) {
+async function mockApi(page: Page, { withCoachClient = false, withCoachApplication = false } = {}) {
   let role: 'client' | 'coach' | 'admin' = 'client';
+  let coachApplication = withCoachApplication
+    ? {
+        id: 42,
+        user_id: 7,
+        username: 'future_coach',
+        full_name: 'Будущий тренер',
+        status: 'pending',
+        source: 'web',
+        created_at: '2030-01-09T09:00:00',
+        reviewed_at: null,
+      }
+    : null;
   const heartRateZones = [
     { zone: 1, title: 'Восстановление', min_bpm: 130, max_bpm: 140 },
     { zone: 2, title: 'Лёгкая', min_bpm: 140, max_bpm: 151 },
@@ -291,6 +303,26 @@ async function mockApi(page: Page, { withCoachClient = false } = {}) {
           trainer: null,
         },
       });
+    if (path.endsWith('/me/coach-application')) {
+      if (request.method() === 'POST') {
+        coachApplication = {
+          id: 42,
+          user_id: 1,
+          username: 'demo',
+          full_name: 'Демо пользователь',
+          status: 'pending',
+          source: 'web',
+          created_at: '2030-01-09T09:00:00',
+          reviewed_at: null,
+        };
+        return route.fulfill({ status: 201, json: coachApplication });
+      }
+      if (request.method() === 'DELETE') {
+        coachApplication = coachApplication ? { ...coachApplication, status: 'cancelled' } : null;
+        return route.fulfill({ status: 204, body: '' });
+      }
+      return route.fulfill({ json: coachApplication });
+    }
     if (path.endsWith('/workouts/today'))
       return route.fulfill({ status: 404, json: { detail: 'На сегодня тренировка не назначена' } });
     if (path.endsWith('/workouts/progress')) return route.fulfill({ json: emptyProgress });
@@ -413,6 +445,16 @@ async function mockApi(page: Page, { withCoachClient = false } = {}) {
         ],
       });
     if (path.endsWith('/programs/templates/hidden')) return route.fulfill({ json: [] });
+    if (path.endsWith('/admin/coach-applications')) {
+      return route.fulfill({
+        json: coachApplication?.status === 'pending' ? [coachApplication] : [],
+      });
+    }
+    if (/\/admin\/coach-applications\/\d+$/.test(path) && request.method() === 'PATCH') {
+      const body = request.postDataJSON() as { status: 'approved' | 'rejected' };
+      coachApplication = coachApplication ? { ...coachApplication, status: body.status } : null;
+      return route.fulfill({ json: coachApplication });
+    }
     if (path.endsWith('/admin/users')) return route.fulfill({ json: [] });
     if (/\/coach\/clients\/\d+\/analytics$/.test(path))
       return route.fulfill({ json: emptyProgress });
@@ -578,6 +620,19 @@ test('профиль содержит уведомления, а карточк�
   await expect(page.locator('.exercise-lightbox')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.locator('.exercise-lightbox')).toHaveCount(0);
+});
+
+test('клиент подаёт заявку на роль тренера из профиля', async ({ page }) => {
+  await mockApi(page);
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Клиент' }).click();
+  await page.getByRole('tab', { name: 'Профиль' }).click();
+
+  await page.getByRole('button', { name: 'Стать тренером' }).click();
+  await page.getByRole('button', { name: 'Отправить заявку' }).click();
+
+  await expect(page.getByText('Заявка отправлена')).toBeVisible();
+  await expect(page.getByText('На рассмотрении')).toBeVisible();
 });
 
 test('рекомендация кардио меняется с целью, а физиологические зоны остаются прежними', async ({
@@ -808,11 +863,16 @@ test('сенсорное поле даты сохраняет нативный �
 });
 
 test('администратор открывает React-панель', async ({ page }) => {
-  await mockApi(page);
+  await mockApi(page, { withCoachApplication: true });
   await page.goto('/admin');
   await page.getByRole('button', { name: 'Админ' }).click();
   await expect(page.getByRole('heading', { name: 'Панель администратора' })).toBeVisible();
   await expect(page.getByText('Пользователи не найдены')).toBeVisible();
+  await page.getByRole('tab', { name: 'Заявки тренеров' }).click();
+  await expect(page.getByText('Будущий тренер')).toBeVisible();
+  await page.getByRole('button', { name: 'Одобрить' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Одобрить' }).click();
+  await expect(page.getByText('Новых заявок нет')).toBeVisible();
 });
 
 test('поля даты остаются внутри анкеты клиента в кабинете тренера', async ({ page }) => {
