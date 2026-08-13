@@ -96,6 +96,11 @@
   background: var(--success-strong);
   color: var(--success-text);
 }
+.onboarding-action__mark .ui-icon {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2;
+}
 .onboarding-action__copy {
   display: grid;
   gap: 3px;
@@ -111,10 +116,13 @@
   line-height: 1.35;
 }
 .onboarding-action__arrow {
+  display: grid;
+  place-items: center;
   color: var(--muted);
-  font-size: 1.5rem;
-  font-weight: 400;
-  line-height: 1;
+}
+.onboarding-action__arrow .ui-icon {
+  width: 16px;
+  height: 16px;
 }
 .form-grid {
   display: grid;
@@ -749,7 +757,7 @@ select:not([multiple]) {
 .compact-disclosure > summary::-webkit-details-marker {
   display: none;
 }
-.compact-disclosure > summary > span {
+.compact-disclosure > summary > span:first-child {
   display: grid;
   flex: 1;
   gap: 3px;
@@ -758,13 +766,9 @@ select:not([multiple]) {
 .compact-disclosure > summary small {
   color: var(--muted);
 }
-.compact-disclosure > summary::after {
-  content: '+';
-  color: var(--muted);
-  font-size: 1.2rem;
-}
-.compact-disclosure[open] > summary::after {
-  content: '−';
+.compact-disclosure[open] > summary .disclosure-icon__vertical,
+.nutrition-details[open] > summary .disclosure-icon__vertical {
+  opacity: 0;
 }
 .compact-field {
   min-width: 145px;
@@ -1073,7 +1077,11 @@ select:not([multiple]) {
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.14);
   color: white;
-  font-size: 1.75rem;
+}
+.exercise-lightbox__close .ui-icon,
+.exercise-lightbox__arrow .ui-icon {
+  width: 20px;
+  height: 20px;
 }
 .exercise-lightbox__close {
   top: max(10px, env(safe-area-inset-top, 0px));
@@ -1173,6 +1181,36 @@ body:has(#appBottomNav) {
   min-width: 0;
   max-width: 100%;
   overflow-wrap: anywhere;
+}
+.nutrition-details > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  list-style: none;
+}
+.nutrition-details > summary::-webkit-details-marker {
+  display: none;
+}
+.nutrition-details > summary > span:first-child {
+  flex: 1;
+  min-width: 0;
+}
+.ui-icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.75;
+}
+.toast__close .ui-icon,
+.exercise-guide-modal__close .ui-icon,
+.program-example-modal__close .ui-icon,
+.icon-danger-btn .ui-icon {
+  width: 18px;
+  height: 18px;
 }
 .nutrition-warning ul,
 .nutrition-reality-check ul {

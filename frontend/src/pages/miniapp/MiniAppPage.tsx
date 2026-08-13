@@ -3,7 +3,7 @@ import { AppShell } from '../../app/AppShell';
 import { useAuth } from '../../app/AuthProvider';
 import { TodayWorkout } from '../../features/workouts/TodayWorkout';
 import type { WorkoutNavigationTarget } from '../../features/workouts/WorkoutHistory';
-import { Badge, Card } from '../../shared/ui/common';
+import { Badge, Card, CheckIcon, ChevronIcon } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { handleTabKeyDown } from '../../shared/ui/tabs';
 
@@ -158,42 +158,42 @@ export default function MiniAppPage() {
             <div className="onboarding-actions top-gap">
               <button className="onboarding-action" onClick={() => setTab('profile')}>
                 <span className={`onboarding-action__mark${profileReady ? ' is-done' : ''}`}>
-                  {profileReady ? '✓' : '1'}
+                  {profileReady ? <CheckIcon /> : '1'}
                 </span>
                 <span className="onboarding-action__copy">
                   <strong>Заполнить профиль</strong>
                   <span>Дата рождения, цель, уровень и текущий вес</span>
                 </span>
                 <span className="onboarding-action__arrow" aria-hidden="true">
-                  ›
+                  <ChevronIcon />
                 </span>
               </button>
               <button className="onboarding-action" onClick={() => setTab('programs')}>
                 <span
                   className={`onboarding-action__mark${user?.has_active_program ? ' is-done' : ''}`}
                 >
-                  {user?.has_active_program ? '✓' : '2'}
+                  {user?.has_active_program ? <CheckIcon /> : '2'}
                 </span>
                 <span className="onboarding-action__copy">
                   <strong>Выбрать программу</strong>
                   <span>Создайте свою или назначьте шаблон</span>
                 </span>
                 <span className="onboarding-action__arrow" aria-hidden="true">
-                  ›
+                  <ChevronIcon />
                 </span>
               </button>
               <button className="onboarding-action" onClick={() => setTab('today')}>
                 <span
                   className={`onboarding-action__mark${user?.has_workout_history ? ' is-done' : ''}`}
                 >
-                  {user?.has_workout_history ? '✓' : '3'}
+                  {user?.has_workout_history ? <CheckIcon /> : '3'}
                 </span>
                 <span className="onboarding-action__copy">
                   <strong>Завершить тренировку</strong>
                   <span>Результат появится в разделе прогресса</span>
                 </span>
                 <span className="onboarding-action__arrow" aria-hidden="true">
-                  ›
+                  <ChevronIcon />
                 </span>
               </button>
             </div>

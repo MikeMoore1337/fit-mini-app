@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../shared/api/client';
 import type { Exercise, ProgramTemplate, ProgramTemplateCreate } from '../../shared/api/types';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
-import { Card, LoadingState } from '../../shared/ui/common';
+import { Card, CloseIcon, LoadingState } from '../../shared/ui/common';
 import { difficultyLabels, orderExercisesForLevel } from './exerciseOrdering';
 import { buildStrengthPreset, resolveStrengthRule, type StrengthSplit } from './strengthPresets';
 import { usePersistentState } from '../../shared/storage';
@@ -706,7 +706,7 @@ export function ProgramBuilder({
                       })
                     }
                   >
-                    ×
+                    <CloseIcon />
                   </button>
                 </div>
               ))}

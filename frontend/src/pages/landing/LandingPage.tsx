@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { CheckIcon } from '../../shared/ui/common';
 import { ThemeIcon } from '../../shared/ui/ThemeIcon';
 import './landing.css';
 
@@ -190,7 +191,7 @@ export default function LandingPage() {
                 <strong>План обновлён</strong>
               </div>
               <span className="landing-check" aria-hidden="true">
-                ✓
+                <CheckIcon />
               </span>
             </div>
             <div className="landing-float-card landing-float-card--progress">
