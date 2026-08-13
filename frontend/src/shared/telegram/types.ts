@@ -2,6 +2,7 @@ export interface TelegramThemeParams {
   bg_color?: string;
   secondary_bg_color?: string;
   section_bg_color?: string;
+  section_separator_color?: string;
   text_color?: string;
   hint_color?: string;
   subtitle_text_color?: string;
