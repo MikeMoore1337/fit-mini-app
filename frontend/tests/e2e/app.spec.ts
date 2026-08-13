@@ -105,6 +105,19 @@ test('сценарий и платформы остаются понятными
       page.getByRole('heading', { name: /когда тренировка уже началась/i }),
     ).toBeVisible();
 
+    const syncIcon = page.locator('.landing-platforms__sync > span');
+    await expect(syncIcon.locator('svg')).toBeVisible();
+    const syncIconBox = await syncIcon.boundingBox();
+    const syncSvgBox = await syncIcon.locator('svg').boundingBox();
+    expect(syncIconBox).not.toBeNull();
+    expect(syncSvgBox).not.toBeNull();
+    expect(
+      Math.abs(syncSvgBox!.x + syncSvgBox!.width / 2 - (syncIconBox!.x + syncIconBox!.width / 2)),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(syncSvgBox!.y + syncSvgBox!.height / 2 - (syncIconBox!.y + syncIconBox!.height / 2)),
+    ).toBeLessThanOrEqual(1);
+
     const browserCard = await page.locator('.landing-platform-card').first().boundingBox();
     const telegramCard = await page.locator('.landing-platform-card').last().boundingBox();
     expect(browserCard).not.toBeNull();

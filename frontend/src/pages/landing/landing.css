@@ -571,8 +571,17 @@ body.landing-mode #root {
   border-radius: 50%;
   background: var(--landing-green);
   color: #172018;
-  font-size: 1.15rem;
-  font-weight: 900;
+}
+
+.landing-platforms__sync > span svg {
+  display: block;
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .landing-problem__result strong {
