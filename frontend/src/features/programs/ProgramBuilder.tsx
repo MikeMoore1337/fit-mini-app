@@ -512,7 +512,10 @@ export function ProgramBuilder({
               </p>
             )}
           </fieldset>
-          <section className="program-builder-section stack" aria-labelledby="strength-template-title">
+          <section
+            className="program-builder-section stack"
+            aria-labelledby="strength-template-title"
+          >
             <h3 id="strength-template-title">Быстрый силовой шаблон</h3>
             <div className="form-grid">
               <label className="field">
