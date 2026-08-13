@@ -260,6 +260,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/coach-application": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Coach Application */
+        get: operations["read_coach_application_api_v1_me_coach_application_get"];
+        put?: never;
+        /** Create Coach Application */
+        post: operations["create_coach_application_api_v1_me_coach_application_post"];
+        /** Delete Coach Application */
+        delete: operations["delete_coach_application_api_v1_me_coach_application_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/auth/telegram-link": {
         parameters: {
             query?: never;
@@ -1140,6 +1159,40 @@ export interface paths {
         patch: operations["update_user_role_api_v1_admin_users__user_id__role_patch"];
         trace?: never;
     };
+    "/api/v1/admin/coach-applications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Coach Applications */
+        get: operations["admin_coach_applications_api_v1_admin_coach_applications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/coach-applications/{application_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Coach Application */
+        patch: operations["update_coach_application_api_v1_admin_coach_applications__application_id__patch"];
+        trace?: never;
+    };
     "/api/v1/admin/users/{user_id}/status": {
         parameters: {
             query?: never;
@@ -1253,6 +1306,23 @@ export interface paths {
         put?: never;
         /** Link Telegram From Bot */
         post: operations["link_telegram_from_bot_api_v1_bot_link_telegram_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bot/coach-application": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Coach Application From Bot */
+        post: operations["create_coach_application_from_bot_api_v1_bot_coach_application_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1442,6 +1512,42 @@ export interface components {
              */
             confirmation: "DELETE";
         };
+        /** AdminCoachRoleApplicationReview */
+        AdminCoachRoleApplicationReview: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "approved" | "rejected";
+        };
+        /** AdminCoachRoleApplicationRow */
+        AdminCoachRoleApplicationRow: {
+            /** Id */
+            id: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "approved" | "rejected" | "cancelled";
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "web" | "telegram";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Reviewed At */
+            reviewed_at?: string | null;
+            /** User Id */
+            user_id: number;
+            /** Username */
+            username?: string | null;
+            /** Full Name */
+            full_name?: string | null;
+        };
         /** AdminNotificationRow */
         AdminNotificationRow: {
             /** Id */
@@ -1600,6 +1706,25 @@ export interface components {
             thigh_cm?: number | null;
             /** Note */
             note?: string | null;
+        };
+        /** BotCoachRoleApplicationRequest */
+        BotCoachRoleApplicationRequest: {
+            /** Telegram User Id */
+            telegram_user_id: number;
+            /** Username */
+            username?: string | null;
+            /** First Name */
+            first_name?: string | null;
+            /** Last Name */
+            last_name?: string | null;
+        };
+        /** BotCoachRoleApplicationResponse */
+        BotCoachRoleApplicationResponse: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "already_pending" | "already_coach";
         };
         /** BotTelegramLinkRequest */
         BotTelegramLinkRequest: {
@@ -1817,6 +1942,28 @@ export interface components {
             rest_seconds: number;
             /** Notes */
             notes?: string | null;
+        };
+        /** CoachRoleApplicationResponse */
+        CoachRoleApplicationResponse: {
+            /** Id */
+            id: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "approved" | "rejected" | "cancelled";
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "web" | "telegram";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Reviewed At */
+            reviewed_at?: string | null;
         };
         /** DevLoginRequest */
         DevLoginRequest: {
@@ -3337,6 +3484,64 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["UserResponse"];
                 };
+            };
+        };
+    };
+    read_coach_application_api_v1_me_coach_application_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachRoleApplicationResponse"] | null;
+                };
+            };
+        };
+    };
+    create_coach_application_api_v1_me_coach_application_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachRoleApplicationResponse"];
+                };
+            };
+        };
+    };
+    delete_coach_application_api_v1_me_coach_application_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -5093,6 +5298,74 @@ export interface operations {
             };
         };
     };
+    admin_coach_applications_api_v1_admin_coach_applications_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCoachRoleApplicationRow"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_coach_application_api_v1_admin_coach_applications__application_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminCoachRoleApplicationReview"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCoachRoleApplicationRow"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     update_user_status_api_v1_admin_users__user_id__status_patch: {
         parameters: {
             query?: never;
@@ -5307,6 +5580,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BotTelegramLinkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_coach_application_from_bot_api_v1_bot_coach_application_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-bot-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BotCoachRoleApplicationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BotCoachRoleApplicationResponse"];
                 };
             };
             /** @description Validation Error */

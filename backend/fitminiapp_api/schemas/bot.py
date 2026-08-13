@@ -26,3 +26,14 @@ class BotTelegramLinkRequest(BaseModel):
 
 class BotTelegramLinkResponse(BaseModel):
     status: Literal["linked", "already_linked"]
+
+
+class BotCoachRoleApplicationRequest(BaseModel):
+    telegram_user_id: int = Field(..., ge=1)
+    username: str | None = Field(default=None, max_length=64)
+    first_name: str | None = Field(default=None, max_length=64)
+    last_name: str | None = Field(default=None, max_length=64)
+
+
+class BotCoachRoleApplicationResponse(BaseModel):
+    status: Literal["pending", "already_pending", "already_coach"]

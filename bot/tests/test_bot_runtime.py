@@ -163,6 +163,64 @@ def test_link_telegram_delivery_sends_identity_to_internal_api(monkeypatch):
     assert captured["headers"]["x-bot-token"] == INTERNAL_TOKEN
 
 
+def test_coach_application_command_submits_telegram_identity(monkeypatch):
+    real_async_client = httpx.AsyncClient
+    captured: dict[str, object] = {}
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        captured["payload"] = json.loads(request.content)
+        return httpx.Response(200, request=request, json={"status": "pending"})
+
+    transport = httpx.MockTransport(respond)
+
+    def client_factory(*, timeout: int):
+        return real_async_client(timeout=timeout, transport=transport)
+
+    monkeypatch.setattr(bot_module.httpx, "AsyncClient", client_factory)
+    monkeypatch.setattr(bot_module.settings, "bot_internal_token", INTERNAL_TOKEN)
+    telegram_user = SimpleNamespace(
+        id=54321,
+        username="coach_candidate",
+        first_name="Coach",
+        last_name="Candidate",
+    )
+    message = SimpleNamespace(from_user=telegram_user, answer=AsyncMock())
+
+    asyncio.run(bot_module.coach_application_command(message))
+
+    assert captured["payload"] == {
+        "telegram_user_id": 54321,
+        "username": "coach_candidate",
+        "first_name": "Coach",
+        "last_name": "Candidate",
+    }
+    assert "отправлена" in message.answer.await_args.args[0]
+
+
+@pytest.mark.parametrize(
+    ("outcome", "message_fragment"),
+    [
+        ("already_pending", "уже находится"),
+        ("already_coach", "уже подключён"),
+        ("failed", "Не удалось"),
+    ],
+)
+def test_coach_application_command_reports_outcome(outcome, message_fragment, monkeypatch):
+    message = SimpleNamespace(
+        from_user=SimpleNamespace(id=54321),
+        answer=AsyncMock(),
+    )
+    monkeypatch.setattr(
+        bot_module,
+        "submit_coach_application_from_bot",
+        AsyncMock(return_value=outcome),
+    )
+
+    asyncio.run(bot_module.coach_application_command(message))
+
+    assert message_fragment in message.answer.await_args.args[0]
+
+
 @pytest.mark.parametrize(
     ("status_code", "expected"),
     [(400, "invalid"), (409, "conflict"), (500, "failed")],

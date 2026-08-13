@@ -22,7 +22,7 @@ from fitminiapp_api.models.program import (
     UserWorkoutExercise,
     UserWorkoutSet,
 )
-from fitminiapp_api.models.user import CoachClient, CoachClientInvite, User
+from fitminiapp_api.models.user import CoachClient, CoachClientInvite, CoachRoleApplication, User
 from fitminiapp_api.services import notifications as notifications_service
 from fitminiapp_api.services.exercise_guides import get_exercise_guide
 from fitminiapp_api.services.notifications import (
@@ -2496,6 +2496,139 @@ def test_admin_can_change_user_role(client):
     promoted = client.get("/api/v1/me", headers=client_headers)
     assert promoted.status_code == 200
     assert promoted.json()["is_coach"] is True
+
+
+def test_client_can_submit_and_cancel_coach_role_application(client):
+    headers = auth(client, telegram_user_id=6021, is_coach=False)
+
+    empty = client.get("/api/v1/me/coach-application", headers=headers)
+    assert empty.status_code == 200
+    assert empty.json() is None
+
+    created = client.post("/api/v1/me/coach-application", headers=headers)
+    assert created.status_code == 201
+    assert created.json()["status"] == "pending"
+    assert created.json()["source"] == "web"
+
+    duplicate = client.post("/api/v1/me/coach-application", headers=headers)
+    assert duplicate.status_code == 409
+    assert duplicate.json()["detail"] == "Заявка тренера уже находится на рассмотрении"
+
+    cancelled = client.delete("/api/v1/me/coach-application", headers=headers)
+    assert cancelled.status_code == 204
+    latest = client.get("/api/v1/me/coach-application", headers=headers)
+    assert latest.json()["status"] == "cancelled"
+
+
+def test_admin_can_approve_coach_role_application(client):
+    applicant_headers = auth(
+        client,
+        telegram_user_id=6022,
+        is_coach=False,
+        username="future_coach",
+        full_name="Будущий тренер",
+    )
+    admin_headers = auth(client, telegram_user_id=6023, is_coach=True, is_admin=True)
+    created = client.post("/api/v1/me/coach-application", headers=applicant_headers)
+    application_id = created.json()["id"]
+
+    listed = client.get("/api/v1/admin/coach-applications", headers=admin_headers)
+    assert listed.status_code == 200
+    assert listed.headers["x-total-count"] == "1"
+    assert listed.json() == [
+        {
+            "id": application_id,
+            "user_id": listed.json()[0]["user_id"],
+            "username": "future_coach",
+            "full_name": "Будущий тренер",
+            "status": "pending",
+            "source": "web",
+            "created_at": listed.json()[0]["created_at"],
+            "reviewed_at": None,
+        }
+    ]
+
+    approved = client.patch(
+        f"/api/v1/admin/coach-applications/{application_id}",
+        json={"status": "approved"},
+        headers=admin_headers,
+    )
+    assert approved.status_code == 200
+    assert approved.json()["status"] == "approved"
+    assert approved.json()["reviewed_at"] is not None
+    assert client.get("/api/v1/me", headers=applicant_headers).json()["is_coach"] is True
+
+    repeated = client.patch(
+        f"/api/v1/admin/coach-applications/{application_id}",
+        json={"status": "rejected"},
+        headers=admin_headers,
+    )
+    assert repeated.status_code == 409
+
+
+def test_coach_role_application_rejects_coaches_and_non_admin_review(client):
+    coach_headers = auth(client, telegram_user_id=6024, is_coach=True)
+    assert client.post("/api/v1/me/coach-application", headers=coach_headers).status_code == 409
+
+    applicant_headers = auth(client, telegram_user_id=6025, is_coach=False)
+    created = client.post("/api/v1/me/coach-application", headers=applicant_headers)
+    application_id = created.json()["id"]
+    forbidden = client.patch(
+        f"/api/v1/admin/coach-applications/{application_id}",
+        json={"status": "approved"},
+        headers=coach_headers,
+    )
+    assert forbidden.status_code == 403
+
+
+def test_direct_admin_role_change_resolves_pending_coach_application(client):
+    applicant_headers = auth(client, telegram_user_id=6026, is_coach=False)
+    admin_headers = auth(client, telegram_user_id=6027, is_coach=True, is_admin=True)
+    application = client.post("/api/v1/me/coach-application", headers=applicant_headers).json()
+    applicant_id = client.get("/api/v1/me", headers=applicant_headers).json()["id"]
+
+    changed = client.patch(
+        f"/api/v1/admin/users/{applicant_id}/role",
+        json={"role": "coach"},
+        headers=admin_headers,
+    )
+    assert changed.status_code == 200
+    with get_session_context() as db:
+        saved = db.query(CoachRoleApplication).filter_by(id=application["id"]).one()
+        assert saved.status == "approved"
+        assert saved.reviewed_by_user_id is not None
+
+
+def test_bot_can_submit_coach_role_application_from_telegram(client):
+    payload = {
+        "telegram_user_id": 6028,
+        "username": "telegram_coach",
+        "first_name": "Telegram",
+        "last_name": "Coach",
+    }
+    headers = {"X-Bot-Token": "test-token"}
+
+    created = client.post("/api/v1/bot/coach-application", json=payload, headers=headers)
+    assert created.status_code == 200
+    assert created.json() == {"status": "pending"}
+    duplicate = client.post("/api/v1/bot/coach-application", json=payload, headers=headers)
+    assert duplicate.json() == {"status": "already_pending"}
+
+    admin_headers = auth(client, telegram_user_id=6029, is_coach=True, is_admin=True)
+    listed = client.get("/api/v1/admin/coach-applications", headers=admin_headers).json()
+    assert len(listed) == 1
+    assert listed[0]["source"] == "telegram"
+    assert listed[0]["username"] == "telegram_coach"
+
+    approved = client.patch(
+        f"/api/v1/admin/coach-applications/{listed[0]['id']}",
+        json={"status": "approved"},
+        headers=admin_headers,
+    )
+    assert approved.status_code == 200
+    assert client.post("/api/v1/bot/coach-application", json=payload, headers=headers).json() == {
+        "status": "already_coach"
+    }
 
 
 def test_admin_can_block_and_unblock_user(client):

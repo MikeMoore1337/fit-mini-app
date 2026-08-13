@@ -164,3 +164,38 @@ class CoachClientInvite(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now_msk_naive)
     accepted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     declined_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class CoachRoleApplication(Base):
+    __tablename__ = "coach_role_applications"
+    __table_args__ = (
+        Index(
+            "uq_coach_role_applications_pending_user",
+            "user_id",
+            unique=True,
+            postgresql_where=text("status = 'pending'"),
+            sqlite_where=text("status = 'pending'"),
+        ),
+        CheckConstraint(
+            "status IN ('pending', 'approved', 'rejected', 'cancelled')",
+            name="ck_coach_role_applications_status",
+        ),
+        CheckConstraint(
+            "source IN ('web', 'telegram')",
+            name="ck_coach_role_applications_source",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="pending", server_default="pending"
+    )
+    source: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="web", server_default="web"
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now_msk_naive)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    reviewed_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )

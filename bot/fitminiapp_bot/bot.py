@@ -37,6 +37,7 @@ except ImportError:  # pragma: no cover - production container runs Linux
 logger = logging.getLogger(__name__)
 
 TelegramLinkOutcome = Literal["linked", "already_linked", "invalid", "conflict", "failed"]
+CoachApplicationOutcome = Literal["pending", "already_pending", "already_coach", "failed"]
 TELEGRAM_LINK_PAYLOAD_PATTERN = re.compile(r"link_([A-Za-z0-9_-]{32,128})\Z")
 
 
@@ -329,6 +330,36 @@ async def link_telegram_from_bot(telegram_user, raw_token: str) -> TelegramLinkO
         return "failed"
 
 
+async def submit_coach_application_from_bot(telegram_user) -> CoachApplicationOutcome:
+    if not telegram_user:
+        return "failed"
+    payload = {
+        "telegram_user_id": telegram_user.id,
+        "username": telegram_user.username,
+        "first_name": telegram_user.first_name,
+        "last_name": telegram_user.last_name,
+    }
+    url = f"{settings.backend_internal_url.rstrip('/')}/api/v1/bot/coach-application"
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            response = await client.post(
+                url,
+                headers={"X-Bot-Token": settings.bot_internal_token},
+                json=payload,
+            )
+            response.raise_for_status()
+            outcome = response.json().get("status")
+            if outcome in {"pending", "already_pending", "already_coach"}:
+                return outcome
+            return "failed"
+    except Exception as exc:
+        logger.error(
+            "coach_application_backend_failed",
+            extra={"error_code": safe_error_code(exc)},
+        )
+        return "failed"
+
+
 async def set_mini_app_menu_button(bot: Bot, chat_id: int | None = None) -> bool:
     url = mini_app_url()
     if not is_https_url(url):
@@ -423,6 +454,21 @@ async def timezone_command(message: Message) -> None:
         "Выберите регион часового пояса.",
         reply_markup=timezone_regions_keyboard(),
     )
+
+
+@dp.message(Command("coach"))
+async def coach_application_command(message: Message) -> None:
+    outcome = await submit_coach_application_from_bot(message.from_user)
+    if outcome == "pending":
+        await message.answer(
+            "Заявка на подключение кабинета тренера отправлена. Администратор рассмотрит её вручную."
+        )
+    elif outcome == "already_pending":
+        await message.answer("Ваша заявка на кабинет тренера уже находится на рассмотрении.")
+    elif outcome == "already_coach":
+        await message.answer("Кабинет тренера уже подключён к вашему аккаунту.")
+    else:
+        await message.answer("Не удалось отправить заявку. Попробуйте ещё раз позже.")
 
 
 @dp.callback_query(lambda callback: bool(callback.data and callback.data.startswith("tz:")))
