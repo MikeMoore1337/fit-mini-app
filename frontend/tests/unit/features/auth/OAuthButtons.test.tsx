@@ -23,6 +23,7 @@ describe('OAuthButtons', () => {
       'href',
       '/api/v1/auth/oauth/vk/start',
     );
+    expect(document.querySelectorAll('.oauth-button__icon svg')).toHaveLength(3);
   });
 
   it('preserves a safe invitation path for VK ID login', () => {

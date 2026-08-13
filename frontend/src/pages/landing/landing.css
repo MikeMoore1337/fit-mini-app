@@ -123,10 +123,13 @@ body.landing-mode #root {
   color: var(--landing-ink);
   cursor: pointer;
   font: inherit;
-  font-size: 1.15rem;
   transition:
     transform 0.18s ease,
     border-color 0.18s ease;
+}
+.landing-theme-toggle > svg {
+  width: 21px;
+  height: 21px;
 }
 
 .landing-theme-toggle:hover {

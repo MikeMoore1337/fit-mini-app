@@ -25,6 +25,7 @@ describe('AppThemeToggle', () => {
     render(<AppThemeToggle />);
 
     expect(document.documentElement.dataset.colorScheme).toBe('dark');
+    expect(screen.getByRole('button').querySelector('svg')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Включить светлую тему' }));
     expect(document.documentElement.dataset.colorScheme).toBe('light');
     expect(localStorage.getItem(APP_THEME_STORAGE_KEY)).toBe('light');

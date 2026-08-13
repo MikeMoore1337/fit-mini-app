@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ThemeIcon } from '../../shared/ui/ThemeIcon';
 import './landing.css';
 
 type LandingTheme = 'light' | 'dark';
@@ -120,7 +121,7 @@ export default function LandingPage() {
             title={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
             onClick={toggleTheme}
           >
-            <span aria-hidden="true">{theme === 'dark' ? '☀' : '☾'}</span>
+            <ThemeIcon theme={theme} />
           </button>
           <a className="landing-button landing-button--compact" href={appUrl}>
             Войти
