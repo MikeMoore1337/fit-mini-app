@@ -7,6 +7,7 @@ import { ErrorBoundary } from './app/ErrorBoundary';
 import { FeedbackProvider } from './shared/ui/FeedbackProvider';
 import { OnlineStatus } from './shared/ui/OnlineStatus';
 import { LoadingState } from './shared/ui/common';
+import { isTelegramLaunch } from './shared/telegram/launch';
 import { useTelegram } from './shared/telegram/useTelegram';
 import { NavigationProvider, useNavigation } from './shared/navigation/router';
 import './styles/legacy.css';
@@ -20,14 +21,8 @@ const VerifyEmailPage = lazy(() => import('./pages/auth/VerifyEmailPage'));
 const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
 const JoinCoachPage = lazy(() => import('./pages/join/JoinCoachPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
-const TELEGRAM_SDK_PATHS = new Set(['/app', '/coach', '/admin']);
-
-function routeNeedsTelegramSdk(path: string): boolean {
-  return TELEGRAM_SDK_PATHS.has(path) || path.startsWith('/join/');
-}
-
 function loadTelegramSdk(): Promise<void> {
-  if (!routeNeedsTelegramSdk(window.location.pathname) || window.Telegram?.WebApp) {
+  if (!isTelegramLaunch(window.location) || window.Telegram?.WebApp) {
     return Promise.resolve();
   }
   return new Promise((resolve) => {
@@ -133,7 +128,7 @@ function renderApp(): void {
   );
 }
 
-if (routeNeedsTelegramSdk(window.location.pathname)) {
+if (isTelegramLaunch(window.location)) {
   void loadTelegramSdk().then(renderApp);
 } else {
   renderApp();
