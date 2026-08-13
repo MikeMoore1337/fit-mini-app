@@ -347,7 +347,11 @@ export default function LandingPage() {
             </article>
 
             <div className="landing-platforms__sync" aria-label="Данные синхронизируются">
-              <span aria-hidden="true">↔</span>
+              <span aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M4 8h16m-3-3 3 3-3 3M20 16H4m3-3-3 3 3 3" />
+                </svg>
+              </span>
               <strong>Общие данные</strong>
             </div>
 
