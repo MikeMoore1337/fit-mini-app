@@ -53,7 +53,23 @@ describe('LandingPage', () => {
     expect(screen.getByLabelText(/пример интерфейса тренировки на сегодня/i)).toBeInTheDocument();
     expect(screen.getByText('Жим гантелей лёжа')).toBeInTheDocument();
     expect(screen.getByText('01:24')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /всё необходимое/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /тренировки не должны жить в пяти разных местах/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Один понятный план действий')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /понятные действия для спортсмена и тренера/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /откройте приложение и сразу переходите к делу/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /получите ориентиры кбжу/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /ведите своих клиентов в одном кабинете/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/приглашайте клиентов, назначайте и корректируйте программы/i),
+    ).toBeInTheDocument();
     expect(screen.queryByText(/тариф/i)).not.toBeInTheDocument();
     expect(screen.queryByText('+18%')).not.toBeInTheDocument();
     expect(screen.queryByText('12', { exact: true })).not.toBeInTheDocument();

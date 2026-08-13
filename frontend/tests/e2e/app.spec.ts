@@ -40,6 +40,26 @@ test('первый экран лендинга объясняет продукт
   }
 });
 
+test('блок возможностей показывает пользу спортсмену и инструменты тренеру', async ({ page }) => {
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 768, height: 900 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/');
+
+    await expect(
+      page.getByRole('heading', { name: /тренировки не должны жить в пяти разных местах/i }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: /ведите своих клиентов в одном кабинете/i }),
+    ).toBeVisible();
+    await expect(page.getByText(/приглашайте клиентов, назначайте и корректируйте/i)).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
+  }
+});
+
 async function mockApi(page: Page, { withCoachClient = false } = {}) {
   let role: 'client' | 'coach' | 'admin' = 'client';
   const heartRateZones = [
