@@ -20,6 +20,25 @@ const VerifyEmailPage = lazy(() => import('./pages/auth/VerifyEmailPage'));
 const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
 const JoinCoachPage = lazy(() => import('./pages/join/JoinCoachPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+const TELEGRAM_SDK_PATHS = new Set(['/app', '/coach', '/admin']);
+
+function routeNeedsTelegramSdk(path: string): boolean {
+  return TELEGRAM_SDK_PATHS.has(path) || path.startsWith('/join/');
+}
+
+function loadTelegramSdk(): Promise<void> {
+  if (!routeNeedsTelegramSdk(window.location.pathname) || window.Telegram?.WebApp) {
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    const script = document.createElement('script');
+    script.src = 'https://telegram.org/js/telegram-web-app.js';
+    script.async = true;
+    script.addEventListener('load', () => resolve(), { once: true });
+    script.addEventListener('error', () => resolve(), { once: true });
+    document.head.append(script);
+  });
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -106,8 +125,16 @@ function Root() {
   );
 }
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <Root />
-  </StrictMode>,
-);
+function renderApp(): void {
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <Root />
+    </StrictMode>,
+  );
+}
+
+if (routeNeedsTelegramSdk(window.location.pathname)) {
+  void loadTelegramSdk().then(renderApp);
+} else {
+  renderApp();
+}
