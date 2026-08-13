@@ -9,7 +9,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # Keep first attempts grouped by ref so newer pushes cancel stale work. A
+  # manually re-run older workflow must not cancel the current branch run.
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.run_attempt == 1 && 'latest' || github.run_id }}
   cancel-in-progress: true
 
 env:
