@@ -229,6 +229,12 @@
 .auth-panel--branded .section-head {
   align-items: flex-start;
 }
+@media (max-width: 640px) {
+  .auth-panel--branded .section-head {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+}
 .auth-panel--branded .section-head h2 {
   display: flex;
   align-items: center;
