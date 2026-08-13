@@ -64,6 +64,13 @@
   display: grid;
   gap: 8px;
 }
+.telegram-link-prompt {
+  border-color: var(--accent-line);
+  background: linear-gradient(135deg, var(--accent-soft), transparent 55%), var(--surface);
+}
+.telegram-link-prompt__actions > * {
+  width: auto;
+}
 .onboarding-action {
   display: grid;
   grid-template-columns: 30px minmax(0, 1fr) 18px;

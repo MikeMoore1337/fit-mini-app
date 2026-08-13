@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { AppShell } from '../../app/AppShell';
 import { useAuth } from '../../app/AuthProvider';
+import { TelegramLinkPrompt } from '../../features/account/TelegramLinkPrompt';
 import { TodayWorkout } from '../../features/workouts/TodayWorkout';
 import type { WorkoutNavigationTarget } from '../../features/workouts/WorkoutHistory';
 import { Badge, Card } from '../../shared/ui/common';
@@ -158,6 +159,7 @@ export default function MiniAppPage() {
             </button>
           </div>
         </header>
+        <TelegramLinkPrompt />
         {(!profileReady || !user?.has_active_program || !user?.has_workout_history) && (
           <Card title="План запуска" description="Три шага до регулярных тренировок">
             <div className="onboarding-actions top-gap">
