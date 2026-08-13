@@ -31,14 +31,15 @@ VK_SCOPE = "email"
 VK_SESSION_KEY = "vk_oauth"
 
 
-def oauth_transport_options() -> dict[str, object]:
+def oauth_transport_options(*, proxy_url: str | None = None) -> dict[str, object]:
     """Return isolated HTTPX options for a short-lived OAuth client."""
 
-    if settings.oauth_proxy_url:
+    configured_proxy_url = settings.oauth_proxy_url if proxy_url is None else proxy_url
+    if configured_proxy_url:
         # The proxy is an explicit operator-configured route used only for
         # OAuth. It carries the provider's TLS stream without disabling
         # certificate or hostname verification.
-        return {"proxy": settings.oauth_proxy_url}
+        return {"proxy": configured_proxy_url}
     if settings.oauth_force_ipv4:
         return {"transport": httpx.AsyncHTTPTransport(local_address="0.0.0.0")}
     return {}
@@ -57,12 +58,29 @@ class OAuthStarletteOAuth2App(StarletteOAuth2App):
     client_cls = OAuthAsyncOAuth2Client
 
 
+class TelegramOAuthAsyncOAuth2Client(AsyncOAuth2Client):
+    """Use Telegram's dedicated route without affecting other providers."""
+
+    def __init__(self, *args, **kwargs) -> None:
+        for option, value in oauth_transport_options(
+            proxy_url=settings.telegram_oauth_proxy_url
+        ).items():
+            kwargs.setdefault(option, value)
+        super().__init__(*args, **kwargs)
+
+
+class TelegramOAuthStarletteOAuth2App(StarletteOAuth2App):
+    client_cls = TelegramOAuthAsyncOAuth2Client
+
+
 def _register_oidc(
     name: str,
     client_id: str,
     client_secret: str,
     metadata_url: str,
     scope: str,
+    *,
+    client_cls: type[StarletteOAuth2App] = OAuthStarletteOAuth2App,
 ) -> None:
     if not client_id.strip() or not client_secret.strip():
         return
@@ -70,7 +88,7 @@ def _register_oidc(
         name,
         client_id=client_id,
         client_secret=client_secret,
-        client_cls=OAuthStarletteOAuth2App,
+        client_cls=client_cls,
         server_metadata_url=metadata_url,
         client_kwargs={
             "scope": scope,
@@ -93,6 +111,7 @@ _register_oidc(
     settings.telegram_oauth_client_secret,
     "https://oauth.telegram.org/.well-known/openid-configuration",
     "openid profile",
+    client_cls=TelegramOAuthStarletteOAuth2App,
 )
 _register_oidc(
     "google",

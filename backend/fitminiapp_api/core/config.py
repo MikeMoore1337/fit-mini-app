@@ -59,6 +59,7 @@ class Settings(BaseSettings):
     oauth_http_timeout_seconds: float = Field(default=15, ge=5, le=60)
     oauth_force_ipv4: bool = True
     oauth_proxy_url: str = ""
+    telegram_oauth_proxy_url: str = ""
     google_oauth_client_id: str = ""
     google_oauth_client_secret: str = ""
     yandex_oauth_client_id: str = ""
@@ -103,7 +104,7 @@ class Settings(BaseSettings):
             raise ValueError("FRONTEND_BASE_URL must be an absolute HTTPS URL in prod")
         return self
 
-    @field_validator("oauth_proxy_url")
+    @field_validator("oauth_proxy_url", "telegram_oauth_proxy_url")
     @classmethod
     def validate_oauth_proxy_url(cls, value: str) -> str:
         normalized = value.strip()
@@ -111,9 +112,9 @@ class Settings(BaseSettings):
             return ""
         parsed = urlparse(normalized)
         if parsed.scheme not in {"http", "https", "socks5", "socks5h"} or not parsed.hostname:
-            raise ValueError("OAUTH_PROXY_URL must be an absolute HTTP(S) or SOCKS5 URL")
+            raise ValueError("OAuth proxy URL must be an absolute HTTP(S) or SOCKS5 URL")
         if parsed.query or parsed.fragment:
-            raise ValueError("OAUTH_PROXY_URL must not contain query parameters or a fragment")
+            raise ValueError("OAuth proxy URL must not contain query parameters or a fragment")
         return normalized
 
     @property
