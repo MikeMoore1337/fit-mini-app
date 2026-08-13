@@ -878,12 +878,12 @@ body.landing-mode #root {
   }
 
   .landing-audience {
-    padding: 82px 0;
+    padding: 56px 0;
   }
 
   .landing-audience article {
-    min-height: 360px;
-    padding: 28px;
+    min-height: 292px;
+    padding: 24px;
   }
 
   .landing-contact {
