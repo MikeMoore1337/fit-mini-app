@@ -448,8 +448,11 @@ export function ProgramBuilder({
               </select>
             </label>
           </div>
-          <fieldset className="program-builder-section stack">
-            <legend>Расписание</legend>
+          <section
+            className="program-builder-section stack"
+            aria-labelledby="program-schedule-title"
+          >
+            <h3 id="program-schedule-title">Расписание</h3>
             <div className="form-grid">
               <label className="field">
                 <span>Начать не раньше</span>
@@ -511,7 +514,7 @@ export function ProgramBuilder({
                 с понедельника.
               </p>
             )}
-          </fieldset>
+          </section>
           <section
             className="program-builder-section stack"
             aria-labelledby="strength-template-title"
@@ -552,8 +555,8 @@ export function ProgramBuilder({
               Заполнить по шаблону
             </button>
           </section>
-          <fieldset className="program-builder-section stack">
-            <legend>Отдых между подходами</legend>
+          <section className="program-builder-section stack" aria-labelledby="program-rest-title">
+            <h3 id="program-rest-title">Отдых между подходами</h3>
             <p className="muted">
               Укажите общее время и примените его ко всей программе. При необходимости измените
               отдых отдельно у любого упражнения ниже.
@@ -582,7 +585,7 @@ export function ProgramBuilder({
                 Применить ко всем упражнениям
               </button>
             </div>
-          </fieldset>
+          </section>
           {days.map((day, dayIndex) => (
             <div className="program-day stack" key={dayIndex}>
               <div className="section-head">
