@@ -195,12 +195,20 @@ export default function LandingPage() {
               одном веб-приложении. Тренируйтесь самостоятельно или работайте вместе с тренером.
             </p>
             <div className="landing-hero__actions">
-              <a className="landing-button" href={appUrl}>
+              <a className="landing-button landing-action" href={appUrl}>
                 Открыть приложение
-                <span aria-hidden="true">↗</span>
+                <span className="landing-action__arrow" aria-hidden="true">
+                  ↗
+                </span>
               </a>
-              <a className="landing-text-link" href="#how-it-works">
+              <a
+                className="landing-button landing-button--secondary landing-action"
+                href="#how-it-works"
+              >
                 Посмотреть, как всё устроено
+                <span className="landing-action__arrow" aria-hidden="true">
+                  ↗
+                </span>
               </a>
             </div>
             <p className="landing-hero__note">
@@ -377,28 +385,11 @@ export default function LandingPage() {
                     <path d="M8 21h8M12 18v3" />
                   </svg>
                 </span>
-                <span>ПК или ноутбук</span>
+                <span>Веб-приложение</span>
               </div>
-              <h3>Планируйте на большом экране</h3>
+              <h3>Открывайте в браузере на любом устройстве</h3>
               <p>
-                Настраивайте программы, заполняйте профиль и разбирайте динамику в обычном
-                веб-приложении.
-              </p>
-            </article>
-
-            <article className="landing-platform-card landing-platform-card--mobile">
-              <div className="landing-platform-card__top">
-                <span className="landing-platform-card__icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24">
-                    <rect x="6" y="2" width="12" height="20" rx="2" />
-                    <path d="M10 18h4" />
-                  </svg>
-                </span>
-                <span>Смартфон</span>
-              </div>
-              <h3>Тренируйтесь прямо из браузера</h3>
-              <p>
-                Открывайте занятие в мобильном браузере, отмечайте подходы и следите за таймером без
+                Компьютер, планшет или смартфон — программы, тренировки и прогресс доступны без
                 отдельной установки.
               </p>
             </article>
@@ -411,7 +402,7 @@ export default function LandingPage() {
                     <path d="m9.7 12.9 4.8-4.3" />
                   </svg>
                 </span>
-                <span>Дополнение</span>
+                <span>Дополнительная возможность</span>
               </div>
               <h3>Продолжайте в Telegram Mini App</h3>
               <p>
@@ -446,7 +437,10 @@ export default function LandingPage() {
               прогресс в браузере — Telegram для этого не нужен.
             </p>
             <a className="landing-button landing-audience__link" href={appUrl}>
-              Начать самостоятельно <span aria-hidden="true">↗</span>
+              Начать самостоятельно
+              <span className="landing-action__arrow" aria-hidden="true">
+                ↗
+              </span>
             </a>
           </article>
           <article>
@@ -458,7 +452,10 @@ export default function LandingPage() {
               прогрессом.
             </p>
             <a className="landing-button landing-audience__link" href={appUrl}>
-              Войти и подать заявку <span aria-hidden="true">↗</span>
+              Войти и подать заявку
+              <span className="landing-action__arrow" aria-hidden="true">
+                ↗
+              </span>
             </a>
           </article>
         </section>
@@ -473,20 +470,20 @@ export default function LandingPage() {
             </p>
           </div>
           <div className="landing-contact__actions">
-            <a className="landing-button landing-contact__primary" href={appUrl}>
-              Перейти в веб-приложение{' '}
-              <span className="landing-contact__arrow" aria-hidden="true">
+            <a className="landing-button landing-contact__primary landing-action" href={appUrl}>
+              Перейти в веб-приложение
+              <span className="landing-action__arrow" aria-hidden="true">
                 ↗
               </span>
             </a>
             <a
-              className="landing-contact__link"
+              className="landing-button landing-button--secondary landing-contact__link landing-action"
               href="https://t.me/your_fitness_support_bot"
               target="_blank"
               rel="noreferrer"
             >
               <strong>Задать вопрос в Telegram</strong>
-              <span className="landing-contact__arrow" aria-hidden="true">
+              <span className="landing-action__arrow" aria-hidden="true">
                 ↗
               </span>
             </a>

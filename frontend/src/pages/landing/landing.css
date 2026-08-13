@@ -245,6 +245,30 @@ body.landing-mode #root {
   box-shadow: 0 16px 34px rgba(23, 32, 24, 0.2);
 }
 
+.landing-button--secondary {
+  border-color: var(--landing-border);
+  background: transparent;
+  color: var(--landing-ink) !important;
+  box-shadow: none;
+}
+
+.landing-button--secondary:hover {
+  border-color: var(--landing-muted);
+  box-shadow: 0 12px 26px rgba(23, 32, 24, 0.1);
+}
+
+.landing-action {
+  justify-content: space-between;
+}
+
+.landing-action__arrow {
+  display: inline-block;
+  flex: 0 0 auto;
+  font-size: 0.85rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .landing-button--compact {
   justify-self: end;
   height: var(--landing-header-control-size);
@@ -818,7 +842,7 @@ body.landing-mode #root {
 
 .landing-platforms__options {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: stretch;
   gap: 14px;
 }
@@ -837,11 +861,6 @@ body.landing-mode #root {
 .landing-platform-card--telegram {
   background:
     linear-gradient(145deg, rgba(182, 242, 56, 0.16), transparent 62%), var(--landing-card);
-}
-
-.landing-platform-card--mobile {
-  background:
-    linear-gradient(145deg, rgba(118, 148, 53, 0.1), transparent 62%), var(--landing-card);
 }
 
 .landing-platform-card__top {
@@ -1006,20 +1025,8 @@ body.landing-mode #root {
 }
 
 .landing-contact__link {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
   min-height: 58px;
   padding: 0 20px;
-  border: 1px solid var(--landing-dark);
-  border-radius: 14px;
-  background: transparent;
-  color: var(--landing-ink) !important;
-  text-decoration: none;
-  transition:
-    transform 0.18s ease,
-    box-shadow 0.18s ease;
 }
 
 .landing-contact__link:hover {
@@ -1029,18 +1036,6 @@ body.landing-mode #root {
 
 .landing-contact__link strong {
   font-size: 0.9rem;
-}
-
-.landing-contact__arrow {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  flex: 0 0 28px;
-  font-size: 1.5rem;
-  font-weight: 700;
-  line-height: 1;
 }
 
 .landing-footer {
@@ -1152,15 +1147,18 @@ body.landing-mode #root {
   .landing-hero__actions {
     align-items: stretch;
     flex-direction: column;
-    gap: 18px;
+    gap: 10px;
   }
 
   .landing-button {
     width: 100%;
   }
 
-  .landing-text-link {
-    text-align: center;
+  .landing-hero__actions .landing-button,
+  .landing-contact__actions .landing-button {
+    min-height: 58px;
+    padding-inline: 20px;
+    border-radius: 14px;
   }
 
   .landing-hero__visual {
