@@ -357,17 +357,21 @@
   height: 15px;
   fill: currentColor;
 }
+.oauth-button__icon img {
+  display: block;
+  width: 15px;
+  height: 15px;
+  object-fit: contain;
+}
 .oauth-button--telegram .oauth-button__icon {
   background: #229ed9;
   color: white;
 }
 .oauth-button--google .oauth-button__icon {
   background: white;
-  color: #4285f4;
 }
 .oauth-button--yandex .oauth-button__icon {
   background: #fc3f1d;
-  color: white;
 }
 .oauth-button--vk .oauth-button__icon {
   background: #07f;
