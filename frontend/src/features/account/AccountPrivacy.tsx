@@ -2,7 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
 import { api } from '../../shared/api/client';
 import type { OAuthLinkCreate, TelegramLinkCreate } from '../../shared/api/types';
-import { Badge, Card } from '../../shared/ui/common';
+import { Badge, Card, DisclosureIcon } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 
 function downloadJson(payload: unknown): void {
@@ -82,6 +82,7 @@ export function AccountPrivacy() {
               Telegram.
             </small>
           </span>
+          <DisclosureIcon />
         </summary>
         <div className="profile-disclosure__body">
           <div className="list-row">

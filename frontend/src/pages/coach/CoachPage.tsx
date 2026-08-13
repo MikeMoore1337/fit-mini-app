@@ -10,7 +10,14 @@ import { ProgramBuilder } from '../../features/programs/ProgramBuilder';
 import { api } from '../../shared/api/client';
 import type { ApiSchemas, Client, CoachAssignedProgram, InviteLink } from '../../shared/api/types';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
-import { Badge, Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
+import {
+  Badge,
+  Card,
+  DisclosureIcon,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from '../../shared/ui/common';
 import { Redirect } from '../../shared/navigation/router';
 import { LIVE_DATA_REFETCH_INTERVAL_MS } from '../../shared/sync';
 import { usePersistentState } from '../../shared/storage';
@@ -57,6 +64,7 @@ function ClientDataSection({
           <strong>{title}</strong>
           <small>{description}</small>
         </span>
+        <DisclosureIcon />
       </summary>
       {expanded && <div className="coach-data-disclosure__body">{children}</div>}
     </details>
