@@ -1,132 +1,146 @@
-# Browser authentication rollout
+# Развёртывание веб-аутентификации
 
-Browser authentication is additive. Telegram Mini App `initData` login remains
-enabled independently of `ENABLE_WEB_AUTH` and all OAuth credentials.
+Веб-аутентификация дополняет существующий вход. Вход в Telegram Mini App по
+`initData` продолжает работать независимо от `ENABLE_WEB_AUTH` и наличия
+реквизитов OAuth.
 
-## Safe production order
+## Безопасный порядок включения в production
 
-1. Deploy the database migrations and application with `ENABLE_WEB_AUTH=false`
-   and `ENABLE_EMAIL_AUTH=false`.
-2. Confirm `/health/ready` and the existing Telegram Mini App login.
-3. Configure only the OAuth providers that are ready.
-4. Register the exact callback URLs listed below in provider consoles.
-5. Set `ENABLE_WEB_AUTH=true`, keep `ENABLE_EMAIL_AUTH=false`, and restart the
-   backend. Email/password endpoints and forms remain unavailable.
+1. Разверните миграции базы данных и приложение с параметрами
+   `ENABLE_WEB_AUTH=false` и `ENABLE_EMAIL_AUTH=false`.
+2. Проверьте `/health/ready` и существующий вход в Telegram Mini App.
+3. Настройте только те OAuth-провайдеры, которые готовы к использованию.
+4. Зарегистрируйте в кабинетах провайдеров точные callback URL, указанные ниже.
+5. Установите `ENABLE_WEB_AUTH=true`, оставьте `ENABLE_EMAIL_AUTH=false` и
+   перезапустите backend. Эндпоинты и формы входа по email и паролю останутся
+   недоступны.
 
-The production deployment script enforces the two values from step 5 in the
-existing server `.env` before validating Compose and starting containers. It
-does not alter OAuth credentials or any other secrets.
+Production-скрипт развёртывания устанавливает два значения из пункта 5 в
+существующем серверном `.env` перед проверкой Compose и запуском контейнеров.
+Скрипт не изменяет реквизиты OAuth и другие секреты.
 
-The public config exposes only providers that have both a client ID and client
-secret. A partially configured provider never appears on the login screen.
+Публичная конфигурация показывает только полностью настроенных провайдеров.
+Для Telegram, Google, Яндекса и Apple должны быть заданы client ID и client
+secret. Для VK ID достаточно `VK_OAUTH_CLIENT_ID`, поскольку используется
+OAuth 2.1 с PKCE. Частично настроенный провайдер не появится на экране входа.
 
-## Common application URL
+## Общий адрес приложения
 
-Production frontend and API are expected on the same origin:
+Production frontend и API должны находиться на одном origin:
 
 ```text
 https://app.your-fitness-coach.ru
 ```
 
-Keep `FRONTEND_BASE_URL` equal to that origin. Browser sessions use same-origin
-HttpOnly refresh cookies; no CORS configuration is required.
-The public landing page is served at `https://your-fitness-coach.ru`; it may use
-the same backend, but login, invitations and OAuth callbacks should stay on the
-canonical `app` origin.
+Значение `FRONTEND_BASE_URL` должно совпадать с этим origin. Браузерные сессии
+используют same-origin HttpOnly refresh-cookie, поэтому дополнительная настройка
+CORS не требуется.
 
-## Provider callbacks
+Публичный лендинг доступен по адресу `https://your-fitness-coach.ru` и может
+использовать тот же backend, однако вход, приглашения и OAuth callback должны
+оставаться на каноническом origin `app`.
 
-Register these exact HTTPS redirect URLs:
+## Callback URL провайдеров
+
+Зарегистрируйте следующие точные HTTPS redirect URL:
 
 ```text
 Telegram  https://app.your-fitness-coach.ru/api/v1/auth/oauth/telegram/callback
 Google    https://app.your-fitness-coach.ru/api/v1/auth/oauth/google/callback
-Yandex    https://app.your-fitness-coach.ru/api/v1/auth/oauth/yandex/callback
+Яндекс    https://app.your-fitness-coach.ru/api/v1/auth/oauth/yandex/callback
 VK ID     https://app.your-fitness-coach.ru/api/v1/auth/oauth/vk/callback
 Apple     https://app.your-fitness-coach.ru/api/v1/auth/oauth/apple/callback
 ```
 
-Configure credentials through the matching variables in `.env.example`.
+Реквизиты задаются соответствующими переменными из `.env.example`.
 
-OAuth discovery and token exchange use `OAUTH_HTTP_TIMEOUT_SECONDS` (15 seconds
-by default) and deliberately ignore ambient proxy environment settings so that
-OAuth secrets and authorization codes stay on a direct provider connection. A
-`ConnectTimeout` in `oauth_login_failed` means the backend container could not
-establish that direct outbound HTTPS connection; it does not indicate a
-refresh-cookie or callback URL problem. Verify DNS and HTTPS connectivity from
-the backend container before increasing the timeout further.
+OAuth discovery и обмен токенов используют `OAUTH_HTTP_TIMEOUT_SECONDS` — по
+умолчанию 15 секунд. Они намеренно игнорируют настройки прокси из окружения,
+чтобы секреты OAuth и коды авторизации передавались провайдеру напрямую.
+Ошибка `ConnectTimeout` в событии `oauth_login_failed` означает, что backend-
+контейнер не смог установить прямое исходящее HTTPS-соединение. Она не связана
+с refresh-cookie или callback URL. Перед увеличением тайм-аута проверьте DNS и
+HTTPS-доступ из backend-контейнера.
 
-`OAUTH_FORCE_IPV4=true` is the safe default for deployments whose DNS resolver
-returns both address families while Docker has no working IPv6 route. It binds
-OAuth clients to IPv4 without pinning provider IP addresses, so DNS rotation and
-TLS hostname verification continue to work. Set it to `false` only when the
-container has a verified IPv6 route or runs in an IPv6-only environment.
+`OAUTH_FORCE_IPV4=true` — безопасное значение по умолчанию для окружений, где
+DNS возвращает IPv4- и IPv6-адреса, но Docker не имеет рабочего IPv6-маршрута.
+Параметр привязывает OAuth-клиенты к IPv4, не фиксируя IP-адреса провайдеров,
+поэтому ротация DNS и проверка имени узла в TLS продолжают работать. Установите
+`false` только при наличии проверенного IPv6-маршрута или в окружении только с
+IPv6.
 
-When the server's direct route to a provider is blocked or unreliable, configure
-an operator-controlled proxy only for OAuth with `OAUTH_PROXY_URL`. For an SSH
-dynamic SOCKS tunnel running on the Docker host, use
-`socks5://host.docker.internal:1081`; the Compose backend service resolves that
-hostname to the host gateway. Do not use an untrusted public proxy: it handles
-the OAuth authorization code and client secret. An explicit OAuth proxy takes
-precedence over `OAUTH_FORCE_IPV4`.
+Если прямой маршрут от сервера к провайдеру заблокирован или нестабилен,
+настройте управляемый оператором прокси исключительно для OAuth через
+`OAUTH_PROXY_URL`. Для динамического SSH SOCKS-туннеля на Docker-хосте
+используйте `socks5://host.docker.internal:1081`: backend-сервис Compose
+разрешает это имя в адрес шлюза хоста. Не используйте недоверенный публичный
+прокси — через него проходят OAuth-код авторизации и client secret. Явно
+заданный OAuth-прокси имеет приоритет над `OAUTH_FORCE_IPV4`.
 
-The SSH tunnel must listen on the Docker host gateway (normally `172.17.0.1`),
-not `127.0.0.1`, so the backend container can reach it while the port remains
-unreachable from the public internet. Create a dedicated unprivileged account
-and SSH key for the tunnel, restrict that key on the egress host, and run the
-tunnel under a supervised system service. The tunnel should not require an
-interactive password at runtime.
+SSH-туннель должен слушать шлюз Docker-хоста — обычно `172.17.0.1`, а не
+`127.0.0.1`. Тогда backend-контейнер сможет подключиться к нему, но порт
+останется недоступен из публичного интернета. Создайте для туннеля отдельную
+непривилегированную учётную запись и SSH-ключ, ограничьте ключ на сервере выхода
+и запускайте туннель под управлением системного сервиса. Во время работы
+туннель не должен запрашивать пароль интерактивно.
 
-- Telegram: create Web Login credentials in BotFather and allow the frontend
-  origin plus the callback URL.
-- Google: create a Web OAuth client and request only `openid profile email`.
-- Yandex: create an application for third-party user authorization and allow
-  the `login:info` and `login:email` scopes.
-- VK ID: create a Web application in the VK ID business console, add the exact
-  callback URL above, and set its application ID as `VK_OAUTH_CLIENT_ID`. The
-  backend implements VK ID OAuth 2.1 with PKCE (S256), requests only the
-  `email` scope, and performs the code exchange and `user_info` request on the
-  server. A VK client secret is not sent or required by this flow.
-- Apple: use a Services ID for the client ID. `APPLE_OAUTH_CLIENT_SECRET` is the
-  signed client-secret JWT generated with the Apple private key; rotate it
-  before its configured expiry.
+- Telegram: создайте реквизиты Web Login в BotFather и разрешите origin
+  frontend вместе с callback URL.
+- Google: создайте Web OAuth client и запрашивайте только
+  `openid profile email`.
+- Яндекс: создайте приложение для авторизации сторонних пользователей и
+  разрешите scopes `login:info` и `login:email`.
+- VK ID: создайте Web-приложение в кабинете VK ID, добавьте точный callback URL
+  из списка выше и задайте ID приложения в `VK_OAUTH_CLIENT_ID`. Backend
+  реализует VK ID OAuth 2.1 с PKCE (S256), запрашивает только scope `email` и
+  выполняет обмен кода и запрос `user_info` на сервере. В этом потоке client
+  secret VK не передаётся и не требуется.
+- Apple: используйте Services ID в качестве client ID.
+  `APPLE_OAUTH_CLIENT_SECRET` — это подписанный JWT client secret, созданный с
+  помощью закрытого ключа Apple. Обновляйте его до истечения установленного
+  срока действия.
 
-Never put provider secrets in frontend variables or commit them to Git.
+Никогда не помещайте секреты провайдеров во frontend-переменные и не сохраняйте
+их в Git.
 
-## Explicit account linking
+## Явная привязка способов входа
 
-Logging in with a new provider does not merge accounts by matching email. An
-email address returned by Google, Yandex or Apple is not sufficient proof that
-an existing Telegram profile belongs to the same person.
+Вход через нового провайдера не объединяет аккаунты по совпадающему email.
+Адрес email, полученный от Google, Яндекса, VK ID или Apple, сам по себе не
+доказывает, что существующий Telegram-профиль принадлежит тому же человеку.
 
-Link an additional login method only from the already authenticated account:
+Дополнительный способ входа следует привязывать только из уже авторизованного
+аккаунта:
 
-1. First sign in to the account whose training history must be preserved. For
-   a profile created by the Telegram bot, open the Mini App in Telegram and go
-   to **Profile → Login methods**.
-2. Choose **Link Telegram**, **Link Google**, **Link Yandex**, **Link VK ID** or
-   **Link Apple**.
-3. Complete the provider confirmation within 10 minutes.
-4. Return to the profile and confirm that both login methods are marked as
-   linked.
+1. Сначала войдите в аккаунт, историю тренировок которого нужно сохранить.
+   Если профиль был создан через Telegram-бота, откройте Mini App в Telegram и
+   перейдите в раздел **Профиль → Способы входа**.
+2. Выберите **Привязать Telegram**, **Привязать Google**,
+   **Привязать Яндекс**, **Привязать VK ID** или **Привязать Apple**.
+3. В течение 10 минут подтвердите действие у провайдера.
+4. Вернитесь в профиль и убедитесь, что оба способа входа отмечены как
+   привязанные.
 
-For Telegram, the browser creates a one-time bot deep link. For Google, Yandex,
-VK ID and Apple, the application creates a one-time OAuth link. The token is
-single-use, a newer token replaces the previous one, and a conflict consumes
-the token without merging data. If the selected Telegram or OAuth identity is
-already owned by another account, the operation is rejected and both accounts
-remain unchanged. Resolving such a conflict requires a separate, audited
-support procedure; there is no automatic data merge.
+Для Telegram браузер создаёт одноразовую deep link-ссылку на бота. Для Google,
+Яндекса, VK ID и Apple приложение создаёт одноразовую OAuth-ссылку. Токен можно
+использовать только один раз, а создание нового токена заменяет предыдущий. При
+конфликте токен расходуется без объединения данных.
 
-After a successful link, both login methods resolve to the same internal user
-ID. Profile data, coach relationships, programs, workouts, nutrition records
-and progress therefore remain identical in Telegram and the browser.
+Если выбранная Telegram- или OAuth-идентичность уже принадлежит другому
+аккаунту, операция отклоняется, а оба аккаунта остаются без изменений. Для
+разрешения такого конфликта требуется отдельная аудируемая процедура поддержки;
+автоматического объединения данных нет.
 
-## Optional email/password authentication
+После успешной привязки оба способа входа разрешаются в один внутренний ID
+пользователя. Поэтому профиль, связь с тренером, программы, тренировки, записи
+питания и прогресс остаются одинаковыми в Telegram и браузере.
 
-Email/password registration is controlled independently by
-`ENABLE_EMAIL_AUTH` and is disabled by default. Browser OAuth does not require
-SMTP. If email authentication is enabled later, production startup rejects the
-configuration unless `SMTP_HOST` and `SMTP_FROM_EMAIL` are set. Configure either
-STARTTLS (normally port 587) or implicit TLS, not both. Email verification and
-password reset links use `FRONTEND_BASE_URL`.
+## Необязательная аутентификация по email и паролю
+
+Регистрация по email и паролю управляется отдельно через `ENABLE_EMAIL_AUTH` и
+по умолчанию отключена. Для браузерного OAuth SMTP не требуется.
+
+Если аутентификация по email будет включена позже, запуск production отклонит
+конфигурацию без `SMTP_HOST` и `SMTP_FROM_EMAIL`. Настройте либо STARTTLS —
+обычно на порту 587, либо неявный TLS, но не оба режима одновременно. Ссылки
+подтверждения email и восстановления пароля используют `FRONTEND_BASE_URL`.
