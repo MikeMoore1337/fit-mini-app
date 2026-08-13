@@ -148,4 +148,42 @@ describe('LandingPage', () => {
       'https://app.your-fitness-coach.ru/app',
     );
   });
+
+  it('publishes useful metadata and a keyboard skip link', () => {
+    const description = document.createElement('meta');
+    description.name = 'description';
+    document.head.append(description);
+    const ogTitle = document.createElement('meta');
+    ogTitle.setAttribute('property', 'og:title');
+    document.head.append(ogTitle);
+    const ogDescription = document.createElement('meta');
+    ogDescription.setAttribute('property', 'og:description');
+    document.head.append(ogDescription);
+    const ogType = document.createElement('meta');
+    ogType.setAttribute('property', 'og:type');
+    document.head.append(ogType);
+
+    const { unmount } = render(
+      <NavigationProvider>
+        <LandingPage />
+      </NavigationProvider>,
+    );
+
+    expect(document.title).toMatch(/тренировки, питание и прогресс в браузере и telegram/i);
+    expect(description.content).toMatch(/фиксировать результаты.*ориентиры кбжу/i);
+    expect(ogTitle.content).toMatch(/в браузере и telegram/i);
+    expect(ogDescription.content).toMatch(/компьютере, смартфоне и в telegram mini app/i);
+    expect(ogType.content).toBe('website');
+    expect(screen.getByRole('link', { name: 'К содержимому' })).toHaveAttribute(
+      'href',
+      '#landing-content',
+    );
+    expect(document.querySelector('#landing-content')).toHaveAttribute('tabindex', '-1');
+
+    unmount();
+    description.remove();
+    ogTitle.remove();
+    ogDescription.remove();
+    ogType.remove();
+  });
 });

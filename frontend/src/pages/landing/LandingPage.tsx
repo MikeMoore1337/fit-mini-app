@@ -5,6 +5,11 @@ import './landing.css';
 type LandingTheme = 'light' | 'dark';
 
 const LANDING_THEME_STORAGE_KEY = 'landing-theme';
+const LANDING_TITLE = 'Your Fitness Coach — тренировки, питание и прогресс в браузере и Telegram';
+const LANDING_DESCRIPTION =
+  'Your Fitness Coach помогает планировать тренировки, фиксировать результаты, рассчитывать ориентиры КБЖУ и отслеживать прогресс в браузере и Telegram.';
+const LANDING_OG_DESCRIPTION =
+  'Планируйте тренировки, фиксируйте результаты и отслеживайте прогресс на компьютере, смартфоне и в Telegram Mini App.';
 
 function storedLandingTheme(): LandingTheme | null {
   const stored = window.localStorage.getItem(LANDING_THEME_STORAGE_KEY);
@@ -85,10 +90,27 @@ export default function LandingPage() {
 
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = 'Your Fitness Coach — веб-приложение для тренировок и прогресса';
+    const metadata = [
+      ['meta[name="description"]', LANDING_DESCRIPTION],
+      ['meta[property="og:title"]', LANDING_TITLE],
+      ['meta[property="og:description"]', LANDING_OG_DESCRIPTION],
+      ['meta[property="og:type"]', 'website'],
+    ] as const;
+    const previousMetadata = metadata.map(([selector]) => {
+      const element = document.querySelector<HTMLMetaElement>(selector);
+      return [element, element?.content] as const;
+    });
+    document.title = LANDING_TITLE;
+    metadata.forEach(([selector, content]) => {
+      const element = document.querySelector<HTMLMetaElement>(selector);
+      if (element) element.content = content;
+    });
     document.body.classList.add('landing-mode');
     return () => {
       document.title = previousTitle;
+      previousMetadata.forEach(([element, content]) => {
+        if (element && content !== undefined) element.content = content;
+      });
       document.body.classList.remove('landing-mode');
     };
   }, []);
@@ -120,6 +142,13 @@ export default function LandingPage() {
 
   return (
     <div className={`landing-page landing-page--${theme}`}>
+      <a
+        className="landing-skip-link"
+        href="#landing-content"
+        onClick={() => document.querySelector<HTMLElement>('#landing-content')?.focus()}
+      >
+        К содержимому
+      </a>
       <header className="landing-header">
         <a className="landing-brand" href="#top" aria-label="Your Fitness Coach — на главную">
           <img
@@ -152,7 +181,7 @@ export default function LandingPage() {
         </div>
       </header>
 
-      <main id="top">
+      <main id="landing-content" tabIndex={-1}>
         <section className="landing-hero" aria-labelledby="landing-title">
           <div className="landing-hero__copy">
             <p className="landing-kicker">Веб-приложение для тренировок и прогресса</p>
