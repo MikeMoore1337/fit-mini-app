@@ -54,7 +54,7 @@ test('лендинг остаётся адаптивным на контроль
     expect(pageMetrics.bodyWidth).toBeLessThanOrEqual(pageMetrics.viewport);
     await expect(page.getByRole('link', { name: /открыть приложение/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /включить .* тему/i })).toBeInViewport();
-    await expect(page.locator('.landing-platform-card')).toHaveCount(3);
+    await expect(page.locator('.landing-platform-card')).toHaveCount(2);
   }
 });
 
@@ -164,10 +164,7 @@ test('сценарий и платформы остаются понятными
       }),
     ).toBeVisible();
     await expect(
-      page.getByRole('heading', { name: /планируйте на большом экране/i }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole('heading', { name: /тренируйтесь прямо из браузера/i }),
+      page.getByRole('heading', { name: /открывайте в браузере на любом устройстве/i }),
     ).toBeVisible();
     await expect(
       page.getByRole('heading', { name: /продолжайте в telegram mini app/i }),
@@ -199,19 +196,15 @@ test('сценарий и платформы остаются понятными
     ).toBeLessThanOrEqual(1);
 
     const platformCards = page.locator('.landing-platform-card');
-    await expect(platformCards).toHaveCount(3);
+    await expect(platformCards).toHaveCount(2);
     const browserCard = await platformCards.first().boundingBox();
-    const mobileCard = await platformCards.nth(1).boundingBox();
     const telegramCard = await platformCards.last().boundingBox();
     expect(browserCard).not.toBeNull();
-    expect(mobileCard).not.toBeNull();
     expect(telegramCard).not.toBeNull();
     if (viewport.width >= 768) {
-      expect(browserCard!.x + browserCard!.width).toBeLessThan(mobileCard!.x);
-      expect(mobileCard!.x + mobileCard!.width).toBeLessThan(telegramCard!.x);
+      expect(browserCard!.x + browserCard!.width).toBeLessThan(telegramCard!.x);
     } else {
-      expect(browserCard!.y + browserCard!.height).toBeLessThan(mobileCard!.y);
-      expect(mobileCard!.y + mobileCard!.height).toBeLessThan(telegramCard!.y);
+      expect(browserCard!.y + browserCard!.height).toBeLessThan(telegramCard!.y);
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
   }
@@ -247,13 +240,24 @@ test('сценарии спортсмена и тренера ведут в ве
       'href',
       'https://t.me/your_fitness_support_bot',
     );
-    const contactArrows = page.locator('.landing-contact__arrow');
-    await expect(contactArrows).toHaveCount(2);
-    for (const arrow of await contactArrows.all()) {
-      await expect(arrow).toHaveCSS('width', '28px');
-      await expect(arrow).toHaveCSS('height', '28px');
-      await expect(arrow).toHaveCSS('font-size', '24px');
-      await expect(arrow).toHaveCSS('font-weight', '700');
+    const actionArrows = page.locator('.landing-action__arrow');
+    await expect(actionArrows).toHaveCount(6);
+    for (const arrow of await actionArrows.all()) {
+      await expect(arrow).toHaveCSS('font-size', '13.6px');
+      await expect(arrow).toHaveCSS('font-weight', '800');
+    }
+    if (viewport.width < 768) {
+      const heroButtons = page.locator('.landing-hero__actions .landing-button');
+      const contactButtons = page.locator('.landing-contact__actions .landing-button');
+      for (const buttons of [heroButtons, contactButtons]) {
+        await expect(buttons).toHaveCount(2);
+        const first = await buttons.first().boundingBox();
+        const second = await buttons.last().boundingBox();
+        expect(first).not.toBeNull();
+        expect(second).not.toBeNull();
+        expect(first!.width).toBeCloseTo(second!.width, 0);
+        expect(first!.height).toBe(second!.height);
+      }
     }
 
     const clientCard = await audienceCards.first().boundingBox();

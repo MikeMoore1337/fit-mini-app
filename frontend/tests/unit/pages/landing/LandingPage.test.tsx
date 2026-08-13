@@ -82,10 +82,7 @@ describe('LandingPage', () => {
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { name: /планируйте на большом экране/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: /тренируйтесь прямо из браузера/i }),
+      screen.getByRole('heading', { name: /открывайте в браузере на любом устройстве/i }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('heading', { name: /продолжайте в telegram mini app/i }),
@@ -106,6 +103,7 @@ describe('LandingPage', () => {
     expect(screen.getByText(/нажмите «стать тренером» в профиле/i)).toBeInTheDocument();
     expect(screen.getByText(/писать администратору отдельно не нужно/i)).toBeInTheDocument();
     expect(screen.getByText(/один аккаунт на компьютере и смартфоне/i)).toBeInTheDocument();
+    expect(screen.getByText(/компьютер, планшет или смартфон/i)).toBeInTheDocument();
     expect(screen.queryByText(/тариф/i)).not.toBeInTheDocument();
     expect(screen.queryByText('+18%')).not.toBeInTheDocument();
     expect(screen.queryByText('12', { exact: true })).not.toBeInTheDocument();
