@@ -92,6 +92,15 @@ describe('LandingPage', () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/общение с тренером происходит в telegram/i)).toBeInTheDocument();
     expect(screen.getByLabelText('Данные синхронизируются')).toBeInTheDocument();
+    expect(screen.getByText(/занимаетесь самостоятельно/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /тренируйтесь по понятному плану/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/вы тренер/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /приглашайте клиентов и ведите их в одном кабинете/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/для старта не нужны установка и telegram/i)).toBeInTheDocument();
     expect(screen.queryByText(/тариф/i)).not.toBeInTheDocument();
     expect(screen.queryByText('+18%')).not.toBeInTheDocument();
     expect(screen.queryByText('12', { exact: true })).not.toBeInTheDocument();
@@ -101,7 +110,7 @@ describe('LandingPage', () => {
     expect(container.querySelectorAll('img[src="/assets/brand/fitness-logo-v2.png"]')).toHaveLength(
       2,
     );
-    const contact = screen.getByRole('link', { name: /связаться в telegram/i });
+    const contact = screen.getByRole('link', { name: /задать вопрос в telegram/i });
     expect(contact).toHaveAttribute('href', 'https://t.me/your_fitness_support_bot');
     expect(contact).toHaveAttribute('target', '_blank');
   });
@@ -115,6 +124,18 @@ describe('LandingPage', () => {
 
     expect(screen.getByRole('link', { name: 'Войти' })).toHaveAttribute('href', '/app');
     expect(screen.getByRole('link', { name: /открыть приложение/i })).toHaveAttribute(
+      'href',
+      '/app',
+    );
+    expect(screen.getByRole('link', { name: /начать самостоятельно/i })).toHaveAttribute(
+      'href',
+      '/app',
+    );
+    expect(screen.getByRole('link', { name: /открыть кабинет тренера/i })).toHaveAttribute(
+      'href',
+      '/app',
+    );
+    expect(screen.getByRole('link', { name: /перейти в веб-приложение/i })).toHaveAttribute(
       'href',
       '/app',
     );
