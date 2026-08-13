@@ -667,6 +667,10 @@ body:has(.auth-page) {
     background: radial-gradient(circle at 85% 5%, rgba(182, 242, 56, 0.12), transparent 26rem), #0d120f;
 }
 
+:root[data-app-surface="telegram"] body:has(.auth-page) {
+    background: var(--page-bg);
+}
+
 #root {
     width: 100%;
     min-width: 0;
