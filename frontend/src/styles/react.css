@@ -204,13 +204,64 @@
 .metric strong {
   font-size: 1.25rem;
 }
-.auth-panel {
-  max-width: 620px;
-  margin: 12vh auto 0;
+.auth-page {
+  min-height: calc(100dvh - max(60px, env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px)));
+  align-content: center;
 }
-.auth-theme-row {
+.auth-panel {
+  width: min(100%, 560px);
+  margin: auto;
+}
+.auth-panel--branded {
+  --auth-ink: #172018;
+  --auth-muted: #657067;
+  --auth-card: rgba(251, 252, 247, 0.94);
+  --auth-border: rgba(23, 32, 24, 0.16);
+  --auth-soft: #e8ede4;
+  --auth-hover: #dfe6dc;
+  background: var(--auth-card);
+  border-color: var(--auth-border);
+  color: var(--auth-ink);
+  box-shadow: 0 18px 42px rgba(23, 32, 24, 0.12);
+}
+.auth-panel--branded .section-head {
+  align-items: flex-start;
+}
+.auth-panel--branded .section-head h2 {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  letter-spacing: -0.025em;
+}
+.auth-panel--branded .section-head h2::before {
+  width: 32px;
+  height: 32px;
+  content: '';
+  background: url('/assets/brand/fitness-logo-v2.png') center / contain no-repeat;
+}
+.auth-panel--branded .muted {
+  color: var(--auth-muted);
+}
+.auth-panel--branded .app-theme-toggle,
+.auth-panel--branded .oauth-button {
+  border-color: var(--auth-border);
+  background: var(--auth-soft);
+  color: var(--auth-ink);
+}
+.auth-panel--branded .app-theme-toggle:hover,
+.auth-panel--branded .oauth-button:hover {
+  border-color: rgba(79, 103, 37, 0.48);
+  background: var(--auth-hover);
+}
+:root[data-color-scheme='dark'] .auth-panel--branded {
+  --auth-ink: #f2f6ef;
+  --auth-muted: #aab5ac;
+  --auth-card: rgba(21, 28, 23, 0.95);
+  --auth-border: rgba(182, 242, 56, 0.18);
+  --auth-soft: #202a23;
+  --auth-hover: #29352c;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28);
 }
 .app-theme-toggle {
   display: inline-grid;

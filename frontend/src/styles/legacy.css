@@ -625,11 +625,20 @@ body {
 }
 
 body {
+    min-height: 100dvh;
     padding-top: max(20px, env(safe-area-inset-top, 0px));
     padding-right: max(14px, env(safe-area-inset-right, 0px));
     padding-bottom: max(40px, env(safe-area-inset-bottom, 0px));
     padding-left: max(14px, env(safe-area-inset-left, 0px));
     -webkit-tap-highlight-color: var(--accent-soft);
+}
+
+body:has(.auth-page) {
+    background: radial-gradient(circle at 85% 5%, rgba(182, 242, 56, 0.2), transparent 26rem), #f1f3ec;
+}
+
+:root[data-color-scheme="dark"] body:has(.auth-page) {
+    background: radial-gradient(circle at 85% 5%, rgba(182, 242, 56, 0.12), transparent 26rem), #0d120f;
 }
 
 #root {

@@ -41,34 +41,30 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <main className="container">
+    <main className="container auth-page">
       <Card
-        className="auth-panel"
+        className="auth-panel auth-panel--branded"
         title="Вход в Your Fitness Coach"
         description={
           hasBrowserAuth
             ? 'Выберите доступный безопасный способ входа.'
             : 'Откройте приложение внутри Telegram для безопасной авторизации.'
         }
+        actions={<AppThemeToggle />}
       >
         <div className="stack top-gap">
-          <div className="auth-theme-row">
-            <AppThemeToggle />
-          </div>
           {(localError || error) && <ErrorState message={localError || error || ''} />}
           {window.Telegram?.WebApp?.initData && (
             <button disabled={busy} onClick={() => void run(() => telegramLogin())}>
               Войти через Telegram
             </button>
           )}
-          {!window.Telegram?.WebApp?.initData && (
+          {!window.Telegram?.WebApp?.initData && !hasBrowserAuth && (
             <div className="auth-notice" role="status">
               <span>
-                {hasBrowserAuth
-                  ? 'Вы открыли приложение в браузере. Вход через Telegram откроет защищённую страницу авторизации и вернёт вас сюда.'
-                  : 'Вход через браузер пока недоступен. Сейчас приложение можно открыть через Telegram.'}
+                Вход через браузер пока недоступен. Сейчас приложение можно открыть через Telegram.
               </span>
-              {!hasBrowserAuth && telegramAppUrl && (
+              {telegramAppUrl && (
                 <a className="button-link" href={telegramAppUrl} target="_blank" rel="noreferrer">
                   Открыть в Telegram
                 </a>
