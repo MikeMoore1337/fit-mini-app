@@ -167,6 +167,49 @@ test('сценарий и платформы остаются понятными
   }
 });
 
+test('сценарии спортсмена и тренера ведут в веб-приложение', async ({ page }) => {
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 768, height: 900 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/');
+
+    const audienceCards = page.locator('.landing-audience article');
+    await expect(audienceCards).toHaveCount(2);
+    await expect(page.getByText(/занимаетесь самостоятельно/i)).toBeVisible();
+    await expect(page.getByText(/вы тренер/i)).toBeVisible();
+    await expect(page.getByRole('link', { name: /начать самостоятельно/i })).toHaveAttribute(
+      'href',
+      '/app',
+    );
+    await expect(page.getByRole('link', { name: /открыть кабинет тренера/i })).toHaveAttribute(
+      'href',
+      '/app',
+    );
+    await expect(page.getByRole('link', { name: /перейти в веб-приложение/i })).toHaveAttribute(
+      'href',
+      '/app',
+    );
+    await expect(page.getByRole('link', { name: /задать вопрос в telegram/i })).toHaveAttribute(
+      'href',
+      'https://t.me/your_fitness_support_bot',
+    );
+
+    const clientCard = await audienceCards.first().boundingBox();
+    const coachCard = await audienceCards.last().boundingBox();
+    expect(clientCard).not.toBeNull();
+    expect(coachCard).not.toBeNull();
+    if (viewport.width >= 768) {
+      expect(clientCard!.x + clientCard!.width).toBeLessThan(coachCard!.x);
+    } else {
+      expect(clientCard!.y + clientCard!.height).toBeLessThan(coachCard!.y);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
+  }
+});
+
 async function mockApi(page: Page, { withCoachClient = false } = {}) {
   let role: 'client' | 'coach' | 'admin' = 'client';
   const heartRateZones = [

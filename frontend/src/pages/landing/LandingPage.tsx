@@ -389,36 +389,53 @@ export default function LandingPage() {
           </p>
         </section>
 
-        <section className="landing-audience">
+        <section className="landing-audience" aria-label="Выберите подходящий сценарий">
           <article>
-            <p className="landing-kicker">Для клиентов</p>
-            <h2>Сосредоточьтесь на тренировке, а не на организации</h2>
+            <p className="landing-kicker">Занимаетесь самостоятельно?</p>
+            <h2>Тренируйтесь по понятному плану в своём темпе</h2>
             <p>
-              Актуальный план, история занятий, замеры и ориентиры по питанию всегда находятся в
-              одном месте.
+              Выберите готовую программу или соберите свою. Выполняйте занятия и отслеживайте
+              прогресс в браузере — Telegram для этого не нужен.
             </p>
+            <a className="landing-button landing-audience__link" href={appUrl}>
+              Начать самостоятельно <span aria-hidden="true">↗</span>
+            </a>
           </article>
           <article>
-            <p className="landing-kicker">Для тренеров</p>
-            <h2>Управляйте сопровождением без лишней рутины</h2>
-            <p>Создавайте программы, планируйте занятия и отслеживайте динамику каждого клиента.</p>
+            <p className="landing-kicker">Вы тренер?</p>
+            <h2>Приглашайте клиентов и ведите их в одном кабинете</h2>
+            <p>
+              Клиент подключается по вашей ссылке. Назначайте программы, следите за выполнением и
+              прогрессом, а для переписки переходите в Telegram.
+            </p>
+            <a className="landing-button landing-audience__link" href={appUrl}>
+              Открыть кабинет тренера <span aria-hidden="true">↗</span>
+            </a>
           </article>
         </section>
 
         <section id="contact" className="landing-contact">
-          <div>
-            <p className="landing-kicker">Начнём с диалога</p>
-            <h2>Хотите узнать больше о Your Fitness Coach?</h2>
+          <div className="landing-contact__copy">
+            <p className="landing-kicker">Начните в браузере</p>
+            <h2>Откройте Your Fitness Coach и выберите свой путь</h2>
+            <p>
+              Зарегистрируйтесь как спортсмен или тренер. Для старта не нужны установка и Telegram.
+            </p>
           </div>
-          <a
-            className="landing-contact__link"
-            href="https://t.me/your_fitness_support_bot"
-            target="_blank"
-            rel="noreferrer"
-          >
-            <strong>Связаться в Telegram</strong>
-            <span aria-hidden="true">↗</span>
-          </a>
+          <div className="landing-contact__actions">
+            <a className="landing-button landing-contact__primary" href={appUrl}>
+              Перейти в веб-приложение <span aria-hidden="true">↗</span>
+            </a>
+            <a
+              className="landing-contact__link"
+              href="https://t.me/your_fitness_support_bot"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <strong>Задать вопрос в Telegram</strong>
+              <span aria-hidden="true">↗</span>
+            </a>
+          </div>
         </section>
       </main>
 
@@ -433,7 +450,7 @@ export default function LandingPage() {
           />
           <span>Your Fitness Coach</span>
         </a>
-        <p>Персональные тренировки и связь с тренером в единой системе.</p>
+        <p>Тренировки и прогресс в веб-приложении. Общение с тренером — в Telegram.</p>
         <span>© {new Date().getFullYear()}</span>
       </footer>
     </div>
