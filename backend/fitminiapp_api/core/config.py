@@ -131,20 +131,33 @@ class Settings(BaseSettings):
 
     @property
     def oauth_provider_names(self) -> list[str]:
-        pairs = {
-            "telegram": (self.telegram_oauth_client_id, self.telegram_oauth_client_secret),
-            "google": (self.google_oauth_client_id, self.google_oauth_client_secret),
-            "yandex": (self.yandex_oauth_client_id, self.yandex_oauth_client_secret),
-            "apple": (self.apple_oauth_client_id, self.apple_oauth_client_secret),
-        }
-        providers = [
-            name
-            for name, credentials in pairs.items()
-            if all(value.strip() for value in credentials)
+        configured = [
+            (
+                "telegram",
+                bool(
+                    self.telegram_oauth_client_id.strip()
+                    and self.telegram_oauth_client_secret.strip()
+                ),
+            ),
+            (
+                "google",
+                bool(
+                    self.google_oauth_client_id.strip() and self.google_oauth_client_secret.strip()
+                ),
+            ),
+            (
+                "yandex",
+                bool(
+                    self.yandex_oauth_client_id.strip() and self.yandex_oauth_client_secret.strip()
+                ),
+            ),
+            ("vk", bool(self.vk_oauth_client_id.strip())),
+            (
+                "apple",
+                bool(self.apple_oauth_client_id.strip() and self.apple_oauth_client_secret.strip()),
+            ),
         ]
-        if self.vk_oauth_client_id.strip():
-            providers.append("vk")
-        return providers
+        return [name for name, enabled in configured if enabled]
 
 
 settings = Settings()

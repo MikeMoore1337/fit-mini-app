@@ -84,6 +84,8 @@ def _finish_vk(client, state: str):
 
 def test_vk_oauth_login_uses_pkce_and_creates_browser_session(client, monkeypatch):
     monkeypatch.setattr(settings, "enable_web_auth", True)
+    monkeypatch.setattr(settings, "telegram_oauth_client_id", "")
+    monkeypatch.setattr(settings, "telegram_oauth_client_secret", "")
     monkeypatch.setattr(settings, "vk_oauth_client_id", "vk-client")
     requests = _vk_transport(monkeypatch)
 
@@ -130,6 +132,22 @@ def test_telegram_profile_can_explicitly_link_vk_login(client, monkeypatch):
 
 def test_vk_claims_require_a_stable_user_id():
     assert normalize_oauth_claims("vk", {"email": "missing-id@example.com"})["subject"] == ""
+
+
+def test_public_config_exposes_requested_oauth_providers_in_ui_order(client, monkeypatch):
+    monkeypatch.setattr(settings, "enable_web_auth", True)
+    monkeypatch.setattr(settings, "telegram_oauth_client_id", "")
+    monkeypatch.setattr(settings, "telegram_oauth_client_secret", "")
+    monkeypatch.setattr(settings, "google_oauth_client_id", "google-client")
+    monkeypatch.setattr(settings, "google_oauth_client_secret", "google-secret")
+    monkeypatch.setattr(settings, "yandex_oauth_client_id", "yandex-client")
+    monkeypatch.setattr(settings, "yandex_oauth_client_secret", "yandex-secret")
+    monkeypatch.setattr(settings, "vk_oauth_client_id", "vk-client")
+
+    response = client.get("/api/v1/public/config")
+
+    assert response.status_code == 200
+    assert response.json()["oauth_providers"] == ["google", "yandex", "vk"]
 
 
 def test_vk_oauth_rejects_callback_with_wrong_state_without_network_call(client, monkeypatch):

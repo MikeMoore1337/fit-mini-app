@@ -97,6 +97,7 @@ export default function MiniAppPage() {
     const labels: Record<string, string> = {
       google: 'Google',
       yandex: 'Яндекс',
+      vk: 'VK ID',
       apple: 'Apple',
     };
     if (linkedProvider) {

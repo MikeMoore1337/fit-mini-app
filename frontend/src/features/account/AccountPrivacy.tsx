@@ -43,6 +43,7 @@ export function AccountPrivacy() {
   const providerLabels: Record<string, string> = {
     google: 'Google',
     yandex: 'Яндекс',
+    vk: 'VK ID',
     apple: 'Apple',
   };
   const availableOAuthProviders = (config?.oauth_providers ?? []).filter(
@@ -74,7 +75,7 @@ export function AccountPrivacy() {
     <>
       <Card
         title="Способы входа"
-        description="Привяжите Telegram, чтобы видеть одни и те же данные в браузере и боте."
+        description="Привяжите дополнительные способы входа, чтобы открывать один профиль в браузере и Telegram."
       >
         <div className="list-row top-gap">
           <div className="list-row__main">
