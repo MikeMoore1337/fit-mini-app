@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from fitminiapp_api.core.timezone import now_msk_naive, today_for_user
 from fitminiapp_api.models.exercise import Exercise
+from fitminiapp_api.models.nutrition import NutritionTarget
 from fitminiapp_api.models.program import (
     HiddenProgramTemplate,
     ProgramTemplate,
@@ -36,6 +37,7 @@ from fitminiapp_api.services.exercise_catalog import (
 )
 from fitminiapp_api.services.exercise_guides import get_exercise_guide
 from fitminiapp_api.services.notifications import queue_telegram_notification
+from fitminiapp_api.services.nutrition import build_nutrition_target_response_from_users
 from fitminiapp_api.services.program_common import ProgramError
 
 GOALS = {"muscle_gain", "fat_loss", "maintenance", "recomposition"}
@@ -799,9 +801,46 @@ def list_clients(db: Session, coach: User) -> list[dict]:
         .all()
     )
 
-    return [_client_entry_from_user(db, user, private_name) for user, private_name in clients] + [
-        _client_entry_from_invite(invite) for invite in invites
-    ]
+    client_users = [user for user, _private_name in clients]
+    users_by_id = {user.id: user for user in client_users}
+    nutrition_targets = (
+        db.query(NutritionTarget).filter(NutritionTarget.user_id.in_(users_by_id)).all()
+        if users_by_id
+        else []
+    )
+    assigner_ids = {
+        target.assigned_by_user_id
+        for target in nutrition_targets
+        if target.assigned_by_user_id is not None
+    }
+    assigners = (
+        {
+            user.id: user
+            for user in db.query(User)
+            .options(joinedload(User.profile))
+            .filter(User.id.in_(assigner_ids))
+            .all()
+        }
+        if assigner_ids
+        else {}
+    )
+    nutrition_by_user_id = {
+        target.user_id: build_nutrition_target_response_from_users(
+            target,
+            users_by_id[target.user_id],
+            (
+                assigners.get(target.assigned_by_user_id)
+                if target.assigned_by_user_id is not None
+                else None
+            ),
+        )
+        for target in nutrition_targets
+    }
+
+    return [
+        _client_entry_from_user(user, private_name, nutrition_by_user_id.get(user.id))
+        for user, private_name in clients
+    ] + [_client_entry_from_invite(invite) for invite in invites]
 
 
 def list_coach_assigned_programs(db: Session, coach: User) -> list[dict]:

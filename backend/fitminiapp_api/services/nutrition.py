@@ -315,26 +315,12 @@ def _assigned_by_response(user: User | None) -> NutritionAssignedByResponse | No
     )
 
 
-def build_nutrition_target_response(
-    db: Session,
-    target: NutritionTarget | None,
-) -> NutritionTargetResponse | None:
-    if not target:
-        return None
-
-    user = db.query(User).filter(User.id == target.user_id).first()
-    if not user:
-        return None
-
-    assigned_by = None
-    if target.assigned_by_user_id:
-        assigned_by = (
-            db.query(User)
-            .options(joinedload(User.profile))
-            .filter(User.id == target.assigned_by_user_id)
-            .first()
-        )
-
+def build_nutrition_target_response_from_users(
+    target: NutritionTarget,
+    user: User,
+    assigned_by: User | None,
+) -> NutritionTargetResponse:
+    """Serialize a target when its related users were loaded by the caller."""
     return NutritionTargetResponse(
         user_id=target.user_id,
         telegram_user_id=user.telegram_user_id,
@@ -363,6 +349,29 @@ def build_nutrition_target_response(
         saved_at=target.saved_at,
         assigned_by=_assigned_by_response(assigned_by),
     )
+
+
+def build_nutrition_target_response(
+    db: Session,
+    target: NutritionTarget | None,
+) -> NutritionTargetResponse | None:
+    if not target:
+        return None
+
+    user = db.query(User).filter(User.id == target.user_id).first()
+    if not user:
+        return None
+
+    assigned_by = None
+    if target.assigned_by_user_id:
+        assigned_by = (
+            db.query(User)
+            .options(joinedload(User.profile))
+            .filter(User.id == target.assigned_by_user_id)
+            .first()
+        )
+
+    return build_nutrition_target_response_from_users(target, user, assigned_by)
 
 
 def get_nutrition_target_for_user(

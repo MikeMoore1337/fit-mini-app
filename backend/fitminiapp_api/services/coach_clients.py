@@ -11,9 +11,9 @@ from fitminiapp_api.core.config import settings
 from fitminiapp_api.core.timezone import now_msk_naive
 from fitminiapp_api.models.notification import Notification
 from fitminiapp_api.models.user import CoachClient, CoachClientInvite, User, UserProfile
+from fitminiapp_api.schemas.nutrition import NutritionTargetResponse
 from fitminiapp_api.services.audit import record_audit_event
 from fitminiapp_api.services.auth_identities import ensure_telegram_identity
-from fitminiapp_api.services.nutrition import get_nutrition_target_for_user
 from fitminiapp_api.services.program_common import ProgramError
 from fitminiapp_api.services.telegram_auth import normalize_telegram_username
 
@@ -121,9 +121,9 @@ def _can_manage_user_id(db: Session, current_user: User, owner_user_id: int | No
 
 
 def _client_entry_from_user(
-    db: Session,
     user: User,
     private_name: str | None,
+    nutrition_target: NutritionTargetResponse | None,
 ) -> dict:
     profile = user.profile
     return {
@@ -140,7 +140,7 @@ def _client_entry_from_user(
         "workouts_per_week": profile.workouts_per_week if profile else None,
         "cardio_trainings_per_week": (profile.cardio_trainings_per_week if profile else None),
         "resting_heart_rate": profile.resting_heart_rate if profile else None,
-        "kbju": get_nutrition_target_for_user(db, user),
+        "kbju": nutrition_target,
         "status": "active",
     }
 
