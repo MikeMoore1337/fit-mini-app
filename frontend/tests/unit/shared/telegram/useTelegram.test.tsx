@@ -73,6 +73,18 @@ describe('useTelegram theme', () => {
       expect(document.documentElement.style.getPropertyValue('--nav-bg')).toBe(
         telegram.themeParams.bottom_bar_bg_color,
       );
+      expect(document.documentElement.style.getPropertyValue('--color-canvas')).toBe(
+        telegram.themeParams.bg_color,
+      );
+      expect(document.documentElement.style.getPropertyValue('--color-surface')).toBe(
+        telegram.themeParams.section_bg_color,
+      );
+      expect(document.documentElement.style.getPropertyValue('--color-accent')).toBe(
+        telegram.themeParams.button_color,
+      );
+      expect(document.documentElement.style.getPropertyValue('--color-focus')).toBe(
+        telegram.themeParams.button_color,
+      );
       expect(telegram.setHeaderColor).toHaveBeenCalledWith(telegram.themeParams.bg_color);
       expect(telegram.setBackgroundColor).toHaveBeenCalledWith(telegram.themeParams.bg_color);
       expect(telegram.setBottomBarColor).toHaveBeenCalledWith(
@@ -105,6 +117,7 @@ describe('useTelegram theme', () => {
     await waitFor(() => expect(document.documentElement.dataset.colorScheme).toBe('light'));
     expect(document.documentElement.dataset.appSurface).toBeUndefined();
     expect(document.documentElement.style.getPropertyValue('--accent')).toBe('');
+    expect(document.documentElement.style.getPropertyValue('--color-accent')).toBe('');
   });
 
   it('updates the palette when Telegram emits themeChanged', async () => {
