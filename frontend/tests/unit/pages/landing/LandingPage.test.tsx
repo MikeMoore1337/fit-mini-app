@@ -6,6 +6,11 @@ import { NavigationProvider } from '../../../../src/shared/navigation/router';
 describe('LandingPage', () => {
   afterEach(() => {
     cleanup();
+    document.head
+      .querySelectorAll(
+        'meta[name="description"], meta[name="robots"], meta[name="yandex"], meta[property^="og:"], link[rel="canonical"], script[type="application/ld+json"]',
+      )
+      .forEach((element) => element.remove());
     localStorage.clear();
     window.history.replaceState({}, '', '/');
     vi.restoreAllMocks();
@@ -194,6 +199,14 @@ describe('LandingPage', () => {
     expect(ogTitle.content).toMatch(/в браузере и telegram/i);
     expect(ogDescription.content).toMatch(/компьютере или смартфоне.*telegram mini app/i);
     expect(ogType.content).toBe('website');
+    expect(document.querySelector('meta[name="robots"]')).toHaveAttribute(
+      'content',
+      'index, follow',
+    );
+    expect(document.querySelector('link[rel="canonical"]')).toHaveAttribute(
+      'href',
+      `${window.location.origin}/`,
+    );
     expect(screen.getByRole('link', { name: 'К содержимому' })).toHaveAttribute(
       'href',
       '#landing-content',

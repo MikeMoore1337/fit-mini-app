@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -20,6 +20,7 @@ from fitminiapp_api.core.rate_limit import limiter
 from fitminiapp_api.db.session import engine
 from fitminiapp_api.middleware.canonical_host import redirect_landing_application_requests
 from fitminiapp_api.middleware.request_context import RequestContextMiddleware
+from fitminiapp_api.seo import public_origin, render_frontend_document
 
 APP_DIR = Path(__file__).resolve().parent
 BACKEND_DIR = APP_DIR.parent
@@ -139,52 +140,87 @@ def health_ready() -> dict[str, str]:
     return health()
 
 
-def _frontend_index() -> FileResponse:
+def _frontend_index(path: str) -> HTMLResponse:
     index = FRONTEND_DIST_DIR / "index.html"
     if not index.exists():
         raise RuntimeError("Frontend build is missing. Run `npm run build` in frontend/.")
-    return FileResponse(
-        index,
+    document, metadata = render_frontend_document(index.read_text(encoding="utf-8"), path)
+    return HTMLResponse(
+        document,
         headers={
             "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
             "Pragma": "no-cache",
             "Expires": "0",
+            "X-Robots-Tag": metadata.robots,
         },
     )
 
 
+@app.get("/robots.txt", include_in_schema=False)
+def robots_txt() -> PlainTextResponse:
+    origin = public_origin()
+    content = "\n".join(
+        (
+            "User-agent: *",
+            "Allow: /",
+            "Disallow: /api/",
+            f"Sitemap: {origin}/sitemap.xml",
+            "",
+        )
+    )
+    return PlainTextResponse(content, headers={"Cache-Control": "public, max-age=3600"})
+
+
+@app.get("/sitemap.xml", include_in_schema=False)
+def sitemap() -> Response:
+    canonical_url = f"{public_origin()}/"
+    content = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        "  <url>\n"
+        f"    <loc>{canonical_url}</loc>\n"
+        "  </url>\n"
+        "</urlset>\n"
+    )
+    return Response(
+        content=content,
+        media_type="application/xml",
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
+
+
 @app.get("/app")
-def miniapp() -> FileResponse:
-    return _frontend_index()
+def miniapp() -> HTMLResponse:
+    return _frontend_index("/app")
 
 
 @app.get("/")
-def landing_page() -> FileResponse:
-    return _frontend_index()
+def landing_page() -> HTMLResponse:
+    return _frontend_index("/")
 
 
 @app.get("/admin")
-def admin_page() -> FileResponse:
-    return _frontend_index()
+def admin_page() -> HTMLResponse:
+    return _frontend_index("/admin")
 
 
 @app.get("/coach")
-def coach_page() -> FileResponse:
-    return _frontend_index()
+def coach_page() -> HTMLResponse:
+    return _frontend_index("/coach")
 
 
 @app.get("/verify-email")
-def verify_email_page() -> FileResponse:
-    return _frontend_index()
+def verify_email_page() -> HTMLResponse:
+    return _frontend_index("/verify-email")
 
 
 @app.get("/reset-password")
-def reset_password_page() -> FileResponse:
-    return _frontend_index()
+def reset_password_page() -> HTMLResponse:
+    return _frontend_index("/reset-password")
 
 
 @app.get("/join/{invite_token}")
-def join_coach_page(invite_token: str) -> FileResponse:
+def join_coach_page(invite_token: str) -> HTMLResponse:
     if not re.fullmatch(r"[A-Za-z0-9_-]{20,128}", invite_token):
         raise HTTPException(status_code=404, detail="Invite not found")
-    return _frontend_index()
+    return _frontend_index("/join")

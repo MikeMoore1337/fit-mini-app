@@ -105,8 +105,9 @@ services:
       - -ec
       - |
         : "$${APP_DOMAIN:?APP_DOMAIN is required}"
-        if [ -n "$${LANDING_DOMAIN}" ] && [ "$${LANDING_DOMAIN}" != "$${APP_DOMAIN}" ]; then
-            SITE_ADDRESSES="$${APP_DOMAIN}, $${LANDING_DOMAIN}"
+        LANDING_CANONICAL="$${LANDING_DOMAIN#www.}"
+        if [ -n "$${LANDING_CANONICAL}" ] && [ "$${LANDING_CANONICAL}" != "$${APP_DOMAIN}" ]; then
+            SITE_ADDRESSES="$${APP_DOMAIN}, $${LANDING_CANONICAL}, www.$${LANDING_CANONICAL}"
         else
             SITE_ADDRESSES="$${APP_DOMAIN}"
         fi

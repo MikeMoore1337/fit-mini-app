@@ -65,7 +65,7 @@ docker compose --profile cloudflare up -d
 The intended production layout uses two hostnames backed by the same API and
 database:
 
-- `https://your-fitness-coach.ru` — public landing page;
+- `https://your-fitness-coach.ru` — canonical public landing page (`www` redirects here);
 - `https://app.your-fitness-coach.ru/app` — authenticated web application and
   Telegram Mini App;
 - `https://app.your-fitness-coach.ru/join/<token>` — universal coach invitation.
@@ -79,18 +79,35 @@ FRONTEND_BASE_URL=https://app.your-fitness-coach.ru
 ```
 
 `LANDING_DOMAIN` is optional so an existing single-host deployment remains valid.
-For direct HTTPS, point the apex and `app` DNS records to the server and recreate
-the Caddy service once to apply the additional host:
+For direct HTTPS, point the apex, `www`, and `app` DNS records to the server and recreate
+the Caddy service once to apply the additional hosts. `www` is served only to redirect to the
+canonical apex landing URL:
 
 ```console
 docker compose --profile direct-https up -d --force-recreate caddy
 ```
 
-For the remotely managed Cloudflare Tunnel, add both public hostnames and route
-both to `http://backend:8000` on the Compose network. Do not expose PostgreSQL or
+For the remotely managed Cloudflare Tunnel, add the apex, `www`, and application public
+hostnames and route all of them to `http://backend:8000` on the Compose network. Do not expose PostgreSQL or
 the backend container port publicly. Keep the Telegram Mini App URL and all OAuth
 callback URLs on the `app` hostname; the exact callbacks are listed in
 [`web-auth.md`](web-auth.md).
+
+### Search indexation contract
+
+- `https://your-fitness-coach.ru/` is the only current indexable URL. It is self-canonical,
+  listed in `/sitemap.xml`, and `/robots.txt` publishes that sitemap.
+- Application, invitation and technical-auth HTML routes return `X-Robots-Tag: noindex, nofollow`.
+  They deliberately remain crawlable enough for search engines to read that directive; `robots.txt`
+  only disallows the API surface.
+- Do not add a URL to the sitemap until it has public, factual, crawler-visible content and a
+  self-canonical response. Future public content routes require an explicit metadata entry and
+  truthful structured data before publication.
+- The current Vite SPA has a static, no-JavaScript fallback for the landing only. Before adding
+  further indexable JS routes, introduce an appropriate prerender/SSR mechanism rather than relying
+  on client-side rendering. Keep public media dimensions/aspect ratios explicit, avoid blocking
+  SEO-only JavaScript, and re-check responsive layout and Core Web Vitals during the relevant
+  performance task.
 
 Before changing DNS, verify the landing and application hosts locally or through
 a temporary protected hostname. After the change, smoke-test `/`, `/app`,

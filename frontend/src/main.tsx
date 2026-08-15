@@ -1,4 +1,4 @@
-import { StrictMode, lazy, Suspense } from 'react';
+import { StrictMode, lazy, Suspense, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './app/AuthProvider';
@@ -10,6 +10,7 @@ import { LoadingState } from './shared/ui/common';
 import { isTelegramLaunch } from './shared/telegram/launch';
 import { useTelegram } from './shared/telegram/useTelegram';
 import { NavigationProvider, useNavigation } from './shared/navigation/router';
+import { applyRouteMetadata } from './shared/seo/metadata';
 import './styles/legacy.css';
 import './styles/react.css';
 
@@ -52,6 +53,7 @@ function AuthenticatedRoute({ children }: { children: React.ReactNode }) {
 
 function AppRoutes() {
   const { path } = useNavigation();
+  useEffect(() => applyRouteMetadata(path), [path]);
   if (path === '/') return <LandingPage />;
   if (path === '/verify-email')
     return (
