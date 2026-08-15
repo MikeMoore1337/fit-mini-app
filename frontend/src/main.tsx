@@ -13,6 +13,7 @@ import { NavigationProvider, useNavigation } from './shared/navigation/router';
 import { applyRouteMetadata } from './shared/seo/metadata';
 import './styles/legacy.css';
 import './styles/react.css';
+import './styles/design-system.css';
 
 const MiniAppPage = lazy(() => import('./pages/miniapp/MiniAppPage'));
 const CoachPage = lazy(() => import('./pages/coach/CoachPage'));

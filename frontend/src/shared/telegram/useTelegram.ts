@@ -58,6 +58,24 @@ const TELEGRAM_THEME_VARS = [
   '--danger-text',
   '--danger-toast-bg',
   '--danger-toast-text',
+  '--color-canvas',
+  '--color-canvas-elevated',
+  '--color-surface',
+  '--color-surface-subtle',
+  '--color-surface-interactive',
+  '--color-surface-active',
+  '--color-border',
+  '--color-border-accent',
+  '--color-text',
+  '--color-text-muted',
+  '--color-text-subtle',
+  '--color-accent',
+  '--color-accent-hover',
+  '--color-accent-subtle',
+  '--color-focus',
+  '--color-status-danger',
+  '--elevation-raised',
+  '--elevation-overlay',
 ] as const;
 
 function mix(color: string, amount: number, base = 'transparent'): string {
@@ -142,6 +160,30 @@ function applyTelegramTheme(telegram: TelegramWebApp): void {
   setVar('--danger-text', danger);
   setVar('--danger-toast-bg', mix(danger, 18, card));
   setVar('--danger-toast-text', danger);
+  setVar('--color-canvas', bg);
+  setVar('--color-canvas-elevated', secondary);
+  setVar('--color-surface', card);
+  setVar('--color-surface-subtle', mix(text, 2, card));
+  setVar('--color-surface-interactive', mix(text, 8, card));
+  setVar('--color-surface-active', mix(text, 12, card));
+  setVar('--color-border', separator);
+  setVar('--color-border-accent', mix(button, 34));
+  setVar('--color-text', text);
+  setVar('--color-text-muted', muted);
+  setVar('--color-text-subtle', hint);
+  setVar('--color-accent', button);
+  setVar('--color-accent-hover', mix(button, 88, text));
+  setVar('--color-accent-subtle', mix(button, 14));
+  setVar('--color-focus', button);
+  setVar('--color-status-danger', danger);
+  setVar(
+    '--elevation-raised',
+    dark ? '0 8px 24px rgba(0, 0, 0, 0.2)' : '0 8px 24px rgba(0, 0, 0, 0.1)',
+  );
+  setVar(
+    '--elevation-overlay',
+    dark ? '0 18px 42px rgba(0, 0, 0, 0.32)' : '0 18px 42px rgba(0, 0, 0, 0.16)',
+  );
 
   try {
     telegram.setHeaderColor(params.header_bg_color ?? bg);
