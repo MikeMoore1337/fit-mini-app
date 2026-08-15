@@ -109,6 +109,10 @@ callback URLs on the `app` hostname; the exact callbacks are listed in
   SEO-only JavaScript, and re-check responsive layout and Core Web Vitals during the relevant
   performance task.
 
+Ownership verification and ongoing Google Search Console/Yandex Webmaster monitoring are manual
+owner operations. Follow [the webmaster runbook](seo/search-console-yandex-webmaster.md); it also
+documents the optional env-injected meta-tag fallback and the read-only public SEO smoke command.
+
 Before changing DNS, verify the landing and application hosts locally or through
 a temporary protected hostname. After the change, smoke-test `/`, `/app`,
 `/health/ready`, one Telegram login and one browser login. DNS and proxy changes

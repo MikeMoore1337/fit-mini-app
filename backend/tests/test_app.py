@@ -3265,6 +3265,22 @@ def test_public_seo_response_uses_canonical_metadata_and_truthful_structured_dat
     assert "offers" not in structured_data.group(1)
 
 
+def test_public_seo_response_injects_optional_webmaster_verification_tags(client, monkeypatch):
+    from fitminiapp_api.core.config import settings
+
+    monkeypatch.setattr(settings, "landing_domain", "your-fitness-coach.ru")
+    monkeypatch.setattr(settings, "google_site_verification", "google-token-123")
+    monkeypatch.setattr(settings, "yandex_verification", "yandex-token-456")
+
+    landing = client.get("/", headers={"Host": "your-fitness-coach.ru"})
+    private = client.get("/app")
+
+    assert '<meta name="google-site-verification" content="google-token-123" />' in landing.text
+    assert '<meta name="yandex-verification" content="yandex-token-456" />' in landing.text
+    assert "google-site-verification" not in private.text
+    assert "yandex-verification" not in private.text
+
+
 def test_robots_and_sitemap_publish_only_the_canonical_public_url(client, monkeypatch):
     from fitminiapp_api.core.config import settings
 
