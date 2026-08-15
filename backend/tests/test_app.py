@@ -6,6 +6,7 @@ import time
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlparse
+from xml.etree import ElementTree
 
 import pytest
 from pydantic import ValidationError
@@ -3235,6 +3236,106 @@ def test_landing_host_keeps_public_home_on_landing_domain(client, monkeypatch):
 
     assert response.status_code == 200
     assert '<div id="root"></div>' in response.text
+
+
+def test_public_seo_response_uses_canonical_metadata_and_truthful_structured_data(
+    client, monkeypatch
+):
+    from fitminiapp_api.core.config import settings
+
+    monkeypatch.setattr(settings, "landing_domain", "your-fitness-coach.ru")
+    response = client.get("/", headers={"Host": "your-fitness-coach.ru"})
+
+    assert response.status_code == 200
+    assert response.headers["x-robots-tag"] == "index, follow"
+    assert '<meta name="robots" content="index, follow" />' in response.text
+    assert '<link rel="canonical" href="https://your-fitness-coach.ru/" />' in response.text
+    assert '<meta property="og:url" content="https://your-fitness-coach.ru/" />' in response.text
+    structured_data = re.search(
+        r'<script type="application/ld\+json">(.*?)</script>', response.text, re.DOTALL
+    )
+    assert structured_data is not None
+    payload = json.loads(structured_data.group(1))
+    assert [entry["@type"] for entry in payload["@graph"]] == [
+        "Organization",
+        "WebSite",
+        "SoftwareApplication",
+    ]
+    assert "aggregateRating" not in structured_data.group(1)
+    assert "offers" not in structured_data.group(1)
+
+
+def test_robots_and_sitemap_publish_only_the_canonical_public_url(client, monkeypatch):
+    from fitminiapp_api.core.config import settings
+
+    monkeypatch.setattr(settings, "landing_domain", "your-fitness-coach.ru")
+    robots = client.get("/robots.txt", headers={"Host": "your-fitness-coach.ru"})
+    sitemap = client.get("/sitemap.xml", headers={"Host": "your-fitness-coach.ru"})
+
+    assert robots.status_code == 200
+    assert "User-agent: *" in robots.text
+    assert "Allow: /" in robots.text
+    assert "Disallow: /api/" in robots.text
+    assert "Disallow: /app" not in robots.text
+    assert "Sitemap: https://your-fitness-coach.ru/sitemap.xml" in robots.text
+    assert sitemap.status_code == 200
+    root = ElementTree.fromstring(sitemap.content)
+    urls = [
+        element.text
+        for element in root.findall("{http://www.sitemaps.org/schemas/sitemap/0.9}url")
+        for element in element.findall("{http://www.sitemaps.org/schemas/sitemap/0.9}loc")
+    ]
+    assert urls == ["https://your-fitness-coach.ru/"]
+    assert all(segment not in sitemap.text for segment in ("/app", "/admin", "/coach", "/join"))
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/app",
+        "/admin",
+        "/coach",
+        "/verify-email",
+        "/reset-password",
+        "/join/abcdefghijklmnopqrstuvwxyz",
+    ],
+)
+def test_private_frontend_routes_send_noindex_contract(client, path):
+    response = client.get(path)
+
+    assert response.status_code == 200
+    assert response.headers["x-robots-tag"] == "noindex, nofollow"
+    assert '<meta name="robots" content="noindex, nofollow" />' in response.text
+    assert 'rel="canonical"' not in response.text
+    assert "application/ld+json" not in response.text
+
+
+def test_canonical_hosts_and_missing_routes_do_not_create_duplicate_or_soft_404_pages(
+    client, monkeypatch
+):
+    from fitminiapp_api.core.config import settings
+
+    monkeypatch.setattr(settings, "landing_domain", "your-fitness-coach.ru")
+    monkeypatch.setattr(settings, "frontend_base_url", "https://app.your-fitness-coach.ru")
+
+    app_home = client.get(
+        "/", headers={"Host": "app.your-fitness-coach.ru"}, follow_redirects=False
+    )
+    www_home = client.get(
+        "/", headers={"Host": "www.your-fitness-coach.ru"}, follow_redirects=False
+    )
+    landing_app_slash = client.get(
+        "/app/", headers={"Host": "your-fitness-coach.ru"}, follow_redirects=False
+    )
+    missing = client.get("/does-not-exist")
+
+    assert app_home.status_code == 308
+    assert app_home.headers["location"] == "https://your-fitness-coach.ru/"
+    assert www_home.status_code == 308
+    assert www_home.headers["location"] == "https://your-fitness-coach.ru/"
+    assert landing_app_slash.status_code == 308
+    assert landing_app_slash.headers["location"] == "https://app.your-fitness-coach.ru/app"
+    assert missing.status_code == 404
 
 
 @pytest.mark.parametrize("path", ["/verify-email", "/reset-password"])

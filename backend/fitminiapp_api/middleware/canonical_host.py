@@ -6,6 +6,7 @@ from starlette.requests import Request
 from starlette.responses import RedirectResponse, Response
 
 from fitminiapp_api.core.config import settings
+from fitminiapp_api.seo import canonical_landing_domain, frontend_host, public_origin
 
 APPLICATION_PATHS = frozenset(
     {
@@ -20,7 +21,14 @@ APPLICATION_PATH_PREFIXES = ("/api/", "/join/")
 
 
 def _is_application_path(path: str) -> bool:
-    return path in APPLICATION_PATHS or path.startswith(APPLICATION_PATH_PREFIXES)
+    return path.rstrip("/") in APPLICATION_PATHS or path.startswith(APPLICATION_PATH_PREFIXES)
+
+
+def _redirect_url(origin: str, request: Request, *, path: str | None = None) -> str:
+    target = f"{origin.rstrip('/')}{path if path is not None else request.url.path}"
+    if request.url.query:
+        target = f"{target}?{request.url.query}"
+    return target
 
 
 async def redirect_landing_application_requests(
@@ -29,11 +37,23 @@ async def redirect_landing_application_requests(
 ) -> Response:
     """Keep browser sessions on the canonical application origin."""
 
-    landing_domain = settings.landing_domain.strip().lower().rstrip(".")
+    landing_domain = canonical_landing_domain()
     request_host = (request.url.hostname or "").lower().rstrip(".")
-    if landing_domain and request_host == landing_domain and _is_application_path(request.url.path):
-        target = f"{settings.frontend_base_url.rstrip('/')}{request.url.path}"
-        if request.url.query:
-            target = f"{target}?{request.url.query}"
-        return RedirectResponse(target, status_code=308)
+    if not landing_domain:
+        return await call_next(request)
+
+    if request_host in {landing_domain, f"www.{landing_domain}"} and _is_application_path(
+        request.url.path
+    ):
+        normalized_path = request.url.path.rstrip("/") or "/"
+        return RedirectResponse(
+            _redirect_url(settings.frontend_base_url, request, path=normalized_path),
+            status_code=308,
+        )
+
+    if request.url.path in {"/", "/robots.txt", "/sitemap.xml"} and request_host in {
+        frontend_host(),
+        f"www.{landing_domain}",
+    }:
+        return RedirectResponse(_redirect_url(public_origin(), request), status_code=308)
     return await call_next(request)

@@ -1,28 +1,36 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" class="no-js">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0f1115" />
-    <meta
-      name="description"
-      content="Your Fitness Coach помогает планировать тренировки, фиксировать результаты, рассчитывать ориентиры КБЖУ и отслеживать прогресс в браузере и Telegram."
-    />
-    <meta
-      property="og:title"
-      content="Your Fitness Coach — тренировки, питание и прогресс в браузере и Telegram"
-    />
-    <meta
-      property="og:description"
-      content="Планируйте тренировки, фиксируйте результаты и отслеживайте прогресс на компьютере, смартфоне и в Telegram Mini App."
-    />
-    <meta property="og:type" content="website" />
+    <script>
+      document.documentElement.classList.replace('no-js', 'js');
+    </script>
+    <style>
+      .js .seo-fallback {
+        display: none;
+      }
+    </style>
+    <!-- seo-head -->
     <link rel="icon" type="image/png" href="/assets/brand/favicon-v2.png" />
     <link rel="apple-touch-icon" href="/assets/brand/fitness-logo-v2.png" />
-    <title>Your Fitness Coach — тренировки, питание и прогресс в браузере и Telegram</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main class="seo-fallback">
+        <h1>Тренировки, питание и прогресс — в одном приложении</h1>
+        <p>
+          Your Fitness Coach помогает планировать тренировки, фиксировать результаты, рассчитывать
+          ориентиры КБЖУ и отслеживать прогресс в браузере и Telegram.
+        </p>
+        <p>
+          Выбирайте программу под свою задачу, сохраняйте подходы и рабочие веса, следите за
+          историей тренировок и работайте с тренером в одном кабинете.
+        </p>
+        <a href="/app">Открыть приложение</a>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
