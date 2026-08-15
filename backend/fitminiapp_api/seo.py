@@ -101,6 +101,16 @@ def render_metadata(metadata: SeoMetadata) -> str:
         f'<meta name="robots" content="{metadata.robots}" />',
         f'<meta name="yandex" content="{metadata.robots}" />',
     ]
+    if metadata.canonical_url and settings.google_site_verification.strip():
+        tags.append(
+            '<meta name="google-site-verification" content="'
+            f'{html.escape(settings.google_site_verification.strip(), quote=True)}" />'
+        )
+    if metadata.canonical_url and settings.yandex_verification.strip():
+        tags.append(
+            '<meta name="yandex-verification" content="'
+            f'{html.escape(settings.yandex_verification.strip(), quote=True)}" />'
+        )
     if metadata.canonical_url:
         canonical = html.escape(metadata.canonical_url, quote=True)
         tags.extend(

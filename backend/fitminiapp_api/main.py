@@ -53,6 +53,8 @@ async def lifespan(app: FastAPI):
             settings.yandex_oauth_client_secret,
             settings.apple_oauth_client_secret,
             settings.database_url,
+            settings.google_site_verification,
+            settings.yandex_verification,
         ),
     )
     logger.info("application_started")
