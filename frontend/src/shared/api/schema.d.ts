@@ -520,6 +520,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/programs/templates/recommendation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Recommend Template */
+        post: operations["recommend_template_api_v1_programs_templates_recommendation_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/programs/templates/hidden": {
         parameters: {
             query?: never;
@@ -3242,6 +3259,65 @@ export interface components {
             /** Duration Weeks */
             duration_weeks: number;
         };
+        /** ProgramRecommendationCriteria */
+        ProgramRecommendationCriteria: {
+            /** Goal */
+            goal?: ("fat_loss" | "recomposition" | "maintenance" | "muscle_gain" | "strength") | null;
+            /** Experience */
+            experience?: ("beginner" | "intermediate" | "advanced") | null;
+            /** Workouts Per Week */
+            workouts_per_week?: number | null;
+            /** Training Location */
+            training_location?: ("gym" | "home" | "other") | null;
+            /** Available Equipment Ids */
+            available_equipment_ids?: ("bodyweight" | "dumbbell" | "barbell" | "bench" | "cable" | "machine" | "kettlebell" | "cardio" | "other")[] | null;
+            /** Profile Fields Used */
+            profile_fields_used: ("goal" | "experience" | "workouts_per_week")[];
+        };
+        /** ProgramRecommendationItem */
+        ProgramRecommendationItem: {
+            template: components["schemas"]["ProgramTemplateResponse"];
+            /** Reason */
+            reason: string;
+            /** Fit Facts */
+            fit_facts: string[];
+            /** Limitations */
+            limitations: string[];
+        };
+        /** ProgramRecommendationRequest */
+        ProgramRecommendationRequest: {
+            /** Goal */
+            goal?: ("fat_loss" | "recomposition" | "maintenance" | "muscle_gain" | "strength") | null;
+            /** Experience */
+            experience?: ("beginner" | "intermediate" | "advanced") | null;
+            /** Workouts Per Week */
+            workouts_per_week?: number | null;
+            /** Training Location */
+            training_location?: ("gym" | "home" | "other") | null;
+            /** Available Equipment Ids */
+            available_equipment_ids?: ("bodyweight" | "dumbbell" | "barbell" | "bench" | "cable" | "machine" | "kettlebell" | "cardio" | "other")[] | null;
+        };
+        /** ProgramRecommendationResponse */
+        ProgramRecommendationResponse: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "recommended" | "needs_input" | "no_match";
+            criteria: components["schemas"]["ProgramRecommendationCriteria"];
+            /** Missing Fields */
+            missing_fields: ("goal" | "experience" | "workouts_per_week")[];
+            /** Message */
+            message: string;
+            recommendation?: components["schemas"]["ProgramRecommendationItem"] | null;
+            /** Alternatives */
+            alternatives?: components["schemas"]["ProgramRecommendationItem"][];
+            /**
+             * Requires Explicit Start
+             * @default true
+             */
+            requires_explicit_start: boolean;
+        };
         /** ProgramTargetUserResponse */
         ProgramTargetUserResponse: {
             /** Id */
@@ -3377,6 +3453,8 @@ export interface components {
             goal: string;
             /** Level */
             level: string;
+            /** Split Type */
+            split_type?: ("full_body" | "upper_lower" | "push_pull_legs" | "body_part" | "hybrid") | null;
             /** Owner User Id */
             owner_user_id?: number | null;
             /** Owner Telegram User Id */
@@ -5125,6 +5203,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProgramTemplateResponse"][];
+                };
+            };
+        };
+    };
+    recommend_template_api_v1_programs_templates_recommendation_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProgramRecommendationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgramRecommendationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

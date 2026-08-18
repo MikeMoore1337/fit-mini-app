@@ -12,6 +12,8 @@ from fitminiapp_api.schemas.program import (
     ExerciseCatalogItem,
     ExerciseGuide,
     ProgramAssignmentResponse,
+    ProgramRecommendationRequest,
+    ProgramRecommendationResponse,
     ProgramTemplateCreate,
     ProgramTemplateCreateResponse,
     ProgramTemplateResponse,
@@ -30,6 +32,7 @@ from fitminiapp_api.services.exercise_domain import (
 )
 from fitminiapp_api.services.exercise_guides import get_exercise_guide
 from fitminiapp_api.services.program_common import ProgramError, assignment_error_status
+from fitminiapp_api.services.program_recommendation import recommend_program_templates
 from fitminiapp_api.services.programs import (
     assign_template_to_self,
     build_template_response,
@@ -259,6 +262,54 @@ def my_templates(
 ):
     items = list_user_templates(db, current_user)
     return build_template_responses(items, db, current_user)
+
+
+@router.post(
+    "/templates/recommendation",
+    response_model=ProgramRecommendationResponse,
+)
+def recommend_template(
+    payload: ProgramRecommendationRequest,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    decision = recommend_program_templates(db, current_user, payload)
+    ranked = decision.ranked_candidates[:3]
+    serialized_templates = build_template_responses(
+        [item.candidate.template for item in ranked],
+        db,
+        current_user,
+    )
+
+    def serialize_item(index: int) -> dict:
+        item = ranked[index]
+        return {
+            "template": serialized_templates[index],
+            "reason": item.reason,
+            "fit_facts": list(item.fit_facts),
+            "limitations": list(item.limitations),
+        }
+
+    return {
+        "status": decision.status,
+        "criteria": {
+            "goal": decision.criteria.goal,
+            "experience": decision.criteria.experience,
+            "workouts_per_week": decision.criteria.workouts_per_week,
+            "training_location": decision.criteria.training_location,
+            "available_equipment_ids": (
+                sorted(decision.criteria.available_equipment_ids)
+                if decision.criteria.available_equipment_ids is not None
+                else None
+            ),
+            "profile_fields_used": list(decision.criteria.profile_fields_used),
+        },
+        "missing_fields": list(decision.missing_fields),
+        "message": decision.message,
+        "recommendation": serialize_item(0) if ranked else None,
+        "alternatives": [serialize_item(index) for index in range(1, len(ranked))],
+        "requires_explicit_start": True,
+    }
 
 
 @router.get("/templates/hidden", response_model=list[ProgramTemplateResponse])

@@ -28,12 +28,20 @@ from fitminiapp_api.models.exercise import Exercise
 
 class ProgramTemplate(Base):
     __tablename__ = "program_templates"
+    __table_args__ = (
+        CheckConstraint(
+            "split_type IS NULL OR split_type IN "
+            "('full_body', 'upper_lower', 'push_pull_legs', 'body_part', 'hybrid')",
+            name="ck_program_templates_split_type",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     slug: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     title: Mapped[str] = mapped_column(String(128))
     goal: Mapped[str] = mapped_column(String(32))
     level: Mapped[str] = mapped_column(String(32))
+    split_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
     owner_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id"), index=True, nullable=True
     )

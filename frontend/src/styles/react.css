@@ -1108,6 +1108,59 @@ select:not([multiple]) {
   gap: 5px;
 }
 
+.program-recommendation__form > button {
+  align-self: flex-start;
+}
+.program-recommendation__primary-fields {
+  align-items: start;
+}
+.program-recommendation__equipment-toggle {
+  align-self: flex-start;
+}
+.program-recommendation__equipment {
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.program-recommendation__equipment legend {
+  padding-inline: 5px;
+  font-weight: 700;
+}
+.program-recommendation__equipment-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 16px;
+  margin-bottom: 8px;
+}
+.program-recommendation__match {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+}
+.program-recommendation__match h3,
+.program-recommendation__match p {
+  margin: 4px 0 0;
+}
+.program-recommendation__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.program-recommendation__facts ul {
+  margin: 7px 0 0;
+  padding-left: 20px;
+}
+.program-recommendation__facts li + li {
+  margin-top: 5px;
+}
+.program-recommendation__actions {
+  justify-content: flex-start;
+}
+
 .program-example-trigger {
   flex: 1 1 auto;
   display: grid;
@@ -1680,6 +1733,18 @@ body:has(#appBottomNav) {
   }
   .program-example-row {
     gap: 10px;
+  }
+  .program-recommendation__equipment-grid,
+  .program-recommendation__facts {
+    grid-template-columns: 1fr;
+  }
+  .program-recommendation__actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+  .program-recommendation__actions button {
+    width: 100%;
   }
   .program-example-trigger,
   .program-example-row .list-row__actions {
