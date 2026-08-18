@@ -1,228 +1,225 @@
-# Food domain
+# Предметная область питания
 
-The food catalog is an independent backend domain. It is the source of truth for future food
-diary entries and integrations; nutrition targets in `nutrition_targets` remain a separate
-calculation of a user's daily target.
+Каталог продуктов — самостоятельная область backend. Он служит источником истины для записей
+дневника питания и будущих интеграций. Суточные цели пользователя в `nutrition_targets`
+рассчитываются отдельно.
 
-## Data and visibility
+## Данные и видимость
 
-Every food stores a name, optional brand and GTIN barcode, nutrition per 100 grams, an optional
-standard serving with a known mass, provenance, trust/status, and timestamps.
+Для каждого продукта хранятся название, необязательные бренд и штрихкод GTIN, пищевая ценность
+на 100 граммов, необязательная стандартная порция с известной массой, происхождение, уровень
+доверия и статус, а также временные метки.
 
-Food types have explicit visibility rules:
+Правила видимости зависят от вида продукта:
 
-- `system` and `branded` foods are catalog records with no user owner;
-- `user` foods always have an owner and `user` provenance;
-- user foods are private to their owner. A trainer relationship or admin UI visibility does not
-  implicitly grant access;
-- only active catalog records and the current user's own active records belong in ordinary food
-  lookup results.
+- `system` и `branded` — записи общего каталога без владельца;
+- `user` — пользовательские продукты с владельцем и происхождением `user`;
+- пользовательский продукт виден только владельцу. Связь с тренером или доступ к интерфейсу
+  администратора сама по себе не даёт права на просмотр;
+- обычный поиск возвращает только активные записи каталога и активные записи текущего пользователя.
 
-The database enforces owner/provenance alignment. Active system and branded records must have
-verified trust and complete energy, protein, fat, and carbohydrate values. Fiber may be unknown.
-Draft/disabled records may remain incomplete while a source is reviewed, but must not be used as
-active diary data.
+База данных проверяет согласованность владельца и происхождения. У активных системных и брендовых
+продуктов должен быть статус verified и заполнены калории, белки, жиры и углеводы. Клетчатка может
+быть неизвестна. Черновые и отключённые записи могут оставаться неполными во время проверки
+источника, но их нельзя использовать в активных записях дневника.
 
-Catalog barcodes are unique across system/branded foods. A user barcode is unique only within its
-owner's private scope, so a private correction cannot collide with another account or with the
-shared catalog. Application validation verifies GTIN length, digits, and check digit before a
-record reaches persistence.
+Штрихкод уникален среди системных и брендовых продуктов. Для пользовательского продукта он
+уникален только в личной области владельца, поэтому частное исправление не конфликтует с общим
+каталогом или другим аккаунтом. До сохранения приложение проверяет длину GTIN, цифры и контрольную
+сумму.
 
-## Nutrition calculations
+## Расчёт пищевой ценности
 
-Nutrients are stored as decimal values per 100 grams. The deterministic calculation scales each
-known value by `weight_g / 100` using decimal arithmetic and round-half-up:
+Показатели хранятся десятичными числами на 100 граммов. Каждый известный показатель умножается на
+`weight_g / 100` с десятичной арифметикой и округлением половины вверх:
 
-- energy: 0.01 kcal;
-- protein, fat, carbohydrates, and fiber: 0.001 g;
-- effective mass: 0.001 g.
+- калории — до 0,01 ккал;
+- белки, жиры, углеводы и клетчатка — до 0,001 г;
+- фактическая масса — до 0,001 г.
 
-Unknown nutrients stay unknown; they are never silently replaced with zero. A standard serving
-can be calculated only when its gram weight is known. For a serving expressed in grams, the
-declared amount must equal its weight. Other units (`ml`, `piece`, `serving`) retain the display
-amount/unit but still require an explicit gram weight; the domain does not invent density or
-piece-weight conversions.
+Неизвестное значение остаётся неизвестным и не заменяется нулём. Стандартную порцию можно
+рассчитать только при известной массе в граммах. Для порции в граммах заявленное количество
+должно совпадать с массой. Другие единицы (`ml`, `piece`, `serving`) сохраняют отображаемые
+количество и единицу, но всё равно требуют явной массы в граммах. Система не придумывает плотность
+или массу одной штуки.
 
-## Reproducible catalog import
+## Воспроизводимый импорт каталога
 
-`scripts/import_food_catalog.py` accepts a local JSON catalog. The manifest is versioned and must
-identify the source dataset and version, source URL, license and license URL, reviewer, review
-date, and an explicit verified-license attestation. Each source record needs a stable external ID.
-The importer upserts by `(source_name, external_id)` and never deletes records absent from a later
-file, which makes reruns deterministic and prevents accidental catalog loss.
+`scripts/import_food_catalog.py` принимает локальный JSON-каталог. Версионируемый манифест должен
+содержать название и версию набора данных, URL источника, лицензию и её URL, проверяющего, дату
+проверки и явное подтверждение лицензии. Каждой исходной записи нужен стабильный внешний ID.
+Импорт выполняет upsert по `(source_name, external_id)` и не удаляет записи, отсутствующие в новой
+версии файла. Поэтому повторный запуск детерминирован и не приводит к случайной потере каталога.
 
-Validate a candidate file without database writes:
+Проверка файла без записи в базу данных:
 
 ```console
 py scripts/import_food_catalog.py path/to/catalog.json --dry-run
 ```
 
-Run the same command without `--dry-run` only after source accuracy, provenance, and license have
-been reviewed. No base food seed is committed until such a source is selected; the pipeline alone
-does not imply that a dataset is suitable for production.
+Команду без `--dry-run` можно запускать только после проверки точности, происхождения и лицензии.
+Базовый набор продуктов не добавляется, пока не выбран подходящий источник. Наличие процесса
+импорта само по себе не подтверждает пригодность набора для production.
 
-External HTTP fetching, barcode scanning, and UI remain outside this foundation.
+Загрузка по HTTP, сканирование штрихкодов и UI в эту основу не входят.
 
-## Personal library and local search
+## Личная библиотека и локальный поиск
 
-Authenticated users can create, read, update, and delete their own active foods through
-`/api/v1/nutrition/foods`. Personal foods use the same nutrient, serving, and GTIN validation as
-the catalog, but remain private to their owner. A foreign personal-food ID returns the same 404 as
-a missing ID. Deleting a personal food does not remove diary snapshots already created from it.
+Авторизованный пользователь управляет своими активными продуктами через
+`/api/v1/nutrition/foods`. Для них действуют те же проверки пищевой ценности, порции и GTIN, но
+записи остаются приватными. Чужой ID возвращает тот же `404`, что и отсутствующий. Удаление
+личного продукта не удаляет уже созданные снимки в дневнике.
 
-Favorites are account-scoped and may reference either a visible catalog food or the user's own
-food. `PUT /foods/{food_id}/favorite` is idempotent; the matching `DELETE` removes the favorite.
-Recent foods are derived from the user's current diary history by the latest entry update, so no
-second mutable usage source is maintained. Deleted diary entries and deleted foods no longer
-contribute to recent results. Frequently-used foods are not exposed yet: current requirements do
-not need another ranking signal, and a durable counter would require explicit semantics for entry
-edits and deletion.
+Избранное принадлежит аккаунту и может ссылаться на видимый продукт каталога или личный продукт.
+`PUT /foods/{food_id}/favorite` идемпотентен, соответствующий `DELETE` удаляет отметку. Недавние
+продукты выводятся из актуальной истории дневника по последнему изменению записи; отдельного
+изменяемого счётчика нет. Удалённые записи дневника и продукты больше не входят в недавние.
+Рейтинг часто используемых продуктов пока не поддерживается: его корректное хранение потребовало
+бы явных правил для изменения и удаления записей.
 
-`GET /api/v1/nutrition/foods/search` always starts with deterministic local search. It case-folds
-and collapses whitespace in the query, requires at least two non-whitespace characters, and
-searches the normalized name plus brand. Results are ranked by mutually exclusive priority:
+`GET /api/v1/nutrition/foods/search` всегда начинает с детерминированного локального поиска.
+Запрос приводится к единому регистру, лишние пробелы схлопываются; требуется минимум два
+непробельных символа. Поиск идёт по нормализованным названию и бренду. Взаимоисключающие уровни
+приоритета:
 
-1. recently used;
-2. favorites;
-3. the user's own foods;
-4. system foods;
-5. local branded foods.
+1. недавно использованные;
+2. избранные;
+3. личные продукты пользователя;
+4. системные продукты;
+5. локальные брендовые продукты.
 
-Ties use recent/favorite timestamps, match position, name, and ID for stable pagination. Search,
-recent, and favorites use `limit`/`offset`; `limit` defaults to 20 and is capped at 50, while
-`offset` is capped at 10,000. The frontend autocomplete contract is a 250 ms debounce after the
-normalized query reaches two characters. A later UI task must cancel obsolete requests and ignore
-stale responses; the API itself does not add an artificial delay. A separate full-text/search
-service is not introduced. PostgreSQL uses a `pg_trgm` GIN index for the real
-substring query over `search_text`; SQLite test/local schemas use an ordinary compatibility index.
-Visibility/ranking queries are additionally backed by food scope, favorite-order, and
-diary-recency indexes. Stable source imports use the unique `(source_name, external_id)` index,
-and barcode lookup uses separate catalog and per-owner partial unique indexes.
+При равенстве учитываются даты недавнего использования и добавления в избранное, позиция
+совпадения, название и ID — это обеспечивает стабильную пагинацию. Для поиска, недавних и
+избранных используются `limit` и `offset`: по умолчанию `limit=20`, максимум 50; максимальный
+`offset` — 10 000. Frontend запускает автодополнение с задержкой 250 мс после появления двух
+нормализованных символов. UI должен отменять устаревшие запросы и игнорировать запоздавшие ответы;
+API не добавляет искусственную задержку.
 
-## Optional external catalog
+Отдельный поисковый сервис не используется. PostgreSQL применяет GIN-индекс `pg_trgm` для поиска
+подстроки по `search_text`, а тестовые и локальные схемы SQLite — обычный совместимый индекс.
+Дополнительные индексы покрывают видимость, избранное и давность дневника. Стабильный импорт
+использует уникальный `(source_name, external_id)`, а поиск штрихкода — отдельные частичные
+уникальные индексы для каталога и владельца.
 
-The neutral `FoodProvider` contract exposes `search` and `get_by_barcode`; domain
-orchestration does not depend on Open Food Facts response shapes. `FOOD_PROVIDER=disabled` is the
-default and requires no external configuration. To enable the current adapter, set
-`FOOD_PROVIDER=open_food_facts` and a real identifying
-`OPEN_FOOD_FACTS_USER_AGENT=AppName/Version (contact)` value. No API secret is required.
-`FOOD_PROVIDER_TIMEOUT_SECONDS` configures the per-attempt network timeout from 1 to 15 seconds
-and defaults to 4 seconds; eligible reads retry at most once, so callers retain a bounded fallback.
+## Необязательный внешний каталог
 
-Search remains local-first. The provider is called only when local results are empty and the
-caller explicitly sets `include_external=true`; callers must present that as a separate external
-search action, not invoke it from the 250 ms local typeahead. Barcode lookup through
-`GET /api/v1/nutrition/foods/barcode/{barcode}` also returns a visible personal/catalog record
-before consulting the provider. Its response echoes the validated barcode and explicitly reports
-`status=found|not_found` plus `source=local|external|null`, so camera and manual-entry clients can
-use the same contract and offer personal-food creation after an empty result. `provider_status`
-separately records whether the external lookup was unnecessary, disabled, available, unavailable,
-or rate-limited. A disabled provider, timeout, network failure, rate limit, upstream 5xx, malformed
-response, or mismatched provider barcode produces a successful structured fallback without raw
-upstream details; it never makes the diary unavailable. Timeout/network/5xx reads get at most one
-short retry. A 429 is not retried.
+Нейтральный контракт `FoodProvider` предоставляет `search` и `get_by_barcode`; логика области не
+зависит от формата ответа Open Food Facts. По умолчанию задано `FOOD_PROVIDER=disabled`, и внешняя
+настройка не нужна. Для текущего адаптера укажите `FOOD_PROVIDER=open_food_facts` и настоящий
+идентифицирующий `OPEN_FOOD_FACTS_USER_AGENT=AppName/Version (contact)`. Секретный API-ключ не
+требуется. `FOOD_PROVIDER_TIMEOUT_SECONDS` задаёт сетевой тайм-аут одной попытки от 1 до 15 секунд,
+по умолчанию 4 секунды. Допустимые операции чтения повторяются не более одного раза.
 
-Open Food Facts integration follows the official current guidance reviewed on 2026-08-18:
+Поиск остаётся локальным в первую очередь. Провайдер вызывается, только когда локальных результатов
+нет и клиент явно передал `include_external=true`. В интерфейсе это отдельное внешнее действие, а
+не часть локального автодополнения с задержкой 250 мс. Поиск штрихкода через
+`GET /api/v1/nutrition/foods/barcode/{barcode}` также сначала возвращает видимый личный или
+каталожный продукт.
 
-- barcode reads use the current v3.6 product endpoint and request only required fields;
-- full-text search uses the dedicated Search-a-licious API because Product Opener v2/v3 do not
-  provide current full-text search;
-- the adapter sends the required identifying User-Agent;
-- upstream limits are currently 15 product reads/minute/IP and 10 searches/minute/IP, so external
-  search is never automatic typeahead; the adapter also enforces matching process-local sliding
-  request budgets, including retries, for the current single-process API deployment;
-- database contents are ODbL 1.0; attribution and share-alike apply, including to local caches.
+Ответ повторяет проверенный штрихкод и содержит `status=found|not_found`,
+`source=local|external|null` и отдельный `provider_status`. Поэтому камера и ручной ввод используют
+один контракт, а при пустом результате можно предложить создать личный продукт. Отключённый
+провайдер, тайм-аут, сетевая ошибка, ограничение частоты, ответ 5xx, некорректный ответ или
+несовпадение штрихкода дают успешный структурированный fallback без внутренних подробностей и не
+делают дневник недоступным. Ошибки сети, тайм-ауты и 5xx повторяются не более одного раза; `429` не
+повторяется.
 
-References: [API introduction and limits](https://openfoodfacts.github.io/openfoodfacts-server/api/),
-[v3 barcode endpoint](https://openfoodfacts.github.io/documentation/docs/Product-Opener/v3/products/get-api-v3-product-code/),
-[Search-a-licious API](https://openfoodfacts.github.io/search-a-licious/users/ref-openapi/), and
-[licensing guidance](https://openfoodfacts.github.io/documentation/docs/Product-Opener/api/tutorials/license-be-on-the-legal-side/).
+Интеграция Open Food Facts следует официальным рекомендациям, проверенным 18 августа 2026 года:
 
-Provider results are read-only response objects, not rows in `foods`. Every result carries the
-provider name, product source URL, `Open Food Facts contributors` attribution, `ODbL-1.0`, and the
-license URL. Images are intentionally not requested because they have a separate CC BY-SA license.
-This boundary prevents an external ODbL cache from being silently combined with private user
-foods or diary data. A future decision to persist or transform provider data requires a separate
-license/share-alike review and a provenance-preserving storage design.
+- чтение по штрихкоду использует endpoint продукта v3.6 и запрашивает только нужные поля;
+- полнотекстовый поиск использует Search-a-licious, потому что Product Opener v2/v3 его не
+  предоставляет;
+- адаптер передаёт обязательный идентифицирующий User-Agent;
+- текущие ограничения upstream — 15 чтений продукта и 10 поисков в минуту на IP. Поэтому внешний
+  поиск не запускается автоматически при вводе. Адаптер применяет такие же локальные скользящие
+  лимиты, включая повторы, для текущего однопроцессного API;
+- база Open Food Facts распространяется по ODbL 1.0; атрибуция и share-alike распространяются и
+  на локальные кэши.
 
-The backend does not persist or process-cache provider responses. Authenticated API responses are
-marked `Cache-Control: no-store, private`; adding a shared or durable Open Food Facts cache would
-require an explicit ODbL attribution/share-alike design. Provider failure logs contain only the
-stable provider name and a bounded failure class (`timeout`, `network_error`, `rate_limited`,
-`upstream_error`, or `malformed_response`), never the search phrase, barcode, returned product, or
-diary content.
+Источники: [введение и ограничения API](https://openfoodfacts.github.io/openfoodfacts-server/api/),
+[endpoint v3](https://openfoodfacts.github.io/documentation/docs/Product-Opener/v3/products/get-api-v3-product-code/),
+[Search-a-licious API](https://openfoodfacts.github.io/search-a-licious/users/ref-openapi/) и
+[лицензионные требования](https://openfoodfacts.github.io/documentation/docs/Product-Opener/api/tutorials/license-be-on-the-legal-side/).
 
-## Private food diary
+Результаты провайдера — объекты ответа только для чтения, а не строки `foods`. Каждый результат
+содержит название провайдера, URL продукта, атрибуцию `Open Food Facts contributors`, `ODbL-1.0`
+и URL лицензии. Изображения намеренно не запрашиваются: для них действует отдельная лицензия
+CC BY-SA. Эта граница не позволяет незаметно объединить внешний ODbL-кэш с личными продуктами или
+дневником. Сохранение или преобразование данных провайдера потребует отдельной проверки лицензии,
+share-alike и схемы хранения происхождения.
 
-The diary stores one entry per selected food, user-local calendar date, and meal type
-(`breakfast`, `lunch`, `dinner`, or `snacks`). An entry accepts either a mass in grams or a number
-of the food's standard servings. Dates in the user's past and their current date are writable;
-future dates are rejected using the timezone stored in the shared account profile. With no date,
-the day endpoint resolves today through that same timezone, so Web and Telegram use identical
-calendar semantics.
+Backend не сохраняет ответы провайдера и не кэширует их в процессе. Ответы авторизованного API
+получают `Cache-Control: no-store, private`. Общий или постоянный кэш Open Food Facts потребует
+отдельного решения по атрибуции и share-alike. Логи сбоев содержат только стабильное имя
+провайдера и ограниченный класс ошибки (`timeout`, `network_error`, `rate_limited`,
+`upstream_error` или `malformed_response`) — без поисковой фразы, штрихкода, продукта и дневника.
 
-Diary entries snapshot the food name, serving information, and nutrients per 100 grams when the
-entry is created or explicitly changed to another food. Later catalog edits or deletion therefore
-do not rewrite nutrition history. Calculated entry, meal, and day totals continue to use the food
-domain's decimal scaling rules. Unknown fiber remains unknown when a non-empty aggregate includes
-an entry without fiber data; energy, protein, fat, and carbohydrate are complete for every active
-food.
+## Приватный дневник питания
 
-The authenticated API is deliberately organized around the diary rather than its table:
+Запись дневника относится к выбранному продукту, локальной календарной дате пользователя и типу
+приёма пищи (`breakfast`, `lunch`, `dinner` или `snacks`). Количество задаётся массой в граммах
+или числом стандартных порций продукта. Разрешены прошлые и текущая даты; будущие даты отклоняются
+по часовому поясу общего профиля. Если дата не передана, endpoint дня определяет сегодня по тому
+же часовому поясу, поэтому Web и Telegram используют одинаковую календарную семантику.
 
-- `GET /api/v1/nutrition/diary?diary_date=YYYY-MM-DD` returns all four meals, day totals, the
-  current target from the existing nutrition service, and the remaining target;
-- `POST /api/v1/nutrition/diary/entries` creates an entry;
-- `PATCH /api/v1/nutrition/diary/entries/{entry_id}` changes its food, date, meal, or amount;
-- `DELETE /api/v1/nutrition/diary/entries/{entry_id}` removes it.
+При создании записи или явной замене продукта дневник сохраняет снимок названия, порции и пищевой
+ценности на 100 граммов. Последующее изменение или удаление каталожной записи не переписывает
+историю. Итоги записи, приёма пищи и дня рассчитываются по тем же десятичным правилам. Если хотя
+бы у одной записи непустого набора клетчатка неизвестна, итоговая клетчатка остаётся неизвестной;
+калории, белки, жиры и углеводы заполнены для каждого активного продукта.
 
-All entry reads and mutations are scoped to the authenticated account. A missing or foreign food
-or diary entry uses the same not-found response, so the API does not disclose another account's
-private catalog or diary data. A day is a bounded aggregate and is intentionally returned as one
-response rather than paginated entry fragments.
+Авторизованный API организован вокруг дневника:
 
-Food/recipe/diary domain failures use the existing API error envelope `{"detail": "..."}`:
-missing or foreign private resources return `404`, idempotency-key conflicts return `409`, and
-domain-invalid operations return `422`. Request-schema validation also returns `422` using
-FastAPI's structured validation details. External-provider unavailability is not a diary failure:
-search/barcode reads return `200` with an explicit `provider_status` fallback and no raw upstream
-error.
+- `GET /api/v1/nutrition/diary?diary_date=YYYY-MM-DD` возвращает четыре приёма пищи, итоги дня,
+  текущую цель из существующего сервиса и остаток до цели;
+- `POST /api/v1/nutrition/diary/entries` создаёт запись;
+- `PATCH /api/v1/nutrition/diary/entries/{entry_id}` меняет продукт, дату, приём пищи или количество;
+- `DELETE /api/v1/nutrition/diary/entries/{entry_id}` удаляет запись.
 
-Migrations `0034`-`0038` are forward, deterministic steps. `0036` initially populated
-`search_text` from food name/brand; `0038` safely recomputes it in ID-ordered batches with the same
-Unicode `casefold()` algorithm used at runtime before adding the search index. Neither step
-invents nutrients, ownership, provenance, or source IDs. `0038` also replaces the trainer relation
-lookup index without changing user-authored domain content.
+Все операции ограничены авторизованным аккаунтом. Отсутствующий или чужой продукт либо запись
+дневника дают одинаковый ответ not found, поэтому API не раскрывает личные данные другого
+аккаунта. День — ограниченный агрегат и возвращается одним ответом без пагинации отдельных записей.
 
-## Private recipes
+Ошибки продуктов, рецептов и дневника используют существующий envelope `{"detail": "..."}`:
+отсутствующие и чужие приватные ресурсы дают `404`, конфликт ключа идемпотентности — `409`,
+некорректная операция области — `422`. Проверка схемы запроса также возвращает `422` со
+структурированными деталями FastAPI. Недоступность внешнего провайдера не считается сбоем дневника:
+поиск и штрихкод возвращают `200`, явный `provider_status` и не раскрывают ошибку upstream.
 
-Recipes under `/api/v1/nutrition/recipes` are private to their owning account. Each ingredient is
-a visible food with an amount in grams or in the food's explicitly defined standard serving. The
-recipe snapshots ingredient names, serving data, and nutrients, so later catalog edits or deletion
-do not silently rewrite the saved recipe.
+Миграции `0034`–`0038` — прямые детерминированные шаги. `0036` заполнила `search_text` из названия и
+бренда, а `0038` безопасно пересчитывает поле пакетами по ID тем же алгоритмом Unicode `casefold()`,
+который используется во время работы, и затем добавляет индекс. Миграции не придумывают пищевую
+ценность, владельца, происхождение или внешние ID. `0038` также заменяет индекс поиска связи с
+тренером, не меняя пользовательские данные области.
 
-Recipe totals use the same decimal scaling and round-half-up rules as foods and diary entries. The
-ingredient weights are summed as the default effective recipe weight. An optional
-`final_weight_g` replaces that denominator only when the user explicitly supplies it; the backend
-does not infer cooking loss, water gain, density, or yield. Responses expose ingredient weight,
-the optional final weight, effective weight, total nutrients, and nutrients per 100 grams. Diary
-entries can reference either one food or one owned recipe. Recipe diary entries accept an
-arbitrary positive gram weight and snapshot the recipe calculation at that point in time.
+## Приватные рецепты
 
-## Explicit diary copying
+Рецепты в `/api/v1/nutrition/recipes` видны только владельцу. Ингредиентом может быть видимый
+продукт с количеством в граммах или в явно заданных стандартных порциях. Рецепт сохраняет снимок
+названий, порций и пищевой ценности, поэтому последующие изменения каталога не переписывают его.
 
-Authenticated copy operations are separated by scope:
+Итоги рассчитываются по тем же десятичным правилам и округлению половины вверх. Сумма масс
+ингредиентов служит стандартной фактической массой рецепта. Необязательный `final_weight_g`
+заменяет знаменатель только при явном вводе пользователя; backend не выводит потери при готовке,
+добавление воды, плотность или выход. Ответ содержит массу ингредиентов, необязательную итоговую и
+фактическую массу, общую пищевую ценность и значение на 100 граммов. Запись дневника может
+ссылаться на один продукт или один принадлежащий пользователю рецепт, принимает произвольную
+положительную массу в граммах и сохраняет снимок расчёта.
 
-- `POST /api/v1/nutrition/diary/copy/product` repeats one source diary entry;
-- `POST /api/v1/nutrition/diary/copy/meal` copies all entries in one meal;
-- `POST /api/v1/nutrition/diary/copy/day` copies all entries in a day while preserving meal types.
+## Явное копирование дневника
 
-Product and meal requests name both the source date/meal and target date/meal. A day request names
-both dates. This makes "repeat yesterday's breakfast" the ordinary meal-copy contract rather than
-a hidden server shortcut. Source ownership and both calendar dates are validated on the backend;
-the same user-timezone future-date rule as manual diary writes applies to copy targets.
+Авторизованные операции разделены по области копирования:
 
-Every copy request requires an `Idempotency-Key` header. The database scopes keys per account and
-stores a fingerprint of the explicit source/target request in the same transaction as the copied
-entries. Retrying the same key and payload returns the original entry IDs with `replayed=true` and
-does not append duplicates. Reusing the key for a different source or target returns `409`.
+- `POST /api/v1/nutrition/diary/copy/product` повторяет одну исходную запись;
+- `POST /api/v1/nutrition/diary/copy/meal` копирует все записи одного приёма пищи;
+- `POST /api/v1/nutrition/diary/copy/day` копирует день с сохранением типов приёмов пищи.
+
+Для продукта и приёма пищи передаются исходные и целевые дата и приём пищи; для дня — обе даты.
+Поэтому «повторить вчерашний завтрак» — обычный контракт копирования, а не скрытое серверное
+правило. Backend проверяет владельца источника и обе даты; для цели действует то же запрещающее
+будущее правило часового пояса, что и при ручной записи.
+
+Каждый запрос требует заголовок `Idempotency-Key`. База данных ограничивает ключ аккаунтом и в той
+же транзакции сохраняет отпечаток явных источника и цели вместе со скопированными записями.
+Повтор того же ключа и тела возвращает исходные ID с `replayed=true` без дубликатов. Использование
+ключа с другим источником или целью возвращает `409`.

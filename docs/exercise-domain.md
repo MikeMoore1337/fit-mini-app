@@ -1,65 +1,66 @@
-# Exercise domain
+# Предметная область упражнений
 
-The exercise catalog keeps the existing `exercises.primary_muscle` and
-`exercises.equipment` text fields for backward compatibility and display. New code that
-filters, recommends, or aggregates exercises must use the structured relations described
-below instead of comparing those legacy strings.
+В каталоге упражнений сохранены текстовые поля `exercises.primary_muscle` и
+`exercises.equipment` — они нужны для обратной совместимости и отображения. Новый код для
+фильтрации, рекомендаций и агрегации упражнений должен использовать описанные ниже
+структурированные связи, а не сравнивать устаревшие строки.
 
-## Canonical metadata
+## Канонические метаданные
 
-- `muscles` stores stable identifiers and Russian display names.
-- `exercise_muscles` assigns one or more muscles with an explicit `primary` or `secondary`
-  role and deterministic order. It deliberately has no fractional contribution or volume
-  coefficient.
-- `equipment` contains the controlled identifiers `bodyweight`, `dumbbell`, `barbell`,
-  `bench`, `cable`, `machine`, `kettlebell`, `cardio`, and `other`.
-- `exercise_equipment` permits more than one equipment category when a future reviewed
-  catalog entry genuinely needs it. The current backfill maps the existing single text value
-  to one controlled identifier.
-- `exercise_alternatives` stores reviewed, symmetric substitutions as one ordered pair.
-  The database rejects self-links and duplicate/reversed pairs. A shared muscle alone never
-  creates an alternative.
-- `exercise_guide_metadata` stores safety notes, source and license attribution, and a stable
-  local media reference. Technique steps, breathing, and common mistakes remain in the
-  existing guide profiles and are not duplicated in a second persistence model.
+- `muscles` хранит стабильные идентификаторы и русские отображаемые названия.
+- `exercise_muscles` связывает упражнение с одной или несколькими мышцами, явно задаёт роль
+  `primary` или `secondary` и стабильный порядок. Долевых коэффициентов вклада или объёма
+  здесь намеренно нет.
+- `equipment` содержит контролируемые идентификаторы `bodyweight`, `dumbbell`, `barbell`,
+  `bench`, `cable`, `machine`, `kettlebell`, `cardio` и `other`.
+- `exercise_equipment` допускает несколько категорий оборудования, если они действительно
+  нужны для проверенной записи каталога. При текущем заполнении одно существующее текстовое
+  значение сопоставляется с одним контролируемым идентификатором.
+- `exercise_alternatives` хранит проверенные симметричные замены в виде одной упорядоченной
+  пары. База данных запрещает ссылки упражнения на себя, дубликаты и пары в обратном порядке.
+  Совпадение целевой мышцы само по себе не делает упражнения взаимозаменяемыми.
+- `exercise_guide_metadata` хранит замечания по безопасности, сведения об источнике и
+  лицензии, а также стабильную локальную ссылку на медиафайл. Этапы выполнения, дыхание и
+  частые ошибки остаются в существующих профилях руководств и не дублируются во второй модели.
 
-The lookup indexes are shaped for muscle/equipment filtering and both sides of an
-alternative lookup. Catalog loading uses batched relationship loading, so query count does
-not grow with the number of exercises.
+Индексы рассчитаны на фильтрацию по мышцам и оборудованию, а также на поиск обеих сторон
+пары замен. Связи каталога загружаются пакетно, поэтому число запросов не растёт вместе с
+числом упражнений.
 
-## Backfill and lifecycle
+## Первичное заполнение и жизненный цикл
 
-Migration `0039_exercise_domain` snapshots the current guide profile assignments and
-backfills existing rows deterministically:
+Миграция `0039_exercise_domain` фиксирует текущие привязки профилей руководств и
+детерминированно заполняет существующие записи:
 
-- explicit recognized `primary_muscle` and `equipment` values become canonical relations;
-- secondary muscles come only from the existing reviewed guide profile for that exercise;
-- guide provenance preserves `free-exercise-db` / Unlicense attribution, while the existing
-  locally created cardio illustrations retain `Your Fitness Coach` attribution;
-- personalized copies inherit the source exercise guide profile and provenance while keeping
-  their explicitly edited primary muscle and equipment;
-- custom exercises with absent or unknown metadata stay partial and receive no inferred
-  muscles, equipment, guide, or alternatives.
+- распознанные значения `primary_muscle` и `equipment` преобразуются в канонические связи;
+- вторичные мышцы берутся только из существующего проверенного профиля руководства;
+- для материалов сохраняется атрибуция `free-exercise-db` / Unlicense, а для созданных
+  проектом кардио-иллюстраций — атрибуция `Your Fitness Coach`;
+- персональные копии наследуют профиль руководства и происхождение исходного упражнения,
+  но сохраняют явно изменённые основную мышцу и оборудование;
+- пользовательские упражнения без известных метаданных остаются частично заполненными:
+  мышцы, оборудование, руководство и замены для них не выводятся автоматически.
 
-The catalog seed performs the same synchronization after migrations and is idempotent. Its
-curated alternative list is the source of truth until an explicit management workflow is
-introduced.
+Начальное заполнение каталога выполняет ту же синхронизацию после миграций и является
+идемпотентным. Подготовленный вручную список замен остаётся источником истины, пока не появится
+отдельный интерфейс управления.
 
-## API contract
+## Контракт API
 
-Catalog and detail responses retain `primary_muscle` and `equipment`, and additionally expose:
+Ответы каталога и карточки сохраняют `primary_muscle` и `equipment`, а также возвращают:
 
-- `primary_muscle_ids[]` and `secondary_muscle_ids[]` with stable identifiers;
-- `equipment_ids[]` with controlled identifiers;
-- `alternatives[]` with stable exercise ID, slug, and visible title.
+- `primary_muscle_ids[]` и `secondary_muscle_ids[]` со стабильными идентификаторами;
+- `equipment_ids[]` с контролируемыми идентификаторами;
+- `alternatives[]` со стабильным ID упражнения, slug и отображаемым названием.
 
-`GET /api/v1/programs/exercises/{exercise_id}` returns the full item including the guide.
-The guide endpoint additionally returns stable muscle role identifiers together with display
-names, controlled equipment with display names,
-safety notes, alternatives, media reference, and source-license metadata. A custom exercise
-may legitimately return empty structured arrays and no guide.
+`GET /api/v1/programs/exercises/{exercise_id}` возвращает полную карточку вместе с
+руководством. Эндпоинт руководства дополнительно возвращает стабильные идентификаторы ролей
+мышц и их названия, контролируемые значения оборудования и их названия, замечания по
+безопасности, замены, ссылку на медиафайл и сведения об источнике и лицензии. Для
+пользовательского упражнения пустые структурированные массивы и отсутствие руководства —
+допустимый результат.
 
-Asset-level media metadata and the selected static-phase delivery policy are documented in
-[`exercise-guide-media.md`](exercise-guide-media.md). The guide API now exposes typed `media[]`
-with dimensions, loading order, fallback poster, and provenance while deriving legacy
-`images[]` from that same manifest.
+Метаданные медиафайлов и выбранная схема показа статических фаз описаны в
+[`exercise-guide-media.md`](exercise-guide-media.md). API руководства возвращает типизированный
+массив `media[]` с размерами, порядком загрузки, резервным постером и происхождением. Устаревший
+массив `images[]` формируется из того же манифеста.

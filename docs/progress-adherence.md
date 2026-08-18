@@ -1,70 +1,70 @@
-# Progress and adherence aggregates
+# Сводные показатели прогресса и соблюдения плана
 
-The period summary API is the backend source of truth for factual progress and plan adherence.
-It supports only `7`, `30`, and `90` day windows:
+API сводки за период — серверный источник истины для фактического прогресса и соблюдения
+плана. Поддерживаются только периоды `7`, `30` и `90` дней:
 
-- `GET /api/v1/workouts/progress/summary?period_days=30` returns the authenticated user's data;
-- `GET /api/v1/coach/clients/{client_id}/summary?period_days=30` returns one currently assigned
-  client;
-- `GET /api/v1/coach/client-summaries?period_days=30&limit=20&offset=0` returns a page object with
-  `items`, `total`, `limit`, and `offset` for the trainer's active clients without loading each
-  client's history separately. `limit` is capped at 100 and `offset` at 10,000.
+- `GET /api/v1/workouts/progress/summary?period_days=30` — данные авторизованного пользователя;
+- `GET /api/v1/coach/clients/{client_id}/summary?period_days=30` — данные одного клиента,
+  который сейчас закреплён за тренером;
+- `GET /api/v1/coach/client-summaries?period_days=30&limit=20&offset=0` — страница с полями
+  `items`, `total`, `limit` и `offset` для активных клиентов тренера без отдельной загрузки
+  истории каждого клиента. Максимальный `limit` — 100, `offset` — 10 000.
 
-The existing `/workouts/progress` and coach analytics endpoints retain their legacy lifetime
-contract.
+Существующие эндпоинты `/workouts/progress` и аналитики тренера сохраняют прежний контракт за
+всё время.
 
-## Adherence formula (`adherence-v1`)
+## Формула соблюдения плана (`adherence-v1`)
 
-The formula has four explicit component weights: planned workouts `40%`, cardio `20%`, calories
-`20%`, and protein `20%`. A component is included only when the backend has both a target or plan
-and factual observations. The overall value is the weighted mean of available components, with
-their weights renormalized. The response lists `included_components`; it returns `null` rather
-than a score when none are available.
+Формула содержит четыре компонента с явными весами: запланированные тренировки — `40%`, кардио —
+`20%`, калории — `20%`, белок — `20%`. Компонент учитывается, только если backend располагает и
+целью или планом, и фактическими наблюдениями. Итог — взвешенное среднее доступных компонентов с
+перенормированными весами. В ответе перечислены `included_components`; если оценить нечего,
+возвращается `null`, а не ноль.
 
-- Workouts: completed workouts divided by evaluable planned workouts. Cancelled workouts and days
-  without a planned workout are excluded. A planned or in-progress workout on the current day is
-  excluded until it is completed, skipped, or becomes overdue.
-- Calories: past logged diary days within `+-10%` of the current calorie target divided by past
-  logged diary days on or after the target's last-save date.
-- Protein: past logged diary days meeting or exceeding the current protein target divided by past
-  logged diary days on or after the target's last-save date.
-- Cardio: exposed as `unsupported` when cardio is planned because the current product has a cardio
-  target but no factual cardio activity log. It is never inferred from the target itself.
+- Тренировки: число завершённых тренировок делится на число запланированных тренировок, которые
+  уже можно оценить. Отменённые тренировки и дни без плана исключаются. Запланированная или
+  начатая тренировка текущего дня не учитывается, пока не завершена, не пропущена или не
+  просрочена.
+- Калории: число прошлых заполненных дней дневника в пределах `+-10%` текущей цели делится на
+  число заполненных прошлых дней не ранее даты последнего сохранения цели.
+- Белок: число прошлых заполненных дней, в которые достигнута текущая цель по белку, делится на
+  число заполненных прошлых дней не ранее даты последнего сохранения цели.
+- Кардио: если кардио запланировано, возвращается `unsupported`, потому что в продукте есть цель,
+  но пока нет журнала фактической кардиоактивности. Выполнение нельзя выводить из самой цели.
 
-The current day is excluded from nutrition adherence because its diary may be incomplete. A past
-day without diary entries is missing data, not a failed day. The current schema has no explicit
-"day complete" marker, so a partially logged past day is evaluated from the recorded totals; the
-response reports `logged_days` and `adherence_evaluated_days` so clients can explain this
-limitation.
-Missing targets and periods without evaluable planned workouts produce component-level
-`not_applicable` or `insufficient_data` states instead of zeroes.
+Текущий день не входит в оценку питания: дневник ещё может быть заполнен не полностью. Прошлый
+день без записей считается отсутствием данных, а не нарушением плана. В схеме нет явного признака
+«день заполнен», поэтому частично заполненный прошлый день оценивается по записанным итогам.
+Поля `logged_days` и `adherence_evaluated_days` позволяют клиентам объяснить это ограничение.
+При отсутствии целей или пригодных для оценки тренировок компонент получает состояние
+`not_applicable` или `insufficient_data`, а не ноль.
 
-Nutrition averages use all past logged days in the selected period. Adherence uses only
-`adherence_evaluated_days` on or after `target_effective_on`, because the current schema stores the
-latest target and save date but not target history. Older diary days are never judged against a
-newer target.
+Средние показатели питания учитывают все заполненные прошлые дни выбранного периода. Соблюдение
+плана учитывает только `adherence_evaluated_days` не ранее `target_effective_on`: текущая схема
+хранит последнюю цель и дату сохранения, но не историю целей. Старые дни дневника не сравниваются
+с более новой целью.
 
-All period boundaries use each account's IANA timezone. `nutrition_targets.saved_at` is written as
-the target client's local wall time, including when a trainer changes the target, so adherence
-uses its calendar date directly without applying a second timezone conversion. Diary rows are
-keyed by the same user-local `diary_date`; the current local day is excluded from nutrition
-adherence. Historical naive timestamps are not bulk-reinterpreted because their original timezone
-cannot be recovered safely; workout adherence itself uses the explicit `scheduled_date`.
+Границы периода рассчитываются в IANA-часовом поясе аккаунта. `nutrition_targets.saved_at`
+записывается как локальное время клиента, в том числе когда цель меняет тренер. Поэтому формула
+использует календарную дату напрямую, без повторного преобразования часового пояса. Записи
+дневника привязаны к такому же локальному `diary_date`; текущий локальный день исключается.
+Исторические naive timestamps массово не переосмысливаются, поскольку их исходный часовой пояс
+нельзя надёжно восстановить. Для тренировок используется явный `scheduled_date`.
 
-## Privacy and interpretation
+## Конфиденциальность и трактовка
 
-User summaries are always scoped to the authenticated account. Trainer endpoints require an
-active trainer-client relationship for every returned client; ended or unrelated relationships
-cannot access the detail endpoint and are absent from the bulk endpoint. Trainer nutrition output
-contains only aggregate calorie/protein totals and targets. It never returns food names, meals,
-recipes, personal foods, notes, or full diary entries.
+Пользовательская сводка всегда ограничена авторизованным аккаунтом. Эндпоинты тренера требуют
+активной связи тренер—клиент для каждого возвращаемого клиента. Завершённая или посторонняя связь
+не даёт доступа к деталям и не попадает в общий список. Данные о питании для тренера содержат
+только агрегированные калории, белок и цели: названия продуктов, приёмы пищи, рецепты,
+пользовательские продукты, заметки и полные записи дневника не возвращаются.
 
-The bulk query is paginated before progress aggregation and uses a composite
-`(coach_user_id, status, client_user_id)` relation index. The aggregate implementation keeps a
-constant query count per page rather than issuing history queries per client.
+Пагинация общего запроса выполняется до агрегации прогресса. Используется составной индекс связи
+`(coach_user_id, status, client_user_id)`. Число запросов на страницу постоянно и не растёт из-за
+отдельной загрузки истории каждого клиента.
 
-Body changes compare the user only with their own measurements in the selected period. Training
-volume uses completed sets from completed workouts. A new personal record is counted per exercise
-when the period's best recorded weight or single-set volume exceeds all completed results before
-the period. These are factual observations, not medical, recovery, readiness, motivation, or risk
-assessments.
+Изменения тела сравнивают пользователя только с его собственными измерениями за выбранный период.
+Тренировочный объём учитывает выполненные подходы завершённых тренировок. Новый личный рекорд по
+упражнению фиксируется, если лучший вес или объём одного подхода за период превышает все
+завершённые результаты до начала периода. Это фактические наблюдения, а не медицинская оценка,
+оценка восстановления, готовности, мотивации или риска.
