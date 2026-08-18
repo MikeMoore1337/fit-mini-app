@@ -56,6 +56,20 @@ test('логотип и кнопки в шапке имеют одинакову
     const menuButton = page.getByRole('button', { name: 'Открыть меню' });
     if (viewport.width < 980) {
       await expect(menuButton).toBeVisible();
+      await menuButton.hover();
+      await expect
+        .poll(() =>
+          menuButton.evaluate((element) => {
+            const styles = getComputedStyle(element);
+            return {
+              backgroundColor: styles.backgroundColor,
+              borderColor: styles.borderColor,
+              boxShadow: styles.boxShadow,
+              transform: styles.transform,
+            };
+          }),
+        )
+        .toEqual(themeHoverStyles);
       await menuButton.click();
       await expect(page.getByRole('navigation', { name: 'Навигация по странице' })).toHaveClass(
         /is-open/,
@@ -67,6 +81,48 @@ test('логотип и кнопки в шапке имеют одинакову
       await expect(menuButton).toBeHidden();
     }
   }
+});
+
+test('мобильное меню не сохраняет активную заливку после касания', async ({ browser }) => {
+  const context = await browser.newContext({
+    baseURL: 'http://127.0.0.1:4173',
+    hasTouch: true,
+    isMobile: true,
+    viewport: { width: 390, height: 844 },
+  });
+  const page = await context.newPage();
+  await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
+  await page.goto('/');
+
+  expect(await page.evaluate(() => matchMedia('(hover: none)').matches)).toBe(true);
+  const menuButton = page.getByRole('button', { name: 'Открыть меню' });
+  const restStyles = await menuButton.evaluate((element) => {
+    const styles = getComputedStyle(element);
+    return {
+      backgroundColor: styles.backgroundColor,
+      borderColor: styles.borderColor,
+      boxShadow: styles.boxShadow,
+      color: styles.color,
+    };
+  });
+
+  await menuButton.tap();
+  const closeMenuButton = page.getByRole('button', { name: 'Закрыть меню' });
+  await expect
+    .poll(() =>
+      closeMenuButton.evaluate((element) => {
+        const styles = getComputedStyle(element);
+        return {
+          backgroundColor: styles.backgroundColor,
+          borderColor: styles.borderColor,
+          boxShadow: styles.boxShadow,
+          color: styles.color,
+        };
+      }),
+    )
+    .toEqual(restStyles);
+
+  await context.close();
 });
 
 test('первый экран лендинга объясняет продукт и не создаёт горизонтальный скролл', async ({
