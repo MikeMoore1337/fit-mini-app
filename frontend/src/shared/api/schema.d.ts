@@ -1089,6 +1089,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/nutrition/foods/barcode/{barcode}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Food By Barcode */
+        get: operations["get_food_by_barcode_api_v1_nutrition_foods_barcode__barcode__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/nutrition/foods/recent": {
         parameters: {
             query?: never;
@@ -2343,6 +2360,63 @@ export interface components {
              */
             last_performed_on: string;
         };
+        /** ExternalFoodResponse */
+        ExternalFoodResponse: {
+            /** Energy Kcal Per 100G */
+            energy_kcal_per_100g: string;
+            /** Protein G Per 100G */
+            protein_g_per_100g: string;
+            /** Fat G Per 100G */
+            fat_g_per_100g: string;
+            /** Carbs G Per 100G */
+            carbs_g_per_100g: string;
+            /** Fiber G Per 100G */
+            fiber_g_per_100g?: string | null;
+            /** Name */
+            name: string;
+            /** Brand */
+            brand?: string | null;
+            /** Barcode */
+            barcode: string;
+            /** Standard Serving Amount */
+            standard_serving_amount?: string | null;
+            /** Standard Serving Unit */
+            standard_serving_unit?: ("g" | "ml" | "piece" | "serving") | null;
+            /** Standard Serving Weight G */
+            standard_serving_weight_g?: string | null;
+            /** External Id */
+            external_id: string;
+            source: components["schemas"]["ExternalFoodSource"];
+        };
+        /** ExternalFoodSource */
+        ExternalFoodSource: {
+            /** Provider */
+            provider: string;
+            /** Attribution */
+            attribution: string;
+            /**
+             * Source Url
+             * Format: uri
+             */
+            source_url: string;
+            /** License */
+            license: string;
+            /**
+             * License Url
+             * Format: uri
+             */
+            license_url: string;
+        };
+        /** FoodBarcodeLookupResponse */
+        FoodBarcodeLookupResponse: {
+            local_item?: components["schemas"]["FoodResponse"] | null;
+            external_item?: components["schemas"]["ExternalFoodResponse"] | null;
+            /**
+             * Provider Status
+             * @enum {string}
+             */
+            provider_status: "not_requested" | "not_needed" | "disabled" | "available" | "unavailable" | "rate_limited";
+        };
         /** FoodDiaryCopyDay */
         FoodDiaryCopyDay: {
             /**
@@ -2625,6 +2699,25 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** FoodSearchResponse */
+        FoodSearchResponse: {
+            /** Items */
+            items: components["schemas"]["FoodResponse"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** External Items */
+            external_items?: components["schemas"]["ExternalFoodResponse"][];
+            /**
+             * Provider Status
+             * @default not_requested
+             * @enum {string}
+             */
+            provider_status: "not_requested" | "not_needed" | "disabled" | "available" | "unavailable" | "rate_limited";
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -5782,6 +5875,7 @@ export interface operations {
                 q: string;
                 limit?: number;
                 offset?: number;
+                include_external?: boolean;
             };
             header?: never;
             path?: never;
@@ -5795,7 +5889,38 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["FoodListResponse"];
+                    "application/json": components["schemas"]["FoodSearchResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_food_by_barcode_api_v1_nutrition_foods_barcode__barcode__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                barcode: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodBarcodeLookupResponse"];
                 };
             };
             /** @description Validation Error */

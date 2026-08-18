@@ -71,6 +71,9 @@ class Settings(BaseSettings):
     apple_oauth_client_id: str = ""
     apple_oauth_client_secret: str = ""
 
+    food_provider: Literal["disabled", "open_food_facts"] = "disabled"
+    open_food_facts_user_agent: str = ""
+
     worker_poll_seconds: int = Field(default=10, ge=1, le=3600)
     reminder_sync_seconds: int = Field(default=60, ge=10, le=3600)
     notification_delivery_concurrency: int = Field(default=8, ge=1, le=30)
@@ -106,6 +109,32 @@ class Settings(BaseSettings):
         if parsed.scheme != "https" or not parsed.netloc:
             raise ValueError("FRONTEND_BASE_URL must be an absolute HTTPS URL in prod")
         return self
+
+    @model_validator(mode="after")
+    def validate_food_provider(self) -> Settings:
+        if self.food_provider == "disabled":
+            return self
+        user_agent = self.open_food_facts_user_agent.strip()
+        if (
+            not user_agent
+            or "/" not in user_agent
+            or "(" not in user_agent
+            or ")" not in user_agent
+        ):
+            raise ValueError(
+                "OPEN_FOOD_FACTS_USER_AGENT must identify the app, version, and contact"
+            )
+        return self
+
+    @field_validator("open_food_facts_user_agent")
+    @classmethod
+    def normalize_open_food_facts_user_agent(cls, value: str) -> str:
+        normalized = value.strip()
+        if "\r" in normalized or "\n" in normalized or len(normalized) > 256:
+            raise ValueError(
+                "OPEN_FOOD_FACTS_USER_AGENT must be a single line up to 256 characters"
+            )
+        return normalized
 
     @field_validator("oauth_proxy_url", "telegram_oauth_proxy_url")
     @classmethod

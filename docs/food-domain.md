@@ -78,9 +78,9 @@ contribute to recent results. Frequently-used foods are not exposed yet: current
 not need another ranking signal, and a durable counter would require explicit semantics for entry
 edits and deletion.
 
-`GET /api/v1/nutrition/foods/search` is a local-only, deterministic search. It case-folds and
-collapses whitespace in the query, requires at least two non-whitespace characters, and searches
-the normalized name plus brand. Results are ranked by mutually exclusive priority:
+`GET /api/v1/nutrition/foods/search` always starts with deterministic local search. It case-folds
+and collapses whitespace in the query, requires at least two non-whitespace characters, and
+searches the normalized name plus brand. Results are ranked by mutually exclusive priority:
 
 1. recently used;
 2. favorites;
@@ -96,6 +96,46 @@ stale responses; the API itself does not add an artificial delay. PostgreSQL tri
 a separate search service are intentionally not used before catalog size and latency demonstrate
 a need. Visibility/ranking queries are backed by food scope, favorite-order, and diary-recency
 indexes.
+
+## Optional external catalog
+
+The neutral `FoodProvider` contract exposes `search` and `get_by_barcode`; domain
+orchestration does not depend on Open Food Facts response shapes. `FOOD_PROVIDER=disabled` is the
+default and requires no external configuration. To enable the current adapter, set
+`FOOD_PROVIDER=open_food_facts` and a real identifying
+`OPEN_FOOD_FACTS_USER_AGENT=AppName/Version (contact)` value. No API secret is required.
+
+Search remains local-first. The provider is called only when local results are empty and the
+caller explicitly sets `include_external=true`; callers must present that as a separate external
+search action, not invoke it from the 250 ms local typeahead. Barcode lookup through
+`GET /api/v1/nutrition/foods/barcode/{barcode}` also returns a visible personal/catalog record
+before consulting the provider. A disabled provider, timeout, network failure, rate limit,
+upstream 5xx, or malformed response produces a successful empty fallback with an explicit
+`provider_status`; it never makes the diary unavailable. Timeout/network/5xx reads get at most one
+short retry. A 429 is not retried.
+
+Open Food Facts integration follows the official current guidance reviewed on 2026-08-18:
+
+- barcode reads use the current v3.6 product endpoint and request only required fields;
+- full-text search uses the dedicated Search-a-licious API because Product Opener v2/v3 do not
+  provide current full-text search;
+- the adapter sends the required identifying User-Agent;
+- upstream limits are currently 15 product reads/minute/IP and 10 searches/minute/IP, so external
+  search is never automatic typeahead; the adapter also enforces matching process-local sliding
+  request budgets, including retries, for the current single-process API deployment;
+- database contents are ODbL 1.0; attribution and share-alike apply, including to local caches.
+
+References: [API introduction and limits](https://openfoodfacts.github.io/openfoodfacts-server/api/),
+[v3 barcode endpoint](https://openfoodfacts.github.io/documentation/docs/Product-Opener/v3/products/get-api-v3-product-code/),
+[Search-a-licious API](https://openfoodfacts.github.io/search-a-licious/users/ref-openapi/), and
+[licensing guidance](https://openfoodfacts.github.io/documentation/docs/Product-Opener/api/tutorials/license-be-on-the-legal-side/).
+
+Provider results are read-only response objects, not rows in `foods`. Every result carries the
+provider name, product source URL, `Open Food Facts contributors` attribution, `ODbL-1.0`, and the
+license URL. Images are intentionally not requested because they have a separate CC BY-SA license.
+This boundary prevents an external ODbL cache from being silently combined with private user
+foods or diary data. A future decision to persist or transform provider data requires a separate
+license/share-alike review and a provenance-preserving storage design.
 
 ## Private food diary
 
