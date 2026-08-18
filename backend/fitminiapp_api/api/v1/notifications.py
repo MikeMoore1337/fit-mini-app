@@ -64,6 +64,7 @@ def get_notifications(
             scheduled_for=row.scheduled_for,
             status=row.status,
             sent_at=row.sent_at,
+            action_url=row.action_url,
         )
         for row in rows
     ]
@@ -105,6 +106,7 @@ def create_notification(
         scheduled_for=row.scheduled_for,
         status=row.status,
         sent_at=row.sent_at,
+        action_url=row.action_url,
     )
 
 

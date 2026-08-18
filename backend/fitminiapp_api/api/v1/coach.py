@@ -11,6 +11,11 @@ from fitminiapp_api.models.program import (
     UserWorkoutSet,
 )
 from fitminiapp_api.models.user import BodyMeasurement, CoachClient, User
+from fitminiapp_api.schemas.feedback import (
+    WorkoutCommentCreate,
+    WorkoutCommentResponse,
+    WorkoutCommentUpdate,
+)
 from fitminiapp_api.schemas.invite import CoachInviteLinkResponse
 from fitminiapp_api.schemas.program import (
     AssignTemplateToClientRequest,
@@ -57,8 +62,90 @@ from fitminiapp_api.services.progress import (
     build_progress_summary,
     build_trainer_client_summaries,
 )
+from fitminiapp_api.services.workout_comments import (
+    WorkoutCommentError,
+    create_workout_comment,
+    edit_workout_comment,
+    list_trainer_workout_comments,
+    serialize_workout_comment,
+)
 
 router = APIRouter()
+
+
+def _comment_error(exc: WorkoutCommentError) -> HTTPException:
+    return HTTPException(status_code=exc.status_code, detail=exc.detail)
+
+
+@router.get(
+    "/clients/{client_id}/workouts/{workout_id}/comments",
+    response_model=list[WorkoutCommentResponse],
+)
+def get_client_workout_comments(
+    client_id: int,
+    workout_id: int,
+    current_user: User = Depends(require_coach_or_admin),
+    db: Session = Depends(get_db),
+):
+    try:
+        comments = list_trainer_workout_comments(
+            db, current_user, client_id=client_id, workout_id=workout_id
+        )
+    except WorkoutCommentError as exc:
+        raise _comment_error(exc) from exc
+    return [serialize_workout_comment(comment) for comment in comments]
+
+
+@router.post(
+    "/clients/{client_id}/workouts/{workout_id}/comments",
+    response_model=WorkoutCommentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def add_client_workout_comment(
+    client_id: int,
+    workout_id: int,
+    payload: WorkoutCommentCreate,
+    current_user: User = Depends(require_coach_or_admin),
+    db: Session = Depends(get_db),
+):
+    try:
+        comment = create_workout_comment(
+            db,
+            current_user,
+            client_id=client_id,
+            workout_id=workout_id,
+            workout_exercise_id=payload.workout_exercise_id,
+            body=payload.body,
+        )
+    except WorkoutCommentError as exc:
+        raise _comment_error(exc) from exc
+    return serialize_workout_comment(comment)
+
+
+@router.patch(
+    "/clients/{client_id}/workouts/{workout_id}/comments/{comment_id}",
+    response_model=WorkoutCommentResponse,
+)
+def update_client_workout_comment(
+    client_id: int,
+    workout_id: int,
+    comment_id: int,
+    payload: WorkoutCommentUpdate,
+    current_user: User = Depends(require_coach_or_admin),
+    db: Session = Depends(get_db),
+):
+    try:
+        comment = edit_workout_comment(
+            db,
+            current_user,
+            client_id=client_id,
+            workout_id=workout_id,
+            comment_id=comment_id,
+            body=payload.body,
+        )
+    except WorkoutCommentError as exc:
+        raise _comment_error(exc) from exc
+    return serialize_workout_comment(comment)
 
 
 def _serialize_measurement(row: BodyMeasurement) -> dict:

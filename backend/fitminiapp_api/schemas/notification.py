@@ -26,3 +26,4 @@ class NotificationResponse(BaseModel):
     scheduled_for: datetime
     status: str
     sent_at: datetime | None = None
+    action_url: str | None = None

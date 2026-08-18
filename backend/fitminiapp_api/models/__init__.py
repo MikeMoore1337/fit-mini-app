@@ -10,6 +10,7 @@ from fitminiapp_api.models.exercise import (
     ExerciseMuscle,
     Muscle,
 )
+from fitminiapp_api.models.feedback import WorkoutComment, WorkoutCommentRevision
 from fitminiapp_api.models.food import Food, FoodFavorite
 from fitminiapp_api.models.food_diary import FoodDiaryCopyOperation, FoodDiaryEntry
 from fitminiapp_api.models.notification import Notification, NotificationSetting
@@ -74,4 +75,6 @@ __all__ = [
     "UserWorkout",
     "UserWorkoutExercise",
     "UserWorkoutSet",
+    "WorkoutComment",
+    "WorkoutCommentRevision",
 ]

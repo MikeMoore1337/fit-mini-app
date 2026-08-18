@@ -9,6 +9,7 @@ from fitminiapp_api.models.audit import AuditEvent
 from fitminiapp_api.models.auth_identity import AuthActionToken, AuthIdentity, LocalCredential
 from fitminiapp_api.models.billing import Payment, Subscription
 from fitminiapp_api.models.exercise import Exercise
+from fitminiapp_api.models.feedback import WorkoutComment, WorkoutCommentRevision
 from fitminiapp_api.models.notification import Notification, NotificationSetting
 from fitminiapp_api.models.nutrition import NutritionTarget
 from fitminiapp_api.models.program import (
@@ -58,6 +59,24 @@ def _delete_user_programs(db: Session, user_program_ids: list[int]) -> None:
             UserWorkoutExercise.id.in_(workout_exercise_ids)
         ).delete(synchronize_session=False)
     if workout_ids:
+        comment_ids = [
+            row.id
+            for row in db.query(WorkoutComment.id)
+            .filter(WorkoutComment.workout_id.in_(workout_ids))
+            .all()
+        ]
+        if comment_ids:
+            db.query(Notification).filter(
+                Notification.dedupe_key.in_(
+                    [f"trainer_feedback:{comment_id}" for comment_id in comment_ids]
+                )
+            ).delete(synchronize_session=False)
+            db.query(WorkoutCommentRevision).filter(
+                WorkoutCommentRevision.comment_id.in_(comment_ids)
+            ).delete(synchronize_session=False)
+            db.query(WorkoutComment).filter(WorkoutComment.id.in_(comment_ids)).delete(
+                synchronize_session=False
+            )
         db.query(UserWorkout).filter(UserWorkout.id.in_(workout_ids)).delete(
             synchronize_session=False
         )
@@ -90,6 +109,29 @@ def delete_user_cascade(db: Session, user: User) -> None:
         row.id for row in db.query(UserProgram.id).filter(UserProgram.user_id == user.id).all()
     ]
     _delete_user_programs(db, own_program_ids)
+    remaining_comment_ids = [
+        row.id
+        for row in db.query(WorkoutComment.id)
+        .filter(
+            or_(
+                WorkoutComment.trainer_author_id == user.id,
+                WorkoutComment.client_user_id == user.id,
+            )
+        )
+        .all()
+    ]
+    if remaining_comment_ids:
+        db.query(Notification).filter(
+            Notification.dedupe_key.in_(
+                [f"trainer_feedback:{comment_id}" for comment_id in remaining_comment_ids]
+            )
+        ).delete(synchronize_session=False)
+        db.query(WorkoutCommentRevision).filter(
+            WorkoutCommentRevision.comment_id.in_(remaining_comment_ids)
+        ).delete(synchronize_session=False)
+        db.query(WorkoutComment).filter(WorkoutComment.id.in_(remaining_comment_ids)).delete(
+            synchronize_session=False
+        )
     db.query(UserProgram).filter(UserProgram.assigned_by_user_id == user.id).update(
         {"assigned_by_user_id": None}, synchronize_session=False
     )
@@ -197,6 +239,13 @@ def build_account_export(db: Session, user: User) -> dict:
         .order_by(AuditEvent.created_at.asc(), AuditEvent.id.asc())
         .all()
     )
+    workout_comments = (
+        db.query(WorkoutComment)
+        .options(joinedload(WorkoutComment.revisions))
+        .filter(WorkoutComment.client_user_id == user.id)
+        .order_by(WorkoutComment.created_at.asc(), WorkoutComment.id.asc())
+        .all()
+    )
 
     profile = user.profile
     return {
@@ -296,6 +345,28 @@ def build_account_export(db: Session, user: User) -> dict:
             }
             for relation in relations
         ],
+        "workout_comments": [
+            {
+                "id": comment.id,
+                "trainer_author_id": comment.trainer_author_id,
+                "workout_id": comment.workout_id,
+                "workout_exercise_id": comment.workout_exercise_id,
+                "body": comment.body,
+                "body_format": "plain_text",
+                "created_at": comment.created_at,
+                "updated_at": comment.updated_at,
+                "revisions": [
+                    {
+                        "revision_number": revision.revision_number,
+                        "body": revision.body,
+                        "edited_by_user_id": revision.edited_by_user_id,
+                        "created_at": revision.created_at,
+                    }
+                    for revision in comment.revisions
+                ],
+            }
+            for comment in workout_comments
+        ],
         "coach_role_applications": [
             {
                 "id": application.id,
@@ -324,6 +395,7 @@ def build_account_export(db: Session, user: User) -> dict:
                 "status": row.status,
                 "created_at": row.created_at,
                 "sent_at": row.sent_at,
+                "action_url": row.action_url,
             }
             for row in notifications
         ],

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from time import monotonic
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -37,19 +38,24 @@ async def send_telegram_message(
     chat_id: int,
     text: str,
     *,
-    open_app: bool = False,
+    open_app_path: str | None = None,
 ) -> None:
     if not settings.telegram_bot_token or settings.telegram_bot_token == "replace-me":
         logger.info("BOT token not configured - skip Telegram delivery to %s", chat_id)
         return
     payload: dict = {"chat_id": chat_id, "text": text}
-    if open_app:
+    if open_app_path:
+        parsed = urlsplit(open_app_path)
+        if parsed.scheme or parsed.netloc or parsed.path != "/app":
+            raise ValueError("unsafe app notification URL")
         payload["reply_markup"] = {
             "inline_keyboard": [
                 [
                     {
                         "text": "Открыть приложение",
-                        "web_app": {"url": f"{settings.frontend_base_url.rstrip('/')}/app"},
+                        "web_app": {
+                            "url": f"{settings.frontend_base_url.rstrip('/')}{open_app_path}"
+                        },
                     }
                 ]
             ]
@@ -70,7 +76,7 @@ async def run_once(*, sync_reminders: bool = True) -> None:
             user.id: user
             for user in db.query(User).filter(User.id.in_({row.user_id for row in rows})).all()
         }
-        deliveries: list[tuple[int, int, str, bool]] = []
+        deliveries: list[tuple[int, int, str, str | None]] = []
         for row in rows:
             user = users.get(row.user_id)
             if not user or not user.is_active:
@@ -82,12 +88,19 @@ async def run_once(*, sync_reminders: bool = True) -> None:
                 row.last_error = "telegram_identity_not_linked"
                 row.processing_started_at = None
                 continue
+            open_app_path = row.action_url
+            if (
+                open_app_path is None
+                and row.dedupe_key
+                and row.dedupe_key.startswith("trainer_request:")
+            ):
+                open_app_path = "/app"
             deliveries.append(
                 (
                     row.id,
                     user.telegram_user_id,
                     f"{row.title}\n\n{row.body}",
-                    bool(row.dedupe_key and row.dedupe_key.startswith("trainer_request:")),
+                    open_app_path,
                 )
             )
         db.commit()
@@ -99,11 +112,15 @@ async def run_once(*, sync_reminders: bool = True) -> None:
 
         async with httpx.AsyncClient(timeout=20) as client:
 
-            async def deliver(item: tuple[int, int, str, bool]) -> tuple[int, Exception | None]:
-                notification_id, chat_id, text, open_app = item
+            async def deliver(
+                item: tuple[int, int, str, str | None],
+            ) -> tuple[int, Exception | None]:
+                notification_id, chat_id, text, open_app_path = item
                 try:
                     async with semaphore:
-                        await send_telegram_message(client, chat_id, text, open_app=open_app)
+                        await send_telegram_message(
+                            client, chat_id, text, open_app_path=open_app_path
+                        )
                     return notification_id, None
                 except Exception as exc:
                     return notification_id, exc

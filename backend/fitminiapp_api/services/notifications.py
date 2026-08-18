@@ -353,6 +353,7 @@ def queue_telegram_notification(
     title: str,
     body: str,
     dedupe_key: str | None = None,
+    action_url: str | None = None,
 ) -> Notification:
     """Add an immediate Telegram notification to the current transaction."""
     scheduled_for = now_for_user_naive(user)
@@ -365,6 +366,7 @@ def queue_telegram_notification(
         scheduled_for_utc=user_local_naive_to_utc_naive(scheduled_for, user),
         status="queued",
         dedupe_key=dedupe_key,
+        action_url=action_url,
     )
     db.add(notification)
     return notification

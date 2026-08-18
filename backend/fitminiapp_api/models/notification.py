@@ -4,6 +4,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     DateTime,
     ForeignKey,
     Index,
@@ -33,6 +34,10 @@ class Notification(Base):
     __tablename__ = "notifications"
     __table_args__ = (
         UniqueConstraint("dedupe_key", name="uq_notifications_dedupe_key"),
+        CheckConstraint(
+            "action_url IS NULL OR action_url = '/app' OR action_url LIKE '/app?%'",
+            name="ck_notifications_internal_action_url",
+        ),
         Index(
             "ix_notifications_due_queue",
             "scheduled_for_utc",
@@ -60,6 +65,7 @@ class Notification(Base):
     )
     sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     dedupe_key: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    action_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     attempt_count: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
     )
