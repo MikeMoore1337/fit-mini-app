@@ -73,6 +73,7 @@ class Settings(BaseSettings):
 
     food_provider: Literal["disabled", "open_food_facts"] = "disabled"
     open_food_facts_user_agent: str = ""
+    food_provider_timeout_seconds: float = Field(default=4, ge=1, le=15)
 
     worker_poll_seconds: int = Field(default=10, ge=1, le=3600)
     reminder_sync_seconds: int = Field(default=60, ge=10, le=3600)

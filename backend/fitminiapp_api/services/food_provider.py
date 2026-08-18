@@ -46,6 +46,8 @@ class ProviderFood:
 
 
 class FoodProvider(Protocol):
+    name: str
+
     def search(self, query: str, *, limit: int) -> list[ProviderFood]: ...
 
     def get_by_barcode(self, barcode: str) -> ProviderFood | None: ...
@@ -85,4 +87,7 @@ def get_food_provider() -> FoodProvider | None:
         return None
     from fitminiapp_api.services.open_food_facts import OpenFoodFactsProvider
 
-    return OpenFoodFactsProvider(user_agent=settings.open_food_facts_user_agent)
+    return OpenFoodFactsProvider(
+        user_agent=settings.open_food_facts_user_agent,
+        timeout_seconds=settings.food_provider_timeout_seconds,
+    )

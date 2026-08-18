@@ -53,6 +53,8 @@ def _provider_food(
 
 
 class FakeFoodProvider:
+    name = "fake_food_catalog"
+
     def __init__(
         self,
         *,
@@ -216,7 +218,10 @@ def test_barcode_lookup_is_local_first_and_private_scope_is_preserved(client) ->
     ],
 )
 def test_provider_failure_falls_back_without_touching_local_foods(
-    client, failure: FoodProviderUnavailable, expected_status: str
+    client,
+    failure: FoodProviderUnavailable,
+    expected_status: str,
+    caplog,
 ) -> None:
     headers = _auth(client, 19_005)
     fake = FakeFoodProvider(failure=failure)
@@ -234,6 +239,11 @@ def test_provider_failure_falls_back_without_touching_local_foods(
     assert response.json()["items"] == []
     assert response.json()["external_items"] == []
     assert response.json()["provider_status"] == expected_status
+    provider_record = next(
+        record for record in caplog.records if record.message == "food_provider_search_unavailable"
+    )
+    assert provider_record.provider == "fake_food_catalog"
+    assert provider_record.reason == failure.reason
     with get_session_context() as db:
         assert db.query(Food).count() == 0
 
@@ -542,3 +552,18 @@ def test_open_food_facts_requires_identifying_user_agent_when_enabled() -> None:
         open_food_facts_user_agent="YourFitnessCoach/1.0 (ops@example.test)",
     )
     assert configured.food_provider == "open_food_facts"
+    assert configured.food_provider_timeout_seconds == 4
+    with pytest.raises(ValidationError):
+        Settings(
+            **common,
+            food_provider="open_food_facts",
+            open_food_facts_user_agent="YourFitnessCoach/1.0 (ops@example.test)",
+            food_provider_timeout_seconds=0.9,
+        )
+    configured_timeout = Settings(
+        **common,
+        food_provider="open_food_facts",
+        open_food_facts_user_agent="YourFitnessCoach/1.0 (ops@example.test)",
+        food_provider_timeout_seconds=6,
+    )
+    assert configured_timeout.food_provider_timeout_seconds == 6

@@ -2,7 +2,7 @@ from datetime import date, time
 from enum import IntEnum
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ProgressPeriodDays(IntEnum):
@@ -99,3 +99,10 @@ class ProgressSummaryResponse(BaseModel):
 
 class TrainerClientProgressSummary(ProgressSummaryResponse):
     client_name: str | None = None
+
+
+class TrainerClientProgressListResponse(BaseModel):
+    items: list[TrainerClientProgressSummary]
+    total: int = Field(ge=0)
+    limit: int = Field(ge=1)
+    offset: int = Field(ge=0)

@@ -657,6 +657,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/coach/clients/{client_id}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Coach Client Progress Summary */
+        get: operations["coach_client_progress_summary_api_v1_coach_clients__client_id__summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/coach/client-summaries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Coach Client Progress Summaries */
+        get: operations["coach_client_progress_summaries_api_v1_coach_client_summaries_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/coach/clients/{client_id}/workouts": {
         parameters: {
             query?: never;
@@ -892,6 +926,23 @@ export interface paths {
         };
         /** Workout Progress */
         get: operations["workout_progress_api_v1_workouts_progress_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/progress/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Workout Progress Summary */
+        get: operations["workout_progress_summary_api_v1_workouts_progress_summary_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1774,6 +1825,43 @@ export interface components {
              */
             confirmation: "DELETE";
         };
+        /** AdherenceComponent */
+        AdherenceComponent: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "available" | "not_applicable" | "insufficient_data" | "unsupported";
+            /** Percent */
+            percent?: number | null;
+            /**
+             * Achieved
+             * @default 0
+             */
+            achieved: number;
+            /**
+             * Evaluated
+             * @default 0
+             */
+            evaluated: number;
+            /** Weight */
+            weight: number;
+            /** Reason */
+            reason?: string | null;
+        };
+        /** AdherenceSummary */
+        AdherenceSummary: {
+            /** Formula Version */
+            formula_version: string;
+            /** Overall Percent */
+            overall_percent?: number | null;
+            /** Included Components */
+            included_components: string[];
+            workouts: components["schemas"]["AdherenceComponent"];
+            cardio: components["schemas"]["AdherenceComponent"];
+            calories: components["schemas"]["AdherenceComponent"];
+            protein: components["schemas"]["AdherenceComponent"];
+        };
         /** AdminCoachRoleApplicationReview */
         AdminCoachRoleApplicationReview: {
             /**
@@ -1968,6 +2056,36 @@ export interface components {
             thigh_cm?: number | null;
             /** Note */
             note?: string | null;
+        };
+        /** BodyMetricTrend */
+        BodyMetricTrend: {
+            /**
+             * Metric
+             * @enum {string}
+             */
+            metric: "weight_kg" | "chest_cm" | "waist_cm" | "hips_cm" | "biceps_cm" | "thigh_cm";
+            /** First Value */
+            first_value: number;
+            /** Latest Value */
+            latest_value: number;
+            /** Change */
+            change?: number | null;
+            /**
+             * First Measured On
+             * Format: date
+             */
+            first_measured_on: string;
+            /**
+             * Latest Measured On
+             * Format: date
+             */
+            latest_measured_on: string;
+        };
+        /** BodyPeriodSummary */
+        BodyPeriodSummary: {
+            latest_measurement?: components["schemas"]["LatestBodyMeasurement"] | null;
+            /** Trends */
+            trends: components["schemas"]["BodyMetricTrend"][];
         };
         /** BotTelegramLinkRequest */
         BotTelegramLinkRequest: {
@@ -2778,6 +2896,26 @@ export interface components {
             /** Max Bpm */
             max_bpm: number;
         };
+        /** LatestBodyMeasurement */
+        LatestBodyMeasurement: {
+            /**
+             * Measured On
+             * Format: date
+             */
+            measured_on: string;
+            /** Weight Kg */
+            weight_kg?: number | null;
+            /** Chest Cm */
+            chest_cm?: number | null;
+            /** Waist Cm */
+            waist_cm?: number | null;
+            /** Hips Cm */
+            hips_cm?: number | null;
+            /** Biceps Cm */
+            biceps_cm?: number | null;
+            /** Thigh Cm */
+            thigh_cm?: number | null;
+        };
         /** LoggedSetItem */
         LoggedSetItem: {
             /** Id */
@@ -2800,6 +2938,22 @@ export interface components {
             message: string;
             /** Action Token */
             action_token?: string | null;
+        };
+        /** NextWorkoutSummary */
+        NextWorkoutSummary: {
+            /** Id */
+            id: number;
+            /**
+             * Scheduled Date
+             * Format: date
+             */
+            scheduled_date: string;
+            /** Scheduled Time */
+            scheduled_time?: string | null;
+            /** Title */
+            title: string;
+            /** Status */
+            status: string;
         };
         /** NotificationCreateRequest */
         NotificationCreateRequest: {
@@ -2855,6 +3009,31 @@ export interface components {
             username?: string | null;
             /** Full Name */
             full_name?: string | null;
+        };
+        /** NutritionPeriodSummary */
+        NutritionPeriodSummary: {
+            /** Visible */
+            visible: boolean;
+            /**
+             * Logged Days
+             * @default 0
+             */
+            logged_days: number;
+            /**
+             * Adherence Evaluated Days
+             * @default 0
+             */
+            adherence_evaluated_days: number;
+            /** Average Calories */
+            average_calories?: number | null;
+            /** Target Calories */
+            target_calories?: number | null;
+            /** Average Protein G */
+            average_protein_g?: number | null;
+            /** Target Protein G */
+            target_protein_g?: number | null;
+            /** Target Effective On */
+            target_effective_on?: string | null;
         };
         /** NutritionTargetResponse */
         NutritionTargetResponse: {
@@ -3191,6 +3370,31 @@ export interface components {
             /** Days */
             days: components["schemas"]["ProgramTemplateDayResponse"][];
         };
+        /**
+         * ProgressPeriodDays
+         * @enum {integer}
+         */
+        ProgressPeriodDays: 7 | 30 | 90;
+        /** ProgressSummaryResponse */
+        ProgressSummaryResponse: {
+            /** User Id */
+            user_id: number;
+            period_days: components["schemas"]["ProgressPeriodDays"];
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            training: components["schemas"]["TrainingPeriodSummary"];
+            nutrition: components["schemas"]["NutritionPeriodSummary"];
+            body: components["schemas"]["BodyPeriodSummary"];
+            adherence: components["schemas"]["AdherenceSummary"];
+        };
         /** ProgressVolumePoint */
         ProgressVolumePoint: {
             /**
@@ -3361,6 +3565,39 @@ export interface components {
              */
             token_type: string;
         };
+        /** TrainerClientProgressListResponse */
+        TrainerClientProgressListResponse: {
+            /** Items */
+            items: components["schemas"]["TrainerClientProgressSummary"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /** TrainerClientProgressSummary */
+        TrainerClientProgressSummary: {
+            /** User Id */
+            user_id: number;
+            period_days: components["schemas"]["ProgressPeriodDays"];
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            training: components["schemas"]["TrainingPeriodSummary"];
+            nutrition: components["schemas"]["NutritionPeriodSummary"];
+            body: components["schemas"]["BodyPeriodSummary"];
+            adherence: components["schemas"]["AdherenceSummary"];
+            /** Client Name */
+            client_name?: string | null;
+        };
         /** TrainerResponse */
         TrainerResponse: {
             /** Id */
@@ -3380,6 +3617,22 @@ export interface components {
             chat_url?: string | null;
             /** Chat Unavailable Reason */
             chat_unavailable_reason?: string | null;
+        };
+        /** TrainingPeriodSummary */
+        TrainingPeriodSummary: {
+            /** Planned Workouts */
+            planned_workouts: number;
+            /** Completed Workouts */
+            completed_workouts: number;
+            /** Frequency Per Week */
+            frequency_per_week: number;
+            /** Volume Kg */
+            volume_kg: number;
+            /** New Personal Records */
+            new_personal_records: number;
+            /** Last Completed Workout On */
+            last_completed_workout_on?: string | null;
+            next_workout?: components["schemas"]["NextWorkoutSummary"] | null;
         };
         /** UserFoodCreate */
         UserFoodCreate: {
@@ -5053,6 +5306,72 @@ export interface operations {
             };
         };
     };
+    coach_client_progress_summary_api_v1_coach_clients__client_id__summary_get: {
+        parameters: {
+            query?: {
+                period_days?: components["schemas"]["ProgressPeriodDays"];
+            };
+            header?: never;
+            path: {
+                client_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressSummaryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    coach_client_progress_summaries_api_v1_coach_client_summaries_get: {
+        parameters: {
+            query?: {
+                period_days?: components["schemas"]["ProgressPeriodDays"];
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrainerClientProgressListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     coach_client_workout_timeline_api_v1_coach_clients__client_id__workouts_get: {
         parameters: {
             query?: {
@@ -5511,6 +5830,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkoutProgressResponse"];
+                };
+            };
+        };
+    };
+    workout_progress_summary_api_v1_workouts_progress_summary_get: {
+        parameters: {
+            query?: {
+                period_days?: components["schemas"]["ProgressPeriodDays"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressSummaryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

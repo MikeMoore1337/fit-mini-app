@@ -50,6 +50,8 @@ _PRODUCT_REQUEST_BUDGET = _RequestBudget(15)
 
 
 class OpenFoodFactsProvider:
+    name = "open_food_facts"
+
     def __init__(
         self,
         *,

@@ -130,28 +130,42 @@ def _body_trends(rows: list) -> list[dict]:
     return trends
 
 
-def _active_clients(db: Session, coach: User) -> list[tuple[User, str | None]]:
-    rows = (
+def _active_clients(
+    db: Session,
+    coach: User,
+    *,
+    limit: int,
+    offset: int,
+) -> tuple[list[tuple[User, str | None]], int]:
+    query = (
         db.query(User, CoachClient.private_name)
         .join(CoachClient, CoachClient.client_user_id == User.id)
-        .options(joinedload(User.profile))
         .filter(
             CoachClient.coach_user_id == coach.id,
             CoachClient.status == "active",
             User.is_active.is_(True),
         )
+    )
+    total = query.count()
+    rows = (
+        query.options(joinedload(User.profile))
         .order_by(User.id.desc())
+        .offset(offset)
+        .limit(limit)
         .all()
     )
-    return [(client, private_name) for client, private_name in rows]
+    return [(client, private_name) for client, private_name in rows], total
 
 
 def build_trainer_client_summaries(
     db: Session,
     coach: User,
     period_days: int,
-) -> list[dict]:
-    client_rows = _active_clients(db, coach)
+    *,
+    limit: int,
+    offset: int,
+) -> dict:
+    client_rows, total = _active_clients(db, coach, limit=limit, offset=offset)
     clients = [client for client, _private_name in client_rows]
     summaries = build_progress_summaries(
         db,
@@ -165,7 +179,12 @@ def build_trainer_client_summaries(
     }
     for summary in summaries:
         summary["client_name"] = names[summary["user_id"]]
-    return summaries
+    return {
+        "items": summaries,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
 
 
 def build_progress_summary(db: Session, user: User, period_days: int) -> dict:
@@ -329,7 +348,6 @@ def build_progress_summaries(
         else []
     )
     targets_by_user = {target.user_id: target for target in targets}
-
     nutrition_end_by_user = {
         user_id: current_day - timedelta(days=1) for user_id, current_day in today_by_user.items()
     }
