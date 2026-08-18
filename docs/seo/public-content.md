@@ -1,95 +1,96 @@
-# Public content architecture
+# Архитектура публичного контента
 
-This document is the editorial and information-architecture contract for the indexable public
-surface. It complements the technical crawl/indexation contract in
-[`operations.md`](../operations.md) and the webmaster runbook in
-[`search-console-yandex-webmaster.md`](search-console-yandex-webmaster.md). Organic acquisition,
-distribution, editorial operations, and the public release gate are defined in the
+Документ задаёт редакционные правила и информационную архитектуру индексируемой публичной части.
+Технические правила обхода и индексации описаны в [`operations.md`](../operations.md), ручная
+работа вебмастера — в [`search-console-yandex-webmaster.md`](search-console-yandex-webmaster.md),
+а органическое привлечение, распространение материалов и критерии публикации — в
 [`organic-growth-playbook.md`](organic-growth-playbook.md).
 
-## Current public information architecture
+## Текущая информационная архитектура
 
-| Route                                                | Audience and intent                                                      | Why it is a separate page                                                    |
-| ---------------------------------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
-| `/`                                                  | Both audiences: understand the product and choose a path                 | Product overview and primary entry point                                     |
-| `/training`                                          | Independent users: understand programs and workout logging               | Covers the end-to-end training workflow, not nutrition or trainer operations |
-| `/nutrition`                                         | Independent users: understand the current KБЖУ calculator and its limits | Answers calculation intent without claiming a meal diary or meal plans       |
-| `/progress`                                          | Users and trainers: understand which factual results are stored          | Explains history, loads, records and measurements without an invented score  |
-| `/for-trainers`                                      | Trainers: evaluate the current Coach workspace                           | Dedicated invitation, program and client-progress workflow                   |
-| `/knowledge`                                         | Both audiences: find reviewed educational material                       | Editorial directory and publication policy                                   |
-| `/knowledge/training/how-to-start-strength-training` | Beginners: start with a repeatable, recorded plan                        | Evergreen guide with source and safety context                               |
-| `/knowledge/nutrition/kbju-as-a-reference`           | Calculator users: interpret an estimate responsibly                      | Evergreen guide separating estimates from diet quality and medical advice    |
+| Маршрут | Аудитория и задача | Зачем нужна отдельная страница |
+| --- | --- | --- |
+| `/` | Все пользователи: понять продукт и выбрать путь | Обзор продукта и основная точка входа |
+| `/training` | Самостоятельные пользователи: понять программы и запись тренировок | Полный сценарий тренировки без питания и работы тренера |
+| `/nutrition` | Самостоятельные пользователи: понять текущий калькулятор КБЖУ и ограничения | Отвечает на задачу расчёта, не обещая дневник или планы питания |
+| `/progress` | Пользователи и тренеры: понять, какие фактические результаты сохраняются | Объясняет историю, нагрузки, рекорды и измерения без выдуманной оценки |
+| `/for-trainers` | Тренеры: оценить текущее рабочее пространство Coach | Отдельный сценарий приглашений, программ и прогресса клиентов |
+| `/knowledge` | Все пользователи: найти проверенные учебные материалы | Каталог статей и правила публикации |
+| `/knowledge/training/how-to-start-strength-training` | Новички: начать с повторяемого и записываемого плана | Долговечное руководство с источниками и оговорками по безопасности |
+| `/knowledge/nutrition/kbju-as-a-reference` | Пользователи калькулятора: правильно понимать оценку | Отделяет расчёт от качества рациона и медицинских рекомендаций |
 
-There is deliberately no generic `/features` page: its intent would duplicate the landing and the
-focused product pages. There is no public `/exercises` index yet. Public exercise pages must later
-read factual names, muscles and technique metadata from the exercise domain rather than copy text
-into an SEO-only content store.
+Общей страницы `/features` намеренно нет: она дублировала бы лендинг и целевые страницы продукта.
+Публичного каталога `/exercises` пока тоже нет. Будущие публичные страницы упражнений должны брать
+названия, мышцы и технику из предметной области упражнений, а не копировать текст в SEO-хранилище.
 
-Authenticated application, Coach, Admin, invitation and technical authentication routes remain
-non-indexable and are not content sources for public pages.
+Маршруты авторизованного приложения, Coach, Admin, приглашений и технической аутентификации не
+индексируются и не служат источниками публичного контента.
 
-## Maintained content source
+## Поддерживаемый источник контента
 
-[`publicContent.json`](../../frontend/src/content/publicContent.json) is the single repo-native
-source for public page copy and the knowledge contract. It contains:
+[`publicContent.json`](../../frontend/src/content/publicContent.json) — единственный источник
+текстов публичных страниц и контракта базы знаний внутри репозитория. В нём хранятся:
 
-- canonical path, page kind, title, description and social description;
-- H1, intro, semantic sections and factual CTA;
-- breadcrumbs and contextual related links;
-- knowledge category, author, optional reviewer, update date, disclaimer and sources;
-- the category vocabulary `training`, `nutrition`, `cardio`, `recovery`, `exercises`.
+- канонический путь, вид страницы, title, description и описание для социальных сетей;
+- H1, введение, смысловые разделы и фактический CTA;
+- хлебные крошки и контекстные связанные ссылки;
+- категория статьи, автор, необязательный рецензент, дата обновления, предупреждение и источники;
+- словарь категорий `training`, `nutrition`, `cardio`, `recovery`, `exercises`.
 
-The React public template imports the manifest directly. The backend reads the same source in local
-development and the copy included in the frontend image for production. It uses the manifest to
-render crawler-visible fallback HTML, route metadata, structured data and the sitemap. Task 38 can
-reuse the typed frontend module for contextual App/TMA rendering without creating a second article
-store.
+Публичный шаблон React импортирует манифест напрямую. Backend читает тот же источник при локальной
+разработке и копию из образа frontend в production. По манифесту он формирует видимый роботу
+fallback HTML, метаданные маршрута, структурированные данные и sitemap. Задача 38 может повторно
+использовать типизированный модуль frontend для App/TMA без второго хранилища статей.
 
-Adding a page requires all of the following in one change:
+Новая страница добавляется одним изменением и должна иметь:
 
-1. a distinct people-first intent and complete manifest entry;
-2. crawlable links from at least one relevant public page and contextual links back;
-3. a self-canonical backend response with visible fallback content;
-4. inclusion in the generated sitemap only after the route is ready for indexing;
-5. targeted frontend and backend SEO-route tests.
+1. отдельную полезную для человека задачу и полную запись в манифесте;
+2. доступные роботу ссылки хотя бы с одной подходящей публичной страницы и обратные контекстные
+   ссылки;
+3. ответ backend с self-canonical и видимым fallback-содержимым;
+4. запись в генерируемом sitemap только после готовности маршрута к индексации;
+5. целевые тесты SEO-маршрута на frontend и backend.
 
-Do not create category routes, query permutations or placeholders until they have standalone value.
+Не создавайте страницы категорий, варианты query string и заглушки без самостоятельной ценности.
 
-## Editorial rules for fitness and nutrition
+## Редакционные правила о фитнесе и питании
 
-- Write for a concrete reader task, not a keyword or target word count.
-- Describe only capabilities present in the current product. Do not present AI Coach, Demo Mode,
-  meal logging, meal plans or future trainer/admin tools as available.
-- Separate general education from individual medical, rehabilitation or dietetic advice.
-- Do not promise treatment, guaranteed weight loss, a guaranteed performance result or a fixed
-  result deadline.
-- Cite primary or authoritative sources for material health, physiology and nutrition claims.
-- Use a truthful organizational or personal byline. Never invent credentials, a medical reviewer,
-  ratings, testimonials or review dates.
-- Set `updated` only after a substantive review. Do not refresh dates to imply freshness.
-- Leave `reviewer` empty when no qualified reviewer participated. If a topic requires specialist
-  review, keep it unpublished until that review exists.
-- Keep limitations and escalation guidance visible when a general guide may not fit a reader's
-  health context.
-- Do not copy third-party text or exercise technique descriptions. Exercise content must be owned
-  or legally usable and backed by domain data.
+- Пишите под конкретную задачу читателя, а не под ключевое слово или объём текста.
+- Описывайте только существующие возможности. Не выдавайте AI Coach, Demo Mode, дневник питания,
+  планы питания и будущие инструменты тренера или администратора за доступные функции.
+- Отделяйте общее обучение от индивидуальных медицинских, реабилитационных и диетологических
+  рекомендаций.
+- Не обещайте лечение, гарантированное снижение веса или спортивный результат и фиксированный срок.
+- Существенные утверждения о здоровье, физиологии и питании подкрепляйте первичными или
+  авторитетными источниками.
+- Указывайте правдивого автора — человека или организацию. Не выдумывайте квалификацию,
+  медицинского рецензента, рейтинг, отзыв или дату проверки.
+- Меняйте `updated` только после содержательной проверки, а не для видимости свежести.
+- Оставляйте `reviewer` пустым, если квалифицированный специалист не участвовал. Материал, который
+  требует его проверки, не публикуется до рецензирования.
+- Показывайте ограничения и совет обратиться к специалисту, если общее руководство может не
+  подходить из-за состояния здоровья.
+- Не копируйте чужие тексты и описания техники. Материал об упражнении должен принадлежать проекту
+  или использоваться законно и опираться на данные предметной области.
 
-The initial guides use current World Health Organization publications for the limited factual
-claims they make. Source links remain visible on the guide pages.
+Первоначальные руководства ссылаются на актуальные публикации Всемирной организации
+здравоохранения для ограниченного набора фактических утверждений. Ссылки видны на страницах.
 
-## Structured data and linking contract
+## Структурированные данные и ссылки
 
-- The landing keeps truthful `Organization`, `WebSite` and `SoftwareApplication` data.
-- Product pages use `WebPage`; the knowledge directory uses `CollectionPage`.
-- A guide uses `Article` only when its visible page contains the matching headline, author, update
-  date and body. No review/rating markup is generated.
-- `BreadcrumbList` is emitted only for the visible hierarchy represented by breadcrumbs.
-- All structured data URLs use the same canonical public origin as the page and sitemap.
-- Landing, product pages, guides and CTA surfaces use normal `<a href>` links. A sitemap supplements
-  this architecture; it does not replace internal linking.
+- Лендинг содержит достоверные `Organization`, `WebSite` и `SoftwareApplication`.
+- Страницы продукта используют `WebPage`, каталог знаний — `CollectionPage`.
+- Для руководства применяется `Article`, только когда видимая страница содержит совпадающие
+  заголовок, автора, дату обновления и основной текст. Разметка отзывов и рейтинга не создаётся.
+- `BreadcrumbList` отражает только видимую иерархию хлебных крошек.
+- Все URL структурированных данных используют тот же канонический публичный origin, что страница
+  и sitemap.
+- Лендинг, страницы продукта, руководства и CTA используют обычные `<a href>`. Sitemap дополняет
+  внутренние ссылки, но не заменяет их.
 
-## Future integration points
+## Будущие точки расширения
 
-Later tasks may add a Demo CTA, an AI Coach page, stabilized product screenshots, richer trainer
-positioning or public exercise pages only after those capabilities and factual assets exist. Until
-then, do not publish indexable draft routes or synthetic screenshots as placeholders.
+Demo CTA, страница AI Coach, стабильные скриншоты продукта, расширенное позиционирование для
+тренеров и публичные страницы упражнений допустимы только после появления соответствующих функций
+и фактических материалов. До этого не публикуйте индексируемые черновики или искусственные
+скриншоты-заглушки.

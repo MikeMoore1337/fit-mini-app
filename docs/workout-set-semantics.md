@@ -1,37 +1,38 @@
-# Workout set semantics and supersets
+# Семантика тренировочных подходов и суперсеты
 
-Workout sets store three independent observations:
+Для тренировочного подхода хранятся три независимых наблюдения:
 
 - `set_kind`: `warmup`, `working`, or `drop`;
-- `rir`: optional repetitions-in-reserve category `0`, `1`, `2`, `3`, or `4+`;
-- `reached_failure`: optional boolean stating whether the person reports reaching failure.
+- `rir`: необязательная категория повторов в запасе — `0`, `1`, `2`, `3` или `4+`;
+- `reached_failure`: необязательный логический признак того, что пользователь сообщил о
+  достижении отказа.
 
-The backend does not derive failure from RIR, detect failure automatically, or calculate
-effective repetitions/sets. Existing rows keep `set_kind = null` and
-`reached_failure = null`; analytics treats the legacy null kind like the previously counted
-working volume. Newly materialized workout sets are explicitly `working`.
+Backend не выводит отказ из RIR, не определяет его автоматически и не рассчитывает
+«эффективные» повторы или подходы. В существующих записях сохраняются `set_kind = null` и
+`reached_failure = null`; аналитика учитывает устаревшее пустое значение вида подхода как
+прежний рабочий объём. Для новых подходов явно задаётся `working`.
 
-Warm-up sets remain visible in workout responses, trainer history, and account export, but do not
-contribute to working-volume, progression, personal-record, RIR-distribution, or muscle-exposure
-analytics. Working and drop sets do contribute. Drop sets are returned explicitly as `drop` and
-are never multiplied or weighted into a synthetic score.
+Разминочные подходы видны в ответах по тренировке, истории для тренера и экспорте аккаунта,
+но не входят в расчёты рабочего объёма, прогрессии, личных рекордов, распределения RIR и
+нагрузки на мышцы. Рабочие подходы и дроп-сеты учитываются. Дроп-сеты возвращаются явно как
+`drop` и не умножаются и не взвешиваются для получения искусственного показателя.
 
-## Superset snapshots
+## Снимки суперсетов
 
-`ProgramTemplateExercise` and `UserWorkoutExercise` both store nullable `superset_group` and
-`superset_order`. The fields are either both null or both present. A template superset contains
-exactly two exercises ordered `1` and `2`; duplicate order slots in one day/workout are rejected.
-Assignment copies the values into each materialized workout so later template edits cannot alter
-workout history.
+`ProgramTemplateExercise` и `UserWorkoutExercise` хранят необязательные поля `superset_group` и
+`superset_order`. Оба поля либо пусты, либо заполнены. Суперсет в шаблоне содержит ровно два
+упражнения с порядком `1` и `2`; одинаковые позиции в одном дне или тренировке запрещены. При
+назначении значения копируются в каждую созданную тренировку, поэтому последующие изменения
+шаблона не меняют историю.
 
-The technical API fields are intentionally compact. User interfaces must present beginner-facing
-Russian wording:
+Технические поля API намеренно краткие. В пользовательском интерфейсе следует показывать
+понятные новичку русские формулировки:
 
 - `warmup` — `Разминочный подход`;
 - `working` — `Рабочий подход`;
-- `drop` — `Дроп-сет`, with a short first-use explanation;
+- `drop` — `Дроп-сет` с коротким пояснением при первом использовании;
 - `reached_failure` — `Подход до отказа`;
-- grouped exercises — `Суперсет — два упражнения подряд`.
+- сгруппированные упражнения — `Суперсет — два упражнения подряд`.
 
-These controls remain optional advanced fields; the default logging flow stays
+Эти элементы остаются необязательными расширенными настройками. Основной сценарий записи:
 `Вес -> Повторы -> Готово`.

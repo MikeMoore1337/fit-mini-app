@@ -1,226 +1,198 @@
-# Organic growth and distribution playbook
+# Органический рост и распространение материалов
 
-This playbook is the operating contract for zero/low-cost organic acquisition. It builds on the
-[public content architecture](public-content.md) and the
-[Search Console/Yandex Webmaster runbook](search-console-yandex-webmaster.md). It does not include
-paid media, cold outreach, hidden tracking, or ranking promises.
+Это рабочий договор по бесплатному и недорогому органическому привлечению. Он дополняет
+[архитектуру публичного контента](public-content.md) и
+[руководство Search Console и Яндекс Вебмастера](search-console-yandex-webmaster.md). Платная
+реклама, холодные рассылки, скрытое отслеживание и обещания позиций в поиске сюда не входят.
 
-The external guidance below was reviewed on **2026-08-18**. The durable rule is to re-check the
-linked official documentation before changing search-facing behavior rather than relying on this
-date indefinitely.
+Внешние рекомендации ниже проверены 18 августа 2026 года. Перед изменением поведения для поиска
+сверяйтесь с актуальной официальной документацией, а не полагайтесь на эту дату бессрочно.
 
-## Principles and boundaries
+## Принципы и границы
 
-- Help a specific reader complete a real task. Search visibility is distribution of useful work,
-  not the reason to manufacture a page.
-- Treat independent users and personal trainers as different audiences with different activation
-  paths. Do not hide trainer intent inside generic consumer copy.
-- Publish cornerstone pages and first-hand product knowledge before expanding topic count. There
-  is no publishing quota or target word count.
-- Keep one stable, canonical URL per resource. UTM parameters may be attached to outbound campaign
-  links, but never create a second social, campaign, or search page.
-- Keep public material factual and separate from private workouts, profiles, client records,
-  trainer notes, Coach/Admin data, and authenticated application state.
-- AI may assist research organization, outlining, drafting, translation, or copy-editing. A human
-  remains accountable for usefulness, claims, sources, product truth, and publication. Scaled
-  low-value generation and query-fanout pages are prohibited.
-- Never buy links, use a PBN or link farm, conceal links, create fake accounts/reviews, spam
-  communities, or automate mass outreach.
-- Organic work does not install analytics. Measurement expands only through an explicitly approved
-  privacy-safe telemetry decision.
+- Помогайте конкретному читателю решить реальную задачу. Видимость в поиске распространяет
+  полезную работу, но не оправдывает создание пустой страницы.
+- Самостоятельные пользователи и персональные тренеры — разные аудитории с разными сценариями
+  активации. Не прячьте задачи тренера в общем потребительском тексте.
+- Сначала улучшайте основные страницы и знания из первых рук, затем расширяйте число тем. Квоты
+  публикаций и целевого объёма текста нет.
+- У каждого материала один стабильный канонический URL. UTM допустимы во внешних ссылках кампании,
+  но не создают отдельную социальную, рекламную или поисковую страницу.
+- Публичный материал не должен раскрывать тренировки, профили, клиентов, заметки тренеров,
+  Coach/Admin и состояние авторизованного приложения.
+- ИИ может помогать с исследованием, планом, черновиком, переводом и редактурой. Человек отвечает
+  за полезность, утверждения, источники, соответствие продукту и публикацию. Массовая генерация
+  малополезных страниц и вариантов запросов запрещена.
+- Запрещены покупка ссылок, PBN, link farm, скрытые ссылки, поддельные аккаунты и отзывы, спам в
+  сообществах и автоматические массовые сообщения.
+- Органическая работа сама по себе не устанавливает аналитику. Измерение расширяется только после
+  отдельного одобрения безопасной для приватности телеметрии.
 
-## Audiences and desired outcomes
+## Аудитории и желаемый результат
 
-| Audience                 | Situation and need                                                                                                     | Useful public promise                                                       | Product CTA                                                            | Candidate meaningful activation                                                              |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Independent fitness user | Wants a repeatable plan, a simple workout record, understandable nutrition estimates, or evidence of personal progress | Explain the next step and the product's limits in beginner-friendly Russian | Open the app; later, start a truthful Demo flow when it exists         | First completed workout or another separately approved core action; not currently attributed |
-| Personal trainer         | Wants a practical way to assign programs and review client progress without a generic messenger or marketplace         | Show the real trainer workflow, decision support, and boundaries            | Open the trainer product path and follow the existing application flow | First real program assignment to an accepted client; not currently attributed                |
+| Аудитория | Потребность | Полезное публичное обещание | CTA | Возможная значимая активация |
+| --- | --- | --- | --- | --- |
+| Самостоятельный пользователь | Повторяемый план, простой журнал, понятная оценка питания или подтверждение прогресса | Объяснить следующий шаг и ограничения продукта понятным русским языком | Открыть приложение; позже — честный Demo, когда он появится | Первая завершённая тренировка или отдельно одобренное ключевое действие; сейчас не атрибутируется |
+| Персональный тренер | Назначать программы и смотреть прогресс без универсального мессенджера или маркетплейса | Показать реальный рабочий процесс, поддержку решений и ограничения | Открыть путь для тренера и пройти существующий сценарий заявки | Первое назначение программы принявшему приглашение клиенту; сейчас не атрибутируется |
 
-Candidate activations are measurement definitions, not events implemented by this task. They must
-be revalidated against the product state before telemetry is approved.
+Возможные активации — определения для будущего измерения, а не события, реализованные этой задачей.
+До добавления телеметрии их нужно повторно сверить с состоянием продукта.
 
-## Channel strategy
+## Стратегия каналов
 
-| Channel                          | Independent users                                                                      | Personal trainers                                                                           | Operating approach                                                                                             | Available evidence                                                              |
-| -------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| Google organic                   | Product explainers, beginner guides, progress and nutrition interpretation             | Trainer workflow and methodology pages                                                      | Maintain crawlable, canonical, internally linked, people-first pages; inspect real queries before expanding    | Search Console impressions, clicks, CTR, pages, queries                         |
-| Yandex organic                   | Same needs in clear Russian with no keyword variants                                   | Same trainer intent, with a distinct `/for-trainers` path                                   | Use the same canonical corpus; monitor indexation, diagnostics, and query statistics                           | Yandex Webmaster impressions, clicks, CTR, searchable pages                     |
-| Telegram organic                 | Share concise answers and useful guide links in owned channels or relevant discussions | Share trainer methods in professional groups only where participation and links are welcome | Native post with a useful summary; one contextual link; answer follow-up questions; no bulk DMs                | Platform-visible post/reaction data; UTM only after approved attribution exists |
-| VK and communities               | Educational excerpts, release explanations, useful checklists                          | Practitioner discussion and workflow examples                                               | Adapt the framing to the community instead of cross-posting an ad; respect rules and disclose affiliation      | Platform-visible engagement; UTM only after approved attribution exists         |
-| Expert publications and mentions | Evidence-based explainers or commentary where YFC adds first-hand product experience   | Method articles, interviews, and practical trainer workflow examples                        | Pitch an editorial contribution because it helps that publication's readers; editor retains control            | Published mentions/referrals visible to the owner or webmaster tools            |
-| Earned backlinks                 | Original guides and genuinely public tools                                             | Trainer methods and safe aggregate insights                                                 | Make the resource worth citing, then inform a small relevant set of people; never request ranking manipulation | Referring pages/links in webmaster tools                                        |
-| Direct/referral                  | Bookmarks, personal recommendations, untagged shares                                   | Peer recommendations and client/trainer referrals                                           | Preserve stable human-readable URLs and useful previews                                                        | Not reliably separable without approved telemetry; report as unknown            |
+| Канал | Подход | Доступные данные |
+| --- | --- | --- |
+| Google | Канонические, связанные внутренними ссылками и полезные людям страницы; расширение по реальным запросам | Search Console: показы, клики, CTR, страницы и запросы |
+| Яндекс | Тот же канонический корпус на понятном русском; отдельный `/for-trainers` для тренеров | Вебмастер: показы, клики, CTR и индексируемые страницы |
+| Telegram | Полезная краткая выжимка и одна уместная ссылка; ответы на вопросы; без массовых личных сообщений | Видимые на платформе реакции; UTM только после одобрения атрибуции |
+| VK и сообщества | Адаптация материала к обсуждению и правилам сообщества с раскрытием связи с YFC | Видимая вовлечённость; UTM только после одобрения |
+| Экспертные публикации | Материал или комментарий, полезный аудитории издания; редакция сохраняет контроль | Публикации и переходы, видимые владельцу или вебмастеру |
+| Естественные ссылки | Ресурс, который достоин цитирования сам по себе, и точечное информирование подходящих людей | Ссылающиеся страницы в инструментах вебмастера |
+| Прямые рекомендации | Стабильные читаемые URL и корректные превью | Без одобренной телеметрии источник надёжно не определяется |
 
-Channel fit is more important than simultaneous distribution. A trainer-method article can go to a
-trainer community; a beginner KБЖУ explainer should not be pushed there merely to complete a list.
+Выбирайте канал по аудитории, а не ради одновременного присутствия везде.
 
-## Prioritized content roadmap
+## Приоритетный план контента
 
-Statuses are `published`, `improve`, `ready for brief`, or `blocked`. `Blocked` means the page must
-not be published until the named product/data/editorial prerequisite exists. Priorities express
-sequence, not expected search volume; no keyword-volume data was used.
+Статусы: `опубликовано`, `улучшить`, `готово к брифу`, `заблокировано`. Заблокированную страницу
+нельзя публиковать до выполнения указанного условия. Приоритет задаёт порядок, а не ожидаемый
+поисковый объём: данные по частотности ключей не использовались.
 
-### Independent-user and shared cornerstone work
+### Самостоятельные пользователи и общие ключевые материалы
 
-| Priority | Audience                       | Intent                | User problem                                                                         | Unique angle / useful addition                                                                                        | Target public page or guide                                     | Internal-link destination                                         | Product CTA                                          | Evidence/review requirement                                                                                              | Status                                          |
-| -------- | ------------------------------ | --------------------- | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
-| P0       | Independent users              | Commercial/product    | Understand whether the service supports a repeatable training workflow               | A truthful path from program to today's workout and recorded sets across Web and Telegram                             | `/training`                                                     | `/knowledge/training/how-to-start-strength-training`, `/progress` | Open the app                                         | Product-owner verification after workflow changes; real screenshots only when stable                                     | published; improve from real questions          |
-| P0       | Independent users              | Informational         | Start strength training without losing the plan after the first session              | Connect a conservative beginner process to an actual repeatable log, with explicit safety limits                      | `/knowledge/training/how-to-start-strength-training`            | `/training`, `/progress`                                          | Open the app                                         | Current authoritative training/safety sources; substantive fact check; specialist review if claims expand                | published                                       |
-| P0       | Independent users              | Informational/product | Understand what a KБЖУ estimate can and cannot tell them                             | Explain the estimate as a starting reference and connect it to the current calculator without a diet-quality promise  | `/knowledge/nutrition/kbju-as-a-reference`                      | `/nutrition`                                                      | Open the app                                         | Current authoritative nutrition sources; nutrition-qualified review before individualized or clinical claims             | published                                       |
-| P1       | Independent users              | Informational         | Know what to write down during a workout and why                                     | Beginner-first checklist using the product's actual weight, repetitions, set completion, and optional advanced fields | `/knowledge/training/what-to-record-in-a-workout`               | `/training`, `/progress`                                          | Record the next workout                              | Verify every field against the current product; cite claims about monitoring/progression                                 | ready for brief                                 |
-| P1       | Independent users              | Informational         | Increase training load without treating every session as a test                      | Explain small, observable progression choices using logged history and no invented readiness score                    | `/knowledge/training/how-to-progress-training-load`             | `/training`, `/progress`                                          | Review the program and log a workout                 | Training-source review; qualified review for safety/loading claims; no deterministic prescription presented as universal | ready for brief                                 |
-| P1       | Independent users              | Informational         | Interpret workout history, records, weight, and measurements without false certainty | Separate observed change from possible explanations and compare the user mainly with their own history                | `/knowledge/progress/how-to-read-training-progress`             | `/progress`, `/training`                                          | Open progress after recording workouts               | Product analytics/formula review plus factual fitness review; document sparse-data limits                                | ready for brief                                 |
-| P2       | Independent users              | Informational         | Resume a routine after an ordinary break without an all-or-nothing plan              | A conservative return checklist tied to planning and logging, with clear medical escalation boundaries                | `/knowledge/recovery/how-to-return-after-a-break`               | `/training`, `/knowledge`                                         | Choose or adjust a plan                              | Qualified safety review; no injury rehabilitation or medical advice                                                      | ready for brief                                 |
-| P2       | Independent users and trainers | Informational         | Find accurate technique information connected to the exercise catalog                | Public pages generated from reviewed domain facts and owned/legal media, not copied SEO text                          | Future `/exercises/` hub and selected `/exercises/{slug}` pages | `/training`, relevant guides                                      | Open the app at the exercise workflow when supported | Exercise-domain source of truth, legal media provenance, technique reviewer, duplicate/thin-page gate                    | blocked until public exercise foundation exists |
+| Приоритет | Страница | Задача и ценность | Требование | Статус |
+| --- | --- | --- | --- | --- |
+| P0 | `/training` | Показать честный путь от программы до сегодняшней тренировки и записанных подходов в Web и Telegram | Проверка владельцем продукта после изменения сценария; только реальные стабильные скриншоты | Опубликовано, улучшать по реальным вопросам |
+| P0 | `/knowledge/training/how-to-start-strength-training` | Консервативный процесс начала силовых тренировок с явными ограничениями безопасности | Актуальные авторитетные источники; специалист при расширении утверждений | Опубликовано |
+| P0 | `/knowledge/nutrition/kbju-as-a-reference` | Объяснить, что оценка КБЖУ может и не может показать | Авторитетные источники; специалист по питанию до индивидуальных или клинических утверждений | Опубликовано |
+| P1 | `/knowledge/training/what-to-record-in-a-workout` | Чек-лист фактически доступных полей тренировки для новичка | Сверка всех полей с продуктом и источники для утверждений о мониторинге | Готово к брифу |
+| P1 | `/knowledge/training/how-to-progress-training-load` | Небольшие наблюдаемые шаги прогрессии без выдуманной оценки готовности | Проверка источников и специалиста; не выдавать универсальное предписание | Готово к брифу |
+| P1 | `/knowledge/progress/how-to-read-training-progress` | Отделить наблюдаемое изменение от возможных причин и сравнивать человека с его историей | Проверка формул продукта, фактов и ограничений редких данных | Готово к брифу |
+| P2 | `/knowledge/recovery/how-to-return-after-a-break` | Консервативное возвращение после обычного перерыва | Проверка безопасности; без реабилитации травм и медицинских советов | Готово к брифу |
+| P2 | Будущие `/exercises/` и `/exercises/{slug}` | Техника из проверенных доменных данных и законных медиа, без SEO-копий | Источник истины, лицензии, рецензент техники и защита от тонких дублей | Заблокировано до публичной основы упражнений |
 
-### Trainer cornerstone work
+### Ключевые материалы для тренеров
 
-| Priority | Audience          | Intent                     | User problem                                                                        | Unique angle / useful addition                                                                                                             | Target public page or guide                             | Internal-link destination                  | Product CTA                                  | Evidence/review requirement                                                                          | Status                                                 |
-| -------- | ----------------- | -------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------- | ------------------------------------------ | -------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| P0       | Personal trainers | Commercial/professional    | Decide whether the current workspace fits program and client-progress work          | Show the real invitation, assignment, correction, and progress-review workflow without marketplace or messenger claims                     | `/for-trainers`                                         | `/training`, `/progress`                   | Follow the existing trainer application path | Product-owner verification; real workflow screenshots only after stabilization; no invented outcomes | published; improve from trainer interviews             |
-| P1       | Personal trainers | Professional/informational | Turn an intake conversation into a clear program brief                              | A reusable briefing checklist aligned with fields and constraints the product actually supports                                            | `/knowledge/trainers/program-brief-checklist`           | `/for-trainers`, `/training`               | Open the trainer workspace                   | Trainer practitioner byline or review; product-field verification; no medical screening claims       | ready for brief                                        |
-| P1       | Personal trainers | Professional/informational | Review a client's logged session and give specific feedback                         | A contextual review method based on plan versus completed work, not a generic chat or invented adherence score                             | `/knowledge/trainers/review-a-client-workout`           | `/for-trainers`, `/progress`               | Review a client in the trainer workspace     | Trainer review; privacy examples must be synthetic; align terminology with actual analytics          | ready for brief                                        |
-| P1       | Personal trainers | Professional/informational | Discuss progress when records are incomplete or mixed                               | A factual conversation guide that states coverage and limitations instead of producing a magic confidence score                            | `/knowledge/trainers/progress-review-with-limited-data` | `/for-trainers`, `/progress`               | Open client progress                         | Trainer and analytics-domain review; synthetic examples only; no client data or health diagnosis     | ready for brief                                        |
-| P2       | Personal trainers | Research summary           | Understand a relevant training recommendation without reading commodity paraphrases | Narrow synthesis that compares authoritative sources, explains uncertainty, and shows where the product does or does not operationalize it | A specific future guide under `/knowledge/training/`    | Relevant trainer guide and `/for-trainers` | Use the applicable product workflow          | Primary/authoritative sources, named accountable author, qualified reviewer, material update trigger | blocked until a concrete trainer question justifies it |
+| Приоритет | Страница | Задача и ценность | Требование | Статус |
+| --- | --- | --- | --- | --- |
+| P0 | `/for-trainers` | Реальные приглашение, назначение, корректировка и просмотр прогресса без обещаний маркетплейса | Проверка владельцем продукта; реальные скриншоты только после стабилизации | Опубликовано, улучшать по интервью |
+| P1 | `/knowledge/trainers/program-brief-checklist` | Чек-лист перевода вводной беседы в поддерживаемый продуктом бриф программы | Автор или рецензент-практик и сверка полей; без обещаний медскрининга | Готово к брифу |
+| P1 | `/knowledge/trainers/review-a-client-workout` | Разбор план/факт и конкретная обратная связь вместо общего чата | Проверка тренером; только синтетические приватные примеры | Готово к брифу |
+| P1 | `/knowledge/trainers/progress-review-with-limited-data` | Обсуждение прогресса при неполных данных без «магической» уверенности | Проверка тренером и владельцем аналитики; без диагнозов и реальных данных | Готово к брифу |
+| P2 | Конкретное будущее руководство о тренировках | Узкий обзор авторитетных источников с неопределённостью и связью с продуктом | Первичные источники, ответственный автор, специалист и условие обновления | Заблокировано до появления реального вопроса тренеров |
 
-Before promoting a new idea from `ready for brief`, use real Search Console/Yandex query evidence,
-support questions, trainer interviews, or observed product confusion. Merge overlapping ideas. Do
-not split a guide by synonyms, city, audience adjective, or question wording.
+До перевода идеи из `готово к брифу` используйте реальные запросы Search Console/Вебмастера,
+обращения поддержки, интервью тренеров или наблюдаемое непонимание продукта. Объединяйте
+пересекающиеся идеи. Не делите материал по синонимам, городам, эпитетам аудитории и вариантам
+формулировки вопроса.
 
-## Expert-led editorial model
+## Редакционная модель с участием экспертов
 
-### Roles and visible fields
+### Роли и видимые поля
 
-- **Author/byline:** required for a guide when accountability adds context. Use a real person or the
-  truthful `Редакция Your Fitness Coach` organization byline; never invent a person or credential.
-- **Reviewer:** required when claims depend on specialist fitness, nutrition, medical, or other
-  professional judgment. The reviewer checks only within their competence. If no qualified review
-  happened, leave the field empty rather than implying it.
-- **Product verifier:** confirms screenshots, UI labels, CTA, and capability claims against the
-  released product.
-- **Editor/fact checker:** checks that every material factual claim is supported, accurately
-  paraphrased, scoped, and linked to the strongest practical source.
-- **Last updated:** changes only after a substantive review or factual update, not to simulate
-  freshness.
+- Автор обязателен для руководства, когда личная ответственность добавляет контекст. Указывайте
+  реального человека или честную подпись `Редакция Your Fitness Coach`; не выдумывайте личность и
+  квалификацию.
+- Рецензент нужен, когда утверждение требует профессиональной оценки по фитнесу, питанию,
+  медицине или другой области. Он проверяет только в границах своей компетенции. Если проверки не
+  было, поле остаётся пустым.
+- Проверяющий продукта сверяет скриншоты, подписи UI, CTA и заявленные функции с релизом.
+- Редактор или фактчекер проверяет поддержку существенных утверждений, точность пересказа,
+  ограничения и ссылки на лучший практичный источник.
+- Дата обновления меняется только после содержательной проверки, а не для имитации свежести.
 
-### Evidence hierarchy
+### Иерархия доказательств
 
-Prefer primary research, consensus guidelines, government/intergovernmental health sources, and
-official product documentation. Secondary sources may help explain context but must not replace a
-primary or authoritative source for a consequential claim. Link to the source a reader can inspect;
-record access/update dates in the editorial brief when freshness matters.
+Предпочитайте первичные исследования, согласованные рекомендации, государственные и международные
+источники о здоровье и официальную документацию продукта. Вторичные источники помогают объяснить
+контекст, но не заменяют первичные или авторитетные для значимого утверждения. Давайте ссылку,
+которую читатель может проверить; если свежесть важна, фиксируйте дату доступа в брифе.
 
-Do not infer a universal prescription from one study, imply causation from product logs, or turn a
-measurement into a single-muscle/ideal-body score. General education must state where individual
-medical, rehabilitation, or dietetic advice begins.
+Не превращайте одно исследование в универсальное предписание, не выводите причинность из журналов
+продукта и не создавайте из измерения оценку «идеального тела» или одной мышцы. Общее обучение
+должно показывать границу индивидуальной медицины, реабилитации и диетологии.
 
-### Publication workflow
+### Процесс публикации
 
-1. **Brief:** name one audience, intent, user task, distinct value, target URL, internal links, CTA,
-   and evidence/reviewer needs. Reject the brief if an existing page can answer it well.
-2. **Evidence pack:** list the claims that need support, original sources, product screenshots/data
-   provenance, and any conflicts or uncertainty.
-3. **Draft:** answer the task before the CTA; use plain Russian and disclose limitations. AI-assisted
-   text is treated as unverified draft material.
-4. **Fact check:** trace material claims to sources, verify quotations and numbers, check product
-   truth, plagiarism/copyright, medical boundaries, and visible/source consistency.
-5. **Review:** obtain the required specialist review and record who approved which scope. A missing
-   required reviewer blocks publication.
-6. **Release check:** run the lightweight public-page checklist below, including raw HTML/rendered
-   metadata and social preview checks.
-7. **Maintain:** review after a material source/guideline or product change, or when user feedback
-   identifies ambiguity. Do not touch the date for cosmetic edits alone.
+1. Бриф: одна аудитория, намерение, задача, уникальная ценность, URL, внутренние ссылки, CTA и
+   требования к доказательствам и рецензенту. Отклоните его, если достаточно улучшить существующую
+   страницу.
+2. Пакет доказательств: утверждения, первичные источники, происхождение скриншотов и данных,
+   противоречия и неопределённость.
+3. Черновик: сначала ответ на задачу, затем CTA; простой русский язык и видимые ограничения.
+   Текст с помощью ИИ остаётся непроверенным черновиком.
+4. Фактчек: источники, цитаты и числа, соответствие продукту, авторское право, медицинские границы
+   и согласованность видимого текста с источниками.
+5. Рецензирование: нужный специалист и зафиксированная область его одобрения. Отсутствие
+   обязательного рецензента блокирует публикацию.
+6. Выпуск: краткий checklist ниже, включая сырой HTML, метаданные после рендера и социальное превью.
+7. Поддержка: повторная проверка после значимого изменения источника, рекомендаций, продукта или
+   замечания читателей. Косметическая правка не меняет дату.
 
-### Corrections and updates
+Исправления принимаются через публичный контакт поддержки. В первую очередь разбирайте ошибки о
+здоровье и безопасности. Сверьте проблему с источниками, исправьте страницу и метаданные, измените
+дату только при содержательной правке, повторите проверки и распространите исправление, если
+исходное утверждение существенно вводило в заблуждение. История Git остаётся журналом изменений.
 
-Corrections should be accepted through the existing public support contact. Triage safety- or
-health-relevant errors first. Confirm the issue against sources, correct the page and metadata,
-update `updated` only for a substantive change, re-run the targeted page checks, and redistribute a
-correction when the original claim was materially misleading. Keep the Git history as the audit
-trail; do not silently rewrite evidence in an external campaign copy while leaving the page stale.
+## Этичное распространение
 
-## Ethical distribution workflow
+До публикации убедитесь, что каноническая страница работает без входа, индексируется по правилам,
+связана внутренними ссылками и прошла редакционную и продуктовую проверку. Title, description,
+Open Graph и alt должны честно описывать страницу, а бот превью — получать изображение без входа.
+Выберите одну основную аудиторию и одну полезную мысль. Используйте чистый стабильный URL; UTM
+добавляйте только при одобренном измерении. Соблюдайте правила сообщества и раскрывайте связь с YFC.
 
-Run this checklist for every meaningful guide or public product update. Skip channels that do not
-fit the audience.
+По каналам:
 
-### Before sharing
+- в собственном Telegram дайте краткий ответ или практический фрагмент и ссылку на полный ресурс;
+- в Telegram-сообществе участвуйте только там, где вопрос и правила делают ссылку полезной;
+- для VK адаптируйте под местное обсуждение и не повторяйте один пост в несвязанных группах;
+- в сообществах тренеров делитесь методикой и приглашайте к критике, не собирая участников и не
+  выдавая продвижение за независимую рекомендацию;
+- редактору или эксперту пишите коротко и лично, объясняя пользу материала для его аудитории;
+  ссылка остаётся на усмотрение получателя.
 
-- The canonical page is live, indexable by policy, linked internally, useful without signing in,
-  and has passed editorial/product verification.
-- Title, description, Open Graph image and image alt describe the page truthfully. Preview bots can
-  fetch the image without authentication.
-- The owner selects one primary audience and one useful takeaway. The post is not just a link or a
-  generic feature announcement.
-- The destination is the clean stable URL. Add one conforming UTM query only to the distributed
-  link when that campaign has an approved measurement use; never publish a UTM URL as canonical.
-- The community permits relevant links and the poster can disclose their YFC affiliation.
+Запрещены фальшивые аккаунты, отзывы и рекомендации, спам в комментариях и форумах, группы
+искусственной активности и массовые автоматические сообщения.
 
-### Channel execution
+После публикации владелец фиксирует дату, канонический URL, канал, метки кампании и URL поста в
+журнале кампаний вне Git. Не сохраняйте в репозитории токены, данные приватных сообществ и
+персональные данные. Отвечайте на вопросы, переносите повторяющееся непонимание в страницу или
+план, учитывайте только доступные агрегаты и одобренные данные вебмастеров. Не выводите конверсию,
+если стадии не связаны телеметрией. Проверяйте социальное превью: платформы могут кэшировать старую
+карточку и требовать ручного обновления.
 
-- **Telegram owned channel/profile:** write a concise answer or actionable excerpt, then link to the
-  complete resource. Reuse the same canonical page rather than making a Telegram-specific clone.
-- **Telegram community:** participate only where the question and rules make the resource useful.
-  Do not bulk-post, bulk-DM, or drop links without context.
-- **VK owned profile/community:** adapt the post to the local discussion and keep the factual scope
-  consistent with the page. Avoid repetitive posts across unrelated groups.
-- **Trainer communities:** share practitioner methods and invite critique. Do not scrape member
-  lists, automate messages, or present promotion as an independent recommendation.
-- **Expert publication or direct sharing:** send a small, personalized note explaining why the
-  resource helps that audience. A link or mention is optional and controlled by the recipient.
+## Естественные ссылки
 
-Never use fake accounts, fabricated testimonials/reviews, comment/forum spam, engagement pods, or
-automated mass messaging. One useful conversation is preferable to nominal reach in an irrelevant
-community.
+Создавайте то, на что ссылались бы и без учёта поисковиками: оригинальные проверенные руководства,
+работающие публичные инструменты без приватного состояния, шаблоны для тренеров из реального
+сценария, аккуратные обзоры исследований и безопасные агрегированные продуктовые наблюдения после
+отдельной проверки приватности.
 
-### After sharing
+Для каждого материала определите, кто и ради какой задачи читателя мог бы на него сослаться и чем
+он полезнее пересказа других страниц. Сообщайте о нём небольшому уместному кругу редакторов,
+практиков и владельцев ресурсов. Принимайте требования раскрытия и решения `nofollow`/`sponsored`.
+Запрещены покупка ссылок ради ранжирования, PBN, link farm, автоматическая генерация ссылок,
+скрытые ссылки, плохие каталоги, массовый взаимный обмен и обязательные ссылки в несвязанных
+партнёрствах.
 
-- Record the publication date, canonical destination, channel, campaign labels, and post URL in the
-  owner's campaign ledger. Do not put access tokens, private community data, or personal data in Git.
-- Answer genuine questions and feed repeated confusion back into the existing page or roadmap.
-- Capture only platform-visible aggregate results and currently approved webmaster data. Do not
-  infer product conversion where no telemetry joins the stages.
-- Check the social preview after first publication and after changing its image or metadata; social
-  platforms may cache old cards and may require a manual refresh.
+## Контракт социальных превью
 
-## Earned-link strategy
+Каждая каноническая страница использует понятные title и social description из
+`frontend/src/content/publicContent.json`, абсолютный self-canonical и общую карточку
+`/assets/brand/yfc-social-preview.png`. Не перерисовывайте и не разветвляйте логотип для канала.
+Метаданные включают тип, размеры и alt Open Graph и fallback с крупным изображением для Twitter.
+Своя картинка страницы допустима, только если она честная, легальная, доступная, стабильная и
+проверена вместе со страницей.
 
-Create assets people would cite even if search engines did not count links:
+Карточка — метаданные представления, а не доказательство для structured data и не обещание
+ранжирования. Не добавляйте искусственные скриншоты, людей, результаты, рейтинги и рекомендации.
+Стандартного обмена браузера и Telegram пока достаточно. Будущая кнопка должна по умолчанию
+копировать чистый канонический URL и явно показывать добавление кампании.
 
-- original, reviewed cornerstone guides that resolve a practical question;
-- public calculators or tools only after they genuinely work without exposing private state;
-- trainer briefing/review templates grounded in the real workflow;
-- careful research summaries that add comparison, limitations, or applied interpretation;
-- product insights only after a separate privacy review defines safe aggregation, minimum cohort
-  handling, suppression, retention, and wording that cannot identify users or trainers.
+## Соглашение UTM
 
-For each candidate, ask: who would cite it, for which reader problem, and what value exists beyond a
-summary of other pages? Share it with a small relevant list of editors, practitioners, or resource
-maintainers. Accept editorial `nofollow`/`sponsored` decisions and disclosure requirements.
-
-Forbidden tactics include buying links or posts for ranking credit, PBNs, link farms, automated
-link creation, hidden links, low-quality directories, mass reciprocal exchanges, required links in
-unrelated partnerships, and keyword-stuffed forum signatures. Sponsorship, if ever approved outside
-this organic scope, must be disclosed and appropriately qualified; it is not an earned-link tactic.
-
-## Shareability contract
-
-Every canonical public page uses its human-readable title and social description from
-`frontend/src/content/publicContent.json`, an absolute self-canonical URL, and the shared
-`/assets/brand/yfc-social-preview.png` card. The card incorporates the canonical task 07 mark; do not
-redraw or fork the logo for a channel. Metadata includes Open Graph image type/dimensions/alt and a
-large-image Twitter-compatible fallback. Per-page images may replace the shared card only when they
-are truthful, legally usable, accessible, stable, and reviewed with the page.
-
-The shared image is presentation metadata, not structured-data evidence and not a ranking claim.
-Do not add fake screenshots, people, results, ratings, or endorsements. Built-in copy/share controls
-are deferred: standard browser/Telegram sharing already preserves the stable URL, and another
-control is justified only by observed user need. If added later, it must copy the clean canonical URL
-by default and expose any campaign tagging explicitly.
-
-## UTM convention
-
-UTM fields are optional labels for owned organic distribution, not user-profile data:
+Необязательные метки для собственной органической дистрибуции:
 
 ```text
 utm_source
@@ -229,131 +201,88 @@ utm_campaign
 utm_content
 ```
 
-Use lowercase ASCII `snake_case`; keep values stable, human-readable, and free of names, usernames,
-chat IDs, account IDs, emails, invitation tokens, health/fitness data, or other personal/sensitive
-content.
+Используйте lowercase ASCII `snake_case`, понятные стабильные значения без имён, usernames, chat
+ID, ID аккаунтов, email, токенов приглашения, данных здоровья и других чувствительных сведений.
 
-| Field          | Meaning                                                            | Examples                                                             |
-| -------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------- |
-| `utm_source`   | Platform or referring publication family                           | `telegram`, `vk`, `trainer_media`                                    |
-| `utm_medium`   | Distribution relationship                                          | `organic_social`, `community`, `earned_media`, `referral`            |
-| `utm_campaign` | Stable initiative or content launch                                | `strength_start_guide`, `trainer_workflow_release`                   |
-| `utm_content`  | Placement or creative variant, only when comparison is intentional | `channel_post`, `profile_post`, `community_answer`, `editorial_link` |
+| Поле | Значение | Примеры |
+| --- | --- | --- |
+| `utm_source` | Платформа или семейство изданий | `telegram`, `vk`, `trainer_media` |
+| `utm_medium` | Отношение распространения | `organic_social`, `community`, `earned_media`, `referral` |
+| `utm_campaign` | Стабильная инициатива или запуск | `strength_start_guide`, `trainer_workflow_release` |
+| `utm_content` | Размещение или вариант, только для осознанного сравнения | `channel_post`, `profile_post`, `community_answer`, `editorial_link` |
 
-Example:
+Внутренние ссылки, навигация, sitemap, canonical, `og:url`, structured data и стандартный обмен
+всегда используют чистый URL. UTM не является новой страницей, redirect target или вариантом
+контента. Одна инициатива сохраняет `utm_campaign` во всех каналах; платформа задаётся
+`utm_source`, размещение — `utm_content`. Не создавайте значение на каждого получателя и не
+сохраняйте UTM в профиль или постоянную фитнес-запись. Пока одобренной клиентской аналитики нет,
+это только соглашение об именах и помощь журналу кампаний, а не источник данных о конверсии.
 
-```text
-https://your-fitness-coach.ru/knowledge/training/how-to-start-strength-training?utm_source=telegram&utm_medium=organic_social&utm_campaign=strength_start_guide&utm_content=channel_post
-```
+## Измерение и воронка
 
-Rules:
+Целевая воронка: показ в поиске или источнике → каноническая страница → CTA продукта или Demo →
+Demo/вход → значимая активация. Измеряйте только доступные стадии:
 
-- Internal links, navigation, sitemap entries, canonical tags, `og:url`, structured data, and default
-  copy/share URLs always use the clean URL without UTM parameters.
-- A UTM variant is never a new page, redirect target, sitemap entry, or content variant. Current
-  route metadata remains self-canonical to the clean path when query parameters are present.
-- Use the same `utm_campaign` for the same initiative across channels; distinguish platform with
-  `utm_source` and placement with `utm_content`.
-- Do not invent a unique parameter value per recipient. Do not persist UTM values into a profile or
-  durable fitness record.
-- There is currently no approved client-side analytics/telemetry that consumes these fields. Until
-  a privacy decision exists, UTM links are a naming-ready convention and campaign-ledger aid, not a
-  claimed source of product conversion data.
+| Стадия | Источник и состояние | Правило отчёта |
+| --- | --- | --- |
+| Показ/клик Google | Search Console после подтверждения и задержки данных | Показы, клики, CTR, страницы и запросы; бренд/небренд только по зафиксированным правилам |
+| Показ/клик Яндекс | Вебмастер после подтверждения и задержки | Те же показатели и неожиданные исключения из индекса |
+| Социальный показ или реакция | Нативные агрегаты платформы, иногда вручную | Не приравнивать реакции к посещениям сайта |
+| Посещение публичной страницы | Одобренной аналитики нет | Неизвестно; не оценивать по показам или серверному шуму |
+| Клик CTA, вход и активация | Одобренной атрибуции нет | Неизвестно |
 
-## Measurement and funnel
+Search Console и Вебмастер не доказывают последующую активацию. Не объединяйте показатели
+вебмастеров, соцсетей, записи входа и серверные логи в профили людей. Отдельно одобренная
+телеметрия должна определить согласие или основание, события, минимизацию, хранение, доступ,
+удаление, ботов, срок UTM, междоменное поведение и агрегирование. В ней недопустимы содержимое
+дневника, точные измерения и КБЖУ, комментарии тренера, диалоги ИИ, токены, секреты и лишние raw ID.
 
-The target funnel is:
+Рабочий ритм: после релиза — checklist и план распространения; еженедельно во время запуска —
+направление запросов и ошибки индексации без реакции на дневной шум; ежемесячно — полезные вопросы,
+страницы и каналы с улучшением ключевого контента; ежеквартально — объединение и удаление лишних
+идей. Опубликованный URL нельзя удалять или перемещать без проверки redirect/canonical.
 
-```text
-search/referral impression
--> canonical public page
--> product/demo CTA
--> demo/auth
--> meaningful product activation
-```
+## Граница AEO/GEO
 
-Measure only the stages available from an approved source:
+Отдельной системы оптимизации под генеративный поиск нет. Нужны те же доступный роботу контент,
+понятные заголовки, уникальная польза, видимые источники, честные авторство и метаданные, актуальные
+факты и стабильные внутренние ссылки. Запрещены массовые варианты запросов, отдельный текст для
+AI-crawler, скрытые выжимки, списки ключей в форме prompt и неподтверждённая schema. Помощь ИИ с
+черновиком не отменяет редакционный процесс.
 
-| Stage                                    | Current source                                               | Current status                                           | Reporting rule                                                                                              |
-| ---------------------------------------- | ------------------------------------------------------------ | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Google search impression/click           | Google Search Console                                        | Available after owner verification and normal data delay | Report impressions, clicks, CTR, page/query; separate branded/non-branded only with recorded grouping rules |
-| Yandex search impression/click           | Yandex Webmaster                                             | Available after owner verification and normal data delay | Report impressions, clicks, CTR, page/query and unexpected index exclusions                                 |
-| Referral/social impression or engagement | Platform/publication native aggregate data                   | Sometimes manually available                             | Keep channel definitions separate; do not equate reactions with site visits                                 |
-| Canonical public-page visit/session      | No approved site analytics                                   | Not available                                            | Mark unknown; do not estimate from impressions or server noise                                              |
-| Product/demo CTA click                   | No approved telemetry; Demo is not yet an attribution source | Not available                                            | Mark unknown                                                                                                |
-| Demo/auth completion                     | No approved acquisition attribution                          | Not available                                            | Mark unknown                                                                                                |
-| Meaningful activation                    | No approved acquisition attribution                          | Not available                                            | Mark unknown                                                                                                |
+## Краткая проверка публичного релиза
 
-Search Console and Yandex Webmaster remain the source of truth for search impressions/clicks. They
-do not prove downstream activation. Direct/referral cannot currently be separated reliably. Do not
-join webmaster totals, social metrics, authentication records, or server logs into person-level
-profiles.
+- [ ] Ясны одна аудитория, задача и полезный результат; существующая страница их не закрывает.
+- [ ] Заявления соответствуют релизу и показывают важные ограничения.
+- [ ] Title, description, H1, social description и CTA понятны и различимы.
+- [ ] Есть один self-canonical; query/UTM не входят в sitemap и навигацию.
+- [ ] Политика индексации осознана; в sitemap попадает только готовая публичная страница.
+- [ ] Есть входящая контекстная ссылка и ссылка на подходящее руководство или продукт.
+- [ ] Автор, рецензент, источники, фактчек, дата, предупреждение и исправления соответствуют модели.
+- [ ] Structured data совпадает с видимым текстом и не выдумывает отзывы, рейтинг, предложения,
+  людей и квалификацию.
+- [ ] Open Graph/Twitter ведут на canonical и доступное проверенное превью; карточка проверена после
+  развёртывания.
+- [ ] Проверены mobile/desktop, клавиатура, raw HTML fallback, статус, canonical, robots, sitemap и
+  целевые тесты.
+- [ ] План измерения использует только доступные источники, UTM — только для одобренной цели.
+- [ ] Каналы подходят аудитории; массовые сообщения, схемы ссылок, фальшивая активность и спам
+  исключены.
 
-If privacy-safe product telemetry is separately approved, its design must specify consent/legal
-basis, exact event definitions, minimization, retention, access, deletion, bot/internal-traffic
-handling, UTM capture lifetime, cross-domain behavior, and aggregate reporting. Only then calculate
-stage-to-stage rates from compatible populations and time windows. Product analytics must never
-contain food contents, exact measurements/macros, trainer comments, AI conversation text, tokens,
-secrets, or unnecessary raw IDs.
+## Базовые официальные источники
 
-### Operating cadence
-
-- After each meaningful public release, run the release checklist and record its distribution plan.
-- Weekly during an active launch, inspect page/query direction and indexation errors without reacting
-  to normal day-to-day noise.
-- Monthly, review which audience questions, pages, and channels produced useful engagement; update
-  existing cornerstone content before increasing volume.
-- Quarterly, prune or merge roadmap ideas that no longer have a distinct problem or product truth.
-  Never delete/move a published URL without redirect/canonical migration review.
-
-## AEO/GEO boundary
-
-There is no separate generative-search optimization system. The same foundation applies: crawlable
-content, clear headings, unique useful information, visible sources, truthful authorship/metadata,
-current facts, and stable internal links. Do not mass-produce fan-out/query-variant pages, special
-AI-crawler copy, hidden summaries, prompt-shaped keyword lists, or unsupported `speakable`/other
-schema. AI-assisted drafting does not bypass the editorial workflow.
-
-## Lightweight public release checklist
-
-This gate applies to a new or materially changed **public feature/content page**, not routine private
-application code.
-
-- [ ] One audience, intent, and useful outcome are explicit; no existing page already serves them.
-- [ ] Visible product claims match the released product and disclose important limits.
-- [ ] Title, description, H1, social description, and CTA are human-readable and distinct.
-- [ ] The route has one stable self-canonical URL; query/UTM variants do not enter sitemap or internal
-      navigation.
-- [ ] Index policy is intentional; only a complete canonical public page enters the sitemap.
-- [ ] At least one crawlable contextual link points in and the page links to a relevant guide/product
-      destination.
-- [ ] Author, reviewer, sources, fact check, update date, disclaimer, and correction path are handled
-      according to the editorial model.
-- [ ] Structured data, when used, matches visible content and does not invent reviews, ratings,
-      offers, people, or credentials.
-- [ ] Open Graph/Twitter metadata resolves to the canonical page and a fetchable reviewed preview;
-      preview was checked on the relevant distribution channel after deployment.
-- [ ] Mobile and desktop rendered content, keyboard access, raw HTML fallback, status, canonical,
-      robots directive, sitemap, and relevant tests pass.
-- [ ] The measurement plan names only currently available sources; distribution uses the UTM
-      convention only when there is an approved use.
-- [ ] The distribution checklist names audience-appropriate channels and excludes bulk outreach,
-      link schemes, fake engagement, and spam.
-
-## Official source baseline
-
-- Google: [people-first content](https://developers.google.com/search/docs/fundamentals/creating-helpful-content),
-  [spam policies](https://developers.google.com/search/docs/essentials/spam-policies),
-  [AI features guidance](https://developers.google.com/search/docs/fundamentals/ai-optimization-guide),
-  [canonical URL guidance](https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls),
-  and [Article structured data](https://developers.google.com/search/docs/appearance/structured-data/article).
-- Yandex Webmaster: [how search works](https://yandex.com/support/webmaster/en/yandex-indexing/site-indexing),
-  [canonical URLs](https://yandex.com/support/webmaster/en/robot-workings/canonical),
-  [site structure](https://yandex.com/support/webmaster/en/recommendations/site-structure), and
-  [link guidance](https://yandex.com/support/webmaster/en/recommendations/links).
-- Schema.org: [`Article`](https://schema.org/Article) and [`author`](https://schema.org/author).
-- Social preview implementation: [web.dev metadata](https://web.dev/learn/html/metadata) and the
+- Google: [полезный контент для людей](https://developers.google.com/search/docs/fundamentals/creating-helpful-content),
+  [правила против спама](https://developers.google.com/search/docs/essentials/spam-policies),
+  [рекомендации для функций ИИ](https://developers.google.com/search/docs/fundamentals/ai-optimization-guide),
+  [canonical URL](https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls)
+  и [структурированные данные Article](https://developers.google.com/search/docs/appearance/structured-data/article).
+- Яндекс Вебмастер: [индексация сайта](https://yandex.com/support/webmaster/ru/yandex-indexing/site-indexing),
+  [canonical](https://yandex.com/support/webmaster/ru/robot-workings/canonical),
+  [структура сайта](https://yandex.com/support/webmaster/ru/recommendations/site-structure) и
+  [рекомендации по ссылкам](https://yandex.com/support/webmaster/ru/recommendations/links).
+- Schema.org: [`Article`](https://schema.org/Article) и [`author`](https://schema.org/author).
+- Социальные превью: [метаданные web.dev](https://web.dev/learn/html/metadata) и
   [Open Graph protocol](https://ogp.me/).
 
-These sources describe eligibility, discovery, and quality signals; none guarantees indexation,
-rich results, generative-search citation, rankings, or traffic.
+Источники описывают требования, обнаружение и сигналы качества, но не гарантируют индексацию,
+расширенный результат, цитирование генеративным поиском, позицию или трафик.

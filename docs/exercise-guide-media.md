@@ -1,69 +1,72 @@
-# Exercise guide media foundation
+# Медиафайлы руководств по упражнениям
 
-## Current inventory
+## Текущий состав
 
-The application ships exercise guide media locally and has no runtime CDN, paid API, or
-remote media dependency. The checked-in inventory contains 158 covered exercise slugs and
-307 JPEG assets (19,596,935 bytes):
+Медиафайлы руководств поставляются вместе с приложением. Во время работы не требуются CDN,
+платный API или удалённый источник. В репозитории находятся материалы для 158 упражнений и
+307 JPEG-файлов общим размером 19 596 935 байт:
 
-- 149 exercises have two reviewed static phases (`start` and `active`);
-- 9 cardio exercises have one locally created composition showing both phases;
-- no guide slug is missing its expected media;
-- intrinsic dimensions range from portrait to landscape and are recorded per asset instead
-  of forcing a cropping ratio.
+- для 149 упражнений есть две проверенные статические фазы (`start` и `active`);
+- для 9 кардиоупражнений есть по одной созданной проектом композиции с обеими фазами;
+- у каждого slug руководства есть ожидаемые материалы;
+- исходные размеры варьируются от портретных до альбомных и хранятся отдельно для каждого
+  файла; единое соотношение сторон с обрезкой не навязывается.
 
-The two provenance groups are `free-exercise-db` under the Unlicense and locally created
-Your Fitness Coach cardio illustrations. `backend/assets/exercise-guides/NOTICE.md` and
-`manifest.json` preserve their source and license status. Fitness Online assets and text are
-not used.
+Материалы делятся на две группы: `free-exercise-db` под лицензией Unlicense и созданные
+проектом Your Fitness Coach иллюстрации кардиоупражнений. Файлы
+`backend/assets/exercise-guides/NOTICE.md` и `manifest.json` фиксируют источник и лицензию.
+Материалы и тексты Fitness Online не используются.
 
-## Format decision
+## Выбор формата
 
-The default production pattern is ordered, static phase images. It gives users simultaneous
-access to the positions they need to compare, works without motion, and matches the
-information present in the legal source material. Technique text always remains available.
+Основной формат — упорядоченные статические изображения фаз. Пользователь одновременно видит
+положения для сравнения, а материал остаётся понятным без анимации и соответствует легальному
+источнику. Текст с описанием техники доступен всегда.
 
-| Candidate               | Representative result                                      | Clarity and compatibility                                                                                              | Decision                                 |
+| Вариант                 | Результат на примере                                       | Понятность и совместимость                                                                                             | Решение                                  |
 | ----------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| Two static JPEG phases  | 142-145 kB total for bench press, squat, and treadmill run | Universal browser fallback; phases can be compared; current legal catalog is complete                                  | **Default**                              |
-| Two static WebP phases  | 90-100 kB in the local quality-80 benchmark                | Smaller, but converting all 307 reviewed binaries would be a separate catalog-wide change                              | Not shipped in this task                 |
-| Two-frame animated WebP | 91-100 kB in the same benchmark                            | Almost no size advantage over two static WebPs; a hard frame switch invents no real movement path and adds motion      | Rejected for current assets              |
-| Short WebM              | Requires owned continuous footage and codec/device testing | Can show a real trajectory, but needs a poster, `preload="none"`, controls, codec fallback, and additional decode cost | Future option for reviewed owned footage |
-| APNG/AVIF animation     | No useful content advantage for two JPEG keyframes         | Adds another format/fallback branch; animated AVIF has less historical support                                         | Rejected for the MVP                     |
+| Две статические фазы JPEG | Всего 142–145 КБ для жима лёжа, приседания и бега на дорожке | Универсальная поддержка браузерами; фазы можно сравнить; легальный каталог уже полон                                    | **Основной вариант**                     |
+| Две статические фазы WebP | 90–100 КБ в локальном тесте с качеством 80                | Размер меньше, но преобразование всех 307 проверенных файлов требует отдельного изменения всего каталога                | Не входит в текущую задачу               |
+| Двухкадровый WebP       | 91–100 КБ в том же тесте                                   | Почти нет выигрыша относительно двух WebP; резкая смена кадров не показывает реальную траекторию и добавляет движение    | Не подходит для текущих материалов       |
+| Короткий WebM           | Нужны собственное непрерывное видео и тесты кодеков и устройств | Показывает реальную траекторию, но требует постера, `preload="none"`, управления, запасного кодека и ресурсов на декодирование | Возможен позже для проверенных собственных видео |
+| Анимация APNG/AVIF      | Для двух ключевых JPEG-кадров преимуществ нет              | Появляется ещё одна ветка формата и fallback; исторически анимированный AVIF поддерживается хуже                        | Не подходит для MVP                      |
 
-The browser behavior assumptions follow MDN's current
-[image format guide](https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Formats/Image_types),
-[`img` loading guidance](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/img),
-and [`video` preload/poster contract](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/video).
-If continuous owned footage is added later, it must not autoplay with sound, must use a static
-poster/fallback and `preload="none"`, and must remain user-controlled when
-`prefers-reduced-motion: reduce` is active.
+Ожидаемое поведение браузеров основано на актуальной документации MDN о
+[форматах изображений](https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Formats/Image_types),
+[загрузке `img`](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/img) и
+[параметрах загрузки и постера `video`](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/video).
+Если позже появятся собственные непрерывные видео, они не должны автоматически запускаться со
+звуком. Для них обязательны статический постер или запасное изображение, `preload="none"` и
+управление пользователем при активном `prefers-reduced-motion: reduce`.
 
-## Runtime contract
+## Контракт во время работы
 
-`exercise_guide_metadata.media_reference` remains the stable link introduced by the exercise
-domain foundation. The local manifest owns asset-level facts; task 23 metadata remains the
-API source of truth for guide provenance. `ExerciseGuide.media[]` exposes:
+`exercise_guide_metadata.media_reference` остаётся стабильной ссылкой, заданной предметной
+областью упражнений. Факты о конкретных файлах хранятся в локальном манифесте, а метаданные
+задачи 23 остаются источником истины для происхождения руководства. `ExerciseGuide.media[]`
+возвращает:
 
-- `type`, `url`, static `poster`, phase, alt text, and deterministic `sort_order`;
-- intrinsic `width` and `height` for reserved layout, plus `byte_size` for inventory control;
-- source name/URL and license name/URL on every item.
+- `type`, `url`, статический `poster`, фазу, альтернативный текст и стабильный `sort_order`;
+- исходные `width` и `height`, чтобы заранее резервировать место, а также `byte_size` для
+  контроля состава файлов;
+- название и URL источника, название и URL лицензии для каждого элемента.
 
-The legacy `images[]` response is derived from the same media list for backward compatibility;
-it is not a second asset registry.
+Устаревший массив `images[]` формируется из того же списка для обратной совместимости и не
+является отдельным реестром.
 
-The frontend requests the guide only after the user opens it. Media then uses native
-`loading="lazy"`, `decoding="async"`, intrinsic dimensions, the recorded aspect ratio, and
-`object-fit: contain`. A failed image request becomes an accessible reserved-size fallback;
-it does not remove the text technique. Hover zoom is disabled under reduced motion.
+Frontend запрашивает руководство только после того, как пользователь его открыл. Для медиа
+используются нативные `loading="lazy"`, `decoding="async"`, исходные размеры, сохранённое
+соотношение сторон и `object-fit: contain`. При ошибке загрузки остаётся доступный резервный
+блок нужного размера, а текст техники не пропадает. Увеличение при наведении отключается при
+настройке уменьшения движения.
 
-Exercise assets are served by the existing same-origin `StaticFiles` mount with ETag and a
-30-day cache plus one-day `stale-while-revalidate`. Filenames are stable rather than
-content-hashed, so they intentionally are not marked `immutable`.
+Файлы упражнений отдаются через существующий same-origin mount `StaticFiles` с ETag, кэшем на
+30 дней и однодневным `stale-while-revalidate`. Имена стабильны и не содержат хеш содержимого,
+поэтому директива `immutable` намеренно не используется.
 
-## Reproducible pipeline
+## Воспроизводимый процесс
 
-After adding or synchronizing legal assets:
+После добавления или синхронизации легально используемых материалов выполните:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\sync_exercise_guide_assets.py
@@ -71,8 +74,9 @@ After adding or synchronizing legal assets:
 .\.venv\Scripts\python.exe scripts\build_exercise_guide_media_manifest.py --check
 ```
 
-The builder fails on missing or unexpected JPEG files, verifies that every image decodes,
-and writes deterministic dimensions, byte sizes, phases, order, and provenance. New media
-must have an explicit legal source before it is admitted to the manifest. A future real-video
-pilot should be limited to a representative owned set and must pass desktop Web, iOS Safari,
-Android Chrome, and Telegram WebView checks before `type` is expanded beyond `image`.
+Сборщик завершается с ошибкой при отсутствующих или неожиданных JPEG-файлах, проверяет
+декодирование каждого изображения и записывает стабильные размеры, объём в байтах, фазы,
+порядок и происхождение. Новый файл можно включить в манифест только при явно указанном
+легальном источнике. Пилот с настоящими видео следует ограничить репрезентативным набором
+собственных материалов. До расширения `type` за пределы `image` он должен пройти проверки в
+настольном браузере, iOS Safari, Android Chrome и Telegram WebView.

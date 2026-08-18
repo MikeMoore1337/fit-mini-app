@@ -1,50 +1,47 @@
-# Operations runbook
+# Руководство по эксплуатации
 
-This document describes the repository-managed part of deployment and recovery.
-Provider-specific DNS, tunnel, object-storage and secret-management procedures
-must live in the private infrastructure documentation.
+Документ описывает только ту часть развёртывания и восстановления, которая управляется
+репозиторием. Инструкции конкретных провайдеров по DNS, туннелю, объектному хранилищу и управлению
+секретами должны находиться в приватной инфраструктурной документации.
 
-## Safety rules
+## Правила безопасности
 
-- Never commit `.env` or database dumps. Repository scripts only accept dump paths
-  below `.artifacts/`, which is gitignored and excluded from Docker build contexts.
-- Run backup, restore and migration commands from the repository root.
-- Never use a production database for integration tests.
-- Keep the previous application image/revision available until post-deploy checks
-  and the observation window have completed.
-- Prefer a forward fix. Do not run `alembic downgrade` automatically: application
-  rollback is safe only while migrations remain backward compatible.
+- Никогда не коммитьте `.env` и дампы базы данных. Скрипты репозитория принимают дампы только из
+  `.artifacts/`; каталог игнорируется Git и исключён из контекста сборки Docker.
+- Запускайте команды резервного копирования, восстановления и миграций из корня репозитория.
+- Не используйте production-базу для интеграционных тестов.
+- Сохраняйте предыдущий образ или ревизию приложения до завершения проверок и периода наблюдения.
+- Предпочитайте исправление вперёд. Не запускайте `alembic downgrade` автоматически: откат
+  приложения безопасен, только пока миграции сохраняют обратную совместимость.
 
-## Pre-deploy
+## Подготовка к развёртыванию
 
-1. Review the migration diff and identify destructive or long-locking operations.
-2. Validate configuration without printing resolved secrets:
+1. Проверьте diff миграций и найдите разрушающие операции или операции с долгой блокировкой.
+2. Проверьте конфигурацию, не выводя вычисленные секреты:
 
    ```console
    docker compose config --quiet
    ```
 
-3. Build the exact revision that will be deployed:
+3. Соберите именно ту ревизию, которая будет развёрнута:
 
    ```console
    docker compose build backend setup worker bot
    ```
 
-4. Create a database backup. The command reads database credentials only inside
-   the running `db` container:
+4. Создайте резервную копию. Команда читает учётные данные базы только внутри контейнера `db`:
 
    ```console
    py scripts/db_maintenance.py backup
    ```
 
-5. Copy the resulting `.artifacts/backups/*.dump` to encrypted external storage.
-   A local named volume and a local dump are not independent backups.
+5. Скопируйте `.artifacts/backups/*.dump` во внешнее зашифрованное хранилище. Именованный том и
+   дамп на том же сервере не являются независимыми резервными копиями.
 
-## Deploy and verify
+## Развёртывание и проверка
 
-The current Compose topology runs the one-shot `setup` service before backend;
-`setup` applies Alembic migrations under a PostgreSQL advisory lock and then runs
-the idempotent seed command.
+В текущей схеме Compose одноразовый сервис `setup` запускается раньше backend. Он применяет
+миграции Alembic под advisory lock PostgreSQL, а затем выполняет идемпотентное начальное заполнение.
 
 ```console
 docker compose up -d --build
@@ -52,25 +49,23 @@ docker compose ps
 py scripts/check_deployment.py https://app.your-fitness-coach.ru
 ```
 
-For direct HTTPS use the `direct-https` profile; for Cloudflare Tunnel use the
-`cloudflare` profile. Do not enable both accidentally:
+Для прямого HTTPS используйте профиль `direct-https`, для Cloudflare Tunnel — `cloudflare`.
+Не включайте оба одновременно:
 
 ```console
 docker compose --profile direct-https up -d
 docker compose --profile cloudflare up -d
 ```
 
-### Public website and web application domains
+### Домены публичного сайта и приложения
 
-The intended production layout uses two hostnames backed by the same API and
-database:
+Production использует два имени хоста с общими API и базой данных:
 
-- `https://your-fitness-coach.ru` — canonical public landing page (`www` redirects here);
-- `https://app.your-fitness-coach.ru/app` — authenticated web application and
-  Telegram Mini App;
-- `https://app.your-fitness-coach.ru/join/<token>` — universal coach invitation.
+- `https://your-fitness-coach.ru` — канонический публичный лендинг; `www` перенаправляет сюда;
+- `https://app.your-fitness-coach.ru/app` — авторизованное веб-приложение и Telegram Mini App;
+- `https://app.your-fitness-coach.ru/join/<token>` — универсальное приглашение тренера.
 
-Set the following non-secret values in the production `.env`:
+В production `.env` задайте несекретные значения:
 
 ```dotenv
 APP_DOMAIN=app.your-fitness-coach.ru
@@ -78,85 +73,78 @@ LANDING_DOMAIN=your-fitness-coach.ru
 FRONTEND_BASE_URL=https://app.your-fitness-coach.ru
 ```
 
-`LANDING_DOMAIN` is optional so an existing single-host deployment remains valid.
-For direct HTTPS, point the apex, `www`, and `app` DNS records to the server and recreate
-the Caddy service once to apply the additional hosts. `www` is served only to redirect to the
-canonical apex landing URL:
+`LANDING_DOMAIN` необязателен, поэтому прежнее развёртывание на одном хосте остаётся рабочим. Для
+прямого HTTPS направьте DNS-записи apex, `www` и `app` на сервер и один раз пересоздайте Caddy,
+чтобы применить дополнительные хосты. `www` служит только для перенаправления на канонический apex:
 
 ```console
 docker compose --profile direct-https up -d --force-recreate caddy
 ```
 
-For the remotely managed Cloudflare Tunnel, add the apex, `www`, and application public
-hostnames and route all of them to `http://backend:8000` on the Compose network. Do not expose PostgreSQL or
-the backend container port publicly. Keep the Telegram Mini App URL and all OAuth
-callback URLs on the `app` hostname; the exact callbacks are listed in
-[`web-auth.md`](web-auth.md).
+Для удалённо управляемого Cloudflare Tunnel добавьте публичные имена apex, `www` и приложения и
+направьте их на `http://backend:8000` в сети Compose. Не публикуйте порт PostgreSQL или контейнера
+backend. URL Telegram Mini App и все callback URL OAuth должны использовать хост `app`; точные
+адреса перечислены в [`web-auth.md`](web-auth.md).
 
-### Search indexation contract
+### Правила индексации
 
-- The canonical public landing, product pages and reviewed guides declared in
-  `frontend/src/content/publicContent.json` are indexable. Each is self-canonical, listed in
-  `/sitemap.xml`, and reachable through ordinary internal links. `/robots.txt` publishes that
-  sitemap.
-- Application, invitation and technical-auth HTML routes return `X-Robots-Tag: noindex, nofollow`.
-  They deliberately remain crawlable enough for search engines to read that directive; `robots.txt`
-  only disallows the API surface.
-- Do not add a URL to the manifest or sitemap until it has public, factual, crawler-visible content,
-  a self-canonical response, crawlable internal links and truthful structured data.
-- The backend renders route-specific no-JavaScript content from the same public content manifest
-  used by React. Keep that fallback, visible page and metadata aligned. Public editorial and IA
-  rules are documented in [`seo/public-content.md`](seo/public-content.md).
-- Keep public media dimensions/aspect ratios explicit, avoid blocking SEO-only JavaScript, and
-  re-check responsive layout and Core Web Vitals when stabilized real product media is introduced.
+- Канонический лендинг, страницы продукта и проверенные руководства из
+  `frontend/src/content/publicContent.json` доступны для индексации. У каждой страницы есть
+  self-canonical, запись в `/sitemap.xml` и обычная внутренняя ссылка. `/robots.txt` публикует
+  карту сайта.
+- HTML-маршруты приложения, приглашений и технической аутентификации возвращают
+  `X-Robots-Tag: noindex, nofollow`. Они остаются доступными роботу настолько, чтобы он прочитал
+  директиву; в `robots.txt` запрещена только поверхность API.
+- Не добавляйте URL в манифест или карту сайта, пока на нём нет публичного, фактического и видимого
+  роботу содержимого, self-canonical, доступных внутренних ссылок и достоверных структурированных
+  данных.
+- Backend формирует отдельное содержимое без JavaScript из того же манифеста, что и React.
+  Поддерживайте согласованность fallback, видимой страницы и метаданных. Правила редакции и
+  информационной архитектуры описаны в [`seo/public-content.md`](seo/public-content.md).
+- Явно указывайте размеры и соотношение сторон публичных медиафайлов, не добавляйте блокирующий
+  JavaScript только ради SEO. После появления стабильных реальных материалов повторно проверяйте
+  адаптивность и Core Web Vitals.
 
-Ownership verification and ongoing Google Search Console/Yandex Webmaster monitoring are manual
-owner operations. Follow [the webmaster runbook](seo/search-console-yandex-webmaster.md); it also
-documents the optional env-injected meta-tag fallback and the read-only public SEO smoke command.
+Подтверждение владения и постоянный контроль Google Search Console и Яндекс Вебмастера выполняет
+владелец вручную. Следуйте [руководству для вебмастеров](seo/search-console-yandex-webmaster.md):
+там также описаны необязательные метатеги из переменных окружения и публичная read-only smoke-команда.
 
-Before changing DNS, verify the landing and application hosts locally or through
-a temporary protected hostname. After the change, smoke-test `/`, `/app`,
-`/health/ready`, one Telegram login and one browser login. DNS and proxy changes
-are operational actions and are not performed by the repository deployment
-script.
+До изменения DNS проверьте лендинг и приложение локально или через временный защищённый хост.
+После изменения проверьте `/`, `/app`, `/health/ready`, один вход через Telegram и один вход в
+браузере. Скрипт развёртывания репозитория не меняет DNS и proxy.
 
-After deployment, inspect backend, worker and bot errors and confirm that due
-notifications leave the queue. Keep the pre-deploy backup and previous image for
-the retention period defined by the service owner.
+После развёртывания изучите ошибки backend, worker и bot и убедитесь, что просроченные уведомления
+покидают очередь. Храните резервную копию и предыдущий образ в течение срока, установленного
+владельцем сервиса.
 
-## Automated production deployment
+## Автоматическое развёртывание в production
 
-The `Deploy production` GitHub Actions workflow deploys successful pushes to
-`master`. It connects to the existing checkout at `/root/fit-mini-app`, checks out
-the exact revision that passed CI, creates a database backup, rebuilds the
-application containers and runs the external smoke check. The active Caddy or
-Cloudflare profile is left unchanged.
+Workflow GitHub Actions `Deploy production` развёртывает успешные push в `master`. Он подключается
+к готовой копии `/root/fit-mini-app`, переключает её на точную ревизию, прошедшую CI, создаёт
+резервную копию базы, пересобирает контейнеры приложения и запускает внешнюю smoke-проверку.
+Активный профиль Caddy или Cloudflare не меняется.
 
-The server checkout is deployment-only: each run resets tracked application code
-to the tested commit. Do not edit tracked files there. Ignored runtime state such
-as `.env`, `.artifacts/` and Docker volumes is not removed by the reset.
+Серверная копия предназначена только для развёртывания: каждый запуск сбрасывает отслеживаемый код
+приложения до проверенного коммита. Не редактируйте там отслеживаемые файлы. Игнорируемые `.env`,
+`.artifacts/` и тома Docker при сбросе не удаляются.
 
-Compose evaluates the backend, worker and bot build targets on every deployment.
-Docker layer caching avoids rebuilding unchanged layers, and Compose recreates a
-running container only when its resulting image or service configuration changed.
-Because the frontend is compiled into the backend image, frontend changes update
-the backend automatically; backend changes also update the worker, while bot-only
-changes update the bot image.
+Compose оценивает цели сборки backend, worker и bot при каждом запуске. Кэш слоёв Docker не
+пересобирает неизменившиеся слои, а Compose пересоздаёт работающий контейнер только при изменении
+образа или конфигурации сервиса. Frontend встроен в образ backend, поэтому изменения frontend
+обновляют backend автоматически; изменения backend также обновляют worker, а изменения только в
+bot — образ bot.
 
-Create a GitHub environment named `production` and add these environment secrets:
+Создайте GitHub environment `production` и добавьте секреты:
 
-- `PROD_SSH_KEY`: the private half of a dedicated key that may SSH to the
-  production server;
-- `PROD_SSH_KNOWN_HOSTS`: the verified `known_hosts` entry for
-  `app.your-fitness-coach.ru`.
+- `PROD_SSH_KEY` — приватная часть отдельного ключа с правом SSH-доступа к production-серверу;
+- `PROD_SSH_KNOWN_HOSTS` — проверенная запись `known_hosts` для `app.your-fitness-coach.ru`.
 
-The matching public SSH key must be present in `/root/.ssh/authorized_keys` on the
-server. For a private GitHub repository, the server also needs separate read-only
-GitHub credentials (prefer a repository deploy key) so `git fetch origin master`
-can run non-interactively. Never reuse the production server host key as either
-client key.
+Соответствующий публичный ключ должен находиться в `/root/.ssh/authorized_keys` на сервере. Для
+приватного GitHub-репозитория серверу нужны отдельные учётные данные только для чтения — лучше
+deploy key репозитория, чтобы `git fetch origin master` выполнялся без диалога. Не используйте
+host key production-сервера как клиентский ключ.
 
-Before enabling the workflow, verify once on the server:
+Перед включением workflow один раз проверьте на сервере:
 
 ```console
 cd /root/fit-mini-app
@@ -165,49 +153,48 @@ git fetch origin master
 docker compose config --quiet
 ```
 
-Manual production runs are available through the workflow's `workflow_dispatch`
-trigger. Deployments are serialized and are not cancelled midway by newer pushes.
+Ручной запуск production доступен через `workflow_dispatch`. Развёртывания выполняются
+последовательно и не отменяются посередине при появлении нового push.
 
-## Application rollback
+## Откат приложения
 
-1. Stop only the application writers, leaving PostgreSQL running:
-
-   ```console
-   docker compose stop backend worker bot
-   ```
-
-2. Deploy the previous immutable image/revision.
-3. If its schema is compatible, start it and run the read-only smoke check. Do not
-   downgrade the database merely because application code was rolled back.
-4. If the migration is incompatible, keep writers stopped and follow database
-   restore below. Record the incident and data-loss window before proceeding.
-
-## Database restore
-
-Restore is destructive: `pg_restore --clean --if-exists` replaces objects in the
-configured database. The helper requires an exact database-name confirmation and
-automatically creates a fresh safety dump before changing anything.
-
-1. Place the selected custom-format dump below `.artifacts/`.
-2. Stop all writers:
+1. Остановите только сервисы, которые пишут данные, оставив PostgreSQL запущенным:
 
    ```console
    docker compose stop backend worker bot
    ```
 
-3. Read the target database name without exposing credentials:
+2. Разверните предыдущий неизменяемый образ или ревизию.
+3. Если схема совместима, запустите приложение и read-only smoke-проверку. Не откатывайте базу
+   только из-за отката кода.
+4. Если миграция несовместима, не запускайте сервисы записи и выполните восстановление базы по
+   инструкции ниже. Сначала зафиксируйте инцидент и окно возможной потери данных.
+
+## Восстановление базы данных
+
+Восстановление разрушительно: `pg_restore --clean --if-exists` заменяет объекты в настроенной базе.
+Скрипт требует точного подтверждения имени базы и автоматически создаёт свежую страховочную копию.
+
+1. Поместите выбранный дамп custom format в `.artifacts/`.
+2. Остановите все сервисы записи:
+
+   ```console
+   docker compose stop backend worker bot
+   ```
+
+3. Прочитайте имя целевой базы без раскрытия учётных данных:
 
    ```console
    docker compose exec -T db sh -ec 'printf "%s\n" "$POSTGRES_DB"'
    ```
 
-4. Restore with an exact confirmation:
+4. Восстановите базу с точным подтверждением:
 
    ```console
    py scripts/db_maintenance.py restore .artifacts/backups/fitminiapp-TIMESTAMP.dump --confirm-database fitminiapp
    ```
 
-5. Run the current setup/migrations, start services and smoke-test:
+5. Примените текущую настройку и миграции, запустите сервисы и smoke-проверку:
 
    ```console
    docker compose run --rm setup
@@ -215,18 +202,18 @@ automatically creates a fresh safety dump before changing anything.
    py scripts/check_deployment.py https://app.your-fitness-coach.ru
    ```
 
-If restore fails, keep writers stopped. The script prints the path of the automatic
-pre-restore safety backup.
+Если восстановление не удалось, оставьте сервисы записи остановленными. Скрипт выводит путь к
+автоматической страховочной копии, созданной перед восстановлением.
 
-## Backup policy and restore drills
+## Политика резервных копий и учебные восстановления
 
-Define explicit RPO/RTO, encrypted off-host storage, retention and access control.
-At minimum, automate daily dumps and test a restore into an isolated PostgreSQL
-instance regularly. A backup is not considered valid until the migrated-stack
-smoke test succeeds against its restored copy.
+Явно определите RPO/RTO, внешнее зашифрованное хранилище, срок хранения и контроль доступа. Как
+минимум автоматизируйте ежедневные дампы и регулярно проверяйте восстановление в изолированный
+экземпляр PostgreSQL. Копия считается корректной только после успешной smoke-проверки актуального
+стека с миграциями на восстановленных данных.
 
-## Incident evidence
+## Материалы об инциденте
 
-Preserve the deployment revision, timestamps, structured API/worker logs, request
-ID supplied to the affected user, migration output and health-check results. Never
-attach `.env`, database dumps or authentication tokens to a public issue.
+Сохраняйте ревизию развёртывания, временные метки, структурированные логи API и worker, request ID,
+переданный затронутому пользователю, вывод миграций и результаты health check. Никогда не
+прикладывайте `.env`, дампы базы или токены аутентификации к публичной задаче.

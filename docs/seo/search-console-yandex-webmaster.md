@@ -1,116 +1,110 @@
-# Search Console and Yandex Webmaster
+# Google Search Console и Яндекс Вебмастер
 
-This runbook covers the manual, account-level work required to monitor the canonical
-public SEO surface. It does not grant Codex access to Google Search Console, Yandex
-Webmaster, DNS, or production deployments.
+Это руководство описывает ручные операции на уровне аккаунта для контроля канонической публичной
+SEO-поверхности. Оно не предоставляет Codex доступ к Google Search Console, Яндекс Вебмастеру,
+DNS или production-развёртыванию.
 
-The current production indexation contract is intentionally limited to the canonical landing,
-product pages, knowledge directory, and reviewed guides declared in
-[`publicContent.json`](../../frontend/src/content/publicContent.json). The authenticated
-application, invitations, and technical routes stay out of the sitemap and return `noindex`. The
-canonical origin and its sitemap are defined in [operations.md](../operations.md).
+Индексация production намеренно ограничена каноническим лендингом, страницами продукта, каталогом
+знаний и проверенными руководствами из
+[`publicContent.json`](../../frontend/src/content/publicContent.json). Авторизованное приложение,
+приглашения и технические маршруты не входят в sitemap и возвращают `noindex`. Канонический origin
+и sitemap определены в [`operations.md`](../operations.md).
 
-## Ownership verification
+## Подтверждение владения
 
-Use the domain owner account and retain at least two trusted owners in each webmaster
-tool. Verification enables access to search and indexation data, so treat its ownership
-and access review as operational security work.
+Используйте аккаунт владельца домена и оставьте не менее двух доверенных владельцев в каждом
+инструменте. Подтверждение открывает данные поиска и индексации, поэтому управление доступом нужно
+рассматривать как операционную безопасность.
 
-1. Prefer DNS TXT verification when the domain DNS is controlled by the owner. In Google
-   Search Console, create a Domain property for `your-fitness-coach.ru`; Domain properties
-   require DNS verification and cover protocol/subdomain variants.
-2. If DNS verification cannot be used, create a URL-prefix property for the exact canonical
-   URL `https://your-fitness-coach.ru/`, then use the repository-supported meta-tag fallback.
-   Put only the token value, not a complete HTML tag, in the production secret store or
-   deployment `.env`:
+1. Если владелец управляет DNS, предпочитайте проверку TXT. В Google Search Console создайте
+   Domain property для `your-fitness-coach.ru`: она требует DNS-подтверждения и охватывает варианты
+   протокола и поддоменов.
+2. Если DNS-проверка недоступна, создайте URL-prefix property для точного канонического URL
+   `https://your-fitness-coach.ru/` и используйте поддерживаемые репозиторием метатеги. В секретное
+   хранилище production или deployment `.env` помещайте только значение токена, не весь HTML-тег:
 
    ```dotenv
    GOOGLE_SITE_VERIFICATION=token-issued-by-google
    YANDEX_VERIFICATION=token-issued-by-yandex
    ```
 
-   The backend renders these tags only on an indexable canonical page. Do not commit real
-   tokens, add them to frontend build variables, or use them on app/private routes.
+   Backend выводит теги только на индексируемой канонической странице. Не коммитьте настоящие
+   токены, не добавляйте их в build variables frontend и не используйте на приватных маршрутах.
 
-3. For Yandex Webmaster, add the exact canonical HTTPS site and verify management rights
-   with DNS TXT where practical. Its meta-tag or root HTML-file methods are alternatives
-   when DNS is unavailable. Keep the selected proof available: Yandex periodically checks it.
-4. After deployment, run the repository smoke check before clicking **Verify**:
+3. В Яндекс Вебмастере добавьте точный канонический HTTPS-сайт и по возможности подтвердите права
+   через DNS TXT. Метатег и HTML-файл в корне — запасные варианты. Сохраняйте выбранное
+   подтверждение: Яндекс периодически проверяет его повторно.
+4. После развёртывания до нажатия «Подтвердить» выполните smoke-проверку:
 
    ```console
    py scripts/check_seo_surface.py https://your-fitness-coach.ru
    ```
 
-Google's property/verification model is documented in [Search Console Help](https://support.google.com/webmasters/answer/34592);
-Yandex's supported verification methods and ongoing verification behavior are in
-[Yandex Webmaster](https://yandex.com/support/webmaster/en/service/rights).
+Модель ресурсов Google описана в [справке Search Console](https://support.google.com/webmasters/answer/34592),
+способы и повторная проверка Яндекса — в [справке Яндекс Вебмастера](https://yandex.com/support/webmaster/ru/service/rights).
 
-## Google Search Console setup
+## Настройка Google Search Console
 
-1. Add the canonical property (Domain property when DNS verification is available; otherwise
-   exact canonical URL-prefix property) and verify ownership.
-2. Inspect the homepage and representative future public URLs with URL Inspection. Confirm
-   Google receives the canonical URL, `index, follow`, and crawler-visible content.
-3. Submit `https://your-fitness-coach.ru/sitemap.xml` in the Sitemaps report. It is already
-   declared in `robots.txt`; submission provides processing feedback but does not guarantee
-   crawling or indexation.
-4. Review Page Indexing for errors, exclusions, and canonical/duplicate disagreements. Do
-   not treat every exclusion as a defect: private routes are intentionally excluded.
-5. Review Core Web Vitals as field data, not as a ranking guarantee or a one-off local score.
-6. Review Search performance: impressions, clicks, CTR, queries, and pages. Split branded
-   and non-branded queries where the report's filters make that practical; record any manual
-   grouping criteria used.
-7. Configure owner notification emails and periodically review property owners/users.
+1. Добавьте канонический ресурс: Domain property при доступном DNS, иначе точный URL-prefix.
+2. Проверьте главную и показательные публичные URL через URL Inspection. Убедитесь, что Google
+   получает канонический URL, `index, follow` и видимое роботу содержимое.
+3. Отправьте `https://your-fitness-coach.ru/sitemap.xml` в отчёте Sitemaps. Карта уже объявлена в
+   `robots.txt`; отправка даёт обратную связь, но не гарантирует обход или индексацию.
+4. Просмотрите Page Indexing: ошибки, исключения и расхождения canonical/duplicate. Не каждое
+   исключение является дефектом — приватные маршруты исключены намеренно.
+5. Рассматривайте Core Web Vitals как полевые данные, а не гарантию ранжирования или разовый
+   локальный балл.
+6. Следите за показами, кликами, CTR, запросами и страницами. По возможности разделяйте брендовые
+   и небрендовые запросы и фиксируйте правила ручной группировки.
+7. Включите уведомления владельца и периодически проверяйте список пользователей ресурса.
 
-For the report meanings and URL Inspection flow, use Google's [Search Console
-getting-started guide](https://developers.google.com/search/docs/monitor-debug/search-console-start).
+Значение отчётов и URL Inspection описаны в
+[руководстве Google](https://developers.google.com/search/docs/monitor-debug/search-console-start).
 
-## Yandex Webmaster setup
+## Настройка Яндекс Вебмастера
 
-1. Add `https://your-fitness-coach.ru` exactly; preserve HTTPS and primary-host consistency
-   (`www` redirects to the apex canonical host).
-2. Verify rights, then add `https://your-fitness-coach.ru/sitemap.xml` in **Indexing → Sitemap
-   files** and validate it there.
-3. Check indexing/searchable pages, server response, robots.txt analysis, crawl statistics,
-   and URL status. Investigate only unexpected exclusions; app/private routes remain excluded
-   by design.
-4. Review **Website optimization → Site diagnostics**, security/violations, and notifications.
-5. Validate the visible landing structured data with Yandex's Structured data validator after
-   structured-data changes.
-6. Review query statistics, impressions, clicks, CTR, and relevant pages; distinguish branded
-   and non-branded groups where the available filters allow it.
-7. Configure owner notifications and review access rights regularly.
+1. Добавьте точно `https://your-fitness-coach.ru`, сохранив HTTPS и основной хост; `www`
+   перенаправляет на канонический apex.
+2. Подтвердите права, добавьте `https://your-fitness-coach.ru/sitemap.xml` в «Индексирование →
+   Файлы Sitemap» и проверьте её.
+3. Проверяйте индексируемые страницы, ответы сервера, анализ `robots.txt`, статистику обхода и
+   статус URL. Исследуйте только неожиданные исключения: приватные маршруты исключены специально.
+4. Просматривайте «Оптимизация сайта → Диагностика сайта», нарушения безопасности и уведомления.
+5. После изменения структурированных данных проверяйте видимый лендинг валидатором Яндекса.
+6. Следите за запросами, показами, кликами, CTR и страницами; где позволяют фильтры, разделяйте
+   брендовые и небрендовые группы.
+7. Настройте уведомления владельца и регулярно проверяйте права доступа.
 
-Yandex documents sitemap processing and validation in its [Sitemap guide](https://yandex.com/support/webmaster/en/indexing-options/sitemap),
-site errors in [Site diagnostics](https://yandex.com/support/webmaster/en/service/site-diagnostics),
-and its available validation tools in the [tools overview](https://yandex.com/support/webmaster/en/indexing-options/tools).
+Справка Яндекса: [Sitemap](https://yandex.com/support/webmaster/ru/indexing-options/sitemap),
+[диагностика](https://yandex.com/support/webmaster/ru/service/site-diagnostics) и
+[инструменты проверки](https://yandex.com/support/webmaster/ru/indexing-options/tools).
 
-## Repeating monitoring runbook
+## Регулярный контроль
 
-Run the read-only smoke command after every major release, public URL change, migration that
-can affect rendering/routing, landing redesign, metadata change, or sitemap change. It checks
-the live canonical homepage, robots.txt, sitemap, self-canonicals, statuses, indexability
-headers, title/description, and that sitemap URLs do not contain known private route families.
+Запускайте read-only smoke-команду после крупного релиза, изменения публичных URL, миграции,
+которая влияет на рендеринг или маршрутизацию, редизайна лендинга, изменения метаданных или sitemap.
+Она проверяет живую каноническую главную, `robots.txt`, sitemap, self-canonical, статусы, заголовки
+индексации, title/description и отсутствие известных семейств приватных маршрутов в карте сайта.
 
-Then review both webmaster tools after their normal data-refresh window:
+После обычного срока обновления данных проверьте в обоих инструментах:
 
-- indexed and excluded pages, crawl/index errors, and duplicate/canonical conflicts;
-- sitemap processing/errors and the status of newly changed public URLs;
-- impressions, clicks, CTR, top queries, and top pages, with a practical brand/non-brand split;
-- Search Console Core Web Vitals and Yandex diagnostics, security, and violations.
+- индексируемые и исключённые страницы, ошибки обхода и конфликты duplicate/canonical;
+- обработку sitemap и состояние изменённых публичных URL;
+- показы, клики, CTR, основные запросы и страницы с практичным разделением бренд/небренд;
+- Core Web Vitals в Search Console, диагностику, безопасность и нарушения в Яндексе.
 
-For one or a few important changed URLs, use URL Inspection / Yandex URL status and request a
-re-crawl only after the canonical page is live and healthy. For a larger set of canonical URLs,
-update and re-submit the sitemap in each tool. Do not automate blanket URL submission and do
-not use the Google Indexing API for ordinary product pages: sitemap submission and recrawl
-requests are discovery signals, not an indexation guarantee. Google's [sitemap guidance](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap)
-and [recrawl guidance](https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl)
-describe these limits.
+Для нескольких важных изменённых URL используйте URL Inspection или статус URL Яндекса и
+запрашивайте повторный обход только после публикации исправной канонической страницы. Для большого
+набора обновите и повторно отправьте sitemap. Не автоматизируйте массовую отправку URL и не
+используйте Google Indexing API для обычных страниц продукта: sitemap и запрос обхода служат лишь
+сигналами обнаружения и не гарантируют индексацию. Ограничения описаны в руководствах Google по
+[sitemap](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap) и
+[повторному обходу](https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl).
 
-## Analytics boundary
+## Граница аналитики
 
-No Google Analytics, Yandex Metrica, or other client-side behavioral analytics is installed by
-this repository task. Search Console and Yandex Webmaster provide the base search monitoring
-without a browser tracking tag. Connecting organic acquisition to product conversions requires
-a separate privacy, legal-consent, retention, and data-flow decision; do not add a tracking tag
-as an SEO side effect.
+Репозиторий не устанавливает Google Analytics, Яндекс Метрику или другую клиентскую поведенческую
+аналитику. Search Console и Яндекс Вебмастер дают базовый контроль поиска без tracking tag в
+браузере. Связывание органического трафика с конверсиями продукта требует отдельного решения по
+конфиденциальности, согласию, срокам хранения и потокам данных. Не добавляйте tracking tag как
+побочный эффект SEO-задачи.

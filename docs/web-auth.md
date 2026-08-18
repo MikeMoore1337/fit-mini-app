@@ -1,9 +1,9 @@
 # Развёртывание веб-аутентификации
 
-Пошаговая регистрация приложений, scopes, callback-контракты и opt-in smoke для
-каждого провайдера описаны в [provider setup runbook](auth/provider-setup.md).
+Пошаговая регистрация приложений, scopes, callback-контракты и ручная smoke-проверка для
+каждого провайдера описаны в [руководстве по настройке](auth/provider-setup.md).
 
-Каноническая точка browser-входа — `/login`; protected routes перенаправляют
+Каноническая точка входа в браузере — `/login`; защищённые маршруты перенаправляют
 неавторизованного пользователя туда с allowlisted параметром `next`.
 Веб-аутентификация дополняет существующий вход. Вход в Telegram Mini App по
 `initData` продолжает работать независимо от `ENABLE_WEB_AUTH` и наличия
@@ -45,7 +45,7 @@ CORS не требуется.
 использовать тот же backend, однако вход, приглашения и OAuth callback должны
 оставаться на каноническом origin `app`.
 
-## Callback URL провайдеров
+## Адреса обратного вызова провайдеров
 
 Зарегистрируйте следующие точные HTTPS redirect URL:
 
@@ -157,7 +157,7 @@ Telegram identity из `ADMIN_TELEGRAM_USER_IDS` является Root identity 
 быть перенесена на существующий OAuth-аккаунт через linking. Root определяется
 только совпадающей подтверждённой Telegram identity и server-side конфигурацией.
 
-## Browser sessions и безопасный возврат
+## Браузерные сессии и безопасный возврат
 
 Access token имеет короткий срок действия и связан с server-side session family.
 Refresh token хранится только в cookie `HttpOnly; SameSite=Strict` с path

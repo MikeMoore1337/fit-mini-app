@@ -1,21 +1,21 @@
-# Repetitions in reserve
+# Повторы в запасе
 
-`UserWorkoutSet.rir` is an optional category describing how many more repetitions a person
-believes they could have completed with good technique after a performed set. It is intended
-for completed working or drop sets, but it is never required for completing a set or workout.
-It remains independent from `reached_failure`: the API records both observations as supplied
-and does not infer one from the other.
+`UserWorkoutSet.rir` — необязательная категория, которая показывает, сколько повторов человек,
+по собственной оценке, ещё мог бы выполнить с хорошей техникой после завершённого подхода.
+Показатель предназначен для выполненных рабочих подходов и дроп-сетов, но не обязателен для
+завершения подхода или тренировки. Он не зависит от `reached_failure`: API сохраняет оба
+наблюдения как передано и не выводит одно из другого.
 
-The API and database use the categorical string values `"0"`, `"1"`, `"2"`, `"3"`, and
-`"4+"`. `"4+"` means that many repetitions remained; it is not an exact estimate of four.
-`null` means that repetitions in reserve were not recorded. Existing workout sets therefore
-remain valid without a backfill.
+API и база данных используют строковые значения `"0"`, `"1"`, `"2"`, `"3"` и `"4+"`.
+Значение `"4+"` означает, что в запасе оставалось много повторов, а не ровно четыре. `null`
+означает, что показатель не записывался. Поэтому существующие подходы остаются корректными без
+дополнительного заполнения.
 
-The primary user-facing label is `Повторы в запасе`. The explanation is:
+Основная подпись в интерфейсе — `Повторы в запасе`. Пояснение:
 
 > Сколько повторов вы ещё могли бы сделать с хорошей техникой после завершения подхода?
 
-User-facing choices are:
+Варианты ответа:
 
 - `0 — больше не смог бы`;
 - `1 — ещё примерно 1 повтор`;
@@ -23,7 +23,7 @@ User-facing choices are:
 - `3 — ещё примерно 3 повтора`;
 - `4+ — осталось много сил`.
 
-RIR is stored and returned by workout set save/resume, completed workout details, trainer
-workout history, and account export. It does not change completion, volume, calories,
-progression, or readiness calculations. Automatic estimation, RPE conversion, and UI are
-outside this foundation.
+RIR сохраняется и возвращается при записи и возобновлении подхода, в деталях завершённой
+тренировки, истории для тренера и экспорте аккаунта. Он не влияет на завершение, объём,
+калории, прогрессию или оценку готовности. Автоматическая оценка, преобразование RPE и
+дополнительный интерфейс не входят в эту основу.

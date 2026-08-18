@@ -1,12 +1,12 @@
 # Настройка провайдеров аутентификации
 
-Этот runbook описывает ручную production-настройку browser OAuth/OIDC для
+Это руководство описывает ручную production-настройку браузерного OAuth/OIDC для
 Telegram, Google, Яндекс и VK ID. Apple остаётся необязательным провайдером.
-Telegram Mini App использует отдельный signed `initData` flow и не зависит от
-browser OAuth credentials.
+Telegram Mini App использует отдельный поток с подписанным `initData` и не зависит от
+реквизитов браузерного OAuth.
 
-Проверяйте ссылки на официальную документацию перед изменением provider app:
-поля кабинетов, требования к модерации и branding могут меняться.
+Проверяйте официальную документацию перед изменением приложения провайдера:
+поля кабинетов, требования к модерации и фирменному оформлению могут меняться.
 
 ## Общий контракт
 
@@ -25,7 +25,7 @@ https://app.your-fitness-coach.ru
 | Google | `https://app.your-fitness-coach.ru/api/v1/auth/oauth/google/callback` |
 | Яндекс | `https://app.your-fitness-coach.ru/api/v1/auth/oauth/yandex/callback` |
 | VK ID | `https://app.your-fitness-coach.ru/api/v1/auth/oauth/vk/callback` |
-| Apple, optional | `https://app.your-fitness-coach.ru/api/v1/auth/oauth/apple/callback` |
+| Apple, необязательно | `https://app.your-fitness-coach.ru/api/v1/auth/oauth/apple/callback` |
 
 Redirect URI должен совпадать посимвольно, включая scheme, host, path и
 отсутствие завершающего `/`. Не регистрируйте production callback в test app и
@@ -58,7 +58,7 @@ OIDC-провайдеры дополнительно используют nonce;
 
 ## Telegram
 
-### Browser OIDC
+### OIDC в браузере
 
 1. Откройте настройки бота в `@BotFather` → **Bot Settings** → **Web Login**.
 2. Добавьте origin приложения и точный callback URL из таблицы.
@@ -154,7 +154,7 @@ account key — `user.user_id`; email не считается явно verified.
 - [VK ID для бизнеса](https://id.vk.ru/about/business/go/docs/ru/vkid/latest/vk-id/connection/start-integration)
 - [Официальный VK ID Web SDK](https://github.com/VKCOM/vkid-web-sdk)
 
-## Apple, optional
+## Apple — необязательно
 
 Apple не входит в обязательный набор. Чтобы безопасно оставить его доступным:
 
@@ -183,7 +183,7 @@ OAuth-клиенты игнорируют ambient proxy variables. Явный pr
 certificate/hostname verification. Не используйте недоверенный публичный proxy:
 через него проходят authorization codes и client secrets.
 
-## Opt-in smoke check
+## Необязательная smoke-проверка
 
 Live smoke выполняется вручную только после явной настройки provider app и
 credentials. Локальные тесты и CI не требуют secrets и не обращаются к provider
