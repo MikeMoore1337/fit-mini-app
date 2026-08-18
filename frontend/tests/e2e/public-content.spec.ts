@@ -126,8 +126,8 @@ test('campaign parameters keep one canonical URL and a fetchable social preview'
   );
 
   const imageUrl = await socialImage.getAttribute('content');
-  expect(imageUrl).not.toBeNull();
-  const response = await request.get(imageUrl!);
+  if (!imageUrl) throw new Error('Social preview URL is missing');
+  const response = await request.get(imageUrl);
   expect(response.ok()).toBe(true);
   expect(response.headers()['content-type']).toContain('image/png');
   expect(

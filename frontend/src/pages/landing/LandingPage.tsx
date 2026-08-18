@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
 import { BrandLogo } from '../../shared/ui/BrandLogo';
-import { AppThemeToggle } from '../../shared/ui/AppThemeToggle';
-import { useWebTheme } from '../../shared/useWebTheme';
+import { PublicShell } from '../../shared/ui/PublicShell';
 import { applyRouteMetadata } from '../../shared/seo/metadata';
-import { appUrlForHostname } from '../../shared/navigation/appUrl';
+import { appUrlForHostname, loginUrlForHostname } from '../../shared/navigation/appUrl';
 import { AppLink } from '../../shared/navigation/router';
 import './landing.css';
 
-export { appUrlForHostname } from '../../shared/navigation/appUrl';
+export { appUrlForHostname, loginUrlForHostname } from '../../shared/navigation/appUrl';
 
 const features = [
   {
@@ -70,13 +69,11 @@ const workflow = [
 
 export default function LandingPage() {
   const appUrl = appUrlForHostname(window.location.hostname);
-  const { colorScheme: theme } = useWebTheme();
+  const loginUrl = loginUrlForHostname(window.location.hostname);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     applyRouteMetadata('/');
-    document.body.classList.add('landing-mode');
-    return () => document.body.classList.remove('landing-mode');
   }, []);
 
   useEffect(() => {
@@ -88,34 +85,12 @@ export default function LandingPage() {
     return () => window.removeEventListener('keydown', closeOnEscape);
   }, [mobileMenuOpen]);
 
-  useEffect(() => {
-    document.body.classList.toggle('landing-dark-mode', theme === 'dark');
-    return () => {
-      document.body.classList.remove('landing-dark-mode');
-    };
-  }, [theme]);
-
   return (
-    <div className={`landing-page landing-page--${theme}`}>
-      <a
-        className="landing-skip-link"
-        href="#landing-content"
-        onClick={() => document.querySelector<HTMLElement>('#landing-content')?.focus()}
-      >
-        К содержимому
-      </a>
-      <header className="landing-header">
-        <a className="landing-brand" href="#top" aria-label="Your Fitness Coach — на главную">
-          <BrandLogo
-            className="landing-brand__mark"
-            decorative
-            surface={theme}
-            variant="mark"
-            width={36}
-            height={36}
-          />
-          <span>Your Fitness Coach</span>
-        </a>
+    <PublicShell
+      className="landing-page"
+      homeHref="#top"
+      skipTarget="landing-content"
+      headerNavigation={
         <nav
           id="landing-navigation"
           className={`landing-nav${mobileMenuOpen ? ' is-open' : ''}`}
@@ -131,9 +106,10 @@ export default function LandingPage() {
             Контакты
           </a>
         </nav>
-        <div className="landing-header__actions">
-          <AppThemeToggle landing />
-          <a className="landing-button landing-button--compact" href={appUrl}>
+      }
+      headerAction={
+        <>
+          <a className="landing-button landing-button--compact" href={loginUrl}>
             Войти
           </a>
           <button
@@ -148,9 +124,9 @@ export default function LandingPage() {
             <span />
             <span />
           </button>
-        </div>
-      </header>
-
+        </>
+      }
+    >
       <main id="landing-content" tabIndex={-1}>
         <section className="landing-hero" aria-labelledby="landing-title">
           <div className="landing-hero__copy">
@@ -467,8 +443,7 @@ export default function LandingPage() {
           <BrandLogo
             className="landing-brand__mark"
             decorative
-            surface={theme}
-            variant="mark"
+            variant="full"
             width={36}
             height={36}
           />
@@ -481,6 +456,6 @@ export default function LandingPage() {
         </p>
         <span>© {new Date().getFullYear()}</span>
       </footer>
-    </div>
+    </PublicShell>
   );
 }

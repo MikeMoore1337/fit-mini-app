@@ -1,25 +1,73 @@
 import { useState } from 'react';
 import { useAuth } from './AuthProvider';
-import { Card, ErrorState, LoadingState } from '../shared/ui/common';
-import { EmailAuthPanel } from '../features/auth/EmailAuthPanel';
-import { OAuthButtons } from '../features/auth/OAuthButtons';
-import { AppThemeToggle } from '../shared/ui/AppThemeToggle';
-import { BrandLogo } from '../shared/ui/BrandLogo';
+import { ErrorState, LoadingState } from '../shared/ui/common';
+import { loginPathForNext } from '../shared/auth/redirects';
+import { Redirect } from '../shared/navigation/router';
+import { isTelegramLaunch } from '../shared/telegram/launch';
 
 export function telegramMiniAppUrl(username: string): string {
   const normalized = username.trim().replace(/^@/, '');
   return `https://t.me/${encodeURIComponent(normalized)}?startapp`;
 }
 
-export function AuthGate({ children }: { children: React.ReactNode }) {
-  const { user, config, loading, error, devLogin, telegramLogin } = useAuth();
+function TelegramAuthRecovery() {
+  const { config, error, telegramLogin } = useAuth();
   const [busy, setBusy] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
-  const oauthProviders = config?.oauth_providers ?? [];
-  const hasBrowserAuth = Boolean(config?.enable_email_auth || oauthProviders.length);
   const telegramAppUrl = config?.telegram_bot_username
     ? telegramMiniAppUrl(config.telegram_bot_username)
     : null;
+  const canRetry = Boolean(window.Telegram?.WebApp?.initData?.trim());
+
+  const retry = async () => {
+    setBusy(true);
+    setLocalError(null);
+    try {
+      await telegramLogin();
+    } catch {
+      setLocalError('Данные Telegram недействительны или истекли. Откройте Mini App заново.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <main className="container auth-page tma-auth-recovery">
+      <section className="card auth-panel" aria-labelledby="tma-auth-title">
+        <div className="stack">
+          <p className="muted">Telegram Mini App</p>
+          <h1 id="tma-auth-title">Не удалось подтвердить вход</h1>
+          <p>
+            Вернитесь в Telegram и откройте приложение заново, чтобы получить свежие данные входа.
+          </p>
+          {(localError || error) && (
+            <ErrorState message={localError || 'Не удалось войти через Telegram.'} />
+          )}
+          <div className="toolbar wrap">
+            {canRetry && (
+              <button type="button" disabled={busy} onClick={() => void retry()}>
+                {busy ? 'Проверяем…' : 'Повторить вход'}
+              </button>
+            )}
+            {telegramAppUrl && (
+              <a
+                className="button-link secondary"
+                href={telegramAppUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Открыть заново в Telegram
+              </a>
+            )}
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+export function AuthGate({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
 
   if (loading)
     return (
@@ -28,118 +76,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       </main>
     );
   if (user) return <>{children}</>;
+  if (isTelegramLaunch(window.location)) return <TelegramAuthRecovery />;
 
-  const run = async (action: () => Promise<void>) => {
-    setBusy(true);
-    setLocalError(null);
-    try {
-      await action();
-    } catch (reason) {
-      setLocalError(reason instanceof Error ? reason.message : 'Не удалось войти');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <main className="container auth-page">
-      <Card
-        collapsible={false}
-        className="auth-panel auth-panel--branded"
-        title={
-          <span className="auth-panel__title">
-            <BrandLogo className="auth-panel__brand-mark" decorative variant="mark" />
-            Вход в Your Fitness Coach
-          </span>
-        }
-        description={
-          hasBrowserAuth
-            ? 'Выберите доступный безопасный способ входа.'
-            : 'Откройте приложение внутри Telegram для безопасной авторизации.'
-        }
-        actions={<AppThemeToggle />}
-      >
-        <div className="stack top-gap">
-          {(localError || error) && <ErrorState message={localError || error || ''} />}
-          {window.Telegram?.WebApp?.initData && (
-            <button disabled={busy} onClick={() => void run(() => telegramLogin())}>
-              Войти через Telegram
-            </button>
-          )}
-          {!window.Telegram?.WebApp?.initData && !hasBrowserAuth && (
-            <div className="auth-notice" role="status">
-              <span>
-                Вход через браузер пока недоступен. Сейчас приложение можно открыть через Telegram.
-              </span>
-              {telegramAppUrl && (
-                <a className="button-link" href={telegramAppUrl} target="_blank" rel="noreferrer">
-                  Открыть в Telegram
-                </a>
-              )}
-            </div>
-          )}
-          {config?.enable_web_auth && <OAuthButtons providers={oauthProviders} />}
-          {config?.enable_email_auth && <EmailAuthPanel />}
-          {config?.enable_dev_auth && (
-            <div className="stack">
-              <p className="muted">Локальный режим разработки</p>
-              <div className="auth-presets">
-                <button
-                  className="secondary"
-                  disabled={busy}
-                  onClick={() =>
-                    void run(() =>
-                      devLogin({
-                        telegram_user_id: 2001,
-                        username: 'demo_client',
-                        full_name: 'Демо клиент',
-                        is_coach: false,
-                        is_admin: false,
-                      }),
-                    )
-                  }
-                >
-                  Клиент
-                </button>
-                <button
-                  className="secondary"
-                  disabled={busy}
-                  onClick={() =>
-                    void run(() =>
-                      devLogin({
-                        telegram_user_id: 1001,
-                        username: 'demo_coach',
-                        full_name: 'Демо тренер',
-                        is_coach: true,
-                        is_admin: false,
-                      }),
-                    )
-                  }
-                >
-                  Тренер
-                </button>
-                <button
-                  className="secondary"
-                  disabled={busy}
-                  onClick={() =>
-                    void run(() =>
-                      devLogin({
-                        telegram_user_id: 1001,
-                        username: 'demo_admin',
-                        full_name: 'Демо админ',
-                        is_coach: true,
-                        is_admin: true,
-                      }),
-                    )
-                  }
-                >
-                  Админ
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </Card>
-    </main>
-  );
+  return <Redirect to={loginPathForNext(window.location.pathname)} />;
 }

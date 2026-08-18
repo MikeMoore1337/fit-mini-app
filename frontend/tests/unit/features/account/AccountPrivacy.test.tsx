@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AccountPrivacy } from '../../../../src/features/account/AccountPrivacy';
+import { ApiError } from '../../../../src/shared/api/client';
 
 const { apiMock, authState, toastMock } = vi.hoisted(() => ({
   apiMock: vi.fn(),
@@ -18,7 +19,19 @@ const { apiMock, authState, toastMock } = vi.hoisted(() => ({
   toastMock: vi.fn(),
 }));
 
-vi.mock('../../../../src/shared/api/client', () => ({ api: apiMock }));
+vi.mock('../../../../src/shared/api/client', () => ({
+  api: apiMock,
+  ApiError: class ApiError extends Error {
+    status: number;
+    body: unknown;
+
+    constructor(message: string, status: number, body: unknown) {
+      super(message);
+      this.status = status;
+      this.body = body;
+    }
+  },
+}));
 vi.mock('../../../../src/app/AuthProvider', () => ({
   useAuth: () => ({ user: authState.user, config: authState.config, logout: vi.fn() }),
 }));
@@ -146,5 +159,21 @@ describe('AccountPrivacy Telegram linking', () => {
       body: {},
     });
     expect(link).toHaveAttribute('href', '/api/v1/auth/oauth/vk/link/start?token=safe-token');
+  });
+
+  it('shows a controlled conflict state without offering automatic merge', async () => {
+    authState.config.oauth_providers = ['google'];
+    apiMock.mockRejectedValue(
+      new ApiError('provider identity belongs to account 991', 409, { detail: 'conflict' }),
+    );
+    renderPrivacy();
+    openLoginMethods();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Привязать Google' }));
+
+    expect(
+      await screen.findByText(/этот способ уже связан с аккаунтом.*объединение недоступно/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/account 991/i)).not.toBeInTheDocument();
   });
 });

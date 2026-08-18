@@ -227,6 +227,11 @@ def coach_page() -> HTMLResponse:
     return _frontend_index("/coach")
 
 
+@app.get("/login")
+def login_page() -> HTMLResponse:
+    return _frontend_index("/login")
+
+
 @app.get("/verify-email")
 def verify_email_page() -> HTMLResponse:
     return _frontend_index("/verify-email")

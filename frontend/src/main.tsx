@@ -23,6 +23,7 @@ const LandingPage = lazy(() => import('./pages/landing/LandingPage'));
 const PublicContentPage = lazy(() => import('./pages/public/PublicContentPage'));
 const VerifyEmailPage = lazy(() => import('./pages/auth/VerifyEmailPage'));
 const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
+const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
 const JoinCoachPage = lazy(() => import('./pages/join/JoinCoachPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 function loadTelegramSdk(): Promise<void> {
@@ -59,6 +60,12 @@ function AppRoutes() {
   useEffect(() => applyRouteMetadata(path), [path]);
   if (path === '/') return <LandingPage />;
   if (isPublicContentPath(path)) return <PublicContentPage />;
+  if (path === '/login')
+    return (
+      <AuthProvider>
+        <LoginPage />
+      </AuthProvider>
+    );
   if (path === '/verify-email')
     return (
       <AuthProvider>

@@ -3,6 +3,8 @@
 Пошаговая регистрация приложений, scopes, callback-контракты и opt-in smoke для
 каждого провайдера описаны в [provider setup runbook](auth/provider-setup.md).
 
+Каноническая точка browser-входа — `/login`; protected routes перенаправляют
+неавторизованного пользователя туда с allowlisted параметром `next`.
 Веб-аутентификация дополняет существующий вход. Вход в Telegram Mini App по
 `initData` продолжает работать независимо от `ENABLE_WEB_AUTH` и наличия
 реквизитов OAuth.
@@ -170,7 +172,7 @@ lock и получают новый access token через `BroadcastChannel`.
 OAuth-параметр `next` принимает только точные внутренние пути `/app`, `/coach`,
 `/admin` и `/join/<безопасный-токен>`. Внешние URL, scheme-relative адреса,
 произвольные пути и percent-encoded варианты отклоняются. Browser callback
-возвращает только стабильные коды `unavailable`, `denied`, `invalid_state`,
+возвращает на `/login` только стабильные коды `unavailable`, `denied`, `invalid_state`,
 `conflict`, `blocked` или `provider_failure`; provider exception, OAuth code,
 token и другие секретные значения пользователю не показываются.
 
