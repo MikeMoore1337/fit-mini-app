@@ -13,6 +13,7 @@ from fitminiapp_api.models.program import (
 )
 from fitminiapp_api.models.user import User, UserProfile
 from fitminiapp_api.services.auth_identities import ensure_telegram_identity
+from fitminiapp_api.services.exercise_domain import sync_catalog_exercise_domain_metadata
 from fitminiapp_api.services.program_seed_data import (
     EXERCISE_CATALOG,
     LEGACY_TEMPLATE_SLUGS,
@@ -67,6 +68,10 @@ def _seed_exercise_catalog(db: Session) -> None:
         synchronize_session=False,
     )
 
+    sync_catalog_exercise_domain_metadata(
+        db,
+        [base_by_slug[slug] for slug, *_ in EXERCISE_CATALOG],
+    )
     db.flush()
 
 

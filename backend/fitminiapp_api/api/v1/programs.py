@@ -23,6 +23,11 @@ from fitminiapp_api.services.exercise_catalog import (
     list_exercises,
     update_exercise_for_user,
 )
+from fitminiapp_api.services.exercise_domain import (
+    alternative_payloads_by_exercise_id,
+    exercise_equipment_payload,
+    exercise_muscle_payload,
+)
 from fitminiapp_api.services.exercise_guides import get_exercise_guide
 from fitminiapp_api.services.program_common import ProgramError, assignment_error_status
 from fitminiapp_api.services.programs import (
@@ -47,8 +52,11 @@ def _serialize_exercise(
     current_user: User,
     *,
     include_guide: bool = False,
+    alternatives: list[dict[str, int | str]] | None = None,
 ) -> dict:
-    guide = get_exercise_guide(exercise)
+    guide = get_exercise_guide(exercise, alternatives=alternatives)
+    muscles = exercise_muscle_payload(exercise)
+    equipment = exercise_equipment_payload(exercise)
     return {
         "id": _effective_exercise_id(exercise),
         "edit_target_id": exercise.id,
@@ -56,6 +64,12 @@ def _serialize_exercise(
         "title": exercise.title,
         "primary_muscle": exercise.primary_muscle,
         "equipment": exercise.equipment,
+        "primary_muscle_ids": [item["identifier"] for item in muscles if item["role"] == "primary"],
+        "secondary_muscle_ids": [
+            item["identifier"] for item in muscles if item["role"] == "secondary"
+        ],
+        "equipment_ids": [item["identifier"] for item in equipment],
+        "alternatives": alternatives or [],
         "difficulty_level": exercise.difficulty_level,
         "is_custom": exercise.created_by_user_id is not None
         and exercise.source_exercise_id is None,
@@ -73,7 +87,15 @@ def get_exercises(
     db: Session = Depends(get_db),
 ):
     exercises = list_exercises(db, current_user)
-    return [_serialize_exercise(ex, current_user) for ex in exercises]
+    alternatives = alternative_payloads_by_exercise_id(db, exercises)
+    return [
+        _serialize_exercise(
+            exercise,
+            current_user,
+            alternatives=alternatives.get(_effective_exercise_id(exercise), []),
+        )
+        for exercise in exercises
+    ]
 
 
 @router.get("/exercises/{exercise_id}/guide", response_model=ExerciseGuide)
@@ -82,20 +104,43 @@ def get_exercise_guide_details(
     current_user: User = Depends(require_user),
     db: Session = Depends(get_db),
 ):
+    exercises = list_exercises(db, current_user)
     exercise = next(
-        (
-            row
-            for row in list_exercises(db, current_user)
-            if _effective_exercise_id(row) == exercise_id
-        ),
+        (row for row in exercises if _effective_exercise_id(row) == exercise_id),
         None,
     )
     if exercise is None:
         raise HTTPException(status_code=404, detail="Упражнение не найдено")
-    guide = get_exercise_guide(exercise)
+    alternatives = alternative_payloads_by_exercise_id(db, exercises)
+    guide = get_exercise_guide(
+        exercise,
+        alternatives=alternatives.get(_effective_exercise_id(exercise), []),
+    )
     if guide is None:
         raise HTTPException(status_code=404, detail="Техника упражнения не заполнена")
     return guide
+
+
+@router.get("/exercises/{exercise_id}", response_model=ExerciseCatalogItem)
+def get_exercise_details(
+    exercise_id: int,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    exercises = list_exercises(db, current_user)
+    exercise = next(
+        (row for row in exercises if _effective_exercise_id(row) == exercise_id),
+        None,
+    )
+    if exercise is None:
+        raise HTTPException(status_code=404, detail="Упражнение не найдено")
+    alternatives = alternative_payloads_by_exercise_id(db, exercises)
+    return _serialize_exercise(
+        exercise,
+        current_user,
+        include_guide=True,
+        alternatives=alternatives.get(_effective_exercise_id(exercise), []),
+    )
 
 
 @router.post(

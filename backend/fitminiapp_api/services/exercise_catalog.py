@@ -11,6 +11,10 @@ from fitminiapp_api.services.coach_clients import (
     _coach_client_ids,
     _resolve_manageable_user,
 )
+from fitminiapp_api.services.exercise_domain import (
+    exercise_metadata_load_options,
+    sync_exercise_domain_metadata,
+)
 from fitminiapp_api.services.program_common import ProgramError
 
 
@@ -37,6 +41,7 @@ def _normalize_optional_text(value: str | None) -> str | None:
 def _load_visible_exercise_rows(db: Session, current_user: User) -> list[Exercise]:
     base_rows = (
         db.query(Exercise)
+        .options(*exercise_metadata_load_options())
         .filter(
             Exercise.created_by_user_id.is_(None),
             Exercise.source_exercise_id.is_(None),
@@ -45,7 +50,12 @@ def _load_visible_exercise_rows(db: Session, current_user: User) -> list[Exercis
         .all()
     )
 
-    personal_rows = db.query(Exercise).filter(Exercise.created_by_user_id == current_user.id).all()
+    personal_rows = (
+        db.query(Exercise)
+        .options(*exercise_metadata_load_options())
+        .filter(Exercise.created_by_user_id == current_user.id)
+        .all()
+    )
 
     overrides_by_source: dict[int, Exercise] = {}
     personal_custom_rows: list[Exercise] = []
@@ -87,6 +97,7 @@ def list_exercises(db: Session, current_user: User) -> list[Exercise]:
     if client_ids:
         rows.extend(
             db.query(Exercise)
+            .options(*exercise_metadata_load_options())
             .filter(
                 Exercise.created_by_user_id.in_(client_ids),
                 Exercise.is_deleted.is_(False),
@@ -141,6 +152,7 @@ def create_exercise(
         is_deleted=False,
     )
     db.add(exercise)
+    sync_exercise_domain_metadata(db, exercise)
     db.commit()
     db.refresh(exercise)
     return exercise
@@ -219,6 +231,7 @@ def update_exercise_for_user(
         exercise.equipment = normalized_equipment
         exercise.difficulty_level = difficulty_level
         exercise.is_deleted = False
+        sync_exercise_domain_metadata(db, exercise)
         db.commit()
         db.refresh(exercise)
         return exercise
@@ -244,6 +257,7 @@ def update_exercise_for_user(
             override.difficulty_level = difficulty_level
             override.is_deleted = False
 
+        sync_exercise_domain_metadata(db, override)
         db.commit()
         db.refresh(override)
         return override

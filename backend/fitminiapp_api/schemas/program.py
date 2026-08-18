@@ -181,9 +181,22 @@ class ProgramAssignedResponse(BaseModel):
 
 
 class ExerciseGuideMuscle(BaseModel):
+    identifier: str | None = None
     name: str
+    role_id: Literal["primary", "secondary"]
     role: str
     function: str
+
+
+class ExerciseTaxonomyItem(BaseModel):
+    identifier: str
+    name: str
+
+
+class ExerciseAlternativeItem(BaseModel):
+    id: int
+    slug: str
+    title: str
 
 
 class ExerciseGuideImage(BaseModel):
@@ -197,10 +210,15 @@ class ExerciseGuide(BaseModel):
     breathing: str
     common_mistakes: list[str]
     muscles: list[ExerciseGuideMuscle]
+    equipment: list[ExerciseTaxonomyItem]
+    safety_notes: list[str]
+    alternatives: list[ExerciseAlternativeItem]
     images: list[ExerciseGuideImage]
+    media_reference: str
     source_name: str
     source_url: str
     source_license: str
+    source_license_url: str | None = None
 
 
 class ExerciseCatalogItem(BaseModel):
@@ -208,6 +226,10 @@ class ExerciseCatalogItem(BaseModel):
     title: str
     primary_muscle: str | None = None
     equipment: str | None = None
+    primary_muscle_ids: list[str]
+    secondary_muscle_ids: list[str]
+    equipment_ids: list[str]
+    alternatives: list[ExerciseAlternativeItem]
     difficulty_level: Literal["beginner", "intermediate", "advanced"]
     edit_target_id: int | None = None
     slug: str | None = None
