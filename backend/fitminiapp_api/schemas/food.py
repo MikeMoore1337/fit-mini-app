@@ -1,0 +1,158 @@
+from __future__ import annotations
+
+from datetime import date
+from decimal import Decimal
+from typing import Literal
+
+from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
+
+FoodType = Literal["system", "branded", "user"]
+FoodProvenance = Literal["internal", "external", "user"]
+FoodTrustLevel = Literal["verified", "unverified"]
+FoodStatus = Literal["draft", "active", "disabled"]
+ServingUnit = Literal["g", "ml", "piece", "serving"]
+
+
+def validate_gtin(value: str | None) -> str | None:
+    if value is None:
+        return None
+    barcode = value.strip()
+    if len(barcode) not in {8, 12, 13, 14} or not barcode.isascii() or not barcode.isdigit():
+        raise ValueError("barcode must be a GTIN-8, UPC-A, EAN-13, or GTIN-14")
+    digits = [int(digit) for digit in barcode]
+    payload = digits[:-1]
+    weighted_sum = sum(
+        digit * (3 if (len(payload) - index) % 2 == 1 else 1) for index, digit in enumerate(payload)
+    )
+    check_digit = (10 - weighted_sum % 10) % 10
+    if check_digit != digits[-1]:
+        raise ValueError("barcode check digit is invalid")
+    return barcode
+
+
+class FoodNutrientsInput(BaseModel):
+    energy_kcal_per_100g: Decimal | None = Field(default=None, ge=0, le=1000)
+    protein_g_per_100g: Decimal | None = Field(default=None, ge=0, le=100)
+    fat_g_per_100g: Decimal | None = Field(default=None, ge=0, le=100)
+    carbs_g_per_100g: Decimal | None = Field(default=None, ge=0, le=100)
+    fiber_g_per_100g: Decimal | None = Field(default=None, ge=0, le=100)
+
+
+class FoodValuesInput(FoodNutrientsInput):
+    name: str = Field(min_length=1, max_length=256)
+    brand: str | None = Field(default=None, max_length=128)
+    barcode: str | None = None
+    standard_serving_amount: Decimal | None = Field(default=None, gt=0, max_digits=10)
+    standard_serving_unit: ServingUnit | None = None
+    standard_serving_weight_g: Decimal | None = Field(default=None, gt=0, max_digits=10)
+
+    @field_validator("name")
+    @classmethod
+    def normalize_name(cls, value: str) -> str:
+        normalized = " ".join(value.split())
+        if not normalized:
+            raise ValueError("name must not be blank")
+        return normalized
+
+    @field_validator("brand")
+    @classmethod
+    def normalize_brand(cls, value: str | None) -> str | None:
+        normalized = " ".join((value or "").split())
+        return normalized or None
+
+    @field_validator("barcode")
+    @classmethod
+    def validate_barcode(cls, value: str | None) -> str | None:
+        return validate_gtin(value)
+
+    @model_validator(mode="after")
+    def validate_serving(self) -> FoodValuesInput:
+        values = (
+            self.standard_serving_amount,
+            self.standard_serving_unit,
+            self.standard_serving_weight_g,
+        )
+        if any(value is not None for value in values) and not all(
+            value is not None for value in values
+        ):
+            raise ValueError("standard serving amount, unit, and weight must be provided together")
+        if (
+            self.standard_serving_unit == "g"
+            and self.standard_serving_amount != self.standard_serving_weight_g
+        ):
+            raise ValueError("a gram serving amount must equal its weight")
+        return self
+
+
+class UserFoodCreate(FoodValuesInput):
+    energy_kcal_per_100g: Decimal = Field(ge=0, le=1000)
+    protein_g_per_100g: Decimal = Field(ge=0, le=100)
+    fat_g_per_100g: Decimal = Field(ge=0, le=100)
+    carbs_g_per_100g: Decimal = Field(ge=0, le=100)
+
+
+class FoodCatalogSource(BaseModel):
+    name: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]{1,63}$")
+    version: str = Field(min_length=1, max_length=64)
+    source_url: HttpUrl
+    license: str = Field(min_length=1, max_length=128)
+    license_url: HttpUrl
+    reviewed_by: str = Field(min_length=1, max_length=128)
+    reviewed_at: date
+    license_verified: Literal[True]
+
+    @field_validator("version", "license", "reviewed_by")
+    @classmethod
+    def reject_blank_values(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("value must not be blank")
+        return normalized
+
+    @field_validator("reviewed_at")
+    @classmethod
+    def reject_future_review_date(cls, value: date) -> date:
+        if value > date.today():
+            raise ValueError("reviewed_at must not be in the future")
+        return value
+
+
+class FoodCatalogItem(FoodValuesInput):
+    external_id: str = Field(min_length=1, max_length=128)
+    food_type: Literal["system", "branded"]
+    status: Literal["active", "disabled"] = "active"
+
+    @field_validator("external_id")
+    @classmethod
+    def normalize_external_id(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("external_id must not be blank")
+        return normalized
+
+    @model_validator(mode="after")
+    def validate_active_nutrients(self) -> FoodCatalogItem:
+        if self.status == "active" and any(
+            value is None
+            for value in (
+                self.energy_kcal_per_100g,
+                self.protein_g_per_100g,
+                self.fat_g_per_100g,
+                self.carbs_g_per_100g,
+            )
+        ):
+            raise ValueError("active catalog foods require energy, protein, fat, and carbs")
+        return self
+
+
+class FoodCatalog(BaseModel):
+    schema_version: Literal[1]
+    source: FoodCatalogSource
+    foods: list[FoodCatalogItem]
+
+    @model_validator(mode="after")
+    def validate_unique_source_ids(self) -> FoodCatalog:
+        source_ids = [food.external_id for food in self.foods]
+        if len(source_ids) != len(set(source_ids)):
+            raise ValueError("catalog external_id values must be unique")
+        return self
