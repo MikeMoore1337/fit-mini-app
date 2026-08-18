@@ -58,7 +58,12 @@ def _backfill_notification_utc() -> None:
 
 
 def upgrade() -> None:
-    op.alter_column("user_programs", "template_id", existing_type=sa.Integer(), nullable=True)
+    with op.batch_alter_table("user_programs") as batch_op:
+        batch_op.alter_column(
+            "template_id",
+            existing_type=sa.Integer(),
+            nullable=True,
+        )
 
     # Если старые параллельные назначения создали несколько активных программ,
     # сохраняем активной только последнюю, не удаляя историю остальных.
@@ -92,34 +97,39 @@ def upgrade() -> None:
         )
         """
     )
-    op.create_unique_constraint(
-        "uq_user_workout_sets_exercise_number",
-        "user_workout_sets",
-        ["workout_exercise_id", "set_number"],
-    )
+    with op.batch_alter_table("user_workout_sets") as batch_op:
+        batch_op.create_unique_constraint(
+            "uq_user_workout_sets_exercise_number",
+            ["workout_exercise_id", "set_number"],
+        )
 
     op.add_column("notifications", sa.Column("scheduled_for_utc", sa.DateTime(), nullable=True))
     _backfill_notification_utc()
-    op.alter_column(
-        "notifications",
-        "scheduled_for_utc",
-        existing_type=sa.DateTime(),
-        nullable=False,
-    )
-    op.create_index(
-        "ix_notifications_scheduled_for_utc",
-        "notifications",
-        ["scheduled_for_utc"],
-    )
+    with op.batch_alter_table("notifications") as batch_op:
+        batch_op.alter_column(
+            "scheduled_for_utc",
+            existing_type=sa.DateTime(),
+            nullable=False,
+        )
+        batch_op.create_index(
+            "ix_notifications_scheduled_for_utc",
+            ["scheduled_for_utc"],
+        )
 
 
 def downgrade() -> None:
-    op.drop_index("ix_notifications_scheduled_for_utc", table_name="notifications")
-    op.drop_column("notifications", "scheduled_for_utc")
-    op.drop_constraint(
-        "uq_user_workout_sets_exercise_number",
-        "user_workout_sets",
-        type_="unique",
-    )
+    with op.batch_alter_table("notifications") as batch_op:
+        batch_op.drop_index("ix_notifications_scheduled_for_utc")
+        batch_op.drop_column("scheduled_for_utc")
+    with op.batch_alter_table("user_workout_sets") as batch_op:
+        batch_op.drop_constraint(
+            "uq_user_workout_sets_exercise_number",
+            type_="unique",
+        )
     op.drop_index("uq_user_programs_one_active_per_user", table_name="user_programs")
-    op.alter_column("user_programs", "template_id", existing_type=sa.Integer(), nullable=False)
+    with op.batch_alter_table("user_programs") as batch_op:
+        batch_op.alter_column(
+            "template_id",
+            existing_type=sa.Integer(),
+            nullable=False,
+        )

@@ -16,37 +16,37 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "exercises",
-        sa.Column("source_exercise_id", sa.Integer(), nullable=True),
-    )
-    op.add_column(
-        "exercises",
-        sa.Column("is_deleted", sa.Boolean(), nullable=False, server_default=sa.text("false")),
-    )
-
-    op.create_index(
-        "ix_exercises_source_exercise_id",
-        "exercises",
-        ["source_exercise_id"],
-        unique=False,
-    )
-
-    op.create_foreign_key(
-        "fk_exercises_source_exercise_id_exercises",
-        "exercises",
-        "exercises",
-        ["source_exercise_id"],
-        ["id"],
-    )
+    with op.batch_alter_table("exercises") as batch_op:
+        batch_op.add_column(
+            sa.Column("source_exercise_id", sa.Integer(), nullable=True),
+        )
+        batch_op.add_column(
+            sa.Column(
+                "is_deleted",
+                sa.Boolean(),
+                nullable=False,
+                server_default=sa.text("false"),
+            ),
+        )
+        batch_op.create_index(
+            "ix_exercises_source_exercise_id",
+            ["source_exercise_id"],
+            unique=False,
+        )
+        batch_op.create_foreign_key(
+            "fk_exercises_source_exercise_id_exercises",
+            "exercises",
+            ["source_exercise_id"],
+            ["id"],
+        )
 
 
 def downgrade() -> None:
-    op.drop_constraint(
-        "fk_exercises_source_exercise_id_exercises",
-        "exercises",
-        type_="foreignkey",
-    )
-    op.drop_index("ix_exercises_source_exercise_id", table_name="exercises")
-    op.drop_column("exercises", "is_deleted")
-    op.drop_column("exercises", "source_exercise_id")
+    with op.batch_alter_table("exercises") as batch_op:
+        batch_op.drop_constraint(
+            "fk_exercises_source_exercise_id_exercises",
+            type_="foreignkey",
+        )
+        batch_op.drop_index("ix_exercises_source_exercise_id")
+        batch_op.drop_column("is_deleted")
+        batch_op.drop_column("source_exercise_id")

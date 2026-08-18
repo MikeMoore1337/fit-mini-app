@@ -14,6 +14,8 @@ down_revision = "0027_nutrition_inputs"
 branch_labels = None
 depends_on = None
 
+UQ_NAMING_CONVENTION = {"uq": "%(table_name)s_%(column_0_name)s_key"}
+
 
 _NON_NULL_TIMESTAMPS = (
     ("coach_client_invites", "created_at"),
@@ -89,18 +91,17 @@ def upgrade() -> None:
                 f'WHERE "{column_name}" IS NULL'
             )
         )
-        op.alter_column(
-            table_name,
-            column_name,
-            existing_type=sa.DateTime(),
-            nullable=False,
-        )
+        with op.batch_alter_table(table_name) as batch_op:
+            batch_op.alter_column(
+                column_name,
+                existing_type=sa.DateTime(),
+                nullable=False,
+            )
 
-    op.drop_constraint(
-        "notification_settings_user_id_key",
-        "notification_settings",
-        type_="unique",
-    )
+    with op.batch_alter_table(
+        "notification_settings", naming_convention=UQ_NAMING_CONVENTION
+    ) as batch_op:
+        batch_op.drop_constraint("notification_settings_user_id_key", type_="unique")
     op.create_index(
         "ix_notification_settings_user_id",
         "notification_settings",
@@ -120,16 +121,16 @@ def downgrade() -> None:
         "ix_notification_settings_user_id",
         table_name="notification_settings",
     )
-    op.create_unique_constraint(
-        "notification_settings_user_id_key",
-        "notification_settings",
-        ["user_id"],
-    )
+    with op.batch_alter_table("notification_settings") as batch_op:
+        batch_op.create_unique_constraint(
+            "notification_settings_user_id_key",
+            ["user_id"],
+        )
 
     for table_name, column_name in reversed(_NON_NULL_TIMESTAMPS):
-        op.alter_column(
-            table_name,
-            column_name,
-            existing_type=sa.DateTime(),
-            nullable=True,
-        )
+        with op.batch_alter_table(table_name) as batch_op:
+            batch_op.alter_column(
+                column_name,
+                existing_type=sa.DateTime(),
+                nullable=True,
+            )

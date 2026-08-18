@@ -113,17 +113,16 @@ def upgrade() -> None:
             """
         )
     )
-    op.alter_column("user_programs", "start_date", nullable=False)
-    op.create_check_constraint(
-        "ck_user_programs_status",
-        "user_programs",
-        "status IN ('scheduled', 'active', 'completed', 'archived')",
-    )
-    op.create_check_constraint(
-        "ck_user_programs_duration_weeks",
-        "user_programs",
-        "duration_weeks >= 1",
-    )
+    with op.batch_alter_table("user_programs") as batch_op:
+        batch_op.alter_column("start_date", nullable=False)
+        batch_op.create_check_constraint(
+            "ck_user_programs_status",
+            "status IN ('scheduled', 'active', 'completed', 'archived')",
+        )
+        batch_op.create_check_constraint(
+            "ck_user_programs_duration_weeks",
+            "duration_weeks >= 1",
+        )
 
     op.add_column(
         "user_workouts",
@@ -172,11 +171,12 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_column("user_workout_exercises", "notes")
     op.drop_column("user_workouts", "week_number")
-    op.drop_constraint("ck_user_programs_duration_weeks", "user_programs", type_="check")
-    op.drop_constraint("ck_user_programs_status", "user_programs", type_="check")
-    op.drop_column("user_programs", "archived_at")
-    op.drop_column("user_programs", "completed_at")
-    op.drop_column("user_programs", "status")
-    op.drop_column("user_programs", "schedule_weekdays")
-    op.drop_column("user_programs", "duration_weeks")
-    op.drop_column("user_programs", "start_date")
+    with op.batch_alter_table("user_programs") as batch_op:
+        batch_op.drop_constraint("ck_user_programs_duration_weeks", type_="check")
+        batch_op.drop_constraint("ck_user_programs_status", type_="check")
+        batch_op.drop_column("archived_at")
+        batch_op.drop_column("completed_at")
+        batch_op.drop_column("status")
+        batch_op.drop_column("schedule_weekdays")
+        batch_op.drop_column("duration_weeks")
+        batch_op.drop_column("start_date")

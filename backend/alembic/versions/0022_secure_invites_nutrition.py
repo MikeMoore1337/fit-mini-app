@@ -14,6 +14,8 @@ down_revision = "0021_coach_client_private_name"
 branch_labels = None
 depends_on = None
 
+FK_NAMING_CONVENTION = {"fk": "%(table_name)s_%(column_0_name)s_fkey"}
+
 
 def upgrade() -> None:
     connection = op.get_bind()
@@ -62,90 +64,73 @@ def upgrade() -> None:
             """
         )
     )
-    op.create_check_constraint(
-        "ck_coach_client_invites_pending_token",
-        "coach_client_invites",
-        "status <> 'pending' OR token_hash IS NOT NULL",
-    )
+    with op.batch_alter_table("coach_client_invites") as batch_op:
+        batch_op.create_check_constraint(
+            "ck_coach_client_invites_pending_token",
+            "status <> 'pending' OR token_hash IS NOT NULL",
+        )
 
     # Stable client codes linked accounts without explicit confirmation of a
     # specific trainer. One-time invitation tokens replace that legacy flow.
     op.drop_index("ix_users_client_code", table_name="users")
     op.drop_column("users", "client_code")
 
-    op.drop_constraint(
-        "nutrition_targets_user_id_fkey",
-        "nutrition_targets",
-        type_="foreignkey",
-    )
-    op.drop_constraint(
-        "nutrition_targets_assigned_by_user_id_fkey",
-        "nutrition_targets",
-        type_="foreignkey",
-    )
-    op.create_foreign_key(
-        "nutrition_targets_user_id_fkey",
-        "nutrition_targets",
-        "users",
-        ["user_id"],
-        ["id"],
-        ondelete="CASCADE",
-    )
-    op.create_foreign_key(
-        "nutrition_targets_assigned_by_user_id_fkey",
-        "nutrition_targets",
-        "users",
-        ["assigned_by_user_id"],
-        ["id"],
-        ondelete="SET NULL",
-    )
-    op.alter_column(
-        "user_profiles",
-        "weight_kg",
-        existing_type=sa.Integer(),
-        type_=sa.Float(),
-        existing_nullable=True,
-        postgresql_using="weight_kg::double precision",
-    )
+    with op.batch_alter_table(
+        "nutrition_targets", naming_convention=FK_NAMING_CONVENTION
+    ) as batch_op:
+        batch_op.drop_constraint("nutrition_targets_user_id_fkey", type_="foreignkey")
+        batch_op.drop_constraint("nutrition_targets_assigned_by_user_id_fkey", type_="foreignkey")
+        batch_op.create_foreign_key(
+            "nutrition_targets_user_id_fkey",
+            "users",
+            ["user_id"],
+            ["id"],
+            ondelete="CASCADE",
+        )
+        batch_op.create_foreign_key(
+            "nutrition_targets_assigned_by_user_id_fkey",
+            "users",
+            ["assigned_by_user_id"],
+            ["id"],
+            ondelete="SET NULL",
+        )
+    with op.batch_alter_table("user_profiles") as batch_op:
+        batch_op.alter_column(
+            "weight_kg",
+            existing_type=sa.Integer(),
+            type_=sa.Float(),
+            existing_nullable=True,
+            postgresql_using="weight_kg::double precision",
+        )
 
 
 def downgrade() -> None:
     op.add_column("users", sa.Column("client_code", sa.String(length=8), nullable=True))
     op.create_index("ix_users_client_code", "users", ["client_code"], unique=True)
-    op.alter_column(
-        "user_profiles",
-        "weight_kg",
-        existing_type=sa.Float(),
-        type_=sa.Integer(),
-        existing_nullable=True,
-        postgresql_using="weight_kg::integer",
-    )
-    op.drop_constraint(
-        "nutrition_targets_assigned_by_user_id_fkey",
-        "nutrition_targets",
-        type_="foreignkey",
-    )
-    op.drop_constraint(
-        "nutrition_targets_user_id_fkey",
-        "nutrition_targets",
-        type_="foreignkey",
-    )
-    op.create_foreign_key(
-        "nutrition_targets_assigned_by_user_id_fkey",
-        "nutrition_targets",
-        "users",
-        ["assigned_by_user_id"],
-        ["id"],
-    )
-    op.create_foreign_key(
-        "nutrition_targets_user_id_fkey",
-        "nutrition_targets",
-        "users",
-        ["user_id"],
-        ["id"],
-    )
-    op.drop_constraint(
-        "ck_coach_client_invites_pending_token",
-        "coach_client_invites",
-        type_="check",
-    )
+    with op.batch_alter_table("user_profiles") as batch_op:
+        batch_op.alter_column(
+            "weight_kg",
+            existing_type=sa.Float(),
+            type_=sa.Integer(),
+            existing_nullable=True,
+            postgresql_using="weight_kg::integer",
+        )
+    with op.batch_alter_table(
+        "nutrition_targets", naming_convention=FK_NAMING_CONVENTION
+    ) as batch_op:
+        batch_op.drop_constraint("nutrition_targets_assigned_by_user_id_fkey", type_="foreignkey")
+        batch_op.drop_constraint("nutrition_targets_user_id_fkey", type_="foreignkey")
+        batch_op.create_foreign_key(
+            "nutrition_targets_assigned_by_user_id_fkey",
+            "users",
+            ["assigned_by_user_id"],
+            ["id"],
+        )
+        batch_op.create_foreign_key(
+            "nutrition_targets_user_id_fkey",
+            "users",
+            ["user_id"],
+            ["id"],
+        )
+    with op.batch_alter_table("coach_client_invites") as batch_op:
+        batch_op.drop_constraint("ck_coach_client_invites_pending_token", type_="check")

@@ -6,7 +6,6 @@ Create Date: 2026-07-31
 """
 
 import secrets
-from datetime import datetime
 
 import sqlalchemy as sa
 
@@ -41,18 +40,17 @@ def upgrade() -> None:
         )
     op.create_index("ix_users_client_code", "users", ["client_code"], unique=True)
 
-    op.drop_constraint("uq_coach_client", "coach_clients", type_="unique")
-    op.drop_constraint("uq_coach_clients_client_user_id", "coach_clients", type_="unique")
-    op.add_column(
-        "coach_clients",
-        sa.Column("status", sa.String(length=16), nullable=False, server_default="active"),
-    )
-    op.add_column("coach_clients", sa.Column("accepted_at", sa.DateTime(), nullable=True))
-    op.add_column("coach_clients", sa.Column("ended_at", sa.DateTime(), nullable=True))
-    op.add_column("coach_clients", sa.Column("ended_reason", sa.String(length=64), nullable=True))
+    with op.batch_alter_table("coach_clients") as batch_op:
+        batch_op.drop_constraint("uq_coach_client", type_="unique")
+        batch_op.drop_constraint("uq_coach_clients_client_user_id", type_="unique")
+        batch_op.add_column(
+            sa.Column("status", sa.String(length=16), nullable=False, server_default="active")
+        )
+        batch_op.add_column(sa.Column("accepted_at", sa.DateTime(), nullable=True))
+        batch_op.add_column(sa.Column("ended_at", sa.DateTime(), nullable=True))
+        batch_op.add_column(sa.Column("ended_reason", sa.String(length=64), nullable=True))
     connection.execute(
-        sa.text("UPDATE coach_clients SET accepted_at = COALESCE(created_at, :now)"),
-        {"now": datetime.now()},
+        sa.text("UPDATE coach_clients SET accepted_at = COALESCE(created_at, CURRENT_TIMESTAMP)")
     )
     op.create_index(
         "uq_coach_clients_one_active_per_client",
@@ -63,52 +61,41 @@ def upgrade() -> None:
         sqlite_where=sa.text("status = 'active'"),
     )
 
-    op.drop_constraint("uq_coach_client_invite_username", "coach_client_invites", type_="unique")
-    op.drop_constraint("uq_coach_client_invite_telegram_id", "coach_client_invites", type_="unique")
-    op.alter_column(
-        "coach_client_invites", "username", existing_type=sa.String(length=64), nullable=True
-    )
-    op.add_column(
-        "coach_client_invites",
-        sa.Column("client_user_id", sa.Integer(), nullable=True),
-    )
-    op.create_foreign_key(
-        "fk_coach_client_invites_client_user_id_users",
-        "coach_client_invites",
-        "users",
-        ["client_user_id"],
-        ["id"],
-    )
-    op.create_index(
-        "ix_coach_client_invites_client_user_id",
-        "coach_client_invites",
-        ["client_user_id"],
-    )
-    op.add_column(
-        "coach_client_invites", sa.Column("token_hash", sa.String(length=64), nullable=True)
-    )
-    op.create_index(
-        "ix_coach_client_invites_token_hash",
-        "coach_client_invites",
-        ["token_hash"],
-        unique=True,
-    )
-    op.add_column(
-        "coach_client_invites",
-        sa.Column(
-            "source",
-            sa.String(length=32),
-            nullable=False,
-            server_default="username_search",
-        ),
-    )
-    op.add_column(
-        "coach_client_invites",
-        sa.Column("status", sa.String(length=16), nullable=False, server_default="pending"),
-    )
-    op.add_column("coach_client_invites", sa.Column("expires_at", sa.DateTime(), nullable=True))
-    op.add_column("coach_client_invites", sa.Column("accepted_at", sa.DateTime(), nullable=True))
-    op.add_column("coach_client_invites", sa.Column("declined_at", sa.DateTime(), nullable=True))
+    with op.batch_alter_table("coach_client_invites") as batch_op:
+        batch_op.drop_constraint("uq_coach_client_invite_username", type_="unique")
+        batch_op.drop_constraint("uq_coach_client_invite_telegram_id", type_="unique")
+        batch_op.alter_column("username", existing_type=sa.String(length=64), nullable=True)
+        batch_op.add_column(sa.Column("client_user_id", sa.Integer(), nullable=True))
+        batch_op.create_foreign_key(
+            "fk_coach_client_invites_client_user_id_users",
+            "users",
+            ["client_user_id"],
+            ["id"],
+        )
+        batch_op.create_index(
+            "ix_coach_client_invites_client_user_id",
+            ["client_user_id"],
+        )
+        batch_op.add_column(sa.Column("token_hash", sa.String(length=64), nullable=True))
+        batch_op.create_index(
+            "ix_coach_client_invites_token_hash",
+            ["token_hash"],
+            unique=True,
+        )
+        batch_op.add_column(
+            sa.Column(
+                "source",
+                sa.String(length=32),
+                nullable=False,
+                server_default="username_search",
+            )
+        )
+        batch_op.add_column(
+            sa.Column("status", sa.String(length=16), nullable=False, server_default="pending")
+        )
+        batch_op.add_column(sa.Column("expires_at", sa.DateTime(), nullable=True))
+        batch_op.add_column(sa.Column("accepted_at", sa.DateTime(), nullable=True))
+        batch_op.add_column(sa.Column("declined_at", sa.DateTime(), nullable=True))
     connection.execute(
         sa.text(
             """
@@ -148,20 +135,20 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_index("uq_coach_client_invites_pending_pair", table_name="coach_client_invites")
-    op.drop_column("coach_client_invites", "declined_at")
-    op.drop_column("coach_client_invites", "accepted_at")
-    op.drop_column("coach_client_invites", "expires_at")
-    op.drop_column("coach_client_invites", "status")
-    op.drop_column("coach_client_invites", "source")
-    op.drop_index("ix_coach_client_invites_token_hash", table_name="coach_client_invites")
-    op.drop_column("coach_client_invites", "token_hash")
-    op.drop_index("ix_coach_client_invites_client_user_id", table_name="coach_client_invites")
-    op.drop_constraint(
-        "fk_coach_client_invites_client_user_id_users",
-        "coach_client_invites",
-        type_="foreignkey",
-    )
-    op.drop_column("coach_client_invites", "client_user_id")
+    with op.batch_alter_table("coach_client_invites") as batch_op:
+        batch_op.drop_column("declined_at")
+        batch_op.drop_column("accepted_at")
+        batch_op.drop_column("expires_at")
+        batch_op.drop_column("status")
+        batch_op.drop_column("source")
+        batch_op.drop_index("ix_coach_client_invites_token_hash")
+        batch_op.drop_column("token_hash")
+        batch_op.drop_index("ix_coach_client_invites_client_user_id")
+        batch_op.drop_constraint(
+            "fk_coach_client_invites_client_user_id_users",
+            type_="foreignkey",
+        )
+        batch_op.drop_column("client_user_id")
     op.execute("DELETE FROM coach_client_invites WHERE username IS NULL")
     op.execute(
         """
@@ -183,31 +170,25 @@ def downgrade() -> None:
           )
         """
     )
-    op.alter_column(
-        "coach_client_invites", "username", existing_type=sa.String(length=64), nullable=False
-    )
-    op.create_unique_constraint(
-        "uq_coach_client_invite_telegram_id",
-        "coach_client_invites",
-        ["coach_user_id", "telegram_user_id"],
-    )
-    op.create_unique_constraint(
-        "uq_coach_client_invite_username",
-        "coach_client_invites",
-        ["coach_user_id", "username"],
-    )
+    with op.batch_alter_table("coach_client_invites") as batch_op:
+        batch_op.alter_column("username", existing_type=sa.String(length=64), nullable=False)
+        batch_op.create_unique_constraint(
+            "uq_coach_client_invite_telegram_id",
+            ["coach_user_id", "telegram_user_id"],
+        )
+        batch_op.create_unique_constraint(
+            "uq_coach_client_invite_username",
+            ["coach_user_id", "username"],
+        )
 
     op.drop_index("uq_coach_clients_one_active_per_client", table_name="coach_clients")
-    op.drop_column("coach_clients", "ended_reason")
-    op.drop_column("coach_clients", "ended_at")
-    op.drop_column("coach_clients", "accepted_at")
-    op.drop_column("coach_clients", "status")
-    op.create_unique_constraint(
-        "uq_coach_clients_client_user_id", "coach_clients", ["client_user_id"]
-    )
-    op.create_unique_constraint(
-        "uq_coach_client", "coach_clients", ["coach_user_id", "client_user_id"]
-    )
+    with op.batch_alter_table("coach_clients") as batch_op:
+        batch_op.drop_column("ended_reason")
+        batch_op.drop_column("ended_at")
+        batch_op.drop_column("accepted_at")
+        batch_op.drop_column("status")
+        batch_op.create_unique_constraint("uq_coach_clients_client_user_id", ["client_user_id"])
+        batch_op.create_unique_constraint("uq_coach_client", ["coach_user_id", "client_user_id"])
 
     op.drop_index("ix_users_client_code", table_name="users")
     op.drop_column("users", "client_code")

@@ -18,7 +18,12 @@ depends_on = None
 def upgrade() -> None:
     op.add_column("refresh_tokens", sa.Column("family_id", sa.String(length=64), nullable=True))
     op.execute(sa.text("UPDATE refresh_tokens SET family_id = jti WHERE family_id IS NULL"))
-    op.alter_column("refresh_tokens", "family_id", existing_type=sa.String(length=64), nullable=False)
+    with op.batch_alter_table("refresh_tokens") as batch_op:
+        batch_op.alter_column(
+            "family_id",
+            existing_type=sa.String(length=64),
+            nullable=False,
+        )
     op.create_index("ix_refresh_tokens_family_id", "refresh_tokens", ["family_id"], unique=False)
 
     op.add_column(

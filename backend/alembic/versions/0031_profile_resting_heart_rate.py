@@ -16,21 +16,20 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "user_profiles",
-        sa.Column("resting_heart_rate", sa.Integer(), nullable=True),
-    )
-    op.create_check_constraint(
-        "ck_user_profiles_resting_heart_rate_range",
-        "user_profiles",
-        "resting_heart_rate IS NULL OR resting_heart_rate BETWEEN 30 AND 120",
-    )
+    with op.batch_alter_table("user_profiles") as batch_op:
+        batch_op.add_column(
+            sa.Column("resting_heart_rate", sa.Integer(), nullable=True),
+        )
+        batch_op.create_check_constraint(
+            "ck_user_profiles_resting_heart_rate_range",
+            "resting_heart_rate IS NULL OR resting_heart_rate BETWEEN 30 AND 120",
+        )
 
 
 def downgrade() -> None:
-    op.drop_constraint(
-        "ck_user_profiles_resting_heart_rate_range",
-        "user_profiles",
-        type_="check",
-    )
-    op.drop_column("user_profiles", "resting_heart_rate")
+    with op.batch_alter_table("user_profiles") as batch_op:
+        batch_op.drop_constraint(
+            "ck_user_profiles_resting_heart_rate_range",
+            type_="check",
+        )
+        batch_op.drop_column("resting_heart_rate")

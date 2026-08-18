@@ -20,40 +20,35 @@ def upgrade() -> None:
         "DELETE FROM coach_clients WHERE id NOT IN "
         "(SELECT MAX(id) FROM coach_clients GROUP BY client_user_id)"
     )
-    op.create_unique_constraint(
-        "uq_coach_clients_client_user_id",
-        "coach_clients",
-        ["client_user_id"],
-    )
-    op.add_column(
-        "coach_client_invites",
-        sa.Column("telegram_user_id", sa.BigInteger(), nullable=True),
-    )
-    op.create_index(
-        "ix_coach_client_invites_telegram_user_id",
-        "coach_client_invites",
-        ["telegram_user_id"],
-    )
-    op.create_unique_constraint(
-        "uq_coach_client_invite_telegram_id",
-        "coach_client_invites",
-        ["coach_user_id", "telegram_user_id"],
-    )
+    with op.batch_alter_table("coach_clients") as batch_op:
+        batch_op.create_unique_constraint(
+            "uq_coach_clients_client_user_id",
+            ["client_user_id"],
+        )
+    with op.batch_alter_table("coach_client_invites") as batch_op:
+        batch_op.add_column(
+            sa.Column("telegram_user_id", sa.BigInteger(), nullable=True),
+        )
+        batch_op.create_index(
+            "ix_coach_client_invites_telegram_user_id",
+            ["telegram_user_id"],
+        )
+        batch_op.create_unique_constraint(
+            "uq_coach_client_invite_telegram_id",
+            ["coach_user_id", "telegram_user_id"],
+        )
 
 
 def downgrade() -> None:
-    op.drop_constraint(
-        "uq_coach_client_invite_telegram_id",
-        "coach_client_invites",
-        type_="unique",
-    )
-    op.drop_index(
-        "ix_coach_client_invites_telegram_user_id",
-        table_name="coach_client_invites",
-    )
-    op.drop_column("coach_client_invites", "telegram_user_id")
-    op.drop_constraint(
-        "uq_coach_clients_client_user_id",
-        "coach_clients",
-        type_="unique",
-    )
+    with op.batch_alter_table("coach_client_invites") as batch_op:
+        batch_op.drop_constraint(
+            "uq_coach_client_invite_telegram_id",
+            type_="unique",
+        )
+        batch_op.drop_index("ix_coach_client_invites_telegram_user_id")
+        batch_op.drop_column("telegram_user_id")
+    with op.batch_alter_table("coach_clients") as batch_op:
+        batch_op.drop_constraint(
+            "uq_coach_clients_client_user_id",
+            type_="unique",
+        )
