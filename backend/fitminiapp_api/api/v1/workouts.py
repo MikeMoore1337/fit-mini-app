@@ -156,6 +156,7 @@ def _serialize_workout(workout: UserWorkout, db: Session, current_user: User) ->
                         "set_number": set_item.set_number,
                         "actual_reps": set_item.actual_reps,
                         "actual_weight": set_item.actual_weight,
+                        "rir": set_item.rir,
                         "is_completed": set_item.is_completed,
                     }
                     for set_item in sorted(item.sets, key=lambda x: x.set_number)
@@ -461,6 +462,8 @@ def update_workout_set(
         set_row.actual_reps = changes["actual_reps"]
     if "actual_weight" in changes:
         set_row.actual_weight = changes["actual_weight"]
+    if "rir" in changes:
+        set_row.rir = changes["rir"]
     if "is_completed" in changes and changes["is_completed"] is not None:
         set_row.is_completed = changes["is_completed"]
 
@@ -472,6 +475,7 @@ def update_workout_set(
         "set_number": set_row.set_number,
         "actual_reps": set_row.actual_reps,
         "actual_weight": set_row.actual_weight,
+        "rir": set_row.rir,
         "is_completed": set_row.is_completed,
     }
 

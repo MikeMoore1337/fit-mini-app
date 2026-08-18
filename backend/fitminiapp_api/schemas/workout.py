@@ -1,6 +1,13 @@
 from datetime import date, datetime, time
+from typing import Literal
 
 from pydantic import BaseModel, Field
+
+RirValue = Literal["0", "1", "2", "3", "4+"]
+RIR_DESCRIPTION = (
+    "Optional repetitions-in-reserve category after the set; 4+ means many repetitions "
+    "remained, not an exact value of four"
+)
 
 
 class WorkoutSetCreate(BaseModel):
@@ -8,12 +15,14 @@ class WorkoutSetCreate(BaseModel):
     set_number: int
     actual_reps: int | None = None
     actual_weight: float | None = None
+    rir: RirValue | None = Field(default=None, description=RIR_DESCRIPTION)
     is_completed: bool = True
 
 
 class WorkoutSetUpdate(BaseModel):
     actual_reps: int | None = Field(default=None, ge=0)
     actual_weight: float | None = Field(default=None, ge=0)
+    rir: RirValue | None = Field(default=None, description=RIR_DESCRIPTION)
     is_completed: bool | None = None
 
 
@@ -22,6 +31,7 @@ class LoggedSetItem(BaseModel):
     set_number: int
     actual_reps: int | None = None
     actual_weight: float | None = None
+    rir: RirValue | None = Field(default=None, description=RIR_DESCRIPTION)
     is_completed: bool = True
 
 
@@ -56,6 +66,7 @@ class WorkoutStatusResponse(BaseModel):
     set_number: int
     actual_reps: int | None = None
     actual_weight: float | None = None
+    rir: RirValue | None = Field(default=None, description=RIR_DESCRIPTION)
     is_completed: bool
 
 
@@ -132,6 +143,7 @@ class WorkoutTimelineSet(BaseModel):
     set_number: int
     actual_reps: int | None = None
     actual_weight: float | None = None
+    rir: RirValue | None = Field(default=None, description=RIR_DESCRIPTION)
     is_completed: bool
 
 
