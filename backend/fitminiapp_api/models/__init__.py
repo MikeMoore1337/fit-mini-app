@@ -3,7 +3,7 @@ from fitminiapp_api.models.auth_identity import AuthActionToken, AuthIdentity, L
 from fitminiapp_api.models.billing import Payment, Plan, Subscription
 from fitminiapp_api.models.exercise import Exercise
 from fitminiapp_api.models.food import Food, FoodFavorite
-from fitminiapp_api.models.food_diary import FoodDiaryEntry
+from fitminiapp_api.models.food_diary import FoodDiaryCopyOperation, FoodDiaryEntry
 from fitminiapp_api.models.notification import Notification, NotificationSetting
 from fitminiapp_api.models.nutrition import NutritionTarget
 from fitminiapp_api.models.program import (
@@ -16,6 +16,7 @@ from fitminiapp_api.models.program import (
     UserWorkoutExercise,
     UserWorkoutSet,
 )
+from fitminiapp_api.models.recipe import Recipe, RecipeIngredient
 from fitminiapp_api.models.token import RefreshToken
 from fitminiapp_api.models.user import (
     BodyMeasurement,
@@ -36,6 +37,7 @@ __all__ = [
     "CoachRoleApplication",
     "Exercise",
     "Food",
+    "FoodDiaryCopyOperation",
     "FoodDiaryEntry",
     "FoodFavorite",
     "HiddenProgramTemplate",
@@ -48,6 +50,8 @@ __all__ = [
     "ProgramTemplate",
     "ProgramTemplateDay",
     "ProgramTemplateExercise",
+    "Recipe",
+    "RecipeIngredient",
     "RefreshToken",
     "Subscription",
     "User",

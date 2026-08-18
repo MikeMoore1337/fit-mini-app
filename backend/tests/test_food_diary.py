@@ -493,8 +493,11 @@ def test_food_diary_migration_upgrades_from_food_domain_head(tmp_path: Path) -> 
         migration.upgrade()
         schema = inspect(connection)
         assert "food_diary_entries" in schema.get_table_names()
+        task_18_columns = {"recipe_id", "copy_operation_id", "copied_from_entry_id"}
         assert {column["name"] for column in schema.get_columns("food_diary_entries")} == {
-            column.name for column in FoodDiaryEntry.__table__.columns
+            column.name
+            for column in FoodDiaryEntry.__table__.columns
+            if column.name not in task_18_columns
         }
         assert {
             constraint["name"] for constraint in schema.get_check_constraints("food_diary_entries")
@@ -502,6 +505,7 @@ def test_food_diary_migration_upgrades_from_food_domain_head(tmp_path: Path) -> 
             constraint.name
             for constraint in FoodDiaryEntry.__table__.constraints
             if isinstance(constraint, CheckConstraint)
+            and constraint.name != "ck_food_diary_entries_single_source"
         }
         assert {index["name"] for index in schema.get_indexes("food_diary_entries")} == {
             "ix_food_diary_entries_user_date_meal"

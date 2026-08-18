@@ -1,6 +1,7 @@
 from datetime import date
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
 from fitminiapp_api.api.dependencies.auth import require_user
@@ -13,15 +14,29 @@ from fitminiapp_api.schemas.food import (
     UserFoodUpdate,
 )
 from fitminiapp_api.schemas.food_diary import (
+    FoodDiaryCopyDay,
+    FoodDiaryCopyMeal,
+    FoodDiaryCopyProduct,
+    FoodDiaryCopyResponse,
     FoodDiaryDayResponse,
     FoodDiaryEntryCreate,
     FoodDiaryEntryResponse,
     FoodDiaryEntryUpdate,
 )
 from fitminiapp_api.schemas.nutrition import NutritionTargetResponse, NutritionTargetSave
+from fitminiapp_api.schemas.recipe import (
+    RecipeCreate,
+    RecipeListResponse,
+    RecipeResponse,
+    RecipeUpdate,
+)
 from fitminiapp_api.services.food_diary import (
+    FoodDiaryConflictError,
     FoodDiaryError,
     FoodDiaryNotFoundError,
+    copy_diary_day,
+    copy_diary_meal,
+    copy_diary_product,
     create_food_diary_entry,
     delete_food_diary_entry,
     get_food_diary_day,
@@ -41,6 +56,15 @@ from fitminiapp_api.services.foods import (
     update_user_food,
 )
 from fitminiapp_api.services.nutrition import NutritionError, save_nutrition_target
+from fitminiapp_api.services.recipes import (
+    RecipeError,
+    RecipeNotFoundError,
+    create_recipe,
+    delete_recipe,
+    get_recipe_response,
+    list_recipes,
+    update_recipe,
+)
 
 router = APIRouter()
 
@@ -56,7 +80,21 @@ def _raise_food_http_error(exc: FoodError) -> None:
 def _raise_diary_http_error(exc: FoodDiaryError) -> None:
     if isinstance(exc, FoodDiaryNotFoundError):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    if isinstance(exc, FoodDiaryConflictError):
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+def _raise_recipe_http_error(exc: RecipeError) -> None:
+    if isinstance(exc, RecipeNotFoundError):
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+IdempotencyKey = Annotated[
+    str,
+    Header(alias="Idempotency-Key", min_length=8, max_length=128),
+]
 
 
 @router.post(
@@ -172,6 +210,70 @@ def remove_food_favorite(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
+@router.post(
+    "/recipes",
+    response_model=RecipeResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_user_recipe(
+    payload: RecipeCreate,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        return create_recipe(db, current_user, payload)
+    except RecipeError as exc:
+        _raise_recipe_http_error(exc)
+
+
+@router.get("/recipes", response_model=RecipeListResponse)
+def get_recipes(
+    limit: int = Query(default=20, ge=1, le=50),
+    offset: int = Query(default=0, ge=0, le=10_000),
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    return list_recipes(db, current_user, limit=limit, offset=offset)
+
+
+@router.get("/recipes/{recipe_id}", response_model=RecipeResponse)
+def get_recipe(
+    recipe_id: int,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        return get_recipe_response(db, current_user, recipe_id)
+    except RecipeError as exc:
+        _raise_recipe_http_error(exc)
+
+
+@router.patch("/recipes/{recipe_id}", response_model=RecipeResponse)
+def patch_recipe(
+    recipe_id: int,
+    payload: RecipeUpdate,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        return update_recipe(db, current_user, recipe_id, payload)
+    except RecipeError as exc:
+        _raise_recipe_http_error(exc)
+
+
+@router.delete("/recipes/{recipe_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_recipe(
+    recipe_id: int,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        delete_recipe(db, current_user, recipe_id)
+    except RecipeError as exc:
+        _raise_recipe_http_error(exc)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.get("/diary", response_model=FoodDiaryDayResponse)
 def get_diary_day(
     diary_date: date | None = None,
@@ -224,6 +326,57 @@ def delete_diary_entry(
     except FoodDiaryError as exc:
         _raise_diary_http_error(exc)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/diary/copy/product",
+    response_model=FoodDiaryCopyResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def copy_product(
+    payload: FoodDiaryCopyProduct,
+    idempotency_key: IdempotencyKey,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        return copy_diary_product(db, current_user, payload, idempotency_key)
+    except FoodDiaryError as exc:
+        _raise_diary_http_error(exc)
+
+
+@router.post(
+    "/diary/copy/meal",
+    response_model=FoodDiaryCopyResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def copy_meal(
+    payload: FoodDiaryCopyMeal,
+    idempotency_key: IdempotencyKey,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        return copy_diary_meal(db, current_user, payload, idempotency_key)
+    except FoodDiaryError as exc:
+        _raise_diary_http_error(exc)
+
+
+@router.post(
+    "/diary/copy/day",
+    response_model=FoodDiaryCopyResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def copy_day(
+    payload: FoodDiaryCopyDay,
+    idempotency_key: IdempotencyKey,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        return copy_diary_day(db, current_user, payload, idempotency_key)
+    except FoodDiaryError as exc:
+        _raise_diary_http_error(exc)
 
 
 @router.post("/targets", response_model=NutritionTargetResponse)
