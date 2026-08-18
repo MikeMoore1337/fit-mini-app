@@ -21,6 +21,7 @@ from fitminiapp_api.schemas.progress import ProgressPeriodDays, ProgressSummaryR
 from fitminiapp_api.schemas.workout import (
     BodyMeasurementResponse,
     BodyMeasurementSave,
+    TrainingAnalyticsResponse,
     WorkoutFinishRequest,
     WorkoutHistoryItem,
     WorkoutHistorySummary,
@@ -31,7 +32,7 @@ from fitminiapp_api.schemas.workout import (
     WorkoutStatusResponse,
     WorkoutTodayResponse,
 )
-from fitminiapp_api.services.analytics import build_user_progress
+from fitminiapp_api.services.analytics import build_training_analytics, build_user_progress
 from fitminiapp_api.services.exercise_catalog import get_visible_exercise_display_map
 from fitminiapp_api.services.exercise_guides import get_exercise_guide
 from fitminiapp_api.services.notifications import queue_telegram_notification
@@ -341,6 +342,21 @@ def workout_progress_summary(
     db: Session = Depends(get_db),
 ):
     return build_progress_summary(db, current_user, period_days)
+
+
+@router.get("/progress/training-analytics", response_model=TrainingAnalyticsResponse)
+def workout_training_analytics(
+    period_days: ProgressPeriodDays = ProgressPeriodDays.DAYS_30,
+    exercise_history_limit: int = Query(default=20, ge=1, le=100),
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    return build_training_analytics(
+        db,
+        current_user,
+        period_days,
+        exercise_history_limit=exercise_history_limit,
+    )
 
 
 @router.delete("/today", status_code=status.HTTP_204_NO_CONTENT)

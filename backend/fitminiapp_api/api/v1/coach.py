@@ -34,12 +34,17 @@ from fitminiapp_api.schemas.user import UserProfileUpdate
 from fitminiapp_api.schemas.workout import (
     BodyMeasurementResponse,
     BodyMeasurementSave,
+    TrainingAnalyticsResponse,
     WorkoutProgressResponse,
     WorkoutRescheduleRequest,
     WorkoutScheduleItem,
     WorkoutTimelineItem,
 )
-from fitminiapp_api.services.analytics import build_user_progress, build_workout_timeline
+from fitminiapp_api.services.analytics import (
+    build_training_analytics,
+    build_user_progress,
+    build_workout_timeline,
+)
 from fitminiapp_api.services.audit import record_audit_event
 from fitminiapp_api.services.coach_clients import (
     create_coach_invite_link,
@@ -218,6 +223,26 @@ def coach_client_progress_summary(
 ):
     client = _managed_client(db, current_user, client_id)
     return build_progress_summary(db, client, period_days)
+
+
+@router.get(
+    "/clients/{client_id}/training-analytics",
+    response_model=TrainingAnalyticsResponse,
+)
+def coach_client_training_analytics(
+    client_id: int,
+    period_days: ProgressPeriodDays = ProgressPeriodDays.DAYS_30,
+    exercise_history_limit: int = Query(default=20, ge=1, le=100),
+    current_user: User = Depends(require_coach_or_admin),
+    db: Session = Depends(get_db),
+):
+    client = _managed_client(db, current_user, client_id)
+    return build_training_analytics(
+        db,
+        client,
+        period_days,
+        exercise_history_limit=exercise_history_limit,
+    )
 
 
 @router.get(
