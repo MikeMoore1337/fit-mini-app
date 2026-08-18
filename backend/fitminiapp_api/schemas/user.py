@@ -6,11 +6,13 @@ from pydantic import BaseModel, Field, field_validator
 from fitminiapp_api.core.timezone import is_valid_timezone
 from fitminiapp_api.schemas.nutrition import NutritionTargetResponse
 
+ProfileGoal = Literal["muscle_gain", "fat_loss", "maintenance", "recomposition"]
+
 
 class UserProfileUpdate(BaseModel):
     full_name: str | None = Field(default=None, max_length=128)
     birth_date: date | None = None
-    goal: Literal["muscle_gain", "fat_loss", "maintenance", "recomposition"] | None = None
+    goal: ProfileGoal | None = None
     level: Literal["beginner", "intermediate", "advanced"] | None = None
     height_cm: int | None = Field(default=None, ge=100, le=250)
     weight_kg: float | None = Field(default=None, ge=20, le=350, allow_inf_nan=False)
@@ -67,7 +69,7 @@ class HeartRateRangeResponse(BaseModel):
 class HeartRatePreviewRequest(BaseModel):
     birth_date: date
     resting_heart_rate: int | None = Field(default=None, ge=30, le=120)
-    goal: Literal["muscle_gain", "fat_loss", "maintenance", "recomposition"] | None = None
+    goal: ProfileGoal | None = None
 
     @field_validator("birth_date")
     @classmethod
@@ -106,6 +108,15 @@ class UserProfileResponse(BaseModel):
     kbju: NutritionTargetResponse | None = None
 
 
+OnboardingField = Literal["goal"]
+
+
+class OnboardingStateResponse(BaseModel):
+    status: Literal["required", "complete"]
+    required_fields: list[OnboardingField]
+    missing_fields: list[OnboardingField]
+
+
 class TrainerResponse(BaseModel):
     id: int
     telegram_user_id: int | None = None
@@ -128,5 +139,6 @@ class UserResponse(BaseModel):
     has_active_program: bool = False
     has_workout_history: bool = False
     auth_providers: list[str] = Field(default_factory=list)
+    onboarding: OnboardingStateResponse
     profile: UserProfileResponse | None = None
     trainer: TrainerResponse | None = None

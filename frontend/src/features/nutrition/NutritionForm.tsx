@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
 import { api } from '../../shared/api/client';
-import type { NutritionTarget } from '../../shared/api/types';
+import type { NutritionTarget, UserProfile } from '../../shared/api/types';
 import { usePersistentState } from '../../shared/storage';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Card, DisclosureIcon } from '../../shared/ui/common';
@@ -158,8 +158,32 @@ const newCardioTraining = (): CardioTraining => ({
 function fromInitial(
   initial: NutritionTarget | null | undefined,
   targetTelegramId: number | null | undefined,
+  profile: UserProfile | null | undefined,
 ): NutritionCalculatorInput {
-  if (!initial) return { ...defaults, target_telegram_user_id: targetTelegramId };
+  if (!initial) {
+    const birthDate = profile?.birth_date ? new Date(`${profile.birth_date}T12:00:00`) : null;
+    const now = new Date();
+    const age = birthDate
+      ? now.getFullYear() -
+        birthDate.getFullYear() -
+        (now.getMonth() < birthDate.getMonth() ||
+        (now.getMonth() === birthDate.getMonth() && now.getDate() < birthDate.getDate())
+          ? 1
+          : 0)
+      : null;
+    const profileGoal =
+      profile?.goal && Object.hasOwn(goalOptions, profile.goal)
+        ? (profile.goal as NutritionCalculatorInput['goal'])
+        : defaults.goal;
+    return {
+      ...defaults,
+      target_telegram_user_id: targetTelegramId,
+      goal: profileGoal,
+      height_cm: profile?.height_cm ?? defaults.height_cm,
+      weight_kg: profile?.weight_kg ?? defaults.weight_kg,
+      age: age && age >= 18 && age <= 100 ? age : defaults.age,
+    };
+  }
   return {
     target_telegram_user_id: targetTelegramId,
     sex: initial.sex as NutritionCalculatorInput['sex'],
@@ -192,7 +216,7 @@ export function NutritionForm({
   const queryClient = useQueryClient();
   const [form, setForm, clearDraft] = usePersistentState<NutritionCalculatorInput>(
     `fit_nutrition_draft_v2_${targetTelegramId ? `client_${targetTelegramId}` : `user_${user?.id ?? 'me'}`}`,
-    () => fromInitial(initial, targetTelegramId),
+    () => fromInitial(initial, targetTelegramId, targetTelegramId ? null : user?.profile),
   );
 
   const calculation = useMemo(() => calculateNutritionEstimate(form), [form]);

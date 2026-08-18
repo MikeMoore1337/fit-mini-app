@@ -48,6 +48,7 @@ from fitminiapp_api.services.nutrition import (
     NutritionError,
     build_nutrition_target_response_for_user,
 )
+from fitminiapp_api.services.onboarding import build_onboarding_state
 from fitminiapp_api.services.profile import (
     ProfileError,
     calculate_profile_heart_rates,
@@ -115,6 +116,7 @@ def _build_user_response(db: Session, user) -> UserResponse:
         has_active_program=has_active_program,
         has_workout_history=has_workout_history,
         auth_providers=sorted(identity.provider for identity in user.auth_identities),
+        onboarding=build_onboarding_state(user.profile),
         profile=UserProfileResponse(
             full_name=user.profile.full_name if user.profile else None,
             birth_date=user.profile.birth_date if user.profile else None,
