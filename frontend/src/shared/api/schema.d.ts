@@ -2407,6 +2407,10 @@ export interface components {
             rest_seconds: number;
             /** Notes */
             notes?: string | null;
+            /** Superset Group */
+            superset_group?: number | null;
+            /** Superset Order */
+            superset_order?: number | null;
         };
         /** CoachRoleApplicationResponse */
         CoachRoleApplicationResponse: {
@@ -3175,6 +3179,10 @@ export interface components {
              * @description Optional repetitions-in-reserve category after the set; 4+ means many repetitions remained, not an exact value of four
              */
             rir?: ("0" | "1" | "2" | "3" | "4+") | null;
+            /** Set Kind */
+            set_kind?: ("warmup" | "working" | "drop") | null;
+            /** Reached Failure */
+            reached_failure?: boolean | null;
             /**
              * Is Completed
              * @default true
@@ -3614,6 +3622,10 @@ export interface components {
             rest_seconds: number;
             /** Notes */
             notes?: string | null;
+            /** Superset Group */
+            superset_group?: number | null;
+            /** Superset Order */
+            superset_order?: number | null;
         };
         /** ProgramTemplateExerciseResponse */
         ProgramTemplateExerciseResponse: {
@@ -3631,6 +3643,10 @@ export interface components {
             rest_seconds: number;
             /** Notes */
             notes?: string | null;
+            /** Superset Group */
+            superset_group?: number | null;
+            /** Superset Order */
+            superset_order?: number | null;
             /**
              * Has Guide
              * @default false
@@ -4011,6 +4027,10 @@ export interface components {
              * @description Optional repetitions-in-reserve category after the set; 4+ means many repetitions remained, not an exact value of four
              */
             rir?: ("0" | "1" | "2" | "3" | "4+") | null;
+            /** Set Kind */
+            set_kind?: ("warmup" | "working" | "drop") | null;
+            /** Reached Failure */
+            reached_failure?: boolean | null;
         };
         /** TrainingPeriodSummary */
         TrainingPeriodSummary: {
@@ -4266,6 +4286,10 @@ export interface components {
             rest_seconds: number;
             /** Notes */
             notes?: string | null;
+            /** Superset Group */
+            superset_group?: number | null;
+            /** Superset Order */
+            superset_order?: number | null;
             /**
              * Has Guide
              * @default false
@@ -4382,6 +4406,10 @@ export interface components {
              * @description Optional repetitions-in-reserve category after the set; 4+ means many repetitions remained, not an exact value of four
              */
             rir?: ("0" | "1" | "2" | "3" | "4+") | null;
+            /** Set Kind */
+            set_kind?: ("warmup" | "working" | "drop") | null;
+            /** Reached Failure */
+            reached_failure?: boolean | null;
             /** Is Completed */
             is_completed?: boolean | null;
         };
@@ -4400,6 +4428,10 @@ export interface components {
              * @description Optional repetitions-in-reserve category after the set; 4+ means many repetitions remained, not an exact value of four
              */
             rir?: ("0" | "1" | "2" | "3" | "4+") | null;
+            /** Set Kind */
+            set_kind?: ("warmup" | "working" | "drop") | null;
+            /** Reached Failure */
+            reached_failure?: boolean | null;
             /** Is Completed */
             is_completed: boolean;
         };
@@ -4411,6 +4443,10 @@ export interface components {
             exercise_title: string;
             /** Notes */
             notes?: string | null;
+            /** Superset Group */
+            superset_group?: number | null;
+            /** Superset Order */
+            superset_order?: number | null;
             /** Sets */
             sets: components["schemas"]["WorkoutTimelineSet"][];
         };
@@ -4451,6 +4487,10 @@ export interface components {
              * @description Optional repetitions-in-reserve category after the set; 4+ means many repetitions remained, not an exact value of four
              */
             rir?: ("0" | "1" | "2" | "3" | "4+") | null;
+            /** Set Kind */
+            set_kind?: ("warmup" | "working" | "drop") | null;
+            /** Reached Failure */
+            reached_failure?: boolean | null;
             /** Is Completed */
             is_completed: boolean;
         };

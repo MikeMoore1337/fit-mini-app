@@ -43,6 +43,10 @@ from fitminiapp_api.services.workout_comments import (
     list_client_workout_comments,
     serialize_workout_comment,
 )
+from fitminiapp_api.services.workouts import (
+    counts_toward_working_volume,
+    working_volume_set_filter,
+)
 
 router = APIRouter()
 
@@ -187,6 +191,8 @@ def _serialize_workout(workout: UserWorkout, db: Session, current_user: User) ->
                 "prescribed_reps": item.prescribed_reps,
                 "rest_seconds": item.rest_seconds,
                 "notes": item.notes,
+                "superset_group": item.superset_group,
+                "superset_order": item.superset_order,
                 "has_guide": bool(
                     (visible_map.get(item.exercise_id) or item.exercise)
                     and get_exercise_guide(visible_map.get(item.exercise_id) or item.exercise)
@@ -198,6 +204,8 @@ def _serialize_workout(workout: UserWorkout, db: Session, current_user: User) ->
                         "actual_reps": set_item.actual_reps,
                         "actual_weight": set_item.actual_weight,
                         "rir": set_item.rir,
+                        "set_kind": set_item.set_kind,
+                        "reached_failure": set_item.reached_failure,
                         "is_completed": set_item.is_completed,
                     }
                     for set_item in sorted(item.sets, key=lambda x: x.set_number)
@@ -520,6 +528,10 @@ def update_workout_set(
         set_row.actual_weight = changes["actual_weight"]
     if "rir" in changes:
         set_row.rir = changes["rir"]
+    if "set_kind" in changes:
+        set_row.set_kind = changes["set_kind"]
+    if "reached_failure" in changes:
+        set_row.reached_failure = changes["reached_failure"]
     if "is_completed" in changes and changes["is_completed"] is not None:
         set_row.is_completed = changes["is_completed"]
 
@@ -532,6 +544,8 @@ def update_workout_set(
         "actual_reps": set_row.actual_reps,
         "actual_weight": set_row.actual_weight,
         "rir": set_row.rir,
+        "set_kind": set_row.set_kind,
+        "reached_failure": set_row.reached_failure,
         "is_completed": set_row.is_completed,
     }
 
@@ -663,7 +677,9 @@ def workout_history(
         sets = [set_row for exercise in item.exercises for set_row in exercise.sets]
         completed_sets = [set_row for set_row in sets if set_row.is_completed]
         volume_kg = sum(
-            (set_row.actual_weight or 0) * (set_row.actual_reps or 0) for set_row in completed_sets
+            (set_row.actual_weight or 0) * (set_row.actual_reps or 0)
+            for set_row in completed_sets
+            if counts_toward_working_volume(set_row)
         )
         rows.append(
             {
@@ -695,7 +711,10 @@ def workout_history_summary(
                 func.sum(
                     func.coalesce(UserWorkoutSet.actual_reps, 0)
                     * func.coalesce(UserWorkoutSet.actual_weight, 0)
-                ).filter(UserWorkoutSet.is_completed.is_(True)),
+                ).filter(
+                    UserWorkoutSet.is_completed.is_(True),
+                    working_volume_set_filter(),
+                ),
                 0,
             ),
         )

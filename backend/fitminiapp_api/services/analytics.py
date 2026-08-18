@@ -22,10 +22,14 @@ from fitminiapp_api.models.program import (
 )
 from fitminiapp_api.models.user import BodyMeasurement, User
 from fitminiapp_api.services.exercise_catalog import get_visible_exercise_display_map
+from fitminiapp_api.services.workouts import (
+    counts_toward_working_volume,
+    working_volume_set_filter,
+)
 
 
 def _completed_set_volume(workout_set) -> float:
-    if not workout_set.is_completed:
+    if not workout_set.is_completed or not counts_toward_working_volume(workout_set):
         return 0.0
     return float((workout_set.actual_reps or 0) * (workout_set.actual_weight or 0))
 
@@ -119,7 +123,11 @@ def build_user_progress(db: Session, user: User) -> dict:
                 volume = _completed_set_volume(workout_set)
                 weekly[week_start]["volume_kg"] += volume
                 record["best_set_volume_kg"] = max(record["best_set_volume_kg"], volume)
-                if workout_set.is_completed and workout_set.actual_weight is not None:
+                if (
+                    workout_set.is_completed
+                    and counts_toward_working_volume(workout_set)
+                    and workout_set.actual_weight is not None
+                ):
                     current_max = record["max_weight_kg"]
                     record["max_weight_kg"] = max(
                         float(workout_set.actual_weight),
@@ -184,6 +192,7 @@ def _period_exercise_aggregates(db: Session, user: User, period_start, period_en
             UserWorkout.status == "completed",
             UserWorkout.scheduled_date.between(period_start, period_end),
             UserWorkoutSet.is_completed.is_(True),
+            working_volume_set_filter(),
         )
         .group_by(UserWorkoutExercise.exercise_id)
         .all()
@@ -213,6 +222,7 @@ def _bounded_exercise_history(
             UserWorkout.status == "completed",
             UserWorkout.scheduled_date.between(period_start, period_end),
             UserWorkoutSet.is_completed.is_(True),
+            working_volume_set_filter(),
         )
         .group_by(
             UserWorkoutExercise.id,
@@ -245,6 +255,8 @@ def _bounded_exercise_history(
             UserWorkoutSet.actual_reps,
             UserWorkoutSet.actual_weight,
             UserWorkoutSet.rir,
+            UserWorkoutSet.set_kind,
+            UserWorkoutSet.reached_failure,
         )
         .join(
             UserWorkoutSet,
@@ -253,6 +265,7 @@ def _bounded_exercise_history(
         .filter(
             ranked.c.history_position <= history_limit,
             UserWorkoutSet.is_completed.is_(True),
+            working_volume_set_filter(),
         )
         .order_by(
             ranked.c.exercise_id,
@@ -364,6 +377,8 @@ def _serialize_training_session(rows: list) -> dict:
                     round(set_volume, 2) if set_volume is not None else None
                 ),
                 "rir": row.rir,
+                "set_kind": row.set_kind,
+                "reached_failure": row.reached_failure,
             }
         )
     first = rows[0]
@@ -546,6 +561,8 @@ def build_workout_timeline(db: Session, user: User, limit: int = 30) -> list[dic
                         "actual_reps": workout_set.actual_reps,
                         "actual_weight": workout_set.actual_weight,
                         "rir": workout_set.rir,
+                        "set_kind": workout_set.set_kind,
+                        "reached_failure": workout_set.reached_failure,
                         "is_completed": workout_set.is_completed,
                     }
                 )
@@ -562,6 +579,8 @@ def build_workout_timeline(db: Session, user: User, limit: int = 30) -> list[dic
                         )
                     ),
                     "notes": exercise.notes,
+                    "superset_group": exercise.superset_group,
+                    "superset_order": exercise.superset_order,
                     "sets": sets,
                 }
             )

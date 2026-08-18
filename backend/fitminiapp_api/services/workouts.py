@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import desc
+from sqlalchemy import desc, or_
 from sqlalchemy.orm import Session, joinedload
 
 from fitminiapp_api.core.timezone import now_msk_naive, today_for_user
@@ -20,6 +20,19 @@ class WorkoutStateError(ValueError):
 
 class WorkoutValidationError(ValueError):
     pass
+
+
+def counts_toward_working_volume(workout_set: UserWorkoutSet) -> bool:
+    """Legacy null kinds retain their historical working-volume behavior."""
+
+    return workout_set.set_kind in {None, "working", "drop"}
+
+
+def working_volume_set_filter():
+    return or_(
+        UserWorkoutSet.set_kind.is_(None),
+        UserWorkoutSet.set_kind.in_(("working", "drop")),
+    )
 
 
 def get_today_workout(db: Session, user: User) -> UserWorkout | None:
@@ -86,6 +99,8 @@ def add_or_update_set(
     row.actual_reps = payload.actual_reps
     row.actual_weight = payload.actual_weight
     row.rir = payload.rir
+    row.set_kind = payload.set_kind
+    row.reached_failure = payload.reached_failure
     row.is_completed = payload.is_completed
     db.commit()
     db.refresh(row)
@@ -124,7 +139,11 @@ def complete_workout(db: Session, workout: UserWorkout) -> UserWorkout:
 
 def _sets_volume(sets: list[UserWorkoutSet]) -> float:
     return float(
-        sum((row.actual_reps or 0) * (row.actual_weight or 0) for row in sets if row.is_completed)
+        sum(
+            (row.actual_reps or 0) * (row.actual_weight or 0)
+            for row in sets
+            if row.is_completed and counts_toward_working_volume(row)
+        )
     )
 
 
@@ -132,7 +151,7 @@ def _top_weight(sets: list[UserWorkoutSet]) -> float | None:
     weights = [
         float(row.actual_weight)
         for row in sets
-        if row.is_completed and row.actual_weight is not None
+        if row.is_completed and counts_toward_working_volume(row) and row.actual_weight is not None
     ]
     return max(weights) if weights else None
 

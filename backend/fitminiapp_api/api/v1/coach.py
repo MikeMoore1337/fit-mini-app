@@ -424,6 +424,22 @@ def add_exercise_to_client_program(
             (row for row in workout.exercises if row.exercise_id == payload.exercise_id),
             None,
         )
+        if payload.superset_group is not None:
+            conflict = next(
+                (
+                    row
+                    for row in workout.exercises
+                    if row.id != getattr(workout_exercise, "id", None)
+                    and row.superset_group == payload.superset_group
+                    and row.superset_order == payload.superset_order
+                ),
+                None,
+            )
+            if conflict is not None:
+                raise HTTPException(
+                    status_code=409,
+                    detail="Порядок упражнений в суперсете уже занят",
+                )
         if workout_exercise is None:
             workout_exercise = UserWorkoutExercise(
                 workout_id=workout.id,
@@ -433,6 +449,8 @@ def add_exercise_to_client_program(
                 prescribed_reps=payload.prescribed_reps,
                 rest_seconds=payload.rest_seconds,
                 notes=payload.notes,
+                superset_group=payload.superset_group,
+                superset_order=payload.superset_order,
             )
             db.add(workout_exercise)
             db.flush()
@@ -441,6 +459,8 @@ def add_exercise_to_client_program(
             workout_exercise.prescribed_reps = payload.prescribed_reps
             workout_exercise.rest_seconds = payload.rest_seconds
             workout_exercise.notes = payload.notes
+            workout_exercise.superset_group = payload.superset_group
+            workout_exercise.superset_order = payload.superset_order
             db.query(UserWorkoutSet).filter(
                 UserWorkoutSet.workout_exercise_id == workout_exercise.id
             ).delete(synchronize_session=False)
@@ -452,6 +472,8 @@ def add_exercise_to_client_program(
                     set_number=set_number,
                     actual_reps=None,
                     actual_weight=None,
+                    set_kind="working",
+                    reached_failure=None,
                     is_completed=False,
                 )
             )

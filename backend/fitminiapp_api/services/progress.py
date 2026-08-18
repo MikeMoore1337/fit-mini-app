@@ -19,6 +19,7 @@ from fitminiapp_api.models.program import (
     UserWorkoutSet,
 )
 from fitminiapp_api.models.user import BodyMeasurement, CoachClient, User
+from fitminiapp_api.services.workouts import working_volume_set_filter
 
 FORMULA_VERSION = "adherence-v1"
 CALORIE_TOLERANCE = 0.10
@@ -395,6 +396,7 @@ def build_progress_summaries(
         .filter(
             UserWorkout.status == "completed",
             UserWorkoutSet.is_completed.is_(True),
+            working_volume_set_filter(),
             _user_date_filter(
                 user_ids,
                 start_by_user,
@@ -430,6 +432,7 @@ def build_progress_summaries(
         .filter(
             UserWorkout.status == "completed",
             UserWorkoutSet.is_completed.is_(True),
+            working_volume_set_filter(),
             or_(
                 *(
                     and_(
