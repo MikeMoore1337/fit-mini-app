@@ -727,6 +727,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/coach/clients/{client_id}/training-analytics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Coach Client Training Analytics */
+        get: operations["coach_client_training_analytics_api_v1_coach_clients__client_id__training_analytics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/coach/client-summaries": {
         parameters: {
             query?: never;
@@ -1013,6 +1030,23 @@ export interface paths {
         };
         /** Workout Progress Summary */
         get: operations["workout_progress_summary_api_v1_workouts_progress_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/progress/training-analytics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Workout Training Analytics */
+        get: operations["workout_training_analytics_api_v1_workouts_progress_training_analytics_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2589,6 +2623,71 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** ExerciseTrainingProgression */
+        ExerciseTrainingProgression: {
+            /** Exercise Id */
+            exercise_id: number;
+            /** Exercise Title */
+            exercise_title: string;
+            /** Uses Bodyweight Equipment */
+            uses_bodyweight_equipment: boolean;
+            /** Performed Session Count */
+            performed_session_count: number;
+            /** Completed Set Count */
+            completed_set_count: number;
+            /**
+             * First Performed On
+             * Format: date
+             */
+            first_performed_on: string;
+            /**
+             * Last Performed On
+             * Format: date
+             */
+            last_performed_on: string;
+            /** Reps Total */
+            reps_total?: number | null;
+            /** Reps Recorded Sets */
+            reps_recorded_sets: number;
+            /** Max External Load Kg */
+            max_external_load_kg?: number | null;
+            /** Best Set Volume Kg */
+            best_set_volume_kg?: number | null;
+            /** External Load Volume Kg */
+            external_load_volume_kg?: number | null;
+            /** Volume Recorded Sets */
+            volume_recorded_sets: number;
+            /** History Truncated */
+            history_truncated: boolean;
+            /** Sessions */
+            sessions: components["schemas"]["ExerciseTrainingSession"][];
+        };
+        /** ExerciseTrainingSession */
+        ExerciseTrainingSession: {
+            /** Workout Id */
+            workout_id: number;
+            /** Workout Exercise Id */
+            workout_exercise_id: number;
+            /**
+             * Performed On
+             * Format: date
+             */
+            performed_on: string;
+            /** Completed Set Count */
+            completed_set_count: number;
+            /** Reps Total */
+            reps_total?: number | null;
+            /** Reps Recorded Sets */
+            reps_recorded_sets: number;
+            /** Max External Load Kg */
+            max_external_load_kg?: number | null;
+            /** External Load Volume Kg */
+            external_load_volume_kg?: number | null;
+            /** Volume Recorded Sets */
+            volume_recorded_sets: number;
+            /** Sets */
+            sets: components["schemas"]["TrainingAnalyticsSet"][];
+        };
         /** ExternalFoodResponse */
         ExternalFoodResponse: {
             /** Energy Kcal Per 100G */
@@ -3054,6 +3153,15 @@ export interface components {
             message: string;
             /** Action Token */
             action_token?: string | null;
+        };
+        /** MuscleSetExposure */
+        MuscleSetExposure: {
+            /** Muscle Id */
+            muscle_id: string;
+            /** Muscle Name */
+            muscle_name: string;
+            /** Completed Set Count */
+            completed_set_count: number;
         };
         /** NextWorkoutSummary */
         NextWorkoutSummary: {
@@ -3722,6 +3830,27 @@ export interface components {
             /** Verification Token */
             verification_token?: string | null;
         };
+        /** RirDistributionBucket */
+        RirDistributionBucket: {
+            /**
+             * Value
+             * @enum {string}
+             */
+            value: "0" | "1" | "2" | "3" | "4+";
+            /** Completed Set Count */
+            completed_set_count: number;
+        };
+        /** RirTrainingAnalytics */
+        RirTrainingAnalytics: {
+            /** Completed Set Count */
+            completed_set_count: number;
+            /** Recorded Set Count */
+            recorded_set_count: number;
+            /** Missing Set Count */
+            missing_set_count: number;
+            /** Distribution */
+            distribution: components["schemas"]["RirDistributionBucket"][];
+        };
         /** TelegramInitRequest */
         TelegramInitRequest: {
             /** Init Data */
@@ -3796,6 +3925,58 @@ export interface components {
             chat_url?: string | null;
             /** Chat Unavailable Reason */
             chat_unavailable_reason?: string | null;
+        };
+        /** TrainingAnalyticsResponse */
+        TrainingAnalyticsResponse: {
+            /** Period Days */
+            period_days: number;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /** Exercise History Limit */
+            exercise_history_limit: number;
+            /** Completed Set Count */
+            completed_set_count: number;
+            /** Reps Total */
+            reps_total?: number | null;
+            /** Reps Recorded Sets */
+            reps_recorded_sets: number;
+            /** External Load Volume Kg */
+            external_load_volume_kg?: number | null;
+            /** Volume Recorded Sets */
+            volume_recorded_sets: number;
+            /** Exercises */
+            exercises: components["schemas"]["ExerciseTrainingProgression"][];
+            rir: components["schemas"]["RirTrainingAnalytics"];
+            /** Primary Muscle Exposure */
+            primary_muscle_exposure: components["schemas"]["MuscleSetExposure"][];
+            /** Secondary Muscle Exposure */
+            secondary_muscle_exposure: components["schemas"]["MuscleSetExposure"][];
+            /** Completed Sets Without Muscle Metadata */
+            completed_sets_without_muscle_metadata: number;
+        };
+        /** TrainingAnalyticsSet */
+        TrainingAnalyticsSet: {
+            /** Set Number */
+            set_number: number;
+            /** Reps */
+            reps?: number | null;
+            /** External Load Kg */
+            external_load_kg?: number | null;
+            /** External Load Volume Kg */
+            external_load_volume_kg?: number | null;
+            /**
+             * Rir
+             * @description Optional repetitions-in-reserve category after the set; 4+ means many repetitions remained, not an exact value of four
+             */
+            rir?: ("0" | "1" | "2" | "3" | "4+") | null;
         };
         /** TrainingPeriodSummary */
         TrainingPeriodSummary: {
@@ -5760,6 +5941,40 @@ export interface operations {
             };
         };
     };
+    coach_client_training_analytics_api_v1_coach_clients__client_id__training_analytics_get: {
+        parameters: {
+            query?: {
+                period_days?: components["schemas"]["ProgressPeriodDays"];
+                exercise_history_limit?: number;
+            };
+            header?: never;
+            path: {
+                client_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrainingAnalyticsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     coach_client_progress_summaries_api_v1_coach_client_summaries_get: {
         parameters: {
             query?: {
@@ -6304,6 +6519,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProgressSummaryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    workout_training_analytics_api_v1_workouts_progress_training_analytics_get: {
+        parameters: {
+            query?: {
+                period_days?: components["schemas"]["ProgressPeriodDays"];
+                exercise_history_limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrainingAnalyticsResponse"];
                 };
             };
             /** @description Validation Error */

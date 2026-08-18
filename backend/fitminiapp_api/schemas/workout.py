@@ -139,6 +139,80 @@ class WorkoutProgressResponse(BaseModel):
     personal_records: list[ExerciseProgressItem]
 
 
+class TrainingAnalyticsSet(BaseModel):
+    set_number: int
+    reps: int | None = None
+    external_load_kg: float | None = None
+    external_load_volume_kg: float | None = None
+    rir: RirValue | None = Field(default=None, description=RIR_DESCRIPTION)
+
+
+class ExerciseTrainingSession(BaseModel):
+    workout_id: int
+    workout_exercise_id: int
+    performed_on: date
+    completed_set_count: int
+    reps_total: int | None = None
+    reps_recorded_sets: int
+    max_external_load_kg: float | None = None
+    external_load_volume_kg: float | None = None
+    volume_recorded_sets: int
+    sets: list[TrainingAnalyticsSet]
+
+
+class ExerciseTrainingProgression(BaseModel):
+    exercise_id: int
+    exercise_title: str
+    uses_bodyweight_equipment: bool
+    performed_session_count: int
+    completed_set_count: int
+    first_performed_on: date
+    last_performed_on: date
+    reps_total: int | None = None
+    reps_recorded_sets: int
+    max_external_load_kg: float | None = None
+    best_set_volume_kg: float | None = None
+    external_load_volume_kg: float | None = None
+    volume_recorded_sets: int
+    history_truncated: bool
+    sessions: list[ExerciseTrainingSession]
+
+
+class RirDistributionBucket(BaseModel):
+    value: RirValue
+    completed_set_count: int
+
+
+class RirTrainingAnalytics(BaseModel):
+    completed_set_count: int
+    recorded_set_count: int
+    missing_set_count: int
+    distribution: list[RirDistributionBucket]
+
+
+class MuscleSetExposure(BaseModel):
+    muscle_id: str
+    muscle_name: str
+    completed_set_count: int
+
+
+class TrainingAnalyticsResponse(BaseModel):
+    period_days: int
+    period_start: date
+    period_end: date
+    exercise_history_limit: int
+    completed_set_count: int
+    reps_total: int | None = None
+    reps_recorded_sets: int
+    external_load_volume_kg: float | None = None
+    volume_recorded_sets: int
+    exercises: list[ExerciseTrainingProgression]
+    rir: RirTrainingAnalytics
+    primary_muscle_exposure: list[MuscleSetExposure]
+    secondary_muscle_exposure: list[MuscleSetExposure]
+    completed_sets_without_muscle_metadata: int
+
+
 class WorkoutTimelineSet(BaseModel):
     set_number: int
     actual_reps: int | None = None
