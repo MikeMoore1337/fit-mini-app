@@ -269,6 +269,22 @@ class ExerciseGuideImage(BaseModel):
     alt: str
 
 
+class ExerciseGuideMedia(BaseModel):
+    type: Literal["image"]
+    url: str
+    poster: str
+    phase: str
+    alt: str
+    source_name: str
+    source_url: str
+    source_license: str
+    source_license_url: str | None = None
+    width: int = Field(gt=0)
+    height: int = Field(gt=0)
+    byte_size: int = Field(gt=0)
+    sort_order: int = Field(ge=0)
+
+
 class ExerciseGuide(BaseModel):
     technique_steps: list[str]
     breathing: str
@@ -277,6 +293,7 @@ class ExerciseGuide(BaseModel):
     equipment: list[ExerciseTaxonomyItem]
     safety_notes: list[str]
     alternatives: list[ExerciseAlternativeItem]
+    media: list[ExerciseGuideMedia]
     images: list[ExerciseGuideImage]
     media_reference: str
     source_name: str

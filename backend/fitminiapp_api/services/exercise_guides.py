@@ -8,6 +8,7 @@ from fitminiapp_api.services.exercise_domain import (
     exercise_equipment_payload,
     exercise_muscle_payload,
 )
+from fitminiapp_api.services.exercise_guide_media import get_guide_media
 
 SOURCE_NAME = "free-exercise-db"
 SOURCE_URL = "https://github.com/yuhonas/free-exercise-db"
@@ -612,29 +613,6 @@ def get_exercise_guide(
     ]
 
     is_generated_cardio = slug in GENERATED_CARDIO_SLUGS
-    images = (
-        [
-            {
-                "phase": "Две фазы движения",
-                "url": f"/static/exercise-guides/{slug}-technique.jpg",
-                "alt": f"{exercise.title}: две фазы движения",
-            }
-        ]
-        if is_generated_cardio
-        else [
-            {
-                "phase": "Исходное положение",
-                "url": f"/static/exercise-guides/{slug}-start.jpg",
-                "alt": f"{exercise.title}: исходное положение",
-            },
-            {
-                "phase": "Активная фаза",
-                "url": f"/static/exercise-guides/{slug}-active.jpg",
-                "alt": f"{exercise.title}: активная фаза",
-            },
-        ]
-    )
-
     metadata = exercise.guide_metadata
     source_name = (
         metadata.source_name
@@ -656,6 +634,17 @@ def get_exercise_guide(
         if metadata is not None
         else (None if is_generated_cardio else SOURCE_LICENSE_URL)
     )
+    media = get_guide_media(
+        slug,
+        exercise_title=exercise.title,
+        source_name=source_name,
+        source_url=source_url,
+        source_license=source_license,
+        source_license_url=source_license_url,
+    )
+    if not media:
+        return None
+    images = [{"phase": item["phase"], "url": item["url"], "alt": item["alt"]} for item in media]
 
     return {
         "technique_steps": profile["steps"],
@@ -667,6 +656,7 @@ def get_exercise_guide(
         if metadata is not None
         else list(DEFAULT_SAFETY_NOTES),
         "alternatives": alternatives or [],
+        "media": media,
         "images": images,
         "media_reference": metadata.media_reference
         if metadata is not None

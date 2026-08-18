@@ -611,6 +611,40 @@ async function mockApi(page: Page, { withCoachClient = false, withCoachApplicati
               alt: 'Активная фаза',
             },
           ],
+          media: [
+            {
+              type: 'image',
+              phase: 'Исходное положение',
+              url: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>',
+              poster:
+                'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>',
+              alt: 'Исходное положение',
+              source_name: 'Test source',
+              source_url: 'https://example.com',
+              source_license: 'Public domain',
+              source_license_url: null,
+              width: 400,
+              height: 300,
+              byte_size: 100,
+              sort_order: 0,
+            },
+            {
+              type: 'image',
+              phase: 'Активная фаза',
+              url: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>%20',
+              poster:
+                'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>%20',
+              alt: 'Активная фаза',
+              source_name: 'Test source',
+              source_url: 'https://example.com',
+              source_license: 'Public domain',
+              source_license_url: null,
+              width: 400,
+              height: 300,
+              byte_size: 100,
+              sort_order: 1,
+            },
+          ],
           source_name: 'Test source',
           source_url: 'https://example.com',
           source_license: 'Public domain',
@@ -925,6 +959,13 @@ test('профиль содержит уведомления, а карточк�
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 780 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  let guideRequests = 0;
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname.endsWith('/programs/exercises/1/guide')) {
+      guideRequests += 1;
+    }
+  });
   await mockApi(page);
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
@@ -994,7 +1035,9 @@ test('профиль содержит уведомления, а карточк�
 
   await page.getByRole('tab', { name: 'Упражнения' }).click();
   await openCard(page, 'Каталог упражнений');
+  expect(guideRequests).toBe(0);
   await page.getByRole('button', { name: 'Техника' }).click();
+  expect(guideRequests).toBe(1);
   await expect(page.getByRole('heading', { name: 'Для чего это упражнение' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Какие мышцы работают' })).toBeVisible();
   await expect(page.getByText('Тянет плечевой пояс назад.')).toBeVisible();
@@ -1008,6 +1051,14 @@ test('профиль содержит уведомления, а карточк�
   expect(
     Math.abs(guideHeadBox!.x + guideHeadBox!.width - (guidePanelBox!.x + guidePanelBox!.width)),
   ).toBeLessThanOrEqual(2);
+  const phaseImage = page.getByAltText('Исходное положение');
+  await expect(phaseImage).toHaveAttribute('loading', 'lazy');
+  await expect(phaseImage).toHaveAttribute('width', '400');
+  expect(
+    await phaseImage.evaluate((image) =>
+      Number.parseFloat(getComputedStyle(image).transitionDuration),
+    ),
+  ).toBeLessThanOrEqual(0.001);
   await page.getByRole('button', { name: 'Увеличить: Исходное положение' }).click();
   await expect(page.locator('.exercise-lightbox')).toBeVisible();
   await page.keyboard.press('Escape');

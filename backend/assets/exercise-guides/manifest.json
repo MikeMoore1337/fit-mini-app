@@ -1,0 +1,4965 @@
+{
+  "schema_version": 1,
+  "default_pattern": "static-phases",
+  "asset_count": 307,
+  "total_bytes": 19596935,
+  "exercises": {
+    "ab-wheel": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "ab-wheel-start.jpg",
+          "poster_path": "ab-wheel-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 800,
+          "height": 533,
+          "byte_size": 58646,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "ab-wheel-active.jpg",
+          "poster_path": "ab-wheel-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 800,
+          "height": 533,
+          "byte_size": 61976,
+          "sort_order": 1
+        }
+      ]
+    },
+    "arnold-press": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "arnold-press-start.jpg",
+          "poster_path": "arnold-press-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 54330,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "arnold-press-active.jpg",
+          "poster_path": "arnold-press-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 55084,
+          "sort_order": 1
+        }
+      ]
+    },
+    "assault-bike": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "assault-bike-start.jpg",
+          "poster_path": "assault-bike-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 62771,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "assault-bike-active.jpg",
+          "poster_path": "assault-bike-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 64017,
+          "sort_order": 1
+        }
+      ]
+    },
+    "barbell-curl": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "barbell-curl-start.jpg",
+          "poster_path": "barbell-curl-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 60608,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "barbell-curl-active.jpg",
+          "poster_path": "barbell-curl-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 62920,
+          "sort_order": 1
+        }
+      ]
+    },
+    "barbell-glute-bridge": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "barbell-glute-bridge-start.jpg",
+          "poster_path": "barbell-glute-bridge-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 50945,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "barbell-glute-bridge-active.jpg",
+          "poster_path": "barbell-glute-bridge-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 48064,
+          "sort_order": 1
+        }
+      ]
+    },
+    "barbell-row": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "barbell-row-start.jpg",
+          "poster_path": "barbell-row-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 64589,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "barbell-row-active.jpg",
+          "poster_path": "barbell-row-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 66556,
+          "sort_order": 1
+        }
+      ]
+    },
+    "barbell-shrug": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "barbell-shrug-start.jpg",
+          "poster_path": "barbell-shrug-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 60819,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "barbell-shrug-active.jpg",
+          "poster_path": "barbell-shrug-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 62383,
+          "sort_order": 1
+        }
+      ]
+    },
+    "battle-rope": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "battle-rope-start.jpg",
+          "poster_path": "battle-rope-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 500,
+          "height": 750,
+          "byte_size": 46106,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "battle-rope-active.jpg",
+          "poster_path": "battle-rope-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 500,
+          "height": 750,
+          "byte_size": 45522,
+          "sort_order": 1
+        }
+      ]
+    },
+    "bear-crawl": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "bear-crawl-start.jpg",
+          "poster_path": "bear-crawl-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 34792,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "bear-crawl-active.jpg",
+          "poster_path": "bear-crawl-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 35146,
+          "sort_order": 1
+        }
+      ]
+    },
+    "belt-squat": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "belt-squat-start.jpg",
+          "poster_path": "belt-squat-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 760,
+          "height": 760,
+          "byte_size": 114305,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "belt-squat-active.jpg",
+          "poster_path": "belt-squat-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 760,
+          "height": 760,
+          "byte_size": 106734,
+          "sort_order": 1
+        }
+      ]
+    },
+    "bench-dip": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "bench-dip-start.jpg",
+          "poster_path": "bench-dip-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 58381,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "bench-dip-active.jpg",
+          "poster_path": "bench-dip-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 58433,
+          "sort_order": 1
+        }
+      ]
+    },
+    "bench-press": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "bench-press-start.jpg",
+          "poster_path": "bench-press-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 72816,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "bench-press-active.jpg",
+          "poster_path": "bench-press-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 72202,
+          "sort_order": 1
+        }
+      ]
+    },
+    "bird-dog": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "bird-dog-start.jpg",
+          "poster_path": "bird-dog-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 59230,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "bird-dog-active.jpg",
+          "poster_path": "bird-dog-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 62125,
+          "sort_order": 1
+        }
+      ]
+    },
+    "box-jump": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "box-jump-start.jpg",
+          "poster_path": "box-jump-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 69962,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "box-jump-active.jpg",
+          "poster_path": "box-jump-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 69353,
+          "sort_order": 1
+        }
+      ]
+    },
+    "bulgarian-split-squat": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "bulgarian-split-squat-start.jpg",
+          "poster_path": "bulgarian-split-squat-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 89864,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "bulgarian-split-squat-active.jpg",
+          "poster_path": "bulgarian-split-squat-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 88596,
+          "sort_order": 1
+        }
+      ]
+    },
+    "burpee": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "burpee-start.jpg",
+          "poster_path": "burpee-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 750,
+          "height": 500,
+          "byte_size": 38422,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "burpee-active.jpg",
+          "poster_path": "burpee-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 750,
+          "height": 500,
+          "byte_size": 43839,
+          "sort_order": 1
+        }
+      ]
+    },
+    "cable-crunch": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "cable-crunch-start.jpg",
+          "poster_path": "cable-crunch-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 67271,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "cable-crunch-active.jpg",
+          "poster_path": "cable-crunch-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 65445,
+          "sort_order": 1
+        }
+      ]
+    },
+    "cable-curl": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "cable-curl-start.jpg",
+          "poster_path": "cable-curl-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 86338,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "cable-curl-active.jpg",
+          "poster_path": "cable-curl-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 86344,
+          "sort_order": 1
+        }
+      ]
+    },
+    "cable-fly": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "cable-fly-start.jpg",
+          "poster_path": "cable-fly-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 74524,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "cable-fly-active.jpg",
+          "poster_path": "cable-fly-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 76451,
+          "sort_order": 1
+        }
+      ]
+    },
+    "cable-kickback": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "cable-kickback-start.jpg",
+          "poster_path": "cable-kickback-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 74142,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "cable-kickback-active.jpg",
+          "poster_path": "cable-kickback-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 75672,
+          "sort_order": 1
+        }
+      ]
+    },
+    "cable-lateral-raise": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "cable-lateral-raise-start.jpg",
+          "poster_path": "cable-lateral-raise-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 64199,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "cable-lateral-raise-active.jpg",
+          "poster_path": "cable-lateral-raise-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 65938,
+          "sort_order": 1
+        }
+      ]
+    },
+    "cable-pull-through": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "cable-pull-through-start.jpg",
+          "poster_path": "cable-pull-through-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 39927,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "cable-pull-through-active.jpg",
+          "poster_path": "cable-pull-through-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 33667,
+          "sort_order": 1
+        }
+      ]
+    },
+    "cable-pushdown": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "cable-pushdown-start.jpg",
+          "poster_path": "cable-pushdown-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 77630,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "cable-pushdown-active.jpg",
+          "poster_path": "cable-pushdown-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 78235,
+          "sort_order": 1
+        }
+      ]
+    },
+    "cable-row-one-arm": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "cable-row-one-arm-start.jpg",
+          "poster_path": "cable-row-one-arm-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 56804,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "cable-row-one-arm-active.jpg",
+          "poster_path": "cable-row-one-arm-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 56192,
+          "sort_order": 1
+        }
+      ]
+    },
+    "calf-press": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "calf-press-start.jpg",
+          "poster_path": "calf-press-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 1275,
+          "byte_size": 124744,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "calf-press-active.jpg",
+          "poster_path": "calf-press-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 1275,
+          "byte_size": 126333,
+          "sort_order": 1
+        }
+      ]
+    },
+    "captain-chair-leg-raise": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "captain-chair-leg-raise-start.jpg",
+          "poster_path": "captain-chair-leg-raise-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 51687,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "captain-chair-leg-raise-active.jpg",
+          "poster_path": "captain-chair-leg-raise-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 56061,
+          "sort_order": 1
+        }
+      ]
+    },
+    "chest-dip": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "chest-dip-start.jpg",
+          "poster_path": "chest-dip-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 73206,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "chest-dip-active.jpg",
+          "poster_path": "chest-dip-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 72525,
+          "sort_order": 1
+        }
+      ]
+    },
+    "chest-supported-row": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "chest-supported-row-start.jpg",
+          "poster_path": "chest-supported-row-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 53821,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "chest-supported-row-active.jpg",
+          "poster_path": "chest-supported-row-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 56826,
+          "sort_order": 1
+        }
+      ]
+    },
+    "chin-up": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "chin-up-start.jpg",
+          "poster_path": "chin-up-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 45846,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "chin-up-active.jpg",
+          "poster_path": "chin-up-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 45627,
+          "sort_order": 1
+        }
+      ]
+    },
+    "close-grip-bench-press": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "close-grip-bench-press-start.jpg",
+          "poster_path": "close-grip-bench-press-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 74240,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "close-grip-bench-press-active.jpg",
+          "poster_path": "close-grip-bench-press-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 76127,
+          "sort_order": 1
+        }
+      ]
+    },
+    "close-grip-lat-pulldown": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "close-grip-lat-pulldown-start.jpg",
+          "poster_path": "close-grip-lat-pulldown-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 66406,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "close-grip-lat-pulldown-active.jpg",
+          "poster_path": "close-grip-lat-pulldown-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 66198,
+          "sort_order": 1
+        }
+      ]
+    },
+    "concentration-curl": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "concentration-curl-start.jpg",
+          "poster_path": "concentration-curl-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 65228,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "concentration-curl-active.jpg",
+          "poster_path": "concentration-curl-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 64253,
+          "sort_order": 1
+        }
+      ]
+    },
+    "crunch": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "crunch-start.jpg",
+          "poster_path": "crunch-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 69289,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "crunch-active.jpg",
+          "poster_path": "crunch-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 69225,
+          "sort_order": 1
+        }
+      ]
+    },
+    "dead-bug": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "dead-bug-start.jpg",
+          "poster_path": "dead-bug-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 1280,
+          "height": 720,
+          "byte_size": 45381,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "dead-bug-active.jpg",
+          "poster_path": "dead-bug-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 1280,
+          "height": 720,
+          "byte_size": 46759,
+          "sort_order": 1
+        }
+      ]
+    },
+    "deadlift": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "deadlift-start.jpg",
+          "poster_path": "deadlift-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 69854,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "deadlift-active.jpg",
+          "poster_path": "deadlift-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 67563,
+          "sort_order": 1
+        }
+      ]
+    },
+    "decline-bench-press": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "decline-bench-press-start.jpg",
+          "poster_path": "decline-bench-press-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 84500,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "decline-bench-press-active.jpg",
+          "poster_path": "decline-bench-press-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 90450,
+          "sort_order": 1
+        }
+      ]
+    },
+    "decline-dumbbell-press": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "decline-dumbbell-press-start.jpg",
+          "poster_path": "decline-dumbbell-press-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 54163,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "decline-dumbbell-press-active.jpg",
+          "poster_path": "decline-dumbbell-press-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 54302,
+          "sort_order": 1
+        }
+      ]
+    },
+    "donkey-calf-raise": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "donkey-calf-raise-start.jpg",
+          "poster_path": "donkey-calf-raise-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 87923,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "donkey-calf-raise-active.jpg",
+          "poster_path": "donkey-calf-raise-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 88967,
+          "sort_order": 1
+        }
+      ]
+    },
+    "dumbbell-bench-press": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "dumbbell-bench-press-start.jpg",
+          "poster_path": "dumbbell-bench-press-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 63319,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "dumbbell-bench-press-active.jpg",
+          "poster_path": "dumbbell-bench-press-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 64120,
+          "sort_order": 1
+        }
+      ]
+    },
+    "dumbbell-curl": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "dumbbell-curl-start.jpg",
+          "poster_path": "dumbbell-curl-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 57223,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "dumbbell-curl-active.jpg",
+          "poster_path": "dumbbell-curl-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 58066,
+          "sort_order": 1
+        }
+      ]
+    },
+    "dumbbell-fly": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "dumbbell-fly-start.jpg",
+          "poster_path": "dumbbell-fly-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 63679,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "dumbbell-fly-active.jpg",
+          "poster_path": "dumbbell-fly-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 63977,
+          "sort_order": 1
+        }
+      ]
+    },
+    "dumbbell-front-raise": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "dumbbell-front-raise-start.jpg",
+          "poster_path": "dumbbell-front-raise-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 51985,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "dumbbell-front-raise-active.jpg",
+          "poster_path": "dumbbell-front-raise-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 51321,
+          "sort_order": 1
+        }
+      ]
+    },
+    "dumbbell-lateral-raise": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "dumbbell-lateral-raise-start.jpg",
+          "poster_path": "dumbbell-lateral-raise-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 57101,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "dumbbell-lateral-raise-active.jpg",
+          "poster_path": "dumbbell-lateral-raise-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 56355,
+          "sort_order": 1
+        }
+      ]
+    },
+    "dumbbell-overhead-extension": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "dumbbell-overhead-extension-start.jpg",
+          "poster_path": "dumbbell-overhead-extension-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 59013,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "dumbbell-overhead-extension-active.jpg",
+          "poster_path": "dumbbell-overhead-extension-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 60767,
+          "sort_order": 1
+        }
+      ]
+    },
+    "dumbbell-pullover": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "dumbbell-pullover-start.jpg",
+          "poster_path": "dumbbell-pullover-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 63149,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "dumbbell-pullover-active.jpg",
+          "poster_path": "dumbbell-pullover-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 61708,
+          "sort_order": 1
+        }
+      ]
+    },
+    "dumbbell-shrug": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "dumbbell-shrug-start.jpg",
+          "poster_path": "dumbbell-shrug-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 52882,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "dumbbell-shrug-active.jpg",
+          "poster_path": "dumbbell-shrug-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 53460,
+          "sort_order": 1
+        }
+      ]
+    },
+    "elliptical-trainer": {
+      "source": {
+        "name": "Your Fitness Coach",
+        "url": "/",
+        "license": "Иллюстрация создана для приложения",
+        "license_url": null
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "elliptical-trainer-technique.jpg",
+          "poster_path": "elliptical-trainer-technique.jpg",
+          "phase_id": "technique",
+          "phase": "Две фазы движения",
+          "width": 1200,
+          "height": 800,
+          "byte_size": 135395,
+          "sort_order": 0
+        }
+      ]
+    },
+    "ez-bar-curl": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "ez-bar-curl-start.jpg",
+          "poster_path": "ez-bar-curl-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 67123,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "ez-bar-curl-active.jpg",
+          "poster_path": "ez-bar-curl-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 68174,
+          "sort_order": 1
+        }
+      ]
+    },
+    "face-pull": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "face-pull-start.jpg",
+          "poster_path": "face-pull-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 40188,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "face-pull-active.jpg",
+          "poster_path": "face-pull-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 46451,
+          "sort_order": 1
+        }
+      ]
+    },
+    "farmer-walk": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "farmer-walk-start.jpg",
+          "poster_path": "farmer-walk-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 54501,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "farmer-walk-active.jpg",
+          "poster_path": "farmer-walk-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 51227,
+          "sort_order": 1
+        }
+      ]
+    },
+    "front-squat": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "front-squat-start.jpg",
+          "poster_path": "front-squat-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 71564,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "front-squat-active.jpg",
+          "poster_path": "front-squat-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 69555,
+          "sort_order": 1
+        }
+      ]
+    },
+    "glute-ham-raise": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "glute-ham-raise-start.jpg",
+          "poster_path": "glute-ham-raise-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 42247,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "glute-ham-raise-active.jpg",
+          "poster_path": "glute-ham-raise-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 36712,
+          "sort_order": 1
+        }
+      ]
+    },
+    "goblet-squat": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "goblet-squat-start.jpg",
+          "poster_path": "goblet-squat-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 569,
+          "byte_size": 34299,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "goblet-squat-active.jpg",
+          "poster_path": "goblet-squat-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 569,
+          "byte_size": 34362,
+          "sort_order": 1
+        }
+      ]
+    },
+    "good-morning": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "good-morning-start.jpg",
+          "poster_path": "good-morning-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 45191,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "good-morning-active.jpg",
+          "poster_path": "good-morning-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 45447,
+          "sort_order": 1
+        }
+      ]
+    },
+    "hack-squat": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "hack-squat-start.jpg",
+          "poster_path": "hack-squat-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 760,
+          "height": 760,
+          "byte_size": 114305,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "hack-squat-active.jpg",
+          "poster_path": "hack-squat-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 760,
+          "height": 760,
+          "byte_size": 106734,
+          "sort_order": 1
+        }
+      ]
+    },
+    "hammer-curl": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "hammer-curl-start.jpg",
+          "poster_path": "hammer-curl-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 51669,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "hammer-curl-active.jpg",
+          "poster_path": "hammer-curl-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 52323,
+          "sort_order": 1
+        }
+      ]
+    },
+    "hanging-leg-raise": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "hanging-leg-raise-start.jpg",
+          "poster_path": "hanging-leg-raise-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 51687,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "hanging-leg-raise-active.jpg",
+          "poster_path": "hanging-leg-raise-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 56061,
+          "sort_order": 1
+        }
+      ]
+    },
+    "hip-abduction": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "hip-abduction-start.jpg",
+          "poster_path": "hip-abduction-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 82032,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "hip-abduction-active.jpg",
+          "poster_path": "hip-abduction-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 86241,
+          "sort_order": 1
+        }
+      ]
+    },
+    "hip-adduction": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "hip-adduction-start.jpg",
+          "poster_path": "hip-adduction-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 73875,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "hip-adduction-active.jpg",
+          "poster_path": "hip-adduction-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 71410,
+          "sort_order": 1
+        }
+      ]
+    },
+    "hip-thrust": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "hip-thrust-start.jpg",
+          "poster_path": "hip-thrust-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 53764,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "hip-thrust-active.jpg",
+          "poster_path": "hip-thrust-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 52252,
+          "sort_order": 1
+        }
+      ]
+    },
+    "hollow-hold": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "hollow-hold-start.jpg",
+          "poster_path": "hollow-hold-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 43296,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "hollow-hold-active.jpg",
+          "poster_path": "hollow-hold-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 43135,
+          "sort_order": 1
+        }
+      ]
+    },
+    "hyperextension": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "hyperextension-start.jpg",
+          "poster_path": "hyperextension-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 72031,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "hyperextension-active.jpg",
+          "poster_path": "hyperextension-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 71234,
+          "sort_order": 1
+        }
+      ]
+    },
+    "incline-bench-press": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "incline-bench-press-start.jpg",
+          "poster_path": "incline-bench-press-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 72311,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "incline-bench-press-active.jpg",
+          "poster_path": "incline-bench-press-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 71198,
+          "sort_order": 1
+        }
+      ]
+    },
+    "incline-dumbbell-curl": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "incline-dumbbell-curl-start.jpg",
+          "poster_path": "incline-dumbbell-curl-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 53708,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "incline-dumbbell-curl-active.jpg",
+          "poster_path": "incline-dumbbell-curl-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 54063,
+          "sort_order": 1
+        }
+      ]
+    },
+    "incline-dumbbell-fly": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "incline-dumbbell-fly-start.jpg",
+          "poster_path": "incline-dumbbell-fly-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 60080,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "incline-dumbbell-fly-active.jpg",
+          "poster_path": "incline-dumbbell-fly-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 59395,
+          "sort_order": 1
+        }
+      ]
+    },
+    "incline-dumbbell-press": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "incline-dumbbell-press-start.jpg",
+          "poster_path": "incline-dumbbell-press-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 61978,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "incline-dumbbell-press-active.jpg",
+          "poster_path": "incline-dumbbell-press-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 61629,
+          "sort_order": 1
+        }
+      ]
+    },
+    "inverted-row": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "inverted-row-start.jpg",
+          "poster_path": "inverted-row-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 57494,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "inverted-row-active.jpg",
+          "poster_path": "inverted-row-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 59968,
+          "sort_order": 1
+        }
+      ]
+    },
+    "jump-rope": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "jump-rope-start.jpg",
+          "poster_path": "jump-rope-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 569,
+          "byte_size": 76449,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "jump-rope-active.jpg",
+          "poster_path": "jump-rope-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 569,
+          "byte_size": 77380,
+          "sort_order": 1
+        }
+      ]
+    },
+    "kettlebell-clean": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "kettlebell-clean-start.jpg",
+          "poster_path": "kettlebell-clean-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 569,
+          "byte_size": 34252,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "kettlebell-clean-active.jpg",
+          "poster_path": "kettlebell-clean-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 569,
+          "byte_size": 34503,
+          "sort_order": 1
+        }
+      ]
+    },
+    "kettlebell-goblet-squat": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "kettlebell-goblet-squat-start.jpg",
+          "poster_path": "kettlebell-goblet-squat-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 569,
+          "byte_size": 34299,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "kettlebell-goblet-squat-active.jpg",
+          "poster_path": "kettlebell-goblet-squat-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 569,
+          "byte_size": 34362,
+          "sort_order": 1
+        }
+      ]
+    },
+    "kettlebell-snatch": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "kettlebell-snatch-start.jpg",
+          "poster_path": "kettlebell-snatch-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 569,
+          "byte_size": 36421,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "kettlebell-snatch-active.jpg",
+          "poster_path": "kettlebell-snatch-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 569,
+          "byte_size": 35968,
+          "sort_order": 1
+        }
+      ]
+    },
+    "kettlebell-swing": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "kettlebell-swing-start.jpg",
+          "poster_path": "kettlebell-swing-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 569,
+          "byte_size": 35521,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "kettlebell-swing-active.jpg",
+          "poster_path": "kettlebell-swing-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 569,
+          "byte_size": 35451,
+          "sort_order": 1
+        }
+      ]
+    },
+    "landmine-press": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "landmine-press-start.jpg",
+          "poster_path": "landmine-press-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 646,
+          "height": 969,
+          "byte_size": 111593,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "landmine-press-active.jpg",
+          "poster_path": "landmine-press-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 646,
+          "height": 969,
+          "byte_size": 112741,
+          "sort_order": 1
+        }
+      ]
+    },
+    "lat-pulldown": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "lat-pulldown-start.jpg",
+          "poster_path": "lat-pulldown-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 71951,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "lat-pulldown-active.jpg",
+          "poster_path": "lat-pulldown-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 71400,
+          "sort_order": 1
+        }
+      ]
+    },
+    "leg-curl": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "leg-curl-start.jpg",
+          "poster_path": "leg-curl-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 77402,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "leg-curl-active.jpg",
+          "poster_path": "leg-curl-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 87755,
+          "sort_order": 1
+        }
+      ]
+    },
+    "leg-extension": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "leg-extension-start.jpg",
+          "poster_path": "leg-extension-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 81219,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "leg-extension-active.jpg",
+          "poster_path": "leg-extension-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 82758,
+          "sort_order": 1
+        }
+      ]
+    },
+    "leg-press": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "leg-press-start.jpg",
+          "poster_path": "leg-press-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 84753,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "leg-press-active.jpg",
+          "poster_path": "leg-press-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 83900,
+          "sort_order": 1
+        }
+      ]
+    },
+    "low-to-high-cable-fly": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "low-to-high-cable-fly-start.jpg",
+          "poster_path": "low-to-high-cable-fly-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 750,
+          "height": 500,
+          "byte_size": 39895,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "low-to-high-cable-fly-active.jpg",
+          "poster_path": "low-to-high-cable-fly-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 750,
+          "height": 500,
+          "byte_size": 40322,
+          "sort_order": 1
+        }
+      ]
+    },
+    "lunge": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "lunge-start.jpg",
+          "poster_path": "lunge-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 55460,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "lunge-active.jpg",
+          "poster_path": "lunge-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 61678,
+          "sort_order": 1
+        }
+      ]
+    },
+    "lying-dumbbell-triceps-extension": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "lying-dumbbell-triceps-extension-start.jpg",
+          "poster_path": "lying-dumbbell-triceps-extension-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 67781,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "lying-dumbbell-triceps-extension-active.jpg",
+          "poster_path": "lying-dumbbell-triceps-extension-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 68005,
+          "sort_order": 1
+        }
+      ]
+    },
+    "machine-biceps-curl": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "machine-biceps-curl-start.jpg",
+          "poster_path": "machine-biceps-curl-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 96958,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "machine-biceps-curl-active.jpg",
+          "poster_path": "machine-biceps-curl-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 97022,
+          "sort_order": 1
+        }
+      ]
+    },
+    "machine-chest-press": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "machine-chest-press-start.jpg",
+          "poster_path": "machine-chest-press-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 73844,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "machine-chest-press-active.jpg",
+          "poster_path": "machine-chest-press-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 72789,
+          "sort_order": 1
+        }
+      ]
+    },
+    "machine-dip": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "machine-dip-start.jpg",
+          "poster_path": "machine-dip-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 79361,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "machine-dip-active.jpg",
+          "poster_path": "machine-dip-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 81821,
+          "sort_order": 1
+        }
+      ]
+    },
+    "machine-lateral-raise": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "machine-lateral-raise-start.jpg",
+          "poster_path": "machine-lateral-raise-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 54479,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "machine-lateral-raise-active.jpg",
+          "poster_path": "machine-lateral-raise-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 55211,
+          "sort_order": 1
+        }
+      ]
+    },
+    "machine-row": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "machine-row-start.jpg",
+          "poster_path": "machine-row-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 57969,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "machine-row-active.jpg",
+          "poster_path": "machine-row-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 61444,
+          "sort_order": 1
+        }
+      ]
+    },
+    "machine-shoulder-press": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "machine-shoulder-press-start.jpg",
+          "poster_path": "machine-shoulder-press-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 74210,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "machine-shoulder-press-active.jpg",
+          "poster_path": "machine-shoulder-press-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 73860,
+          "sort_order": 1
+        }
+      ]
+    },
+    "meadows-row": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "meadows-row-start.jpg",
+          "poster_path": "meadows-row-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 500,
+          "height": 750,
+          "byte_size": 46113,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "meadows-row-active.jpg",
+          "poster_path": "meadows-row-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 500,
+          "height": 750,
+          "byte_size": 44884,
+          "sort_order": 1
+        }
+      ]
+    },
+    "medicine-ball-slam": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "medicine-ball-slam-start.jpg",
+          "poster_path": "medicine-ball-slam-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 500,
+          "height": 750,
+          "byte_size": 47442,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "medicine-ball-slam-active.jpg",
+          "poster_path": "medicine-ball-slam-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 500,
+          "height": 750,
+          "byte_size": 46048,
+          "sort_order": 1
+        }
+      ]
+    },
+    "mountain-climber": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "mountain-climber-start.jpg",
+          "poster_path": "mountain-climber-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 30166,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "mountain-climber-active.jpg",
+          "poster_path": "mountain-climber-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 30259,
+          "sort_order": 1
+        }
+      ]
+    },
+    "nordic-curl": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "nordic-curl-start.jpg",
+          "poster_path": "nordic-curl-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 750,
+          "height": 500,
+          "byte_size": 51751,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "nordic-curl-active.jpg",
+          "poster_path": "nordic-curl-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 750,
+          "height": 500,
+          "byte_size": 53582,
+          "sort_order": 1
+        }
+      ]
+    },
+    "one-arm-dumbbell-row": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "one-arm-dumbbell-row-start.jpg",
+          "poster_path": "one-arm-dumbbell-row-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 70752,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "one-arm-dumbbell-row-active.jpg",
+          "poster_path": "one-arm-dumbbell-row-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 71407,
+          "sort_order": 1
+        }
+      ]
+    },
+    "outdoor-cycling": {
+      "source": {
+        "name": "Your Fitness Coach",
+        "url": "/",
+        "license": "Иллюстрация создана для приложения",
+        "license_url": null
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "outdoor-cycling-technique.jpg",
+          "poster_path": "outdoor-cycling-technique.jpg",
+          "phase_id": "technique",
+          "phase": "Две фазы движения",
+          "width": 1200,
+          "height": 800,
+          "byte_size": 171100,
+          "sort_order": 0
+        }
+      ]
+    },
+    "outdoor-run": {
+      "source": {
+        "name": "Your Fitness Coach",
+        "url": "/",
+        "license": "Иллюстрация создана для приложения",
+        "license_url": null
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "outdoor-run-technique.jpg",
+          "poster_path": "outdoor-run-technique.jpg",
+          "phase_id": "technique",
+          "phase": "Две фазы движения",
+          "width": 1200,
+          "height": 800,
+          "byte_size": 98742,
+          "sort_order": 0
+        }
+      ]
+    },
+    "outdoor-walk": {
+      "source": {
+        "name": "Your Fitness Coach",
+        "url": "/",
+        "license": "Иллюстрация создана для приложения",
+        "license_url": null
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "outdoor-walk-technique.jpg",
+          "poster_path": "outdoor-walk-technique.jpg",
+          "phase_id": "technique",
+          "phase": "Две фазы движения",
+          "width": 1200,
+          "height": 800,
+          "byte_size": 143058,
+          "sort_order": 0
+        }
+      ]
+    },
+    "overhead-press": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "overhead-press-start.jpg",
+          "poster_path": "overhead-press-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 70631,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "overhead-press-active.jpg",
+          "poster_path": "overhead-press-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 69354,
+          "sort_order": 1
+        }
+      ]
+    },
+    "overhead-triceps-extension": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "overhead-triceps-extension-start.jpg",
+          "poster_path": "overhead-triceps-extension-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 33676,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "overhead-triceps-extension-active.jpg",
+          "poster_path": "overhead-triceps-extension-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 34406,
+          "sort_order": 1
+        }
+      ]
+    },
+    "pallof-press": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "pallof-press-start.jpg",
+          "poster_path": "pallof-press-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 1280,
+          "height": 720,
+          "byte_size": 59572,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "pallof-press-active.jpg",
+          "poster_path": "pallof-press-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 1280,
+          "height": 720,
+          "byte_size": 51839,
+          "sort_order": 1
+        }
+      ]
+    },
+    "pec-deck": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "pec-deck-start.jpg",
+          "poster_path": "pec-deck-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 85665,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "pec-deck-active.jpg",
+          "poster_path": "pec-deck-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 82097,
+          "sort_order": 1
+        }
+      ]
+    },
+    "pendlay-row": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "pendlay-row-start.jpg",
+          "poster_path": "pendlay-row-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 64589,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "pendlay-row-active.jpg",
+          "poster_path": "pendlay-row-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 66556,
+          "sort_order": 1
+        }
+      ]
+    },
+    "plank": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "plank-start.jpg",
+          "poster_path": "plank-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 43296,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "plank-active.jpg",
+          "poster_path": "plank-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 43135,
+          "sort_order": 1
+        }
+      ]
+    },
+    "preacher-curl": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "preacher-curl-start.jpg",
+          "poster_path": "preacher-curl-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 59261,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "preacher-curl-active.jpg",
+          "poster_path": "preacher-curl-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 59522,
+          "sort_order": 1
+        }
+      ]
+    },
+    "pull-up": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "pull-up-start.jpg",
+          "poster_path": "pull-up-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 42281,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "pull-up-active.jpg",
+          "poster_path": "pull-up-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 40018,
+          "sort_order": 1
+        }
+      ]
+    },
+    "push-up": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "push-up-start.jpg",
+          "poster_path": "push-up-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 66786,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "push-up-active.jpg",
+          "poster_path": "push-up-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 64283,
+          "sort_order": 1
+        }
+      ]
+    },
+    "rack-pull": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "rack-pull-start.jpg",
+          "poster_path": "rack-pull-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 44236,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "rack-pull-active.jpg",
+          "poster_path": "rack-pull-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 45236,
+          "sort_order": 1
+        }
+      ]
+    },
+    "rear-delt-fly": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "rear-delt-fly-start.jpg",
+          "poster_path": "rear-delt-fly-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 58354,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "rear-delt-fly-active.jpg",
+          "poster_path": "rear-delt-fly-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 59217,
+          "sort_order": 1
+        }
+      ]
+    },
+    "renegade-row": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "renegade-row-start.jpg",
+          "poster_path": "renegade-row-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 569,
+          "byte_size": 33835,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "renegade-row-active.jpg",
+          "poster_path": "renegade-row-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 569,
+          "byte_size": 32913,
+          "sort_order": 1
+        }
+      ]
+    },
+    "reverse-crunch": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "reverse-crunch-start.jpg",
+          "poster_path": "reverse-crunch-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 61594,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "reverse-crunch-active.jpg",
+          "poster_path": "reverse-crunch-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 56809,
+          "sort_order": 1
+        }
+      ]
+    },
+    "reverse-curl": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "reverse-curl-start.jpg",
+          "poster_path": "reverse-curl-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 57755,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "reverse-curl-active.jpg",
+          "poster_path": "reverse-curl-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 58110,
+          "sort_order": 1
+        }
+      ]
+    },
+    "reverse-grip-lat-pulldown": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "reverse-grip-lat-pulldown-start.jpg",
+          "poster_path": "reverse-grip-lat-pulldown-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 65340,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "reverse-grip-lat-pulldown-active.jpg",
+          "poster_path": "reverse-grip-lat-pulldown-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 63811,
+          "sort_order": 1
+        }
+      ]
+    },
+    "reverse-lunge": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "reverse-lunge-start.jpg",
+          "poster_path": "reverse-lunge-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 51169,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "reverse-lunge-active.jpg",
+          "poster_path": "reverse-lunge-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 49129,
+          "sort_order": 1
+        }
+      ]
+    },
+    "reverse-pec-deck": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "reverse-pec-deck-start.jpg",
+          "poster_path": "reverse-pec-deck-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 77240,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "reverse-pec-deck-active.jpg",
+          "poster_path": "reverse-pec-deck-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 77689,
+          "sort_order": 1
+        }
+      ]
+    },
+    "romanian-deadlift": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "romanian-deadlift-start.jpg",
+          "poster_path": "romanian-deadlift-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 59859,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "romanian-deadlift-active.jpg",
+          "poster_path": "romanian-deadlift-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 57367,
+          "sort_order": 1
+        }
+      ]
+    },
+    "rope-pushdown": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "rope-pushdown-start.jpg",
+          "poster_path": "rope-pushdown-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 88082,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "rope-pushdown-active.jpg",
+          "poster_path": "rope-pushdown-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 86992,
+          "sort_order": 1
+        }
+      ]
+    },
+    "rowing-machine": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "rowing-machine-start.jpg",
+          "poster_path": "rowing-machine-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 569,
+          "byte_size": 63420,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "rowing-machine-active.jpg",
+          "poster_path": "rowing-machine-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 569,
+          "byte_size": 61810,
+          "sort_order": 1
+        }
+      ]
+    },
+    "russian-twist": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "russian-twist-start.jpg",
+          "poster_path": "russian-twist-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 70925,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "russian-twist-active.jpg",
+          "poster_path": "russian-twist-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 70973,
+          "sort_order": 1
+        }
+      ]
+    },
+    "seated-cable-row": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "seated-cable-row-start.jpg",
+          "poster_path": "seated-cable-row-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 65319,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "seated-cable-row-active.jpg",
+          "poster_path": "seated-cable-row-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 65659,
+          "sort_order": 1
+        }
+      ]
+    },
+    "seated-calf-raise": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "seated-calf-raise-start.jpg",
+          "poster_path": "seated-calf-raise-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 60369,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "seated-calf-raise-active.jpg",
+          "poster_path": "seated-calf-raise-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 61832,
+          "sort_order": 1
+        }
+      ]
+    },
+    "seated-dumbbell-press": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "seated-dumbbell-press-start.jpg",
+          "poster_path": "seated-dumbbell-press-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 60972,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "seated-dumbbell-press-active.jpg",
+          "poster_path": "seated-dumbbell-press-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 61379,
+          "sort_order": 1
+        }
+      ]
+    },
+    "seated-leg-curl": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "seated-leg-curl-start.jpg",
+          "poster_path": "seated-leg-curl-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 91213,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "seated-leg-curl-active.jpg",
+          "poster_path": "seated-leg-curl-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 91286,
+          "sort_order": 1
+        }
+      ]
+    },
+    "side-plank": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "side-plank-start.jpg",
+          "poster_path": "side-plank-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 69518,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "side-plank-active.jpg",
+          "poster_path": "side-plank-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 63711,
+          "sort_order": 1
+        }
+      ]
+    },
+    "single-arm-cable-triceps-extension": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "single-arm-cable-triceps-extension-start.jpg",
+          "poster_path": "single-arm-cable-triceps-extension-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 84630,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "single-arm-cable-triceps-extension-active.jpg",
+          "poster_path": "single-arm-cable-triceps-extension-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 84994,
+          "sort_order": 1
+        }
+      ]
+    },
+    "single-leg-calf-raise": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "single-leg-calf-raise-start.jpg",
+          "poster_path": "single-leg-calf-raise-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 60966,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "single-leg-calf-raise-active.jpg",
+          "poster_path": "single-leg-calf-raise-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 59984,
+          "sort_order": 1
+        }
+      ]
+    },
+    "single-leg-hip-thrust": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "single-leg-hip-thrust-start.jpg",
+          "poster_path": "single-leg-hip-thrust-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 54678,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "single-leg-hip-thrust-active.jpg",
+          "poster_path": "single-leg-hip-thrust-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 55170,
+          "sort_order": 1
+        }
+      ]
+    },
+    "single-leg-rdl": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "single-leg-rdl-start.jpg",
+          "poster_path": "single-leg-rdl-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 569,
+          "byte_size": 38772,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "single-leg-rdl-active.jpg",
+          "poster_path": "single-leg-rdl-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 569,
+          "byte_size": 42018,
+          "sort_order": 1
+        }
+      ]
+    },
+    "sissy-squat": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "sissy-squat-start.jpg",
+          "poster_path": "sissy-squat-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 56427,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "sissy-squat-active.jpg",
+          "poster_path": "sissy-squat-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 56599,
+          "sort_order": 1
+        }
+      ]
+    },
+    "ski-erg": {
+      "source": {
+        "name": "Your Fitness Coach",
+        "url": "/",
+        "license": "Иллюстрация создана для приложения",
+        "license_url": null
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "ski-erg-technique.jpg",
+          "poster_path": "ski-erg-technique.jpg",
+          "phase_id": "technique",
+          "phase": "Две фазы движения",
+          "width": 1200,
+          "height": 800,
+          "byte_size": 102901,
+          "sort_order": 0
+        }
+      ]
+    },
+    "skull-crusher": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "skull-crusher-start.jpg",
+          "poster_path": "skull-crusher-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 750,
+          "height": 500,
+          "byte_size": 38566,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "skull-crusher-active.jpg",
+          "poster_path": "skull-crusher-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 750,
+          "height": 500,
+          "byte_size": 37438,
+          "sort_order": 1
+        }
+      ]
+    },
+    "sled-pull": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "sled-pull-start.jpg",
+          "poster_path": "sled-pull-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 32193,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "sled-pull-active.jpg",
+          "poster_path": "sled-pull-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 30134,
+          "sort_order": 1
+        }
+      ]
+    },
+    "sled-push": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "sled-push-start.jpg",
+          "poster_path": "sled-push-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 34209,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "sled-push-active.jpg",
+          "poster_path": "sled-push-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 36668,
+          "sort_order": 1
+        }
+      ]
+    },
+    "smith-bench-press": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "smith-bench-press-start.jpg",
+          "poster_path": "smith-bench-press-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 74906,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "smith-bench-press-active.jpg",
+          "poster_path": "smith-bench-press-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 74652,
+          "sort_order": 1
+        }
+      ]
+    },
+    "smith-shoulder-press": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "smith-shoulder-press-start.jpg",
+          "poster_path": "smith-shoulder-press-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 86577,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "smith-shoulder-press-active.jpg",
+          "poster_path": "smith-shoulder-press-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 85543,
+          "sort_order": 1
+        }
+      ]
+    },
+    "smith-squat": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "smith-squat-start.jpg",
+          "poster_path": "smith-squat-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 82170,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "smith-squat-active.jpg",
+          "poster_path": "smith-squat-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 85252,
+          "sort_order": 1
+        }
+      ]
+    },
+    "spider-curl": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "spider-curl-start.jpg",
+          "poster_path": "spider-curl-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 49046,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "spider-curl-active.jpg",
+          "poster_path": "spider-curl-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 47314,
+          "sort_order": 1
+        }
+      ]
+    },
+    "split-squat": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "split-squat-start.jpg",
+          "poster_path": "split-squat-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 30777,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "split-squat-active.jpg",
+          "poster_path": "split-squat-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 31014,
+          "sort_order": 1
+        }
+      ]
+    },
+    "squat": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "squat-start.jpg",
+          "poster_path": "squat-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 72823,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "squat-active.jpg",
+          "poster_path": "squat-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 71334,
+          "sort_order": 1
+        }
+      ]
+    },
+    "stair-climber": {
+      "source": {
+        "name": "Your Fitness Coach",
+        "url": "/",
+        "license": "Иллюстрация создана для приложения",
+        "license_url": null
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "stair-climber-technique.jpg",
+          "poster_path": "stair-climber-technique.jpg",
+          "phase_id": "technique",
+          "phase": "Две фазы движения",
+          "width": 1200,
+          "height": 800,
+          "byte_size": 133141,
+          "sort_order": 0
+        }
+      ]
+    },
+    "standing-calf-raise": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "standing-calf-raise-start.jpg",
+          "poster_path": "standing-calf-raise-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 60966,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "standing-calf-raise-active.jpg",
+          "poster_path": "standing-calf-raise-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 59984,
+          "sort_order": 1
+        }
+      ]
+    },
+    "standing-leg-curl": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "standing-leg-curl-start.jpg",
+          "poster_path": "standing-leg-curl-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 88574,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "standing-leg-curl-active.jpg",
+          "poster_path": "standing-leg-curl-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 88858,
+          "sort_order": 1
+        }
+      ]
+    },
+    "stationary-bike": {
+      "source": {
+        "name": "Your Fitness Coach",
+        "url": "/",
+        "license": "Иллюстрация создана для приложения",
+        "license_url": null
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "stationary-bike-technique.jpg",
+          "poster_path": "stationary-bike-technique.jpg",
+          "phase_id": "technique",
+          "phase": "Две фазы движения",
+          "width": 1200,
+          "height": 800,
+          "byte_size": 113771,
+          "sort_order": 0
+        }
+      ]
+    },
+    "step-up": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "step-up-start.jpg",
+          "poster_path": "step-up-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 70516,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "step-up-active.jpg",
+          "poster_path": "step-up-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 70840,
+          "sort_order": 1
+        }
+      ]
+    },
+    "stiff-leg-deadlift": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "stiff-leg-deadlift-start.jpg",
+          "poster_path": "stiff-leg-deadlift-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 67855,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "stiff-leg-deadlift-active.jpg",
+          "poster_path": "stiff-leg-deadlift-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 68335,
+          "sort_order": 1
+        }
+      ]
+    },
+    "straight-arm-pulldown": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "straight-arm-pulldown-start.jpg",
+          "poster_path": "straight-arm-pulldown-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 66022,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "straight-arm-pulldown-active.jpg",
+          "poster_path": "straight-arm-pulldown-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 67261,
+          "sort_order": 1
+        }
+      ]
+    },
+    "suitcase-carry": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "suitcase-carry-start.jpg",
+          "poster_path": "suitcase-carry-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 59728,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "suitcase-carry-active.jpg",
+          "poster_path": "suitcase-carry-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 48204,
+          "sort_order": 1
+        }
+      ]
+    },
+    "sumo-deadlift": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "sumo-deadlift-start.jpg",
+          "poster_path": "sumo-deadlift-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 44437,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "sumo-deadlift-active.jpg",
+          "poster_path": "sumo-deadlift-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 40578,
+          "sort_order": 1
+        }
+      ]
+    },
+    "swimming": {
+      "source": {
+        "name": "Your Fitness Coach",
+        "url": "/",
+        "license": "Иллюстрация создана для приложения",
+        "license_url": null
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "swimming-technique.jpg",
+          "poster_path": "swimming-technique.jpg",
+          "phase_id": "technique",
+          "phase": "Две фазы движения",
+          "width": 1200,
+          "height": 800,
+          "byte_size": 131385,
+          "sort_order": 0
+        }
+      ]
+    },
+    "t-bar-row": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "t-bar-row-start.jpg",
+          "poster_path": "t-bar-row-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 500,
+          "height": 750,
+          "byte_size": 46113,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "t-bar-row-active.jpg",
+          "poster_path": "t-bar-row-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 500,
+          "height": 750,
+          "byte_size": 44884,
+          "sort_order": 1
+        }
+      ]
+    },
+    "thruster": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "thruster-start.jpg",
+          "poster_path": "thruster-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 569,
+          "byte_size": 35804,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "thruster-active.jpg",
+          "poster_path": "thruster-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 569,
+          "byte_size": 37473,
+          "sort_order": 1
+        }
+      ]
+    },
+    "treadmill-run": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "treadmill-run-start.jpg",
+          "poster_path": "treadmill-run-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 569,
+          "byte_size": 79903,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "treadmill-run-active.jpg",
+          "poster_path": "treadmill-run-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 569,
+          "byte_size": 61731,
+          "sort_order": 1
+        }
+      ]
+    },
+    "treadmill-walk": {
+      "source": {
+        "name": "Your Fitness Coach",
+        "url": "/",
+        "license": "Иллюстрация создана для приложения",
+        "license_url": null
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "treadmill-walk-technique.jpg",
+          "poster_path": "treadmill-walk-technique.jpg",
+          "phase_id": "technique",
+          "phase": "Две фазы движения",
+          "width": 1200,
+          "height": 800,
+          "byte_size": 108533,
+          "sort_order": 0
+        }
+      ]
+    },
+    "triceps-kickback": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "triceps-kickback-start.jpg",
+          "poster_path": "triceps-kickback-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 52072,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "triceps-kickback-active.jpg",
+          "poster_path": "triceps-kickback-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 50368,
+          "sort_order": 1
+        }
+      ]
+    },
+    "turkish-get-up": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "turkish-get-up-start.jpg",
+          "poster_path": "turkish-get-up-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 569,
+          "byte_size": 37820,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "turkish-get-up-active.jpg",
+          "poster_path": "turkish-get-up-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 569,
+          "byte_size": 37701,
+          "sort_order": 1
+        }
+      ]
+    },
+    "upright-row": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "upright-row-start.jpg",
+          "poster_path": "upright-row-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 55002,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "upright-row-active.jpg",
+          "poster_path": "upright-row-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 54626,
+          "sort_order": 1
+        }
+      ]
+    },
+    "walking-lunge": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "walking-lunge-start.jpg",
+          "poster_path": "walking-lunge-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 77155,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "walking-lunge-active.jpg",
+          "poster_path": "walking-lunge-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 76877,
+          "sort_order": 1
+        }
+      ]
+    },
+    "wall-ball": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "wall-ball-start.jpg",
+          "poster_path": "wall-ball-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 51399,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "wall-ball-active.jpg",
+          "poster_path": "wall-ball-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 50964,
+          "sort_order": 1
+        }
+      ]
+    },
+    "wall-sit": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "wall-sit-start.jpg",
+          "poster_path": "wall-sit-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 37986,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "wall-sit-active.jpg",
+          "poster_path": "wall-sit-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 41546,
+          "sort_order": 1
+        }
+      ]
+    },
+    "weighted-dip": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "weighted-dip-start.jpg",
+          "poster_path": "weighted-dip-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 73206,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "weighted-dip-active.jpg",
+          "poster_path": "weighted-dip-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 72525,
+          "sort_order": 1
+        }
+      ]
+    },
+    "woodchopper": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "woodchopper-start.jpg",
+          "poster_path": "woodchopper-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 1275,
+          "byte_size": 107915,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "woodchopper-active.jpg",
+          "poster_path": "woodchopper-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 1275,
+          "byte_size": 112505,
+          "sort_order": 1
+        }
+      ]
+    },
+    "y-raise": {
+      "source": {
+        "name": "free-exercise-db",
+        "url": "https://github.com/yuhonas/free-exercise-db",
+        "license": "Unlicense (общественное достояние)",
+        "license_url": "https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "y-raise-start.jpg",
+          "poster_path": "y-raise-start.jpg",
+          "phase_id": "start",
+          "phase": "Исходное положение",
+          "width": 850,
+          "height": 567,
+          "byte_size": 58234,
+          "sort_order": 0
+        },
+        {
+          "type": "image",
+          "path": "y-raise-active.jpg",
+          "poster_path": "y-raise-active.jpg",
+          "phase_id": "active",
+          "phase": "Активная фаза",
+          "width": 850,
+          "height": 567,
+          "byte_size": 58549,
+          "sort_order": 1
+        }
+      ]
+    }
+  }
+}
