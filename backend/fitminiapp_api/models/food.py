@@ -1,0 +1,171 @@
+from datetime import datetime
+from decimal import Decimal
+
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    text,
+)
+from sqlalchemy.orm import Mapped, mapped_column
+
+from fitminiapp_api.core.timezone import now_msk_naive
+from fitminiapp_api.db.base import Base
+
+
+class Food(Base):
+    __tablename__ = "foods"
+    __table_args__ = (
+        CheckConstraint("length(trim(name)) > 0", name="ck_foods_name_not_blank"),
+        CheckConstraint(
+            "food_type IN ('system', 'branded', 'user')",
+            name="ck_foods_food_type",
+        ),
+        CheckConstraint(
+            "provenance IN ('internal', 'external', 'user')",
+            name="ck_foods_provenance",
+        ),
+        CheckConstraint(
+            "trust_level IN ('verified', 'unverified')",
+            name="ck_foods_trust_level",
+        ),
+        CheckConstraint(
+            "status IN ('draft', 'active', 'disabled')",
+            name="ck_foods_status",
+        ),
+        CheckConstraint(
+            "(food_type = 'user' AND owner_user_id IS NOT NULL AND provenance = 'user') "
+            "OR (food_type <> 'user' AND owner_user_id IS NULL AND provenance <> 'user')",
+            name="ck_foods_owner_scope",
+        ),
+        CheckConstraint(
+            "food_type = 'user' OR (source_name IS NOT NULL AND length(trim(source_name)) > 0)",
+            name="ck_foods_catalog_source",
+        ),
+        CheckConstraint(
+            "provenance <> 'external' OR "
+            "(source_name IS NOT NULL AND length(trim(source_name)) > 0 "
+            "AND external_id IS NOT NULL AND length(trim(external_id)) > 0 "
+            "AND source_license IS NOT NULL AND length(trim(source_license)) > 0 "
+            "AND source_url IS NOT NULL AND length(trim(source_url)) > 0 "
+            "AND source_license_url IS NOT NULL AND length(trim(source_license_url)) > 0)",
+            name="ck_foods_external_source",
+        ),
+        CheckConstraint(
+            "barcode IS NULL OR length(barcode) IN (8, 12, 13, 14)",
+            name="ck_foods_barcode_length",
+        ),
+        CheckConstraint(
+            "standard_serving_amount IS NULL AND standard_serving_unit IS NULL "
+            "AND standard_serving_weight_g IS NULL OR "
+            "standard_serving_amount > 0 AND "
+            "standard_serving_unit IN ('g', 'ml', 'piece', 'serving') AND "
+            "standard_serving_weight_g > 0",
+            name="ck_foods_standard_serving_complete",
+        ),
+        CheckConstraint(
+            "standard_serving_unit IS NULL OR standard_serving_unit <> 'g' "
+            "OR standard_serving_amount = standard_serving_weight_g",
+            name="ck_foods_gram_serving_weight",
+        ),
+        CheckConstraint(
+            "energy_kcal_per_100g IS NULL OR energy_kcal_per_100g BETWEEN 0 AND 1000",
+            name="ck_foods_energy_non_negative",
+        ),
+        CheckConstraint(
+            "protein_g_per_100g IS NULL OR protein_g_per_100g BETWEEN 0 AND 100",
+            name="ck_foods_protein_range",
+        ),
+        CheckConstraint(
+            "fat_g_per_100g IS NULL OR fat_g_per_100g BETWEEN 0 AND 100",
+            name="ck_foods_fat_range",
+        ),
+        CheckConstraint(
+            "carbs_g_per_100g IS NULL OR carbs_g_per_100g BETWEEN 0 AND 100",
+            name="ck_foods_carbs_range",
+        ),
+        CheckConstraint(
+            "fiber_g_per_100g IS NULL OR fiber_g_per_100g BETWEEN 0 AND 100",
+            name="ck_foods_fiber_range",
+        ),
+        CheckConstraint(
+            "status <> 'active' OR (energy_kcal_per_100g IS NOT NULL "
+            "AND protein_g_per_100g IS NOT NULL AND fat_g_per_100g IS NOT NULL "
+            "AND carbs_g_per_100g IS NOT NULL)",
+            name="ck_foods_active_nutrients",
+        ),
+        CheckConstraint(
+            "food_type = 'user' OR status <> 'active' OR trust_level = 'verified'",
+            name="ck_foods_active_catalog_trust",
+        ),
+        Index("ix_foods_owner_status", "owner_user_id", "status"),
+        Index(
+            "uq_foods_catalog_barcode",
+            "barcode",
+            unique=True,
+            postgresql_where=text("barcode IS NOT NULL AND food_type <> 'user'"),
+            sqlite_where=text("barcode IS NOT NULL AND food_type <> 'user'"),
+        ),
+        Index(
+            "uq_foods_user_barcode",
+            "owner_user_id",
+            "barcode",
+            unique=True,
+            postgresql_where=text("barcode IS NOT NULL AND food_type = 'user'"),
+            sqlite_where=text("barcode IS NOT NULL AND food_type = 'user'"),
+        ),
+        Index(
+            "uq_foods_external_source_id",
+            "source_name",
+            "external_id",
+            unique=True,
+            postgresql_where=text("provenance = 'external'"),
+            sqlite_where=text("provenance = 'external'"),
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(256), nullable=False)
+    brand: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    barcode: Mapped[str | None] = mapped_column(String(14), nullable=True)
+
+    energy_kcal_per_100g: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    protein_g_per_100g: Mapped[Decimal | None] = mapped_column(Numeric(8, 3), nullable=True)
+    fat_g_per_100g: Mapped[Decimal | None] = mapped_column(Numeric(8, 3), nullable=True)
+    carbs_g_per_100g: Mapped[Decimal | None] = mapped_column(Numeric(8, 3), nullable=True)
+    fiber_g_per_100g: Mapped[Decimal | None] = mapped_column(Numeric(8, 3), nullable=True)
+
+    standard_serving_amount: Mapped[Decimal | None] = mapped_column(Numeric(10, 3), nullable=True)
+    standard_serving_unit: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    standard_serving_weight_g: Mapped[Decimal | None] = mapped_column(Numeric(10, 3), nullable=True)
+
+    food_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    owner_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    )
+    provenance: Mapped[str] = mapped_column(String(16), nullable=False)
+    source_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    source_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    source_license: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_license_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    external_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    trust_level: Mapped[str] = mapped_column(String(16), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=now_msk_naive,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=now_msk_naive,
+        onupdate=now_msk_naive,
+    )

@@ -2,6 +2,7 @@ from fitminiapp_api.models.audit import AuditEvent
 from fitminiapp_api.models.auth_identity import AuthActionToken, AuthIdentity, LocalCredential
 from fitminiapp_api.models.billing import Payment, Plan, Subscription
 from fitminiapp_api.models.exercise import Exercise
+from fitminiapp_api.models.food import Food
 from fitminiapp_api.models.notification import Notification, NotificationSetting
 from fitminiapp_api.models.nutrition import NutritionTarget
 from fitminiapp_api.models.program import (
@@ -33,6 +34,7 @@ __all__ = [
     "CoachClientInvite",
     "CoachRoleApplication",
     "Exercise",
+    "Food",
     "HiddenProgramTemplate",
     "LocalCredential",
     "Notification",
