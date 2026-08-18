@@ -20,6 +20,11 @@ from fitminiapp_api.schemas.program import (
     CoachProgramExerciseCreate,
     ProgramAssignmentResponse,
 )
+from fitminiapp_api.schemas.progress import (
+    ProgressPeriodDays,
+    ProgressSummaryResponse,
+    TrainerClientProgressSummary,
+)
 from fitminiapp_api.schemas.user import UserProfileUpdate
 from fitminiapp_api.schemas.workout import (
     BodyMeasurementResponse,
@@ -47,6 +52,10 @@ from fitminiapp_api.services.programs import (
     get_template_for_user,
     list_clients,
     list_coach_assigned_programs,
+)
+from fitminiapp_api.services.progress import (
+    build_progress_summary,
+    build_trainer_client_summaries,
 )
 
 router = APIRouter()
@@ -108,6 +117,32 @@ def coach_client_analytics(
 ):
     client = _managed_client(db, current_user, client_id)
     return build_user_progress(db, client)
+
+
+@router.get(
+    "/clients/{client_id}/summary",
+    response_model=ProgressSummaryResponse,
+)
+def coach_client_progress_summary(
+    client_id: int,
+    period_days: ProgressPeriodDays = ProgressPeriodDays.DAYS_30,
+    current_user: User = Depends(require_coach_or_admin),
+    db: Session = Depends(get_db),
+):
+    client = _managed_client(db, current_user, client_id)
+    return build_progress_summary(db, client, period_days)
+
+
+@router.get(
+    "/client-summaries",
+    response_model=list[TrainerClientProgressSummary],
+)
+def coach_client_progress_summaries(
+    period_days: ProgressPeriodDays = ProgressPeriodDays.DAYS_30,
+    current_user: User = Depends(require_coach_or_admin),
+    db: Session = Depends(get_db),
+):
+    return build_trainer_client_summaries(db, current_user, period_days)
 
 
 @router.get(

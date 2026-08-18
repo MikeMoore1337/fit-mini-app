@@ -14,6 +14,7 @@ from fitminiapp_api.models.program import (
     UserWorkoutSet,
 )
 from fitminiapp_api.models.user import BodyMeasurement, User
+from fitminiapp_api.schemas.progress import ProgressPeriodDays, ProgressSummaryResponse
 from fitminiapp_api.schemas.workout import (
     BodyMeasurementResponse,
     BodyMeasurementSave,
@@ -32,6 +33,7 @@ from fitminiapp_api.services.exercise_catalog import get_visible_exercise_displa
 from fitminiapp_api.services.exercise_guides import get_exercise_guide
 from fitminiapp_api.services.notifications import queue_telegram_notification
 from fitminiapp_api.services.nutrition import NutritionError, recalculate_nutrition_target
+from fitminiapp_api.services.progress import build_progress_summary
 
 router = APIRouter()
 
@@ -289,6 +291,15 @@ def workout_progress(
     db: Session = Depends(get_db),
 ):
     return build_user_progress(db, current_user)
+
+
+@router.get("/progress/summary", response_model=ProgressSummaryResponse)
+def workout_progress_summary(
+    period_days: ProgressPeriodDays = ProgressPeriodDays.DAYS_30,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    return build_progress_summary(db, current_user, period_days)
 
 
 @router.delete("/today", status_code=status.HTTP_204_NO_CONTENT)
