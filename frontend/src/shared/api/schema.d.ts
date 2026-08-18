@@ -1160,6 +1160,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/nutrition/recipes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Recipes */
+        get: operations["get_recipes_api_v1_nutrition_recipes_get"];
+        put?: never;
+        /** Create User Recipe */
+        post: operations["create_user_recipe_api_v1_nutrition_recipes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nutrition/recipes/{recipe_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Recipe */
+        get: operations["get_recipe_api_v1_nutrition_recipes__recipe_id__get"];
+        put?: never;
+        post?: never;
+        /** Remove Recipe */
+        delete: operations["remove_recipe_api_v1_nutrition_recipes__recipe_id__delete"];
+        options?: never;
+        head?: never;
+        /** Patch Recipe */
+        patch: operations["patch_recipe_api_v1_nutrition_recipes__recipe_id__patch"];
+        trace?: never;
+    };
     "/api/v1/nutrition/diary": {
         parameters: {
             query?: never;
@@ -1210,6 +1247,57 @@ export interface paths {
         head?: never;
         /** Update Diary Entry */
         patch: operations["update_diary_entry_api_v1_nutrition_diary_entries__entry_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/nutrition/diary/copy/product": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Copy Product */
+        post: operations["copy_product_api_v1_nutrition_diary_copy_product_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nutrition/diary/copy/meal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Copy Meal */
+        post: operations["copy_meal_api_v1_nutrition_diary_copy_meal_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nutrition/diary/copy/day": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Copy Day */
+        post: operations["copy_day_api_v1_nutrition_diary_copy_day_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/nutrition/targets": {
@@ -2255,6 +2343,93 @@ export interface components {
              */
             last_performed_on: string;
         };
+        /** FoodDiaryCopyDay */
+        FoodDiaryCopyDay: {
+            /**
+             * Source Date
+             * Format: date
+             */
+            source_date: string;
+            /**
+             * Target Date
+             * Format: date
+             */
+            target_date: string;
+        };
+        /** FoodDiaryCopyMeal */
+        FoodDiaryCopyMeal: {
+            /**
+             * Source Date
+             * Format: date
+             */
+            source_date: string;
+            /**
+             * Source Meal Type
+             * @enum {string}
+             */
+            source_meal_type: "breakfast" | "lunch" | "dinner" | "snacks";
+            /**
+             * Target Date
+             * Format: date
+             */
+            target_date: string;
+            /**
+             * Target Meal Type
+             * @enum {string}
+             */
+            target_meal_type: "breakfast" | "lunch" | "dinner" | "snacks";
+        };
+        /** FoodDiaryCopyProduct */
+        FoodDiaryCopyProduct: {
+            /** Source Entry Id */
+            source_entry_id: number;
+            /**
+             * Source Date
+             * Format: date
+             */
+            source_date: string;
+            /**
+             * Source Meal Type
+             * @enum {string}
+             */
+            source_meal_type: "breakfast" | "lunch" | "dinner" | "snacks";
+            /**
+             * Target Date
+             * Format: date
+             */
+            target_date: string;
+            /**
+             * Target Meal Type
+             * @enum {string}
+             */
+            target_meal_type: "breakfast" | "lunch" | "dinner" | "snacks";
+        };
+        /** FoodDiaryCopyResponse */
+        FoodDiaryCopyResponse: {
+            /**
+             * Copy Scope
+             * @enum {string}
+             */
+            copy_scope: "product" | "meal" | "day";
+            /**
+             * Source Date
+             * Format: date
+             */
+            source_date: string;
+            /** Source Meal Type */
+            source_meal_type: ("breakfast" | "lunch" | "dinner" | "snacks") | null;
+            /**
+             * Target Date
+             * Format: date
+             */
+            target_date: string;
+            /** Target Meal Type */
+            target_meal_type: ("breakfast" | "lunch" | "dinner" | "snacks") | null;
+            /** Entries */
+            entries: components["schemas"]["FoodDiaryEntryResponse"][];
+            /** Replayed */
+            replayed: boolean;
+        };
         /** FoodDiaryDayResponse */
         FoodDiaryDayResponse: {
             /**
@@ -2273,7 +2448,9 @@ export interface components {
         /** FoodDiaryEntryCreate */
         FoodDiaryEntryCreate: {
             /** Food Id */
-            food_id: number;
+            food_id?: number | null;
+            /** Recipe Id */
+            recipe_id?: number | null;
             /**
              * Diary Date
              * Format: date
@@ -2309,6 +2486,8 @@ export interface components {
             meal_type: "breakfast" | "lunch" | "dinner" | "snacks";
             /** Food Id */
             food_id: number | null;
+            /** Recipe Id */
+            recipe_id: number | null;
             /** Food Name */
             food_name: string;
             /** Food Brand */
@@ -2344,6 +2523,8 @@ export interface components {
         FoodDiaryEntryUpdate: {
             /** Food Id */
             food_id?: number | null;
+            /** Recipe Id */
+            recipe_id?: number | null;
             /** Diary Date */
             diary_date?: string | null;
             /** Meal Type */
@@ -2929,6 +3110,117 @@ export interface components {
             measured_on: string;
             /** Weight Kg */
             weight_kg: number;
+        };
+        /** RecipeCreate */
+        RecipeCreate: {
+            /** Name */
+            name: string;
+            /** Ingredients */
+            ingredients: components["schemas"]["RecipeIngredientInput"][];
+            /** Final Weight G */
+            final_weight_g?: number | string | null;
+        };
+        /** RecipeIngredientInput */
+        RecipeIngredientInput: {
+            /** Food Id */
+            food_id: number;
+            /** Amount */
+            amount: number | string;
+            /**
+             * Amount Unit
+             * @default g
+             * @enum {string}
+             */
+            amount_unit: "g" | "serving";
+        };
+        /** RecipeIngredientResponse */
+        RecipeIngredientResponse: {
+            /** Id */
+            id: number;
+            /** Position */
+            position: number;
+            /** Food Id */
+            food_id: number | null;
+            /** Food Name */
+            food_name: string;
+            /** Food Brand */
+            food_brand: string | null;
+            /** Amount */
+            amount: string;
+            /**
+             * Amount Unit
+             * @enum {string}
+             */
+            amount_unit: "g" | "serving";
+            /** Weight G */
+            weight_g: string;
+            /** Serving Amount */
+            serving_amount: string | null;
+            /** Serving Unit */
+            serving_unit: string | null;
+            /** Serving Weight G */
+            serving_weight_g: string | null;
+            nutrition: components["schemas"]["FoodDiaryNutrition"];
+        };
+        /** RecipeListResponse */
+        RecipeListResponse: {
+            /** Items */
+            items: components["schemas"]["RecipeResponse"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /** RecipeNutrientsPer100g */
+        RecipeNutrientsPer100g: {
+            /** Energy Kcal Per 100G */
+            energy_kcal_per_100g: string;
+            /** Protein G Per 100G */
+            protein_g_per_100g: string;
+            /** Fat G Per 100G */
+            fat_g_per_100g: string;
+            /** Carbs G Per 100G */
+            carbs_g_per_100g: string;
+            /** Fiber G Per 100G */
+            fiber_g_per_100g: string | null;
+        };
+        /** RecipeResponse */
+        RecipeResponse: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Ingredients */
+            ingredients: components["schemas"]["RecipeIngredientResponse"][];
+            /** Ingredients Weight G */
+            ingredients_weight_g: string;
+            /** Final Weight G */
+            final_weight_g: string | null;
+            /** Effective Weight G */
+            effective_weight_g: string;
+            totals: components["schemas"]["FoodDiaryNutrition"];
+            nutrients_per_100g: components["schemas"]["RecipeNutrientsPer100g"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** RecipeUpdate */
+        RecipeUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Ingredients */
+            ingredients?: components["schemas"]["RecipeIngredientInput"][] | null;
+            /** Final Weight G */
+            final_weight_g?: number | string | null;
         };
         /** RefreshRequest */
         RefreshRequest: {
@@ -5736,6 +6028,166 @@ export interface operations {
             };
         };
     };
+    get_recipes_api_v1_nutrition_recipes_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipeListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_user_recipe_api_v1_nutrition_recipes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecipeCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_recipe_api_v1_nutrition_recipes__recipe_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recipe_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_recipe_api_v1_nutrition_recipes__recipe_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recipe_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_recipe_api_v1_nutrition_recipes__recipe_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recipe_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecipeUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_diary_day_api_v1_nutrition_diary_get: {
         parameters: {
             query?: {
@@ -5851,6 +6303,111 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FoodDiaryEntryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    copy_product_api_v1_nutrition_diary_copy_product_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FoodDiaryCopyProduct"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodDiaryCopyResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    copy_meal_api_v1_nutrition_diary_copy_meal_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FoodDiaryCopyMeal"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodDiaryCopyResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    copy_day_api_v1_nutrition_diary_copy_day_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FoodDiaryCopyDay"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodDiaryCopyResponse"];
                 };
             };
             /** @description Validation Error */

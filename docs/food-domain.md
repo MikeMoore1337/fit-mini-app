@@ -61,7 +61,7 @@ Run the same command without `--dry-run` only after source accuracy, provenance,
 been reviewed. No base food seed is committed until such a source is selected; the pipeline alone
 does not imply that a dataset is suitable for production.
 
-External HTTP fetching, recipes, barcode scanning, and UI remain outside this foundation.
+External HTTP fetching, barcode scanning, and UI remain outside this foundation.
 
 ## Personal library and local search
 
@@ -125,3 +125,36 @@ All entry reads and mutations are scoped to the authenticated account. A missing
 or diary entry uses the same not-found response, so the API does not disclose another account's
 private catalog or diary data. A day is a bounded aggregate and is intentionally returned as one
 response rather than paginated entry fragments.
+
+## Private recipes
+
+Recipes under `/api/v1/nutrition/recipes` are private to their owning account. Each ingredient is
+a visible food with an amount in grams or in the food's explicitly defined standard serving. The
+recipe snapshots ingredient names, serving data, and nutrients, so later catalog edits or deletion
+do not silently rewrite the saved recipe.
+
+Recipe totals use the same decimal scaling and round-half-up rules as foods and diary entries. The
+ingredient weights are summed as the default effective recipe weight. An optional
+`final_weight_g` replaces that denominator only when the user explicitly supplies it; the backend
+does not infer cooking loss, water gain, density, or yield. Responses expose ingredient weight,
+the optional final weight, effective weight, total nutrients, and nutrients per 100 grams. Diary
+entries can reference either one food or one owned recipe. Recipe diary entries accept an
+arbitrary positive gram weight and snapshot the recipe calculation at that point in time.
+
+## Explicit diary copying
+
+Authenticated copy operations are separated by scope:
+
+- `POST /api/v1/nutrition/diary/copy/product` repeats one source diary entry;
+- `POST /api/v1/nutrition/diary/copy/meal` copies all entries in one meal;
+- `POST /api/v1/nutrition/diary/copy/day` copies all entries in a day while preserving meal types.
+
+Product and meal requests name both the source date/meal and target date/meal. A day request names
+both dates. This makes "repeat yesterday's breakfast" the ordinary meal-copy contract rather than
+a hidden server shortcut. Source ownership and both calendar dates are validated on the backend;
+the same user-timezone future-date rule as manual diary writes applies to copy targets.
+
+Every copy request requires an `Idempotency-Key` header. The database scopes keys per account and
+stores a fingerprint of the explicit source/target request in the same transaction as the copied
+entries. Retrying the same key and payload returns the original entry IDs with `replayed=true` and
+does not append duplicates. Reusing the key for a different source or target returns `409`.
