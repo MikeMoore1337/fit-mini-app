@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react';
 import { browserAppTheme, type AppColorScheme } from '../theme';
 
 export const brandAssetPaths = {
-  favicon: '/assets/brand/favicon.svg',
+  favicon: {
+    dark: '/assets/brand/favicon-dark.svg',
+    fallback: '/assets/brand/favicon.svg',
+    light: '/assets/brand/favicon-light.svg',
+  },
   full: {
     dark: '/assets/brand/yfc-logo-dark.svg',
     light: '/assets/brand/yfc-logo-light.svg',

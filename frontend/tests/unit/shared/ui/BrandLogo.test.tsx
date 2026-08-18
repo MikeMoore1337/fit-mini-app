@@ -20,4 +20,12 @@ describe('BrandLogo', () => {
     expect(image).toHaveAttribute('aria-hidden', 'true');
     expect(image).toHaveAttribute('src', brandAssetPaths.mark.light);
   });
+
+  it('exposes theme-aware favicon variants with a legacy fallback', () => {
+    expect(brandAssetPaths.favicon).toEqual({
+      dark: '/assets/brand/favicon-dark.svg',
+      fallback: '/assets/brand/favicon.svg',
+      light: '/assets/brand/favicon-light.svg',
+    });
+  });
 });
