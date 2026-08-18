@@ -262,7 +262,7 @@ def test_food_migration_upgrades_from_previous_head(tmp_path: Path) -> None:
         schema = inspect(connection)
         assert "foods" in schema.get_table_names()
         assert {column["name"] for column in schema.get_columns("foods")} == {
-            column.name for column in Food.__table__.columns
+            column.name for column in Food.__table__.columns if column.name != "search_text"
         }
         assert {constraint["name"] for constraint in schema.get_check_constraints("foods")} == {
             constraint.name

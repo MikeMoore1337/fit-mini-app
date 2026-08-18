@@ -2,7 +2,7 @@ from fitminiapp_api.models.audit import AuditEvent
 from fitminiapp_api.models.auth_identity import AuthActionToken, AuthIdentity, LocalCredential
 from fitminiapp_api.models.billing import Payment, Plan, Subscription
 from fitminiapp_api.models.exercise import Exercise
-from fitminiapp_api.models.food import Food
+from fitminiapp_api.models.food import Food, FoodFavorite
 from fitminiapp_api.models.food_diary import FoodDiaryEntry
 from fitminiapp_api.models.notification import Notification, NotificationSetting
 from fitminiapp_api.models.nutrition import NutritionTarget
@@ -37,6 +37,7 @@ __all__ = [
     "Exercise",
     "Food",
     "FoodDiaryEntry",
+    "FoodFavorite",
     "HiddenProgramTemplate",
     "LocalCredential",
     "Notification",

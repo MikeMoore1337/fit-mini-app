@@ -1055,6 +1055,163 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/nutrition/foods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Food */
+        post: operations["create_food_api_v1_nutrition_foods_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nutrition/foods/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search Food Library */
+        get: operations["search_food_library_api_v1_nutrition_foods_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nutrition/foods/recent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Recent Foods */
+        get: operations["get_recent_foods_api_v1_nutrition_foods_recent_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nutrition/foods/favorites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Favorite Foods */
+        get: operations["get_favorite_foods_api_v1_nutrition_foods_favorites_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nutrition/foods/{food_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Food */
+        get: operations["get_food_api_v1_nutrition_foods__food_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Food */
+        delete: operations["delete_food_api_v1_nutrition_foods__food_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Food */
+        patch: operations["update_food_api_v1_nutrition_foods__food_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/nutrition/foods/{food_id}/favorite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Add Food Favorite */
+        put: operations["add_food_favorite_api_v1_nutrition_foods__food_id__favorite_put"];
+        post?: never;
+        /** Remove Food Favorite */
+        delete: operations["remove_food_favorite_api_v1_nutrition_foods__food_id__favorite_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nutrition/diary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Diary Day */
+        get: operations["get_diary_day_api_v1_nutrition_diary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nutrition/diary/entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Diary Entry */
+        post: operations["create_diary_entry_api_v1_nutrition_diary_entries_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nutrition/diary/entries/{entry_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Diary Entry */
+        delete: operations["delete_diary_entry_api_v1_nutrition_diary_entries__entry_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Diary Entry */
+        patch: operations["update_diary_entry_api_v1_nutrition_diary_entries__entry_id__patch"];
+        trace?: never;
+    };
     "/api/v1/nutrition/targets": {
         parameters: {
             query?: never;
@@ -2098,6 +2255,196 @@ export interface components {
              */
             last_performed_on: string;
         };
+        /** FoodDiaryDayResponse */
+        FoodDiaryDayResponse: {
+            /**
+             * Diary Date
+             * Format: date
+             */
+            diary_date: string;
+            /** Timezone */
+            timezone: string;
+            /** Meals */
+            meals: components["schemas"]["FoodDiaryMeal"][];
+            totals: components["schemas"]["FoodDiaryNutrition"];
+            targets: components["schemas"]["FoodDiaryTargets"] | null;
+            remaining: components["schemas"]["FoodDiaryTargets"] | null;
+        };
+        /** FoodDiaryEntryCreate */
+        FoodDiaryEntryCreate: {
+            /** Food Id */
+            food_id: number;
+            /**
+             * Diary Date
+             * Format: date
+             */
+            diary_date: string;
+            /**
+             * Meal Type
+             * @enum {string}
+             */
+            meal_type: "breakfast" | "lunch" | "dinner" | "snacks";
+            /** Amount */
+            amount: number | string;
+            /**
+             * Amount Unit
+             * @default g
+             * @enum {string}
+             */
+            amount_unit: "g" | "serving";
+        };
+        /** FoodDiaryEntryResponse */
+        FoodDiaryEntryResponse: {
+            /** Id */
+            id: number;
+            /**
+             * Diary Date
+             * Format: date
+             */
+            diary_date: string;
+            /**
+             * Meal Type
+             * @enum {string}
+             */
+            meal_type: "breakfast" | "lunch" | "dinner" | "snacks";
+            /** Food Id */
+            food_id: number | null;
+            /** Food Name */
+            food_name: string;
+            /** Food Brand */
+            food_brand: string | null;
+            /** Amount */
+            amount: string;
+            /**
+             * Amount Unit
+             * @enum {string}
+             */
+            amount_unit: "g" | "serving";
+            /** Weight G */
+            weight_g: string;
+            /** Serving Amount */
+            serving_amount: string | null;
+            /** Serving Unit */
+            serving_unit: string | null;
+            /** Serving Weight G */
+            serving_weight_g: string | null;
+            nutrition: components["schemas"]["FoodDiaryNutrition"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** FoodDiaryEntryUpdate */
+        FoodDiaryEntryUpdate: {
+            /** Food Id */
+            food_id?: number | null;
+            /** Diary Date */
+            diary_date?: string | null;
+            /** Meal Type */
+            meal_type?: ("breakfast" | "lunch" | "dinner" | "snacks") | null;
+            /** Amount */
+            amount?: number | string | null;
+            /** Amount Unit */
+            amount_unit?: ("g" | "serving") | null;
+        };
+        /** FoodDiaryMeal */
+        FoodDiaryMeal: {
+            /**
+             * Meal Type
+             * @enum {string}
+             */
+            meal_type: "breakfast" | "lunch" | "dinner" | "snacks";
+            /** Entries */
+            entries: components["schemas"]["FoodDiaryEntryResponse"][];
+            totals: components["schemas"]["FoodDiaryNutrition"];
+        };
+        /** FoodDiaryNutrition */
+        FoodDiaryNutrition: {
+            /** Energy Kcal */
+            energy_kcal: string;
+            /** Protein G */
+            protein_g: string;
+            /** Fat G */
+            fat_g: string;
+            /** Carbs G */
+            carbs_g: string;
+            /** Fiber G */
+            fiber_g: string | null;
+        };
+        /** FoodDiaryTargets */
+        FoodDiaryTargets: {
+            /** Energy Kcal */
+            energy_kcal: string;
+            /** Protein G */
+            protein_g: string;
+            /** Fat G */
+            fat_g: string;
+            /** Carbs G */
+            carbs_g: string;
+        };
+        /** FoodListResponse */
+        FoodListResponse: {
+            /** Items */
+            items: components["schemas"]["FoodResponse"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /** FoodResponse */
+        FoodResponse: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Brand */
+            brand: string | null;
+            /** Barcode */
+            barcode: string | null;
+            /** Energy Kcal Per 100G */
+            energy_kcal_per_100g: string;
+            /** Protein G Per 100G */
+            protein_g_per_100g: string;
+            /** Fat G Per 100G */
+            fat_g_per_100g: string;
+            /** Carbs G Per 100G */
+            carbs_g_per_100g: string;
+            /** Fiber G Per 100G */
+            fiber_g_per_100g: string | null;
+            /** Standard Serving Amount */
+            standard_serving_amount: string | null;
+            /** Standard Serving Unit */
+            standard_serving_unit: ("g" | "ml" | "piece" | "serving") | null;
+            /** Standard Serving Weight G */
+            standard_serving_weight_g: string | null;
+            /**
+             * Food Type
+             * @enum {string}
+             */
+            food_type: "system" | "branded" | "user";
+            /** Is Favorite */
+            is_favorite: boolean;
+            /** Last Used At */
+            last_used_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -2639,6 +2986,56 @@ export interface components {
             chat_url?: string | null;
             /** Chat Unavailable Reason */
             chat_unavailable_reason?: string | null;
+        };
+        /** UserFoodCreate */
+        UserFoodCreate: {
+            /** Energy Kcal Per 100G */
+            energy_kcal_per_100g: number | string;
+            /** Protein G Per 100G */
+            protein_g_per_100g: number | string;
+            /** Fat G Per 100G */
+            fat_g_per_100g: number | string;
+            /** Carbs G Per 100G */
+            carbs_g_per_100g: number | string;
+            /** Fiber G Per 100G */
+            fiber_g_per_100g?: number | string | null;
+            /** Name */
+            name: string;
+            /** Brand */
+            brand?: string | null;
+            /** Barcode */
+            barcode?: string | null;
+            /** Standard Serving Amount */
+            standard_serving_amount?: number | string | null;
+            /** Standard Serving Unit */
+            standard_serving_unit?: ("g" | "ml" | "piece" | "serving") | null;
+            /** Standard Serving Weight G */
+            standard_serving_weight_g?: number | string | null;
+        };
+        /** UserFoodUpdate */
+        UserFoodUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Brand */
+            brand?: string | null;
+            /** Barcode */
+            barcode?: string | null;
+            /** Energy Kcal Per 100G */
+            energy_kcal_per_100g?: number | string | null;
+            /** Protein G Per 100G */
+            protein_g_per_100g?: number | string | null;
+            /** Fat G Per 100G */
+            fat_g_per_100g?: number | string | null;
+            /** Carbs G Per 100G */
+            carbs_g_per_100g?: number | string | null;
+            /** Fiber G Per 100G */
+            fiber_g_per_100g?: number | string | null;
+            /** Standard Serving Amount */
+            standard_serving_amount?: number | string | null;
+            /** Standard Serving Unit */
+            standard_serving_unit?: ("g" | "ml" | "piece" | "serving") | null;
+            /** Standard Serving Weight G */
+            standard_serving_weight_g?: number | string | null;
         };
         /** UserProfileResponse */
         UserProfileResponse: {
@@ -5042,6 +5439,419 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_food_api_v1_nutrition_foods_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserFoodCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_food_library_api_v1_nutrition_foods_search_get: {
+        parameters: {
+            query: {
+                q: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_recent_foods_api_v1_nutrition_foods_recent_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_favorite_foods_api_v1_nutrition_foods_favorites_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_food_api_v1_nutrition_foods__food_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                food_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_food_api_v1_nutrition_foods__food_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                food_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_food_api_v1_nutrition_foods__food_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                food_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserFoodUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_food_favorite_api_v1_nutrition_foods__food_id__favorite_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                food_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_food_favorite_api_v1_nutrition_foods__food_id__favorite_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                food_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_diary_day_api_v1_nutrition_diary_get: {
+        parameters: {
+            query?: {
+                diary_date?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodDiaryDayResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_diary_entry_api_v1_nutrition_diary_entries_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FoodDiaryEntryCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodDiaryEntryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_diary_entry_api_v1_nutrition_diary_entries__entry_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_diary_entry_api_v1_nutrition_diary_entries__entry_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FoodDiaryEntryUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodDiaryEntryResponse"];
+                };
             };
             /** @description Validation Error */
             422: {

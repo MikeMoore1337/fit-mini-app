@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 
@@ -89,6 +89,68 @@ class UserFoodCreate(FoodValuesInput):
     protein_g_per_100g: Decimal = Field(ge=0, le=100)
     fat_g_per_100g: Decimal = Field(ge=0, le=100)
     carbs_g_per_100g: Decimal = Field(ge=0, le=100)
+
+
+class UserFoodUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=256)
+    brand: str | None = Field(default=None, max_length=128)
+    barcode: str | None = None
+    energy_kcal_per_100g: Decimal | None = Field(default=None, ge=0, le=1000)
+    protein_g_per_100g: Decimal | None = Field(default=None, ge=0, le=100)
+    fat_g_per_100g: Decimal | None = Field(default=None, ge=0, le=100)
+    carbs_g_per_100g: Decimal | None = Field(default=None, ge=0, le=100)
+    fiber_g_per_100g: Decimal | None = Field(default=None, ge=0, le=100)
+    standard_serving_amount: Decimal | None = Field(default=None, gt=0, max_digits=10)
+    standard_serving_unit: ServingUnit | None = None
+    standard_serving_weight_g: Decimal | None = Field(default=None, gt=0, max_digits=10)
+
+    @field_validator("name")
+    @classmethod
+    def normalize_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = " ".join(value.split())
+        if not normalized:
+            raise ValueError("name must not be blank")
+        return normalized
+
+    @field_validator("brand")
+    @classmethod
+    def normalize_brand(cls, value: str | None) -> str | None:
+        normalized = " ".join((value or "").split())
+        return normalized or None
+
+    @field_validator("barcode")
+    @classmethod
+    def validate_barcode(cls, value: str | None) -> str | None:
+        return validate_gtin(value)
+
+
+class FoodResponse(BaseModel):
+    id: int
+    name: str
+    brand: str | None
+    barcode: str | None
+    energy_kcal_per_100g: Decimal
+    protein_g_per_100g: Decimal
+    fat_g_per_100g: Decimal
+    carbs_g_per_100g: Decimal
+    fiber_g_per_100g: Decimal | None
+    standard_serving_amount: Decimal | None
+    standard_serving_unit: ServingUnit | None
+    standard_serving_weight_g: Decimal | None
+    food_type: FoodType
+    is_favorite: bool
+    last_used_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class FoodListResponse(BaseModel):
+    items: list[FoodResponse]
+    total: int = Field(ge=0)
+    limit: int = Field(ge=1)
+    offset: int = Field(ge=0)
 
 
 class FoodCatalogSource(BaseModel):
