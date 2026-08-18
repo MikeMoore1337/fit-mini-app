@@ -2562,6 +2562,8 @@ export interface components {
             safety_notes: string[];
             /** Alternatives */
             alternatives: components["schemas"]["ExerciseAlternativeItem"][];
+            /** Media */
+            media: components["schemas"]["ExerciseGuideMedia"][];
             /** Images */
             images: components["schemas"]["ExerciseGuideImage"][];
             /** Media Reference */
@@ -2583,6 +2585,38 @@ export interface components {
             url: string;
             /** Alt */
             alt: string;
+        };
+        /** ExerciseGuideMedia */
+        ExerciseGuideMedia: {
+            /**
+             * Type
+             * @constant
+             */
+            type: "image";
+            /** Url */
+            url: string;
+            /** Poster */
+            poster: string;
+            /** Phase */
+            phase: string;
+            /** Alt */
+            alt: string;
+            /** Source Name */
+            source_name: string;
+            /** Source Url */
+            source_url: string;
+            /** Source License */
+            source_license: string;
+            /** Source License Url */
+            source_license_url?: string | null;
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
+            /** Byte Size */
+            byte_size: number;
+            /** Sort Order */
+            sort_order: number;
         };
         /** ExerciseGuideMuscle */
         ExerciseGuideMuscle: {

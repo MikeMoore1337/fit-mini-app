@@ -1748,6 +1748,8 @@ def test_every_seeded_exercise_has_complete_guide_and_local_images(client):
     )
     assert sample.status_code == 200
     assert len(sample.json()["images"]) == 2
+    assert len(sample.json()["media"]) == 2
+    assert [item["sort_order"] for item in sample.json()["media"]] == [0, 1]
 
     with get_session_context() as session:
         seeded_guides = [
@@ -1765,9 +1767,32 @@ def test_every_seeded_exercise_has_complete_guide_and_local_images(client):
         assert len(guide["common_mistakes"]) >= 3
         assert guide["muscles"]
         assert guide["images"]
-        for image in guide["images"]:
-            asset = static_dir / image["url"].removeprefix("/static/")
+        assert guide["media"]
+        for media in guide["media"]:
+            assert media["type"] == "image"
+            assert media["poster"] == media["url"]
+            assert media["width"] > 0
+            assert media["height"] > 0
+            assert media["byte_size"] > 0
+            assert media["source_name"] == guide["source_name"]
+            assert media["source_license"] == guide["source_license"]
+            asset = static_dir / media["url"].removeprefix("/static/")
             assert asset.is_file(), asset
+            assert asset.stat().st_size == media["byte_size"]
+
+
+def test_exercise_guide_assets_have_cache_headers_and_missing_asset_is_safe(client):
+    asset = client.get("/static/exercise-guides/bench-press-start.jpg")
+
+    assert asset.status_code == 200
+    assert asset.headers["content-type"] == "image/jpeg"
+    assert asset.headers["cache-control"] == (
+        "public, max-age=2592000, stale-while-revalidate=86400"
+    )
+    assert asset.headers["etag"]
+
+    missing = client.get("/static/exercise-guides/not-a-real-exercise-start.jpg")
+    assert missing.status_code == 404
 
 
 def test_cardio_exercises_have_specific_guides_and_generated_images(client):
@@ -1797,6 +1822,7 @@ def test_cardio_exercises_have_specific_guides_and_generated_images(client):
         assert len(guide["technique_steps"]) >= 3
         assert guide["source_name"] == "Your Fitness Coach"
         assert guide["images"][0]["phase"] == "Две фазы движения"
+        assert guide["media"][0]["source_license"] == "Иллюстрация создана для приложения"
 
 
 def test_custom_exercise_has_no_incorrect_stock_guide(client):

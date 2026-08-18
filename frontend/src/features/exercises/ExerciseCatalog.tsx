@@ -6,13 +6,13 @@ import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import {
   Badge,
   Card,
-  ChevronIcon,
   CloseIcon,
   EmptyState,
   ErrorState,
   LoadingState,
 } from '../../shared/ui/common';
 import { useModalA11y } from '../../shared/ui/useModalA11y';
+import { ExerciseGuideMedia } from './ExerciseGuideMedia';
 
 const difficultyLabels = {
   beginner: 'Начальный',
@@ -38,7 +38,7 @@ export function ExerciseCatalog({
   const [activeSearchIndex, setActiveSearchIndex] = useState(0);
   const [muscle, setMuscle] = useState('');
   const [guide, setGuide] = useState<{ exercise: Exercise; data: ExerciseGuide } | null>(null);
-  const [largeImage, setLargeImage] = useState<number | null>(null);
+  const [mediaExpanded, setMediaExpanded] = useState(false);
   const [assignment, setAssignment] = useState<Exercise | null>(null);
   const [assignmentClientId, setAssignmentClientId] = useState(0);
   const [assignmentProgramId, setAssignmentProgramId] = useState(0);
@@ -48,13 +48,12 @@ export function ExerciseCatalog({
   const [assignmentDay, setAssignmentDay] = useState(1);
   const [assignmentNotes, setAssignmentNotes] = useState('');
   const [newTitle, setNewTitle] = useState('');
-  const guidePanelRef = useModalA11y<HTMLDivElement>(Boolean(guide) && largeImage === null, () =>
+  const guidePanelRef = useModalA11y<HTMLDivElement>(Boolean(guide) && !mediaExpanded, () =>
     setGuide(null),
   );
   const assignmentPanelRef = useModalA11y<HTMLDivElement>(Boolean(assignment), () =>
     setAssignment(null),
   );
-  const lightboxRef = useModalA11y<HTMLDivElement>(largeImage !== null, () => setLargeImage(null));
   const rows = useQuery({
     queryKey: ['exercises'],
     queryFn: () => api<Exercise[]>('/api/v1/programs/exercises'),
@@ -411,24 +410,7 @@ export function ExerciseCatalog({
                   нужные мышцы и не компенсировать движение корпусом.
                 </p>
               </section>
-              <div className="exercise-guide-images">
-                {guide.data.images.map((image, index) => (
-                  <figure className="exercise-guide-image" key={image.url}>
-                    <button
-                      className="exercise-guide-image__frame"
-                      type="button"
-                      aria-label={`Увеличить: ${image.phase}`}
-                      onClick={() => setLargeImage(index)}
-                    >
-                      <img src={image.url} alt={image.alt} loading="lazy" />
-                      <span className="exercise-guide-image__zoom" aria-hidden="true">
-                        ⛶
-                      </span>
-                    </button>
-                    <figcaption>{image.phase}</figcaption>
-                  </figure>
-                ))}
-              </div>
+              <ExerciseGuideMedia items={guide.data.media} onExpandedChange={setMediaExpanded} />
               <div className="exercise-guide-notes">
                 <section className="exercise-guide-note" aria-labelledby="guide-technique">
                   <h3 id="guide-technique">Техника выполнения</h3>
@@ -476,60 +458,6 @@ export function ExerciseCatalog({
                 · {guide.data.source_license}
               </p>
             </div>
-            {largeImage !== null && guide.data.images[largeImage] && (
-              <div
-                className="exercise-lightbox"
-                role="dialog"
-                aria-modal="true"
-                ref={lightboxRef}
-                tabIndex={-1}
-              >
-                <button
-                  className="exercise-lightbox__backdrop"
-                  aria-label="Закрыть увеличенное изображение"
-                  onClick={() => setLargeImage(null)}
-                />
-                <button
-                  type="button"
-                  className="exercise-lightbox__close"
-                  aria-label="Закрыть"
-                  onClick={() => setLargeImage(null)}
-                >
-                  <CloseIcon />
-                </button>
-                {guide.data.images.length > 1 && (
-                  <button
-                    type="button"
-                    className="exercise-lightbox__arrow exercise-lightbox__arrow--prev"
-                    aria-label="Предыдущее изображение"
-                    onClick={() =>
-                      setLargeImage(
-                        (largeImage - 1 + guide.data.images.length) % guide.data.images.length,
-                      )
-                    }
-                  >
-                    <ChevronIcon direction="left" />
-                  </button>
-                )}
-                <figure>
-                  <img
-                    src={guide.data.images[largeImage].url}
-                    alt={guide.data.images[largeImage].alt}
-                  />
-                  <figcaption>{guide.data.images[largeImage].phase}</figcaption>
-                </figure>
-                {guide.data.images.length > 1 && (
-                  <button
-                    type="button"
-                    className="exercise-lightbox__arrow exercise-lightbox__arrow--next"
-                    aria-label="Следующее изображение"
-                    onClick={() => setLargeImage((largeImage + 1) % guide.data.images.length)}
-                  >
-                    <ChevronIcon />
-                  </button>
-                )}
-              </div>
-            )}
           </div>
         </div>
       )}

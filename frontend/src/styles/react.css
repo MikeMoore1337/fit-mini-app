@@ -1320,6 +1320,15 @@ select:not([multiple]) {
   display: block;
   transition: transform 0.18s ease;
 }
+@media (prefers-reduced-motion: reduce) {
+  .exercise-guide-image__frame img {
+    transition: none;
+  }
+  .exercise-guide-image__frame:hover img,
+  .exercise-guide-image__frame:focus-visible img {
+    transform: none;
+  }
+}
 .exercise-guide-image__zoom {
   position: absolute;
   right: 8px;

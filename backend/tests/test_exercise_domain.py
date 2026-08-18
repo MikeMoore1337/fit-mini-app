@@ -223,6 +223,21 @@ def test_seeded_exercise_metadata_and_alternatives_are_serialized(client) -> Non
     assert guide["source_name"] == "free-exercise-db"
     assert guide["source_license"] == "Unlicense (общественное достояние)"
     assert guide["source_license_url"].endswith("/LICENSE.md")
+    assert guide["media"][0] == {
+        "type": "image",
+        "url": "/static/exercise-guides/bench-press-start.jpg",
+        "poster": "/static/exercise-guides/bench-press-start.jpg",
+        "phase": "Исходное положение",
+        "alt": "Жим лежа: исходное положение",
+        "source_name": "free-exercise-db",
+        "source_url": "https://github.com/yuhonas/free-exercise-db",
+        "source_license": "Unlicense (общественное достояние)",
+        "source_license_url": ("https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"),
+        "width": 850,
+        "height": 567,
+        "byte_size": 72816,
+        "sort_order": 0,
+    }
     assert guide["safety_notes"]
     assert guide["equipment"] == [{"identifier": "barbell", "name": "Штанга"}]
     assert guide["muscles"][0]["identifier"] == "chest"

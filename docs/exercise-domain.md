@@ -58,3 +58,8 @@ The guide endpoint additionally returns stable muscle role identifiers together 
 names, controlled equipment with display names,
 safety notes, alternatives, media reference, and source-license metadata. A custom exercise
 may legitimately return empty structured arrays and no guide.
+
+Asset-level media metadata and the selected static-phase delivery policy are documented in
+[`exercise-guide-media.md`](exercise-guide-media.md). The guide API now exposes typed `media[]`
+with dimensions, loading order, fallback poster, and provenance while deriving legacy
+`images[]` from that same manifest.
