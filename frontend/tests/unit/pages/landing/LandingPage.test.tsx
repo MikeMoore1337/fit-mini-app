@@ -34,9 +34,11 @@ describe('LandingPage', () => {
     );
 
     expect(container.firstChild).toHaveClass('landing-page--dark');
-    fireEvent.click(screen.getByRole('button', { name: 'Включить светлую тему' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Тема оформления' }), {
+      target: { value: 'light' },
+    });
     expect(container.firstChild).toHaveClass('landing-page--light');
-    expect(localStorage.getItem('landing-theme')).toBe('light');
+    expect(localStorage.getItem('app-theme')).toBe('light');
   });
 
   it('shows the service, features and Telegram contact without publishing tariffs', () => {

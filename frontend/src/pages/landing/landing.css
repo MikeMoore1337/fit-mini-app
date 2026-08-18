@@ -156,11 +156,12 @@ body.landing-mode #root {
 }
 
 .landing-theme-toggle {
-  display: inline-grid;
-  place-items: center;
-  width: var(--landing-header-control-size);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 132px;
   height: var(--landing-header-control-size);
-  padding: 0;
+  padding: 0 8px;
   border: 1px solid var(--landing-border);
   border-radius: 14px;
   background: var(--landing-card);
@@ -210,9 +211,16 @@ body.landing-mode #root {
 .landing-menu-toggle.is-open span:last-child {
   transform: translateY(-7px) rotate(-45deg);
 }
-.landing-theme-toggle > svg {
+.landing-theme-toggle .app-theme-toggle__icon,
+.landing-theme-toggle .app-theme-toggle__icon svg {
   width: 21px;
   height: 21px;
+}
+
+.landing-theme-toggle .app-theme-control__select {
+  min-width: 0;
+  padding-right: 24px;
+  color: var(--landing-ink);
 }
 
 .landing-theme-toggle:hover {
@@ -220,7 +228,7 @@ body.landing-mode #root {
   transform: translateY(-2px);
 }
 
-.landing-theme-toggle:focus-visible {
+.landing-theme-toggle:focus-within {
   outline: 3px solid var(--landing-green);
   outline-offset: 2px;
 }
@@ -1275,6 +1283,10 @@ body.landing-mode #root {
   .landing-brand {
     gap: 7px;
     font-size: 0.78rem;
+  }
+
+  .landing-header .landing-brand > span:last-child {
+    display: none;
   }
 
   .landing-button--compact {

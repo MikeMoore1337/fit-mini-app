@@ -1,25 +1,13 @@
 import { useEffect, useState } from 'react';
-import { ThemeIcon } from '../../shared/ui/ThemeIcon';
 import { BrandLogo } from '../../shared/ui/BrandLogo';
+import { AppThemeToggle } from '../../shared/ui/AppThemeToggle';
+import { useWebTheme } from '../../shared/useWebTheme';
 import { applyRouteMetadata } from '../../shared/seo/metadata';
 import { appUrlForHostname } from '../../shared/navigation/appUrl';
 import { AppLink } from '../../shared/navigation/router';
 import './landing.css';
 
 export { appUrlForHostname } from '../../shared/navigation/appUrl';
-
-type LandingTheme = 'light' | 'dark';
-
-const LANDING_THEME_STORAGE_KEY = 'landing-theme';
-
-function storedLandingTheme(): LandingTheme | null {
-  const stored = window.localStorage.getItem(LANDING_THEME_STORAGE_KEY);
-  return stored === 'light' || stored === 'dark' ? stored : null;
-}
-
-function systemPrefersDark(): boolean {
-  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
-}
 
 const features = [
   {
@@ -82,23 +70,13 @@ const workflow = [
 
 export default function LandingPage() {
   const appUrl = appUrlForHostname(window.location.hostname);
-  const [manualTheme, setManualTheme] = useState<LandingTheme | null>(storedLandingTheme);
-  const [prefersDark, setPrefersDark] = useState(systemPrefersDark);
+  const { colorScheme: theme } = useWebTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const theme: LandingTheme = manualTheme ?? (prefersDark ? 'dark' : 'light');
 
   useEffect(() => {
     applyRouteMetadata('/');
     document.body.classList.add('landing-mode');
     return () => document.body.classList.remove('landing-mode');
-  }, []);
-
-  useEffect(() => {
-    if (!window.matchMedia) return;
-    const media = window.matchMedia('(prefers-color-scheme: dark)');
-    const onChange = (event: MediaQueryListEvent) => setPrefersDark(event.matches);
-    media.addEventListener?.('change', onChange);
-    return () => media.removeEventListener?.('change', onChange);
   }, []);
 
   useEffect(() => {
@@ -111,21 +89,11 @@ export default function LandingPage() {
   }, [mobileMenuOpen]);
 
   useEffect(() => {
-    const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
-    const previousColor = meta?.content;
     document.body.classList.toggle('landing-dark-mode', theme === 'dark');
-    if (meta) meta.content = theme === 'dark' ? '#0d120f' : '#f1f3ec';
     return () => {
       document.body.classList.remove('landing-dark-mode');
-      if (meta && previousColor) meta.content = previousColor;
     };
   }, [theme]);
-
-  const toggleTheme = () => {
-    const nextTheme: LandingTheme = theme === 'dark' ? 'light' : 'dark';
-    window.localStorage.setItem(LANDING_THEME_STORAGE_KEY, nextTheme);
-    setManualTheme(nextTheme);
-  };
 
   return (
     <div className={`landing-page landing-page--${theme}`}>
@@ -164,15 +132,7 @@ export default function LandingPage() {
           </a>
         </nav>
         <div className="landing-header__actions">
-          <button
-            type="button"
-            className="landing-theme-toggle"
-            aria-label={theme === 'dark' ? 'Включить светлую тему' : 'Включить тёмную тему'}
-            title={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
-            onClick={toggleTheme}
-          >
-            <ThemeIcon theme={theme} />
-          </button>
+          <AppThemeToggle landing />
           <a className="landing-button landing-button--compact" href={appUrl}>
             Войти
           </a>

@@ -34,8 +34,8 @@ test('логотип и кнопки в шапке имеют одинакову
       await expect(page.getByRole('navigation', { name: 'Навигация по странице' })).toHaveClass(
         /is-open/,
       );
-      await expect(page.getByRole('link', { name: 'Возможности' })).toBeVisible();
-      await page.getByRole('link', { name: 'Возможности' }).click();
+      await expect(page.getByRole('link', { name: 'Возможности', exact: true })).toBeVisible();
+      await page.getByRole('link', { name: 'Возможности', exact: true }).click();
       await expect(menuButton).toHaveAttribute('aria-expanded', 'false');
     } else {
       await expect(menuButton).toBeHidden();
@@ -75,7 +75,7 @@ test('лендинг остаётся адаптивным на контроль
     expect(pageMetrics.documentWidth).toBeLessThanOrEqual(pageMetrics.viewport);
     expect(pageMetrics.bodyWidth).toBeLessThanOrEqual(pageMetrics.viewport);
     await expect(page.getByRole('link', { name: /открыть приложение/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /включить .* тему/i })).toBeInViewport();
+    await expect(page.getByRole('combobox', { name: 'Тема оформления' })).toBeInViewport();
     await expect(page.locator('.landing-platform-card')).toHaveCount(2);
   }
 });
@@ -377,6 +377,8 @@ async function mockApi(page: Page, { withCoachClient = false, withCoachApplicati
       });
     if (path.endsWith('/auth/refresh'))
       return route.fulfill({ status: 401, json: { detail: 'No refresh cookie' } });
+    if (path.endsWith('/auth/telegram/init'))
+      return route.fulfill({ json: { access_token: 'telegram-test-token', token_type: 'bearer' } });
     if (path.endsWith('/auth/dev-login')) {
       const body = request.postDataJSON() as { is_admin: boolean; is_coach: boolean };
       role = body.is_admin ? 'admin' : body.is_coach ? 'coach' : 'client';
@@ -623,7 +625,7 @@ test('цветовая система сохраняет иерархию в с�
   await expect(clientButton).toHaveCSS('background-color', 'rgb(232, 237, 228)');
   await expect(clientButton).toHaveCSS('color', 'rgb(23, 32, 24)');
 
-  await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
+  await page.getByRole('combobox', { name: 'Тема оформления' }).selectOption('dark');
   await expect(authPanel).toHaveCSS('background-color', 'rgb(21, 28, 23)');
   await expect(authPanel).toHaveCSS('border-color', 'rgb(52, 64, 56)');
   await expect(clientButton).toHaveCSS('background-color', 'rgb(32, 42, 35)');
@@ -633,9 +635,128 @@ test('цветовая система сохраняет иерархию в с�
   const selectedTab = page.getByRole('tab', { name: 'Сегодня' });
   await expect(selectedTab).toHaveCSS('background-color', 'rgb(182, 242, 56)');
   await expect(selectedTab).toHaveCSS('color', 'rgb(23, 32, 24)');
-  await page.getByRole('button', { name: 'Включить светлую тему' }).click();
+  await page.getByRole('combobox', { name: 'Тема оформления' }).selectOption('light');
   await expect(selectedTab).toHaveCSS('background-color', 'rgb(24, 37, 29)');
   await expect(selectedTab).toHaveCSS('color', 'rgb(255, 255, 255)');
+});
+
+test('Web theme preference следует системе и сохраняет ручной выбор', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.goto('/');
+  const selector = page.getByRole('combobox', { name: 'Тема оформления' });
+  await expect(selector).toHaveValue('system');
+  await selector.focus();
+  await expect(selector).toBeFocused();
+  await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'light');
+
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
+
+  await selector.selectOption('light');
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'light');
+  await page.reload();
+  await expect(page.getByRole('combobox', { name: 'Тема оформления' })).toHaveValue('light');
+  await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'light');
+
+  await page.getByRole('combobox', { name: 'Тема оформления' }).selectOption('system');
+  await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
+});
+
+test('Mobile Web и Telegram используют одну YFC palette и геометрию', async ({ browser }) => {
+  const viewport = { width: 390, height: 844 };
+  const webPage = await browser.newPage({ viewport });
+  const telegramPage = await browser.newPage({ viewport });
+  await telegramPage.addInitScript(() => {
+    const themeHandlers = new Set<() => void>();
+    const shellColors = {
+      background: [] as string[],
+      bottomBar: [] as string[],
+      header: [] as string[],
+    };
+    const telegram = {
+      initData: 'signed-test-data',
+      colorScheme: 'light' as 'light' | 'dark',
+      themeParams: { bg_color: '#ffffff', button_color: '#ff00ff', text_color: '#00ffff' },
+      ready() {},
+      expand() {},
+      onEvent(event: string, callback: () => void) {
+        if (event === 'themeChanged') themeHandlers.add(callback);
+      },
+      offEvent(event: string, callback: () => void) {
+        if (event === 'themeChanged') themeHandlers.delete(callback);
+      },
+      setHeaderColor(color: string) {
+        shellColors.header.push(color);
+      },
+      setBackgroundColor(color: string) {
+        shellColors.background.push(color);
+      },
+      setBottomBarColor(color: string) {
+        shellColors.bottomBar.push(color);
+      },
+    };
+    Object.assign(window, {
+      Telegram: { WebApp: telegram },
+      __telegramShellColors: shellColors,
+      __setTelegramTheme(colorScheme: 'light' | 'dark') {
+        telegram.colorScheme = colorScheme;
+        themeHandlers.forEach((callback) => callback());
+      },
+    });
+  });
+
+  await mockApi(webPage);
+  await mockApi(telegramPage);
+  await webPage.goto('/app');
+  await webPage.getByRole('button', { name: 'Клиент' }).click();
+  await telegramPage.goto('/app');
+  await expect(webPage.getByRole('heading', { name: 'Демо пользователь' })).toBeVisible();
+  await expect(telegramPage.getByRole('heading', { name: 'Демо пользователь' })).toBeVisible();
+  await webPage.getByRole('combobox', { name: 'Тема оформления' }).selectOption('light');
+  await expect(telegramPage.getByRole('combobox', { name: 'Тема оформления' })).not.toBeAttached();
+
+  const snapshot = (page: Page) =>
+    page.evaluate(() => {
+      const rootStyle = getComputedStyle(document.documentElement);
+      const card = document.querySelector<HTMLElement>('.card')!.getBoundingClientRect();
+      const container = document.querySelector<HTMLElement>('.container')!.getBoundingClientRect();
+      return {
+        tokens: ['--bg', '--card', '--text', '--accent', '--border'].map((token) =>
+          rootStyle.getPropertyValue(token).trim(),
+        ),
+        card: {
+          width: card.width,
+          borderRadius: getComputedStyle(document.querySelector('.card')!).borderRadius,
+        },
+        container: { width: container.width, x: container.x },
+      };
+    });
+
+  expect(await snapshot(telegramPage)).toEqual(await snapshot(webPage));
+  expect(await telegramPage.evaluate(() => document.documentElement.dataset.themeSource)).toBe(
+    'telegram',
+  );
+  expect(
+    await telegramPage.evaluate(() =>
+      (
+        window as unknown as Window & { __telegramShellColors: { background: string[] } }
+      ).__telegramShellColors.background.at(-1),
+    ),
+  ).toBe('#f1f3ec');
+
+  await webPage.getByRole('combobox', { name: 'Тема оформления' }).selectOption('dark');
+  await telegramPage.evaluate(() =>
+    (
+      window as unknown as Window & { __setTelegramTheme(theme: 'light' | 'dark'): void }
+    ).__setTelegramTheme('dark'),
+  );
+  await expect(telegramPage.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
+  expect(await snapshot(telegramPage)).toEqual(await snapshot(webPage));
+  await expect(telegramPage.getByRole('heading', { name: 'Демо пользователь' })).toBeVisible();
+
+  await webPage.close();
+  await telegramPage.close();
 });
 
 test('primary CTA лендинга меняется вместе с темой', async ({ page }) => {
@@ -644,7 +765,7 @@ test('primary CTA лендинга меняется вместе с темой',
 
   await expect(primary).toHaveCSS('background-color', 'rgb(24, 37, 29)');
   await expect(primary).toHaveCSS('color', 'rgb(255, 255, 255)');
-  await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
+  await page.getByRole('combobox', { name: 'Тема оформления' }).selectOption('dark');
   await expect(primary).toHaveCSS('background-color', 'rgb(182, 242, 56)');
   await expect(primary).toHaveCSS('color', 'rgb(23, 32, 24)');
 });
