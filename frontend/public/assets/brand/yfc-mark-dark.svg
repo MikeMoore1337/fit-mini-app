@@ -1,11 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 364 364" shape-rendering="geometricPrecision">
   <title>Your Fitness Coach</title>
-  <path fill="#f2f6ef" d="M48.7 12.3a23.5 23.5 0 1 0 0 39.4l-4.6-6.2a15.8 15.8 0 1 1 0-27z"/>
-  <g fill="#b6f238">
-    <path d="M13.2 13.3h8.7L32 24.1l10.1-10.8h8.7L36.4 28.8l-1.5 11.9h-6l-1.5-11.9z"/>
-    <rect x="3" y="26.7" width="3.8" height="10.6" rx=".4"/>
-    <rect x="8.5" y="21.7" width="4.5" height="20.6" rx=".4"/>
-    <rect x="51" y="21.7" width="4.5" height="20.6" rx=".4"/>
-    <rect x="57.2" y="26.7" width="3.8" height="10.6" rx=".4"/>
+  <defs>
+    <linearGradient id="c-dark" x1="108" y1="20" x2="287" y2="285" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.55" stop-color="#f7f7f5"/>
+      <stop offset="1" stop-color="#eeeeeb"/>
+    </linearGradient>
+    <linearGradient id="yf-dark" x1="30" y1="235" x2="330" y2="18" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4bba00"/>
+      <stop offset="0.52" stop-color="#81cc00"/>
+      <stop offset="1" stop-color="#9ed900"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(0 30.5)">
+    <path fill="url(#c-dark)" d="M129 49.5C149 29 178 16 209.5 12C229 11 248 13 264 18.5L231.5 50C204 48 177 57 155.5 74H153.5Z"/>
+    <path fill="url(#c-dark)" d="M85 112L118 142C115 174 128 207 152.5 228C190 259 247 263 291.5 228L317 255.5C282 287 233 298 185.5 287C130 274 90 230 80 179.5C75 154 78 132 85 112Z"/>
+    <path fill="url(#yf-dark)" d="M12 13H75.5L178.5 121L284.5 16Q289 13 294.5 13H350.5L241 124.5L241.5 126H308L272.5 159Q267 164 261.5 167H199.5L198 168.5L188 234C171 228 160 221 151 210L144 200.5L150 161.5L68 73.5L20 23.5Z"/>
   </g>
 </svg>
