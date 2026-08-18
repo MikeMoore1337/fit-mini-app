@@ -185,6 +185,34 @@ test('Login адаптивен, доступен с клавиатуры и ув
       await expect(page.getByRole('heading', { name: 'Войти в Your Fitness Coach' })).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
 
+      const themeControl = page.locator('.landing-theme-toggle');
+      const themeIcon = themeControl.locator('.app-theme-toggle__icon');
+      const themeSelect = page.getByRole('combobox', { name: 'Тема оформления' });
+      const [controlBox, iconBox, selectBox] = await Promise.all([
+        themeControl.boundingBox(),
+        themeIcon.boundingBox(),
+        themeSelect.boundingBox(),
+      ]);
+      expect(controlBox?.height).toBe(44);
+      expect(controlBox?.width).toBe(144);
+      expect(iconBox).not.toBeNull();
+      expect(selectBox).not.toBeNull();
+      expect(selectBox!.x).toBeGreaterThan(iconBox!.x + iconBox!.width);
+      expect(
+        Math.abs(iconBox!.y + iconBox!.height / 2 - (selectBox!.y + selectBox!.height / 2)),
+      ).toBeLessThan(1);
+      const themeStyles = await themeControl.evaluate((element) => {
+        const styles = getComputedStyle(element);
+        return {
+          backgroundColor: styles.backgroundColor,
+          borderTopWidth: styles.borderTopWidth,
+          cursor: styles.cursor,
+        };
+      });
+      expect(themeStyles.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+      expect(themeStyles.borderTopWidth).toBe('1px');
+      expect(themeStyles.cursor).toBe('pointer');
+
       const google = page.getByRole('link', { name: 'Продолжить с Google' });
       await google.focus();
       await expect(google).toBeFocused();
