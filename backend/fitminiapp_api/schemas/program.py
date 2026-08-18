@@ -7,6 +7,24 @@ from pydantic import BaseModel, Field, model_validator
 
 from fitminiapp_api.schemas.nutrition import NutritionTargetResponse
 
+ProgramRecommendationGoal = Literal[
+    "fat_loss", "recomposition", "maintenance", "muscle_gain", "strength"
+]
+ProgramExperience = Literal["beginner", "intermediate", "advanced"]
+ProgramSplitType = Literal["full_body", "upper_lower", "push_pull_legs", "body_part", "hybrid"]
+TrainingLocation = Literal["gym", "home", "other"]
+EquipmentIdentifier = Literal[
+    "bodyweight",
+    "dumbbell",
+    "barbell",
+    "bench",
+    "cable",
+    "machine",
+    "kettlebell",
+    "cardio",
+    "other",
+]
+
 
 class ProgramTemplateExerciseCreate(BaseModel):
     exercise_id: int = Field(ge=1)
@@ -72,6 +90,7 @@ class ProgramTemplateResponse(BaseModel):
     slug: str
     goal: str
     level: str
+    split_type: ProgramSplitType | None = None
     owner_user_id: int | None = None
     owner_telegram_user_id: int | None = None
     owner_full_name: str | None = None
@@ -84,6 +103,51 @@ class ProgramTemplateResponse(BaseModel):
     assigned_by_user_id: int | None = None
     assigned_by_full_name: str | None = None
     days: list[ProgramTemplateDayResponse]
+
+
+class ProgramRecommendationRequest(BaseModel):
+    goal: ProgramRecommendationGoal | None = None
+    experience: ProgramExperience | None = None
+    workouts_per_week: int | None = Field(default=None, ge=1, le=8)
+    training_location: TrainingLocation | None = None
+    available_equipment_ids: list[EquipmentIdentifier] | None = Field(
+        default=None,
+        max_length=9,
+    )
+
+    @model_validator(mode="after")
+    def validate_equipment_is_unique(self):
+        if self.available_equipment_ids is not None and len(
+            set(self.available_equipment_ids)
+        ) != len(self.available_equipment_ids):
+            raise ValueError("available_equipment_ids must be unique")
+        return self
+
+
+class ProgramRecommendationCriteria(BaseModel):
+    goal: ProgramRecommendationGoal | None = None
+    experience: ProgramExperience | None = None
+    workouts_per_week: int | None = None
+    training_location: TrainingLocation | None = None
+    available_equipment_ids: list[EquipmentIdentifier] | None = None
+    profile_fields_used: list[Literal["goal", "experience", "workouts_per_week"]]
+
+
+class ProgramRecommendationItem(BaseModel):
+    template: ProgramTemplateResponse
+    reason: str
+    fit_facts: list[str]
+    limitations: list[str]
+
+
+class ProgramRecommendationResponse(BaseModel):
+    status: Literal["recommended", "needs_input", "no_match"]
+    criteria: ProgramRecommendationCriteria
+    missing_fields: list[Literal["goal", "experience", "workouts_per_week"]]
+    message: str
+    recommendation: ProgramRecommendationItem | None = None
+    alternatives: list[ProgramRecommendationItem] = Field(default_factory=list)
+    requires_explicit_start: bool = True
 
 
 class ProgramTargetUserResponse(BaseModel):

@@ -465,6 +465,7 @@ STRENGTH_TEMPLATE_SPECS: list[dict[str, object]] = [
         "title": "Тяни/Толкай/Ноги/Фуллбади · 4 дня",
         "goal": "recomposition",
         "level": "intermediate",
+        "split_type": "hybrid",
         "days": PPLF_4_DAYS,
     },
     {
@@ -472,6 +473,7 @@ STRENGTH_TEMPLATE_SPECS: list[dict[str, object]] = [
         "title": "Тяни/Толкай/Ноги/Фуллбади · 8 дней",
         "goal": "muscle_gain",
         "level": "advanced",
+        "split_type": "hybrid",
         "days": PPLF_8_DAYS,
     },
     {
@@ -479,6 +481,7 @@ STRENGTH_TEMPLATE_SPECS: list[dict[str, object]] = [
         "title": "Тяни/Ноги/Толкай/Ноги · 4 дня",
         "goal": "recomposition",
         "level": "intermediate",
+        "split_type": "hybrid",
         "days": PLPL_4_DAYS,
     },
     {
@@ -486,6 +489,7 @@ STRENGTH_TEMPLATE_SPECS: list[dict[str, object]] = [
         "title": "Тяни/Ноги/Толкай/Ноги · 8 дней",
         "goal": "muscle_gain",
         "level": "advanced",
+        "split_type": "hybrid",
         "days": PLPL_8_DAYS,
     },
     {
@@ -493,6 +497,7 @@ STRENGTH_TEMPLATE_SPECS: list[dict[str, object]] = [
         "title": "Силовой сплит 5 дней",
         "goal": "muscle_gain",
         "level": "intermediate",
+        "split_type": "body_part",
         "days": [
             (
                 "Грудь",
@@ -551,6 +556,7 @@ STRENGTH_TEMPLATE_SPECS: list[dict[str, object]] = [
         "title": "Тяни-толкай-ноги 6 дней",
         "goal": "muscle_gain",
         "level": "advanced",
+        "split_type": "push_pull_legs",
         "days": [
             (
                 "Толкай A",
@@ -619,6 +625,7 @@ STRENGTH_TEMPLATE_SPECS: list[dict[str, object]] = [
         "title": "Верх-низ 4 дня",
         "goal": "recomposition",
         "level": "intermediate",
+        "split_type": "upper_lower",
         "days": [
             (
                 "Верх A",
@@ -669,6 +676,7 @@ STRENGTH_TEMPLATE_SPECS: list[dict[str, object]] = [
         "title": "Фуллбади 3 дня",
         "goal": "recomposition",
         "level": "beginner",
+        "split_type": "full_body",
         "days": [
             (
                 "Фуллбади A",

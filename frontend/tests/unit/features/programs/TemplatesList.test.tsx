@@ -6,7 +6,15 @@ import { FeedbackProvider } from '../../../../src/shared/ui/FeedbackProvider';
 
 vi.mock('../../../../src/app/AuthProvider', () => ({
   useAuth: () => ({
-    user: { id: 1, profile: { timezone: 'Europe/Moscow' } },
+    user: {
+      id: 1,
+      profile: {
+        timezone: 'Europe/Moscow',
+        goal: 'recomposition',
+        level: 'beginner',
+        workouts_per_week: 3,
+      },
+    },
     reloadUser: vi.fn(),
   }),
 }));
@@ -110,6 +118,39 @@ describe('TemplatesList editing', () => {
       if (path === '/api/v1/programs/templates/hidden') {
         return new Response(JSON.stringify([]), { status: 200 });
       }
+      if (path === '/api/v1/programs/templates/recommendation') {
+        return new Response(
+          JSON.stringify({
+            status: 'recommended',
+            criteria: {
+              goal: 'recomposition',
+              experience: 'beginner',
+              workouts_per_week: 3,
+              training_location: null,
+              available_equipment_ids: null,
+              profile_fields_used: [],
+            },
+            missing_fields: [],
+            message: 'Сначала посмотрите состав программы.',
+            recommendation: {
+              template: {
+                ...templateBase,
+                id: 20,
+                title: 'Фуллбади по правилам',
+                split_type: 'full_body',
+                is_example: true,
+                can_edit: false,
+              },
+              reason: 'Подходит по цели, уровню и частоте.',
+              fit_facts: ['Три тренировки за цикл.'],
+              limitations: ['Оборудование не проверялось.'],
+            },
+            alternatives: [],
+            requires_explicit_start: true,
+          }),
+          { status: 200 },
+        );
+      }
       return new Response(JSON.stringify({ detail: 'Unexpected request' }), { status: 500 });
     });
   });
@@ -141,5 +182,26 @@ describe('TemplatesList editing', () => {
     renderList();
 
     expect(await screen.findByRole('button', { name: 'Уже назначена' })).toBeDisabled();
+  });
+
+  it('previews a deterministic recommendation before explicit start', async () => {
+    renderList();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Подобрать программу' }));
+
+    expect(await screen.findByText('Фуллбади по правилам')).toBeInTheDocument();
+    expect(screen.getByText('Подходит по цели, уровню и частоте.')).toBeInTheDocument();
+    expect(screen.getByText('Оборудование не проверялось.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Посмотреть состав' }));
+    expect(screen.getByRole('dialog', { name: /Фуллбади по правилам/ })).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Закрыть состав программы' })[1]!);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Перейти к запуску' }));
+    expect(screen.getByRole('dialog', { name: /Фуллбади по правилам/ })).toBeInTheDocument();
+
+    const requestedPaths = vi.mocked(globalThis.fetch).mock.calls.map(([input]) => String(input));
+    expect(requestedPaths).toContain('/api/v1/programs/templates/recommendation');
+    expect(requestedPaths.some((path) => path.includes('/assign-to-me'))).toBe(false);
   });
 });

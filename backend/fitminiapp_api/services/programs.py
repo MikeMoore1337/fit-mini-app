@@ -71,6 +71,7 @@ def _serialize_template_with_context(
         "slug": item.slug,
         "goal": item.goal,
         "level": item.level,
+        "split_type": item.split_type,
         "owner_user_id": item.owner_user_id,
         "owner_telegram_user_id": owner.telegram_user_id if owner else None,
         "owner_full_name": owner.profile.full_name if owner and owner.profile else None,

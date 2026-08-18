@@ -19,6 +19,7 @@ import { ExerciseGuideDialog } from '../exercises/ExerciseGuideDialog';
 import { ProgramBuilder } from './ProgramBuilder';
 import { shouldSaveTemplateAsCopy } from './templateEditing';
 import { DateInput } from '../../shared/ui/PickerInput';
+import { ProgramRecommendation } from './ProgramRecommendation';
 
 const goalLabels: Record<string, string> = {
   muscle_gain: 'Набор мышечной массы',
@@ -162,8 +163,25 @@ export function TemplatesList() {
           (offset, index) => index === 0 || offset > assignmentOffsets[index - 1]!,
         ));
 
+  const openAssignment = (template: ProgramTemplate) => {
+    setAssignmentStartDate(defaultStartDate);
+    setAssignmentDuration(4);
+    setAssignmentWeekdays(defaultWeekdays(template, defaultStartDate));
+    setAssignmentTemplate(template);
+  };
+
+  const editCopy = (template: ProgramTemplate) => {
+    setSaveAsCopy(true);
+    setEditingTemplate(template);
+  };
+
   return (
     <>
+      <ProgramRecommendation
+        onPreview={setSelectedExample}
+        onEditCopy={editCopy}
+        onStart={openAssignment}
+      />
       <Card title="Мои программы">
         {templates.isLoading ? (
           <LoadingState />
@@ -226,16 +244,7 @@ export function TemplatesList() {
                       Уже назначена
                     </button>
                   ) : (
-                    <button
-                      onClick={() => {
-                        setAssignmentStartDate(defaultStartDate);
-                        setAssignmentDuration(4);
-                        setAssignmentWeekdays(defaultWeekdays(item, defaultStartDate));
-                        setAssignmentTemplate(item);
-                      }}
-                    >
-                      Назначить себе
-                    </button>
+                    <button onClick={() => openAssignment(item)}>Назначить себе</button>
                   )}
                   <button
                     className="btn-danger"

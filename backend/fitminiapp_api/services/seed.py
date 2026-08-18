@@ -130,6 +130,7 @@ def _seed_strength_templates(db: Session) -> None:
         template.title = str(spec["title"])
         template.goal = str(spec["goal"])
         template.level = str(spec["level"])
+        template.split_type = str(spec["split_type"])
         template.owner_user_id = None
         template.created_by_user_id = None
         template.is_public = True
