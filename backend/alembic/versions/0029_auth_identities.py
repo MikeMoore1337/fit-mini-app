@@ -28,19 +28,11 @@ def upgrade() -> None:
         sa.Column("last_login_at", sa.DateTime(), server_default=sa.func.now(), nullable=False),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "provider", "subject", name="uq_auth_identities_provider_subject"
-        ),
-        sa.UniqueConstraint(
-            "user_id", "provider", name="uq_auth_identities_user_provider"
-        ),
+        sa.UniqueConstraint("provider", "subject", name="uq_auth_identities_provider_subject"),
+        sa.UniqueConstraint("user_id", "provider", name="uq_auth_identities_user_provider"),
     )
-    op.create_index(
-        "ix_auth_identities_provider", "auth_identities", ["provider"], unique=False
-    )
-    op.create_index(
-        "ix_auth_identities_user_id", "auth_identities", ["user_id"], unique=False
-    )
+    op.create_index("ix_auth_identities_provider", "auth_identities", ["provider"], unique=False)
+    op.create_index("ix_auth_identities_user_id", "auth_identities", ["user_id"], unique=False)
     op.execute(
         sa.text(
             "INSERT INTO auth_identities "

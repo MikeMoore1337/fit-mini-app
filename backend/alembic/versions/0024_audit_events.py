@@ -38,9 +38,7 @@ def upgrade() -> None:
     op.create_index(
         "ix_audit_events_target_created", "audit_events", ["target_user_id", "created_at"]
     )
-    op.create_index(
-        "ix_audit_events_action_created", "audit_events", ["action", "created_at"]
-    )
+    op.create_index("ix_audit_events_action_created", "audit_events", ["action", "created_at"])
 
 
 def downgrade() -> None:

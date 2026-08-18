@@ -1,0 +1,846 @@
+{
+  "package": "your-fitness-coach-release-backlog-final-unified-web-tma-design",
+  "generated_at": "2026-08-18T01:07:00+03:00",
+  "repository": "MikeMoore1337/fit-mini-app",
+  "working_branch": "feature/yfc-platform-v2",
+  "status": "FINAL_PRE_RELEASE_FEATURE_FREEZE",
+  "user_confirmed_completed_tasks": "00-06",
+  "next_task": "07-brand-logo-favicon-foundation",
+  "task_count": 94,
+  "task_range": "00-93",
+  "core_product_complete_before_ai_through": "75",
+  "ai_block": "76-91",
+  "production_readiness": "92",
+  "final_release_gate": "93",
+  "brand_assets": {
+    "reference": "references/brand/your-fitness-coach-logo-reference-light-dark.png",
+    "requirements": "BRAND_ASSET_NOTES.md",
+    "implementation_task": "07-brand-logo-favicon-foundation",
+    "full_logo": "transparent SVG, separate light/dark variants",
+    "favicon": "mark only, no YOUR FITNESS COACH wordmark, readable at 16x16 and 32x32"
+  },
+  "landing_references": {
+    "dark": "references/landing/landing-reference-dark.png",
+    "light": "references/landing/landing-reference-light.png",
+    "requirements": "LANDING_REFERENCE_NOTES.md",
+    "implementation_task": "73-landing-premium-refresh",
+    "policy": "visual direction only; factual product truth overrides reference text/data"
+  },
+  "new_final_release_gaps": {
+    "07": "canonical brand logo/favicon foundation",
+    "14": "progressive onboarding",
+    "58": "deterministic progression guidance",
+    "59": "notification/reminder orchestration",
+    "60": "account data export/lifecycle",
+    "61": "cardio gap audit/minimal implementation",
+    "92": "production operational readiness"
+  },
+  "explicitly_deferred_until_post_release": [
+    "progress photos",
+    "AI/computer-vision body photo analysis",
+    "wearables/Health/Strava",
+    "social network/feed/friends",
+    "trainer marketplace",
+    "generic messenger/video calls",
+    "Trainer Copilot",
+    "autonomous AI writes",
+    "AI-triggered reminders",
+    "complex recovery/readiness scores"
+  ],
+  "files": [
+    {
+      "path": "00_START_HERE.md",
+      "bytes": 3406,
+      "sha256": "88294f65910e916b2b431fdf3779aa7a3d9fe5640a5e5c30d89222da55664d2d"
+    },
+    {
+      "path": "ADMIN_MODEL_NOTES.md",
+      "bytes": 1096,
+      "sha256": "f98b6a6c659c17a4874e09b1c874f29d33368c4b4d67ebdeeeae405c585f184a"
+    },
+    {
+      "path": "AI_PROVIDER_MIGRATION_NOTES.md",
+      "bytes": 3060,
+      "sha256": "8a4db02272df7328b8d7852b85defd0775d88214d8b496c3f732e31e15cb48fa"
+    },
+    {
+      "path": "AUTH_IMPLEMENTATION_NOTES.md",
+      "bytes": 1477,
+      "sha256": "7ebfba32dab29f5cfd60c2dec25c019f466c8304a2e305f12b72a6962f90f304"
+    },
+    {
+      "path": "AUTH_INTEGRATION_NOTES.md",
+      "bytes": 623,
+      "sha256": "ebf519e822887210e06efb7e8c9bb62699face89a2c36c8c8f16d1573dcdb996"
+    },
+    {
+      "path": "BACKLOG_V3_CHANGELOG.md",
+      "bytes": 889,
+      "sha256": "0d1ac3b2207f478c0097c0b22c17858bb610669034dc3043fcf1c5359903a0bc"
+    },
+    {
+      "path": "BRAND_ASSET_NOTES.md",
+      "bytes": 2367,
+      "sha256": "4304b57d124d3e75a9cf48b1c122cbb195b2f764ba7d50339a3efd21868c0b9a"
+    },
+    {
+      "path": "CODEX_PROMPT_TEMPLATE.md",
+      "bytes": 3929,
+      "sha256": "4721710a3d68cada72e5e4432c3cddd9a321c52da889b659ed7315ed30403d3b"
+    },
+    {
+      "path": "COMPLETION_CHECKLIST.md",
+      "bytes": 5438,
+      "sha256": "58815a87f865e7f2bc75fa7ca5d148860a645e5a07841614e5ff9d7acf3f6065"
+    },
+    {
+      "path": "DEFERRED_NOT_IN_SCOPE.md",
+      "bytes": 535,
+      "sha256": "37aecf039853c785092865cb4e127ebdb51ba701e3343d3a465ea467cb5b11ea"
+    },
+    {
+      "path": "DEMO_MODE_INTEGRATION_NOTES.md",
+      "bytes": 899,
+      "sha256": "9386b4f3af8b7697d2823196e2b3cf1043706b55d62be2af85de2d46ef3d9fde"
+    },
+    {
+      "path": "DEPENDENCY_GRAPH.md",
+      "bytes": 910,
+      "sha256": "023da1e730337575dd25a5e1a781db0edc6835cbb4f324fb3a6fe20f308bb898"
+    },
+    {
+      "path": "EXECUTION_STATUS.md",
+      "bytes": 638,
+      "sha256": "f6e67927b206ed059208fff699d54ef48f34cc238a993951f454912200a0e875"
+    },
+    {
+      "path": "FINAL_BACKLOG_CHANGELOG.md",
+      "bytes": 4790,
+      "sha256": "9ee25dec771bc194304304c6454dbdc4a8d275289795223e555ec7634554cde7"
+    },
+    {
+      "path": "FITNESS_ONLINE_GAP_ANALYSIS.md",
+      "bytes": 1563,
+      "sha256": "7e359c5375b626ca5f3a6d1c5120cd144f52c858bc43418a6d1eb5dec44dc8df"
+    },
+    {
+      "path": "GLOBAL_RULES.md",
+      "bytes": 22033,
+      "sha256": "5488582e3992e33bc7c88999ff662d714f1124cdacc40515439eced9c673e127"
+    },
+    {
+      "path": "LANDING_REFERENCE_NOTES.md",
+      "bytes": 10467,
+      "sha256": "34258780cbd2d09174a5c820e00a76e559df67c8d3ccf87afe2b72ba1ee9255b"
+    },
+    {
+      "path": "MODEL_SELECTION.md",
+      "bytes": 2760,
+      "sha256": "1d76652d7742705b0a09bdfaeaacbf91ca62bba55c0d6e09187ddc0400b26e2c"
+    },
+    {
+      "path": "PLAIN_LANGUAGE_UX.md",
+      "bytes": 2504,
+      "sha256": "1c5cb3a91eba7f1c98767f9617d1c869ac6c12d1ea0725bff46080fe91b4de2b"
+    },
+    {
+      "path": "POST_RELEASE_VALIDATION_PLAN.md",
+      "bytes": 1187,
+      "sha256": "802331207e08f1768a5d54296cbd44d758c30dad428c0c8b2804ae21112a701d"
+    },
+    {
+      "path": "PRIORITY_ORDER.md",
+      "bytes": 800,
+      "sha256": "c39e082189f49cc4c4d50b058636cdedcb1600b5f4679c13b1e578f21f00484d"
+    },
+    {
+      "path": "RELEASE_SCOPE_FREEZE.md",
+      "bytes": 1587,
+      "sha256": "035021afdd3d536906a5debca79b5dc10f806101d4899736e94b2ea4707ca61c"
+    },
+    {
+      "path": "SEO_GROWTH_INTEGRATION_NOTES.md",
+      "bytes": 1141,
+      "sha256": "9c4e875632720c512c0987198b3ad56944afac23b1b47fd74a3d2c5186da74b9"
+    },
+    {
+      "path": "SOURCE_COVERAGE.md",
+      "bytes": 5990,
+      "sha256": "219b19aa6aea35e1c8b46a30211e1a096be17b2dfce76c64d0218e066e289432"
+    },
+    {
+      "path": "masters/ai-coach-multiprovider-master.md",
+      "bytes": 47567,
+      "sha256": "1ee8a860b0fb625f2bdbc650ee2b3df8e1e45b7cb1d9614499d6702115b26f34"
+    },
+    {
+      "path": "masters/auth/MASTER.md",
+      "bytes": 750,
+      "sha256": "cf42523e25bf7f17e193908e7d09332538678e950dc7f77619fe471f98539810"
+    },
+    {
+      "path": "masters/demo-mode/00_START_HERE.md",
+      "bytes": 3450,
+      "sha256": "f2a71015ea4e11d1924417783cea9b05ccece275c2353e29fc66c19f072a8f80"
+    },
+    {
+      "path": "masters/demo-mode/01_SHARED_REQUIREMENTS.md",
+      "bytes": 5560,
+      "sha256": "c1ae1cf8b10d4887d26e93e758e44c550b7adb3b2812d3e9ef7a0c469f00c0af"
+    },
+    {
+      "path": "masters/demo-mode/02_AUDIT_AND_DESIGN.md",
+      "bytes": 2409,
+      "sha256": "cba895818048a981a6bcac7ca070a42ea62768d1ab78911d89d0c84748815eb4"
+    },
+    {
+      "path": "masters/demo-mode/03_DEMO_MODE_FOUNDATION.md",
+      "bytes": 2395,
+      "sha256": "d1646352373001c5c3748fffd7425c62fad3abe96acb2484dd1b7d09b60e1866"
+    },
+    {
+      "path": "masters/demo-mode/04_DEMO_DATA_AND_INTERACTIONS.md",
+      "bytes": 2360,
+      "sha256": "286e4b8f539e478e070c9b11d43afa2cd492c82ffbcf5b960fa115a9889ed244"
+    },
+    {
+      "path": "masters/demo-mode/05_DEMO_UX_AND_CONVERSION.md",
+      "bytes": 2658,
+      "sha256": "5d7a4089c878a738980164509f83ff3b1619ceb5d6de4c42a8a969d2f43080b3"
+    },
+    {
+      "path": "masters/demo-mode/06_AUTH_HANDOFF_AND_OPTIONAL_MIGRATION.md",
+      "bytes": 2242,
+      "sha256": "caec1e63892073af21367abae4f52678b134e988b89bc6ab590c686f9e8e5a17"
+    },
+    {
+      "path": "masters/demo-mode/07_SECURITY_AND_RESTRICTIONS.md",
+      "bytes": 2353,
+      "sha256": "6fd154460e8b827a08e7ecb3d4263a62f0e1f747d64f9236d7c5721aa2ec472f"
+    },
+    {
+      "path": "masters/demo-mode/08_TESTS_AND_FINAL_VERIFICATION.md",
+      "bytes": 2944,
+      "sha256": "edddd302be2a769df70f29697b1cb23fa062e35fea6b817efb1bc5c4d896e921"
+    },
+    {
+      "path": "masters/demo-mode/CODEX_PROMPT.md",
+      "bytes": 1516,
+      "sha256": "8b4ace422f2aa9f5d58c4b2e196cdd1b72a371f66138d415efbe51418ae4789b"
+    },
+    {
+      "path": "masters/fitness-online-product/MASTER.md",
+      "bytes": 986,
+      "sha256": "472aaf4da053c7c43144b1fc31d0840f326f5d39172243db0229310dd21da98d"
+    },
+    {
+      "path": "masters/food-platform-master.md",
+      "bytes": 52126,
+      "sha256": "34502d4068316828468b61d32e3d46afac1ead553c955d42c24462a19c775d3c"
+    },
+    {
+      "path": "masters/premium-redesign-master.md",
+      "bytes": 115150,
+      "sha256": "2eaebbd0afc525612ccb95d32e2e28d1c71f9f1ab1f63c3375d1279390b7aaf1"
+    },
+    {
+      "path": "masters/premium-redesign-start-original.md",
+      "bytes": 5674,
+      "sha256": "b6a065a0ed6592e26f406fc252760e4ae84d8df764bfaeb34b21ecfc1d805d38"
+    },
+    {
+      "path": "masters/product-v3/MASTER.md",
+      "bytes": 592,
+      "sha256": "f71dc3d201946cf5d82e7b7f23c15c73dcf7cc7396ae472888991bad39fe1c6c"
+    },
+    {
+      "path": "masters/release-final/MASTER.md",
+      "bytes": 1200,
+      "sha256": "52eaee63dd80968cde051ded88a5d41ed4cc25b8b4bf5f04fd437800bbe01f16"
+    },
+    {
+      "path": "masters/seo-organic-growth/MASTER.md",
+      "bytes": 2079,
+      "sha256": "c117388d5284dddaa6e5ded25f993fbe28f21d34909c0f06e69a1ec6121d9409"
+    },
+    {
+      "path": "references/brand/your-fitness-coach-logo-reference-light-dark.png",
+      "bytes": 1000002,
+      "sha256": "d283d06f9670b6f73b50aebf1ed96c4616d33d66335f6e5443572da3102afc32"
+    },
+    {
+      "path": "references/landing/landing-reference-dark.png",
+      "bytes": 2487250,
+      "sha256": "d28f449dbf97a427c82460209a3e5e82a89896100bff3e3daafe5188cc959a76"
+    },
+    {
+      "path": "references/landing/landing-reference-light.png",
+      "bytes": 2030262,
+      "sha256": "7141bb67c7559aa5e72dc07964c64d3a430dbd1e4155051871aa0218591f74da"
+    },
+    {
+      "path": "tasks/00-platform-technical-baseline-audit.md",
+      "bytes": 2934,
+      "sha256": "3986ab54d028a612f80961ff26a93007f018bd484243bee97a5216cb4701ae78"
+    },
+    {
+      "path": "tasks/01-ui-baseline-audit-target-direction.md",
+      "bytes": 2803,
+      "sha256": "c0b31a006c0667e8d44c286df5eeecf4c9f72a16a3ecbf2f4d226f17df4d3822"
+    },
+    {
+      "path": "tasks/02-seo-organic-growth-baseline-audit.md",
+      "bytes": 9250,
+      "sha256": "fcb7aaaf3f319394249d58b5a316407c0c6e3f52d09c0b3b4a7b72b96695b302"
+    },
+    {
+      "path": "tasks/03-technical-seo-indexation-foundation.md",
+      "bytes": 8790,
+      "sha256": "325d663008f4d474fbb63d11252c8ec739c7d83a7b346ccd089abb69d697d089"
+    },
+    {
+      "path": "tasks/04-search-webmaster-monitoring-foundation.md",
+      "bytes": 6755,
+      "sha256": "236d7b22451f9eab4d4eb340a89ecc87fd501af502258e0f114e7e9048c33a21"
+    },
+    {
+      "path": "tasks/05-design-system-foundation.md",
+      "bytes": 3306,
+      "sha256": "69b5efa0324fa5f37cda5f4e2b326a0608a39853328fc0c26a17f6ee98457354"
+    },
+    {
+      "path": "tasks/06-seo-public-information-architecture-content-foundation.md",
+      "bytes": 9222,
+      "sha256": "6ab0aee617287a97360d89b1d4be5edd2f538e31ecd2001afa98f0ffe6928709"
+    },
+    {
+      "path": "tasks/07-brand-logo-favicon-foundation.md",
+      "bytes": 10851,
+      "sha256": "92b85f8471049015b45a736b7dc4e700690a10c5b69e619a5b0a17bec03c0ce1"
+    },
+    {
+      "path": "tasks/08-theme-preference-and-platform-sync.md",
+      "bytes": 14245,
+      "sha256": "dc5049e983792dc1c7298ce5aadf0c985a143532790bef367fa741ad0f7cba06"
+    },
+    {
+      "path": "tasks/09-organic-promotion-distribution-foundation.md",
+      "bytes": 8335,
+      "sha256": "a1b85c6a623bad973cef3d4d83055e5d80e697bee6b54b791d58db50229eaba5"
+    },
+    {
+      "path": "tasks/10-auth-multi-provider-baseline-audit.md",
+      "bytes": 4965,
+      "sha256": "911619e724b7f65a6a9549b10b1bb4f52feccd46310b4847ebbcf2b8a474f5b8"
+    },
+    {
+      "path": "tasks/11-auth-identity-session-linking-hardening.md",
+      "bytes": 4297,
+      "sha256": "93c3254d8d18a9c3c32c0aa495b0e81e318e4ac4736954fccc4cbcfce2f30df3"
+    },
+    {
+      "path": "tasks/12-auth-provider-production-readiness.md",
+      "bytes": 4077,
+      "sha256": "ca24426913bfc94979a2b49e5e2ad45c9f632dc35056da2ba156179363777804"
+    },
+    {
+      "path": "tasks/13-premium-auth-entry-and-linking-experience.md",
+      "bytes": 6463,
+      "sha256": "cab38651eb22e31d20486098373dc7a3dddb9d6043f4eaacc7e06f14963b18be"
+    },
+    {
+      "path": "tasks/14-progressive-user-onboarding.md",
+      "bytes": 7178,
+      "sha256": "d0d2640f3af26d96c8d44e2eaaea9d045702493047d315993f7055da094728d2"
+    },
+    {
+      "path": "tasks/15-food-domain-foundation.md",
+      "bytes": 3078,
+      "sha256": "c303bd1f74dc586c0688fd0889e4538fcbfe3b4642967027afb34488b32c3fcd"
+    },
+    {
+      "path": "tasks/16-food-diary-backend.md",
+      "bytes": 2603,
+      "sha256": "c934a315877680733f635711f6eb596591f190170533821e2d2ea3091851bac4"
+    },
+    {
+      "path": "tasks/17-food-product-library-search.md",
+      "bytes": 2623,
+      "sha256": "1f23ed1f2015ef090d26553b0fba23da86b40ec9fcf28cfd89301eb1c0a66451"
+    },
+    {
+      "path": "tasks/18-recipes-copying-backend.md",
+      "bytes": 2279,
+      "sha256": "f5ca168144f4e9e745562069d8540a6a607fadd0e17ffe02ad682012d01217b5"
+    },
+    {
+      "path": "tasks/19-external-food-provider.md",
+      "bytes": 2902,
+      "sha256": "e29b3aff75273a2f0b3ea0c99ba21fdc0e8f95a0bfa55e467eb8984acc6372e9"
+    },
+    {
+      "path": "tasks/20-barcode-lookup-backend.md",
+      "bytes": 2031,
+      "sha256": "de1b6a3f5223bb222ad75f34fa9e5957c85cc704c58d8901564f08bd45a91643"
+    },
+    {
+      "path": "tasks/21-progress-adherence-trainer-backend.md",
+      "bytes": 5581,
+      "sha256": "4063e30405dfd0b7ae8bfd9585346652e78da68ab78775b4e43ad29968da536b"
+    },
+    {
+      "path": "tasks/22-food-platform-hardening.md",
+      "bytes": 2481,
+      "sha256": "330555783049388e85f5e5b00eefa5c6deea8ef4cbbd9753a15283a809dd7494"
+    },
+    {
+      "path": "tasks/23-exercise-muscle-domain-foundation.md",
+      "bytes": 4958,
+      "sha256": "b0f725b0a006fc36b5eb459a54b255fc339966206c4d728663d9ce95f90f95af"
+    },
+    {
+      "path": "tasks/24-rir-workout-set-foundation.md",
+      "bytes": 3796,
+      "sha256": "4754c118a7eee16d25ccd933d446e81fdd5ede00d7ca14c2b4a7f4d482405d3f"
+    },
+    {
+      "path": "tasks/25-deterministic-program-selection-engine.md",
+      "bytes": 4309,
+      "sha256": "420d35f7487f51d9136cb82a43f5bed6fa0a34b3412ddc3e3443970a5b155033"
+    },
+    {
+      "path": "tasks/26-trainer-context-comments-backend.md",
+      "bytes": 3748,
+      "sha256": "d1ad405f4710a5fc2fa6a38eee5adf669b5434c45f7cd9c6a19a0138ba42d861"
+    },
+    {
+      "path": "tasks/27-training-analytics-extension-backend.md",
+      "bytes": 4003,
+      "sha256": "89e6c464cbbee9cd627bc87e5d0bb32b26dc838633c0608f768d9875a6d7bc5e"
+    },
+    {
+      "path": "tasks/28-exercise-guide-media-foundation.md",
+      "bytes": 3877,
+      "sha256": "34766c1333392d50901f868261f8aff16f5ec5146f5b0d250278ed9f18ecd55d"
+    },
+    {
+      "path": "tasks/29-advanced-set-semantics-and-supersets.md",
+      "bytes": 3369,
+      "sha256": "2617a9c1773f8afef5b8e333a5dbab234304a634928c5ff888d3778443fac7b5"
+    },
+    {
+      "path": "tasks/30-program-versioning-and-training-blocks.md",
+      "bytes": 2787,
+      "sha256": "bd52758b91a1e7278797381c94847c7be6c7e6f9b4e92c3cc6a87dc041c88757"
+    },
+    {
+      "path": "tasks/31-body-priorities-and-anthropometry-foundation.md",
+      "bytes": 3129,
+      "sha256": "cd76a8e59962959ea8355be002a120b50746231d049f7ca8a0b9e807d5d0b8af"
+    },
+    {
+      "path": "tasks/32-data-quality-and-confidence-contract.md",
+      "bytes": 2782,
+      "sha256": "9c591279634120c8455e44ed72485d86170ac9ca969f7ae75589fcda88fac806"
+    },
+    {
+      "path": "tasks/33-adaptive-energy-calibration-engine.md",
+      "bytes": 3016,
+      "sha256": "eb63235b6e0a1b452b7ea25b2dcf7b7c0004f9d82c8cfc0d074baee64b10ba07"
+    },
+    {
+      "path": "tasks/34-weekly-check-in-foundation.md",
+      "bytes": 2651,
+      "sha256": "43bf247b40dce84d8fbf4db8a896a90b4682ebd729c62986eec3197cb660f568"
+    },
+    {
+      "path": "tasks/35-deterministic-workout-adaptation-engine.md",
+      "bytes": 2929,
+      "sha256": "608262046d8e6ef6c38a241d49ba528fcca7c90bf979f01c8dd8938124a87b64"
+    },
+    {
+      "path": "tasks/36-offline-safe-active-workout.md",
+      "bytes": 2824,
+      "sha256": "bbe975bba22efccedf8b1446a28a3ee65bf82247c93d43144a221682e5bb741d"
+    },
+    {
+      "path": "tasks/37-product-analytics-foundation.md",
+      "bytes": 2957,
+      "sha256": "e09e4d8d2d0b6d0bdc38e8727ae31f0dd90f92caa00bd740fdd3e19382a9fd0d"
+    },
+    {
+      "path": "tasks/38-app-shell-navigation.md",
+      "bytes": 3759,
+      "sha256": "b2a64e4747e3c4b9ac6aa2ffad8ecebb0dbfe03f7c7d0c0fc6ab0a23a798c7fd"
+    },
+    {
+      "path": "tasks/39-today-dashboard-integrated.md",
+      "bytes": 3146,
+      "sha256": "d36edf6f93ecc7a94af0f6bfb1a5126e7ebff8f2659ca5bc6012e719cb5aa3bb"
+    },
+    {
+      "path": "tasks/40-active-workout-experience.md",
+      "bytes": 3779,
+      "sha256": "54fbfa3434f9de4e26c97723ff8fb3952e7515e4df99137a92cc6ea864bdb9ef"
+    },
+    {
+      "path": "tasks/41-nutrition-diary-core-ui.md",
+      "bytes": 2606,
+      "sha256": "9655acfee451c9593c9baab7674a40697eede3a8777e288220d64bdeec4a51a4"
+    },
+    {
+      "path": "tasks/42-nutrition-discovery-recipes-barcode-ui.md",
+      "bytes": 3001,
+      "sha256": "bdab79554f581de4014bc83ec5bfa147e4ad32e02130877e99f7d7bb10301485"
+    },
+    {
+      "path": "tasks/43-progress-experience.md",
+      "bytes": 3551,
+      "sha256": "dd243ad5462db531169c345a9e88cfe7cb9a77f4d6984b778bbb23c08026d0d9"
+    },
+    {
+      "path": "tasks/44-programs-exercises-experience.md",
+      "bytes": 5180,
+      "sha256": "babb8f30711a3ed2b6e7cf05d9c15160809fe64d177a902292f799ba68943ba2"
+    },
+    {
+      "path": "tasks/45-program-selection-wizard-experience.md",
+      "bytes": 3890,
+      "sha256": "f232c266bd15362960b1c44a9825b17f2772f8b72bd621c7196be897c063386c"
+    },
+    {
+      "path": "tasks/46-exercise-guide-encyclopedia-experience.md",
+      "bytes": 3735,
+      "sha256": "60ab49b9ca6300814650426770ae56f984c530af8ff3edbd77cb4f4ea80c473a"
+    },
+    {
+      "path": "tasks/47-profile-account-experience.md",
+      "bytes": 3033,
+      "sha256": "0d7552def7f880f1b7ba959e9e20f3920fbf8b148103bb724813857ab902b49c"
+    },
+    {
+      "path": "tasks/48-coach-workspace.md",
+      "bytes": 7527,
+      "sha256": "557869ba0cdf53fcef91341d4afd52adb272ba40d37f81b7a13ceb4b91ffbd58"
+    },
+    {
+      "path": "tasks/49-trainer-context-comments-experience.md",
+      "bytes": 3024,
+      "sha256": "268a4a4ca3378ac22f75c86075e1e1fd2d6f317a394663e2cffd7e46a3042816"
+    },
+    {
+      "path": "tasks/50-knowledge-base-contextual-integration.md",
+      "bytes": 4551,
+      "sha256": "6e81a64ff6ba1c1ee2bb73da432922df9d2e9cbf2766040a81b670589937ccf3"
+    },
+    {
+      "path": "tasks/51-weekly-check-in-experience.md",
+      "bytes": 2657,
+      "sha256": "e8daeacb4384ddc136085cd9456da6384acb81b499eac4332bdbd601de9ebc74"
+    },
+    {
+      "path": "tasks/52-adaptive-energy-calibration-experience.md",
+      "bytes": 2421,
+      "sha256": "dd152ac2bf27a66234f55b4ca5d76014aed6bd633184bb6c7dee90ba6b1f38ed"
+    },
+    {
+      "path": "tasks/53-workout-adaptation-experience.md",
+      "bytes": 2372,
+      "sha256": "687b675dcd486a3ba969c1116f1e0efc59ff35be93ea4e7e64defde831eac3c2"
+    },
+    {
+      "path": "tasks/54-program-history-and-training-blocks-experience.md",
+      "bytes": 2367,
+      "sha256": "22a68ee2468c36710a51423f91eee05ccef205d928036ee796b3114817f3991e"
+    },
+    {
+      "path": "tasks/55-body-priorities-and-anthropometry-experience.md",
+      "bytes": 2519,
+      "sha256": "b2deaeaa1027f285ccb8dae0f4d6c700a28178ca19faf645ca53cd8420edf6a0"
+    },
+    {
+      "path": "tasks/56-data-confidence-product-integration.md",
+      "bytes": 2837,
+      "sha256": "127ba12d7a942a971f3e1a83f89a387aab00ba15a29c6ef3b9a1c4adce5cb421"
+    },
+    {
+      "path": "tasks/57-product-analytics-core-instrumentation.md",
+      "bytes": 2920,
+      "sha256": "d337e2e624d69eb31fcf0de8481ba653242b07e6357ae205a79000d9d080ba08"
+    },
+    {
+      "path": "tasks/58-deterministic-progression-guidance.md",
+      "bytes": 7729,
+      "sha256": "58dc65898121cd9fc3f052f160271fc73dacd5c9eb18b646bf72f6444a853998"
+    },
+    {
+      "path": "tasks/59-notification-reminder-orchestration.md",
+      "bytes": 6166,
+      "sha256": "2cf82796bf5d37053882b21953626dc786691cd217f866e6c63bbcea130bac64"
+    },
+    {
+      "path": "tasks/60-account-data-export-and-lifecycle.md",
+      "bytes": 6204,
+      "sha256": "23706fe915f0f0e387802db8be82058c41b79a3a4f3ab98203e66171a89f5abd"
+    },
+    {
+      "path": "tasks/61-cardio-logging-gap-audit-and-minimal-implementation.md",
+      "bytes": 5981,
+      "sha256": "a1dbf9a407df4d265787f671d60d4805cb0b9a0d9a18bede376ed9908948c021"
+    },
+    {
+      "path": "tasks/62-demo-mode-audit-design.md",
+      "bytes": 3582,
+      "sha256": "936731794b0a83a7af628466c6ba6db55cbc66ceca85f9847d42efab7f3f8daa"
+    },
+    {
+      "path": "tasks/63-demo-mode-foundation.md",
+      "bytes": 3052,
+      "sha256": "2a705c26a31280885e958bffeb309e077866783df930b1039b35835afff2ad40"
+    },
+    {
+      "path": "tasks/64-demo-fixtures-ephemeral-interactions.md",
+      "bytes": 6626,
+      "sha256": "fd2ccd4f2bf667082c98b4545723b178e88ffdd96c286be0011966275c106824"
+    },
+    {
+      "path": "tasks/65-demo-ux-conversion.md",
+      "bytes": 5535,
+      "sha256": "e6941572f2dc3457f3645e19aa8c8c2eead00f27841348b6e69a12119c280e15"
+    },
+    {
+      "path": "tasks/66-demo-auth-handoff-migration.md",
+      "bytes": 3660,
+      "sha256": "642a90772d44382e7bd6813c8868e18c8be3230be383feabeb879dc35ec0524b"
+    },
+    {
+      "path": "tasks/67-demo-security-restrictions.md",
+      "bytes": 3002,
+      "sha256": "38e862360ce49df16ad31b3dd18f4f4f28504a98ca76d66e97e0a5b6276de4bd"
+    },
+    {
+      "path": "tasks/68-demo-final-verification.md",
+      "bytes": 3090,
+      "sha256": "5b6e6f4238d9c14bcfa306620529aed04a2f9c5b50adafc5e29d6cb262fab163"
+    },
+    {
+      "path": "tasks/69-admin-root-capabilities-foundation.md",
+      "bytes": 7772,
+      "sha256": "fb756c66af1f1b7fcdba66ce760382c20ed0c7207f770f1d8b7e8a3e7f1eece2"
+    },
+    {
+      "path": "tasks/70-admin-operations-backend.md",
+      "bytes": 4422,
+      "sha256": "4124a456b4dc65ed2b32d532dbf3d95fdd3712dec3594fd72706ab433b338890"
+    },
+    {
+      "path": "tasks/71-admin-workspace.md",
+      "bytes": 4412,
+      "sha256": "e37c085786c337b700601b2b42bbef71c201538aca8a838f1ff8e847277de1ef"
+    },
+    {
+      "path": "tasks/72-telegram-mini-app-adaptation.md",
+      "bytes": 7880,
+      "sha256": "71b051584bfa8d23b1601166740537f76b5567477552a286780fa4b5cc606f14"
+    },
+    {
+      "path": "tasks/73-landing-premium-refresh.md",
+      "bytes": 21383,
+      "sha256": "e2f4364b707d2491f30d0f9e9b06b2132a02ad066b95d0b772dc03b7a966796e"
+    },
+    {
+      "path": "tasks/74-responsive-accessibility-states.md",
+      "bytes": 4774,
+      "sha256": "3bf44ae74c10b08098682896035f6b62eb0d330540729b90099974b5b928ad76"
+    },
+    {
+      "path": "tasks/75-performance-motion-hardening.md",
+      "bytes": 5360,
+      "sha256": "0e1c0c19a7b2721c26c53da6efba402ab74ef136fa8a39ffb09250ccd27141f7"
+    },
+    {
+      "path": "tasks/76-ai-integration-audit.md",
+      "bytes": 4250,
+      "sha256": "1ddb5355d28afe463beed41bffe78687dadd24458f9054adcf2a960aa6d4b0eb"
+    },
+    {
+      "path": "tasks/77-ai-provider-core-free-only.md",
+      "bytes": 6971,
+      "sha256": "f6debc98c98cfea5a1d0b943ae2c35a4adcdfc6201fd54f89aab68e770849ee1"
+    },
+    {
+      "path": "tasks/78-ai-provider-cloudflare.md",
+      "bytes": 4898,
+      "sha256": "b11e3f31637b6b44b80e8d205dcb73df4fc55b2040aa485e4936bc5fe56bc4ea"
+    },
+    {
+      "path": "tasks/79-ai-provider-openrouter.md",
+      "bytes": 4456,
+      "sha256": "0e20632643befd416348541eab810e5f62959e26406c3daddbffda53889957ca"
+    },
+    {
+      "path": "tasks/80-ai-provider-orcarouter.md",
+      "bytes": 5479,
+      "sha256": "8857c8e4ea610d9149ed0260ee19dd9282b96b5fe97c7cf9f2ee9c8e772fe6a1"
+    },
+    {
+      "path": "tasks/81-ai-router-failover-cooldown.md",
+      "bytes": 6689,
+      "sha256": "6cd9ef990de3993e164cc05047d67bc8135e060b2bbdd4708fdb400a83fa2486"
+    },
+    {
+      "path": "tasks/82-ai-domain-policy-topic-gate.md",
+      "bytes": 3876,
+      "sha256": "07147a6ecd66b46ef2025f4453de40d2585b5261174eaa3b00abc8ef2833e3d1"
+    },
+    {
+      "path": "tasks/83-ai-app-knowledge-retrieval.md",
+      "bytes": 3331,
+      "sha256": "11b17d9fc9b656007349587dcdaf177fa6137999b473d3953ad79199e98a0137"
+    },
+    {
+      "path": "tasks/84-ai-readonly-tools-agent-loop.md",
+      "bytes": 4099,
+      "sha256": "3d75ed957023f2b0ead5b1aa3b9a5baade3202ea4f24453a8c0da1d4794d67a9"
+    },
+    {
+      "path": "tasks/85-ai-nutrition-context-tools.md",
+      "bytes": 2950,
+      "sha256": "bbee2c67ef9c2f08dbc5797e9513fa5d5853570d82d1edb06e162548ab0f1c8c"
+    },
+    {
+      "path": "tasks/86-ai-training-progress-anthropometry-context.md",
+      "bytes": 3826,
+      "sha256": "d6db4ec0968f10df7ee855c8d84e0e6a314d1228614b30ee37becc61e5018e4d"
+    },
+    {
+      "path": "tasks/87-ai-personalized-memory-and-user-context.md",
+      "bytes": 3309,
+      "sha256": "f480dc002a291654bf2bf2039bc58545715b94085c0e8d8d04f91e5404f0a6b9"
+    },
+    {
+      "path": "tasks/88-ai-evidence-confidence-and-rationale.md",
+      "bytes": 3362,
+      "sha256": "210ebb0cd400daf58ba20551a7a0715e78c11a7f22712693e1f150d1d45b3957"
+    },
+    {
+      "path": "tasks/89-ai-conversations-api-telemetry.md",
+      "bytes": 8354,
+      "sha256": "f5c7214869877c6e1e142411b263797be9fc352a2edec9ee509cc0a1652435ae"
+    },
+    {
+      "path": "tasks/90-ai-ui-integration.md",
+      "bytes": 4209,
+      "sha256": "151d7eade5badbbb52bf02b1d11d108f5adc1cea39af56ca7083757c9598011b"
+    },
+    {
+      "path": "tasks/91-ai-security-evals-docs.md",
+      "bytes": 4689,
+      "sha256": "42c2b25aa39a623e1080900e96b4dc207432fec960dcd57a60ba2fca1214555b"
+    },
+    {
+      "path": "tasks/92-production-operational-readiness.md",
+      "bytes": 6923,
+      "sha256": "c08a1388739f84c7362494f040edcebcfeac5ce014b0282be52d224e2da4f32b"
+    },
+    {
+      "path": "tasks/93-final-integrated-audit-regression.md",
+      "bytes": 16959,
+      "sha256": "237b4ab3ca445da4405d87f3f73ee7416a1abb294e2c5fdf44934c1734dc01d9"
+    },
+    {
+      "path": "tasks/README.md",
+      "bytes": 353,
+      "sha256": "3becacbe8b6173aee60c739c560120d3dd5d63d71a2e017681e67969f37d0876"
+    }
+  ],
+  "plain_language_ux": {
+    "enabled": true,
+    "task_count": 94,
+    "task_range": "00-93",
+    "primary_rir_label": "Повторы в запасе",
+    "reference_doc": "PLAIN_LANGUAGE_UX.md",
+    "beginner_release_gate": true
+  },
+  "ai_provider_revision": {
+    "default_order": [
+      "cloudflare",
+      "orcarouter",
+      "openrouter"
+    ],
+    "free_only_policy": "recurring free allocation only; promotional/trial credits are not production fallback",
+    "data_classes": [
+      "generic",
+      "personalized"
+    ],
+    "privacy_policy": "personalized routing is fail-closed on unknown/incompatible provider data policy",
+    "deferred_experimental": [
+      "NaraRouter",
+      "Pollinations.ai"
+    ],
+    "provider_task_80": "80-ai-provider-orcarouter"
+  },
+  "unified_web_tma_design": {
+    "policy": "one YFC visual system for Web, Mobile Web and Telegram Mini App",
+    "themes": [
+      "YFC Light",
+      "YFC Dark"
+    ],
+    "web_preference": [
+      "system",
+      "light",
+      "dark"
+    ],
+    "telegram_theme_source": "Telegram colorScheme selects YFC Light/Dark",
+    "telegram_theme_params_policy": "not a feature-component palette source; platform/fallback use only when justified",
+    "mobile_parity": "Mobile Web and TMA share palette, typography, geometry, components, spacing and visual hierarchy at equal viewport",
+    "allowed_tma_differences": [
+      "safe areas",
+      "viewport/keyboard",
+      "BackButton",
+      "haptics",
+      "auth/initData",
+      "deep links",
+      "Telegram shell/platform controls"
+    ],
+    "primary_tasks": [
+      "08-theme-preference-and-platform-sync",
+      "38-app-shell-navigation",
+      "72-telegram-mini-app-adaptation",
+      "74-responsive-accessibility-states",
+      "93-final-integrated-audit-regression"
+    ]
+  },
+  "codex_model_policy": {
+    "selection": "manual per Codex session; backlog text does not auto-switch runtime model",
+    "terra_high_tasks": [
+      7,
+      16,
+      17,
+      18,
+      20,
+      24,
+      34,
+      38,
+      39,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      49,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      64,
+      65,
+      90
+    ],
+    "default_for_other_pending_tasks": "GPT-5.6 Sol High"
+  }
+}

@@ -35,9 +35,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(
-        "ix_local_credentials_user_id", "local_credentials", ["user_id"], unique=True
-    )
+    op.create_index("ix_local_credentials_user_id", "local_credentials", ["user_id"], unique=True)
     op.create_index(
         "ix_local_credentials_username_normalized",
         "local_credentials",
@@ -76,9 +74,7 @@ def downgrade() -> None:
     op.drop_index("ix_auth_action_tokens_purpose", table_name="auth_action_tokens")
     op.drop_index("ix_auth_action_tokens_expires_at", table_name="auth_action_tokens")
     op.drop_table("auth_action_tokens")
-    op.drop_index(
-        "ix_local_credentials_username_normalized", table_name="local_credentials"
-    )
+    op.drop_index("ix_local_credentials_username_normalized", table_name="local_credentials")
     op.drop_index("ix_local_credentials_user_id", table_name="local_credentials")
     op.drop_table("local_credentials")
     op.alter_column(
