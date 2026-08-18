@@ -474,7 +474,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Get Exercise Details */
+        get: operations["get_exercise_details_api_v1_programs_exercises__exercise_id__get"];
         put?: never;
         post?: never;
         /** Remove Exercise */
@@ -2368,6 +2369,15 @@ export interface components {
             /** Email */
             email: string;
         };
+        /** ExerciseAlternativeItem */
+        ExerciseAlternativeItem: {
+            /** Id */
+            id: number;
+            /** Slug */
+            slug: string;
+            /** Title */
+            title: string;
+        };
         /** ExerciseCatalogCreate */
         ExerciseCatalogCreate: {
             /** Title */
@@ -2395,6 +2405,14 @@ export interface components {
             primary_muscle?: string | null;
             /** Equipment */
             equipment?: string | null;
+            /** Primary Muscle Ids */
+            primary_muscle_ids: string[];
+            /** Secondary Muscle Ids */
+            secondary_muscle_ids: string[];
+            /** Equipment Ids */
+            equipment_ids: string[];
+            /** Alternatives */
+            alternatives: components["schemas"]["ExerciseAlternativeItem"][];
             /**
              * Difficulty Level
              * @enum {string}
@@ -2435,14 +2453,24 @@ export interface components {
             common_mistakes: string[];
             /** Muscles */
             muscles: components["schemas"]["ExerciseGuideMuscle"][];
+            /** Equipment */
+            equipment: components["schemas"]["ExerciseTaxonomyItem"][];
+            /** Safety Notes */
+            safety_notes: string[];
+            /** Alternatives */
+            alternatives: components["schemas"]["ExerciseAlternativeItem"][];
             /** Images */
             images: components["schemas"]["ExerciseGuideImage"][];
+            /** Media Reference */
+            media_reference: string;
             /** Source Name */
             source_name: string;
             /** Source Url */
             source_url: string;
             /** Source License */
             source_license: string;
+            /** Source License Url */
+            source_license_url?: string | null;
         };
         /** ExerciseGuideImage */
         ExerciseGuideImage: {
@@ -2455,8 +2483,15 @@ export interface components {
         };
         /** ExerciseGuideMuscle */
         ExerciseGuideMuscle: {
+            /** Identifier */
+            identifier?: string | null;
             /** Name */
             name: string;
+            /**
+             * Role Id
+             * @enum {string}
+             */
+            role_id: "primary" | "secondary";
             /** Role */
             role: string;
             /** Function */
@@ -2477,6 +2512,13 @@ export interface components {
              * Format: date
              */
             last_performed_on: string;
+        };
+        /** ExerciseTaxonomyItem */
+        ExerciseTaxonomyItem: {
+            /** Identifier */
+            identifier: string;
+            /** Name */
+            name: string;
         };
         /** ExternalFoodResponse */
         ExternalFoodResponse: {
@@ -4904,6 +4946,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ExerciseGuide"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_exercise_details_api_v1_programs_exercises__exercise_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exercise_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExerciseCatalogItem"];
                 };
             };
             /** @description Validation Error */

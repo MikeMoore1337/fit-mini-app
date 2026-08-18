@@ -1,6 +1,13 @@
 from __future__ import annotations
 
 from fitminiapp_api.models.exercise import Exercise
+from fitminiapp_api.services.exercise_domain import (
+    DEFAULT_SAFETY_NOTES,
+    SOURCE_LICENSE_URL,
+    canonical_muscle_identifier,
+    exercise_equipment_payload,
+    exercise_muscle_payload,
+)
 
 SOURCE_NAME = "free-exercise-db"
 SOURCE_URL = "https://github.com/yuhonas/free-exercise-db"
@@ -571,24 +578,38 @@ def _base_slug(exercise: Exercise) -> str:
     return exercise.slug.split("-u-", maxsplit=1)[0]
 
 
-def get_exercise_guide(exercise: Exercise) -> dict | None:
+def get_exercise_guide(
+    exercise: Exercise,
+    *,
+    alternatives: list[dict[str, int | str]] | None = None,
+) -> dict | None:
     slug = _base_slug(exercise)
     profile_name = SLUG_TO_PROFILE.get(slug)
     if profile_name is None:
         return None
 
     profile = PROFILES[profile_name]
-    primary = exercise.primary_muscle or "Все тело"
-    muscle_names = [primary, *profile["secondary"]]
-    muscles = []
-    for index, name in enumerate(dict.fromkeys(muscle_names)):
-        muscles.append(
+    structured_muscles = exercise_muscle_payload(exercise)
+    if not any(item["role"] == "primary" for item in structured_muscles):
+        primary = exercise.primary_muscle or "Все тело"
+        structured_muscles.insert(
+            0,
             {
-                "name": name,
-                "role": "Основная" if index == 0 else "Вспомогательная / стабилизатор",
-                "function": MUSCLE_FUNCTIONS.get(name, MUSCLE_FUNCTIONS["Все тело"]),
-            }
+                "identifier": canonical_muscle_identifier(primary) or "",
+                "name": primary,
+                "role": "primary",
+            },
         )
+    muscles = [
+        {
+            "identifier": item["identifier"] or None,
+            "name": item["name"],
+            "role_id": item["role"],
+            "role": "Основная" if item["role"] == "primary" else "Вспомогательная / стабилизатор",
+            "function": MUSCLE_FUNCTIONS.get(item["name"], MUSCLE_FUNCTIONS["Все тело"]),
+        }
+        for item in structured_muscles
+    ]
 
     is_generated_cardio = slug in GENERATED_CARDIO_SLUGS
     images = (
@@ -614,15 +635,44 @@ def get_exercise_guide(exercise: Exercise) -> dict | None:
         ]
     )
 
+    metadata = exercise.guide_metadata
+    source_name = (
+        metadata.source_name
+        if metadata is not None
+        else ("Your Fitness Coach" if is_generated_cardio else SOURCE_NAME)
+    )
+    source_url = (
+        metadata.source_url
+        if metadata is not None
+        else ("/" if is_generated_cardio else SOURCE_URL)
+    )
+    source_license = (
+        metadata.source_license
+        if metadata is not None
+        else ("Иллюстрация создана для приложения" if is_generated_cardio else SOURCE_LICENSE)
+    )
+    source_license_url = (
+        metadata.source_license_url
+        if metadata is not None
+        else (None if is_generated_cardio else SOURCE_LICENSE_URL)
+    )
+
     return {
         "technique_steps": profile["steps"],
         "breathing": profile["breathing"],
         "common_mistakes": profile["mistakes"],
         "muscles": muscles,
+        "equipment": exercise_equipment_payload(exercise),
+        "safety_notes": list(metadata.safety_notes)
+        if metadata is not None
+        else list(DEFAULT_SAFETY_NOTES),
+        "alternatives": alternatives or [],
         "images": images,
-        "source_name": "Your Fitness Coach" if is_generated_cardio else SOURCE_NAME,
-        "source_url": "/" if is_generated_cardio else SOURCE_URL,
-        "source_license": "Иллюстрация создана для приложения"
-        if is_generated_cardio
-        else SOURCE_LICENSE,
+        "media_reference": metadata.media_reference
+        if metadata is not None
+        else f"exercise-guides:{slug}",
+        "source_name": source_name,
+        "source_url": source_url,
+        "source_license": source_license,
+        "source_license_url": source_license_url,
     }
