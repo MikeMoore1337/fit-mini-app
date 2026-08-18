@@ -212,9 +212,108 @@ class CoachAssignedProgramResponse(BaseModel):
     workouts_completed: int
     workouts_planned: int
     next_workout_date: date | None = None
+    current_revision_number: int
+
+
+ProgramRevisionActorRole = Literal["self", "trainer", "admin", "system"]
+ProgramRevisionChangeKind = Literal[
+    "assigned",
+    "program_archived",
+    "plan_updated",
+    "block_created",
+    "block_updated",
+    "block_status_changed",
+]
+TrainingBlockStatus = Literal["planned", "active", "completed", "archived"]
+
+
+class ProgramRevisionResponse(BaseModel):
+    id: int
+    user_program_id: int
+    revision_number: int
+    changed_by_user_id: int | None = None
+    actor_role: ProgramRevisionActorRole
+    change_kind: ProgramRevisionChangeKind
+    reason: str | None = None
+    changed_fields: dict
+    snapshot: dict
+    created_at: datetime
+
+
+class TrainingBlockCreate(BaseModel):
+    expected_revision_number: int = Field(ge=0)
+    title: str = Field(min_length=1, max_length=128)
+    start_date: date
+    end_date: date
+    purpose: str = Field(min_length=1, max_length=500)
+    priority_muscle_ids: list[str] = Field(default_factory=list, max_length=20)
+    notes: str | None = Field(default=None, max_length=2000)
+    is_deload: bool = False
+    reason: str | None = Field(default=None, max_length=500)
+
+    @model_validator(mode="after")
+    def validate_dates_and_muscles(self):
+        if self.end_date < self.start_date:
+            raise ValueError("end_date must be on or after start_date")
+        if len(set(self.priority_muscle_ids)) != len(self.priority_muscle_ids):
+            raise ValueError("priority_muscle_ids must be unique")
+        return self
+
+
+class TrainingBlockUpdate(BaseModel):
+    expected_revision_number: int = Field(ge=0)
+    title: str | None = Field(default=None, min_length=1, max_length=128)
+    start_date: date | None = None
+    end_date: date | None = None
+    purpose: str | None = Field(default=None, min_length=1, max_length=500)
+    priority_muscle_ids: list[str] | None = Field(default=None, max_length=20)
+    notes: str | None = Field(default=None, max_length=2000)
+    is_deload: bool | None = None
+    status: TrainingBlockStatus | None = None
+    reason: str | None = Field(default=None, max_length=500)
+
+    @model_validator(mode="after")
+    def validate_update(self):
+        if (
+            self.start_date is not None
+            and self.end_date is not None
+            and self.end_date < self.start_date
+        ):
+            raise ValueError("end_date must be on or after start_date")
+        if self.priority_muscle_ids is not None and len(set(self.priority_muscle_ids)) != len(
+            self.priority_muscle_ids
+        ):
+            raise ValueError("priority_muscle_ids must be unique")
+        change_fields = self.model_fields_set - {"expected_revision_number", "reason"}
+        if not change_fields:
+            raise ValueError("at least one block field must be changed")
+        return self
+
+
+class TrainingBlockResponse(BaseModel):
+    id: int
+    user_program_id: int
+    title: str
+    start_date: date
+    end_date: date
+    duration_days: int
+    purpose: str
+    priority_muscle_ids: list[str]
+    notes: str | None = None
+    is_deload: bool
+    status: TrainingBlockStatus
+    created_by_user_id: int | None = None
+    created_at: datetime
+    updated_at: datetime | None = None
+
+
+class TrainingBlockMutationResponse(BaseModel):
+    block: TrainingBlockResponse
+    current_revision_number: int
 
 
 class CoachProgramExerciseCreate(BaseModel):
+    expected_revision_number: int = Field(ge=0)
     exercise_id: int = Field(ge=1)
     day_number: int | None = Field(default=None, ge=1, le=14)
     prescribed_sets: int = Field(ge=1, le=10)
@@ -223,6 +322,7 @@ class CoachProgramExerciseCreate(BaseModel):
     notes: str | None = Field(default=None, max_length=2000)
     superset_group: int | None = Field(default=None, ge=1)
     superset_order: int | None = Field(default=None, ge=1, le=2)
+    reason: str | None = Field(default=None, max_length=500)
 
     @model_validator(mode="after")
     def validate_superset_pair(self):
@@ -233,6 +333,7 @@ class CoachProgramExerciseCreate(BaseModel):
 
 class CoachProgramExerciseAssignmentResponse(BaseModel):
     workouts_updated: int
+    current_revision_number: int
 
 
 class AssignTemplateRequest(BaseModel):

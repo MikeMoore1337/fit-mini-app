@@ -607,6 +607,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/programs/assigned/{program_id}/revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Assigned Program Revisions */
+        get: operations["assigned_program_revisions_api_v1_programs_assigned__program_id__revisions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/programs/assigned/{program_id}/blocks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Assigned Program Blocks */
+        get: operations["assigned_program_blocks_api_v1_programs_assigned__program_id__blocks_get"];
+        put?: never;
+        /** Add Assigned Program Block */
+        post: operations["add_assigned_program_block_api_v1_programs_assigned__program_id__blocks_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/programs/assigned/{program_id}/blocks/{block_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edit Assigned Program Block */
+        patch: operations["edit_assigned_program_block_api_v1_programs_assigned__program_id__blocks__block_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/programs/assigned/{program_id}/exercises": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Update Assigned Program Exercise */
+        post: operations["update_assigned_program_exercise_api_v1_programs_assigned__program_id__exercises_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/programs/clients": {
         parameters: {
             query?: never;
@@ -2335,6 +2404,8 @@ export interface components {
             workouts_planned: number;
             /** Next Workout Date */
             next_workout_date?: string | null;
+            /** Current Revision Number */
+            current_revision_number: number;
         };
         /** CoachInviteLinkResponse */
         CoachInviteLinkResponse: {
@@ -2389,9 +2460,13 @@ export interface components {
         CoachProgramExerciseAssignmentResponse: {
             /** Workouts Updated */
             workouts_updated: number;
+            /** Current Revision Number */
+            current_revision_number: number;
         };
         /** CoachProgramExerciseCreate */
         CoachProgramExerciseCreate: {
+            /** Expected Revision Number */
+            expected_revision_number: number;
             /** Exercise Id */
             exercise_id: number;
             /** Day Number */
@@ -2411,6 +2486,8 @@ export interface components {
             superset_group?: number | null;
             /** Superset Order */
             superset_order?: number | null;
+            /** Reason */
+            reason?: string | null;
         };
         /** CoachRoleApplicationResponse */
         CoachRoleApplicationResponse: {
@@ -3522,6 +3599,42 @@ export interface components {
              */
             requires_explicit_start: boolean;
         };
+        /** ProgramRevisionResponse */
+        ProgramRevisionResponse: {
+            /** Id */
+            id: number;
+            /** User Program Id */
+            user_program_id: number;
+            /** Revision Number */
+            revision_number: number;
+            /** Changed By User Id */
+            changed_by_user_id?: number | null;
+            /**
+             * Actor Role
+             * @enum {string}
+             */
+            actor_role: "self" | "trainer" | "admin" | "system";
+            /**
+             * Change Kind
+             * @enum {string}
+             */
+            change_kind: "assigned" | "program_archived" | "plan_updated" | "block_created" | "block_updated" | "block_status_changed";
+            /** Reason */
+            reason?: string | null;
+            /** Changed Fields */
+            changed_fields: {
+                [key: string]: unknown;
+            };
+            /** Snapshot */
+            snapshot: {
+                [key: string]: unknown;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /** ProgramTargetUserResponse */
         ProgramTargetUserResponse: {
             /** Id */
@@ -4031,6 +4144,108 @@ export interface components {
             set_kind?: ("warmup" | "working" | "drop") | null;
             /** Reached Failure */
             reached_failure?: boolean | null;
+        };
+        /** TrainingBlockCreate */
+        TrainingBlockCreate: {
+            /** Expected Revision Number */
+            expected_revision_number: number;
+            /** Title */
+            title: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /** Purpose */
+            purpose: string;
+            /** Priority Muscle Ids */
+            priority_muscle_ids?: string[];
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Is Deload
+             * @default false
+             */
+            is_deload: boolean;
+            /** Reason */
+            reason?: string | null;
+        };
+        /** TrainingBlockMutationResponse */
+        TrainingBlockMutationResponse: {
+            block: components["schemas"]["TrainingBlockResponse"];
+            /** Current Revision Number */
+            current_revision_number: number;
+        };
+        /** TrainingBlockResponse */
+        TrainingBlockResponse: {
+            /** Id */
+            id: number;
+            /** User Program Id */
+            user_program_id: number;
+            /** Title */
+            title: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /** Duration Days */
+            duration_days: number;
+            /** Purpose */
+            purpose: string;
+            /** Priority Muscle Ids */
+            priority_muscle_ids: string[];
+            /** Notes */
+            notes?: string | null;
+            /** Is Deload */
+            is_deload: boolean;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "planned" | "active" | "completed" | "archived";
+            /** Created By User Id */
+            created_by_user_id?: number | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Updated At */
+            updated_at?: string | null;
+        };
+        /** TrainingBlockUpdate */
+        TrainingBlockUpdate: {
+            /** Expected Revision Number */
+            expected_revision_number: number;
+            /** Title */
+            title?: string | null;
+            /** Start Date */
+            start_date?: string | null;
+            /** End Date */
+            end_date?: string | null;
+            /** Purpose */
+            purpose?: string | null;
+            /** Priority Muscle Ids */
+            priority_muscle_ids?: string[] | null;
+            /** Notes */
+            notes?: string | null;
+            /** Is Deload */
+            is_deload?: boolean | null;
+            /** Status */
+            status?: ("planned" | "active" | "completed" | "archived") | null;
+            /** Reason */
+            reason?: string | null;
         };
         /** TrainingPeriodSummary */
         TrainingPeriodSummary: {
@@ -5773,6 +5988,174 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProgramAssignmentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    assigned_program_revisions_api_v1_programs_assigned__program_id__revisions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                program_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgramRevisionResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    assigned_program_blocks_api_v1_programs_assigned__program_id__blocks_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                program_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrainingBlockResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_assigned_program_block_api_v1_programs_assigned__program_id__blocks_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                program_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TrainingBlockCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrainingBlockMutationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    edit_assigned_program_block_api_v1_programs_assigned__program_id__blocks__block_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                program_id: number;
+                block_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TrainingBlockUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrainingBlockMutationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_assigned_program_exercise_api_v1_programs_assigned__program_id__exercises_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                program_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoachProgramExerciseCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachProgramExerciseAssignmentResponse"];
                 };
             };
             /** @description Validation Error */

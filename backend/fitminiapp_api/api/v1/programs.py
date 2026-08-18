@@ -8,15 +8,22 @@ from fitminiapp_api.models.user import User
 from fitminiapp_api.schemas.program import (
     AssignTemplateSelfRequest,
     ClientResponse,
+    CoachProgramExerciseAssignmentResponse,
+    CoachProgramExerciseCreate,
     ExerciseCatalogCreate,
     ExerciseCatalogItem,
     ExerciseGuide,
     ProgramAssignmentResponse,
     ProgramRecommendationRequest,
     ProgramRecommendationResponse,
+    ProgramRevisionResponse,
     ProgramTemplateCreate,
     ProgramTemplateCreateResponse,
     ProgramTemplateResponse,
+    TrainingBlockCreate,
+    TrainingBlockMutationResponse,
+    TrainingBlockResponse,
+    TrainingBlockUpdate,
 )
 from fitminiapp_api.services.exercise_catalog import (
     _effective_exercise_id,
@@ -33,6 +40,13 @@ from fitminiapp_api.services.exercise_domain import (
 from fitminiapp_api.services.exercise_guides import get_exercise_guide
 from fitminiapp_api.services.program_common import ProgramError, assignment_error_status
 from fitminiapp_api.services.program_recommendation import recommend_program_templates
+from fitminiapp_api.services.program_versioning import (
+    create_training_block,
+    list_program_revisions,
+    list_training_blocks,
+    update_training_block,
+    upsert_future_program_exercise,
+)
 from fitminiapp_api.services.programs import (
     assign_template_to_self,
     build_template_response,
@@ -48,6 +62,25 @@ from fitminiapp_api.services.programs import (
 )
 
 router = APIRouter()
+
+
+def _assigned_program_error(exc: ProgramError) -> HTTPException:
+    detail = str(exc)
+    if detail in {"Assigned program not found", "Training block not found"}:
+        return HTTPException(status_code=404, detail=detail)
+    if detail in {
+        "Program revision conflict",
+        "Assigned program is not editable",
+        "Training blocks must not overlap",
+        "Invalid training block status transition",
+        "Complete the previous training block first",
+        "Another training block is already active",
+        "Completed or archived training blocks are immutable",
+        "No future planned workouts for the selected day",
+        "Superset position is already occupied",
+    }:
+        return HTTPException(status_code=409, detail=detail)
+    return HTTPException(status_code=422, detail=detail)
 
 
 def _serialize_exercise(
@@ -426,6 +459,111 @@ def delete_template(
         if detail == "Template not found":
             raise HTTPException(status_code=404, detail=detail)
         raise HTTPException(status_code=403, detail=detail)
+
+
+@router.get(
+    "/assigned/{program_id}/revisions",
+    response_model=list[ProgramRevisionResponse],
+)
+def assigned_program_revisions(
+    program_id: int,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        rows = list_program_revisions(db, current_user, program_id)
+    except ProgramError as exc:
+        raise _assigned_program_error(exc) from exc
+    return [
+        {
+            "id": row.id,
+            "user_program_id": row.user_program_id,
+            "revision_number": row.revision_number,
+            "changed_by_user_id": row.changed_by_user_id,
+            "actor_role": row.actor_role,
+            "change_kind": row.change_kind,
+            "reason": row.reason,
+            "changed_fields": row.changed_fields,
+            "snapshot": row.snapshot,
+            "created_at": row.created_at,
+        }
+        for row in rows
+    ]
+
+
+@router.get(
+    "/assigned/{program_id}/blocks",
+    response_model=list[TrainingBlockResponse],
+)
+def assigned_program_blocks(
+    program_id: int,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        return list_training_blocks(db, current_user, program_id)
+    except ProgramError as exc:
+        raise _assigned_program_error(exc) from exc
+
+
+@router.post(
+    "/assigned/{program_id}/blocks",
+    response_model=TrainingBlockMutationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def add_assigned_program_block(
+    program_id: int,
+    payload: TrainingBlockCreate,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        block, revision_number = create_training_block(db, current_user, program_id, payload)
+    except ProgramError as exc:
+        raise _assigned_program_error(exc) from exc
+    return {"block": block, "current_revision_number": revision_number}
+
+
+@router.patch(
+    "/assigned/{program_id}/blocks/{block_id}",
+    response_model=TrainingBlockMutationResponse,
+)
+def edit_assigned_program_block(
+    program_id: int,
+    block_id: int,
+    payload: TrainingBlockUpdate,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        block, revision_number = update_training_block(
+            db, current_user, program_id, block_id, payload
+        )
+    except ProgramError as exc:
+        raise _assigned_program_error(exc) from exc
+    return {"block": block, "current_revision_number": revision_number}
+
+
+@router.post(
+    "/assigned/{program_id}/exercises",
+    response_model=CoachProgramExerciseAssignmentResponse,
+)
+def update_assigned_program_exercise(
+    program_id: int,
+    payload: CoachProgramExerciseCreate,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        workouts_updated, revision_number = upsert_future_program_exercise(
+            db, current_user, program_id, payload
+        )
+    except ProgramError as exc:
+        raise _assigned_program_error(exc) from exc
+    return {
+        "workouts_updated": workouts_updated,
+        "current_revision_number": revision_number,
+    }
 
 
 @router.get("/clients", response_model=list[ClientResponse])
