@@ -92,10 +92,12 @@ Ties use recent/favorite timestamps, match position, name, and ID for stable pag
 recent, and favorites use `limit`/`offset`; `limit` defaults to 20 and is capped at 50, while
 `offset` is capped at 10,000. The frontend autocomplete contract is a 250 ms debounce after the
 normalized query reaches two characters. A later UI task must cancel obsolete requests and ignore
-stale responses; the API itself does not add an artificial delay. PostgreSQL trigram/full-text or
-a separate search service are intentionally not used before catalog size and latency demonstrate
-a need. Visibility/ranking queries are backed by food scope, favorite-order, and diary-recency
-indexes.
+stale responses; the API itself does not add an artificial delay. A separate full-text/search
+service is not introduced. PostgreSQL uses a `pg_trgm` GIN index for the real
+substring query over `search_text`; SQLite test/local schemas use an ordinary compatibility index.
+Visibility/ranking queries are additionally backed by food scope, favorite-order, and
+diary-recency indexes. Stable source imports use the unique `(source_name, external_id)` index,
+and barcode lookup uses separate catalog and per-owner partial unique indexes.
 
 ## Optional external catalog
 
@@ -104,6 +106,8 @@ orchestration does not depend on Open Food Facts response shapes. `FOOD_PROVIDER
 default and requires no external configuration. To enable the current adapter, set
 `FOOD_PROVIDER=open_food_facts` and a real identifying
 `OPEN_FOOD_FACTS_USER_AGENT=AppName/Version (contact)` value. No API secret is required.
+`FOOD_PROVIDER_TIMEOUT_SECONDS` configures the per-attempt network timeout from 1 to 15 seconds
+and defaults to 4 seconds; eligible reads retry at most once, so callers retain a bounded fallback.
 
 Search remains local-first. The provider is called only when local results are empty and the
 caller explicitly sets `include_external=true`; callers must present that as a separate external
@@ -141,6 +145,13 @@ This boundary prevents an external ODbL cache from being silently combined with 
 foods or diary data. A future decision to persist or transform provider data requires a separate
 license/share-alike review and a provenance-preserving storage design.
 
+The backend does not persist or process-cache provider responses. Authenticated API responses are
+marked `Cache-Control: no-store, private`; adding a shared or durable Open Food Facts cache would
+require an explicit ODbL attribution/share-alike design. Provider failure logs contain only the
+stable provider name and a bounded failure class (`timeout`, `network_error`, `rate_limited`,
+`upstream_error`, or `malformed_response`), never the search phrase, barcode, returned product, or
+diary content.
+
 ## Private food diary
 
 The diary stores one entry per selected food, user-local calendar date, and meal type
@@ -169,6 +180,19 @@ All entry reads and mutations are scoped to the authenticated account. A missing
 or diary entry uses the same not-found response, so the API does not disclose another account's
 private catalog or diary data. A day is a bounded aggregate and is intentionally returned as one
 response rather than paginated entry fragments.
+
+Food/recipe/diary domain failures use the existing API error envelope `{"detail": "..."}`:
+missing or foreign private resources return `404`, idempotency-key conflicts return `409`, and
+domain-invalid operations return `422`. Request-schema validation also returns `422` using
+FastAPI's structured validation details. External-provider unavailability is not a diary failure:
+search/barcode reads return `200` with an explicit `provider_status` fallback and no raw upstream
+error.
+
+Migrations `0034`-`0038` are forward, deterministic steps. `0036` initially populated
+`search_text` from food name/brand; `0038` safely recomputes it in ID-ordered batches with the same
+Unicode `casefold()` algorithm used at runtime before adding the search index. Neither step
+invents nutrients, ownership, provenance, or source IDs. `0038` also replaces the trainer relation
+lookup index without changing user-authored domain content.
 
 ## Private recipes
 

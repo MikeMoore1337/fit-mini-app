@@ -23,7 +23,7 @@ from fitminiapp_api.schemas.program import (
 from fitminiapp_api.schemas.progress import (
     ProgressPeriodDays,
     ProgressSummaryResponse,
-    TrainerClientProgressSummary,
+    TrainerClientProgressListResponse,
 )
 from fitminiapp_api.schemas.user import UserProfileUpdate
 from fitminiapp_api.schemas.workout import (
@@ -135,14 +135,22 @@ def coach_client_progress_summary(
 
 @router.get(
     "/client-summaries",
-    response_model=list[TrainerClientProgressSummary],
+    response_model=TrainerClientProgressListResponse,
 )
 def coach_client_progress_summaries(
     period_days: ProgressPeriodDays = ProgressPeriodDays.DAYS_30,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0, le=10_000),
     current_user: User = Depends(require_coach_or_admin),
     db: Session = Depends(get_db),
 ):
-    return build_trainer_client_summaries(db, current_user, period_days)
+    return build_trainer_client_summaries(
+        db,
+        current_user,
+        period_days,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.get(

@@ -111,6 +111,12 @@ class Food(Base):
         Index("ix_foods_owner_status", "owner_user_id", "status"),
         Index("ix_foods_status_type_name", "status", "food_type", "name"),
         Index(
+            "ix_foods_search_text_trgm",
+            "search_text",
+            postgresql_using="gin",
+            postgresql_ops={"search_text": "gin_trgm_ops"},
+        ),
+        Index(
             "uq_foods_catalog_barcode",
             "barcode",
             unique=True,

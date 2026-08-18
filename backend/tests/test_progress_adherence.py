@@ -5,7 +5,7 @@ from decimal import Decimal
 
 import pytest
 
-from fitminiapp_api.core.timezone import today_msk
+from fitminiapp_api.core.timezone import today_for_user, today_msk
 from fitminiapp_api.db.performance import (
     begin_sql_metrics,
     current_sql_metrics,
@@ -343,6 +343,22 @@ def test_trainer_summary_requires_current_relationship_and_revokes_access(client
     own = client.get("/api/v1/workouts/progress/summary", headers=client_headers)
     assert own.status_code == 200
 
+    bulk_active = client.get(
+        "/api/v1/coach/client-summaries?period_days=30&limit=1&offset=0",
+        headers=coach_headers,
+    )
+    assert bulk_active.status_code == 200
+    assert bulk_active.json()["total"] == 1
+    assert bulk_active.json()["limit"] == 1
+    assert bulk_active.json()["offset"] == 0
+    assert bulk_active.json()["items"][0]["user_id"] == managed_client_id
+    assert "food_name" not in bulk_active.text
+    invalid_page = client.get(
+        "/api/v1/coach/client-summaries?limit=101",
+        headers=coach_headers,
+    )
+    assert invalid_page.status_code == 422
+
     with get_session_context() as db:
         relation = (
             db.query(CoachClient)
@@ -361,7 +377,7 @@ def test_trainer_summary_requires_current_relationship_and_revokes_access(client
     assert revoked.status_code == 404
     bulk = client.get("/api/v1/coach/client-summaries", headers=coach_headers)
     assert bulk.status_code == 200
-    assert bulk.json() == []
+    assert bulk.json() == {"items": [], "total": 0, "limit": 20, "offset": 0}
 
 
 def test_bulk_trainer_summaries_use_constant_query_count() -> None:
@@ -398,18 +414,55 @@ def test_bulk_trainer_summaries_use_constant_query_count() -> None:
 
         token = begin_sql_metrics()
         try:
-            summaries = build_trainer_client_summaries(db, coach, 90)
+            page = build_trainer_client_summaries(
+                db,
+                coach,
+                90,
+                limit=10,
+                offset=5,
+            )
             metrics = current_sql_metrics()
         finally:
             reset_sql_metrics(token)
 
-    assert len(summaries) == 25
-    assert {summary["client_name"] for summary in summaries} == {
-        f"Private {index}" for index in range(25)
-    }
+    summaries = page["items"]
+    assert page["total"] == 25
+    assert page["limit"] == 10
+    assert page["offset"] == 5
+    assert len(summaries) == 10
     summaries_by_name = {summary["client_name"]: summary for summary in summaries}
-    assert summaries_by_name["Private 0"]["body"]["latest_measurement"]["weight_kg"] == 70
-    assert summaries_by_name["Private 1"]["body"]["latest_measurement"]["weight_kg"] == 71
-    assert summaries_by_name["Private 0"]["nutrition"]["target_calories"] == 2000
-    assert summaries_by_name["Private 1"]["nutrition"]["target_calories"] is None
-    assert metrics.query_count == 10
+    assert summaries_by_name["Private 19"]["body"]["latest_measurement"]["weight_kg"] == 89
+    assert summaries_by_name["Private 10"]["body"]["latest_measurement"]["weight_kg"] == 80
+    assert all(summary["nutrition"]["target_calories"] is None for summary in summaries)
+    assert metrics.query_count == 11
+
+
+def test_nutrition_target_effective_date_keeps_client_local_wall_date(client) -> None:
+    headers = _auth(client, 21_300)
+    user_id = _user_id(21_300)
+
+    with get_session_context() as db:
+        user = db.get(User, user_id)
+        assert user is not None and user.profile is not None
+        user.profile.timezone = "Pacific/Kiritimati"
+        local_today = today_for_user(user)
+        saved_local_date = local_today - timedelta(days=3)
+        target = _nutrition_target(user_id, cardio_per_week=0)
+        target.saved_at = datetime.combine(saved_local_date, time(hour=20))
+        db.add(target)
+        db.add_all(
+            [
+                _diary_entry(user_id, saved_local_date),
+                _diary_entry(user_id, saved_local_date + timedelta(days=1)),
+            ]
+        )
+
+    response = client.get(
+        "/api/v1/workouts/progress/summary?period_days=7",
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["nutrition"]["logged_days"] == 2
+    assert payload["nutrition"]["target_effective_on"] == saved_local_date.isoformat()
+    assert payload["nutrition"]["adherence_evaluated_days"] == 2

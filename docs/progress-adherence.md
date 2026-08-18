@@ -6,8 +6,9 @@ It supports only `7`, `30`, and `90` day windows:
 - `GET /api/v1/workouts/progress/summary?period_days=30` returns the authenticated user's data;
 - `GET /api/v1/coach/clients/{client_id}/summary?period_days=30` returns one currently assigned
   client;
-- `GET /api/v1/coach/client-summaries?period_days=30` returns bounded summaries for all of the
-  trainer's active clients without loading each client's history separately.
+- `GET /api/v1/coach/client-summaries?period_days=30&limit=20&offset=0` returns a page object with
+  `items`, `total`, `limit`, and `offset` for the trainer's active clients without loading each
+  client's history separately. `limit` is capped at 100 and `offset` at 10,000.
 
 The existing `/workouts/progress` and coach analytics endpoints retain their legacy lifetime
 contract.
@@ -43,6 +44,13 @@ Nutrition averages use all past logged days in the selected period. Adherence us
 latest target and save date but not target history. Older diary days are never judged against a
 newer target.
 
+All period boundaries use each account's IANA timezone. `nutrition_targets.saved_at` is written as
+the target client's local wall time, including when a trainer changes the target, so adherence
+uses its calendar date directly without applying a second timezone conversion. Diary rows are
+keyed by the same user-local `diary_date`; the current local day is excluded from nutrition
+adherence. Historical naive timestamps are not bulk-reinterpreted because their original timezone
+cannot be recovered safely; workout adherence itself uses the explicit `scheduled_date`.
+
 ## Privacy and interpretation
 
 User summaries are always scoped to the authenticated account. Trainer endpoints require an
@@ -50,6 +58,10 @@ active trainer-client relationship for every returned client; ended or unrelated
 cannot access the detail endpoint and are absent from the bulk endpoint. Trainer nutrition output
 contains only aggregate calorie/protein totals and targets. It never returns food names, meals,
 recipes, personal foods, notes, or full diary entries.
+
+The bulk query is paginated before progress aggregation and uses a composite
+`(coach_user_id, status, client_user_id)` relation index. The aggregate implementation keeps a
+constant query count per page rather than issuing history queries per client.
 
 Body changes compare the user only with their own measurements in the selected period. Training
 volume uses completed sets from completed workouts. A new personal record is counted per exercise
