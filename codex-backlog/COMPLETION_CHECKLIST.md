@@ -1,0 +1,120 @@
+# Final pre-release completion checklist
+
+## Completed
+- [x] 00 `platform-technical-baseline-audit`
+- [x] 01 `ui-baseline-audit-target-direction`
+- [x] 02 `seo-organic-growth-baseline-audit`
+- [x] 03 `technical-seo-indexation-foundation`
+- [x] 04 `search-webmaster-monitoring-foundation`
+- [x] 05 `design-system-foundation`
+- [x] 06 `seo-public-information-architecture-content-foundation`
+
+## Pending
+- [ ] 07 `brand-logo-favicon-foundation`
+- [ ] 08 `theme-preference-and-platform-sync`
+- [ ] 09 `organic-promotion-distribution-foundation`
+- [ ] 10 `auth-multi-provider-baseline-audit`
+- [ ] 11 `auth-identity-session-linking-hardening`
+- [ ] 12 `auth-provider-production-readiness`
+- [ ] 13 `premium-auth-entry-and-linking-experience`
+- [ ] 14 `progressive-user-onboarding`
+- [ ] 15 `food-domain-foundation`
+- [ ] 16 `food-diary-backend`
+- [ ] 17 `food-product-library-search`
+- [ ] 18 `recipes-copying-backend`
+- [ ] 19 `external-food-provider`
+- [ ] 20 `barcode-lookup-backend`
+- [ ] 21 `progress-adherence-trainer-backend`
+- [ ] 22 `food-platform-hardening`
+- [ ] 23 `exercise-muscle-domain-foundation`
+- [ ] 24 `rir-workout-set-foundation`
+- [ ] 25 `deterministic-program-selection-engine`
+- [ ] 26 `trainer-context-comments-backend`
+- [ ] 27 `training-analytics-extension-backend`
+- [ ] 28 `exercise-guide-media-foundation`
+- [ ] 29 `advanced-set-semantics-and-supersets`
+- [ ] 30 `program-versioning-and-training-blocks`
+- [ ] 31 `body-priorities-and-anthropometry-foundation`
+- [ ] 32 `data-quality-and-confidence-contract`
+- [ ] 33 `adaptive-energy-calibration-engine`
+- [ ] 34 `weekly-check-in-foundation`
+- [ ] 35 `deterministic-workout-adaptation-engine`
+- [ ] 36 `offline-safe-active-workout`
+- [ ] 37 `product-analytics-foundation`
+- [ ] 38 `app-shell-navigation`
+- [ ] 39 `today-dashboard-integrated`
+- [ ] 40 `active-workout-experience`
+- [ ] 41 `nutrition-diary-core-ui`
+- [ ] 42 `nutrition-discovery-recipes-barcode-ui`
+- [ ] 43 `progress-experience`
+- [ ] 44 `programs-exercises-experience`
+- [ ] 45 `program-selection-wizard-experience`
+- [ ] 46 `exercise-guide-encyclopedia-experience`
+- [ ] 47 `profile-account-experience`
+- [ ] 48 `coach-workspace`
+- [ ] 49 `trainer-context-comments-experience`
+- [ ] 50 `knowledge-base-contextual-integration`
+- [ ] 51 `weekly-check-in-experience`
+- [ ] 52 `adaptive-energy-calibration-experience`
+- [ ] 53 `workout-adaptation-experience`
+- [ ] 54 `program-history-and-training-blocks-experience`
+- [ ] 55 `body-priorities-and-anthropometry-experience`
+- [ ] 56 `data-confidence-product-integration`
+- [ ] 57 `product-analytics-core-instrumentation`
+- [ ] 58 `deterministic-progression-guidance`
+- [ ] 59 `notification-reminder-orchestration`
+- [ ] 60 `account-data-export-and-lifecycle`
+- [ ] 61 `cardio-logging-gap-audit-and-minimal-implementation`
+- [ ] 62 `demo-mode-audit-design`
+- [ ] 63 `demo-mode-foundation`
+- [ ] 64 `demo-fixtures-ephemeral-interactions`
+- [ ] 65 `demo-ux-conversion`
+- [ ] 66 `demo-auth-handoff-migration`
+- [ ] 67 `demo-security-restrictions`
+- [ ] 68 `demo-final-verification`
+- [ ] 69 `admin-root-capabilities-foundation`
+- [ ] 70 `admin-operations-backend`
+- [ ] 71 `admin-workspace`
+- [ ] 72 `telegram-mini-app-adaptation`
+- [ ] 73 `landing-premium-refresh`
+- [ ] 74 `responsive-accessibility-states`
+- [ ] 75 `performance-motion-hardening`
+- [ ] 76 `ai-integration-audit`
+- [ ] 77 `ai-provider-core-free-only`
+- [ ] 78 `ai-provider-cloudflare`
+- [ ] 79 `ai-provider-openrouter`
+- [ ] 80 `ai-provider-orcarouter`
+- [ ] 81 `ai-router-failover-cooldown`
+- [ ] 82 `ai-domain-policy-topic-gate`
+- [ ] 83 `ai-app-knowledge-retrieval`
+- [ ] 84 `ai-readonly-tools-agent-loop`
+- [ ] 85 `ai-nutrition-context-tools`
+- [ ] 86 `ai-training-progress-anthropometry-context`
+- [ ] 87 `ai-personalized-memory-and-user-context`
+- [ ] 88 `ai-evidence-confidence-and-rationale`
+- [ ] 89 `ai-conversations-api-telemetry`
+- [ ] 90 `ai-ui-integration`
+- [ ] 91 `ai-security-evals-docs`
+- [ ] 92 `production-operational-readiness`
+- [ ] 93 `final-integrated-audit-regression`
+
+## Final release conditions
+- [ ] Canonical light/dark logo assets come from task 07 and no conflicting legacy brand remains on main surfaces
+- [ ] Favicon is mark-only, readable at 16x16/32x32 and contains no `YOUR FITNESS COACH` wordmark
+- [ ] Web, Mobile Web and TMA use one YFC Light/Dark visual system and shared components
+- [ ] Telegram `colorScheme` selects YFC Light/Dark; `themeParams` do not create a separate product palette
+- [ ] Representative Mobile Web/TMA screens have visual parity except documented platform behavior
+- [ ] Core app is fully usable with AI disabled/unavailable
+- [ ] New user onboarding is short, resumable and non-blocking for optional data
+- [ ] Active workout is offline-safe
+- [ ] Progression guidance is deterministic and explainable
+- [ ] Manual cardio flow is adequate or existing implementation verified
+- [ ] Notifications respect timezone/preferences and do not duplicate
+- [ ] User can export data and delete account safely
+- [ ] No progress photos / image-body analysis in release scope
+- [ ] AI is strict per-user, read-only and evidence-aware
+- [ ] Trainer personal AI cannot read client data
+- [ ] Backup restore was tested outside production
+- [ ] Deploy/rollback/degradation runbooks exist
+- [ ] Final task 93 has no unresolved release blocker
+- [ ] A novice user can complete core flows without searching unexplained fitness terminology
