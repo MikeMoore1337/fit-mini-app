@@ -103,6 +103,8 @@ def _serialize_template_with_context(
                         "prescribed_reps": ex.prescribed_reps,
                         "rest_seconds": ex.rest_seconds,
                         "notes": ex.notes,
+                        "superset_group": ex.superset_group,
+                        "superset_order": ex.superset_order,
                         "has_guide": get_exercise_guide(
                             visible_map.get(ex.exercise_id, ex.exercise)
                         )
@@ -303,6 +305,8 @@ def create_template(
                     prescribed_reps=ex.prescribed_reps,
                     rest_seconds=ex.rest_seconds,
                     notes=ex.notes,
+                    superset_group=ex.superset_group,
+                    superset_order=ex.superset_order,
                 )
             )
 
@@ -435,6 +439,8 @@ def assign_template_to_user(
                     prescribed_reps=exercise_item.prescribed_reps,
                     rest_seconds=exercise_item.rest_seconds,
                     notes=exercise_item.notes,
+                    superset_group=exercise_item.superset_group,
+                    superset_order=exercise_item.superset_order,
                 )
                 db.add(workout_exercise)
 
@@ -445,6 +451,8 @@ def assign_template_to_user(
                             set_number=set_number,
                             actual_reps=None,
                             actual_weight=None,
+                            set_kind="working",
+                            reached_failure=None,
                             is_completed=False,
                         )
                     )
@@ -743,6 +751,8 @@ def update_template_for_user(
                     prescribed_reps=ex.prescribed_reps,
                     rest_seconds=ex.rest_seconds,
                     notes=ex.notes,
+                    superset_group=ex.superset_group,
+                    superset_order=ex.superset_order,
                 )
             )
 

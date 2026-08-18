@@ -192,6 +192,8 @@ def test_training_analytics_reports_factual_progression_rir_and_muscle_exposure(
         "external_load_kg": None,
         "external_load_volume_kg": None,
         "rir": "4+",
+        "set_kind": "working",
+        "reached_failure": None,
     }
 
     bodyweight = exercises[push_up_id]

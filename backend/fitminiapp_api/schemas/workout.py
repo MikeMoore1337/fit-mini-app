@@ -4,6 +4,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 RirValue = Literal["0", "1", "2", "3", "4+"]
+SetKind = Literal["warmup", "working", "drop"]
 RIR_DESCRIPTION = (
     "Optional repetitions-in-reserve category after the set; 4+ means many repetitions "
     "remained, not an exact value of four"
@@ -16,6 +17,8 @@ class WorkoutSetCreate(BaseModel):
     actual_reps: int | None = None
     actual_weight: float | None = None
     rir: RirValue | None = Field(default=None, description=RIR_DESCRIPTION)
+    set_kind: SetKind | None = "working"
+    reached_failure: bool | None = None
     is_completed: bool = True
 
 
@@ -23,6 +26,8 @@ class WorkoutSetUpdate(BaseModel):
     actual_reps: int | None = Field(default=None, ge=0)
     actual_weight: float | None = Field(default=None, ge=0)
     rir: RirValue | None = Field(default=None, description=RIR_DESCRIPTION)
+    set_kind: SetKind | None = None
+    reached_failure: bool | None = None
     is_completed: bool | None = None
 
 
@@ -32,6 +37,8 @@ class LoggedSetItem(BaseModel):
     actual_reps: int | None = None
     actual_weight: float | None = None
     rir: RirValue | None = Field(default=None, description=RIR_DESCRIPTION)
+    set_kind: SetKind | None = None
+    reached_failure: bool | None = None
     is_completed: bool = True
 
 
@@ -44,6 +51,8 @@ class WorkoutExerciseItem(BaseModel):
     prescribed_reps: str
     rest_seconds: int
     notes: str | None = None
+    superset_group: int | None = None
+    superset_order: int | None = None
     has_guide: bool = False
     sets: list[LoggedSetItem]
 
@@ -67,6 +76,8 @@ class WorkoutStatusResponse(BaseModel):
     actual_reps: int | None = None
     actual_weight: float | None = None
     rir: RirValue | None = Field(default=None, description=RIR_DESCRIPTION)
+    set_kind: SetKind | None = None
+    reached_failure: bool | None = None
     is_completed: bool
 
 
@@ -145,6 +156,8 @@ class TrainingAnalyticsSet(BaseModel):
     external_load_kg: float | None = None
     external_load_volume_kg: float | None = None
     rir: RirValue | None = Field(default=None, description=RIR_DESCRIPTION)
+    set_kind: SetKind | None = None
+    reached_failure: bool | None = None
 
 
 class ExerciseTrainingSession(BaseModel):
@@ -218,6 +231,8 @@ class WorkoutTimelineSet(BaseModel):
     actual_reps: int | None = None
     actual_weight: float | None = None
     rir: RirValue | None = Field(default=None, description=RIR_DESCRIPTION)
+    set_kind: SetKind | None = None
+    reached_failure: bool | None = None
     is_completed: bool
 
 
@@ -225,6 +240,8 @@ class WorkoutTimelineExercise(BaseModel):
     exercise_id: int
     exercise_title: str
     notes: str | None = None
+    superset_group: int | None = None
+    superset_order: int | None = None
     sets: list[WorkoutTimelineSet]
 
 

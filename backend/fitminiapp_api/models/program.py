@@ -102,6 +102,20 @@ class ProgramTemplateDay(Base):
 
 class ProgramTemplateExercise(Base):
     __tablename__ = "program_template_exercises"
+    __table_args__ = (
+        UniqueConstraint(
+            "day_id",
+            "superset_group",
+            "superset_order",
+            name="uq_program_template_exercises_superset_order",
+        ),
+        CheckConstraint(
+            "(superset_group IS NULL AND superset_order IS NULL) OR "
+            "(superset_group IS NOT NULL AND superset_order IS NOT NULL AND "
+            "superset_group >= 1 AND superset_order IN (1, 2))",
+            name="ck_program_template_exercises_superset",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     day_id: Mapped[int] = mapped_column(ForeignKey("program_template_days.id"), index=True)
@@ -111,6 +125,8 @@ class ProgramTemplateExercise(Base):
     prescribed_reps: Mapped[str] = mapped_column(String(32))
     rest_seconds: Mapped[int] = mapped_column(Integer, default=90)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    superset_group: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    superset_order: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     day: Mapped[ProgramTemplateDay] = relationship("ProgramTemplateDay", back_populates="exercises")
     exercise: Mapped[Exercise] = relationship("Exercise")
@@ -202,6 +218,20 @@ class UserWorkout(Base):
 
 class UserWorkoutExercise(Base):
     __tablename__ = "user_workout_exercises"
+    __table_args__ = (
+        UniqueConstraint(
+            "workout_id",
+            "superset_group",
+            "superset_order",
+            name="uq_user_workout_exercises_superset_order",
+        ),
+        CheckConstraint(
+            "(superset_group IS NULL AND superset_order IS NULL) OR "
+            "(superset_group IS NOT NULL AND superset_order IS NOT NULL AND "
+            "superset_group >= 1 AND superset_order IN (1, 2))",
+            name="ck_user_workout_exercises_superset",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     workout_id: Mapped[int] = mapped_column(ForeignKey("user_workouts.id"), index=True)
@@ -211,6 +241,8 @@ class UserWorkoutExercise(Base):
     prescribed_reps: Mapped[str] = mapped_column(String(32))
     rest_seconds: Mapped[int] = mapped_column(Integer, default=90)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    superset_group: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    superset_order: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     workout: Mapped[UserWorkout] = relationship("UserWorkout", back_populates="exercises")
     exercise: Mapped[Exercise] = relationship("Exercise")
@@ -234,6 +266,10 @@ class UserWorkoutSet(Base):
             "rir IS NULL OR rir IN ('0', '1', '2', '3', '4+')",
             name="ck_user_workout_sets_rir",
         ),
+        CheckConstraint(
+            "set_kind IS NULL OR set_kind IN ('warmup', 'working', 'drop')",
+            name="ck_user_workout_sets_kind",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -244,6 +280,8 @@ class UserWorkoutSet(Base):
     actual_reps: Mapped[int | None] = mapped_column(Integer, nullable=True)
     actual_weight: Mapped[float | None] = mapped_column(Float, nullable=True)
     rir: Mapped[str | None] = mapped_column(String(2), nullable=True)
+    set_kind: Mapped[str | None] = mapped_column(String(16), nullable=True, default="working")
+    reached_failure: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False)
 
     workout_exercise: Mapped[UserWorkoutExercise] = relationship(

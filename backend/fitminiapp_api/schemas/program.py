@@ -32,11 +32,29 @@ class ProgramTemplateExerciseCreate(BaseModel):
     prescribed_reps: str = Field(min_length=1, max_length=32)
     rest_seconds: int = Field(default=90, ge=15, le=600)
     notes: str | None = Field(default=None, max_length=2000)
+    superset_group: int | None = Field(default=None, ge=1)
+    superset_order: int | None = Field(default=None, ge=1, le=2)
+
+    @model_validator(mode="after")
+    def validate_superset_pair(self):
+        if (self.superset_group is None) != (self.superset_order is None):
+            raise ValueError("superset_group and superset_order must be provided together")
+        return self
 
 
 class ProgramTemplateDayCreate(BaseModel):
     title: str = Field(min_length=1, max_length=128)
     exercises: list[ProgramTemplateExerciseCreate] = Field(min_length=1, max_length=20)
+
+    @model_validator(mode="after")
+    def validate_supersets(self):
+        groups: dict[int, list[int]] = {}
+        for exercise in self.exercises:
+            if exercise.superset_group is not None and exercise.superset_order is not None:
+                groups.setdefault(exercise.superset_group, []).append(exercise.superset_order)
+        if any(sorted(orders) != [1, 2] for orders in groups.values()):
+            raise ValueError("each superset must contain exactly two exercises ordered 1 and 2")
+        return self
 
 
 class ProgramTemplateCreate(BaseModel):
@@ -74,6 +92,8 @@ class ProgramTemplateExerciseResponse(BaseModel):
     prescribed_reps: str
     rest_seconds: int
     notes: str | None = None
+    superset_group: int | None = None
+    superset_order: int | None = None
     has_guide: bool = False
 
 
@@ -201,6 +221,14 @@ class CoachProgramExerciseCreate(BaseModel):
     prescribed_reps: str = Field(min_length=1, max_length=32)
     rest_seconds: int = Field(default=90, ge=15, le=600)
     notes: str | None = Field(default=None, max_length=2000)
+    superset_group: int | None = Field(default=None, ge=1)
+    superset_order: int | None = Field(default=None, ge=1, le=2)
+
+    @model_validator(mode="after")
+    def validate_superset_pair(self):
+        if (self.superset_group is None) != (self.superset_order is None):
+            raise ValueError("superset_group and superset_order must be provided together")
+        return self
 
 
 class CoachProgramExerciseAssignmentResponse(BaseModel):

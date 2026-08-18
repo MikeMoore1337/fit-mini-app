@@ -14,15 +14,15 @@ endpoints remain summaries and do not load this history.
 
 ## Formulas and missing data
 
-All period boundaries use the account's IANA timezone and include both boundary dates. Only sets
-with `is_completed = true` inside workouts whose status is `completed` are included. Planned,
-in-progress, skipped, and cancelled workouts and incomplete sets are excluded from every metric.
-The current model does not distinguish warm-up and working sets, so the API deliberately calls
-them `completed sets`.
+All period boundaries use the account's IANA timezone and include both boundary dates. Only
+working and drop sets with `is_completed = true` inside workouts whose status is `completed` are
+included. Warm-up sets, planned/in-progress/skipped/cancelled workouts, and incomplete sets are
+excluded from working-volume, progression, RIR, and muscle-exposure metrics. Legacy rows whose
+`set_kind` is `null` remain included so the migration does not rewrite historical meaning.
 
 | Metric | Formula and unit | Missing data and limitations |
 | --- | --- | --- |
-| Completed sets | Count of included set rows, sets | Does not claim working-set volume because set type is not stored. |
+| Completed sets | Count of included working, drop, or legacy-null set rows, sets | Warm-up sets are excluded. Drop sets remain a distinct `set_kind` in bounded history; they are not converted into an effective-set score. |
 | Repetitions | Sum of recorded `actual_reps`, repetitions | `reps_recorded_sets` reports coverage. The sum is `null` when no included set has repetitions and can be partial when coverage is incomplete. Repetitions at different loads are not converted into a score. |
 | Maximum external load | Maximum recorded `actual_weight`, kg | `null` when load is absent. It is an observed load, not an estimated 1RM and not proof of strength change by itself. |
 | Set external-load volume | `actual_reps × actual_weight`, kg | `null` unless both inputs exist. |

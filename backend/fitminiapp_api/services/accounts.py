@@ -314,12 +314,16 @@ def build_account_export(db: Session, user: User) -> dict:
                                 "exercise_id": exercise.exercise_id,
                                 "title": exercise.exercise.title if exercise.exercise else None,
                                 "notes": exercise.notes,
+                                "superset_group": exercise.superset_group,
+                                "superset_order": exercise.superset_order,
                                 "sets": [
                                     {
                                         "set_number": workout_set.set_number,
                                         "actual_reps": workout_set.actual_reps,
                                         "actual_weight": workout_set.actual_weight,
                                         "rir": workout_set.rir,
+                                        "set_kind": workout_set.set_kind,
+                                        "reached_failure": workout_set.reached_failure,
                                         "is_completed": workout_set.is_completed,
                                     }
                                     for workout_set in exercise.sets
