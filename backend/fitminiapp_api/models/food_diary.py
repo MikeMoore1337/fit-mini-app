@@ -58,6 +58,12 @@ class FoodDiaryEntry(Base):
             "meal_type",
             "id",
         ),
+        Index(
+            "ix_food_diary_entries_user_food_updated",
+            "user_id",
+            "food_id",
+            "updated_at",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

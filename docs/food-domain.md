@@ -61,8 +61,41 @@ Run the same command without `--dry-run` only after source accuracy, provenance,
 been reviewed. No base food seed is committed until such a source is selected; the pipeline alone
 does not imply that a dataset is suitable for production.
 
-External HTTP fetching, recipes, favorites/recent foods, barcode scanning, and UI remain outside
-this foundation.
+External HTTP fetching, recipes, barcode scanning, and UI remain outside this foundation.
+
+## Personal library and local search
+
+Authenticated users can create, read, update, and delete their own active foods through
+`/api/v1/nutrition/foods`. Personal foods use the same nutrient, serving, and GTIN validation as
+the catalog, but remain private to their owner. A foreign personal-food ID returns the same 404 as
+a missing ID. Deleting a personal food does not remove diary snapshots already created from it.
+
+Favorites are account-scoped and may reference either a visible catalog food or the user's own
+food. `PUT /foods/{food_id}/favorite` is idempotent; the matching `DELETE` removes the favorite.
+Recent foods are derived from the user's current diary history by the latest entry update, so no
+second mutable usage source is maintained. Deleted diary entries and deleted foods no longer
+contribute to recent results. Frequently-used foods are not exposed yet: current requirements do
+not need another ranking signal, and a durable counter would require explicit semantics for entry
+edits and deletion.
+
+`GET /api/v1/nutrition/foods/search` is a local-only, deterministic search. It case-folds and
+collapses whitespace in the query, requires at least two non-whitespace characters, and searches
+the normalized name plus brand. Results are ranked by mutually exclusive priority:
+
+1. recently used;
+2. favorites;
+3. the user's own foods;
+4. system foods;
+5. local branded foods.
+
+Ties use recent/favorite timestamps, match position, name, and ID for stable pagination. Search,
+recent, and favorites use `limit`/`offset`; `limit` defaults to 20 and is capped at 50, while
+`offset` is capped at 10,000. The frontend autocomplete contract is a 250 ms debounce after the
+normalized query reaches two characters. A later UI task must cancel obsolete requests and ignore
+stale responses; the API itself does not add an artificial delay. PostgreSQL trigram/full-text or
+a separate search service are intentionally not used before catalog size and latency demonstrate
+a need. Visibility/ranking queries are backed by food scope, favorite-order, and diary-recency
+indexes.
 
 ## Private food diary
 

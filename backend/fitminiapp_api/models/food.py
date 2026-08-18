@@ -10,12 +10,17 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    event,
     text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
 from fitminiapp_api.core.timezone import now_msk_naive
 from fitminiapp_api.db.base import Base
+
+
+def normalize_food_search_text(name: str, brand: str | None) -> str:
+    return " ".join(part for part in (name, brand or "") if part).casefold()
 
 
 class Food(Base):
@@ -104,6 +109,7 @@ class Food(Base):
             name="ck_foods_active_catalog_trust",
         ),
         Index("ix_foods_owner_status", "owner_user_id", "status"),
+        Index("ix_foods_status_type_name", "status", "food_type", "name"),
         Index(
             "uq_foods_catalog_barcode",
             "barcode",
@@ -133,6 +139,7 @@ class Food(Base):
     name: Mapped[str] = mapped_column(String(256), nullable=False)
     brand: Mapped[str | None] = mapped_column(String(128), nullable=True)
     barcode: Mapped[str | None] = mapped_column(String(14), nullable=True)
+    search_text: Mapped[str] = mapped_column(String(1024), nullable=False, default="")
 
     energy_kcal_per_100g: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
     protein_g_per_100g: Mapped[Decimal | None] = mapped_column(Numeric(8, 3), nullable=True)
@@ -169,3 +176,35 @@ class Food(Base):
         default=now_msk_naive,
         onupdate=now_msk_naive,
     )
+
+
+class FoodFavorite(Base):
+    __tablename__ = "food_favorites"
+    __table_args__ = (
+        Index(
+            "ix_food_favorites_user_created",
+            "user_id",
+            "created_at",
+            "food_id",
+        ),
+    )
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    food_id: Mapped[int] = mapped_column(
+        ForeignKey("foods.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=now_msk_naive,
+    )
+
+
+@event.listens_for(Food, "before_insert")
+@event.listens_for(Food, "before_update")
+def _set_food_search_text(_mapper: object, _connection: object, target: Food) -> None:
+    target.search_text = normalize_food_search_text(target.name, target.brand)
