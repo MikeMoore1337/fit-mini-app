@@ -109,9 +109,13 @@ Search remains local-first. The provider is called only when local results are e
 caller explicitly sets `include_external=true`; callers must present that as a separate external
 search action, not invoke it from the 250 ms local typeahead. Barcode lookup through
 `GET /api/v1/nutrition/foods/barcode/{barcode}` also returns a visible personal/catalog record
-before consulting the provider. A disabled provider, timeout, network failure, rate limit,
-upstream 5xx, or malformed response produces a successful empty fallback with an explicit
-`provider_status`; it never makes the diary unavailable. Timeout/network/5xx reads get at most one
+before consulting the provider. Its response echoes the validated barcode and explicitly reports
+`status=found|not_found` plus `source=local|external|null`, so camera and manual-entry clients can
+use the same contract and offer personal-food creation after an empty result. `provider_status`
+separately records whether the external lookup was unnecessary, disabled, available, unavailable,
+or rate-limited. A disabled provider, timeout, network failure, rate limit, upstream 5xx, malformed
+response, or mismatched provider barcode produces a successful structured fallback without raw
+upstream details; it never makes the diary unavailable. Timeout/network/5xx reads get at most one
 short retry. A 429 is not retried.
 
 Open Food Facts integration follows the official current guidance reviewed on 2026-08-18:

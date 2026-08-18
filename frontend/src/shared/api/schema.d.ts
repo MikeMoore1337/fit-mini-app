@@ -2409,6 +2409,15 @@ export interface components {
         };
         /** FoodBarcodeLookupResponse */
         FoodBarcodeLookupResponse: {
+            /** Barcode */
+            barcode: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "found" | "not_found";
+            /** Source */
+            source?: ("local" | "external") | null;
             local_item?: components["schemas"]["FoodResponse"] | null;
             external_item?: components["schemas"]["ExternalFoodResponse"] | null;
             /**

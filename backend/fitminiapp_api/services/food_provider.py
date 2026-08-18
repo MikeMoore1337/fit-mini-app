@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Literal, Protocol
 
+from pydantic import ValidationError
+
 from fitminiapp_api.core.config import settings
 from fitminiapp_api.schemas.food import ExternalFoodResponse, ExternalFoodSource, ServingUnit
 
@@ -50,29 +52,32 @@ class FoodProvider(Protocol):
 
 
 def serialize_provider_food(food: ProviderFood) -> ExternalFoodResponse:
-    return ExternalFoodResponse(
-        external_id=food.external_id,
-        name=food.name,
-        brand=food.brand,
-        barcode=food.barcode,
-        energy_kcal_per_100g=food.energy_kcal_per_100g,
-        protein_g_per_100g=food.protein_g_per_100g,
-        fat_g_per_100g=food.fat_g_per_100g,
-        carbs_g_per_100g=food.carbs_g_per_100g,
-        fiber_g_per_100g=food.fiber_g_per_100g,
-        standard_serving_amount=food.standard_serving_amount,
-        standard_serving_unit=food.standard_serving_unit,
-        standard_serving_weight_g=food.standard_serving_weight_g,
-        source=ExternalFoodSource.model_validate(
-            {
-                "provider": food.provider,
-                "attribution": food.attribution,
-                "source_url": food.source_url,
-                "license": food.license,
-                "license_url": food.license_url,
-            }
-        ),
-    )
+    try:
+        return ExternalFoodResponse(
+            external_id=food.external_id,
+            name=food.name,
+            brand=food.brand,
+            barcode=food.barcode,
+            energy_kcal_per_100g=food.energy_kcal_per_100g,
+            protein_g_per_100g=food.protein_g_per_100g,
+            fat_g_per_100g=food.fat_g_per_100g,
+            carbs_g_per_100g=food.carbs_g_per_100g,
+            fiber_g_per_100g=food.fiber_g_per_100g,
+            standard_serving_amount=food.standard_serving_amount,
+            standard_serving_unit=food.standard_serving_unit,
+            standard_serving_weight_g=food.standard_serving_weight_g,
+            source=ExternalFoodSource.model_validate(
+                {
+                    "provider": food.provider,
+                    "attribution": food.attribution,
+                    "source_url": food.source_url,
+                    "license": food.license,
+                    "license_url": food.license_url,
+                }
+            ),
+        )
+    except ValidationError as exc:
+        raise FoodProviderUnavailable("malformed_response") from exc
 
 
 def get_food_provider() -> FoodProvider | None:

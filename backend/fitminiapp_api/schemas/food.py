@@ -19,6 +19,8 @@ FoodProviderStatus = Literal[
     "unavailable",
     "rate_limited",
 ]
+FoodBarcodeLookupStatus = Literal["found", "not_found"]
+FoodBarcodeLookupSource = Literal["local", "external"]
 
 
 def validate_gtin(value: str | None) -> str | None:
@@ -185,9 +187,30 @@ class FoodSearchResponse(FoodListResponse):
 
 
 class FoodBarcodeLookupResponse(BaseModel):
+    barcode: str
+    status: FoodBarcodeLookupStatus
+    source: FoodBarcodeLookupSource | None = None
     local_item: FoodResponse | None = None
     external_item: ExternalFoodResponse | None = None
     provider_status: FoodProviderStatus
+
+    @model_validator(mode="after")
+    def validate_result_shape(self) -> FoodBarcodeLookupResponse:
+        if self.status == "not_found":
+            if (
+                self.source is not None
+                or self.local_item is not None
+                or self.external_item is not None
+            ):
+                raise ValueError("a not-found barcode lookup cannot contain a result")
+            return self
+        if self.source == "local" and self.local_item is not None and self.external_item is None:
+            return self
+        if self.source == "external" and self.external_item is not None and self.local_item is None:
+            return self
+        raise ValueError(
+            "a found barcode lookup must contain exactly one result matching its source"
+        )
 
 
 class FoodCatalogSource(BaseModel):

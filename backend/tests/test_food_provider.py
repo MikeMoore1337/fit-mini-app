@@ -184,10 +184,27 @@ def test_barcode_lookup_is_local_first_and_private_scope_is_preserved(client) ->
     finally:
         _clear_provider_override()
 
-    assert owner_result.json()["local_item"]["id"] == created.json()["id"]
-    assert owner_result.json()["provider_status"] == "not_needed"
-    assert other_result.json()["local_item"] is None
-    assert other_result.json()["external_item"]["barcode"] == barcode
+    owner_payload = owner_result.json()
+    other_payload = other_result.json()
+    assert owner_payload["barcode"] == barcode
+    assert owner_payload["status"] == "found"
+    assert owner_payload["source"] == "local"
+    assert owner_payload["local_item"]["id"] == created.json()["id"]
+    assert owner_payload["external_item"] is None
+    assert owner_payload["provider_status"] == "not_needed"
+    assert other_payload["barcode"] == barcode
+    assert other_payload["status"] == "found"
+    assert other_payload["source"] == "external"
+    assert other_payload["local_item"] is None
+    assert other_payload["external_item"]["barcode"] == barcode
+    assert other_payload["external_item"]["source"] == {
+        "provider": "fake_food_catalog",
+        "attribution": "Fake catalog contributors",
+        "source_url": f"https://catalog.example/products/{barcode}",
+        "license": "Test-1.0",
+        "license_url": "https://catalog.example/license",
+    }
+    assert other_payload["provider_status"] == "available"
     assert fake.barcode_calls == 1
 
 
@@ -230,13 +247,137 @@ def test_disabled_provider_and_invalid_barcode_have_safe_contract(client) -> Non
             headers=headers,
             params={"q": "не найдено", "include_external": "true"},
         )
+        disabled_barcode = client.get(
+            "/api/v1/nutrition/foods/barcode/3017620422003",
+            headers=headers,
+        )
         barcode = client.get("/api/v1/nutrition/foods/barcode/12345678", headers=headers)
     finally:
         _clear_provider_override()
 
     assert search.status_code == 200
     assert search.json()["provider_status"] == "disabled"
+    assert disabled_barcode.status_code == 200
+    assert disabled_barcode.json() == {
+        "barcode": "3017620422003",
+        "status": "not_found",
+        "source": None,
+        "local_item": None,
+        "external_item": None,
+        "provider_status": "disabled",
+    }
     assert barcode.status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("failure", "expected_provider_status"),
+    [
+        (FoodProviderUnavailable("timeout"), "unavailable"),
+        (FoodProviderUnavailable("rate_limited"), "rate_limited"),
+        (FoodProviderUnavailable("malformed_response"), "unavailable"),
+    ],
+)
+def test_barcode_provider_failure_returns_safe_not_found_contract(
+    client,
+    failure: FoodProviderUnavailable,
+    expected_provider_status: str,
+) -> None:
+    headers = _auth(client, 19_007)
+    fake = FakeFoodProvider(failure=failure)
+    _override_provider(fake)
+    try:
+        response = client.get(
+            "/api/v1/nutrition/foods/barcode/3017620422003",
+            headers=headers,
+        )
+    finally:
+        _clear_provider_override()
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "not_found"
+    assert payload["source"] is None
+    assert payload["local_item"] is None
+    assert payload["external_item"] is None
+    assert payload["provider_status"] == expected_provider_status
+    assert "detail" not in payload
+    assert fake.barcode_calls == 1
+
+
+def test_barcode_not_found_can_flow_into_manual_user_food_creation(client) -> None:
+    headers = _auth(client, 19_008)
+    barcode = "3017620422003"
+    fake = FakeFoodProvider()
+    _override_provider(fake)
+    try:
+        not_found = client.get(
+            f"/api/v1/nutrition/foods/barcode/{barcode}",
+            headers=headers,
+        )
+        created = client.post(
+            "/api/v1/nutrition/foods",
+            headers=headers,
+            json={
+                "name": "Продукт, добавленный вручную",
+                "barcode": not_found.json()["barcode"],
+                "energy_kcal_per_100g": "100",
+                "protein_g_per_100g": "5",
+                "fat_g_per_100g": "3",
+                "carbs_g_per_100g": "15",
+            },
+        )
+        local = client.get(
+            f"/api/v1/nutrition/foods/barcode/{barcode}",
+            headers=headers,
+        )
+    finally:
+        _clear_provider_override()
+
+    assert not_found.status_code == 200
+    assert not_found.json()["status"] == "not_found"
+    assert not_found.json()["provider_status"] == "available"
+    assert created.status_code == 201
+    assert local.status_code == 200
+    assert local.json()["status"] == "found"
+    assert local.json()["source"] == "local"
+    assert local.json()["local_item"]["id"] == created.json()["id"]
+    assert fake.barcode_calls == 1
+
+
+def test_barcode_lookup_rejects_mismatched_provider_result(client) -> None:
+    headers = _auth(client, 19_009)
+    requested_barcode = "3017620422003"
+    fake = FakeFoodProvider(barcode_result=_provider_food(barcode="4006381333931"))
+    _override_provider(fake)
+    try:
+        response = client.get(
+            f"/api/v1/nutrition/foods/barcode/{requested_barcode}",
+            headers=headers,
+        )
+    finally:
+        _clear_provider_override()
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "not_found"
+    assert response.json()["provider_status"] == "unavailable"
+    assert response.json()["external_item"] is None
+
+
+@pytest.mark.parametrize(
+    "barcode",
+    [
+        "1234567",
+        "123456789012345",
+        "3017620422004",
+        "30176204220A3",
+    ],
+)
+def test_barcode_lookup_rejects_invalid_manual_input(client, barcode: str) -> None:
+    headers = _auth(client, 19_010)
+
+    response = client.get(f"/api/v1/nutrition/foods/barcode/{barcode}", headers=headers)
+
+    assert response.status_code == 422
 
 
 def _off_product() -> dict[str, object]:
