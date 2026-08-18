@@ -128,7 +128,7 @@ describe('LandingPage', () => {
     expect(contact).toHaveAttribute('target', '_blank');
   });
 
-  it('links calls to action to the existing application route', () => {
+  it('links product calls to action to the app and crawlable public routes', () => {
     render(
       <NavigationProvider>
         <LandingPage />
@@ -140,13 +140,13 @@ describe('LandingPage', () => {
       'href',
       '/app',
     );
-    expect(screen.getByRole('link', { name: /начать самостоятельно/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /узнать о тренировках/i })).toHaveAttribute(
       'href',
-      '/app',
+      '/training',
     );
-    expect(screen.getByRole('link', { name: /войти и подать заявку/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /возможности для тренеров/i })).toHaveAttribute(
       'href',
-      '/app',
+      '/for-trainers',
     );
     expect(screen.getByRole('link', { name: /перейти в веб-приложение/i })).toHaveAttribute(
       'href',
@@ -155,6 +155,7 @@ describe('LandingPage', () => {
     expect(appUrlForHostname('your-fitness-coach.ru')).toBe(
       'https://app.your-fitness-coach.ru/app',
     );
+    expect(screen.getAllByRole('link', { name: /подробнее/i })).toHaveLength(6);
   });
 
   it('opens and closes the mobile navigation', () => {

@@ -5,7 +5,7 @@ import {
   useEffect,
   useMemo,
   useState,
-  type AriaAttributes,
+  type AnchorHTMLAttributes,
 } from 'react';
 
 interface NavigationContextValue {
@@ -61,19 +61,21 @@ export function AppLink({
   to,
   className,
   children,
-  ...ariaAttributes
+  onClick,
+  ...anchorAttributes
 }: {
   to: string;
-  className?: string;
   children: React.ReactNode;
-} & AriaAttributes) {
+} & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href'>) {
   const { navigate } = useNavigation();
   return (
     <a
       href={to}
       className={className}
-      {...ariaAttributes}
+      {...anchorAttributes}
       onClick={(event) => {
+        onClick?.(event);
+        if (event.defaultPrevented) return;
         if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
           return;
         event.preventDefault();

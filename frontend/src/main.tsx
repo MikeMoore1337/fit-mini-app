@@ -11,6 +11,7 @@ import { isTelegramLaunch } from './shared/telegram/launch';
 import { useTelegram } from './shared/telegram/useTelegram';
 import { NavigationProvider, useNavigation } from './shared/navigation/router';
 import { applyRouteMetadata } from './shared/seo/metadata';
+import { isPublicContentPath } from './content/publicContent';
 import './styles/legacy.css';
 import './styles/react.css';
 import './styles/design-system.css';
@@ -19,6 +20,7 @@ const MiniAppPage = lazy(() => import('./pages/miniapp/MiniAppPage'));
 const CoachPage = lazy(() => import('./pages/coach/CoachPage'));
 const AdminPage = lazy(() => import('./pages/admin/AdminPage'));
 const LandingPage = lazy(() => import('./pages/landing/LandingPage'));
+const PublicContentPage = lazy(() => import('./pages/public/PublicContentPage'));
 const VerifyEmailPage = lazy(() => import('./pages/auth/VerifyEmailPage'));
 const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
 const JoinCoachPage = lazy(() => import('./pages/join/JoinCoachPage'));
@@ -56,6 +58,7 @@ function AppRoutes() {
   const { path } = useNavigation();
   useEffect(() => applyRouteMetadata(path), [path]);
   if (path === '/') return <LandingPage />;
+  if (isPublicContentPath(path)) return <PublicContentPage />;
   if (path === '/verify-email')
     return (
       <AuthProvider>
