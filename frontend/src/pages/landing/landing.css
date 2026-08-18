@@ -30,24 +30,6 @@
   gap: 10px;
 }
 
-.landing-theme-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-width: 132px;
-  height: var(--landing-header-control-size);
-  padding: 0 8px;
-  border: 1px solid var(--landing-border);
-  border-radius: 14px;
-  background: var(--landing-card);
-  color: var(--landing-ink);
-  cursor: pointer;
-  font: inherit;
-  transition:
-    transform 0.18s ease,
-    border-color 0.18s ease;
-}
-
 .landing-menu-toggle {
   display: none;
   width: var(--landing-header-control-size);
@@ -86,28 +68,6 @@
 .landing-menu-toggle.is-open span:last-child {
   transform: translateY(-7px) rotate(-45deg);
 }
-.landing-theme-toggle .app-theme-toggle__icon,
-.landing-theme-toggle .app-theme-toggle__icon svg {
-  width: 21px;
-  height: 21px;
-}
-
-.landing-theme-toggle .app-theme-control__select {
-  min-width: 0;
-  padding-right: 24px;
-  color: var(--landing-ink);
-}
-
-.landing-theme-toggle:hover {
-  border-color: var(--landing-muted);
-  transform: translateY(-2px);
-}
-
-.landing-theme-toggle:focus-within {
-  outline: 3px solid var(--landing-green);
-  outline-offset: 2px;
-}
-
 .landing-brand {
   display: inline-flex;
   align-items: center;
@@ -1459,8 +1419,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .landing-button,
-  .landing-contact__link,
-  .landing-theme-toggle {
+  .landing-contact__link {
     transition: none;
   }
 }
