@@ -541,20 +541,22 @@ select:not([multiple]) {
 .oauth-button__icon {
   display: inline-grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: var(--surface-active);
+  overflow: hidden;
 }
 .oauth-button__icon svg {
-  width: 15px;
-  height: 15px;
+  width: 20px;
+  height: 20px;
   fill: currentColor;
 }
 .oauth-button__icon img {
   display: block;
-  width: 15px;
-  height: 15px;
+  width: 20px;
+  height: 20px;
   object-fit: contain;
 }
 .oauth-button--telegram .oauth-button__icon {
@@ -564,8 +566,16 @@ select:not([multiple]) {
 .oauth-button--google .oauth-button__icon {
   background: white;
 }
+.oauth-button--google .oauth-button__icon img {
+  width: 18px;
+  height: 18px;
+}
 .oauth-button--yandex .oauth-button__icon {
   background: #fc3f1d;
+}
+.oauth-button--yandex .oauth-button__icon img {
+  width: 28px;
+  height: 28px;
 }
 .oauth-button--vk .oauth-button__icon {
   background: #07f;
