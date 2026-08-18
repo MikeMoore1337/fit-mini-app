@@ -212,6 +212,29 @@ test('Login адаптивен, доступен с клавиатуры и ув
       expect(themeStyles.borderTopWidth).toBe('1px');
       expect(themeStyles.cursor).toBe('pointer');
 
+      await themeControl.hover();
+      const themeHoverStyles = await themeControl.evaluate((element) => {
+        const styles = getComputedStyle(element);
+        return {
+          backgroundColor: styles.backgroundColor,
+          borderColor: styles.borderColor,
+          boxShadow: styles.boxShadow,
+          transform: styles.transform,
+        };
+      });
+      const homeLink = page.getByRole('link', { name: 'На главную', exact: true });
+      await homeLink.hover();
+      const homeHoverStyles = await homeLink.evaluate((element) => {
+        const styles = getComputedStyle(element);
+        return {
+          backgroundColor: styles.backgroundColor,
+          borderColor: styles.borderColor,
+          boxShadow: styles.boxShadow,
+          transform: styles.transform,
+        };
+      });
+      expect(homeHoverStyles).toEqual(themeHoverStyles);
+
       await themeControl.click();
       expect(await themeControl.evaluate((element) => element.matches(':focus-visible'))).toBe(
         false,

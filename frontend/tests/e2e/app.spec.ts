@@ -10,6 +10,7 @@ async function openCard(page: Page, title: string) {
 }
 
 test('логотип и кнопки в шапке имеют одинаковую высоту', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   for (const viewport of [
     { width: 1440, height: 900 },
     { width: 390, height: 844 },
@@ -27,6 +28,31 @@ test('логотип и кнопки в шапке имеют одинакову
     expect(logo?.height).toBe(44);
     expect(themeButton?.height).toBe(logo?.height);
     expect(loginButton?.height).toBe(logo?.height);
+
+    const themeControl = page.getByRole('button', { name: /Включить .* тему/ });
+    const loginControl = page.getByRole('link', { name: 'Войти' });
+    await themeControl.hover();
+    const themeHoverStyles = await themeControl.evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return {
+        backgroundColor: styles.backgroundColor,
+        borderColor: styles.borderColor,
+        boxShadow: styles.boxShadow,
+        transform: styles.transform,
+      };
+    });
+    await loginControl.hover();
+    const loginHoverStyles = await loginControl.evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return {
+        backgroundColor: styles.backgroundColor,
+        borderColor: styles.borderColor,
+        boxShadow: styles.boxShadow,
+        transform: styles.transform,
+      };
+    });
+    expect(loginHoverStyles).toEqual(themeHoverStyles);
+
     const menuButton = page.getByRole('button', { name: 'Открыть меню' });
     if (viewport.width < 980) {
       await expect(menuButton).toBeVisible();
@@ -59,6 +85,29 @@ test('первый экран лендинга объясняет продукт
     await expect(page.getByText('Жим гантелей лёжа')).toBeVisible();
     await expect(page.getByText('+18%')).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
+  }
+});
+
+test('вторичные CTA сохраняют контрастный текст при наведении в обеих темах', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+
+  for (const scheme of ['light', 'dark'] as const) {
+    await page.evaluate(() => window.localStorage.removeItem('app-theme'));
+    await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
+    await page.reload();
+
+    const expectedBackground = scheme === 'light' ? 'rgb(223, 230, 220)' : 'rgb(32, 42, 35)';
+    const expectedText = scheme === 'light' ? 'rgb(23, 32, 24)' : 'rgb(242, 246, 239)';
+    for (const link of [
+      page.getByRole('link', { name: /Посмотреть, как всё устроено/ }),
+      page.getByRole('link', { name: /Задать вопрос в Telegram/ }),
+    ]) {
+      await link.hover();
+      await expect(link).toHaveCSS('background-color', expectedBackground);
+      await expect(link).toHaveCSS('color', expectedText);
+      await expect(link.locator('.landing-action__arrow')).toHaveCSS('color', expectedText);
+    }
   }
 });
 
