@@ -120,7 +120,7 @@ describe('LandingPage', () => {
     expect(screen.queryByText('4 недели', { exact: true })).not.toBeInTheDocument();
 
     expect(screen.queryByText('@mikhail_murzaev')).not.toBeInTheDocument();
-    expect(container.querySelectorAll('img[src="/assets/brand/fitness-logo-v2.png"]')).toHaveLength(
+    expect(container.querySelectorAll('img[src="/assets/brand/yfc-mark-light.svg"]')).toHaveLength(
       2,
     );
     const contact = screen.getByRole('link', { name: /задать вопрос в telegram/i });

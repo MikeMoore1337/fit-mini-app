@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Your Fitness Coach</title>
+  <path fill="#172018" d="M48.7 12.3a23.5 23.5 0 1 0 0 39.4l-4.6-6.2a15.8 15.8 0 1 1 0-27z"/>
+  <g fill="#b6f238">
+    <path d="M13.2 13.3h8.7L32 24.1l10.1-10.8h8.7L36.4 28.8l-1.5 11.9h-6l-1.5-11.9z"/>
+    <rect x="3" y="26.7" width="3.8" height="10.6" rx=".4"/>
+    <rect x="8.5" y="21.7" width="4.5" height="20.6" rx=".4"/>
+    <rect x="51" y="21.7" width="4.5" height="20.6" rx=".4"/>
+    <rect x="57.2" y="26.7" width="3.8" height="10.6" rx=".4"/>
+  </g>
+</svg>

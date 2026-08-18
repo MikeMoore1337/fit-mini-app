@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AppLink, useNavigation } from '../shared/navigation/router';
 import { AppThemeToggle } from '../shared/ui/AppThemeToggle';
+import { BrandLogo } from '../shared/ui/BrandLogo';
 import { useAuth } from './AuthProvider';
 
 const AVATAR_EMOJIS = ['🏋️', '💪', '🏃', '🚴', '🥗', '⚡', '🎯', '🔥'] as const;
@@ -50,11 +51,7 @@ export function AppShell({
       {user && (
         <nav id="appBottomNav" className="app-bottom-nav" aria-label="Основная навигация">
           <div className="app-bottom-nav__brand" aria-hidden="true">
-            <img
-              className="app-bottom-nav__brand-mark"
-              src="/assets/brand/fitness-logo-v2.png"
-              alt=""
-            />
+            <BrandLogo className="app-bottom-nav__brand-mark" decorative variant="mark" />
             <strong>Your Fitness Coach</strong>
           </div>
           <AppLink

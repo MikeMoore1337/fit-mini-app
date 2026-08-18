@@ -267,17 +267,18 @@ select:not([multiple]) {
   }
 }
 .auth-panel--branded .section-head h2 {
-  display: flex;
-  align-items: center;
-  gap: 10px;
   margin: 0;
   letter-spacing: -0.025em;
 }
-.auth-panel--branded .section-head h2::before {
+.auth-panel__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.auth-panel__brand-mark {
+  display: block;
   width: 32px;
   height: 32px;
-  content: '';
-  background: url('/assets/brand/fitness-logo-v2.png') center / contain no-repeat;
 }
 .auth-panel--branded .muted {
   color: var(--auth-muted);
