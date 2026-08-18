@@ -58,6 +58,7 @@ class AuthActionToken(Base):
     )
     purpose: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    session_family_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now_msk_naive)

@@ -13,7 +13,9 @@ from fitminiapp_api.services.audit import record_audit_event
 from fitminiapp_api.services.auth_identities import ensure_auth_identity, ensure_telegram_identity
 from fitminiapp_api.services.oauth_login import normalize_oauth_claims
 from fitminiapp_api.services.password_auth import consume_action_token, create_action_token
+from fitminiapp_api.services.root_admin import is_root_telegram_user_id
 from fitminiapp_api.services.telegram_auth import normalize_telegram_username
+from fitminiapp_api.services.token_service import is_refresh_token_family_active
 
 TELEGRAM_LINK_PURPOSE = "link_telegram"
 TELEGRAM_LINK_LIFETIME = timedelta(minutes=10)
@@ -50,7 +52,13 @@ def oauth_link_purpose(provider: str) -> str:
     return f"link_oauth_{normalized_provider}"
 
 
-def create_oauth_link_url(db: Session, user: User, provider: str) -> tuple[str, int]:
+def create_oauth_link_url(
+    db: Session,
+    user: User,
+    provider: str,
+    *,
+    session_family_id: str,
+) -> tuple[str, int]:
     normalized_provider = provider.strip().lower()
     purpose = oauth_link_purpose(normalized_provider)
     existing_provider = (
@@ -66,6 +74,7 @@ def create_oauth_link_url(db: Session, user: User, provider: str) -> tuple[str, 
         user.id,
         purpose=purpose,
         lifetime=OAUTH_LINK_LIFETIME,
+        session_family_id=session_family_id,
     )
     encoded_token = quote(raw_token, safe="_-~")
     return (
@@ -80,6 +89,7 @@ def link_oauth_account(
     raw_token: str,
     provider: str,
     raw_claims: dict[str, object],
+    expected_session_family_id: str,
 ) -> User:
     normalized_provider = provider.strip().lower()
     token = consume_action_token(
@@ -87,9 +97,13 @@ def link_oauth_account(
         raw_token,
         purpose=oauth_link_purpose(normalized_provider),
     )
+    if token.session_family_id != expected_session_family_id:
+        raise OAuthLinkError("Сессия привязки недействительна")
     target = db.query(User).filter(User.id == token.user_id).with_for_update().first()
     if target is None or not target.is_active:
         raise OAuthLinkError("Аккаунт для привязки недоступен")
+    if not is_refresh_token_family_active(db, target.id, expected_session_family_id):
+        raise OAuthLinkError("Сессия привязки недействительна")
 
     claims = normalize_oauth_claims(normalized_provider, raw_claims)
     subject = claims["subject"]
@@ -147,7 +161,13 @@ def link_oauth_account(
     return target
 
 
-def create_telegram_link_url(db: Session, user: User, bot_username: str) -> tuple[str, int]:
+def create_telegram_link_url(
+    db: Session,
+    user: User,
+    bot_username: str,
+    *,
+    session_family_id: str,
+) -> tuple[str, int]:
     if user.telegram_user_id is not None:
         raise TelegramLinkConflictError("Telegram уже привязан к этому аккаунту")
     normalized_bot_username = bot_username.strip().lstrip("@")
@@ -159,6 +179,7 @@ def create_telegram_link_url(db: Session, user: User, bot_username: str) -> tupl
         user.id,
         purpose=TELEGRAM_LINK_PURPOSE,
         lifetime=TELEGRAM_LINK_LIFETIME,
+        session_family_id=session_family_id,
     )
     start_payload = quote(f"link_{raw_token}", safe="_-~")
     return (
@@ -180,6 +201,20 @@ def link_telegram_account(
     target = db.query(User).filter(User.id == token.user_id).with_for_update().first()
     if target is None or not target.is_active:
         raise TelegramLinkError("Аккаунт для привязки недоступен")
+    if token.session_family_id is None or not is_refresh_token_family_active(
+        db, target.id, token.session_family_id
+    ):
+        raise TelegramLinkError("Сессия привязки недействительна")
+
+    if is_root_telegram_user_id(telegram_user_id):
+        record_audit_event(
+            db,
+            action="account.root_telegram_link_rejected",
+            resource_type="user",
+            target_user_id=target.id,
+            resource_id=target.id,
+        )
+        raise TelegramLinkConflictError("Root Telegram нельзя привязать к другому аккаунту")
 
     telegram_subject = str(telegram_user_id)
     existing_identity = (

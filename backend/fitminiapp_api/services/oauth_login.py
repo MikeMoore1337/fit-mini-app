@@ -12,6 +12,7 @@ import httpx
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 from authlib.integrations.starlette_client import OAuth
 from authlib.integrations.starlette_client.apps import StarletteOAuth2App
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from fitminiapp_api.core.config import settings
@@ -29,6 +30,14 @@ VK_TOKEN_URL = "https://id.vk.ru/oauth2/auth"
 VK_USER_INFO_URL = "https://id.vk.ru/oauth2/user_info"
 VK_SCOPE = "email"
 VK_SESSION_KEY = "vk_oauth"
+
+
+class OAuthAccountBlockedError(RuntimeError):
+    pass
+
+
+class OAuthStateError(RuntimeError):
+    pass
 
 
 def oauth_transport_options(*, proxy_url: str | None = None) -> dict[str, object]:
@@ -200,21 +209,24 @@ class VKOAuthClient:
 
         session_data = request.session.pop(VK_SESSION_KEY, None)
         if not isinstance(session_data, dict):
-            raise ValueError("VK ID authorization state is invalid or expired")
+            raise OAuthStateError("VK ID authorization state is invalid or expired")
         expected_state = session_data.get("state")
         if not isinstance(expected_state, str) or not compare_digest(expected_state, state):
-            raise ValueError("VK ID authorization state is invalid or expired")
+            raise OAuthStateError("VK ID authorization state is invalid or expired")
         code_verifier = session_data.get("code_verifier")
         redirect_uri = session_data.get("redirect_uri")
         if not isinstance(code_verifier, str) or not isinstance(redirect_uri, str):
-            raise ValueError("VK ID authorization session is invalid")
+            raise OAuthStateError("VK ID authorization session is invalid")
 
-        client_options = {
-            "trust_env": False,
-            "timeout": settings.oauth_http_timeout_seconds,
-            **oauth_transport_options(),
-        }
-        async with httpx.AsyncClient(**client_options) as client:
+        transport_options = oauth_transport_options()
+        proxy = transport_options.get("proxy")
+        transport = transport_options.get("transport")
+        async with httpx.AsyncClient(
+            trust_env=False,
+            timeout=settings.oauth_http_timeout_seconds,
+            proxy=proxy if isinstance(proxy, str) else None,
+            transport=transport if isinstance(transport, httpx.AsyncBaseTransport) else None,
+        ) as client:
             token_response = await client.post(
                 VK_TOKEN_URL,
                 params={
@@ -235,7 +247,7 @@ class VKOAuthClient:
             if returned_state is not None and (
                 not isinstance(returned_state, str) or not compare_digest(returned_state, state)
             ):
-                raise ValueError("VK ID token state does not match")
+                raise OAuthStateError("VK ID token state does not match")
             access_token = token.get("access_token")
             if not isinstance(access_token, str) or not access_token:
                 raise ValueError("VK ID did not return an access token")
@@ -365,7 +377,7 @@ def get_or_create_oauth_user(
         user = db.query(User).filter(User.telegram_user_id == claims["telegram_user_id"]).first()
 
     if user is None:
-        user = User(
+        candidate = User(
             telegram_user_id=claims["telegram_user_id"],
             username=claims["username"],
             first_name=claims["first_name"],
@@ -373,35 +385,76 @@ def get_or_create_oauth_user(
             photo_url=claims["photo_url"],
             is_active=True,
         )
-        db.add(user)
-        db.flush()
-        db.add(
-            UserProfile(
-                user_id=user.id,
-                full_name=(
-                    claims["full_name"]
-                    or " ".join(
-                        part for part in [claims["first_name"], claims["last_name"]] if part
-                    ).strip()
-                    or claims["username"]
-                    or "Новый пользователь"
-                ),
+        try:
+            # The provider subject is the concurrency boundary. Keeping the
+            # candidate account and identity in one savepoint prevents an
+            # orphan duplicate user when first-login requests race.
+            with db.begin_nested():
+                db.add(candidate)
+                db.flush()
+                db.add(
+                    UserProfile(
+                        user_id=candidate.id,
+                        full_name=(
+                            claims["full_name"]
+                            or " ".join(
+                                part for part in [claims["first_name"], claims["last_name"]] if part
+                            ).strip()
+                            or claims["username"]
+                            or "Новый пользователь"
+                        ),
+                    )
+                )
+                db.add(NotificationSetting(user_id=candidate.id))
+                identity = ensure_auth_identity(
+                    db,
+                    candidate,
+                    provider=provider,
+                    subject=subject,
+                    email=claims["email"],
+                    email_verified=claims["email_verified"],
+                )
+                db.flush()
+            user = candidate
+        except IntegrityError:
+            identity = (
+                db.query(AuthIdentity)
+                .filter(AuthIdentity.provider == provider, AuthIdentity.subject == subject)
+                .first()
             )
-        )
-        db.add(NotificationSetting(user_id=user.id))
+            user = db.query(User).filter(User.id == identity.user_id).first() if identity else None
+            if user is None and provider == "telegram":
+                user = (
+                    db.query(User)
+                    .filter(User.telegram_user_id == claims["telegram_user_id"])
+                    .first()
+                )
+            if user is None:
+                raise
 
     if not user.is_active:
-        raise ValueError("User account is blocked")
+        raise OAuthAccountBlockedError("User account is blocked")
 
     if identity is None:
-        identity = ensure_auth_identity(
-            db,
-            user,
-            provider=provider,
-            subject=subject,
-            email=claims["email"],
-            email_verified=claims["email_verified"],
-        )
+        try:
+            with db.begin_nested():
+                identity = ensure_auth_identity(
+                    db,
+                    user,
+                    provider=provider,
+                    subject=subject,
+                    email=claims["email"],
+                    email_verified=claims["email_verified"],
+                )
+                db.flush()
+        except IntegrityError:
+            identity = (
+                db.query(AuthIdentity)
+                .filter(AuthIdentity.provider == provider, AuthIdentity.subject == subject)
+                .first()
+            )
+            if identity is None or identity.user_id != user.id:
+                raise
     else:
         identity.email = claims["email"]
         identity.email_verified = claims["email_verified"]

@@ -80,6 +80,7 @@ def create_action_token(
     *,
     purpose: str,
     lifetime: timedelta,
+    session_family_id: str | None = None,
 ) -> str:
     now = utcnow()
     db.query(AuthActionToken).filter(
@@ -93,6 +94,7 @@ def create_action_token(
             user_id=user_id,
             purpose=purpose,
             token_hash=hashlib.sha256(raw_token.encode()).hexdigest(),
+            session_family_id=session_family_id,
             expires_at=now + lifetime,
         )
     )

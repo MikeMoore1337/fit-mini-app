@@ -3,6 +3,7 @@ import {
   api,
   clearAccessToken,
   getAccessToken,
+  refreshAccessToken,
   setAccessToken,
 } from '../../../../src/shared/api/client';
 
@@ -30,6 +31,32 @@ describe('api client', () => {
     await expect(api<{ ok: boolean }>('/api/v1/me')).resolves.toEqual({ ok: true });
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(getAccessToken()).toBe('new');
+  });
+
+  it('reuses a token refreshed by another tab while waiting for the browser lock', async () => {
+    setAccessToken('old');
+    const fetchMock = vi.spyOn(globalThis, 'fetch');
+    const request = vi.fn(async (_name: string, callback: () => Promise<boolean>) => {
+      setAccessToken('from-another-tab');
+      return callback();
+    });
+    const originalLocks = navigator.locks;
+    Object.defineProperty(navigator, 'locks', {
+      configurable: true,
+      value: { request },
+    });
+
+    try {
+      await expect(refreshAccessToken()).resolves.toBe(true);
+      expect(request).toHaveBeenCalledWith('fit-auth-refresh', expect.any(Function));
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(getAccessToken()).toBe('from-another-tab');
+    } finally {
+      Object.defineProperty(navigator, 'locks', {
+        configurable: true,
+        value: originalLocks,
+      });
+    }
   });
 
   it('turns a fetch failure into a readable offline error', async () => {

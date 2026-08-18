@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
@@ -193,13 +193,16 @@ def delete_coach_application(
 
 @router.post("/auth/telegram-link", response_model=TelegramLinkCreateResponse)
 def create_telegram_link(
-    user=Depends(get_current_user), db: Session = Depends(get_db)
+    request: Request,
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> TelegramLinkCreateResponse:
     try:
         telegram_url, expires_in_seconds = create_telegram_link_url(
             db,
             user,
             settings.telegram_bot_username,
+            session_family_id=request.state.session_family_id,
         )
     except TelegramLinkConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -214,6 +217,7 @@ def create_telegram_link(
 
 @router.post("/auth/oauth-link/{provider}", response_model=OAuthLinkCreateResponse)
 def create_oauth_link(
+    request: Request,
     provider: str,
     user=Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -226,7 +230,12 @@ def create_oauth_link(
     ):
         raise HTTPException(status_code=404, detail="Провайдер входа не настроен")
     try:
-        oauth_url, expires_in_seconds = create_oauth_link_url(db, user, normalized_provider)
+        oauth_url, expires_in_seconds = create_oauth_link_url(
+            db,
+            user,
+            normalized_provider,
+            session_family_id=request.state.session_family_id,
+        )
     except OAuthLinkConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except OAuthLinkError as exc:

@@ -7,20 +7,9 @@ from fitminiapp_api.db.session import get_db
 from fitminiapp_api.models.user import User
 from fitminiapp_api.services.jwt import (
     AuthError,
-    build_access_token,
-    build_refresh_token,
     decode_token,
 )
-
-
-def create_access_token(user_id: int) -> str:
-    token, _, _ = build_access_token(user_id)
-    return token
-
-
-def create_refresh_token(user_id: int) -> str:
-    token, _, _ = build_refresh_token(user_id)
-    return token
+from fitminiapp_api.services.token_service import is_refresh_token_family_active
 
 
 def _extract_bearer_token(request: Request) -> str:
@@ -52,7 +41,7 @@ def get_current_user(
     except AuthError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(exc),
+            detail="Сессия недействительна или истекла",
         ) from exc
 
     sub = payload.get("sub")
@@ -70,6 +59,19 @@ def get_current_user(
             detail="Invalid user id in token",
         )
 
+    session_family_id = payload.get("sid")
+    if not isinstance(session_family_id, str) or not session_family_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Сессия недействительна или истекла",
+        )
+
+    if not is_refresh_token_family_active(db, user_id, session_family_id):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Сессия недействительна или истекла",
+        )
+
     user = db.query(User).filter(User.id == user_id).first()
     if not user or not user.is_active:
         raise HTTPException(
@@ -78,4 +80,5 @@ def get_current_user(
         )
 
     request.state.user = user
+    request.state.session_family_id = session_family_id
     return user

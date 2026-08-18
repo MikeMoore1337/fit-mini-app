@@ -1,6 +1,6 @@
 import logging
-import re
 from datetime import timedelta
+from uuid import uuid4
 
 from authlib.integrations.base_client.errors import OAuthError
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -35,15 +35,20 @@ from fitminiapp_api.services.account_linking import (
     link_oauth_account,
     oauth_link_purpose,
 )
+from fitminiapp_api.services.audit import record_audit_event
 from fitminiapp_api.services.auth_email import password_reset_email, verification_email
 from fitminiapp_api.services.auth_identities import ensure_auth_identity, ensure_telegram_identity
+from fitminiapp_api.services.auth_redirects import auth_error_redirect, safe_auth_next_path
 from fitminiapp_api.services.jwt import (
     AuthError,
     build_access_token,
     build_refresh_token,
     decode_token,
+    extract_bearer_token,
 )
 from fitminiapp_api.services.oauth_login import (
+    OAuthAccountBlockedError,
+    OAuthStateError,
     configured_oauth_client,
     get_or_create_oauth_user,
 )
@@ -67,7 +72,7 @@ from fitminiapp_api.services.token_service import (
     get_refresh_token_by_jti,
     is_refresh_token_valid,
     revoke_all_user_refresh_tokens,
-    revoke_refresh_token,
+    revoke_refresh_token_family,
     save_refresh_token,
 )
 
@@ -116,13 +121,12 @@ def _set_refresh_cookie(response: Response, raw_token: str) -> None:
         httponly=True,
         samesite="strict",
     )
-    response.headers["Cache-Control"] = "no-store"
+    response.headers["Cache-Control"] = "no-store, private"
+    response.headers["Pragma"] = "no-cache"
 
 
 def _safe_next_path(value: str | None) -> str | None:
-    if value and re.fullmatch(r"/join/[A-Za-z0-9_-]{20,128}", value):
-        return value
-    return None
+    return safe_auth_next_path(value)
 
 
 def _clear_refresh_cookie(response: Response) -> None:
@@ -135,23 +139,43 @@ def _clear_refresh_cookie(response: Response) -> None:
     )
 
 
+def _refresh_session_error(status_code: int, detail: str) -> HTTPException:
+    cookie_response = Response()
+    _clear_refresh_cookie(cookie_response)
+    return HTTPException(
+        status_code=status_code,
+        detail=detail,
+        headers={
+            "Set-Cookie": cookie_response.headers["set-cookie"],
+            "Cache-Control": "no-store, private",
+            "Pragma": "no-cache",
+        },
+    )
+
+
 def issue_token_pair(
     db: Session,
     user: User,
     response: Response,
     *,
     commit: bool = True,
+    session_family_id: str | None = None,
 ) -> TokenPairResponse:
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Пользователь заблокирован")
 
-    access_token, _, _ = build_access_token(user.id)
-    refresh_token, refresh_jti, refresh_expires_at = build_refresh_token(user.id)
+    family_id = session_family_id or uuid4().hex
+    access_token, _, _ = build_access_token(user.id, session_family_id=family_id)
+    refresh_token, refresh_jti, refresh_expires_at = build_refresh_token(
+        user.id,
+        session_family_id=family_id,
+    )
 
     save_refresh_token(
         db,
         user_id=user.id,
         jti=refresh_jti,
+        family_id=family_id,
         raw_token=refresh_token,
         expires_at=refresh_expires_at,
         commit=commit,
@@ -161,6 +185,40 @@ def issue_token_pair(
     return TokenPairResponse(
         access_token=access_token,
     )
+
+
+def _active_refresh_session(request: Request, db: Session) -> tuple[User, str]:
+    raw_token = request.cookies.get(settings.refresh_cookie_name, "")
+    if not raw_token:
+        raise HTTPException(status_code=401, detail="Требуется активная сессия")
+    try:
+        payload = decode_token(raw_token, expected_type="refresh")
+    except AuthError:
+        raise HTTPException(status_code=401, detail="Сессия недействительна или истекла")
+    raw_user_id = payload.get("sub")
+    if not isinstance(raw_user_id, str):
+        raise HTTPException(status_code=401, detail="Сессия недействительна или истекла")
+    try:
+        user_id = int(raw_user_id)
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Сессия недействительна или истекла")
+
+    jti = payload.get("jti")
+    family_id = payload.get("sid")
+    if not isinstance(jti, str) or not isinstance(family_id, str) or not family_id:
+        raise HTTPException(status_code=401, detail="Сессия недействительна или истекла")
+    row = get_refresh_token_by_jti(db, jti)
+    if (
+        row is None
+        or row.user_id != user_id
+        or row.family_id != family_id
+        or not is_refresh_token_valid(row, raw_token)
+    ):
+        raise HTTPException(status_code=401, detail="Сессия недействительна или истекла")
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None or not user.is_active:
+        raise HTTPException(status_code=403, detail="Аккаунт заблокирован")
+    return user, family_id
 
 
 @router.post("/telegram/init", response_model=TokenPairResponse)
@@ -182,7 +240,11 @@ def telegram_init_auth(
     try:
         validated_init_data = validate_telegram_init_data(init_data, bot_token)
     except ValueError as exc:
-        raise HTTPException(status_code=401, detail=str(exc))
+        logger.warning("telegram_auth_rejected", extra={"reason": type(exc).__name__})
+        raise HTTPException(
+            status_code=401,
+            detail="Данные Telegram недействительны или истекли",
+        ) from exc
 
     user = get_or_create_user_from_init_data(db, validated_init_data)
     return issue_token_pair(db, user, response)
@@ -194,9 +256,16 @@ async def oauth_start(request: Request, provider: str, next: str | None = None):
     _require_web_auth()
     client = configured_oauth_client(provider)
     if client is None:
-        raise HTTPException(status_code=404, detail="Провайдер входа не настроен")
+        return RedirectResponse(url=auth_error_redirect("unavailable"), status_code=303)
     request.session["oauth_next"] = _safe_next_path(next)
-    return await client.authorize_redirect(request, _oauth_callback_url(provider))
+    try:
+        return await client.authorize_redirect(request, _oauth_callback_url(provider))
+    except (HTTPError, OAuthError, ValueError) as exc:
+        logger.warning(
+            "oauth_start_failed",
+            extra={"provider": provider, "reason": type(exc).__name__},
+        )
+        return RedirectResponse(url=auth_error_redirect("unavailable"), status_code=303)
 
 
 @router.get("/oauth/{provider}/link/start")
@@ -221,13 +290,38 @@ async def oauth_link_start(
             purpose=oauth_link_purpose(normalized_provider),
         )
     except (PasswordAuthError, OAuthLinkError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail="Ссылка привязки недействительна") from exc
     target = db.query(User).filter(User.id == action_token.user_id).first()
     if target is None or not target.is_active:
-        raise HTTPException(status_code=400, detail="Аккаунт для привязки недоступен")
+        raise HTTPException(status_code=403, detail="Аккаунт заблокирован")
+    session_user, session_family_id = _active_refresh_session(request, db)
+    if (
+        session_user.id != target.id
+        or action_token.session_family_id is None
+        or action_token.session_family_id != session_family_id
+    ):
+        record_audit_event(
+            db,
+            action="account.oauth_link_session_mismatch",
+            resource_type="user",
+            actor_user_id=session_user.id,
+            target_user_id=target.id,
+            resource_id=target.id,
+            details={"provider": normalized_provider},
+        )
+        db.commit()
+        raise HTTPException(status_code=403, detail="Ссылка создана в другой сессии")
     request.session["oauth_link_token"] = token
     request.session["oauth_link_provider"] = normalized_provider
-    return await client.authorize_redirect(request, _oauth_callback_url(normalized_provider))
+    request.session["oauth_link_family"] = session_family_id
+    try:
+        return await client.authorize_redirect(request, _oauth_callback_url(normalized_provider))
+    except (HTTPError, OAuthError, ValueError) as exc:
+        logger.warning(
+            "oauth_link_start_failed",
+            extra={"provider": normalized_provider, "reason": type(exc).__name__},
+        )
+        return RedirectResponse(url=auth_error_redirect("unavailable"), status_code=303)
 
 
 async def _oauth_callback_impl(
@@ -238,12 +332,23 @@ async def _oauth_callback_impl(
     _require_web_auth()
     client = configured_oauth_client(provider)
     if client is None:
-        raise HTTPException(status_code=404, detail="Провайдер входа не настроен")
+        return RedirectResponse(url=auth_error_redirect("unavailable"), status_code=303)
     next_path = _safe_next_path(request.session.pop("oauth_next", None))
     link_token = request.session.pop("oauth_link_token", None)
     link_provider = request.session.pop("oauth_link_provider", None)
-    if link_token and link_provider != provider:
-        return RedirectResponse(url="/app?auth_error=oauth_link", status_code=303)
+    link_family_id = request.session.pop("oauth_link_family", None)
+    if link_token and (
+        link_provider != provider or not isinstance(link_family_id, str) or not link_family_id
+    ):
+        return RedirectResponse(url=auth_error_redirect("invalid_state"), status_code=303)
+    provider_error = request.query_params.get("error")
+    if provider_error:
+        code = (
+            "denied"
+            if provider_error in {"access_denied", "user_cancelled"}
+            else "provider_failure"
+        )
+        return RedirectResponse(url=auth_error_redirect(code, next_path=next_path), status_code=303)
     try:
         token = await client.authorize_access_token(request)
         if provider == "yandex":
@@ -259,6 +364,7 @@ async def _oauth_callback_impl(
                     raw_token=link_token,
                     provider=provider,
                     raw_claims=raw_claims,
+                    expected_session_family_id=link_family_id,
                 )
             except OAuthLinkConflictError as exc:
                 db.commit()
@@ -266,20 +372,59 @@ async def _oauth_callback_impl(
                     "oauth_link_conflict",
                     extra={"provider": provider, "reason": type(exc).__name__},
                 )
-                return RedirectResponse(url="/app?auth_error=oauth_link_conflict", status_code=303)
+                return RedirectResponse(url=auth_error_redirect("conflict"), status_code=303)
+            except (OAuthLinkError, PasswordAuthError) as exc:
+                db.commit()
+                logger.warning(
+                    "oauth_link_failed",
+                    extra={"provider": provider, "reason": type(exc).__name__},
+                )
+                return RedirectResponse(url=auth_error_redirect("invalid_state"), status_code=303)
         else:
             user = get_or_create_oauth_user(db, provider=provider, raw_claims=raw_claims)
-    except (HTTPError, OAuthError, OAuthLinkError, PasswordAuthError, ValueError) as exc:
+    except OAuthAccountBlockedError as exc:
+        logger.warning(
+            "oauth_login_blocked", extra={"provider": provider, "reason": type(exc).__name__}
+        )
+        return RedirectResponse(
+            url=auth_error_redirect("blocked", next_path=next_path), status_code=303
+        )
+    except OAuthStateError as exc:
         logger.warning(
             "oauth_login_failed", extra={"provider": provider, "reason": type(exc).__name__}
         )
-        return RedirectResponse(url=next_path or "/app?auth_error=oauth", status_code=303)
+        return RedirectResponse(
+            url=auth_error_redirect("invalid_state", next_path=next_path), status_code=303
+        )
+    except OAuthError as exc:
+        oauth_error = getattr(exc, "error", "")
+        code = (
+            "denied"
+            if oauth_error in {"access_denied", "user_cancelled"}
+            else "invalid_state"
+            if oauth_error in {"mismatching_state", "missing_state", "invalid_state"}
+            else "provider_failure"
+        )
+        logger.warning(
+            "oauth_login_failed", extra={"provider": provider, "reason": type(exc).__name__}
+        )
+        return RedirectResponse(url=auth_error_redirect(code, next_path=next_path), status_code=303)
+    except (HTTPError, OAuthLinkError, PasswordAuthError, IntegrityError, ValueError) as exc:
+        logger.warning(
+            "oauth_login_failed", extra={"provider": provider, "reason": type(exc).__name__}
+        )
+        return RedirectResponse(
+            url=auth_error_redirect("provider_failure", next_path=next_path), status_code=303
+        )
 
     redirect = RedirectResponse(
         url=(f"/app?auth_linked={provider}" if link_token else next_path or "/app"),
         status_code=303,
     )
-    issue_token_pair(db, user, redirect)
+    if link_token:
+        db.commit()
+    else:
+        issue_token_pair(db, user, redirect)
     return redirect
 
 
@@ -570,39 +715,74 @@ def refresh_tokens(
     try:
         token_payload = decode_token(raw_refresh_token, expected_type="refresh")
     except AuthError:
-        raise HTTPException(status_code=401, detail="Невалидный refresh token")
+        raise _refresh_session_error(401, "Невалидный refresh token")
 
     jti = token_payload.get("jti")
     sub = token_payload.get("sub")
-    if not jti or not sub:
-        raise HTTPException(status_code=401, detail="Невалидный refresh token")
+    if not isinstance(jti, str) or not sub:
+        raise _refresh_session_error(401, "Невалидный refresh token")
 
     try:
         user_id = int(sub)
     except TypeError, ValueError:
-        raise HTTPException(status_code=401, detail="Невалидный refresh token")
+        raise _refresh_session_error(401, "Невалидный refresh token")
 
     row = get_refresh_token_by_jti(db, jti)
-    if not row:
-        raise HTTPException(status_code=401, detail="Refresh token не найден")
+    session_family_id = token_payload.get("sid")
+    if session_family_id is None and row is not None and row.family_id == row.jti:
+        # Migration 0033 backfills pre-family rows with family_id=jti. Accept
+        # such a refresh token once so an existing browser can rotate into the
+        # new sid-bearing format instead of being logged out during rollout.
+        session_family_id = row.family_id
+    if (
+        row is None
+        or row.user_id != user_id
+        or not isinstance(session_family_id, str)
+        or not session_family_id
+        or row.family_id != session_family_id
+    ):
+        raise _refresh_session_error(401, "Refresh token не найден")
 
     if row.is_used:
-        revoke_all_user_refresh_tokens(db, user_id)
-        raise HTTPException(status_code=401, detail="Refresh token уже использован")
+        record_audit_event(
+            db,
+            action="session.refresh_replay",
+            resource_type="session",
+            target_user_id=row.user_id,
+            resource_id=session_family_id,
+        )
+        revoke_refresh_token_family(db, row.user_id, session_family_id, commit=False)
+        db.commit()
+        raise _refresh_session_error(401, "Refresh token уже использован")
 
     if not is_refresh_token_valid(row, raw_refresh_token):
-        raise HTTPException(status_code=401, detail="Refresh token недействителен")
+        raise _refresh_session_error(401, "Refresh token недействителен")
+
+    user = db.query(User).filter(User.id == row.user_id).first()
+    if not user or not user.is_active:
+        revoke_refresh_token_family(db, row.user_id, session_family_id)
+        raise _refresh_session_error(403, "Аккаунт заблокирован")
 
     if not consume_refresh_token(db, row, commit=False):
         db.rollback()
-        revoke_all_user_refresh_tokens(db, user_id)
-        raise HTTPException(status_code=401, detail="Refresh token уже использован")
+        record_audit_event(
+            db,
+            action="session.refresh_replay",
+            resource_type="session",
+            target_user_id=row.user_id,
+            resource_id=session_family_id,
+        )
+        revoke_refresh_token_family(db, row.user_id, session_family_id, commit=False)
+        db.commit()
+        raise _refresh_session_error(401, "Refresh token уже использован")
 
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user or not user.is_active:
-        raise HTTPException(status_code=401, detail="Пользователь не найден")
-
-    token_pair = issue_token_pair(db, user, response, commit=False)
+    token_pair = issue_token_pair(
+        db,
+        user,
+        response,
+        commit=False,
+        session_family_id=session_family_id,
+    )
     db.commit()
     return token_pair
 
@@ -620,16 +800,38 @@ def logout(
         else request.cookies.get(settings.refresh_cookie_name, "")
     )
     _clear_refresh_cookie(response)
-    if not raw_refresh_token:
-        return {"status": "ok"}
-    try:
-        token_payload = decode_token(raw_refresh_token, expected_type="refresh")
-    except AuthError:
-        return {"status": "ok"}
+    revoked = False
+    if raw_refresh_token:
+        try:
+            token_payload = decode_token(raw_refresh_token, expected_type="refresh")
+        except AuthError:
+            token_payload = {}
+        jti = token_payload.get("jti")
+        row = get_refresh_token_by_jti(db, jti) if isinstance(jti, str) else None
+        session_family_id = token_payload.get("sid")
+        if row and isinstance(session_family_id, str) and row.family_id == session_family_id:
+            revoke_refresh_token_family(db, row.user_id, session_family_id)
+            revoked = True
 
-    jti = token_payload.get("jti")
-    row = get_refresh_token_by_jti(db, jti) if isinstance(jti, str) else None
-    if row:
-        revoke_refresh_token(db, row)
+    if not revoked:
+        access_token = extract_bearer_token(request.headers.get("Authorization"))
+        try:
+            access_payload = (
+                decode_token(access_token, expected_type="access") if access_token else {}
+            )
+        except AuthError:
+            access_payload = {}
+            access_user_id = 0
+        else:
+            raw_access_user_id = access_payload.get("sub")
+            try:
+                access_user_id = (
+                    int(raw_access_user_id) if isinstance(raw_access_user_id, str) else 0
+                )
+            except ValueError:
+                access_user_id = 0
+        access_family_id = access_payload.get("sid")
+        if access_user_id > 0 and isinstance(access_family_id, str) and access_family_id:
+            revoke_refresh_token_family(db, access_user_id, access_family_id)
 
     return {"status": "ok"}
