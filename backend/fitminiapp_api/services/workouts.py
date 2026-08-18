@@ -85,6 +85,7 @@ def add_or_update_set(
 
     row.actual_reps = payload.actual_reps
     row.actual_weight = payload.actual_weight
+    row.rir = payload.rir
     row.is_completed = payload.is_completed
     db.commit()
     db.refresh(row)

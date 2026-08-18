@@ -2969,6 +2969,11 @@ export interface components {
             /** Actual Weight */
             actual_weight?: number | null;
             /**
+             * Rir
+             * @description Optional repetitions-in-reserve category after the set; 4+ means many repetitions remained, not an exact value of four
+             */
+            rir?: ("0" | "1" | "2" | "3" | "4+") | null;
+            /**
              * Is Completed
              * @default true
              */
@@ -3967,6 +3972,11 @@ export interface components {
             actual_reps?: number | null;
             /** Actual Weight */
             actual_weight?: number | null;
+            /**
+             * Rir
+             * @description Optional repetitions-in-reserve category after the set; 4+ means many repetitions remained, not an exact value of four
+             */
+            rir?: ("0" | "1" | "2" | "3" | "4+") | null;
             /** Is Completed */
             is_completed?: boolean | null;
         };
@@ -3980,6 +3990,11 @@ export interface components {
             actual_reps?: number | null;
             /** Actual Weight */
             actual_weight?: number | null;
+            /**
+             * Rir
+             * @description Optional repetitions-in-reserve category after the set; 4+ means many repetitions remained, not an exact value of four
+             */
+            rir?: ("0" | "1" | "2" | "3" | "4+") | null;
             /** Is Completed */
             is_completed: boolean;
         };
@@ -4026,6 +4041,11 @@ export interface components {
             actual_reps?: number | null;
             /** Actual Weight */
             actual_weight?: number | null;
+            /**
+             * Rir
+             * @description Optional repetitions-in-reserve category after the set; 4+ means many repetitions remained, not an exact value of four
+             */
+            rir?: ("0" | "1" | "2" | "3" | "4+") | null;
             /** Is Completed */
             is_completed: boolean;
         };

@@ -222,6 +222,10 @@ class UserWorkoutSet(Base):
             "set_number",
             name="uq_user_workout_sets_exercise_number",
         ),
+        CheckConstraint(
+            "rir IS NULL OR rir IN ('0', '1', '2', '3', '4+')",
+            name="ck_user_workout_sets_rir",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -231,6 +235,7 @@ class UserWorkoutSet(Base):
     set_number: Mapped[int] = mapped_column(Integer)
     actual_reps: Mapped[int | None] = mapped_column(Integer, nullable=True)
     actual_weight: Mapped[float | None] = mapped_column(Float, nullable=True)
+    rir: Mapped[str | None] = mapped_column(String(2), nullable=True)
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False)
 
     workout_exercise: Mapped[UserWorkoutExercise] = relationship(
