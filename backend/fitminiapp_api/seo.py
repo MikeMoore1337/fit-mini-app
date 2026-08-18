@@ -14,6 +14,8 @@ from fitminiapp_api.core.config import settings
 
 INDEX_ROBOTS = "index, follow"
 NOINDEX_ROBOTS = "noindex, nofollow"
+SOCIAL_IMAGE_PATH = "/assets/brand/yfc-social-preview.png"
+SOCIAL_IMAGE_ALT = "Your Fitness Coach — тренировки, питание и прогресс в браузере и Telegram"
 _PUBLIC_FALLBACK_PATTERN = re.compile(
     r"<!-- public-fallback-start -->.*?<!-- public-fallback-end -->",
     re.DOTALL,
@@ -243,6 +245,8 @@ def render_metadata(metadata: SeoMetadata) -> str:
         )
     if metadata.canonical_url:
         canonical = html.escape(metadata.canonical_url, quote=True)
+        social_image = html.escape(_absolute_public_url(SOCIAL_IMAGE_PATH), quote=True)
+        social_image_alt = html.escape(SOCIAL_IMAGE_ALT, quote=True)
         tags.extend(
             [
                 f'<link rel="canonical" href="{canonical}" />',
@@ -251,6 +255,19 @@ def render_metadata(metadata: SeoMetadata) -> str:
                 f'{html.escape(metadata.og_description or metadata.description, quote=True)}" />',
                 f'<meta property="og:type" content="{metadata.og_type}" />',
                 f'<meta property="og:url" content="{canonical}" />',
+                '<meta property="og:site_name" content="Your Fitness Coach" />',
+                '<meta property="og:locale" content="ru_RU" />',
+                f'<meta property="og:image" content="{social_image}" />',
+                '<meta property="og:image:type" content="image/png" />',
+                '<meta property="og:image:width" content="1200" />',
+                '<meta property="og:image:height" content="630" />',
+                f'<meta property="og:image:alt" content="{social_image_alt}" />',
+                '<meta name="twitter:card" content="summary_large_image" />',
+                f'<meta name="twitter:title" content="{html.escape(metadata.title, quote=True)}" />',
+                '<meta name="twitter:description" content="'
+                f'{html.escape(metadata.og_description or metadata.description, quote=True)}" />',
+                f'<meta name="twitter:image" content="{social_image}" />',
+                f'<meta name="twitter:image:alt" content="{social_image_alt}" />',
             ]
         )
     for item in metadata.structured_data:

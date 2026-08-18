@@ -8,7 +8,7 @@ describe('LandingPage', () => {
     cleanup();
     document.head
       .querySelectorAll(
-        'meta[name="description"], meta[name="robots"], meta[name="yandex"], meta[property^="og:"], link[rel="canonical"], script[type="application/ld+json"]',
+        'meta[name="description"], meta[name="robots"], meta[name="yandex"], meta[name^="twitter:"], meta[property^="og:"], link[rel="canonical"], script[type="application/ld+json"]',
       )
       .forEach((element) => element.remove());
     localStorage.clear();

@@ -3,7 +3,9 @@
 This document is the editorial and information-architecture contract for the indexable public
 surface. It complements the technical crawl/indexation contract in
 [`operations.md`](../operations.md) and the webmaster runbook in
-[`search-console-yandex-webmaster.md`](search-console-yandex-webmaster.md).
+[`search-console-yandex-webmaster.md`](search-console-yandex-webmaster.md). Organic acquisition,
+distribution, editorial operations, and the public release gate are defined in the
+[`organic-growth-playbook.md`](organic-growth-playbook.md).
 
 ## Current public information architecture
 

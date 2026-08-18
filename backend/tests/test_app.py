@@ -3252,6 +3252,14 @@ def test_public_seo_response_uses_canonical_metadata_and_truthful_structured_dat
     assert '<meta name="robots" content="index, follow" />' in response.text
     assert '<link rel="canonical" href="https://your-fitness-coach.ru/" />' in response.text
     assert '<meta property="og:url" content="https://your-fitness-coach.ru/" />' in response.text
+    assert (
+        '<meta property="og:image" '
+        'content="https://your-fitness-coach.ru/assets/brand/yfc-social-preview.png" />'
+        in response.text
+    )
+    assert '<meta property="og:image:width" content="1200" />' in response.text
+    assert '<meta property="og:image:height" content="630" />' in response.text
+    assert '<meta name="twitter:card" content="summary_large_image" />' in response.text
     structured_data = re.search(
         r'<script type="application/ld\+json">(.*?)</script>', response.text, re.DOTALL
     )
@@ -3338,6 +3346,25 @@ def test_public_content_routes_render_unique_crawlable_pages(client, monkeypatch
     assert heading in response.text
     assert '<a href="/knowledge">База знаний</a>' in response.text
     assert "Личный интерфейс Your Fitness Coach" not in response.text
+
+
+def test_public_campaign_url_keeps_clean_canonical_metadata(client, monkeypatch):
+    from fitminiapp_api.core.config import settings
+
+    monkeypatch.setattr(settings, "landing_domain", "your-fitness-coach.ru")
+    response = client.get(
+        "/training?utm_source=telegram&utm_medium=organic_social"
+        "&utm_campaign=strength_start_guide&utm_content=channel_post",
+        headers={"Host": "your-fitness-coach.ru"},
+    )
+
+    assert response.status_code == 200
+    assert '<link rel="canonical" href="https://your-fitness-coach.ru/training" />' in response.text
+    assert (
+        '<meta property="og:url" content="https://your-fitness-coach.ru/training" />'
+        in response.text
+    )
+    assert "utm_" not in response.text
 
 
 def test_public_guide_has_visible_editorial_metadata_and_truthful_schema(client, monkeypatch):

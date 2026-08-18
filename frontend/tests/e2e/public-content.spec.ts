@@ -34,6 +34,14 @@ test('публичные страницы сохраняют hierarchy и не �
         'href',
         `http://127.0.0.1:4173${publicPage.path}`,
       );
+      await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+        'content',
+        'http://127.0.0.1:4173/assets/brand/yfc-social-preview.png',
+      );
+      await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute(
+        'content',
+        'summary_large_image',
+      );
       expect(
         await page.evaluate(() => ({
           content: document.documentElement.scrollWidth,
@@ -89,4 +97,49 @@ test('guide exposes visible editorial metadata, sources and matching Article sch
     '@graph': Array<{ '@type': string }>;
   };
   expect(payload['@graph'].map((item) => item['@type'])).toEqual(['Article', 'BreadcrumbList']);
+});
+
+test('campaign parameters keep one canonical URL and a fetchable social preview', async ({
+  page,
+  request,
+}) => {
+  await page.goto(
+    '/training?utm_source=telegram&utm_medium=organic_social&utm_campaign=strength_start_guide&utm_content=channel_post',
+  );
+
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    'href',
+    'http://127.0.0.1:4173/training',
+  );
+  await expect(page.locator('meta[property="og:url"]')).toHaveAttribute(
+    'content',
+    'http://127.0.0.1:4173/training',
+  );
+  const socialImage = page.locator('meta[property="og:image"]');
+  await expect(socialImage).toHaveAttribute(
+    'content',
+    'http://127.0.0.1:4173/assets/brand/yfc-social-preview.png',
+  );
+  await expect(page.locator('meta[property="og:image:alt"]')).toHaveAttribute(
+    'content',
+    /тренировки, питание и прогресс/i,
+  );
+
+  const imageUrl = await socialImage.getAttribute('content');
+  expect(imageUrl).not.toBeNull();
+  const response = await request.get(imageUrl!);
+  expect(response.ok()).toBe(true);
+  expect(response.headers()['content-type']).toContain('image/png');
+  expect(
+    await page.evaluate(
+      (url) =>
+        new Promise<{ width: number; height: number }>((resolve, reject) => {
+          const image = new Image();
+          image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
+          image.onerror = () => reject(new Error('Social preview failed to load'));
+          image.src = url;
+        }),
+      imageUrl,
+    ),
+  ).toEqual({ width: 1200, height: 630 });
 });
