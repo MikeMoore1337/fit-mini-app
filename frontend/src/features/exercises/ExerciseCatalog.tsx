@@ -77,11 +77,12 @@ export function ExerciseCatalog({
     mutationFn: () => {
       if (!assignment || !activeAssignmentClientId || !activeAssignmentProgramId)
         throw new Error('Выберите клиента и программу');
-      return api<{ workouts_updated: number }>(
+      return api<{ workouts_updated: number; current_revision_number: number }>(
         `/api/v1/coach/clients/${activeAssignmentClientId}/programs/${activeAssignmentProgramId}/exercises`,
         {
           method: 'POST',
           body: {
+            expected_revision_number: activeAssignmentProgram?.current_revision_number ?? 0,
             exercise_id: assignment.id,
             day_number: assignmentDay,
             prescribed_sets: assignmentSets,

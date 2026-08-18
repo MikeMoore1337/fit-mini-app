@@ -23,7 +23,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from fitminiapp_api.core.timezone import now_msk_naive
 from fitminiapp_api.db.base import Base
-from fitminiapp_api.models.exercise import Exercise
+from fitminiapp_api.models.exercise import Exercise, Muscle
 
 
 class ProgramTemplate(Base):
@@ -147,6 +147,10 @@ class UserProgram(Base):
             name="ck_user_programs_status",
         ),
         CheckConstraint("duration_weeks >= 1", name="ck_user_programs_duration_weeks"),
+        CheckConstraint(
+            "current_revision_number >= 0",
+            name="ck_user_programs_current_revision_number",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -178,11 +182,157 @@ class UserProgram(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     archived_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    current_revision_number: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
 
     template: Mapped[ProgramTemplate | None] = relationship("ProgramTemplate")
     workouts: Mapped[list[UserWorkout]] = relationship(
         "UserWorkout", back_populates="user_program", cascade="all, delete-orphan"
     )
+    revisions: Mapped[list[ProgramRevision]] = relationship(
+        "ProgramRevision",
+        back_populates="user_program",
+        cascade="all, delete-orphan",
+        order_by="ProgramRevision.revision_number",
+    )
+    training_blocks: Mapped[list[TrainingBlock]] = relationship(
+        "TrainingBlock",
+        back_populates="user_program",
+        cascade="all, delete-orphan",
+        order_by="TrainingBlock.start_date, TrainingBlock.id",
+    )
+
+
+class ProgramRevision(Base):
+    __tablename__ = "program_revisions"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_program_id",
+            "revision_number",
+            name="uq_program_revisions_program_number",
+        ),
+        CheckConstraint("revision_number >= 1", name="ck_program_revisions_number"),
+        CheckConstraint(
+            "actor_role IN ('self', 'trainer', 'admin', 'system')",
+            name="ck_program_revisions_actor_role",
+        ),
+        CheckConstraint(
+            "change_kind IN "
+            "('assigned', 'program_archived', 'plan_updated', 'block_created', "
+            "'block_updated', 'block_status_changed')",
+            name="ck_program_revisions_change_kind",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_program_id: Mapped[int] = mapped_column(
+        ForeignKey("user_programs.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    revision_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    changed_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    actor_role: Mapped[str] = mapped_column(String(16), nullable=False)
+    change_kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    changed_fields: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    snapshot: Mapped[dict] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=now_msk_naive,
+        server_default=func.now(),
+    )
+
+    user_program: Mapped[UserProgram] = relationship("UserProgram", back_populates="revisions")
+
+
+class TrainingBlock(Base):
+    __tablename__ = "training_blocks"
+    __table_args__ = (
+        CheckConstraint("end_date >= start_date", name="ck_training_blocks_dates"),
+        CheckConstraint("length(trim(title)) >= 1", name="ck_training_blocks_title"),
+        CheckConstraint("length(trim(purpose)) >= 1", name="ck_training_blocks_purpose"),
+        CheckConstraint(
+            "status IN ('planned', 'active', 'completed', 'archived')",
+            name="ck_training_blocks_status",
+        ),
+        Index(
+            "uq_training_blocks_one_active_per_program",
+            "user_program_id",
+            unique=True,
+            postgresql_where=text("status = 'active'"),
+            sqlite_where=text("status = 'active'"),
+        ),
+        Index(
+            "ix_training_blocks_program_dates",
+            "user_program_id",
+            "start_date",
+            "end_date",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_program_id: Mapped[int] = mapped_column(
+        ForeignKey("user_programs.id", ondelete="CASCADE"), nullable=False
+    )
+    title: Mapped[str] = mapped_column(String(128), nullable=False)
+    start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    end_date: Mapped[date] = mapped_column(Date, nullable=False)
+    purpose: Mapped[str] = mapped_column(String(500), nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_deload: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="planned", server_default="planned"
+    )
+    created_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=now_msk_naive,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    user_program: Mapped[UserProgram] = relationship(
+        "UserProgram", back_populates="training_blocks"
+    )
+    priority_links: Mapped[list[TrainingBlockPriorityMuscle]] = relationship(
+        "TrainingBlockPriorityMuscle",
+        back_populates="training_block",
+        cascade="all, delete-orphan",
+        order_by="TrainingBlockPriorityMuscle.position",
+    )
+
+
+class TrainingBlockPriorityMuscle(Base):
+    __tablename__ = "training_block_priority_muscles"
+    __table_args__ = (
+        UniqueConstraint(
+            "training_block_id",
+            "position",
+            name="uq_training_block_priority_position",
+        ),
+        CheckConstraint("position >= 0", name="ck_training_block_priority_position"),
+    )
+
+    training_block_id: Mapped[int] = mapped_column(
+        ForeignKey("training_blocks.id", ondelete="CASCADE"), primary_key=True
+    )
+    muscle_id: Mapped[int] = mapped_column(
+        ForeignKey("muscles.id", ondelete="RESTRICT"), primary_key=True
+    )
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    training_block: Mapped[TrainingBlock] = relationship(
+        "TrainingBlock", back_populates="priority_links"
+    )
+    muscle: Mapped[Muscle] = relationship("Muscle")
 
 
 class UserWorkout(Base):

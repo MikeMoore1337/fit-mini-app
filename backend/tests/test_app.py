@@ -965,6 +965,7 @@ def test_coach_can_assign_existing_template_to_own_client(client):
             "workouts_completed": 0,
             "workouts_planned": 1,
             "next_workout_date": coach_programs.json()[0]["next_workout_date"],
+            "current_revision_number": 1,
         }
     ]
 
@@ -973,6 +974,7 @@ def test_coach_can_assign_existing_template_to_own_client(client):
         f"/api/v1/coach/clients/{client_user['id']}/programs/"
         f"{assigned.json()['user_program_id']}/exercises",
         json={
+            "expected_revision_number": 1,
             "exercise_id": second_exercise["id"],
             "day_number": 1,
             "prescribed_sets": 4,
@@ -982,7 +984,10 @@ def test_coach_can_assign_existing_template_to_own_client(client):
         headers=coach_headers,
     )
     assert exercise_assignment.status_code == 200
-    assert exercise_assignment.json() == {"workouts_updated": 1}
+    assert exercise_assignment.json() == {
+        "workouts_updated": 1,
+        "current_revision_number": 2,
+    }
     with get_session_context() as db:
         added = (
             db.query(UserWorkoutExercise)

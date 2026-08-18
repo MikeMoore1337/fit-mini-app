@@ -39,6 +39,7 @@ from fitminiapp_api.services.exercise_guides import get_exercise_guide
 from fitminiapp_api.services.notifications import queue_telegram_notification
 from fitminiapp_api.services.nutrition import build_nutrition_target_response_from_users
 from fitminiapp_api.services.program_common import ProgramError
+from fitminiapp_api.services.program_versioning import record_program_revision
 
 GOALS = {"muscle_gain", "fat_loss", "maintenance", "recomposition"}
 LEVELS = {"beginner", "intermediate", "advanced"}
@@ -352,6 +353,14 @@ def assign_template_to_user(
         active_program.status = "archived"
         active_program.archived_at = now_msk_naive()
         db.flush()
+        record_program_revision(
+            db,
+            active_program,
+            actor=assigned_by,
+            change_kind="program_archived",
+            changed_fields={"replacement": True, "cancelled_future_workouts": True},
+            reason="Программа заменена новым назначением",
+        )
 
     # A fresh coach assignment should put a previously hidden example back into
     # the client's library, where the client can hide it again if desired.
@@ -460,6 +469,17 @@ def assign_template_to_user(
             created += 1
 
     db.flush()
+    record_program_revision(
+        db,
+        user_program,
+        actor=assigned_by,
+        change_kind="assigned",
+        changed_fields={
+            "template_id": template.id,
+            "workouts_created": created,
+            "duration_weeks": duration_weeks,
+        },
+    )
     if assigned_by.id != target_user.id:
         queue_telegram_notification(
             db,
@@ -914,6 +934,7 @@ def list_coach_assigned_programs(db: Session, coach: User) -> list[dict]:
                 "workouts_completed": completed,
                 "workouts_planned": planned,
                 "next_workout_date": min(upcoming_dates) if upcoming_dates else None,
+                "current_revision_number": program.current_revision_number,
             }
         )
     return result

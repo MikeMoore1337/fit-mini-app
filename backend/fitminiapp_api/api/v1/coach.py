@@ -7,8 +7,6 @@ from fitminiapp_api.db.session import get_db
 from fitminiapp_api.models.program import (
     UserProgram,
     UserWorkout,
-    UserWorkoutExercise,
-    UserWorkoutSet,
 )
 from fitminiapp_api.models.user import BodyMeasurement, CoachClient, User
 from fitminiapp_api.schemas.feedback import (
@@ -57,6 +55,7 @@ from fitminiapp_api.services.notifications import queue_telegram_notification
 from fitminiapp_api.services.nutrition import NutritionError, recalculate_nutrition_target
 from fitminiapp_api.services.profile import update_profile
 from fitminiapp_api.services.program_common import ProgramError, assignment_error_status
+from fitminiapp_api.services.program_versioning import upsert_future_program_exercise
 from fitminiapp_api.services.programs import (
     assign_template_to_user,
     get_template_for_user,
@@ -370,129 +369,40 @@ def add_exercise_to_client_program(
 ):
     """Add or update an exercise in future occurrences of one selected program day."""
     managed_client = _managed_client(db, current_user, client_id)
-    program = (
-        db.query(UserProgram)
+    if (
+        db.query(UserProgram.id)
         .filter(
             UserProgram.id == program_id,
             UserProgram.user_id == managed_client.id,
             UserProgram.assigned_by_user_id == current_user.id,
-            UserProgram.is_active.is_(True),
         )
         .first()
-    )
-    if not program:
+        is None
+    ):
         raise HTTPException(status_code=404, detail="Программа клиента не найдена")
-
-    visible_exercise_ids = {
-        _effective_exercise_id(exercise) for exercise in list_exercises(db, managed_client)
+    try:
+        workouts_updated, revision_number = upsert_future_program_exercise(
+            db,
+            current_user,
+            program_id,
+            payload,
+        )
+    except ProgramError as exc:
+        detail = str(exc)
+        if detail == "Assigned program not found":
+            raise HTTPException(status_code=404, detail=detail) from exc
+        if detail in {
+            "Program revision conflict",
+            "Assigned program is not editable",
+            "No future planned workouts for the selected day",
+            "Superset position is already occupied",
+        }:
+            raise HTTPException(status_code=409, detail=detail) from exc
+        raise HTTPException(status_code=422, detail=detail) from exc
+    return {
+        "workouts_updated": workouts_updated,
+        "current_revision_number": revision_number,
     }
-    if payload.exercise_id not in visible_exercise_ids:
-        raise HTTPException(status_code=404, detail="Упражнение недоступно клиенту")
-
-    available_days = sorted(
-        {
-            workout.day_number
-            for workout in program.workouts
-            if workout.status == "planned"
-            and workout.scheduled_date >= today_for_user(managed_client)
-        }
-    )
-    selected_day = payload.day_number
-    if selected_day is None:
-        if len(available_days) != 1:
-            raise HTTPException(
-                status_code=422,
-                detail="Выберите день программы для добавления упражнения",
-            )
-        selected_day = available_days[0]
-
-    planned_workouts = [
-        workout
-        for workout in program.workouts
-        if workout.status == "planned"
-        and workout.day_number == selected_day
-        and workout.scheduled_date >= today_for_user(managed_client)
-    ]
-    if not planned_workouts:
-        raise HTTPException(
-            status_code=409,
-            detail="Для выбранного дня нет предстоящих тренировок",
-        )
-
-    for workout in planned_workouts:
-        workout_exercise = next(
-            (row for row in workout.exercises if row.exercise_id == payload.exercise_id),
-            None,
-        )
-        if payload.superset_group is not None:
-            conflict = next(
-                (
-                    row
-                    for row in workout.exercises
-                    if row.id != getattr(workout_exercise, "id", None)
-                    and row.superset_group == payload.superset_group
-                    and row.superset_order == payload.superset_order
-                ),
-                None,
-            )
-            if conflict is not None:
-                raise HTTPException(
-                    status_code=409,
-                    detail="Порядок упражнений в суперсете уже занят",
-                )
-        if workout_exercise is None:
-            workout_exercise = UserWorkoutExercise(
-                workout_id=workout.id,
-                exercise_id=payload.exercise_id,
-                sort_order=max((row.sort_order for row in workout.exercises), default=0) + 1,
-                prescribed_sets=payload.prescribed_sets,
-                prescribed_reps=payload.prescribed_reps,
-                rest_seconds=payload.rest_seconds,
-                notes=payload.notes,
-                superset_group=payload.superset_group,
-                superset_order=payload.superset_order,
-            )
-            db.add(workout_exercise)
-            db.flush()
-        else:
-            workout_exercise.prescribed_sets = payload.prescribed_sets
-            workout_exercise.prescribed_reps = payload.prescribed_reps
-            workout_exercise.rest_seconds = payload.rest_seconds
-            workout_exercise.notes = payload.notes
-            workout_exercise.superset_group = payload.superset_group
-            workout_exercise.superset_order = payload.superset_order
-            db.query(UserWorkoutSet).filter(
-                UserWorkoutSet.workout_exercise_id == workout_exercise.id
-            ).delete(synchronize_session=False)
-
-        for set_number in range(1, payload.prescribed_sets + 1):
-            db.add(
-                UserWorkoutSet(
-                    workout_exercise_id=workout_exercise.id,
-                    set_number=set_number,
-                    actual_reps=None,
-                    actual_weight=None,
-                    set_kind="working",
-                    reached_failure=None,
-                    is_completed=False,
-                )
-            )
-
-    record_audit_event(
-        db,
-        actor_user_id=current_user.id,
-        target_user_id=managed_client.id,
-        action="coach.program_exercise_upserted",
-        resource_type="user_program",
-        resource_id=program.id,
-        details={
-            "day_number": selected_day,
-            "exercise_id": payload.exercise_id,
-            "workouts_updated": len(planned_workouts),
-        },
-    )
-    db.commit()
-    return {"workouts_updated": len(planned_workouts)}
 
 
 @router.post(

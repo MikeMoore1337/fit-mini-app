@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from sqlalchemy import or_
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from fitminiapp_api.models.audit import AuditEvent
 from fitminiapp_api.models.auth_identity import AuthActionToken, AuthIdentity, LocalCredential
@@ -14,7 +14,10 @@ from fitminiapp_api.models.notification import Notification, NotificationSetting
 from fitminiapp_api.models.nutrition import NutritionTarget
 from fitminiapp_api.models.program import (
     HiddenProgramTemplate,
+    ProgramRevision,
     ProgramTemplate,
+    TrainingBlock,
+    TrainingBlockPriorityMuscle,
     UserProgram,
     UserWorkout,
     UserWorkoutExercise,
@@ -80,6 +83,22 @@ def _delete_user_programs(db: Session, user_program_ids: list[int]) -> None:
         db.query(UserWorkout).filter(UserWorkout.id.in_(workout_ids)).delete(
             synchronize_session=False
         )
+    block_ids = [
+        row.id
+        for row in db.query(TrainingBlock.id)
+        .filter(TrainingBlock.user_program_id.in_(user_program_ids))
+        .all()
+    ]
+    if block_ids:
+        db.query(TrainingBlockPriorityMuscle).filter(
+            TrainingBlockPriorityMuscle.training_block_id.in_(block_ids)
+        ).delete(synchronize_session=False)
+        db.query(TrainingBlock).filter(TrainingBlock.id.in_(block_ids)).delete(
+            synchronize_session=False
+        )
+    db.query(ProgramRevision).filter(ProgramRevision.user_program_id.in_(user_program_ids)).delete(
+        synchronize_session=False
+    )
     db.query(UserProgram).filter(UserProgram.id.in_(user_program_ids)).delete(
         synchronize_session=False
     )
@@ -109,6 +128,14 @@ def delete_user_cascade(db: Session, user: User) -> None:
         row.id for row in db.query(UserProgram.id).filter(UserProgram.user_id == user.id).all()
     ]
     _delete_user_programs(db, own_program_ids)
+    db.query(ProgramRevision).filter(ProgramRevision.changed_by_user_id == user.id).update(
+        {ProgramRevision.changed_by_user_id: None},
+        synchronize_session=False,
+    )
+    db.query(TrainingBlock).filter(TrainingBlock.created_by_user_id == user.id).update(
+        {TrainingBlock.created_by_user_id: None},
+        synchronize_session=False,
+    )
     remaining_comment_ids = [
         row.id
         for row in db.query(WorkoutComment.id)
@@ -202,6 +229,10 @@ def build_account_export(db: Session, user: User) -> dict:
             joinedload(UserProgram.workouts)
             .joinedload(UserWorkout.exercises)
             .joinedload(UserWorkoutExercise.sets),
+            selectinload(UserProgram.revisions),
+            selectinload(UserProgram.training_blocks)
+            .selectinload(TrainingBlock.priority_links)
+            .joinedload(TrainingBlockPriorityMuscle.muscle),
         )
         .filter(UserProgram.user_id == user.id)
         .order_by(UserProgram.assigned_at.asc(), UserProgram.id.asc())
@@ -301,6 +332,39 @@ def build_account_export(db: Session, user: User) -> dict:
                 "duration_weeks": program.duration_weeks,
                 "status": program.status,
                 "completed_at": program.completed_at,
+                "current_revision_number": program.current_revision_number,
+                "revisions": [
+                    {
+                        "revision_number": revision.revision_number,
+                        "changed_by_user_id": revision.changed_by_user_id,
+                        "actor_role": revision.actor_role,
+                        "change_kind": revision.change_kind,
+                        "reason": revision.reason,
+                        "changed_fields": revision.changed_fields,
+                        "snapshot": revision.snapshot,
+                        "created_at": revision.created_at,
+                    }
+                    for revision in program.revisions
+                ],
+                "training_blocks": [
+                    {
+                        "id": block.id,
+                        "title": block.title,
+                        "start_date": block.start_date,
+                        "end_date": block.end_date,
+                        "purpose": block.purpose,
+                        "priority_muscle_ids": [
+                            link.muscle.identifier for link in block.priority_links
+                        ],
+                        "notes": block.notes,
+                        "is_deload": block.is_deload,
+                        "status": block.status,
+                        "created_by_user_id": block.created_by_user_id,
+                        "created_at": block.created_at,
+                        "updated_at": block.updated_at,
+                    }
+                    for block in program.training_blocks
+                ],
                 "workouts": [
                     {
                         "id": workout.id,
