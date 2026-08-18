@@ -1,66 +1,55 @@
-import { useEffect, useState } from 'react';
-import {
-  APP_THEME_STORAGE_KEY,
-  applyColorScheme,
-  browserAppTheme,
-  saveAppTheme,
-  type AppColorScheme,
-} from '../theme';
+import type { ChangeEvent } from 'react';
+import type { ThemePreference } from '../theme';
+import { useWebTheme } from '../useWebTheme';
 import { ThemeIcon } from './ThemeIcon';
 
-export function AppThemeToggle({ navigation = false }: { navigation?: boolean }) {
-  const [theme, setTheme] = useState<AppColorScheme>(browserAppTheme);
-  const isTelegramMiniApp = Boolean(window.Telegram?.WebApp?.initData);
+const THEME_LABELS: Record<ThemePreference, string> = {
+  system: 'Системная',
+  light: 'Светлая',
+  dark: 'Тёмная',
+};
 
-  useEffect(() => {
-    if (isTelegramMiniApp) return;
-
-    const media = window.matchMedia?.('(prefers-color-scheme: dark)');
-    const syncTheme = () => {
-      const nextTheme = browserAppTheme();
-      setTheme(nextTheme);
-      applyColorScheme(nextTheme);
-    };
-    const onStorage = (event: StorageEvent) => {
-      if (event.key === APP_THEME_STORAGE_KEY) syncTheme();
-    };
-
-    syncTheme();
-    media?.addEventListener?.('change', syncTheme);
-    window.addEventListener('storage', onStorage);
-    return () => {
-      media?.removeEventListener?.('change', syncTheme);
-      window.removeEventListener('storage', onStorage);
-    };
-  }, [isTelegramMiniApp]);
-
-  if (isTelegramMiniApp) return null;
-
-  const toggleTheme = () => {
-    const nextTheme: AppColorScheme = theme === 'dark' ? 'light' : 'dark';
-    saveAppTheme(nextTheme);
-    setTheme(nextTheme);
-    applyColorScheme(nextTheme);
+function WebThemeControl({ landing, navigation }: { landing: boolean; navigation: boolean }) {
+  const { colorScheme, preference, setPreference } = useWebTheme();
+  const className = landing
+    ? 'landing-theme-toggle app-theme-control--landing'
+    : navigation
+      ? 'app-bottom-nav__btn app-theme-toggle--nav'
+      : 'app-theme-toggle';
+  const onChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    setPreference(event.currentTarget.value as ThemePreference);
   };
-  const actionLabel = theme === 'dark' ? 'Включить светлую тему' : 'Включить тёмную тему';
 
   return (
-    <button
-      type="button"
-      className={navigation ? 'app-bottom-nav__btn app-theme-toggle--nav' : 'app-theme-toggle'}
-      aria-label={actionLabel}
-      title={actionLabel}
-      onClick={toggleTheme}
-    >
+    <span className={className} title={`Тема: ${THEME_LABELS[preference].toLowerCase()}`}>
       <span
         className={navigation ? 'app-bottom-nav__icon' : 'app-theme-toggle__icon'}
         aria-hidden="true"
       >
-        <ThemeIcon theme={theme} />
+        <ThemeIcon theme={colorScheme} />
       </span>
-      {navigation && (
-        <span className="app-bottom-nav__label">{theme === 'dark' ? 'Светлая' : 'Тёмная'}</span>
-      )}
-    </button>
+      {navigation && <span className="app-bottom-nav__label">{THEME_LABELS[preference]}</span>}
+      <select
+        className="app-theme-control__select"
+        aria-label="Тема оформления"
+        value={preference}
+        onChange={onChange}
+      >
+        <option value="system">Системная</option>
+        <option value="light">Светлая</option>
+        <option value="dark">Тёмная</option>
+      </select>
+    </span>
   );
+}
+
+export function AppThemeToggle({
+  landing = false,
+  navigation = false,
+}: {
+  landing?: boolean;
+  navigation?: boolean;
+}) {
+  if (window.Telegram?.WebApp?.initData) return null;
+  return <WebThemeControl landing={landing} navigation={navigation} />;
 }

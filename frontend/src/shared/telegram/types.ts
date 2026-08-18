@@ -37,13 +37,13 @@ export interface TelegramWebApp {
     impactOccurred(style: string): void;
     notificationOccurred(type: string): void;
   };
-  ready(): void;
-  expand(): void;
-  onEvent(event: string, callback: () => void): void;
-  offEvent(event: string, callback: () => void): void;
-  setHeaderColor(color: string): void;
-  setBackgroundColor(color: string): void;
-  setBottomBarColor(color: string): void;
+  ready?(): void;
+  expand?(): void;
+  onEvent?(event: string, callback: () => void): void;
+  offEvent?(event: string, callback: () => void): void;
+  setHeaderColor?(color: string): void;
+  setBackgroundColor?(color: string): void;
+  setBottomBarColor?(color: string): void;
 }
 
 declare global {

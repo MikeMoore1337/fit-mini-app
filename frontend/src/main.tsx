@@ -8,7 +8,7 @@ import { FeedbackProvider } from './shared/ui/FeedbackProvider';
 import { OnlineStatus } from './shared/ui/OnlineStatus';
 import { LoadingState } from './shared/ui/common';
 import { isTelegramLaunch } from './shared/telegram/launch';
-import { useTelegram } from './shared/telegram/useTelegram';
+import { applyPlatformTheme, useTelegram } from './shared/telegram/useTelegram';
 import { NavigationProvider, useNavigation } from './shared/navigation/router';
 import { applyRouteMetadata } from './shared/seo/metadata';
 import { isPublicContentPath } from './content/publicContent';
@@ -127,6 +127,7 @@ function Root() {
 }
 
 function renderApp(): void {
+  applyPlatformTheme(window.Telegram?.WebApp ?? null);
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <Root />

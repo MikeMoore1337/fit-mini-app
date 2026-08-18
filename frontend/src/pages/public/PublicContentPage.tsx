@@ -9,22 +9,13 @@ import {
 import { appUrlForHostname } from '../../shared/navigation/appUrl';
 import { AppLink, useNavigation } from '../../shared/navigation/router';
 import { BrandLogo } from '../../shared/ui/BrandLogo';
-import { ThemeIcon } from '../../shared/ui/ThemeIcon';
+import { AppThemeToggle } from '../../shared/ui/AppThemeToggle';
+import { useWebTheme } from '../../shared/useWebTheme';
 import { applyRouteMetadata } from '../../shared/seo/metadata';
 import '../landing/landing.css';
 import './public-content.css';
 
-type PublicTheme = 'light' | 'dark';
-
-const THEME_STORAGE_KEY = 'landing-theme';
-
-function initialTheme(): PublicTheme {
-  const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-  if (stored === 'light' || stored === 'dark') return stored;
-  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
-
-function PublicHeader({ theme, onToggleTheme }: { theme: PublicTheme; onToggleTheme(): void }) {
+function PublicHeader({ theme }: { theme: 'light' | 'dark' }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = () => setMenuOpen(false);
 
@@ -72,15 +63,7 @@ function PublicHeader({ theme, onToggleTheme }: { theme: PublicTheme; onToggleTh
         </AppLink>
       </nav>
       <div className="landing-header__actions">
-        <button
-          type="button"
-          className="landing-theme-toggle"
-          aria-label={theme === 'dark' ? 'Включить светлую тему' : 'Включить тёмную тему'}
-          title={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
-          onClick={onToggleTheme}
-        >
-          <ThemeIcon theme={theme} />
-        </button>
+        <AppThemeToggle landing />
         <a
           className="landing-button landing-button--compact"
           href={appUrlForHostname(window.location.hostname)}
@@ -216,7 +199,7 @@ function RelatedContent({ page }: { page: PublicContentPageData }) {
   );
 }
 
-function PublicFooter({ theme }: { theme: PublicTheme }) {
+function PublicFooter({ theme }: { theme: 'light' | 'dark' }) {
   return (
     <footer className="landing-footer public-footer">
       <AppLink className="landing-brand" to="/">
@@ -244,7 +227,7 @@ function PublicFooter({ theme }: { theme: PublicTheme }) {
 export default function PublicContentPage() {
   const { path } = useNavigation();
   const page = getPublicContentPage(path);
-  const [theme, setTheme] = useState<PublicTheme>(initialTheme);
+  const { colorScheme: theme } = useWebTheme();
 
   useEffect(() => {
     applyRouteMetadata(path);
@@ -253,23 +236,14 @@ export default function PublicContentPage() {
   }, [path]);
 
   useEffect(() => {
-    const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
-    const previousColor = meta?.content;
     document.body.classList.toggle('landing-dark-mode', theme === 'dark');
-    if (meta) meta.content = theme === 'dark' ? '#0d120f' : '#f1f3ec';
     return () => {
       document.body.classList.remove('landing-dark-mode');
-      if (meta && previousColor) meta.content = previousColor;
     };
   }, [theme]);
 
   if (!page || page.kind === 'landing') return null;
 
-  const toggleTheme = () => {
-    const next = theme === 'dark' ? 'light' : 'dark';
-    window.localStorage.setItem(THEME_STORAGE_KEY, next);
-    setTheme(next);
-  };
   const appUrl = appUrlForHostname(window.location.hostname);
 
   return (
@@ -281,7 +255,7 @@ export default function PublicContentPage() {
       >
         К содержимому
       </a>
-      <PublicHeader theme={theme} onToggleTheme={toggleTheme} />
+      <PublicHeader theme={theme} />
       <main id="public-content" className="public-main" tabIndex={-1}>
         <Breadcrumbs page={page} />
         <article className={`public-article public-article--${page.kind}`}>

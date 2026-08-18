@@ -25,7 +25,10 @@ test('canonical brand assets render on light and dark public surfaces', async ({
   ]) {
     await page.setViewportSize(viewport);
     await page.goto('/');
-    await page.evaluate(() => window.localStorage.removeItem('landing-theme'));
+    await page.evaluate(() => {
+      window.localStorage.removeItem('app-theme');
+      window.localStorage.removeItem('landing-theme');
+    });
     await page.reload();
     await assertHeaderMark(page, 'light');
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
@@ -34,7 +37,7 @@ test('canonical brand assets render on light and dark public surfaces', async ({
       await page.screenshot({ path: '../.artifacts/brand/landing-light-desktop.png' });
     }
 
-    await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
+    await page.getByRole('combobox', { name: 'Тема оформления' }).selectOption('dark');
     await assertHeaderMark(page, 'dark');
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
 
