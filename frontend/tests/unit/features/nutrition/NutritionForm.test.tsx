@@ -5,10 +5,11 @@ import { NutritionForm } from '../../../../src/features/nutrition/NutritionForm'
 import { FeedbackProvider } from '../../../../src/shared/ui/FeedbackProvider';
 
 const apiMock = vi.hoisted(() => vi.fn());
+const useAuthMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../../../../src/shared/api/client', () => ({ api: apiMock }));
 vi.mock('../../../../src/app/AuthProvider', () => ({
-  useAuth: () => ({ user: { id: 10 } }),
+  useAuth: useAuthMock,
 }));
 
 function renderForm() {
@@ -29,6 +30,7 @@ describe('NutritionForm', () => {
     localStorage.clear();
     apiMock.mockReset();
     apiMock.mockResolvedValue({});
+    useAuthMock.mockReturnValue({ user: { id: 10, profile: null } });
   });
 
   afterEach(cleanup);
@@ -52,6 +54,25 @@ describe('NutritionForm', () => {
     expect(screen.getByText(/Смарт-часы и фитнес-браслеты оценивают/)).toBeInTheDocument();
     expect(document.body).not.toHaveTextContent(/MET/i);
     expect(document.body).not.toHaveTextContent(/×\s*1[.,]5/);
+  });
+
+  it('prefills progressively collected profile values for the personal calculation', () => {
+    useAuthMock.mockReturnValue({
+      user: {
+        id: 10,
+        profile: {
+          birth_date: '1990-08-12',
+          goal: 'fat_loss',
+          height_cm: 182,
+          weight_kg: 83,
+        },
+      },
+    });
+    renderForm();
+
+    expect(screen.getByRole('combobox', { name: /^Цель/ })).toHaveValue('fat_loss');
+    expect(screen.getByRole('spinbutton', { name: 'Рост, см' })).toHaveValue(182);
+    expect(screen.getByRole('spinbutton', { name: 'Вес, кг' })).toHaveValue(83);
   });
 
   it('adds and removes separately configured cardio trainings', () => {

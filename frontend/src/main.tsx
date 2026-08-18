@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './app/AuthProvider';
 import { AuthGate } from './app/AuthGate';
+import { OnboardingGate } from './app/OnboardingGate';
 import { ErrorBoundary } from './app/ErrorBoundary';
 import { FeedbackProvider } from './shared/ui/FeedbackProvider';
 import { OnlineStatus } from './shared/ui/OnlineStatus';
@@ -25,6 +26,7 @@ const VerifyEmailPage = lazy(() => import('./pages/auth/VerifyEmailPage'));
 const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
 const JoinCoachPage = lazy(() => import('./pages/join/JoinCoachPage'));
+const OnboardingPage = lazy(() => import('./pages/onboarding/OnboardingPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 function loadTelegramSdk(): Promise<void> {
   if (!isTelegramLaunch(window.location) || window.Telegram?.WebApp) {
@@ -91,7 +93,15 @@ function AppRoutes() {
   if (path === '/app')
     return (
       <AuthenticatedRoute>
-        <MiniAppPage />
+        <OnboardingGate>
+          <MiniAppPage />
+        </OnboardingGate>
+      </AuthenticatedRoute>
+    );
+  if (path === '/onboarding')
+    return (
+      <AuthenticatedRoute>
+        <OnboardingPage />
       </AuthenticatedRoute>
     );
   if (path === '/coach')

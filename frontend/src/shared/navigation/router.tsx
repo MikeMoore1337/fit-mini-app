@@ -34,7 +34,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     const backButton = window.Telegram?.WebApp?.BackButton;
     if (!backButton) return;
-    if (path === '/app' || path === '/') {
+    if (path === '/app' || path === '/onboarding' || path === '/') {
       backButton.hide();
       return;
     }

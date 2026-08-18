@@ -8,6 +8,7 @@ import { detectedTimeZone } from '../../shared/dateTime';
 import { usePersistentState } from '../../shared/storage';
 import { getTimezoneOptions } from './timezones';
 import { DateInput } from '../../shared/ui/PickerInput';
+import { profileGoals } from './goals';
 
 const emptyProfile: UserProfileUpdate = {
   full_name: '',
@@ -130,10 +131,11 @@ export function ProfileForm() {
               <option value="" disabled>
                 Выберите цель
               </option>
-              <option value="fat_loss">Похудение</option>
-              <option value="muscle_gain">Набор мышц</option>
-              <option value="maintenance">Поддержание</option>
-              <option value="recomposition">Рекомпозиция</option>
+              {profileGoals.map((option) => (
+                <option value={option.value} key={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </label>
           <label className="field">

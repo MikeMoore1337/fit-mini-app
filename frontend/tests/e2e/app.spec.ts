@@ -466,7 +466,13 @@ async function mockApi(page: Page, { withCoachClient = false, withCoachApplicati
           is_admin: role === 'admin',
           has_active_program: false,
           has_workout_history: false,
-          profile: { full_name: 'Демо пользователь', timezone: 'Europe/Moscow', kbju: null },
+          onboarding: { status: 'complete', required_fields: ['goal'], missing_fields: [] },
+          profile: {
+            full_name: 'Демо пользователь',
+            goal: 'maintenance',
+            timezone: 'Europe/Moscow',
+            kbju: null,
+          },
           trainer: null,
         },
       });

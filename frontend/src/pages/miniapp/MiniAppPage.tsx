@@ -4,7 +4,7 @@ import { useAuth } from '../../app/AuthProvider';
 import { TelegramLinkPrompt } from '../../features/account/TelegramLinkPrompt';
 import { TodayWorkout } from '../../features/workouts/TodayWorkout';
 import type { WorkoutNavigationTarget } from '../../features/workouts/WorkoutHistory';
-import { Badge, Card, CheckIcon, ChevronIcon } from '../../shared/ui/common';
+import { Badge } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { handleTabKeyDown } from '../../shared/ui/tabs';
 
@@ -69,6 +69,15 @@ const WorkoutHistory = lazy(() =>
 
 type Tab = 'today' | 'progress' | 'programs' | 'catalog' | 'nutrition' | 'profile';
 
+const tabs: ReadonlyArray<Tab> = [
+  'today',
+  'progress',
+  'programs',
+  'catalog',
+  'nutrition',
+  'profile',
+];
+
 function launchInviteToken(): string | null {
   const params = new URLSearchParams(window.location.search);
   const startParam =
@@ -84,6 +93,8 @@ export default function MiniAppPage() {
   const [initialInviteToken] = useState(launchInviteToken);
   const [tab, setTab] = useState<Tab>(() => {
     const params = new URLSearchParams(window.location.search);
+    const requestedSection = params.get('section');
+    if (requestedSection && tabs.includes(requestedSection as Tab)) return requestedSection as Tab;
     return initialInviteToken || params.has('auth_linked') || params.has('auth_error')
       ? 'profile'
       : 'today';
@@ -132,13 +143,6 @@ export default function MiniAppPage() {
     );
   }, [toast]);
   const role = user?.is_admin ? 'Администратор' : user?.is_coach ? 'Тренер' : 'Клиент';
-  const profileReady = Boolean(
-    user?.profile?.full_name &&
-    user.profile.birth_date &&
-    user.profile.goal &&
-    user.profile.level &&
-    user.profile.weight_kg,
-  );
   const profileFormKey = JSON.stringify([
     user?.profile?.full_name,
     user?.profile?.birth_date,
@@ -168,52 +172,6 @@ export default function MiniAppPage() {
           </div>
         </header>
         <TelegramLinkPrompt />
-        {(!profileReady || !user?.has_active_program || !user?.has_workout_history) && (
-          <Card title="План запуска" description="Три шага до регулярных тренировок">
-            <div className="onboarding-actions top-gap">
-              <button className="onboarding-action" onClick={() => setTab('profile')}>
-                <span className={`onboarding-action__mark${profileReady ? ' is-done' : ''}`}>
-                  {profileReady ? <CheckIcon /> : '1'}
-                </span>
-                <span className="onboarding-action__copy">
-                  <strong>Заполнить профиль</strong>
-                  <span>Дата рождения, цель, уровень и текущий вес</span>
-                </span>
-                <span className="onboarding-action__arrow" aria-hidden="true">
-                  <ChevronIcon />
-                </span>
-              </button>
-              <button className="onboarding-action" onClick={() => setTab('programs')}>
-                <span
-                  className={`onboarding-action__mark${user?.has_active_program ? ' is-done' : ''}`}
-                >
-                  {user?.has_active_program ? <CheckIcon /> : '2'}
-                </span>
-                <span className="onboarding-action__copy">
-                  <strong>Выбрать программу</strong>
-                  <span>Создайте свою или назначьте шаблон</span>
-                </span>
-                <span className="onboarding-action__arrow" aria-hidden="true">
-                  <ChevronIcon />
-                </span>
-              </button>
-              <button className="onboarding-action" onClick={() => setTab('today')}>
-                <span
-                  className={`onboarding-action__mark${user?.has_workout_history ? ' is-done' : ''}`}
-                >
-                  {user?.has_workout_history ? <CheckIcon /> : '3'}
-                </span>
-                <span className="onboarding-action__copy">
-                  <strong>Завершить тренировку</strong>
-                  <span>Результат появится в разделе прогресса</span>
-                </span>
-                <span className="onboarding-action__arrow" aria-hidden="true">
-                  <ChevronIcon />
-                </span>
-              </button>
-            </div>
-          </Card>
-        )}
         <div className="react-tabs react-tabs--mini" role="tablist" aria-label="Разделы приложения">
           {(
             [

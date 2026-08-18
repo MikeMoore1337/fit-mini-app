@@ -26,7 +26,13 @@ from fitminiapp_api.models.program import (
     UserWorkoutExercise,
     UserWorkoutSet,
 )
-from fitminiapp_api.models.user import CoachClient, CoachClientInvite, CoachRoleApplication, User
+from fitminiapp_api.models.user import (
+    CoachClient,
+    CoachClientInvite,
+    CoachRoleApplication,
+    User,
+    UserProfile,
+)
 from fitminiapp_api.services import notifications as notifications_service
 from fitminiapp_api.services.exercise_guides import get_exercise_guide
 from fitminiapp_api.services.notifications import (
@@ -139,6 +145,56 @@ def test_dev_login_and_me(client):
     data = response.json()
     assert data["telegram_user_id"] == 1001
     assert data["is_coach"] is True
+
+
+def test_onboarding_state_uses_existing_profile_and_resumes_partial_progress(client):
+    headers = auth(client, telegram_user_id=1002, is_coach=False)
+
+    initial = client.get("/api/v1/me", headers=headers)
+    assert initial.status_code == 200
+    assert initial.json()["onboarding"] == {
+        "status": "required",
+        "required_fields": ["goal"],
+        "missing_fields": ["goal"],
+    }
+
+    partial = client.patch(
+        "/api/v1/me/profile",
+        headers=headers,
+        json={"height_cm": 180, "weight_kg": 80},
+    )
+    assert partial.status_code == 200
+    assert partial.json()["onboarding"]["status"] == "required"
+    assert partial.json()["profile"]["height_cm"] == 180
+    assert partial.json()["profile"]["weight_kg"] == 80
+
+    invalid = client.patch(
+        "/api/v1/me/profile",
+        headers=headers,
+        json={"goal": "fast_result"},
+    )
+    assert invalid.status_code == 422
+    after_invalid = client.get("/api/v1/me", headers=headers).json()
+    assert after_invalid["onboarding"]["status"] == "required"
+    assert after_invalid["profile"]["height_cm"] == 180
+
+    completed = client.patch(
+        "/api/v1/me/profile",
+        headers=headers,
+        json={"goal": "maintenance"},
+    )
+    assert completed.status_code == 200
+    assert completed.json()["onboarding"] == {
+        "status": "complete",
+        "required_fields": ["goal"],
+        "missing_fields": [],
+    }
+    assert completed.json()["profile"]["height_cm"] == 180
+    assert completed.json()["profile"]["weight_kg"] == 80
+
+    with get_session_context() as db:
+        user_id = completed.json()["id"]
+        assert db.query(UserProfile).filter(UserProfile.user_id == user_id).count() == 1
 
 
 def test_production_settings_reject_placeholder_secret():
