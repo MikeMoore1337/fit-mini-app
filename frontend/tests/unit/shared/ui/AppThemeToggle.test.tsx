@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { APP_THEME_STORAGE_KEY } from '../../../../src/shared/theme';
 import { AppThemeToggle } from '../../../../src/shared/ui/AppThemeToggle';
@@ -36,41 +36,41 @@ describe('AppThemeToggle', () => {
     vi.unstubAllGlobals();
   });
 
-  it('defaults to system, follows runtime OS changes and persists an explicit choice', () => {
+  it('follows the system until the visitor toggles and then persists explicit choices', () => {
     const system = mockColorScheme(true);
     render(<AppThemeToggle />);
 
-    const selector = screen.getByRole('combobox', { name: 'Тема оформления' });
-    expect(selector).toHaveValue('system');
+    let toggle = screen.getByRole('button', { name: 'Включить светлую тему' });
     expect(document.documentElement.dataset.colorScheme).toBe('dark');
 
-    system.setDark(false);
+    act(() => system.setDark(false));
     expect(document.documentElement.dataset.colorScheme).toBe('light');
+    toggle = screen.getByRole('button', { name: 'Включить тёмную тему' });
 
-    fireEvent.change(selector, { target: { value: 'dark' } });
+    fireEvent.click(toggle);
     expect(localStorage.getItem(APP_THEME_STORAGE_KEY)).toBe('dark');
     expect(document.documentElement.dataset.colorScheme).toBe('dark');
 
-    system.setDark(false);
+    act(() => system.setDark(false));
     expect(document.documentElement.dataset.colorScheme).toBe('dark');
 
-    fireEvent.change(selector, { target: { value: 'system' } });
-    expect(localStorage.getItem(APP_THEME_STORAGE_KEY)).toBe('system');
+    fireEvent.click(screen.getByRole('button', { name: 'Включить светлую тему' }));
+    expect(localStorage.getItem(APP_THEME_STORAGE_KEY)).toBe('light');
     expect(document.documentElement.dataset.colorScheme).toBe('light');
   });
 
-  it('offers all preferences with a native selected state', () => {
+  it('is a compact action with an explicit accessible label', () => {
     mockColorScheme(false);
     render(<AppThemeToggle />);
 
-    expect(screen.getByRole('option', { name: 'Системная' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Светлая' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Тёмная' })).toBeInTheDocument();
+    const toggle = screen.getByRole('button', { name: 'Включить тёмную тему' });
+    expect(toggle).toHaveAttribute('title', 'Включить тёмную тему');
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 
   it('is not exposed inside a valid Telegram Mini App', () => {
     window.Telegram = { WebApp: { initData: 'signed' } };
     render(<AppThemeToggle />);
-    expect(screen.queryByRole('combobox', { name: 'Тема оформления' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Включить .* тему/ })).not.toBeInTheDocument();
   });
 });

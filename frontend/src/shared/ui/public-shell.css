@@ -135,15 +135,12 @@ body.public-shell-mode #root {
 }
 
 .public-shell .landing-theme-toggle {
-  position: relative;
   display: inline-grid;
-  grid-template-columns: 21px minmax(0, 1fr) 10px;
-  align-items: center;
-  flex: 0 0 144px;
-  gap: 8px;
-  width: 144px;
+  flex: 0 0 var(--landing-header-control-size);
+  place-items: center;
+  width: var(--landing-header-control-size);
   height: var(--landing-header-control-size);
-  padding: 0 12px;
+  padding: 0;
   border: 1px solid var(--landing-border);
   border-radius: 14px;
   background: var(--landing-card);
@@ -159,48 +156,11 @@ body.public-shell-mode #root {
     box-shadow 0.18s ease;
 }
 
-.public-shell .landing-theme-toggle::after {
-  width: 7px;
-  height: 7px;
-  border-right: 1.5px solid currentColor;
-  border-bottom: 1.5px solid currentColor;
-  content: '';
-  pointer-events: none;
-  transform: translateY(-2px) rotate(45deg);
-}
-
 .public-shell .landing-theme-toggle .app-theme-toggle__icon,
 .public-shell .landing-theme-toggle .app-theme-toggle__icon svg {
   display: block;
   width: 21px;
   height: 21px;
-}
-
-.public-shell .landing-theme-toggle .app-theme-control__select {
-  width: 100%;
-  min-width: 0;
-  height: 100%;
-  min-height: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  appearance: none;
-  background: transparent;
-  color: var(--landing-ink);
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 800;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.public-shell .landing-theme-toggle .app-theme-control__select:focus {
-  outline: none;
-}
-
-.public-shell .landing-theme-toggle .app-theme-control__select option {
-  background: var(--landing-card);
-  color: var(--landing-ink);
 }
 
 .public-shell .landing-theme-toggle:hover {
@@ -210,7 +170,7 @@ body.public-shell-mode #root {
   transform: translateY(-2px);
 }
 
-.public-shell .landing-theme-toggle:focus-within {
+.public-shell .landing-theme-toggle:focus-visible {
   outline: 3px solid var(--landing-green);
   outline-offset: 2px;
 }

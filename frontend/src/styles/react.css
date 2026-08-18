@@ -323,6 +323,8 @@ select:not([multiple]) {
   border-radius: 12px;
   background: var(--bg-soft);
   color: var(--text);
+  font: inherit;
+  cursor: pointer;
 }
 .app-theme-toggle:hover {
   background: var(--surface-hover);
@@ -346,26 +348,8 @@ select:not([multiple]) {
   position: relative;
   font-family: inherit;
 }
-.app-theme-control__select {
-  min-height: 34px;
-  padding: 0 28px 0 8px;
-  border: 0;
-  border-radius: 8px;
-  background-color: transparent;
-  color: inherit;
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
-}
-.app-theme-toggle--nav .app-theme-control__select {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-}
-.app-theme-toggle:focus-within,
-.app-theme-toggle--nav:focus-within {
+.app-theme-toggle:focus-visible,
+.app-theme-toggle--nav:focus-visible {
   outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
 }
