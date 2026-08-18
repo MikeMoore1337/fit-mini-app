@@ -1,9 +1,9 @@
 const PROVIDER_LABELS: Record<string, string> = {
-  telegram: 'Telegram',
-  google: 'Google',
-  yandex: 'Яндекс',
-  vk: 'VK ID',
-  apple: 'Apple',
+  telegram: 'Войти через Telegram',
+  google: 'Продолжить с Google',
+  yandex: 'Войти с Яндекс ID',
+  vk: 'Войти с VK ID',
+  apple: 'Войти с Apple',
 };
 
 function ProviderIcon({ provider }: { provider: string }) {
@@ -39,7 +39,7 @@ export function OAuthButtons({ providers }: { providers: string[] }) {
 
   return (
     <section className="oauth-auth" aria-label="Вход через другой сервис">
-      <p className="muted">Продолжить с аккаунтом</p>
+      <p className="muted">Войти с помощью</p>
       <div className="oauth-auth__grid">
         {providers.map((provider) => (
           <a

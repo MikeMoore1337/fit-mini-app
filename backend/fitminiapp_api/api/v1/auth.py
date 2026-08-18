@@ -48,6 +48,7 @@ from fitminiapp_api.services.jwt import (
 )
 from fitminiapp_api.services.oauth_login import (
     OAuthAccountBlockedError,
+    OAuthProviderResponseError,
     OAuthStateError,
     configured_oauth_client,
     get_or_create_oauth_user,
@@ -127,6 +128,25 @@ def _set_refresh_cookie(response: Response, raw_token: str) -> None:
 
 def _safe_next_path(value: str | None) -> str | None:
     return safe_auth_next_path(value)
+
+
+def _oauth_error_code(provider_error: str) -> str:
+    return (
+        "denied"
+        if provider_error in {"access_denied", "cancelled", "user_cancelled", "user_denied"}
+        else "invalid_state"
+        if provider_error in {"invalid_state", "mismatching_state", "missing_state"}
+        else "provider_failure"
+    )
+
+
+async def _oauth_callback_error(request: Request) -> str | None:
+    provider_error = request.query_params.get("error")
+    if provider_error or request.method == "GET":
+        return provider_error
+    form = await request.form()
+    form_error = form.get("error")
+    return form_error if isinstance(form_error, str) else None
 
 
 def _clear_refresh_cookie(response: Response) -> None:
@@ -238,7 +258,11 @@ def telegram_init_auth(
         raise HTTPException(status_code=500, detail="Telegram bot token is not configured")
 
     try:
-        validated_init_data = validate_telegram_init_data(init_data, bot_token)
+        validated_init_data = validate_telegram_init_data(
+            init_data,
+            bot_token,
+            max_age_seconds=settings.telegram_init_data_max_age_seconds,
+        )
     except ValueError as exc:
         logger.warning("telegram_auth_rejected", extra={"reason": type(exc).__name__})
         raise HTTPException(
@@ -341,22 +365,27 @@ async def _oauth_callback_impl(
         link_provider != provider or not isinstance(link_family_id, str) or not link_family_id
     ):
         return RedirectResponse(url=auth_error_redirect("invalid_state"), status_code=303)
-    provider_error = request.query_params.get("error")
+    provider_error = await _oauth_callback_error(request)
     if provider_error:
-        code = (
-            "denied"
-            if provider_error in {"access_denied", "user_cancelled"}
-            else "provider_failure"
+        return RedirectResponse(
+            url=auth_error_redirect(_oauth_error_code(provider_error), next_path=next_path),
+            status_code=303,
         )
-        return RedirectResponse(url=auth_error_redirect(code, next_path=next_path), status_code=303)
     try:
         token = await client.authorize_access_token(request)
+        if not isinstance(token, dict):
+            raise ValueError("OAuth provider returned an invalid token response")
         if provider == "yandex":
             profile_response = await client.get("info?format=json", token=token)
             profile_response.raise_for_status()
             raw_claims = profile_response.json()
+            if not isinstance(raw_claims, dict):
+                raise ValueError("Yandex returned an invalid user profile")
         else:
-            raw_claims = dict(token.get("userinfo") or {})
+            userinfo = token.get("userinfo")
+            if not isinstance(userinfo, dict):
+                raise ValueError("OAuth provider returned invalid identity claims")
+            raw_claims = dict(userinfo)
         if link_token:
             try:
                 user = link_oauth_account(
@@ -396,19 +425,23 @@ async def _oauth_callback_impl(
         return RedirectResponse(
             url=auth_error_redirect("invalid_state", next_path=next_path), status_code=303
         )
-    except OAuthError as exc:
-        oauth_error = getattr(exc, "error", "")
-        code = (
-            "denied"
-            if oauth_error in {"access_denied", "user_cancelled"}
-            else "invalid_state"
-            if oauth_error in {"mismatching_state", "missing_state", "invalid_state"}
-            else "provider_failure"
-        )
+    except OAuthProviderResponseError as exc:
         logger.warning(
             "oauth_login_failed", extra={"provider": provider, "reason": type(exc).__name__}
         )
-        return RedirectResponse(url=auth_error_redirect(code, next_path=next_path), status_code=303)
+        return RedirectResponse(
+            url=auth_error_redirect(_oauth_error_code(exc.error), next_path=next_path),
+            status_code=303,
+        )
+    except OAuthError as exc:
+        oauth_error = getattr(exc, "error", "")
+        logger.warning(
+            "oauth_login_failed", extra={"provider": provider, "reason": type(exc).__name__}
+        )
+        return RedirectResponse(
+            url=auth_error_redirect(_oauth_error_code(oauth_error), next_path=next_path),
+            status_code=303,
+        )
     except (HTTPError, OAuthLinkError, PasswordAuthError, IntegrityError, ValueError) as exc:
         logger.warning(
             "oauth_login_failed", extra={"provider": provider, "reason": type(exc).__name__}
