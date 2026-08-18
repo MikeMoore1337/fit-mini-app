@@ -143,17 +143,10 @@ body.public-shell-mode #root {
   padding: 0;
   border: 1px solid var(--landing-border);
   border-radius: 14px;
-  background: var(--landing-card);
-  box-shadow: 0 4px 14px rgba(23, 32, 24, 0.08);
   color: var(--landing-ink);
   cursor: pointer;
   font: inherit;
   touch-action: manipulation;
-  transition:
-    transform 0.18s ease,
-    border-color 0.18s ease,
-    background-color 0.18s ease,
-    box-shadow 0.18s ease;
 }
 
 .public-shell .landing-theme-toggle .app-theme-toggle__icon,
@@ -163,7 +156,19 @@ body.public-shell-mode #root {
   height: 21px;
 }
 
-.public-shell .landing-theme-toggle:hover {
+.public-shell :is(.landing-theme-toggle, .landing-button--compact, .login-home-link) {
+  border-color: var(--landing-border);
+  background: var(--landing-card);
+  box-shadow: 0 4px 14px rgba(23, 32, 24, 0.08);
+  color: var(--landing-ink) !important;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.public-shell :is(.landing-theme-toggle, .landing-button--compact, .login-home-link):hover {
   border-color: var(--landing-muted);
   background: var(--landing-secondary);
   box-shadow: 0 8px 20px rgba(23, 32, 24, 0.12);
@@ -175,7 +180,7 @@ body.public-shell-mode #root {
   outline-offset: 2px;
 }
 
-.public-shell .landing-theme-toggle:active {
+.public-shell :is(.landing-theme-toggle, .landing-button--compact, .login-home-link):active {
   box-shadow: 0 2px 8px rgba(23, 32, 24, 0.1);
   transform: translateY(0);
 }
@@ -234,7 +239,7 @@ body.public-shell-mode #root {
 
 @media (prefers-reduced-motion: reduce) {
   .public-shell__skip-link,
-  .public-shell .landing-theme-toggle {
+  .public-shell :is(.landing-theme-toggle, .landing-button--compact, .login-home-link) {
     transition: none;
   }
 }
