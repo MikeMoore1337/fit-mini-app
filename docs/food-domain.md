@@ -61,5 +61,34 @@ Run the same command without `--dry-run` only after source accuracy, provenance,
 been reviewed. No base food seed is committed until such a source is selected; the pipeline alone
 does not imply that a dataset is suitable for production.
 
-External HTTP fetching, diary entries, recipes, favorites/recent foods, barcode scanning, and UI
-are intentionally outside this foundation.
+External HTTP fetching, recipes, favorites/recent foods, barcode scanning, and UI remain outside
+this foundation.
+
+## Private food diary
+
+The diary stores one entry per selected food, user-local calendar date, and meal type
+(`breakfast`, `lunch`, `dinner`, or `snacks`). An entry accepts either a mass in grams or a number
+of the food's standard servings. Dates in the user's past and their current date are writable;
+future dates are rejected using the timezone stored in the shared account profile. With no date,
+the day endpoint resolves today through that same timezone, so Web and Telegram use identical
+calendar semantics.
+
+Diary entries snapshot the food name, serving information, and nutrients per 100 grams when the
+entry is created or explicitly changed to another food. Later catalog edits or deletion therefore
+do not rewrite nutrition history. Calculated entry, meal, and day totals continue to use the food
+domain's decimal scaling rules. Unknown fiber remains unknown when a non-empty aggregate includes
+an entry without fiber data; energy, protein, fat, and carbohydrate are complete for every active
+food.
+
+The authenticated API is deliberately organized around the diary rather than its table:
+
+- `GET /api/v1/nutrition/diary?diary_date=YYYY-MM-DD` returns all four meals, day totals, the
+  current target from the existing nutrition service, and the remaining target;
+- `POST /api/v1/nutrition/diary/entries` creates an entry;
+- `PATCH /api/v1/nutrition/diary/entries/{entry_id}` changes its food, date, meal, or amount;
+- `DELETE /api/v1/nutrition/diary/entries/{entry_id}` removes it.
+
+All entry reads and mutations are scoped to the authenticated account. A missing or foreign food
+or diary entry uses the same not-found response, so the API does not disclose another account's
+private catalog or diary data. A day is a bounded aggregate and is intentionally returned as one
+response rather than paginated entry fragments.
