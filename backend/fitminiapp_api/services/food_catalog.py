@@ -21,6 +21,10 @@ from fitminiapp_api.services.foods import (
 logger = logging.getLogger("app")
 
 
+def _provider_failure_status(exc: FoodProviderUnavailable) -> FoodProviderStatus:
+    return "rate_limited" if exc.reason == "rate_limited" else "unavailable"
+
+
 def search_food_catalog(
     db: Session,
     current_user: User,
@@ -41,15 +45,16 @@ def search_food_catalog(
         return FoodSearchResponse(**response_values, provider_status="disabled")
     try:
         external = provider.search(query_text, limit=min(limit, 20))
+        external_items = [serialize_provider_food(food) for food in external]
     except FoodProviderUnavailable as exc:
         logger.warning("food_provider_search_unavailable", extra={"reason": exc.reason})
-        status: FoodProviderStatus = (
-            "rate_limited" if exc.reason == "rate_limited" else "unavailable"
+        return FoodSearchResponse(
+            **response_values,
+            provider_status=_provider_failure_status(exc),
         )
-        return FoodSearchResponse(**response_values, provider_status=status)
     return FoodSearchResponse(
         **response_values,
-        external_items=[serialize_provider_food(food) for food in external],
+        external_items=external_items,
         provider_status="available",
     )
 
@@ -63,18 +68,41 @@ def get_food_catalog_item_by_barcode(
 ) -> FoodBarcodeLookupResponse:
     local = get_food_by_barcode_response(db, current_user, barcode)
     if local is not None:
-        return FoodBarcodeLookupResponse(local_item=local, provider_status="not_needed")
+        return FoodBarcodeLookupResponse(
+            barcode=barcode,
+            status="found",
+            source="local",
+            local_item=local,
+            provider_status="not_needed",
+        )
     if provider is None:
-        return FoodBarcodeLookupResponse(provider_status="disabled")
+        return FoodBarcodeLookupResponse(
+            barcode=barcode,
+            status="not_found",
+            provider_status="disabled",
+        )
     try:
         external = provider.get_by_barcode(barcode)
+        external_item = serialize_provider_food(external) if external is not None else None
+        if external_item is not None and external_item.barcode != barcode:
+            raise FoodProviderUnavailable("malformed_response")
     except FoodProviderUnavailable as exc:
         logger.warning("food_provider_barcode_unavailable", extra={"reason": exc.reason})
-        status: FoodProviderStatus = (
-            "rate_limited" if exc.reason == "rate_limited" else "unavailable"
+        return FoodBarcodeLookupResponse(
+            barcode=barcode,
+            status="not_found",
+            provider_status=_provider_failure_status(exc),
         )
-        return FoodBarcodeLookupResponse(provider_status=status)
+    if external_item is None:
+        return FoodBarcodeLookupResponse(
+            barcode=barcode,
+            status="not_found",
+            provider_status="available",
+        )
     return FoodBarcodeLookupResponse(
-        external_item=serialize_provider_food(external) if external is not None else None,
+        barcode=barcode,
+        status="found",
+        source="external",
+        external_item=external_item,
         provider_status="available",
     )
