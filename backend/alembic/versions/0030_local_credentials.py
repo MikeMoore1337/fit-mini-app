@@ -16,12 +16,12 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.alter_column(
-        "users",
-        "telegram_user_id",
-        existing_type=sa.BigInteger(),
-        nullable=True,
-    )
+    with op.batch_alter_table("users") as batch_op:
+        batch_op.alter_column(
+            "telegram_user_id",
+            existing_type=sa.BigInteger(),
+            nullable=True,
+        )
     op.create_table(
         "local_credentials",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -77,9 +77,9 @@ def downgrade() -> None:
     op.drop_index("ix_local_credentials_username_normalized", table_name="local_credentials")
     op.drop_index("ix_local_credentials_user_id", table_name="local_credentials")
     op.drop_table("local_credentials")
-    op.alter_column(
-        "users",
-        "telegram_user_id",
-        existing_type=sa.BigInteger(),
-        nullable=False,
-    )
+    with op.batch_alter_table("users") as batch_op:
+        batch_op.alter_column(
+            "telegram_user_id",
+            existing_type=sa.BigInteger(),
+            nullable=False,
+        )

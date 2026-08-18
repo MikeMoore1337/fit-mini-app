@@ -123,6 +123,19 @@ inaccurate.
 Do not duplicate trivial implementation details when code is the better source of truth.
 Use `technical-writer` for substantial documentation work.
 
+- Russian is the mandatory primary language for all human-readable documentation
+  under `docs/`.
+- Do not create new English-language documentation under `docs/` unless the task
+  explicitly requires an English version.
+- When updating an existing English-language document under `docs/`, translate the
+  explanatory prose you modify into Russian when practical, but do not mass-translate
+  unrelated documentation outside the current task scope.
+- Keep code, commands, configuration keys, API names, file paths, identifiers,
+  library/framework names, protocol names, and other technical literals in their
+  original form when translation would reduce clarity or accuracy.
+- Do not manually translate generated documentation or vendored third-party content.
+- Write all explanatory prose in Russian.
+
 # Codex backlog
 
 Large project work is decomposed into tasks under `codex-backlog/tasks/`.
@@ -136,7 +149,6 @@ When a task file is explicitly provided:
   of truth for completed previous stages;
 - do not read all files under `codex-backlog/masters/` unless the current task
   explicitly requires clarification from a master specification.
-
 
 # Git branch policy
 
@@ -176,7 +188,7 @@ During backlog implementation and testing:
 - never use production credentials for local or automated tests;
 - never modify production data;
 - prefer local/test/staging services;
-- before running any command that appears to target production, stop and ask the user;
+- before running any command that appears to target production, stop and ask the user.
 
 # Final verification
 
