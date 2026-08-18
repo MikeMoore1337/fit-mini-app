@@ -4,6 +4,7 @@ import { Card, ErrorState, LoadingState } from '../shared/ui/common';
 import { EmailAuthPanel } from '../features/auth/EmailAuthPanel';
 import { OAuthButtons } from '../features/auth/OAuthButtons';
 import { AppThemeToggle } from '../shared/ui/AppThemeToggle';
+import { BrandLogo } from '../shared/ui/BrandLogo';
 
 export function telegramMiniAppUrl(username: string): string {
   const normalized = username.trim().replace(/^@/, '');
@@ -45,7 +46,12 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       <Card
         collapsible={false}
         className="auth-panel auth-panel--branded"
-        title="Вход в Your Fitness Coach"
+        title={
+          <span className="auth-panel__title">
+            <BrandLogo className="auth-panel__brand-mark" decorative variant="mark" />
+            Вход в Your Fitness Coach
+          </span>
+        }
         description={
           hasBrowserAuth
             ? 'Выберите доступный безопасный способ входа.'

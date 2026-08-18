@@ -168,7 +168,7 @@ export function Card({
   className = '',
   collapsible = true,
 }: {
-  title?: string;
+  title?: ReactNode;
   description?: string;
   actions?: ReactNode;
   children: ReactNode;

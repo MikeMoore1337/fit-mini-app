@@ -8,6 +8,7 @@ import {
 } from '../../content/publicContent';
 import { appUrlForHostname } from '../../shared/navigation/appUrl';
 import { AppLink, useNavigation } from '../../shared/navigation/router';
+import { BrandLogo } from '../../shared/ui/BrandLogo';
 import { ThemeIcon } from '../../shared/ui/ThemeIcon';
 import { applyRouteMetadata } from '../../shared/seo/metadata';
 import '../landing/landing.css';
@@ -39,12 +40,13 @@ function PublicHeader({ theme, onToggleTheme }: { theme: PublicTheme; onToggleTh
   return (
     <header className="landing-header public-header">
       <AppLink className="landing-brand" to="/" aria-label="Your Fitness Coach — на главную">
-        <img
+        <BrandLogo
           className="landing-brand__mark"
-          src="/assets/brand/fitness-logo-v2.png"
-          alt=""
-          width="36"
-          height="36"
+          decorative
+          surface={theme}
+          variant="mark"
+          width={36}
+          height={36}
         />
         <span>Your Fitness Coach</span>
       </AppLink>
@@ -214,16 +216,17 @@ function RelatedContent({ page }: { page: PublicContentPageData }) {
   );
 }
 
-function PublicFooter() {
+function PublicFooter({ theme }: { theme: PublicTheme }) {
   return (
     <footer className="landing-footer public-footer">
       <AppLink className="landing-brand" to="/">
-        <img
+        <BrandLogo
           className="landing-brand__mark"
-          src="/assets/brand/fitness-logo-v2.png"
-          alt=""
-          width="36"
-          height="36"
+          decorative
+          surface={theme}
+          variant="mark"
+          width={36}
+          height={36}
         />
         <span>Your Fitness Coach</span>
       </AppLink>
@@ -366,7 +369,7 @@ export default function PublicContentPage() {
           )}
         </article>
       </main>
-      <PublicFooter />
+      <PublicFooter theme={theme} />
     </div>
   );
 }
