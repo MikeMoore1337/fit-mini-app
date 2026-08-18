@@ -1,62 +1,79 @@
-import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthGate, telegramMiniAppUrl } from '../../../src/app/AuthGate';
+import { NavigationProvider } from '../../../src/shared/navigation/router';
 
-const { authConfig } = vi.hoisted(() => ({
-  authConfig: {
-    app_env: 'prod',
-    enable_dev_auth: false,
-    enable_web_auth: true,
-    enable_email_auth: false,
-    telegram_bot_username: 'fitness_bot',
-    oauth_providers: ['telegram'],
+const { authState } = vi.hoisted(() => ({
+  authState: {
+    user: null as { id: number } | null,
+    config: {
+      telegram_bot_username: 'fitness_bot',
+    },
+    loading: false,
+    error: null as string | null,
+    telegramLogin: vi.fn(),
   },
 }));
 
 vi.mock('../../../src/app/AuthProvider', () => ({
-  useAuth: () => ({
-    user: null,
-    config: authConfig,
-    loading: false,
-    error: null,
-    devLogin: vi.fn(),
-    telegramLogin: vi.fn(),
-  }),
-}));
-
-vi.mock('../../../src/features/auth/EmailAuthPanel', () => ({
-  EmailAuthPanel: () => <div>EMAIL_AUTH_PANEL</div>,
-}));
-
-vi.mock('../../../src/features/auth/OAuthButtons', () => ({
-  OAuthButtons: ({ providers }: { providers: string[] }) => <div>OAUTH:{providers.join(',')}</div>,
+  useAuth: () => authState,
 }));
 
 describe('AuthGate', () => {
   beforeEach(() => {
-    authConfig.enable_web_auth = true;
-    authConfig.oauth_providers = ['telegram'];
+    authState.user = null;
+    authState.loading = false;
+    authState.error = null;
+    authState.telegramLogin.mockReset();
+    window.history.replaceState(null, '', '/coach');
+    delete window.Telegram;
   });
 
-  it('показывает OAuth без неактуального уведомления про Telegram', () => {
-    render(<AuthGate>Приложение</AuthGate>);
-
-    expect(screen.getByText('OAUTH:telegram')).toBeInTheDocument();
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
-    expect(screen.queryByText('EMAIL_AUTH_PANEL')).not.toBeInTheDocument();
+  afterEach(() => {
+    delete window.Telegram;
   });
 
-  it('offers a direct Telegram button when browser login is disabled', () => {
-    authConfig.enable_web_auth = false;
-    authConfig.oauth_providers = [];
+  it('redirects an unauthenticated browser route to canonical login with a safe return', async () => {
+    render(
+      <NavigationProvider>
+        <AuthGate>Кабинет</AuthGate>
+      </NavigationProvider>,
+    );
 
-    render(<AuthGate>Приложение</AuthGate>);
+    await waitFor(() => expect(window.location.pathname).toBe('/login'));
+    expect(window.location.search).toBe('?next=%2Fcoach');
+  });
 
-    expect(screen.getByText(/вход через браузер пока недоступен/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Открыть в Telegram' })).toHaveAttribute(
+  it('renders the requested route after authentication', () => {
+    authState.user = { id: 7 };
+    render(
+      <NavigationProvider>
+        <AuthGate>Кабинет</AuthGate>
+      </NavigationProvider>,
+    );
+
+    expect(screen.getByText('Кабинет')).toBeInTheDocument();
+  });
+
+  it('shows Telegram-specific recovery without a browser provider chooser', () => {
+    window.history.replaceState(null, '', '/app?tgWebAppPlatform=android');
+    authState.error = 'raw initData error';
+
+    render(
+      <NavigationProvider>
+        <AuthGate>Приложение</AuthGate>
+      </NavigationProvider>,
+    );
+
+    expect(
+      screen.getByRole('heading', { name: 'Не удалось подтвердить вход' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Открыть заново в Telegram' })).toHaveAttribute(
       'href',
       'https://t.me/fitness_bot?startapp',
     );
+    expect(screen.queryByText(/выберите удобный способ/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('raw initData error')).not.toBeInTheDocument();
   });
 
   it('normalizes Telegram usernames for Mini App links', () => {

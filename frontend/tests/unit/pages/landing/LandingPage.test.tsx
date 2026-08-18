@@ -1,6 +1,9 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import LandingPage, { appUrlForHostname } from '../../../../src/pages/landing/LandingPage';
+import LandingPage, {
+  appUrlForHostname,
+  loginUrlForHostname,
+} from '../../../../src/pages/landing/LandingPage';
 import { NavigationProvider } from '../../../../src/shared/navigation/router';
 
 describe('LandingPage', () => {
@@ -33,11 +36,11 @@ describe('LandingPage', () => {
       </NavigationProvider>,
     );
 
-    expect(container.firstChild).toHaveClass('landing-page--dark');
+    expect(container.firstChild).toHaveClass('public-shell--dark');
     fireEvent.change(screen.getByRole('combobox', { name: 'Тема оформления' }), {
       target: { value: 'light' },
     });
-    expect(container.firstChild).toHaveClass('landing-page--light');
+    expect(container.firstChild).toHaveClass('public-shell--light');
     expect(localStorage.getItem('app-theme')).toBe('light');
   });
 
@@ -122,9 +125,7 @@ describe('LandingPage', () => {
     expect(screen.queryByText('4 недели', { exact: true })).not.toBeInTheDocument();
 
     expect(screen.queryByText('@mikhail_murzaev')).not.toBeInTheDocument();
-    expect(container.querySelectorAll('img[src="/assets/brand/yfc-mark-light.svg"]')).toHaveLength(
-      2,
-    );
+    expect(container.querySelectorAll('img[src*="/assets/brand/yfc-logo-"]')).toHaveLength(2);
     const contact = screen.getByRole('link', { name: /задать вопрос в telegram/i });
     expect(contact).toHaveAttribute('href', 'https://t.me/your_fitness_support_bot');
     expect(contact).toHaveAttribute('target', '_blank');
@@ -137,7 +138,7 @@ describe('LandingPage', () => {
       </NavigationProvider>,
     );
 
-    expect(screen.getByRole('link', { name: 'Войти' })).toHaveAttribute('href', '/app');
+    expect(screen.getByRole('link', { name: 'Войти' })).toHaveAttribute('href', '/login');
     expect(screen.getByRole('link', { name: /открыть приложение/i })).toHaveAttribute(
       'href',
       '/app',
@@ -156,6 +157,9 @@ describe('LandingPage', () => {
     );
     expect(appUrlForHostname('your-fitness-coach.ru')).toBe(
       'https://app.your-fitness-coach.ru/app',
+    );
+    expect(loginUrlForHostname('your-fitness-coach.ru')).toBe(
+      'https://app.your-fitness-coach.ru/login',
     );
     expect(screen.getAllByRole('link', { name: /подробнее/i })).toHaveLength(6);
   });

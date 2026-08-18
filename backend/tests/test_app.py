@@ -3220,6 +3220,7 @@ def test_root_serves_public_landing_spa(client):
     ("method", "path"),
     [
         ("GET", "/app"),
+        ("GET", "/login"),
         ("GET", "/join/abcdefghijklmnopqrstuvwxyz"),
         ("POST", "/api/v1/auth/refresh"),
     ],
@@ -3334,7 +3335,9 @@ def test_robots_and_sitemap_publish_only_canonical_public_urls(client, monkeypat
         "https://your-fitness-coach.ru/knowledge/training/how-to-start-strength-training",
         "https://your-fitness-coach.ru/knowledge/nutrition/kbju-as-a-reference",
     ]
-    assert all(segment not in sitemap.text for segment in ("/app", "/admin", "/coach", "/join"))
+    assert all(
+        segment not in sitemap.text for segment in ("/app", "/admin", "/coach", "/join", "/login")
+    )
 
 
 @pytest.mark.parametrize(
@@ -3436,6 +3439,7 @@ def test_public_fallback_replaces_the_built_vite_marker_without_stale_landing_co
         "/app",
         "/admin",
         "/coach",
+        "/login",
         "/verify-email",
         "/reset-password",
         "/join/abcdefghijklmnopqrstuvwxyz",
@@ -3490,7 +3494,7 @@ def test_canonical_hosts_and_missing_routes_do_not_create_duplicate_or_soft_404_
     assert missing.status_code == 404
 
 
-@pytest.mark.parametrize("path", ["/verify-email", "/reset-password"])
+@pytest.mark.parametrize("path", ["/login", "/verify-email", "/reset-password"])
 def test_browser_auth_routes_serve_spa(client, path):
     response = client.get(path)
 
@@ -3686,7 +3690,7 @@ def test_unconfigured_oauth_provider_is_not_exposed(client, monkeypatch):
 
     started = client.get("/api/v1/auth/oauth/google/start", follow_redirects=False)
     assert started.status_code == 303
-    assert started.headers["location"] == "/app?auth_error=unavailable"
+    assert started.headers["location"] == "/login?next=%2Fapp&auth_error=unavailable"
 
 
 def test_browser_telegram_login_reuses_existing_telegram_user(client):

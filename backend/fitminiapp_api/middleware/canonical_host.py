@@ -18,6 +18,7 @@ APPLICATION_PATHS = frozenset(
         "/app",
         "/admin",
         "/coach",
+        "/login",
         "/verify-email",
         "/reset-password",
     }

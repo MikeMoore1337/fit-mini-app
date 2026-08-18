@@ -29,4 +29,9 @@ def safe_auth_next_path(value: str | None) -> str | None:
 def auth_error_redirect(code: str, *, next_path: str | None = None) -> str:
     normalized_code = code if code in AUTH_ERROR_CODES else "provider_failure"
     target = safe_auth_next_path(next_path) or "/app"
-    return f"{target}?{urlencode({'auth_error': normalized_code})}"
+    return f"/login?{urlencode({'next': target, 'auth_error': normalized_code})}"
+
+
+def account_link_error_redirect(code: str) -> str:
+    normalized_code = code if code in AUTH_ERROR_CODES else "provider_failure"
+    return f"/app?{urlencode({'auth_error': normalized_code})}"

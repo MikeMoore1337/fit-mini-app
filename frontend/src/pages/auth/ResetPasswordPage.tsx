@@ -2,6 +2,8 @@ import { useState, type FormEvent } from 'react';
 import { useAuth } from '../../app/AuthProvider';
 import { AppLink } from '../../shared/navigation/router';
 import { Card, ErrorState } from '../../shared/ui/common';
+import { PublicShell } from '../../shared/ui/PublicShell';
+import './auth.css';
 
 export default function ResetPasswordPage() {
   const { confirmPasswordReset } = useAuth();
@@ -27,46 +29,48 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <main className="container narrow">
-      <Card
-        collapsible={false}
-        className="auth-panel"
-        title="Новый пароль"
-        description="Создайте новый пароль длиной не менее 12 символов."
-      >
-        <div className="stack top-gap">
-          {error && <ErrorState message={error} />}
-          {!token && <ErrorState message="В ссылке отсутствует токен восстановления" />}
-          {completed ? (
-            <p className="auth-success" role="status">
-              Пароль изменён. Теперь можно войти.
-            </p>
-          ) : (
-            token && (
-              <form className="stack" onSubmit={(event) => void submit(event)}>
-                <label>
-                  Новый пароль
-                  <input
-                    required
-                    type="password"
-                    minLength={12}
-                    maxLength={128}
-                    autoComplete="new-password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                  />
-                </label>
-                <button type="submit" disabled={busy}>
-                  {busy ? 'Сохраняем…' : 'Сохранить новый пароль'}
-                </button>
-              </form>
-            )
-          )}
-          <AppLink className="button-link secondary" to="/app">
-            Перейти ко входу
-          </AppLink>
-        </div>
-      </Card>
-    </main>
+    <PublicShell skipTarget="reset-password-content">
+      <main id="reset-password-content" className="auth-aux-layout" tabIndex={-1}>
+        <Card
+          collapsible={false}
+          className="auth-panel"
+          title="Новый пароль"
+          description="Создайте новый пароль длиной не менее 12 символов."
+        >
+          <div className="stack top-gap">
+            {error && <ErrorState message={error} />}
+            {!token && <ErrorState message="В ссылке отсутствует токен восстановления" />}
+            {completed ? (
+              <p className="auth-success" role="status">
+                Пароль изменён. Теперь можно войти.
+              </p>
+            ) : (
+              token && (
+                <form className="stack" onSubmit={(event) => void submit(event)}>
+                  <label>
+                    Новый пароль
+                    <input
+                      required
+                      type="password"
+                      minLength={12}
+                      maxLength={128}
+                      autoComplete="new-password"
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                    />
+                  </label>
+                  <button type="submit" disabled={busy}>
+                    {busy ? 'Сохраняем…' : 'Сохранить новый пароль'}
+                  </button>
+                </form>
+              )
+            )}
+            <AppLink className="button-link secondary" to="/login">
+              Перейти ко входу
+            </AppLink>
+          </div>
+        </Card>
+      </main>
+    </PublicShell>
   );
 }

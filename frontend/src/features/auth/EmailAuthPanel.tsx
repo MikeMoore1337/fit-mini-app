@@ -4,7 +4,7 @@ import { ErrorState } from '../../shared/ui/common';
 
 type AuthMode = 'login' | 'register' | 'recover';
 
-export function EmailAuthPanel() {
+export function EmailAuthPanel({ nextPath }: { nextPath?: string | null }) {
   const { emailLogin, emailRegister, requestPasswordReset } = useAuth();
   const [mode, setMode] = useState<AuthMode>('login');
   const [username, setUsername] = useState('');
@@ -30,9 +30,6 @@ export function EmailAuthPanel() {
       if (mode === 'login') {
         await emailLogin(email, password);
       } else if (mode === 'register') {
-        const nextPath = window.location.pathname.startsWith('/join/')
-          ? window.location.pathname
-          : null;
         await emailRegister(username, email, password, nextPath);
         setMessage('Аккаунт создан. Проверьте почту и подтвердите email.');
         setPassword('');

@@ -202,6 +202,22 @@ select:not([multiple]) {
 .list-row__actions button {
   width: auto;
 }
+
+.auth-method-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.auth-method-row__feedback {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.auth-method-row__feedback[role='alert'] {
+  color: var(--danger-text);
+}
 .text-button {
   min-height: 0;
   padding: 0;

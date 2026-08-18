@@ -317,7 +317,7 @@ def test_oauth_library_errors_are_normalized(client, monkeypatch, error, expecte
     response = client.get("/api/v1/auth/oauth/google/callback", follow_redirects=False)
 
     assert response.status_code == 303
-    assert response.headers["location"] == f"/app?auth_error={expected}"
+    assert response.headers["location"] == f"/login?next=%2Fapp&auth_error={expected}"
 
 
 def test_provider_timeout_is_safe_on_start_and_callback(client, monkeypatch):
@@ -337,9 +337,9 @@ def test_provider_timeout_is_safe_on_start_and_callback(client, monkeypatch):
     callback = client.get("/api/v1/auth/oauth/google/callback", follow_redirects=False)
 
     assert started.status_code == 303
-    assert started.headers["location"] == "/app?auth_error=unavailable"
+    assert started.headers["location"] == "/login?next=%2Fapp&auth_error=unavailable"
     assert callback.status_code == 303
-    assert callback.headers["location"] == "/app?auth_error=provider_failure"
+    assert callback.headers["location"] == "/login?next=%2Fapp&auth_error=provider_failure"
 
 
 def test_post_callback_cancel_is_normalized_without_provider_call(client, monkeypatch):
@@ -358,7 +358,7 @@ def test_post_callback_cancel_is_normalized_without_provider_call(client, monkey
     )
 
     assert response.status_code == 303
-    assert response.headers["location"] == "/app?auth_error=denied"
+    assert response.headers["location"] == "/login?next=%2Fapp&auth_error=denied"
 
 
 def test_post_callback_success_keeps_form_available_for_provider_client(client, monkeypatch):

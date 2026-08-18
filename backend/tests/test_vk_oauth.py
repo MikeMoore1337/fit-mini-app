@@ -168,7 +168,7 @@ def test_vk_oauth_rejects_callback_with_wrong_state_without_network_call(client,
     callback = _finish_vk(client, "attacker-state")
 
     assert callback.status_code == 303
-    assert callback.headers["location"] == "/app?auth_error=invalid_state"
+    assert callback.headers["location"] == "/login?next=%2Fapp&auth_error=invalid_state"
     assert requests == []
 
 
@@ -223,7 +223,7 @@ def test_vk_oauth_rejects_missing_device_without_network_call(client, monkeypatc
     )
 
     assert callback.status_code == 303
-    assert callback.headers["location"] == "/app?auth_error=provider_failure"
+    assert callback.headers["location"] == "/login?next=%2Fapp&auth_error=provider_failure"
     assert requests == []
 
 
@@ -249,7 +249,7 @@ def test_vk_oauth_rejects_conflicting_flat_and_payload_state(client, monkeypatch
     )
 
     assert callback.status_code == 303
-    assert callback.headers["location"] == "/app?auth_error=invalid_state"
+    assert callback.headers["location"] == "/login?next=%2Fapp&auth_error=invalid_state"
     assert requests == []
 
 
@@ -262,7 +262,7 @@ def test_vk_oauth_rejects_mismatched_token_state(client, monkeypatch):
     callback = _finish_vk(client, state)
 
     assert callback.status_code == 303
-    assert callback.headers["location"] == "/app?auth_error=invalid_state"
+    assert callback.headers["location"] == "/login?next=%2Fapp&auth_error=invalid_state"
     assert [request.url.path for request in requests] == ["/oauth2/auth"]
 
 
@@ -279,5 +279,5 @@ def test_vk_oauth_json_payload_cancel_is_normalized(client, monkeypatch):
     )
 
     assert callback.status_code == 303
-    assert callback.headers["location"] == "/app?auth_error=denied"
+    assert callback.headers["location"] == "/login?next=%2Fapp&auth_error=denied"
     assert requests == []

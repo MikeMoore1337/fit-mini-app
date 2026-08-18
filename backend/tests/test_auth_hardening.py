@@ -19,7 +19,7 @@ from fitminiapp_api.models.audit import AuditEvent
 from fitminiapp_api.models.auth_identity import AuthActionToken, AuthIdentity
 from fitminiapp_api.models.token import RefreshToken
 from fitminiapp_api.models.user import User
-from fitminiapp_api.services.auth_redirects import safe_auth_next_path
+from fitminiapp_api.services.auth_redirects import auth_error_redirect, safe_auth_next_path
 from fitminiapp_api.services.jwt import ALGORITHM, decode_token, hash_token
 from fitminiapp_api.services.oauth_login import OAuthStateError, get_or_create_oauth_user
 from fitminiapp_api.services.password_auth import utcnow
@@ -98,7 +98,7 @@ def test_oauth_link_is_bound_to_owner_session_and_is_one_time(client, monkeypatc
 
     replayed = client.get("/api/v1/auth/oauth/google/callback", follow_redirects=False)
     assert replayed.status_code == 303
-    assert replayed.headers["location"] == "/app?auth_error=invalid_state"
+    assert replayed.headers["location"] == "/login?next=%2Fapp&auth_error=invalid_state"
     with get_session_context() as db:
         identities = db.query(AuthIdentity).filter(AuthIdentity.user_id == owner_id).all()
         assert sorted(identity.provider for identity in identities) == ["google", "telegram"]
@@ -158,14 +158,14 @@ def test_oauth_browser_errors_are_normalized(client, monkeypatch):
         "/api/v1/auth/oauth/google/callback?error=access_denied",
         follow_redirects=False,
     )
-    assert denied.headers["location"] == "/app?auth_error=denied"
+    assert denied.headers["location"] == "/login?next=%2Fapp&auth_error=denied"
 
     client.get("/api/v1/auth/oauth/google/start", follow_redirects=False)
     blocked_response = client.get(
         "/api/v1/auth/oauth/google/callback",
         follow_redirects=False,
     )
-    assert blocked_response.headers["location"] == "/app?auth_error=blocked"
+    assert blocked_response.headers["location"] == "/login?next=%2Fapp&auth_error=blocked"
 
 
 def test_refresh_replay_revokes_only_its_family_and_logout_revokes_access():
@@ -323,6 +323,15 @@ def test_private_responses_and_auth_cookies_have_safe_policy(client, monkeypatch
 )
 def test_safe_auth_next_allowlist(value, expected):
     assert safe_auth_next_path(value) == expected
+
+
+def test_auth_error_redirect_keeps_only_a_safe_continuation():
+    assert auth_error_redirect("denied", next_path="/coach") == (
+        "/login?next=%2Fcoach&auth_error=denied"
+    )
+    assert auth_error_redirect("provider-secret", next_path="https://evil.example") == (
+        "/login?next=%2Fapp&auth_error=provider_failure"
+    )
 
 
 def test_root_telegram_identity_cannot_be_transferred_by_link(client, monkeypatch):

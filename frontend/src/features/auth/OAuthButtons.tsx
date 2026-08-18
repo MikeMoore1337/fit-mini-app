@@ -1,3 +1,6 @@
+import { useState } from 'react';
+import { safeAuthNextPath } from '../../shared/auth/redirects';
+
 const PROVIDER_LABELS: Record<string, string> = {
   telegram: 'Войти через Telegram',
   google: 'Продолжить с Google',
@@ -5,6 +8,13 @@ const PROVIDER_LABELS: Record<string, string> = {
   vk: 'Войти с VK ID',
   apple: 'Войти с Apple',
 };
+
+const PROVIDER_ORDER = ['telegram', 'google', 'yandex', 'vk', 'apple'];
+
+export function configuredOAuthProviders(providers: string[]): string[] {
+  const configured = new Set(providers.map((provider) => provider.trim().toLowerCase()));
+  return PROVIDER_ORDER.filter((provider) => configured.has(provider));
+}
 
 function ProviderIcon({ provider }: { provider: string }) {
   if (provider === 'google' || provider === 'yandex') {
@@ -34,27 +44,41 @@ function ProviderIcon({ provider }: { provider: string }) {
   );
 }
 
-export function OAuthButtons({ providers }: { providers: string[] }) {
-  if (!providers.length) return null;
+export function OAuthButtons({
+  providers,
+  nextPath,
+}: {
+  providers: string[];
+  nextPath?: string | null;
+}) {
+  const [redirectingProvider, setRedirectingProvider] = useState<string | null>(null);
+  const configuredProviders = configuredOAuthProviders(providers);
+  if (!configuredProviders.length) return null;
+
+  const safeNext = nextPath ? safeAuthNextPath(nextPath) : null;
 
   return (
     <section className="oauth-auth" aria-label="Вход через другой сервис">
       <p className="muted">Войти с помощью</p>
       <div className="oauth-auth__grid">
-        {providers.map((provider) => (
+        {configuredProviders.map((provider) => (
           <a
             key={provider}
             className={`oauth-button oauth-button--${provider}`}
-            href={`/api/v1/auth/oauth/${provider}/start${
-              window.location.pathname.startsWith('/join/')
-                ? `?next=${encodeURIComponent(window.location.pathname)}`
-                : ''
-            }`}
+            href={`/api/v1/auth/oauth/${provider}/start${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ''}`}
+            aria-disabled={redirectingProvider !== null}
+            onClick={(event) => {
+              if (redirectingProvider !== null) {
+                event.preventDefault();
+                return;
+              }
+              setRedirectingProvider(provider);
+            }}
           >
             <span className="oauth-button__icon" aria-hidden="true">
               <ProviderIcon provider={provider} />
             </span>
-            {PROVIDER_LABELS[provider] ?? provider}
+            {redirectingProvider === provider ? 'Переходим…' : PROVIDER_LABELS[provider]}
           </a>
         ))}
       </div>

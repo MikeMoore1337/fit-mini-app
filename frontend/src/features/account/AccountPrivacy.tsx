@@ -1,9 +1,16 @@
 import { useMutation } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
-import { api } from '../../shared/api/client';
+import { api, ApiError } from '../../shared/api/client';
 import type { OAuthLinkCreate, TelegramLinkCreate } from '../../shared/api/types';
 import { Badge, Card, DisclosureIcon } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
+
+const PROVIDER_LABELS: Record<string, string> = {
+  google: 'Google',
+  yandex: 'Яндекс',
+  vk: 'VK ID',
+  apple: 'Apple',
+};
 
 function downloadJson(payload: unknown): void {
   const blob = new Blob([JSON.stringify(payload, null, 2)], {
@@ -19,6 +26,13 @@ function downloadJson(payload: unknown): void {
   URL.revokeObjectURL(url);
 }
 
+function linkingErrorMessage(reason: unknown): string {
+  if (reason instanceof ApiError && reason.status === 409) {
+    return 'Этот способ уже связан с аккаунтом. Автоматическое объединение недоступно.';
+  }
+  return 'Не удалось подготовить привязку. Проверьте соединение и попробуйте снова.';
+}
+
 export function AccountPrivacy() {
   const { user, config, logout } = useAuth();
   const { toast, confirm } = useFeedback();
@@ -28,7 +42,7 @@ export function AccountPrivacy() {
         method: 'POST',
         body: {},
       }),
-    onError: (reason) => toast((reason as Error).message, 'error'),
+    onError: () => toast('Не удалось подготовить привязку Telegram', 'error'),
   });
   const oauthLinkMutation = useMutation({
     mutationFn: async (provider: string) => ({
@@ -38,16 +52,11 @@ export function AccountPrivacy() {
         body: {},
       }),
     }),
-    onError: (reason) => toast((reason as Error).message, 'error'),
+    onError: (_reason, provider) =>
+      toast(`Не удалось подготовить привязку ${PROVIDER_LABELS[provider] ?? provider}`, 'error'),
   });
-  const providerLabels: Record<string, string> = {
-    google: 'Google',
-    yandex: 'Яндекс',
-    vk: 'VK ID',
-    apple: 'Apple',
-  };
   const availableOAuthProviders = (config?.oauth_providers ?? []).filter(
-    (provider) => provider in providerLabels,
+    (provider) => provider in PROVIDER_LABELS,
   );
   const linkedProviders = new Set(user?.auth_providers ?? []);
   const exportMutation = useMutation({
@@ -85,7 +94,7 @@ export function AccountPrivacy() {
           <DisclosureIcon />
         </summary>
         <div className="profile-disclosure__body">
-          <div className="list-row">
+          <div className="list-row auth-method-row" aria-busy={telegramLinkMutation.isPending}>
             <div className="list-row__main">
               <strong>Telegram</strong>
               <span className="muted">
@@ -117,6 +126,16 @@ export function AccountPrivacy() {
                 </button>
               )}
             </div>
+            {telegramLinkMutation.isError && (
+              <p className="auth-method-row__feedback" role="alert">
+                {linkingErrorMessage(telegramLinkMutation.error)}
+              </p>
+            )}
+            {telegramLinkMutation.data && (
+              <p className="auth-method-row__feedback" role="status">
+                Ссылка готова и действует 10 минут.
+              </p>
+            )}
           </div>
           {!user?.telegram_user_id && (
             <p className="muted">
@@ -125,12 +144,16 @@ export function AccountPrivacy() {
             </p>
           )}
           {availableOAuthProviders.map((provider) => {
-            const label = providerLabels[provider];
+            const label = PROVIDER_LABELS[provider];
             const pending = oauthLinkMutation.isPending && oauthLinkMutation.variables === provider;
             const createdLink =
               oauthLinkMutation.data?.provider === provider ? oauthLinkMutation.data.link : null;
+            const providerError =
+              oauthLinkMutation.isError && oauthLinkMutation.variables === provider
+                ? oauthLinkMutation.error
+                : null;
             return (
-              <div className="list-row" key={provider}>
+              <div className="list-row auth-method-row" key={provider} aria-busy={pending}>
                 <div className="list-row__main">
                   <strong>{label}</strong>
                   <span className="muted">
@@ -157,6 +180,16 @@ export function AccountPrivacy() {
                     </button>
                   )}
                 </div>
+                {providerError && (
+                  <p className="auth-method-row__feedback" role="alert">
+                    {linkingErrorMessage(providerError)}
+                  </p>
+                )}
+                {createdLink && (
+                  <p className="auth-method-row__feedback" role="status">
+                    Ссылка готова. Завершите привязку у провайдера.
+                  </p>
+                )}
               </div>
             );
           })}

@@ -38,7 +38,11 @@ from fitminiapp_api.services.account_linking import (
 from fitminiapp_api.services.audit import record_audit_event
 from fitminiapp_api.services.auth_email import password_reset_email, verification_email
 from fitminiapp_api.services.auth_identities import ensure_auth_identity, ensure_telegram_identity
-from fitminiapp_api.services.auth_redirects import auth_error_redirect, safe_auth_next_path
+from fitminiapp_api.services.auth_redirects import (
+    account_link_error_redirect,
+    auth_error_redirect,
+    safe_auth_next_path,
+)
 from fitminiapp_api.services.jwt import (
     AuthError,
     build_access_token,
@@ -280,7 +284,9 @@ async def oauth_start(request: Request, provider: str, next: str | None = None):
     _require_web_auth()
     client = configured_oauth_client(provider)
     if client is None:
-        return RedirectResponse(url=auth_error_redirect("unavailable"), status_code=303)
+        return RedirectResponse(
+            url=auth_error_redirect("unavailable", next_path=next), status_code=303
+        )
     request.session["oauth_next"] = _safe_next_path(next)
     try:
         return await client.authorize_redirect(request, _oauth_callback_url(provider))
@@ -289,7 +295,9 @@ async def oauth_start(request: Request, provider: str, next: str | None = None):
             "oauth_start_failed",
             extra={"provider": provider, "reason": type(exc).__name__},
         )
-        return RedirectResponse(url=auth_error_redirect("unavailable"), status_code=303)
+        return RedirectResponse(
+            url=auth_error_redirect("unavailable", next_path=next), status_code=303
+        )
 
 
 @router.get("/oauth/{provider}/link/start")
@@ -345,7 +353,7 @@ async def oauth_link_start(
             "oauth_link_start_failed",
             extra={"provider": normalized_provider, "reason": type(exc).__name__},
         )
-        return RedirectResponse(url=auth_error_redirect("unavailable"), status_code=303)
+        return RedirectResponse(url=account_link_error_redirect("unavailable"), status_code=303)
 
 
 async def _oauth_callback_impl(
@@ -354,21 +362,29 @@ async def _oauth_callback_impl(
     db: Session,
 ) -> Response:
     _require_web_auth()
-    client = configured_oauth_client(provider)
-    if client is None:
-        return RedirectResponse(url=auth_error_redirect("unavailable"), status_code=303)
     next_path = _safe_next_path(request.session.pop("oauth_next", None))
     link_token = request.session.pop("oauth_link_token", None)
     link_provider = request.session.pop("oauth_link_provider", None)
     link_family_id = request.session.pop("oauth_link_family", None)
+
+    def error_redirect(code: str) -> str:
+        return (
+            account_link_error_redirect(code)
+            if link_token
+            else auth_error_redirect(code, next_path=next_path)
+        )
+
+    client = configured_oauth_client(provider)
+    if client is None:
+        return RedirectResponse(url=error_redirect("unavailable"), status_code=303)
     if link_token and (
         link_provider != provider or not isinstance(link_family_id, str) or not link_family_id
     ):
-        return RedirectResponse(url=auth_error_redirect("invalid_state"), status_code=303)
+        return RedirectResponse(url=error_redirect("invalid_state"), status_code=303)
     provider_error = await _oauth_callback_error(request)
     if provider_error:
         return RedirectResponse(
-            url=auth_error_redirect(_oauth_error_code(provider_error), next_path=next_path),
+            url=error_redirect(_oauth_error_code(provider_error)),
             status_code=303,
         )
     try:
@@ -401,36 +417,36 @@ async def _oauth_callback_impl(
                     "oauth_link_conflict",
                     extra={"provider": provider, "reason": type(exc).__name__},
                 )
-                return RedirectResponse(url=auth_error_redirect("conflict"), status_code=303)
+                return RedirectResponse(
+                    url=account_link_error_redirect("conflict"), status_code=303
+                )
             except (OAuthLinkError, PasswordAuthError) as exc:
                 db.commit()
                 logger.warning(
                     "oauth_link_failed",
                     extra={"provider": provider, "reason": type(exc).__name__},
                 )
-                return RedirectResponse(url=auth_error_redirect("invalid_state"), status_code=303)
+                return RedirectResponse(
+                    url=account_link_error_redirect("invalid_state"), status_code=303
+                )
         else:
             user = get_or_create_oauth_user(db, provider=provider, raw_claims=raw_claims)
     except OAuthAccountBlockedError as exc:
         logger.warning(
             "oauth_login_blocked", extra={"provider": provider, "reason": type(exc).__name__}
         )
-        return RedirectResponse(
-            url=auth_error_redirect("blocked", next_path=next_path), status_code=303
-        )
+        return RedirectResponse(url=error_redirect("blocked"), status_code=303)
     except OAuthStateError as exc:
         logger.warning(
             "oauth_login_failed", extra={"provider": provider, "reason": type(exc).__name__}
         )
-        return RedirectResponse(
-            url=auth_error_redirect("invalid_state", next_path=next_path), status_code=303
-        )
+        return RedirectResponse(url=error_redirect("invalid_state"), status_code=303)
     except OAuthProviderResponseError as exc:
         logger.warning(
             "oauth_login_failed", extra={"provider": provider, "reason": type(exc).__name__}
         )
         return RedirectResponse(
-            url=auth_error_redirect(_oauth_error_code(exc.error), next_path=next_path),
+            url=error_redirect(_oauth_error_code(exc.error)),
             status_code=303,
         )
     except OAuthError as exc:
@@ -439,16 +455,14 @@ async def _oauth_callback_impl(
             "oauth_login_failed", extra={"provider": provider, "reason": type(exc).__name__}
         )
         return RedirectResponse(
-            url=auth_error_redirect(_oauth_error_code(oauth_error), next_path=next_path),
+            url=error_redirect(_oauth_error_code(oauth_error)),
             status_code=303,
         )
     except (HTTPError, OAuthLinkError, PasswordAuthError, IntegrityError, ValueError) as exc:
         logger.warning(
             "oauth_login_failed", extra={"provider": provider, "reason": type(exc).__name__}
         )
-        return RedirectResponse(
-            url=auth_error_redirect("provider_failure", next_path=next_path), status_code=303
-        )
+        return RedirectResponse(url=error_redirect("provider_failure"), status_code=303)
 
     redirect = RedirectResponse(
         url=(f"/app?auth_linked={provider}" if link_token else next_path or "/app"),
