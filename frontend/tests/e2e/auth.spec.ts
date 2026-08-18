@@ -121,6 +121,44 @@ test('Login показывает только configured providers и контр
   await expect(page.getByText('secret-code')).toHaveCount(0);
 });
 
+test('Повторить сохраняет контраст и единый hover с provider-кнопками', async ({ page }) => {
+  await mockAuthApi(page, { providers: ['google'] });
+
+  for (const scheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
+    await page.goto('/login?auth_error=provider_failure');
+
+    const retry = page.getByRole('button', { name: 'Повторить' });
+    const provider = page.getByRole('link', { name: 'Продолжить с Google' });
+    await retry.hover();
+    const retryStyles = await retry.evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return {
+        backgroundColor: styles.backgroundColor,
+        borderColor: styles.borderColor,
+        color: styles.color,
+        transform: styles.transform,
+      };
+    });
+    await provider.hover();
+    const providerStyles = await provider.evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return {
+        backgroundColor: styles.backgroundColor,
+        borderColor: styles.borderColor,
+        color: styles.color,
+        transform: styles.transform,
+      };
+    });
+
+    expect(retryStyles).toEqual(providerStyles);
+    expect(retryStyles.backgroundColor).toBe(
+      scheme === 'light' ? 'rgb(223, 230, 220)' : 'rgb(32, 42, 35)',
+    );
+    expect(retryStyles.color).toBe(scheme === 'light' ? 'rgb(23, 32, 24)' : 'rgb(242, 246, 239)');
+  }
+});
+
 test('already authenticated Login возвращает в safe destination', async ({ page }) => {
   await mockAuthApi(page, { authenticated: true });
   await page.goto('/login?next=%2Fapp');

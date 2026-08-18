@@ -185,6 +185,18 @@
   border: 1px solid var(--landing-border);
   background: transparent;
   color: var(--landing-ink);
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    transform 120ms ease;
+}
+
+.login-retry:hover {
+  border-color: var(--landing-muted);
+  background: var(--landing-secondary);
+  color: var(--landing-ink);
+  transform: translateY(-1px);
 }
 
 .login-dev {
@@ -282,7 +294,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .login-card .oauth-button {
+  .login-card .oauth-button,
+  .login-retry {
     transition: none;
   }
 }
