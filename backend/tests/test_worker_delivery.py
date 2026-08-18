@@ -57,6 +57,27 @@ def test_telegram_delivery_propagates_timeout() -> None:
     asyncio.run(deliver())
 
 
+def test_telegram_delivery_rejects_external_or_non_app_action_urls() -> None:
+    async def deliver() -> None:
+        async with httpx.AsyncClient() as client:
+            with pytest.raises(ValueError, match="unsafe app notification URL"):
+                await send_telegram_message(
+                    client,
+                    123456,
+                    "test notification",
+                    open_app_path="https://attacker.example/app",
+                )
+            with pytest.raises(ValueError, match="unsafe app notification URL"):
+                await send_telegram_message(
+                    client,
+                    123456,
+                    "test notification",
+                    open_app_path="/admin",
+                )
+
+    asyncio.run(deliver())
+
+
 @pytest.mark.parametrize(
     ("error", "expected"),
     [

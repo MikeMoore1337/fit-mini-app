@@ -624,6 +624,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/coach/clients/{client_id}/workouts/{workout_id}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Client Workout Comments */
+        get: operations["get_client_workout_comments_api_v1_coach_clients__client_id__workouts__workout_id__comments_get"];
+        put?: never;
+        /** Add Client Workout Comment */
+        post: operations["add_client_workout_comment_api_v1_coach_clients__client_id__workouts__workout_id__comments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/coach/clients/{client_id}/workouts/{workout_id}/comments/{comment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Client Workout Comment */
+        patch: operations["update_client_workout_comment_api_v1_coach_clients__client_id__workouts__workout_id__comments__comment_id__patch"];
+        trace?: never;
+    };
     "/api/v1/coach/clients": {
         parameters: {
             query?: never;
@@ -878,6 +913,23 @@ export interface paths {
         post?: never;
         /** Remove Coach Client Invite By Id */
         delete: operations["remove_coach_client_invite_by_id_api_v1_coach_client_invites_id__invite_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/{workout_id}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get My Workout Comments */
+        get: operations["get_my_workout_comments_api_v1_workouts__workout_id__comments_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -3048,6 +3100,8 @@ export interface components {
             status: string;
             /** Sent At */
             sent_at?: string | null;
+            /** Action Url */
+            action_url?: string | null;
         };
         /** NotificationSettingResponse */
         NotificationSettingResponse: {
@@ -3920,6 +3974,64 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** WorkoutCommentCreate */
+        WorkoutCommentCreate: {
+            /** Body */
+            body: string;
+            /** Workout Exercise Id */
+            workout_exercise_id?: number | null;
+        };
+        /** WorkoutCommentResponse */
+        WorkoutCommentResponse: {
+            /** Id */
+            id: number;
+            /** Trainer Author Id */
+            trainer_author_id: number;
+            /** Client User Id */
+            client_user_id: number;
+            /** Workout Id */
+            workout_id: number;
+            /** Workout Exercise Id */
+            workout_exercise_id?: number | null;
+            /** Body */
+            body: string;
+            /**
+             * Body Format
+             * @default plain_text
+             * @constant
+             */
+            body_format: "plain_text";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Updated At */
+            updated_at?: string | null;
+            /** Revisions */
+            revisions?: components["schemas"]["WorkoutCommentRevisionResponse"][];
+        };
+        /** WorkoutCommentRevisionResponse */
+        WorkoutCommentRevisionResponse: {
+            /** Id */
+            id: number;
+            /** Revision Number */
+            revision_number: number;
+            /** Body */
+            body: string;
+            /** Edited By User Id */
+            edited_by_user_id: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** WorkoutCommentUpdate */
+        WorkoutCommentUpdate: {
+            /** Body */
+            body: string;
         };
         /** WorkoutExerciseItem */
         WorkoutExerciseItem: {
@@ -5439,6 +5551,111 @@ export interface operations {
             };
         };
     };
+    get_client_workout_comments_api_v1_coach_clients__client_id__workouts__workout_id__comments_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: number;
+                workout_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkoutCommentResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_client_workout_comment_api_v1_coach_clients__client_id__workouts__workout_id__comments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: number;
+                workout_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkoutCommentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkoutCommentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_client_workout_comment_api_v1_coach_clients__client_id__workouts__workout_id__comments__comment_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: number;
+                workout_id: number;
+                comment_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkoutCommentUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkoutCommentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     coach_clients_api_v1_coach_clients_get: {
         parameters: {
             query?: never;
@@ -5916,6 +6133,37 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_my_workout_comments_api_v1_workouts__workout_id__comments_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workout_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkoutCommentResponse"][];
+                };
             };
             /** @description Validation Error */
             422: {

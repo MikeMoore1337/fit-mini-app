@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session, joinedload
 from fitminiapp_api.api.dependencies.auth import require_user
 from fitminiapp_api.core.timezone import now_for_user_naive, today_for_user
 from fitminiapp_api.db.session import get_db
+from fitminiapp_api.models.feedback import WorkoutComment, WorkoutCommentRevision
+from fitminiapp_api.models.notification import Notification
 from fitminiapp_api.models.program import (
     UserProgram,
     UserWorkout,
@@ -14,6 +16,7 @@ from fitminiapp_api.models.program import (
     UserWorkoutSet,
 )
 from fitminiapp_api.models.user import BodyMeasurement, User
+from fitminiapp_api.schemas.feedback import WorkoutCommentResponse
 from fitminiapp_api.schemas.progress import ProgressPeriodDays, ProgressSummaryResponse
 from fitminiapp_api.schemas.workout import (
     BodyMeasurementResponse,
@@ -34,8 +37,26 @@ from fitminiapp_api.services.exercise_guides import get_exercise_guide
 from fitminiapp_api.services.notifications import queue_telegram_notification
 from fitminiapp_api.services.nutrition import NutritionError, recalculate_nutrition_target
 from fitminiapp_api.services.progress import build_progress_summary
+from fitminiapp_api.services.workout_comments import (
+    WorkoutCommentError,
+    list_client_workout_comments,
+    serialize_workout_comment,
+)
 
 router = APIRouter()
+
+
+@router.get("/{workout_id}/comments", response_model=list[WorkoutCommentResponse])
+def get_my_workout_comments(
+    workout_id: int,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        comments = list_client_workout_comments(db, current_user, workout_id)
+    except WorkoutCommentError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    return [serialize_workout_comment(comment) for comment in comments]
 
 
 def _get_user_workout_or_404(db: Session, current_user: User, workout_id: int) -> UserWorkout:
@@ -92,6 +113,25 @@ def _reconcile_program_completion(db: Session, program: UserProgram, current_use
 def _delete_workouts(db: Session, workout_ids: list[int]) -> int:
     if not workout_ids:
         return 0
+
+    comment_ids = [
+        item.id
+        for item in db.query(WorkoutComment.id)
+        .filter(WorkoutComment.workout_id.in_(workout_ids))
+        .all()
+    ]
+    if comment_ids:
+        db.query(Notification).filter(
+            Notification.dedupe_key.in_(
+                [f"trainer_feedback:{comment_id}" for comment_id in comment_ids]
+            )
+        ).delete(synchronize_session=False)
+        db.query(WorkoutCommentRevision).filter(
+            WorkoutCommentRevision.comment_id.in_(comment_ids)
+        ).delete(synchronize_session=False)
+        db.query(WorkoutComment).filter(WorkoutComment.id.in_(comment_ids)).delete(
+            synchronize_session=False
+        )
 
     workout_exercise_ids = [
         item.id
