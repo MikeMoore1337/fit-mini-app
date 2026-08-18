@@ -24,7 +24,7 @@ def hash_token(raw_token: str) -> str:
     return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
 
 
-def build_access_token(user_id: int) -> tuple[str, str, datetime]:
+def build_access_token(user_id: int, *, session_family_id: str) -> tuple[str, str, datetime]:
     now_aware = datetime.now(UTC)
     expires_at_aware = now_aware + timedelta(minutes=settings.access_token_expire_minutes)
     expires_at = expires_at_aware.replace(tzinfo=None)
@@ -34,6 +34,7 @@ def build_access_token(user_id: int) -> tuple[str, str, datetime]:
         "sub": str(user_id),
         "type": "access",
         "jti": jti,
+        "sid": session_family_id,
         "iat": int(now_aware.timestamp()),
         "exp": int(expires_at_aware.timestamp()),
     }
@@ -41,7 +42,7 @@ def build_access_token(user_id: int) -> tuple[str, str, datetime]:
     return token, jti, expires_at
 
 
-def build_refresh_token(user_id: int) -> tuple[str, str, datetime]:
+def build_refresh_token(user_id: int, *, session_family_id: str) -> tuple[str, str, datetime]:
     now_aware = datetime.now(UTC)
     expires_at_aware = now_aware + timedelta(days=settings.refresh_token_expire_days)
     expires_at = expires_at_aware.replace(tzinfo=None)
@@ -51,6 +52,7 @@ def build_refresh_token(user_id: int) -> tuple[str, str, datetime]:
         "sub": str(user_id),
         "type": "refresh",
         "jti": jti,
+        "sid": session_family_id,
         "iat": int(now_aware.timestamp()),
         "exp": int(expires_at_aware.timestamp()),
     }

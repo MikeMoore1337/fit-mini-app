@@ -4,13 +4,16 @@ import json
 import re
 import time
 from datetime import UTC, date, datetime, timedelta
+from http.cookies import SimpleCookie
 from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlparse
 from xml.etree import ElementTree
 
 import pytest
+from fastapi import Response
 from pydantic import ValidationError
 
+from fitminiapp_api.api.v1.auth import issue_token_pair
 from fitminiapp_api.core.config import Settings, settings
 from fitminiapp_api.core.timezone import to_msk_naive, today_msk
 from fitminiapp_api.db.session import get_session_context
@@ -90,6 +93,17 @@ def auth(
     assert response.status_code == 200
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
+
+
+def auth_existing_user(client, user_id: int) -> dict[str, str]:
+    response = Response()
+    with get_session_context() as db:
+        user = db.query(User).filter(User.id == user_id).one()
+        token_pair = issue_token_pair(db, user, response)
+    cookie = SimpleCookie()
+    cookie.load(response.headers["set-cookie"])
+    client.cookies.set(settings.refresh_cookie_name, cookie[settings.refresh_cookie_name].value)
+    return {"Authorization": f"Bearer {token_pair.access_token}"}
 
 
 def create_coach_invite_token(client, coach_headers):
@@ -3671,7 +3685,8 @@ def test_unconfigured_oauth_provider_is_not_exposed(client, monkeypatch):
     assert config.json()["oauth_providers"] == []
 
     started = client.get("/api/v1/auth/oauth/google/start")
-    assert started.status_code == 404
+    assert started.status_code == 303
+    assert started.headers["location"] == "/app?auth_error=unavailable"
 
 
 def test_browser_telegram_login_reuses_existing_telegram_user(client):
@@ -3797,7 +3812,6 @@ def test_social_login_does_not_auto_link_only_by_matching_email(client, monkeypa
 
 def test_web_account_explicitly_links_telegram_and_keeps_its_data(client, monkeypatch):
     from fitminiapp_api.services.oauth_login import get_or_create_oauth_user
-    from fitminiapp_api.services.security import create_access_token
 
     monkeypatch.setattr(settings, "telegram_bot_username", "your_fitness_coach_bot")
     with get_session_context() as db:
@@ -3813,7 +3827,7 @@ def test_web_account_explicitly_links_telegram_and_keeps_its_data(client, monkey
         )
         web_user_id = web_user.id
 
-    web_headers = {"Authorization": f"Bearer {create_access_token(web_user_id)}"}
+    web_headers = auth_existing_user(client, web_user_id)
     profile = client.patch(
         "/api/v1/me/profile",
         headers=web_headers,
@@ -3868,7 +3882,6 @@ def test_web_account_explicitly_links_telegram_and_keeps_its_data(client, monkey
 
 def test_telegram_link_rejects_existing_account_and_consumes_token(client, monkeypatch):
     from fitminiapp_api.services.oauth_login import get_or_create_oauth_user
-    from fitminiapp_api.services.security import create_access_token
 
     monkeypatch.setattr(settings, "telegram_bot_username", "your_fitness_coach_bot")
     existing_headers = auth(client, telegram_user_id=8_820_002, username="existing_owner")
@@ -3885,7 +3898,7 @@ def test_telegram_link_rejects_existing_account_and_consumes_token(client, monke
         )
         web_user_id = web_user.id
 
-    web_headers = {"Authorization": f"Bearer {create_access_token(web_user_id)}"}
+    web_headers = auth_existing_user(client, web_user_id)
     created = client.post("/api/v1/me/auth/telegram-link", headers=web_headers)
     start_payload = parse_qs(urlparse(created.json()["telegram_url"]).query)["start"][0]
     raw_token = start_payload.removeprefix("link_")
@@ -4014,7 +4027,7 @@ def test_oauth_link_refuses_identity_owned_by_another_account(client, monkeypatc
     callback = client.get("/api/v1/auth/oauth/google/callback", follow_redirects=False)
 
     assert callback.status_code == 303
-    assert callback.headers["location"] == "/app?auth_error=oauth_link_conflict"
+    assert callback.headers["location"] == "/app?auth_error=conflict"
     me = client.get("/api/v1/me", headers=telegram_headers).json()
     assert me["id"] == telegram_id
     assert me["auth_providers"] == ["telegram"]

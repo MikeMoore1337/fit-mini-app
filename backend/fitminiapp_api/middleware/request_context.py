@@ -93,6 +93,9 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
                 response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
             elif path.startswith("/static/exercise-guides/"):
                 response.headers["Cache-Control"] = "public, max-age=2592000"
+            elif path.startswith("/api/v1/") and not path.startswith("/api/v1/public/"):
+                response.headers["Cache-Control"] = "no-store, private"
+                response.headers["Pragma"] = "no-cache"
             if not path.startswith("/static"):
                 _log_request(
                     request,

@@ -159,7 +159,7 @@ def test_vk_oauth_rejects_callback_with_wrong_state_without_network_call(client,
     callback = _finish_vk(client, "attacker-state")
 
     assert callback.status_code == 303
-    assert callback.headers["location"] == "/app?auth_error=oauth"
+    assert callback.headers["location"] == "/app?auth_error=invalid_state"
     assert requests == []
 
 

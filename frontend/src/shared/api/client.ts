@@ -1,4 +1,21 @@
 const ACCESS_TOKEN_KEY = 'fit_access_token';
+const AUTH_CHANNEL_NAME = 'fit_auth_session';
+
+type AuthChannelMessage = { type: 'access-token'; token: string } | { type: 'logout' };
+
+const authChannel =
+  typeof window !== 'undefined' && typeof window.BroadcastChannel === 'function'
+    ? new window.BroadcastChannel(AUTH_CHANNEL_NAME)
+    : null;
+
+authChannel?.addEventListener('message', (event: MessageEvent<AuthChannelMessage>) => {
+  if (!event.data || typeof event.data !== 'object' || !('type' in event.data)) return;
+  if (event.data.type === 'access-token' && typeof event.data.token === 'string') {
+    sessionStorage.setItem(ACCESS_TOKEN_KEY, event.data.token);
+  } else if (event.data.type === 'logout') {
+    sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+  }
+});
 
 export class ApiError extends Error {
   status: number;
@@ -29,10 +46,12 @@ export function getAccessToken(): string | null {
 
 export function setAccessToken(token: string): void {
   sessionStorage.setItem(ACCESS_TOKEN_KEY, token);
+  authChannel?.postMessage({ type: 'access-token', token } satisfies AuthChannelMessage);
 }
 
 export function clearAccessToken(): void {
   sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+  authChannel?.postMessage({ type: 'logout' } satisfies AuthChannelMessage);
 }
 
 async function responseError(response: Response): Promise<ApiError> {
@@ -60,29 +79,43 @@ async function responseError(response: Response): Promise<ApiError> {
 
 let refreshPromise: Promise<boolean> | null = null;
 
+async function requestAccessTokenRefresh(): Promise<boolean> {
+  try {
+    const response = await fetch('/api/v1/auth/refresh', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) clearAccessToken();
+      return false;
+    }
+    const data = (await response.json()) as { access_token?: unknown };
+    if (typeof data.access_token !== 'string' || !data.access_token) {
+      clearAccessToken();
+      return false;
+    }
+    setAccessToken(data.access_token);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function refreshAccessToken(): Promise<boolean> {
   if (refreshPromise) return refreshPromise;
   refreshPromise = (async () => {
     try {
-      const response = await fetch('/api/v1/auth/refresh', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        body: '{}',
-      });
-      if (!response.ok) {
-        clearAccessToken();
-        return false;
+      const tokenBeforeLock = getAccessToken();
+      if (navigator.locks?.request) {
+        return await navigator.locks.request('fit-auth-refresh', async () => {
+          const tokenAfterLock = getAccessToken();
+          if (tokenAfterLock && tokenAfterLock !== tokenBeforeLock) return true;
+          return requestAccessTokenRefresh();
+        });
       }
-      const data = (await response.json()) as { access_token?: unknown };
-      if (typeof data.access_token !== 'string' || !data.access_token) {
-        clearAccessToken();
-        return false;
-      }
-      setAccessToken(data.access_token);
-      return true;
-    } catch {
-      return false;
+      return await requestAccessTokenRefresh();
     } finally {
       refreshPromise = null;
     }

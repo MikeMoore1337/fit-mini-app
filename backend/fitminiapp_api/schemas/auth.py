@@ -2,6 +2,8 @@ import re
 
 from pydantic import BaseModel, Field, field_validator
 
+from fitminiapp_api.services.auth_redirects import safe_auth_next_path
+
 
 class DevLoginRequest(BaseModel):
     telegram_user_id: int = Field(..., ge=1)
@@ -47,8 +49,8 @@ def normalize_local_username(value: str) -> str:
 def normalize_next_path(value: str | None) -> str | None:
     if value is None or not value.strip():
         return None
-    normalized = value.strip()
-    if not re.fullmatch(r"/join/[A-Za-z0-9_-]{20,128}", normalized):
+    normalized = safe_auth_next_path(value)
+    if normalized is None:
         raise ValueError("Некорректный адрес возврата")
     return normalized
 

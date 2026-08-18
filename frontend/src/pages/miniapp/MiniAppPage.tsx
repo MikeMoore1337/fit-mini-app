@@ -108,10 +108,18 @@ export default function MiniAppPage() {
     };
     if (linkedProvider) {
       toast(`${labels[linkedProvider] ?? linkedProvider} привязан к аккаунту`);
-    } else if (authError === 'oauth_link_conflict') {
+    } else if (authError === 'conflict') {
       toast('Этот способ входа уже привязан к другому аккаунту', 'error');
+    } else if (authError === 'denied') {
+      toast('Авторизация отменена или не разрешена', 'error');
+    } else if (authError === 'invalid_state') {
+      toast('Ссылка авторизации недействительна или устарела', 'error');
+    } else if (authError === 'blocked') {
+      toast('Аккаунт заблокирован', 'error');
+    } else if (authError === 'unavailable') {
+      toast('Этот способ входа временно недоступен', 'error');
     } else {
-      toast('Не удалось завершить авторизацию', 'error');
+      toast('Не удалось связаться с сервисом авторизации', 'error');
     }
 
     params.delete('auth_linked');
