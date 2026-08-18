@@ -12,9 +12,9 @@ const canonicalSvgPaths = [
 
 async function assertHeaderMark(page: Page, surface: 'light' | 'dark') {
   const mark = page.locator('.landing-header .landing-brand__mark');
-  await expect(mark).toHaveAttribute('src', `/assets/brand/yfc-mark-${surface}.svg`);
-  await expect(mark).toHaveAttribute('width', '36');
-  await expect(mark).toHaveAttribute('height', '36');
+  await expect(mark).toHaveAttribute('src', `/assets/brand/yfc-logo-${surface}.svg`);
+  await expect(mark).toHaveAttribute('width', '44');
+  await expect(mark).toHaveAttribute('height', '44');
   await expect(mark).toHaveAttribute('alt', '');
 }
 
@@ -37,7 +37,7 @@ test('canonical brand assets render on light and dark public surfaces', async ({
       await page.screenshot({ path: '../.artifacts/brand/landing-light-desktop.png' });
     }
 
-    await page.getByRole('combobox', { name: 'Тема оформления' }).selectOption('dark');
+    await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
     await assertHeaderMark(page, 'dark');
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
 

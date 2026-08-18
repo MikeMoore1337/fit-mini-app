@@ -37,9 +37,7 @@ describe('LandingPage', () => {
     );
 
     expect(container.firstChild).toHaveClass('public-shell--dark');
-    fireEvent.change(screen.getByRole('combobox', { name: 'Тема оформления' }), {
-      target: { value: 'light' },
-    });
+    fireEvent.click(screen.getByRole('button', { name: 'Включить светлую тему' }));
     expect(container.firstChild).toHaveClass('public-shell--light');
     expect(localStorage.getItem('app-theme')).toBe('light');
   });

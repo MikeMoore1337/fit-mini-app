@@ -75,7 +75,7 @@ test('лендинг остаётся адаптивным на контроль
     expect(pageMetrics.documentWidth).toBeLessThanOrEqual(pageMetrics.viewport);
     expect(pageMetrics.bodyWidth).toBeLessThanOrEqual(pageMetrics.viewport);
     await expect(page.getByRole('link', { name: /открыть приложение/i })).toBeVisible();
-    await expect(page.getByRole('combobox', { name: 'Тема оформления' })).toBeInViewport();
+    await expect(page.getByRole('button', { name: /Включить .* тему/ })).toBeInViewport();
     await expect(page.locator('.landing-platform-card')).toHaveCount(2);
   }
 });
@@ -616,18 +616,18 @@ test('цветовая система сохраняет иерархию в с�
   await mockApi(page);
   await page.goto('/app');
 
-  const authPanel = page.locator('.auth-panel--branded');
-  await expect(page.getByRole('heading', { name: 'Вход в Your Fitness Coach' })).toBeVisible();
+  const authPanel = page.locator('.login-card');
+  await expect(page.getByRole('heading', { name: 'Войти в Your Fitness Coach' })).toBeVisible();
   await expect(authPanel).toHaveCSS('background-color', 'rgb(251, 252, 247)');
-  await expect(authPanel).toHaveCSS('border-color', 'rgb(205, 211, 201)');
+  await expect(authPanel).toHaveCSS('border-color', 'rgb(213, 219, 209)');
 
   const clientButton = page.getByRole('button', { name: 'Клиент' });
   await expect(clientButton).toHaveCSS('background-color', 'rgb(232, 237, 228)');
   await expect(clientButton).toHaveCSS('color', 'rgb(23, 32, 24)');
 
-  await page.getByRole('combobox', { name: 'Тема оформления' }).selectOption('dark');
+  await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
   await expect(authPanel).toHaveCSS('background-color', 'rgb(21, 28, 23)');
-  await expect(authPanel).toHaveCSS('border-color', 'rgb(52, 64, 56)');
+  await expect(authPanel).toHaveCSS('border-color', 'rgb(43, 55, 47)');
   await expect(clientButton).toHaveCSS('background-color', 'rgb(32, 42, 35)');
   await expect(clientButton).toHaveCSS('color', 'rgb(242, 246, 239)');
 
@@ -635,7 +635,7 @@ test('цветовая система сохраняет иерархию в с�
   const selectedTab = page.getByRole('tab', { name: 'Сегодня' });
   await expect(selectedTab).toHaveCSS('background-color', 'rgb(182, 242, 56)');
   await expect(selectedTab).toHaveCSS('color', 'rgb(23, 32, 24)');
-  await page.getByRole('combobox', { name: 'Тема оформления' }).selectOption('light');
+  await page.getByRole('button', { name: 'Включить светлую тему' }).click();
   await expect(selectedTab).toHaveCSS('background-color', 'rgb(24, 37, 29)');
   await expect(selectedTab).toHaveCSS('color', 'rgb(255, 255, 255)');
 });
@@ -643,23 +643,23 @@ test('цветовая система сохраняет иерархию в с�
 test('Web theme preference следует системе и сохраняет ручной выбор', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('/');
-  const selector = page.getByRole('combobox', { name: 'Тема оформления' });
-  await expect(selector).toHaveValue('system');
-  await selector.focus();
-  await expect(selector).toBeFocused();
+  let toggle = page.getByRole('button', { name: 'Включить тёмную тему' });
+  await toggle.focus();
+  await expect(toggle).toBeFocused();
   await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'light');
 
   await page.emulateMedia({ colorScheme: 'dark' });
   await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
 
-  await selector.selectOption('light');
+  toggle = page.getByRole('button', { name: 'Включить светлую тему' });
+  await toggle.click();
   await page.emulateMedia({ colorScheme: 'dark' });
   await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'light');
   await page.reload();
-  await expect(page.getByRole('combobox', { name: 'Тема оформления' })).toHaveValue('light');
+  await expect(page.getByRole('button', { name: 'Включить тёмную тему' })).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'light');
 
-  await page.getByRole('combobox', { name: 'Тема оформления' }).selectOption('system');
+  await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
 });
 
@@ -713,8 +713,7 @@ test('Mobile Web и Telegram используют одну YFC palette и гео
   await telegramPage.goto('/app');
   await expect(webPage.getByRole('heading', { name: 'Демо пользователь' })).toBeVisible();
   await expect(telegramPage.getByRole('heading', { name: 'Демо пользователь' })).toBeVisible();
-  await webPage.getByRole('combobox', { name: 'Тема оформления' }).selectOption('light');
-  await expect(telegramPage.getByRole('combobox', { name: 'Тема оформления' })).not.toBeAttached();
+  await expect(telegramPage.getByRole('button', { name: /Включить .* тему/ })).not.toBeAttached();
 
   const snapshot = (page: Page) =>
     page.evaluate(() => {
@@ -745,7 +744,7 @@ test('Mobile Web и Telegram используют одну YFC palette и гео
     ),
   ).toBe('#f1f3ec');
 
-  await webPage.getByRole('combobox', { name: 'Тема оформления' }).selectOption('dark');
+  await webPage.getByRole('button', { name: 'Включить тёмную тему' }).click();
   await telegramPage.evaluate(() =>
     (
       window as unknown as Window & { __setTelegramTheme(theme: 'light' | 'dark'): void }
@@ -765,7 +764,7 @@ test('primary CTA лендинга меняется вместе с темой',
 
   await expect(primary).toHaveCSS('background-color', 'rgb(24, 37, 29)');
   await expect(primary).toHaveCSS('color', 'rgb(255, 255, 255)');
-  await page.getByRole('combobox', { name: 'Тема оформления' }).selectOption('dark');
+  await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
   await expect(primary).toHaveCSS('background-color', 'rgb(182, 242, 56)');
   await expect(primary).toHaveCSS('color', 'rgb(23, 32, 24)');
 });
