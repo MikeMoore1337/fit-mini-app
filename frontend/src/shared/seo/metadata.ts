@@ -2,6 +2,9 @@ import { getPublicContentPage, type PublicContentPage } from '../../content/publ
 
 export const INDEX_ROBOTS = 'index, follow';
 export const NOINDEX_ROBOTS = 'noindex, nofollow';
+export const SOCIAL_IMAGE_PATH = '/assets/brand/yfc-social-preview.png';
+export const SOCIAL_IMAGE_ALT =
+  'Your Fitness Coach — тренировки, питание и прогресс в браузере и Telegram';
 
 function upsertMeta(
   selector: string,
@@ -24,6 +27,12 @@ function canonicalOrigin(): string {
 
 function absoluteUrl(path: string): string {
   return path === '/' ? `${canonicalOrigin()}/` : `${canonicalOrigin()}${path}`;
+}
+
+function removeSocialMetadata(): void {
+  document.head
+    .querySelectorAll('meta[property^="og:"], meta[name^="twitter:"]')
+    .forEach((element) => element.remove());
 }
 
 function breadcrumbStructuredData(page: PublicContentPage): Record<string, unknown> | null {
@@ -135,9 +144,31 @@ export function applyRouteMetadata(path: string): void {
       page.kind === 'guide' ? 'article' : 'website',
     );
     upsertMeta('meta[property="og:url"]', 'property', 'og:url', canonical.href);
+    upsertMeta('meta[property="og:site_name"]', 'property', 'og:site_name', 'Your Fitness Coach');
+    upsertMeta('meta[property="og:locale"]', 'property', 'og:locale', 'ru_RU');
+    upsertMeta('meta[property="og:image"]', 'property', 'og:image', absoluteUrl(SOCIAL_IMAGE_PATH));
+    upsertMeta('meta[property="og:image:type"]', 'property', 'og:image:type', 'image/png');
+    upsertMeta('meta[property="og:image:width"]', 'property', 'og:image:width', '1200');
+    upsertMeta('meta[property="og:image:height"]', 'property', 'og:image:height', '630');
+    upsertMeta('meta[property="og:image:alt"]', 'property', 'og:image:alt', SOCIAL_IMAGE_ALT);
+    upsertMeta('meta[name="twitter:card"]', 'name', 'twitter:card', 'summary_large_image');
+    upsertMeta('meta[name="twitter:title"]', 'name', 'twitter:title', title);
+    upsertMeta(
+      'meta[name="twitter:description"]',
+      'name',
+      'twitter:description',
+      page.ogDescription,
+    );
+    upsertMeta(
+      'meta[name="twitter:image"]',
+      'name',
+      'twitter:image',
+      absoluteUrl(SOCIAL_IMAGE_PATH),
+    );
+    upsertMeta('meta[name="twitter:image:alt"]', 'name', 'twitter:image:alt', SOCIAL_IMAGE_ALT);
   } else {
     canonical?.remove();
-    document.head.querySelectorAll('meta[property^="og:"]').forEach((element) => element.remove());
+    removeSocialMetadata();
   }
   replaceStructuredData(page);
 }

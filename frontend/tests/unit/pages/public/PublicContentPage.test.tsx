@@ -18,7 +18,7 @@ describe('PublicContentPage', () => {
     cleanup();
     document.head
       .querySelectorAll(
-        'meta[name="description"], meta[name="robots"], meta[name="yandex"], meta[property^="og:"], link[rel="canonical"], script[type="application/ld+json"]',
+        'meta[name="description"], meta[name="robots"], meta[name="yandex"], meta[name^="twitter:"], meta[property^="og:"], link[rel="canonical"], script[type="application/ld+json"]',
       )
       .forEach((element) => element.remove());
     document.body.className = '';
@@ -78,10 +78,32 @@ describe('PublicContentPage', () => {
       'content',
       'article',
     );
+    expect(document.querySelector('meta[property="og:image"]')).toHaveAttribute(
+      'content',
+      `${window.location.origin}/assets/brand/yfc-social-preview.png`,
+    );
+    expect(document.querySelector('meta[property="og:image:width"]')).toHaveAttribute(
+      'content',
+      '1200',
+    );
+    expect(document.querySelector('meta[property="og:image:height"]')).toHaveAttribute(
+      'content',
+      '630',
+    );
+    expect(document.querySelector('meta[property="og:image:alt"]')).toHaveAttribute(
+      'content',
+      expect.stringMatching(/тренировки, питание и прогресс/i),
+    );
+    expect(document.querySelector('meta[name="twitter:card"]')).toHaveAttribute(
+      'content',
+      'summary_large_image',
+    );
 
     applyRouteMetadata('/app');
     expect(document.querySelector('script[type="application/ld+json"]')).toBeNull();
     expect(document.querySelector('link[rel="canonical"]')).toBeNull();
+    expect(document.querySelector('meta[property^="og:"]')).toBeNull();
+    expect(document.querySelector('meta[name^="twitter:"]')).toBeNull();
   });
 
   it('keeps all knowledge categories in one maintainable directory without empty routes', () => {

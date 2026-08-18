@@ -4,10 +4,11 @@ This runbook covers the manual, account-level work required to monitor the canon
 public SEO surface. It does not grant Codex access to Google Search Console, Yandex
 Webmaster, DNS, or production deployments.
 
-The current production indexation contract is intentionally small: only
-`https://your-fitness-coach.ru/` is indexable. The authenticated application,
-invitations, and technical routes stay out of the sitemap and return `noindex`.
-The canonical origin and its sitemap are defined in [operations.md](../operations.md).
+The current production indexation contract is intentionally limited to the canonical landing,
+product pages, knowledge directory, and reviewed guides declared in
+[`publicContent.json`](../../frontend/src/content/publicContent.json). The authenticated
+application, invitations, and technical routes stay out of the sitemap and return `noindex`. The
+canonical origin and its sitemap are defined in [operations.md](../operations.md).
 
 ## Ownership verification
 
@@ -30,6 +31,7 @@ and access review as operational security work.
 
    The backend renders these tags only on an indexable canonical page. Do not commit real
    tokens, add them to frontend build variables, or use them on app/private routes.
+
 3. For Yandex Webmaster, add the exact canonical HTTPS site and verify management rights
    with DNS TXT where practical. Its meta-tag or root HTML-file methods are alternatives
    when DNS is unavailable. Keep the selected proof available: Yandex periodically checks it.
