@@ -3197,7 +3197,8 @@ def test_root_serves_public_landing_spa(client):
     response = client.get("/")
 
     assert response.status_code == 200
-    assert '<div id="root"></div>' in response.text
+    assert '<main class="seo-fallback">' in response.text
+    assert "Тренировки, питание и прогресс" in response.text
     assert "no-store" in response.headers["cache-control"]
 
 
@@ -3235,7 +3236,7 @@ def test_landing_host_keeps_public_home_on_landing_domain(client, monkeypatch):
     response = client.get("/", headers={"Host": "your-fitness-coach.ru"})
 
     assert response.status_code == 200
-    assert '<div id="root"></div>' in response.text
+    assert '<main class="seo-fallback">' in response.text
 
 
 def test_public_seo_response_uses_canonical_metadata_and_truthful_structured_data(
@@ -3281,7 +3282,7 @@ def test_public_seo_response_injects_optional_webmaster_verification_tags(client
     assert "yandex-verification" not in private.text
 
 
-def test_robots_and_sitemap_publish_only_the_canonical_public_url(client, monkeypatch):
+def test_robots_and_sitemap_publish_only_canonical_public_urls(client, monkeypatch):
     from fitminiapp_api.core.config import settings
 
     monkeypatch.setattr(settings, "landing_domain", "your-fitness-coach.ru")
@@ -3301,8 +3302,91 @@ def test_robots_and_sitemap_publish_only_the_canonical_public_url(client, monkey
         for element in root.findall("{http://www.sitemaps.org/schemas/sitemap/0.9}url")
         for element in element.findall("{http://www.sitemaps.org/schemas/sitemap/0.9}loc")
     ]
-    assert urls == ["https://your-fitness-coach.ru/"]
+    assert urls == [
+        "https://your-fitness-coach.ru/",
+        "https://your-fitness-coach.ru/training",
+        "https://your-fitness-coach.ru/nutrition",
+        "https://your-fitness-coach.ru/progress",
+        "https://your-fitness-coach.ru/for-trainers",
+        "https://your-fitness-coach.ru/knowledge",
+        "https://your-fitness-coach.ru/knowledge/training/how-to-start-strength-training",
+        "https://your-fitness-coach.ru/knowledge/nutrition/kbju-as-a-reference",
+    ]
     assert all(segment not in sitemap.text for segment in ("/app", "/admin", "/coach", "/join"))
+
+
+@pytest.mark.parametrize(
+    ("path", "heading"),
+    [
+        ("/training", "План тренировки, который остаётся перед глазами"),
+        ("/nutrition", "Ориентиры КБЖУ без обещаний"),
+        ("/progress", "Прогресс, который можно проверить"),
+        ("/for-trainers", "Кабинет тренера для программ"),
+        ("/knowledge", "Материалы, которые помогают понять"),
+    ],
+)
+def test_public_content_routes_render_unique_crawlable_pages(client, monkeypatch, path, heading):
+    from fitminiapp_api.core.config import settings
+
+    monkeypatch.setattr(settings, "landing_domain", "your-fitness-coach.ru")
+    response = client.get(path, headers={"Host": "your-fitness-coach.ru"})
+
+    assert response.status_code == 200
+    assert response.headers["x-robots-tag"] == "index, follow"
+    assert f'<link rel="canonical" href="https://your-fitness-coach.ru{path}" />' in response.text
+    assert response.text.count("<h1>") == 1
+    assert heading in response.text
+    assert '<a href="/knowledge">База знаний</a>' in response.text
+    assert "Личный интерфейс Your Fitness Coach" not in response.text
+
+
+def test_public_guide_has_visible_editorial_metadata_and_truthful_schema(client, monkeypatch):
+    from fitminiapp_api.core.config import settings
+
+    monkeypatch.setattr(settings, "landing_domain", "your-fitness-coach.ru")
+    response = client.get(
+        "/knowledge/training/how-to-start-strength-training",
+        headers={"Host": "your-fitness-coach.ru"},
+    )
+
+    assert response.status_code == 200
+    assert '<nav aria-label="Хлебные крошки">' in response.text
+    assert "Редакция Your Fitness Coach" in response.text
+    assert '<time datetime="2026-08-15">' in response.text
+    assert "World Health Organization" in response.text
+    structured_data = re.search(
+        r'<script type="application/ld\+json">(.*?)</script>', response.text, re.DOTALL
+    )
+    assert structured_data is not None
+    payload = json.loads(structured_data.group(1))
+    assert [entry["@type"] for entry in payload["@graph"]] == [
+        "Article",
+        "BreadcrumbList",
+    ]
+    assert "review" not in structured_data.group(1).lower()
+
+    knowledge = client.get("/knowledge", headers={"Host": "your-fitness-coach.ru"})
+    assert "Опубликованные руководства" in knowledge.text
+    assert (
+        '<a href="/knowledge/training/how-to-start-strength-training">'
+        "Как начать силовые тренировки и не потерять план</a>" in knowledge.text
+    )
+
+
+def test_public_fallback_replaces_the_built_vite_marker_without_stale_landing_copy():
+    from fitminiapp_api.seo import render_frontend_document
+
+    template = (Path(__file__).resolve().parents[2] / "frontend" / "index.html").read_text(
+        encoding="utf-8"
+    )
+    guide, _ = render_frontend_document(template, "/knowledge/nutrition/kbju-as-a-reference")
+    private, _ = render_frontend_document(template, "/app")
+
+    assert guide.count("<!-- public-fallback-start -->") == 1
+    assert guide.count("<h1>") == 1
+    assert "КБЖУ как ориентир, а не обещание результата" in guide
+    assert "Выбирайте программу под свою задачу" not in guide
+    assert '<main class="seo-fallback">' not in private
 
 
 @pytest.mark.parametrize(
@@ -3324,6 +3408,7 @@ def test_private_frontend_routes_send_noindex_contract(client, path):
     assert '<meta name="robots" content="noindex, nofollow" />' in response.text
     assert 'rel="canonical"' not in response.text
     assert "application/ld+json" not in response.text
+    assert '<main class="seo-fallback">' not in response.text
 
 
 def test_canonical_hosts_and_missing_routes_do_not_create_duplicate_or_soft_404_pages(
@@ -3343,6 +3428,12 @@ def test_canonical_hosts_and_missing_routes_do_not_create_duplicate_or_soft_404_
     landing_app_slash = client.get(
         "/app/", headers={"Host": "your-fitness-coach.ru"}, follow_redirects=False
     )
+    app_host_public_page = client.get(
+        "/training", headers={"Host": "app.your-fitness-coach.ru"}, follow_redirects=False
+    )
+    trailing_public_page = client.get(
+        "/training/", headers={"Host": "your-fitness-coach.ru"}, follow_redirects=False
+    )
     missing = client.get("/does-not-exist")
 
     assert app_home.status_code == 308
@@ -3351,6 +3442,10 @@ def test_canonical_hosts_and_missing_routes_do_not_create_duplicate_or_soft_404_
     assert www_home.headers["location"] == "https://your-fitness-coach.ru/"
     assert landing_app_slash.status_code == 308
     assert landing_app_slash.headers["location"] == "https://app.your-fitness-coach.ru/app"
+    assert app_host_public_page.status_code == 308
+    assert app_host_public_page.headers["location"] == "https://your-fitness-coach.ru/training"
+    assert trailing_public_page.status_code == 308
+    assert trailing_public_page.headers["location"] == "https://your-fitness-coach.ru/training"
     assert missing.status_code == 404
 
 

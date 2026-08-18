@@ -826,6 +826,23 @@ body.landing-mode #root {
   color: #aeb9b0;
 }
 
+.landing-feature__link {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  width: fit-content;
+  margin-top: auto;
+  padding-top: 22px;
+  color: var(--landing-kicker) !important;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.landing-feature--coach .landing-feature__link {
+  color: var(--landing-green) !important;
+}
+
 .landing-workflow {
   width: 100%;
   padding-inline: max(24px, calc((100% - 1180px) / 2));
@@ -1139,6 +1156,10 @@ body.landing-mode #root {
   margin: 0;
   color: var(--landing-muted);
   font-size: 0.75rem;
+}
+
+.landing-footer p a {
+  text-underline-offset: 3px;
 }
 
 @media (max-width: 980px) {

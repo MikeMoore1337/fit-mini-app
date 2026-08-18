@@ -20,7 +20,7 @@ from fitminiapp_api.core.rate_limit import limiter
 from fitminiapp_api.db.session import engine
 from fitminiapp_api.middleware.canonical_host import redirect_landing_application_requests
 from fitminiapp_api.middleware.request_context import RequestContextMiddleware
-from fitminiapp_api.seo import public_origin, render_frontend_document
+from fitminiapp_api.seo import public_origin, public_page_paths, render_frontend_document
 
 APP_DIR = Path(__file__).resolve().parent
 BACKEND_DIR = APP_DIR.parent
@@ -175,13 +175,13 @@ def robots_txt() -> PlainTextResponse:
 
 @app.get("/sitemap.xml", include_in_schema=False)
 def sitemap() -> Response:
-    canonical_url = f"{public_origin()}/"
+    origin = public_origin()
+    urls = [f"{origin}/" if path == "/" else f"{origin}{path}" for path in public_page_paths()]
+    entries = "\n".join(f"  <url>\n    <loc>{url}</loc>\n  </url>" for url in urls)
     content = (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-        "  <url>\n"
-        f"    <loc>{canonical_url}</loc>\n"
-        "  </url>\n"
+        f"{entries}\n"
         "</urlset>\n"
     )
     return Response(
@@ -199,6 +199,22 @@ def miniapp() -> HTMLResponse:
 @app.get("/")
 def landing_page() -> HTMLResponse:
     return _frontend_index("/")
+
+
+def public_content_page(request: Request) -> HTMLResponse:
+    return _frontend_index(request.url.path)
+
+
+for public_path in public_page_paths():
+    if public_path == "/":
+        continue
+    app.add_api_route(
+        public_path,
+        public_content_page,
+        methods=["GET"],
+        include_in_schema=False,
+        name=f"public_{public_path.strip('/').replace('/', '_').replace('-', '_')}",
+    )
 
 
 @app.get("/admin")

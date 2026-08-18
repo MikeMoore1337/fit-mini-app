@@ -21,6 +21,7 @@ COPY --chown=appuser:appuser backend/alembic/ ./alembic/
 COPY --chown=appuser:appuser backend/fitminiapp_api/ ./fitminiapp_api/
 COPY --chown=appuser:appuser backend/alembic.ini backend/docker-entrypoint.sh backend/worker-entrypoint.sh backend/setup-entrypoint.sh ./
 COPY --from=frontend-build --chown=appuser:appuser /frontend/dist /app/frontend-dist
+COPY --from=frontend-build --chown=appuser:appuser /frontend/src/content/publicContent.json /app/frontend-dist/publicContent.json
 RUN chmod +x /app/docker-entrypoint.sh /app/worker-entrypoint.sh /app/setup-entrypoint.sh
 USER appuser
 CMD ["/app/docker-entrypoint.sh"]

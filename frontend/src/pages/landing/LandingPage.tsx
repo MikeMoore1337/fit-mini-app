@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
 import { ThemeIcon } from '../../shared/ui/ThemeIcon';
 import { applyRouteMetadata } from '../../shared/seo/metadata';
+import { appUrlForHostname } from '../../shared/navigation/appUrl';
+import { AppLink } from '../../shared/navigation/router';
 import './landing.css';
+
+export { appUrlForHostname } from '../../shared/navigation/appUrl';
 
 type LandingTheme = 'light' | 'dark';
 
@@ -16,12 +20,6 @@ function systemPrefersDark(): boolean {
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
 }
 
-export function appUrlForHostname(hostname: string): string {
-  return ['your-fitness-coach.ru', 'www.your-fitness-coach.ru'].includes(hostname)
-    ? 'https://app.your-fitness-coach.ru/app'
-    : '/app';
-}
-
 const features = [
   {
     number: '01',
@@ -29,6 +27,7 @@ const features = [
     title: 'Откройте приложение и сразу переходите к делу',
     text: 'Упражнения, подходы, повторения, рабочий вес и отдых уже собраны в понятном плане занятия.',
     variant: 'wide',
+    path: '/training',
   },
   {
     number: '02',
@@ -36,6 +35,7 @@ const features = [
     title: 'Выберите путь под свою задачу',
     text: 'Назначьте себе готовую программу, создайте собственную или занимайтесь по плану тренера.',
     variant: 'standard',
+    path: '/training',
   },
   {
     number: '03',
@@ -43,6 +43,7 @@ const features = [
     title: 'Принимайте решения по своим результатам',
     text: 'История тренировок, рабочие веса, личные рекорды и показатели тела помогают видеть динамику.',
     variant: 'standard',
+    path: '/progress',
   },
   {
     number: '04',
@@ -50,6 +51,7 @@ const features = [
     title: 'Получите ориентиры КБЖУ',
     text: 'Рассчитайте калории, белки, жиры и углеводы с учётом параметров, активности и цели.',
     variant: 'standard',
+    path: '/nutrition',
   },
   {
     number: '05',
@@ -57,6 +59,7 @@ const features = [
     title: 'Сверяйтесь с техникой в нужный момент',
     text: 'Каталог и информация об упражнениях доступны прямо во время работы с программой.',
     variant: 'standard',
+    path: '/knowledge',
   },
   {
     number: '06',
@@ -64,6 +67,7 @@ const features = [
     title: 'Ведите своих клиентов в одном кабинете',
     text: 'После одобрения заявки приглашайте клиентов, назначайте и корректируйте программы, отслеживайте тренировки, прогресс и показатели каждого человека.',
     variant: 'coach',
+    path: '/for-trainers',
   },
 ];
 
@@ -339,6 +343,9 @@ export default function LandingPage() {
                 </div>
                 <h3>{feature.title}</h3>
                 <p>{feature.text}</p>
+                <AppLink className="landing-feature__link" to={feature.path}>
+                  Подробнее <span aria-hidden="true">→</span>
+                </AppLink>
               </article>
             ))}
           </div>
@@ -438,12 +445,12 @@ export default function LandingPage() {
               Выберите готовую программу или соберите свою. Выполняйте занятия и отслеживайте
               прогресс в браузере — Telegram для этого не нужен.
             </p>
-            <a className="landing-button landing-audience__link" href={appUrl}>
-              Начать самостоятельно
+            <AppLink className="landing-button landing-audience__link" to="/training">
+              Узнать о тренировках
               <span className="landing-action__arrow" aria-hidden="true">
                 ↗
               </span>
-            </a>
+            </AppLink>
           </article>
           <article>
             <p className="landing-kicker">Вы тренер?</p>
@@ -453,12 +460,12 @@ export default function LandingPage() {
               После одобрения заявки сможете приглашать клиентов, назначать программы и следить за
               прогрессом.
             </p>
-            <a className="landing-button landing-audience__link" href={appUrl}>
-              Войти и подать заявку
+            <AppLink className="landing-button landing-audience__link" to="/for-trainers">
+              Возможности для тренеров
               <span className="landing-action__arrow" aria-hidden="true">
                 ↗
               </span>
-            </a>
+            </AppLink>
           </article>
         </section>
 
@@ -504,7 +511,11 @@ export default function LandingPage() {
           />
           <span>Your Fitness Coach</span>
         </a>
-        <p>Тренировки и прогресс в веб-приложении. Общение с тренером — в Telegram.</p>
+        <p>
+          <AppLink to="/training">Тренировки</AppLink> · <AppLink to="/nutrition">Питание</AppLink>{' '}
+          · <AppLink to="/knowledge">База знаний</AppLink> ·{' '}
+          <AppLink to="/for-trainers">Для тренеров</AppLink>
+        </p>
         <span>© {new Date().getFullYear()}</span>
       </footer>
     </div>

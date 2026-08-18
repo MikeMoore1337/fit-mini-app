@@ -95,19 +95,20 @@ callback URLs on the `app` hostname; the exact callbacks are listed in
 
 ### Search indexation contract
 
-- `https://your-fitness-coach.ru/` is the only current indexable URL. It is self-canonical,
-  listed in `/sitemap.xml`, and `/robots.txt` publishes that sitemap.
+- The canonical public landing, product pages and reviewed guides declared in
+  `frontend/src/content/publicContent.json` are indexable. Each is self-canonical, listed in
+  `/sitemap.xml`, and reachable through ordinary internal links. `/robots.txt` publishes that
+  sitemap.
 - Application, invitation and technical-auth HTML routes return `X-Robots-Tag: noindex, nofollow`.
   They deliberately remain crawlable enough for search engines to read that directive; `robots.txt`
   only disallows the API surface.
-- Do not add a URL to the sitemap until it has public, factual, crawler-visible content and a
-  self-canonical response. Future public content routes require an explicit metadata entry and
-  truthful structured data before publication.
-- The current Vite SPA has a static, no-JavaScript fallback for the landing only. Before adding
-  further indexable JS routes, introduce an appropriate prerender/SSR mechanism rather than relying
-  on client-side rendering. Keep public media dimensions/aspect ratios explicit, avoid blocking
-  SEO-only JavaScript, and re-check responsive layout and Core Web Vitals during the relevant
-  performance task.
+- Do not add a URL to the manifest or sitemap until it has public, factual, crawler-visible content,
+  a self-canonical response, crawlable internal links and truthful structured data.
+- The backend renders route-specific no-JavaScript content from the same public content manifest
+  used by React. Keep that fallback, visible page and metadata aligned. Public editorial and IA
+  rules are documented in [`seo/public-content.md`](seo/public-content.md).
+- Keep public media dimensions/aspect ratios explicit, avoid blocking SEO-only JavaScript, and
+  re-check responsive layout and Core Web Vitals when stabilized real product media is introduced.
 
 Ownership verification and ongoing Google Search Console/Yandex Webmaster monitoring are manual
 owner operations. Follow [the webmaster runbook](seo/search-console-yandex-webmaster.md); it also
