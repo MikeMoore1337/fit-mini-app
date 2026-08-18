@@ -8,10 +8,13 @@ from fitminiapp_api.api.dependencies.auth import require_user
 from fitminiapp_api.db.session import get_db
 from fitminiapp_api.models.user import User
 from fitminiapp_api.schemas.food import (
+    FoodBarcodeLookupResponse,
     FoodListResponse,
     FoodResponse,
+    FoodSearchResponse,
     UserFoodCreate,
     UserFoodUpdate,
+    validate_gtin,
 )
 from fitminiapp_api.schemas.food_diary import (
     FoodDiaryCopyDay,
@@ -30,6 +33,10 @@ from fitminiapp_api.schemas.recipe import (
     RecipeResponse,
     RecipeUpdate,
 )
+from fitminiapp_api.services.food_catalog import (
+    get_food_catalog_item_by_barcode,
+    search_food_catalog,
+)
 from fitminiapp_api.services.food_diary import (
     FoodDiaryConflictError,
     FoodDiaryError,
@@ -42,6 +49,7 @@ from fitminiapp_api.services.food_diary import (
     get_food_diary_day,
     update_food_diary_entry,
 )
+from fitminiapp_api.services.food_provider import FoodProvider, get_food_provider
 from fitminiapp_api.services.foods import (
     FoodConflictError,
     FoodError,
@@ -51,7 +59,6 @@ from fitminiapp_api.services.foods import (
     get_food_response,
     list_favorite_foods,
     list_recent_foods,
-    search_foods,
     set_food_favorite,
     update_user_food,
 )
@@ -113,18 +120,49 @@ def create_food(
         _raise_food_http_error(exc)
 
 
-@router.get("/foods/search", response_model=FoodListResponse)
+@router.get("/foods/search", response_model=FoodSearchResponse)
 def search_food_library(
     q: str = Query(min_length=2, max_length=100),
     limit: int = Query(default=20, ge=1, le=50),
     offset: int = Query(default=0, ge=0, le=10_000),
+    include_external: bool = False,
     current_user: User = Depends(require_user),
     db: Session = Depends(get_db),
+    provider: FoodProvider | None = Depends(get_food_provider),
 ):
     try:
-        return search_foods(db, current_user, q, limit=limit, offset=offset)
+        return search_food_catalog(
+            db,
+            current_user,
+            q,
+            limit=limit,
+            offset=offset,
+            include_external=include_external,
+            provider=provider,
+        )
     except FoodError as exc:
         _raise_food_http_error(exc)
+
+
+@router.get("/foods/barcode/{barcode}", response_model=FoodBarcodeLookupResponse)
+def get_food_by_barcode(
+    barcode: str,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+    provider: FoodProvider | None = Depends(get_food_provider),
+):
+    try:
+        normalized = validate_gtin(barcode)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if normalized is None:
+        raise HTTPException(status_code=422, detail="barcode is required")
+    return get_food_catalog_item_by_barcode(
+        db,
+        current_user,
+        normalized,
+        provider=provider,
+    )
 
 
 @router.get("/foods/recent", response_model=FoodListResponse)

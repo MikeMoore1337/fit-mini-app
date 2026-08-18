@@ -252,6 +252,25 @@ def get_food_response(db: Session, current_user: User, food_id: int) -> FoodResp
     return _serialize_rows([row])[0]
 
 
+def get_food_by_barcode_response(
+    db: Session,
+    current_user: User,
+    barcode: str,
+) -> FoodResponse | None:
+    query, _, _ = _food_metadata_query(db, current_user)
+    row = (
+        query.filter(Food.barcode == barcode)
+        .order_by(
+            case((Food.food_type == "user", 0), else_=1).asc(),
+            Food.id.asc(),
+        )
+        .first()
+    )
+    if row is None:
+        return None
+    return _serialize_rows([row])[0]
+
+
 def update_user_food(
     db: Session,
     current_user: User,

@@ -11,6 +11,14 @@ FoodProvenance = Literal["internal", "external", "user"]
 FoodTrustLevel = Literal["verified", "unverified"]
 FoodStatus = Literal["draft", "active", "disabled"]
 ServingUnit = Literal["g", "ml", "piece", "serving"]
+FoodProviderStatus = Literal[
+    "not_requested",
+    "not_needed",
+    "disabled",
+    "available",
+    "unavailable",
+    "rate_limited",
+]
 
 
 def validate_gtin(value: str | None) -> str | None:
@@ -151,6 +159,35 @@ class FoodListResponse(BaseModel):
     total: int = Field(ge=0)
     limit: int = Field(ge=1)
     offset: int = Field(ge=0)
+
+
+class ExternalFoodSource(BaseModel):
+    provider: str
+    attribution: str
+    source_url: HttpUrl
+    license: str
+    license_url: HttpUrl
+
+
+class ExternalFoodResponse(FoodValuesInput):
+    energy_kcal_per_100g: Decimal = Field(ge=0, le=1000)
+    protein_g_per_100g: Decimal = Field(ge=0, le=100)
+    fat_g_per_100g: Decimal = Field(ge=0, le=100)
+    carbs_g_per_100g: Decimal = Field(ge=0, le=100)
+    barcode: str
+    external_id: str
+    source: ExternalFoodSource
+
+
+class FoodSearchResponse(FoodListResponse):
+    external_items: list[ExternalFoodResponse] = Field(default_factory=list)
+    provider_status: FoodProviderStatus = "not_requested"
+
+
+class FoodBarcodeLookupResponse(BaseModel):
+    local_item: FoodResponse | None = None
+    external_item: ExternalFoodResponse | None = None
+    provider_status: FoodProviderStatus
 
 
 class FoodCatalogSource(BaseModel):
