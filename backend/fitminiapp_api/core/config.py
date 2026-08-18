@@ -46,6 +46,7 @@ class Settings(BaseSettings):
     yandex_verification: str = ""
     telegram_bot_token: str
     telegram_bot_username: str = ""
+    telegram_init_data_max_age_seconds: int = Field(default=300, ge=60, le=3600)
     bot_internal_token: str = ""
 
     smtp_host: str = ""

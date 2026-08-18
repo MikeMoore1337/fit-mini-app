@@ -24,13 +24,16 @@ def build_secret_key(bot_token: str) -> bytes:
 
 
 def parse_init_data(init_data: str) -> dict[str, str]:
-    return dict(parse_qsl(init_data, keep_blank_values=True))
+    pairs = parse_qsl(init_data, keep_blank_values=True)
+    if len({key for key, _ in pairs}) != len(pairs):
+        raise ValueError("init_data содержит повторяющиеся параметры")
+    return dict(pairs)
 
 
 def validate_telegram_init_data(
     init_data: str,
     bot_token: str,
-    max_age_seconds: int = 24 * 60 * 60,
+    max_age_seconds: int = 5 * 60,
 ) -> dict:
     data = parse_init_data(init_data)
 
@@ -81,6 +84,16 @@ def validate_telegram_init_data(
         raise ValueError("Некорректный id пользователя в init_data")
     if telegram_user_id <= 0 or telegram_user_id > 2**63 - 1:
         raise ValueError("Некорректный id пользователя в init_data")
+
+    for field, max_length in {
+        "username": 64,
+        "first_name": 64,
+        "last_name": 64,
+        "photo_url": 512,
+    }.items():
+        value = user_data.get(field)
+        if value is not None and (not isinstance(value, str) or len(value) > max_length):
+            raise ValueError(f"Некорректный {field} пользователя в init_data")
 
     return {
         "auth_date": data.get("auth_date"),

@@ -40,6 +40,12 @@ class OAuthStateError(RuntimeError):
     pass
 
 
+class OAuthProviderResponseError(RuntimeError):
+    def __init__(self, error: str) -> None:
+        super().__init__("OAuth provider returned an authorization error")
+        self.error = error
+
+
 def oauth_transport_options(*, proxy_url: str | None = None) -> dict[str, object]:
     """Return isolated HTTPX options for a short-lived OAuth client."""
 
@@ -82,6 +88,21 @@ class TelegramOAuthStarletteOAuth2App(StarletteOAuth2App):
     client_cls = TelegramOAuthAsyncOAuth2Client
 
 
+def _oauth_client_kwargs(scope: str, *, use_pkce: bool = False) -> dict[str, object]:
+    client_kwargs: dict[str, object] = {
+        "scope": scope,
+        # OAuth credentials and authorization codes must never be routed
+        # through an ambient proxy inherited by the container. On some hosts
+        # HTTPX proxy discovery also makes provider connections time out even
+        # though a direct connection succeeds.
+        "trust_env": False,
+        "timeout": settings.oauth_http_timeout_seconds,
+    }
+    if use_pkce:
+        client_kwargs["code_challenge_method"] = "S256"
+    return client_kwargs
+
+
 def _register_oidc(
     name: str,
     client_id: str,
@@ -90,6 +111,7 @@ def _register_oidc(
     scope: str,
     *,
     client_cls: type[StarletteOAuth2App] = OAuthStarletteOAuth2App,
+    use_pkce: bool = False,
 ) -> None:
     if not client_id.strip() or not client_secret.strip():
         return
@@ -99,18 +121,22 @@ def _register_oidc(
         client_secret=client_secret,
         client_cls=client_cls,
         server_metadata_url=metadata_url,
-        client_kwargs={
-            "scope": scope,
-            # OAuth credentials and authorization codes must never be routed
-            # through an ambient proxy inherited by the container. On some
-            # hosts HTTPX proxy discovery also makes Telegram connections time
-            # out even though a direct connection succeeds.
-            "trust_env": False,
-            # HTTPX defaults to a five-second connect timeout. Telegram's OAuth
-            # endpoint can take longer to establish a connection from production
-            # networks, especially while IPv4/IPv6 routes are being selected.
-            "timeout": settings.oauth_http_timeout_seconds,
-        },
+        client_kwargs=_oauth_client_kwargs(scope, use_pkce=use_pkce),
+    )
+
+
+def _register_yandex(client_id: str, client_secret: str) -> None:
+    if not client_id.strip() or not client_secret.strip():
+        return
+    oauth.register(
+        "yandex",
+        client_id=client_id,
+        client_secret=client_secret,
+        authorize_url="https://oauth.yandex.ru/authorize",
+        access_token_url="https://oauth.yandex.ru/token",
+        api_base_url="https://login.yandex.ru/",
+        client_cls=OAuthStarletteOAuth2App,
+        client_kwargs=_oauth_client_kwargs("login:info login:email", use_pkce=True),
     )
 
 
@@ -121,6 +147,7 @@ _register_oidc(
     "https://oauth.telegram.org/.well-known/openid-configuration",
     "openid profile",
     client_cls=TelegramOAuthStarletteOAuth2App,
+    use_pkce=True,
 )
 _register_oidc(
     "google",
@@ -128,6 +155,7 @@ _register_oidc(
     settings.google_oauth_client_secret,
     "https://accounts.google.com/.well-known/openid-configuration",
     "openid profile email",
+    use_pkce=True,
 )
 _register_oidc(
     "apple",
@@ -136,16 +164,7 @@ _register_oidc(
     "https://appleid.apple.com/.well-known/openid-configuration",
     "openid email",
 )
-if settings.yandex_oauth_client_id.strip() and settings.yandex_oauth_client_secret.strip():
-    oauth.register(
-        "yandex",
-        client_id=settings.yandex_oauth_client_id,
-        client_secret=settings.yandex_oauth_client_secret,
-        authorize_url="https://oauth.yandex.ru/authorize",
-        access_token_url="https://oauth.yandex.ru/token",
-        api_base_url="https://login.yandex.ru/",
-        client_kwargs={"scope": "login:info login:email"},
-    )
+_register_yandex(settings.yandex_oauth_client_id, settings.yandex_oauth_client_secret)
 
 
 def _vk_callback_params(request) -> dict[str, str]:
@@ -157,7 +176,14 @@ def _vk_callback_params(request) -> dict[str, str]:
         payload = json.loads(raw_payload)
         if not isinstance(payload, dict):
             raise ValueError("VK ID returned an invalid callback payload")
-        params.update({key: str(value) for key, value in payload.items() if value is not None})
+        for key, value in payload.items():
+            if value is None:
+                continue
+            normalized_value = str(value)
+            if key in params and key != "payload" and params[key] != normalized_value:
+                raise OAuthStateError("VK ID returned conflicting callback parameters")
+            params[key] = normalized_value
+    params.pop("payload", None)
     return params
 
 
@@ -190,7 +216,8 @@ class VKOAuthClient:
                 "scope": VK_SCOPE,
                 "state": state,
                 "code_challenge": _pkce_challenge(code_verifier),
-                "code_challenge_method": "S256",
+                # VK ID's current Web SDK sends the method token in lowercase.
+                "code_challenge_method": "s256",
             }
         )
         return RedirectResponse(f"{VK_AUTHORIZE_URL}?{query}", status_code=302)
@@ -199,7 +226,7 @@ class VKOAuthClient:
         params = _vk_callback_params(request)
         error = params.get("error")
         if error:
-            raise ValueError(f"VK ID authorization failed: {error}")
+            raise OAuthProviderResponseError(error)
 
         code = params.get("code")
         state = params.get("state")
@@ -292,67 +319,100 @@ def _telegram_oidc_user_id(raw_claims: dict[str, Any]) -> int:
     return telegram_user_id
 
 
+def _stable_subject(value: object, *, allow_integer: bool = False) -> str:
+    if allow_integer and isinstance(value, int) and not isinstance(value, bool) and value > 0:
+        return str(value)
+    if (
+        not isinstance(value, str)
+        or not value.strip()
+        or len(value) > 255
+        or not value.isprintable()
+    ):
+        return ""
+    return value
+
+
+def _optional_string(value: object, *, max_length: int | None = None) -> str | None:
+    if not isinstance(value, str) or not value:
+        return None
+    if max_length is not None and len(value) > max_length:
+        return None
+    return value
+
+
 def normalize_oauth_claims(provider: str, raw_claims: dict[str, Any]) -> dict[str, Any]:
     if provider == "telegram":
         telegram_id = _telegram_oidc_user_id(raw_claims)
+        username = normalize_telegram_username(
+            _optional_string(raw_claims.get("preferred_username"))
+        )
+        if username is not None and len(username) > 64:
+            username = None
         return {
             "subject": str(telegram_id),
             "telegram_user_id": telegram_id,
-            "username": normalize_telegram_username(raw_claims.get("preferred_username")),
-            "first_name": raw_claims.get("given_name"),
-            "last_name": raw_claims.get("family_name"),
-            "full_name": raw_claims.get("name"),
-            "photo_url": raw_claims.get("picture"),
+            "username": username,
+            "first_name": _optional_string(raw_claims.get("given_name"), max_length=64),
+            "last_name": _optional_string(raw_claims.get("family_name"), max_length=64),
+            "full_name": _optional_string(raw_claims.get("name"), max_length=128),
+            "photo_url": _optional_string(raw_claims.get("picture"), max_length=512),
             "email": None,
             "email_verified": False,
         }
     if provider == "yandex":
-        subject = raw_claims.get("id")
-        email = raw_claims.get("default_email")
+        subject = _stable_subject(raw_claims.get("id"), allow_integer=True)
+        email = _optional_string(raw_claims.get("default_email"), max_length=320)
         return {
-            "subject": str(subject or ""),
+            "subject": subject,
             "telegram_user_id": None,
-            "username": raw_claims.get("login"),
-            "first_name": raw_claims.get("first_name"),
-            "last_name": raw_claims.get("last_name"),
-            "full_name": raw_claims.get("display_name") or raw_claims.get("real_name"),
+            "username": _optional_string(raw_claims.get("login"), max_length=64),
+            "first_name": _optional_string(raw_claims.get("first_name"), max_length=64),
+            "last_name": _optional_string(raw_claims.get("last_name"), max_length=64),
+            "full_name": _optional_string(raw_claims.get("display_name"), max_length=128)
+            or _optional_string(raw_claims.get("real_name"), max_length=128),
             "photo_url": None,
             "email": email,
-            "email_verified": bool(email),
+            # Yandex exposes a contact email but no explicit verification claim.
+            "email_verified": False,
         }
     if provider == "vk":
-        subject = raw_claims.get("user_id")
-        if isinstance(subject, bool) or not isinstance(subject, (str, int)):
-            subject = ""
-        email = raw_claims.get("email")
-        first_name = raw_claims.get("first_name")
-        last_name = raw_claims.get("last_name")
+        subject = _stable_subject(raw_claims.get("user_id"), allow_integer=True)
+        email = _optional_string(raw_claims.get("email"), max_length=320)
+        first_name = _optional_string(raw_claims.get("first_name"), max_length=64)
+        last_name = _optional_string(raw_claims.get("last_name"), max_length=64)
+        full_name = _optional_string(
+            " ".join(part for part in [first_name, last_name] if part),
+            max_length=128,
+        )
         return {
-            "subject": str(subject),
+            "subject": subject,
             "telegram_user_id": None,
             "username": None,
             "first_name": first_name,
             "last_name": last_name,
-            "full_name": " ".join(
-                part for part in [first_name, last_name] if isinstance(part, str) and part
-            ),
-            "photo_url": raw_claims.get("avatar"),
+            "full_name": full_name,
+            "photo_url": _optional_string(raw_claims.get("avatar"), max_length=512),
             "email": email,
-            "email_verified": bool(email),
+            # VK ID user_info returns email but no verification flag.
+            "email_verified": False,
         }
 
-    subject = raw_claims.get("sub")
-    email = raw_claims.get("email")
+    subject = _stable_subject(raw_claims.get("sub"))
+    email = _optional_string(raw_claims.get("email"), max_length=320)
+    email_verified = raw_claims.get("email_verified") is True
+    if provider == "apple":
+        # Apple's ID token represents this claim as a JSON string.
+        email_verified = raw_claims.get("email_verified") in {True, "true"}
     return {
-        "subject": str(subject or ""),
+        "subject": subject,
         "telegram_user_id": None,
         "username": None,
-        "first_name": raw_claims.get("given_name"),
-        "last_name": raw_claims.get("family_name"),
-        "full_name": raw_claims.get("name"),
-        "photo_url": raw_claims.get("picture"),
+        "first_name": _optional_string(raw_claims.get("given_name"), max_length=64),
+        "last_name": _optional_string(raw_claims.get("family_name"), max_length=64),
+        "full_name": _optional_string(raw_claims.get("name"), max_length=128),
+        "photo_url": _optional_string(raw_claims.get("picture"), max_length=512),
         "email": email,
-        "email_verified": bool(raw_claims.get("email_verified", provider == "apple" and email)),
+        "email_verified": email_verified,
     }
 
 
@@ -397,9 +457,14 @@ def get_or_create_oauth_user(
                         user_id=candidate.id,
                         full_name=(
                             claims["full_name"]
-                            or " ".join(
-                                part for part in [claims["first_name"], claims["last_name"]] if part
-                            ).strip()
+                            or _optional_string(
+                                " ".join(
+                                    part
+                                    for part in [claims["first_name"], claims["last_name"]]
+                                    if part
+                                ).strip(),
+                                max_length=128,
+                            )
                             or claims["username"]
                             or "Новый пользователь"
                         ),

@@ -3684,7 +3684,7 @@ def test_unconfigured_oauth_provider_is_not_exposed(client, monkeypatch):
     assert config.json()["enable_email_auth"] is False
     assert config.json()["oauth_providers"] == []
 
-    started = client.get("/api/v1/auth/oauth/google/start")
+    started = client.get("/api/v1/auth/oauth/google/start", follow_redirects=False)
     assert started.status_code == 303
     assert started.headers["location"] == "/app?auth_error=unavailable"
 

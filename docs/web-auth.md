@@ -1,5 +1,8 @@
 # Развёртывание веб-аутентификации
 
+Пошаговая регистрация приложений, scopes, callback-контракты и opt-in smoke для
+каждого провайдера описаны в [provider setup runbook](auth/provider-setup.md).
+
 Веб-аутентификация дополняет существующий вход. Вход в Telegram Mini App по
 `initData` продолжает работать независимо от `ENABLE_WEB_AUTH` и наличия
 реквизитов OAuth.
