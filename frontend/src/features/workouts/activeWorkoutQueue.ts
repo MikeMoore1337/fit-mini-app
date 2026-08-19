@@ -1,5 +1,7 @@
 import type { Workout } from '../../shared/api/types';
 
+type WorkoutSet = Workout['exercises'][number]['sets'][number];
+
 export const ACTIVE_WORKOUT_QUEUE_VERSION = 1 as const;
 const ACTIVE_WORKOUT_QUEUE_PREFIX = 'fit_active_workout_v1_';
 const ACTIVE_WORKOUT_REST_PREFIX = 'fit_active_workout_rest_v1_';
@@ -9,6 +11,9 @@ const MAX_QUEUE_LENGTH = 256;
 export interface ActiveWorkoutSetValues {
   actual_reps: number | null;
   actual_weight: number | null;
+  rir?: WorkoutSet['rir'];
+  set_kind?: WorkoutSet['set_kind'];
+  reached_failure?: WorkoutSet['reached_failure'];
   is_completed: boolean;
 }
 
@@ -74,6 +79,15 @@ function validMutation(value: unknown): value is ActiveWorkoutMutation {
     item.values &&
     validNullableNumber(item.values.actual_reps, true) &&
     validNullableNumber(item.values.actual_weight, false) &&
+    (item.values.rir === undefined ||
+      item.values.rir === null ||
+      ['0', '1', '2', '3', '4+'].includes(item.values.rir)) &&
+    (item.values.set_kind === undefined ||
+      item.values.set_kind === null ||
+      ['warmup', 'working', 'drop'].includes(item.values.set_kind)) &&
+    (item.values.reached_failure === undefined ||
+      item.values.reached_failure === null ||
+      typeof item.values.reached_failure === 'boolean') &&
     typeof item.values.is_completed === 'boolean',
   );
 }
