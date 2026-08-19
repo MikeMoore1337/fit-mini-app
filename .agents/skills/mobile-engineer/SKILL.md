@@ -1,6 +1,10 @@
 ---
 name: mobile-engineer
-description: Native and mobile-client engineering, device lifecycle, connectivity, storage, permissions and platform behavior.
+description: >
+  Implement platform-specific native or mobile-client behavior involving app lifecycle,
+  connectivity, storage, permissions, deep links or device APIs. Use for native/mobile runtime
+  concerns. Do not use for ordinary responsive web layout unless a real mobile platform boundary
+  is involved.
 ---
 
 # mobile-engineer

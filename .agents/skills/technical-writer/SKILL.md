@@ -1,6 +1,10 @@
 ---
 name: technical-writer
-description: Maintain project documentation for setup, architecture, API, operations, deployment and contributor workflows.
+description: >
+  Create or maintain long-term project documentation for setup, architecture, APIs, operations,
+  deployment, migrations and contributor workflows. Use when a change makes project documentation
+  inaccurate or when durable operational/architectural context is needed; follow repository
+  language rules.
 ---
 
 # technical-writer
@@ -39,6 +43,13 @@ description: Maintain project documentation for setup, architecture, API, operat
 Перед изменением существующей подсистемы проверь связанную с ней документацию. Документируй
 значимые архитектурные решения, неочевидные бизнес-правила, security constraints, operational
 procedures и существенные trade-offs.
+
+## Язык и аудитория
+
+Следуй языку документации, закреплённому в root `AGENTS.md`/project rules. Не смешивай языки без
+причины; названия API, библиотек, команд и identifiers оставляй в их исходном виде.
+
+Пиши документацию для конкретного действия/решения, а не как пересказ кода.
 
 ## Audit material
 

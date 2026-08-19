@@ -1,6 +1,9 @@
 ---
 name: commercial-product-builder
-description: End-to-end implementation of a new product or large cross-cutting feature to production readiness.
+description: >
+  Orchestrate end-to-end delivery of a new product or large cross-cutting feature to production
+  readiness across product, design, engineering, QA, security, privacy, operations and release.
+  Use for multi-layer work; do not use for small isolated fixes with already clear scope.
 ---
 
 # commercial-product-builder
@@ -25,7 +28,9 @@ description: End-to-end implementation of a new product or large cross-cutting f
 - конфигурация окружений;
 - документация;
 - процедура релиза и отката;
-- UX/UI и доступность, если продукт имеет интерфейс.
+- UX/UI и доступность, если продукт имеет интерфейс;
+- privacy и управляемый жизненный цикл чувствительных данных;
+- измеримость критических пользовательских сценариев после релиза.
 
 Не усложняй архитектуру ради "enterprise"-вида. Коммерческое качество - это прежде всего надёжность, понятность и управляемая сложность.
 
@@ -44,7 +49,10 @@ description: End-to-end implementation of a new product or large cross-cutting f
 - интеграции;
 - платформы;
 - требования к доступности и отказоустойчивости;
-- что является MVP, а что не входит в текущий объём.
+- что является MVP, а что не входит в текущий объём;
+- какой первый полезный результат получает пользователь;
+- где в критических потоках есть friction, recovery и повторное использование;
+- какими наблюдаемыми сигналами можно понять, что основной сценарий работает.
 
 Если контекст уже достаточен - не задавай лишних вопросов, зафиксируй разумные предположения.
 
@@ -75,7 +83,7 @@ description: End-to-end implementation of a new product or large cross-cutting f
 Если есть пользовательский интерфейс:
 
 - используй `$product-designer` для создания/редизайна;
-- используй `$ui-audit` для независимой проверки;
+- используй `$ui-audit` для независимой проверки usability и фактической реализации;
 - проверяй реальные экраны в браузере через Playwright, когда это применимо.
 
 Не вызывай UI-стадии для чистого backend/CLI, где они не нужны.
@@ -97,6 +105,7 @@ description: End-to-end implementation of a new product or large cross-cutting f
 
 - `$qa-engineer`;
 - `$security-engineer`;
+- `$privacy-engineer`, если затрагиваются персональные/чувствительные данные или их lifecycle;
 - `$performance-engineer` для производительно-критичных участков;
 - `$code-reviewer` перед завершением крупной работы.
 
@@ -110,7 +119,7 @@ description: End-to-end implementation of a new product or large cross-cutting f
 - `$observability-engineer`;
 - `$release-manager`.
 
-Проверь конфигурацию, секреты, health checks, логи, метрики, алерты, миграции, резервирование и откат там, где это требуется типом продукта.
+Проверь конфигурацию, секреты, health checks, correlated logs/metrics/traces, product-critical signals, алерты, миграции, резервирование и откат там, где это требуется типом продукта.
 
 ### 7. Документация
 

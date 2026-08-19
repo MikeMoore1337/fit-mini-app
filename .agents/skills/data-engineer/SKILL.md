@@ -1,6 +1,9 @@
 ---
 name: data-engineer
-description: Data modeling, database schema, migrations, constraints, indexes, transactions and query performance.
+description: >
+  Design or change persistent data models, database schemas, migrations, constraints, indexes,
+  transaction semantics, retention and query performance. Use when stored data or migration
+  behavior changes; do not use for business logic that does not alter persistence semantics.
 ---
 
 # data-engineer
@@ -14,6 +17,21 @@ description: Data modeling, database schema, migrations, constraints, indexes, t
 - явные ownership/lifecycle rules;
 - timestamps и timezone semantics;
 - soft delete только при реальной необходимости.
+
+## Lifecycle и privacy
+
+Для пользовательских/чувствительных данных явно определяй:
+
+- owner и access boundary;
+- retention/deletion semantics;
+- cascade/orphan behavior;
+- exportability, если требуется продуктом;
+- влияние soft delete на уникальность и запросы;
+- backup implications;
+- что не должно попадать в analytics/debug copies.
+
+Согласуй lifecycle с `$privacy-engineer`; не используй soft delete как универсальную замену
+нормальному удалению.
 
 ## Индексы
 

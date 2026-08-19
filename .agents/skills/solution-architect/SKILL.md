@@ -1,6 +1,10 @@
 ---
 name: solution-architect
-description: Architecture changes, component boundaries, APIs, data flow, integrations and major technical trade-offs.
+description: >
+  Design or change system boundaries, APIs, data flow, integrations, deployment topology and
+  major technical trade-offs. Use before significant architectural changes or cross-component
+  work. Prefer the simplest architecture that satisfies real reliability, security, privacy and
+  operability requirements.
 ---
 
 # solution-architect
@@ -17,6 +21,8 @@ description: Architecture changes, component boundaries, APIs, data flow, integr
 - consistency requirements;
 - failure modes;
 - security boundaries;
+- privacy/data lifecycle boundaries;
+- observability requirements for critical flows;
 - deployment environment;
 - skills команды и стоимость поддержки.
 
@@ -37,6 +43,8 @@ description: Architecture changes, component boundaries, APIs, data flow, integr
 - versioning и backward compatibility;
 - миграции;
 - failure isolation;
+- observability/correlation points for critical paths;
+- data retention/deletion boundaries where sensitive data is involved;
 - deployment topology.
 
 ## Запрещённые привычки
