@@ -141,6 +141,51 @@ async function mockActiveWorkout(page: Page) {
         },
       });
     }
+    if (path.endsWith('/programs/exercises/11')) {
+      return route.fulfill({
+        json: {
+          id: 11,
+          title: 'Жим штанги лёжа',
+          primary_muscle: 'Грудь',
+          equipment: 'Штанга и скамья',
+          primary_muscle_ids: ['chest'],
+          secondary_muscle_ids: ['triceps'],
+          equipment_ids: ['barbell', 'bench'],
+          alternatives: [],
+          difficulty_level: 'beginner',
+          is_custom: false,
+          is_personalized: false,
+          has_guide: true,
+          guide: {
+            technique_steps: ['Сведите лопатки.', 'Опускайте штангу под контролем.'],
+            breathing: 'Вдох при опускании, выдох после тяжёлой части подъёма.',
+            common_mistakes: ['Отрыв таза от скамьи'],
+            muscles: [
+              {
+                identifier: 'chest',
+                name: 'Грудь',
+                role_id: 'primary',
+                role: 'Основная',
+                function: 'Перемещает руку вперёд в фазе усилия.',
+              },
+            ],
+            equipment: [
+              { identifier: 'barbell', name: 'Штанга' },
+              { identifier: 'bench', name: 'Скамья' },
+            ],
+            safety_notes: ['Используйте страховку при тяжёлых подходах.'],
+            alternatives: [],
+            media: [],
+            images: [],
+            media_reference: 'test:bench-press',
+            source_name: 'Test source',
+            source_url: 'https://example.com',
+            source_license: 'Public domain',
+            source_license_url: null,
+          },
+        },
+      });
+    }
     const setMatch = path.match(/\/workouts\/sets\/(\d+)$/);
     if (setMatch) {
       if (failSetPatch) {
@@ -226,6 +271,9 @@ test('active workout has touch-size controls and no horizontal overflow', async 
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
   await page.getByRole('button', { name: 'Продолжить тренировку' }).click();
+  await page.getByRole('button', { name: 'Техника' }).click();
+  await expect(page.getByRole('heading', { name: 'Техника выполнения' })).toBeVisible();
+  await page.getByRole('button', { name: 'Закрыть карточку упражнения' }).click();
 
   for (const viewport of [
     { width: 1280, height: 900 },

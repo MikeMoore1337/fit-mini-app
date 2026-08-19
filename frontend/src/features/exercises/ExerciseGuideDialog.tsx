@@ -1,28 +1,50 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
-import type { Exercise, ExerciseGuide } from '../../shared/api/types';
+import type { Exercise } from '../../shared/api/types';
 import { Badge, CloseIcon, ErrorState, LoadingState } from '../../shared/ui/common';
 import { useModalA11y } from '../../shared/ui/useModalA11y';
 import { ExerciseGuideMedia } from './ExerciseGuideMedia';
 
+const difficultyLabels: Record<Exercise['difficulty_level'], string> = {
+  beginner: 'Начальный уровень',
+  intermediate: 'Средний уровень',
+  advanced: 'Продвинутый уровень',
+};
+
 export function ExerciseGuideDialog({
   exerciseId,
   exerciseTitle,
-  exercise,
   onClose,
 }: {
   exerciseId: number;
   exerciseTitle: string;
-  exercise?: Exercise;
   onClose: () => void;
 }) {
+  const [currentExercise, setCurrentExercise] = useState({ id: exerciseId, title: exerciseTitle });
   const [mediaExpanded, setMediaExpanded] = useState(false);
   const panelRef = useModalA11y<HTMLDivElement>(!mediaExpanded, onClose);
-  const guide = useQuery({
-    queryKey: ['exercises', exerciseId, 'guide'],
-    queryFn: () => api<ExerciseGuide>(`/api/v1/programs/exercises/${exerciseId}/guide`),
+  const details = useQuery({
+    queryKey: ['exercises', currentExercise.id, 'details'],
+    queryFn: () => api<Exercise>(`/api/v1/programs/exercises/${currentExercise.id}`),
   });
+  const guide = details.data?.guide;
+  const primaryMuscles = useMemo(
+    () => guide?.muscles.filter((muscle) => muscle.role_id === 'primary') ?? [],
+    [guide?.muscles],
+  );
+  const secondaryMuscles = useMemo(
+    () => guide?.muscles.filter((muscle) => muscle.role_id === 'secondary') ?? [],
+    [guide?.muscles],
+  );
+  const alternatives = guide?.alternatives ?? details.data?.alternatives ?? [];
+
+  const openAlternative = (alternative: (typeof alternatives)[number]) => {
+    setMediaExpanded(false);
+    setCurrentExercise({ id: alternative.id, title: alternative.title });
+    if (panelRef.current) panelRef.current.scrollTop = 0;
+  };
+
   return (
     <div
       className="modal exercise-guide-modal"
@@ -34,125 +56,196 @@ export function ExerciseGuideDialog({
       <div className="modal__panel card exercise-guide-modal__panel" ref={panelRef} tabIndex={-1}>
         <div className="exercise-guide-modal__head">
           <div>
-            <span className="eyebrow">Техника упражнения</span>
-            <h2 className="modal__title" id="exercise-guide-title">
-              {exerciseTitle}
+            <span className="eyebrow">Карточка упражнения</span>
+            <h2 className="modal__title" id="exercise-guide-title" aria-live="polite">
+              {details.data?.title ?? currentExercise.title}
             </h2>
           </div>
           <button
             type="button"
             className="secondary exercise-guide-modal__close"
-            aria-label="Закрыть технику"
+            aria-label="Закрыть карточку упражнения"
             onClick={onClose}
           >
             <CloseIcon />
           </button>
         </div>
         <div className="exercise-guide-modal__body">
-          {guide.isLoading && <LoadingState />}
-          {guide.error && (
+          {details.isLoading && <LoadingState />}
+          {details.error && (
             <ErrorState
-              message={(guide.error as Error).message}
-              retry={() => void guide.refetch()}
+              message={(details.error as Error).message}
+              retry={() => void details.refetch()}
             />
           )}
-          {guide.data && (
-            <>
-              {exercise && (
-                <div className="exercise-guide-meta toolbar wrap">
-                  <Badge>{exercise.primary_muscle || 'Всё тело'}</Badge>
-                  <Badge>{exercise.equipment || 'Без оборудования'}</Badge>
-                  <Badge>
-                    {
-                      {
-                        beginner: 'Начальный уровень',
-                        intermediate: 'Средний уровень',
-                        advanced: 'Продвинутый уровень',
-                      }[exercise.difficulty_level]
-                    }
-                  </Badge>
+          {details.data && (
+            <div className="exercise-guide-card">
+              <div className="exercise-guide-meta toolbar wrap" aria-label="Краткие сведения">
+                <Badge>{difficultyLabels[details.data.difficulty_level]}</Badge>
+                {details.data.is_custom && <Badge>Пользовательское упражнение</Badge>}
+                {guide && <Badge>Техника доступна</Badge>}
+              </div>
+
+              {guide?.media.length ? (
+                <ExerciseGuideMedia items={guide.media} onExpandedChange={setMediaExpanded} />
+              ) : null}
+
+              {guide ? (
+                <div className="exercise-guide-notes">
+                  {!!guide.technique_steps.length && (
+                    <section className="exercise-guide-note exercise-guide-note--technique">
+                      <h3>Техника выполнения</h3>
+                      <ol>
+                        {guide.technique_steps.map((step) => (
+                          <li key={step}>{step}</li>
+                        ))}
+                      </ol>
+                    </section>
+                  )}
+                  {guide.breathing && (
+                    <section className="exercise-guide-note">
+                      <h3>Дыхание</h3>
+                      <p>{guide.breathing}</p>
+                    </section>
+                  )}
+                  {!!guide.common_mistakes.length && (
+                    <section className="exercise-guide-note exercise-guide-note--warning">
+                      <h3>Частые ошибки</h3>
+                      <ul>
+                        {guide.common_mistakes.map((mistake) => (
+                          <li key={mistake}>{mistake}</li>
+                        ))}
+                      </ul>
+                    </section>
+                  )}
                 </div>
-              )}
-              {exercise && (
-                <section className="exercise-guide-intro" aria-labelledby="guide-purpose">
-                  <h3 id="guide-purpose">Для чего это упражнение</h3>
+              ) : (
+                <section className="exercise-guide-empty" aria-labelledby="guide-empty-title">
+                  <span className="eyebrow">Доступные сведения</span>
+                  <h3 id="guide-empty-title">Техника пока не добавлена</h3>
                   <p>
-                    Основная задача — нагрузить группу «{exercise.primary_muscle || 'всё тело'}» и
-                    выполнить движение с контролируемой техникой. Ниже показаны ключевые фазы и
-                    проверенные подсказки.
+                    Для этого упражнения нет проверенного пошагового руководства. Мы не заменяем его
+                    общими или неподтверждёнными советами.
                   </p>
                 </section>
               )}
-              <ExerciseGuideMedia items={guide.data.media} onExpandedChange={setMediaExpanded} />
-              <div className="exercise-guide-notes">
-                <section className="exercise-guide-note">
-                  <h3>Техника выполнения</h3>
-                  <ol>
-                    {guide.data.technique_steps.map((step) => (
-                      <li key={step}>{step}</li>
-                    ))}
-                  </ol>
-                </section>
-                <section className="exercise-guide-note">
-                  <h3>Дыхание</h3>
-                  <p>{guide.data.breathing}</p>
-                </section>
-                <section className="exercise-guide-note exercise-guide-note--warning">
-                  <h3>Частые ошибки</h3>
-                  <ul>
-                    {guide.data.common_mistakes.map((mistake) => (
-                      <li key={mistake}>{mistake}</li>
-                    ))}
-                  </ul>
-                </section>
-              </div>
-              {!!guide.data.safety_notes?.length && (
-                <section className="exercise-guide-section exercise-guide-section--safety">
-                  <h3>Что важно для безопасности</h3>
-                  <ul>
-                    {guide.data.safety_notes.map((note) => (
-                      <li key={note}>{note}</li>
-                    ))}
-                  </ul>
-                </section>
-              )}
-              {!!guide.data.muscles?.length && (
-                <section className="exercise-guide-section" aria-labelledby="guide-muscles">
-                  <h3 id="guide-muscles">Какие мышцы работают</h3>
-                  <div className="exercise-guide-muscles">
-                    {guide.data.muscles.map((muscle) => (
-                      <article
-                        className="exercise-guide-muscle"
-                        key={`${muscle.role_id}-${muscle.name}`}
-                      >
-                        <div className="exercise-guide-muscle__head">
+
+              <div className="exercise-guide-facts">
+                {(primaryMuscles.length > 0 || details.data.primary_muscle) && (
+                  <section
+                    className="exercise-guide-section"
+                    aria-labelledby="guide-primary-muscles"
+                  >
+                    <h3 id="guide-primary-muscles">Основные мышцы</h3>
+                    {primaryMuscles.length > 0 ? (
+                      <div className="exercise-guide-muscles">
+                        {primaryMuscles.map((muscle) => (
+                          <article
+                            className="exercise-guide-muscle"
+                            key={muscle.identifier ?? muscle.name}
+                          >
+                            <strong>{muscle.name}</strong>
+                            {muscle.function && <p>{muscle.function}</p>}
+                          </article>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="toolbar wrap">
+                        <Badge>{details.data.primary_muscle}</Badge>
+                      </div>
+                    )}
+                  </section>
+                )}
+
+                {secondaryMuscles.length > 0 && (
+                  <section
+                    className="exercise-guide-section"
+                    aria-labelledby="guide-secondary-muscles"
+                  >
+                    <h3 id="guide-secondary-muscles">Дополнительные мышцы</h3>
+                    <div className="exercise-guide-muscles">
+                      {secondaryMuscles.map((muscle) => (
+                        <article
+                          className="exercise-guide-muscle"
+                          key={muscle.identifier ?? muscle.name}
+                        >
                           <strong>{muscle.name}</strong>
-                          <span>{muscle.role}</span>
-                        </div>
-                        <p>{muscle.function}</p>
-                      </article>
-                    ))}
-                  </div>
-                </section>
-              )}
-              {!!guide.data.alternatives?.length && (
-                <section className="exercise-guide-section">
-                  <h3>Проверенные замены</h3>
+                          {muscle.function && <p>{muscle.function}</p>}
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {(guide?.equipment.length || details.data.equipment) && (
+                  <section className="exercise-guide-section" aria-labelledby="guide-equipment">
+                    <h3 id="guide-equipment">Оборудование</h3>
+                    <div className="toolbar wrap">
+                      {guide?.equipment.length ? (
+                        guide.equipment.map((item) => (
+                          <Badge key={item.identifier}>{item.name}</Badge>
+                        ))
+                      ) : (
+                        <Badge>{details.data.equipment}</Badge>
+                      )}
+                    </div>
+                  </section>
+                )}
+
+                {!!guide?.safety_notes.length && (
+                  <section
+                    className="exercise-guide-section exercise-guide-section--safety"
+                    aria-labelledby="guide-safety"
+                  >
+                    <h3 id="guide-safety">Что важно для безопасности</h3>
+                    <ul>
+                      {guide.safety_notes.map((note) => (
+                        <li key={note}>{note}</li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+              </div>
+
+              {!!alternatives.length && (
+                <section className="exercise-guide-section exercise-guide-alternatives">
+                  <h3>Варианты замены</h3>
+                  <p>Откройте карточку другого проверенного варианта и сравните технику.</p>
                   <div className="toolbar wrap">
-                    {guide.data.alternatives.map((alternative) => (
-                      <Badge key={alternative.id}>{alternative.title}</Badge>
+                    {alternatives.map((alternative) => (
+                      <button
+                        type="button"
+                        className="secondary exercise-guide-alternative"
+                        key={alternative.id}
+                        onClick={() => openAlternative(alternative)}
+                      >
+                        {alternative.title}
+                      </button>
                     ))}
                   </div>
                 </section>
               )}
-              <p className="muted exercise-guide-source">
-                Источник:{' '}
-                <a href={guide.data.source_url} target="_blank" rel="noreferrer">
-                  {guide.data.source_name}
-                </a>{' '}
-                · {guide.data.source_license}
-              </p>
-            </>
+
+              {guide && (
+                <footer className="exercise-guide-source">
+                  <span>Материал и иллюстрации</span>
+                  <p>
+                    Источник:{' '}
+                    <a href={guide.source_url} target="_blank" rel="noreferrer">
+                      {guide.source_name}
+                    </a>
+                    {' · '}
+                    {guide.source_license_url ? (
+                      <a href={guide.source_license_url} target="_blank" rel="noreferrer">
+                        {guide.source_license}
+                      </a>
+                    ) : (
+                      guide.source_license
+                    )}
+                  </p>
+                </footer>
+              )}
+            </div>
           )}
         </div>
       </div>

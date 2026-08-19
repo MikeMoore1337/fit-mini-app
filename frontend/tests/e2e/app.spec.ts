@@ -764,65 +764,96 @@ async function mockApi(
         },
       });
     if (path.endsWith('/notifications')) return route.fulfill({ json: [] });
-    if (path.endsWith('/programs/exercises/1/guide'))
+    if (path.endsWith('/programs/exercises/1'))
       return route.fulfill({
         json: {
-          technique_steps: ['Зафиксируйте корпус', 'Выполните движение под контролем'],
-          breathing: 'Выдох в фазе усилия, вдох при возврате.',
-          common_mistakes: ['Раскачивание корпусом'],
-          muscles: [
-            { name: 'Спина', role: 'Основная', function: 'Тянет плечевой пояс назад.' },
-            { name: 'Бицепс', role: 'Вспомогательная', function: 'Сгибает локоть.' },
-          ],
-          images: [
-            {
-              phase: 'Исходное положение',
-              url: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>',
-              alt: 'Исходное положение',
-            },
-            {
-              phase: 'Активная фаза',
-              url: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>',
-              alt: 'Активная фаза',
-            },
-          ],
-          media: [
-            {
-              type: 'image',
-              phase: 'Исходное положение',
-              url: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>',
-              poster:
-                'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>',
-              alt: 'Исходное положение',
-              source_name: 'Test source',
-              source_url: 'https://example.com',
-              source_license: 'Public domain',
-              source_license_url: null,
-              width: 400,
-              height: 300,
-              byte_size: 100,
-              sort_order: 0,
-            },
-            {
-              type: 'image',
-              phase: 'Активная фаза',
-              url: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>%20',
-              poster:
-                'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>%20',
-              alt: 'Активная фаза',
-              source_name: 'Test source',
-              source_url: 'https://example.com',
-              source_license: 'Public domain',
-              source_license_url: null,
-              width: 400,
-              height: 300,
-              byte_size: 100,
-              sort_order: 1,
-            },
-          ],
-          source_name: 'Test source',
-          source_url: 'https://example.com',
-          source_license: 'Public domain',
+          id: 1,
+          title: 'Тяга блока',
+          primary_muscle: 'Спина',
+          equipment: 'Блок',
+          primary_muscle_ids: ['back'],
+          secondary_muscle_ids: ['biceps'],
+          equipment_ids: ['cable'],
+          alternatives: [],
+          difficulty_level: 'beginner',
+          is_custom: false,
+          is_personalized: false,
+          has_guide: true,
+          guide: {
+            technique_steps: ['Зафиксируйте корпус', 'Выполните движение под контролем'],
+            breathing: 'Выдох в фазе усилия, вдох при возврате.',
+            common_mistakes: ['Раскачивание корпусом'],
+            muscles: [
+              {
+                identifier: 'back',
+                name: 'Спина',
+                role_id: 'primary',
+                role: 'Основная',
+                function: 'Тянет плечевой пояс назад.',
+              },
+              {
+                identifier: 'biceps',
+                name: 'Бицепс',
+                role_id: 'secondary',
+                role: 'Дополнительная',
+                function: 'Сгибает локоть.',
+              },
+            ],
+            equipment: [{ identifier: 'cable', name: 'Тросовый блок' }],
+            safety_notes: ['Сохраняйте устойчивое положение корпуса.'],
+            alternatives: [],
+            images: [
+              {
+                phase: 'Исходное положение',
+                url: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>',
+                alt: 'Исходное положение',
+              },
+              {
+                phase: 'Активная фаза',
+                url: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>',
+                alt: 'Активная фаза',
+              },
+            ],
+            media: [
+              {
+                type: 'image',
+                phase: 'Исходное положение',
+                url: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>',
+                poster:
+                  'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>',
+                alt: 'Исходное положение',
+                source_name: 'Test source',
+                source_url: 'https://example.com',
+                source_license: 'Public domain',
+                source_license_url: null,
+                width: 400,
+                height: 300,
+                byte_size: 100,
+                sort_order: 0,
+              },
+              {
+                type: 'image',
+                phase: 'Активная фаза',
+                url: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>%20',
+                poster:
+                  'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>%20',
+                alt: 'Активная фаза',
+                source_name: 'Test source',
+                source_url: 'https://example.com',
+                source_license: 'Public domain',
+                source_license_url: null,
+                width: 400,
+                height: 300,
+                byte_size: 100,
+                sort_order: 1,
+              },
+            ],
+            source_name: 'Test source',
+            source_url: 'https://example.com',
+            source_license: 'Public domain',
+            source_license_url: null,
+            media_reference: 'test:lat-pulldown',
+          },
         },
       });
     if (path.endsWith('/programs/exercises'))
@@ -1361,7 +1392,7 @@ test('профиль содержит уведомления, а карточк�
   await page.emulateMedia({ reducedMotion: 'reduce' });
   let guideRequests = 0;
   page.on('request', (request) => {
-    if (new URL(request.url()).pathname.endsWith('/programs/exercises/1/guide')) {
+    if (new URL(request.url()).pathname.endsWith('/programs/exercises/1')) {
       guideRequests += 1;
     }
   });
@@ -1435,10 +1466,10 @@ test('профиль содержит уведомления, а карточк�
   await openAppDestination(page, 'Упражнения');
   await expect(page.getByRole('heading', { name: 'Упражнения', exact: true })).toBeVisible();
   expect(guideRequests).toBe(0);
-  await page.getByRole('button', { name: 'Техника' }).click();
+  await page.getByRole('button', { name: 'Техника и детали' }).click();
   expect(guideRequests).toBe(1);
-  await expect(page.getByRole('heading', { name: 'Для чего это упражнение' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Какие мышцы работают' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Основные мышцы' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Дополнительные мышцы' })).toBeVisible();
   await expect(page.getByText('Тянет плечевой пояс назад.')).toBeVisible();
   const [guidePanelBox, guideHeadBox] = await Promise.all([
     page.locator('.exercise-guide-modal__panel').boundingBox(),
@@ -1471,7 +1502,7 @@ test('описание упражнения использует широкую 
   await page.getByRole('button', { name: 'Клиент' }).click();
   await openAppDestination(page, 'Упражнения');
   await expect(page.getByRole('heading', { name: 'Упражнения', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Техника' }).click();
+  await page.getByRole('button', { name: 'Техника и детали' }).click();
 
   const guidePanel = page.locator('.exercise-guide-modal__panel');
   const guidePanelBox = await guidePanel.boundingBox();
@@ -1674,7 +1705,7 @@ test('поля адаптируются к разным iPhone, а пример 
       programHeadBox!.x + programHeadBox!.width - (programPanelBox!.x + programPanelBox!.width),
     ),
   ).toBeLessThanOrEqual(2);
-  await page.getByRole('button', { name: 'Есть техника — посмотреть' }).click();
+  await page.getByRole('button', { name: 'Техника и детали' }).click();
   const exerciseGuide = page.locator('.exercise-guide-modal__panel');
   await expect(exerciseGuide.getByRole('img', { name: 'Исходное положение' })).toBeVisible();
   await expect(exerciseGuide.getByRole('img', { name: 'Активная фаза' })).toBeVisible();

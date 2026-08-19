@@ -1819,19 +1819,6 @@ button:disabled {
     background: var(--surface-subtle);
 }
 
-.exercise-guide-muscle__head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 10px;
-}
-
-.exercise-guide-muscle__head span {
-    color: var(--muted);
-    font-size: 12px;
-    text-align: right;
-}
-
 .exercise-guide-muscle p,
 .exercise-guide-note p {
     margin: 7px 0 0;

@@ -107,6 +107,26 @@ describe('WorkoutHistory', () => {
           { status: 200 },
         );
       }
+      if (path === '/api/v1/programs/exercises/7') {
+        return new Response(
+          JSON.stringify({
+            id: 7,
+            title: 'Жим гантелей лежа',
+            primary_muscle: 'Грудь',
+            equipment: 'Гантели',
+            primary_muscle_ids: [],
+            secondary_muscle_ids: [],
+            equipment_ids: [],
+            alternatives: [],
+            difficulty_level: 'beginner',
+            is_custom: true,
+            is_personalized: true,
+            has_guide: false,
+            guide: null,
+          }),
+          { status: 200 },
+        );
+      }
       return new Response(JSON.stringify({ detail: 'Unexpected request' }), { status: 500 });
     });
   });
@@ -123,7 +143,8 @@ describe('WorkoutHistory', () => {
     expect(screen.getByText('Завершена')).toBeInTheDocument();
     expect(screen.queryByText('planned')).not.toBeInTheDocument();
     expect(screen.queryByText('completed')).not.toBeInTheDocument();
-    expect(screen.getByText('Фактически: Жим гантелей лежа')).toBeInTheDocument();
+    const exerciseDetails = screen.getByRole('button', { name: 'Жим гантелей лежа' });
+    expect(exerciseDetails).toBeInTheDocument();
     expect(screen.getByText('Изменено перед тренировкой: замена упражнения')).toBeInTheDocument();
     expect(screen.getByText('Прошедшая пропущенная тренировка').closest('a')).toBeNull();
 
@@ -142,5 +163,8 @@ describe('WorkoutHistory', () => {
     expect(completedDay).toHaveAttribute('href', '#workout-history-43');
     fireEvent.click(completedDay);
     expect(onWorkoutSelect).toHaveBeenLastCalledWith(43, 'history');
+
+    fireEvent.click(exerciseDetails);
+    expect(await screen.findByRole('heading', { name: 'Техника пока не добавлена' })).toBeVisible();
   });
 });

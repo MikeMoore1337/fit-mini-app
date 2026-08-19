@@ -692,8 +692,7 @@ export function ProgramBuilder({
                         })
                       }
                     />
-                    {exercises.data?.find((exercise) => exercise.id === item.exercise_id)
-                      ?.has_guide && (
+                    {exercises.data?.some((exercise) => exercise.id === item.exercise_id) && (
                       <button
                         type="button"
                         className="text-button"
@@ -704,7 +703,10 @@ export function ProgramBuilder({
                           if (selected) setGuide({ id: selected.id, title: selected.title });
                         }}
                       >
-                        Есть техника — посмотреть
+                        {exercises.data?.find((exercise) => exercise.id === item.exercise_id)
+                          ?.has_guide
+                          ? 'Техника и детали'
+                          : 'Подробнее об упражнении'}
                       </button>
                     )}
                   </label>
