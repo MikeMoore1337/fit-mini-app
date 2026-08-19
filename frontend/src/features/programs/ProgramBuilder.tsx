@@ -7,6 +7,7 @@ import { Badge, Card, CloseIcon, LoadingState } from '../../shared/ui/common';
 import { difficultyLabels, orderExercisesForLevel } from './exerciseOrdering';
 import { buildStrengthPreset, resolveStrengthRule, type StrengthSplit } from './strengthPresets';
 import { usePersistentState } from '../../shared/storage';
+import { programDraftStorageKey } from '../../shared/userScopedStorage';
 import { useAuth } from '../../app/AuthProvider';
 import { dateInputValue, detectedTimeZone } from '../../shared/dateTime';
 import { applyRestSeconds } from './programRest';
@@ -186,19 +187,19 @@ export function ProgramBuilder({
       ? `client_${targetTelegramId}`
       : `user_${user?.id ?? 'me'}`;
   const [title, setTitle, clearTitleDraft] = usePersistentState(
-    `fit_program_title_${draftScope}`,
+    programDraftStorageKey('title', draftScope),
     editingTemplate ? templateDraftTitle(editingTemplate, saveAsCopy) : 'Персональная программа',
   );
   const [goal, setGoal, clearGoalDraft] = usePersistentState<ProgramTemplateCreate['goal']>(
-    `fit_program_goal_${draftScope}`,
+    programDraftStorageKey('goal', draftScope),
     (editingTemplate?.goal as ProgramTemplateCreate['goal'] | undefined) ?? 'maintenance',
   );
   const [level, setLevel, clearLevelDraft] = usePersistentState<ProgramTemplateCreate['level']>(
-    `fit_program_level_${draftScope}`,
+    programDraftStorageKey('level', draftScope),
     (editingTemplate?.level as ProgramTemplateCreate['level'] | undefined) ?? 'beginner',
   );
   const [days, setDays, clearDaysDraft] = usePersistentState<Day[]>(
-    `fit_program_days_${draftScope}`,
+    programDraftStorageKey('days', draftScope),
     editingTemplate?.days.map((day) => ({
       title: day.title,
       exercises: day.exercises.map((exercise) => ({
@@ -213,7 +214,7 @@ export function ProgramBuilder({
     })) ?? [blankDay(1)],
   );
   const [defaultRestSeconds, setDefaultRestSeconds, clearDefaultRestDraft] = usePersistentState(
-    `fit_program_rest_${draftScope}`,
+    programDraftStorageKey('rest', draftScope),
     90,
   );
   const defaultStartDate = dateInputValue(
@@ -221,15 +222,15 @@ export function ProgramBuilder({
     user?.profile?.timezone || detectedTimeZone(),
   );
   const [startDate, setStartDate, clearStartDateDraft] = usePersistentState(
-    `fit_program_start_${draftScope}`,
+    programDraftStorageKey('start', draftScope),
     defaultStartDate,
   );
   const [durationWeeks, setDurationWeeks, clearDurationDraft] = usePersistentState(
-    `fit_program_duration_${draftScope}`,
+    programDraftStorageKey('duration', draftScope),
     4,
   );
   const [scheduleWeekdays, setScheduleWeekdays, clearScheduleDraft] = usePersistentState<number[]>(
-    `fit_program_weekdays_${draftScope}`,
+    programDraftStorageKey('weekdays', draftScope),
     [],
   );
   const [split, setSplit] = useState<StrengthSplit>('upper_lower');

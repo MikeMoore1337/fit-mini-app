@@ -14,6 +14,7 @@ import {
 import { useAuth } from '../../app/AuthProvider';
 import { addCalendarDays, dateInputValue, detectedTimeZone } from '../../shared/dateTime';
 import { usePersistentState } from '../../shared/storage';
+import { notificationDraftStorageKey } from '../../shared/userScopedStorage';
 import { notificationStatusLabel } from '../../shared/statusLabels';
 import { DateInput, TimeInput } from '../../shared/ui/PickerInput';
 
@@ -48,7 +49,7 @@ export function NotificationsPanel({
     scheduledDate: addCalendarDays(dateInputValue(new Date(), timeZone), 1),
   });
   const [notificationDraft, setNotificationDraft, clearNotificationDraft] = usePersistentState(
-    `fit_notification_draft_${user?.id ?? 'anonymous'}`,
+    notificationDraftStorageKey(user?.id ?? 'anonymous'),
     defaultNotification,
   );
   const [settingsDraft, setSettingsDraft] = useState<NotificationSetting | null>(null);

@@ -5,6 +5,7 @@ import { api } from '../../shared/api/client';
 import type { NutritionTarget, UserProfile } from '../../shared/api/types';
 import { invalidateNutritionSummaries, queryKeys } from '../../shared/queryKeys';
 import { usePersistentState } from '../../shared/storage';
+import { nutritionDraftStorageKey } from '../../shared/userScopedStorage';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Card, DisclosureIcon } from '../../shared/ui/common';
 import { EnergyCalibrationCard } from './EnergyCalibrationCard';
@@ -219,7 +220,9 @@ export function NutritionForm({
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [form, setForm, clearDraft] = usePersistentState<NutritionCalculatorInput>(
-    `fit_nutrition_draft_v2_${targetTelegramId ? `client_${targetTelegramId}` : `user_${user?.id ?? 'me'}`}`,
+    nutritionDraftStorageKey(
+      targetTelegramId ? `client_${targetTelegramId}` : `user_${user?.id ?? 'me'}`,
+    ),
     () => fromInitial(initial, targetTelegramId, targetTelegramId ? null : user?.profile),
   );
 

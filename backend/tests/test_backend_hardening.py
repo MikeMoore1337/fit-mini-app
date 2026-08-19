@@ -254,7 +254,7 @@ def test_account_export_omits_secrets_and_self_delete_removes_account(client):
 
     exported = client.get("/api/v1/me/export", headers=headers)
     assert exported.status_code == 200
-    assert exported.headers["cache-control"] == "no-store"
+    assert exported.headers["cache-control"] == "no-store, private"
     assert exported.json()["account"]["telegram_user_id"] == 883_001
     assert exported.json()["measurements"][0]["weight_kg"] == 74.5
     serialized = exported.text.lower()

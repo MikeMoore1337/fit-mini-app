@@ -22,6 +22,7 @@ import {
   type ActiveWorkoutMutation,
   type ActiveWorkoutSetValues,
 } from './activeWorkoutQueue';
+import { legacyWorkoutRestStorageKey } from '../../shared/userScopedStorage';
 import { WorkoutAdaptation } from './WorkoutAdaptation';
 import { reconcileFinishedWorkout } from './finishWorkoutRecovery';
 import { useActiveWorkoutQueue } from './useActiveWorkoutQueue';
@@ -386,7 +387,7 @@ function RestTimer({
   nextLabel: string;
 }) {
   const storageKey = activeWorkoutRestKey(userId, workoutId);
-  const legacyStorageKey = `fit_workout_rest_deadline_${workoutId}`;
+  const legacyStorageKey = legacyWorkoutRestStorageKey(workoutId);
   const [deadline, setDeadline] = useState(() => {
     const scoped = readStorage<number>(storageKey, 0);
     if (scoped) return scoped;

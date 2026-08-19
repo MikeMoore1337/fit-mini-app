@@ -11,6 +11,7 @@ import type {
   Recipe,
 } from '../../shared/api/types';
 import { usePersistentState } from '../../shared/storage';
+import { foodDraftStorageKey } from '../../shared/userScopedStorage';
 import { invalidateNutritionSummaries } from '../../shared/queryKeys';
 import { trackProductEvent, productEventSurface } from '../../shared/analytics/productEvents';
 import {
@@ -40,16 +41,43 @@ const mealLabels: Record<MealType, string> = {
 type PickerSource = 'recent' | 'favorites';
 type PickerView = 'browse' | 'food-editor' | 'recipes' | 'barcode';
 
+type FoodDraftSelection = Pick<
+  Food,
+  | 'id'
+  | 'name'
+  | 'brand'
+  | 'food_type'
+  | 'energy_kcal_per_100g'
+  | 'protein_g_per_100g'
+  | 'fat_g_per_100g'
+  | 'carbs_g_per_100g'
+  | 'standard_serving_weight_g'
+>;
+
 interface AddDraft {
-  food: Food | null;
+  food: FoodDraftSelection | null;
   amount: string;
   amountUnit: 'g' | 'serving';
 }
 
-function foodSourceLabel(food: Food): string {
+function foodSourceLabel(food: Pick<Food, 'food_type'>): string {
   if (food.food_type === 'user') return 'Мой продукт';
   if (food.food_type === 'branded') return 'Брендовый';
   return 'Каталог';
+}
+
+function foodDraftSelection(food: Food): FoodDraftSelection {
+  return {
+    id: food.id,
+    name: food.name,
+    brand: food.brand,
+    food_type: food.food_type,
+    energy_kcal_per_100g: food.energy_kcal_per_100g,
+    protein_g_per_100g: food.protein_g_per_100g,
+    fat_g_per_100g: food.fat_g_per_100g,
+    carbs_g_per_100g: food.carbs_g_per_100g,
+    standard_serving_weight_g: food.standard_serving_weight_g,
+  };
 }
 
 function formatNumber(value: string): string {
@@ -203,7 +231,7 @@ export function FoodPickerDialog({
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [recipeAmount, setRecipeAmount] = useState('100');
   const [draft, setDraft, clearDraft] = usePersistentState<AddDraft>(
-    `fit_food_draft_${user?.id ?? 'anonymous'}_${diaryDate}_${mealType}`,
+    foodDraftStorageKey(user?.id ?? 'anonymous', diaryDate, mealType),
     { food: null, amount: '100', amountUnit: 'g' },
   );
 
@@ -290,7 +318,7 @@ export function FoodPickerDialog({
   const selectFood = (food: Food) => {
     setSelectedRecipe(null);
     setDraft({
-      food,
+      food: foodDraftSelection(food),
       amount: food.standard_serving_weight_g ? '1' : '100',
       amountUnit: food.standard_serving_weight_g ? 'serving' : 'g',
     });

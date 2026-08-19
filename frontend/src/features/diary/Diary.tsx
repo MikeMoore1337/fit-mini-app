@@ -7,6 +7,7 @@ import { Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/comm
 import { useAuth } from '../../app/AuthProvider';
 import { dateInputValue, detectedTimeZone } from '../../shared/dateTime';
 import { usePersistentState } from '../../shared/storage';
+import { measurementDraftStorageKey } from '../../shared/userScopedStorage';
 import { DateInput } from '../../shared/ui/PickerInput';
 import { invalidateMeasurementMutation, queryKeys } from '../../shared/queryKeys';
 
@@ -27,7 +28,7 @@ export function Diary({
     : user?.profile?.timezone || detectedTimeZone();
   const today = dateInputValue(new Date(), timeZone);
   const [form, setForm, clearDraft] = usePersistentState<BodyMeasurementSave>(
-    `fit_measurement_draft_${clientId ? `client_${clientId}` : `user_${user?.id ?? 'me'}`}`,
+    measurementDraftStorageKey(clientId ? `client_${clientId}` : `user_${user?.id ?? 'me'}`),
     { measured_on: dateInputValue(new Date(), timeZone) },
   );
   const base = clientId

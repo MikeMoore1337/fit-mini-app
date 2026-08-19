@@ -33,6 +33,15 @@ export function usePersistentState<T>(
   const resolveInitial = () => (typeof initial === 'function' ? (initial as () => T)() : initial);
   const [value, setValue] = useState<T>(() => readStorage(key, resolveInitial()));
   const skipNextWrite = useRef(false);
+  const keyRef = useRef(key);
+
+  useEffect(() => {
+    if (keyRef.current === key) return;
+    keyRef.current = key;
+    const fallback = typeof initial === 'function' ? (initial as () => T)() : initial;
+    skipNextWrite.current = true;
+    setValue(readStorage(key, fallback));
+  }, [initial, key]);
 
   useEffect(() => {
     if (skipNextWrite.current) {

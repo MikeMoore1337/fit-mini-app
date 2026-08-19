@@ -20,16 +20,15 @@ import type { PublicConfig, User } from '../shared/api/types';
 import { LIVE_DATA_REFETCH_INTERVAL_MS } from '../shared/sync';
 import type { TelegramWebApp } from '../shared/telegram/types';
 import { useQueryClient } from '@tanstack/react-query';
+import { loadCurrentActiveWorkoutSnapshot } from '../features/workouts/activeWorkoutQueue';
 import {
-  clearActiveWorkoutDataForUser,
-  loadCurrentActiveWorkoutSnapshot,
-} from '../features/workouts/activeWorkoutQueue';
-
-const AUTHENTICATED_USER_ID_KEY = 'fit_authenticated_user_id';
+  AUTHENTICATED_USER_ID_STORAGE_KEY,
+  clearSensitiveUserScopedStorage,
+} from '../shared/userScopedStorage';
 
 function offlineWorkoutUser(): User | null {
   if (!getAccessToken()) return null;
-  const userId = Number(sessionStorage.getItem(AUTHENTICATED_USER_ID_KEY));
+  const userId = Number(sessionStorage.getItem(AUTHENTICATED_USER_ID_STORAGE_KEY));
   if (!Number.isInteger(userId) || userId <= 0) return null;
   if (!loadCurrentActiveWorkoutSnapshot(userId)) return null;
   return {
@@ -89,48 +88,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const userIdRef = useRef<number | null>(null);
 
-  useEffect(() => {
-    userIdRef.current = user?.id ?? null;
-  }, [user?.id]);
+  const clearCurrentUserData = useCallback(() => {
+    clearSensitiveUserScopedStorage();
+    userIdRef.current = null;
+  }, []);
 
-  const clearCurrentWorkoutData = useCallback(() => {
-    if (userIdRef.current) clearActiveWorkoutDataForUser(userIdRef.current);
-    sessionStorage.removeItem(AUTHENTICATED_USER_ID_KEY);
+  const acceptAuthenticatedUser = useCallback((current: User) => {
+    const storedUserId = Number(sessionStorage.getItem(AUTHENTICATED_USER_ID_STORAGE_KEY));
+    const previousUserId =
+      userIdRef.current ?? (Number.isInteger(storedUserId) ? storedUserId : null);
+    if (previousUserId && previousUserId !== current.id) clearSensitiveUserScopedStorage();
+    sessionStorage.setItem(AUTHENTICATED_USER_ID_STORAGE_KEY, String(current.id));
+    userIdRef.current = current.id;
+    setUser(current);
   }, []);
 
   const reloadUser = useCallback(async (): Promise<User | null> => {
     try {
       const current = await api<User>('/api/v1/me');
-      sessionStorage.setItem(AUTHENTICATED_USER_ID_KEY, String(current.id));
-      setUser(current);
+      acceptAuthenticatedUser(current);
       setError(null);
       return current;
     } catch (reason) {
       if (reason instanceof ApiError && reason.status === 0) {
         const cached = offlineWorkoutUser();
         if (cached) {
+          userIdRef.current = cached.id;
           setUser(cached);
           setError(null);
           return cached;
         }
       }
-      if (reason instanceof ApiError && [401, 403].includes(reason.status)) setUser(null);
+      if (reason instanceof ApiError && [401, 403].includes(reason.status)) {
+        clearCurrentUserData();
+        setUser(null);
+      }
       setError(reason instanceof Error ? reason.message : 'Не удалось загрузить профиль');
       return null;
     }
-  }, []);
+  }, [acceptAuthenticatedUser, clearCurrentUserData]);
 
   const syncUser = useCallback(async (): Promise<void> => {
     try {
       const current = await api<User>('/api/v1/me');
-      sessionStorage.setItem(AUTHENTICATED_USER_ID_KEY, String(current.id));
-      setUser(current);
+      acceptAuthenticatedUser(current);
       setError(null);
     } catch (reason) {
       // A temporary connection error must not log the user out. An expired session should.
-      if (reason instanceof ApiError && reason.status === 401) setUser(null);
+      if (reason instanceof ApiError && reason.status === 401) {
+        clearCurrentUserData();
+        setUser(null);
+      }
     }
-  }, []);
+  }, [acceptAuthenticatedUser, clearCurrentUserData]);
 
   const userId = user?.id;
   useEffect(() => {
@@ -159,14 +169,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: { init_data: initData },
         retryAuth: false,
       });
-      clearCurrentWorkoutData();
+      clearCurrentUserData();
       setUser(null);
       setError(null);
       queryClient.clear();
       setAccessToken(token.access_token);
       await reloadUser();
     },
-    [clearCurrentWorkoutData, queryClient, reloadUser],
+    [clearCurrentUserData, queryClient, reloadUser],
   );
 
   const devLogin = useCallback(
@@ -176,26 +186,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: input,
         retryAuth: false,
       });
-      clearCurrentWorkoutData();
+      clearCurrentUserData();
       setUser(null);
       setError(null);
       queryClient.clear();
       setAccessToken(token.access_token);
       await reloadUser();
     },
-    [clearCurrentWorkoutData, queryClient, reloadUser],
+    [clearCurrentUserData, queryClient, reloadUser],
   );
 
   const acceptToken = useCallback(
     async (token: { access_token: string }) => {
-      clearCurrentWorkoutData();
+      clearCurrentUserData();
       setUser(null);
       setError(null);
       queryClient.clear();
       setAccessToken(token.access_token);
       await reloadUser();
     },
-    [clearCurrentWorkoutData, queryClient, reloadUser],
+    [clearCurrentUserData, queryClient, reloadUser],
   );
 
   const emailLogin = useCallback(
@@ -255,22 +265,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       retryAuth: false,
       timeoutMs: 3_000,
     }).catch(() => undefined);
-    clearCurrentWorkoutData();
+    clearCurrentUserData();
     clearAccessToken();
     setUser(null);
     queryClient.clear();
     await serverLogout;
-  }, [clearCurrentWorkoutData, queryClient]);
+  }, [clearCurrentUserData, queryClient]);
 
   useEffect(() => {
     const handleAuthLogout = () => {
-      clearCurrentWorkoutData();
+      clearCurrentUserData();
       setUser(null);
       queryClient.clear();
     };
     window.addEventListener(AUTH_LOGOUT_EVENT, handleAuthLogout);
     return () => window.removeEventListener(AUTH_LOGOUT_EVENT, handleAuthLogout);
-  }, [clearCurrentWorkoutData, queryClient]);
+  }, [clearCurrentUserData, queryClient]);
 
   useEffect(() => {
     let cancelled = false;
