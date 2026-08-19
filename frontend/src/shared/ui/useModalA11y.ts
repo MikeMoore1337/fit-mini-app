@@ -15,6 +15,7 @@ const focusableSelector = [
 export function useModalA11y<T extends HTMLElement>(
   open: boolean,
   onClose: () => void,
+  initialFocusSelector?: string,
 ): RefObject<T | null> {
   const panelRef = useRef<T | null>(null);
   const closeRef = useRef(onClose);
@@ -35,8 +36,11 @@ export function useModalA11y<T extends HTMLElement>(
 
     const frame = window.requestAnimationFrame(() => {
       const panel = panelRef.current;
+      const preferred = initialFocusSelector
+        ? panel?.querySelector<HTMLElement>(initialFocusSelector)
+        : null;
       const first = panel?.querySelector<HTMLElement>(focusableSelector);
-      (first ?? panel)?.focus();
+      (preferred ?? first ?? panel)?.focus();
     });
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -71,7 +75,7 @@ export function useModalA11y<T extends HTMLElement>(
       if (openModalCount === 0) document.body.style.overflow = originalBodyOverflow;
       previousFocus?.focus();
     };
-  }, [open]);
+  }, [initialFocusSelector, open]);
 
   return panelRef;
 }

@@ -26,9 +26,9 @@ const ExerciseCatalog = lazy(() =>
     default: module.ExerciseCatalog,
   })),
 );
-const NutritionForm = lazy(() =>
-  import('../../features/nutrition/NutritionForm').then((module) => ({
-    default: module.NutritionForm,
+const NutritionPage = lazy(() =>
+  import('../../features/nutrition/NutritionPage').then((module) => ({
+    default: module.NutritionPage,
   })),
 );
 const CoachInvites = lazy(() =>
@@ -211,9 +211,10 @@ export default function MiniAppPage() {
               <ExerciseCatalog canCreate={Boolean(user?.is_coach || user?.is_admin)} />
             )}
             {section === 'nutrition' && (
-              <NutritionForm
+              <NutritionPage
                 key={JSON.stringify(user?.profile?.kbju ?? null)}
                 initial={user?.profile?.kbju}
+                timeZone={user?.profile?.timezone}
                 onSaved={async () => void (await reloadUser())}
               />
             )}

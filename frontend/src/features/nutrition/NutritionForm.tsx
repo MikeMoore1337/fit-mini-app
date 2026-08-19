@@ -238,7 +238,10 @@ export function NutritionForm({
       }),
     onSuccess: async () => {
       clearDraft();
-      await queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+        queryClient.invalidateQueries({ queryKey: ['nutrition', 'diary'] }),
+      ]);
       await onSaved?.();
       toast('Ориентиры КБЖУ сохранены');
     },
@@ -264,7 +267,7 @@ export function NutritionForm({
     });
 
   return (
-    <Card title="КБЖУ" description="Расчёт является ориентиром и может корректироваться тренером.">
+    <Card title="КБЖУ" description="Рассчитайте ориентир и отслеживайте его рядом с дневником.">
       <form
         className="stack top-gap"
         onSubmit={(event) => {
