@@ -9,6 +9,7 @@ from fitminiapp_api.models.program import (
     UserWorkout,
 )
 from fitminiapp_api.models.user import BodyMeasurement, CoachClient, User
+from fitminiapp_api.schemas.check_in import WeeklyCheckInHistoryResponse
 from fitminiapp_api.schemas.feedback import (
     WorkoutCommentCreate,
     WorkoutCommentResponse,
@@ -66,6 +67,7 @@ from fitminiapp_api.services.progress import (
     build_progress_summary,
     build_trainer_client_summaries,
 )
+from fitminiapp_api.services.weekly_check_ins import list_weekly_check_ins
 from fitminiapp_api.services.workout_comments import (
     WorkoutCommentError,
     create_workout_comment,
@@ -222,6 +224,21 @@ def coach_client_progress_summary(
 ):
     client = _managed_client(db, current_user, client_id)
     return build_progress_summary(db, client, period_days)
+
+
+@router.get(
+    "/clients/{client_id}/weekly-check-ins",
+    response_model=WeeklyCheckInHistoryResponse,
+)
+def coach_client_weekly_check_ins(
+    client_id: int,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0, le=10_000),
+    current_user: User = Depends(require_coach_or_admin),
+    db: Session = Depends(get_db),
+):
+    client = _managed_client(db, current_user, client_id)
+    return list_weekly_check_ins(db, client, limit=limit, offset=offset)
 
 
 @router.get(

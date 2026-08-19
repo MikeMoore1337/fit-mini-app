@@ -57,9 +57,16 @@ describe('NotificationsPanel', () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const path = String(input);
       if (path === '/api/v1/notifications/settings') {
-        return new Response(JSON.stringify({ workout_reminders_enabled: true, reminder_hour: 9 }), {
-          status: 200,
-        });
+        return new Response(
+          JSON.stringify({
+            workout_reminders_enabled: true,
+            weekly_check_in_reminders_enabled: true,
+            reminder_hour: 9,
+          }),
+          {
+            status: 200,
+          },
+        );
       }
       if (path === '/api/v1/notifications') {
         return new Response(JSON.stringify(notifications), { status: 200 });

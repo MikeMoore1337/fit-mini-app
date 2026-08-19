@@ -813,6 +813,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/coach/clients/{client_id}/weekly-check-ins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Coach Client Weekly Check Ins */
+        get: operations["coach_client_weekly_check_ins_api_v1_coach_clients__client_id__weekly_check_ins_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/coach/clients/{client_id}/training-analytics": {
         parameters: {
             query?: never;
@@ -1291,6 +1308,41 @@ export interface paths {
         post?: never;
         /** Delete Body Measurement */
         delete: operations["delete_body_measurement_api_v1_workouts_diary__measurement_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/check-ins/weekly/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Current Weekly Check In */
+        get: operations["current_weekly_check_in_api_v1_check_ins_weekly_current_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/check-ins/weekly": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Weekly Check In History */
+        get: operations["weekly_check_in_history_api_v1_check_ins_weekly_get"];
+        put?: never;
+        /** Create Weekly Check In */
+        post: operations["create_weekly_check_in_api_v1_check_ins_weekly_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -3553,6 +3605,8 @@ export interface components {
         NotificationSettingResponse: {
             /** Workout Reminders Enabled */
             workout_reminders_enabled: boolean;
+            /** Weekly Check In Reminders Enabled */
+            weekly_check_in_reminders_enabled: boolean;
             /** Reminder Hour */
             reminder_hour: number;
         };
@@ -3560,6 +3614,8 @@ export interface components {
         NotificationSettingUpdate: {
             /** Workout Reminders Enabled */
             workout_reminders_enabled: boolean;
+            /** Weekly Check In Reminders Enabled */
+            weekly_check_in_reminders_enabled?: boolean | null;
             /** Reminder Hour */
             reminder_hour: number;
         };
@@ -4674,6 +4730,166 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** WeeklyCheckInCurrentResponse */
+        WeeklyCheckInCurrentResponse: {
+            /**
+             * Week Start
+             * Format: date
+             */
+            week_start: string;
+            /**
+             * Week End
+             * Format: date
+             */
+            week_end: string;
+            /**
+             * Submitted On
+             * Format: date
+             */
+            submitted_on: string;
+            /** Timezone */
+            timezone: string;
+            existing?: components["schemas"]["WeeklyCheckInResponse"] | null;
+            summary: components["schemas"]["WeeklyCheckInSummary"];
+        };
+        /** WeeklyCheckInHistoryResponse */
+        WeeklyCheckInHistoryResponse: {
+            /** Items */
+            items: components["schemas"]["WeeklyCheckInResponse"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /** WeeklyCheckInNutritionSummary */
+        WeeklyCheckInNutritionSummary: {
+            /** Logged Days */
+            logged_days: number;
+            /** Average Calories */
+            average_calories?: number | null;
+            /** Target Calories */
+            target_calories?: number | null;
+            /** Average Protein G */
+            average_protein_g?: number | null;
+            /** Target Protein G */
+            target_protein_g?: number | null;
+            calories_adherence: components["schemas"]["AdherenceComponent"];
+            protein_adherence: components["schemas"]["AdherenceComponent"];
+        };
+        /** WeeklyCheckInProgressionSummary */
+        WeeklyCheckInProgressionSummary: {
+            /** Training Volume Kg */
+            training_volume_kg: number;
+            /** New Personal Records */
+            new_personal_records: number;
+        };
+        /** WeeklyCheckInResponse */
+        WeeklyCheckInResponse: {
+            /** Id */
+            id: number;
+            /** User Id */
+            user_id: number;
+            /**
+             * Week Start
+             * Format: date
+             */
+            week_start: string;
+            /**
+             * Week End
+             * Format: date
+             */
+            week_end: string;
+            /**
+             * Submitted On
+             * Format: date
+             */
+            submitted_on: string;
+            /** Timezone */
+            timezone: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "completed" | "skipped";
+            /**
+             * Summary Version
+             * @constant
+             */
+            summary_version: "weekly-check-in-summary-v1";
+            summary: components["schemas"]["WeeklyCheckInSummary"];
+            /** Training Load */
+            training_load?: number | null;
+            /** Recovery */
+            recovery?: number | null;
+            /** Hunger */
+            hunger?: number | null;
+            /** Adherence Difficulty */
+            adherence_difficulty?: number | null;
+            /** Note */
+            note?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** WeeklyCheckInSubmitRequest */
+        WeeklyCheckInSubmitRequest: {
+            /**
+             * Status
+             * @default completed
+             * @enum {string}
+             */
+            status: "completed" | "skipped";
+            /** Training Load */
+            training_load?: number | null;
+            /** Recovery */
+            recovery?: number | null;
+            /** Hunger */
+            hunger?: number | null;
+            /** Adherence Difficulty */
+            adherence_difficulty?: number | null;
+            /** Note */
+            note?: string | null;
+        };
+        /** WeeklyCheckInSummary */
+        WeeklyCheckInSummary: {
+            /**
+             * Ruleset Version
+             * @constant
+             */
+            ruleset_version: "weekly-check-in-summary-v1";
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /** Goal */
+            goal?: string | null;
+            training: components["schemas"]["WeeklyCheckInTrainingSummary"];
+            nutrition: components["schemas"]["WeeklyCheckInNutritionSummary"];
+            weight_trend?: components["schemas"]["BodyMetricTrend"] | null;
+            /** Anthropometry Trends */
+            anthropometry_trends: components["schemas"]["BodyMetricTrend"][];
+            body_priority?: components["schemas"]["BodyPriorityPreference"] | null;
+            progression: components["schemas"]["WeeklyCheckInProgressionSummary"];
+            data_sufficiency: components["schemas"]["ProgressDataSufficiency"];
+        };
+        /** WeeklyCheckInTrainingSummary */
+        WeeklyCheckInTrainingSummary: {
+            /** Planned Workouts */
+            planned_workouts: number;
+            /** Completed Workouts */
+            completed_workouts: number;
+            adherence: components["schemas"]["AdherenceComponent"];
         };
         /** WorkoutCommentCreate */
         WorkoutCommentCreate: {
@@ -6668,6 +6884,40 @@ export interface operations {
             };
         };
     };
+    coach_client_weekly_check_ins_api_v1_coach_clients__client_id__weekly_check_ins_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                client_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyCheckInHistoryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     coach_client_training_analytics_api_v1_coach_clients__client_id__training_analytics_get: {
         parameters: {
             query?: {
@@ -7609,6 +7859,91 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    current_weekly_check_in_api_v1_check_ins_weekly_current_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyCheckInCurrentResponse"];
+                };
+            };
+        };
+    };
+    weekly_check_in_history_api_v1_check_ins_weekly_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyCheckInHistoryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_weekly_check_in_api_v1_check_ins_weekly_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WeeklyCheckInSubmitRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyCheckInResponse"];
+                };
             };
             /** @description Validation Error */
             422: {

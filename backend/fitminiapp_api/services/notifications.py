@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 
 import httpx
 from sqlalchemy import or_
@@ -12,8 +12,10 @@ from fitminiapp_api.core.timezone import (
     now_for_user_naive,
     now_msk_naive,
     to_user_timezone_naive,
+    today_in_timezone,
     user_local_naive_to_utc_naive,
 )
+from fitminiapp_api.models.check_in import WeeklyCheckIn
 from fitminiapp_api.models.notification import Notification, NotificationSetting
 from fitminiapp_api.models.program import UserProgram, UserWorkout
 from fitminiapp_api.models.user import CoachClientInvite, User, UserProfile
@@ -50,6 +52,7 @@ def get_or_create_settings(db: Session, user: User) -> NotificationSetting:
             setting = NotificationSetting(
                 user_id=user.id,
                 workout_reminders_enabled=True,
+                weekly_check_in_reminders_enabled=True,
                 reminder_hour=9,
             )
             db.add(setting)
@@ -236,6 +239,108 @@ def sync_workout_reminders(db: Session) -> int:
         db.commit()
     except IntegrityError:
         # Параллельный worker мог первым создать тот же dedupe_key.
+        db.rollback()
+        return 0
+    return created
+
+
+def sync_weekly_check_in_reminders(db: Session) -> int:
+    created = 0
+    rows = (
+        db.query(NotificationSetting, User, UserProfile.timezone)
+        .join(User, User.id == NotificationSetting.user_id)
+        .outerjoin(UserProfile, UserProfile.user_id == User.id)
+        .filter(User.is_active.is_(True))
+        .all()
+    )
+    if not rows:
+        return 0
+
+    week_by_user: dict[int, tuple[date, date]] = {}
+    for _setting, user, timezone in rows:
+        local_day = today_in_timezone(timezone)
+        week_start = local_day - timedelta(days=local_day.weekday())
+        week_by_user[user.id] = (week_start, week_start + timedelta(days=6))
+    existing_check_ins = {
+        (row.user_id, row.week_start)
+        for row in db.query(WeeklyCheckIn.user_id, WeeklyCheckIn.week_start)
+        .filter(
+            or_(
+                *(
+                    (WeeklyCheckIn.user_id == user.id)
+                    & (WeeklyCheckIn.week_start == week_by_user[user.id][0])
+                    for _setting, user, _timezone in rows
+                )
+            )
+        )
+        .all()
+    }
+
+    active: dict[str, tuple[User, str | None, datetime]] = {}
+    for setting, user, timezone in rows:
+        week_start, week_end = week_by_user[user.id]
+        if (
+            not setting.weekly_check_in_reminders_enabled
+            or (user.id, week_start) in existing_check_ins
+        ):
+            continue
+        dedupe_key = f"weekly_check_in:{user.id}:{week_start.isoformat()}"
+        active[dedupe_key] = (
+            user,
+            timezone,
+            datetime.combine(week_end, time(hour=setting.reminder_hour)),
+        )
+
+    active_keys = set(active)
+    reminder_scope = [Notification.status == "queued"]
+    if active_keys:
+        reminder_scope.append(Notification.dedupe_key.in_(active_keys))
+    reminders = (
+        db.query(Notification)
+        .filter(
+            Notification.dedupe_key.like("weekly_check_in:%"),
+            or_(*reminder_scope),
+        )
+        .all()
+    )
+    reminders_by_key = {row.dedupe_key: row for row in reminders}
+
+    for dedupe_key, (user, timezone, scheduled_for) in active.items():
+        existing = reminders_by_key.get(dedupe_key)
+        if existing:
+            if existing.status in {"queued", "cancelled"}:
+                was_cancelled = existing.status == "cancelled"
+                existing.status = "queued"
+                existing.scheduled_for = scheduled_for
+                existing.scheduled_for_utc = local_naive_to_utc_naive(scheduled_for, timezone)
+                if was_cancelled:
+                    existing.attempt_count = 0
+                    existing.last_error = None
+                    existing.next_attempt_at = None
+                    existing.processing_started_at = None
+            continue
+        db.add(
+            Notification(
+                user_id=user.id,
+                channel="telegram",
+                title="Еженедельные итоги",
+                body="Подведите итоги недели: тренировки, питание и самочувствие.",
+                scheduled_for=scheduled_for,
+                scheduled_for_utc=local_naive_to_utc_naive(scheduled_for, timezone),
+                status="queued",
+                dedupe_key=dedupe_key,
+                action_url="/app?section=progress",
+            )
+        )
+        created += 1
+
+    for reminder in reminders:
+        if reminder.status == "queued" and reminder.dedupe_key not in active_keys:
+            reminder.status = "cancelled"
+
+    try:
+        db.commit()
+    except IntegrityError:
         db.rollback()
         return 0
     return created

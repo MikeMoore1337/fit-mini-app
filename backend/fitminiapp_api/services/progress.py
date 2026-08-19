@@ -252,24 +252,50 @@ def build_progress_summary(db: Session, user: User, period_days: int) -> dict:
     )[0]
 
 
+def build_progress_summary_for_range(
+    db: Session,
+    user: User,
+    period_start: date,
+    period_end: date,
+) -> dict:
+    if period_end < period_start:
+        raise ValueError("period_end must not be before period_start")
+    return build_progress_summaries(
+        db,
+        [user],
+        (period_end - period_start).days + 1,
+        nutrition_visible_user_ids={user.id},
+        period_bounds={user.id: (period_start, period_end)},
+    )[0]
+
+
 def build_progress_summaries(
     db: Session,
     users: list[User],
     period_days: int,
     *,
     nutrition_visible_user_ids: set[int],
+    period_bounds: dict[int, tuple[date, date]] | None = None,
 ) -> list[dict]:
-    if period_days not in {7, 30, 90}:
+    if period_bounds is None and period_days not in {7, 30, 90}:
         raise ValueError("period_days must be 7, 30, or 90")
     if not users:
         return []
 
     user_ids = [user.id for user in users]
-    today_by_user = {user.id: today_for_user(user) for user in users}
-    start_by_user = {
-        user_id: current_day - timedelta(days=period_days - 1)
-        for user_id, current_day in today_by_user.items()
-    }
+    if period_bounds is None:
+        today_by_user = {user.id: today_for_user(user) for user in users}
+        start_by_user = {
+            user_id: current_day - timedelta(days=period_days - 1)
+            for user_id, current_day in today_by_user.items()
+        }
+    else:
+        if set(period_bounds) != set(user_ids):
+            raise ValueError("period bounds must be provided for every user")
+        start_by_user = {user_id: bounds[0] for user_id, bounds in period_bounds.items()}
+        today_by_user = {user_id: bounds[1] for user_id, bounds in period_bounds.items()}
+        if any(today_by_user[user_id] < start_by_user[user_id] for user_id in user_ids):
+            raise ValueError("period end must not be before period start")
 
     workout_rows = (
         db.query(

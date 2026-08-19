@@ -25,6 +25,7 @@ def get_notification_settings(
     settings = get_or_create_settings(db, current_user)
     return NotificationSettingResponse(
         workout_reminders_enabled=settings.workout_reminders_enabled,
+        weekly_check_in_reminders_enabled=settings.weekly_check_in_reminders_enabled,
         reminder_hour=settings.reminder_hour,
     )
 
@@ -40,12 +41,15 @@ def update_notification_settings(
 
     settings = get_or_create_settings(db, current_user)
     settings.workout_reminders_enabled = payload.workout_reminders_enabled
+    if payload.weekly_check_in_reminders_enabled is not None:
+        settings.weekly_check_in_reminders_enabled = payload.weekly_check_in_reminders_enabled
     settings.reminder_hour = payload.reminder_hour
     db.commit()
     db.refresh(settings)
 
     return NotificationSettingResponse(
         workout_reminders_enabled=settings.workout_reminders_enabled,
+        weekly_check_in_reminders_enabled=settings.weekly_check_in_reminders_enabled,
         reminder_hour=settings.reminder_hour,
     )
 
