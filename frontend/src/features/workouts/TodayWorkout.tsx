@@ -714,18 +714,16 @@ export function TodayWorkout({ embedded = false }: { embedded?: boolean }) {
                     )}
                     {exercise.notes && <p className="exercise-note">{exercise.notes}</p>}
                   </div>
-                  {exercise.has_guide && (
-                    <button
-                      type="button"
-                      className="exercise-guide-trigger compact"
-                      onClick={() =>
-                        setGuide({ id: exercise.exercise_id, title: exercise.exercise_title })
-                      }
-                    >
-                      <span>Техника</span>
-                      <span aria-hidden="true">⌕</span>
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    className="exercise-guide-trigger compact"
+                    onClick={() =>
+                      setGuide({ id: exercise.exercise_id, title: exercise.exercise_title })
+                    }
+                  >
+                    <span>{exercise.has_guide ? 'Техника' : 'Подробнее'}</span>
+                    <span aria-hidden="true">⌕</span>
+                  </button>
                 </header>
 
                 <div className="active-workout-exercise__sets">

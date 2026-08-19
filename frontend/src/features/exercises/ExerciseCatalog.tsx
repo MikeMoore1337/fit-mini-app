@@ -416,15 +416,9 @@ export function ExerciseCatalog({
                     </div>
                   </div>
                   <div className="exercise-catalog-item__actions">
-                    {exercise.has_guide && (
-                      <button
-                        className="secondary"
-                        type="button"
-                        onClick={() => setGuide(exercise)}
-                      >
-                        Техника
-                      </button>
-                    )}
+                    <button className="secondary" type="button" onClick={() => setGuide(exercise)}>
+                      {exercise.has_guide ? 'Техника и детали' : 'Подробнее'}
+                    </button>
                     {canAssign && (
                       <button type="button" onClick={() => setAssignment(exercise)}>
                         В программу
@@ -474,7 +468,6 @@ export function ExerciseCatalog({
         <ExerciseGuideDialog
           exerciseId={guide.id}
           exerciseTitle={guide.title}
-          exercise={guide}
           onClose={() => setGuide(null)}
         />
       )}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type {
@@ -10,6 +10,7 @@ import { Badge, Card, EmptyState, ErrorState, LoadingState } from '../../shared/
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { workoutStatusLabel } from '../../shared/statusLabels';
 import { dateInputValue, detectedTimeZone } from '../../shared/dateTime';
+import { ExerciseGuideDialog } from '../exercises/ExerciseGuideDialog';
 
 const HISTORY_PAGE_SIZE = 10;
 const adaptationReasonLabels: Record<string, string> = {
@@ -31,6 +32,7 @@ export function WorkoutHistory({
 }) {
   const queryClient = useQueryClient();
   const { confirm, toast } = useFeedback();
+  const [guide, setGuide] = useState<{ id: number; title: string } | null>(null);
   const week = useQuery({
     queryKey: ['workout', 'week'],
     queryFn: () => api<WorkoutScheduleItem[]>('/api/v1/workouts/week'),
@@ -178,9 +180,20 @@ export function WorkoutHistory({
                     <p className="muted">
                       {item.scheduled_date} · {item.completed_sets} подходов
                     </p>
-                    <p className="muted workout-history__actual">
-                      Фактически: {item.exercises.map((exercise) => exercise.title).join(', ')}
-                    </p>
+                    <div className="workout-history__exercises" aria-label="Выполненные упражнения">
+                      {item.exercises.map((exercise) => (
+                        <button
+                          type="button"
+                          className="text-button"
+                          key={exercise.workout_exercise_id}
+                          onClick={() =>
+                            setGuide({ id: exercise.exercise_id, title: exercise.title })
+                          }
+                        >
+                          {exercise.title}
+                        </button>
+                      ))}
+                    </div>
                     {item.adaptations.map((adaptation) => (
                       <p className="workout-history__adaptation" key={adaptation.id}>
                         Изменено перед тренировкой: {adaptationReasonLabels[adaptation.reason]}
@@ -203,6 +216,13 @@ export function WorkoutHistory({
           </>
         )}
       </Card>
+      {guide && (
+        <ExerciseGuideDialog
+          exerciseId={guide.id}
+          exerciseTitle={guide.title}
+          onClose={() => setGuide(null)}
+        />
+      )}
     </div>
   );
 }

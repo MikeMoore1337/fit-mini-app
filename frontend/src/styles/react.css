@@ -1716,8 +1716,8 @@ select:not([multiple]) {
   max-width: none;
 }
 .exercise-guide-modal__panel {
-  width: min(900px, 100%);
-  max-width: 900px;
+  width: min(1040px, 100%);
+  max-width: 1040px;
   min-width: 0;
   max-height: calc(100dvh - 32px);
   overflow-x: hidden;
@@ -1725,23 +1725,24 @@ select:not([multiple]) {
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
 }
-.exercise-guide-intro {
-  margin-bottom: 16px;
-  padding: 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface-subtle);
+.exercise-guide-card {
+  display: grid;
+  gap: 22px;
 }
-.exercise-guide-intro h3,
+.exercise-guide-meta {
+  margin-bottom: 0;
+}
 .exercise-guide-note h3,
 .exercise-guide-section h3 {
   margin: 0 0 9px;
   font-size: 1rem;
 }
-.exercise-guide-intro p {
-  margin: 0;
-  color: var(--muted);
-  line-height: 1.55;
+.exercise-guide-images {
+  gap: 14px;
+}
+.exercise-guide-image {
+  border-color: color-mix(in srgb, var(--border) 78%, transparent);
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--text) 8%, transparent);
 }
 .exercise-guide-image__frame {
   position: relative;
@@ -1784,8 +1785,11 @@ select:not([multiple]) {
   background: rgba(15, 17, 21, 0.78);
   color: white;
 }
-.exercise-guide-note:first-child {
+.exercise-guide-note--technique {
   grid-column: 1 / -1;
+}
+.exercise-guide-note {
+  padding: 17px;
 }
 .exercise-guide-note ol,
 .exercise-guide-note ul {
@@ -1795,6 +1799,120 @@ select:not([multiple]) {
 }
 .exercise-guide-note li + li {
   margin-top: 6px;
+}
+.exercise-guide-empty {
+  padding: clamp(20px, 4vw, 32px);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--surface-subtle);
+}
+.exercise-guide-empty h3 {
+  margin: 7px 0 8px;
+  font-size: clamp(1.15rem, 3vw, 1.45rem);
+}
+.exercise-guide-empty p {
+  max-width: 68ch;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.exercise-guide-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.exercise-guide-facts .exercise-guide-section {
+  min-width: 0;
+  margin: 0;
+  padding: 17px;
+  border-top: 1px solid var(--border);
+}
+.exercise-guide-muscles {
+  grid-template-columns: 1fr;
+}
+.exercise-guide-muscle {
+  border: 0;
+  border-left: 3px solid var(--accent-line);
+  border-radius: 0;
+  background: transparent;
+}
+.exercise-guide-facts .exercise-guide-section--safety {
+  border-top-color: var(--warning-line);
+  background: var(--warning-soft);
+}
+.exercise-guide-section--safety ul {
+  margin: 0;
+  padding-left: 21px;
+  line-height: 1.55;
+}
+.exercise-guide-alternatives {
+  margin-top: 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.exercise-guide-alternatives > p {
+  margin: -2px 0 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.exercise-guide-alternative {
+  width: auto;
+  min-height: 42px;
+}
+.exercise-guide-source {
+  margin: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.exercise-guide-source > span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.exercise-guide-source p {
+  margin: 5px 0 0;
+  line-height: 1.5;
+}
+.workout-history__exercises {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 7px;
+}
+.workout-history__exercises .text-button {
+  min-height: 36px;
+  color: var(--accent-strong);
+  font-size: 0.84rem;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 38%, transparent);
+  text-underline-offset: 3px;
+}
+.workout-history__exercises .text-button:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+@media (max-width: 620px) {
+  .exercise-guide-modal__body {
+    padding-top: 14px;
+  }
+  .exercise-guide-card {
+    gap: 18px;
+  }
+  .exercise-guide-facts {
+    grid-template-columns: 1fr;
+  }
+  .exercise-guide-facts .exercise-guide-section {
+    padding: 15px 2px 3px;
+  }
+  .exercise-guide-facts .exercise-guide-section--safety {
+    padding: 15px;
+    border-radius: var(--radius-sm);
+  }
+  .exercise-guide-alternative {
+    width: 100%;
+  }
 }
 .exercise-lightbox {
   position: fixed;

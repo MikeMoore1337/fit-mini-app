@@ -472,20 +472,18 @@ export function TemplatesList() {
                           </small>
                         )}
                         {exercise.notes && <small>{exercise.notes}</small>}
-                        {exercise.has_guide && (
-                          <button
-                            type="button"
-                            className="text-button"
-                            onClick={() =>
-                              setGuide({
-                                id: exercise.exercise_id,
-                                title: exercise.exercise_title,
-                              })
-                            }
-                          >
-                            Есть техника — посмотреть
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          className="text-button"
+                          onClick={() =>
+                            setGuide({
+                              id: exercise.exercise_id,
+                              title: exercise.exercise_title,
+                            })
+                          }
+                        >
+                          {exercise.has_guide ? 'Техника и детали' : 'Подробнее об упражнении'}
+                        </button>
                       </li>
                     ))}
                   </ol>
