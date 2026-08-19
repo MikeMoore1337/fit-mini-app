@@ -57,7 +57,9 @@ export function NotificationsPanel({
     settings.data &&
     settingsDraft &&
     (settings.data.reminder_hour !== settingsDraft.reminder_hour ||
-      settings.data.workout_reminders_enabled !== settingsDraft.workout_reminders_enabled),
+      settings.data.workout_reminders_enabled !== settingsDraft.workout_reminders_enabled ||
+      settings.data.weekly_check_in_reminders_enabled !==
+        settingsDraft.weekly_check_in_reminders_enabled),
   );
   const settingsMutation = useMutation({
     mutationFn: (payload: NotificationSetting) =>
@@ -121,7 +123,20 @@ export function NotificationsPanel({
                       })
                     }
                   />
-                  <span>Включить напоминания</span>
+                  <span>Напоминать о тренировках</span>
+                </label>
+                <label className="switch-row">
+                  <input
+                    type="checkbox"
+                    checked={visibleSettings.weekly_check_in_reminders_enabled}
+                    onChange={(e) =>
+                      setSettingsDraft({
+                        ...visibleSettings,
+                        weekly_check_in_reminders_enabled: e.target.checked,
+                      })
+                    }
+                  />
+                  <span>Напоминать о еженедельных итогах</span>
                 </label>
                 <label className="field">
                   <span>Час отправки</span>

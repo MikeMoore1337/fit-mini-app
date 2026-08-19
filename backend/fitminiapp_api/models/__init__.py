@@ -1,6 +1,7 @@
 from fitminiapp_api.models.audit import AuditEvent
 from fitminiapp_api.models.auth_identity import AuthActionToken, AuthIdentity, LocalCredential
 from fitminiapp_api.models.billing import Payment, Plan, Subscription
+from fitminiapp_api.models.check_in import WeeklyCheckIn
 from fitminiapp_api.models.exercise import (
     Equipment,
     Exercise,
@@ -84,6 +85,7 @@ __all__ = [
     "UserWorkout",
     "UserWorkoutExercise",
     "UserWorkoutSet",
+    "WeeklyCheckIn",
     "WorkoutComment",
     "WorkoutCommentRevision",
 ]

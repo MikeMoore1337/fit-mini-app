@@ -5,11 +5,13 @@ from pydantic import BaseModel, Field
 
 class NotificationSettingUpdate(BaseModel):
     workout_reminders_enabled: bool
+    weekly_check_in_reminders_enabled: bool | None = None
     reminder_hour: int = Field(ge=0, le=23)
 
 
 class NotificationSettingResponse(BaseModel):
     workout_reminders_enabled: bool
+    weekly_check_in_reminders_enabled: bool
     reminder_hour: int
 
 

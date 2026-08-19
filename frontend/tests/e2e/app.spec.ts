@@ -555,6 +555,61 @@ async function mockApi(page: Page, { withCoachClient = false, withCoachApplicati
     if (path.endsWith('/workouts/today'))
       return route.fulfill({ status: 404, json: { detail: 'На сегодня тренировка не назначена' } });
     if (path.endsWith('/workouts/progress')) return route.fulfill({ json: emptyProgress });
+    if (path.endsWith('/check-ins/weekly/current'))
+      return route.fulfill({
+        json: {
+          week_start: '2030-01-07',
+          week_end: '2030-01-13',
+          submitted_on: '2030-01-10',
+          timezone: 'Europe/Moscow',
+          existing: null,
+          summary: {
+            ruleset_version: 'weekly-check-in-summary-v1',
+            period_start: '2030-01-07',
+            period_end: '2030-01-10',
+            goal: null,
+            training: {
+              planned_workouts: 0,
+              completed_workouts: 0,
+              adherence: {
+                status: 'not_applicable',
+                percent: null,
+                achieved: 0,
+                evaluated: 0,
+                weight: 0.4,
+              },
+            },
+            nutrition: {
+              logged_days: 0,
+              average_calories: null,
+              target_calories: null,
+              average_protein_g: null,
+              target_protein_g: null,
+              calories_adherence: {
+                status: 'not_applicable',
+                percent: null,
+                achieved: 0,
+                evaluated: 0,
+                weight: 0.2,
+              },
+              protein_adherence: {
+                status: 'not_applicable',
+                percent: null,
+                achieved: 0,
+                evaluated: 0,
+                weight: 0.2,
+              },
+            },
+            weight_trend: null,
+            anthropometry_trends: [],
+            body_priority: null,
+            progression: { training_volume_kg: 0, new_personal_records: 0 },
+            data_sufficiency: {},
+          },
+        },
+      });
+    if (path.endsWith('/check-ins/weekly'))
+      return route.fulfill({ json: { items: [], total: 0, limit: 4, offset: 0 } });
     if (path.endsWith('/workouts/schedule')) return route.fulfill({ json: [] });
     if (path.endsWith('/workouts/history/summary'))
       return route.fulfill({
@@ -586,7 +641,11 @@ async function mockApi(page: Page, { withCoachClient = false, withCoachApplicati
       return route.fulfill({ status: 204, body: '' });
     if (path.endsWith('/notifications/settings'))
       return route.fulfill({
-        json: { workout_reminders_enabled: true, reminder_hour: 9 },
+        json: {
+          workout_reminders_enabled: true,
+          weekly_check_in_reminders_enabled: true,
+          reminder_hour: 9,
+        },
       });
     if (path.endsWith('/notifications')) return route.fulfill({ json: [] });
     if (path.endsWith('/programs/exercises/1/guide'))

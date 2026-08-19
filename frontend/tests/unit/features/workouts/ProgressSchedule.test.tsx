@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProgressSchedule } from '../../../../src/features/workouts/ProgressSchedule';
@@ -37,6 +37,51 @@ const schedule = [
   },
 ];
 
+const weeklyCheckIn = {
+  week_start: '2030-01-07',
+  week_end: '2030-01-13',
+  submitted_on: '2030-01-10',
+  timezone: 'Europe/Moscow',
+  existing: null,
+  summary: {
+    ruleset_version: 'weekly-check-in-summary-v1',
+    period_start: '2030-01-07',
+    period_end: '2030-01-10',
+    goal: 'maintenance',
+    training: {
+      planned_workouts: 2,
+      completed_workouts: 1,
+      adherence: { status: 'available', percent: 50, achieved: 1, evaluated: 2, weight: 0.4 },
+    },
+    nutrition: {
+      logged_days: 3,
+      average_calories: 2000,
+      target_calories: 2000,
+      average_protein_g: 140,
+      target_protein_g: 150,
+      calories_adherence: {
+        status: 'available',
+        percent: 100,
+        achieved: 3,
+        evaluated: 3,
+        weight: 0.2,
+      },
+      protein_adherence: {
+        status: 'available',
+        percent: 66.7,
+        achieved: 2,
+        evaluated: 3,
+        weight: 0.2,
+      },
+    },
+    weight_trend: null,
+    anthropometry_trends: [],
+    body_priority: null,
+    progression: { training_volume_kg: 1200, new_personal_records: 1 },
+    data_sufficiency: {},
+  },
+};
+
 function renderPanel() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -57,6 +102,17 @@ describe('ProgressSchedule', () => {
       if (path === '/api/v1/workouts/progress') {
         return new Response(JSON.stringify(progress), { status: 200 });
       }
+      if (path === '/api/v1/check-ins/weekly/current') {
+        return new Response(JSON.stringify(weeklyCheckIn), { status: 200 });
+      }
+      if (path === '/api/v1/check-ins/weekly?limit=4&offset=0') {
+        return new Response(JSON.stringify({ items: [], total: 0, limit: 4, offset: 0 }), {
+          status: 200,
+        });
+      }
+      if (path === '/api/v1/check-ins/weekly' && init?.method === 'POST') {
+        return new Response(JSON.stringify({ id: 1 }), { status: 201 });
+      }
       if (path === '/api/v1/workouts/schedule' && (!init?.method || init.method === 'GET')) {
         return new Response(JSON.stringify(schedule), { status: 200 });
       }
@@ -69,7 +125,10 @@ describe('ProgressSchedule', () => {
     });
   });
 
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
 
   it('shows progress and sends a reschedule request', async () => {
     renderPanel();
@@ -92,6 +151,36 @@ describe('ProgressSchedule', () => {
         expect.objectContaining({
           method: 'PATCH',
           body: JSON.stringify({ scheduled_date: '2030-01-12', scheduled_time: '19:15' }),
+        }),
+      ),
+    );
+  });
+
+  it('submits optional weekly self-assessment', async () => {
+    renderPanel();
+
+    expect(await screen.findByText('Еженедельные итоги')).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('combobox', { name: /Как вы восстановились/ }), {
+      target: { value: '4' },
+    });
+    fireEvent.change(screen.getByLabelText('Заметка о неделе'), {
+      target: { value: 'Больше сна' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить итоги' }));
+
+    await waitFor(() =>
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        '/api/v1/check-ins/weekly',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            status: 'completed',
+            training_load: null,
+            recovery: 4,
+            hunger: null,
+            adherence_difficulty: null,
+            note: 'Больше сна',
+          }),
         }),
       ),
     );

@@ -17,6 +17,7 @@ from fitminiapp_api.services.notifications import (
     mark_delivery_failed,
     mark_delivery_succeeded,
     safe_delivery_error,
+    sync_weekly_check_in_reminders,
     sync_workout_reminders,
 )
 
@@ -71,6 +72,7 @@ async def run_once(*, sync_reminders: bool = True) -> None:
     with get_session_context() as db:
         if sync_reminders:
             sync_workout_reminders(db)
+            sync_weekly_check_in_reminders(db)
         rows = claim_due_notifications(db)
         users = {
             user.id: user

@@ -27,6 +27,7 @@ class NotificationSetting(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True, index=True)
     workout_reminders_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    weekly_check_in_reminders_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     reminder_hour: Mapped[int] = mapped_column(Integer, default=9)
 
 

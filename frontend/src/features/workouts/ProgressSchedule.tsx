@@ -11,6 +11,7 @@ import { workoutStatusLabel } from '../../shared/statusLabels';
 import { Badge, Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { DateInput, TimeInput } from '../../shared/ui/PickerInput';
+import { WeeklyCheckInCard } from './WeeklyCheckInCard';
 
 function formatDate(value: string): string {
   return new Date(`${value}T12:00:00`).toLocaleDateString('ru-RU', {
@@ -312,6 +313,7 @@ export function ProgressSchedule({
 }) {
   return (
     <div className="stack">
+      <WeeklyCheckInCard />
       <ProgressPanel />
       <SchedulePanel timeZone={timeZone} focusedWorkoutId={focusedWorkoutId} />
     </div>

@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 from fitminiapp_api.models.audit import AuditEvent
 from fitminiapp_api.models.auth_identity import AuthActionToken, AuthIdentity, LocalCredential
 from fitminiapp_api.models.billing import Payment, Subscription
+from fitminiapp_api.models.check_in import WeeklyCheckIn
 from fitminiapp_api.models.exercise import Exercise
 from fitminiapp_api.models.feedback import WorkoutComment, WorkoutCommentRevision
 from fitminiapp_api.models.notification import Notification, NotificationSetting
@@ -188,6 +189,9 @@ def delete_user_cascade(db: Session, user: User) -> None:
     db.query(EnergyCalibration).filter(EnergyCalibration.user_id == user.id).delete(
         synchronize_session=False
     )
+    db.query(WeeklyCheckIn).filter(WeeklyCheckIn.user_id == user.id).delete(
+        synchronize_session=False
+    )
     db.query(NutritionTarget).filter(NutritionTarget.user_id == user.id).delete(
         synchronize_session=False
     )
@@ -261,6 +265,12 @@ def build_account_export(db: Session, user: User) -> dict:
         db.query(EnergyCalibration)
         .filter(EnergyCalibration.user_id == user.id)
         .order_by(EnergyCalibration.created_at.asc(), EnergyCalibration.id.asc())
+        .all()
+    )
+    weekly_check_ins = (
+        db.query(WeeklyCheckIn)
+        .filter(WeeklyCheckIn.user_id == user.id)
+        .order_by(WeeklyCheckIn.week_start.asc(), WeeklyCheckIn.id.asc())
         .all()
     )
     setting = db.query(NotificationSetting).filter(NotificationSetting.user_id == user.id).first()
@@ -341,6 +351,14 @@ def build_account_export(db: Session, user: User) -> dict:
                 if column.name != "user_id"
             }
             for row in energy_calibrations
+        ],
+        "weekly_check_ins": [
+            {
+                column.name: getattr(row, column.name)
+                for column in WeeklyCheckIn.__table__.columns
+                if column.name != "user_id"
+            }
+            for row in weekly_check_ins
         ],
         "measurements": [
             {
@@ -475,6 +493,7 @@ def build_account_export(db: Session, user: User) -> dict:
         "notification_settings": (
             {
                 "workout_reminders_enabled": setting.workout_reminders_enabled,
+                "weekly_check_in_reminders_enabled": (setting.weekly_check_in_reminders_enabled),
                 "reminder_hour": setting.reminder_hour,
             }
             if setting
