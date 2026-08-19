@@ -185,8 +185,16 @@ refresh token атомарно помечается использованным
 отзывает только соответствующую session family, не независимые устройства.
 Logout отзывает текущую family, поэтому выданные ей access tokens сразу перестают
 приниматься. Смена пароля отзывает все refresh sessions пользователя. Frontend не
-хранит refresh token в `localStorage`; вкладки координируют refresh через browser
-lock и получают новый access token через `BroadcastChannel`.
+хранит refresh token в `localStorage`. В браузерах с Web Locks вкладки координируют
+refresh через native lock. В браузерах и WebView без Web Locks используется versioned
+cross-context mutex поверх короткоживущих owner/ticket records
+в `localStorage`; lease обновляется на время запроса, освобождается штатно либо истекает после
+закрытия context. После ожидания lock вкладка повторно проверяет access token, который мог получить
+другой context, и не выполняет вторую rotation. Новый access token передаётся через
+`BroadcastChannel`, а при его отсутствии — через немедленно удаляемое событие
+`localStorage`, после чего хранится только в `sessionStorage`. Backend по-прежнему отзывает
+session family при реальном replay старого refresh token; client coordination не ослабляет
+эту защиту.
 
 OAuth-параметр `next` принимает только точные внутренние пути `/app`, `/coach`,
 `/admin` и `/join/<безопасный-токен>`. Внешние URL, scheme-relative адреса,

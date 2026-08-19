@@ -3,7 +3,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Workout } from '../../../../src/shared/api/types';
 import {
+  acknowledgeWorkoutMutation,
+  activeWorkoutLockName,
   activeWorkoutQueueKey,
+  clearActiveWorkoutData,
   clearActiveWorkoutDataForUser,
   emptyActiveWorkoutQueue,
   enqueueWorkoutMutation,
@@ -14,6 +17,7 @@ import {
   saveActiveWorkoutSnapshot,
 } from '../../../../src/features/workouts/activeWorkoutQueue';
 import { useActiveWorkoutQueue } from '../../../../src/features/workouts/useActiveWorkoutQueue';
+import { createCrossContextCoordinator } from '../../../../src/shared/browser/crossContextLock';
 
 const workout: Workout = {
   id: 42,
@@ -110,7 +114,7 @@ describe('active workout durable queue', () => {
     const first = renderHarness();
 
     act(() => screen.getByRole('button', { name: 'Изменить' }).click());
-    expect(screen.getByTestId('pending')).toHaveTextContent('1');
+    await waitFor(() => expect(screen.getByTestId('pending')).toHaveTextContent('1'));
     expect(screen.getByTestId('reps')).toHaveTextContent('8');
     expect(fetchMock).not.toHaveBeenCalled();
     first.unmount();
@@ -182,6 +186,175 @@ describe('active workout durable queue', () => {
       expected_version: 3,
       values: { actual_reps: 10, actual_weight: 42.5, is_completed: true },
     });
+  });
+
+  it('не теряет interleaved enqueue из двух contexts без Web Locks', async () => {
+    const lockName = activeWorkoutLockName(7, 42);
+    const firstContext = createCrossContextCoordinator({
+      nativeLocks: null,
+      ownerId: 'workout-context-a',
+      pollMs: 1,
+      leaseMs: 1000,
+      timeoutMs: 2000,
+    });
+    const secondContext = createCrossContextCoordinator({
+      nativeLocks: null,
+      ownerId: 'workout-context-b',
+      pollMs: 1,
+      leaseMs: 1000,
+      timeoutMs: 2000,
+    });
+    const enqueue = (
+      coordinator: ReturnType<typeof createCrossContextCoordinator>,
+      setId: number,
+    ) =>
+      coordinator.run(lockName, () => {
+        const current = loadActiveWorkoutQueue(7, 42);
+        saveActiveWorkoutQueue(
+          enqueueWorkoutMutation(current, {
+            setId,
+            serverVersion: 1,
+            values: { actual_reps: 8, actual_weight: 40, is_completed: true },
+          }),
+        );
+      });
+
+    await Promise.all([enqueue(firstContext, 201), enqueue(secondContext, 202)]);
+
+    expect(
+      loadActiveWorkoutQueue(7, 42)
+        .queue.map((item) => item.set_id)
+        .sort(),
+    ).toEqual([201, 202]);
+  });
+
+  it('ack и clear под lock не перезаписывают последующую concurrent mutation', async () => {
+    let initial = enqueueWorkoutMutation(emptyActiveWorkoutQueue(7, 42), {
+      setId: 201,
+      serverVersion: 1,
+      values: { actual_reps: 8, actual_weight: 40, is_completed: true },
+    });
+    const acknowledgedId = initial.queue[0]!.mutation_id;
+    initial = enqueueWorkoutMutation(initial, {
+      setId: 202,
+      serverVersion: 1,
+      values: { actual_reps: 10, actual_weight: 30, is_completed: true },
+    });
+    saveActiveWorkoutQueue(initial);
+    const lockName = activeWorkoutLockName(7, 42);
+    const firstContext = createCrossContextCoordinator({
+      nativeLocks: null,
+      ownerId: 'workout-ack-context',
+      pollMs: 1,
+      leaseMs: 1000,
+      timeoutMs: 2000,
+    });
+    const secondContext = createCrossContextCoordinator({
+      nativeLocks: null,
+      ownerId: 'workout-enqueue-context',
+      pollMs: 1,
+      leaseMs: 1000,
+      timeoutMs: 2000,
+    });
+
+    await Promise.all([
+      firstContext.run(lockName, () => {
+        saveActiveWorkoutQueue(
+          acknowledgeWorkoutMutation(loadActiveWorkoutQueue(7, 42), acknowledgedId, 2),
+        );
+      }),
+      secondContext.run(lockName, () => {
+        saveActiveWorkoutQueue(
+          enqueueWorkoutMutation(loadActiveWorkoutQueue(7, 42), {
+            setId: 203,
+            serverVersion: 1,
+            values: { actual_reps: 6, actual_weight: 50, is_completed: false },
+          }),
+        );
+      }),
+    ]);
+    expect(
+      loadActiveWorkoutQueue(7, 42)
+        .queue.map((item) => item.set_id)
+        .sort(),
+    ).toEqual([202, 203]);
+
+    const rebasedId = loadActiveWorkoutQueue(7, 42).queue.find(
+      (item) => item.set_id === 202,
+    )!.mutation_id;
+    await Promise.all([
+      firstContext.run(lockName, () => {
+        saveActiveWorkoutQueue(
+          resolveWorkoutVersionConflict(loadActiveWorkoutQueue(7, 42), rebasedId, 4),
+        );
+      }),
+      secondContext.run(lockName, () => {
+        saveActiveWorkoutQueue(
+          enqueueWorkoutMutation(loadActiveWorkoutQueue(7, 42), {
+            setId: 205,
+            serverVersion: 1,
+            values: { actual_reps: 7, actual_weight: 60, is_completed: false },
+          }),
+        );
+      }),
+    ]);
+    const afterRebase = loadActiveWorkoutQueue(7, 42);
+    expect(afterRebase.queue.find((item) => item.set_id === 202)?.expected_version).toBe(4);
+    expect(afterRebase.queue.map((item) => item.set_id).sort()).toEqual([202, 203, 205]);
+
+    let releaseClear!: () => void;
+    const clearStarted = new Promise<void>((resolve) => {
+      releaseClear = resolve;
+    });
+    let clearEntered!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      clearEntered = resolve;
+    });
+    const clearing = firstContext.run(lockName, async () => {
+      clearActiveWorkoutData(7, 42);
+      clearEntered();
+      await clearStarted;
+    });
+    await entered;
+    const laterEnqueue = secondContext.run(lockName, () => {
+      saveActiveWorkoutQueue(
+        enqueueWorkoutMutation(loadActiveWorkoutQueue(7, 42), {
+          setId: 204,
+          serverVersion: 1,
+          values: { actual_reps: 12, actual_weight: 20, is_completed: true },
+        }),
+      );
+    });
+    releaseClear();
+    await Promise.all([clearing, laterEnqueue]);
+    expect(loadActiveWorkoutQueue(7, 42).queue.map((item) => item.set_id)).toEqual([204]);
+  });
+
+  it('читает сохранённый queue/snapshot v1 после coordination upgrade', () => {
+    localStorage.setItem(
+      activeWorkoutQueueKey(7, 42),
+      JSON.stringify({
+        schema_version: 1,
+        user_id: 7,
+        workout_id: 42,
+        queue: [
+          {
+            mutation_id: 'legacy-v1-mutation-0001',
+            set_id: 201,
+            expected_version: 1,
+            values: { actual_reps: 9, actual_weight: 42.5, is_completed: true },
+            created_at: 1,
+          },
+        ],
+        workout_snapshot: workout,
+      }),
+    );
+
+    const restored = loadActiveWorkoutQueue(7, 42);
+
+    expect(restored.schema_version).toBe(1);
+    expect(restored.queue[0]?.values.actual_reps).toBe(9);
+    expect(restored.workout_snapshot?.id).toBe(42);
   });
 
   it('сохраняет расширенные поля подхода в offline-очереди', () => {

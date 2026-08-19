@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../shared/api/client';
+import { crossContextCoordinator } from '../../shared/browser/crossContextLock';
 import type { Workout, WorkoutStatus } from '../../shared/api/types';
 import {
   acknowledgeWorkoutMutation,
+  activeWorkoutLockName,
   activeWorkoutQueueKey,
   clearActiveWorkoutData,
   emptyActiveWorkoutQueue,
@@ -65,6 +67,7 @@ export function useActiveWorkoutQueue(userId: number | undefined, workout: Worko
     [workout],
   );
   const key = userId && workoutId ? activeWorkoutQueueKey(userId, workoutId) : null;
+  const lockName = userId && workoutId ? activeWorkoutLockName(userId, workoutId) : null;
   const [storedState, setStoredState] = useState<{
     key: string | null;
     data: ActiveWorkoutQueue;
@@ -113,18 +116,15 @@ export function useActiveWorkoutQueue(userId: number | undefined, workout: Worko
 
   useEffect(() => {
     if (!userId || !workout || workout.status !== 'in_progress') return;
-    const next = saveActiveWorkoutSnapshot(userId, workout);
-    if (!next) return;
     let cancelled = false;
-    queueMicrotask(() => {
-      if (!cancelled) {
-        const fresh = storageAvailable.current
-          ? loadActiveWorkoutQueue(userId, workout.id, validSetIds)
-          : memoryState.current;
-        memoryState.current = fresh;
-        setStoredState({ key: activeWorkoutQueueKey(userId, workout.id), data: fresh });
-      }
-    });
+    void crossContextCoordinator
+      .run(activeWorkoutLockName(userId, workout.id), () => {
+        const next = saveActiveWorkoutSnapshot(userId, workout);
+        if (!next || cancelled) return;
+        memoryState.current = next;
+        setStoredState({ key: activeWorkoutQueueKey(userId, workout.id), data: next });
+      })
+      .catch(() => undefined);
     return () => {
       cancelled = true;
     };
@@ -228,53 +228,71 @@ export function useActiveWorkoutQueue(userId: number | undefined, workout: Worko
   const flushNow = useCallback((): Promise<boolean> => {
     if (flushPromise.current) return flushPromise.current;
     const promise = (async (): Promise<boolean> => {
-      if (key && navigator.locks?.request) {
-        return await navigator.locks.request(`fit-active-workout-${key}`, () => runQueue());
+      if (!lockName) return runQueue();
+      try {
+        return await crossContextCoordinator.run(lockName, runQueue);
+      } catch (reason) {
+        setSyncState('error');
+        setMessage(
+          reason instanceof Error ? reason.message : 'Не удалось синхронизировать очередь.',
+        );
+        return false;
       }
-      return await runQueue();
     })();
     flushPromise.current = promise;
     void promise.finally(() => {
       flushPromise.current = null;
     });
     return promise;
-  }, [key, runQueue]);
+  }, [lockName, runQueue]);
 
   const enqueue = useCallback(
     (setId: number, serverVersion: number, values: ActiveWorkoutSetValues, immediate = false) => {
-      if (!userId || !workoutId) return;
-      const next = enqueueWorkoutMutation(readFresh(), {
-        setId,
-        serverVersion,
-        values,
-        inFlightMutationId: inFlightId.current,
-      });
-      const durable = persist(next);
-      setSyncState(navigator.onLine ? 'pending' : 'offline');
-      setMessage(
-        durable
-          ? navigator.onLine
-            ? null
-            : 'Нет сети. Изменения сохранены на этом устройстве.'
-          : 'Хранилище устройства недоступно. Не закрывайте приложение до синхронизации.',
-      );
-      if (immediate && navigator.onLine) window.setTimeout(() => void flushNow(), 0);
+      if (!userId || !workoutId || !lockName) return;
+      const onlineAtEnqueue = navigator.onLine;
+      setSyncState(onlineAtEnqueue ? 'pending' : 'offline');
+      void crossContextCoordinator
+        .run(lockName, () => {
+          const next = enqueueWorkoutMutation(readFresh(), {
+            setId,
+            serverVersion,
+            values,
+            inFlightMutationId: inFlightId.current,
+          });
+          const durable = persist(next);
+          setMessage(
+            durable
+              ? navigator.onLine
+                ? null
+                : 'Нет сети. Изменения сохранены на этом устройстве.'
+              : 'Хранилище устройства недоступно. Не закрывайте приложение до синхронизации.',
+          );
+        })
+        .then(() => {
+          if (immediate && onlineAtEnqueue) window.setTimeout(() => void flushNow(), 0);
+        })
+        .catch((reason) => {
+          setSyncState('error');
+          setMessage(reason instanceof Error ? reason.message : 'Не удалось сохранить изменение.');
+        });
     },
-    [flushNow, persist, readFresh, userId, workoutId],
+    [flushNow, lockName, persist, readFresh, userId, workoutId],
   );
 
-  const clear = useCallback(() => {
-    if (!userId || !workoutId) return;
-    clearActiveWorkoutData(userId, workoutId);
-    storageAvailable.current = true;
-    memoryState.current = emptyActiveWorkoutQueue(userId, workoutId);
-    setStoredState({
-      key: activeWorkoutQueueKey(userId, workoutId),
-      data: memoryState.current,
+  const clear = useCallback(async () => {
+    if (!userId || !workoutId || !lockName) return;
+    await crossContextCoordinator.run(lockName, () => {
+      clearActiveWorkoutData(userId, workoutId);
+      storageAvailable.current = true;
+      memoryState.current = emptyActiveWorkoutQueue(userId, workoutId);
+      setStoredState({
+        key: activeWorkoutQueueKey(userId, workoutId),
+        data: memoryState.current,
+      });
+      setSyncState('idle');
+      setMessage(null);
     });
-    setSyncState('idle');
-    setMessage(null);
-  }, [userId, workoutId]);
+  }, [lockName, userId, workoutId]);
 
   useEffect(() => {
     if (

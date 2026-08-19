@@ -199,12 +199,24 @@ def test_finish_requires_explicit_incomplete_confirmation_and_completes_program(
         json={"confirm_incomplete": True},
     )
     assert finished.status_code == 200, finished.text
+    with get_session_context() as db:
+        completed_workout = db.query(UserWorkout).filter(UserWorkout.id == workout["id"]).one()
+        completed_program = (
+            db.query(UserProgram).filter(UserProgram.id == completed_workout.user_program_id).one()
+        )
+        terminal_timestamps = (completed_workout.completed_at, completed_program.completed_at)
     repeated_finish = client.post(
         f"/api/v1/workouts/{workout['id']}/finish",
         headers=headers,
         json={"confirm_incomplete": True},
     )
-    assert repeated_finish.status_code == 409
+    assert repeated_finish.status_code == 200
+    assert repeated_finish.json() == finished.json()
+    other_headers = _auth(client, 91003)
+    assert (
+        client.post(f"/api/v1/workouts/{workout['id']}/finish", headers=other_headers).status_code
+        == 404
+    )
 
     progress = client.get("/api/v1/workouts/progress", headers=headers)
     assert progress.status_code == 200
@@ -222,8 +234,10 @@ def test_finish_requires_explicit_incomplete_confirmation_and_completes_program(
     with get_session_context() as db:
         user = db.query(User).filter(User.telegram_user_id == 91002).one()
         program = db.query(UserProgram).filter(UserProgram.user_id == user.id).one()
+        completed_workout = db.query(UserWorkout).filter(UserWorkout.id == workout["id"]).one()
         assert program.status == "completed"
         assert program.is_active is False
+        assert (completed_workout.completed_at, program.completed_at) == terminal_timestamps
         assert program.completed_at is not None
 
 

@@ -2,10 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   api,
   clearAccessToken,
+  coordinateAccessTokenRefresh,
   getAccessToken,
   refreshAccessToken,
   setAccessToken,
 } from '../../../../src/shared/api/client';
+import { createCrossContextCoordinator } from '../../../../src/shared/browser/crossContextLock';
 
 describe('api client', () => {
   beforeEach(() => {
@@ -57,6 +59,101 @@ describe('api client', () => {
         value: originalLocks,
       });
     }
+  });
+
+  it('serializes two refresh contexts without Web Locks and reuses the winner token', async () => {
+    setAccessToken('old');
+    const originalLocks = navigator.locks;
+    Object.defineProperty(navigator, 'locks', { configurable: true, value: undefined });
+    const firstContext = createCrossContextCoordinator({
+      nativeLocks: null,
+      ownerId: 'context-a',
+      pollMs: 1,
+      leaseMs: 1000,
+      timeoutMs: 2000,
+    });
+    const secondContext = createCrossContextCoordinator({
+      nativeLocks: null,
+      ownerId: 'context-b',
+      pollMs: 1,
+      leaseMs: 1000,
+      timeoutMs: 2000,
+    });
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('{"access_token":"winner"}', { status: 200 }));
+
+    try {
+      await expect(
+        Promise.all([
+          coordinateAccessTokenRefresh(firstContext),
+          coordinateAccessTokenRefresh(secondContext),
+        ]),
+      ).resolves.toEqual([true, true]);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(getAccessToken()).toBe('winner');
+    } finally {
+      Object.defineProperty(navigator, 'locks', {
+        configurable: true,
+        value: originalLocks,
+      });
+    }
+  });
+
+  it('waits for delayed winner-token delivery after the fallback lock', async () => {
+    setAccessToken('old');
+    const holder = createCrossContextCoordinator({
+      nativeLocks: null,
+      ownerId: 'refresh-holder',
+      pollMs: 1,
+      leaseMs: 1000,
+      timeoutMs: 2000,
+    });
+    const waitingContext = createCrossContextCoordinator({
+      nativeLocks: null,
+      ownerId: 'refresh-waiter',
+      pollMs: 1,
+      leaseMs: 1000,
+      timeoutMs: 2000,
+    });
+    let releaseHolder!: () => void;
+    const hold = new Promise<void>((resolve) => {
+      releaseHolder = resolve;
+    });
+    let holderEntered!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      holderEntered = resolve;
+    });
+    const holding = holder.run('fit-auth-refresh', async () => {
+      holderEntered();
+      await hold;
+    });
+    await entered;
+    const waiting = coordinateAccessTokenRefresh(waitingContext);
+    setAccessToken('winner');
+    sessionStorage.setItem('fit_access_token', 'old');
+    releaseHolder();
+    window.setTimeout(() => {
+      if (typeof window.BroadcastChannel === 'function') {
+        const channel = new window.BroadcastChannel('fit_auth_session');
+        channel.postMessage({ type: 'access-token', token: 'winner' });
+        channel.close();
+      } else {
+        window.dispatchEvent(
+          new StorageEvent('storage', {
+            key: 'fit_auth_session_event_v1',
+            newValue: JSON.stringify({
+              message: { type: 'access-token', token: 'winner' },
+            }),
+          }),
+        );
+      }
+    }, 10);
+    const fetchMock = vi.spyOn(globalThis, 'fetch');
+
+    await expect(Promise.all([holding, waiting])).resolves.toEqual([undefined, true]);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(getAccessToken()).toBe('winner');
   });
 
   it('turns a fetch failure into a readable offline error', async () => {
