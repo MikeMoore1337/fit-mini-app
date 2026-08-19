@@ -190,18 +190,31 @@ describe('TemplatesList editing', () => {
   it('previews a deterministic recommendation before explicit start', async () => {
     renderList();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Подобрать программу' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Начать подбор' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Далее' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Далее' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Далее' }));
+    fireEvent.click(screen.getByRole('radio', { name: /Место не важно/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Далее' }));
+    fireEvent.click(screen.getByRole('radio', { name: /Не проверять оборудование/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Показать рекомендацию' }));
 
     expect(await screen.findByText('Фуллбади по правилам')).toBeInTheDocument();
     expect(screen.getByText('Подходит по цели, уровню и частоте.')).toBeInTheDocument();
     expect(screen.getByText('Оборудование не проверялось.')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Посмотреть состав' }));
+    fireEvent.click(
+      within(screen.getByRole('dialog', { name: 'Ваш результат' })).getByRole('button', {
+        name: 'Посмотреть план',
+      }),
+    );
     expect(screen.getByRole('dialog', { name: /Фуллбади по правилам/ })).toBeInTheDocument();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Закрыть состав программы' })[1]!);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Перейти к запуску' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Настроить расписание и запустить' }));
     expect(screen.getByRole('dialog', { name: /Фуллбади по правилам/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Назначить по расписанию' }));
+    expect(
+      await screen.findByRole('dialog', { name: 'Заменить активную программу?' }),
+    ).toBeInTheDocument();
 
     const requestedPaths = vi.mocked(globalThis.fetch).mock.calls.map(([input]) => String(input));
     expect(requestedPaths).toContain('/api/v1/programs/templates/recommendation');
