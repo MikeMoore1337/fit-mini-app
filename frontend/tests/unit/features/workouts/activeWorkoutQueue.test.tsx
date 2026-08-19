@@ -184,6 +184,33 @@ describe('active workout durable queue', () => {
     });
   });
 
+  it('сохраняет расширенные поля подхода в offline-очереди', () => {
+    const state = enqueueWorkoutMutation(emptyActiveWorkoutQueue(7, 42), {
+      setId: 201,
+      serverVersion: 1,
+      values: {
+        actual_reps: 8,
+        actual_weight: 40,
+        rir: '2',
+        set_kind: 'drop',
+        reached_failure: false,
+        is_completed: true,
+      },
+      now: 1,
+    });
+
+    saveActiveWorkoutQueue(state);
+
+    expect(loadActiveWorkoutQueue(7, 42).queue[0]?.values).toEqual({
+      actual_reps: 8,
+      actual_weight: 40,
+      rir: '2',
+      set_kind: 'drop',
+      reached_failure: false,
+      is_completed: true,
+    });
+  });
+
   it('изолирует аккаунты и удаляет повреждённое хранилище', () => {
     saveActiveWorkoutSnapshot(7, workout);
     saveActiveWorkoutQueue({

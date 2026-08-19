@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { YFC_THEME_COLORS } from '../../../../src/shared/theme';
-import { useTelegram } from '../../../../src/shared/telegram/useTelegram';
+import { haptic, useTelegram } from '../../../../src/shared/telegram/useTelegram';
 import type { TelegramWebApp } from '../../../../src/shared/telegram/types';
 
 function TelegramThemeProbe() {
@@ -133,5 +133,20 @@ describe('useTelegram theme', () => {
     await waitFor(() => expect(document.documentElement.dataset.colorScheme).toBe('light'));
     expect(document.documentElement.dataset.appSurface).toBeUndefined();
     expect(document.documentElement.dataset.themeSource).toBe('web');
+  });
+
+  it('routes moderate workout feedback through the Telegram adapter when available', () => {
+    const telegram = telegramMock('dark');
+    telegram.HapticFeedback = {
+      impactOccurred: vi.fn(),
+      notificationOccurred: vi.fn(),
+    };
+    window.Telegram = { WebApp: telegram };
+
+    haptic('success');
+    haptic('error');
+
+    expect(telegram.HapticFeedback.notificationOccurred).toHaveBeenNthCalledWith(1, 'success');
+    expect(telegram.HapticFeedback.notificationOccurred).toHaveBeenNthCalledWith(2, 'error');
   });
 });

@@ -136,7 +136,8 @@ test('active workout переживает offline edit, refresh и reconnect б�
   await page.getByRole('spinbutton', { name: 'Повторы, Жим штанги лежа, подход 1' }).fill('8');
   await page.getByRole('spinbutton', { name: 'Вес, Жим штанги лежа, подход 1' }).fill('40');
   await page.getByRole('button', { name: 'Завершить: Жим штанги лежа, подход 1' }).click();
-  await expect(page.getByText('Изменения сохранены на устройстве')).toBeVisible();
+  await expect(page.getByText('Сохранено на устройстве')).toBeVisible();
+  await expect(page.getByRole('timer').filter({ hasText: 'Отдых' })).toContainText('1:30');
   await expect
     .poll(() =>
       page.evaluate(() => {
@@ -161,8 +162,8 @@ test('active workout переживает offline edit, refresh и reconnect б�
   workoutOffline = false;
   workoutMissing = false;
   const callsBeforeReconnect = setPatchCalls;
-  await page.getByRole('button', { name: 'Повторить синхронизацию' }).click();
-  await expect(page.getByText('Изменения сохранены на устройстве')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Повторить' }).click();
+  await expect(page.getByText('Синхронизировано')).toBeVisible();
   expect(setPatchCalls - callsBeforeReconnect).toBe(1);
   expect(setState).toEqual({ actual_reps: 8, actual_weight: 40, is_completed: true });
 });
