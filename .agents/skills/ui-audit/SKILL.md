@@ -7,7 +7,9 @@ description: Audit an implemented UI in the real browser for layout, responsive 
 
 Проверяй фактический render, а не только исходный код.
 
-Используй Playwright/browser tooling, если доступен.
+В Codex IDE используй Playwright MCP. Не используй Browser skill / In-app Browser: эта
+интеграция не поддерживается в Codex IDE extension. В других средах используй доступный
+Playwright/browser tooling.
 
 Проверь репрезентативные размеры, обычно:
 
