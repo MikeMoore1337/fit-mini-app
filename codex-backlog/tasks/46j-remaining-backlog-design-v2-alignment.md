@@ -152,7 +152,9 @@ Task должна реализовывать production Landing по:
 Зафиксировать порядок:
 
 ```text
-46 -> 46A -> 46B -> 46C -> 46D -> 46E
+46 -> 46A -> 46B -> 46B1 -> 46C umbrella
+   -> 46C.1 -> 46C.2 -> 46C.3 -> 46C.4 -> 46C.5
+   -> 46D -> 46E
    -> owner choice
    -> 46F
    -> owner approval

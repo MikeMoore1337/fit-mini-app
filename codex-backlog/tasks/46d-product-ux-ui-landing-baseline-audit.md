@@ -1,8 +1,8 @@
 # TASK 46D. Product UX/UI и Landing baseline-аудит перед Design V2
 
 - Фаза: **Design V2 discovery**
-- Приоритет: **46D/93 - выполнить после технического gate 46C**
-- Зависит от: `46C` или подтверждение `no remediation required`
+- Приоритет: **46D/93 - выполнить только после всех remediation tasks 46C.1-46C.5**
+- Зависит от: `46C.1`, `46C.2`, `46C.3`, `46C.4`, `46C.5`
 - Рекомендуемый reasoning: **High**
 - Рекомендуемая модель: **GPT-5.6 Sol High**
 - Рекомендуемые skills: `$product-discovery`, `$product-designer`, `$ui-audit`, `$frontend-engineer`, `$qa-engineer`
@@ -25,7 +25,7 @@
 - Не создавать Design V2 в этой task.
 - Не исправлять найденные UI/UX defects.
 - Не считать старые Landing PNG целевым source of truth.
-- Не проводить новый технический/security audit, уже закрытый tasks `46A-46C`.
+- Не проводить новый технический/security audit, уже закрытый tasks `46A-46C.5`.
 - Не придумывать функции, метрики, отзывы, тарифы или обещания.
 
 ## Обязательные источники

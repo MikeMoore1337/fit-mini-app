@@ -1,13 +1,13 @@
 {
   "package": "your-fitness-coach-release-backlog-final-unified-web-tma-design",
-  "generated_at": "2026-08-18T01:07:00+03:00",
+  "generated_at": "2026-08-19T19:59:52+03:00",
   "repository": "MikeMoore1337/fit-mini-app",
   "working_branch": "feature/yfc-platform-v2",
   "status": "FINAL_PRE_RELEASE_FEATURE_FREEZE",
-  "user_confirmed_completed_tasks": "00-06",
-  "next_task": "07-brand-logo-favicon-foundation",
-  "task_count": 94,
-  "task_range": "00-93",
+  "user_confirmed_completed_tasks": "00-46 plus 46A, 46B and 46B1",
+  "next_task": "46c1-root-admin-trainer-authorization-remediation",
+  "task_count": 110,
+  "task_range": "00-93 plus 46A-46J and 46C.1-46C.5",
   "core_product_complete_before_ai_through": "75",
   "ai_block": "76-91",
   "production_readiness": "92",
@@ -105,8 +105,13 @@
     },
     {
       "path": "DEPENDENCY_GRAPH.md",
-      "bytes": 910,
-      "sha256": "023da1e730337575dd25a5e1a781db0edc6835cbb4f324fb3a6fe20f308bb898"
+      "bytes": 1316,
+      "sha256": "667ed251c4d9daf20909615689f898d608bdd7e015c0a1e2c9037f011a55be77"
+    },
+    {
+      "path": "DESIGN_V2_INTEGRATION_NOTES.md",
+      "bytes": 3227,
+      "sha256": "706b3f3f0e707311b3a7858cdb774a620301c21a38a79828356ae0eb2598fe1d"
     },
     {
       "path": "EXECUTION_STATUS.md",
@@ -115,8 +120,8 @@
     },
     {
       "path": "FINAL_BACKLOG_CHANGELOG.md",
-      "bytes": 4790,
-      "sha256": "9ee25dec771bc194304304c6454dbdc4a8d275289795223e555ec7634554cde7"
+      "bytes": 4789,
+      "sha256": "9a014340c1dff552de07b6493c567cdaf4a2cd60da22845e48430eb7d1e29d4f"
     },
     {
       "path": "FITNESS_ONLINE_GAP_ANALYSIS.md",
@@ -139,6 +144,11 @@
       "sha256": "1d76652d7742705b0a09bdfaeaacbf91ca62bba55c0d6e09187ddc0400b26e2c"
     },
     {
+      "path": "NEW_TASKS_46A_46J_README.md",
+      "bytes": 1751,
+      "sha256": "2fc6c93f75414cd903d5192410672026fb853fb8f9ed84298175cc459230dd80"
+    },
+    {
       "path": "PLAIN_LANGUAGE_UX.md",
       "bytes": 2504,
       "sha256": "1c5cb3a91eba7f1c98767f9617d1c869ac6c12d1ea0725bff46080fe91b4de2b"
@@ -150,8 +160,8 @@
     },
     {
       "path": "PRIORITY_ORDER.md",
-      "bytes": 800,
-      "sha256": "c39e082189f49cc4c4d50b058636cdedcb1600b5f4679c13b1e578f21f00484d"
+      "bytes": 1291,
+      "sha256": "b6251326458f3c34bbd4c24d54f63c87d5aacfef57b928f249b09d490b706f98"
     },
     {
       "path": "RELEASE_SCOPE_FREEZE.md",
@@ -170,8 +180,8 @@
     },
     {
       "path": "masters/ai-coach-multiprovider-master.md",
-      "bytes": 47567,
-      "sha256": "1ee8a860b0fb625f2bdbc650ee2b3df8e1e45b7cb1d9614499d6702115b26f34"
+      "bytes": 47565,
+      "sha256": "c847fe8c390d6f0474d20ed99927a7ce043487cec29ce8f21103b20bc597efe7"
     },
     {
       "path": "masters/auth/MASTER.md",
@@ -240,8 +250,8 @@
     },
     {
       "path": "masters/premium-redesign-master.md",
-      "bytes": 115150,
-      "sha256": "2eaebbd0afc525612ccb95d32e2e28d1c71f9f1ab1f63c3375d1279390b7aaf1"
+      "bytes": 115122,
+      "sha256": "648ade0730b7b3e2e3bbb7918a23b01e2ef136232404964f9b5fa2287ffad8ae"
     },
     {
       "path": "masters/premium-redesign-start-original.md",
@@ -514,6 +524,86 @@
       "sha256": "60ab49b9ca6300814650426770ae56f984c530af8ff3edbd77cb4f4ea80c473a"
     },
     {
+      "path": "tasks/46a-completed-scope-production-quality-audit.md",
+      "bytes": 8563,
+      "sha256": "ecc2850ec21115e24325e62b08120fda813efdde2908b24d0c24a9b4a9149ea3"
+    },
+    {
+      "path": "tasks/46b-security-privacy-data-integrity-audit.md",
+      "bytes": 9072,
+      "sha256": "11782ebc0354624b8c2020fb451d41e5998c4824deb60eed3a376843bac9556e"
+    },
+    {
+      "path": "tasks/46b1-consolidated-audit-triage-owner-decision.md",
+      "bytes": 18444,
+      "sha256": "052c96756ed0d18fd70bbbf64cfc699fd6adcd8923adeca052bc8fe5179f1f3c"
+    },
+    {
+      "path": "tasks/46c-critical-technical-remediation.md",
+      "bytes": 4903,
+      "sha256": "50c7534b11606277e0bf4c11ece4d615f8d875e6d2b7c8b75429caf27617bb90"
+    },
+    {
+      "path": "tasks/46c1-root-admin-trainer-authorization-remediation.md",
+      "bytes": 5689,
+      "sha256": "98938ad11c35455565552d49ba02270eb033be56370994f0105d82c0b7b9ea54"
+    },
+    {
+      "path": "tasks/46c2-measurement-state-concurrency-remediation.md",
+      "bytes": 5485,
+      "sha256": "4b0e4797c50ff7873b360416bbc359f8f2de88619cd32cbe9794894d0bcaa51b"
+    },
+    {
+      "path": "tasks/46c3-cross-context-workout-recovery-remediation.md",
+      "bytes": 4207,
+      "sha256": "57a1353c786baf3aaee5dca36aae1fb872af948c8bbb4c59ebdd4af68e860a79"
+    },
+    {
+      "path": "tasks/46c4-account-export-browser-privacy-remediation.md",
+      "bytes": 4360,
+      "sha256": "5356554a2741fbec40ee81136ab5f9b3298680a96db1376a1b0e8f66130bfddc"
+    },
+    {
+      "path": "tasks/46c5-http-limits-safe-logging-remediation.md",
+      "bytes": 5173,
+      "sha256": "18a68782f2aecbd0cc1cec0d0f4e035801be5c45ca1c8be4fa43806ab5405e23"
+    },
+    {
+      "path": "tasks/46d-product-ux-ui-landing-baseline-audit.md",
+      "bytes": 9093,
+      "sha256": "3490843b2e4caf2ad418fb088b460ef90763191ab351a91a4059838b47860c2b"
+    },
+    {
+      "path": "tasks/46e-design-v2-visual-directions.md",
+      "bytes": 10650,
+      "sha256": "a67f5af1bde948ed91a626849c84ddd0b9c1766f7c06a7dd5b2054ec15957296"
+    },
+    {
+      "path": "tasks/46f-design-v2-approved-direction-specification.md",
+      "bytes": 9617,
+      "sha256": "85a0825fd2c1e869ea96284c8b89780dfeab7631c03dcf2dcd0f06907b284e7f"
+    },
+    {
+      "path": "tasks/46g-design-v2-production-pilot.md",
+      "bytes": 7881,
+      "sha256": "bb03ff8edca5d082a2c2cc8b9c15ca3e7944e8542d7d55cff5d87948bb8183a0"
+    },
+    {
+      "path": "tasks/46h-design-v2-pilot-refinement-approval.md",
+      "bytes": 5647,
+      "sha256": "632d62f3d1b1ec2365709894b3e67d6ef7a26b52dad441aa8c125b64c9b9d308"
+    },
+    {
+      "path": "tasks/46i-design-v2-core-ui-rollout.md",
+      "bytes": 8857,
+      "sha256": "a1040b183ec1227fdde6078abeecee484bd61ec0579f2d2368d628a9a94e3b93"
+    },
+    {
+      "path": "tasks/46j-remaining-backlog-design-v2-alignment.md",
+      "bytes": 10710,
+      "sha256": "4f4a8fd3826ffc5a446ef0d9844a3aa109b21a518e464d7538461369fd80ed6f"
+    },
+    {
       "path": "tasks/47-profile-account-experience.md",
       "bytes": 3033,
       "sha256": "0d7552def7f880f1b7ba959e9e20f3920fbf8b148103bb724813857ab902b49c"
@@ -575,13 +665,13 @@
     },
     {
       "path": "tasks/59-notification-reminder-orchestration.md",
-      "bytes": 6166,
-      "sha256": "2cf82796bf5d37053882b21953626dc786691cd217f866e6c63bbcea130bac64"
+      "bytes": 6165,
+      "sha256": "da2d4cfe37d8d49378f6aa0f2ae9ad6f986bb68adfc101b653722145014227ef"
     },
     {
       "path": "tasks/60-account-data-export-and-lifecycle.md",
-      "bytes": 6204,
-      "sha256": "23706fe915f0f0e387802db8be82058c41b79a3a4f3ab98203e66171a89f5abd"
+      "bytes": 6203,
+      "sha256": "e264975c835916cb2948e03dc38396e20e904212cfca1d8facf5fbc7d0de217b"
     },
     {
       "path": "tasks/61-cardio-logging-gap-audit-and-minimal-implementation.md",
@@ -740,13 +830,13 @@
     },
     {
       "path": "tasks/92-production-operational-readiness.md",
-      "bytes": 6923,
-      "sha256": "c08a1388739f84c7362494f040edcebcfeac5ce014b0282be52d224e2da4f32b"
+      "bytes": 8364,
+      "sha256": "10435d71a428b7cc037c16d3e1e543f1fe0212be527edab07cffb5dd7b17d118"
     },
     {
       "path": "tasks/93-final-integrated-audit-regression.md",
-      "bytes": 16959,
-      "sha256": "237b4ab3ca445da4405d87f3f73ee7416a1abb294e2c5fdf44934c1734dc01d9"
+      "bytes": 18701,
+      "sha256": "2432d0ef4e818ecf54fb2a4ffd0ee179dc27aae53b575652e34805c6c94c1be7"
     },
     {
       "path": "tasks/README.md",
@@ -756,7 +846,7 @@
   ],
   "plain_language_ux": {
     "enabled": true,
-    "task_count": 94,
+    "task_count": 110,
     "task_range": "00-93",
     "primary_rir_label": "Повторы в запасе",
     "reference_doc": "PLAIN_LANGUAGE_UX.md",

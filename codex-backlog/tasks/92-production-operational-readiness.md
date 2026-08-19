@@ -96,6 +96,24 @@ Core unaffected areas должны продолжать работать.
    - deploy/rollback;
    - provider degradation.
 
+## Carried finding acceptance: F46B-08
+
+Task 92 обязана закрыть routed finding `F46B-08`, а не ограничиться общим backup/logging review.
+
+Acceptance criteria:
+
+- составлена sensitivity/retention/access matrix для audit events, API/worker logs и backups;
+- для каждого класса указан конкретный TTL либо документированное обоснованное исключение;
+- определены deletion/anonymization semantics для audit metadata после account deletion;
+- определены backup retention, access controls и процедура удаления expired copies;
+- non-production restore drill проверяет поведение ранее удалённых accounts: применяется
+  tombstone/reconciliation либо явно ограниченное и документированное backup exception;
+- восстановление не делает удалённый account активным незаметно и без operator decision;
+- user/operator disclosure описывает реальные ограничения lifecycle без raw sensitive data;
+- checks подтверждают retention job/policy boundaries и не удаляют необходимое security evidence.
+
+Без этих критериев `F46B-08` и task 92 не считаются закрытыми.
+
 ## Out of scope
 
 Не deploy в production.

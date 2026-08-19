@@ -1,152 +1,91 @@
-# TASK 46C. Критические технические исправления по результатам 46A/46B
+# TASK 46C. Umbrella: owner-approved technical remediation gate
 
 - Фаза: **Retrospective remediation gate**
-- Приоритет: **46C/93 - выполнить после owner review tasks 46A/46B**
-- Зависит от: `46A`, `46B`, явное подтверждение владельцем списка исправлений
+- Приоритет: **46C/93 — umbrella после 46B1, завершить до 46D**
+- Зависит от: `46A`, `46B`, `46B1`, явное owner decision от 2026-08-19
+- Состоит из: `46C.1`, `46C.2`, `46C.3`, `46C.4`, `46C.5`
 - Рекомендуемый reasoning: **High**
 - Рекомендуемая модель: **GPT-5.6 Sol High**
-- Рекомендуемые skills: `$commercial-product-builder`, `$solution-architect`, `$security-engineer`, `$privacy-engineer`, `$data-engineer`, `$backend-engineer`, `$frontend-engineer`, `$python-engineer`, `$qa-engineer`, `$code-reviewer`
 
-## Цель
+## Назначение umbrella
 
-Исправить только подтверждённые владельцем критические findings из tasks `46A` и `46B` до продолжения функционального backlog.
+Task `46C` больше не является одним implementation change set. Она фиксирует утверждённый
+владельцем remediation scope и порядок пяти независимых tasks. Саму umbrella-task отдельно не
+реализовывать и не использовать как разрешение смешать findings в одном commit.
 
-Эта task не является разрешением на общий refactor. Она закрывает production-риски, которые уже существуют или будут системно размножаться в tasks `47-93`.
+Каждая дочерняя task выполняется:
 
-## Preconditions
+- в отдельной Codex-сессии;
+- только в `feature/yfc-platform-v2`;
+- после проверки своей зависимости;
+- с профильными checks;
+- с отдельным логическим commit;
+- с обязательной остановкой до следующей task.
 
-Перед началом должны быть доступны:
+## Утверждённый allowlist
 
-- `.artifacts/codex-audits/46a-production-quality/`;
-- `.artifacts/codex-audits/46b-security-privacy-data/`;
-- явный owner-approved список finding IDs в текущем запросе Codex.
+Только следующие canonical findings входят в remediation gate:
 
-Если owner-approved список отсутствует, не начинать изменения. Кратко перечислить кандидатов и остановиться.
+- `F46B-01`, `F46B-02`;
+- `F-01`, `F-02`, `F46B-07`;
+- `F-03`, `F-04`, `F-05`;
+- `F46B-03`, `F46B-04`;
+- `F46B-05`, `F46B-06`.
 
-## Разрешённый scope
+Все остальные findings не входят в task `46C` без нового явного owner approval.
 
-Исправлять только:
+## Утверждённая декомпозиция и порядок
 
-- `P0` и `P1`;
-- cross-user/client data leakage;
-- privilege escalation или auth bypass;
-- secret/token exposure;
-- data-loss/data-corruption risk;
-- unsafe migration/data invariant;
-- подтверждённый lost update, duplicate write или race condition критического flow;
-- сломанный API contract/core recovery path;
-- системный `P2`, который неизбежно будет скопирован в новые tasks и явно одобрен владельцем.
+```text
+46B1 owner decision
+  -> 46C.1 Root/Admin/Trainer authorization boundaries
+  -> 46C.2 Measurements, concurrency and dependent state
+  -> 46C.3 Cross-context auth/workout recovery
+  -> 46C.4 Account export and browser privacy lifecycle
+  -> 46C.5 HTTP limits and safe logging boundary
+  -> 46D Design V2 baseline audit
+```
 
-## Запрещённый scope
+| Task | Canonical findings | Результат |
+|---|---|---|
+| 46C.1 | `F46B-01`, `F46B-02` | независимые Root/Admin/Trainer capabilities и least-privilege boundaries |
+| 46C.2 | `F-01`, `F-02`, `F46B-07` | единая chronology/concurrency политика замеров и согласованные dependent queries |
+| 46C.3 | `F-03`, `F-04`, `F-05` | безопасные cross-context refresh/queue и idempotent workout finish recovery |
+| 46C.4 | `F46B-03`, `F46B-04` | полный versioned export и browser-storage lifecycle |
+| 46C.5 | `F46B-05`, `F46B-06` | согласованные body limits, safe diagnostic logging и корректный cache assertion |
 
-Не делать:
+## Future routing вне 46C
 
-- Design V2 или любые визуальные изменения, кроме необходимых security/error states;
-- новые product features;
-- косметический refactor;
-- массовое переименование;
-- смену framework/ORM/state manager;
-- speculative performance optimization;
-- новую инфраструктуру без необходимости;
-- исправление `P3`;
-- nice-to-have observability, которая относится к task `92`;
-- заранее реализовывать tasks `47-93`.
+- `F46B-08` закреплён за task `92` с отдельными retention/access/restore acceptance criteria.
+- `F-06` закреплён за task `93` с real migrated PostgreSQL API+UI critical flows.
+- `F46B-09` закреплён за task `93` с SQLite/PostgreSQL account-deletion regression.
 
-## Порядок работы
+## Общие ограничения
 
-### 1. Зафиксировать scope
+- Не добавлять findings сверх allowlist.
+- Не начинать Design V2 до завершения всех `46C.1`–`46C.5`.
+- Не объединять commits дочерних tasks.
+- Не deploy, не использовать production data и не запускать production migrations.
+- Не ослаблять auth, replay protection, cache headers, validation, tests или privacy boundaries.
+- Raw audit reports остаются в `.artifacts/` и не переносятся в public docs.
 
-Для каждого approved finding записать:
+## Completion gate
 
-- finding ID;
-- affected subsystem;
-- минимальный fix;
-- regression evidence;
-- возможную migration/compatibility стоимость;
-- rollback/forward-fix план, если затрагиваются данные.
+Umbrella `46C` считается завершённой только когда:
 
-Если approved findings затрагивают несколько независимых крупных подсистем и не помещаются в один безопасный change set, не смешивать их. Остановиться и предложить декомпозицию на `46C.1`, `46C.2` и т.д. с отдельными commits/checks.
-
-### 2. Реализация
-
-- исправлять root cause, а не маскировать симптом;
-- сохранять backward compatibility, где она нужна;
-- authorization проверять server-side;
-- migrations делать воспроизводимыми и безопасными для существующих данных;
-- retry/idempotency вводить только там, где операция безопасно повторяема;
-- не раскрывать чувствительные details в client errors/logs;
-- не ухудшать core flow без доказанной security-причины.
-
-### 3. Тесты
-
-Добавить targeted regression tests пропорционально риску:
-
-- unit/domain;
-- API/integration;
-- authorization negative tests;
-- migration/data compatibility;
-- concurrency/idempotency;
-- frontend recovery/error state;
-- Web/TMA auth continuity, если затронуто.
-
-Не запускать полный suite автоматически, если это запрещено `AGENTS.md`. Выполнить профильные проверки для каждого изменённого subsystem.
-
-### 4. Независимый review
-
-Перед завершением применить `$code-reviewer` к фактическому diff.
-
-Повторно проверить:
-
-- correctness;
-- data integrity;
-- security/privacy;
-- compatibility;
-- tests;
-- accidental scope;
-- sensitive logging;
-- migration safety.
-
-## Документация
-
-Обновить durable `docs/` только когда fix меняет:
-
-- architecture;
-- API contract;
-- security/privacy constraint;
-- environment/config;
-- migration/deployment/rollback procedure;
-- документированное пользовательское поведение.
-
-Raw audit reports не переносить в публичные docs.
+- каждая task `46C.1`–`46C.5` завершена отдельным commit;
+- каждый approved finding имеет regression evidence;
+- migration/config/compatibility effects каждой task явно отражены в её отчёте;
+- нет незакрытых P0/P1 или approved data-loss/privacy blockers;
+- выполнен финальный targeted review совокупного remediation scope;
+- task `46D` запускается только после подтверждения всех пяти commits/checks.
 
 ## STOP CONDITION
 
-После закрытия owner-approved списка остановиться.
+Этот файл — coordination contract. Не реализовывать application changes при выполнении umbrella.
+Запускать только конкретную следующую дочернюю task и останавливаться после неё.
 
-Не переходить к Design V2 или task `47`.
-Не исправлять новые findings без отдельного owner approval, кроме очевидной регрессии, внесённой текущим change set.
+## Процесс
 
-Если approved blockers отсутствуют, не создавать искусственные изменения. Зафиксировать `no remediation required`, проверить `git diff` и завершить task без commit.
-
-## Done when
-
-- каждый approved finding закрыт или явно заблокирован с доказанной причиной;
-- root cause исправлен;
-- соответствующие regression tests проходят;
-- migrations/data changes имеют безопасную стратегию;
-- независимый code review не выявил незакрытых P0/P1;
-- нет unrelated refactor/feature work;
-- документация синхронизирована только там, где это нужно;
-- commits логически разделены согласно `AGENTS.md`.
-
-## Рекомендуемый commit
-
-Для одного однородного change set:
-
-`fix(core): remediate approved production blockers`
-
-Для нескольких одобренных независимых stages использовать отдельный логический commit на stage.
-
-## Процесс и отчёт
-
-Следовать `AGENTS.md` и `codex-backlog/GLOBAL_RULES.md`. Работать только в текущей feature-ветке. Не создавать/переключать ветки, не merge/rebase и не deploy. В финальном отчёте перечислить finding IDs, исправления, ключевые файлы, migrations/config, реально запущенные проверки, review findings, ограничения и commit hashes.
+Следовать `AGENTS.md` и `codex-backlog/GLOBAL_RULES.md`. Не создавать и не переключать ветки, не
+merge/rebase, не deploy и не переходить автоматически к следующей task.

@@ -7,7 +7,13 @@
 ```text
 46A  Read-only production quality audit
 46B  Read-only security/privacy/data-integrity audit
-46C  Owner-approved critical remediation
+46B1 Consolidated triage + owner decision
+46C  Umbrella for owner-approved remediation
+46C.1 Root/Admin/Trainer authorization boundaries
+46C.2 Measurement chronology/concurrency/dependent state
+46C.3 Cross-context auth/workout recovery
+46C.4 Account export/browser privacy lifecycle
+46C.5 HTTP limits/safe logging boundary
 46D  Read-only product UX/UI/Landing baseline audit
 46E  Three visual directions + renders
      OWNER CHOICE
@@ -22,7 +28,9 @@
 47   Resume original backlog
 ```
 
-Каждая task выполняется в отдельной Codex-сессии. Между checkpoint tasks требуется явное решение владельца.
+Каждая implementation task выполняется в отдельной Codex-сессии. `46C.1-46C.5` идут строго
+последовательно с отдельными commits; `46D` запрещено начинать, пока не завершены все пять.
+Между checkpoint tasks требуется явное решение владельца.
 
 ## Source of truth после Design V2
 

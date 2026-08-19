@@ -266,6 +266,34 @@ organic/public landing
 
 и сохранение UTM convention, если campaign params используются.
 
+## Carried finding acceptance: F-06 и F46B-09
+
+### F-06 — real migrated PostgreSQL API+UI critical flows
+
+Task 93 должна включать небольшой real-stack слой на isolated migrated PostgreSQL без полного
+route mocking `/api/v1/**`:
+
+- auth -> start workout -> save set -> finish -> Progress;
+- nutrition -> persisted create/update/read critical flow;
+- terminal retry/recovery проверяется через реальный backend contract;
+- assertions проверяют фактические transaction results и migrated schema, а не только UI mocks;
+- existing быстрые mocked component/E2E tests сохраняются, но не считаются заменой real-stack gate.
+
+Readiness/login/me smoke без product writes не закрывает `F-06`.
+
+### F46B-09 — cross-database account deletion regression
+
+- Включить SQLite foreign-key enforcement для test/local engine.
+- Создать full-domain fixture со всеми owner-scoped nutrition/account data classes.
+- Выполнить account deletion regression на SQLite и isolated PostgreSQL.
+- После delete не остаются owner orphans; чужие immutable snapshots/history, которые должны
+  сохраняться по contract, не удаляются.
+- Model/FK declarations без executed PostgreSQL regression недостаточны для closure.
+- Non-PostgreSQL production deployment не разрешается до подтверждения эквивалентной semantics.
+
+Без этих criteria `F-06`, `F46B-09` и соответствующий account/privacy integration gate task 93 не
+считаются закрытыми.
+
 ## Out of scope
 
 Не начинать новый redesign/feature, не менять бизнес-логику ради polish, не делать unrelated refactor, не занижать severity, не добавлять Trainer Copilot и не расширять trainer permissions.
