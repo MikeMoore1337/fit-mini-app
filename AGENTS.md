@@ -78,6 +78,12 @@ subsystem.
 Normal local linting, formatting, type checking, tests, builds and browser verification do
 not require additional confirmation.
 
+When working in the Codex IDE extension, use Playwright MCP for visual and functional UI
+verification on local environments, including interactions, responsive states, screenshots
+and console errors. Do not use the Browser skill or In-app Browser in Codex IDE because that
+integration is not supported there. This restriction does not replace existing project e2e
+scripts or browser tooling in other environments.
+
 Ask before operations that are destructive, production-affecting, use real paid external
 services, modify real user data, or are unusually expensive/outside the task scope.
 
