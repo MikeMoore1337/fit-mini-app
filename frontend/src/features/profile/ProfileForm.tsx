@@ -9,6 +9,7 @@ import { usePersistentState } from '../../shared/storage';
 import { getTimezoneOptions } from './timezones';
 import { DateInput } from '../../shared/ui/PickerInput';
 import { profileGoals } from './goals';
+import { BodyPriorityPicker, isBodyPriorityComplete } from './BodyPriorityPicker';
 
 const emptyProfile: UserProfileUpdate = {
   full_name: '',
@@ -20,6 +21,7 @@ const emptyProfile: UserProfileUpdate = {
   workouts_per_week: 3,
   cardio_trainings_per_week: 0,
   resting_heart_rate: null,
+  body_priority: null,
   timezone: detectedTimeZone(),
 };
 
@@ -97,6 +99,10 @@ export function ProfileForm() {
         className="stack top-gap"
         onSubmit={(event) => {
           event.preventDefault();
+          if (!isBodyPriorityComplete(form.body_priority)) {
+            toast('Выберите хотя бы одну приоритетную мышечную группу', 'error');
+            return;
+          }
           mutation.mutate();
         }}
       >
@@ -234,6 +240,10 @@ export function ProfileForm() {
             </small>
           </label>
         </div>
+        <BodyPriorityPicker
+          value={form.body_priority}
+          onChange={(body_priority) => setForm({ ...form, body_priority })}
+        />
         {heartRatePreview.isError && validBirthDate && validRestingHeartRate && (
           <div className="nutrition-warning" role="alert">
             Проверьте значение пульса в покое. Если оно указано верно и заметно отличается от вашего

@@ -1,12 +1,36 @@
 from datetime import date
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from fitminiapp_api.core.timezone import is_valid_timezone
 from fitminiapp_api.schemas.nutrition import NutritionTargetResponse
 
 ProfileGoal = Literal["muscle_gain", "fat_loss", "maintenance", "recomposition"]
+
+
+class BodyPriorityPreference(BaseModel):
+    mode: Literal["balanced", "muscle_groups"]
+    muscle_group_ids: list[str] = Field(default_factory=list, max_length=32)
+
+    @model_validator(mode="after")
+    def validate_mode_and_groups(self):
+        if len(set(self.muscle_group_ids)) != len(self.muscle_group_ids):
+            raise ValueError("muscle_group_ids must be unique")
+        if self.mode == "balanced" and self.muscle_group_ids:
+            raise ValueError("balanced priority cannot contain muscle groups")
+        if self.mode == "muscle_groups" and not self.muscle_group_ids:
+            raise ValueError("muscle_groups priority requires at least one group")
+        return self
+
+
+class BodyPriorityMuscleOption(BaseModel):
+    id: str
+    name: str
+
+
+class BodyPriorityOptionsResponse(BaseModel):
+    items: list[BodyPriorityMuscleOption]
 
 
 class UserProfileUpdate(BaseModel):
@@ -19,6 +43,7 @@ class UserProfileUpdate(BaseModel):
     workouts_per_week: int | None = Field(default=None, ge=0, le=14)
     cardio_trainings_per_week: int | None = Field(default=None, ge=0, le=14)
     resting_heart_rate: int | None = Field(default=None, ge=30, le=120)
+    body_priority: BodyPriorityPreference | None = None
     timezone: str | None = Field(default=None, max_length=64)
 
     @field_validator("timezone")
@@ -99,6 +124,7 @@ class UserProfileResponse(BaseModel):
     workouts_per_week: int | None = None
     cardio_trainings_per_week: int | None = None
     resting_heart_rate: int | None = None
+    body_priority: BodyPriorityPreference | None = None
     timezone: str = "Europe/Moscow"
     estimated_max_heart_rate: int | None = None
     heart_rate_reserve: int | None = None

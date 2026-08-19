@@ -57,14 +57,17 @@ describe('ProfileForm heart rate preview', () => {
     localStorage.clear();
     apiMock.mockReset();
     apiMock.mockImplementation(
-      (_path: string, options: { body: { goal: keyof typeof previewByGoal } }) =>
-        Promise.resolve({
+      (path: string, options?: { body: { goal: keyof typeof previewByGoal } }) => {
+        if (path.endsWith('/body-priority-options'))
+          return Promise.resolve({ items: [{ id: 'chest', name: 'Грудь' }] });
+        return Promise.resolve({
           estimated_max_heart_rate: 184,
           heart_rate_reserve: 109,
           heart_rate_calculation_method: 'heart_rate_reserve',
           heart_rate_zones: zones,
-          recommended_cardio_range: previewByGoal[options.body.goal],
-        }),
+          recommended_cardio_range: previewByGoal[options!.body.goal],
+        });
+      },
     );
   });
 
@@ -104,15 +107,22 @@ describe('ProfileForm heart rate preview', () => {
     fireEvent.change(restingHeartRate, {
       target: { value: 'abc' },
     });
-    await waitFor(() => expect(apiMock).toHaveBeenCalledOnce());
+    await waitFor(() =>
+      expect(
+        apiMock.mock.calls.filter(([path]) => path.endsWith('/heart-rates/preview')),
+      ).toHaveLength(1),
+    );
     expect(restingHeartRate).toHaveValue(null);
-    expect(apiMock.mock.calls[0]![1].body.resting_heart_rate).toBeNull();
+    const previewCall = apiMock.mock.calls.find(([path]) => path.endsWith('/heart-rates/preview'));
+    expect(previewCall?.[1].body.resting_heart_rate).toBeNull();
 
     apiMock.mockClear();
     fireEvent.change(restingHeartRate, {
       target: { value: '121' },
     });
     await new Promise((resolve) => window.setTimeout(resolve, 0));
-    expect(apiMock).not.toHaveBeenCalled();
+    expect(
+      apiMock.mock.calls.filter(([path]) => path.endsWith('/heart-rates/preview')),
+    ).toHaveLength(0);
   });
 });

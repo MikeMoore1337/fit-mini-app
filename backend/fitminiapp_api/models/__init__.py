@@ -37,6 +37,7 @@ from fitminiapp_api.models.user import (
     CoachRoleApplication,
     User,
     UserProfile,
+    UserProfilePriorityMuscle,
 )
 
 __all__ = [
@@ -77,6 +78,7 @@ __all__ = [
     "TrainingBlockPriorityMuscle",
     "User",
     "UserProfile",
+    "UserProfilePriorityMuscle",
     "UserProgram",
     "UserWorkout",
     "UserWorkoutExercise",

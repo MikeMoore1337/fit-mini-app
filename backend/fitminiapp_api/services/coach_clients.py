@@ -14,6 +14,7 @@ from fitminiapp_api.models.user import CoachClient, CoachClientInvite, User, Use
 from fitminiapp_api.schemas.nutrition import NutritionTargetResponse
 from fitminiapp_api.services.audit import record_audit_event
 from fitminiapp_api.services.auth_identities import ensure_telegram_identity
+from fitminiapp_api.services.profile import serialize_body_priority
 from fitminiapp_api.services.program_common import ProgramError
 from fitminiapp_api.services.telegram_auth import normalize_telegram_username
 
@@ -140,6 +141,7 @@ def _client_entry_from_user(
         "workouts_per_week": profile.workouts_per_week if profile else None,
         "cardio_trainings_per_week": (profile.cardio_trainings_per_week if profile else None),
         "resting_heart_rate": profile.resting_heart_rate if profile else None,
+        "body_priority": serialize_body_priority(profile),
         "kbju": nutrition_target,
         "status": "active",
     }
@@ -163,6 +165,7 @@ def _client_entry_from_invite(invite: CoachClientInvite) -> dict:
         "workouts_per_week": None,
         "cardio_trainings_per_week": None,
         "resting_heart_rate": None,
+        "body_priority": None,
         "kbju": None,
         "status": "pending",
     }

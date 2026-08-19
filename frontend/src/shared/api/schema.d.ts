@@ -330,6 +330,23 @@ export interface paths {
         patch: operations["patch_profile_api_v1_me_profile_patch"];
         trace?: never;
     };
+    "/api/v1/me/profile/body-priority-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Body Priority Options */
+        get: operations["body_priority_options_api_v1_me_profile_body_priority_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/profile/heart-rates/preview": {
         parameters: {
             query?: never;
@@ -2185,6 +2202,23 @@ export interface components {
             /** Token */
             token: string;
         };
+        /** BodyMeasurementGuidance */
+        BodyMeasurementGuidance: {
+            /**
+             * Comparison Basis
+             * @default self
+             * @constant
+             */
+            comparison_basis: "self";
+            /** Minimum Points For Interpretation */
+            minimum_points_for_interpretation: number;
+            /** Minimum Span Days For Interpretation */
+            minimum_span_days_for_interpretation: number;
+            /** Consistency Tips */
+            consistency_tips: string[];
+            /** Circumference Limitations */
+            circumference_limitations: string[];
+        };
         /** BodyMeasurementResponse */
         BodyMeasurementResponse: {
             /** Id */
@@ -2230,6 +2264,16 @@ export interface components {
             /** Note */
             note?: string | null;
         };
+        /** BodyMetricPoint */
+        BodyMetricPoint: {
+            /**
+             * Measured On
+             * Format: date
+             */
+            measured_on: string;
+            /** Value */
+            value: number;
+        };
         /** BodyMetricTrend */
         BodyMetricTrend: {
             /**
@@ -2253,12 +2297,47 @@ export interface components {
              * Format: date
              */
             latest_measured_on: string;
+            /** Point Count */
+            point_count: number;
+            /** Span Days */
+            span_days: number;
+            /**
+             * Interpretation Status
+             * @enum {string}
+             */
+            interpretation_status: "single_point" | "insufficient_points" | "insufficient_period" | "available";
+            /** Points */
+            points: components["schemas"]["BodyMetricPoint"][];
         };
         /** BodyPeriodSummary */
         BodyPeriodSummary: {
             latest_measurement?: components["schemas"]["LatestBodyMeasurement"] | null;
             /** Trends */
             trends: components["schemas"]["BodyMetricTrend"][];
+            priority?: components["schemas"]["BodyPriorityPreference"] | null;
+            guidance: components["schemas"]["BodyMeasurementGuidance"];
+        };
+        /** BodyPriorityMuscleOption */
+        BodyPriorityMuscleOption: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /** BodyPriorityOptionsResponse */
+        BodyPriorityOptionsResponse: {
+            /** Items */
+            items: components["schemas"]["BodyPriorityMuscleOption"][];
+        };
+        /** BodyPriorityPreference */
+        BodyPriorityPreference: {
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "balanced" | "muscle_groups";
+            /** Muscle Group Ids */
+            muscle_group_ids?: string[];
         };
         /** BotTelegramLinkRequest */
         BotTelegramLinkRequest: {
@@ -2346,6 +2425,7 @@ export interface components {
             cardio_trainings_per_week?: number | null;
             /** Resting Heart Rate */
             resting_heart_rate?: number | null;
+            body_priority?: components["schemas"]["BodyPriorityPreference"] | null;
             kbju?: components["schemas"]["NutritionTargetResponse"] | null;
             /**
              * Status
@@ -4333,6 +4413,7 @@ export interface components {
             cardio_trainings_per_week?: number | null;
             /** Resting Heart Rate */
             resting_heart_rate?: number | null;
+            body_priority?: components["schemas"]["BodyPriorityPreference"] | null;
             /**
              * Timezone
              * @default Europe/Moscow
@@ -4369,6 +4450,7 @@ export interface components {
             cardio_trainings_per_week?: number | null;
             /** Resting Heart Rate */
             resting_heart_rate?: number | null;
+            body_priority?: components["schemas"]["BodyPriorityPreference"] | null;
             /** Timezone */
             timezone?: string | null;
         };
@@ -5385,6 +5467,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    body_priority_options_api_v1_me_profile_body_priority_options_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BodyPriorityOptionsResponse"];
                 };
             };
         };

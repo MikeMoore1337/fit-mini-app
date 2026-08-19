@@ -3,9 +3,11 @@ from datetime import date
 from sqlalchemy.orm import Session
 
 from fitminiapp_api.core.timezone import DEFAULT_TIMEZONE, is_valid_timezone
+from fitminiapp_api.models.exercise import Muscle
 from fitminiapp_api.models.notification import NotificationSetting
-from fitminiapp_api.models.user import User, UserProfile
-from fitminiapp_api.schemas.user import UserProfileUpdate
+from fitminiapp_api.models.user import User, UserProfile, UserProfilePriorityMuscle
+from fitminiapp_api.schemas.user import BodyPriorityPreference, UserProfileUpdate
+from fitminiapp_api.services.exercise_domain import BODY_PRIORITY_TAXONOMY
 from fitminiapp_api.services.heart_rate import (
     HeartRateCalculation,
     calculate_heart_rates,
@@ -15,6 +17,49 @@ from fitminiapp_api.services.heart_rate import (
 
 class ProfileError(ValueError):
     pass
+
+
+BODY_PRIORITY_IDS = frozenset(identifier for identifier, _name in BODY_PRIORITY_TAXONOMY)
+
+
+def serialize_body_priority(profile: UserProfile | None) -> dict | None:
+    if profile is None or profile.body_priority_mode is None:
+        return None
+    return {
+        "mode": profile.body_priority_mode,
+        "muscle_group_ids": [link.muscle.identifier for link in profile.body_priority_links],
+    }
+
+
+def _replace_body_priority(
+    db: Session,
+    profile: UserProfile,
+    preference: BodyPriorityPreference | None,
+) -> None:
+    profile.body_priority_links.clear()
+    db.flush()
+    if preference is None:
+        profile.body_priority_mode = None
+        return
+
+    profile.body_priority_mode = preference.mode
+    if preference.mode == "balanced":
+        return
+
+    identifiers = preference.muscle_group_ids
+    if not set(identifiers).issubset(BODY_PRIORITY_IDS):
+        raise ProfileError("Unknown body priority muscle group")
+    muscles = db.query(Muscle).filter(Muscle.identifier.in_(identifiers)).all()
+    by_identifier = {muscle.identifier: muscle for muscle in muscles}
+    if set(by_identifier) != set(identifiers):
+        raise ProfileError("Unknown body priority muscle group")
+    profile.body_priority_links.extend(
+        UserProfilePriorityMuscle(
+            muscle_id=by_identifier[identifier].id,
+            position=position,
+        )
+        for position, identifier in enumerate(identifiers)
+    )
 
 
 def calculate_profile_heart_rates(
@@ -64,6 +109,7 @@ def update_profile(
 ) -> User:
     profile = ensure_profile(db, user, commit=commit)
     changes = payload.model_dump(exclude_unset=True)
+    body_priority = changes.pop("body_priority", ...)
     birth_date = changes.get("birth_date", profile.birth_date)
     resting_heart_rate = changes.get("resting_heart_rate", profile.resting_heart_rate)
     if birth_date is not None and resting_heart_rate is not None:
@@ -92,6 +138,15 @@ def update_profile(
         if field in nutrition_field_map and value is not None and getattr(profile, field) != value:
             nutrition_updates[nutrition_field_map[field]] = value
         setattr(profile, field, value)
+
+    if body_priority is not ...:
+        _replace_body_priority(
+            db,
+            profile,
+            BodyPriorityPreference.model_validate(body_priority)
+            if body_priority is not None
+            else None,
+        )
 
     if nutrition_updates:
         # Local import avoids a module cycle: nutrition uses ensure_profile on first save.

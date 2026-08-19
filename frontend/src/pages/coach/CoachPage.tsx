@@ -23,6 +23,10 @@ import { LIVE_DATA_REFETCH_INTERVAL_MS } from '../../shared/sync';
 import { usePersistentState } from '../../shared/storage';
 import { handleTabKeyDown } from '../../shared/ui/tabs';
 import { DateInput } from '../../shared/ui/PickerInput';
+import {
+  BodyPriorityPicker,
+  isBodyPriorityComplete,
+} from '../../features/profile/BodyPriorityPicker';
 
 type CoachTab = 'clients' | 'programs' | 'catalog';
 
@@ -38,6 +42,7 @@ function clientProfileKey(client: Client): string {
     client.workouts_per_week,
     client.cardio_trainings_per_week,
     client.resting_heart_rate,
+    client.body_priority,
   ]);
 }
 
@@ -118,6 +123,7 @@ function ClientProfileEditor({ client }: { client: Client }) {
           workouts_per_week: form.workouts_per_week ?? null,
           cardio_trainings_per_week: form.cardio_trainings_per_week ?? null,
           resting_heart_rate: form.resting_heart_rate ?? null,
+          body_priority: form.body_priority ?? null,
         },
       }),
     onSuccess: async (updatedClient) => {
@@ -136,6 +142,10 @@ function ClientProfileEditor({ client }: { client: Client }) {
       className="stack"
       onSubmit={(e) => {
         e.preventDefault();
+        if (!isBodyPriorityComplete(form.body_priority)) {
+          toast('Выберите хотя бы одну приоритетную мышечную группу', 'error');
+          return;
+        }
         mutation.mutate();
       }}
     >
@@ -243,6 +253,10 @@ function ClientProfileEditor({ client }: { client: Client }) {
           />
         </label>
       </div>
+      <BodyPriorityPicker
+        value={form.body_priority}
+        onChange={(body_priority) => setForm({ ...form, body_priority })}
+      />
       {heartRate && (
         <div className="auth-notice stack">
           <strong>Пульсовые зоны · максимум {heartRate.estimated_max_heart_rate} уд/мин</strong>
