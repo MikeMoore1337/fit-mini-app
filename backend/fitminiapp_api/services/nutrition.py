@@ -285,9 +285,6 @@ def _resolve_target_user(
     if not target_user:
         raise NutritionError("Target user not found")
 
-    if current_user.is_admin:
-        return target_user
-
     if current_user.is_coach:
         link = (
             db.query(CoachClient)

@@ -36,6 +36,7 @@ function offlineWorkoutUser(): User | null {
     id: userId,
     is_coach: false,
     is_admin: false,
+    is_root: false,
     has_active_program: true,
     has_workout_history: false,
     onboarding: { status: 'complete', required_fields: [], missing_fields: [] },

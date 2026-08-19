@@ -1816,6 +1816,23 @@ export interface paths {
         patch: operations["update_user_role_api_v1_admin_users__user_id__role_patch"];
         trace?: never;
     };
+    "/api/v1/admin/users/{user_id}/admin-capability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update User Admin Capability */
+        patch: operations["update_user_admin_capability_api_v1_admin_users__user_id__admin_capability_patch"];
+        trace?: never;
+    };
     "/api/v1/admin/coach-applications": {
         parameters: {
             query?: never;
@@ -2250,10 +2267,6 @@ export interface components {
             user_id: number;
             /** Timezone */
             timezone: string;
-            /** Title */
-            title: string;
-            /** Body */
-            body: string;
             /** Status */
             status: string;
             /** Scheduled For */
@@ -2278,13 +2291,18 @@ export interface components {
             /** Is Public */
             is_public: boolean;
         };
+        /** AdminUserAdminCapabilityUpdate */
+        AdminUserAdminCapabilityUpdate: {
+            /** Is Admin */
+            is_admin: boolean;
+        };
         /** AdminUserRoleUpdate */
         AdminUserRoleUpdate: {
             /**
              * Role
              * @enum {string}
              */
-            role: "client" | "coach" | "admin";
+            role: "client" | "coach";
         };
         /** AdminUserRow */
         AdminUserRow: {
@@ -4768,6 +4786,11 @@ export interface components {
              * @default false
              */
             is_admin: boolean;
+            /**
+             * Is Root
+             * @default false
+             */
+            is_root: boolean;
             /**
              * Has Active Program
              * @default false
@@ -9303,6 +9326,41 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["AdminUserRoleUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserRow"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_user_admin_capability_api_v1_admin_users__user_id__admin_capability_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminUserAdminCapabilityUpdate"];
             };
         };
         responses: {

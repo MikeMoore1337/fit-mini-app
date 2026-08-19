@@ -42,9 +42,9 @@ function Pagination({
 }
 
 function roleLabel(user: AdminUser): string {
-  if (user.role === 'admin') return 'Администратор';
-  if (user.role === 'coach') return 'Тренер';
-  return 'Клиент';
+  if (user.is_admin && user.is_coach) return 'Администратор · Тренер';
+  if (user.is_admin) return 'Администратор';
+  return user.is_coach ? 'Тренер' : 'Клиент';
 }
 
 export default function AdminPage() {
@@ -247,7 +247,7 @@ export default function AdminPage() {
                       <div className="list-row__actions">
                         <select
                           aria-label="Роль"
-                          value={item.role}
+                          value={item.is_coach ? 'coach' : 'client'}
                           onChange={(e) =>
                             mutation.mutate({
                               path: `/api/v1/admin/users/${item.id}/role`,
@@ -258,8 +258,23 @@ export default function AdminPage() {
                         >
                           <option value="client">Клиент</option>
                           <option value="coach">Тренер</option>
-                          <option value="admin">Админ</option>
                         </select>
+                        {user.is_root && item.id !== user.id && (
+                          <button
+                            type="button"
+                            className="secondary"
+                            disabled={mutation.isPending}
+                            onClick={() =>
+                              mutation.mutate({
+                                path: `/api/v1/admin/users/${item.id}/admin-capability`,
+                                method: 'PATCH',
+                                body: { is_admin: !item.is_admin },
+                              })
+                            }
+                          >
+                            {item.is_admin ? 'Снять права админа' : 'Назначить админом'}
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="secondary"
@@ -306,8 +321,6 @@ export default function AdminPage() {
                   {notifications.data.map((item) => (
                     <article className="list-row" key={item.id}>
                       <div className="list-row__main">
-                        <strong>{item.title}</strong>
-                        <span>{item.body}</span>
                         <span className="muted">
                           Пользователь {item.user_id} · {item.timezone}
                         </span>

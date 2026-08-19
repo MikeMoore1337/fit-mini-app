@@ -23,5 +23,14 @@ def has_verified_root_identity(db: Session, user: User) -> bool:
     )
 
 
+def is_root_user(user: User) -> bool:
+    """Return whether this account is protected by the server Root configuration."""
+
+    return (
+        user.telegram_user_id is not None
+        and user.telegram_user_id in settings.admin_telegram_id_set
+    )
+
+
 def is_root_telegram_user_id(telegram_user_id: int) -> bool:
     return telegram_user_id in settings.admin_telegram_id_set

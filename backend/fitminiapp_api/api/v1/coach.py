@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
-from fitminiapp_api.api.dependencies.auth import require_coach_or_admin
+from fitminiapp_api.api.dependencies.auth import require_coach
 from fitminiapp_api.core.timezone import now_for_user_naive, today_for_user
 from fitminiapp_api.db.session import get_db
 from fitminiapp_api.models.program import (
@@ -90,7 +90,7 @@ def _comment_error(exc: WorkoutCommentError) -> HTTPException:
 def get_client_workout_comments(
     client_id: int,
     workout_id: int,
-    current_user: User = Depends(require_coach_or_admin),
+    current_user: User = Depends(require_coach),
     db: Session = Depends(get_db),
 ):
     try:
@@ -111,7 +111,7 @@ def add_client_workout_comment(
     client_id: int,
     workout_id: int,
     payload: WorkoutCommentCreate,
-    current_user: User = Depends(require_coach_or_admin),
+    current_user: User = Depends(require_coach),
     db: Session = Depends(get_db),
 ):
     try:
@@ -137,7 +137,7 @@ def update_client_workout_comment(
     workout_id: int,
     comment_id: int,
     payload: WorkoutCommentUpdate,
-    current_user: User = Depends(require_coach_or_admin),
+    current_user: User = Depends(require_coach),
     db: Session = Depends(get_db),
 ):
     try:
@@ -182,7 +182,7 @@ def _client_list_entry(db: Session, coach: User, client_id: int) -> dict:
 
 @router.get("/clients", response_model=list[ClientResponse])
 def coach_clients(
-    current_user: User = Depends(require_coach_or_admin),
+    current_user: User = Depends(require_coach),
     db: Session = Depends(get_db),
 ):
     return list_clients(db, current_user)
@@ -193,7 +193,7 @@ def coach_clients(
     response_model=list[CoachAssignedProgramResponse],
 )
 def coach_assigned_programs(
-    current_user: User = Depends(require_coach_or_admin),
+    current_user: User = Depends(require_coach),
     db: Session = Depends(get_db),
 ):
     return list_coach_assigned_programs(db, current_user)
@@ -205,7 +205,7 @@ def coach_assigned_programs(
 )
 def coach_client_analytics(
     client_id: int,
-    current_user: User = Depends(require_coach_or_admin),
+    current_user: User = Depends(require_coach),
     db: Session = Depends(get_db),
 ):
     client = _managed_client(db, current_user, client_id)
@@ -219,7 +219,7 @@ def coach_client_analytics(
 def coach_client_progress_summary(
     client_id: int,
     period_days: ProgressPeriodDays = ProgressPeriodDays.DAYS_30,
-    current_user: User = Depends(require_coach_or_admin),
+    current_user: User = Depends(require_coach),
     db: Session = Depends(get_db),
 ):
     client = _managed_client(db, current_user, client_id)
@@ -234,7 +234,7 @@ def coach_client_weekly_check_ins(
     client_id: int,
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0, le=10_000),
-    current_user: User = Depends(require_coach_or_admin),
+    current_user: User = Depends(require_coach),
     db: Session = Depends(get_db),
 ):
     client = _managed_client(db, current_user, client_id)
@@ -249,7 +249,7 @@ def coach_client_training_analytics(
     client_id: int,
     period_days: ProgressPeriodDays = ProgressPeriodDays.DAYS_30,
     exercise_history_limit: int = Query(default=20, ge=1, le=100),
-    current_user: User = Depends(require_coach_or_admin),
+    current_user: User = Depends(require_coach),
     db: Session = Depends(get_db),
 ):
     client = _managed_client(db, current_user, client_id)
@@ -269,7 +269,7 @@ def coach_client_progress_summaries(
     period_days: ProgressPeriodDays = ProgressPeriodDays.DAYS_30,
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0, le=10_000),
-    current_user: User = Depends(require_coach_or_admin),
+    current_user: User = Depends(require_coach),
     db: Session = Depends(get_db),
 ):
     return build_trainer_client_summaries(
@@ -288,7 +288,7 @@ def coach_client_progress_summaries(
 def coach_client_workout_timeline(
     client_id: int,
     limit: int = Query(default=30, ge=1, le=100),
-    current_user: User = Depends(require_coach_or_admin),
+    current_user: User = Depends(require_coach),
     db: Session = Depends(get_db),
 ):
     client = _managed_client(db, current_user, client_id)
@@ -303,7 +303,7 @@ def coach_reschedule_client_workout(
     client_id: int,
     workout_id: int,
     payload: WorkoutRescheduleRequest,
-    current_user: User = Depends(require_coach_or_admin),
+    current_user: User = Depends(require_coach),
     db: Session = Depends(get_db),
 ):
     managed_client = _managed_client(db, current_user, client_id)
@@ -381,7 +381,7 @@ def add_exercise_to_client_program(
     client_id: int,
     program_id: int,
     payload: CoachProgramExerciseCreate,
-    current_user: User = Depends(require_coach_or_admin),
+    current_user: User = Depends(require_coach),
     db: Session = Depends(get_db),
 ):
     """Add or update an exercise in future occurrences of one selected program day."""
@@ -428,7 +428,7 @@ def add_exercise_to_client_program(
     status_code=status.HTTP_201_CREATED,
 )
 def create_invite_link(
-    current_user: User = Depends(require_coach_or_admin),
+    current_user: User = Depends(require_coach),
     db: Session = Depends(get_db),
 ) -> dict:
     return create_coach_invite_link(db, current_user)
@@ -438,7 +438,7 @@ def create_invite_link(
 def update_coach_client_profile(
     client_id: int,
     payload: UserProfileUpdate,
-    current_user: User = Depends(require_coach_or_admin),
+    current_user: User = Depends(require_coach),
     db: Session = Depends(get_db),
 ):
     client = _managed_client(db, current_user, client_id)
@@ -488,7 +488,7 @@ def update_coach_client_profile(
 def coach_client_measurements(
     client_id: int,
     limit: int = Query(default=12, ge=1, le=60),
-    current_user: User = Depends(require_coach_or_admin),
+    current_user: User = Depends(require_coach),
     db: Session = Depends(get_db),
 ):
     client = _managed_client(db, current_user, client_id)
@@ -509,7 +509,7 @@ def coach_client_measurements(
 def save_coach_client_measurement(
     client_id: int,
     payload: BodyMeasurementSave,
-    current_user: User = Depends(require_coach_or_admin),
+    current_user: User = Depends(require_coach),
     db: Session = Depends(get_db),
 ):
     client = _managed_client(db, current_user, client_id)
@@ -583,7 +583,7 @@ def save_coach_client_measurement(
 def delete_coach_client_measurement(
     client_id: int,
     measurement_id: int,
-    current_user: User = Depends(require_coach_or_admin),
+    current_user: User = Depends(require_coach),
     db: Session = Depends(get_db),
 ):
     client = _managed_client(db, current_user, client_id)
@@ -619,7 +619,7 @@ def assign_template_to_coach_client(
     client_id: int,
     template_id: int,
     payload: AssignTemplateToClientRequest | None = None,
-    current_user: User = Depends(require_coach_or_admin),
+    current_user: User = Depends(require_coach),
     db: Session = Depends(get_db),
 ):
     client = _managed_client(db, current_user, client_id)
@@ -677,7 +677,7 @@ def assign_template_to_coach_client(
 @router.delete("/clients/{client_id}", status_code=status.HTTP_204_NO_CONTENT)
 def remove_coach_client(
     client_id: int,
-    current_user: User = Depends(require_coach_or_admin),
+    current_user: User = Depends(require_coach),
     db: Session = Depends(get_db),
 ):
     try:
@@ -692,7 +692,7 @@ def remove_coach_client(
 @router.delete("/client-invites/id/{invite_id}", status_code=status.HTTP_204_NO_CONTENT)
 def remove_coach_client_invite_by_id(
     invite_id: int,
-    current_user: User = Depends(require_coach_or_admin),
+    current_user: User = Depends(require_coach),
     db: Session = Depends(get_db),
 ):
     try:

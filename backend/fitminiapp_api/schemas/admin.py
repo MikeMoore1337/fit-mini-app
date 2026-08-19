@@ -21,8 +21,6 @@ class AdminNotificationRow(BaseModel):
     id: int
     user_id: int
     timezone: str
-    title: str
-    body: str
     status: str
     scheduled_for: datetime | None = None
     sent_at: datetime | None = None
@@ -39,7 +37,11 @@ class AdminTemplateRow(BaseModel):
 
 
 class AdminUserRoleUpdate(BaseModel):
-    role: Literal["client", "coach", "admin"]
+    role: Literal["client", "coach"]
+
+
+class AdminUserAdminCapabilityUpdate(BaseModel):
+    is_admin: bool
 
 
 class AdminUserStatusUpdate(BaseModel):

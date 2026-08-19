@@ -162,6 +162,7 @@ class UserResponse(BaseModel):
     photo_url: str | None = None
     is_coach: bool = False
     is_admin: bool = False
+    is_root: bool = False
     has_active_program: bool = False
     has_workout_history: bool = False
     auth_providers: list[str] = Field(default_factory=list)

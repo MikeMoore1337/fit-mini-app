@@ -58,6 +58,7 @@ from fitminiapp_api.services.profile import (
     update_profile,
 )
 from fitminiapp_api.services.program_common import ProgramError
+from fitminiapp_api.services.root_admin import has_verified_root_identity, is_root_user
 from fitminiapp_api.services.security import get_current_user
 
 router = APIRouter()
@@ -116,6 +117,7 @@ def _build_user_response(db: Session, user) -> UserResponse:
         photo_url=user.photo_url,
         is_coach=user.is_coach,
         is_admin=user.is_admin,
+        is_root=has_verified_root_identity(db, user),
         has_active_program=has_active_program,
         has_workout_history=has_workout_history,
         auth_providers=sorted(identity.provider for identity in user.auth_identities),
@@ -309,6 +311,11 @@ def delete_own_account(
     user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Response:
+    if is_root_user(user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Удаление Root-аккаунта запрещено",
+        )
     record_audit_event(
         db,
         action="account.self_deleted",

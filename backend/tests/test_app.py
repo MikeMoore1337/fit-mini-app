@@ -1069,9 +1069,9 @@ def test_coach_cannot_assign_kbju_to_non_client(client):
     assert response.status_code == 403
 
 
-def test_admin_can_assign_kbju_to_existing_user(client):
+def test_admin_cannot_assign_kbju_to_unrelated_user(client):
     admin_headers = auth(client, telegram_user_id=6301, is_coach=True, is_admin=True)
-    user_headers = auth(client, telegram_user_id=6302, is_coach=False)
+    auth(client, telegram_user_id=6302, is_coach=False)
 
     response = client.post(
         "/api/v1/nutrition/targets",
@@ -1088,9 +1088,7 @@ def test_admin_can_assign_kbju_to_existing_user(client):
         headers=admin_headers,
     )
 
-    assert response.status_code == 200
-    kbju = client.get("/api/v1/me", headers=user_headers).json()["profile"]["kbju"]
-    assert kbju["assigned_by"]["telegram_user_id"] == 6301
+    assert response.status_code == 403
 
 
 def test_telegram_login_bootstraps_admin_from_env(client, monkeypatch):
@@ -4136,13 +4134,14 @@ def test_alembic_revision_ids_fit_version_table_column():
         assert len(match.group(1)) <= 32, f"Revision id is too long in {migration.name}"
 
 
-def test_miniapp_has_role_gated_coach_and_admin_navigation():
+def test_miniapp_has_independent_coach_and_admin_navigation():
     source = (
         Path(__file__).resolve().parents[2] / "frontend" / "src" / "app" / "AppShell.tsx"
     ).read_text(encoding="utf-8")
     assert 'to="/coach"' in source
     assert 'to="/admin"' in source
-    assert "user.is_coach || user.is_admin" in source
+    assert "user.is_coach || user.is_admin" not in source
+    assert "{user.is_coach && (" in source
     assert "user.is_admin" in source
 
 
