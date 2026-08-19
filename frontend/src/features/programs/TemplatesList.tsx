@@ -20,6 +20,7 @@ import { ProgramBuilder } from './ProgramBuilder';
 import { shouldSaveTemplateAsCopy } from './templateEditing';
 import { DateInput } from '../../shared/ui/PickerInput';
 import { ProgramRecommendation } from './ProgramRecommendation';
+import { AssignedProgramDetails } from './AssignedProgramDetails';
 
 const goalLabels: Record<string, string> = {
   muscle_gain: 'Набор мышечной массы',
@@ -55,7 +56,23 @@ function defaultWeekdays(template: ProgramTemplate, startDate: string): number[]
 }
 
 function programMeta(item: ProgramTemplate) {
-  return `${goalLabels[item.goal] ?? 'Цель не указана'} · ${levelLabels[item.level] ?? 'Уровень не указан'} · ${item.days.length} дн.`;
+  const remainder = item.days.length % 10;
+  const suffix =
+    remainder === 1 && item.days.length % 100 !== 11
+      ? 'тренировка'
+      : remainder >= 2 &&
+          remainder <= 4 &&
+          (item.days.length % 100 < 10 || item.days.length % 100 >= 20)
+        ? 'тренировки'
+        : 'тренировок';
+  return `${goalLabels[item.goal] ?? 'Цель не указана'} · ${levelLabels[item.level] ?? 'Уровень не указан'} · ${item.days.length} ${suffix} в цикле`;
+}
+
+function programKind(item: ProgramTemplate, currentUserId?: number): string {
+  if (item.assigned_by_user_id && item.assigned_by_user_id !== currentUserId) return 'От тренера';
+  if (item.is_example) return 'Готовый шаблон';
+  if (item.owner_user_id === currentUserId || item.can_edit) return 'Моя программа';
+  return 'Шаблон';
 }
 
 export function TemplatesList() {
@@ -175,98 +192,183 @@ export function TemplatesList() {
     setEditingTemplate(template);
   };
 
+  const activeTemplate = templates.data?.find((item) => item.is_active_for_current_user) ?? null;
+  const ownTemplates =
+    templates.data?.filter(
+      (item) =>
+        !item.is_active_for_current_user &&
+        !item.is_example &&
+        (item.owner_user_id === user?.id || item.can_edit),
+    ) ?? [];
+  const readyTemplates =
+    templates.data?.filter(
+      (item) =>
+        !item.is_active_for_current_user &&
+        (item.is_example || (item.owner_user_id !== user?.id && !item.can_edit)),
+    ) ?? [];
+
+  const renderTemplate = (item: ProgramTemplate) => (
+    <article className="program-template-card" key={item.id}>
+      <button
+        type="button"
+        className="text-button program-template-card__main"
+        aria-label={`Посмотреть ${item.is_example ? 'шаблон' : 'программу'} «${item.title}»`}
+        onClick={() => setSelectedExample(item)}
+      >
+        <span className="program-template-badges">
+          <Badge>{programKind(item, user?.id)}</Badge>
+        </span>
+        <strong>{item.title}</strong>
+        <span className="muted">{programMeta(item)}</span>
+        <span className="program-example-trigger__hint">Открыть состав</span>
+      </button>
+      <div className="program-template-card__actions">
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => {
+            setSaveAsCopy(shouldSaveTemplateAsCopy(item));
+            setEditingTemplate(item);
+          }}
+        >
+          {shouldSaveTemplateAsCopy(item) ? 'Настроить копию' : 'Редактировать'}
+        </button>
+        <button onClick={() => openAssignment(item)}>Запустить</button>
+      </div>
+      <details className="program-danger-menu">
+        <summary>Другие действия</summary>
+        <button
+          type="button"
+          className="btn-danger"
+          onClick={async () => {
+            if (
+              await confirm({
+                title: item.is_example ? 'Скрыть шаблон?' : 'Удалить программу?',
+                message: item.title,
+                confirmText: item.is_example ? 'Скрыть' : 'Удалить',
+              })
+            )
+              mutation.mutate({
+                path: `/api/v1/programs/templates/${item.id}`,
+                method: 'DELETE',
+              });
+          }}
+        >
+          {item.is_example ? 'Скрыть шаблон' : 'Удалить программу'}
+        </button>
+      </details>
+    </article>
+  );
+
   return (
     <>
+      <section className="program-active" aria-labelledby="active-program-title">
+        {templates.isLoading ? (
+          <LoadingState label="Загружаем текущую программу…" />
+        ) : templates.error ? (
+          <ErrorState
+            message={(templates.error as Error).message}
+            retry={() => void templates.refetch()}
+          />
+        ) : activeTemplate ? (
+          <>
+            <div className="program-active__head">
+              <div>
+                <span className="eyebrow">Текущая программа</span>
+                <h2 id="active-program-title">{activeTemplate.title}</h2>
+                <p>{programMeta(activeTemplate)}</p>
+              </div>
+              <Badge tone="success">Активна</Badge>
+            </div>
+            <div className="program-active__source">
+              <strong>{programKind(activeTemplate, user?.id)}</strong>
+              {activeTemplate.assigned_by_user_id &&
+              activeTemplate.assigned_by_user_id !== user?.id ? (
+                <span>
+                  Назначил тренер
+                  {activeTemplate.assigned_by_full_name
+                    ? ` ${activeTemplate.assigned_by_full_name}`
+                    : ''}
+                </span>
+              ) : (
+                <span>Вы можете посмотреть состав или изменить будущий шаблон.</span>
+              )}
+            </div>
+            <div className="program-active__actions">
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => setSelectedExample(activeTemplate)}
+              >
+                Посмотреть план
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSaveAsCopy(shouldSaveTemplateAsCopy(activeTemplate));
+                  setEditingTemplate(activeTemplate);
+                }}
+              >
+                {shouldSaveTemplateAsCopy(activeTemplate)
+                  ? 'Настроить свою копию'
+                  : 'Редактировать шаблон'}
+              </button>
+            </div>
+            {activeTemplate.assigned_program_id &&
+              activeTemplate.assigned_program_start_date &&
+              activeTemplate.assigned_program_duration_weeks != null &&
+              activeTemplate.current_revision_number != null && (
+                <AssignedProgramDetails
+                  programId={activeTemplate.assigned_program_id}
+                  currentRevisionNumber={activeTemplate.current_revision_number}
+                  startDate={activeTemplate.assigned_program_start_date}
+                  durationWeeks={activeTemplate.assigned_program_duration_weeks}
+                />
+              )}
+          </>
+        ) : (
+          <div className="program-active__empty">
+            <span className="eyebrow">Текущая программа</span>
+            <h2 id="active-program-title">План ещё не выбран</h2>
+            <p>Подберите готовый вариант или создайте собственный ниже.</p>
+          </div>
+        )}
+      </section>
       <ProgramRecommendation
         onPreview={setSelectedExample}
         onEditCopy={editCopy}
         onStart={openAssignment}
       />
-      <Card title="Мои программы">
+      <Card
+        title="Программы и шаблоны"
+        description="Ваши заготовки и готовые варианты для быстрого запуска."
+      >
         {templates.isLoading ? (
           <LoadingState />
         ) : templates.error ? (
           <ErrorState message={(templates.error as Error).message} />
-        ) : !templates.data?.length ? (
+        ) : !ownTemplates.length && !readyTemplates.length ? (
           <EmptyState title="Программ пока нет" text="Создайте первую программу в конструкторе." />
         ) : (
-          <div className="list-grid top-gap">
-            {templates.data.map((item) => (
-              <article
-                className={`list-row program-template-row${item.is_example ? ' program-example-row' : ''}`}
-                key={item.id}
-              >
-                {item.is_example ? (
-                  <button
-                    type="button"
-                    className="text-button program-example-trigger"
-                    aria-label={`Посмотреть пример программы «${item.title}»`}
-                    onClick={() => setSelectedExample(item)}
-                  >
-                    <strong>{item.title}</strong>
-                    <span className="muted">{programMeta(item)}</span>
-                    <span className="program-template-badges">
-                      {item.is_active_for_current_user && <Badge>Активна</Badge>}
-                      <Badge>Пример программы</Badge>
-                    </span>
-                    <span className="program-example-trigger__hint">Посмотреть упражнения</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="text-button program-example-trigger"
-                    aria-label={`Посмотреть программу «${item.title}»`}
-                    onClick={() => setSelectedExample(item)}
-                  >
-                    <strong>{item.title}</strong>
-                    <span className="muted">{programMeta(item)}</span>
-                    {item.is_active_for_current_user && (
-                      <span className="program-template-badges">
-                        <Badge>Активна</Badge>
-                      </span>
-                    )}
-                    <span className="program-example-trigger__hint">Посмотреть упражнения</span>
-                  </button>
-                )}
-                <div className="list-row__actions">
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={() => {
-                      setSaveAsCopy(shouldSaveTemplateAsCopy(item));
-                      setEditingTemplate(item);
-                    }}
-                  >
-                    {shouldSaveTemplateAsCopy(item) ? 'Редактировать копию' : 'Редактировать'}
-                  </button>
-                  {item.is_active_for_current_user ? (
-                    <button type="button" className="secondary" disabled>
-                      Уже назначена
-                    </button>
-                  ) : (
-                    <button onClick={() => openAssignment(item)}>Назначить себе</button>
-                  )}
-                  <button
-                    className="btn-danger"
-                    onClick={async () => {
-                      if (
-                        await confirm({
-                          title: 'Скрыть или удалить программу?',
-                          message: item.title,
-                          confirmText: 'Продолжить',
-                        })
-                      )
-                        mutation.mutate({
-                          path: `/api/v1/programs/templates/${item.id}`,
-                          method: 'DELETE',
-                        });
-                    }}
-                  >
-                    {item.is_example ? 'Скрыть' : 'Удалить'}
-                  </button>
+          <div className="program-library top-gap">
+            {!!ownTemplates.length && (
+              <section className="program-library__group" aria-labelledby="own-programs-title">
+                <div>
+                  <h3 id="own-programs-title">Мои программы</h3>
+                  <span>{ownTemplates.length}</span>
                 </div>
-              </article>
-            ))}
+                <div className="program-template-grid">{ownTemplates.map(renderTemplate)}</div>
+              </section>
+            )}
+            {!!readyTemplates.length && (
+              <section className="program-library__group" aria-labelledby="ready-programs-title">
+                <div>
+                  <h3 id="ready-programs-title">Готовые шаблоны</h3>
+                  <span>{readyTemplates.length}</span>
+                </div>
+                <div className="program-template-grid">{readyTemplates.map(renderTemplate)}</div>
+              </section>
+            )}
           </div>
         )}
         {!!hidden.data?.length && (
@@ -345,6 +447,12 @@ export function TemplatesList() {
                           {exercise.prescribed_sets} подх. × {exercise.prescribed_reps} · отдых{' '}
                           {exercise.rest_seconds} сек.
                         </span>
+                        {exercise.superset_group && (
+                          <small>
+                            Суперсет {exercise.superset_group} · упражнение{' '}
+                            {exercise.superset_order} из 2
+                          </small>
+                        )}
                         {exercise.notes && <small>{exercise.notes}</small>}
                         {exercise.has_guide && (
                           <button

@@ -1,25 +1,40 @@
-import { useId, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
-import type { CoachAssignedProgram, Exercise, ExerciseGuide } from '../../shared/api/types';
+import type { CoachAssignedProgram, Exercise } from '../../shared/api/types';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import {
   Badge,
   Card,
   CloseIcon,
+  DisclosureIcon,
   EmptyState,
   ErrorState,
   LoadingState,
 } from '../../shared/ui/common';
 import { useModalA11y } from '../../shared/ui/useModalA11y';
-import { ExerciseGuideMedia } from './ExerciseGuideMedia';
+import { ExerciseGuideDialog } from './ExerciseGuideDialog';
 
-const difficultyLabels = {
+const difficultyLabels: Record<Exercise['difficulty_level'], string> = {
   beginner: 'Начальный',
   intermediate: 'Средний',
   advanced: 'Продвинутый',
 };
+
+const equipmentLabels: Record<string, string> = {
+  bodyweight: 'Собственный вес',
+  dumbbell: 'Гантели',
+  barbell: 'Штанга',
+  bench: 'Скамья',
+  cable: 'Тросовый блок',
+  machine: 'Тренажёр',
+  kettlebell: 'Гиря',
+  cardio: 'Кардиооборудование',
+  other: 'Другое',
+};
+
 const weekdayLabels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+const PAGE_SIZE = 32;
 
 export function ExerciseCatalog({
   canCreate = false,
@@ -32,13 +47,12 @@ export function ExerciseCatalog({
 }) {
   const { toast, confirm } = useFeedback();
   const queryClient = useQueryClient();
-  const searchResultsId = useId();
   const [search, setSearch] = useState('');
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [activeSearchIndex, setActiveSearchIndex] = useState(0);
   const [muscle, setMuscle] = useState('');
-  const [guide, setGuide] = useState<{ exercise: Exercise; data: ExerciseGuide } | null>(null);
-  const [mediaExpanded, setMediaExpanded] = useState(false);
+  const [equipment, setEquipment] = useState('');
+  const [difficulty, setDifficulty] = useState<Exercise['difficulty_level'] | ''>('');
+  const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
+  const [guide, setGuide] = useState<Exercise | null>(null);
   const [assignment, setAssignment] = useState<Exercise | null>(null);
   const [assignmentClientId, setAssignmentClientId] = useState(0);
   const [assignmentProgramId, setAssignmentProgramId] = useState(0);
@@ -47,10 +61,13 @@ export function ExerciseCatalog({
   const [assignmentRest, setAssignmentRest] = useState(90);
   const [assignmentDay, setAssignmentDay] = useState(1);
   const [assignmentNotes, setAssignmentNotes] = useState('');
+  const [assignmentSupersetGroup, setAssignmentSupersetGroup] = useState<number | ''>('');
+  const [assignmentSupersetOrder, setAssignmentSupersetOrder] = useState<1 | 2>(1);
+  const [assignmentReason, setAssignmentReason] = useState('');
   const [newTitle, setNewTitle] = useState('');
-  const guidePanelRef = useModalA11y<HTMLDivElement>(Boolean(guide) && !mediaExpanded, () =>
-    setGuide(null),
-  );
+  const [newMuscle, setNewMuscle] = useState('');
+  const [newEquipment, setNewEquipment] = useState('');
+  const [newDifficulty, setNewDifficulty] = useState<Exercise['difficulty_level']>('intermediate');
   const assignmentPanelRef = useModalA11y<HTMLDivElement>(Boolean(assignment), () =>
     setAssignment(null),
   );
@@ -69,51 +86,66 @@ export function ExerciseCatalog({
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['exercises'] });
       setNewTitle('');
+      setNewMuscle('');
+      setNewEquipment('');
+      setNewDifficulty('intermediate');
       toast('Каталог обновлён');
     },
     onError: (reason) => toast((reason as Error).message, 'error'),
   });
-  const assignmentMutation = useMutation({
-    mutationFn: () => {
-      if (!assignment || !activeAssignmentClientId || !activeAssignmentProgramId)
-        throw new Error('Выберите клиента и программу');
-      return api<{ workouts_updated: number; current_revision_number: number }>(
-        `/api/v1/coach/clients/${activeAssignmentClientId}/programs/${activeAssignmentProgramId}/exercises`,
-        {
-          method: 'POST',
-          body: {
-            expected_revision_number: activeAssignmentProgram?.current_revision_number ?? 0,
-            exercise_id: assignment.id,
-            day_number: assignmentDay,
-            prescribed_sets: assignmentSets,
-            prescribed_reps: assignmentReps,
-            rest_seconds: assignmentRest,
-            notes: assignmentNotes || null,
-          },
-        },
-      );
-    },
-    onSuccess: async (result) => {
-      await queryClient.invalidateQueries({ queryKey: ['coach', 'programs'] });
-      toast(`Упражнение добавлено в ${result.workouts_updated} предстоящих тренировок`);
-      setAssignment(null);
-      setAssignmentNotes('');
-    },
-    onError: (reason) => toast((reason as Error).message, 'error'),
-  });
-  const muscles = useMemo(
-    () => [...new Set((rows.data ?? []).map((item) => item.primary_muscle).filter(Boolean))].sort(),
-    [rows.data],
-  );
+
+  const muscleOptions = useMemo(() => {
+    const values = new Map<string, string>();
+    for (const exercise of rows.data ?? []) {
+      const ids = exercise.primary_muscle_ids ?? [];
+      if (ids.length) {
+        for (const id of ids) values.set(id, exercise.primary_muscle || id);
+      } else if (exercise.primary_muscle) {
+        values.set(`legacy:${exercise.primary_muscle}`, exercise.primary_muscle);
+      }
+    }
+    return [...values].sort((left, right) => left[1].localeCompare(right[1], 'ru'));
+  }, [rows.data]);
+
+  const equipmentOptions = useMemo(() => {
+    const values = new Map<string, string>();
+    for (const exercise of rows.data ?? []) {
+      const ids = exercise.equipment_ids ?? [];
+      if (ids.length) {
+        for (const id of ids) values.set(id, equipmentLabels[id] ?? exercise.equipment ?? id);
+      } else if (exercise.equipment) {
+        values.set(`legacy:${exercise.equipment}`, exercise.equipment);
+      }
+    }
+    return [...values].sort((left, right) => left[1].localeCompare(right[1], 'ru'));
+  }, [rows.data]);
+
   const filtered = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return (rows.data ?? []).filter(
-      (item) =>
-        (!muscle || item.primary_muscle === muscle) &&
-        (!query ||
-          `${item.title} ${item.primary_muscle} ${item.equipment}`.toLowerCase().includes(query)),
-    );
-  }, [rows.data, search, muscle]);
+    const query = search.trim().toLocaleLowerCase('ru-RU');
+    return (rows.data ?? []).filter((item) => {
+      const matchesMuscle =
+        !muscle ||
+        (muscle.startsWith('legacy:')
+          ? item.primary_muscle === muscle.slice(7)
+          : (item.primary_muscle_ids ?? []).includes(muscle));
+      const matchesEquipment =
+        !equipment ||
+        (equipment.startsWith('legacy:')
+          ? item.equipment === equipment.slice(7)
+          : (item.equipment_ids ?? []).includes(equipment));
+      const haystack =
+        `${item.title} ${item.primary_muscle ?? ''} ${item.equipment ?? ''} ${(item.alternatives ?? []).map((alternative) => alternative.title).join(' ')}`.toLocaleLowerCase(
+          'ru-RU',
+        );
+      return (
+        matchesMuscle &&
+        matchesEquipment &&
+        (!difficulty || item.difficulty_level === difficulty) &&
+        (!query || haystack.includes(query))
+      );
+    });
+  }, [difficulty, equipment, muscle, rows.data, search]);
+
   const assignablePrograms = useMemo(
     () => (coachPrograms.data ?? []).filter((item) => item.is_active && item.workouts_planned > 0),
     [coachPrograms.data],
@@ -151,316 +183,300 @@ export function ExerciseCatalog({
   const activeAssignmentProgram = clientPrograms.find(
     (item) => item.id === activeAssignmentProgramId,
   );
-  const activeAssignmentSchedule = (
-    activeAssignmentProgram as (CoachAssignedProgram & { schedule_weekdays?: number[] }) | undefined
-  )?.schedule_weekdays;
 
-  const chooseSearchResult = (exercise: Exercise) => {
-    setSearch(exercise.title);
-    setSearchOpen(false);
-  };
+  const assignmentMutation = useMutation({
+    mutationFn: () => {
+      if (!assignment || !activeAssignmentClientId || !activeAssignmentProgramId)
+        throw new Error('Выберите клиента и программу');
+      return api<{ workouts_updated: number; current_revision_number: number }>(
+        `/api/v1/coach/clients/${activeAssignmentClientId}/programs/${activeAssignmentProgramId}/exercises`,
+        {
+          method: 'POST',
+          body: {
+            expected_revision_number: activeAssignmentProgram?.current_revision_number ?? 0,
+            exercise_id: assignment.id,
+            day_number: assignmentDay,
+            prescribed_sets: assignmentSets,
+            prescribed_reps: assignmentReps,
+            rest_seconds: assignmentRest,
+            notes: assignmentNotes || null,
+            superset_group: assignmentSupersetGroup || null,
+            superset_order: assignmentSupersetGroup ? assignmentSupersetOrder : null,
+            reason: assignmentReason || null,
+          },
+        },
+      );
+    },
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: ['coach', 'programs'] });
+      toast(`Упражнение добавлено в ${result.workouts_updated} предстоящих тренировок`);
+      setAssignment(null);
+      setAssignmentNotes('');
+      setAssignmentSupersetGroup('');
+      setAssignmentReason('');
+    },
+    onError: (reason) => toast((reason as Error).message, 'error'),
+  });
 
-  const openGuide = async (exercise: Exercise) => {
-    try {
-      const data =
-        exercise.guide ??
-        (await api<ExerciseGuide>(`/api/v1/programs/exercises/${exercise.id}/guide`));
-      setGuide({ exercise, data });
-    } catch (reason) {
-      toast((reason as Error).message, 'error');
-    }
+  const resetFilters = () => {
+    setSearch('');
+    setMuscle('');
+    setEquipment('');
+    setDifficulty('');
+    setVisibleLimit(PAGE_SIZE);
   };
 
   return (
     <>
       <Card
-        title="Каталог упражнений"
-        description={
-          canCreate && targetTelegramId
-            ? `Новые упражнения создаются персонально для клиента Telegram ${targetTelegramId}.`
-            : undefined
-        }
-        actions={<Badge>{filtered.length}</Badge>}
+        className="exercise-catalog"
+        collapsible={false}
+        title="Упражнения"
+        description="Найдите движение по названию, мышцам или доступному оборудованию."
       >
-        <div className="form-grid exercise-filter-grid top-gap">
+        <div className="exercise-catalog__search top-gap">
           <label className="field">
             <span>Поиск</span>
-            <div className="exercise-picker">
-              <input
-                type="search"
-                role="combobox"
-                aria-label="Поиск в каталоге упражнений"
-                aria-expanded={searchOpen}
-                aria-controls={searchResultsId}
-                aria-activedescendant={
-                  searchOpen && filtered[activeSearchIndex]
-                    ? `${searchResultsId}-${filtered[activeSearchIndex].id}`
-                    : undefined
-                }
-                autoComplete="off"
-                value={search}
-                onFocus={() => setSearchOpen(true)}
-                onBlur={() => setSearchOpen(false)}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setActiveSearchIndex(0);
-                  setSearchOpen(true);
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === 'ArrowDown') {
-                    event.preventDefault();
-                    setSearchOpen(true);
-                    setActiveSearchIndex((index) => Math.min(filtered.length - 1, index + 1));
-                  } else if (event.key === 'ArrowUp') {
-                    event.preventDefault();
-                    setSearchOpen(true);
-                    setActiveSearchIndex((index) => Math.max(0, index - 1));
-                  } else if (event.key === 'Enter' && searchOpen && filtered[activeSearchIndex]) {
-                    event.preventDefault();
-                    chooseSearchResult(filtered[activeSearchIndex]);
-                  } else if (event.key === 'Escape') {
-                    setSearchOpen(false);
-                  }
-                }}
-                placeholder="Упражнение, мышца или инвентарь"
-              />
-              {searchOpen && (
-                <div className="exercise-picker__results" id={searchResultsId} role="listbox">
-                  {filtered.length ? (
-                    filtered.map((exercise) => (
-                      <button
-                        type="button"
-                        role="option"
-                        id={`${searchResultsId}-${exercise.id}`}
-                        tabIndex={-1}
-                        aria-selected={search === exercise.title}
-                        className="exercise-picker__option"
-                        key={exercise.id}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onPointerDown={(event) => event.preventDefault()}
-                        onClick={() => chooseSearchResult(exercise)}
-                      >
-                        <strong>{exercise.title}</strong>
-                        <span className="exercise-picker__meta">
-                          <small>
-                            {exercise.primary_muscle || 'Все мышцы'} ·{' '}
-                            {exercise.equipment || 'Без оборудования'}
-                          </small>
-                          <span className="badge">
-                            {difficultyLabels[exercise.difficulty_level]}
-                          </span>
-                        </span>
-                      </button>
-                    ))
-                  ) : (
-                    <span className="exercise-picker__empty">Ничего не найдено</span>
-                  )}
-                </div>
-              )}
-            </div>
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setVisibleLimit(PAGE_SIZE);
+              }}
+              placeholder="Например, приседание или гантели"
+            />
           </label>
+        </div>
+        <div className="exercise-catalog__filters" aria-label="Фильтры упражнений">
           <label className="field">
-            <span>Группа мышц</span>
+            <span>Мышцы</span>
             <select
               value={muscle}
-              onChange={(e) => {
-                setMuscle(e.target.value);
-                setActiveSearchIndex(0);
+              onChange={(event) => {
+                setMuscle(event.target.value);
+                setVisibleLimit(PAGE_SIZE);
               }}
             >
-              <option value="">Все</option>
-              {muscles.map((value) => (
-                <option value={value!} key={value}>
-                  {value}
+              <option value="">Все группы</option>
+              {muscleOptions.map(([value, label]) => (
+                <option value={value} key={value}>
+                  {label}
                 </option>
               ))}
             </select>
           </label>
+          <label className="field">
+            <span>Оборудование</span>
+            <select
+              value={equipment}
+              onChange={(event) => {
+                setEquipment(event.target.value);
+                setVisibleLimit(PAGE_SIZE);
+              }}
+            >
+              <option value="">Любое</option>
+              {equipmentOptions.map(([value, label]) => (
+                <option value={value} key={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>Опыт</span>
+            <select
+              value={difficulty}
+              onChange={(event) => {
+                setDifficulty(event.target.value as Exercise['difficulty_level'] | '');
+                setVisibleLimit(PAGE_SIZE);
+              }}
+            >
+              <option value="">Любой</option>
+              {Object.entries(difficultyLabels).map(([value, label]) => (
+                <option value={value} key={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {(search || muscle || equipment || difficulty) && (
+            <button type="button" className="text-button" onClick={resetFilters}>
+              Сбросить фильтры
+            </button>
+          )}
         </div>
         {canCreate && (
-          <form
-            className="toolbar wrap top-gap"
-            onSubmit={(e) => {
-              e.preventDefault();
-              mutation.mutate({
-                path: '/api/v1/programs/exercises',
-                method: 'POST',
-                body: {
-                  title: newTitle,
-                  difficulty_level: 'intermediate',
-                  target_telegram_user_id: targetTelegramId || null,
-                },
-              });
-            }}
-          >
-            <input
-              aria-label="Новое упражнение"
-              value={newTitle}
-              maxLength={128}
-              onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="Название нового упражнения"
-              required
-            />
-            <button disabled={mutation.isPending}>Добавить</button>
-          </form>
+          <details className="exercise-create compact-disclosure">
+            <summary>
+              <span>
+                <strong>Создать своё упражнение</strong>
+                <small>
+                  {targetTelegramId
+                    ? 'Персонально для выбранного клиента'
+                    : 'Если подходящего движения нет в каталоге'}
+                </small>
+              </span>
+              <DisclosureIcon />
+            </summary>
+            <form
+              className="exercise-create__form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                mutation.mutate({
+                  path: '/api/v1/programs/exercises',
+                  method: 'POST',
+                  body: {
+                    title: newTitle,
+                    primary_muscle: newMuscle || null,
+                    equipment: newEquipment || null,
+                    difficulty_level: newDifficulty,
+                    target_telegram_user_id: targetTelegramId || null,
+                  },
+                });
+              }}
+            >
+              <label className="field exercise-create__title">
+                <span>Название</span>
+                <input
+                  value={newTitle}
+                  maxLength={128}
+                  onChange={(event) => setNewTitle(event.target.value)}
+                  required
+                />
+              </label>
+              <label className="field">
+                <span>Основная мышечная группа</span>
+                <input
+                  value={newMuscle}
+                  maxLength={64}
+                  onChange={(event) => setNewMuscle(event.target.value)}
+                />
+              </label>
+              <label className="field">
+                <span>Оборудование</span>
+                <input
+                  value={newEquipment}
+                  maxLength={64}
+                  onChange={(event) => setNewEquipment(event.target.value)}
+                />
+              </label>
+              <label className="field">
+                <span>Уровень</span>
+                <select
+                  value={newDifficulty}
+                  onChange={(event) =>
+                    setNewDifficulty(event.target.value as Exercise['difficulty_level'])
+                  }
+                >
+                  {Object.entries(difficultyLabels).map(([value, label]) => (
+                    <option value={value} key={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button disabled={mutation.isPending}>
+                {mutation.isPending ? 'Создаём…' : 'Создать упражнение'}
+              </button>
+            </form>
+          </details>
+        )}
+        {!rows.isLoading && !rows.error && (
+          <p className="exercise-catalog__count" aria-live="polite">
+            Найдено: <strong>{filtered.length}</strong>
+          </p>
         )}
         {rows.isLoading ? (
           <LoadingState />
         ) : rows.error ? (
           <ErrorState message={(rows.error as Error).message} retry={() => void rows.refetch()} />
         ) : filtered.length === 0 ? (
-          <EmptyState title="Ничего не найдено" />
+          <EmptyState
+            title="Ничего не найдено"
+            text="Попробуйте убрать один из фильтров или изменить запрос."
+          />
         ) : (
-          <div className="list-grid top-gap">
-            {filtered.map((exercise) => (
-              <article className="list-row exercise-catalog-row" key={exercise.id}>
-                <div className="list-row__main">
-                  <strong>{exercise.title}</strong>
-                  <span className="muted">
-                    {exercise.primary_muscle || 'Все мышцы'} ·{' '}
-                    {exercise.equipment || 'Без оборудования'}
-                  </span>
-                  <div className="exercise-catalog-row__badges">
-                    <Badge>{difficultyLabels[exercise.difficulty_level]}</Badge>{' '}
-                    {exercise.is_custom && <Badge>Своё</Badge>}
+          <>
+            <div className="exercise-catalog-list" aria-live="polite">
+              {filtered.slice(0, visibleLimit).map((exercise) => (
+                <article className="exercise-catalog-item" key={exercise.id}>
+                  <div className="exercise-catalog-item__main">
+                    <strong>{exercise.title}</strong>
+                    <span>
+                      {exercise.primary_muscle || 'Всё тело'} ·{' '}
+                      {exercise.equipment || 'Без оборудования'}
+                    </span>
+                    <div className="exercise-catalog-item__badges">
+                      <Badge>{difficultyLabels[exercise.difficulty_level]}</Badge>
+                      {exercise.is_custom && <Badge>Своё</Badge>}
+                      {!!exercise.alternatives?.length && (
+                        <Badge>{exercise.alternatives.length} проверенных замен</Badge>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div className="list-row__actions">
-                  {canAssign && (
-                    <button type="button" onClick={() => setAssignment(exercise)}>
-                      Добавить
-                    </button>
-                  )}
-                  {exercise.has_guide && (
-                    <button
-                      className="exercise-guide-trigger"
-                      type="button"
-                      onClick={() => void openGuide(exercise)}
-                    >
-                      <span>Техника</span>
-                      <span aria-hidden="true">⌕</span>
-                    </button>
-                  )}
+                  <div className="exercise-catalog-item__actions">
+                    {exercise.has_guide && (
+                      <button
+                        className="secondary"
+                        type="button"
+                        onClick={() => setGuide(exercise)}
+                      >
+                        Техника
+                      </button>
+                    )}
+                    {canAssign && (
+                      <button type="button" onClick={() => setAssignment(exercise)}>
+                        В программу
+                      </button>
+                    )}
+                  </div>
                   {exercise.is_custom && (
-                    <button
-                      className="btn-danger"
-                      type="button"
-                      onClick={async () => {
-                        if (
-                          await confirm({
-                            title: 'Удалить упражнение?',
-                            message: exercise.title,
-                            confirmText: 'Удалить',
-                          })
-                        )
-                          mutation.mutate({
-                            path: `/api/v1/programs/exercises/${exercise.id}`,
-                            method: 'DELETE',
-                          });
-                      }}
-                    >
-                      Удалить
-                    </button>
+                    <details className="exercise-catalog-item__danger">
+                      <summary>Другие действия</summary>
+                      <button
+                        className="btn-danger"
+                        type="button"
+                        onClick={async () => {
+                          if (
+                            await confirm({
+                              title: 'Удалить упражнение?',
+                              message: exercise.title,
+                              confirmText: 'Удалить',
+                            })
+                          )
+                            mutation.mutate({
+                              path: `/api/v1/programs/exercises/${exercise.id}`,
+                              method: 'DELETE',
+                            });
+                        }}
+                      >
+                        Удалить упражнение
+                      </button>
+                    </details>
                   )}
-                </div>
-              </article>
-            ))}
-          </div>
+                </article>
+              ))}
+            </div>
+            {visibleLimit < filtered.length && (
+              <button
+                type="button"
+                className="secondary exercise-catalog__more"
+                onClick={() => setVisibleLimit((value) => value + PAGE_SIZE)}
+              >
+                Показать ещё {Math.min(PAGE_SIZE, filtered.length - visibleLimit)}
+              </button>
+            )}
+          </>
         )}
       </Card>
       {guide && (
-        <div
-          className="modal exercise-guide-modal"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="guide-title"
-        >
-          <button className="modal__backdrop" aria-label="Закрыть" onClick={() => setGuide(null)} />
-          <div
-            className="modal__panel card exercise-guide-modal__panel"
-            ref={guidePanelRef}
-            tabIndex={-1}
-          >
-            <div className="exercise-guide-modal__head">
-              <div>
-                <span className="eyebrow">Описание упражнения</span>
-                <h2 className="modal__title" id="guide-title">
-                  {guide.exercise.title}
-                </h2>
-              </div>
-              <button
-                className="secondary exercise-guide-modal__close"
-                aria-label="Закрыть описание"
-                onClick={() => setGuide(null)}
-              >
-                <CloseIcon />
-              </button>
-            </div>
-            <div className="exercise-guide-modal__body">
-              <div className="exercise-guide-meta toolbar wrap">
-                <Badge>{difficultyLabels[guide.exercise.difficulty_level]}</Badge>
-                <Badge>{guide.exercise.primary_muscle || 'Всё тело'}</Badge>
-                <Badge>{guide.exercise.equipment || 'Без оборудования'}</Badge>
-              </div>
-              <section className="exercise-guide-intro" aria-labelledby="guide-purpose">
-                <h3 id="guide-purpose">Для чего это упражнение</h3>
-                <p>
-                  Основная задача — нагрузить целевую группу «
-                  {guide.exercise.primary_muscle || 'всё тело'}» и отработать движение с
-                  контролируемой амплитудой. Используйте технику ниже, чтобы направить нагрузку в
-                  нужные мышцы и не компенсировать движение корпусом.
-                </p>
-              </section>
-              <ExerciseGuideMedia items={guide.data.media} onExpandedChange={setMediaExpanded} />
-              <div className="exercise-guide-notes">
-                <section className="exercise-guide-note" aria-labelledby="guide-technique">
-                  <h3 id="guide-technique">Техника выполнения</h3>
-                  <ol>
-                    {guide.data.technique_steps.map((step) => (
-                      <li key={step}>{step}</li>
-                    ))}
-                  </ol>
-                </section>
-                <section className="exercise-guide-note" aria-labelledby="guide-breathing">
-                  <h3 id="guide-breathing">Дыхание</h3>
-                  <p>{guide.data.breathing}</p>
-                </section>
-                <section
-                  className="exercise-guide-note exercise-guide-note--warning"
-                  aria-labelledby="guide-mistakes"
-                >
-                  <h3 id="guide-mistakes">Частые ошибки</h3>
-                  <ul>
-                    {guide.data.common_mistakes.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                </section>
-              </div>
-              <section className="exercise-guide-section" aria-labelledby="guide-muscles">
-                <h3 id="guide-muscles">Какие мышцы работают</h3>
-                <div className="exercise-guide-muscles">
-                  {guide.data.muscles.map((muscleItem) => (
-                    <article className="exercise-guide-muscle" key={muscleItem.name}>
-                      <div className="exercise-guide-muscle__head">
-                        <strong>{muscleItem.name}</strong>
-                        <span>{muscleItem.role}</span>
-                      </div>
-                      <p>{muscleItem.function}</p>
-                    </article>
-                  ))}
-                </div>
-              </section>
-              <p className="muted exercise-guide-source">
-                Источник:{' '}
-                <a href={guide.data.source_url} target="_blank" rel="noreferrer">
-                  {guide.data.source_name}
-                </a>{' '}
-                · {guide.data.source_license}
-              </p>
-            </div>
-          </div>
-        </div>
+        <ExerciseGuideDialog
+          exerciseId={guide.id}
+          exerciseTitle={guide.title}
+          exercise={guide}
+          onClose={() => setGuide(null)}
+        />
       )}
       {assignment && (
         <div className="modal" role="dialog" aria-modal="true" aria-labelledby="assign-title">
@@ -476,7 +492,7 @@ export function ExerciseCatalog({
           >
             <div className="section-head">
               <div>
-                <span className="eyebrow">Назначение упражнения</span>
+                <span className="eyebrow">Изменение будущего плана</span>
                 <h2 id="assign-title">{assignment.title}</h2>
               </div>
               <button
@@ -507,62 +523,66 @@ export function ExerciseCatalog({
                   assignmentMutation.mutate();
                 }}
               >
-                <label className="field">
-                  <span>Кому</span>
-                  <select
-                    value={activeAssignmentClientId}
-                    onChange={(event) => {
-                      const nextClientId = Number(event.target.value);
-                      setAssignmentClientId(nextClientId);
-                      setAssignmentProgramId(
-                        assignablePrograms.find((item) => item.client_id === nextClientId)?.id ?? 0,
-                      );
-                      setAssignmentDay(1);
-                    }}
-                  >
-                    {assignmentClients.map((client) => (
-                      <option value={client.id} key={client.id}>
-                        {client.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field">
-                  <span>В какую программу</span>
-                  <select
-                    value={activeAssignmentProgramId}
-                    onChange={(event) => {
-                      setAssignmentProgramId(Number(event.target.value));
-                      setAssignmentDay(1);
-                    }}
-                  >
-                    {clientPrograms.map((program) => (
-                      <option value={program.id} key={program.id}>
-                        {program.title}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field">
-                  <span>В какой день программы</span>
-                  <select
-                    value={assignmentDay}
-                    onChange={(event) => setAssignmentDay(Number(event.target.value))}
-                  >
-                    {(activeAssignmentSchedule ?? []).map((weekday, index) => (
-                      <option value={index + 1} key={`${weekday}-${index}`}>
-                        День {index + 1} · {weekdayLabels[weekday] ?? `день недели ${weekday + 1}`}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <div className="assignment-context">
+                  <label className="field">
+                    <span>Клиент</span>
+                    <select
+                      value={activeAssignmentClientId}
+                      onChange={(event) => {
+                        const nextClientId = Number(event.target.value);
+                        setAssignmentClientId(nextClientId);
+                        setAssignmentProgramId(
+                          assignablePrograms.find((item) => item.client_id === nextClientId)?.id ??
+                            0,
+                        );
+                        setAssignmentDay(1);
+                      }}
+                    >
+                      {assignmentClients.map((client) => (
+                        <option value={client.id} key={client.id}>
+                          {client.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="field">
+                    <span>Активная программа</span>
+                    <select
+                      value={activeAssignmentProgramId}
+                      onChange={(event) => {
+                        setAssignmentProgramId(Number(event.target.value));
+                        setAssignmentDay(1);
+                      }}
+                    >
+                      {clientPrograms.map((program) => (
+                        <option value={program.id} key={program.id}>
+                          {program.title}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="field">
+                    <span>День программы</span>
+                    <select
+                      value={assignmentDay}
+                      onChange={(event) => setAssignmentDay(Number(event.target.value))}
+                    >
+                      {(activeAssignmentProgram?.schedule_weekdays ?? []).map((weekday, index) => (
+                        <option value={index + 1} key={`${weekday}-${index}`}>
+                          День {index + 1} ·{' '}
+                          {weekdayLabels[weekday] ?? `день недели ${weekday + 1}`}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
                 <p className="muted assignment-modal__hint">
-                  Упражнение появится только в будущих тренировках выбранного дня. Уже завершённые
-                  тренировки не изменятся.
+                  Изменение попадёт только в будущие тренировки выбранного дня. Завершённые и уже
+                  начатые тренировки не изменятся.
                 </p>
                 <div className="form-grid assignment-prescription">
                   <label className="field">
-                    <span>Подходы</span>
+                    <span>Рабочие подходы</span>
                     <input
                       type="number"
                       min="1"
@@ -599,8 +619,59 @@ export function ExerciseCatalog({
                     onChange={(event) => setAssignmentNotes(event.target.value)}
                   />
                 </label>
+                <details className="compact-disclosure assignment-advanced">
+                  <summary>
+                    <span>
+                      <strong>Дополнительные настройки</strong>
+                      <small>Суперсет и причина изменения</small>
+                    </span>
+                    <DisclosureIcon />
+                  </summary>
+                  <div className="assignment-advanced__body">
+                    <div className="form-grid">
+                      <label className="field">
+                        <span>Номер суперсета</span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={assignmentSupersetGroup}
+                          placeholder="Не задан"
+                          onChange={(event) =>
+                            setAssignmentSupersetGroup(
+                              event.target.value ? Number(event.target.value) : '',
+                            )
+                          }
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Порядок в паре</span>
+                        <select
+                          value={assignmentSupersetOrder}
+                          disabled={!assignmentSupersetGroup}
+                          onChange={(event) =>
+                            setAssignmentSupersetOrder(Number(event.target.value) as 1 | 2)
+                          }
+                        >
+                          <option value="1">Первое</option>
+                          <option value="2">Второе</option>
+                        </select>
+                      </label>
+                    </div>
+                    <small className="muted">
+                      Суперсет — два упражнения подряд. Используйте номер уже существующей пары.
+                    </small>
+                    <label className="field">
+                      <span>Причина изменения (необязательно)</span>
+                      <input
+                        value={assignmentReason}
+                        maxLength={500}
+                        onChange={(event) => setAssignmentReason(event.target.value)}
+                      />
+                    </label>
+                  </div>
+                </details>
                 <button disabled={assignmentMutation.isPending || !activeAssignmentProgramId}>
-                  {assignmentMutation.isPending ? 'Добавляем…' : 'Добавить в программу'}
+                  {assignmentMutation.isPending ? 'Сохраняем…' : 'Добавить в будущий план'}
                 </button>
               </form>
             )}

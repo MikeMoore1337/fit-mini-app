@@ -63,3 +63,9 @@ Endpoint-ы находятся под `/api/v1/programs/assigned/{program_id}`:
 
 Существующий тренерский endpoint добавления упражнения использует тот же сервис, поэтому соблюдает
 те же правила optimistic concurrency и неизменяемости истории.
+
+`GET /api/v1/programs/templates/mine` связывает видимый шаблон с последним релевантным
+назначением текущего пользователя. Вместе с флагами активности ответ возвращает
+`assigned_program_id`, `assigned_program_status`, `assigned_program_start_date`,
+`assigned_program_duration_weeks` и `current_revision_number`. Эти поля нужны интерфейсу для
+перехода от активного шаблона к блокам и истории; они не расширяют права доступа к назначению.

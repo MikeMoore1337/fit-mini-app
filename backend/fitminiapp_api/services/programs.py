@@ -86,6 +86,11 @@ def _serialize_template_with_context(
         "assigned_by_full_name": (
             assigned_by.profile.full_name if assigned_by and assigned_by.profile else None
         ),
+        "assigned_program_id": assignment.id if assignment else None,
+        "assigned_program_status": assignment.status if assignment else None,
+        "assigned_program_start_date": assignment.start_date if assignment else None,
+        "assigned_program_duration_weeks": assignment.duration_weeks if assignment else None,
+        "current_revision_number": assignment.current_revision_number if assignment else None,
         "days": [
             {
                 "id": day.id,

@@ -12,15 +12,19 @@ async function openCard(page: Page, title: string) {
 type AppDestination = 'Сегодня' | 'План' | 'Прогресс' | 'Питание' | 'Упражнения' | 'Профиль';
 
 async function openAppDestination(page: Page, destination: AppDestination) {
+  await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible();
   const desktopLabel = destination;
   const mobileLabel = destination === 'Профиль' ? 'Профиль и настройки' : destination;
   const directLink = page.getByRole('link', { name: desktopLabel, exact: true });
-  if (await directLink.isVisible()) {
-    await directLink.click();
-    return;
+  for (let index = 0; index < (await directLink.count()); index += 1) {
+    const candidate = directLink.nth(index);
+    if (await candidate.isVisible()) {
+      await candidate.click();
+      return;
+    }
   }
   await page.getByRole('button', { name: 'Ещё', exact: true }).click();
-  await page.getByRole('link', { name: mobileLabel, exact: true }).click();
+  await page.locator('#appMorePanel').getByRole('link', { name: mobileLabel, exact: true }).click();
 }
 
 test('логотип и кнопки в шапке имеют одинаковую высоту', async ({ page }) => {
@@ -453,7 +457,10 @@ test('сценарии спортсмена и тренера ведут в ве
   }
 });
 
-async function mockApi(page: Page, { withCoachClient = false, withCoachApplication = false } = {}) {
+async function mockApi(
+  page: Page,
+  { withCoachClient = false, withCoachApplication = false, withCoachProgram = false } = {},
+) {
   let role: 'client' | 'coach' | 'admin' = 'client';
   let coachApplication = withCoachApplication
     ? {
@@ -604,7 +611,46 @@ async function mockApi(page: Page, { withCoachClient = false, withCoachApplicati
             calories: {},
             protein: {},
           },
-          data_sufficiency: {},
+          data_sufficiency: {
+            ruleset_version: 'data-sufficiency-v1',
+            workout_logging: { status: 'insufficient', counters: {}, reason_keys: [] },
+            working_sets: { status: 'insufficient', counters: {}, reason_keys: [] },
+            rir_coverage: { status: 'insufficient', counters: {}, reason_keys: [] },
+            nutrition_coverage: { status: 'insufficient', counters: {}, reason_keys: [] },
+            weight_trend: { status: 'insufficient', counters: {}, reason_keys: [] },
+            anthropometry: { status: 'insufficient', counters: {}, reason_keys: [] },
+            schedule_adherence: { status: 'insufficient', counters: {}, reason_keys: [] },
+          },
+        },
+      });
+    if (path.endsWith('/workouts/progress/training-analytics'))
+      return route.fulfill({
+        json: {
+          period_days: 30,
+          period_start: '2030-01-01',
+          period_end: '2030-01-10',
+          exercise_history_limit: 20,
+          completed_set_count: 0,
+          reps_total: 0,
+          reps_recorded_sets: 0,
+          external_load_volume_kg: 0,
+          volume_recorded_sets: 0,
+          exercises: [],
+          rir: {
+            completed_set_count: 0,
+            recorded_set_count: 0,
+            missing_set_count: 0,
+            distribution: [],
+          },
+          primary_muscle_exposure: [],
+          secondary_muscle_exposure: [],
+          completed_sets_without_muscle_metadata: 0,
+          data_sufficiency: {
+            ruleset_version: 'data-sufficiency-v1',
+            workout_logging: { status: 'insufficient', counters: {}, reason_keys: [] },
+            working_sets: { status: 'insufficient', counters: {}, reason_keys: [] },
+            rir_coverage: { status: 'insufficient', counters: {}, reason_keys: [] },
+          },
         },
       });
     if (path.endsWith('/nutrition/diary'))
@@ -787,6 +833,10 @@ async function mockApi(page: Page, { withCoachClient = false, withCoachApplicati
             title: 'Тяга блока',
             primary_muscle: 'Спина',
             equipment: 'Блок',
+            primary_muscle_ids: ['back'],
+            secondary_muscle_ids: ['biceps'],
+            equipment_ids: ['cable'],
+            alternatives: [],
             difficulty_level: 'beginner',
             is_custom: false,
             is_personalized: false,
@@ -834,8 +884,70 @@ async function mockApi(page: Page, { withCoachClient = false, withCoachApplicati
               },
             ],
           },
+          {
+            id: 11,
+            title: 'Текущий план от тренера',
+            slug: 'coach-active-plan',
+            goal: 'maintenance',
+            level: 'beginner',
+            owner_user_id: null,
+            owner_telegram_user_id: null,
+            owner_full_name: null,
+            created_by_user_id: 99,
+            is_public: false,
+            is_example: false,
+            is_assigned_to_current_user: true,
+            is_active_for_current_user: true,
+            can_edit: false,
+            assigned_by_user_id: 99,
+            assigned_by_full_name: 'Тренер Анна',
+            assigned_program_id: 501,
+            assigned_program_status: 'active',
+            assigned_program_start_date: '2030-01-01',
+            assigned_program_duration_weeks: 4,
+            current_revision_number: 1,
+            days: [
+              {
+                id: 110,
+                day_number: 1,
+                title: 'База',
+                exercises: [
+                  {
+                    id: 1100,
+                    exercise_id: 1,
+                    exercise_title: 'Тяга блока',
+                    prescribed_sets: 3,
+                    prescribed_reps: '10–12',
+                    rest_seconds: 90,
+                    notes: null,
+                    superset_group: null,
+                    superset_order: null,
+                    has_guide: true,
+                  },
+                ],
+              },
+            ],
+          },
         ],
       });
+    if (path.endsWith('/programs/assigned/501/revisions'))
+      return route.fulfill({
+        json: [
+          {
+            id: 1,
+            user_program_id: 501,
+            revision_number: 1,
+            changed_by_user_id: 99,
+            actor_role: 'trainer',
+            change_kind: 'assigned',
+            reason: null,
+            changed_fields: {},
+            snapshot: {},
+            created_at: '2030-01-01T10:00:00',
+          },
+        ],
+      });
+    if (path.endsWith('/programs/assigned/501/blocks')) return route.fulfill({ json: [] });
     if (path.endsWith('/programs/templates/hidden')) return route.fulfill({ json: [] });
     if (path.endsWith('/admin/coach-applications')) {
       return route.fulfill({
@@ -851,6 +963,38 @@ async function mockApi(page: Page, { withCoachClient = false, withCoachApplicati
     if (/\/coach\/clients\/\d+\/analytics$/.test(path))
       return route.fulfill({ json: emptyProgress });
     if (/\/coach\/clients\/\d+\/workouts$/.test(path)) return route.fulfill({ json: [] });
+    if (path.endsWith('/coach/assigned-programs'))
+      return route.fulfill({
+        json: withCoachProgram
+          ? [
+              {
+                id: 701,
+                client_id: 2,
+                client_telegram_user_id: 3002,
+                client_username: 'client',
+                client_full_name: 'Тестовый клиент',
+                template_id: 10,
+                title: 'План клиента на четыре недели',
+                goal: 'maintenance',
+                level: 'beginner',
+                assigned_at: '2030-01-01T10:00:00',
+                is_active: true,
+                status: 'active',
+                start_date: '2030-01-01',
+                duration_weeks: 4,
+                schedule_weekdays: [0, 2, 4],
+                completed_at: null,
+                workouts_total: 12,
+                workouts_completed: 4,
+                workouts_planned: 8,
+                next_workout_date: '2030-01-08',
+                current_revision_number: 2,
+              },
+            ]
+          : [],
+      });
+    if (path.endsWith('/programs/assigned/701/revisions')) return route.fulfill({ json: [] });
+    if (path.endsWith('/programs/assigned/701/blocks')) return route.fulfill({ json: [] });
     if (path.endsWith('/coach/clients'))
       return route.fulfill({
         json: withCoachClient
@@ -1211,7 +1355,7 @@ test('профиль содержит уведомления, а карточк�
   await expect(page.getByRole('heading', { name: 'Напоминания о тренировках' })).toHaveCount(0);
 
   await openAppDestination(page, 'Упражнения');
-  await openCard(page, 'Каталог упражнений');
+  await expect(page.getByRole('heading', { name: 'Упражнения', exact: true })).toBeVisible();
   expect(guideRequests).toBe(0);
   await page.getByRole('button', { name: 'Техника' }).click();
   expect(guideRequests).toBe(1);
@@ -1248,7 +1392,7 @@ test('описание упражнения использует широкую 
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
   await openAppDestination(page, 'Упражнения');
-  await openCard(page, 'Каталог упражнений');
+  await expect(page.getByRole('heading', { name: 'Упражнения', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Техника' }).click();
 
   const guidePanel = page.locator('.exercise-guide-modal__panel');
@@ -1402,10 +1546,10 @@ test('поля адаптируются к разным iPhone, а пример 
   expect(await page.evaluate(() => window.scrollX)).toBe(0);
 
   await openAppDestination(page, 'Упражнения');
-  await openCard(page, 'Каталог упражнений');
-  const search = page.getByRole('combobox', { name: 'Поиск в каталоге упражнений' });
-  await search.focus();
-  await expect(page.getByRole('option', { name: /Тяга блока/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Упражнения', exact: true })).toBeVisible();
+  const search = page.getByRole('searchbox', { name: 'Поиск' });
+  await search.fill('Тяга');
+  await expect(page.getByText('Тяга блока', { exact: true })).toBeVisible();
   const searchBox = await search.boundingBox();
   expect(searchBox).not.toBeNull();
   expect(searchBox!.x + searchBox!.width).toBeLessThanOrEqual(440);
@@ -1419,12 +1563,18 @@ test('поля адаптируются к разным iPhone, а пример 
   );
 
   await openAppDestination(page, 'План');
-  await openCard(page, 'Мои программы');
+  await expect(page.getByRole('heading', { name: 'Текущий план от тренера' })).toBeVisible();
+  await expect(page.getByText('Назначил тренер Тренер Анна')).toBeVisible();
+  await page.getByText('Этапы и история программы', { exact: true }).click();
+  await expect(page.getByText('Блоков пока нет')).toBeVisible();
+  await expect(page.getByText('Программа назначена')).toBeVisible();
+  await page.getByText('Этапы и история программы', { exact: true }).click();
+  await openCard(page, 'Программы и шаблоны');
   const example = page.getByRole('button', {
-    name: 'Посмотреть пример программы «Программа на всё тело — 3 дня»',
+    name: 'Посмотреть шаблон «Программа на всё тело — 3 дня»',
   });
-  await expect(example).toContainText('Рекомпозиция · Начальный уровень · 1 дн.');
-  await expect(example).toContainText('Пример программы');
+  await expect(example).toContainText('Рекомпозиция · Начальный уровень · 1 тренировка в цикле');
+  await expect(example).toContainText('Готовый шаблон');
   await expect(example).not.toContainText('recomposition');
   await expect(example).not.toContainText('beginner');
   await example.click();
@@ -1456,6 +1606,39 @@ test('поля адаптируются к разным iPhone, а пример 
   await expect(page.locator('.exercise-lightbox')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.locator('.exercise-lightbox')).toHaveCount(0);
+});
+
+test('клиент собирает и переупорядочивает личную программу', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockApi(page);
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Клиент' }).click();
+  await openAppDestination(page, 'План');
+  await openCard(page, 'Создать свою программу');
+
+  const exercisePicker = page.getByRole('combobox', { name: 'Поиск упражнения' }).first();
+  await exercisePicker.fill('Тяга');
+  await page.getByRole('option', { name: /Тяга блока/ }).click();
+
+  await page.getByRole('button', { name: 'Добавить упражнение' }).first().click();
+  await page.getByRole('button', { name: 'Переместить упражнение 2 выше' }).click();
+  await page.getByRole('button', { name: 'Удалить упражнение 1 из дня 1' }).click();
+
+  await page.getByRole('button', { name: 'Добавить день' }).click();
+  await page.getByRole('button', { name: 'Переместить день 2 выше' }).click();
+  await page.getByRole('button', { name: 'Удалить день 1' }).click();
+
+  const createRequest = page.waitForRequest(
+    (request) =>
+      new URL(request.url()).pathname.endsWith('/programs/templates') &&
+      request.method() === 'POST',
+  );
+  await page.getByRole('button', { name: 'Создать программу' }).click();
+  const payload = (await createRequest).postDataJSON() as {
+    days: Array<{ exercises: Array<{ exercise_id: number }> }>;
+  };
+  expect(payload.days).toHaveLength(1);
+  expect(payload.days[0]?.exercises).toEqual([expect.objectContaining({ exercise_id: 1 })]);
 });
 
 test('сенсорное поле даты сохраняет нативный пикер и показывает иконку календаря', async ({
@@ -1583,4 +1766,28 @@ test('тренер открывает кабинет', async ({ page }) => {
   await expect(page.getByRole('link', { name: 'Администрирование' })).toHaveCount(0);
   await openCard(page, 'Клиенты');
   await expect(page.getByText('Клиентов пока нет')).toBeVisible();
+});
+
+test('тренер быстро переходит между программой клиента и каталогом', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockApi(page, { withCoachClient: true, withCoachProgram: true });
+  await page.goto('/coach');
+  await page.getByRole('button', { name: 'Тренер' }).click();
+
+  await page.getByRole('tab', { name: 'Назначенные программы' }).click();
+  await openCard(page, 'Программы клиентов');
+  await expect(page.getByText('План клиента на четыре недели')).toBeVisible();
+  await page.getByRole('button', { name: 'Открыть клиента' }).click();
+
+  await expect(page.getByText('Текущая программа клиента')).toBeVisible();
+  await expect(page.getByText('План клиента на четыре недели')).toBeVisible();
+  await page.getByRole('button', { name: 'Добавить упражнение' }).first().click();
+
+  await expect(page.getByRole('heading', { name: 'Упражнения', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'В программу' }).click();
+  const assignment = page.getByRole('dialog', { name: /Тяга блока/ });
+  const assignmentContext = assignment.locator('.assignment-context select');
+  await expect(assignmentContext.nth(0)).toHaveValue('2');
+  await expect(assignmentContext.nth(1)).toHaveValue('701');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
 });

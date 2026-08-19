@@ -4148,6 +4148,16 @@ export interface components {
             assigned_by_user_id?: number | null;
             /** Assigned By Full Name */
             assigned_by_full_name?: string | null;
+            /** Assigned Program Id */
+            assigned_program_id?: number | null;
+            /** Assigned Program Status */
+            assigned_program_status?: ("scheduled" | "active" | "completed" | "archived") | null;
+            /** Assigned Program Start Date */
+            assigned_program_start_date?: string | null;
+            /** Assigned Program Duration Weeks */
+            assigned_program_duration_weeks?: number | null;
+            /** Current Revision Number */
+            current_revision_number?: number | null;
             /** Days */
             days: components["schemas"]["ProgramTemplateDayResponse"][];
         };
