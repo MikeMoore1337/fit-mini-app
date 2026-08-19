@@ -3,6 +3,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from fitminiapp_api.schemas.data_quality import TrainingDataSufficiency
+
 RirValue = Literal["0", "1", "2", "3", "4+"]
 SetKind = Literal["warmup", "working", "drop"]
 RIR_DESCRIPTION = (
@@ -224,6 +226,7 @@ class TrainingAnalyticsResponse(BaseModel):
     primary_muscle_exposure: list[MuscleSetExposure]
     secondary_muscle_exposure: list[MuscleSetExposure]
     completed_sets_without_muscle_metadata: int
+    data_sufficiency: TrainingDataSufficiency
 
 
 class WorkoutTimelineSet(BaseModel):

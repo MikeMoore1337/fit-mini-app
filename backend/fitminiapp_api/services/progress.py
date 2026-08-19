@@ -25,6 +25,14 @@ from fitminiapp_api.models.user import (
     UserProfile,
     UserProfilePriorityMuscle,
 )
+from fitminiapp_api.services.data_quality import (
+    build_anthropometry_signal,
+    build_body_metric_signal,
+    build_nutrition_coverage_signal,
+    build_schedule_adherence_signal,
+    build_training_data_sufficiency,
+    collect_training_data_counts,
+)
 from fitminiapp_api.services.profile import serialize_body_priority
 from fitminiapp_api.services.workouts import working_volume_set_filter
 
@@ -429,6 +437,13 @@ def build_progress_summaries(
     for diary_row in diary_rows:
         diary_by_user[diary_row.user_id].append(diary_row)
 
+    training_counts_by_user = collect_training_data_counts(
+        db,
+        user_ids=user_ids,
+        period_starts=start_by_user,
+        period_ends=today_by_user,
+    )
+
     set_rows = (
         db.query(
             UserProgram.user_id,
@@ -616,6 +631,12 @@ def build_progress_summaries(
             if diary_days
             else None
         )
+        body_trends = _body_trends(measurements_by_user[user.id])
+        weight_trend = next(
+            (trend for trend in body_trends if trend["metric"] == "weight_kg"),
+            None,
+        )
+        training_sufficiency = build_training_data_sufficiency(training_counts_by_user[user.id])
         summary = {
             "user_id": user.id,
             "period_days": period_days,
@@ -644,7 +665,7 @@ def build_progress_summaries(
             },
             "body": {
                 "latest_measurement": latest_measurement_by_user.get(user.id),
-                "trends": _body_trends(measurements_by_user[user.id]),
+                "trends": body_trends,
                 "priority": serialize_body_priority(user.profile),
                 "guidance": BODY_MEASUREMENT_GUIDANCE,
             },
@@ -653,6 +674,22 @@ def build_progress_summaries(
                 "overall_percent": overall,
                 "included_components": included,
                 **components,
+            },
+            "data_sufficiency": {
+                **training_sufficiency,
+                "nutrition_coverage": build_nutrition_coverage_signal(
+                    logged_day_count=len(diary_days) if nutrition_visible else 0,
+                    eligible_day_count=period_days - 1,
+                    visible=nutrition_visible,
+                ),
+                "weight_trend": build_body_metric_signal(
+                    point_count=weight_trend["point_count"] if weight_trend else 0,
+                    span_days=weight_trend["span_days"] if weight_trend else 0,
+                ),
+                "anthropometry": build_anthropometry_signal(body_trends),
+                "schedule_adherence": build_schedule_adherence_signal(
+                    evaluable_workout_count=len(evaluated_workouts),
+                ),
             },
         }
         summaries.append(summary)

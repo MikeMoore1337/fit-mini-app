@@ -189,6 +189,11 @@ def test_user_progress_summary_handles_periods_current_day_and_isolation(client)
     assert empty.json()["adherence"]["overall_percent"] is None
     assert empty.json()["adherence"]["workouts"]["status"] == "not_applicable"
     assert empty.json()["adherence"]["calories"]["status"] == "not_applicable"
+    empty_sufficiency = empty.json()["data_sufficiency"]
+    assert empty_sufficiency["nutrition_coverage"]["status"] == "insufficient"
+    assert empty_sufficiency["weight_trend"]["status"] == "insufficient"
+    assert empty_sufficiency["anthropometry"]["status"] == "insufficient"
+    assert empty_sufficiency["schedule_adherence"]["status"] == "insufficient"
 
     with get_session_context() as db:
         db.add(_nutrition_target(user_id))
@@ -293,6 +298,15 @@ def test_user_progress_summary_handles_periods_current_day_and_isolation(client)
         trend for trend in payload["body"]["trends"] if trend["metric"] == "weight_kg"
     )
     assert weight_trend["change"] == -1.0
+    sufficiency = payload["data_sufficiency"]
+    assert sufficiency["nutrition_coverage"]["status"] == "limited"
+    assert sufficiency["nutrition_coverage"]["counters"]["eligible_day_count"] == 6
+    assert sufficiency["weight_trend"]["status"] == "limited"
+    assert sufficiency["anthropometry"]["status"] == "limited"
+    assert sufficiency["workout_logging"]["status"] == "sufficient"
+    assert sufficiency["working_sets"]["status"] == "limited"
+    assert sufficiency["rir_coverage"]["status"] == "insufficient"
+    assert sufficiency["schedule_adherence"]["status"] == "limited"
     assert "250" not in response.text
 
     longer_period = client.get(
@@ -331,6 +345,7 @@ def test_trainer_summary_requires_current_relationship_and_revokes_access(client
     )
     assert detail.status_code == 200
     assert detail.json()["user_id"] == managed_client_id
+    assert detail.json()["data_sufficiency"]["ruleset_version"] == "data-sufficiency-v1"
     assert "food_name" not in detail.text
     assert "meals" not in detail.text
 
@@ -434,7 +449,7 @@ def test_bulk_trainer_summaries_use_constant_query_count() -> None:
     assert summaries_by_name["Private 19"]["body"]["latest_measurement"]["weight_kg"] == 89
     assert summaries_by_name["Private 10"]["body"]["latest_measurement"]["weight_kg"] == 80
     assert all(summary["nutrition"]["target_calories"] is None for summary in summaries)
-    assert metrics.query_count == 11
+    assert metrics.query_count == 12
 
 
 def test_nutrition_target_effective_date_keeps_client_local_wall_date(client) -> None:

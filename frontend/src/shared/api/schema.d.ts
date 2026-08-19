@@ -2591,6 +2591,20 @@ export interface components {
             /** Reviewed At */
             reviewed_at?: string | null;
         };
+        /** DataSufficiencySignal */
+        DataSufficiencySignal: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "sufficient" | "limited" | "insufficient";
+            /** Counters */
+            counters: {
+                [key: string]: number;
+            };
+            /** Reason Keys */
+            reason_keys: ("thresholds_met" | "nutrition_access_not_granted" | "no_logged_days" | "below_required_coverage" | "no_measurements" | "no_anthropometry_measurements" | "too_few_points" | "timespan_too_short" | "no_completed_workouts" | "no_prescribed_sets" | "no_logged_working_sets" | "partial_workout_logging" | "no_working_sets" | "too_few_working_sets" | "too_few_workout_sessions" | "no_rir_observations" | "too_few_rir_observations" | "rir_coverage_too_low" | "no_evaluable_planned_workouts" | "too_few_evaluable_workouts")[];
+        };
         /** DevLoginRequest */
         DevLoginRequest: {
             /** Telegram User Id */
@@ -3900,6 +3914,21 @@ export interface components {
             /** Days */
             days: components["schemas"]["ProgramTemplateDayResponse"][];
         };
+        /** ProgressDataSufficiency */
+        ProgressDataSufficiency: {
+            /**
+             * Ruleset Version
+             * @constant
+             */
+            ruleset_version: "data-sufficiency-v1";
+            workout_logging: components["schemas"]["DataSufficiencySignal"];
+            working_sets: components["schemas"]["DataSufficiencySignal"];
+            rir_coverage: components["schemas"]["DataSufficiencySignal"];
+            nutrition_coverage: components["schemas"]["DataSufficiencySignal"];
+            weight_trend: components["schemas"]["DataSufficiencySignal"];
+            anthropometry: components["schemas"]["DataSufficiencySignal"];
+            schedule_adherence: components["schemas"]["DataSufficiencySignal"];
+        };
         /**
          * ProgressPeriodDays
          * @enum {integer}
@@ -3924,6 +3953,7 @@ export interface components {
             nutrition: components["schemas"]["NutritionPeriodSummary"];
             body: components["schemas"]["BodyPeriodSummary"];
             adherence: components["schemas"]["AdherenceSummary"];
+            data_sufficiency: components["schemas"]["ProgressDataSufficiency"];
         };
         /** ProgressVolumePoint */
         ProgressVolumePoint: {
@@ -4146,6 +4176,7 @@ export interface components {
             nutrition: components["schemas"]["NutritionPeriodSummary"];
             body: components["schemas"]["BodyPeriodSummary"];
             adherence: components["schemas"]["AdherenceSummary"];
+            data_sufficiency: components["schemas"]["ProgressDataSufficiency"];
             /** Client Name */
             client_name?: string | null;
         };
@@ -4204,6 +4235,7 @@ export interface components {
             secondary_muscle_exposure: components["schemas"]["MuscleSetExposure"][];
             /** Completed Sets Without Muscle Metadata */
             completed_sets_without_muscle_metadata: number;
+            data_sufficiency: components["schemas"]["TrainingDataSufficiency"];
         };
         /** TrainingAnalyticsSet */
         TrainingAnalyticsSet: {
@@ -4326,6 +4358,17 @@ export interface components {
             status?: ("planned" | "active" | "completed" | "archived") | null;
             /** Reason */
             reason?: string | null;
+        };
+        /** TrainingDataSufficiency */
+        TrainingDataSufficiency: {
+            /**
+             * Ruleset Version
+             * @constant
+             */
+            ruleset_version: "data-sufficiency-v1";
+            workout_logging: components["schemas"]["DataSufficiencySignal"];
+            working_sets: components["schemas"]["DataSufficiencySignal"];
+            rir_coverage: components["schemas"]["DataSufficiencySignal"];
         };
         /** TrainingPeriodSummary */
         TrainingPeriodSummary: {
