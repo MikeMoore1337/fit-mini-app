@@ -18,12 +18,12 @@ import { readStorage, removeStorage, writeStorage } from '../../shared/storage';
 import { ExerciseGuideDialog } from '../exercises/ExerciseGuideDialog';
 import {
   activeWorkoutRestKey,
-  clearActiveWorkoutData,
   loadCurrentActiveWorkoutSnapshot,
   type ActiveWorkoutMutation,
   type ActiveWorkoutSetValues,
 } from './activeWorkoutQueue';
 import { WorkoutAdaptation } from './WorkoutAdaptation';
+import { reconcileFinishedWorkout } from './finishWorkoutRecovery';
 import { useActiveWorkoutQueue } from './useActiveWorkoutQueue';
 
 type WorkoutSet = Workout['exercises'][number]['sets'][number];
@@ -480,12 +480,17 @@ export function TodayWorkout({ embedded = false }: { embedded?: boolean }) {
   const mutation = useMutation({
     mutationFn: ({ path, method, body }: { path: string; method: string; body?: unknown }) =>
       api<Workout | void>(path, { method, body }),
-    onSuccess: async (_result, variables) => {
+    onSuccess: async (result, variables) => {
       if (variables.path.endsWith('/finish')) {
-        activeSync.clear();
+        if (result) await reconcileFinishedWorkout(queryClient, result, activeSync.clear);
+        else {
+          await activeSync.clear();
+          await queryClient.invalidateQueries({ queryKey: ['workout'] });
+        }
         haptic('success');
+      } else {
+        await queryClient.invalidateQueries({ queryKey: ['workout'] });
       }
-      await queryClient.invalidateQueries({ queryKey: ['workout'] });
     },
     onError: (reason) => {
       haptic('error');
@@ -517,18 +522,20 @@ export function TodayWorkout({ embedded = false }: { embedded?: boolean }) {
     return null;
   })();
   const currentSetId = currentSet?.set.id;
+  const clearActiveState = activeSync.clear;
+  const pendingActiveCount = activeSync.pendingCount;
 
   useEffect(() => {
     if (
       user &&
-      activeSync.pendingCount === 0 &&
+      pendingActiveCount === 0 &&
       workout.error instanceof ApiError &&
       workout.error.status === 404
     ) {
       const stale = loadCurrentActiveWorkoutSnapshot(user.id);
-      if (stale) clearActiveWorkoutData(user.id, stale.id);
+      if (stale) void clearActiveState();
     }
-  }, [activeSync.pendingCount, user, workout.error]);
+  }, [clearActiveState, pendingActiveCount, user, workout.error]);
 
   useEffect(() => {
     if (!currentSetId || completed === 0) return;

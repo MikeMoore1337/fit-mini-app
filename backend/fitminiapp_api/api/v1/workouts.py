@@ -545,10 +545,10 @@ def finish_workout(
     program = _lock_program(db, workout.user_program_id)
     db.refresh(workout)
 
+    if workout.status == "completed":
+        return _serialize_workout(workout, db, current_user)
     if workout.scheduled_date != today_for_user(current_user):
         raise HTTPException(status_code=409, detail="Можно завершить только тренировку на сегодня")
-    if workout.status == "completed":
-        raise HTTPException(status_code=409, detail="Тренировка уже завершена")
     _require_active_program(program)
     if workout.status != "in_progress":
         raise HTTPException(status_code=409, detail="Сначала начните тренировку")

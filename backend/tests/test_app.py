@@ -3108,7 +3108,7 @@ def test_workout_state_machine_rejects_invalid_transitions(client):
         client.post(f"/api/v1/workouts/{workout['id']}/finish", headers=headers).status_code == 200
     )
     assert (
-        client.post(f"/api/v1/workouts/{workout['id']}/finish", headers=headers).status_code == 409
+        client.post(f"/api/v1/workouts/{workout['id']}/finish", headers=headers).status_code == 200
     )
 
 

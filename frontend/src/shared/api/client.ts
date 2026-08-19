@@ -1,6 +1,12 @@
+import { crossContextCoordinator, type CrossContextCoordinator } from '../browser/crossContextLock';
+
 const ACCESS_TOKEN_KEY = 'fit_access_token';
 const AUTH_CHANNEL_NAME = 'fit_auth_session';
+const AUTH_STORAGE_EVENT_KEY = 'fit_auth_session_event_v1';
+const AUTH_GENERATION_KEY = 'fit_auth_session_generation_v1';
+const AUTH_REFRESH_LOCK_NAME = 'fit-auth-refresh';
 export const AUTH_LOGOUT_EVENT = 'fit:auth-logout';
+const AUTH_TOKEN_RECEIVED_EVENT = 'fit:auth-token-received';
 
 type AuthChannelMessage = { type: 'access-token'; token: string } | { type: 'logout' };
 
@@ -9,15 +15,83 @@ const authChannel =
     ? new window.BroadcastChannel(AUTH_CHANNEL_NAME)
     : null;
 
-authChannel?.addEventListener('message', (event: MessageEvent<AuthChannelMessage>) => {
-  if (!event.data || typeof event.data !== 'object' || !('type' in event.data)) return;
-  if (event.data.type === 'access-token' && typeof event.data.token === 'string') {
-    sessionStorage.setItem(ACCESS_TOKEN_KEY, event.data.token);
-  } else if (event.data.type === 'logout') {
+function receiveAuthMessage(message: AuthChannelMessage): void {
+  if (message.type === 'access-token' && typeof message.token === 'string') {
+    sessionStorage.setItem(ACCESS_TOKEN_KEY, message.token);
+    window.dispatchEvent(new Event(AUTH_TOKEN_RECEIVED_EVENT));
+  } else if (message.type === 'logout') {
     sessionStorage.removeItem(ACCESS_TOKEN_KEY);
     window.dispatchEvent(new Event(AUTH_LOGOUT_EVENT));
   }
+}
+
+authChannel?.addEventListener('message', (event: MessageEvent<AuthChannelMessage>) => {
+  if (!event.data || typeof event.data !== 'object' || !('type' in event.data)) return;
+  receiveAuthMessage(event.data);
 });
+
+window.addEventListener('storage', (event) => {
+  if (event.key !== AUTH_STORAGE_EVENT_KEY || authChannel || !event.newValue) return;
+  try {
+    const envelope = JSON.parse(event.newValue) as { message?: AuthChannelMessage };
+    if (envelope.message?.type === 'logout' || envelope.message?.type === 'access-token') {
+      receiveAuthMessage(envelope.message);
+    }
+  } catch {
+    // Ignore malformed cross-tab messages.
+  }
+});
+
+function broadcastAuthMessage(message: AuthChannelMessage): void {
+  if (authChannel) {
+    authChannel.postMessage(message);
+    return;
+  }
+  try {
+    const id =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random()}`;
+    localStorage.setItem(AUTH_STORAGE_EVENT_KEY, JSON.stringify({ id, message }));
+    localStorage.removeItem(AUTH_STORAGE_EVENT_KEY);
+  } catch {
+    // Session state remains usable in the current restrictive WebView.
+  }
+}
+
+function authGeneration(): string | null {
+  try {
+    return localStorage.getItem(AUTH_GENERATION_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function advanceAuthGeneration(): void {
+  try {
+    const id =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random()}`;
+    localStorage.setItem(AUTH_GENERATION_KEY, id);
+  } catch {
+    // BroadcastChannel remains the primary transport when shared storage is unavailable.
+  }
+}
+
+async function waitForWinnerToken(tokenBeforeLock: string | null): Promise<boolean> {
+  if (getAccessToken() !== tokenBeforeLock) return Boolean(getAccessToken());
+  return new Promise((resolve) => {
+    const finish = () => {
+      window.clearTimeout(timeout);
+      window.removeEventListener(AUTH_TOKEN_RECEIVED_EVENT, onToken);
+      resolve(Boolean(getAccessToken() && getAccessToken() !== tokenBeforeLock));
+    };
+    const onToken = () => finish();
+    const timeout = window.setTimeout(finish, 250);
+    window.addEventListener(AUTH_TOKEN_RECEIVED_EVENT, onToken, { once: true });
+  });
+}
 
 export class ApiError extends Error {
   status: number;
@@ -38,6 +112,7 @@ function migrateLegacyToken(): void {
   }
   localStorage.removeItem(ACCESS_TOKEN_KEY);
   localStorage.removeItem('fit_refresh_token');
+  localStorage.removeItem(AUTH_STORAGE_EVENT_KEY);
 }
 
 migrateLegacyToken();
@@ -48,13 +123,15 @@ export function getAccessToken(): string | null {
 
 export function setAccessToken(token: string): void {
   sessionStorage.setItem(ACCESS_TOKEN_KEY, token);
-  authChannel?.postMessage({ type: 'access-token', token } satisfies AuthChannelMessage);
+  advanceAuthGeneration();
+  broadcastAuthMessage({ type: 'access-token', token });
 }
 
 export function clearAccessToken(): void {
   sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+  advanceAuthGeneration();
   window.dispatchEvent(new Event(AUTH_LOGOUT_EVENT));
-  authChannel?.postMessage({ type: 'logout' } satisfies AuthChannelMessage);
+  broadcastAuthMessage({ type: 'logout' });
 }
 
 async function responseError(response: Response): Promise<ApiError> {
@@ -82,25 +159,54 @@ async function responseError(response: Response): Promise<ApiError> {
 
 let refreshPromise: Promise<boolean> | null = null;
 
-async function requestAccessTokenRefresh(): Promise<boolean> {
+async function requestAccessTokenRefresh(tokenBeforeRequest: string | null): Promise<boolean> {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 15_000);
   try {
     const response = await fetch('/api/v1/auth/refresh', {
       method: 'POST',
       credentials: 'same-origin',
+      signal: controller.signal,
       headers: { 'Content-Type': 'application/json' },
       body: '{}',
     });
     if (!response.ok) {
+      const winnerToken = getAccessToken();
+      if (winnerToken && winnerToken !== tokenBeforeRequest) return true;
       if (response.status === 401 || response.status === 403) clearAccessToken();
       return false;
     }
     const data = (await response.json()) as { access_token?: unknown };
     if (typeof data.access_token !== 'string' || !data.access_token) {
+      const winnerToken = getAccessToken();
+      if (winnerToken && winnerToken !== tokenBeforeRequest) return true;
       clearAccessToken();
       return false;
     }
     setAccessToken(data.access_token);
     return true;
+  } catch {
+    const winnerToken = getAccessToken();
+    return Boolean(winnerToken && winnerToken !== tokenBeforeRequest);
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
+export async function coordinateAccessTokenRefresh(
+  coordinator: CrossContextCoordinator = crossContextCoordinator,
+): Promise<boolean> {
+  const tokenBeforeLock = getAccessToken();
+  const generationBeforeLock = authGeneration();
+  try {
+    return await coordinator.run(AUTH_REFRESH_LOCK_NAME, async () => {
+      const tokenAfterLock = getAccessToken();
+      if (tokenAfterLock && tokenAfterLock !== tokenBeforeLock) return true;
+      if (authGeneration() !== generationBeforeLock) {
+        return waitForWinnerToken(tokenBeforeLock);
+      }
+      return requestAccessTokenRefresh(tokenAfterLock);
+    });
   } catch {
     return false;
   }
@@ -110,15 +216,7 @@ export async function refreshAccessToken(): Promise<boolean> {
   if (refreshPromise) return refreshPromise;
   refreshPromise = (async () => {
     try {
-      const tokenBeforeLock = getAccessToken();
-      if (navigator.locks?.request) {
-        return await navigator.locks.request('fit-auth-refresh', async () => {
-          const tokenAfterLock = getAccessToken();
-          if (tokenAfterLock && tokenAfterLock !== tokenBeforeLock) return true;
-          return requestAccessTokenRefresh();
-        });
-      }
-      return await requestAccessTokenRefresh();
+      return await coordinateAccessTokenRefresh();
     } finally {
       refreshPromise = null;
     }

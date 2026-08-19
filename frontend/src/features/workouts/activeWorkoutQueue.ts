@@ -41,6 +41,10 @@ export function activeWorkoutQueueKey(userId: number, workoutId: number): string
   return `${ACTIVE_WORKOUT_QUEUE_PREFIX}${scopedSuffix(userId, workoutId)}`;
 }
 
+export function activeWorkoutLockName(userId: number, workoutId: number): string {
+  return `fit-active-workout-${activeWorkoutQueueKey(userId, workoutId)}`;
+}
+
 export function activeWorkoutRestKey(userId: number, workoutId: number): string {
   return `${ACTIVE_WORKOUT_REST_PREFIX}${scopedSuffix(userId, workoutId)}`;
 }
