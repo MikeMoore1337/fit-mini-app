@@ -142,7 +142,7 @@ async def route_support_message(message: Message) -> None:
 
 
 async def main() -> None:
-    configure_logging(bot_token=settings.support_bot_token, internal_token="")
+    configure_logging()
     if not settings.support_bot_enabled:
         logger.warning("support_bot_disabled")
         while True:

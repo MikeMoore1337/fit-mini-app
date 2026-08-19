@@ -100,7 +100,7 @@ def test_timezone_delivery_reports_backend_http_errors(
 
     assert result is False
     record = caplog.records[-1]
-    rendered = JsonFormatter(sensitive_values=(BOT_TOKEN, INTERNAL_TOKEN)).format(record)
+    rendered = JsonFormatter().format(record)
     payload = json.loads(rendered)
     assert record.exc_info is None
     assert payload["message"] == "timezone_backend_update_failed"
@@ -203,7 +203,7 @@ def test_start_link_payload_is_validated_and_reports_success(monkeypatch):
     assert "одни и те же данные" in message.answer.await_args.args[0]
 
 
-def test_json_formatter_redacts_secrets_and_urls_from_message_and_exception() -> None:
+def test_json_formatter_excludes_arbitrary_message_and_exception_values() -> None:
     try:
         raise RuntimeError(
             f"request to https://api.telegram.org/bot{BOT_TOKEN}/getUpdates "
@@ -220,12 +220,12 @@ def test_json_formatter_redacts_secrets_and_urls_from_message_and_exception() ->
             exc_info=sys.exc_info(),
         )
 
-    rendered = JsonFormatter(sensitive_values=(BOT_TOKEN, INTERNAL_TOKEN)).format(record)
+    rendered = JsonFormatter().format(record)
     payload = json.loads(rendered)
 
-    assert payload["message"] == "failed [url] with [redacted]"
-    assert "[url]" in payload["exception"]
-    assert "[redacted]" in payload["exception"]
+    assert payload["message"] == "application_log"
+    assert payload["exception_type"] == "RuntimeError"
+    assert "exception" not in payload
     assert BOT_TOKEN not in rendered
     assert INTERNAL_TOKEN not in rendered
     assert "api.telegram.org" not in rendered

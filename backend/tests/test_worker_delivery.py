@@ -10,6 +10,7 @@ from fitminiapp_api.core.logging_config import JsonFormatter
 from fitminiapp_api.db.session import get_session_context
 from fitminiapp_api.models.notification import Notification
 from fitminiapp_api.models.user import User
+from fitminiapp_api.services import worker
 from fitminiapp_api.services.notifications import mark_delivery_failed, safe_delivery_error
 from fitminiapp_api.services.worker import _log_delivery_failure, send_telegram_message
 
@@ -55,6 +56,23 @@ def test_telegram_delivery_propagates_timeout() -> None:
                 await send_telegram_message(client, 123456, "test notification")
 
     asyncio.run(deliver())
+
+
+def test_disabled_telegram_delivery_log_does_not_include_exact_chat_id(monkeypatch, caplog) -> None:
+    monkeypatch.setattr(worker.settings, "telegram_bot_token", "")
+
+    async def deliver() -> None:
+        async with httpx.AsyncClient() as client:
+            await send_telegram_message(client, 987654321, "private notification")
+
+    with caplog.at_level(logging.INFO, logger="fitminiapp_api.services.worker"):
+        asyncio.run(deliver())
+
+    rendered = JsonFormatter(service="notification-worker").format(caplog.records[-1])
+    payload = json.loads(rendered)
+    assert payload["message"] == "telegram_delivery_skipped"
+    assert payload["delivery_error"] == "bot_token_not_configured"
+    assert "987654321" not in rendered
 
 
 def test_telegram_delivery_rejects_external_or_non_app_action_urls() -> None:
@@ -135,7 +153,9 @@ def test_delivery_failure_json_log_excludes_exception_and_sensitive_url(caplog) 
 
     assert record.exc_info is None
     assert payload["message"] == "notification_delivery_failed"
-    assert payload["notification_id"] == 42
+    assert payload["notification_ref"].startswith("notification:")
+    assert payload["notification_ref"] != "notification:42"
+    assert "notification_id" not in payload
     assert payload["delivery_error"] == "http_status:500"
     assert SECRET_TOKEN not in rendered
     assert "api.telegram.org" not in rendered

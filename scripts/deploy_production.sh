@@ -36,7 +36,7 @@ docker compose config --quiet
 
 stage_started=$SECONDS
 echo "Pulling tested application images"
-docker compose pull backend bot
+docker compose pull backend bot edge
 echo "Application images pulled in $((SECONDS - stage_started))s"
 
 stage_started=$SECONDS
@@ -47,13 +47,20 @@ echo "Database backup completed in $((SECONDS - stage_started))s"
 stage_started=$SECONDS
 echo "Starting application services"
 # Target application services explicitly so the currently selected HTTPS/tunnel
-# profile keeps running unchanged.
+# profile stays selected while its active gateway receives the new edge route.
+gateway_services=(edge)
+if docker compose ps --services --status running | grep -qx caddy; then
+  gateway_services+=(caddy)
+fi
+if docker compose ps --services --status running | grep -qx cloudflared; then
+  gateway_services+=(cloudflared)
+fi
 docker compose up \
   -d \
   --no-build \
   --wait \
   --wait-timeout 180 \
-  backend worker bot support-bot
+  backend worker bot support-bot "${gateway_services[@]}"
 echo "Application services became ready in $((SECONDS - stage_started))s"
 
 docker compose ps

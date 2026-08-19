@@ -19,6 +19,7 @@ from fitminiapp_api.core.logging_config import configure_logging
 from fitminiapp_api.core.rate_limit import limiter
 from fitminiapp_api.db.session import engine
 from fitminiapp_api.middleware.canonical_host import redirect_landing_application_requests
+from fitminiapp_api.middleware.request_body_limit import RequestBodyLimitMiddleware
 from fitminiapp_api.middleware.request_context import RequestContextMiddleware
 from fitminiapp_api.seo import public_origin, public_page_paths, render_frontend_document
 
@@ -91,6 +92,7 @@ app.middleware("http")(redirect_landing_application_requests)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 app.add_middleware(SlowAPIMiddleware)
+app.add_middleware(RequestBodyLimitMiddleware)
 app.add_middleware(RequestContextMiddleware)
 app.add_middleware(
     SessionMiddleware,
@@ -107,7 +109,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> Respo
     # HTTPException и RequestValidationError обрабатываются встроенными хендлерами FastAPI,
     # сюда попадают только остальные исключения.
     rid = getattr(request.state, "request_id", None)
-    logger.error("Необработанная ошибка", exc_info=exc, extra={"request_id": rid})
+    logger.error("unhandled_exception", exc_info=exc, extra={"request_id": rid})
     return JSONResponse(
         status_code=500,
         content={

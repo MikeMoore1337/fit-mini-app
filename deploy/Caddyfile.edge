@@ -1,0 +1,21 @@
+:8080 {
+	@auth path /api/v1/auth /api/v1/auth/*
+	request_body @auth {
+		max_size 65536
+	}
+
+	@default not path /api/v1/auth /api/v1/auth/*
+	request_body @default {
+		max_size 1048576
+	}
+
+	reverse_proxy backend:8000
+
+	handle_errors {
+		@too_large expression {http.error.status_code} == 413
+		header @too_large Content-Type application/json
+		header @too_large Cache-Control "no-store, private"
+		respond @too_large `{"detail":"Request body too large","code":"request_body_too_large"}` 413
+		respond "Request rejected" {http.error.status_code}
+	}
+}

@@ -57,6 +57,11 @@ docker compose --profile direct-https up -d
 docker compose --profile cloudflare up -d
 ```
 
+Оба профиля направляют HTTP-трафик через внутренний сервис `edge`. Он ограничивает тело запроса
+до `1 MiB` по умолчанию и до `64 KiB` для `/api/v1/auth/*`; backend повторяет те же лимиты на
+ASGI streaming boundary. Порт backend привязан только к loopback хоста, а сети Compose не позволяют
+публичным proxy-контейнерам обращаться к backend в обход `edge`.
+
 ### Домены публичного сайта и приложения
 
 Production использует два имени хоста с общими API и базой данных:
@@ -82,9 +87,14 @@ docker compose --profile direct-https up -d --force-recreate caddy
 ```
 
 Для удалённо управляемого Cloudflare Tunnel добавьте публичные имена apex, `www` и приложения и
-направьте их на `http://backend:8000` в сети Compose. Не публикуйте порт PostgreSQL или контейнера
+направьте их на `http://edge:8080` в сети Compose. Изменение origin и развёртывание этой ревизии
+нужно выполнить в одно окно: прежний `http://backend:8000` после сетевого разделения намеренно
+недоступен и не может молча обходить лимиты. Не публикуйте порт PostgreSQL, edge или контейнера
 backend. URL Telegram Mini App и все callback URL OAuth должны использовать хост `app`; точные
 адреса перечислены в [`web-auth.md`](web-auth.md).
+
+Подробный контракт лимитов, правила исключений и allowlist production-логов описаны в
+[`security.md`](security.md).
 
 ### Правила индексации
 

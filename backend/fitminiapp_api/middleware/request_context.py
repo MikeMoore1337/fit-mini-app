@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 import logging
-import re
 import uuid
-from collections.abc import Awaitable, Callable
 from time import perf_counter
 
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.datastructures import MutableHeaders
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from fitminiapp_api.db.performance import (
     begin_sql_metrics,
@@ -17,12 +15,15 @@ from fitminiapp_api.db.performance import (
     reset_sql_metrics,
 )
 from fitminiapp_api.db.session import engine
+from fitminiapp_api.middleware.request_body_limit import REQUEST_ID_PATTERN
 
 logger = logging.getLogger("app.http")
-REQUEST_ID_PATTERN = re.compile(r"[A-Za-z0-9._:-]{1,128}\Z")
 
 
 def _request_id(request: Request) -> str:
+    current = getattr(request.state, "request_id", "")
+    if REQUEST_ID_PATTERN.fullmatch(current):
+        return current
     supplied = request.headers.get("x-request-id", "")
     if REQUEST_ID_PATTERN.fullmatch(supplied):
         return supplied
@@ -34,9 +35,13 @@ def _is_health_probe(path: str) -> bool:
 
 
 def _log_request(request: Request, *, status_code: int, started_at: float, rid: str) -> None:
-    path = request.url.path
-    if _is_health_probe(path):
+    raw_path = request.url.path
+    if _is_health_probe(raw_path):
         return
+    route = request.scope.get("route")
+    path = getattr(route, "path", None)
+    if not isinstance(path, str):
+        path = "unmatched"
     sql_metrics = current_sql_metrics()
     logger.info(
         "http_request_completed",
@@ -53,58 +58,70 @@ def _log_request(request: Request, *, status_code: int, started_at: float, rid: 
     )
 
 
-class RequestContextMiddleware(BaseHTTPMiddleware):
+class RequestContextMiddleware:
     """X-Request-ID на запрос и в ответ; базовое логирование после обработки."""
 
-    async def dispatch(
-        self,
-        request: Request,
-        call_next: Callable[[Request], Awaitable[Response]],
-    ) -> Response:
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        request = Request(scope)
         rid = _request_id(request)
         request.state.request_id = rid
         started_at = perf_counter()
         sql_metrics_token = begin_sql_metrics()
+        status_code: int | None = None
+
+        async def send_with_context(message: Message) -> None:
+            nonlocal status_code
+            if message["type"] == "http.response.start":
+                status_code = message["status"]
+                headers = MutableHeaders(scope=message)
+                headers["X-Request-ID"] = rid
+                headers.setdefault("X-Content-Type-Options", "nosniff")
+                headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+                headers.setdefault(
+                    "Permissions-Policy",
+                    "camera=(), microphone=(), geolocation=()",
+                )
+                headers.setdefault(
+                    "Content-Security-Policy",
+                    "default-src 'self'; script-src 'self' https://telegram.org; "
+                    "style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://t.me "
+                    "https://*.telegram.org https://*.cdn-telegram.org; connect-src 'self'; "
+                    "font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; "
+                    "frame-ancestors 'self' https://web.telegram.org https://*.telegram.org",
+                )
+
+                path = request.url.path
+                if path.startswith("/assets/"):
+                    headers["Cache-Control"] = "public, max-age=31536000, immutable"
+                elif path.startswith("/static/exercise-guides/"):
+                    headers["Cache-Control"] = (
+                        "public, max-age=2592000, stale-while-revalidate=86400"
+                    )
+                elif path.startswith("/api/v1/") and not path.startswith("/api/v1/public/"):
+                    headers["Cache-Control"] = "no-store, private"
+                    headers["Pragma"] = "no-cache"
+            await send(message)
 
         try:
-            response = await call_next(request)
+            await self.app(scope, receive, send_with_context)
         except Exception:
             _log_request(request, status_code=500, started_at=started_at, rid=rid)
             raise
         else:
-            response.headers["X-Request-ID"] = rid
-            response.headers.setdefault("X-Content-Type-Options", "nosniff")
-            response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-            response.headers.setdefault(
-                "Permissions-Policy",
-                "camera=(), microphone=(), geolocation=()",
-            )
-            response.headers.setdefault(
-                "Content-Security-Policy",
-                "default-src 'self'; script-src 'self' https://telegram.org; "
-                "style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://t.me "
-                "https://*.telegram.org https://*.cdn-telegram.org; connect-src 'self'; "
-                "font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; "
-                "frame-ancestors 'self' https://web.telegram.org https://*.telegram.org",
-            )
-
             path = request.url.path
-            if path.startswith("/assets/"):
-                response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
-            elif path.startswith("/static/exercise-guides/"):
-                response.headers["Cache-Control"] = (
-                    "public, max-age=2592000, stale-while-revalidate=86400"
-                )
-            elif path.startswith("/api/v1/") and not path.startswith("/api/v1/public/"):
-                response.headers["Cache-Control"] = "no-store, private"
-                response.headers["Pragma"] = "no-cache"
-            if not path.startswith("/static"):
+            if status_code is not None and not path.startswith("/static"):
                 _log_request(
                     request,
-                    status_code=response.status_code,
+                    status_code=status_code,
                     started_at=started_at,
                     rid=rid,
                 )
-            return response
         finally:
             reset_sql_metrics(sql_metrics_token)
