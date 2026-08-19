@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import hmac
 import logging
 from time import monotonic
 from urllib.parse import urlsplit
@@ -25,10 +27,15 @@ logger = logging.getLogger(__name__)
 
 
 def _log_delivery_failure(notification_id: int, error: Exception) -> None:
+    notification_ref = hmac.new(
+        settings.secret_key.encode("utf-8"),
+        str(notification_id).encode("ascii"),
+        hashlib.sha256,
+    ).hexdigest()[:16]
     logger.error(
         "notification_delivery_failed",
         extra={
-            "notification_id": notification_id,
+            "notification_ref": f"notification:{notification_ref}",
             "delivery_error": safe_delivery_error(error),
         },
     )
@@ -42,7 +49,10 @@ async def send_telegram_message(
     open_app_path: str | None = None,
 ) -> None:
     if not settings.telegram_bot_token or settings.telegram_bot_token == "replace-me":
-        logger.info("BOT token not configured - skip Telegram delivery to %s", chat_id)
+        logger.info(
+            "telegram_delivery_skipped",
+            extra={"delivery_error": "bot_token_not_configured"},
+        )
         return
     payload: dict = {"chat_id": chat_id, "text": text}
     if open_app_path:

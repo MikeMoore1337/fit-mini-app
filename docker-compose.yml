@@ -33,7 +33,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
-      FORWARDED_ALLOW_IPS: 172.28.0.10,172.28.0.11
+      FORWARDED_ALLOW_IPS: 172.29.0.3
     depends_on:
       db:
         condition: service_healthy
@@ -53,8 +53,9 @@ services:
       start_period: 60s
       start_interval: 2s
     networks:
-      - default
-      - proxy_net
+      default:
+      app_edge:
+        ipv4_address: 172.29.0.2
 
   setup:
     <<: *backend-image
@@ -91,6 +92,26 @@ services:
       SUPPORT_ADMIN_TELEGRAM_USER_IDS: ${SUPPORT_ADMIN_TELEGRAM_USER_IDS:-}
       SUPPORT_BOT_ENABLED: ${SUPPORT_BOT_ENABLED:-false}
 
+  edge:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    command: caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
+    depends_on:
+      backend:
+        condition: service_healthy
+    volumes:
+      - ./deploy/Caddyfile.edge:/etc/caddy/Caddyfile:ro
+    healthcheck:
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      app_edge:
+        ipv4_address: 172.29.0.3
+      proxy_net:
+        ipv4_address: 172.28.0.12
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
@@ -121,12 +142,12 @@ services:
                 Referrer-Policy "strict-origin-when-cross-origin"
             }
 
-            reverse_proxy backend:8000
+            reverse_proxy edge:8080
         }
         EOF
         exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
     depends_on:
-      backend:
+      edge:
         condition: service_healthy
     ports:
       - "80:80"
@@ -148,7 +169,7 @@ services:
       TUNNEL_TOKEN: ${CLOUDFLARED_TOKEN:-}
     command: tunnel --no-autoupdate run
     depends_on:
-      backend:
+      edge:
         condition: service_healthy
     networks:
       proxy_net:
@@ -175,6 +196,11 @@ volumes:
     name: fitminiapp_bot_polling_lock
 
 networks:
+  app_edge:
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.29.0.0/24
   proxy_net:
     ipam:
       config:

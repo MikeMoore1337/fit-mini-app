@@ -469,10 +469,7 @@ async def timezone_callback(callback: CallbackQuery) -> None:
 
 
 async def main() -> None:
-    configure_logging(
-        bot_token=settings.bot_token,
-        internal_token=settings.bot_internal_token,
-    )
+    configure_logging()
     if not settings.bot_polling_enabled:
         logger.warning("polling_disabled")
         while True:

@@ -48,29 +48,43 @@ def test_json_formatter_includes_request_context() -> None:
     assert payload["db_pool_overflow"] == 0
 
 
-def test_json_formatter_redacts_configured_secrets_urls_and_exception() -> None:
-    secret = "configured-database-password"
+def test_json_formatter_rejects_arbitrary_values_and_keeps_safe_diagnostics() -> None:
+    markers = (
+        "private_note_marker",
+        "configured-database-password",
+        "https://backend.example/private",
+        "Иван Иванов",
+        "личная заметка",
+        "талия 81.4",
+        "chat_id=99887766",
+    )
     try:
-        raise RuntimeError(f"failed at https://backend.example/path with {secret}")
+        raise RuntimeError(" ".join(markers))
     except RuntimeError:
         record = logging.LogRecord(
             name="app",
             level=logging.ERROR,
             pathname=__file__,
             lineno=1,
-            msg=f"request https://backend.example/path used {secret}",
+            msg="private_note_marker",
             args=(),
             exc_info=sys.exc_info(),
         )
+    record.request_id = "request-safe-123"
+    record.reason = "личная заметка"
+    record.chat_id = 99887766
 
-    rendered = JsonFormatter(service="api", sensitive_values=(secret,)).format(record)
+    rendered = JsonFormatter(service="api").format(record)
     payload = json.loads(rendered)
 
-    assert payload["message"] == "request [url] used [redacted]"
-    assert "[url]" in payload["exception"]
-    assert "[redacted]" in payload["exception"]
-    assert secret not in rendered
-    assert "backend.example" not in rendered
+    assert payload["message"] == "application_log"
+    assert payload["exception_type"] == "RuntimeError"
+    assert payload["request_id"] == "request-safe-123"
+    assert "exception" not in payload
+    assert "reason" not in payload
+    assert "chat_id" not in payload
+    for marker in markers:
+        assert marker not in rendered
 
 
 def test_request_log_has_duration_and_health_probes_are_quiet(caplog) -> None:
@@ -85,14 +99,20 @@ def test_request_log_has_duration_and_health_probes_are_quiet(caplog) -> None:
     def health_ready() -> dict[str, str]:
         return {"status": "ok"}
 
+    @test_app.get("/profiles/{profile_id}")
+    def profile(profile_id: str) -> dict[str, str]:
+        return {"profile_id": profile_id}
+
     with TestClient(test_app) as test_client, caplog.at_level(logging.INFO, logger="app.http"):
         response = test_client.get("/example", headers={"X-Request-ID": "edge-123"})
         health_response = test_client.get("/health/ready")
+        profile_response = test_client.get("/profiles/private-user-99887766")
 
     assert response.headers["X-Request-ID"] == "edge-123"
     assert health_response.status_code == 200
     records = [record for record in caplog.records if record.name == "app.http"]
-    assert len(records) == 1
+    assert profile_response.status_code == 200
+    assert len(records) == 2
     assert records[0].request_id == "edge-123"
     assert records[0].method == "GET"
     assert records[0].path == "/example"
@@ -101,6 +121,8 @@ def test_request_log_has_duration_and_health_probes_are_quiet(caplog) -> None:
     assert records[0].sql_query_count == 0
     assert records[0].sql_duration_ms == 0
     assert records[0].db_pool_checked_out >= 0
+    assert records[1].path == "/profiles/{profile_id}"
+    assert "private-user-99887766" not in records[1].path
 
 
 def test_request_log_includes_sql_metrics_from_sync_endpoint(caplog) -> None:
