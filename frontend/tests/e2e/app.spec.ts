@@ -930,6 +930,84 @@ async function mockApi(
           },
         ],
       });
+    if (path.endsWith('/programs/templates/recommendation')) {
+      const criteria = request.postDataJSON() as {
+        goal: string;
+        experience: string;
+        workouts_per_week: number;
+        training_location: string | null;
+        available_equipment_ids: string[] | null;
+      };
+      return route.fulfill({
+        json: {
+          status: 'recommended',
+          criteria: { ...criteria, profile_fields_used: [] },
+          missing_fields: [],
+          message: 'Сначала посмотрите состав программы.',
+          recommendation: {
+            template: {
+              id: 10,
+              title: 'Программа на всё тело — 3 дня',
+              slug: 'full-body-3-days',
+              goal: 'recomposition',
+              level: 'beginner',
+              split_type: 'full_body',
+              owner_user_id: null,
+              owner_telegram_user_id: null,
+              owner_full_name: null,
+              created_by_user_id: null,
+              is_public: true,
+              is_example: true,
+              is_assigned_to_current_user: false,
+              is_active_for_current_user: false,
+              can_edit: false,
+              assigned_by_user_id: null,
+              assigned_by_full_name: null,
+              days: [
+                {
+                  id: 100,
+                  day_number: 1,
+                  title: 'Всё тело',
+                  exercises: [
+                    {
+                      id: 1000,
+                      exercise_id: 1,
+                      exercise_title: 'Тяга блока',
+                      prescribed_sets: 3,
+                      prescribed_reps: '10–12',
+                      rest_seconds: 90,
+                      notes: null,
+                      has_guide: true,
+                    },
+                  ],
+                },
+                {
+                  id: 101,
+                  day_number: 2,
+                  title: 'Всё тело B',
+                  exercises: [],
+                },
+                {
+                  id: 102,
+                  day_number: 3,
+                  title: 'Всё тело C',
+                  exercises: [],
+                },
+              ],
+            },
+            reason: 'Совпадает с выбранной целью, уровнем и ритмом.',
+            fit_facts: [
+              'Цель подбора: улучшение композиции тела.',
+              'В шаблоне 3 тренировки за цикл.',
+              'Для шаблона не требуется отдельное оборудование.',
+            ],
+            limitations: [],
+          },
+          alternatives: [],
+          requires_explicit_start: true,
+        },
+      });
+    }
     if (path.endsWith('/programs/assigned/501/revisions'))
       return route.fulfill({
         json: [
@@ -1606,6 +1684,88 @@ test('поля адаптируются к разным iPhone, а пример 
   await expect(page.locator('.exercise-lightbox')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.locator('.exercise-lightbox')).toHaveCount(0);
+});
+
+test('мастер подбора сохраняет ответы и ведёт к явному запуску на mobile и desktop', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await mockApi(page);
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Клиент' }).click();
+  await openAppDestination(page, 'План');
+
+  const launcher = page.getByRole('button', { name: 'Начать подбор' });
+  await launcher.click();
+  const wizard = page.getByRole('dialog', { name: 'Цель' });
+  await expect(wizard).toBeVisible();
+  await expect(wizard.getByText(/профиль от этого не обновится/i)).toBeVisible();
+  expect(
+    await wizard.locator('.program-wizard__panel').evaluate((element) => ({
+      client: element.clientWidth,
+      scroll: element.scrollWidth,
+    })),
+  ).toEqual({ client: 360, scroll: 360 });
+
+  await wizard.getByRole('radio', { name: /Рекомпозиция/ }).check();
+  await wizard.getByRole('button', { name: 'Далее' }).click();
+  await page.getByRole('radio', { name: /Начинаю или возвращаюсь/ }).check();
+  await page.getByRole('button', { name: 'Далее' }).click();
+  const threeWorkouts = page.locator('input[name="recommendation-frequency"][value="3"]');
+  await threeWorkouts.check();
+  await page.getByRole('button', { name: 'Назад' }).click();
+  await expect(page.getByRole('radio', { name: /Начинаю или возвращаюсь/ })).toBeChecked();
+  await page.getByRole('button', { name: 'Далее' }).click();
+  await expect(threeWorkouts).toBeChecked();
+  await page.getByRole('button', { name: 'Далее' }).click();
+  await page.getByRole('radio', { name: /Тренажёрный зал/ }).check();
+  await page.getByRole('button', { name: 'Далее' }).click();
+  await page.getByRole('radio', { name: /Учесть только доступное/ }).check();
+  await page.getByRole('checkbox', { name: 'Только собственный вес' }).check();
+  await page.getByRole('button', { name: 'Показать рекомендацию' }).click();
+
+  const result = page.getByRole('dialog', { name: 'Ваш результат' });
+  await expect(
+    result.getByRole('heading', { name: 'Программа на всё тело — 3 дня' }),
+  ).toBeVisible();
+  await expect(result.getByText(/Всё тело — основные мышечные группы/)).toBeVisible();
+  await expect(result.getByText(/не является медицинской рекомендацией/i)).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await result
+      .locator('.program-wizard__panel')
+      .evaluate((element) => element.scrollWidth <= element.clientWidth),
+  ).toBe(true);
+  await expect(result.getByText('Рекомпозиция', { exact: true })).toBeVisible();
+  const frequencySummary = result
+    .getByText('Частота', { exact: true })
+    .locator('xpath=following-sibling::dd');
+  await expect(frequencySummary).toContainText('3 тренировки в неделю');
+  await expect(frequencySummary).toContainText('В программе: 3 тренировки в цикле');
+  const mobileSummary = await result.locator('.program-wizard-result__summary').boundingBox();
+  expect(mobileSummary).not.toBeNull();
+  expect(mobileSummary!.height).toBeGreaterThan(150);
+
+  await result.getByRole('button', { name: 'Посмотреть план' }).click();
+  const preview = page.getByRole('dialog', { name: /Программа на всё тело — 3 дня/ });
+  await expect(
+    preview.getByRole('button', { name: 'Настроить расписание и запустить' }),
+  ).toBeVisible();
+  await preview.locator('.program-example-modal__close').click();
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await launcher.click();
+  const desktopPanel = page
+    .getByRole('dialog', { name: 'Ваш результат' })
+    .locator('.program-wizard__panel');
+  const desktopBox = await desktopPanel.boundingBox();
+  expect(desktopBox).not.toBeNull();
+  expect(desktopBox!.width).toBeLessThanOrEqual(760);
+  expect(Math.abs(desktopBox!.x + desktopBox!.width / 2 - 720)).toBeLessThanOrEqual(1);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: 'Ваш результат' })).toHaveCount(0);
+  await expect(launcher).toBeFocused();
 });
 
 test('клиент собирает и переупорядочивает личную программу', async ({ page }) => {

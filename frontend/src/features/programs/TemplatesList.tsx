@@ -84,6 +84,7 @@ export function TemplatesList() {
   const [editingTemplate, setEditingTemplate] = useState<ProgramTemplate | null>(null);
   const [saveAsCopy, setSaveAsCopy] = useState(false);
   const [assignmentTemplate, setAssignmentTemplate] = useState<ProgramTemplate | null>(null);
+  const [recommendationOpen, setRecommendationOpen] = useState(false);
   const defaultStartDate = dateInputValue(
     new Date(),
     user?.profile?.timezone || detectedTimeZone(),
@@ -304,6 +305,13 @@ export function TemplatesList() {
               </button>
               <button
                 type="button"
+                className="secondary"
+                onClick={() => setRecommendationOpen(true)}
+              >
+                Подобрать другую
+              </button>
+              <button
+                type="button"
                 onClick={() => {
                   setSaveAsCopy(shouldSaveTemplateAsCopy(activeTemplate));
                   setEditingTemplate(activeTemplate);
@@ -330,16 +338,26 @@ export function TemplatesList() {
           <div className="program-active__empty">
             <span className="eyebrow">Текущая программа</span>
             <h2 id="active-program-title">План ещё не выбран</h2>
-            <p>Подберите готовый вариант или создайте собственный ниже.</p>
+            <p>Ответьте на пять коротких вопросов или выберите готовый вариант вручную.</p>
+            <div className="program-active__actions">
+              <button type="button" onClick={() => setRecommendationOpen(true)}>
+                Подобрать программу
+              </button>
+              <a className="secondary program-wizard__anchor" href="#program-library">
+                Выбрать вручную
+              </a>
+            </div>
           </div>
         )}
       </section>
       <ProgramRecommendation
+        open={recommendationOpen}
+        onOpenChange={setRecommendationOpen}
         onPreview={setSelectedExample}
         onEditCopy={editCopy}
-        onStart={openAssignment}
       />
       <Card
+        id="program-library"
         title="Программы и шаблоны"
         description="Ваши заготовки и готовые варианты для быстрого запуска."
       >
@@ -473,6 +491,38 @@ export function TemplatesList() {
                   </ol>
                 </section>
               ))}
+            </div>
+            <div className="program-example-modal__actions">
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => {
+                  const template = selectedExample;
+                  setSelectedExample(null);
+                  setSaveAsCopy(shouldSaveTemplateAsCopy(template));
+                  setEditingTemplate(template);
+                }}
+              >
+                {shouldSaveTemplateAsCopy(selectedExample)
+                  ? 'Настроить личную копию'
+                  : 'Редактировать программу'}
+              </button>
+              {selectedExample.is_active_for_current_user ? (
+                <button type="button" disabled>
+                  Уже запущена
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const template = selectedExample;
+                    setSelectedExample(null);
+                    openAssignment(template);
+                  }}
+                >
+                  Настроить расписание и запустить
+                </button>
+              )}
             </div>
           </div>
         </div>

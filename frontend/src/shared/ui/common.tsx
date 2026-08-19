@@ -161,6 +161,7 @@ export function Skeleton({
 }
 
 export function Card({
+  id,
   title,
   description,
   actions,
@@ -168,6 +169,7 @@ export function Card({
   className = '',
   collapsible = true,
 }: {
+  id?: string;
   title?: ReactNode;
   description?: string;
   actions?: ReactNode;
@@ -178,7 +180,7 @@ export function Card({
 }) {
   if (collapsible && (title || description)) {
     return (
-      <details className={`card card-disclosure ${className}`.trim()}>
+      <details className={`card card-disclosure ${className}`.trim()} id={id}>
         <summary>
           <span>
             {title && <h2>{title}</h2>}
@@ -195,7 +197,7 @@ export function Card({
   }
 
   return (
-    <section className={`card ${className}`.trim()}>
+    <section className={`card ${className}`.trim()} id={id}>
       {(title || description || actions) && (
         <div className="section-head">
           <div>

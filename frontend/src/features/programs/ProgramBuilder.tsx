@@ -379,6 +379,7 @@ export function ProgramBuilder({
     <Card
       className="program-builder"
       collapsible={!editingTemplate && !targetTelegramId}
+      id={!editingTemplate && !targetTelegramId ? 'program-builder' : undefined}
       title={
         editingTemplate
           ? saveAsCopy
