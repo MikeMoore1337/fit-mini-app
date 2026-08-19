@@ -120,6 +120,14 @@ class WorkoutSetUpdate(BaseModel):
     set_kind: SetKind | None = None
     reached_failure: bool | None = None
     is_completed: bool | None = None
+    expected_version: int | None = Field(default=None, ge=1)
+    mutation_id: str | None = Field(default=None, min_length=16, max_length=64)
+
+    @model_validator(mode="after")
+    def validate_offline_sync_fields(self):
+        if (self.expected_version is None) != (self.mutation_id is None):
+            raise ValueError("expected_version и mutation_id должны передаваться вместе")
+        return self
 
 
 class LoggedSetItem(BaseModel):
@@ -131,6 +139,7 @@ class LoggedSetItem(BaseModel):
     set_kind: SetKind | None = None
     reached_failure: bool | None = None
     is_completed: bool = True
+    version: int = Field(default=1, ge=1)
 
 
 class WorkoutExerciseItem(BaseModel):
@@ -176,6 +185,7 @@ class WorkoutStatusResponse(BaseModel):
     set_kind: SetKind | None = None
     reached_failure: bool | None = None
     is_completed: bool
+    version: int = Field(ge=1)
 
 
 class WorkoutScheduleItem(BaseModel):

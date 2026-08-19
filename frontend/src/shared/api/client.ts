@@ -1,5 +1,6 @@
 const ACCESS_TOKEN_KEY = 'fit_access_token';
 const AUTH_CHANNEL_NAME = 'fit_auth_session';
+export const AUTH_LOGOUT_EVENT = 'fit:auth-logout';
 
 type AuthChannelMessage = { type: 'access-token'; token: string } | { type: 'logout' };
 
@@ -14,6 +15,7 @@ authChannel?.addEventListener('message', (event: MessageEvent<AuthChannelMessage
     sessionStorage.setItem(ACCESS_TOKEN_KEY, event.data.token);
   } else if (event.data.type === 'logout') {
     sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+    window.dispatchEvent(new Event(AUTH_LOGOUT_EVENT));
   }
 });
 
@@ -51,6 +53,7 @@ export function setAccessToken(token: string): void {
 
 export function clearAccessToken(): void {
   sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+  window.dispatchEvent(new Event(AUTH_LOGOUT_EVENT));
   authChannel?.postMessage({ type: 'logout' } satisfies AuthChannelMessage);
 }
 
