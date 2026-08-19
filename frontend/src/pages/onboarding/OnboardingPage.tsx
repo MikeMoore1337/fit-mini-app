@@ -6,10 +6,10 @@ import { api } from '../../shared/api/client';
 import type { User } from '../../shared/api/types';
 import { safeAuthNextPath } from '../../shared/auth/redirects';
 import {
-  activationSurface,
-  emitActivationEvent,
-  type ActivationEvent,
-} from '../../shared/analytics/activation';
+  productEventSurface,
+  trackProductEvent,
+  type ProductEvent,
+} from '../../shared/analytics/productEvents';
 import { useNavigation } from '../../shared/navigation/router';
 import { AppThemeToggle } from '../../shared/ui/AppThemeToggle';
 import { BrandLogo } from '../../shared/ui/BrandLogo';
@@ -36,10 +36,8 @@ const nextActions = [
   },
 ] as const;
 
-function trackNextAction(
-  nextAction: ActivationEvent & { name: 'onboarding_next_action_selected' },
-) {
-  emitActivationEvent(nextAction);
+function trackNextAction(nextAction: ProductEvent & { name: 'onboarding_next_action_selected' }) {
+  trackProductEvent(nextAction);
 }
 
 export default function OnboardingPage() {
@@ -52,18 +50,13 @@ export default function OnboardingPage() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const completionHeading = useRef<HTMLHeadingElement>(null);
   const nextPath = safeAuthNextPath(new URLSearchParams(window.location.search).get('next'));
-  const surface = activationSurface();
+  const surface = productEventSurface();
   const complete = saved || user?.onboarding?.status === 'complete';
 
   useEffect(() => {
-    if (complete || window.history.state?.yfcOnboardingStartedFor === user?.id) return;
-    window.history.replaceState(
-      { ...(window.history.state ?? {}), yfcOnboardingStartedFor: user?.id },
-      '',
-      window.location.href,
-    );
-    emitActivationEvent({ name: 'onboarding_started', surface });
-  }, [complete, surface, user?.id]);
+    if (complete) return;
+    trackProductEvent({ name: 'onboarding_started', surface }, { dedupe: 'session' });
+  }, [complete, surface]);
 
   useEffect(() => {
     if (complete) completionHeading.current?.focus();
@@ -77,7 +70,7 @@ export default function OnboardingPage() {
       }),
     onSuccess: () => {
       setSaved(true);
-      emitActivationEvent({ name: 'onboarding_minimum_saved', surface });
+      trackProductEvent({ name: 'onboarding_minimum_saved', surface });
       void reloadUser();
     },
   });
