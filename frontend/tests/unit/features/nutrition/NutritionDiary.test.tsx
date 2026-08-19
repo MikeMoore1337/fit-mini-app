@@ -207,6 +207,22 @@ describe('NutritionDiary', () => {
 
     expect(await screen.findByText('Соединение прервано')).toBeVisible();
     expect(screen.getByRole('spinbutton', { name: 'Количество' })).toHaveValue(2.5);
+    const storedDraft = JSON.parse(
+      localStorage.getItem('fit_food_draft_10_2026-08-19_breakfast') ?? '{}',
+    );
+    expect(storedDraft.food).toEqual({
+      id: 7,
+      name: 'Овсяная каша',
+      brand: null,
+      food_type: 'system',
+      energy_kcal_per_100g: '420.00',
+      protein_g_per_100g: '18.500',
+      fat_g_per_100g: '12.000',
+      carbs_g_per_100g: '54.000',
+      standard_serving_weight_g: '50.000',
+    });
+    expect(storedDraft.food).not.toHaveProperty('barcode');
+    expect(storedDraft.food).not.toHaveProperty('last_used_at');
     first.unmount();
 
     renderDiary();

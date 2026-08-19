@@ -84,6 +84,11 @@ describe('AuthProvider active workout cleanup', () => {
   it('очищает локальную тренировку при logout', async () => {
     const queueKey = activeWorkoutQueueKey(7, 42);
     localStorage.setItem(queueKey, '{"private":"draft"}');
+    localStorage.setItem('fit_food_draft_7_2030-01-10_breakfast', '{"private":"food"}');
+    localStorage.setItem('fit_measurement_draft_user_7', '{"private":"measurement"}');
+    localStorage.setItem('fit_profile_draft_7', '{"private":"profile"}');
+    localStorage.setItem('fit_workout_set_201', '{"private":"legacy"}');
+    localStorage.setItem('app-theme', 'dark');
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const path = String(input);
       if (path.endsWith('/public/config')) return new Response('{}', { status: 200 });
@@ -98,11 +103,20 @@ describe('AuthProvider active workout cleanup', () => {
 
     await waitFor(() => expect(screen.getByTestId('user-id')).toHaveTextContent('none'));
     expect(localStorage.getItem(queueKey)).toBeNull();
+    expect(localStorage.getItem('fit_food_draft_7_2030-01-10_breakfast')).toBeNull();
+    expect(localStorage.getItem('fit_measurement_draft_user_7')).toBeNull();
+    expect(localStorage.getItem('fit_profile_draft_7')).toBeNull();
+    expect(localStorage.getItem('fit_workout_set_201')).toBeNull();
+    expect(localStorage.getItem('app-theme')).toBe('dark');
   });
 
   it('очищает данные прежнего аккаунта перед account switch', async () => {
     const queueKey = activeWorkoutQueueKey(7, 42);
     localStorage.setItem(queueKey, '{"private":"draft"}');
+    localStorage.setItem('fit_nutrition_draft_v2_user_7', '{"private":"nutrition"}');
+    localStorage.setItem('fit_program_days_user_7', '{"private":"program"}');
+    localStorage.setItem('fit_notification_draft_7', '{"private":"notification"}');
+    localStorage.setItem('app-theme', 'light');
     let meCalls = 0;
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const path = String(input);
@@ -123,6 +137,10 @@ describe('AuthProvider active workout cleanup', () => {
 
     await waitFor(() => expect(screen.getByTestId('user-id')).toHaveTextContent('8'));
     expect(localStorage.getItem(queueKey)).toBeNull();
+    expect(localStorage.getItem('fit_nutrition_draft_v2_user_7')).toBeNull();
+    expect(localStorage.getItem('fit_program_days_user_7')).toBeNull();
+    expect(localStorage.getItem('fit_notification_draft_7')).toBeNull();
+    expect(localStorage.getItem('app-theme')).toBe('light');
   });
 
   it('восстанавливает offline-shell после refresh только для подтверждённой auth-сессии', async () => {

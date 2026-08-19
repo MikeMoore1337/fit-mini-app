@@ -6,6 +6,7 @@ import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Card } from '../../shared/ui/common';
 import { detectedTimeZone } from '../../shared/dateTime';
 import { usePersistentState } from '../../shared/storage';
+import { profileDraftStorageKey } from '../../shared/userScopedStorage';
 import { getTimezoneOptions } from './timezones';
 import { DateInput } from '../../shared/ui/PickerInput';
 import { profileGoals } from './goals';
@@ -41,7 +42,7 @@ export function ProfileForm() {
   const { toast } = useFeedback();
   const queryClient = useQueryClient();
   const [form, setForm, clearDraft] = usePersistentState<UserProfileUpdate>(
-    `fit_profile_draft_${user?.id ?? 'anonymous'}`,
+    profileDraftStorageKey(user?.id ?? 'anonymous'),
     () =>
       user?.profile
         ? {

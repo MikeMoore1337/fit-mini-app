@@ -1,10 +1,11 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AccountPrivacy } from '../../../../src/features/account/AccountPrivacy';
 import { ApiError } from '../../../../src/shared/api/client';
+import { clearSensitiveUserScopedStorage } from '../../../../src/shared/userScopedStorage';
 
-const { apiMock, authState, toastMock } = vi.hoisted(() => ({
+const { apiMock, authState, confirmMock, logoutMock, toastMock } = vi.hoisted(() => ({
   apiMock: vi.fn(),
   authState: {
     user: {
@@ -16,6 +17,8 @@ const { apiMock, authState, toastMock } = vi.hoisted(() => ({
       oauth_providers: [] as string[],
     },
   },
+  confirmMock: vi.fn(),
+  logoutMock: vi.fn(),
   toastMock: vi.fn(),
 }));
 
@@ -33,10 +36,10 @@ vi.mock('../../../../src/shared/api/client', () => ({
   },
 }));
 vi.mock('../../../../src/app/AuthProvider', () => ({
-  useAuth: () => ({ user: authState.user, config: authState.config, logout: vi.fn() }),
+  useAuth: () => ({ user: authState.user, config: authState.config, logout: logoutMock }),
 }));
 vi.mock('../../../../src/shared/ui/FeedbackProvider', () => ({
-  useFeedback: () => ({ toast: toastMock, confirm: vi.fn() }),
+  useFeedback: () => ({ toast: toastMock, confirm: confirmMock }),
 }));
 
 function renderPrivacy() {
@@ -58,10 +61,15 @@ function openLoginMethods() {
 
 describe('AccountPrivacy Telegram linking', () => {
   beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
     authState.user.telegram_user_id = null;
     authState.user.auth_providers = [];
     authState.config.oauth_providers = [];
     apiMock.mockReset();
+    confirmMock.mockReset();
+    logoutMock.mockReset();
+    logoutMock.mockImplementation(async () => clearSensitiveUserScopedStorage());
     toastMock.mockReset();
   });
 
@@ -175,5 +183,36 @@ describe('AccountPrivacy Telegram linking', () => {
       await screen.findByText(/этот способ уже связан с аккаунтом.*объединение недоступно/i),
     ).toBeInTheDocument();
     expect(screen.queryByText(/account 991/i)).not.toBeInTheDocument();
+  });
+
+  it('cleans sensitive browser state only after successful account deletion', async () => {
+    localStorage.setItem('fit_food_draft_77_2026-08-19_breakfast', '{"private":true}');
+    localStorage.setItem('app-theme', 'dark');
+    confirmMock.mockResolvedValue(true);
+    apiMock.mockResolvedValue(undefined);
+    renderPrivacy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Удалить аккаунт' }));
+
+    await waitFor(() => expect(logoutMock).toHaveBeenCalledOnce());
+    expect(apiMock).toHaveBeenCalledWith('/api/v1/me/account', {
+      method: 'DELETE',
+      body: { confirmation: 'DELETE' },
+    });
+    expect(localStorage.getItem('fit_food_draft_77_2026-08-19_breakfast')).toBeNull();
+    expect(localStorage.getItem('app-theme')).toBe('dark');
+  });
+
+  it('keeps browser state when account deletion fails', async () => {
+    localStorage.setItem('fit_measurement_draft_user_77', '{"private":true}');
+    confirmMock.mockResolvedValue(true);
+    apiMock.mockRejectedValue(new ApiError('Удаление не выполнено', 500, {}));
+    renderPrivacy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Удалить аккаунт' }));
+
+    await waitFor(() => expect(toastMock).toHaveBeenCalledWith('Удаление не выполнено', 'error'));
+    expect(logoutMock).not.toHaveBeenCalled();
+    expect(localStorage.getItem('fit_measurement_draft_user_77')).toBe('{"private":true}');
   });
 });

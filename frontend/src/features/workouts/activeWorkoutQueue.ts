@@ -1,11 +1,17 @@
 import type { Workout } from '../../shared/api/types';
+import {
+  ACTIVE_WORKOUT_STORAGE_PREFIXES,
+  LEGACY_ACTIVE_WORKOUT_STORAGE_PREFIXES,
+  activeWorkoutPointerStorageKey,
+  activeWorkoutQueueStorageKey,
+  activeWorkoutRestStorageKey,
+  legacyWorkoutPendingStorageKey,
+  legacyWorkoutSetStorageKey,
+} from '../../shared/userScopedStorage';
 
 type WorkoutSet = Workout['exercises'][number]['sets'][number];
 
 export const ACTIVE_WORKOUT_QUEUE_VERSION = 1 as const;
-const ACTIVE_WORKOUT_QUEUE_PREFIX = 'fit_active_workout_v1_';
-const ACTIVE_WORKOUT_REST_PREFIX = 'fit_active_workout_rest_v1_';
-const ACTIVE_WORKOUT_POINTER_PREFIX = 'fit_active_workout_current_v1_user_';
 const MAX_QUEUE_LENGTH = 256;
 
 export interface ActiveWorkoutSetValues {
@@ -33,12 +39,8 @@ export interface ActiveWorkoutQueue {
   workout_snapshot?: Workout;
 }
 
-function scopedSuffix(userId: number, workoutId: number): string {
-  return `user_${userId}_workout_${workoutId}`;
-}
-
 export function activeWorkoutQueueKey(userId: number, workoutId: number): string {
-  return `${ACTIVE_WORKOUT_QUEUE_PREFIX}${scopedSuffix(userId, workoutId)}`;
+  return activeWorkoutQueueStorageKey(userId, workoutId);
 }
 
 export function activeWorkoutLockName(userId: number, workoutId: number): string {
@@ -46,7 +48,7 @@ export function activeWorkoutLockName(userId: number, workoutId: number): string
 }
 
 export function activeWorkoutRestKey(userId: number, workoutId: number): string {
-  return `${ACTIVE_WORKOUT_REST_PREFIX}${scopedSuffix(userId, workoutId)}`;
+  return activeWorkoutRestStorageKey(userId, workoutId);
 }
 
 export function emptyActiveWorkoutQueue(userId: number, workoutId: number): ActiveWorkoutQueue {
@@ -268,18 +270,16 @@ export function latestMutationForSet(
 
 export function clearActiveWorkoutDataForUser(userId: number): void {
   const prefixes = [
-    `${ACTIVE_WORKOUT_QUEUE_PREFIX}user_${userId}_`,
-    `${ACTIVE_WORKOUT_REST_PREFIX}user_${userId}_`,
-    'fit_workout_set_',
-    'fit_workout_pending_',
-    'fit_workout_rest_deadline_',
+    `${ACTIVE_WORKOUT_STORAGE_PREFIXES.queue}user_${userId}_`,
+    `${ACTIVE_WORKOUT_STORAGE_PREFIXES.rest}user_${userId}_`,
+    ...LEGACY_ACTIVE_WORKOUT_STORAGE_PREFIXES,
   ];
   try {
     const keys = Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index));
     for (const key of keys) {
       if (key && prefixes.some((prefix) => key.startsWith(prefix))) localStorage.removeItem(key);
     }
-    localStorage.removeItem(`${ACTIVE_WORKOUT_POINTER_PREFIX}${userId}`);
+    localStorage.removeItem(activeWorkoutPointerStorageKey(userId));
   } catch {
     // Storage is optional in restrictive webviews.
   }
@@ -312,7 +312,7 @@ export function saveActiveWorkoutSnapshot(
   workout: Workout,
 ): ActiveWorkoutQueue | undefined {
   if (workout.status !== 'in_progress') return undefined;
-  const pointerKey = `${ACTIVE_WORKOUT_POINTER_PREFIX}${userId}`;
+  const pointerKey = activeWorkoutPointerStorageKey(userId);
   try {
     const previousWorkoutId = Number(localStorage.getItem(pointerKey));
     if (
@@ -329,8 +329,8 @@ export function saveActiveWorkoutSnapshot(
     let current = loadActiveWorkoutQueue(userId, workout.id, setIds);
     const legacyKeys: string[] = [];
     for (const set of workout.exercises.flatMap((exercise) => exercise.sets)) {
-      const draftKey = `fit_workout_set_${set.id}`;
-      const pendingKey = `fit_workout_pending_${set.id}`;
+      const draftKey = legacyWorkoutSetStorageKey(set.id);
+      const pendingKey = legacyWorkoutPendingStorageKey(set.id);
       const draft = readLegacySetValue(draftKey);
       const pending = readLegacySetValue(pendingKey);
       if (draft === null && pending === null) continue;
@@ -369,7 +369,7 @@ export function saveActiveWorkoutSnapshot(
 
 export function loadCurrentActiveWorkoutSnapshot(userId: number): Workout | undefined {
   try {
-    const pointerKey = `${ACTIVE_WORKOUT_POINTER_PREFIX}${userId}`;
+    const pointerKey = activeWorkoutPointerStorageKey(userId);
     const workoutId = Number(localStorage.getItem(pointerKey));
     if (!Number.isInteger(workoutId) || workoutId <= 0) {
       localStorage.removeItem(pointerKey);
@@ -385,7 +385,7 @@ export function clearActiveWorkoutData(userId: number, workoutId: number): void 
   try {
     localStorage.removeItem(activeWorkoutQueueKey(userId, workoutId));
     localStorage.removeItem(activeWorkoutRestKey(userId, workoutId));
-    const pointerKey = `${ACTIVE_WORKOUT_POINTER_PREFIX}${userId}`;
+    const pointerKey = activeWorkoutPointerStorageKey(userId);
     if (localStorage.getItem(pointerKey) === String(workoutId)) localStorage.removeItem(pointerKey);
   } catch {
     // Storage is optional in restrictive webviews.

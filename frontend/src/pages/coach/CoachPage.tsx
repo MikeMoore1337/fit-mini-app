@@ -23,6 +23,7 @@ import {
 import { AppLink, Redirect } from '../../shared/navigation/router';
 import { LIVE_DATA_REFETCH_INTERVAL_MS } from '../../shared/sync';
 import { usePersistentState } from '../../shared/storage';
+import { coachClientProfileDraftStorageKey } from '../../shared/userScopedStorage';
 import { handleTabKeyDown } from '../../shared/ui/tabs';
 import { DateInput } from '../../shared/ui/PickerInput';
 import {
@@ -31,6 +32,35 @@ import {
 } from '../../features/profile/BodyPriorityPicker';
 
 type CoachTab = 'clients' | 'programs' | 'catalog';
+
+type ClientProfileDraft = Pick<
+  Client,
+  | 'full_name'
+  | 'birth_date'
+  | 'goal'
+  | 'level'
+  | 'height_cm'
+  | 'weight_kg'
+  | 'workouts_per_week'
+  | 'cardio_trainings_per_week'
+  | 'resting_heart_rate'
+  | 'body_priority'
+>;
+
+function clientProfileDraft(client: Client): ClientProfileDraft {
+  return {
+    full_name: client.full_name,
+    birth_date: client.birth_date,
+    goal: client.goal,
+    level: client.level,
+    height_cm: client.height_cm,
+    weight_kg: client.weight_kg,
+    workouts_per_week: client.workouts_per_week,
+    cardio_trainings_per_week: client.cardio_trainings_per_week,
+    resting_heart_rate: client.resting_heart_rate,
+    body_priority: client.body_priority,
+  };
+}
 
 function clientProfileKey(client: Client): string {
   return JSON.stringify([
@@ -81,9 +111,9 @@ function ClientDataSection({
 function ClientProfileEditor({ client }: { client: Client }) {
   const queryClient = useQueryClient();
   const { toast } = useFeedback();
-  const [form, setForm, clearDraft] = usePersistentState(
-    `fit_coach_client_profile_draft_${client.id}`,
-    client,
+  const [form, setForm, clearDraft] = usePersistentState<ClientProfileDraft>(
+    coachClientProfileDraftStorageKey(client.id),
+    () => clientProfileDraft(client),
   );
   const validBirthDate = /^\d{4}-\d{2}-\d{2}$/.test(form.birth_date ?? '');
   const validRestingHeartRate =
