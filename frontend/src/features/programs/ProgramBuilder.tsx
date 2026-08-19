@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../shared/api/client';
 import type { Exercise, ProgramTemplate, ProgramTemplateCreate } from '../../shared/api/types';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
-import { Card, CloseIcon, LoadingState } from '../../shared/ui/common';
+import { Badge, Card, CloseIcon, LoadingState } from '../../shared/ui/common';
 import { difficultyLabels, orderExercisesForLevel } from './exerciseOrdering';
 import { buildStrengthPreset, resolveStrengthRule, type StrengthSplit } from './strengthPresets';
 import { usePersistentState } from '../../shared/storage';
@@ -13,6 +13,7 @@ import { applyRestSeconds } from './programRest';
 import { ExerciseGuideDialog } from '../exercises/ExerciseGuideDialog';
 import { scheduleWeekdaysForSave, templateDraftTitle } from './templateEditing';
 import { DateInput } from '../../shared/ui/PickerInput';
+import { isPairedWithPrevious, moveItem, removeExercise, toggleSuperset } from './programDraft';
 
 type Day = ProgramTemplateCreate['days'][number];
 type ProgramTemplateAssignmentCreate = ProgramTemplateCreate & {
@@ -206,6 +207,8 @@ export function ProgramBuilder({
         prescribed_reps: exercise.prescribed_reps,
         rest_seconds: exercise.rest_seconds,
         notes: exercise.notes,
+        superset_group: exercise.superset_group,
+        superset_order: exercise.superset_order,
       })),
     })) ?? [blankDay(1)],
   );
@@ -374,7 +377,17 @@ export function ProgramBuilder({
   };
   return (
     <Card
-      title="Конструктор программы"
+      className="program-builder"
+      collapsible={!editingTemplate && !targetTelegramId}
+      title={
+        editingTemplate
+          ? saveAsCopy
+            ? 'Настроить личную копию'
+            : 'Редактировать программу'
+          : targetTelegramId
+            ? `Новая программа для ${targetName || targetTelegramId}`
+            : 'Создать свою программу'
+      }
       description={
         editingTemplate
           ? saveAsCopy
@@ -382,7 +395,7 @@ export function ProgramBuilder({
             : `Редактирование «${editingTemplate.title}»`
           : targetTelegramId
             ? `Назначение для ${targetName || targetTelegramId}`
-            : 'Создайте программу для себя.'
+            : 'Соберите дни и упражнения с понятным расписанием.'
       }
     >
       {exercises.isLoading ? (
@@ -414,45 +427,54 @@ export function ProgramBuilder({
               копия, в которой можно использовать свои упражнения.
             </p>
           )}
-          <div className="form-grid">
-            <label className="field">
-              <span>Название</span>
-              <input
-                value={title}
-                maxLength={128}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-              />
-            </label>
-            <label className="field">
-              <span>Цель</span>
-              <select
-                value={goal}
-                onChange={(e) => setGoal(e.target.value as ProgramTemplateCreate['goal'])}
-              >
-                <option value="fat_loss">Похудение</option>
-                <option value="muscle_gain">Набор</option>
-                <option value="maintenance">Поддержание</option>
-                <option value="recomposition">Рекомпозиция</option>
-              </select>
-            </label>
-            <label className="field">
-              <span>Уровень</span>
-              <select
-                value={level}
-                onChange={(e) => setLevel(e.target.value as ProgramTemplateCreate['level'])}
-              >
-                <option value="beginner">Начальный</option>
-                <option value="intermediate">Средний</option>
-                <option value="advanced">Продвинутый</option>
-              </select>
-            </label>
-          </div>
+          <section className="program-builder-basics stack" aria-labelledby="program-basics-title">
+            <div>
+              <span className="eyebrow">Шаг 1</span>
+              <h3 id="program-basics-title">Основа программы</h3>
+            </div>
+            <div className="form-grid">
+              <label className="field">
+                <span>Название</span>
+                <input
+                  value={title}
+                  maxLength={128}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                />
+              </label>
+              <label className="field">
+                <span>Цель</span>
+                <select
+                  value={goal}
+                  onChange={(e) => setGoal(e.target.value as ProgramTemplateCreate['goal'])}
+                >
+                  <option value="fat_loss">Похудение</option>
+                  <option value="muscle_gain">Набор</option>
+                  <option value="maintenance">Поддержание</option>
+                  <option value="recomposition">Рекомпозиция</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>Уровень</span>
+                <select
+                  value={level}
+                  onChange={(e) => setLevel(e.target.value as ProgramTemplateCreate['level'])}
+                >
+                  <option value="beginner">Начальный</option>
+                  <option value="intermediate">Средний</option>
+                  <option value="advanced">Продвинутый</option>
+                </select>
+              </label>
+            </div>
+          </section>
           <section
             className="program-builder-section stack"
             aria-labelledby="program-schedule-title"
           >
-            <h3 id="program-schedule-title">Расписание</h3>
+            <div>
+              <span className="eyebrow">Шаг 2</span>
+              <h3 id="program-schedule-title">Расписание</h3>
+            </div>
             <div className="form-grid">
               <label className="field">
                 <span>Начать не раньше</span>
@@ -515,80 +537,103 @@ export function ProgramBuilder({
               </p>
             )}
           </section>
-          <section
-            className="program-builder-section stack"
-            aria-labelledby="strength-template-title"
-          >
-            <h3 id="strength-template-title">Быстрый силовой шаблон</h3>
-            <div className="form-grid">
-              <label className="field">
-                <span>Схема</span>
-                <select
-                  value={split}
-                  onChange={(e) => {
-                    const next = e.target.value as StrengthSplit;
-                    setSplit(next);
-                    setPresetDays(resolveStrengthRule(level, next).recommended);
-                  }}
-                >
-                  <option value="fullbody">Фуллбади</option>
-                  <option value="upper_lower">Верх/Низ</option>
-                  <option value="push_pull_legs">Тяни/Толкай/Ноги</option>
-                  <option value="split">Сплит</option>
-                </select>
-              </label>
-              <label className="field">
-                <span>
-                  Дней ({rule.min}–{rule.max})
-                </span>
-                <input
-                  type="number"
-                  min={rule.min}
-                  max={rule.max}
-                  value={presetDays}
-                  onChange={(e) => setPresetDays(Number(e.target.value))}
-                />
-              </label>
-            </div>
-            {rule.warning && <p className="muted">{rule.warning}</p>}
-            <button type="button" className="secondary" onClick={() => void loadPreset()}>
-              Заполнить по шаблону
-            </button>
-          </section>
-          <section className="program-builder-section stack" aria-labelledby="program-rest-title">
-            <h3 id="program-rest-title">Отдых между подходами</h3>
-            <p className="muted">
-              Укажите общее время и примените его ко всей программе. При необходимости измените
-              отдых отдельно у любого упражнения ниже.
-            </p>
-            <div className="toolbar wrap">
-              <label className="field">
-                <span>Общий отдых, сек</span>
-                <input
-                  type="number"
-                  min="15"
-                  max="600"
-                  value={defaultRestSeconds}
-                  onChange={(event) => setDefaultRestSeconds(Number(event.target.value))}
-                  required
-                />
-              </label>
-              <button
-                type="button"
-                className="secondary"
-                disabled={defaultRestSeconds < 15 || defaultRestSeconds > 600}
-                onClick={() => {
-                  setDays(applyRestSeconds(days, defaultRestSeconds));
-                  toast('Общее время отдыха применено ко всем упражнениям');
-                }}
+          <details className="program-builder-tools compact-disclosure">
+            <summary>
+              <span>
+                <strong>Быстрое заполнение</strong>
+                <small>Готовая схема и общий отдых — необязательно</small>
+              </span>
+              <span aria-hidden="true">+</span>
+            </summary>
+            <div className="program-builder-tools__body">
+              <section
+                className="program-builder-section stack"
+                aria-labelledby="strength-template-title"
               >
-                Применить ко всем упражнениям
-              </button>
+                <h3 id="strength-template-title">Силовой шаблон</h3>
+                <div className="form-grid">
+                  <label className="field">
+                    <span>Схема</span>
+                    <select
+                      value={split}
+                      onChange={(e) => {
+                        const next = e.target.value as StrengthSplit;
+                        setSplit(next);
+                        setPresetDays(resolveStrengthRule(level, next).recommended);
+                      }}
+                    >
+                      <option value="fullbody">Фуллбади</option>
+                      <option value="upper_lower">Верх/Низ</option>
+                      <option value="push_pull_legs">Тяни/Толкай/Ноги</option>
+                      <option value="split">Сплит</option>
+                    </select>
+                  </label>
+                  <label className="field">
+                    <span>
+                      Дней ({rule.min}–{rule.max})
+                    </span>
+                    <input
+                      type="number"
+                      min={rule.min}
+                      max={rule.max}
+                      value={presetDays}
+                      onChange={(e) => setPresetDays(Number(e.target.value))}
+                    />
+                  </label>
+                </div>
+                {rule.warning && <p className="muted">{rule.warning}</p>}
+                <button type="button" className="secondary" onClick={() => void loadPreset()}>
+                  Заполнить по шаблону
+                </button>
+              </section>
+              <section
+                className="program-builder-section stack"
+                aria-labelledby="program-rest-title"
+              >
+                <h3 id="program-rest-title">Отдых между подходами</h3>
+                <p className="muted">
+                  Укажите общее время и примените его ко всей программе. При необходимости измените
+                  отдых отдельно у любого упражнения ниже.
+                </p>
+                <div className="toolbar wrap">
+                  <label className="field">
+                    <span>Общий отдых, сек</span>
+                    <input
+                      type="number"
+                      min="15"
+                      max="600"
+                      value={defaultRestSeconds}
+                      onChange={(event) => setDefaultRestSeconds(Number(event.target.value))}
+                      required
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={defaultRestSeconds < 15 || defaultRestSeconds > 600}
+                    onClick={() => {
+                      setDays(applyRestSeconds(days, defaultRestSeconds));
+                      toast('Общее время отдыха применено ко всем упражнениям');
+                    }}
+                  >
+                    Применить ко всем упражнениям
+                  </button>
+                </div>
+              </section>
             </div>
-          </section>
+          </details>
+          <div className="program-builder-days-heading">
+            <div>
+              <span className="eyebrow">Шаг 3</span>
+              <h3>Тренировочные дни</h3>
+              <p>Расположите дни и упражнения в том порядке, в котором они будут выполняться.</p>
+            </div>
+            <Badge>{days.length} из 8</Badge>
+          </div>
           {days.map((day, dayIndex) => (
             <div className="program-day stack" key={dayIndex}>
-              <div className="section-head">
+              <div className="program-day__head">
+                <span className="program-day__number">{dayIndex + 1}</span>
                 <input
                   aria-label={`Название дня ${dayIndex + 1}`}
                   value={day.title}
@@ -596,18 +641,40 @@ export function ProgramBuilder({
                   required
                   onChange={(e) => updateDay(dayIndex, { ...day, title: e.target.value })}
                 />
-                {days.length > 1 && (
+                <div className="program-order-controls" aria-label={`Порядок дня ${dayIndex + 1}`}>
                   <button
                     type="button"
-                    className="btn-danger"
-                    onClick={() => setDays(days.filter((_, index) => index !== dayIndex))}
+                    className="secondary"
+                    aria-label={`Переместить день ${dayIndex + 1} выше`}
+                    disabled={dayIndex === 0}
+                    onClick={() => setDays(moveItem(days, dayIndex, dayIndex - 1))}
                   >
-                    Удалить день
+                    ↑
                   </button>
-                )}
+                  <button
+                    type="button"
+                    className="secondary"
+                    aria-label={`Переместить день ${dayIndex + 1} ниже`}
+                    disabled={dayIndex === days.length - 1}
+                    onClick={() => setDays(moveItem(days, dayIndex, dayIndex + 1))}
+                  >
+                    ↓
+                  </button>
+                  {days.length > 1 && (
+                    <button
+                      type="button"
+                      className="btn-danger"
+                      aria-label={`Удалить день ${dayIndex + 1}`}
+                      onClick={() => setDays(days.filter((_, index) => index !== dayIndex))}
+                    >
+                      <CloseIcon />
+                    </button>
+                  )}
+                </div>
               </div>
               {day.exercises.map((item, exerciseIndex) => (
                 <div className="program-exercise-row" key={exerciseIndex}>
+                  <span className="program-exercise-row__number">{exerciseIndex + 1}</span>
                   <label className="field exercise-select">
                     <span>Упражнение</span>
                     <ExercisePicker
@@ -642,7 +709,7 @@ export function ProgramBuilder({
                   </label>
                   {(
                     [
-                      ['prescribed_sets', 'Подходы'],
+                      ['prescribed_sets', 'Рабочие подходы'],
                       ['prescribed_reps', 'Повторы'],
                       ['rest_seconds', 'Отдых, сек'],
                     ] as const
@@ -679,35 +746,129 @@ export function ProgramBuilder({
                       />
                     </label>
                   ))}
-                  <label className="field exercise-notes">
-                    <span>Заметка к упражнению</span>
-                    <input
-                      maxLength={2000}
-                      value={item.notes ?? ''}
-                      placeholder="Например: контролировать темп"
-                      onChange={(event) =>
+                  <div className="program-exercise-row__actions">
+                    <button
+                      type="button"
+                      className="secondary"
+                      aria-label={`Переместить упражнение ${exerciseIndex + 1} выше`}
+                      disabled={exerciseIndex === 0}
+                      onClick={() =>
                         updateDay(dayIndex, {
                           ...day,
-                          exercises: day.exercises.map((row, index) =>
-                            index === exerciseIndex ? { ...row, notes: event.target.value } : row,
-                          ),
+                          exercises: moveItem(day.exercises, exerciseIndex, exerciseIndex - 1),
                         })
                       }
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    className="secondary"
-                    aria-label={`Удалить упражнение ${exerciseIndex + 1} из дня ${dayIndex + 1}`}
-                    onClick={() =>
-                      updateDay(dayIndex, {
-                        ...day,
-                        exercises: day.exercises.filter((_, index) => index !== exerciseIndex),
-                      })
-                    }
-                  >
-                    <CloseIcon />
-                  </button>
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary"
+                      aria-label={`Переместить упражнение ${exerciseIndex + 1} ниже`}
+                      disabled={exerciseIndex === day.exercises.length - 1}
+                      onClick={() =>
+                        updateDay(dayIndex, {
+                          ...day,
+                          exercises: moveItem(day.exercises, exerciseIndex, exerciseIndex + 1),
+                        })
+                      }
+                    >
+                      ↓
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-danger"
+                      aria-label={`Удалить упражнение ${exerciseIndex + 1} из дня ${dayIndex + 1}`}
+                      onClick={() => updateDay(dayIndex, removeExercise(day, exerciseIndex))}
+                    >
+                      <CloseIcon />
+                    </button>
+                  </div>
+                  <details className="program-exercise-advanced compact-disclosure">
+                    <summary>
+                      <span>
+                        <strong>Дополнительно</strong>
+                        <small>Заметка, суперсет и проверенные замены</small>
+                      </span>
+                      <span aria-hidden="true">+</span>
+                    </summary>
+                    <div className="program-exercise-advanced__body">
+                      <label className="field exercise-notes">
+                        <span>Заметка к упражнению</span>
+                        <input
+                          maxLength={2000}
+                          value={item.notes ?? ''}
+                          placeholder="Например: выполнять медленно, без рывков"
+                          onChange={(event) =>
+                            updateDay(dayIndex, {
+                              ...day,
+                              exercises: day.exercises.map((row, index) =>
+                                index === exerciseIndex
+                                  ? { ...row, notes: event.target.value }
+                                  : row,
+                              ),
+                            })
+                          }
+                        />
+                      </label>
+                      {exerciseIndex > 0 && (
+                        <label className="checkbox-row">
+                          <input
+                            type="checkbox"
+                            checked={isPairedWithPrevious(day, exerciseIndex)}
+                            onChange={(event) =>
+                              updateDay(
+                                dayIndex,
+                                toggleSuperset(day, exerciseIndex, event.target.checked),
+                              )
+                            }
+                          />
+                          <span>Суперсет — выполнить вместе с предыдущим упражнением подряд</span>
+                        </label>
+                      )}
+                      {(() => {
+                        const selected = exercises.data?.find(
+                          (exercise) => exercise.id === item.exercise_id,
+                        );
+                        const alternatives = (selected?.alternatives ?? [])
+                          .map((alternative) =>
+                            exercises.data?.find((exercise) => exercise.id === alternative.id),
+                          )
+                          .filter((exercise): exercise is Exercise => Boolean(exercise));
+                        return alternatives.length ? (
+                          <div className="program-exercise-alternatives">
+                            <strong>Проверенные замены</strong>
+                            <div className="toolbar wrap">
+                              {alternatives.map((alternative) => (
+                                <button
+                                  type="button"
+                                  className="text-button"
+                                  key={alternative.id}
+                                  onClick={() =>
+                                    updateDay(dayIndex, {
+                                      ...day,
+                                      exercises: day.exercises.map((row, index) =>
+                                        index === exerciseIndex
+                                          ? { ...row, exercise_id: alternative.id }
+                                          : row,
+                                      ),
+                                    })
+                                  }
+                                >
+                                  Заменить на «{alternative.title}»
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <small className="muted">Проверенных замен пока нет.</small>
+                        );
+                      })()}
+                      <small className="muted">
+                        Разминочные и дроп-сеты отмечаются отдельно во время тренировки.
+                      </small>
+                    </div>
+                  </details>
                 </div>
               ))}
               {day.exercises.length < 20 ? (
@@ -728,7 +889,7 @@ export function ProgramBuilder({
               )}
             </div>
           ))}
-          <div className="toolbar wrap">
+          <div className="program-builder-footer">
             {days.length < 8 ? (
               <button
                 type="button"
@@ -749,6 +910,7 @@ export function ProgramBuilder({
               <span className="muted">В одном цикле максимум 8 тренировочных дней.</span>
             )}
             <button
+              className="program-builder-footer__save"
               disabled={
                 mutation.isPending ||
                 !scheduleIsValid ||

@@ -78,6 +78,18 @@ def test_recurring_schedule_snapshots_notes_and_requires_replacement_confirmatio
     assert assigned.json()["workouts_created"] == 4
     assert assigned.json()["duration_weeks"] == 2
 
+    template = next(
+        item
+        for item in client.get("/api/v1/programs/templates/mine", headers=headers).json()
+        if item["id"] == template_id
+    )
+    assert template["is_active_for_current_user"] is True
+    assert template["assigned_program_id"] == assigned.json()["user_program_id"]
+    assert template["assigned_program_status"] == "scheduled"
+    assert template["assigned_program_start_date"] == start_date.isoformat()
+    assert template["assigned_program_duration_weeks"] == 2
+    assert template["current_revision_number"] == 1
+
     with get_session_context() as db:
         user = db.query(User).filter(User.telegram_user_id == 91001).one()
         program = db.query(UserProgram).filter(UserProgram.user_id == user.id).one()

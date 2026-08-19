@@ -7,6 +7,7 @@ import { ClientAnalytics } from '../../features/coach/ClientAnalytics';
 import { ExerciseCatalog } from '../../features/exercises/ExerciseCatalog';
 import { NutritionForm } from '../../features/nutrition/NutritionForm';
 import { ProgramBuilder } from '../../features/programs/ProgramBuilder';
+import { AssignedProgramDetails } from '../../features/programs/AssignedProgramDetails';
 import { api } from '../../shared/api/client';
 import type { ApiSchemas, Client, CoachAssignedProgram, InviteLink } from '../../shared/api/types';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
@@ -18,7 +19,7 @@ import {
   ErrorState,
   LoadingState,
 } from '../../shared/ui/common';
-import { Redirect } from '../../shared/navigation/router';
+import { AppLink, Redirect } from '../../shared/navigation/router';
 import { LIVE_DATA_REFETCH_INTERVAL_MS } from '../../shared/sync';
 import { usePersistentState } from '../../shared/storage';
 import { handleTabKeyDown } from '../../shared/ui/tabs';
@@ -289,6 +290,7 @@ export default function CoachPage() {
   const [tab, setTab] = useState<CoachTab>('clients');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [programSearch, setProgramSearch] = useState('');
+  const [focusedProgramId, setFocusedProgramId] = useState<number | null>(null);
   const [inviteLink, setInviteLink] = useState<InviteLink | null>(null);
   const [inviteCreating, setInviteCreating] = useState(false);
   const clients = useQuery({
@@ -300,7 +302,7 @@ export default function CoachPage() {
   const programs = useQuery({
     queryKey: ['coach', 'programs'],
     queryFn: () => api<CoachAssignedProgram[]>('/api/v1/coach/assigned-programs'),
-    enabled: tab === 'programs',
+    enabled: true,
     refetchInterval: tab === 'programs' ? LIVE_DATA_REFETCH_INTERVAL_MS : false,
     refetchOnWindowFocus: true,
   });
@@ -325,6 +327,10 @@ export default function CoachPage() {
         `${item.title} ${item.client_full_name} ${item.client_username}`.toLowerCase().includes(q),
     );
   }, [programs.data, programSearch]);
+  const selectedPrograms = useMemo(
+    () => (programs.data ?? []).filter((item) => item.client_id === selected?.id),
+    [programs.data, selected?.id],
+  );
   if (!user?.is_coach && !user?.is_admin) return <Redirect to="/app" />;
   const copyInvite = async (value: string) => {
     try {
@@ -556,9 +562,63 @@ export default function CoachPage() {
                     />
                   </ClientDataSection>
                   <ClientDataSection
+                    key={`program-${selected.id}-${focusedProgramId ?? 'none'}`}
                     title="Программа тренировок"
-                    description="Создание и назначение программы"
+                    description="Текущий план клиента и новое назначение"
+                    open={selectedPrograms.some((item) => item.id === focusedProgramId)}
                   >
+                    <div className="coach-client-programs">
+                      <div className="coach-client-programs__head">
+                        <div>
+                          <strong>Программы клиента</strong>
+                          <span>Контекст клиента сохраняется при переходе к каталогу.</span>
+                        </div>
+                        {!!selectedPrograms.some((item) => item.is_active) && (
+                          <button
+                            type="button"
+                            className="secondary"
+                            onClick={() => setTab('catalog')}
+                          >
+                            Добавить упражнение
+                          </button>
+                        )}
+                      </div>
+                      {!selectedPrograms.length ? (
+                        <EmptyState
+                          title="У клиента ещё нет назначенной вами программы"
+                          text="Создайте и назначьте её в форме ниже."
+                        />
+                      ) : (
+                        selectedPrograms.map((program) => (
+                          <article
+                            className={`coach-client-program${program.id === focusedProgramId ? ' is-focused' : ''}`}
+                            key={program.id}
+                          >
+                            <div>
+                              <span className="eyebrow">
+                                {program.is_active ? 'Текущая программа клиента' : 'Архив клиента'}
+                              </span>
+                              <strong>{program.title}</strong>
+                              <small>
+                                {program.workouts_completed} из {program.workouts_total} тренировок
+                                выполнено
+                              </small>
+                            </div>
+                            <Badge tone={program.is_active ? 'success' : 'neutral'}>
+                              {program.is_active ? 'Активна' : 'Архив'}
+                            </Badge>
+                            {program.is_active && (
+                              <AssignedProgramDetails
+                                programId={program.id}
+                                currentRevisionNumber={program.current_revision_number}
+                                startDate={program.start_date}
+                                durationWeeks={program.duration_weeks}
+                              />
+                            )}
+                          </article>
+                        ))
+                      )}
+                    </div>
                     <ProgramBuilder
                       key={`program-${selected.id}`}
                       targetTelegramId={selected.telegram_user_id}
@@ -570,7 +630,15 @@ export default function CoachPage() {
             </>
           )}
           {tab === 'programs' && (
-            <Card title="Назначенные программы">
+            <Card
+              title="Программы клиентов"
+              description="Здесь только назначения вашим клиентам. Собственные программы хранятся в личном плане."
+              actions={
+                <AppLink className="button-link secondary-link" to="/app?section=programs">
+                  Мои программы
+                </AppLink>
+              }
+            >
               <label className="field top-gap">
                 <span>Поиск</span>
                 <input
@@ -588,22 +656,63 @@ export default function CoachPage() {
               ) : (
                 <div className="list-grid top-gap">
                   {filteredPrograms.map((item) => (
-                    <article className="list-row" key={item.id}>
-                      <div>
+                    <article className="coach-program-row" key={item.id}>
+                      <div className="coach-program-row__main">
+                        <span className="eyebrow">Программа клиента</span>
                         <strong>{item.title}</strong>
-                        <p className="muted">
+                        <p>
                           {item.client_full_name ||
                             item.client_username ||
-                            item.client_telegram_user_id}{' '}
-                          · {new Date(item.assigned_at).toLocaleDateString('ru-RU')}
+                            item.client_telegram_user_id}
                         </p>
+                        <small>
+                          Назначена {new Date(item.assigned_at).toLocaleDateString('ru-RU')}
+                          {item.next_workout_date
+                            ? ` · следующая ${new Date(`${item.next_workout_date}T12:00:00`).toLocaleDateString('ru-RU')}`
+                            : ''}
+                        </small>
                       </div>
-                      <div>
-                        <Badge>{item.is_active ? 'Активна' : 'Архив'}</Badge>
-                        <p>
-                          {item.workouts_completed}/{item.workouts_total} тренировок
-                        </p>
+                      <div className="coach-program-row__progress">
+                        <Badge tone={item.is_active ? 'success' : 'neutral'}>
+                          {item.is_active ? 'Активна' : 'Архив'}
+                        </Badge>
+                        <strong>
+                          {item.workouts_completed} / {item.workouts_total}
+                        </strong>
+                        <span>тренировок выполнено</span>
                       </div>
+                      <div className="coach-program-row__actions">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedId(item.client_id);
+                            setFocusedProgramId(item.id);
+                            setTab('clients');
+                          }}
+                        >
+                          Открыть клиента
+                        </button>
+                        {item.is_active && (
+                          <button
+                            type="button"
+                            className="secondary"
+                            onClick={() => {
+                              setSelectedId(item.client_id);
+                              setTab('catalog');
+                            }}
+                          >
+                            Добавить упражнение
+                          </button>
+                        )}
+                      </div>
+                      {item.is_active && (
+                        <AssignedProgramDetails
+                          programId={item.id}
+                          currentRevisionNumber={item.current_revision_number}
+                          startDate={item.start_date}
+                          durationWeeks={item.duration_weeks}
+                        />
+                      )}
                     </article>
                   ))}
                 </div>

@@ -123,6 +123,11 @@ class ProgramTemplateResponse(BaseModel):
     can_edit: bool = False
     assigned_by_user_id: int | None = None
     assigned_by_full_name: str | None = None
+    assigned_program_id: int | None = None
+    assigned_program_status: Literal["scheduled", "active", "completed", "archived"] | None = None
+    assigned_program_start_date: date | None = None
+    assigned_program_duration_weeks: int | None = None
+    current_revision_number: int | None = None
     days: list[ProgramTemplateDayResponse]
 
 

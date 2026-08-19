@@ -163,7 +163,7 @@ describe('TemplatesList editing', () => {
   it('opens a personal copy editor for a ready-made template', async () => {
     renderList();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Редактировать копию' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Настроить копию' }));
 
     expect(screen.getByText('copy:Готовый шаблон')).toBeInTheDocument();
   });
@@ -171,7 +171,9 @@ describe('TemplatesList editing', () => {
   it('updates an owned template directly', async () => {
     renderList();
 
-    const programCard = (await screen.findByText('Моя программа')).closest('article');
+    const programCard = (
+      await screen.findByRole('button', { name: 'Посмотреть программу «Моя программа»' })
+    ).closest('article');
     expect(programCard).not.toBeNull();
     fireEvent.click(within(programCard!).getByRole('button', { name: 'Редактировать' }));
 
@@ -181,7 +183,8 @@ describe('TemplatesList editing', () => {
   it('shows that the active program is already assigned', async () => {
     renderList();
 
-    expect(await screen.findByRole('button', { name: 'Уже назначена' })).toBeDisabled();
+    expect(await screen.findByRole('heading', { name: 'Активная программа' })).toBeInTheDocument();
+    expect(screen.getByText('Активна')).toBeInTheDocument();
   });
 
   it('previews a deterministic recommendation before explicit start', async () => {
