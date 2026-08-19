@@ -60,6 +60,7 @@ export type ProgressVolumePoint = ApiSchemas['ProgressVolumePoint'];
 export type WorkoutProgress = ApiSchemas['WorkoutProgressResponse'];
 export type WorkoutTimelineItem = ApiSchemas['WorkoutTimelineItem'];
 export type ProgressSummary = ApiSchemas['ProgressSummaryResponse'];
+export type TrainingAnalytics = ApiSchemas['TrainingAnalyticsResponse'];
 
 export interface PublicConfig {
   app_env: string;

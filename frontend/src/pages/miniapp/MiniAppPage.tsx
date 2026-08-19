@@ -163,7 +163,7 @@ export default function MiniAppPage() {
   return (
     <AppShell section={section}>
       <div className="page-stack">
-        {section !== 'today' && (
+        {section !== 'today' && section !== 'progress' && (
           <header className="card hero-card">
             <div>
               <span className="eyebrow">Your Fitness Coach</span>
