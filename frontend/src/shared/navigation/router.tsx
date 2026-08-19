@@ -10,16 +10,21 @@ import {
 
 interface NavigationContextValue {
   path: string;
+  search: string;
   navigate(to: string, replace?: boolean): void;
 }
 
 const NavigationContext = createContext<NavigationContextValue | null>(null);
 
 export function NavigationProvider({ children }: { children: React.ReactNode }) {
-  const [path, setPath] = useState(window.location.pathname);
+  const [location, setLocation] = useState(() => ({
+    path: window.location.pathname,
+    search: window.location.search,
+  }));
 
   useEffect(() => {
-    const onPopState = () => setPath(window.location.pathname);
+    const onPopState = () =>
+      setLocation({ path: window.location.pathname, search: window.location.search });
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
@@ -27,14 +32,14 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   const navigate = useCallback((to: string, replace = false) => {
     if (replace) window.history.replaceState({}, '', to);
     else window.history.pushState({}, '', to);
-    setPath(window.location.pathname);
+    setLocation({ path: window.location.pathname, search: window.location.search });
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, []);
 
   useEffect(() => {
     const backButton = window.Telegram?.WebApp?.BackButton;
     if (!backButton) return;
-    if (path === '/app' || path === '/onboarding' || path === '/') {
+    if (location.path === '/app' || location.path === '/onboarding' || location.path === '/') {
       backButton.hide();
       return;
     }
@@ -45,9 +50,12 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       backButton.offClick(goBack);
       backButton.hide();
     };
-  }, [navigate, path]);
+  }, [navigate, location.path]);
 
-  const value = useMemo(() => ({ path, navigate }), [navigate, path]);
+  const value = useMemo(
+    () => ({ path: location.path, search: location.search, navigate }),
+    [location.path, location.search, navigate],
+  );
   return <NavigationContext.Provider value={value}>{children}</NavigationContext.Provider>;
 }
 
