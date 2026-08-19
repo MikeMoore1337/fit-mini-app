@@ -150,7 +150,7 @@ Multi-provider login/linking не должен позволять:
 
 ## Out of scope
 
-Не делать Admin Workspace UI/API operations из tasks `65-66`.
+Не делать Admin Workspace UI/API operations из tasks `70-71`. Не реализовывать trainer application state machine или review flow - это tasks `69A`, `70A`, `71A`; текущая task должна только предоставить стабильный canonical Trainer capability boundary, который они переиспользуют.
 
 Не добавлять impersonation, Trainer Copilot, enterprise IAM, десятки admin roles, root management через БД/UI или self trainer-client relation.
 

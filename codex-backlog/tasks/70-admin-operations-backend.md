@@ -96,7 +96,7 @@ Lists paginated/bounded, no obvious N+1, safe errors без raw SQL/stack/secret
 
 ## Out of scope
 
-Не делать UI, impersonation, SQL console, shell, DB browser, secret viewer, paid AI controls, billing admin или Root management через UI/API.
+Не делать UI, impersonation, SQL console, shell, DB browser, secret viewer, paid AI controls, billing admin или Root management через UI/API. Trainer application moderation API и атомарная выдача capability реализуются отдельно в task `70A` поверх этой foundation.
 
 ## Проверки
 

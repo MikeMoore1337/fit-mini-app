@@ -78,7 +78,7 @@ Desktop-first, но graceful Web layout на 768/390/360.
 
 ## Out of scope
 
-Не добавлять Telegram admin panel, impersonation, automatic Admin=>Trainer, arbitrary DB editor, terminal/SQL console, secrets, billing UI или Trainer Copilot.
+Не добавлять Telegram admin panel, impersonation, automatic Admin=>Trainer, arbitrary DB editor, terminal/SQL console, secrets, billing UI или Trainer Copilot. Queue/detail/actions для trainer applications реализуются отдельно в task `71A` поверх готового Admin Workspace.
 
 ## Проверки
 

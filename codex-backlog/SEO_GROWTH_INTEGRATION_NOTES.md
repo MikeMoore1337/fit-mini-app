@@ -12,7 +12,7 @@
 
 ## Current late integration points
 - Demo `62-68`
-- Admin `69-71`
+- Admin + trainer activation `69 -> 69A -> 70 -> 70A -> 71 -> 71A`
 - Telegram `72`
 - Landing `73`
 - Responsive/A11y `74`

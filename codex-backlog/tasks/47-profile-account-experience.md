@@ -12,13 +12,17 @@
 
 ## In scope
 
-Сгруппировать: личные данные; фитнес-параметры/цели; trainer/Telegram links и invites; notifications; privacy/security; role application; опасные account actions.
+Сгруппировать: личные данные; фитнес-параметры/цели; trainer/Telegram links и invites; notifications; privacy/security; entry point/status shell будущей trainer application; опасные account actions.
 
 Forms: правильные mobile keyboards, validation near field, loading/disabled, сохранение input при recoverable error; sticky save только если реально помогает. Account deletion/destructive actions визуально отделены. Multi-provider auth architecture из tasks `09-12` не переписывается. Сохранить provider/linking states из task `13`; trainer invite/privacy semantics не менять.
 
+## Trainer application boundary
+
+Task `47` отвечает только за понятное место раздела `Для тренеров` внутри Profile и сохранение существующего корректного состояния, если backend уже есть. Не создавать новую application schema, approve/reject API, capability mutation или Admin review по предположениям. Полный канонический flow реализуется в tasks `69A`, `70A`, `71A`. До них нельзя показывать ложное успешное отправление заявки.
+
 ## Out of scope
 
-Не менять authentication architecture из tasks `09-12`, trainer invite logic, privacy model или KBJU formulas; не добавлять health integrations.
+Не менять authentication architecture из tasks `09-12`, trainer invite logic, privacy model или KBJU formulas; не добавлять health integrations. Не реализовывать professional verification, документы или verified trainer badge.
 
 
 

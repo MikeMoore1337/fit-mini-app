@@ -41,7 +41,7 @@ Task `46D` начинается только после завершения в�
 ## Release surfaces
 `62-75`
 - Demo
-- Admin
+- Admin and trainer activation: `69 -> 69A -> 70 -> 70A -> 71 -> 71A`
 - TMA platform integration over shared YFC UI
 - Landing
 - Responsive/A11y

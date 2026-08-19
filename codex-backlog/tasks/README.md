@@ -1,6 +1,6 @@
 # Final pre-release tasks
 
-Execution order: `00` -> `93`.
+Основной порядок числовых tasks не меняется. В Admin-блок добавлена последовательность: `69 -> 69A -> 70 -> 70A -> 71 -> 71A -> 72`.
 
 `00-06` are already completed.
 Next: `07-brand-logo-favicon-foundation.md`.

@@ -1,13 +1,13 @@
 {
-  "package": "your-fitness-coach-release-backlog-final-unified-web-tma-design",
-  "generated_at": "2026-08-19T19:59:52+03:00",
+  "package": "your-fitness-coach-release-backlog-final-with-trainer-application",
+  "generated_at": "2026-08-19T22:14:52+03:00",
   "repository": "MikeMoore1337/fit-mini-app",
   "working_branch": "feature/yfc-platform-v2",
   "status": "FINAL_PRE_RELEASE_FEATURE_FREEZE",
   "user_confirmed_completed_tasks": "00-46 plus 46A, 46B, 46B1 and 46C.1-46C.5",
   "next_task": "46d-product-ux-ui-landing-baseline-audit",
-  "task_count": 111,
-  "task_range": "00-93 plus 46A-46J and 46C.1-46C.6",
+  "task_count": 114,
+  "task_range": "00-93 plus 46A-46J, 46C.1-46C.6, 69A, 70A and 71A",
   "core_product_complete_before_ai_through": "75",
   "ai_block": "76-91",
   "production_readiness": "92",
@@ -33,7 +33,8 @@
     "59": "notification/reminder orchestration",
     "60": "account data export/lifecycle",
     "61": "cardio gap audit/minimal implementation",
-    "92": "production operational readiness"
+    "92": "production operational readiness",
+    "69A-71A": "manual trainer application, moderation and activation flow"
   },
   "explicitly_deferred_until_post_release": [
     "progress photos",
@@ -50,13 +51,13 @@
   "files": [
     {
       "path": "00_START_HERE.md",
-      "bytes": 3406,
-      "sha256": "88294f65910e916b2b431fdf3779aa7a3d9fe5640a5e5c30d89222da55664d2d"
+      "bytes": 3555,
+      "sha256": "2cff43124bea1170111674b5ac9ca31f675a3891772c87e1b9b0864ee86c577a"
     },
     {
       "path": "ADMIN_MODEL_NOTES.md",
-      "bytes": 1096,
-      "sha256": "f98b6a6c659c17a4874e09b1c874f29d33368c4b4d67ebdeeeae405c585f184a"
+      "bytes": 1676,
+      "sha256": "70d3c8024bd8ba2a604b8571b295aa6ee17cd52b599cd4df3b08aad936d61e6c"
     },
     {
       "path": "AI_PROVIDER_MIGRATION_NOTES.md",
@@ -70,8 +71,8 @@
     },
     {
       "path": "AUTH_INTEGRATION_NOTES.md",
-      "bytes": 623,
-      "sha256": "ebf519e822887210e06efb7e8c9bb62699face89a2c36c8c8f16d1573dcdb996"
+      "bytes": 698,
+      "sha256": "7238ac030b83aa082ff78a5964fb4e361a14d7cdd5020cfef478c081d9a9ab3f"
     },
     {
       "path": "BACKLOG_V3_CHANGELOG.md",
@@ -90,8 +91,8 @@
     },
     {
       "path": "COMPLETION_CHECKLIST.md",
-      "bytes": 5438,
-      "sha256": "58815a87f865e7f2bc75fa7ca5d148860a645e5a07841614e5ff9d7acf3f6065"
+      "bytes": 5875,
+      "sha256": "60b29b12c2fe5fcca9e8ca2718c8fdb7d5d4aa6e5faafb75a3f3d07b93b3f67d"
     },
     {
       "path": "DEFERRED_NOT_IN_SCOPE.md",
@@ -105,8 +106,8 @@
     },
     {
       "path": "DEPENDENCY_GRAPH.md",
-      "bytes": 1362,
-      "sha256": "044e244e88efa12f90abaa3f71957341e854c5449f312118491d120132162970"
+      "bytes": 1659,
+      "sha256": "ebbc13daf7a680728401a8919c55850f2c147cfafd8062715c8dfceb0e632205"
     },
     {
       "path": "DESIGN_V2_INTEGRATION_NOTES.md",
@@ -120,8 +121,8 @@
     },
     {
       "path": "FINAL_BACKLOG_CHANGELOG.md",
-      "bytes": 4789,
-      "sha256": "9a014340c1dff552de07b6493c567cdaf4a2cd60da22845e48430eb7d1e29d4f"
+      "bytes": 5536,
+      "sha256": "27a6ab2150c21daaba88ff70a51288b234dfd3d46ded2b69c4be3878f26c2f99"
     },
     {
       "path": "FITNESS_ONLINE_GAP_ANALYSIS.md",
@@ -140,8 +141,8 @@
     },
     {
       "path": "MODEL_SELECTION.md",
-      "bytes": 2973,
-      "sha256": "829af808d6e7565983c8bb0e80be0102b9c1f3f6612229929c10da001450e0ae"
+      "bytes": 3244,
+      "sha256": "ee247ffd6d686eacc3e7d99d878b6d0fe669165b11982dcf55a72943bbae937b"
     },
     {
       "path": "NEW_TASKS_46A_46J_README.md",
@@ -160,8 +161,8 @@
     },
     {
       "path": "PRIORITY_ORDER.md",
-      "bytes": 1300,
-      "sha256": "3c90823fffdb73f369c1b5a46be96e162b7acef231072a1ee16efe1e533cb020"
+      "bytes": 1421,
+      "sha256": "ac7936059c4f83567c55a9bb25f5d1f746e8d0a36fa580efcc4659a7619d4924"
     },
     {
       "path": "RELEASE_SCOPE_FREEZE.md",
@@ -170,13 +171,18 @@
     },
     {
       "path": "SEO_GROWTH_INTEGRATION_NOTES.md",
-      "bytes": 1141,
-      "sha256": "9c4e875632720c512c0987198b3ad56944afac23b1b47fd74a3d2c5186da74b9"
+      "bytes": 1220,
+      "sha256": "83f3bcfe249380ce6c5ade28f9066e33654976ab83437965e40364d08087e52e"
     },
     {
       "path": "SOURCE_COVERAGE.md",
       "bytes": 5990,
       "sha256": "219b19aa6aea35e1c8b46a30211e1a096be17b2dfce76c64d0218e066e289432"
+    },
+    {
+      "path": "TRAINER_APPLICATION_INTEGRATION_NOTES.md",
+      "bytes": 6593,
+      "sha256": "0b131dbf33166a07e583d7a8339825fe494e9137918cbc760fccb7bf44c8f146"
     },
     {
       "path": "masters/ai-coach-multiprovider-master.md",
@@ -610,8 +616,8 @@
     },
     {
       "path": "tasks/47-profile-account-experience.md",
-      "bytes": 3033,
-      "sha256": "0d7552def7f880f1b7ba959e9e20f3920fbf8b148103bb724813857ab902b49c"
+      "bytes": 3894,
+      "sha256": "0d9c484b1f158212abadbdcfaf748f6108f5203abb8e9e69927a92c7b07c3d99"
     },
     {
       "path": "tasks/48-coach-workspace.md",
@@ -720,23 +726,38 @@
     },
     {
       "path": "tasks/69-admin-root-capabilities-foundation.md",
-      "bytes": 7772,
-      "sha256": "fb756c66af1f1b7fcdba66ce760382c20ed0c7207f770f1d8b7e8a3e7f1eece2"
+      "bytes": 8273,
+      "sha256": "431de968a2241ea9fd8dd23b121b0398cc9bac738ebe9b5551fe3672a458db13"
+    },
+    {
+      "path": "tasks/69a-trainer-application-domain-user-api.md",
+      "bytes": 10059,
+      "sha256": "7d35395cd0053946f246c1e4bfa57ffa3fdc9fe2abc301a6dea63c87eb81d75b"
     },
     {
       "path": "tasks/70-admin-operations-backend.md",
-      "bytes": 4422,
-      "sha256": "4124a456b4dc65ed2b32d532dbf3d95fdd3712dec3594fd72706ab433b338890"
+      "bytes": 4722,
+      "sha256": "5845c363bf6c88a42ef92c4a6d8203ebbdd849cc57ac3df8f065c399d1cd8a16"
+    },
+    {
+      "path": "tasks/70a-trainer-application-review-capability-orchestration.md",
+      "bytes": 9527,
+      "sha256": "09235eabd860bcc0ada462de8c199131671d3dc682f8ddad1ba7b7cd1fa0a50c"
     },
     {
       "path": "tasks/71-admin-workspace.md",
-      "bytes": 4412,
-      "sha256": "e37c085786c337b700601b2b42bbef71c201538aca8a838f1ff8e847277de1ef"
+      "bytes": 4681,
+      "sha256": "09e1241f957b40932139062e2e7235111beb2e78f40e04b094bd5b4cbfa260c9"
+    },
+    {
+      "path": "tasks/71a-trainer-application-experience.md",
+      "bytes": 12094,
+      "sha256": "6765c2c5b7ffb08b828a6565ced97c7b6d4c6f3c0bf7e96efe52d197a7ffe216"
     },
     {
       "path": "tasks/72-telegram-mini-app-adaptation.md",
-      "bytes": 7880,
-      "sha256": "71b051584bfa8d23b1601166740537f76b5567477552a286780fa4b5cc606f14"
+      "bytes": 8200,
+      "sha256": "76d0858e56f9c51175392e3189fd20676b7e163d9bfbb1b5026e0215e9a9dcdc"
     },
     {
       "path": "tasks/73-landing-premium-refresh.md",
@@ -790,8 +811,8 @@
     },
     {
       "path": "tasks/83-ai-app-knowledge-retrieval.md",
-      "bytes": 3331,
-      "sha256": "11b17d9fc9b656007349587dcdaf177fa6137999b473d3953ad79199e98a0137"
+      "bytes": 3732,
+      "sha256": "08bbd78ab2da0e8bd63b5e996dac4ec9d67b96b69944395d32b355e16e7e9752"
     },
     {
       "path": "tasks/84-ai-readonly-tools-agent-loop.md",
@@ -840,13 +861,13 @@
     },
     {
       "path": "tasks/93-final-integrated-audit-regression.md",
-      "bytes": 18701,
-      "sha256": "2432d0ef4e818ecf54fb2a4ffd0ee179dc27aae53b575652e34805c6c94c1be7"
+      "bytes": 19818,
+      "sha256": "8e5bf0f43dca69f54a2d798d8c12a9405f0d4cc0caa8e683640358a9e5f71f25"
     },
     {
       "path": "tasks/README.md",
-      "bytes": 353,
-      "sha256": "3becacbe8b6173aee60c739c560120d3dd5d63d71a2e017681e67969f37d0876"
+      "bytes": 531,
+      "sha256": "75cbe01a54d046c407ff77517771c6efea73258617d4a3f8666f16d9079f1ffc"
     }
   ],
   "plain_language_ux": {
@@ -937,5 +958,23 @@
       90
     ],
     "default_for_other_pending_tasks": "GPT-5.6 Sol High"
+  },
+  "trainer_application": {
+    "integration_notes": "TRAINER_APPLICATION_INTEGRATION_NOTES.md",
+    "execution_order": [
+      "69",
+      "69A",
+      "70",
+      "70A",
+      "71",
+      "71A",
+      "72"
+    ],
+    "tasks": [
+      "tasks/69a-trainer-application-domain-user-api.md",
+      "tasks/70a-trainer-application-review-capability-orchestration.md",
+      "tasks/71a-trainer-application-experience.md"
+    ],
+    "policy": "manual access approval, not professional verification; no documents or verified badge in first release"
   }
 }

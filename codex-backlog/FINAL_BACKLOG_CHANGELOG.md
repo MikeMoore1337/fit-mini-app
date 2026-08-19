@@ -44,6 +44,16 @@ Based on the previous final backlog.
 - guarded manual cardio gap audit/minimal implementation;
 - production operational readiness.
 
+## Trainer application activation revision - 2026-08-19
+- added tasks `69A`, `70A`, `71A`;
+- application history is separated from current Trainer capability;
+- short applicant form and manual Root/super_admin review are included;
+- approve atomically grants Trainer capability and records audit/notification events;
+- support_admin is read-only and self-review is prohibited;
+- no document upload, verified badge, marketplace or AI qualification decision;
+- task `72` adapts the completed user flow to TMA, while Admin Workspace remains Web-only;
+- final task `93` now verifies the full submit -> review -> activation path and negative security cases.
+
 ## Release policy
 Task `93` ends feature development for the first release.
 Further feature work is driven by real users and product analytics.

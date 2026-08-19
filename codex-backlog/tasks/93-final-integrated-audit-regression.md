@@ -2,7 +2,7 @@
 
 - Фаза: **Final gate**
 - Приоритет: **93/93**
-- Зависит от: `07`, `13`, `14`, `22`, `23`, `24`, `25`, `26`, `27`, `28`, `29`, `30`, `31`, `32`, `33`, `34`, `35`, `36`, `37`, `38`, `39`, `40`, `41`, `42`, `43`, `44`, `45`, `46`, `47`, `48`, `49`, `50`, `51`, `52`, `53`, `54`, `55`, `56`, `57`, `58`, `59`, `60`, `61`, `62`, `63`, `64`, `65`, `66`, `67`, `68`, `69`, `70`, `71`, `72`, `73`, `74`, `75`, `76`, `77`, `78`, `79`, `80`, `81`, `82`, `83`, `84`, `85`, `86`, `87`, `88`, `89`, `90`, `91`, `92`
+- Зависит от: `07`, `13`, `14`, `22`, `23`, `24`, `25`, `26`, `27`, `28`, `29`, `30`, `31`, `32`, `33`, `34`, `35`, `36`, `37`, `38`, `39`, `40`, `41`, `42`, `43`, `44`, `45`, `46`, `47`, `48`, `49`, `50`, `51`, `52`, `53`, `54`, `55`, `56`, `57`, `58`, `59`, `60`, `61`, `62`, `63`, `64`, `65`, `66`, `67`, `68`, `69`, `69A`, `70`, `70A`, `71`, `71A`, `72`, `73`, `74`, `75`, `76`, `77`, `78`, `79`, `80`, `81`, `82`, `83`, `84`, `85`, `86`, `87`, `88`, `89`, `90`, `91`, `92`
 - Рекомендуемый reasoning: **High**
 - Рекомендуемые skills: `$ui-audit`, `$qa-engineer`, `$code-reviewer`; `$product-designer` только для подтверждённых визуальных fixes
 
@@ -57,7 +57,22 @@ Landing / authenticated entry
 -> client list
 ```
 
-Дополнительно: new trainer -> zero state -> invite first client path; assigned/unrelated/former/revoked client security; pending invites; several/long-name clients; recent/no-recent activity.
+Дополнительно проверить trainer activation flow:
+
+```text
+ordinary user
+-> Profile / Для тренеров
+-> submit application
+-> pending
+-> Root/super_admin approve или reject
+-> applicant notification
+-> approved: Personal + Coach capability contexts
+-> Coach zero state
+```
+
+Обязательные negative cases: duplicate/pending submit, withdraw/resubmit, rejection reason, support_admin read-only, self-review denied, concurrent review, Demo submission blocked, no internal-note leakage, approval не создаёт client relationship и не означает professional verification.
+
+После activation проверить: new trainer -> zero state -> invite first client path; assigned/unrelated/former/revoked client security; pending invites; several/long-name clients; recent/no-recent activity.
 
 ## Trainer Demo gate
 

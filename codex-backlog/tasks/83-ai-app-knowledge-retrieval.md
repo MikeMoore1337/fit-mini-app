@@ -2,7 +2,7 @@
 
 - Фаза: **AI grounding**
 - Приоритет: **83/93**
-- Зависит от: `50`
+- Зависит от: `50`, `71A`
 - Рекомендуемый reasoning: **Medium/High**
 
 ## Цель
@@ -14,7 +14,8 @@
 
 Проверить текущие `docs/`, README и фактическую реализацию Web/Telegram. При необходимости создать
 минимальную пользовательскую knowledge base в `docs/ai-knowledge/` с разделами overview/web/telegram,
-workouts/programs/nutrition/progress/faq - только если это оправдано текущей документацией.
+workouts/programs/nutrition/progress/trainer-application/faq - только если это оправдано текущей документацией.
+AI Coach должен уметь объяснить назначение заявки, статусы, повторную подачу и путь к Coach workspace, но не оценивать квалификацию, не раскрывать internal moderation data и не принимать решение.
 
 Выбрать минимальный бесплатный retrieval:
 - существующий поиск;

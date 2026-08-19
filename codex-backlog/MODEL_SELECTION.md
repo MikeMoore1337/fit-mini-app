@@ -63,6 +63,10 @@ Final pre-release quality-first policy.
 - `73` - public commercial surface where visual judgment and polish matter.
 - `74` - product-wide audit/fixes across responsive, accessibility and async states.
 
+## New trainer application tasks
+
+`69A`, `70A` and `71A` require **GPT-5.6 Sol High** because they combine migrations, state transitions, RBAC, concurrency, audit, notifications and cross-context UX.
+
 ## Retrospective remediation gate
 
 `46C.6` requires **GPT-5.6 Sol High** because it preserves a security-sensitive production

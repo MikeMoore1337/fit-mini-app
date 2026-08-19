@@ -2,7 +2,7 @@
 
 - Фаза: **Platform integration / polish**
 - Приоритет: **72/93**
-- Зависит от: `08`, `12`, `13`, `14`, `36`, `38`, `39`, `40`, `41`, `42`, `43`, `44`, `46`, `47`, `48`, `49`, `50`, `51`, `52`, `53`, `54`, `55`, `58`, `59`, `60`, `61`, `68`
+- Зависит от: `08`, `12`, `13`, `14`, `36`, `38`, `39`, `40`, `41`, `42`, `43`, `44`, `46`, `47`, `48`, `49`, `50`, `51`, `52`, `53`, `54`, `55`, `58`, `59`, `60`, `61`, `68`, `71A`
 - Рекомендуемый reasoning: **High**
 - Рекомендуемые skills: `$product-designer`, `$frontend-engineer`, `$qa-engineer`
 
@@ -41,6 +41,7 @@ Mobile Web и TMA должны выглядеть как один продукт
 - workout/offline recovery;
 - nutrition/search/barcode forms;
 - Progress/Programs/Exercise Guide;
+- trainer application submit/status/withdraw/resubmit flow из task `71A`;
 - trainer/contextual comments/knowledge;
 - check-in/adaptive calories/workout adaptation/program history/anthropometry;
 - notifications/deep links;
@@ -140,6 +141,7 @@ Fixed/sticky UI учитывает safe area и keyboard.
 - active workout/offline recovery;
 - nutrition;
 - Progress/Programs;
+- trainer application flow и approved Coach entry;
 - trainer flows;
 - Demo auth continuation;
 - AI unavailable/degraded states;

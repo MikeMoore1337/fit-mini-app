@@ -37,7 +37,7 @@ Tasks `00-06` считаются выполненными и не запуска
 61     Cardio logging gap audit + minimal implementation
 
 62-68  Demo Mode
-69-71  Admin
+69 -> 69A -> 70 -> 70A -> 71 -> 71A  Admin + trainer application activation
 72     Telegram Mini App platform integration / hardening
 73     Landing
 74     Responsive / Accessibility
