@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type { WorkoutProgress, WorkoutTimelineItem } from '../../shared/api/types';
+import { queryKeys } from '../../shared/queryKeys';
 import { workoutStatusLabel } from '../../shared/statusLabels';
 import {
   Badge,
@@ -71,7 +72,7 @@ export function ClientAnalytics({ clientId }: { clientId: number }) {
   const { toast } = useFeedback();
   const queryClient = useQueryClient();
   const progress = useQuery({
-    queryKey: ['coach', 'client', clientId, 'analytics'],
+    queryKey: queryKeys.trainer.clientAnalytics(clientId),
     queryFn: () => api<WorkoutProgress>(`/api/v1/coach/clients/${clientId}/analytics`),
   });
   const timeline = useQuery({
@@ -88,7 +89,7 @@ export function ClientAnalytics({ clientId }: { clientId: number }) {
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['coach', 'client', clientId, 'workouts'] }),
-        queryClient.invalidateQueries({ queryKey: ['coach', 'client', clientId, 'analytics'] }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.trainer.clientAnalytics(clientId) }),
       ]);
       toast('Дата и время тренировки изменены');
     },

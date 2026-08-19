@@ -8,7 +8,7 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
 from fitminiapp_api.core.config import settings
-from fitminiapp_api.core.timezone import now_msk_naive
+from fitminiapp_api.core.timezone import get_user_timezone_name, now_msk_naive
 from fitminiapp_api.models.notification import Notification
 from fitminiapp_api.models.user import CoachClient, CoachClientInvite, User, UserProfile
 from fitminiapp_api.schemas.nutrition import NutritionTargetResponse
@@ -137,6 +137,7 @@ def _client_entry_from_user(
         "cardio_trainings_per_week": (profile.cardio_trainings_per_week if profile else None),
         "resting_heart_rate": profile.resting_heart_rate if profile else None,
         "body_priority": serialize_body_priority(profile),
+        "timezone": get_user_timezone_name(user),
         "kbju": nutrition_target,
         "status": "active",
     }
@@ -161,6 +162,7 @@ def _client_entry_from_invite(invite: CoachClientInvite) -> dict:
         "cardio_trainings_per_week": None,
         "resting_heart_rate": None,
         "body_priority": None,
+        "timezone": None,
         "kbju": None,
         "status": "pending",
     }

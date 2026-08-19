@@ -1,7 +1,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NutritionForm } from '../../../../src/features/nutrition/NutritionForm';
+import { queryKeys } from '../../../../src/shared/queryKeys';
 import { FeedbackProvider } from '../../../../src/shared/ui/FeedbackProvider';
 
 const apiMock = vi.hoisted(() => vi.fn());
@@ -12,13 +13,19 @@ vi.mock('../../../../src/app/AuthProvider', () => ({
   useAuth: useAuthMock,
 }));
 
-function renderForm() {
+function SummaryProbe({ queryFn }: { queryFn: () => Promise<unknown> }) {
+  useQuery({ queryKey: queryKeys.progress.summary(30), queryFn });
+  return null;
+}
+
+function renderForm(dependentQuery?: () => Promise<unknown>) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   render(
     <QueryClientProvider client={queryClient}>
       <FeedbackProvider>
+        {dependentQuery && <SummaryProbe queryFn={dependentQuery} />}
         <NutritionForm />
       </FeedbackProvider>
     </QueryClientProvider>,
@@ -126,5 +133,15 @@ describe('NutritionForm', () => {
     expect(options.body).not.toHaveProperty('daily_activity_level');
     expect(options.body).not.toHaveProperty('cardio_trainings_per_week');
     expect(options.body).not.toHaveProperty('cardio_intensity');
+  });
+
+  it('refetches adherence summaries after saving nutrition targets', async () => {
+    const dependentQuery = vi.fn().mockResolvedValue({});
+    renderForm(dependentQuery);
+    await waitFor(() => expect(dependentQuery).toHaveBeenCalledOnce());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить КБЖУ' }));
+
+    await waitFor(() => expect(dependentQuery).toHaveBeenCalledTimes(2));
   });
 });

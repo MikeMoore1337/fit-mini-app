@@ -5,6 +5,7 @@ import { ApiError, api } from '../../shared/api/client';
 import type { FoodDiaryDay, ProgressSummary, Workout } from '../../shared/api/types';
 import { dateInputValue, detectedTimeZone } from '../../shared/dateTime';
 import { AppLink } from '../../shared/navigation/router';
+import { queryKeys } from '../../shared/queryKeys';
 import {
   loadActiveWorkoutQueue,
   loadCurrentActiveWorkoutSnapshot,
@@ -218,7 +219,7 @@ function ProgressSummaryPanel({ summary }: { summary: ReturnType<typeof useProgr
 
 function useProgressSummary() {
   return useQuery({
-    queryKey: ['workout', 'progress-summary', 30],
+    queryKey: queryKeys.progress.summary(30),
     queryFn: () => api<ProgressSummary>('/api/v1/workouts/progress/summary?period_days=30'),
   });
 }
@@ -382,7 +383,7 @@ export function TodayDashboard() {
     onSuccess: async (startedWorkout) => {
       queryClient.setQueryData(['workout', 'today'], startedWorkout);
       setDetailsOpen(true);
-      await queryClient.invalidateQueries({ queryKey: ['workout', 'progress-summary'] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.progress.summaries });
     },
     onError: (reason) => toast((reason as Error).message, 'error'),
   });
