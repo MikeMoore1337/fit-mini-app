@@ -15,7 +15,22 @@
    ↓
 29-40 Advanced deterministic foundations
    ↓
-41-57 Core + advanced UX
+41-46 Completed core UX
+   ↓
+46A Production quality audit
+46B Security/privacy/data audit
+46B1 Consolidated triage + owner decision
+46C Umbrella
+46C.1 Root/Admin/Trainer boundaries
+46C.2 Measurement state/concurrency
+46C.3 Cross-context recovery
+46C.4 Export/browser privacy
+46C.5 HTTP limits/safe logging
+   ↓
+46D-46I Design V2 discovery/pilot/rollout
+46J Remaining backlog alignment
+   ↓
+47-57 Remaining core + advanced UX
    ↓
 58 Progression guidance
 59 Notifications
