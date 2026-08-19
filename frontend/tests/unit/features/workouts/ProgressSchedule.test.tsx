@@ -5,24 +5,91 @@ import { ProgressSchedule } from '../../../../src/features/workouts/ProgressSche
 import { FeedbackProvider } from '../../../../src/shared/ui/FeedbackProvider';
 
 const progress = {
-  workouts_total: 5,
-  workouts_completed: 4,
-  workouts_skipped: 1,
-  workouts_missed: 0,
-  adherence_percent: 80,
-  current_streak: 3,
-  weight_change_kg: -1.5,
-  weights: [],
-  weekly_volume: [{ week_start: '2030-01-07', completed_workouts: 2, volume_kg: 1200 }],
-  personal_records: [
-    {
-      exercise_id: 7,
-      exercise_title: 'Приседания',
-      max_weight_kg: 80,
-      best_set_volume_kg: 800,
-      last_performed_on: '2030-01-09',
+  user_id: 7,
+  period_days: 30,
+  period_start: '2029-12-12',
+  period_end: '2030-01-10',
+  training: {
+    planned_workouts: 5,
+    completed_workouts: 4,
+    frequency_per_week: 1.2,
+    volume_kg: 1200,
+    new_personal_records: 1,
+    last_completed_workout_on: '2030-01-09',
+    next_workout: null,
+  },
+  nutrition: {
+    visible: true,
+    logged_days: 4,
+    adherence_evaluated_days: 4,
+    average_calories: 2000,
+    target_calories: 2100,
+    average_protein_g: 140,
+    target_protein_g: 150,
+    target_effective_on: '2029-12-01',
+  },
+  body: {
+    latest_measurement: null,
+    trends: [],
+    priority: null,
+    guidance: {
+      comparison_basis: 'self',
+      minimum_points_for_interpretation: 3,
+      minimum_span_days_for_interpretation: 14,
+      consistency_tips: [],
+      circumference_limitations: [],
     },
-  ],
+  },
+  adherence: {
+    formula_version: 'adherence-v1',
+    overall_percent: 80,
+    included_components: ['workouts', 'calories', 'protein'],
+    workouts: { status: 'available', percent: 80, achieved: 4, evaluated: 5, weight: 0.4 },
+    cardio: { status: 'unsupported', percent: null, achieved: 0, evaluated: 0, weight: 0.2 },
+    calories: { status: 'available', percent: 75, achieved: 3, evaluated: 4, weight: 0.2 },
+    protein: { status: 'available', percent: 75, achieved: 3, evaluated: 4, weight: 0.2 },
+  },
+  data_sufficiency: {
+    ruleset_version: 'data-sufficiency-v1',
+    workout_logging: { status: 'sufficient', counters: {}, reason_keys: ['thresholds_met'] },
+    working_sets: { status: 'limited', counters: {}, reason_keys: ['too_few_working_sets'] },
+    rir_coverage: { status: 'insufficient', counters: {}, reason_keys: ['no_rir_observations'] },
+    nutrition_coverage: {
+      status: 'limited',
+      counters: {},
+      reason_keys: ['below_required_coverage'],
+    },
+    weight_trend: { status: 'insufficient', counters: {}, reason_keys: ['no_measurements'] },
+    anthropometry: {
+      status: 'insufficient',
+      counters: {},
+      reason_keys: ['no_anthropometry_measurements'],
+    },
+    schedule_adherence: { status: 'sufficient', counters: {}, reason_keys: ['thresholds_met'] },
+  },
+};
+
+const trainingAnalytics = {
+  period_days: 30,
+  period_start: '2029-12-12',
+  period_end: '2030-01-10',
+  exercise_history_limit: 20,
+  completed_set_count: 12,
+  reps_total: 96,
+  reps_recorded_sets: 12,
+  external_load_volume_kg: 1200,
+  volume_recorded_sets: 12,
+  exercises: [],
+  rir: { completed_set_count: 12, recorded_set_count: 0, missing_set_count: 12, distribution: [] },
+  primary_muscle_exposure: [],
+  secondary_muscle_exposure: [],
+  completed_sets_without_muscle_metadata: 12,
+  data_sufficiency: {
+    ruleset_version: 'data-sufficiency-v1',
+    workout_logging: { status: 'sufficient', counters: {}, reason_keys: ['thresholds_met'] },
+    working_sets: { status: 'limited', counters: {}, reason_keys: ['too_few_working_sets'] },
+    rir_coverage: { status: 'insufficient', counters: {}, reason_keys: ['no_rir_observations'] },
+  },
 };
 
 const schedule = [
@@ -99,8 +166,11 @@ describe('ProgressSchedule', () => {
   beforeEach(() => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const path = String(input);
-      if (path === '/api/v1/workouts/progress') {
+      if (path === '/api/v1/workouts/progress/summary?period_days=30') {
         return new Response(JSON.stringify(progress), { status: 200 });
+      }
+      if (path === '/api/v1/workouts/progress/training-analytics?period_days=30') {
+        return new Response(JSON.stringify(trainingAnalytics), { status: 200 });
       }
       if (path === '/api/v1/check-ins/weekly/current') {
         return new Response(JSON.stringify(weeklyCheckIn), { status: 200 });
@@ -133,7 +203,9 @@ describe('ProgressSchedule', () => {
   it('shows progress and sends a reschedule request', async () => {
     renderPanel();
 
-    expect(await screen.findByText('80%')).toBeInTheDocument();
+    expect((await screen.findAllByText('80%')).length).toBeGreaterThan(1);
+    expect(screen.getByRole('heading', { name: 'Прогресс' })).toBeInTheDocument();
+    expect(screen.getByText('Замеров за этот период нет')).toBeInTheDocument();
     expect(screen.getByText('Тренировка A')).toBeInTheDocument();
     expect(screen.getByText('Запланирована')).toBeInTheDocument();
     expect(screen.queryByText('planned')).not.toBeInTheDocument();
