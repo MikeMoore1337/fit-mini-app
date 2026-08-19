@@ -2,7 +2,10 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import OnboardingPage from '../../../../src/pages/onboarding/OnboardingPage';
-import { PRODUCT_EVENT_NAME } from '../../../../src/shared/analytics/activation';
+import {
+  PRODUCT_EVENT_NAME,
+  PRODUCT_EVENT_SCHEMA_VERSION,
+} from '../../../../src/shared/analytics/productEvents';
 import { NavigationProvider } from '../../../../src/shared/navigation/router';
 
 const apiMock = vi.hoisted(() => vi.fn());
@@ -65,8 +68,18 @@ describe('OnboardingPage', () => {
     expect(reloadUserMock).toHaveBeenCalledOnce();
     expect(events).toEqual(
       expect.arrayContaining([
-        { name: 'onboarding_started', surface: 'web' },
-        { name: 'onboarding_minimum_saved', surface: 'web' },
+        expect.objectContaining({
+          name: 'onboarding_started',
+          surface: 'web',
+          schema_version: PRODUCT_EVENT_SCHEMA_VERSION,
+          environment: 'test',
+        }),
+        expect.objectContaining({
+          name: 'onboarding_minimum_saved',
+          surface: 'web',
+          schema_version: PRODUCT_EVENT_SCHEMA_VERSION,
+          environment: 'test',
+        }),
       ]),
     );
     expect(JSON.stringify(events)).not.toContain('maintenance');
