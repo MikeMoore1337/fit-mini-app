@@ -392,6 +392,11 @@ def test_public_config_never_exposes_provider_credentials(client, monkeypatch):
     monkeypatch.setattr(settings, "enable_web_auth", True)
     monkeypatch.setattr(settings, "telegram_oauth_client_id", "telegram-client-sensitive")
     monkeypatch.setattr(settings, "telegram_oauth_client_secret", "telegram-secret-sensitive")
+    monkeypatch.setattr(
+        settings,
+        "telegram_oauth_proxy_url",
+        "socks5://proxy-user:proxy-password@telegram-proxy-sensitive.test:1081",
+    )
     monkeypatch.setattr(settings, "google_oauth_client_id", "google-client-sensitive")
     monkeypatch.setattr(settings, "google_oauth_client_secret", "google-secret-sensitive")
     monkeypatch.setattr(settings, "yandex_oauth_client_id", "yandex-client-sensitive")
@@ -407,3 +412,5 @@ def test_public_config_never_exposes_provider_credentials(client, monkeypatch):
     serialized = response.text.lower()
     assert "client-sensitive" not in serialized
     assert "secret-sensitive" not in serialized
+    assert "proxy-password" not in serialized
+    assert "telegram-proxy-sensitive" not in serialized

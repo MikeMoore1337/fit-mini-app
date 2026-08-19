@@ -18,6 +18,7 @@ class Settings(BaseSettings):
         extra="ignore",
         env_file=".env",
         env_file_encoding="utf-8",
+        hide_input_in_errors=True,
     )
 
     app_env: Literal["dev", "test", "prod"]
@@ -103,6 +104,15 @@ class Settings(BaseSettings):
         ):
             raise ValueError(
                 "SMTP_HOST and SMTP_FROM_EMAIL must be configured when email auth is enabled in prod"
+            )
+        if (
+            self.enable_web_auth
+            and "telegram" in self.oauth_provider_names
+            and not self.telegram_oauth_proxy_url
+        ):
+            raise ValueError(
+                "TELEGRAM_OAUTH_PROXY_URL must be configured when Telegram browser OAuth "
+                "is enabled in prod"
             )
         _ = self.admin_telegram_id_set
 

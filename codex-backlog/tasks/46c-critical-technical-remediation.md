@@ -3,14 +3,14 @@
 - Фаза: **Retrospective remediation gate**
 - Приоритет: **46C/93 — umbrella после 46B1, завершить до 46D**
 - Зависит от: `46A`, `46B`, `46B1`, явное owner decision от 2026-08-19
-- Состоит из: `46C.1`, `46C.2`, `46C.3`, `46C.4`, `46C.5`
+- Состоит из: `46C.1`, `46C.2`, `46C.3`, `46C.4`, `46C.5`, `46C.6`
 - Рекомендуемый reasoning: **High**
 - Рекомендуемая модель: **GPT-5.6 Sol High**
 
 ## Назначение umbrella
 
 Task `46C` больше не является одним implementation change set. Она фиксирует утверждённый
-владельцем remediation scope и порядок пяти независимых tasks. Саму umbrella-task отдельно не
+владельцем remediation scope и порядок шести независимых tasks. Саму umbrella-task отдельно не
 реализовывать и не использовать как разрешение смешать findings в одном commit.
 
 Каждая дочерняя task выполняется:
@@ -32,6 +32,10 @@ Task `46C` больше не является одним implementation change s
 - `F46B-03`, `F46B-04`;
 - `F46B-05`, `F46B-06`.
 
+Кроме findings retrospective-аудита, владелец отдельно подтвердил production-инвариант:
+Telegram browser login сохраняет существующий proxy-tunnel/network path. Этот инвариант
+закрывается task `46C.6` и не расширяет allowlist других remediation findings.
+
 Все остальные findings не входят в task `46C` без нового явного owner approval.
 
 ## Утверждённая декомпозиция и порядок
@@ -43,6 +47,7 @@ Task `46C` больше не является одним implementation change s
   -> 46C.3 Cross-context auth/workout recovery
   -> 46C.4 Account export and browser privacy lifecycle
   -> 46C.5 HTTP limits and safe logging boundary
+  -> 46C.6 Telegram auth proxy-tunnel preservation
   -> 46D Design V2 baseline audit
 ```
 
@@ -53,6 +58,7 @@ Task `46C` больше не является одним implementation change s
 | 46C.3 | `F-03`, `F-04`, `F-05` | безопасные cross-context refresh/queue и idempotent workout finish recovery |
 | 46C.4 | `F46B-03`, `F46B-04` | полный versioned export и browser-storage lifecycle |
 | 46C.5 | `F46B-05`, `F46B-06` | согласованные body limits, safe diagnostic logging и корректный cache assertion |
+| 46C.6 | owner-confirmed production invariant | сохранённый canonical proxy-tunnel для Telegram browser OAuth без влияния на TMA и другие providers |
 
 ## Future routing вне 46C
 
@@ -63,7 +69,7 @@ Task `46C` больше не является одним implementation change s
 ## Общие ограничения
 
 - Не добавлять findings сверх allowlist.
-- Не начинать Design V2 до завершения всех `46C.1`–`46C.5`.
+- Не начинать Design V2 до завершения всех `46C.1`–`46C.6`.
 - Не объединять commits дочерних tasks.
 - Не deploy, не использовать production data и не запускать production migrations.
 - Не ослаблять auth, replay protection, cache headers, validation, tests или privacy boundaries.
@@ -73,12 +79,12 @@ Task `46C` больше не является одним implementation change s
 
 Umbrella `46C` считается завершённой только когда:
 
-- каждая task `46C.1`–`46C.5` завершена отдельным commit;
+- каждая task `46C.1`–`46C.6` завершена отдельным commit;
 - каждый approved finding имеет regression evidence;
 - migration/config/compatibility effects каждой task явно отражены в её отчёте;
 - нет незакрытых P0/P1 или approved data-loss/privacy blockers;
 - выполнен финальный targeted review совокупного remediation scope;
-- task `46D` запускается только после подтверждения всех пяти commits/checks.
+- task `46D` запускается только после подтверждения всех шести commits/checks.
 
 ## STOP CONDITION
 

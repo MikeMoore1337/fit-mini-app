@@ -26,6 +26,7 @@
 46C.3 Cross-context recovery
 46C.4 Export/browser privacy
 46C.5 HTTP limits/safe logging
+46C.6 Telegram auth proxy-tunnel preservation
    ↓
 46D-46I Design V2 discovery/pilot/rollout
 46J Remaining backlog alignment

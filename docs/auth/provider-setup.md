@@ -177,11 +177,28 @@ account key всегда `sub`.
 `OAUTH_HTTP_TIMEOUT_SECONDS` ограничивает discovery, token exchange и profile
 requests (5–60 секунд, default 15). `OAUTH_FORCE_IPV4=true` помогает Docker-host
 без рабочего IPv6 route. `OAUTH_PROXY_URL` относится к Google, Яндексу, VK ID и
-Apple; `TELEGRAM_OAUTH_PROXY_URL` — только к Telegram browser OIDC.
+Apple. `TELEGRAM_OAUTH_PROXY_URL` используется только canonical Telegram browser
+OIDC client и обязателен в `prod`, если одновременно включён `ENABLE_WEB_AUTH` и
+настроены оба Telegram OAuth credential. Отсутствующая или некорректная
+конфигурация в этом режиме останавливает startup вместо silent direct fallback.
+
+Telegram Mini App `initData` проверяется локально, а Telegram account linking
+подтверждается через одноразовый bot deep link и внутренний backend endpoint;
+эти потоки не используют `TELEGRAM_OAUTH_PROXY_URL`. Bot API и notification
+delivery также не являются частью browser OIDC network path.
 
 OAuth-клиенты игнорируют ambient proxy variables. Явный proxy не отключает TLS
 certificate/hostname verification. Не используйте недоверенный публичный proxy:
 через него проходят authorization codes и client secrets.
+
+Compose передаёт server-only `.env` в backend и сохраняет
+`host.docker.internal:host-gateway` для operator-managed tunnel на Docker-хосте.
+Сам tunnel service не создаётся и не управляется приложением. При его
+недоступности browser flow возвращает `unavailable`/`provider_failure`, не
+создавая identity или session; другие providers и TMA продолжают работать.
+Диагностируйте по безопасным event code, `provider=telegram`, `reason` и request
+ID, не печатая proxy URL, credentials, authorization code или полный provider
+response.
 
 ## Необязательная smoke-проверка
 

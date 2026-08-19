@@ -4,10 +4,10 @@
   "repository": "MikeMoore1337/fit-mini-app",
   "working_branch": "feature/yfc-platform-v2",
   "status": "FINAL_PRE_RELEASE_FEATURE_FREEZE",
-  "user_confirmed_completed_tasks": "00-46 plus 46A, 46B and 46B1",
-  "next_task": "46c1-root-admin-trainer-authorization-remediation",
-  "task_count": 110,
-  "task_range": "00-93 plus 46A-46J and 46C.1-46C.5",
+  "user_confirmed_completed_tasks": "00-46 plus 46A, 46B, 46B1 and 46C.1-46C.5",
+  "next_task": "46d-product-ux-ui-landing-baseline-audit",
+  "task_count": 111,
+  "task_range": "00-93 plus 46A-46J and 46C.1-46C.6",
   "core_product_complete_before_ai_through": "75",
   "ai_block": "76-91",
   "production_readiness": "92",
@@ -105,8 +105,8 @@
     },
     {
       "path": "DEPENDENCY_GRAPH.md",
-      "bytes": 1316,
-      "sha256": "667ed251c4d9daf20909615689f898d608bdd7e015c0a1e2c9037f011a55be77"
+      "bytes": 1362,
+      "sha256": "044e244e88efa12f90abaa3f71957341e854c5449f312118491d120132162970"
     },
     {
       "path": "DESIGN_V2_INTEGRATION_NOTES.md",
@@ -140,8 +140,8 @@
     },
     {
       "path": "MODEL_SELECTION.md",
-      "bytes": 2760,
-      "sha256": "1d76652d7742705b0a09bdfaeaacbf91ca62bba55c0d6e09187ddc0400b26e2c"
+      "bytes": 2973,
+      "sha256": "829af808d6e7565983c8bb0e80be0102b9c1f3f6612229929c10da001450e0ae"
     },
     {
       "path": "NEW_TASKS_46A_46J_README.md",
@@ -160,8 +160,8 @@
     },
     {
       "path": "PRIORITY_ORDER.md",
-      "bytes": 1291,
-      "sha256": "b6251326458f3c34bbd4c24d54f63c87d5aacfef57b928f249b09d490b706f98"
+      "bytes": 1300,
+      "sha256": "3c90823fffdb73f369c1b5a46be96e162b7acef231072a1ee16efe1e533cb020"
     },
     {
       "path": "RELEASE_SCOPE_FREEZE.md",
@@ -540,8 +540,8 @@
     },
     {
       "path": "tasks/46c-critical-technical-remediation.md",
-      "bytes": 4903,
-      "sha256": "50c7534b11606277e0bf4c11ece4d615f8d875e6d2b7c8b75429caf27617bb90"
+      "bytes": 5516,
+      "sha256": "950be92e18af1cb8c284ae5562b7e22a35999b9b2f969f7f4fd7f289a35a2b5f"
     },
     {
       "path": "tasks/46c1-root-admin-trainer-authorization-remediation.md",
@@ -569,9 +569,14 @@
       "sha256": "18a68782f2aecbd0cc1cec0d0f4e035801be5c45ca1c8be4fa43806ab5405e23"
     },
     {
+      "path": "tasks/46c6-telegram-auth-proxy-tunnel-preservation.md",
+      "bytes": 14139,
+      "sha256": "2e96dd5f7787659c4a9108bbe9e811d943b760805c99069a6597983187cd3df7"
+    },
+    {
       "path": "tasks/46d-product-ux-ui-landing-baseline-audit.md",
-      "bytes": 9093,
-      "sha256": "3490843b2e4caf2ad418fb088b460ef90763191ab351a91a4059838b47860c2b"
+      "bytes": 9102,
+      "sha256": "9d4b556be71c5a7f29659dddee70e28019acdba1cdcdb79a692dc36fad1c218b"
     },
     {
       "path": "tasks/46e-design-v2-visual-directions.md",

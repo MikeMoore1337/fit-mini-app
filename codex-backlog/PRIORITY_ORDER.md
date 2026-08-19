@@ -19,14 +19,14 @@
 `41-46`
 
 ## Retrospective audit and owner-approved remediation
-`46A -> 46B -> 46B1 -> 46C umbrella -> 46C.1 -> 46C.2 -> 46C.3 -> 46C.4 -> 46C.5`
+`46A -> 46B -> 46B1 -> 46C umbrella -> 46C.1 -> 46C.2 -> 46C.3 -> 46C.4 -> 46C.5 -> 46C.6`
 
 Каждая `46C.*` выполняется отдельной сессией и отдельным commit.
 
 ## Design V2 integration
 `46D -> 46E -> 46F -> 46G -> 46H -> 46I -> 46J`
 
-Task `46D` начинается только после завершения всех `46C.1-46C.5`.
+Task `46D` начинается только после завершения всех `46C.1-46C.6`.
 
 ## Remaining product UX
 `47-57`

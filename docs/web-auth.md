@@ -94,19 +94,60 @@ DNS возвращает IPv4- и IPv6-адреса, но Docker не имеет
 IPv6.
 
 Если прямой маршрут от сервера к провайдеру заблокирован или нестабилен,
-настройте управляемый оператором прокси исключительно для OAuth. Переменная
-`OAUTH_PROXY_URL` применяется к Google, Яндексу, VK ID и Apple, а
-`TELEGRAM_OAUTH_PROXY_URL` — только к браузерному входу через Telegram.
-Для динамического SSH SOCKS-туннеля на Docker-хосте используйте
-`socks5://host.docker.internal:1081`: backend-сервис Compose разрешает это
-имя в адрес шлюза хоста. Не используйте недоверенный публичный прокси — через
-него проходят OAuth-код авторизации и client secret. Явно заданный OAuth-прокси
-имеет приоритет над `OAUTH_FORCE_IPV4`.
+используйте управляемый оператором прокси исключительно для OAuth. Переменная
+`OAUTH_PROXY_URL` применяется к Google, Яндексу, VK ID и Apple. Отдельный
+`TELEGRAM_OAUTH_PROXY_URL` является обязательным production-инвариантом, когда
+одновременно включён `ENABLE_WEB_AUTH` и заданы оба реквизита Telegram OAuth.
+Если этот контракт нарушен, backend не запускается; пустое значение допустимо
+только в `dev`/`test` или когда Telegram browser OAuth отключён.
 
-Проверка `initData` при открытии именно Telegram Mini App не выполняет
-внешний OAuth-запрос и не использует ни одну из этих переменных. Отдельная
-настройка Telegram нужна для сценария «Войти через Telegram» в браузере или
-при привязке Telegram-аккаунта из веб-версии.
+Telegram browser OIDC зарегистрирован через canonical
+`TelegramOAuthStarletteOAuth2App` и `TelegramOAuthAsyncOAuth2Client`. Этот
+клиент использует `TELEGRAM_OAUTH_PROXY_URL` для OIDC discovery, получения
+provider metadata и обмена authorization code на token/user claims. Он
+игнорирует ambient `HTTP_PROXY`/`HTTPS_PROXY` (`trust_env=false`), применяет
+`OAUTH_HTTP_TIMEOUT_SECONDS` и не отключает TLS certificate/hostname
+verification. Telegram-specific route не передаётся Google, Яндексу, VK ID или
+Apple; общий `OAUTH_PROXY_URL` также не подменяет отдельный Telegram route.
+
+Для динамического SSH SOCKS-туннеля на Docker-хосте можно использовать
+`socks5://host.docker.internal:1081`: backend-сервис Compose получает `.env` и
+разрешает `host.docker.internal` в адрес шлюза хоста. Репозиторий хранит только
+этот consumer contract; запуск и supervision существующего SSH/proxy service
+остаются в operator-managed конфигурации хоста. Не используйте недоверенный
+публичный прокси — через него проходят OAuth-код авторизации и client secret.
+Явно заданный OAuth-прокси имеет приоритет над `OAUTH_FORCE_IPV4`.
+
+Проверка подписанного `initData` при открытии Telegram Mini App выполняется
+локально по `TELEGRAM_BOT_TOKEN`, не делает outbound-запрос к Telegram и не
+использует OAuth proxy. Привязка Telegram к уже авторизованному web-аккаунту
+также не является OIDC flow: приложение создаёт одноразовый deep link, бот
+получает подтверждённую Telegram identity и вызывает внутренний backend
+endpoint. Исходящие Bot API-вызовы бота и notification worker имеют собственный
+runtime path и не должны искусственно направляться через
+`TELEGRAM_OAUTH_PROXY_URL`.
+
+При недоступном tunnel начало browser login возвращает безопасный
+`auth_error=unavailable`, а сбой discovery/token exchange в callback —
+`auth_error=provider_failure`. До подтверждённых user claims приложение не
+создаёт `AuthIdentity`, refresh session или новый аккаунт и не переключается
+молча на прямой Telegram route. После восстановления tunnel пользователь может
+начать вход повторно. Ошибка не блокирует TMA `initData`, bot deep-link linking
+или другие OAuth providers.
+
+Для диагностики проверяйте только наличие настройки и безопасные structured
+events `oauth_start_failed`/`oauth_login_failed` с `provider=telegram`, `reason`
+и request ID. Не выводите значение переменной в terminal, CI logs или issue.
+Например, внутри backend-контейнера безопасно вывести только boolean:
+
+```bash
+docker compose exec -T backend python -c "from fitminiapp_api.core.config import settings; print(bool(settings.telegram_oauth_proxy_url))"
+```
+
+Отдельно проверьте состояние operator-managed tunnel service и доступность его
+локального listening socket без публикации endpoint или credentials. Proxy URL
+включён в application log redaction; public config и frontend bundle его не
+получают.
 
 SSH-туннель должен слушать шлюз Docker-хоста — обычно `172.17.0.1`, а не
 `127.0.0.1`. Тогда backend-контейнер сможет подключиться к нему, но порт
