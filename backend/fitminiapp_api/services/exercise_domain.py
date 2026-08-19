@@ -44,6 +44,13 @@ MUSCLE_TAXONOMY = (
     ("conditioning", "Кондиция"),
 )
 
+# Non-anatomical catalog categories remain valid exercise metadata, but they
+# cannot be selected as an individual muscle-development priority.
+BODY_PRIORITY_EXCLUDED_MUSCLE_IDS = frozenset({"cardio", "conditioning", "full_body"})
+BODY_PRIORITY_TAXONOMY = tuple(
+    item for item in MUSCLE_TAXONOMY if item[0] not in BODY_PRIORITY_EXCLUDED_MUSCLE_IDS
+)
+
 EQUIPMENT_TAXONOMY = (
     ("bodyweight", "Собственный вес"),
     ("dumbbell", "Гантели"),

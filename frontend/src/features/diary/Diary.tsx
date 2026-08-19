@@ -90,8 +90,8 @@ export function Diary({
                     chest_cm: 'Грудь, см',
                     waist_cm: 'Талия, см',
                     hips_cm: 'Бёдра, см',
-                    biceps_cm: 'Бицепс, см',
-                    thigh_cm: 'Бедро, см',
+                    biceps_cm: 'Плечо (окружность), см',
+                    thigh_cm: 'Бедро (окружность), см',
                   }[key]
                 }
               </span>
@@ -107,6 +107,17 @@ export function Diary({
               />
             </label>
           ))}
+        </div>
+        <div className="auth-notice stack" aria-label="Как делать замеры">
+          <strong>Как сравнивать замеры</strong>
+          <span>
+            Снимайте их в похожее время суток, в одинаковых условиях и накладывайте ленту в одном
+            месте. Оценивайте несколько замеров, а не единичное колебание.
+          </span>
+          <small className="muted">
+            Окружность плеча не показывает отдельно размер бицепса, а окружность бедра — размер
+            квадрицепса. Эти значения описывают участок тела целиком.
+          </small>
         </div>
         <label className="field">
           <span>Заметка</span>
@@ -135,7 +146,7 @@ export function Diary({
                     .filter((key) => item[key] != null)
                     .map(
                       (key) =>
-                        `${{ weight_kg: 'Вес', chest_cm: 'Грудь', waist_cm: 'Талия', hips_cm: 'Бёдра', biceps_cm: 'Бицепс', thigh_cm: 'Бедро' }[key]}: ${item[key]}`,
+                        `${{ weight_kg: 'Вес', chest_cm: 'Грудь', waist_cm: 'Талия', hips_cm: 'Бёдра', biceps_cm: 'Окружность плеча', thigh_cm: 'Окружность бедра' }[key]}: ${item[key]}`,
                     )
                     .join(' · ')}
                 </span>

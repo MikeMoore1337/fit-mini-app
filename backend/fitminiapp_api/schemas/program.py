@@ -6,6 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
 from fitminiapp_api.schemas.nutrition import NutritionTargetResponse
+from fitminiapp_api.schemas.user import BodyPriorityPreference
 
 ProgramRecommendationGoal = Literal[
     "fat_loss", "recomposition", "maintenance", "muscle_gain", "strength"
@@ -477,5 +478,6 @@ class ClientResponse(BaseModel):
     workouts_per_week: int | None = None
     cardio_trainings_per_week: int | None = None
     resting_heart_rate: int | None = None
+    body_priority: BodyPriorityPreference | None = None
     kbju: NutritionTargetResponse | None = None
     status: Literal["active", "pending"]

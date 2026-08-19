@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from fitminiapp_api.schemas.user import BodyPriorityPreference
+
 
 class ProgressPeriodDays(IntEnum):
     DAYS_7 = 7
@@ -62,6 +64,11 @@ class NutritionPeriodSummary(BaseModel):
     target_effective_on: date | None = None
 
 
+class BodyMetricPoint(BaseModel):
+    measured_on: date
+    value: float
+
+
 class BodyMetricTrend(BaseModel):
     metric: Literal["weight_kg", "chest_cm", "waist_cm", "hips_cm", "biceps_cm", "thigh_cm"]
     first_value: float
@@ -69,6 +76,12 @@ class BodyMetricTrend(BaseModel):
     change: float | None = None
     first_measured_on: date
     latest_measured_on: date
+    point_count: int = Field(ge=1)
+    span_days: int = Field(ge=0)
+    interpretation_status: Literal[
+        "single_point", "insufficient_points", "insufficient_period", "available"
+    ]
+    points: list[BodyMetricPoint]
 
 
 class LatestBodyMeasurement(BaseModel):
@@ -81,9 +94,19 @@ class LatestBodyMeasurement(BaseModel):
     thigh_cm: float | None = None
 
 
+class BodyMeasurementGuidance(BaseModel):
+    comparison_basis: Literal["self"] = "self"
+    minimum_points_for_interpretation: int = Field(ge=2)
+    minimum_span_days_for_interpretation: int = Field(ge=1)
+    consistency_tips: list[str]
+    circumference_limitations: list[str]
+
+
 class BodyPeriodSummary(BaseModel):
     latest_measurement: LatestBodyMeasurement | None = None
     trends: list[BodyMetricTrend]
+    priority: BodyPriorityPreference | None = None
+    guidance: BodyMeasurementGuidance
 
 
 class ProgressSummaryResponse(BaseModel):

@@ -12,6 +12,7 @@ from fitminiapp_api.schemas.coach_application import CoachRoleApplicationRespons
 from fitminiapp_api.schemas.invite import CoachInvitePreviewResponse, CoachInviteTokenRequest
 from fitminiapp_api.schemas.user import (
     AccountDeleteRequest,
+    BodyPriorityOptionsResponse,
     HeartRatePreviewRequest,
     HeartRatePreviewResponse,
     HeartRateRangeResponse,
@@ -44,6 +45,7 @@ from fitminiapp_api.services.coach_clients import (
     preview_coach_invite_link,
     remove_current_trainer,
 )
+from fitminiapp_api.services.exercise_domain import BODY_PRIORITY_TAXONOMY
 from fitminiapp_api.services.nutrition import (
     NutritionError,
     build_nutrition_target_response_for_user,
@@ -52,6 +54,7 @@ from fitminiapp_api.services.onboarding import build_onboarding_state
 from fitminiapp_api.services.profile import (
     ProfileError,
     calculate_profile_heart_rates,
+    serialize_body_priority,
     update_profile,
 )
 from fitminiapp_api.services.program_common import ProgramError
@@ -129,6 +132,7 @@ def _build_user_response(db: Session, user) -> UserResponse:
                 user.profile.cardio_trainings_per_week if user.profile else None
             ),
             resting_heart_rate=user.profile.resting_heart_rate if user.profile else None,
+            body_priority=serialize_body_priority(user.profile),
             timezone=user.profile.timezone if user.profile else "Europe/Moscow",
             estimated_max_heart_rate=heart_rates.maximum if heart_rates else None,
             heart_rate_reserve=heart_rates.reserve if heart_rates else None,
@@ -258,6 +262,13 @@ def patch_profile(
     except (NutritionError, ProfileError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return _build_user_response(db, user)
+
+
+@router.get("/profile/body-priority-options", response_model=BodyPriorityOptionsResponse)
+def body_priority_options(_user=Depends(get_current_user)) -> dict:
+    return {
+        "items": [{"id": identifier, "name": name} for identifier, name in BODY_PRIORITY_TAXONOMY]
+    }
 
 
 @router.post("/profile/heart-rates/preview", response_model=HeartRatePreviewResponse)

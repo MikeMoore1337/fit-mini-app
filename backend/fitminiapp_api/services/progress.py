@@ -18,7 +18,14 @@ from fitminiapp_api.models.program import (
     UserWorkoutExercise,
     UserWorkoutSet,
 )
-from fitminiapp_api.models.user import BodyMeasurement, CoachClient, User
+from fitminiapp_api.models.user import (
+    BodyMeasurement,
+    CoachClient,
+    User,
+    UserProfile,
+    UserProfilePriorityMuscle,
+)
+from fitminiapp_api.services.profile import serialize_body_priority
 from fitminiapp_api.services.workouts import working_volume_set_filter
 
 FORMULA_VERSION = "adherence-v1"
@@ -30,6 +37,23 @@ ADHERENCE_WEIGHTS = {
     "protein": 0.20,
 }
 BODY_METRICS = ("weight_kg", "chest_cm", "waist_cm", "hips_cm", "biceps_cm", "thigh_cm")
+BODY_TREND_MIN_POINTS = 3
+BODY_TREND_MIN_SPAN_DAYS = 14
+BODY_MEASUREMENT_GUIDANCE = {
+    "comparison_basis": "self",
+    "minimum_points_for_interpretation": BODY_TREND_MIN_POINTS,
+    "minimum_span_days_for_interpretation": BODY_TREND_MIN_SPAN_DAYS,
+    "consistency_tips": [
+        "Снимайте замеры в похожее время суток и в одинаковых условиях.",
+        "Используйте одну технику и одно место наложения измерительной ленты.",
+        "Оценивайте последовательность замеров, а не отдельное колебание.",
+    ],
+    "circumference_limitations": [
+        "Окружность плеча не измеряет отдельно бицепс или трицепс.",
+        "Окружность бедра не измеряет отдельно квадрицепс или другие мышцы бедра.",
+        "Окружности сами по себе не показывают рост конкретной мышцы.",
+    ],
+}
 AdherenceStatus = Literal["available", "not_applicable", "insufficient_data", "unsupported"]
 
 
@@ -118,6 +142,15 @@ def _body_trends(rows: list) -> list[dict]:
         latest = points[-1]
         first_value = float(getattr(first, metric))
         latest_value = float(getattr(latest, metric))
+        span_days = (latest.measured_on - first.measured_on).days
+        if len(points) == 1:
+            interpretation_status = "single_point"
+        elif len(points) < BODY_TREND_MIN_POINTS:
+            interpretation_status = "insufficient_points"
+        elif span_days < BODY_TREND_MIN_SPAN_DAYS:
+            interpretation_status = "insufficient_period"
+        else:
+            interpretation_status = "available"
         trends.append(
             {
                 "metric": metric,
@@ -126,6 +159,16 @@ def _body_trends(rows: list) -> list[dict]:
                 "change": round(latest_value - first_value, 2) if len(points) >= 2 else None,
                 "first_measured_on": first.measured_on,
                 "latest_measured_on": latest.measured_on,
+                "point_count": len(points),
+                "span_days": span_days,
+                "interpretation_status": interpretation_status,
+                "points": [
+                    {
+                        "measured_on": point.measured_on,
+                        "value": float(getattr(point, metric)),
+                    }
+                    for point in points
+                ],
             }
         )
     return trends
@@ -149,7 +192,11 @@ def _active_clients(
     )
     total = query.count()
     rows = (
-        query.options(joinedload(User.profile))
+        query.options(
+            joinedload(User.profile)
+            .joinedload(UserProfile.body_priority_links)
+            .joinedload(UserProfilePriorityMuscle.muscle)
+        )
         .order_by(User.id.desc())
         .offset(offset)
         .limit(limit)
@@ -598,6 +645,8 @@ def build_progress_summaries(
             "body": {
                 "latest_measurement": latest_measurement_by_user.get(user.id),
                 "trends": _body_trends(measurements_by_user[user.id]),
+                "priority": serialize_body_priority(user.profile),
+                "guidance": BODY_MEASUREMENT_GUIDANCE,
             },
             "adherence": {
                 "formula_version": FORMULA_VERSION,

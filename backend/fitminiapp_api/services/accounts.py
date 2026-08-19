@@ -31,7 +31,9 @@ from fitminiapp_api.models.user import (
     CoachRoleApplication,
     User,
     UserProfile,
+    UserProfilePriorityMuscle,
 )
+from fitminiapp_api.services.profile import serialize_body_priority
 from fitminiapp_api.services.programs import delete_template_cascade
 
 
@@ -206,6 +208,13 @@ def delete_user_cascade(db: Session, user: User) -> None:
     db.query(AuthActionToken).filter(AuthActionToken.user_id == user.id).delete(
         synchronize_session=False
     )
+    profile_ids = [
+        row.id for row in db.query(UserProfile.id).filter(UserProfile.user_id == user.id).all()
+    ]
+    if profile_ids:
+        db.query(UserProfilePriorityMuscle).filter(
+            UserProfilePriorityMuscle.profile_id.in_(profile_ids)
+        ).delete(synchronize_session=False)
     db.query(UserProfile).filter(UserProfile.user_id == user.id).delete(synchronize_session=False)
     db.query(AuditEvent).filter(AuditEvent.actor_user_id == user.id).update(
         {"actor_user_id": None}, synchronize_session=False
@@ -301,6 +310,7 @@ def build_account_export(db: Session, user: User) -> dict:
                 "weight_kg": profile.weight_kg,
                 "workouts_per_week": profile.workouts_per_week,
                 "cardio_trainings_per_week": profile.cardio_trainings_per_week,
+                "body_priority": serialize_body_priority(profile),
                 "timezone": profile.timezone,
             }
             if profile

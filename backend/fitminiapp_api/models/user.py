@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import date, datetime
 
 from sqlalchemy import (
@@ -19,6 +21,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from fitminiapp_api.core.timezone import DEFAULT_TIMEZONE, now_msk_naive
 from fitminiapp_api.db.base import Base
+from fitminiapp_api.models.exercise import Muscle
 
 
 class User(Base):
@@ -56,6 +59,10 @@ class UserProfile(Base):
             "resting_heart_rate IS NULL OR resting_heart_rate BETWEEN 30 AND 120",
             name="ck_user_profiles_resting_heart_rate_range",
         ),
+        CheckConstraint(
+            "body_priority_mode IS NULL OR body_priority_mode IN ('balanced', 'muscle_groups')",
+            name="ck_user_profiles_body_priority_mode",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -69,6 +76,7 @@ class UserProfile(Base):
     workouts_per_week: Mapped[int | None] = mapped_column(Integer, nullable=True)
     cardio_trainings_per_week: Mapped[int | None] = mapped_column(Integer, nullable=True)
     resting_heart_rate: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    body_priority_mode: Mapped[str | None] = mapped_column(String(16), nullable=True)
     timezone: Mapped[str] = mapped_column(
         String(64),
         nullable=False,
@@ -77,6 +85,39 @@ class UserProfile(Base):
     )
 
     user = relationship("User", back_populates="profile")
+    body_priority_links: Mapped[list[UserProfilePriorityMuscle]] = relationship(
+        "UserProfilePriorityMuscle",
+        back_populates="profile",
+        cascade="all, delete-orphan",
+        order_by="UserProfilePriorityMuscle.position",
+        lazy="selectin",
+    )
+
+
+class UserProfilePriorityMuscle(Base):
+    __tablename__ = "user_profile_priority_muscles"
+    __table_args__ = (
+        UniqueConstraint(
+            "profile_id",
+            "position",
+            name="uq_user_profile_priority_muscle_position",
+        ),
+        CheckConstraint(
+            "position >= 0",
+            name="ck_user_profile_priority_muscle_position",
+        ),
+    )
+
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("user_profiles.id", ondelete="CASCADE"), primary_key=True
+    )
+    muscle_id: Mapped[int] = mapped_column(
+        ForeignKey("muscles.id", ondelete="RESTRICT"), primary_key=True
+    )
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    profile: Mapped[UserProfile] = relationship("UserProfile", back_populates="body_priority_links")
+    muscle: Mapped[Muscle] = relationship("Muscle", lazy="joined")
 
 
 class BodyMeasurement(Base):

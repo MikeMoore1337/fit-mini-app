@@ -53,7 +53,7 @@ from fitminiapp_api.services.coach_clients import (
 from fitminiapp_api.services.exercise_catalog import _effective_exercise_id, list_exercises
 from fitminiapp_api.services.notifications import queue_telegram_notification
 from fitminiapp_api.services.nutrition import NutritionError, recalculate_nutrition_target
-from fitminiapp_api.services.profile import update_profile
+from fitminiapp_api.services.profile import ProfileError, update_profile
 from fitminiapp_api.services.program_common import ProgramError, assignment_error_status
 from fitminiapp_api.services.program_versioning import upsert_future_program_exercise
 from fitminiapp_api.services.programs import (
@@ -441,13 +441,16 @@ def update_coach_client_profile(
         relation.private_name = (private_name.strip() or None) if private_name else None
 
     if profile_changes:
-        update_profile(
-            db,
-            client,
-            UserProfileUpdate.model_validate(profile_changes),
-            changed_by=current_user,
-            commit=False,
-        )
+        try:
+            update_profile(
+                db,
+                client,
+                UserProfileUpdate.model_validate(profile_changes),
+                changed_by=current_user,
+                commit=False,
+            )
+        except (NutritionError, ProfileError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
     record_audit_event(
         db,
         actor_user_id=current_user.id,
