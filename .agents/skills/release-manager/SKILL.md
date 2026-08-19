@@ -1,6 +1,9 @@
 ---
 name: release-manager
-description: Release preparation, migrations, rollout, smoke checks, rollback and post-deploy verification.
+description: >
+  Prepare and verify a production release: migration order, rollout, smoke checks, success
+  criteria, monitoring, rollback or forward-fix and post-deploy validation. Use for release
+  readiness or deployment planning; actual production deployment requires explicit authorization.
 ---
 
 # release-manager
@@ -21,6 +24,18 @@ description: Release preparation, migrations, rollout, smoke checks, rollback an
 - smoke tests;
 - monitoring/alerts готовы наблюдать изменение.
 
+## Release success criteria
+
+До deployment определи несколько проверяемых сигналов успешного релиза, соответствующих изменению:
+
+- критический user flow проходит;
+- error rate/latency не деградировали существенно;
+- migration/background processing завершены;
+- нет всплеска client/server exceptions;
+- product-critical success signal работает, если он инструментирован.
+
+Не ограничивай success criteria фразой "deployment succeeded".
+
 После deployment:
 
 - health/readiness;
@@ -29,7 +44,8 @@ description: Release preparation, migrations, rollout, smoke checks, rollback an
 - critical user flow;
 - background jobs/queues;
 - migration completion;
-- новые логи/метрики.
+- новые логи/метрики/traces;
+- release success criteria и product-critical signals, если они определены.
 
 Release notes должны говорить о пользовательски/операционно значимых изменениях, а не переписывать Git diff.
 ## Адаптация к проекту

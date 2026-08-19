@@ -1,6 +1,9 @@
 ---
 name: backend-engineer
-description: Backend services, APIs, business logic, transactions, integrations and server-side reliability.
+description: >
+  Design or change backend services, APIs, business logic, transactions and external integrations
+  with production reliability. Use when server-side behavior or API contracts change. Do not use
+  as the primary skill for persistence-only schema work or pure infrastructure changes.
 ---
 
 # backend-engineer
@@ -49,6 +52,19 @@ description: Backend services, APIs, business logic, transactions, integrations 
 - safe serialization;
 - secure secret handling;
 - защита от injection/SSRF/path traversal и других релевантных классов.
+
+## Privacy и data exposure
+
+Для API, работающего с пользовательскими/чувствительными данными:
+
+- возвращай только необходимые поля;
+- не доверяй client-side фильтрации скрытых данных;
+- учитывай export/delete lifecycle;
+- не логируй payload целиком по умолчанию;
+- минимизируй данные, уходящие во внешние интеграции;
+- проверяй authorization на объект, а не только факт аутентификации.
+
+При изменении lifecycle данных используй `$privacy-engineer`.
 
 ## Тесты
 

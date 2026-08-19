@@ -1,6 +1,9 @@
 ---
 name: python-engineer
-description: Python implementation, typing, testing, linting, async behavior and project-specific Python tooling.
+description: >
+  Implement or refactor Python code using the repository's supported Python version, typing,
+  tests, linting, async conventions and project tooling. Use whenever Python source is materially
+  changed; pair with domain-specific skills when the task is primarily backend, data or QA.
 ---
 
 # python-engineer

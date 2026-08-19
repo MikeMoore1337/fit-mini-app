@@ -1,6 +1,9 @@
 ---
 name: code-reviewer
-description: Independent pre-merge review for correctness, regressions, security, data integrity, tests and scope.
+description: >
+  Perform an independent pre-merge review of an implemented diff for correctness, regressions,
+  data integrity, security, performance, user-facing behavior, tests and unnecessary scope. Use
+  after implementation or before merge; do not use as the primary implementation skill.
 ---
 
 # code-reviewer
@@ -16,8 +19,11 @@ description: Independent pre-merge review for correctness, regressions, security
 5. compatibility;
 6. error handling;
 7. tests;
-8. maintainability;
-9. style.
+8. user-facing UX/accessibility regression;
+9. performance/operability;
+10. privacy/data exposure;
+11. maintainability;
+12. style.
 
 Ищи конкретно:
 
@@ -35,7 +41,11 @@ description: Independent pre-merge review for correctness, regressions, security
 - stale state;
 - untested critical branch;
 - accidental public API change;
-- unnecessary scope.
+- unnecessary scope;
+- broken loading/error/recovery UI;
+- accessibility regression;
+- accidental sensitive-data logging/telemetry;
+- material performance regression on a critical path.
 
 Не комментируй вкусовщину, если она не нарушает standards проекта.
 

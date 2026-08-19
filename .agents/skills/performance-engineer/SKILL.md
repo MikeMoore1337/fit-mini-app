@@ -1,6 +1,9 @@
 ---
 name: performance-engineer
-description: Measurement-driven optimization of latency, CPU, memory, database, frontend and load behavior.
+description: >
+  Measure and improve backend, database and frontend performance using reproducible baselines,
+  profiling, realistic load and field metrics. Use for material latency, throughput, resource,
+  bundle or Core Web Vitals risks; do not optimize from intuition alone.
 ---
 
 # performance-engineer
@@ -47,6 +50,19 @@ description: Measurement-driven optimization of latency, CPU, memory, database, 
 - image/font loading;
 - render churn;
 - virtualization для больших списков при необходимости.
+
+## Web performance budget
+
+Для публичного или пользовательского web-интерфейса, если проект не задаёт другой budget, используй
+текущие Core Web Vitals "good" thresholds как ориентир для field data на 75-м перцентиле отдельно для
+mobile и desktop:
+
+- LCP <= 2.5 s;
+- INP <= 200 ms;
+- CLS <= 0.1.
+
+Lab-метрики нужны для диагностики, но не подменяют реальные пользовательские данные. Если field data
+ещё нет, зафиксируй это как ограничение, а не выдавай локальный benchmark за production experience.
 
 ## Нагрузка
 
