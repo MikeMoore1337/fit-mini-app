@@ -1,12 +1,12 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { AppShell } from '../../app/AppShell';
+import { AppShell, type AppSection } from '../../app/AppShell';
 import { useAuth } from '../../app/AuthProvider';
 import { TelegramLinkPrompt } from '../../features/account/TelegramLinkPrompt';
 import { TodayWorkout } from '../../features/workouts/TodayWorkout';
 import type { WorkoutNavigationTarget } from '../../features/workouts/WorkoutHistory';
+import { useNavigation } from '../../shared/navigation/router';
 import { Badge } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
-import { handleTabKeyDown } from '../../shared/ui/tabs';
 
 const NotificationsPanel = lazy(() =>
   import('../../features/account/NotificationsPanel').then((module) => ({
@@ -67,9 +67,7 @@ const WorkoutHistory = lazy(() =>
   })),
 );
 
-type Tab = 'today' | 'progress' | 'programs' | 'catalog' | 'nutrition' | 'profile';
-
-const tabs: ReadonlyArray<Tab> = [
+const sections: ReadonlyArray<AppSection> = [
   'today',
   'progress',
   'programs',
@@ -77,6 +75,11 @@ const tabs: ReadonlyArray<Tab> = [
   'nutrition',
   'profile',
 ];
+
+function requestedSection(search: string): AppSection | null {
+  const section = new URLSearchParams(search).get('section');
+  return section && sections.includes(section as AppSection) ? (section as AppSection) : null;
+}
 
 function launchInviteToken(): string | null {
   const params = new URLSearchParams(window.location.search);
@@ -88,17 +91,19 @@ function launchInviteToken(): string | null {
 }
 
 export default function MiniAppPage() {
-  const { user, logout, reloadUser } = useAuth();
+  const { user, reloadUser } = useAuth();
+  const { navigate, search } = useNavigation();
   const { toast } = useFeedback();
   const [initialInviteToken] = useState(launchInviteToken);
-  const [tab, setTab] = useState<Tab>(() => {
+  const [fallbackSection] = useState<AppSection>(() => {
+    const requested = requestedSection(window.location.search);
+    if (requested) return requested;
     const params = new URLSearchParams(window.location.search);
-    const requestedSection = params.get('section');
-    if (requestedSection && tabs.includes(requestedSection as Tab)) return requestedSection as Tab;
     return initialInviteToken || params.has('auth_linked') || params.has('auth_error')
       ? 'profile'
       : 'today';
   });
+  const section = requestedSection(search) ?? fallbackSection;
   const [focusedWorkout, setFocusedWorkout] = useState<{
     id: number;
     target: WorkoutNavigationTarget;
@@ -156,7 +161,7 @@ export default function MiniAppPage() {
   ]);
 
   return (
-    <AppShell>
+    <AppShell section={section}>
       <div className="page-stack">
         <header className="card hero-card">
           <div>
@@ -166,44 +171,10 @@ export default function MiniAppPage() {
           </div>
           <div className="hero-card__meta">
             <Badge>{role}</Badge>
-            <button className="secondary miniapp-hero-logout" onClick={() => void logout()}>
-              Выйти
-            </button>
           </div>
         </header>
         <TelegramLinkPrompt />
-        <div className="react-tabs react-tabs--mini" role="tablist" aria-label="Разделы приложения">
-          {(
-            [
-              ['today', 'Сегодня'],
-              ['progress', 'Прогресс'],
-              ['programs', 'Программы'],
-              ['catalog', 'Упражнения'],
-              ['nutrition', 'Питание'],
-              ['profile', 'Профиль'],
-            ] as const
-          ).map(([key, label]) => (
-            <button
-              role="tab"
-              aria-selected={tab === key}
-              id={`mini-tab-${key}`}
-              aria-controls={`mini-panel-${key}`}
-              tabIndex={tab === key ? 0 : -1}
-              className={tab === key ? 'is-active' : 'secondary'}
-              key={key}
-              onClick={() => setTab(key)}
-              onKeyDown={handleTabKeyDown}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <section
-          className="page-stack"
-          role="tabpanel"
-          id={`mini-panel-${tab}`}
-          aria-labelledby={`mini-tab-${tab}`}
-        >
+        <section className="page-stack">
           <Suspense
             fallback={
               <p className="muted" role="status">
@@ -211,8 +182,8 @@ export default function MiniAppPage() {
               </p>
             }
           >
-            {tab === 'today' && <TodayWorkout />}
-            {tab === 'progress' && (
+            {section === 'today' && <TodayWorkout />}
+            {section === 'progress' && (
               <>
                 <ProgressSchedule
                   timeZone={user?.profile?.timezone}
@@ -228,23 +199,23 @@ export default function MiniAppPage() {
                 <Diary onSaved={async () => void (await reloadUser())} />
               </>
             )}
-            {tab === 'programs' && (
+            {section === 'programs' && (
               <>
                 <TemplatesList />
                 <ProgramBuilder />
               </>
             )}
-            {tab === 'catalog' && (
+            {section === 'catalog' && (
               <ExerciseCatalog canCreate={Boolean(user?.is_coach || user?.is_admin)} />
             )}
-            {tab === 'nutrition' && (
+            {section === 'nutrition' && (
               <NutritionForm
                 key={JSON.stringify(user?.profile?.kbju ?? null)}
                 initial={user?.profile?.kbju}
                 onSaved={async () => void (await reloadUser())}
               />
             )}
-            {tab === 'profile' && (
+            {section === 'profile' && (
               <>
                 <ProfileForm key={profileFormKey} />
                 <CoachRoleApplicationCard />
@@ -255,7 +226,7 @@ export default function MiniAppPage() {
                 <NotificationsPanel
                   onNavigate={(destination) => {
                     setFocusedWorkout(null);
-                    setTab(destination);
+                    navigate(`/app?section=${destination}`);
                   }}
                 />
                 <AccountPrivacy />

@@ -9,6 +9,20 @@ async function openCard(page: Page, title: string) {
   await expect(card).toHaveAttribute('open');
 }
 
+type AppDestination = 'Сегодня' | 'План' | 'Прогресс' | 'Питание' | 'Упражнения' | 'Профиль';
+
+async function openAppDestination(page: Page, destination: AppDestination) {
+  const desktopLabel = destination;
+  const mobileLabel = destination === 'Профиль' ? 'Профиль и настройки' : destination;
+  const directLink = page.getByRole('link', { name: desktopLabel, exact: true });
+  if (await directLink.isVisible()) {
+    await directLink.click();
+    return;
+  }
+  await page.getByRole('button', { name: 'Ещё', exact: true }).click();
+  await page.getByRole('link', { name: mobileLabel, exact: true }).click();
+}
+
 test('логотип и кнопки в шапке имеют одинаковую высоту', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   for (const viewport of [
@@ -836,12 +850,14 @@ test('цветовая система сохраняет иерархию в с�
   await expect(clientButton).toHaveCSS('color', 'rgb(242, 246, 239)');
 
   await clientButton.click();
-  const selectedTab = page.getByRole('tab', { name: 'Сегодня' });
-  await expect(selectedTab).toHaveCSS('background-color', 'rgb(182, 242, 56)');
-  await expect(selectedTab).toHaveCSS('color', 'rgb(23, 32, 24)');
+  const selectedDestination = page.getByRole('link', { name: 'Сегодня', exact: true });
+  const selectedDestinationIcon = selectedDestination.locator('.app-bottom-nav__icon');
+  await expect(selectedDestination).toHaveAttribute('aria-current', 'page');
+  await expect(selectedDestinationIcon).toHaveCSS('background-color', 'rgb(182, 242, 56)');
+  await expect(selectedDestinationIcon).toHaveCSS('color', 'rgb(23, 32, 24)');
   await page.getByRole('button', { name: 'Включить светлую тему' }).click();
-  await expect(selectedTab).toHaveCSS('background-color', 'rgb(24, 37, 29)');
-  await expect(selectedTab).toHaveCSS('color', 'rgb(255, 255, 255)');
+  await expect(selectedDestinationIcon).toHaveCSS('background-color', 'rgb(24, 37, 29)');
+  await expect(selectedDestinationIcon).toHaveCSS('color', 'rgb(255, 255, 255)');
 });
 
 test('Web theme preference следует системе и сохраняет ручной выбор', async ({ page }) => {
@@ -924,6 +940,17 @@ test('Mobile Web и Telegram используют одну YFC palette и гео
       const rootStyle = getComputedStyle(document.documentElement);
       const card = document.querySelector<HTMLElement>('.card')!.getBoundingClientRect();
       const container = document.querySelector<HTMLElement>('.container')!.getBoundingClientRect();
+      const navigation = document
+        .querySelector<HTMLElement>('#appBottomNav')!
+        .getBoundingClientRect();
+      const destinations = Array.from(
+        document.querySelectorAll<HTMLElement>(
+          '.app-bottom-nav__primary > a, .app-bottom-nav__primary > button',
+        ),
+      ).map((destination) => {
+        const rect = destination.getBoundingClientRect();
+        return { height: rect.height, width: rect.width, x: rect.x, y: rect.y };
+      });
       return {
         tokens: ['--bg', '--card', '--text', '--accent', '--border'].map((token) =>
           rootStyle.getPropertyValue(token).trim(),
@@ -933,6 +960,13 @@ test('Mobile Web и Telegram используют одну YFC palette и гео
           borderRadius: getComputedStyle(document.querySelector('.card')!).borderRadius,
         },
         container: { width: container.width, x: container.x },
+        navigation: {
+          height: navigation.height,
+          width: navigation.width,
+          x: navigation.x,
+          y: navigation.y,
+        },
+        destinations,
       };
     });
 
@@ -948,7 +982,9 @@ test('Mobile Web и Telegram используют одну YFC palette и гео
     ),
   ).toBe('#f1f3ec');
 
-  await webPage.getByRole('button', { name: 'Включить тёмную тему' }).click();
+  await webPage.getByRole('button', { name: 'Ещё', exact: true }).click();
+  await webPage.getByRole('dialog').getByRole('button', { name: 'Включить тёмную тему' }).click();
+  await webPage.getByRole('button', { name: 'Закрыть меню' }).click();
   await telegramPage.evaluate(() =>
     (
       window as unknown as Window & { __setTelegramTheme(theme: 'light' | 'dark'): void }
@@ -984,34 +1020,60 @@ test('deep link показывает тренера до явного подтв
   await expect(page.getByText('Тренер подключён')).toBeVisible();
 });
 
-test('мобильный интерфейс не обрезает навигацию и текст плана', async ({ page }) => {
+test('app shell сохраняет композицию и доступность на целевых viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 780 });
   await mockApi(page);
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
 
-  const tabs = page.getByRole('tab');
-  await expect(tabs).toHaveCount(6);
-  for (const tab of await tabs.all()) await expect(tab).toBeInViewport();
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 1280, height: 800 },
+    { width: 768, height: 900 },
+    { width: 390, height: 780 },
+    { width: 360, height: 740 },
+  ]) {
+    await page.setViewportSize(viewport);
+    const primaryNavigation = page.locator('.app-bottom-nav__primary');
+    const visibleDestinations = primaryNavigation.locator('a:visible, button:visible');
+    await expect(visibleDestinations).toHaveCount(viewport.width >= 900 ? 4 : 5);
+    for (const destination of await visibleDestinations.all()) {
+      await expect(destination).toBeInViewport();
+    }
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+  }
 
-  await openCard(page, 'План запуска');
-  const firstStep = page.getByRole('button', { name: /Заполнить профиль/ });
-  const title = firstStep.getByText('Заполнить профиль', { exact: true });
-  const description = firstStep.getByText('Дата рождения, цель, уровень и текущий вес', {
-    exact: true,
-  });
-  const [titleBox, descriptionBox] = await Promise.all([
-    title.boundingBox(),
-    description.boundingBox(),
-  ]);
-  expect(titleBox).not.toBeNull();
-  expect(descriptionBox).not.toBeNull();
-  expect(titleBox!.y + titleBox!.height).toBeLessThanOrEqual(descriptionBox!.y);
-
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
-    true,
+  await page.setViewportSize({ width: 390, height: 780 });
+  await openAppDestination(page, 'Прогресс');
+  await expect(page).toHaveURL('/app?section=progress');
+  await openAppDestination(page, 'Питание');
+  await expect(page).toHaveURL('/app?section=nutrition');
+  await page.goBack();
+  await expect(page).toHaveURL('/app?section=progress');
+  await expect(page.getByRole('link', { name: 'Прогресс', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page',
   );
+  await page.goForward();
+  await expect(page).toHaveURL('/app?section=nutrition');
+
+  await openAppDestination(page, 'Сегодня');
+  await expect(page.getByRole('heading', { name: 'Тренировка сегодня' })).toBeVisible();
+
   await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeInViewport();
+  const moreButton = page.getByRole('button', { name: 'Ещё', exact: true });
+  await moreButton.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).not.toBeAttached();
+  await expect(moreButton).toBeFocused();
+
+  await moreButton.click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Выйти из аккаунта' }).click();
+  await expect(page.getByRole('heading', { name: 'Войти в Your Fitness Coach' })).toBeVisible();
 });
 
 test('профиль содержит уведомления, а карточка упражнения открывает полное описание', async ({
@@ -1029,7 +1091,7 @@ test('профиль содержит уведомления, а карточк�
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
 
-  await page.getByRole('tab', { name: 'Профиль' }).click();
+  await openAppDestination(page, 'Профиль');
   await openCard(page, 'Профиль');
   await openCard(page, 'Напоминания о тренировках');
   await expect(page.getByRole('heading', { name: 'Напоминания о тренировках' })).toBeVisible();
@@ -1089,10 +1151,10 @@ test('профиль содержит уведомления, а карточк�
   };
   expect(notificationPayload.scheduled_for).toMatch(/^\d{4}-\d{2}-\d{2}T09:00:00$/);
 
-  await page.getByRole('tab', { name: 'Питание' }).click();
+  await openAppDestination(page, 'Питание');
   await expect(page.getByRole('heading', { name: 'Напоминания о тренировках' })).toHaveCount(0);
 
-  await page.getByRole('tab', { name: 'Упражнения' }).click();
+  await openAppDestination(page, 'Упражнения');
   await openCard(page, 'Каталог упражнений');
   expect(guideRequests).toBe(0);
   await page.getByRole('button', { name: 'Техника' }).click();
@@ -1129,7 +1191,7 @@ test('описание упражнения использует широкую 
   await mockApi(page);
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
-  await page.getByRole('tab', { name: 'Упражнения' }).click();
+  await openAppDestination(page, 'Упражнения');
   await openCard(page, 'Каталог упражнений');
   await page.getByRole('button', { name: 'Техника' }).click();
 
@@ -1148,7 +1210,7 @@ test('клиент подаёт заявку на роль тренера из �
   await mockApi(page);
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
-  await page.getByRole('tab', { name: 'Профиль' }).click();
+  await openAppDestination(page, 'Профиль');
   await openCard(page, 'Стать тренером');
 
   await page.getByRole('button', { name: 'Стать тренером' }).click();
@@ -1165,7 +1227,7 @@ test('рекомендация кардио меняется с целью, а �
   await mockApi(page);
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
-  await page.getByRole('tab', { name: 'Профиль' }).click();
+  await openAppDestination(page, 'Профиль');
   await openCard(page, 'Профиль');
 
   await page.getByLabel('Дата рождения').fill('1992-08-12');
@@ -1196,7 +1258,7 @@ test('поля профиля и питания выровнены на деск
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
 
-  await page.getByRole('tab', { name: 'Профиль' }).click();
+  await openAppDestination(page, 'Профиль');
   await openCard(page, 'Профиль');
   const profileControlTops = await page.locator('.profile-form-grid').evaluate((grid) =>
     Array.from(grid.querySelectorAll<HTMLElement>(':scope > .field'))
@@ -1208,7 +1270,7 @@ test('поля профиля и питания выровнены на деск
   );
   expect(new Set(profileControlTops.map(Math.round)).size).toBe(1);
 
-  await page.getByRole('tab', { name: 'Питание' }).click();
+  await openAppDestination(page, 'Питание');
   await openCard(page, 'КБЖУ');
   const nutritionControlTops = await page
     .locator('.nutrition-form-grid')
@@ -1246,7 +1308,7 @@ test('поля адаптируются к разным iPhone, а пример 
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
 
-  await page.getByRole('tab', { name: 'Прогресс' }).click();
+  await openAppDestination(page, 'Прогресс');
   await openCard(page, 'Дневник замеров');
   const dateField = page.getByLabel('Дата');
   const weightField = page.getByLabel('Вес, кг');
@@ -1272,7 +1334,7 @@ test('поля адаптируются к разным iPhone, а пример 
     dateControlBox!.x + dateControlBox!.width,
   );
 
-  await page.getByRole('tab', { name: 'Питание' }).click();
+  await openAppDestination(page, 'Питание');
   await openCard(page, 'КБЖУ');
   expect(
     await page.evaluate(() => ({
@@ -1283,7 +1345,7 @@ test('поля адаптируются к разным iPhone, а пример 
   await page.evaluate(() => window.scrollTo({ left: 1000 }));
   expect(await page.evaluate(() => window.scrollX)).toBe(0);
 
-  await page.getByRole('tab', { name: 'Упражнения' }).click();
+  await openAppDestination(page, 'Упражнения');
   await openCard(page, 'Каталог упражнений');
   const search = page.getByRole('combobox', { name: 'Поиск в каталоге упражнений' });
   await search.focus();
@@ -1300,7 +1362,7 @@ test('поля адаптируются к разным iPhone, а пример 
     true,
   );
 
-  await page.getByRole('tab', { name: 'Программы' }).click();
+  await openAppDestination(page, 'План');
   await openCard(page, 'Мои программы');
   const example = page.getByRole('button', {
     name: 'Посмотреть пример программы «Программа на всё тело — 3 дня»',
@@ -1355,7 +1417,7 @@ test('сенсорное поле даты сохраняет нативный �
     await mockApi(page);
     await page.goto('/app');
     await page.getByRole('button', { name: 'Клиент' }).click();
-    await page.getByRole('tab', { name: 'Прогресс' }).click();
+    await openAppDestination(page, 'Прогресс');
     await openCard(page, 'Дневник замеров');
 
     const dateField = page.getByLabel('Дата');
@@ -1401,6 +1463,11 @@ test('администратор открывает React-панель', async (
   await page.goto('/admin');
   await page.getByRole('button', { name: 'Админ' }).click();
   await expect(page.getByRole('heading', { name: 'Панель администратора' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Администрирование' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  await expect(page.getByRole('link', { name: 'Тренер', exact: true })).toBeVisible();
   await openCard(page, 'Пользователи');
   await expect(page.getByText('Пользователи не найдены')).toBeVisible();
   await page.getByRole('tab', { name: 'Заявки тренеров' }).click();
@@ -1453,6 +1520,11 @@ test('тренер открывает кабинет', async ({ page }) => {
   await page.goto('/coach');
   await page.getByRole('button', { name: 'Тренер' }).click();
   await expect(page.getByRole('heading', { name: 'Кабинет тренера' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Тренер', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  await expect(page.getByRole('link', { name: 'Администрирование' })).toHaveCount(0);
   await openCard(page, 'Клиенты');
   await expect(page.getByText('Клиентов пока нет')).toBeVisible();
 });

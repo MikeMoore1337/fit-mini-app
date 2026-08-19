@@ -1,9 +1,10 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppShell } from '../../../src/app/AppShell';
 
 const logout = vi.fn();
-const { user } = vi.hoisted(() => ({
+const { navigation, user } = vi.hoisted(() => ({
+  navigation: { path: '/coach', search: '' },
   user: {
     id: 1,
     username: 'mikhail',
@@ -22,7 +23,7 @@ vi.mock('../../../src/app/AuthProvider', () => ({
 }));
 
 vi.mock('../../../src/shared/navigation/router', () => ({
-  useNavigation: () => ({ path: '/coach' }),
+  useNavigation: () => navigation,
   AppLink: ({ to, className, children, ...props }: React.ComponentProps<'a'> & { to: string }) => (
     <a href={to} className={className} {...props}>
       {children}
@@ -32,20 +33,67 @@ vi.mock('../../../src/shared/navigation/router', () => ({
 
 describe('AppShell', () => {
   beforeEach(() => {
+    cleanup();
     user.photo_url = null;
+    user.is_admin = false;
+    navigation.path = '/coach';
+    navigation.search = '';
     logout.mockClear();
   });
 
-  it('показывает адаптивную навигацию и данные аккаунта', () => {
+  it('показывает основные направления и отделяет рабочее пространство тренера', () => {
     render(<AppShell>Содержимое</AppShell>);
 
     expect(screen.getByRole('navigation', { name: 'Основная навигация' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Сегодня' })).toHaveAttribute(
+      'href',
+      '/app?section=today',
+    );
+    expect(screen.getByRole('link', { name: 'План' })).toHaveAttribute(
+      'href',
+      '/app?section=programs',
+    );
     expect(screen.getByRole('link', { name: 'Тренер' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.queryByRole('link', { name: 'Админ' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Администрирование' })).not.toBeInTheDocument();
     expect(screen.getByText('Михаил')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Выйти из аккаунта' }));
     expect(logout).toHaveBeenCalledOnce();
+  });
+
+  it('открывает доступное mobile-меню с secondary navigation', () => {
+    navigation.path = '/app';
+    render(<AppShell section="profile">Содержимое</AppShell>);
+
+    const more = screen.getByRole('button', { name: 'Ещё' });
+    expect(more).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(more);
+
+    expect(more).toHaveAttribute('aria-expanded', 'true');
+    const dialog = screen.getByRole('dialog', { name: 'Михаил' });
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByRole('link', { name: 'Профиль и настройки' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(within(dialog).getByRole('link', { name: 'База знаний' })).toHaveAttribute(
+      'href',
+      '/knowledge',
+    );
+
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('показывает admin entry только аккаунту с соответствующей capability', () => {
+    user.is_admin = true;
+    navigation.path = '/admin';
+    render(<AppShell>Содержимое</AppShell>);
+
+    expect(screen.getByRole('link', { name: 'Администрирование' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
   });
 
   it('показывает тематическую заглушку, если аватар отсутствует или не загрузился', () => {
