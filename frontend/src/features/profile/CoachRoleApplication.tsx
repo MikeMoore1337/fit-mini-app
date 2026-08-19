@@ -19,7 +19,7 @@ export function CoachRoleApplicationCard() {
   const application = useQuery({
     queryKey: ['me', 'coach-application'],
     queryFn: () => api<CoachRoleApplication | null>('/api/v1/me/coach-application'),
-    enabled: Boolean(user && !user.is_coach && !user.is_admin),
+    enabled: Boolean(user && !user.is_coach),
   });
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['me', 'coach-application'] });
@@ -40,7 +40,7 @@ export function CoachRoleApplicationCard() {
     },
     onError: (reason) => toast((reason as Error).message, 'error'),
   });
-  if (!user || user.is_coach || user.is_admin) return null;
+  if (!user || user.is_coach) return null;
 
   const requestCoachRole = async () => {
     const accepted = await confirm({

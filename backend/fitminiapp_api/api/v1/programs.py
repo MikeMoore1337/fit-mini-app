@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from fitminiapp_api.api.dependencies.auth import require_coach_or_admin, require_user
+from fitminiapp_api.api.dependencies.auth import require_coach, require_user
 from fitminiapp_api.db.session import get_db
 from fitminiapp_api.models.exercise import Exercise
 from fitminiapp_api.models.user import User
@@ -568,7 +568,7 @@ def update_assigned_program_exercise(
 
 @router.get("/clients", response_model=list[ClientResponse])
 def clients(
-    current_user: User = Depends(require_coach_or_admin),
+    current_user: User = Depends(require_coach),
     db: Session = Depends(get_db),
 ):
     return list_clients(db, current_user)

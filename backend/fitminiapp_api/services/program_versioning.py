@@ -43,8 +43,6 @@ def _actor_role(program: UserProgram, actor: User | None) -> str:
         return "system"
     if actor.id == program.user_id:
         return "self"
-    if actor.is_admin:
-        return "admin"
     return "trainer"
 
 
@@ -62,7 +60,7 @@ def get_program_for_actor(
     if program is None:
         raise ProgramError("Assigned program not found")
     role = _actor_role(program, actor)
-    if role == "self" or role == "admin":
+    if role == "self":
         return program, role
     if (
         actor.is_coach

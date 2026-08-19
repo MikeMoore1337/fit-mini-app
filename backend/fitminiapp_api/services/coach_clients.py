@@ -102,9 +102,6 @@ def _resolve_manageable_user(
     if not target_user:
         raise ProgramError("Client is not linked to coach")
 
-    if current_user.is_admin:
-        return target_user
-
     if current_user.is_coach and _is_coach_client(db, current_user, target_user):
         return target_user
 
@@ -112,8 +109,6 @@ def _resolve_manageable_user(
 
 
 def _can_manage_user_id(db: Session, current_user: User, owner_user_id: int | None) -> bool:
-    if current_user.is_admin:
-        return True
     if owner_user_id is None:
         return False
     if owner_user_id == current_user.id:
@@ -296,7 +291,7 @@ def get_current_trainer(db: Session, client: User) -> dict | None:
             CoachClient.client_user_id == client.id,
             CoachClient.status == "active",
             User.is_active.is_(True),
-            or_(User.is_coach.is_(True), User.is_admin.is_(True)),
+            User.is_coach.is_(True),
         )
         .order_by(CoachClient.id.desc())
         .first()
@@ -373,7 +368,7 @@ def _available_invite_coach(db: Session, invite: CoachClientInvite) -> User:
         .filter(User.id == invite.coach_user_id)
         .first()
     )
-    if not coach or not coach.is_active or not (coach.is_coach or coach.is_admin):
+    if not coach or not coach.is_active or not coach.is_coach:
         raise ProgramError("Тренер недоступен")
     return coach
 

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import String, cast, func, or_
 from sqlalchemy.orm import Session
 
-from fitminiapp_api.api.dependencies.auth import require_admin
+from fitminiapp_api.api.dependencies.auth import require_admin, require_root_admin
 from fitminiapp_api.db.session import get_db
 from fitminiapp_api.models.notification import Notification
 from fitminiapp_api.models.program import ProgramTemplate
@@ -10,6 +10,7 @@ from fitminiapp_api.models.user import CoachRoleApplication, User, UserProfile
 from fitminiapp_api.schemas.admin import (
     AdminNotificationRow,
     AdminTemplateRow,
+    AdminUserAdminCapabilityUpdate,
     AdminUserRoleUpdate,
     AdminUserRow,
     AdminUserStatusUpdate,
@@ -26,6 +27,7 @@ from fitminiapp_api.services.coach_applications import (
 )
 from fitminiapp_api.services.coach_clients import close_user_coaching_relationships
 from fitminiapp_api.services.programs import delete_template_cascade
+from fitminiapp_api.services.root_admin import is_root_user
 from fitminiapp_api.services.token_service import revoke_all_user_refresh_tokens
 
 router = APIRouter()
@@ -52,6 +54,14 @@ def _serialize_user_row(user: User, profile: UserProfile | None) -> dict:
         "goal": profile.goal if profile else None,
         "level": profile.level if profile else None,
     }
+
+
+def _require_mutable_target(user: User) -> None:
+    if is_root_user(user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Операции с Root-аккаунтом запрещены",
+        )
 
 
 @router.get("/users", response_model=list[AdminUserRow])
@@ -100,12 +110,7 @@ def update_user_role(
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден")
-
-    if user.id == current_user.id and payload.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Нельзя снять роль администратора с текущего пользователя",
-        )
+    _require_mutable_target(user)
 
     if payload.role == "client":
         close_user_coaching_relationships(
@@ -116,26 +121,47 @@ def update_user_role(
             actor_user_id=current_user.id,
         )
         user.is_coach = False
-        user.is_admin = False
-    elif payload.role == "coach":
-        user.is_coach = True
-        user.is_admin = False
-        approve_pending_coach_applications(db, user, current_user)
     else:
         user.is_coach = True
-        user.is_admin = True
         approve_pending_coach_applications(db, user, current_user)
 
     record_audit_event(
         db,
-        action="admin.user_role_updated",
+        action="admin.user_trainer_capability_updated",
         resource_type="user",
         actor_user_id=current_user.id,
         target_user_id=user.id,
         resource_id=user.id,
-        details={"role": payload.role},
+        details={"is_coach": user.is_coach},
     )
 
+    db.commit()
+    profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
+    return _serialize_user_row(user, profile)
+
+
+@router.patch("/users/{user_id}/admin-capability", response_model=AdminUserRow)
+def update_user_admin_capability(
+    user_id: int,
+    payload: AdminUserAdminCapabilityUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_root_admin),
+) -> dict:
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден")
+    _require_mutable_target(user)
+
+    user.is_admin = payload.is_admin
+    record_audit_event(
+        db,
+        action="root.user_admin_capability_updated",
+        resource_type="user",
+        actor_user_id=current_user.id,
+        target_user_id=user.id,
+        resource_id=user.id,
+        details={"is_admin": user.is_admin},
+    )
     db.commit()
     profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
     return _serialize_user_row(user, profile)
@@ -223,7 +249,7 @@ def update_user_status(
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден")
-
+    _require_mutable_target(user)
     if user.id == current_user.id and not payload.is_active:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -268,7 +294,7 @@ def delete_user(
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден")
-
+    _require_mutable_target(user)
     if user.id == current_user.id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -298,8 +324,6 @@ def admin_notifications(
             "id": row.id,
             "user_id": row.user_id,
             "timezone": timezone or "Europe/Moscow",
-            "title": row.title,
-            "body": row.body,
             "status": row.status,
             "scheduled_for": row.scheduled_for.isoformat() if row.scheduled_for else None,
             "sent_at": row.sent_at.isoformat() if row.sent_at else None,
@@ -316,7 +340,7 @@ def admin_templates(
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
 ) -> list[dict]:
-    query = db.query(ProgramTemplate)
+    query = db.query(ProgramTemplate).filter(ProgramTemplate.is_public.is_(True))
     response.headers["X-Total-Count"] = str(query.count())
     rows = query.order_by(ProgramTemplate.id.desc()).offset(offset).limit(limit).all()
 
@@ -343,6 +367,8 @@ def delete_admin_template(
     template = db.query(ProgramTemplate).filter(ProgramTemplate.id == template_id).first()
     if not template:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Шаблон не найден")
+    if not template.is_public:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Недостаточно прав")
 
     delete_template_cascade(db, template)
     db.commit()

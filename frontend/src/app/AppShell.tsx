@@ -183,7 +183,7 @@ export function AppShell({
                 <span className="app-bottom-nav__label">База знаний</span>
               </AppLink>
 
-              {(user.is_coach || user.is_admin) && (
+              {user.is_coach && (
                 <>
                   <p className="app-bottom-nav__group-label">Рабочие пространства</p>
                   <AppLink
@@ -290,7 +290,7 @@ export function AppShell({
                     <AppNavigationIcon name="knowledge" />
                     <span>База знаний</span>
                   </AppLink>
-                  {(user.is_coach || user.is_admin) && (
+                  {user.is_coach && (
                     <AppLink
                       to="/coach"
                       className="app-more-panel__item"

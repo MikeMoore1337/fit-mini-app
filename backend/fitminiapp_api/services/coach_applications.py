@@ -10,7 +10,7 @@ from fitminiapp_api.services.audit import record_audit_event
 def submit_coach_application(
     db: Session, user: User, *, source: str = "web"
 ) -> CoachRoleApplication:
-    if user.is_coach or user.is_admin:
+    if user.is_coach:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Кабинет тренера уже подключён",

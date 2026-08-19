@@ -331,7 +331,7 @@ export default function CoachPage() {
     () => (programs.data ?? []).filter((item) => item.client_id === selected?.id),
     [programs.data, selected?.id],
   );
-  if (!user?.is_coach && !user?.is_admin) return <Redirect to="/app" />;
+  if (!user?.is_coach) return <Redirect to="/app" />;
   const copyInvite = async (value: string) => {
     try {
       await navigator.clipboard.writeText(value);

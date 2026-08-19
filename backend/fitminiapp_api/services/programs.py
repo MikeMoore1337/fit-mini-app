@@ -28,7 +28,6 @@ from fitminiapp_api.services.coach_clients import (
     _client_entry_from_user,
     _coach_client_ids,
     _resolve_manageable_user,
-    get_or_create_user_by_telegram_id,
 )
 from fitminiapp_api.services.exercise_catalog import (
     _effective_exercise_id,
@@ -236,8 +235,7 @@ def _created_by_current_user_with_manageable_owner(
 
 def _can_view_template(db: Session, current_user: User, template: ProgramTemplate) -> bool:
     return (
-        current_user.is_admin
-        or template.is_public
+        template.is_public
         or template.owner_user_id == current_user.id
         or _created_by_current_user_with_manageable_owner(db, current_user, template)
         or (current_user.is_coach and template.owner_user_id in _coach_client_ids(db, current_user))
@@ -253,8 +251,7 @@ def _can_view_template(db: Session, current_user: User, template: ProgramTemplat
 
 def _can_manage_template(db: Session, current_user: User, template: ProgramTemplate) -> bool:
     return (
-        current_user.is_admin
-        or template.owner_user_id == current_user.id
+        template.owner_user_id == current_user.id
         or _created_by_current_user_with_manageable_owner(db, current_user, template)
         or (current_user.is_coach and template.owner_user_id in _coach_client_ids(db, current_user))
     )
@@ -506,23 +503,16 @@ def create_and_optionally_assign_program(
     target_user = current_user
 
     if payload.mode == "coach":
-        if not current_user.is_coach and not current_user.is_admin:
+        if not current_user.is_coach:
             raise ProgramError("No permission to assign program as coach")
 
         if payload.target_telegram_user_id is None:
             raise ProgramError("Target Telegram user id is required in coach mode")
-        if current_user.is_admin:
-            target_user = get_or_create_user_by_telegram_id(
-                db,
-                payload.target_telegram_user_id,
-                payload.target_full_name,
-            )
-        else:
-            target_user = _resolve_manageable_user(
-                db,
-                current_user,
-                payload.target_telegram_user_id,
-            )
+        target_user = _resolve_manageable_user(
+            db,
+            current_user,
+            payload.target_telegram_user_id,
+        )
 
     template = create_template(db, current_user, payload, target_user)
     assigned_program = None
@@ -628,8 +618,7 @@ def list_user_templates(db: Session, current_user: User) -> list[ProgramTemplate
         template
         for template in templates
         if (
-            current_user.is_admin
-            or template.is_public
+            template.is_public
             or template.owner_user_id == current_user.id
             or (
                 template.created_by_user_id == current_user.id
@@ -970,8 +959,7 @@ def assign_template_to_self(
         raise ProgramError("Template not found")
 
     can_use = (
-        current_user.is_admin
-        or template.is_public
+        template.is_public
         or template.owner_user_id == current_user.id
         or (
             template.created_by_user_id == current_user.id
