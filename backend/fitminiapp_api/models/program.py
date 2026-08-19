@@ -364,6 +364,48 @@ class UserWorkout(Base):
         cascade="all, delete-orphan",
         order_by="UserWorkoutExercise.sort_order",
     )
+    adaptations: Mapped[list[WorkoutAdaptation]] = relationship(
+        "WorkoutAdaptation",
+        back_populates="workout",
+        cascade="all, delete-orphan",
+        order_by="WorkoutAdaptation.applied_at, WorkoutAdaptation.id",
+    )
+
+
+class WorkoutAdaptation(Base):
+    __tablename__ = "workout_adaptations"
+    __table_args__ = (
+        CheckConstraint(
+            "reason IN ('limited_time', 'unavailable_equipment', "
+            "'replace_exercise', 'different_environment')",
+            name="ck_workout_adaptations_reason",
+        ),
+        Index(
+            "ix_workout_adaptations_workout_applied",
+            "workout_id",
+            "applied_at",
+            "id",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    workout_id: Mapped[int] = mapped_column(
+        ForeignKey("user_workouts.id", ondelete="CASCADE"), nullable=False
+    )
+    reason: Mapped[str] = mapped_column(String(32), nullable=False)
+    preview_token: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    request_payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+    original_snapshot: Mapped[dict] = mapped_column(JSON, nullable=False)
+    applied_diff: Mapped[list[dict]] = mapped_column(JSON, nullable=False)
+    ruleset_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    applied_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=now_msk_naive,
+        server_default=func.now(),
+    )
+
+    workout: Mapped[UserWorkout] = relationship("UserWorkout", back_populates="adaptations")
 
 
 class UserWorkoutExercise(Base):

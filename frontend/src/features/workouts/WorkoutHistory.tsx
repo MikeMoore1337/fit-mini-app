@@ -12,6 +12,12 @@ import { workoutStatusLabel } from '../../shared/statusLabels';
 import { dateInputValue, detectedTimeZone } from '../../shared/dateTime';
 
 const HISTORY_PAGE_SIZE = 10;
+const adaptationReasonLabels: Record<string, string> = {
+  limited_time: 'мало времени',
+  unavailable_equipment: 'оборудование недоступно',
+  replace_exercise: 'замена упражнения',
+  different_environment: 'другое место тренировки',
+};
 export type WorkoutNavigationTarget = 'schedule' | 'history';
 
 export function WorkoutHistory({
@@ -172,6 +178,14 @@ export function WorkoutHistory({
                     <p className="muted">
                       {item.scheduled_date} · {item.completed_sets} подходов
                     </p>
+                    <p className="muted workout-history__actual">
+                      Фактически: {item.exercises.map((exercise) => exercise.title).join(', ')}
+                    </p>
+                    {item.adaptations.map((adaptation) => (
+                      <p className="workout-history__adaptation" key={adaptation.id}>
+                        Изменено перед тренировкой: {adaptationReasonLabels[adaptation.reason]}
+                      </p>
+                    ))}
                   </div>
                   <strong>{item.volume_kg} кг</strong>
                 </article>
