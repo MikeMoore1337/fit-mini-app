@@ -568,6 +568,62 @@ async function mockApi(page: Page, { withCoachClient = false, withCoachApplicati
     }
     if (path.endsWith('/workouts/today'))
       return route.fulfill({ status: 404, json: { detail: 'На сегодня тренировка не назначена' } });
+    if (path.endsWith('/workouts/progress/summary'))
+      return route.fulfill({
+        json: {
+          user_id: 1,
+          period_days: 30,
+          period_start: '2030-01-01',
+          period_end: '2030-01-10',
+          training: {
+            planned_workouts: 0,
+            completed_workouts: 0,
+            frequency_per_week: 0,
+            volume_kg: 0,
+            new_personal_records: 0,
+            last_completed_workout_on: null,
+            next_workout: null,
+          },
+          nutrition: {
+            visible: true,
+            logged_days: 0,
+            adherence_evaluated_days: 0,
+            average_calories: null,
+            target_calories: null,
+            average_protein_g: null,
+            target_protein_g: null,
+            target_effective_on: null,
+          },
+          body: { latest_measurement: null, trends: [], priority: null, guidance: {} },
+          adherence: {
+            formula_version: 'adherence-v1',
+            overall_percent: null,
+            included_components: [],
+            workouts: {},
+            cardio: {},
+            calories: {},
+            protein: {},
+          },
+          data_sufficiency: {},
+        },
+      });
+    if (path.endsWith('/nutrition/diary'))
+      return route.fulfill({
+        json: {
+          diary_date: '2030-01-10',
+          timezone: 'Europe/Moscow',
+          meals: [],
+          totals: {
+            energy_kcal: '0',
+            protein_g: '0',
+            fat_g: '0',
+            carbs_g: '0',
+            fiber_g: null,
+          },
+          targets: null,
+          remaining: null,
+        },
+      });
     if (path.endsWith('/workouts/progress')) return route.fulfill({ json: emptyProgress });
     if (path.endsWith('/check-ins/weekly/current'))
       return route.fulfill({
@@ -825,9 +881,8 @@ test('клиент входит и видит экран тренировки', 
   await mockApi(page);
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
-  await expect(page.getByRole('heading', { name: 'Демо пользователь' })).toBeVisible();
-  await openCard(page, 'Тренировка сегодня');
-  await expect(page.getByText('Сегодня отдых')).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Сегодня,/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Выберите тренировочный план' })).toBeVisible();
 });
 
 test('цветовая система сохраняет иерархию в светлой и тёмной темах', async ({ page }) => {
@@ -931,14 +986,15 @@ test('Mobile Web и Telegram используют одну YFC palette и гео
   await webPage.goto('/app');
   await webPage.getByRole('button', { name: 'Клиент' }).click();
   await telegramPage.goto('/app');
-  await expect(webPage.getByRole('heading', { name: 'Демо пользователь' })).toBeVisible();
-  await expect(telegramPage.getByRole('heading', { name: 'Демо пользователь' })).toBeVisible();
+  await expect(webPage.getByRole('heading', { name: /^Сегодня,/ })).toBeVisible();
+  await expect(telegramPage.getByRole('heading', { name: /^Сегодня,/ })).toBeVisible();
   await expect(telegramPage.getByRole('button', { name: /Включить .* тему/ })).not.toBeAttached();
 
   const snapshot = (page: Page) =>
     page.evaluate(() => {
       const rootStyle = getComputedStyle(document.documentElement);
-      const card = document.querySelector<HTMLElement>('.card')!.getBoundingClientRect();
+      const surfaceElement = document.querySelector<HTMLElement>('.today-workout-spotlight')!;
+      const card = surfaceElement.getBoundingClientRect();
       const container = document.querySelector<HTMLElement>('.container')!.getBoundingClientRect();
       const navigation = document
         .querySelector<HTMLElement>('#appBottomNav')!
@@ -957,7 +1013,7 @@ test('Mobile Web и Telegram используют одну YFC palette и гео
         ),
         card: {
           width: card.width,
-          borderRadius: getComputedStyle(document.querySelector('.card')!).borderRadius,
+          borderRadius: getComputedStyle(surfaceElement).borderRadius,
         },
         container: { width: container.width, x: container.x },
         navigation: {
@@ -992,7 +1048,7 @@ test('Mobile Web и Telegram используют одну YFC palette и гео
   );
   await expect(telegramPage.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
   expect(await snapshot(telegramPage)).toEqual(await snapshot(webPage));
-  await expect(telegramPage.getByRole('heading', { name: 'Демо пользователь' })).toBeVisible();
+  await expect(telegramPage.getByRole('heading', { name: /^Сегодня,/ })).toBeVisible();
 
   await webPage.close();
   await telegramPage.close();
@@ -1060,7 +1116,7 @@ test('app shell сохраняет композицию и доступност�
   await expect(page).toHaveURL('/app?section=nutrition');
 
   await openAppDestination(page, 'Сегодня');
-  await expect(page.getByRole('heading', { name: 'Тренировка сегодня' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Сегодня,/ })).toBeVisible();
 
   await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeInViewport();
   const moreButton = page.getByRole('button', { name: 'Ещё', exact: true });

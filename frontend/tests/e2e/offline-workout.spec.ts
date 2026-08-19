@@ -82,6 +82,35 @@ test('active workout переживает offline edit, refresh и reconnect б�
       if (workoutOffline) return route.abort('internetdisconnected');
       return route.fulfill({ json: workout() });
     }
+    if (path.endsWith('/workouts/progress/summary'))
+      return route.fulfill({
+        json: {
+          training: { last_completed_workout_on: null, next_workout: null },
+          body: { latest_measurement: null, trends: [] },
+          adherence: {
+            formula_version: 'adherence-v1',
+            overall_percent: null,
+            included_components: [],
+          },
+        },
+      });
+    if (path.endsWith('/nutrition/diary'))
+      return route.fulfill({
+        json: {
+          diary_date: '2030-01-10',
+          timezone: 'Europe/Moscow',
+          meals: [],
+          totals: {
+            energy_kcal: '0',
+            protein_g: '0',
+            fat_g: '0',
+            carbs_g: '0',
+            fiber_g: null,
+          },
+          targets: null,
+          remaining: null,
+        },
+      });
     if (path.endsWith('/workouts/sets/201')) {
       setPatchCalls += 1;
       if (workoutOffline) return route.abort('internetdisconnected');
@@ -101,10 +130,7 @@ test('active workout переживает offline edit, refresh и reconnect б�
 
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
-  const card = page
-    .getByRole('heading', { name: 'Тренировка A' })
-    .locator('xpath=ancestor::details[1]');
-  await card.locator(':scope > summary').click();
+  await page.getByRole('button', { name: 'Продолжить тренировку' }).click();
 
   workoutOffline = true;
   await page.getByRole('spinbutton', { name: 'Повторы, Жим штанги лежа, подход 1' }).fill('8');
@@ -124,10 +150,7 @@ test('active workout переживает offline edit, refresh и reconnect б�
 
   workoutMissing = true;
   await page.reload();
-  const restoredCard = page
-    .getByRole('heading', { name: 'Тренировка A' })
-    .locator('xpath=ancestor::details[1]');
-  await restoredCard.locator(':scope > summary').click();
+  await page.getByRole('button', { name: 'Продолжить тренировку' }).click();
   await expect(
     page.getByRole('spinbutton', { name: 'Повторы, Жим штанги лежа, подход 1' }),
   ).toHaveValue('8');

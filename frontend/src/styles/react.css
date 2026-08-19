@@ -1896,6 +1896,398 @@ select:not([multiple]) {
   }
 }
 
+/* Today dashboard: one action-first view shared by Web and Telegram Mini App. */
+.today-dashboard {
+  display: grid;
+  gap: clamp(22px, 3vw, 34px);
+}
+.today-dashboard__header {
+  display: grid;
+  gap: 5px;
+  padding: 8px 2px 0;
+}
+.today-dashboard__header h1 {
+  max-width: 760px;
+  font-size: clamp(2rem, 4.5vw, 3.5rem);
+  line-height: 1.02;
+  letter-spacing: -0.055em;
+}
+.today-dashboard__header p {
+  color: var(--muted);
+  font-size: clamp(0.94rem, 1.5vw, 1.08rem);
+}
+.today-workout-spotlight {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(210px, 280px);
+  align-items: end;
+  gap: clamp(20px, 4vw, 54px);
+  min-height: 278px;
+  padding: clamp(24px, 4.5vw, 48px);
+  border: 1px solid var(--accent-line);
+  border-radius: clamp(20px, 3vw, 30px);
+  background: var(--card-bg);
+  box-shadow: var(--elevation-raised);
+}
+.today-workout-spotlight::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 6px;
+  background: var(--accent);
+  content: '';
+}
+.today-workout-spotlight::after {
+  position: absolute;
+  right: -70px;
+  bottom: -108px;
+  width: 260px;
+  height: 260px;
+  border: 54px solid var(--accent-soft);
+  border-radius: 50%;
+  content: '';
+  pointer-events: none;
+}
+.today-workout-spotlight > * {
+  position: relative;
+  z-index: 1;
+}
+.today-workout-spotlight__label,
+.today-panel__kicker {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 850;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.today-workout-spotlight__label {
+  position: absolute;
+  top: clamp(24px, 4.5vw, 48px);
+  left: clamp(24px, 4.5vw, 48px);
+}
+.today-workout-copy {
+  display: grid;
+  gap: 12px;
+  align-self: end;
+  padding-top: 34px;
+}
+.today-workout-copy__status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+.today-workout-copy h2 {
+  max-width: 690px;
+  font-size: clamp(1.75rem, 4vw, 3rem);
+  line-height: 1.03;
+  letter-spacing: -0.045em;
+}
+.today-workout-copy p {
+  max-width: 58ch;
+  color: var(--muted);
+  font-size: clamp(0.94rem, 1.5vw, 1.04rem);
+  line-height: 1.5;
+}
+.today-workout-copy__marker {
+  color: var(--accent-strong, var(--accent));
+  font-size: 0.86rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+.today-workout-actions {
+  display: grid;
+  gap: 9px;
+  align-self: end;
+}
+.today-workout-actions .ui-button {
+  min-height: 50px;
+}
+.today-workout-details {
+  scroll-margin-top: 18px;
+  display: grid;
+  gap: 10px;
+}
+.today-workout-details__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-inline: 4px;
+}
+.today-workout-details .card {
+  box-shadow: none;
+}
+.today-dashboard__daily,
+.today-dashboard__progress {
+  display: grid;
+  gap: 13px;
+}
+.today-dashboard__section-title {
+  display: grid;
+  gap: 3px;
+}
+.today-dashboard__section-title h2 {
+  font-size: clamp(1.4rem, 2.4vw, 1.8rem);
+  letter-spacing: -0.03em;
+}
+.today-panel {
+  min-width: 0;
+  padding: clamp(18px, 2.6vw, 26px);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--card-bg);
+}
+.today-panel__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+.today-panel__head > div {
+  display: grid;
+  gap: 4px;
+}
+.today-panel__head h2 {
+  font-size: 1.08rem;
+}
+.today-text-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent-strong, var(--accent));
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+button.today-text-link {
+  width: auto;
+}
+.today-text-link:hover {
+  background: transparent;
+  color: var(--text);
+}
+.today-calories {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  margin-top: 18px;
+}
+.today-calories strong {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  line-height: 0.95;
+  letter-spacing: -0.06em;
+}
+.today-calories span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.today-macros {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  margin-top: 20px;
+  border-radius: 14px;
+  background: var(--border);
+}
+.today-macro {
+  display: grid;
+  gap: 5px;
+  padding: 13px 15px;
+  background: var(--bg-soft);
+}
+.today-macro > span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+.today-macro strong {
+  font-size: 1rem;
+}
+.today-macro small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+.today-panel__note {
+  margin-top: 13px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+.today-progress-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.today-signal {
+  display: grid;
+  min-height: 154px;
+  align-content: space-between;
+  gap: 18px;
+}
+.today-signal__value {
+  display: grid;
+  gap: 5px;
+}
+.today-signal__value strong {
+  font-size: clamp(1.8rem, 4vw, 2.65rem);
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+.today-signal__value span,
+.today-signal__empty {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+.today-summary-skeleton {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  padding-top: 34px;
+}
+.today-progress-skeleton {
+  border-radius: 20px;
+}
+.today-inline-state {
+  display: grid;
+  gap: 7px;
+  align-content: center;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+.today-inline-state strong {
+  color: var(--text);
+  font-size: 1rem;
+}
+.today-progress-unavailable {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+.today-profile-nudge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 18px;
+  border-left: 3px solid var(--accent);
+  background: var(--bg-soft);
+}
+.today-profile-nudge > div {
+  display: grid;
+  gap: 4px;
+}
+.today-profile-nudge strong {
+  font-size: 0.88rem;
+}
+.today-profile-nudge span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+.today-secondary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  padding-block: 2px 8px;
+}
+.today-secondary-actions a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+.today-secondary-actions a:hover {
+  color: var(--text);
+}
+
+@media (max-width: 720px) {
+  .today-workout-spotlight {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+  .today-workout-actions {
+    width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .today-dashboard {
+    gap: 22px;
+  }
+  .today-dashboard__header {
+    padding-inline: 2px;
+  }
+  .today-dashboard__header h1 {
+    font-size: clamp(1.95rem, 10vw, 2.55rem);
+  }
+  .today-workout-spotlight {
+    gap: 20px;
+    padding: 22px 19px 20px;
+    border-radius: 22px;
+  }
+  .today-workout-spotlight__label {
+    top: 22px;
+    left: 19px;
+  }
+  .today-workout-copy h2 {
+    font-size: clamp(1.7rem, 8.5vw, 2.2rem);
+  }
+  .today-progress-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .today-macros {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .today-macro {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+  }
+  .today-profile-nudge {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .today-secondary-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2px 12px;
+  }
+}
+
+@media (max-width: 360px) {
+  .today-workout-spotlight {
+    padding-inline: 16px;
+  }
+  .today-workout-spotlight__label {
+    left: 16px;
+  }
+  .today-panel {
+    padding: 17px 15px;
+  }
+  .today-calories {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .today-secondary-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* App shell: shared mobile composition and a purpose-built desktop sidebar. */
 .app-shell {
   min-height: 100dvh;
