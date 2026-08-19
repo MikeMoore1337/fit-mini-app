@@ -41,6 +41,37 @@ const history = [
     completed_at: '2030-01-09T10:00:00',
     completed_sets: 4,
     volume_kg: 1200,
+    exercises: [
+      {
+        workout_exercise_id: 55,
+        exercise_id: 7,
+        title: 'Жим гантелей лежа',
+        equipment_ids: ['dumbbell'],
+        prescribed_sets: 4,
+        prescribed_reps: '8-10',
+        rest_seconds: 90,
+        sort_order: 1,
+        priority: 'core',
+      },
+    ],
+    adaptations: [
+      {
+        id: 5,
+        reason: 'replace_exercise',
+        ruleset_version: 'workout-adaptation-v1',
+        applied_at: '2030-01-09T08:55:00',
+        changes: [
+          {
+            kind: 'replaced',
+            workout_exercise_id: 55,
+            from_exercise_id: 6,
+            from_title: 'Жим штанги лежа',
+            to_exercise_id: 7,
+            to_title: 'Жим гантелей лежа',
+          },
+        ],
+      },
+    ],
   },
 ];
 
@@ -92,6 +123,8 @@ describe('WorkoutHistory', () => {
     expect(screen.getByText('Завершена')).toBeInTheDocument();
     expect(screen.queryByText('planned')).not.toBeInTheDocument();
     expect(screen.queryByText('completed')).not.toBeInTheDocument();
+    expect(screen.getByText('Фактически: Жим гантелей лежа')).toBeInTheDocument();
+    expect(screen.getByText('Изменено перед тренировкой: замена упражнения')).toBeInTheDocument();
     expect(screen.getByText('Прошедшая пропущенная тренировка').closest('a')).toBeNull();
 
     const plannedDay = screen.getByRole('link', {

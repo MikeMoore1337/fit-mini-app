@@ -14,14 +14,21 @@ from fitminiapp_api.models.program import (
     UserWorkout,
     UserWorkoutExercise,
     UserWorkoutSet,
+    WorkoutAdaptation,
 )
 from fitminiapp_api.models.user import BodyMeasurement, User
 from fitminiapp_api.schemas.feedback import WorkoutCommentResponse
+from fitminiapp_api.schemas.program import EquipmentIdentifier
 from fitminiapp_api.schemas.progress import ProgressPeriodDays, ProgressSummaryResponse
 from fitminiapp_api.schemas.workout import (
     BodyMeasurementResponse,
     BodyMeasurementSave,
     TrainingAnalyticsResponse,
+    WorkoutAdaptationApplyRequest,
+    WorkoutAdaptationApplyResponse,
+    WorkoutAdaptationPreviewResponse,
+    WorkoutAdaptationRequest,
+    WorkoutAlternativeItem,
     WorkoutFinishRequest,
     WorkoutHistoryItem,
     WorkoutHistorySummary,
@@ -38,6 +45,12 @@ from fitminiapp_api.services.exercise_guides import get_exercise_guide
 from fitminiapp_api.services.notifications import queue_telegram_notification
 from fitminiapp_api.services.nutrition import NutritionError, recalculate_nutrition_target
 from fitminiapp_api.services.progress import build_progress_summary
+from fitminiapp_api.services.workout_adaptation import (
+    WorkoutAdaptationError,
+    apply_adaptation,
+    build_adaptation_preview,
+    list_compatible_alternatives,
+)
 from fitminiapp_api.services.workout_comments import (
     WorkoutCommentError,
     list_client_workout_comments,
@@ -72,6 +85,7 @@ def _get_user_workout_or_404(db: Session, current_user: User, workout_id: int) -
             joinedload(UserWorkout.user_program),
             joinedload(UserWorkout.exercises).joinedload(UserWorkoutExercise.exercise),
             joinedload(UserWorkout.exercises).joinedload(UserWorkoutExercise.sets),
+            joinedload(UserWorkout.adaptations),
         )
         .filter(
             UserWorkout.id == workout_id,
@@ -118,6 +132,10 @@ def _reconcile_program_completion(db: Session, program: UserProgram, current_use
 def _delete_workouts(db: Session, workout_ids: list[int]) -> int:
     if not workout_ids:
         return 0
+
+    db.query(WorkoutAdaptation).filter(WorkoutAdaptation.workout_id.in_(workout_ids)).delete(
+        synchronize_session=False
+    )
 
     comment_ids = [
         item.id
@@ -259,6 +277,87 @@ def get_today_workout(
         raise HTTPException(status_code=404, detail="На сегодня тренировка не назначена")
 
     return _serialize_workout(workout, db, current_user)
+
+
+@router.get(
+    "/{workout_id}/exercises/{workout_exercise_id}/alternatives",
+    response_model=list[WorkoutAlternativeItem],
+)
+def workout_exercise_alternatives(
+    workout_id: int,
+    workout_exercise_id: int,
+    available_equipment_ids: list[EquipmentIdentifier] | None = Query(default=None),
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    if available_equipment_ids is not None and (
+        len(available_equipment_ids) > 9
+        or len(set(available_equipment_ids)) != len(available_equipment_ids)
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="Укажите не больше девяти уникальных видов оборудования",
+        )
+    workout = _get_user_workout_or_404(db, current_user, workout_id)
+    try:
+        return list_compatible_alternatives(
+            db,
+            current_user,
+            workout,
+            workout_exercise_id,
+            set(available_equipment_ids or []),
+        )
+    except WorkoutAdaptationError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+
+@router.post(
+    "/{workout_id}/adaptations/preview",
+    response_model=WorkoutAdaptationPreviewResponse,
+)
+def preview_workout_adaptation(
+    workout_id: int,
+    payload: WorkoutAdaptationRequest,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    workout = _get_user_workout_or_404(db, current_user, workout_id)
+    try:
+        return build_adaptation_preview(db, current_user, workout, payload)
+    except WorkoutAdaptationError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+
+@router.post(
+    "/{workout_id}/adaptations/apply",
+    response_model=WorkoutAdaptationApplyResponse,
+)
+def apply_workout_adaptation(
+    workout_id: int,
+    payload: WorkoutAdaptationApplyRequest,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    workout = _get_user_workout_or_404(db, current_user, workout_id)
+    _lock_program(db, workout.user_program_id)
+    workout = _get_user_workout_or_404(db, current_user, workout_id)
+    try:
+        adaptation = apply_adaptation(
+            db,
+            current_user,
+            workout,
+            payload,
+            payload.preview_token,
+        )
+    except WorkoutAdaptationError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    updated = _get_user_workout_or_404(db, current_user, workout_id)
+    return {
+        "adaptation_id": adaptation.id,
+        "applied_at": adaptation.applied_at,
+        "workout": _serialize_workout(updated, db, current_user),
+    }
 
 
 @router.get("/week", response_model=list[WorkoutScheduleItem])
@@ -661,7 +760,11 @@ def workout_history(
     workouts = (
         db.query(UserWorkout)
         .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
-        .options(joinedload(UserWorkout.exercises).joinedload(UserWorkoutExercise.sets))
+        .options(
+            joinedload(UserWorkout.exercises).joinedload(UserWorkoutExercise.sets),
+            joinedload(UserWorkout.exercises).joinedload(UserWorkoutExercise.exercise),
+            joinedload(UserWorkout.adaptations),
+        )
         .filter(
             UserProgram.user_id == current_user.id,
             UserWorkout.status == "completed",
@@ -692,6 +795,30 @@ def workout_history(
                 "completed_at": item.completed_at.isoformat() if item.completed_at else None,
                 "completed_sets": len(completed_sets),
                 "volume_kg": round(volume_kg, 1),
+                "exercises": [
+                    {
+                        "workout_exercise_id": exercise.id,
+                        "exercise_id": exercise.exercise_id,
+                        "title": exercise.exercise.title,
+                        "prescribed_sets": exercise.prescribed_sets,
+                        "prescribed_reps": exercise.prescribed_reps,
+                        "sort_order": exercise.sort_order,
+                    }
+                    for exercise in sorted(
+                        item.exercises,
+                        key=lambda exercise: (exercise.sort_order, exercise.id),
+                    )
+                ],
+                "adaptations": [
+                    {
+                        "id": adaptation.id,
+                        "reason": adaptation.reason,
+                        "ruleset_version": adaptation.ruleset_version,
+                        "applied_at": adaptation.applied_at,
+                        "changes": adaptation.applied_diff,
+                    }
+                    for adaptation in item.adaptations
+                ],
             }
         )
 

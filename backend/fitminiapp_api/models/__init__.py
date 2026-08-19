@@ -28,6 +28,7 @@ from fitminiapp_api.models.program import (
     UserWorkout,
     UserWorkoutExercise,
     UserWorkoutSet,
+    WorkoutAdaptation,
 )
 from fitminiapp_api.models.recipe import Recipe, RecipeIngredient
 from fitminiapp_api.models.token import RefreshToken
@@ -86,6 +87,7 @@ __all__ = [
     "UserWorkoutExercise",
     "UserWorkoutSet",
     "WeeklyCheckIn",
+    "WorkoutAdaptation",
     "WorkoutComment",
     "WorkoutCommentRevision",
 ]

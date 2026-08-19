@@ -1,9 +1,10 @@
 from datetime import date, datetime, time
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from fitminiapp_api.schemas.data_quality import TrainingDataSufficiency
+from fitminiapp_api.schemas.program import EquipmentIdentifier
 
 RirValue = Literal["0", "1", "2", "3", "4+"]
 SetKind = Literal["warmup", "working", "drop"]
@@ -11,6 +12,94 @@ RIR_DESCRIPTION = (
     "Optional repetitions-in-reserve category after the set; 4+ means many repetitions "
     "remained, not an exact value of four"
 )
+WorkoutAdaptationReason = Literal[
+    "limited_time",
+    "unavailable_equipment",
+    "replace_exercise",
+    "different_environment",
+    "pain_or_injury",
+]
+
+
+class WorkoutAdaptationRequest(BaseModel):
+    reason: WorkoutAdaptationReason
+    time_budget_minutes: int | None = Field(default=None, ge=10, le=240)
+    target_workout_exercise_id: int | None = Field(default=None, ge=1)
+    replacement_exercise_id: int | None = Field(default=None, ge=1)
+    available_equipment_ids: list[EquipmentIdentifier] | None = Field(
+        default=None,
+        max_length=9,
+    )
+
+    @model_validator(mode="after")
+    def validate_reason_fields(self):
+        if self.available_equipment_ids is not None and len(
+            set(self.available_equipment_ids)
+        ) != len(self.available_equipment_ids):
+            raise ValueError("Список доступного оборудования не должен содержать повторы")
+        if self.reason == "limited_time" and self.time_budget_minutes is None:
+            raise ValueError("Для ограничения по времени укажите бюджет в минутах")
+        if self.reason == "unavailable_equipment" and (
+            self.target_workout_exercise_id is None or self.available_equipment_ids is None
+        ):
+            raise ValueError("Выберите упражнение и доступное оборудование")
+        if self.reason == "different_environment" and self.available_equipment_ids is None:
+            raise ValueError("Укажите оборудование, доступное в новом месте")
+        if self.reason == "replace_exercise" and (
+            self.target_workout_exercise_id is None
+            or self.replacement_exercise_id is None
+            or self.available_equipment_ids is None
+        ):
+            raise ValueError("Выберите упражнение, замену и доступное оборудование")
+        return self
+
+
+class WorkoutAdaptationApplyRequest(WorkoutAdaptationRequest):
+    preview_token: str = Field(min_length=64, max_length=64)
+
+
+class WorkoutAdaptationExercise(BaseModel):
+    workout_exercise_id: int | None = None
+    exercise_id: int
+    title: str
+    equipment_ids: list[str]
+    prescribed_sets: int
+    prescribed_reps: str
+    rest_seconds: int
+    sort_order: int
+    superset_group: int | None = None
+    priority: Literal["core", "priority", "accessory"]
+
+
+class WorkoutAdaptationChange(BaseModel):
+    kind: Literal["removed", "replaced"]
+    workout_exercise_id: int
+    from_exercise_id: int
+    from_title: str
+    to_exercise_id: int | None = None
+    to_title: str | None = None
+
+
+class WorkoutAdaptationPreviewResponse(BaseModel):
+    status: Literal["preview", "no_changes", "safety_stop"]
+    workout_id: int
+    reason: WorkoutAdaptationReason
+    ruleset_version: str
+    original_estimated_minutes: int
+    adapted_estimated_minutes: int
+    time_budget_minutes: int | None = None
+    changes: list[WorkoutAdaptationChange]
+    original_exercises: list[WorkoutAdaptationExercise]
+    adapted_exercises: list[WorkoutAdaptationExercise]
+    warnings: list[str]
+    message: str
+    preview_token: str | None = None
+
+
+class WorkoutAlternativeItem(BaseModel):
+    exercise_id: int
+    title: str
+    equipment_ids: list[str]
 
 
 class WorkoutSetCreate(BaseModel):
@@ -72,6 +161,12 @@ class WorkoutTodayResponse(BaseModel):
     exercises: list[WorkoutExerciseItem]
 
 
+class WorkoutAdaptationApplyResponse(BaseModel):
+    adaptation_id: int
+    applied_at: datetime
+    workout: WorkoutTodayResponse
+
+
 class WorkoutStatusResponse(BaseModel):
     id: int
     set_number: int
@@ -112,6 +207,30 @@ class WorkoutHistoryItem(BaseModel):
     completed_at: datetime | None = None
     completed_sets: int
     volume_kg: float
+    exercises: list[WorkoutHistoryExerciseItem]
+    adaptations: list[WorkoutAdaptationHistoryItem]
+
+
+class WorkoutHistoryExerciseItem(BaseModel):
+    workout_exercise_id: int
+    exercise_id: int
+    title: str
+    prescribed_sets: int
+    prescribed_reps: str
+    sort_order: int
+
+
+class WorkoutAdaptationHistoryItem(BaseModel):
+    id: int
+    reason: Literal[
+        "limited_time",
+        "unavailable_equipment",
+        "replace_exercise",
+        "different_environment",
+    ]
+    ruleset_version: str
+    applied_at: datetime
+    changes: list[WorkoutAdaptationChange]
 
 
 class WorkoutHistorySummary(BaseModel):

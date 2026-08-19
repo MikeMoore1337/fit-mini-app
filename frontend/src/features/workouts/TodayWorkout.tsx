@@ -7,6 +7,7 @@ import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Badge, Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
 import { readStorage, removeStorage, writeStorage } from '../../shared/storage';
 import { ExerciseGuideDialog } from '../exercises/ExerciseGuideDialog';
+import { WorkoutAdaptation } from './WorkoutAdaptation';
 
 type WorkoutSet = Workout['exercises'][number]['sets'][number];
 
@@ -341,15 +342,20 @@ export function TodayWorkout() {
               />
             )}
           </div>
+          {(data.status === 'planned' || started) && (
+            <WorkoutAdaptation workout={data} safetyOnly={started} />
+          )}
           {data.status === 'planned' && (
-            <button
-              disabled={mutation.isPending}
-              onClick={() =>
-                mutation.mutate({ path: `/api/v1/workouts/${data.id}/start`, method: 'POST' })
-              }
-            >
-              Начать тренировку
-            </button>
+            <>
+              <button
+                disabled={mutation.isPending}
+                onClick={() =>
+                  mutation.mutate({ path: `/api/v1/workouts/${data.id}/start`, method: 'POST' })
+                }
+              >
+                Начать тренировку
+              </button>
+            </>
           )}
           {data.exercises.map((exercise) => (
             <article className="program-day stack" key={exercise.id}>

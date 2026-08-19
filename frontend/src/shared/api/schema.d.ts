@@ -1073,6 +1073,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workouts/{workout_id}/exercises/{workout_exercise_id}/alternatives": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Workout Exercise Alternatives */
+        get: operations["workout_exercise_alternatives_api_v1_workouts__workout_id__exercises__workout_exercise_id__alternatives_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/{workout_id}/adaptations/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Workout Adaptation */
+        post: operations["preview_workout_adaptation_api_v1_workouts__workout_id__adaptations_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/{workout_id}/adaptations/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Apply Workout Adaptation */
+        post: operations["apply_workout_adaptation_api_v1_workouts__workout_id__adaptations_apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workouts/week": {
         parameters: {
             query?: never;
@@ -4891,6 +4942,158 @@ export interface components {
             completed_workouts: number;
             adherence: components["schemas"]["AdherenceComponent"];
         };
+        /** WorkoutAdaptationApplyRequest */
+        WorkoutAdaptationApplyRequest: {
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "limited_time" | "unavailable_equipment" | "replace_exercise" | "different_environment" | "pain_or_injury";
+            /** Time Budget Minutes */
+            time_budget_minutes?: number | null;
+            /** Target Workout Exercise Id */
+            target_workout_exercise_id?: number | null;
+            /** Replacement Exercise Id */
+            replacement_exercise_id?: number | null;
+            /** Available Equipment Ids */
+            available_equipment_ids?: ("bodyweight" | "dumbbell" | "barbell" | "bench" | "cable" | "machine" | "kettlebell" | "cardio" | "other")[] | null;
+            /** Preview Token */
+            preview_token: string;
+        };
+        /** WorkoutAdaptationApplyResponse */
+        WorkoutAdaptationApplyResponse: {
+            /** Adaptation Id */
+            adaptation_id: number;
+            /**
+             * Applied At
+             * Format: date-time
+             */
+            applied_at: string;
+            workout: components["schemas"]["WorkoutTodayResponse"];
+        };
+        /** WorkoutAdaptationChange */
+        WorkoutAdaptationChange: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "removed" | "replaced";
+            /** Workout Exercise Id */
+            workout_exercise_id: number;
+            /** From Exercise Id */
+            from_exercise_id: number;
+            /** From Title */
+            from_title: string;
+            /** To Exercise Id */
+            to_exercise_id?: number | null;
+            /** To Title */
+            to_title?: string | null;
+        };
+        /** WorkoutAdaptationExercise */
+        WorkoutAdaptationExercise: {
+            /** Workout Exercise Id */
+            workout_exercise_id?: number | null;
+            /** Exercise Id */
+            exercise_id: number;
+            /** Title */
+            title: string;
+            /** Equipment Ids */
+            equipment_ids: string[];
+            /** Prescribed Sets */
+            prescribed_sets: number;
+            /** Prescribed Reps */
+            prescribed_reps: string;
+            /** Rest Seconds */
+            rest_seconds: number;
+            /** Sort Order */
+            sort_order: number;
+            /** Superset Group */
+            superset_group?: number | null;
+            /**
+             * Priority
+             * @enum {string}
+             */
+            priority: "core" | "priority" | "accessory";
+        };
+        /** WorkoutAdaptationHistoryItem */
+        WorkoutAdaptationHistoryItem: {
+            /** Id */
+            id: number;
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "limited_time" | "unavailable_equipment" | "replace_exercise" | "different_environment";
+            /** Ruleset Version */
+            ruleset_version: string;
+            /**
+             * Applied At
+             * Format: date-time
+             */
+            applied_at: string;
+            /** Changes */
+            changes: components["schemas"]["WorkoutAdaptationChange"][];
+        };
+        /** WorkoutAdaptationPreviewResponse */
+        WorkoutAdaptationPreviewResponse: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "preview" | "no_changes" | "safety_stop";
+            /** Workout Id */
+            workout_id: number;
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "limited_time" | "unavailable_equipment" | "replace_exercise" | "different_environment" | "pain_or_injury";
+            /** Ruleset Version */
+            ruleset_version: string;
+            /** Original Estimated Minutes */
+            original_estimated_minutes: number;
+            /** Adapted Estimated Minutes */
+            adapted_estimated_minutes: number;
+            /** Time Budget Minutes */
+            time_budget_minutes?: number | null;
+            /** Changes */
+            changes: components["schemas"]["WorkoutAdaptationChange"][];
+            /** Original Exercises */
+            original_exercises: components["schemas"]["WorkoutAdaptationExercise"][];
+            /** Adapted Exercises */
+            adapted_exercises: components["schemas"]["WorkoutAdaptationExercise"][];
+            /** Warnings */
+            warnings: string[];
+            /** Message */
+            message: string;
+            /** Preview Token */
+            preview_token?: string | null;
+        };
+        /** WorkoutAdaptationRequest */
+        WorkoutAdaptationRequest: {
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "limited_time" | "unavailable_equipment" | "replace_exercise" | "different_environment" | "pain_or_injury";
+            /** Time Budget Minutes */
+            time_budget_minutes?: number | null;
+            /** Target Workout Exercise Id */
+            target_workout_exercise_id?: number | null;
+            /** Replacement Exercise Id */
+            replacement_exercise_id?: number | null;
+            /** Available Equipment Ids */
+            available_equipment_ids?: ("bodyweight" | "dumbbell" | "barbell" | "bench" | "cable" | "machine" | "kettlebell" | "cardio" | "other")[] | null;
+        };
+        /** WorkoutAlternativeItem */
+        WorkoutAlternativeItem: {
+            /** Exercise Id */
+            exercise_id: number;
+            /** Title */
+            title: string;
+            /** Equipment Ids */
+            equipment_ids: string[];
+        };
         /** WorkoutCommentCreate */
         WorkoutCommentCreate: {
             /** Body */
@@ -4987,6 +5190,21 @@ export interface components {
              */
             confirm_incomplete: boolean;
         };
+        /** WorkoutHistoryExerciseItem */
+        WorkoutHistoryExerciseItem: {
+            /** Workout Exercise Id */
+            workout_exercise_id: number;
+            /** Exercise Id */
+            exercise_id: number;
+            /** Title */
+            title: string;
+            /** Prescribed Sets */
+            prescribed_sets: number;
+            /** Prescribed Reps */
+            prescribed_reps: string;
+            /** Sort Order */
+            sort_order: number;
+        };
         /** WorkoutHistoryItem */
         WorkoutHistoryItem: {
             /** Id */
@@ -5010,6 +5228,10 @@ export interface components {
             completed_sets: number;
             /** Volume Kg */
             volume_kg: number;
+            /** Exercises */
+            exercises: components["schemas"]["WorkoutHistoryExerciseItem"][];
+            /** Adaptations */
+            adaptations: components["schemas"]["WorkoutAdaptationHistoryItem"][];
         };
         /** WorkoutHistorySummary */
         WorkoutHistorySummary: {
@@ -7403,6 +7625,110 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    workout_exercise_alternatives_api_v1_workouts__workout_id__exercises__workout_exercise_id__alternatives_get: {
+        parameters: {
+            query?: {
+                available_equipment_ids?: ("bodyweight" | "dumbbell" | "barbell" | "bench" | "cable" | "machine" | "kettlebell" | "cardio" | "other")[] | null;
+            };
+            header?: never;
+            path: {
+                workout_id: number;
+                workout_exercise_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkoutAlternativeItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_workout_adaptation_api_v1_workouts__workout_id__adaptations_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workout_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkoutAdaptationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkoutAdaptationPreviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_workout_adaptation_api_v1_workouts__workout_id__adaptations_apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workout_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkoutAdaptationApplyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkoutAdaptationApplyResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };
