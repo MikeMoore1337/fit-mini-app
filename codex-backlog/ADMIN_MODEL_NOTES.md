@@ -18,6 +18,15 @@ Trainer = Personal + Trainer.
 Admin = Personal + Admin.
 Trainer + Admin допустимы вместе.
 
+Trainer application:
+- короткий manual access request, не professional verification;
+- application history хранится отдельно от current Trainer capability;
+- approve выполняется только Root/super_admin или explicit `trainer_applications.manage`;
+- support_admin read-only;
+- self-review запрещён;
+- approve атомарно активирует Trainer capability и пишет audit event;
+- документы/verified badge/marketplace не входят в первый релиз.
+
 Текущая convenience-связь `admin => trainer` должна быть удалена без уничтожения реального trainer status.
 
 Trainer может пользоваться AI Coach для собственных Personal данных.

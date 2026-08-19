@@ -39,7 +39,12 @@
 61 Cardio gap closure
    ↓
 62-68 Demo
-69-71 Admin
+69 Admin/capability foundation
+69A Trainer application domain + applicant API
+70 Admin operations backend
+70A Trainer application moderation + atomic capability grant
+71 Web Admin Workspace
+71A Trainer application UX + notifications + onboarding
 72 TMA platform integration/hardening
 73 Landing
 74 Responsive/A11y

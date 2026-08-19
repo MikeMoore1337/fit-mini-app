@@ -73,8 +73,11 @@
 - [ ] 67 `demo-security-restrictions`
 - [ ] 68 `demo-final-verification`
 - [ ] 69 `admin-root-capabilities-foundation`
+- [ ] 69A `trainer-application-domain-user-api`
 - [ ] 70 `admin-operations-backend`
+- [ ] 70A `trainer-application-review-capability-orchestration`
 - [ ] 71 `admin-workspace`
+- [ ] 71A `trainer-application-experience`
 - [ ] 72 `telegram-mini-app-adaptation`
 - [ ] 73 `landing-premium-refresh`
 - [ ] 74 `responsive-accessibility-states`
@@ -110,6 +113,7 @@
 - [ ] Progression guidance is deterministic and explainable
 - [ ] Manual cardio flow is adequate or existing implementation verified
 - [ ] Notifications respect timezone/preferences and do not duplicate
+- [ ] Trainer application is manually reviewed, separate from Trainer capability history, and approval opens Coach without claiming professional verification
 - [ ] User can export data and delete account safely
 - [ ] No progress photos / image-body analysis in release scope
 - [ ] AI is strict per-user, read-only and evidence-aware
