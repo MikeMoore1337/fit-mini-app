@@ -21,6 +21,10 @@ from fitminiapp_api.models.program import (
     UserWorkoutSet,
 )
 from fitminiapp_api.models.user import BodyMeasurement, User
+from fitminiapp_api.services.data_quality import (
+    build_training_data_sufficiency,
+    collect_training_data_counts,
+)
 from fitminiapp_api.services.exercise_catalog import get_visible_exercise_display_map
 from fitminiapp_api.services.workouts import (
     counts_toward_working_volume,
@@ -412,6 +416,12 @@ def build_training_analytics(
 
     period_end = today_for_user(user)
     period_start = period_end - timedelta(days=period_days - 1)
+    training_counts = collect_training_data_counts(
+        db,
+        user_ids=[user.id],
+        period_starts={user.id: period_start},
+        period_ends={user.id: period_end},
+    )[user.id]
     aggregates = _period_exercise_aggregates(db, user, period_start, period_end)
     exercise_ids = {row.exercise_id for row in aggregates}
     history_rows = _bounded_exercise_history(
@@ -539,6 +549,7 @@ def build_training_analytics(
         "primary_muscle_exposure": exposure_payload(primary_exposure),
         "secondary_muscle_exposure": exposure_payload(secondary_exposure),
         "completed_sets_without_muscle_metadata": completed_sets_without_muscle_metadata,
+        "data_sufficiency": build_training_data_sufficiency(training_counts),
     }
 
 

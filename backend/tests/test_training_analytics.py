@@ -222,6 +222,17 @@ def test_training_analytics_reports_factual_progression_rir_and_muscle_exposure(
     assert primary["chest"] == 5
     assert secondary["triceps"] == 5
     assert payload["completed_sets_without_muscle_metadata"] == 0
+    sufficiency = payload["data_sufficiency"]
+    assert sufficiency["ruleset_version"] == "data-sufficiency-v1"
+    assert sufficiency["workout_logging"]["status"] == "limited"
+    assert sufficiency["workout_logging"]["counters"] == {
+        "completed_workout_count": 3,
+        "prescribed_set_count": 6,
+        "logged_set_count": 5,
+        "coverage_percent": 83.3,
+    }
+    assert sufficiency["working_sets"]["status"] == "limited"
+    assert sufficiency["rir_coverage"]["status"] == "sufficient"
 
     days_30 = client.get(
         "/api/v1/workouts/progress/training-analytics?period_days=30",
@@ -266,6 +277,7 @@ def test_training_analytics_handles_empty_data_and_trainer_isolation(client) -> 
     assert empty.json()["exercises"] == []
     assert empty.json()["external_load_volume_kg"] is None
     assert empty.json()["rir"]["missing_set_count"] == 0
+    assert empty.json()["data_sufficiency"]["workout_logging"]["status"] == "insufficient"
 
     with get_session_context() as db:
         custom = Exercise(
@@ -296,12 +308,15 @@ def test_training_analytics_handles_empty_data_and_trainer_isolation(client) -> 
     assert missing_metadata["completed_sets_without_muscle_metadata"] == 1
     assert missing_metadata["primary_muscle_exposure"] == []
     assert missing_metadata["rir"]["missing_set_count"] == 1
+    assert missing_metadata["data_sufficiency"]["workout_logging"]["status"] == "insufficient"
+    assert missing_metadata["data_sufficiency"]["rir_coverage"]["status"] == "insufficient"
 
     detail = client.get(
         f"/api/v1/coach/clients/{client_id}/training-analytics",
         headers=coach_headers,
     )
     assert detail.status_code == 200
+    assert detail.json()["data_sufficiency"] == missing_metadata["data_sufficiency"]
     denied = client.get(
         f"/api/v1/coach/clients/{client_id}/training-analytics",
         headers=other_coach_headers,
@@ -352,4 +367,4 @@ def test_training_analytics_bounds_long_history_with_constant_query_count(client
     assert result["exercises"][0]["performed_session_count"] == 25
     assert result["exercises"][0]["history_truncated"] is True
     assert len(result["exercises"][0]["sessions"]) == 2
-    assert metrics.query_count == 3
+    assert metrics.query_count == 4

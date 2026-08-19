@@ -4,6 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from fitminiapp_api.schemas.data_quality import ProgressDataSufficiency
 from fitminiapp_api.schemas.user import BodyPriorityPreference
 
 
@@ -118,6 +119,7 @@ class ProgressSummaryResponse(BaseModel):
     nutrition: NutritionPeriodSummary
     body: BodyPeriodSummary
     adherence: AdherenceSummary
+    data_sufficiency: ProgressDataSufficiency
 
 
 class TrainerClientProgressSummary(ProgressSummaryResponse):
