@@ -281,8 +281,397 @@ describe('NutritionDiary', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Повторить' }));
     await screen.findAllByText('Пока без записей');
     fireEvent.click(within(breakfastSection()).getByRole('button', { name: /Добавить/ }));
-    expect(await screen.findByText('Недавние недоступны')).toBeVisible();
+    expect(
+      await screen.findByText('Локальный каталог сейчас не ответил. Попробуйте снова.'),
+    ).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Избранное' }));
     expect(await screen.findByRole('button', { name: 'Добавить Овсяная каша' })).toBeVisible();
+  });
+
+  it('ignores a stale local search and keeps an unavailable external provider optional', async () => {
+    let staleSignal: AbortSignal | undefined;
+    apiMock.mockImplementation((path: string, options?: { signal?: AbortSignal }) => {
+      if (path.startsWith('/api/v1/nutrition/diary?')) return Promise.resolve(makeDay([]));
+      if (path.startsWith('/api/v1/nutrition/foods/recent'))
+        return Promise.resolve({ items: [], total: 0, limit: 12, offset: 0 });
+      if (path.startsWith('/api/v1/nutrition/foods/favorites'))
+        return Promise.resolve({ items: [], total: 0, limit: 12, offset: 0 });
+      const decoded = decodeURIComponent(path);
+      if (decoded.includes('q=ов&')) {
+        staleSignal = options?.signal;
+        return new Promise(() => undefined);
+      }
+      if (decoded.includes('q=тофу') && decoded.includes('include_external=true')) {
+        return Promise.resolve({
+          items: [],
+          external_items: [],
+          total: 0,
+          limit: 20,
+          offset: 0,
+          provider_status: 'unavailable',
+        });
+      }
+      if (decoded.includes('q=тофу')) {
+        return Promise.resolve({
+          items: [],
+          external_items: [],
+          total: 0,
+          limit: 20,
+          offset: 0,
+          provider_status: 'not_requested',
+        });
+      }
+      throw new Error(`Unexpected API call: ${path}`);
+    });
+    renderDiary();
+    await screen.findAllByText('Пока без записей');
+    fireEvent.click(within(breakfastSection()).getByRole('button', { name: /Добавить/ }));
+    const search = screen.getByRole('searchbox', { name: 'Поиск по названию или бренду' });
+    fireEvent.change(search, { target: { value: 'ов' } });
+    await waitFor(() => expect(staleSignal).toBeDefined());
+    fireEvent.change(search, { target: { value: 'тофу' } });
+
+    expect(await screen.findByRole('button', { name: 'Искать во внешнем каталоге' })).toBeVisible();
+    await waitFor(() => expect(staleSignal?.aborted).toBe(true));
+    fireEvent.click(screen.getByRole('button', { name: 'Искать во внешнем каталоге' }));
+    expect(
+      await screen.findByText(
+        'Внешний каталог временно недоступен. Локальные продукты продолжают работать.',
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText(/429|timeout/i)).not.toBeInTheDocument();
+  });
+
+  it('validates and creates an own food before selecting its serving', async () => {
+    const ownFood = {
+      ...food,
+      id: 81,
+      name: 'Домашний хлеб',
+      food_type: 'user' as const,
+      is_favorite: false,
+      standard_serving_weight_g: '35.000',
+    };
+    apiMock.mockImplementation((path: string, options?: { method?: string; body?: unknown }) => {
+      if (path.startsWith('/api/v1/nutrition/diary?')) return Promise.resolve(makeDay([]));
+      if (path.startsWith('/api/v1/nutrition/foods/recent'))
+        return Promise.resolve({ items: [], total: 0, limit: 12, offset: 0 });
+      if (path.startsWith('/api/v1/nutrition/foods/favorites'))
+        return Promise.resolve({ items: [], total: 0, limit: 12, offset: 0 });
+      if (path === '/api/v1/nutrition/foods' && options?.method === 'POST')
+        return Promise.resolve(ownFood);
+      throw new Error(`Unexpected API call: ${path}`);
+    });
+    renderDiary();
+    await screen.findAllByText('Пока без записей');
+    fireEvent.click(within(breakfastSection()).getByRole('button', { name: /Добавить/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Свой продукт/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Создать продукт' }));
+    expect(await screen.findByText('Введите название продукта')).toBeVisible();
+    expect(apiMock).not.toHaveBeenCalledWith('/api/v1/nutrition/foods', expect.anything());
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Название *' }), {
+      target: { value: 'Домашний хлеб' },
+    });
+    for (const [name, value] of [
+      ['Калории *', '240'],
+      ['Белки *', '8'],
+      ['Жиры *', '3'],
+      ['Углеводы *', '45'],
+      ['Вес одной порции', '35'],
+    ]) {
+      fireEvent.change(screen.getByRole('spinbutton', { name }), { target: { value } });
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Создать продукт' }));
+    await waitFor(() =>
+      expect(apiMock).toHaveBeenCalledWith(
+        '/api/v1/nutrition/foods',
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.objectContaining({
+            name: 'Домашний хлеб',
+            standard_serving_amount: 1,
+            standard_serving_unit: 'serving',
+            standard_serving_weight_g: 35,
+          }),
+        }),
+      ),
+    );
+    expect(await screen.findByRole('heading', { name: 'Домашний хлеб' })).toBeVisible();
+    expect(screen.getByRole('spinbutton', { name: 'Количество' })).toHaveValue(1);
+  });
+
+  it('uses recipe totals and adds an explicit gram serving to the diary', async () => {
+    const recipe = {
+      id: 9,
+      name: 'Омлет с сыром',
+      ingredients: [
+        {
+          id: 1,
+          position: 0,
+          food_id: 7,
+          food_name: 'Яйцо',
+          food_brand: null,
+          amount: '180.000',
+          amount_unit: 'g' as const,
+          weight_g: '180.000',
+          serving_amount: null,
+          serving_unit: null,
+          serving_weight_g: null,
+          nutrition,
+        },
+      ],
+      ingredients_weight_g: '180.000',
+      final_weight_g: '160.000',
+      effective_weight_g: '160.000',
+      totals: nutrition,
+      nutrients_per_100g: {
+        energy_kcal_per_100g: '262.50',
+        protein_g_per_100g: '11.563',
+        fat_g_per_100g: '7.500',
+        carbs_g_per_100g: '33.750',
+        fiber_g_per_100g: '4.375',
+      },
+      created_at: '2026-08-19T08:00:00Z',
+      updated_at: '2026-08-19T08:00:00Z',
+    };
+    apiMock.mockImplementation((path: string, options?: { method?: string; body?: unknown }) => {
+      if (path.startsWith('/api/v1/nutrition/diary?')) return Promise.resolve(makeDay([]));
+      if (path.startsWith('/api/v1/nutrition/foods/recent'))
+        return Promise.resolve({ items: [], total: 0, limit: 12, offset: 0 });
+      if (path.startsWith('/api/v1/nutrition/foods/favorites'))
+        return Promise.resolve({ items: [], total: 0, limit: 12, offset: 0 });
+      if (path.startsWith('/api/v1/nutrition/recipes'))
+        return Promise.resolve({ items: [recipe], total: 1, limit: 50, offset: 0 });
+      if (path === '/api/v1/nutrition/diary/entries' && options?.method === 'POST')
+        return Promise.resolve(entry);
+      throw new Error(`Unexpected API call: ${path}`);
+    });
+    renderDiary();
+    await screen.findAllByText('Пока без записей');
+    fireEvent.click(within(breakfastSection()).getByRole('button', { name: /Добавить/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Рецепты' }));
+    expect(await screen.findByText(/1 продуктов · 160 г/)).toBeVisible();
+    expect(screen.getByText(/263 ккал/)).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Добавить рецепт Омлет с сыром' }));
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Порция готового блюда, г' }), {
+      target: { value: '140' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Добавить в дневник' }));
+    await waitFor(() =>
+      expect(apiMock).toHaveBeenCalledWith(
+        '/api/v1/nutrition/diary/entries',
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.objectContaining({ recipe_id: 9, amount: 140, amount_unit: 'g' }),
+        }),
+      ),
+    );
+  });
+
+  it('copies a product with an explicit target and blocks double submit', async () => {
+    let resolveCopy: ((value: unknown) => void) | undefined;
+    const copyPromise = new Promise((resolve) => {
+      resolveCopy = resolve;
+    });
+    apiMock.mockImplementation((path: string, options?: { method?: string }) => {
+      if (path.startsWith('/api/v1/nutrition/diary?')) return Promise.resolve(makeDay());
+      if (path.endsWith('/copy/product') && options?.method === 'POST') return copyPromise;
+      throw new Error(`Unexpected API call: ${path}`);
+    });
+    renderDiary();
+    await screen.findByText('Овсяная каша');
+    fireEvent.click(screen.getByRole('button', { name: 'Повторить' }));
+    expect(await screen.findByText('Овсяная каша', { selector: 'dd' })).toBeVisible();
+    const submit = screen.getByRole('button', { name: 'Повторить продукт' });
+    fireEvent.click(submit);
+    fireEvent.click(submit);
+    await waitFor(() =>
+      expect(
+        apiMock.mock.calls.filter(([path]) => String(path).endsWith('/copy/product')),
+      ).toHaveLength(1),
+    );
+    const [, request] = apiMock.mock.calls.find(([path]) =>
+      String(path).endsWith('/copy/product'),
+    )!;
+    expect(request).toEqual(
+      expect.objectContaining({
+        headers: { 'Idempotency-Key': expect.any(String) },
+        body: {
+          source_date: '2026-08-19',
+          target_date: '2026-08-19',
+          source_entry_id: 41,
+          source_meal_type: 'breakfast',
+          target_meal_type: 'breakfast',
+        },
+      }),
+    );
+    resolveCopy?.({
+      copy_scope: 'product',
+      source_date: '2026-08-19',
+      source_meal_type: 'breakfast',
+      target_date: '2026-08-19',
+      target_meal_type: 'breakfast',
+      entries: [entry],
+      replayed: false,
+    });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('handles barcode not found and continues with a prefilled manual product', async () => {
+    apiMock.mockImplementation((path: string) => {
+      if (path.startsWith('/api/v1/nutrition/diary?')) return Promise.resolve(makeDay([]));
+      if (path.startsWith('/api/v1/nutrition/foods/recent'))
+        return Promise.resolve({ items: [], total: 0, limit: 12, offset: 0 });
+      if (path.startsWith('/api/v1/nutrition/foods/favorites'))
+        return Promise.resolve({ items: [], total: 0, limit: 12, offset: 0 });
+      if (path.endsWith('/foods/barcode/3017620422003'))
+        return Promise.resolve({
+          barcode: '3017620422003',
+          status: 'not_found',
+          source: null,
+          local_item: null,
+          external_item: null,
+          provider_status: 'unavailable',
+        });
+      throw new Error(`Unexpected API call: ${path}`);
+    });
+    renderDiary();
+    await screen.findAllByText('Пока без записей');
+    fireEvent.click(within(breakfastSection()).getByRole('button', { name: /Добавить/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Штрихкод' }));
+    expect(
+      await screen.findByText(
+        'Камера в этом браузере не поддерживается — ручной ввод работает на всех устройствах.',
+      ),
+    ).toBeVisible();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Штрихкод' }), {
+      target: { value: '3017620422003' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Найти' }));
+    expect(await screen.findByText('Продукт не найден')).toBeVisible();
+    expect(screen.queryByText(/timeout|429/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Создать свой продукт' }));
+    expect(screen.getByRole('textbox', { name: 'Штрихкод' })).toHaveValue('3017620422003');
+  });
+
+  it('uses local barcode results and keeps external results read-only with attribution', async () => {
+    const externalFood = {
+      name: 'Шоколадная паста',
+      brand: 'Example',
+      barcode: '3017620422003',
+      energy_kcal_per_100g: '539.00',
+      protein_g_per_100g: '6.300',
+      fat_g_per_100g: '30.900',
+      carbs_g_per_100g: '57.500',
+      fiber_g_per_100g: null,
+      standard_serving_amount: null,
+      standard_serving_unit: null,
+      standard_serving_weight_g: null,
+      external_id: '3017620422003',
+      source: {
+        provider: 'open_food_facts',
+        attribution: 'Open Food Facts contributors',
+        source_url: 'https://world.openfoodfacts.org/product/3017620422003',
+        license: 'ODbL-1.0',
+        license_url: 'https://opendatacommons.org/licenses/odbl/1-0/',
+      },
+    };
+    apiMock.mockImplementation((path: string) => {
+      if (path.startsWith('/api/v1/nutrition/diary?')) return Promise.resolve(makeDay([]));
+      if (path.startsWith('/api/v1/nutrition/foods/recent'))
+        return Promise.resolve({ items: [], total: 0, limit: 12, offset: 0 });
+      if (path.startsWith('/api/v1/nutrition/foods/favorites'))
+        return Promise.resolve({ items: [], total: 0, limit: 12, offset: 0 });
+      if (path.endsWith('/foods/barcode/4006381333931'))
+        return Promise.resolve({
+          barcode: '4006381333931',
+          status: 'found',
+          source: 'local',
+          local_item: food,
+          external_item: null,
+          provider_status: 'not_needed',
+        });
+      if (path.endsWith('/foods/barcode/3017620422003'))
+        return Promise.resolve({
+          barcode: '3017620422003',
+          status: 'found',
+          source: 'external',
+          local_item: null,
+          external_item: externalFood,
+          provider_status: 'available',
+        });
+      throw new Error(`Unexpected API call: ${path}`);
+    });
+    renderDiary();
+    await screen.findAllByText('Пока без записей');
+    fireEvent.click(within(breakfastSection()).getByRole('button', { name: /Добавить/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Штрихкод' }));
+    const barcode = screen.getByRole('textbox', { name: 'Штрихкод' });
+    fireEvent.change(barcode, { target: { value: '4006381333931' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Найти' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Выбрать продукт' }));
+    expect(await screen.findByRole('heading', { name: 'Овсяная каша' })).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: /Выбрать другое/ }));
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Штрихкод' }), {
+      target: { value: '3017620422003' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Найти' }));
+    expect(await screen.findByText('Шоколадная паста')).toBeVisible();
+    expect(screen.getByRole('link', { name: /Open Food Facts contributors/ })).toHaveAttribute(
+      'href',
+      'https://opendatacommons.org/licenses/odbl/1-0/',
+    );
+    expect(screen.queryByRole('button', { name: /Выбрать продукт/ })).not.toBeInTheDocument();
+  });
+
+  it('explains denied camera permission and preserves manual barcode input', async () => {
+    const originalMediaDevices = navigator.mediaDevices;
+    const originalDetector = (globalThis as typeof globalThis & { BarcodeDetector?: unknown })
+      .BarcodeDetector;
+    Object.defineProperty(globalThis, 'BarcodeDetector', {
+      configurable: true,
+      value: class {
+        detect() {
+          return Promise.resolve([]);
+        }
+      },
+    });
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: {
+        getUserMedia: vi.fn().mockRejectedValue(new DOMException('Denied', 'NotAllowedError')),
+      },
+    });
+    apiMock.mockImplementation((path: string) => {
+      if (path.startsWith('/api/v1/nutrition/diary?')) return Promise.resolve(makeDay([]));
+      if (path.startsWith('/api/v1/nutrition/foods/recent'))
+        return Promise.resolve({ items: [], total: 0, limit: 12, offset: 0 });
+      if (path.startsWith('/api/v1/nutrition/foods/favorites'))
+        return Promise.resolve({ items: [], total: 0, limit: 12, offset: 0 });
+      throw new Error(`Unexpected API call: ${path}`);
+    });
+    try {
+      renderDiary();
+      await screen.findAllByText('Пока без записей');
+      fireEvent.click(within(breakfastSection()).getByRole('button', { name: /Добавить/ }));
+      fireEvent.click(screen.getByRole('button', { name: 'Штрихкод' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Сканировать камерой' }));
+      expect(
+        await screen.findByText(
+          'Доступ к камере запрещён. Разрешите его в настройках браузера или введите код вручную.',
+        ),
+      ).toBeVisible();
+      expect(screen.getByRole('textbox', { name: 'Штрихкод' })).toBeEnabled();
+    } finally {
+      Object.defineProperty(navigator, 'mediaDevices', {
+        configurable: true,
+        value: originalMediaDevices,
+      });
+      Object.defineProperty(globalThis, 'BarcodeDetector', {
+        configurable: true,
+        value: originalDetector,
+      });
+    }
   });
 });

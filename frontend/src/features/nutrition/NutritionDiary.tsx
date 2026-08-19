@@ -19,6 +19,7 @@ import {
 } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { FoodPickerDialog, type MealType } from './FoodPickerDialog';
+import { CopyDiaryDialog, type CopySubject } from './CopyDiaryDialog';
 
 const mealOrder: MealType[] = ['breakfast', 'lunch', 'dinner', 'snacks'];
 const mealLabels: Record<MealType, string> = {
@@ -180,7 +181,7 @@ function DaySummary({ day }: { day: FoodDiaryDay }) {
   );
 }
 
-function EntryRow({ entry }: { entry: FoodDiaryEntry }) {
+function EntryRow({ entry, onCopy }: { entry: FoodDiaryEntry; onCopy: () => void }) {
   const queryClient = useQueryClient();
   const { confirm, toast } = useFeedback();
   const [editing, setEditing] = useState(false);
@@ -242,6 +243,9 @@ function EntryRow({ entry }: { entry: FoodDiaryEntry }) {
       </div>
       {!editing ? (
         <div className="nutrition-entry__actions">
+          <button type="button" onClick={onCopy} disabled={remove.isPending}>
+            Повторить
+          </button>
           <button type="button" onClick={() => setEditing(true)} disabled={remove.isPending}>
             Изменить
           </button>
@@ -325,7 +329,17 @@ function EntryRow({ entry }: { entry: FoodDiaryEntry }) {
   );
 }
 
-function MealSection({ meal, onAdd }: { meal: FoodDiaryMeal; onAdd: () => void }) {
+function MealSection({
+  meal,
+  onAdd,
+  onCopy,
+  onCopyEntry,
+}: {
+  meal: FoodDiaryMeal;
+  onAdd: () => void;
+  onCopy: () => void;
+  onCopyEntry: (entry: FoodDiaryEntry) => void;
+}) {
   return (
     <section className="nutrition-meal" aria-labelledby={`nutrition-meal-${meal.meal_type}`}>
       <header className="nutrition-meal__header">
@@ -337,14 +351,21 @@ function MealSection({ meal, onAdd }: { meal: FoodDiaryMeal; onAdd: () => void }
               : 'Пока без записей'}
           </span>
         </div>
-        <Button variant="secondary" type="button" onClick={onAdd}>
-          <span aria-hidden="true">＋</span> Добавить
-        </Button>
+        <div className="nutrition-meal__actions">
+          {meal.entries.length > 0 && (
+            <button type="button" onClick={onCopy}>
+              Копировать
+            </button>
+          )}
+          <Button variant="secondary" type="button" onClick={onAdd}>
+            <span aria-hidden="true">＋</span> Добавить
+          </Button>
+        </div>
       </header>
       {meal.entries.length ? (
         <ul className="nutrition-entry-list">
           {meal.entries.map((entry) => (
-            <EntryRow entry={entry} key={entry.id} />
+            <EntryRow entry={entry} key={entry.id} onCopy={() => onCopyEntry(entry)} />
           ))}
         </ul>
       ) : (
@@ -375,6 +396,7 @@ export function NutritionDiary({
   const today = dateInputValue(new Date(), timeZone || undefined);
   const [selectedDate, setSelectedDate] = useState(initialDate || today);
   const [addingTo, setAddingTo] = useState<MealType | null>(null);
+  const [copySubject, setCopySubject] = useState<CopySubject | null>(null);
   const diary = useQuery({
     queryKey: ['nutrition', 'diary', selectedDate],
     queryFn: () => api<FoodDiaryDay>(`/api/v1/nutrition/diary?diary_date=${selectedDate}`),
@@ -437,6 +459,23 @@ export function NutritionDiary({
         )}
       </nav>
 
+      {diary.data && diary.data.meals.some((meal) => meal.entries.length > 0) && (
+        <div className="nutrition-day-actions">
+          <button
+            type="button"
+            onClick={() =>
+              setCopySubject({
+                scope: 'day',
+                sourceDate: selectedDate,
+                label: `Все записи за ${dateLabel.title.toLowerCase()}`,
+              })
+            }
+          >
+            Скопировать день
+          </button>
+        </div>
+      )}
+
       {diary.isLoading && <LoadingState label="Загружаем дневник…" />}
       {diary.error && (
         <ErrorState message={(diary.error as Error).message} retry={() => void diary.refetch()} />
@@ -449,6 +488,23 @@ export function NutritionDiary({
                 key={meal.meal_type}
                 meal={meal}
                 onAdd={() => setAddingTo(meal.meal_type as MealType)}
+                onCopy={() =>
+                  setCopySubject({
+                    scope: 'meal',
+                    sourceDate: selectedDate,
+                    sourceMeal: meal.meal_type as MealType,
+                    label: `${mealLabels[meal.meal_type as MealType]} — ${meal.entries.length} записей`,
+                  })
+                }
+                onCopyEntry={(entry) =>
+                  setCopySubject({
+                    scope: 'product',
+                    sourceDate: selectedDate,
+                    sourceMeal: meal.meal_type as MealType,
+                    entryId: entry.id,
+                    label: entry.food_name,
+                  })
+                }
               />
             ))}
           </div>
@@ -462,6 +518,9 @@ export function NutritionDiary({
           mealType={addingTo}
           onClose={() => setAddingTo(null)}
         />
+      )}
+      {copySubject && (
+        <CopyDiaryDialog subject={copySubject} today={today} onClose={() => setCopySubject(null)} />
       )}
     </div>
   );

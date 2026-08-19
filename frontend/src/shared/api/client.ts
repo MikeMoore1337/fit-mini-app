@@ -133,9 +133,12 @@ export interface ApiOptions extends Omit<RequestInit, 'body'> {
 }
 
 export async function api<T>(path: string, options: ApiOptions = {}): Promise<T> {
-  const { body, timeoutMs = 15_000, retryAuth = true, headers, ...init } = options;
+  const { body, timeoutMs = 15_000, retryAuth = true, headers, signal, ...init } = options;
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+  const abortFromCaller = () => controller.abort(signal?.reason);
+  if (signal?.aborted) abortFromCaller();
+  else signal?.addEventListener('abort', abortFromCaller, { once: true });
   const token = getAccessToken();
   try {
     const response = await fetch(path, {
@@ -160,6 +163,7 @@ export async function api<T>(path: string, options: ApiOptions = {}): Promise<T>
     return (text ? JSON.parse(text) : null) as T;
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
+      if (signal?.aborted) throw error;
       throw new ApiError('Сервер не ответил вовремя. Попробуйте снова.', 0);
     }
     if (error instanceof TypeError) {
@@ -168,5 +172,6 @@ export async function api<T>(path: string, options: ApiOptions = {}): Promise<T>
     throw error;
   } finally {
     window.clearTimeout(timer);
+    signal?.removeEventListener('abort', abortFromCaller);
   }
 }

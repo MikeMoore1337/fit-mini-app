@@ -188,7 +188,6 @@ test('nutrition diary is responsive, keyboard-safe and supports local quick add'
   await expect(page.getByRole('heading', { name: 'КБЖУ' })).toBeVisible();
   await expect(page.getByText('Немного выше ориентира: 20 ккал')).toBeVisible();
   await expect(page.locator('.nutrition-target').first()).not.toHaveClass(/is-over/);
-
   for (const viewport of [
     { width: 1440, height: 900 },
     { width: 768, height: 900 },
@@ -209,6 +208,10 @@ test('nutrition diary is responsive, keyboard-safe and supports local quick add'
   await page.keyboard.press('Enter');
   const search = page.getByRole('searchbox', { name: 'Поиск по названию или бренду' });
   await expect(search).toBeFocused();
+  await expect(page.getByRole('button', { name: /Свой продукт/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Рецепты' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Штрихкод' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(360);
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).not.toBeAttached();
   await expect(addButton).toBeFocused();
@@ -220,4 +223,13 @@ test('nutrition diary is responsive, keyboard-safe and supports local quick add'
   await expect(page.getByRole('dialog')).not.toBeAttached();
   await expect(page.getByText('Овсяная каша')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(360);
+
+  const oatmeal = page.locator('.nutrition-entry').filter({ hasText: 'Овсяная каша' });
+  await oatmeal.getByRole('button', { name: 'Повторить' }).click();
+  await expect(page.getByRole('dialog', { name: 'Повторить продукт' })).toBeVisible();
+  await expect(page.getByText('Новые записи добавятся к уже существующим.')).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Дата назначения' })).toHaveValue('2026-08-19');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(360);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).not.toBeAttached();
 });

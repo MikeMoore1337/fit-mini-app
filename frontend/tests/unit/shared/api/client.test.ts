@@ -67,4 +67,22 @@ describe('api client', () => {
       message: 'Нет соединения с сервером. Проверьте интернет и попробуйте снова.',
     });
   });
+
+  it('forwards caller cancellation without presenting it as a timeout', async () => {
+    const controller = new AbortController();
+    vi.spyOn(globalThis, 'fetch').mockImplementationOnce((_input, init) => {
+      return new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => {
+          reject(new DOMException('Cancelled', 'AbortError'));
+        });
+      });
+    });
+
+    const request = api('/api/v1/nutrition/foods/search?q=test', {
+      signal: controller.signal,
+    });
+    controller.abort();
+
+    await expect(request).rejects.toMatchObject({ name: 'AbortError' });
+  });
 });
