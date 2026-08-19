@@ -23,7 +23,7 @@ const workout: Workout = {
       prescribed_reps: '8-10',
       rest_seconds: 90,
       has_guide: true,
-      sets: [{ id: 201, set_number: 1, is_completed: false }],
+      sets: [{ id: 201, set_number: 1, is_completed: false, version: 1 }],
     },
     {
       id: 102,
@@ -34,7 +34,7 @@ const workout: Workout = {
       prescribed_reps: '10-12',
       rest_seconds: 60,
       has_guide: true,
-      sets: [{ id: 202, set_number: 1, is_completed: false }],
+      sets: [{ id: 202, set_number: 1, is_completed: false, version: 1 }],
     },
   ],
 };

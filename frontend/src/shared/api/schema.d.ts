@@ -3587,6 +3587,11 @@ export interface components {
              * @default true
              */
             is_completed: boolean;
+            /**
+             * Version
+             * @default 1
+             */
+            version: number;
         };
         /** MessageResponse */
         MessageResponse: {
@@ -5315,6 +5320,10 @@ export interface components {
             reached_failure?: boolean | null;
             /** Is Completed */
             is_completed?: boolean | null;
+            /** Expected Version */
+            expected_version?: number | null;
+            /** Mutation Id */
+            mutation_id?: string | null;
         };
         /** WorkoutStatusResponse */
         WorkoutStatusResponse: {
@@ -5337,6 +5346,8 @@ export interface components {
             reached_failure?: boolean | null;
             /** Is Completed */
             is_completed: boolean;
+            /** Version */
+            version: number;
         };
         /** WorkoutTimelineExercise */
         WorkoutTimelineExercise: {

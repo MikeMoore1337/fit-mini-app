@@ -462,6 +462,7 @@ class UserWorkoutSet(Base):
             "set_kind IS NULL OR set_kind IN ('warmup', 'working', 'drop')",
             name="ck_user_workout_sets_kind",
         ),
+        CheckConstraint("version >= 1", name="ck_user_workout_sets_version_positive"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -475,7 +476,37 @@ class UserWorkoutSet(Base):
     set_kind: Mapped[str | None] = mapped_column(String(16), nullable=True, default="working")
     reached_failure: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
 
     workout_exercise: Mapped[UserWorkoutExercise] = relationship(
         "UserWorkoutExercise", back_populates="sets"
+    )
+
+
+class WorkoutSetMutation(Base):
+    __tablename__ = "workout_set_mutations"
+    __table_args__ = (
+        UniqueConstraint(
+            "workout_set_id",
+            "mutation_id",
+            name="uq_workout_set_mutations_set_mutation",
+        ),
+        CheckConstraint(
+            "applied_version >= 1",
+            name="ck_workout_set_mutations_version_positive",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    workout_set_id: Mapped[int] = mapped_column(
+        ForeignKey("user_workout_sets.id", ondelete="CASCADE"), nullable=False
+    )
+    mutation_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    request_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    applied_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=now_msk_naive,
+        server_default=func.now(),
     )

@@ -13,6 +13,7 @@ export type ProgramRecommendationResponse = ApiSchemas['ProgramRecommendationRes
 export type Client = ApiSchemas['ClientResponse'];
 export type CoachAssignedProgram = ApiSchemas['CoachAssignedProgramResponse'];
 export type Workout = ApiSchemas['WorkoutTodayResponse'];
+export type WorkoutStatus = ApiSchemas['WorkoutStatusResponse'];
 export type WorkoutScheduleItem = ApiSchemas['WorkoutScheduleItem'];
 export type WorkoutHistoryItem = ApiSchemas['WorkoutHistoryItem'];
 export type WorkoutHistorySummary = ApiSchemas['WorkoutHistorySummary'];

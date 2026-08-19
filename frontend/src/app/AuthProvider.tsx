@@ -1,5 +1,14 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import {
+  AUTH_LOGOUT_EVENT,
   api,
   ApiError,
   clearAccessToken,
@@ -11,6 +20,29 @@ import type { PublicConfig, User } from '../shared/api/types';
 import { LIVE_DATA_REFETCH_INTERVAL_MS } from '../shared/sync';
 import type { TelegramWebApp } from '../shared/telegram/types';
 import { useQueryClient } from '@tanstack/react-query';
+import {
+  clearActiveWorkoutDataForUser,
+  loadCurrentActiveWorkoutSnapshot,
+} from '../features/workouts/activeWorkoutQueue';
+
+const AUTHENTICATED_USER_ID_KEY = 'fit_authenticated_user_id';
+
+function offlineWorkoutUser(): User | null {
+  if (!getAccessToken()) return null;
+  const userId = Number(sessionStorage.getItem(AUTHENTICATED_USER_ID_KEY));
+  if (!Number.isInteger(userId) || userId <= 0) return null;
+  if (!loadCurrentActiveWorkoutSnapshot(userId)) return null;
+  return {
+    id: userId,
+    is_coach: false,
+    is_admin: false,
+    has_active_program: true,
+    has_workout_history: false,
+    onboarding: { status: 'complete', required_fields: [], missing_fields: [] },
+    profile: null,
+    trainer: null,
+  };
+}
 
 interface DevLoginInput {
   telegram_user_id: number;
@@ -54,14 +86,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [config, setConfig] = useState<PublicConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const userIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    userIdRef.current = user?.id ?? null;
+  }, [user?.id]);
+
+  const clearCurrentWorkoutData = useCallback(() => {
+    if (userIdRef.current) clearActiveWorkoutDataForUser(userIdRef.current);
+    sessionStorage.removeItem(AUTHENTICATED_USER_ID_KEY);
+  }, []);
 
   const reloadUser = useCallback(async (): Promise<User | null> => {
     try {
       const current = await api<User>('/api/v1/me');
+      sessionStorage.setItem(AUTHENTICATED_USER_ID_KEY, String(current.id));
       setUser(current);
       setError(null);
       return current;
     } catch (reason) {
+      if (reason instanceof ApiError && reason.status === 0) {
+        const cached = offlineWorkoutUser();
+        if (cached) {
+          setUser(cached);
+          setError(null);
+          return cached;
+        }
+      }
       if (reason instanceof ApiError && [401, 403].includes(reason.status)) setUser(null);
       setError(reason instanceof Error ? reason.message : 'Не удалось загрузить профиль');
       return null;
@@ -71,6 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const syncUser = useCallback(async (): Promise<void> => {
     try {
       const current = await api<User>('/api/v1/me');
+      sessionStorage.setItem(AUTHENTICATED_USER_ID_KEY, String(current.id));
       setUser(current);
       setError(null);
     } catch (reason) {
@@ -106,13 +158,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: { init_data: initData },
         retryAuth: false,
       });
+      clearCurrentWorkoutData();
       setUser(null);
       setError(null);
       queryClient.clear();
       setAccessToken(token.access_token);
       await reloadUser();
     },
-    [queryClient, reloadUser],
+    [clearCurrentWorkoutData, queryClient, reloadUser],
   );
 
   const devLogin = useCallback(
@@ -122,24 +175,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: input,
         retryAuth: false,
       });
+      clearCurrentWorkoutData();
       setUser(null);
       setError(null);
       queryClient.clear();
       setAccessToken(token.access_token);
       await reloadUser();
     },
-    [queryClient, reloadUser],
+    [clearCurrentWorkoutData, queryClient, reloadUser],
   );
 
   const acceptToken = useCallback(
     async (token: { access_token: string }) => {
+      clearCurrentWorkoutData();
       setUser(null);
       setError(null);
       queryClient.clear();
       setAccessToken(token.access_token);
       await reloadUser();
     },
-    [queryClient, reloadUser],
+    [clearCurrentWorkoutData, queryClient, reloadUser],
   );
 
   const emailLogin = useCallback(
@@ -199,11 +254,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       retryAuth: false,
       timeoutMs: 3_000,
     }).catch(() => undefined);
+    clearCurrentWorkoutData();
     clearAccessToken();
     setUser(null);
     queryClient.clear();
     await serverLogout;
-  }, [queryClient]);
+  }, [clearCurrentWorkoutData, queryClient]);
+
+  useEffect(() => {
+    const handleAuthLogout = () => {
+      clearCurrentWorkoutData();
+      setUser(null);
+      queryClient.clear();
+    };
+    window.addEventListener(AUTH_LOGOUT_EVENT, handleAuthLogout);
+    return () => window.removeEventListener(AUTH_LOGOUT_EVENT, handleAuthLogout);
+  }, [clearCurrentWorkoutData, queryClient]);
 
   useEffect(() => {
     let cancelled = false;
@@ -241,7 +307,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (reason) {
         if (!cancelled) {
-          setError(reason instanceof Error ? reason.message : 'Не удалось запустить приложение');
+          const cached =
+            reason instanceof ApiError && reason.status === 0 ? offlineWorkoutUser() : null;
+          if (cached) {
+            setUser(cached);
+            setError(null);
+          } else {
+            setError(reason instanceof Error ? reason.message : 'Не удалось запустить приложение');
+          }
         }
       } finally {
         if (!cancelled) setLoading(false);

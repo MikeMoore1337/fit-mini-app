@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../../app/AuthProvider';
 import { api, ApiError } from '../../shared/api/client';
 import type { Workout } from '../../shared/api/types';
 import { haptic } from '../../shared/telegram/useTelegram';
@@ -7,7 +8,15 @@ import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Badge, Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
 import { readStorage, removeStorage, writeStorage } from '../../shared/storage';
 import { ExerciseGuideDialog } from '../exercises/ExerciseGuideDialog';
+import {
+  activeWorkoutRestKey,
+  clearActiveWorkoutData,
+  loadCurrentActiveWorkoutSnapshot,
+  type ActiveWorkoutMutation,
+  type ActiveWorkoutSetValues,
+} from './activeWorkoutQueue';
 import { WorkoutAdaptation } from './WorkoutAdaptation';
+import { useActiveWorkoutQueue } from './useActiveWorkoutQueue';
 
 type WorkoutSet = Workout['exercises'][number]['sets'][number];
 
@@ -54,98 +63,76 @@ function WorkoutSetRow({
   restSeconds,
   workoutId,
   exerciseTitle,
+  pending,
+  syncing,
+  enqueue,
 }: {
   set: WorkoutSet;
   disabled: boolean;
   restSeconds: number;
   workoutId: number;
   exerciseTitle: string;
+  pending?: ActiveWorkoutMutation;
+  syncing: boolean;
+  enqueue: (
+    setId: number,
+    serverVersion: number,
+    values: ActiveWorkoutSetValues,
+    immediate?: boolean,
+  ) => void;
 }) {
-  const { toast } = useFeedback();
-  const queryClient = useQueryClient();
-  const draftKey = `fit_workout_set_${set.id}`;
-  const pendingKey = `fit_workout_pending_${set.id}`;
-  const stored = readStorage<Partial<WorkoutSet>>(draftKey, {});
-  const [reps, setReps] = useState<string>(String(stored.actual_reps ?? set.actual_reps ?? ''));
-  const [weight, setWeight] = useState<string>(
-    String(stored.actual_weight ?? set.actual_weight ?? ''),
+  const [reps, setReps] = useState<string>(
+    String(pending?.values.actual_reps ?? set.actual_reps ?? ''),
   );
-  const [saving, setSaving] = useState(false);
-  const pending = useRef<{
-    actual_reps: number | null;
-    actual_weight: number | null;
-    is_completed: boolean;
-  } | null>(null);
-  const inFlight = useRef<Promise<void> | null>(null);
-  const dirty = useRef(false);
-  const processQueue = useCallback(() => {
-    if (inFlight.current || !pending.current) return;
-    setSaving(true);
-    inFlight.current = (async () => {
-      try {
-        while (pending.current) {
-          const payload = pending.current;
-          pending.current = null;
-          await api(`/api/v1/workouts/sets/${set.id}`, { method: 'PATCH', body: payload });
-        }
-        removeStorage(pendingKey);
-        removeStorage(draftKey);
-        await queryClient.invalidateQueries({ queryKey: ['workout', 'today'] });
-      } catch (reason) {
-        const retryable =
-          !(reason instanceof ApiError) ||
-          reason.status === 0 ||
-          reason.status === 429 ||
-          reason.status >= 500;
-        if (!retryable) removeStorage(pendingKey);
-        toast(
-          navigator.onLine
-            ? (reason as Error).message
-            : 'Нет сети. Подход сохранён на устройстве и будет отправлен позже.',
-          'error',
-        );
-      } finally {
-        inFlight.current = null;
-        setSaving(false);
-      }
-    })();
-  }, [draftKey, pendingKey, queryClient, set.id, toast]);
-
-  const enqueueSave = (completed: boolean, startRest = false) => {
-    const payload = {
-      actual_reps: reps === '' ? null : Number(reps),
-      actual_weight: weight === '' ? null : Number(weight),
-      is_completed: completed,
-    };
-    pending.current = payload;
-    writeStorage(pendingKey, payload);
-    if (startRest && completed) {
+  const [weight, setWeight] = useState<string>(
+    String(pending?.values.actual_weight ?? set.actual_weight ?? ''),
+  );
+  const [completed, setCompleted] = useState(pending?.values.is_completed ?? set.is_completed);
+  const editing = useRef(false);
+  const serverVersion = set.version ?? 1;
+  const enqueueSave = (
+    nextReps: string,
+    nextWeight: string,
+    nextCompleted: boolean,
+    immediate = false,
+  ) => {
+    enqueue(
+      set.id,
+      serverVersion,
+      {
+        actual_reps: nextReps === '' ? null : Number(nextReps),
+        actual_weight: nextWeight === '' ? null : Number(nextWeight),
+        is_completed: nextCompleted,
+      },
+      immediate,
+    );
+    if (immediate && nextCompleted) {
       haptic('success');
       window.dispatchEvent(
         new CustomEvent('fit:rest', { detail: { workoutId, seconds: restSeconds } }),
       );
     }
-    processQueue();
   };
-  const saveDraft = (nextReps: string, nextWeight: string) =>
-    writeStorage(draftKey, {
-      actual_reps: nextReps === '' ? null : Number(nextReps),
-      actual_weight: nextWeight === '' ? null : Number(nextWeight),
-    });
 
   useEffect(() => {
-    const flush = () => {
-      const saved = readStorage<NonNullable<typeof pending.current> | null>(pendingKey, null);
-      if (!saved) return;
-      pending.current = saved;
-      processQueue();
-    };
-    flush();
-    window.addEventListener('online', flush);
-    return () => window.removeEventListener('online', flush);
-  }, [pendingKey, processQueue]);
+    if (pending) {
+      if (editing.current) return;
+      setReps(String(pending.values.actual_reps ?? ''));
+      setWeight(String(pending.values.actual_weight ?? ''));
+      setCompleted(pending.values.is_completed);
+    } else {
+      if (editing.current) {
+        editing.current = false;
+        return;
+      }
+      setReps(String(set.actual_reps ?? ''));
+      setWeight(String(set.actual_weight ?? ''));
+      setCompleted(set.is_completed);
+    }
+  }, [pending, set.actual_reps, set.actual_weight, set.is_completed]);
+
   return (
-    <div className="workout-set-row">
+    <div className="workout-set-row" aria-busy={syncing || undefined}>
       <strong>#{set.set_number}</strong>
       <label className="field">
         <span>Повторы</span>
@@ -157,15 +144,10 @@ function WorkoutSetRow({
           min="0"
           value={reps}
           onChange={(e) => {
-            setReps(e.target.value);
-            dirty.current = true;
-            saveDraft(e.target.value, weight);
-          }}
-          onBlur={() => {
-            if (!disabled && dirty.current) {
-              dirty.current = false;
-              enqueueSave(set.is_completed);
-            }
+            const next = e.target.value;
+            editing.current = true;
+            setReps(next);
+            enqueueSave(next, weight, completed);
           }}
         />
       </label>
@@ -180,37 +162,42 @@ function WorkoutSetRow({
           step="0.5"
           value={weight}
           onChange={(e) => {
-            setWeight(e.target.value);
-            dirty.current = true;
-            saveDraft(reps, e.target.value);
-          }}
-          onBlur={() => {
-            if (!disabled && dirty.current) {
-              dirty.current = false;
-              enqueueSave(set.is_completed);
-            }
+            const next = e.target.value;
+            editing.current = true;
+            setWeight(next);
+            enqueueSave(reps, next, completed);
           }}
         />
       </label>
       <button
         type="button"
-        disabled={disabled || saving}
-        aria-label={`${set.is_completed ? 'Отметить невыполненным' : 'Завершить'}: ${exerciseTitle}, подход ${set.set_number}`}
-        className={set.is_completed ? 'secondary' : ''}
+        disabled={disabled}
+        aria-label={`${completed ? 'Отметить невыполненным' : 'Завершить'}: ${exerciseTitle}, подход ${set.set_number}`}
+        className={completed ? 'secondary' : ''}
         onClick={() => {
-          dirty.current = false;
-          enqueueSave(!set.is_completed, true);
+          const next = !completed;
+          editing.current = true;
+          setCompleted(next);
+          enqueueSave(reps, weight, next, true);
         }}
       >
-        {saving ? 'Сохраняем…' : set.is_completed ? 'Отменить' : 'Готово'}
+        {completed ? 'Отменить' : 'Готово'}
       </button>
     </div>
   );
 }
 
-function RestTimer({ workoutId }: { workoutId: number }) {
-  const storageKey = `fit_workout_rest_deadline_${workoutId}`;
-  const [deadline, setDeadline] = useState(() => readStorage<number>(storageKey, 0));
+function RestTimer({ userId, workoutId }: { userId: number; workoutId: number }) {
+  const storageKey = activeWorkoutRestKey(userId, workoutId);
+  const legacyStorageKey = `fit_workout_rest_deadline_${workoutId}`;
+  const [deadline, setDeadline] = useState(() => {
+    const scoped = readStorage<number>(storageKey, 0);
+    if (scoped) return scoped;
+    const legacy = readStorage<number>(legacyStorageKey, 0);
+    if (legacy) writeStorage(storageKey, legacy);
+    removeStorage(legacyStorageKey);
+    return legacy;
+  });
   const [now, setNow] = useState(() => Date.now());
   const seconds = Math.max(0, Math.ceil((deadline - now) / 1000));
   useEffect(() => {
@@ -264,44 +251,75 @@ function RestTimer({ workoutId }: { workoutId: number }) {
 
 export function TodayWorkout() {
   const { toast, confirm } = useFeedback();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [guide, setGuide] = useState<{ id: number; title: string } | null>(null);
   const workout = useQuery({
     queryKey: ['workout', 'today'],
     queryFn: () => api<Workout>('/api/v1/workouts/today'),
+    initialData: () => (user ? loadCurrentActiveWorkoutSnapshot(user.id) : undefined),
+    initialDataUpdatedAt: 0,
     retry: (count, error) => !(error instanceof ApiError && error.status === 404) && count < 1,
   });
+  const activeSync = useActiveWorkoutQueue(user?.id, workout.data);
   const mutation = useMutation({
     mutationFn: ({ path, method, body }: { path: string; method: string; body?: unknown }) =>
       api<Workout | void>(path, { method, body }),
-    onSuccess: async () => {
+    onSuccess: async (_result, variables) => {
+      if (variables.path.endsWith('/finish')) activeSync.clear();
       await queryClient.invalidateQueries({ queryKey: ['workout'] });
     },
     onError: (reason) => toast((reason as Error).message, 'error'),
   });
   const completed = useMemo(
     () =>
-      workout.data?.exercises.flatMap((item) => item.sets).filter((item) => item.is_completed)
-        .length ?? 0,
-    [workout.data],
+      workout.data?.exercises
+        .flatMap((item) => item.sets)
+        .filter(
+          (item) => activeSync.pendingBySet.get(item.id)?.values.is_completed ?? item.is_completed,
+        ).length ?? 0,
+    [activeSync.pendingBySet, workout.data],
   );
   const total = useMemo(
     () => workout.data?.exercises.flatMap((item) => item.sets).length ?? 0,
     [workout.data],
   );
+  useEffect(() => {
+    if (
+      user &&
+      activeSync.pendingCount === 0 &&
+      workout.error instanceof ApiError &&
+      workout.error.status === 404
+    ) {
+      const stale = loadCurrentActiveWorkoutSnapshot(user.id);
+      if (stale) clearActiveWorkoutData(user.id, stale.id);
+    }
+  }, [activeSync.pendingCount, user, workout.error]);
   if (workout.isLoading)
     return (
       <Card title="Тренировка сегодня">
         <LoadingState />
       </Card>
     );
-  if (workout.error instanceof ApiError && workout.error.status === 404)
+  if (
+    workout.error instanceof ApiError &&
+    workout.error.status === 404 &&
+    activeSync.pendingCount === 0
+  )
     return (
       <Card title="Тренировка сегодня">
         <EmptyState title="Сегодня отдых" text="На сегодня тренировка не назначена." />
       </Card>
     );
-  if (workout.error || !workout.data)
+  if (
+    !workout.data ||
+    (workout.error &&
+      !(
+        workout.error instanceof ApiError &&
+        (workout.error.status === 0 ||
+          (workout.error.status === 404 && activeSync.pendingCount > 0))
+      ))
+  )
     return (
       <Card title="Тренировка сегодня">
         <ErrorState
@@ -342,6 +360,24 @@ export function TodayWorkout() {
               />
             )}
           </div>
+          {activeSync.pendingCount > 0 && (
+            <div className="auth-notice stack" role="status" aria-live="polite">
+              <strong>
+                {activeSync.syncState === 'syncing'
+                  ? 'Синхронизируем тренировку…'
+                  : 'Изменения сохранены на устройстве'}
+              </strong>
+              <span>
+                {activeSync.message ||
+                  `Ожидает отправки: ${activeSync.pendingCount}. Можно закрыть или обновить приложение.`}
+              </span>
+              {activeSync.syncState !== 'syncing' && navigator.onLine && (
+                <button className="secondary" type="button" onClick={() => void activeSync.retry()}>
+                  Повторить синхронизацию
+                </button>
+              )}
+            </div>
+          )}
           {(data.status === 'planned' || started) && (
             <WorkoutAdaptation workout={data} safetyOnly={started} />
           )}
@@ -389,6 +425,9 @@ export function TodayWorkout() {
                   disabled={!started}
                   workoutId={data.id}
                   exerciseTitle={exercise.exercise_title}
+                  pending={activeSync.pendingBySet.get(set.id)}
+                  syncing={activeSync.syncState === 'syncing'}
+                  enqueue={activeSync.enqueue}
                 />
               ))}
             </article>
@@ -397,6 +436,10 @@ export function TodayWorkout() {
             <button
               disabled={mutation.isPending}
               onClick={async () => {
+                if (!(await activeSync.flushNow())) {
+                  toast('Сначала синхронизируйте сохранённые на устройстве подходы.', 'error');
+                  return;
+                }
                 const incomplete = total - completed;
                 if (
                   incomplete > 0 &&
@@ -441,7 +484,7 @@ export function TodayWorkout() {
           )}
         </div>
       </Card>
-      <RestTimer workoutId={data.id} />
+      {user && <RestTimer userId={user.id} workoutId={data.id} />}
       {guide && (
         <ExerciseGuideDialog
           exerciseId={guide.id}

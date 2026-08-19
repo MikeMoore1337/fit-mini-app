@@ -56,6 +56,12 @@ from fitminiapp_api.services.workout_comments import (
     list_client_workout_comments,
     serialize_workout_comment,
 )
+from fitminiapp_api.services.workout_sync import (
+    WorkoutSetSyncError,
+    apply_workout_set_update,
+    replayed_workout_set,
+    serialize_workout_set,
+)
 from fitminiapp_api.services.workouts import (
     counts_toward_working_volume,
     working_volume_set_filter,
@@ -225,6 +231,7 @@ def _serialize_workout(workout: UserWorkout, db: Session, current_user: User) ->
                         "set_kind": set_item.set_kind,
                         "reached_failure": set_item.reached_failure,
                         "is_completed": set_item.is_completed,
+                        "version": set_item.version,
                     }
                     for set_item in sorted(item.sets, key=lambda x: x.set_number)
                 ],
@@ -613,40 +620,35 @@ def update_workout_set(
     program = _lock_program(db, workout.user_program_id)
     db.refresh(workout)
     db.refresh(set_row)
-    _require_active_program(program)
-    if workout.status != "in_progress":
-        raise HTTPException(
-            status_code=409,
-            detail="Подходы можно изменять только во время тренировки",
-        )
-
     changes = payload.model_dump(exclude_unset=True)
-    if "actual_reps" in changes:
-        set_row.actual_reps = changes["actual_reps"]
-    if "actual_weight" in changes:
-        set_row.actual_weight = changes["actual_weight"]
-    if "rir" in changes:
-        set_row.rir = changes["rir"]
-    if "set_kind" in changes:
-        set_row.set_kind = changes["set_kind"]
-    if "reached_failure" in changes:
-        set_row.reached_failure = changes["reached_failure"]
-    if "is_completed" in changes and changes["is_completed"] is not None:
-        set_row.is_completed = changes["is_completed"]
+    expected_version = changes.pop("expected_version", None)
+    mutation_id = changes.pop("mutation_id", None)
+
+    try:
+        replayed = replayed_workout_set(db, set_row, mutation_id, changes)
+        if replayed is not None:
+            return serialize_workout_set(replayed)
+        if mutation_id is None and workout.status != "in_progress":
+            raise HTTPException(
+                status_code=409,
+                detail="Подходы можно изменять только во время тренировки",
+            )
+        if workout.status == "in_progress":
+            _require_active_program(program)
+        apply_workout_set_update(
+            db,
+            set_row,
+            workout,
+            changes,
+            expected_version=expected_version,
+            mutation_id=mutation_id,
+        )
+    except WorkoutSetSyncError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
     db.commit()
     db.refresh(set_row)
-
-    return {
-        "id": set_row.id,
-        "set_number": set_row.set_number,
-        "actual_reps": set_row.actual_reps,
-        "actual_weight": set_row.actual_weight,
-        "rir": set_row.rir,
-        "set_kind": set_row.set_kind,
-        "reached_failure": set_row.reached_failure,
-        "is_completed": set_row.is_completed,
-    }
+    return serialize_workout_set(set_row)
 
 
 @router.patch("/{workout_id}/schedule", response_model=WorkoutScheduleItem)
