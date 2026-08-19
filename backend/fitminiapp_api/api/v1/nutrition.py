@@ -26,12 +26,25 @@ from fitminiapp_api.schemas.food_diary import (
     FoodDiaryEntryResponse,
     FoodDiaryEntryUpdate,
 )
-from fitminiapp_api.schemas.nutrition import NutritionTargetResponse, NutritionTargetSave
+from fitminiapp_api.schemas.nutrition import (
+    EnergyCalibrationDecision,
+    EnergyCalibrationHistoryResponse,
+    EnergyCalibrationResponse,
+    NutritionTargetResponse,
+    NutritionTargetSave,
+)
 from fitminiapp_api.schemas.recipe import (
     RecipeCreate,
     RecipeListResponse,
     RecipeResponse,
     RecipeUpdate,
+)
+from fitminiapp_api.services.energy_calibration import (
+    EnergyCalibrationConflictError,
+    EnergyCalibrationNotFoundError,
+    decide_energy_calibration,
+    list_energy_calibrations,
+    preview_energy_calibration,
 )
 from fitminiapp_api.services.food_catalog import (
     get_food_catalog_item_by_barcode,
@@ -102,6 +115,51 @@ IdempotencyKey = Annotated[
     str,
     Header(alias="Idempotency-Key", min_length=8, max_length=128),
 ]
+
+
+@router.post(
+    "/energy-calibration/preview",
+    response_model=EnergyCalibrationResponse,
+)
+def preview_calibration(
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    return preview_energy_calibration(db, current_user)
+
+
+@router.get(
+    "/energy-calibration/history",
+    response_model=EnergyCalibrationHistoryResponse,
+)
+def calibration_history(
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    return {"items": list_energy_calibrations(db, current_user)}
+
+
+@router.post(
+    "/energy-calibration/{calibration_id}/decision",
+    response_model=EnergyCalibrationResponse,
+)
+def decide_calibration(
+    calibration_id: int,
+    payload: EnergyCalibrationDecision,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        return decide_energy_calibration(
+            db,
+            current_user,
+            calibration_id,
+            payload.decision,
+        )
+    except EnergyCalibrationNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except EnergyCalibrationConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
 
 
 @router.post(

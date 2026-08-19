@@ -1296,6 +1296,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/nutrition/energy-calibration/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Calibration */
+        post: operations["preview_calibration_api_v1_nutrition_energy_calibration_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nutrition/energy-calibration/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Calibration History */
+        get: operations["calibration_history_api_v1_nutrition_energy_calibration_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nutrition/energy-calibration/{calibration_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Calibration */
+        post: operations["decide_calibration_api_v1_nutrition_energy_calibration__calibration_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/nutrition/foods": {
         parameters: {
             query?: never;
@@ -2646,6 +2697,80 @@ export interface components {
         EmailRequest: {
             /** Email */
             email: string;
+        };
+        /** EnergyCalibrationDecision */
+        EnergyCalibrationDecision: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "accept" | "reject";
+        };
+        /** EnergyCalibrationHistoryResponse */
+        EnergyCalibrationHistoryResponse: {
+            /** Items */
+            items: components["schemas"]["EnergyCalibrationResponse"][];
+        };
+        /** EnergyCalibrationResponse */
+        EnergyCalibrationResponse: {
+            /** Id */
+            id?: number | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "insufficient" | "limited" | "no_change" | "pending" | "accepted" | "rejected" | "superseded";
+            /** Ruleset Version */
+            ruleset_version: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            sufficiency: components["schemas"]["EnergyCalibrationSufficiency"];
+            /** Average Intake Kcal */
+            average_intake_kcal?: number | null;
+            /** Smoothed Start Weight Kg */
+            smoothed_start_weight_kg?: number | null;
+            /** Smoothed End Weight Kg */
+            smoothed_end_weight_kg?: number | null;
+            /** Estimated Expenditure Kcal */
+            estimated_expenditure_kcal?: number | null;
+            /** Estimate Low Kcal */
+            estimate_low_kcal?: number | null;
+            /** Estimate High Kcal */
+            estimate_high_kcal?: number | null;
+            /** Goal */
+            goal: string;
+            /** Current Target Calories */
+            current_target_calories?: number | null;
+            /** Proposed Target Calories */
+            proposed_target_calories?: number | null;
+            /** Rationale */
+            rationale: string[];
+            /** Created At */
+            created_at?: string | null;
+            /** Decided At */
+            decided_at?: string | null;
+        };
+        /** EnergyCalibrationSufficiency */
+        EnergyCalibrationSufficiency: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "insufficient" | "limited" | "sufficient";
+            /** Counters */
+            counters: {
+                [key: string]: number;
+            };
+            /** Reason Keys */
+            reason_keys: string[];
         };
         /** ExerciseAlternativeItem */
         ExerciseAlternativeItem: {
@@ -7484,6 +7609,81 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_calibration_api_v1_nutrition_energy_calibration_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnergyCalibrationResponse"];
+                };
+            };
+        };
+    };
+    calibration_history_api_v1_nutrition_energy_calibration_history_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnergyCalibrationHistoryResponse"];
+                };
+            };
+        };
+    };
+    decide_calibration_api_v1_nutrition_energy_calibration__calibration_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                calibration_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EnergyCalibrationDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnergyCalibrationResponse"];
+                };
             };
             /** @description Validation Error */
             422: {

@@ -11,7 +11,7 @@ from fitminiapp_api.models.billing import Payment, Subscription
 from fitminiapp_api.models.exercise import Exercise
 from fitminiapp_api.models.feedback import WorkoutComment, WorkoutCommentRevision
 from fitminiapp_api.models.notification import Notification, NotificationSetting
-from fitminiapp_api.models.nutrition import NutritionTarget
+from fitminiapp_api.models.nutrition import EnergyCalibration, NutritionTarget
 from fitminiapp_api.models.program import (
     HiddenProgramTemplate,
     ProgramRevision,
@@ -185,6 +185,9 @@ def delete_user_cascade(db: Session, user: User) -> None:
         synchronize_session=False
     )
 
+    db.query(EnergyCalibration).filter(EnergyCalibration.user_id == user.id).delete(
+        synchronize_session=False
+    )
     db.query(NutritionTarget).filter(NutritionTarget.user_id == user.id).delete(
         synchronize_session=False
     )
@@ -254,6 +257,12 @@ def build_account_export(db: Session, user: User) -> dict:
         .all()
     )
     nutrition = db.query(NutritionTarget).filter(NutritionTarget.user_id == user.id).first()
+    energy_calibrations = (
+        db.query(EnergyCalibration)
+        .filter(EnergyCalibration.user_id == user.id)
+        .order_by(EnergyCalibration.created_at.asc(), EnergyCalibration.id.asc())
+        .all()
+    )
     setting = db.query(NotificationSetting).filter(NotificationSetting.user_id == user.id).first()
     notifications = (
         db.query(Notification)
@@ -325,6 +334,14 @@ def build_account_export(db: Session, user: User) -> dict:
             if nutrition
             else None
         ),
+        "energy_calibrations": [
+            {
+                column.name: getattr(row, column.name)
+                for column in EnergyCalibration.__table__.columns
+                if column.name != "user_id"
+            }
+            for row in energy_calibrations
+        ],
         "measurements": [
             {
                 column.name: getattr(row, column.name)

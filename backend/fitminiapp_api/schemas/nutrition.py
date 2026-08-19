@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
@@ -115,3 +115,49 @@ class NutritionTargetResponse(BaseModel):
     cardio_trainings_per_week: int
     cardio_training_duration_minutes: int
     cardio_intensity: str
+
+
+EnergyCalibrationStatus = Literal[
+    "insufficient",
+    "limited",
+    "no_change",
+    "pending",
+    "accepted",
+    "rejected",
+    "superseded",
+]
+
+
+class EnergyCalibrationSufficiency(BaseModel):
+    status: Literal["insufficient", "limited", "sufficient"]
+    counters: dict[str, int | float]
+    reason_keys: list[str]
+
+
+class EnergyCalibrationResponse(BaseModel):
+    id: int | None = None
+    status: EnergyCalibrationStatus
+    ruleset_version: str
+    period_start: date
+    period_end: date
+    sufficiency: EnergyCalibrationSufficiency
+    average_intake_kcal: int | None = None
+    smoothed_start_weight_kg: float | None = None
+    smoothed_end_weight_kg: float | None = None
+    estimated_expenditure_kcal: int | None = None
+    estimate_low_kcal: int | None = None
+    estimate_high_kcal: int | None = None
+    goal: str
+    current_target_calories: int | None = None
+    proposed_target_calories: int | None = None
+    rationale: list[str]
+    created_at: datetime | None = None
+    decided_at: datetime | None = None
+
+
+class EnergyCalibrationHistoryResponse(BaseModel):
+    items: list[EnergyCalibrationResponse]
+
+
+class EnergyCalibrationDecision(BaseModel):
+    decision: Literal["accept", "reject"]

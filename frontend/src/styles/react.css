@@ -1602,6 +1602,56 @@ body:has(#appBottomNav) {
   color: var(--muted);
   line-height: 1.45;
 }
+.energy-calibration {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+.energy-calibration h3,
+.energy-calibration p {
+  margin-top: 0;
+}
+.energy-calibration__result,
+.energy-calibration__proposal {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-subtle);
+}
+.energy-calibration__result .metric-grid {
+  margin-top: 12px;
+}
+.energy-calibration__rationale {
+  margin: 12px 0 0;
+  padding-left: 19px;
+}
+.energy-calibration__rationale li + li {
+  margin-top: 5px;
+}
+.energy-calibration__proposal {
+  margin-top: 12px;
+}
+.energy-calibration__proposal p {
+  margin: 0 0 10px;
+}
+.energy-calibration__history > ul {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.energy-calibration__history li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.energy-calibration__history li > span:last-child {
+  grid-column: 1 / -1;
+  color: var(--muted);
+}
 
 .date-control,
 .time-control {
