@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type { FoodDiaryCopyResponse } from '../../shared/api/types';
+import { invalidateNutritionSummaries } from '../../shared/queryKeys';
 import { Button, CloseIcon, Field, Input, Select } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { useModalA11y } from '../../shared/ui/useModalA11y';
@@ -72,9 +73,8 @@ export function CopyDiaryDialog({
     },
     onSuccess: async (result) => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['nutrition', 'diary', subject.sourceDate] }),
-        queryClient.invalidateQueries({ queryKey: ['nutrition', 'diary', targetDate] }),
         queryClient.invalidateQueries({ queryKey: ['nutrition', 'foods', 'recent'] }),
+        invalidateNutritionSummaries(queryClient),
       ]);
       toast(
         result.replayed

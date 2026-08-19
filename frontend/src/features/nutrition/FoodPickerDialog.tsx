@@ -11,6 +11,7 @@ import type {
   Recipe,
 } from '../../shared/api/types';
 import { usePersistentState } from '../../shared/storage';
+import { invalidateNutritionSummaries } from '../../shared/queryKeys';
 import { trackProductEvent, productEventSurface } from '../../shared/analytics/productEvents';
 import {
   Badge,
@@ -278,8 +279,8 @@ export function FoodPickerDialog({
     onSuccess: async () => {
       clearDraft({ food: null, amount: '100', amountUnit: 'g' });
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['nutrition', 'diary', diaryDate] }),
         queryClient.invalidateQueries({ queryKey: ['nutrition', 'foods', 'recent'] }),
+        invalidateNutritionSummaries(queryClient),
       ]);
       trackProductEvent({ name: 'food_logged', surface: productEventSurface() });
       toast(`Добавлено в ${mealLabels[mealType]}`);

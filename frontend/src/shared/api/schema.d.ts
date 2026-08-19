@@ -2598,6 +2598,8 @@ export interface components {
             /** Resting Heart Rate */
             resting_heart_rate?: number | null;
             body_priority?: components["schemas"]["BodyPriorityPreference"] | null;
+            /** Timezone */
+            timezone?: string | null;
             kbju?: components["schemas"]["NutritionTargetResponse"] | null;
             /**
              * Status

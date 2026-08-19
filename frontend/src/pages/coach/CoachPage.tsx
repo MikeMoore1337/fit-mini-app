@@ -10,6 +10,7 @@ import { ProgramBuilder } from '../../features/programs/ProgramBuilder';
 import { AssignedProgramDetails } from '../../features/programs/AssignedProgramDetails';
 import { api } from '../../shared/api/client';
 import type { ApiSchemas, Client, CoachAssignedProgram, InviteLink } from '../../shared/api/types';
+import { queryKeys } from '../../shared/queryKeys';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import {
   Badge,
@@ -129,10 +130,10 @@ function ClientProfileEditor({ client }: { client: Client }) {
       }),
     onSuccess: async (updatedClient) => {
       clearDraft();
-      queryClient.setQueryData<Client[]>(['coach', 'clients'], (clients) =>
+      queryClient.setQueryData<Client[]>(queryKeys.trainer.clients, (clients) =>
         clients?.map((item) => (item.id === updatedClient.id ? updatedClient : item)),
       );
-      await queryClient.invalidateQueries({ queryKey: ['coach', 'clients'] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.trainer.clients });
       toast('Профиль клиента сохранён');
     },
     onError: (reason) => toast((reason as Error).message, 'error'),
@@ -294,7 +295,7 @@ export default function CoachPage() {
   const [inviteLink, setInviteLink] = useState<InviteLink | null>(null);
   const [inviteCreating, setInviteCreating] = useState(false);
   const clients = useQuery({
-    queryKey: ['coach', 'clients'],
+    queryKey: queryKeys.trainer.clients,
     queryFn: () => api<Client[]>('/api/v1/coach/clients'),
     refetchInterval: LIVE_DATA_REFETCH_INTERVAL_MS,
     refetchOnWindowFocus: true,
@@ -551,14 +552,18 @@ export default function CoachPage() {
                     description="Соблюдение плана, рекорды и лента тренировок"
                   >
                     <ClientAnalytics clientId={selected.id} />
-                    <Diary key={`diary-${selected.id}`} clientId={selected.id} />
+                    <Diary
+                      key={`diary-${selected.id}`}
+                      clientId={selected.id}
+                      timeZone={selected.timezone}
+                    />
                   </ClientDataSection>
                   <ClientDataSection title="Питание" description="Расчёт и целевые КБЖУ">
                     <NutritionForm
                       key={JSON.stringify([selected.id, selected.kbju])}
+                      clientId={selected.id}
                       targetTelegramId={selected.telegram_user_id}
                       initial={selected.kbju}
-                      onSaved={() => void clients.refetch()}
                     />
                   </ClientDataSection>
                   <ClientDataSection

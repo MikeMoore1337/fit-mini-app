@@ -6,6 +6,7 @@ import type {
   EnergyCalibrationHistory,
   NutritionTarget,
 } from '../../shared/api/types';
+import { invalidateNutritionSummaries } from '../../shared/queryKeys';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { DisclosureIcon } from '../../shared/ui/common';
 
@@ -59,7 +60,10 @@ export function EnergyCalibrationCard({
       }),
     onSuccess: async (response) => {
       setResult(response);
-      await queryClient.invalidateQueries({ queryKey: ['energy-calibration-history'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['energy-calibration-history'] }),
+        ...(response.status === 'accepted' ? [invalidateNutritionSummaries(queryClient)] : []),
+      ]);
       if (response.status === 'accepted') {
         await onAccepted?.();
         toast('Новая калорийность подтверждена');

@@ -16,7 +16,7 @@ from fitminiapp_api.models.program import (
     UserWorkoutSet,
     WorkoutAdaptation,
 )
-from fitminiapp_api.models.user import BodyMeasurement, User
+from fitminiapp_api.models.user import User
 from fitminiapp_api.schemas.feedback import WorkoutCommentResponse
 from fitminiapp_api.schemas.program import EquipmentIdentifier
 from fitminiapp_api.schemas.progress import ProgressPeriodDays, ProgressSummaryResponse
@@ -42,8 +42,15 @@ from fitminiapp_api.schemas.workout import (
 from fitminiapp_api.services.analytics import build_training_analytics, build_user_progress
 from fitminiapp_api.services.exercise_catalog import get_visible_exercise_display_map
 from fitminiapp_api.services.exercise_guides import get_exercise_guide
+from fitminiapp_api.services.measurements import (
+    MeasurementError,
+    MeasurementNotFoundError,
+    delete_measurement,
+    list_measurements,
+    save_measurement,
+    serialize_measurement,
+)
 from fitminiapp_api.services.notifications import queue_telegram_notification
-from fitminiapp_api.services.nutrition import NutritionError, recalculate_nutrition_target
 from fitminiapp_api.services.progress import build_progress_summary
 from fitminiapp_api.services.workout_adaptation import (
     WorkoutAdaptationError,
@@ -238,21 +245,6 @@ def _serialize_workout(workout: UserWorkout, db: Session, current_user: User) ->
             }
             for item in sorted(workout.exercises, key=lambda x: x.sort_order)
         ],
-    }
-
-
-def _serialize_body_measurement(row: BodyMeasurement) -> dict:
-    return {
-        "id": row.id,
-        "measured_on": row.measured_on,
-        "weight_kg": row.weight_kg,
-        "chest_cm": row.chest_cm,
-        "waist_cm": row.waist_cm,
-        "hips_cm": row.hips_cm,
-        "biceps_cm": row.biceps_cm,
-        "thigh_cm": row.thigh_cm,
-        "note": row.note,
-        "created_at": row.created_at,
     }
 
 
@@ -872,14 +864,7 @@ def body_measurements(
     db: Session = Depends(get_db),
     limit: int = Query(default=12, ge=1, le=60),
 ):
-    rows = (
-        db.query(BodyMeasurement)
-        .filter(BodyMeasurement.user_id == current_user.id)
-        .order_by(BodyMeasurement.measured_on.desc(), BodyMeasurement.id.desc())
-        .limit(limit)
-        .all()
-    )
-    return [_serialize_body_measurement(row) for row in rows]
+    return [serialize_measurement(row) for row in list_measurements(db, current_user, limit=limit)]
 
 
 @router.post("/diary", response_model=BodyMeasurementResponse)
@@ -888,57 +873,11 @@ def save_body_measurement(
     current_user: User = Depends(require_user),
     db: Session = Depends(get_db),
 ):
-    changes = payload.model_dump(exclude_unset=True)
-    note = changes.get("note")
-    if isinstance(note, str):
-        changes["note"] = note.strip() or None
-
-    measurement_keys = [
-        "weight_kg",
-        "chest_cm",
-        "waist_cm",
-        "hips_cm",
-        "biceps_cm",
-        "thigh_cm",
-    ]
-    has_measurement = any(changes.get(key) is not None for key in measurement_keys)
-    if not changes.get("note") and not has_measurement:
-        raise HTTPException(status_code=400, detail="Укажите вес, замер или заметку")
-
-    measured_on = payload.measured_on or today_for_user(current_user)
-    row = (
-        db.query(BodyMeasurement)
-        .filter(
-            BodyMeasurement.user_id == current_user.id,
-            BodyMeasurement.measured_on == measured_on,
-        )
-        .first()
-    )
-
-    if row is None:
-        row = BodyMeasurement(user_id=current_user.id, measured_on=measured_on)
-        db.add(row)
-
-    for key in measurement_keys:
-        if key in changes:
-            setattr(row, key, changes[key])
-    if "note" in changes:
-        row.note = changes["note"]
-
-    if changes.get("weight_kg") is not None:
-        try:
-            recalculate_nutrition_target(
-                db,
-                current_user,
-                {"weight_kg": changes["weight_kg"]},
-                current_user,
-            )
-        except NutritionError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    db.commit()
-    db.refresh(row)
-    return _serialize_body_measurement(row)
+    try:
+        row = save_measurement(db, current_user, payload, changed_by=current_user)
+    except MeasurementError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return serialize_measurement(row)
 
 
 @router.delete("/diary/{measurement_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -947,19 +886,12 @@ def delete_body_measurement(
     current_user: User = Depends(require_user),
     db: Session = Depends(get_db),
 ):
-    row = (
-        db.query(BodyMeasurement)
-        .filter(
-            BodyMeasurement.id == measurement_id,
-            BodyMeasurement.user_id == current_user.id,
-        )
-        .first()
-    )
-    if not row:
-        raise HTTPException(status_code=404, detail="Запись дневника не найдена")
-
-    db.delete(row)
-    db.commit()
+    try:
+        delete_measurement(db, current_user, measurement_id, changed_by=current_user)
+    except MeasurementNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except MeasurementError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

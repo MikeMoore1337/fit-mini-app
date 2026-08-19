@@ -81,7 +81,11 @@ def build_user_progress(db: Session, user: User) -> dict:
 
     measurements = (
         db.query(BodyMeasurement)
-        .filter(BodyMeasurement.user_id == user.id, BodyMeasurement.weight_kg.is_not(None))
+        .filter(
+            BodyMeasurement.user_id == user.id,
+            BodyMeasurement.measured_on <= today,
+            BodyMeasurement.weight_kg.is_not(None),
+        )
         .order_by(BodyMeasurement.measured_on.asc(), BodyMeasurement.id.asc())
         .all()
     )

@@ -2,13 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
 from fitminiapp_api.api.dependencies.auth import require_coach
-from fitminiapp_api.core.timezone import now_for_user_naive, today_for_user
+from fitminiapp_api.core.timezone import now_for_user_naive
 from fitminiapp_api.db.session import get_db
 from fitminiapp_api.models.program import (
     UserProgram,
     UserWorkout,
 )
-from fitminiapp_api.models.user import BodyMeasurement, CoachClient, User
+from fitminiapp_api.models.user import CoachClient, User
 from fitminiapp_api.schemas.check_in import WeeklyCheckInHistoryResponse
 from fitminiapp_api.schemas.feedback import (
     WorkoutCommentCreate,
@@ -52,8 +52,16 @@ from fitminiapp_api.services.coach_clients import (
     revoke_coach_invite,
 )
 from fitminiapp_api.services.exercise_catalog import _effective_exercise_id, list_exercises
+from fitminiapp_api.services.measurements import (
+    MeasurementError,
+    MeasurementNotFoundError,
+    delete_measurement,
+    list_measurements,
+    save_measurement,
+    serialize_measurement,
+)
 from fitminiapp_api.services.notifications import queue_telegram_notification
-from fitminiapp_api.services.nutrition import NutritionError, recalculate_nutrition_target
+from fitminiapp_api.services.nutrition import NutritionError
 from fitminiapp_api.services.profile import ProfileError, update_profile
 from fitminiapp_api.services.program_common import ProgramError, assignment_error_status
 from fitminiapp_api.services.program_versioning import upsert_future_program_exercise
@@ -152,21 +160,6 @@ def update_client_workout_comment(
     except WorkoutCommentError as exc:
         raise _comment_error(exc) from exc
     return serialize_workout_comment(comment)
-
-
-def _serialize_measurement(row: BodyMeasurement) -> dict:
-    return {
-        "id": row.id,
-        "measured_on": row.measured_on,
-        "weight_kg": row.weight_kg,
-        "chest_cm": row.chest_cm,
-        "waist_cm": row.waist_cm,
-        "hips_cm": row.hips_cm,
-        "biceps_cm": row.biceps_cm,
-        "thigh_cm": row.thigh_cm,
-        "note": row.note,
-        "created_at": row.created_at,
-    }
 
 
 def _managed_client(db: Session, coach: User, client_id: int) -> User:
@@ -492,14 +485,7 @@ def coach_client_measurements(
     db: Session = Depends(get_db),
 ):
     client = _managed_client(db, current_user, client_id)
-    rows = (
-        db.query(BodyMeasurement)
-        .filter(BodyMeasurement.user_id == client.id)
-        .order_by(BodyMeasurement.measured_on.desc(), BodyMeasurement.id.desc())
-        .limit(limit)
-        .all()
-    )
-    return [_serialize_measurement(row) for row in rows]
+    return [serialize_measurement(row) for row in list_measurements(db, client, limit=limit)]
 
 
 @router.post(
@@ -513,67 +499,11 @@ def save_coach_client_measurement(
     db: Session = Depends(get_db),
 ):
     client = _managed_client(db, current_user, client_id)
-    changes = payload.model_dump(exclude_unset=True)
-    note = changes.get("note")
-    if isinstance(note, str):
-        changes["note"] = note.strip() or None
-
-    measurement_keys = (
-        "weight_kg",
-        "chest_cm",
-        "waist_cm",
-        "hips_cm",
-        "biceps_cm",
-        "thigh_cm",
-    )
-    if not changes.get("note") and not any(
-        changes.get(key) is not None for key in measurement_keys
-    ):
-        raise HTTPException(status_code=400, detail="Укажите вес, замер или заметку")
-
-    measured_on = payload.measured_on or today_for_user(client)
-    row = (
-        db.query(BodyMeasurement)
-        .filter(
-            BodyMeasurement.user_id == client.id,
-            BodyMeasurement.measured_on == measured_on,
-        )
-        .first()
-    )
-    if row is None:
-        row = BodyMeasurement(user_id=client.id, measured_on=measured_on)
-        db.add(row)
-
-    for key in measurement_keys:
-        if key in changes:
-            setattr(row, key, changes[key])
-    if "note" in changes:
-        row.note = changes["note"]
-
-    if changes.get("weight_kg") is not None:
-        try:
-            recalculate_nutrition_target(
-                db,
-                client,
-                {"weight_kg": changes["weight_kg"]},
-                current_user,
-            )
-        except NutritionError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    db.flush()
-    record_audit_event(
-        db,
-        actor_user_id=current_user.id,
-        target_user_id=client.id,
-        action="coach.measurement_saved",
-        resource_type="body_measurement",
-        resource_id=row.id,
-        details={"measured_on": measured_on.isoformat(), "fields": sorted(changes)},
-    )
-    db.commit()
-    db.refresh(row)
-    return _serialize_measurement(row)
+    try:
+        row = save_measurement(db, client, payload, changed_by=current_user)
+    except MeasurementError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return serialize_measurement(row)
 
 
 @router.delete(
@@ -587,27 +517,12 @@ def delete_coach_client_measurement(
     db: Session = Depends(get_db),
 ):
     client = _managed_client(db, current_user, client_id)
-    row = (
-        db.query(BodyMeasurement)
-        .filter(
-            BodyMeasurement.id == measurement_id,
-            BodyMeasurement.user_id == client.id,
-        )
-        .first()
-    )
-    if not row:
-        raise HTTPException(status_code=404, detail="Запись дневника не найдена")
-    record_audit_event(
-        db,
-        actor_user_id=current_user.id,
-        target_user_id=client.id,
-        action="coach.measurement_deleted",
-        resource_type="body_measurement",
-        resource_id=row.id,
-        details={"measured_on": row.measured_on.isoformat()},
-    )
-    db.delete(row)
-    db.commit()
+    try:
+        delete_measurement(db, client, measurement_id, changed_by=current_user)
+    except MeasurementNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except MeasurementError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

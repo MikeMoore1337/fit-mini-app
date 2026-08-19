@@ -404,7 +404,17 @@ def build_progress_summaries(
             )
             .label("row_number"),
         )
-        .filter(BodyMeasurement.user_id.in_(user_ids))
+        .filter(
+            or_(
+                *(
+                    and_(
+                        BodyMeasurement.user_id == user_id,
+                        BodyMeasurement.measured_on <= today_by_user[user_id],
+                    )
+                    for user_id in user_ids
+                )
+            )
+        )
         .subquery()
     )
     latest_measurement_rows = (

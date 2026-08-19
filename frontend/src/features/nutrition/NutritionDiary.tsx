@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import { addCalendarDays, dateInputValue } from '../../shared/dateTime';
+import { invalidateNutritionSummaries, queryKeys } from '../../shared/queryKeys';
 import type {
   FoodDiaryDay,
   FoodDiaryEntry,
@@ -195,9 +196,7 @@ function EntryRow({ entry, onCopy }: { entry: FoodDiaryEntry; onCopy: () => void
         body: { amount: Number(amount.replace(',', '.')), amount_unit: amountUnit },
       }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ['nutrition', 'diary', entry.diary_date],
-      });
+      await invalidateNutritionSummaries(queryClient);
       setEditing(false);
       toast('Количество обновлено');
     },
@@ -206,9 +205,7 @@ function EntryRow({ entry, onCopy }: { entry: FoodDiaryEntry; onCopy: () => void
     mutationFn: () =>
       api<void>(`/api/v1/nutrition/diary/entries/${entry.id}`, { method: 'DELETE' }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ['nutrition', 'diary', entry.diary_date],
-      });
+      await invalidateNutritionSummaries(queryClient);
       toast('Запись удалена');
     },
   });
@@ -398,7 +395,7 @@ export function NutritionDiary({
   const [addingTo, setAddingTo] = useState<MealType | null>(null);
   const [copySubject, setCopySubject] = useState<CopySubject | null>(null);
   const diary = useQuery({
-    queryKey: ['nutrition', 'diary', selectedDate],
+    queryKey: queryKeys.nutrition.diaryDate(selectedDate),
     queryFn: () => api<FoodDiaryDay>(`/api/v1/nutrition/diary?diary_date=${selectedDate}`),
   });
   const dateLabel = formatDate(selectedDate, today);

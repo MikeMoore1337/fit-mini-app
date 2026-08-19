@@ -484,5 +484,6 @@ class ClientResponse(BaseModel):
     cardio_trainings_per_week: int | None = None
     resting_heart_rate: int | None = None
     body_priority: BodyPriorityPreference | None = None
+    timezone: str | None = None
     kbju: NutritionTargetResponse | None = None
     status: Literal["active", "pending"]

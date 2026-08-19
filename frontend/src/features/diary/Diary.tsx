@@ -8,18 +8,24 @@ import { useAuth } from '../../app/AuthProvider';
 import { dateInputValue, detectedTimeZone } from '../../shared/dateTime';
 import { usePersistentState } from '../../shared/storage';
 import { DateInput } from '../../shared/ui/PickerInput';
+import { invalidateMeasurementMutation, queryKeys } from '../../shared/queryKeys';
 
 export function Diary({
   clientId,
+  timeZone: clientTimeZone,
   onSaved,
 }: {
   clientId?: number;
+  timeZone?: string | null;
   onSaved?: () => void | Promise<void>;
 }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { toast, confirm } = useFeedback();
-  const timeZone = clientId ? detectedTimeZone() : user?.profile?.timezone || detectedTimeZone();
+  const timeZone = clientId
+    ? clientTimeZone || detectedTimeZone()
+    : user?.profile?.timezone || detectedTimeZone();
+  const today = dateInputValue(new Date(), timeZone);
   const [form, setForm, clearDraft] = usePersistentState<BodyMeasurementSave>(
     `fit_measurement_draft_${clientId ? `client_${clientId}` : `user_${user?.id ?? 'me'}`}`,
     { measured_on: dateInputValue(new Date(), timeZone) },
@@ -28,7 +34,7 @@ export function Diary({
     ? `/api/v1/coach/clients/${clientId}/measurements`
     : '/api/v1/workouts/diary';
   const rows = useQuery({
-    queryKey: ['measurements', clientId || 'me'],
+    queryKey: queryKeys.measurements.subject(clientId),
     queryFn: () => api<BodyMeasurement[]>(base),
     refetchInterval: LIVE_DATA_REFETCH_INTERVAL_MS,
     refetchOnWindowFocus: true,
@@ -37,11 +43,8 @@ export function Diary({
     mutationFn: ({ path, method, body }: { path: string; method: string; body?: unknown }) =>
       api(path, { method, body }),
     onSuccess: async () => {
-      clearDraft({ measured_on: dateInputValue(new Date(), timeZone) });
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['measurements', clientId || 'me'] }),
-        ...(!clientId ? [queryClient.invalidateQueries({ queryKey: ['notifications'] })] : []),
-      ]);
+      clearDraft({ measured_on: today });
+      await invalidateMeasurementMutation(queryClient, clientId);
       await onSaved?.();
       toast('Дневник обновлён');
     },
@@ -78,6 +81,7 @@ export function Diary({
             <DateInput
               controlClassName="diary-date-control"
               value={form.measured_on || ''}
+              max={today}
               onChange={(e) => setForm({ ...form, measured_on: e.target.value })}
             />
           </label>

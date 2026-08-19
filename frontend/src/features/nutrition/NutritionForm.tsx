@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
 import { api } from '../../shared/api/client';
 import type { NutritionTarget, UserProfile } from '../../shared/api/types';
+import { invalidateNutritionSummaries, queryKeys } from '../../shared/queryKeys';
 import { usePersistentState } from '../../shared/storage';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Card, DisclosureIcon } from '../../shared/ui/common';
@@ -204,10 +205,12 @@ function fromInitial(
 }
 
 export function NutritionForm({
+  clientId,
   targetTelegramId,
   initial,
   onSaved,
 }: {
+  clientId?: number;
   targetTelegramId?: number | null;
   initial?: NutritionTarget | null;
   onSaved?: () => void | Promise<void>;
@@ -239,8 +242,10 @@ export function NutritionForm({
     onSuccess: async () => {
       clearDraft();
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['notifications'] }),
-        queryClient.invalidateQueries({ queryKey: ['nutrition', 'diary'] }),
+        invalidateNutritionSummaries(queryClient, clientId),
+        ...(!clientId
+          ? [queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })]
+          : []),
       ]);
       await onSaved?.();
       toast('Ориентиры КБЖУ сохранены');

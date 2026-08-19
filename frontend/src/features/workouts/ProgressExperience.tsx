@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type { ProgressSummary, TrainingAnalytics } from '../../shared/api/types';
+import { queryKeys } from '../../shared/queryKeys';
 import {
   Badge,
   EmptyState,
@@ -679,7 +680,7 @@ function useTrainingAnalytics(period: PeriodDays) {
 export function ProgressExperience() {
   const [period, setPeriod] = useState<PeriodDays>(30);
   const summary = useQuery({
-    queryKey: ['workout', 'progress-summary', period],
+    queryKey: queryKeys.progress.summary(period),
     queryFn: () => api<ProgressSummary>(`/api/v1/workouts/progress/summary?period_days=${period}`),
     placeholderData: keepPreviousData,
   });
