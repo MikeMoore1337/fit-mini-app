@@ -6,6 +6,7 @@ import type { NutritionTarget, UserProfile } from '../../shared/api/types';
 import { usePersistentState } from '../../shared/storage';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Card, DisclosureIcon } from '../../shared/ui/common';
+import { EnergyCalibrationCard } from './EnergyCalibrationCard';
 import { calculateNutritionEstimate, type NutritionCalculatorInput } from './nutritionCalculator';
 
 type CardioTraining = NutritionCalculatorInput['cardio_trainings'][number];
@@ -657,6 +658,9 @@ export function NutritionForm({
           {mutation.isPending ? 'Сохраняем…' : 'Сохранить КБЖУ'}
         </button>
       </form>
+      {!targetTelegramId && initial && (
+        <EnergyCalibrationCard target={initial} onAccepted={onSaved} />
+      )}
     </Card>
   );
 }

@@ -14,7 +14,7 @@ from fitminiapp_api.models.feedback import WorkoutComment, WorkoutCommentRevisio
 from fitminiapp_api.models.food import Food, FoodFavorite
 from fitminiapp_api.models.food_diary import FoodDiaryCopyOperation, FoodDiaryEntry
 from fitminiapp_api.models.notification import Notification, NotificationSetting
-from fitminiapp_api.models.nutrition import NutritionTarget
+from fitminiapp_api.models.nutrition import EnergyCalibration, NutritionTarget
 from fitminiapp_api.models.program import (
     HiddenProgramTemplate,
     ProgramRevision,
@@ -48,6 +48,7 @@ __all__ = [
     "CoachClient",
     "CoachClientInvite",
     "CoachRoleApplication",
+    "EnergyCalibration",
     "Equipment",
     "Exercise",
     "ExerciseAlternative",

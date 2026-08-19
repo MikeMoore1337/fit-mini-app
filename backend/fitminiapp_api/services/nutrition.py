@@ -157,7 +157,7 @@ def _target_calories(maintenance_calories: float, goal: str) -> int:
     return _round_to_ten(maintenance_calories * GOAL_MULTIPLIERS[goal])
 
 
-def _macros(weight_kg: float, target_calories: int, goal: str) -> NutritionMacros:
+def calculate_macros(weight_kg: float, target_calories: int, goal: str) -> NutritionMacros:
     protein_per_kg = {
         "fat_loss": 2.2,
         "muscle_gain": 1.8,
@@ -252,13 +252,13 @@ def calculate_nutrition(payload: NutritionTargetSave) -> NutritionCalculation:
     cardio_daily_calories = cardio_weekly_calories / 7
     maintenance_calories = base_tdee + strength_daily_calories + cardio_daily_calories
     calories = _target_calories(maintenance_calories, goal)
-    macros = _macros(payload.weight_kg, calories, goal)
+    macros = calculate_macros(payload.weight_kg, calories, goal)
     if macros["macro_warning"]:
         # A calorie target below its own protein/fat allocation is internally
         # inconsistent and could previously become zero for accepted edge
         # inputs. Raise it only as far as needed to make every macro nonnegative.
         calories = _round_up_to_ten(macros["protein_g"] * 4 + macros["fat_g"] * 9)
-        macros = _macros(payload.weight_kg, calories, goal)
+        macros = calculate_macros(payload.weight_kg, calories, goal)
         macros["macro_warning"] = True
 
     return {
