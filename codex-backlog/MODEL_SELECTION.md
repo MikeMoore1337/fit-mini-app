@@ -63,6 +63,11 @@ Final pre-release quality-first policy.
 - `73` - public commercial surface where visual judgment and polish matter.
 - `74` - product-wide audit/fixes across responsive, accessibility and async states.
 
+## Retrospective remediation gate
+
+`46C.6` requires **GPT-5.6 Sol High** because it preserves a security-sensitive production
+network path across auth, configuration, deployment diagnostics and regression tests.
+
 ## Borderline tasks
 
 Terra High can sometimes work for `40`, `47`, `48`, `71`, `75`, `80`, `83` when an implementation plan is already fixed and tests strongly guard behavior. Quality-first default remains **Sol High**.

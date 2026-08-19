@@ -37,26 +37,31 @@ FRONTEND_DIST_DIR = (
 logger = logging.getLogger("app")
 
 
+def _application_sensitive_values() -> tuple[str, ...]:
+    return (
+        settings.secret_key,
+        settings.telegram_bot_token,
+        settings.bot_internal_token,
+        settings.smtp_password,
+        settings.telegram_oauth_client_secret,
+        settings.oauth_proxy_url,
+        settings.telegram_oauth_proxy_url,
+        settings.google_oauth_client_secret,
+        settings.yandex_oauth_client_secret,
+        settings.apple_oauth_client_secret,
+        settings.database_url,
+        settings.google_site_verification,
+        settings.yandex_verification,
+    )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     del app
     configure_logging(
         debug=settings.app_debug,
         service="api",
-        sensitive_values=(
-            settings.secret_key,
-            settings.telegram_bot_token,
-            settings.bot_internal_token,
-            settings.smtp_password,
-            settings.telegram_oauth_client_secret,
-            settings.oauth_proxy_url,
-            settings.google_oauth_client_secret,
-            settings.yandex_oauth_client_secret,
-            settings.apple_oauth_client_secret,
-            settings.database_url,
-            settings.google_site_verification,
-            settings.yandex_verification,
-        ),
+        sensitive_values=_application_sensitive_values(),
     )
     logger.info("application_started")
     try:
