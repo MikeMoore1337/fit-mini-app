@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { AppShell, type AppSection } from '../../app/AppShell';
 import { useAuth } from '../../app/AuthProvider';
 import { TelegramLinkPrompt } from '../../features/account/TelegramLinkPrompt';
-import { TodayWorkout } from '../../features/workouts/TodayWorkout';
+import { TodayDashboard } from '../../features/dashboard/TodayDashboard';
 import type { WorkoutNavigationTarget } from '../../features/workouts/WorkoutHistory';
 import { useNavigation } from '../../shared/navigation/router';
 import { Badge } from '../../shared/ui/common';
@@ -163,17 +163,19 @@ export default function MiniAppPage() {
   return (
     <AppShell section={section}>
       <div className="page-stack">
-        <header className="card hero-card">
-          <div>
-            <span className="eyebrow">Your Fitness Coach</span>
-            <h1>{user?.profile?.full_name || user?.first_name || 'Мой фитнес'}</h1>
-            <p className="muted">Тренировки, питание и прогресс в одном месте.</p>
-          </div>
-          <div className="hero-card__meta">
-            <Badge>{role}</Badge>
-          </div>
-        </header>
-        <TelegramLinkPrompt />
+        {section !== 'today' && (
+          <header className="card hero-card">
+            <div>
+              <span className="eyebrow">Your Fitness Coach</span>
+              <h1>{user?.profile?.full_name || user?.first_name || 'Мой фитнес'}</h1>
+              <p className="muted">Тренировки, питание и прогресс в одном месте.</p>
+            </div>
+            <div className="hero-card__meta">
+              <Badge>{role}</Badge>
+            </div>
+          </header>
+        )}
+        {section !== 'today' && <TelegramLinkPrompt />}
         <section className="page-stack">
           <Suspense
             fallback={
@@ -182,7 +184,7 @@ export default function MiniAppPage() {
               </p>
             }
           >
-            {section === 'today' && <TodayWorkout />}
+            {section === 'today' && <TodayDashboard />}
             {section === 'progress' && (
               <>
                 <ProgressSchedule
@@ -234,6 +236,7 @@ export default function MiniAppPage() {
             )}
           </Suspense>
         </section>
+        {section === 'today' && <TelegramLinkPrompt />}
       </div>
     </AppShell>
   );

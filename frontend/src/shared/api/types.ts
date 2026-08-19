@@ -23,6 +23,7 @@ export type WorkoutAdaptationApply = ApiSchemas['WorkoutAdaptationApplyResponse'
 export type WorkoutAlternative = ApiSchemas['WorkoutAlternativeItem'];
 export type BodyMeasurement = ApiSchemas['BodyMeasurementResponse'];
 export type BodyMeasurementSave = ApiSchemas['BodyMeasurementSave'];
+export type FoodDiaryDay = ApiSchemas['FoodDiaryDayResponse'];
 export type NutritionTarget = ApiSchemas['NutritionTargetResponse'];
 export type NutritionTargetSave = ApiSchemas['NutritionTargetSave'];
 export type EnergyCalibration = ApiSchemas['EnergyCalibrationResponse'];
@@ -44,6 +45,7 @@ export type OAuthLinkCreate = ApiSchemas['OAuthLinkCreateResponse'];
 export type ProgressVolumePoint = ApiSchemas['ProgressVolumePoint'];
 export type WorkoutProgress = ApiSchemas['WorkoutProgressResponse'];
 export type WorkoutTimelineItem = ApiSchemas['WorkoutTimelineItem'];
+export type ProgressSummary = ApiSchemas['ProgressSummaryResponse'];
 
 export interface PublicConfig {
   app_env: string;

@@ -1,0 +1,406 @@
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ApiError } from '../../../../src/shared/api/client';
+import type { FoodDiaryDay, ProgressSummary, Workout } from '../../../../src/shared/api/types';
+import { dateInputValue } from '../../../../src/shared/dateTime';
+import { FeedbackProvider } from '../../../../src/shared/ui/FeedbackProvider';
+import {
+  formatTodayHeading,
+  TodayDashboard,
+} from '../../../../src/features/dashboard/TodayDashboard';
+
+const apiMock = vi.hoisted(() => vi.fn());
+const authState = vi.hoisted(() => ({
+  user: {
+    id: 7,
+    first_name: 'Анна',
+    is_coach: false,
+    is_admin: false,
+    has_active_program: true,
+    has_workout_history: true,
+    onboarding: { status: 'complete', required_fields: ['goal'], missing_fields: [] },
+    profile: {
+      full_name: 'Анна Петрова',
+      goal: 'maintenance',
+      level: 'beginner' as string | null,
+      height_cm: 168 as number | null,
+      workouts_per_week: 3 as number | null,
+      timezone: 'Europe/Moscow',
+      kbju: null,
+    },
+  },
+}));
+
+vi.mock('../../../../src/shared/api/client', () => {
+  class MockApiError extends Error {
+    constructor(
+      message: string,
+      public status: number,
+      public body: unknown = null,
+    ) {
+      super(message);
+      this.name = 'ApiError';
+    }
+  }
+  return { api: apiMock, ApiError: MockApiError };
+});
+
+vi.mock('../../../../src/app/AuthProvider', () => ({
+  useAuth: () => ({ user: authState.user }),
+}));
+
+vi.mock('../../../../src/shared/navigation/router', () => ({
+  AppLink: ({ to, children, ...props }: React.ComponentProps<'a'> & { to: string }) => (
+    <a href={to} {...props}>
+      {children}
+    </a>
+  ),
+}));
+
+vi.mock('../../../../src/features/workouts/TodayWorkout', () => ({
+  TodayWorkout: () => <div>Активная тренировка открыта</div>,
+}));
+
+const plannedWorkout = {
+  id: 42,
+  scheduled_date: '2030-01-10',
+  scheduled_time: '18:30:00',
+  title: 'Силовая база',
+  status: 'planned',
+  day_number: 2,
+  week_number: 1,
+  started_at: null,
+  completed_at: null,
+  exercises: [
+    {
+      id: 101,
+      exercise_id: 11,
+      exercise_title: 'Приседания',
+      sort_order: 1,
+      prescribed_sets: 1,
+      prescribed_reps: '8-10',
+      rest_seconds: 90,
+      notes: null,
+      has_guide: false,
+      sets: [
+        {
+          id: 201,
+          set_number: 1,
+          actual_reps: null,
+          actual_weight: null,
+          is_completed: false,
+          version: 1,
+        },
+      ],
+    },
+  ],
+} as Workout;
+
+const availableAdherence = {
+  status: 'available' as const,
+  percent: 84,
+  achieved: 7,
+  evaluated: 8,
+  weight: 0.4,
+  reason: null,
+};
+
+const sufficientSignal = {
+  status: 'sufficient' as const,
+  counters: {},
+  reason_keys: ['thresholds_met' as const],
+};
+
+const progressSummary = {
+  user_id: 7,
+  period_days: 30,
+  period_start: '2029-12-12',
+  period_end: '2030-01-10',
+  training: {
+    planned_workouts: 8,
+    completed_workouts: 7,
+    frequency_per_week: 1.63,
+    volume_kg: 12400,
+    new_personal_records: 1,
+    last_completed_workout_on: '2030-01-08',
+    next_workout: {
+      id: 42,
+      scheduled_date: '2030-01-10',
+      scheduled_time: '18:30:00',
+      title: 'Силовая база',
+      status: 'planned',
+    },
+  },
+  nutrition: {
+    visible: true,
+    logged_days: 20,
+    adherence_evaluated_days: 20,
+    average_calories: 1980,
+    target_calories: 2100,
+    average_protein_g: 130,
+    target_protein_g: 140,
+    target_effective_on: '2029-12-01',
+  },
+  body: {
+    latest_measurement: { measured_on: '2030-01-09', weight_kg: 68.4 },
+    trends: [
+      {
+        metric: 'weight_kg',
+        first_value: 69.1,
+        latest_value: 68.4,
+        change: -0.7,
+        first_measured_on: '2029-12-15',
+        latest_measured_on: '2030-01-09',
+        point_count: 4,
+        span_days: 25,
+        interpretation_status: 'available',
+        points: [],
+      },
+    ],
+    priority: null,
+    guidance: {
+      comparison_basis: 'self',
+      minimum_points_for_interpretation: 3,
+      minimum_span_days_for_interpretation: 14,
+      consistency_tips: [],
+      circumference_limitations: [],
+    },
+  },
+  adherence: {
+    formula_version: 'adherence-v1',
+    overall_percent: 84,
+    included_components: ['workouts', 'calories', 'protein'],
+    workouts: availableAdherence,
+    cardio: {
+      status: 'not_applicable',
+      percent: null,
+      achieved: 0,
+      evaluated: 0,
+      weight: 0.2,
+      reason: 'cardio_not_planned',
+    },
+    calories: { ...availableAdherence, weight: 0.2 },
+    protein: { ...availableAdherence, weight: 0.2 },
+  },
+  data_sufficiency: {
+    ruleset_version: 'data-sufficiency-v1',
+    workout_logging: sufficientSignal,
+    working_sets: sufficientSignal,
+    rir_coverage: sufficientSignal,
+    nutrition_coverage: sufficientSignal,
+    weight_trend: sufficientSignal,
+    anthropometry: sufficientSignal,
+    schedule_adherence: sufficientSignal,
+  },
+} satisfies ProgressSummary;
+
+const diary = {
+  diary_date: '2030-01-10',
+  timezone: 'Europe/Moscow',
+  meals: [],
+  totals: {
+    energy_kcal: '1450.0',
+    protein_g: '96.0',
+    fat_g: '48.0',
+    carbs_g: '160.0',
+    fiber_g: '18.0',
+  },
+  targets: {
+    energy_kcal: '2100.0',
+    protein_g: '140.0',
+    fat_g: '70.0',
+    carbs_g: '230.0',
+  },
+  remaining: {
+    energy_kcal: '650.0',
+    protein_g: '44.0',
+    fat_g: '22.0',
+    carbs_g: '70.0',
+  },
+} as FoodDiaryDay;
+
+function renderDashboard() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <FeedbackProvider>
+        <TodayDashboard />
+      </FeedbackProvider>
+    </QueryClientProvider>,
+  );
+}
+
+function useAvailableData() {
+  apiMock.mockImplementation((path: string) => {
+    if (path === '/api/v1/workouts/today') return Promise.resolve(plannedWorkout);
+    if (path.startsWith('/api/v1/workouts/progress/summary')) {
+      return Promise.resolve(progressSummary);
+    }
+    if (path.startsWith('/api/v1/nutrition/diary')) return Promise.resolve(diary);
+    if (path === '/api/v1/workouts/42/start') {
+      return Promise.resolve({ ...plannedWorkout, status: 'in_progress' });
+    }
+    throw new Error(`Unexpected API path: ${path}`);
+  });
+}
+
+describe('TodayDashboard', () => {
+  beforeEach(() => {
+    apiMock.mockReset();
+    authState.user.has_active_program = true;
+    authState.user.profile.level = 'beginner';
+    authState.user.profile.height_cm = 168;
+    authState.user.profile.workouts_per_week = 3;
+  });
+
+  afterEach(cleanup);
+
+  it('formats the day context in clear Russian', () => {
+    expect(formatTodayHeading('2030-01-10')).toEqual({
+      eyebrow: 'Четверг',
+      title: 'Сегодня, 10 января',
+    });
+  });
+
+  it('puts the real workout CTA first and shows compact nutrition and progress data', async () => {
+    useAvailableData();
+    renderDashboard();
+
+    expect(await screen.findByRole('heading', { name: 'Силовая база' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Начать тренировку' })).toBeInTheDocument();
+    expect(screen.getByText('1450')).toBeInTheDocument();
+    expect(screen.getByText('из 2100 ккал')).toBeInTheDocument();
+    expect(screen.getByText('68,4 кг')).toBeInTheDocument();
+    expect(screen.getByText('84%')).toBeInTheDocument();
+    expect(screen.getByText('Учтены: тренировки, калории и белок')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Начать тренировку' }));
+
+    await waitFor(() =>
+      expect(apiMock).toHaveBeenCalledWith('/api/v1/workouts/42/start', { method: 'POST' }),
+    );
+    expect(await screen.findByText('Активная тренировка открыта')).toBeInTheDocument();
+  });
+
+  it('keeps the workout usable when the nutrition request fails', async () => {
+    useAvailableData();
+    apiMock.mockImplementation((path: string) => {
+      if (path === '/api/v1/workouts/today') return Promise.resolve(plannedWorkout);
+      if (path.startsWith('/api/v1/workouts/progress/summary')) {
+        return Promise.resolve(progressSummary);
+      }
+      if (path.startsWith('/api/v1/nutrition/diary')) {
+        return Promise.reject(new ApiError('Нет соединения', 0));
+      }
+      throw new Error(`Unexpected API path: ${path}`);
+    });
+    renderDashboard();
+
+    expect(await screen.findByRole('button', { name: 'Начать тренировку' })).toBeInTheDocument();
+    expect(await screen.findByText('Сводка питания временно недоступна')).toBeInTheDocument();
+    expect(screen.getByText('68,4 кг')).toBeInTheDocument();
+  });
+
+  it('shows a completed state without invented duration or volume', async () => {
+    apiMock.mockImplementation((path: string) => {
+      if (path === '/api/v1/workouts/today') {
+        return Promise.reject(new ApiError('На сегодня тренировка не назначена', 404));
+      }
+      if (path.startsWith('/api/v1/workouts/progress/summary')) {
+        const currentDate = dateInputValue(new Date(), 'Europe/Moscow');
+        return Promise.resolve({
+          ...progressSummary,
+          period_end: currentDate,
+          training: {
+            ...progressSummary.training,
+            last_completed_workout_on: currentDate,
+            next_workout: null,
+          },
+        });
+      }
+      if (path.startsWith('/api/v1/nutrition/diary')) return Promise.resolve(diary);
+      throw new Error(`Unexpected API path: ${path}`);
+    });
+    renderDashboard();
+
+    expect(
+      await screen.findByRole('heading', { name: 'Тренировка завершена' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/длительность/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/объём/i)).not.toBeInTheDocument();
+  });
+
+  it('shows a factual rest day and the nearest planned workout', async () => {
+    apiMock.mockImplementation((path: string) => {
+      if (path === '/api/v1/workouts/today') {
+        return Promise.reject(new ApiError('На сегодня тренировка не назначена', 404));
+      }
+      if (path.startsWith('/api/v1/workouts/progress/summary')) {
+        return Promise.resolve({
+          ...progressSummary,
+          training: {
+            ...progressSummary.training,
+            last_completed_workout_on: '2030-01-08',
+            next_workout: {
+              id: 55,
+              scheduled_date: '2030-01-12',
+              scheduled_time: '19:00:00',
+              title: 'Верх тела',
+              status: 'planned',
+            },
+          },
+        });
+      }
+      if (path.startsWith('/api/v1/nutrition/diary')) return Promise.resolve(diary);
+      throw new Error(`Unexpected API path: ${path}`);
+    });
+    renderDashboard();
+
+    expect(
+      await screen.findByRole('heading', { name: 'Сегодня без тренировки' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Ближайшая .*Верх тела/)).toBeInTheDocument();
+  });
+
+  it('guides a new user to a program and keeps incomplete profile secondary', async () => {
+    authState.user.has_active_program = false;
+    authState.user.profile.level = null;
+    authState.user.profile.height_cm = null;
+    authState.user.profile.workouts_per_week = null;
+    apiMock.mockImplementation((path: string) => {
+      if (path === '/api/v1/workouts/today') {
+        return Promise.reject(new ApiError('На сегодня тренировка не назначена', 404));
+      }
+      if (path.startsWith('/api/v1/workouts/progress/summary')) {
+        return Promise.resolve({
+          ...progressSummary,
+          body: { ...progressSummary.body, latest_measurement: null, trends: [] },
+          adherence: {
+            ...progressSummary.adherence,
+            overall_percent: null,
+            included_components: [],
+          },
+          training: { ...progressSummary.training, next_workout: null },
+        });
+      }
+      if (path.startsWith('/api/v1/nutrition/diary')) {
+        return Promise.resolve({ ...diary, targets: null, remaining: null });
+      }
+      throw new Error(`Unexpected API path: ${path}`);
+    });
+    renderDashboard();
+
+    expect(
+      await screen.findByRole('heading', { name: 'Выберите тренировочный план' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Выбрать программу' })).toHaveAttribute(
+      'href',
+      '/app?section=programs',
+    );
+    expect(screen.getByText('Сделайте рекомендации точнее')).toBeInTheDocument();
+    expect(screen.getByText('Пока мало данных для общей сводки.')).toBeInTheDocument();
+  });
+});

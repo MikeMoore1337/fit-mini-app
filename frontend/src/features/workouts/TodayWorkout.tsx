@@ -249,7 +249,7 @@ function RestTimer({ userId, workoutId }: { userId: number; workoutId: number })
   );
 }
 
-export function TodayWorkout() {
+export function TodayWorkout({ embedded = false }: { embedded?: boolean }) {
   const { toast, confirm } = useFeedback();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -333,6 +333,7 @@ export function TodayWorkout() {
   return (
     <>
       <Card
+        collapsible={!embedded}
         title={data.title}
         description={`${data.scheduled_date}${data.scheduled_time ? ` в ${data.scheduled_time.slice(0, 5)}` : ''} · День ${data.day_number}`}
         actions={
