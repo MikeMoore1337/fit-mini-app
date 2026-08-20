@@ -1111,6 +1111,66 @@ async function mockApi(
       });
     if (path.endsWith('/programs/assigned/701/revisions')) return route.fulfill({ json: [] });
     if (path.endsWith('/programs/assigned/701/blocks')) return route.fulfill({ json: [] });
+    if (path.endsWith('/coach/client-summaries'))
+      return route.fulfill({
+        json: {
+          items: withCoachClient
+            ? [
+                {
+                  user_id: 2,
+                  client_name: 'Тестовый клиент',
+                  period_days: 30,
+                  period_start: '2026-07-22',
+                  period_end: '2026-08-20',
+                  training: {
+                    planned_workouts: 8,
+                    completed_workouts: 6,
+                    frequency_per_week: 1.5,
+                    volume_kg: 12000,
+                    new_personal_records: 1,
+                    last_completed_workout_on: '2026-08-18',
+                    next_workout: null,
+                  },
+                  nutrition: {
+                    visible: true,
+                    logged_days: 12,
+                    adherence_evaluated_days: 10,
+                    average_calories: 2000,
+                    target_calories: 2100,
+                    average_protein_g: 130,
+                    target_protein_g: 140,
+                    target_effective_on: '2026-07-01',
+                  },
+                  body: {
+                    latest_measurement: { measured_on: '2026-08-17', weight_kg: 75 },
+                    trends: [],
+                    priority: null,
+                    guidance: {},
+                  },
+                  adherence: {
+                    formula_version: 'adherence-v1',
+                    overall_percent: 75,
+                    included_components: ['workouts'],
+                    workouts: {
+                      status: 'available',
+                      percent: 75,
+                      achieved: 6,
+                      evaluated: 8,
+                      weight: 1,
+                    },
+                    cardio: { status: 'not_applicable', achieved: 0, evaluated: 0, weight: 0 },
+                    calories: { status: 'not_applicable', achieved: 0, evaluated: 0, weight: 0 },
+                    protein: { status: 'not_applicable', achieved: 0, evaluated: 0, weight: 0 },
+                  },
+                  data_sufficiency: {},
+                },
+              ]
+            : [],
+          total: withCoachClient ? 1 : 0,
+          limit: 100,
+          offset: 0,
+        },
+      });
     if (path.endsWith('/coach/clients'))
       return route.fulfill({
         json: withCoachClient
@@ -2035,6 +2095,8 @@ test('поля даты остаются внутри анкеты клиент�
   await mockApi(page, { withCoachClient: true });
   await page.goto('/coach');
   await page.getByRole('button', { name: 'Тренер' }).click();
+  await page.getByRole('button', { name: /Тестовый клиент/ }).click();
+  await page.getByText('Профиль клиента', { exact: true }).click();
 
   const birthDateField = page.getByLabel('Дата рождения');
   const birthDateBox = await birthDateField.boundingBox();
@@ -2046,7 +2108,7 @@ test('поля даты остаются внутри анкеты клиент�
     birthDateControlBox!.x + birthDateControlBox!.width,
   );
 
-  await page.getByText('Прогресс и замеры', { exact: true }).click();
+  await page.getByText('Тренировки, прогресс и замеры', { exact: true }).click();
 
   const dateField = page.getByLabel('Дата', { exact: true });
   const dateBox = await dateField.boundingBox();
@@ -2077,8 +2139,9 @@ test('тренер открывает кабинет', async ({ page }) => {
     'page',
   );
   await expect(page.getByRole('link', { name: 'Администрирование' })).toHaveCount(0);
-  await openCard(page, 'Клиенты');
   await expect(page.getByText('Клиентов пока нет')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Добавьте первого клиента' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Пригласить первого клиента' })).toBeVisible();
 });
 
 test('тренер быстро переходит между программой клиента и каталогом', async ({ page }) => {
@@ -2093,7 +2156,9 @@ test('тренер быстро переходит между программо
   await page.getByRole('button', { name: 'Открыть клиента' }).click();
 
   await expect(page.getByText('Текущая программа клиента')).toBeVisible();
-  await expect(page.getByText('План клиента на четыре недели')).toBeVisible();
+  await expect(page.locator('.coach-client-program > div > strong')).toHaveText(
+    'План клиента на четыре недели',
+  );
   await page.getByRole('button', { name: 'Добавить упражнение' }).first().click();
 
   await expect(page.getByRole('heading', { name: 'Упражнения', exact: true })).toBeVisible();

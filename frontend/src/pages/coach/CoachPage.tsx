@@ -9,7 +9,14 @@ import { NutritionForm } from '../../features/nutrition/NutritionForm';
 import { ProgramBuilder } from '../../features/programs/ProgramBuilder';
 import { AssignedProgramDetails } from '../../features/programs/AssignedProgramDetails';
 import { api } from '../../shared/api/client';
-import type { ApiSchemas, Client, CoachAssignedProgram, InviteLink } from '../../shared/api/types';
+import type {
+  ApiSchemas,
+  Client,
+  CoachAssignedProgram,
+  InviteLink,
+  TrainerClientProgressList,
+  TrainerClientProgressSummary,
+} from '../../shared/api/types';
 import { queryKeys } from '../../shared/queryKeys';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import {
@@ -30,8 +37,32 @@ import {
   BodyPriorityPicker,
   isBodyPriorityComplete,
 } from '../../features/profile/BodyPriorityPicker';
+import {
+  activityLabel,
+  clientDisplayName,
+  coachWorkspaceStats,
+  filterCoachClients,
+  needsCoachAttention,
+  type CoachClientFilter,
+} from '../../features/coach/coachWorkspace';
 
 type CoachTab = 'clients' | 'programs' | 'catalog';
+
+async function loadCoachClientSummaries(): Promise<TrainerClientProgressList> {
+  const limit = 100;
+  const firstPage = await api<TrainerClientProgressList>(
+    `/api/v1/coach/client-summaries?period_days=30&limit=${limit}&offset=0`,
+  );
+  const items = [...firstPage.items];
+  while (items.length < firstPage.total) {
+    const page = await api<TrainerClientProgressList>(
+      `/api/v1/coach/client-summaries?period_days=30&limit=${limit}&offset=${items.length}`,
+    );
+    if (!page.items.length) break;
+    items.push(...page.items);
+  }
+  return { ...firstPage, items };
+}
 
 type ClientProfileDraft = Pick<
   Client,
@@ -79,11 +110,13 @@ function clientProfileKey(client: Client): string {
 }
 
 function ClientDataSection({
+  id,
   title,
   description,
   children,
   open = false,
 }: {
+  id?: string;
   title: string;
   description: string;
   children: ReactNode;
@@ -93,6 +126,7 @@ function ClientDataSection({
   return (
     <details
       className="coach-data-disclosure"
+      id={id}
       open={expanded}
       onToggle={(event) => setExpanded(event.currentTarget.open)}
     >
@@ -314,12 +348,387 @@ function ClientProfileEditor({ client }: { client: Client }) {
   );
 }
 
+function formatCoachDate(value: string | null | undefined): string {
+  if (!value) return 'Нет данных';
+  return new Date(`${value}T12:00:00`).toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'short',
+  });
+}
+
+function coachGoalLabel(goal: string | null | undefined): string {
+  return (
+    {
+      fat_loss: 'Похудение',
+      muscle_gain: 'Набор мышц',
+      maintenance: 'Поддержание формы',
+      recomposition: 'Рекомпозиция',
+    }[goal ?? ''] ?? 'Цель пока не указана'
+  );
+}
+
+function clientCountLabel(value: number): string {
+  const lastTwo = value % 100;
+  const last = value % 10;
+  if (lastTwo >= 11 && lastTwo <= 14) return `${value} клиентов`;
+  if (last === 1) return `${value} клиент`;
+  if (last >= 2 && last <= 4) return `${value} клиента`;
+  return `${value} клиентов`;
+}
+
+function adherenceText(summary?: TrainerClientProgressSummary): string {
+  const workouts = summary?.adherence.workouts;
+  if (!workouts || workouts.status !== 'available' || workouts.percent == null) {
+    return 'Пока мало данных о выполнении плана';
+  }
+  return `Выполнено ${workouts.achieved} из ${workouts.evaluated} по плану — ${Math.round(workouts.percent)}%`;
+}
+
+function CoachWorkspaceDashboard({
+  clients,
+  loading,
+  summaries,
+  unavailable,
+}: {
+  clients: Client[];
+  loading: boolean;
+  summaries: TrainerClientProgressSummary[];
+  unavailable: boolean;
+}) {
+  const stats = coachWorkspaceStats(clients, summaries);
+  const summariesMissing = loading || unavailable;
+  return (
+    <section className="coach-dashboard" aria-labelledby="coach-dashboard-title">
+      <div className="coach-dashboard__heading">
+        <div>
+          <span className="eyebrow">За последние 30 дней</span>
+          <h2 id="coach-dashboard-title">Состояние клиентской базы</h2>
+        </div>
+        <p>
+          {unavailable
+            ? 'Краткие показатели временно недоступны'
+            : loading
+              ? 'Обновляем краткие показатели клиентов…'
+              : stats.attention
+                ? `${clientCountLabel(stats.attention)} ${stats.attention === 1 ? 'давно не тренировался' : 'давно не тренировались'}`
+                : 'У активных клиентов нет длительных пауз'}
+        </p>
+      </div>
+      <dl className="coach-fact-strip">
+        <div>
+          <dt>Активные</dt>
+          <dd>{stats.active}</dd>
+        </div>
+        <div>
+          <dt>Ожидают подключения</dt>
+          <dd>{stats.pending}</dd>
+        </div>
+        <div>
+          <dt>Тренировались за 7 дней</dt>
+          <dd>
+            {summariesMissing ? '—' : stats.recent}{' '}
+            {!summariesMissing && <small>из {stats.active}</small>}
+          </dd>
+        </div>
+        <div>
+          <dt>Новые личные результаты</dt>
+          <dd>{summariesMissing ? '—' : stats.personalRecords}</dd>
+        </div>
+        <div>
+          <dt>Обновили замеры</dt>
+          <dd>{summariesMissing ? '—' : stats.measurementUpdates}</dd>
+        </div>
+      </dl>
+    </section>
+  );
+}
+
+function CoachZeroState({
+  inviteCreating,
+  pendingCount,
+  onInvite,
+}: {
+  inviteCreating: boolean;
+  pendingCount: number;
+  onInvite: () => void;
+}) {
+  return (
+    <section className="coach-zero-state" aria-labelledby="coach-zero-title">
+      <div className="coach-zero-state__copy">
+        <span className="eyebrow">Первый рабочий цикл</span>
+        <h2 id="coach-zero-title">Добавьте первого клиента</h2>
+        <p>
+          После подключения здесь появятся программа, ближайшие тренировки, прогресс и разрешённые
+          данные питания.
+        </p>
+        <button disabled={inviteCreating} onClick={onInvite} type="button">
+          {inviteCreating ? 'Создаём приглашение…' : 'Пригласить первого клиента'}
+        </button>
+      </div>
+      <ol className="coach-onboarding-steps">
+        <li className={pendingCount ? 'is-complete' : ''}>
+          <span>01</span>
+          <div>
+            <strong>Отправьте приглашение</strong>
+            <small>
+              {pendingCount
+                ? 'Приглашение ожидает подтверждения'
+                : 'Ссылка работает в Web и Telegram'}
+            </small>
+          </div>
+        </li>
+        <li>
+          <span>02</span>
+          <div>
+            <strong>Клиент подтвердит связь</strong>
+            <small>Доступ появится только после его согласия</small>
+          </div>
+        </li>
+        <li>
+          <span>03</span>
+          <div>
+            <strong>Назначьте программу</strong>
+            <small>Используйте общий конструктор программ YFC</small>
+          </div>
+        </li>
+        <li>
+          <span>04</span>
+          <div>
+            <strong>Следите за фактами</strong>
+            <small>Тренировки, результаты, замеры и соблюдение плана</small>
+          </div>
+        </li>
+      </ol>
+    </section>
+  );
+}
+
+function ClientSummaryFacts({ summary }: { summary?: TrainerClientProgressSummary }) {
+  if (!summary) {
+    return <p className="muted">Сводка ещё загружается или данных за период пока нет.</p>;
+  }
+  const workoutAdherence = summary.adherence.workouts;
+  return (
+    <div className="coach-client-facts">
+      <div>
+        <span>Последняя тренировка</span>
+        <strong>{formatCoachDate(summary.training.last_completed_workout_on)}</strong>
+        <small>{activityLabel(summary.training.last_completed_workout_on)}</small>
+      </div>
+      <div>
+        <span>Выполнение плана</span>
+        <strong>
+          {workoutAdherence.status === 'available' && workoutAdherence.percent != null
+            ? `${Math.round(workoutAdherence.percent)}%`
+            : 'Недостаточно данных'}
+        </strong>
+        <small>
+          {workoutAdherence.status === 'available'
+            ? `${workoutAdherence.achieved} из ${workoutAdherence.evaluated} тренировок`
+            : 'Появится после выполненных тренировок'}
+        </small>
+      </div>
+      <div>
+        <span>Новые результаты</span>
+        <strong>{summary.training.new_personal_records}</strong>
+        <small>личных рекордов за 30 дней</small>
+      </div>
+      <div>
+        <span>Последний замер</span>
+        <strong>{formatCoachDate(summary.body.latest_measurement?.measured_on)}</strong>
+        <small>
+          {summary.body.latest_measurement?.weight_kg != null
+            ? `${summary.body.latest_measurement.weight_kg} кг`
+            : 'Вес не указан'}
+        </small>
+      </div>
+    </div>
+  );
+}
+
+function ProgramAssignmentDisclosure({ client }: { client: Client }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <details
+      className="coach-program-assignment"
+      open={expanded}
+      onToggle={(event) => setExpanded(event.currentTarget.open)}
+    >
+      <summary>
+        <span>
+          <strong>Назначить новую программу</strong>
+          <small>Открыть общий конструктор программ для этого клиента</small>
+        </span>
+        <DisclosureIcon />
+      </summary>
+      {expanded && (
+        <div className="coach-program-assignment__body">
+          <ProgramBuilder
+            targetTelegramId={client.telegram_user_id}
+            targetName={client.full_name || client.username}
+          />
+        </div>
+      )}
+    </details>
+  );
+}
+
+function CoachClientDetail({
+  client,
+  focusedProgramId,
+  onBack,
+  onOpenCatalog,
+  programs,
+  summary,
+}: {
+  client: Client;
+  focusedProgramId: number | null;
+  onBack: () => void;
+  onOpenCatalog: () => void;
+  programs: CoachAssignedProgram[];
+  summary?: TrainerClientProgressSummary;
+}) {
+  if (client.id == null) return null;
+  const activeProgram = programs.find((program) => program.is_active);
+  return (
+    <article className="coach-client-detail" aria-labelledby="coach-client-detail-title">
+      <header className="coach-client-detail__header">
+        <button className="coach-client-detail__back secondary" onClick={onBack} type="button">
+          К списку клиентов
+        </button>
+        <div className="coach-client-detail__identity">
+          <span className="eyebrow">Сейчас открыт клиент</span>
+          <h2 id="coach-client-detail-title">{clientDisplayName(client)}</h2>
+          <p>
+            {client.username ? `@${client.username} · ` : ''}
+            Цель: {coachGoalLabel(client.goal)}
+          </p>
+        </div>
+        <nav className="coach-client-quick-actions" aria-label="Данные клиента">
+          <a href="#coach-client-program">Программа</a>
+          <a href="#coach-client-progress">Тренировки и прогресс</a>
+          <a href="#coach-client-nutrition">Питание</a>
+          <a href="#coach-client-profile">Профиль</a>
+        </nav>
+      </header>
+
+      <ClientSummaryFacts summary={summary} />
+
+      <ClientDataSection
+        id="coach-client-program"
+        key={`program-${client.id}-${focusedProgramId ?? 'none'}`}
+        title="Программа тренировок"
+        description="Текущий план, ближайшая тренировка и новое назначение"
+        open
+      >
+        <div className="coach-client-programs">
+          <div className="coach-client-programs__head">
+            <div>
+              <strong>{activeProgram ? 'Активная программа' : 'Программа не назначена'}</strong>
+              <span>
+                {summary?.training.next_workout
+                  ? `Следующая тренировка ${formatCoachDate(summary.training.next_workout.scheduled_date)} — ${summary.training.next_workout.title}`
+                  : 'Ближайшая тренировка пока не запланирована'}
+              </span>
+            </div>
+            {activeProgram && (
+              <button type="button" className="secondary" onClick={onOpenCatalog}>
+                Добавить упражнение
+              </button>
+            )}
+          </div>
+          {!programs.length ? (
+            <EmptyState
+              title="У клиента ещё нет назначенной программы"
+              text="Создайте и назначьте её в общем конструкторе ниже."
+            />
+          ) : (
+            programs.map((program) => (
+              <article
+                className={`coach-client-program${program.id === focusedProgramId ? ' is-focused' : ''}`}
+                key={program.id}
+              >
+                <div>
+                  <span className="eyebrow">
+                    {program.is_active ? 'Текущая программа клиента' : 'Архив клиента'}
+                  </span>
+                  <strong>{program.title}</strong>
+                  <small>
+                    Выполнено {program.workouts_completed} из {program.workouts_total} тренировок
+                  </small>
+                </div>
+                <Badge tone={program.is_active ? 'success' : 'neutral'}>
+                  {program.is_active ? 'Активна' : 'Архив'}
+                </Badge>
+                {program.is_active && (
+                  <AssignedProgramDetails
+                    programId={program.id}
+                    currentRevisionNumber={program.current_revision_number}
+                    startDate={program.start_date}
+                    durationWeeks={program.duration_weeks}
+                  />
+                )}
+              </article>
+            ))
+          )}
+        </div>
+        <ProgramAssignmentDisclosure key={`program-${client.id}`} client={client} />
+      </ClientDataSection>
+
+      <ClientDataSection
+        id="coach-client-progress"
+        title="Тренировки, прогресс и замеры"
+        description={adherenceText(summary)}
+        open={Boolean(focusedProgramId)}
+      >
+        <ClientAnalytics clientId={client.id} />
+        <Diary key={`diary-${client.id}`} clientId={client.id} timeZone={client.timezone} />
+      </ClientDataSection>
+
+      <ClientDataSection
+        id="coach-client-nutrition"
+        title="Питание"
+        description={
+          summary?.nutrition.visible
+            ? `${summary.nutrition.logged_days} дней с записями за период`
+            : 'Агрегаты питания не доступны'
+        }
+      >
+        {summary && !summary.nutrition.visible ? (
+          <EmptyState
+            title="Нет доступа к сводке питания"
+            text="Раздел не показывает дневник или состав приёмов пищи без разрешённого доступа."
+          />
+        ) : (
+          <NutritionForm
+            key={JSON.stringify([client.id, client.kbju])}
+            clientId={client.id}
+            targetTelegramId={client.telegram_user_id}
+            initial={client.kbju}
+          />
+        )}
+      </ClientDataSection>
+
+      <ClientDataSection
+        id="coach-client-profile"
+        title="Профиль клиента"
+        description="Анкета, цель и параметры"
+      >
+        <ClientProfileEditor key={clientProfileKey(client)} client={client} />
+      </ClientDataSection>
+    </article>
+  );
+}
+
 export default function CoachPage() {
   const { user } = useAuth();
   const { toast, confirm } = useFeedback();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<CoachTab>('clients');
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [clientDetailOpen, setClientDetailOpen] = useState(false);
+  const [clientSearch, setClientSearch] = useState('');
+  const [clientFilter, setClientFilter] = useState<CoachClientFilter>('all');
   const [programSearch, setProgramSearch] = useState('');
   const [focusedProgramId, setFocusedProgramId] = useState<number | null>(null);
   const [inviteLink, setInviteLink] = useState<InviteLink | null>(null);
@@ -337,8 +746,22 @@ export default function CoachPage() {
     refetchInterval: tab === 'programs' ? LIVE_DATA_REFETCH_INTERVAL_MS : false,
     refetchOnWindowFocus: true,
   });
+  const clientSummaries = useQuery({
+    queryKey: queryKeys.trainer.clientSummaries,
+    queryFn: loadCoachClientSummaries,
+    enabled: Boolean(clients.data?.some((client) => client.status === 'active')),
+    refetchInterval: tab === 'clients' ? LIVE_DATA_REFETCH_INTERVAL_MS : false,
+    refetchOnWindowFocus: true,
+  });
+  const summaryMap = useMemo(
+    () =>
+      new Map(
+        (clientSummaries.data?.items ?? []).map((summary) => [summary.user_id, summary] as const),
+      ),
+    [clientSummaries.data?.items],
+  );
   const selected =
-    clients.data?.find((item) => item.id === selectedId) ??
+    (selectedId == null ? null : clients.data?.find((item) => item.id === selectedId)) ??
     clients.data?.find((item) => item.status === 'active') ??
     null;
   const mutation = useMutation({
@@ -346,6 +769,8 @@ export default function CoachPage() {
       api(path, { method, body }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['coach'] });
+      setSelectedId(null);
+      setClientDetailOpen(false);
       toast('Данные тренера обновлены');
     },
     onError: (reason) => toast((reason as Error).message, 'error'),
@@ -362,6 +787,23 @@ export default function CoachPage() {
     () => (programs.data ?? []).filter((item) => item.client_id === selected?.id),
     [programs.data, selected?.id],
   );
+  const activeClients = useMemo(
+    () => (clients.data ?? []).filter((client) => client.status === 'active'),
+    [clients.data],
+  );
+  const pendingCount = (clients.data ?? []).filter((client) => client.status === 'pending').length;
+  const filteredClients = useMemo(
+    () =>
+      filterCoachClients({
+        clients: clients.data ?? [],
+        filter: clientFilter,
+        programs: programs.data ?? [],
+        search: clientSearch,
+        summaries: summaryMap,
+      }),
+    [clientFilter, clientSearch, clients.data, programs.data, summaryMap],
+  );
+  const selectedSummary = selected?.id ? summaryMap.get(selected.id) : undefined;
   if (!user?.is_coach) return <Redirect to="/app" />;
   const copyInvite = async (value: string) => {
     try {
@@ -378,6 +820,7 @@ export default function CoachPage() {
         method: 'POST',
       });
       setInviteLink(result);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.trainer.clients });
       if (result.web_url || result.url) await copyInvite(result.web_url || result.url || '');
       else toast('Приглашение создано');
     } catch (reason) {
@@ -388,15 +831,22 @@ export default function CoachPage() {
   };
 
   return (
-    <AppShell narrow>
-      <div className="page-stack">
-        <header className="card hero-card">
+    <AppShell>
+      <div className="page-stack coach-workspace--design-v2">
+        <header className="coach-workspace-header">
           <div>
-            <span className="eyebrow">Рабочее пространство</span>
+            <span className="eyebrow">Клиенты · рабочее пространство</span>
             <h1>Кабинет тренера</h1>
-            <p className="muted">Клиенты, прогресс и назначения — в одном месте.</p>
+            <p>Факты о тренировках, планах и прогрессе — без потери контекста клиента.</p>
           </div>
-          <Badge>Тренер</Badge>
+          <div className="coach-workspace-header__actions">
+            <AppLink className="button-link secondary-link" to="/app">
+              Для себя
+            </AppLink>
+            <button disabled={inviteCreating} onClick={() => void createInvite()} type="button">
+              {inviteCreating ? 'Создаём…' : 'Пригласить клиента'}
+            </button>
+          </div>
         </header>
         <div className="react-tabs react-tabs--coach" role="tablist" aria-label="Разделы тренера">
           {(
@@ -430,7 +880,31 @@ export default function CoachPage() {
         >
           {tab === 'clients' && (
             <>
+              <CoachWorkspaceDashboard
+                clients={clients.data ?? []}
+                loading={activeClients.length > 0 && clientSummaries.isPending}
+                summaries={clientSummaries.data?.items ?? []}
+                unavailable={Boolean(clientSummaries.error)}
+              />
+              {clientSummaries.error && activeClients.length > 0 && (
+                <div className="coach-summary-warning" role="status">
+                  Краткие показатели временно недоступны. Список клиентов и подробные разделы
+                  продолжают работать.
+                  <button className="secondary" onClick={() => void clientSummaries.refetch()}>
+                    Повторить
+                  </button>
+                </div>
+              )}
+              {!clients.isLoading && activeClients.length === 0 && (
+                <CoachZeroState
+                  inviteCreating={inviteCreating}
+                  pendingCount={pendingCount}
+                  onInvite={() => void createInvite()}
+                />
+              )}
               <Card
+                className={`coach-invite-panel${inviteLink ? ' is-visible' : ''}`}
+                collapsible={false}
                 title="Пригласить клиента"
                 description="Отправьте персональную ссылку. Клиент сначала увидит ваше имя и сам подтвердит подключение."
                 actions={
@@ -443,7 +917,7 @@ export default function CoachPage() {
                   </button>
                 }
               >
-                {inviteLink && (
+                {inviteLink ? (
                   <div className="auth-notice stack top-gap">
                     {inviteLink.web_url && (
                       <label className="field">
@@ -511,157 +985,147 @@ export default function CoachPage() {
                       )}
                     </div>
                   </div>
-                )}
-              </Card>
-              <Card title="Клиенты">
-                {clients.isLoading ? (
-                  <LoadingState />
-                ) : clients.error ? (
-                  <ErrorState message={(clients.error as Error).message} />
-                ) : !clients.data?.length ? (
-                  <EmptyState title="Клиентов пока нет" />
                 ) : (
-                  <div className="list-grid top-gap">
-                    {clients.data.map((client) => (
-                      <article
-                        className={`list-row coach-client-row${selected?.id === client.id ? ' selected' : ''}`}
-                        key={client.id || `invite-${client.invite_id}`}
-                      >
-                        <button
-                          className="list-row__main text-button"
-                          onClick={() => client.id && setSelectedId(client.id)}
-                        >
-                          <strong>
-                            {client.full_name ||
-                              client.username ||
-                              client.telegram_user_id ||
-                              'Приглашённый клиент'}
-                          </strong>
-                          <span className="muted">
-                            {client.username ? `@${client.username}` : ''}{' '}
-                            {client.telegram_user_id ? `· ${client.telegram_user_id}` : ''}
-                          </span>
-                          <Badge>{client.status === 'active' ? 'Активен' : 'Ожидает входа'}</Badge>
-                        </button>
-                        <button
-                          className="btn-danger"
-                          onClick={async () => {
-                            if (
-                              await confirm({
-                                title: 'Удалить клиента?',
-                                message: client.full_name || client.username || 'Приглашение',
-                                confirmText: 'Удалить',
-                              })
-                            )
-                              mutation.mutate({
-                                path: client.id
-                                  ? `/api/v1/coach/clients/${client.id}`
-                                  : `/api/v1/coach/client-invites/id/${client.invite_id}`,
-                                method: 'DELETE',
-                              });
-                          }}
-                        >
-                          Удалить
-                        </button>
-                      </article>
-                    ))}
-                  </div>
+                  <p className="muted">
+                    Новая персональная ссылка появится здесь. Приглашение не даёт доступ к данным до
+                    подтверждения клиентом.
+                  </p>
                 )}
               </Card>
-              {selected?.id && selected.status === 'active' && (
-                <>
-                  <ClientDataSection
-                    title="Профиль клиента"
-                    description="Анкета, цель и параметры"
-                    open
-                  >
-                    <ClientProfileEditor key={clientProfileKey(selected)} client={selected} />
-                  </ClientDataSection>
-                  <ClientDataSection
-                    title="Прогресс и замеры"
-                    description="Соблюдение плана, рекорды и лента тренировок"
-                  >
-                    <ClientAnalytics clientId={selected.id} />
-                    <Diary
-                      key={`diary-${selected.id}`}
-                      clientId={selected.id}
-                      timeZone={selected.timezone}
+              <div className={`coach-client-workspace${clientDetailOpen ? ' is-client-open' : ''}`}>
+                <Card className="coach-client-roster" title="Клиенты" collapsible={false}>
+                  <div className="coach-client-tools">
+                    <label className="field">
+                      <span>Найти клиента</span>
+                      <input
+                        type="search"
+                        placeholder="Имя, username или Telegram ID"
+                        value={clientSearch}
+                        onChange={(event) => setClientSearch(event.target.value)}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Показать</span>
+                      <select
+                        value={clientFilter}
+                        onChange={(event) =>
+                          setClientFilter(event.target.value as CoachClientFilter)
+                        }
+                      >
+                        <option value="all">Все</option>
+                        <option value="attention">Нет тренировок 7+ дней</option>
+                        <option value="recent">Тренировались за 7 дней</option>
+                        <option value="without_program">Без активной программы</option>
+                        <option value="pending">Ожидают подключения</option>
+                      </select>
+                    </label>
+                  </div>
+                  {clients.isLoading ? (
+                    <LoadingState />
+                  ) : clients.error ? (
+                    <ErrorState message={(clients.error as Error).message} />
+                  ) : !clients.data?.length ? (
+                    <EmptyState
+                      title="Клиентов пока нет"
+                      text="Создайте приглашение, чтобы начать работу."
                     />
-                  </ClientDataSection>
-                  <ClientDataSection title="Питание" description="Расчёт и целевые КБЖУ">
-                    <NutritionForm
-                      key={JSON.stringify([selected.id, selected.kbju])}
-                      clientId={selected.id}
-                      targetTelegramId={selected.telegram_user_id}
-                      initial={selected.kbju}
+                  ) : !filteredClients.length ? (
+                    <EmptyState
+                      title="Клиенты не найдены"
+                      text="Измените запрос или выберите другой фильтр."
                     />
-                  </ClientDataSection>
-                  <ClientDataSection
-                    key={`program-${selected.id}-${focusedProgramId ?? 'none'}`}
-                    title="Программа тренировок"
-                    description="Текущий план клиента и новое назначение"
-                    open={selectedPrograms.some((item) => item.id === focusedProgramId)}
-                  >
-                    <div className="coach-client-programs">
-                      <div className="coach-client-programs__head">
-                        <div>
-                          <strong>Программы клиента</strong>
-                          <span>Контекст клиента сохраняется при переходе к каталогу.</span>
-                        </div>
-                        {!!selectedPrograms.some((item) => item.is_active) && (
-                          <button
-                            type="button"
-                            className="secondary"
-                            onClick={() => setTab('catalog')}
-                          >
-                            Добавить упражнение
-                          </button>
-                        )}
-                      </div>
-                      {!selectedPrograms.length ? (
-                        <EmptyState
-                          title="У клиента ещё нет назначенной вами программы"
-                          text="Создайте и назначьте её в форме ниже."
-                        />
-                      ) : (
-                        selectedPrograms.map((program) => (
+                  ) : (
+                    <div className="coach-client-list">
+                      {filteredClients.map((client) => {
+                        const summary = client.id ? summaryMap.get(client.id) : undefined;
+                        const activeProgram = (programs.data ?? []).find(
+                          (program) => program.client_id === client.id && program.is_active,
+                        );
+                        return (
                           <article
-                            className={`coach-client-program${program.id === focusedProgramId ? ' is-focused' : ''}`}
-                            key={program.id}
+                            className={`coach-client-row${selected?.id === client.id ? ' selected' : ''}`}
+                            key={client.id || `invite-${client.invite_id}`}
                           >
-                            <div>
-                              <span className="eyebrow">
-                                {program.is_active ? 'Текущая программа клиента' : 'Архив клиента'}
+                            <button
+                              className="coach-client-row__main text-button"
+                              disabled={!client.id}
+                              onClick={() => {
+                                if (!client.id) return;
+                                setSelectedId(client.id);
+                                setFocusedProgramId(null);
+                                setClientDetailOpen(true);
+                              }}
+                            >
+                              <span className="coach-client-row__identity">
+                                <strong>{clientDisplayName(client)}</strong>
+                                <small>
+                                  {client.status === 'pending'
+                                    ? 'Ожидает подтверждения'
+                                    : activeProgram?.title || 'Нет активной программы'}
+                                </small>
                               </span>
-                              <strong>{program.title}</strong>
-                              <small>
-                                {program.workouts_completed} из {program.workouts_total} тренировок
-                                выполнено
-                              </small>
-                            </div>
-                            <Badge tone={program.is_active ? 'success' : 'neutral'}>
-                              {program.is_active ? 'Активна' : 'Архив'}
-                            </Badge>
-                            {program.is_active && (
-                              <AssignedProgramDetails
-                                programId={program.id}
-                                currentRevisionNumber={program.current_revision_number}
-                                startDate={program.start_date}
-                                durationWeeks={program.duration_weeks}
-                              />
-                            )}
+                              {client.status === 'active' ? (
+                                <span className="coach-client-row__signals">
+                                  <span
+                                    className={needsCoachAttention(summary) ? 'is-attention' : ''}
+                                  >
+                                    {activityLabel(summary?.training.last_completed_workout_on)}
+                                  </span>
+                                  <small>{adherenceText(summary)}</small>
+                                </span>
+                              ) : (
+                                <Badge tone="warning">Ожидает</Badge>
+                              )}
+                            </button>
+                            <details className="coach-client-row__menu">
+                              <summary aria-label={`Действия: ${clientDisplayName(client)}`}>
+                                •••
+                              </summary>
+                              <button
+                                className="btn-danger"
+                                onClick={async () => {
+                                  if (
+                                    await confirm({
+                                      title:
+                                        client.status === 'pending'
+                                          ? 'Отозвать приглашение?'
+                                          : 'Завершить работу с клиентом?',
+                                      message: clientDisplayName(client),
+                                      confirmText:
+                                        client.status === 'pending' ? 'Отозвать' : 'Завершить',
+                                    })
+                                  )
+                                    mutation.mutate({
+                                      path: client.id
+                                        ? `/api/v1/coach/clients/${client.id}`
+                                        : `/api/v1/coach/client-invites/id/${client.invite_id}`,
+                                      method: 'DELETE',
+                                    });
+                                }}
+                              >
+                                {client.status === 'pending'
+                                  ? 'Отозвать приглашение'
+                                  : 'Завершить работу'}
+                              </button>
+                            </details>
                           </article>
-                        ))
-                      )}
+                        );
+                      })}
                     </div>
-                    <ProgramBuilder
-                      key={`program-${selected.id}`}
-                      targetTelegramId={selected.telegram_user_id}
-                      targetName={selected.full_name || selected.username}
-                    />
-                  </ClientDataSection>
-                </>
-              )}
+                  )}
+                </Card>
+                {selected?.id && selected.status === 'active' && (
+                  <CoachClientDetail
+                    key={selected.id}
+                    client={selected}
+                    focusedProgramId={focusedProgramId}
+                    onBack={() => setClientDetailOpen(false)}
+                    onOpenCatalog={() => setTab('catalog')}
+                    programs={selectedPrograms}
+                    summary={selectedSummary}
+                  />
+                )}
+              </div>
             </>
           )}
           {tab === 'programs' && (
@@ -722,6 +1186,7 @@ export default function CoachPage() {
                           onClick={() => {
                             setSelectedId(item.client_id);
                             setFocusedProgramId(item.id);
+                            setClientDetailOpen(true);
                             setTab('clients');
                           }}
                         >
@@ -733,6 +1198,7 @@ export default function CoachPage() {
                             className="secondary"
                             onClick={() => {
                               setSelectedId(item.client_id);
+                              setClientDetailOpen(true);
                               setTab('catalog');
                             }}
                           >
