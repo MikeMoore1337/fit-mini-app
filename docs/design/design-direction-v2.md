@@ -113,7 +113,7 @@ textual wordmark`. Создавать новые варианты SVG-логот
 | Статус | Решение |
 |---|---|
 | Принято | A / Quiet Pace, compact rail, tabular numerals, neutral Light, near-black Dark, theme-native surfaces и один lime primary CTA в локальном контексте |
-| Изменено | Неопределённый full-logo контракт сведён к shared lockup из canonical mark task `07` и protected textual wordmark |
+| Изменено | Неопределённый full-logo контракт сведён к shared lockup из canonical mark task `07` и protected textual wordmark; после production pilot Dark neutral surfaces немного осветлены, success приведён к lime family, active navigation усилена neutral surface, а exercises получили самостоятельные boundaries |
 | Отклонено | B и C как production themes, green-black Dark, warm-paper Light, inverted content cards, serif/italic и pill buttons |
 | Требует реализации позже | Shared tokens/components, production motion, реальный focus order, screen-reader и keyboard/safe-area проверка в pilot |
 | Невозможно без product behavior | Автоматически скрывать navigation во время workout или добавлять новые statuses/metrics; такие решения не входят в визуальную спецификацию |

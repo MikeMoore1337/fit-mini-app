@@ -608,7 +608,9 @@ export function TodayWorkout({ embedded = false }: { embedded?: boolean }) {
 
   return (
     <>
-      <section className={`active-workout ${embedded ? 'is-embedded' : ''}`}>
+      <section
+        className={`active-workout active-workout--design-v2 ${embedded ? 'is-embedded' : ''}`}
+      >
         <header className="active-workout-hero">
           <div className="active-workout-hero__top">
             <div className="active-workout-hero__copy">
@@ -730,7 +732,6 @@ export function TodayWorkout({ embedded = false }: { embedded?: boolean }) {
                     }
                   >
                     <span>{exercise.has_guide ? 'Техника' : 'Подробнее'}</span>
-                    <span aria-hidden="true">⌕</span>
                   </button>
                 </header>
 

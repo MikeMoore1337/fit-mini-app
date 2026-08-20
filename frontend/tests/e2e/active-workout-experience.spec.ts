@@ -271,7 +271,13 @@ test('active workout has touch-size controls and no horizontal overflow', async 
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
   await page.getByRole('button', { name: 'Продолжить тренировку' }).click();
-  await page.getByRole('button', { name: 'Техника' }).click();
+  const exercise = page.locator('.active-workout-exercise').first();
+  await expect(exercise).toHaveCSS('border-radius', '16px');
+  await expect(exercise).toHaveCSS('border-top-color', 'rgb(158, 224, 43)');
+  await expect(exercise).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  const guideButton = page.getByRole('button', { name: 'Техника' });
+  await expect(guideButton).toHaveText('Техника');
+  await guideButton.click();
   await expect(page.getByRole('heading', { name: 'Техника выполнения' })).toBeVisible();
   await page.getByRole('button', { name: 'Закрыть карточку упражнения' }).click();
 

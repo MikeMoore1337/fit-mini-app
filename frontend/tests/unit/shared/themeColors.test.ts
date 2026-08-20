@@ -25,20 +25,38 @@ function contrast(foreground: string, background: string): number {
   return (light + 0.05) / (dark + 0.05);
 }
 
-describe('brand color contrast', () => {
+describe('legacy brand color contrast', () => {
   it.each([
     ['light text', '#172018', '#f1f3ec', 4.5],
     ['light muted text', '#657067', '#f1f3ec', 4.5],
     ['light primary', '#ffffff', '#18251d', 4.5],
     ['light secondary', '#172018', '#e8ede4', 4.5],
     ['light link', '#3f5f0e', '#f1f3ec', 4.5],
-    ['dark text', '#f2f6ef', '#0d120f', 4.5],
-    ['dark muted text', '#aab5ac', '#0d120f', 4.5],
+    ['dark text', '#eef0ea', '#101310', 4.5],
+    ['dark muted text', '#afb5ad', '#101310', 4.5],
     ['dark primary', '#172018', '#b6f238', 4.5],
-    ['dark secondary', '#f2f6ef', '#202a23', 4.5],
-    ['dark link', '#b6f238', '#0d120f', 4.5],
+    ['dark secondary', '#eef0ea', '#242924', 4.5],
+    ['dark link', '#b6f238', '#101310', 4.5],
     ['light focus ring', '#527613', '#f1f3ec', 3],
-    ['dark focus ring', '#b6f238', '#0d120f', 3],
+    ['dark focus ring', '#b6f238', '#101310', 3],
+  ])('%s meets the target ratio', (_name, foreground, background, minimum) => {
+    expect(contrast(foreground, background)).toBeGreaterThanOrEqual(minimum);
+  });
+});
+
+describe('Design V2 semantic color contrast', () => {
+  it.each([
+    ['light text', '#161a17', '#f4f5f2', 4.5],
+    ['light muted text', '#59605b', '#f4f5f2', 4.5],
+    ['light on lime', '#102015', '#9ee02b', 4.5],
+    ['light accent text', '#486414', '#ffffff', 4.5],
+    ['dark text', '#eef0ea', '#101310', 4.5],
+    ['dark muted text', '#afb5ad', '#101310', 4.5],
+    ['dark on lime', '#102015', '#a8e83a', 4.5],
+    ['dark accent text', '#b9ea72', '#161916', 4.5],
+    ['dark success text', '#b9ea72', '#1e221e', 4.5],
+    ['light focus ring', '#9ee02b', '#161a17', 3],
+    ['dark focus ring', '#a8e83a', '#101310', 3],
   ])('%s meets the target ratio', (_name, foreground, background, minimum) => {
     expect(contrast(foreground, background)).toBeGreaterThanOrEqual(minimum);
   });

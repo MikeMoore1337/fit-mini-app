@@ -163,7 +163,7 @@ export default function MiniAppPage() {
   return (
     <AppShell section={section}>
       <div className="page-stack">
-        {section !== 'today' && section !== 'progress' && (
+        {section !== 'today' && section !== 'progress' && section !== 'nutrition' && (
           <header className="card hero-card">
             <div>
               <span className="eyebrow">Your Fitness Coach</span>
@@ -175,7 +175,7 @@ export default function MiniAppPage() {
             </div>
           </header>
         )}
-        {section !== 'today' && <TelegramLinkPrompt />}
+        {section !== 'today' && section !== 'nutrition' && <TelegramLinkPrompt />}
         <section className="page-stack">
           <Suspense
             fallback={
@@ -237,7 +237,6 @@ export default function MiniAppPage() {
             )}
           </Suspense>
         </section>
-        {section === 'today' && <TelegramLinkPrompt />}
       </div>
     </AppShell>
   );

@@ -12,7 +12,8 @@
   Несколько соседних lime fills запрещены.
 - Primary обозначает следующий безопасный шаг; provider choices, navigation, secondary и recovery
   сохраняют neutral surface/border; danger используется только для действительно опасного действия.
-- Основная geometry — `6 px`, compact/icon — `4 px`; pill не является default.
+- Основная geometry buttons и form controls — `12 px`, compact controls — `8 px`; pill не является
+  default. Круглая geometry допустима для icon-only controls с соответствующей семантикой.
 - Loading не меняет ширину и блокирует double submit. Disabled объясняет причину, если она не
   очевидна. Icon-only control имеет accessible name и touch target не меньше `44 px`.
 
@@ -26,6 +27,9 @@
 - Long form использует sections/progressive disclosure, а не stack одинаковых cards.
 
 ## Navigation
+
+- Выбранный раздел использует одновременно neutral active surface, усиленный вес label и lime
+  boundary. Одного тонкого lime marker без изменения surface недостаточно.
 
 - Desktop contextual rail даёт location и быстрый переход, но не конкурирует с содержимым.
 - Mobile navigation сохраняет главные destinations и не перекрывает keyboard, input или current
@@ -67,6 +71,9 @@ inside card и универсальная `surface` вокруг каждого 
 - Rest — отдельное state с theme-native surface и lime boundary; оно не конкурирует с primary CTA.
 - Completed set отличается от editable current set. Post-finish controls не остаются в конфликтном
   состоянии.
+- Упражнения являются самостоятельными task regions с geometry `16 px`, видимой boundary и
+  spacing между ними; подходы остаются более плоскими внутри упражнения и не сливаются с соседней
+  группой.
 - Offline save, pending sync, retry и duplicate-safe recovery видимы и сформулированы фактически.
 - Exercise detail разделяет media, параметры программы, технику и long text; media не auto-play.
 

@@ -125,7 +125,7 @@ export default function LoginPage() {
 
   return (
     <PublicShell
-      className="auth-public-shell"
+      className="auth-public-shell auth-public-shell--design-v2"
       headerAction={
         <AppLink className="login-home-link" to="/">
           На главную
@@ -136,8 +136,8 @@ export default function LoginPage() {
       <main id="login-content" className="login-layout" tabIndex={-1}>
         <section className="login-intro" aria-labelledby="login-title">
           <p className="login-kicker">Безопасный доступ к вашему профилю</p>
-          <h1 id="login-title">Войти в Your Fitness Coach</h1>
-          <p>Выберите удобный способ</p>
+          <h1 id="login-title">Продолжить в Your Fitness Coach</h1>
+          <p>Тренировки, питание и измерения остаются в одном профиле.</p>
           <ul aria-label="Что останется доступно после входа">
             <li>Тренировки и программы</li>
             <li>Питание и измерения</li>

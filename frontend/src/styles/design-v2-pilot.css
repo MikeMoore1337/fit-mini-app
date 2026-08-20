@@ -1,0 +1,1209 @@
+/*
+ * Design V2 production pilot migration seam (task 46G).
+ * Only explicit pilot markers opt in; task 46I can fold verified rules into shared components.
+ */
+
+body:has(.app-shell--design-v2) {
+  background: var(--v2-canvas);
+}
+
+.app-shell--design-v2 {
+  min-height: 100dvh;
+}
+
+.app-shell--design-v2 .app-bottom-nav {
+  border-color: var(--v2-border);
+  background: var(--v2-surface);
+  box-shadow: none;
+  color: var(--v2-text-primary);
+  backdrop-filter: none;
+}
+
+.app-shell--design-v2 .app-bottom-nav__brand,
+.app-shell--design-v2 .app-bottom-nav__btn,
+.app-shell--design-v2 .app-bottom-nav__account-copy strong {
+  color: var(--v2-text-primary);
+}
+
+.app-shell--design-v2 .app-bottom-nav__btn {
+  border-radius: var(--v2-compact-radius);
+  color: var(--v2-text-secondary);
+}
+
+.app-shell--design-v2 .app-bottom-nav__btn:hover,
+.app-shell--design-v2 .app-bottom-nav__logout:hover {
+  background: var(--v2-surface-secondary);
+  color: var(--v2-text-primary);
+}
+
+.app-shell--design-v2 .app-bottom-nav__btn.is-active {
+  background: var(--v2-surface-secondary);
+  color: var(--v2-text-primary);
+  font-weight: 800;
+}
+
+.app-shell--design-v2 .app-bottom-nav__btn.is-active::before {
+  background: var(--v2-lime);
+}
+
+.app-shell--design-v2 .app-bottom-nav__btn.is-active .app-bottom-nav__icon {
+  background: transparent;
+  color: var(--v2-accent-text);
+}
+
+.app-shell--design-v2 .app-bottom-nav__secondary,
+.app-shell--design-v2 .app-bottom-nav__utility {
+  border-color: var(--v2-border);
+}
+
+.app-shell--design-v2 .app-bottom-nav__group-label,
+.app-shell--design-v2 .app-bottom-nav__account-copy small {
+  color: var(--v2-text-secondary);
+}
+
+.app-shell--design-v2 .app-more-panel {
+  border-color: var(--v2-border);
+  border-radius: var(--v2-region-radius) var(--v2-region-radius) 0 0;
+  background: var(--v2-surface);
+  color: var(--v2-text-primary);
+}
+
+.app-shell--design-v2 .app-more-panel__item,
+.app-shell--design-v2 .app-more-panel__account strong {
+  color: var(--v2-text-primary);
+}
+
+.app-shell--design-v2 .app-more-panel__account small {
+  color: var(--v2-text-secondary);
+}
+
+.app-shell--design-v2 .app-more-panel__item:hover,
+.app-shell--design-v2 .app-more-panel__item[aria-current='page'] {
+  background: var(--v2-surface-secondary);
+}
+
+.app-shell--design-v2 .telegram-link-prompt {
+  border-color: var(--v2-border);
+  border-radius: var(--v2-region-radius);
+  background: var(--v2-surface-secondary);
+  box-shadow: none;
+}
+
+.app-shell--design-v2 :where(.app-bottom-nav__btn, .app-bottom-nav__logout):focus-visible,
+.today-dashboard--design-v2 :where(button, a):focus-visible,
+.nutrition-diary--design-v2 :where(button, a, input, select):focus-visible,
+.active-workout--design-v2 :where(button, a, input, select, summary):focus-visible,
+.auth-public-shell--design-v2 :where(button, a, input, select):focus-visible {
+  outline: 3px solid var(--v2-lime);
+  outline-offset: 3px;
+}
+
+.today-dashboard--design-v2,
+.nutrition-diary--design-v2,
+.active-workout--design-v2 {
+  --text: var(--v2-text-primary);
+  --muted: var(--v2-text-secondary);
+  --border: var(--v2-border);
+  --accent: var(--v2-lime);
+  --accent-hover: var(--v2-lime-hover);
+  --accent-strong: var(--v2-accent-text);
+  --accent-line: var(--v2-lime);
+  --accent-soft: var(--v2-surface-secondary);
+  --button-text: var(--v2-on-lime);
+  --surface: var(--v2-surface);
+  --surface-subtle: var(--v2-surface-secondary);
+  --surface-active: var(--v2-surface-strong);
+  --surface-hover: var(--v2-surface-secondary);
+  --secondary-bg: transparent;
+  --secondary-hover: var(--v2-surface-secondary);
+  --card-bg: var(--v2-surface);
+  --success-line: var(--v2-success-border);
+  --success-soft: var(--v2-success-surface);
+  --success-text: var(--v2-success-text);
+  color: var(--v2-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+:where(.today-dashboard--design-v2, .nutrition-diary--design-v2, .active-workout--design-v2)
+  .ui-button {
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-lime);
+  color: var(--v2-on-lime);
+  box-shadow: none;
+}
+
+:where(.today-dashboard--design-v2, .nutrition-diary--design-v2, .active-workout--design-v2)
+  .ui-button:hover:not(:disabled) {
+  background: var(--v2-lime-hover);
+}
+
+:where(.today-dashboard--design-v2, .nutrition-diary--design-v2, .active-workout--design-v2)
+  .ui-button--secondary,
+:where(.today-dashboard--design-v2, .nutrition-diary--design-v2, .active-workout--design-v2)
+  .ui-button--ghost {
+  border-color: var(--v2-border);
+  background: transparent;
+  color: var(--v2-text-primary);
+}
+
+:where(.today-dashboard--design-v2, .nutrition-diary--design-v2, .active-workout--design-v2)
+  .ui-button--secondary:hover:not(:disabled),
+:where(.today-dashboard--design-v2, .nutrition-diary--design-v2, .active-workout--design-v2)
+  .ui-button--ghost:hover:not(:disabled) {
+  background: var(--v2-surface-secondary);
+}
+
+:where(.today-dashboard--design-v2, .nutrition-diary--design-v2, .active-workout--design-v2)
+  .ui-badge {
+  border-radius: var(--v2-compact-radius);
+  background: transparent;
+}
+
+:where(.today-dashboard--design-v2, .nutrition-diary--design-v2, .active-workout--design-v2)
+  .ui-badge--success {
+  border-color: var(--v2-success-border);
+  background: var(--v2-success-surface);
+  color: var(--v2-success-text);
+}
+
+:where(.today-dashboard--design-v2, .nutrition-diary--design-v2, .active-workout--design-v2)
+  .ui-skeleton {
+  background: var(--v2-surface-strong);
+  animation: none;
+}
+
+/* Today */
+.today-dashboard--design-v2 {
+  gap: var(--v2-space-5);
+}
+
+.today-dashboard--design-v2 .today-dashboard__header {
+  gap: var(--v2-space-1);
+  padding: 0 0 var(--v2-space-4);
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.today-dashboard--design-v2 .today-dashboard__header .eyebrow,
+.today-dashboard--design-v2 .today-workout-spotlight__label,
+.today-dashboard--design-v2 .today-panel__kicker {
+  color: var(--v2-accent-text);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.today-dashboard--design-v2 .today-dashboard__header h1 {
+  color: var(--v2-text-primary);
+  font-size: clamp(2.8rem, 5vw, 4.25rem);
+  font-weight: 750;
+  letter-spacing: -0.055em;
+  line-height: 0.95;
+}
+
+.today-dashboard--design-v2 .today-dashboard__header p {
+  display: none;
+}
+
+.today-dashboard__overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+  align-items: start;
+  gap: var(--v2-space-4);
+}
+
+.today-dashboard--design-v2 .today-workout-spotlight {
+  min-height: 260px;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: end;
+  gap: var(--v2-space-4);
+  padding: var(--v2-space-5);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-region-radius);
+  background: var(--v2-surface-secondary);
+  box-shadow: none;
+}
+
+.today-dashboard--design-v2 .today-workout-spotlight::before {
+  width: 2px;
+  background: var(--v2-lime);
+}
+
+.today-dashboard--design-v2 .today-workout-spotlight::after {
+  content: none;
+}
+
+.today-dashboard--design-v2 .today-workout-spotlight__label {
+  top: var(--v2-space-5);
+  left: var(--v2-space-5);
+}
+
+.today-dashboard--design-v2 .today-workout-copy {
+  gap: var(--v2-space-2);
+  padding-top: var(--v2-space-5);
+}
+
+.today-dashboard--design-v2 .today-workout-copy h2 {
+  font-size: clamp(2rem, 3.5vw, 3rem);
+  font-weight: 750;
+  letter-spacing: -0.045em;
+}
+
+.today-dashboard--design-v2 .today-workout-copy p,
+.today-dashboard--design-v2 .today-workout-copy__status,
+.today-dashboard--design-v2 .today-panel__note {
+  color: var(--v2-text-secondary);
+}
+
+.today-dashboard--design-v2 .today-workout-actions {
+  width: min(100%, 280px);
+}
+
+.today-dashboard--design-v2 .today-workout-actions .ui-button,
+.today-dashboard--design-v2 .button-link {
+  min-height: 44px;
+  border-radius: var(--v2-control-radius);
+}
+
+.today-dashboard__facts {
+  display: grid;
+  min-width: 0;
+  border-top: 1px solid var(--v2-border);
+}
+
+.today-dashboard--design-v2 .today-panel,
+.today-dashboard--design-v2 .today-progress-grid {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.today-dashboard--design-v2 .today-panel {
+  padding: var(--v2-space-4) 0;
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.today-dashboard--design-v2 .today-panel__head {
+  gap: var(--v2-space-3);
+}
+
+.today-dashboard--design-v2 .today-panel__head h2 {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.today-dashboard--design-v2 .today-text-link {
+  color: var(--v2-text-primary);
+  font-size: 0.75rem;
+}
+
+.today-dashboard--design-v2 .today-calories {
+  justify-content: space-between;
+  margin-top: var(--v2-space-3);
+}
+
+.today-dashboard--design-v2 .today-calories strong {
+  font-size: 1.65rem;
+  letter-spacing: -0.035em;
+}
+
+.today-dashboard--design-v2 .today-macros {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  margin-top: var(--v2-space-3);
+  border-radius: 0;
+  background: transparent;
+}
+
+.today-dashboard--design-v2 .today-macro {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--v2-space-2);
+  padding: var(--v2-space-2) 0;
+  border-top: 1px solid var(--v2-border);
+  background: transparent;
+}
+
+.today-dashboard--design-v2 .today-macro strong {
+  font-size: 0.82rem;
+}
+
+.today-dashboard--design-v2 .today-panel__note {
+  margin-top: var(--v2-space-2);
+  font-size: 0.72rem;
+}
+
+.today-dashboard--design-v2 .today-progress-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+.today-dashboard--design-v2 .today-signal {
+  min-height: 0;
+  gap: var(--v2-space-3);
+}
+
+.today-dashboard--design-v2 .today-signal__value strong {
+  font-size: 1.65rem;
+}
+
+.today-dashboard--design-v2 .today-profile-nudge {
+  border-left: 2px solid var(--v2-lime);
+  background: var(--v2-surface-secondary);
+}
+
+.today-dashboard--design-v2 .today-secondary-actions {
+  padding-top: var(--v2-space-3);
+  border-top: 1px solid var(--v2-border);
+}
+
+.today-dashboard--design-v2 .today-secondary-actions a {
+  color: var(--v2-text-primary);
+}
+
+.today-dashboard--design-v2 .today-workout-details__bar {
+  padding: var(--v2-space-3) 0;
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.today-workout-focus {
+  display: grid;
+  gap: var(--v2-space-4);
+  color: var(--v2-text-primary);
+}
+
+.today-workout-focus__header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--v2-space-4);
+  padding-bottom: var(--v2-space-3);
+  border-bottom: 2px solid var(--v2-lime);
+}
+
+.today-workout-focus__header > div {
+  display: grid;
+  min-width: 0;
+  justify-items: center;
+  gap: 2px;
+}
+
+.today-workout-focus__header > div span,
+.today-workout-focus__header > span {
+  overflow: hidden;
+  color: var(--v2-text-secondary);
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.today-workout-focus__header strong {
+  font-size: 0.9rem;
+}
+
+.today-workout-focus .today-text-link {
+  color: var(--v2-text-primary);
+}
+
+/* Nutrition diary core */
+.nutrition-diary--design-v2 {
+  gap: var(--v2-space-4);
+  padding: var(--v2-space-5);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-region-radius);
+  background: var(--v2-surface);
+  box-shadow: none;
+}
+
+.nutrition-diary--design-v2 .nutrition-diary__intro {
+  align-items: flex-start;
+  padding-bottom: var(--v2-space-4);
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.nutrition-diary--design-v2 .nutrition-diary__intro .eyebrow,
+.nutrition-diary--design-v2 .nutrition-day-summary__head .eyebrow {
+  color: var(--v2-accent-text);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+}
+
+.nutrition-diary--design-v2 .nutrition-diary__intro h1 {
+  margin-top: var(--v2-space-1);
+  color: var(--v2-text-primary);
+  font-size: clamp(2.7rem, 5vw, 4rem);
+  font-weight: 750;
+  letter-spacing: -0.055em;
+  line-height: 0.95;
+}
+
+.nutrition-diary--design-v2 .nutrition-diary__intro p {
+  margin-top: var(--v2-space-1);
+  color: var(--v2-text-secondary);
+  font-size: 0.9rem;
+}
+
+.nutrition-diary--design-v2 .nutrition-diary__primary-action {
+  flex: 0 0 auto;
+  min-height: 44px;
+}
+
+.nutrition-diary--design-v2 .nutrition-date-nav {
+  grid-template-columns: 44px minmax(180px, 340px) 44px auto;
+  justify-content: start;
+  gap: var(--v2-space-2);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.nutrition-diary--design-v2 .nutrition-date-nav__current span {
+  color: var(--v2-text-primary);
+}
+
+.nutrition-diary--design-v2 .nutrition-date-nav__current small,
+.nutrition-diary--design-v2 .nutrition-entry__title > div > span,
+.nutrition-diary--design-v2 .nutrition-entry__amount,
+.nutrition-diary--design-v2 .nutrition-entry__macros {
+  color: var(--v2-text-secondary);
+}
+
+.nutrition-diary--design-v2 .nutrition-date-nav__today {
+  color: var(--v2-text-primary);
+}
+
+.nutrition-diary--design-v2 .nutrition-diary__status {
+  display: flex;
+  min-height: 24px;
+  justify-content: flex-end;
+  margin-top: calc(-1 * var(--v2-space-5));
+}
+
+.nutrition-diary--design-v2 .nutrition-diary__layout {
+  grid-template-columns: minmax(0, 1.65fr) minmax(280px, 0.8fr);
+  gap: var(--v2-space-5);
+}
+
+.nutrition-diary--design-v2 .nutrition-meals {
+  gap: 0;
+  border-top: 1px solid var(--v2-border);
+}
+
+.nutrition-diary--design-v2 .nutrition-meal {
+  border: 0;
+  border-bottom: 1px solid var(--v2-border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.nutrition-diary--design-v2 .nutrition-meal__header {
+  padding: var(--v2-space-4) 0 var(--v2-space-3);
+}
+
+.nutrition-diary--design-v2 .nutrition-meal__header h2 {
+  color: var(--v2-text-primary);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.nutrition-diary--design-v2 .nutrition-meal__header .ui-button,
+.nutrition-diary--design-v2 .nutrition-meal__actions > button:not(.ui-button) {
+  min-height: 44px;
+}
+
+.nutrition-diary--design-v2 .nutrition-meal__empty {
+  margin: 0;
+  padding: 0 0 var(--v2-space-4);
+  background: transparent;
+  color: var(--v2-text-secondary);
+}
+
+.nutrition-diary--design-v2 .nutrition-entry {
+  padding: var(--v2-space-3) 0 var(--v2-space-4);
+  border-color: var(--v2-border);
+}
+
+.nutrition-diary--design-v2 .nutrition-entry__actions button {
+  min-height: 44px;
+  color: var(--v2-text-secondary);
+}
+
+.nutrition-diary--design-v2 .nutrition-entry-editor {
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface-secondary);
+}
+
+.nutrition-diary--design-v2 .nutrition-day-summary {
+  top: var(--v2-space-4);
+  gap: var(--v2-space-5);
+  padding: var(--v2-space-5);
+  border: 0;
+  border-radius: var(--v2-region-radius);
+  background: var(--v2-surface-secondary);
+}
+
+.nutrition-diary--design-v2 .nutrition-day-summary__head h2 {
+  margin-top: var(--v2-space-2);
+  color: var(--v2-text-primary);
+  font-size: 1.75rem;
+  font-weight: 750;
+  letter-spacing: -0.035em;
+}
+
+.nutrition-diary--design-v2 .nutrition-target__heading > span,
+.nutrition-diary--design-v2 .nutrition-target > small {
+  color: var(--v2-text-secondary);
+}
+
+.nutrition-diary--design-v2 .nutrition-target__track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--v2-surface-strong);
+}
+
+.nutrition-diary--design-v2 .nutrition-target__track > span {
+  border-radius: inherit;
+  background: var(--v2-progress-fill);
+}
+
+.nutrition-diary--design-v2 .nutrition-target.is-over .nutrition-target__track > span {
+  background: var(--v2-warning);
+}
+
+.nutrition-diary--design-v2 .nutrition-day-summary__totals {
+  display: none;
+}
+
+.nutrition-diary--design-v2 .nutrition-inline-error {
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-danger-surface);
+  color: var(--v2-danger);
+}
+
+/* Active workout */
+.active-workout--design-v2 {
+  gap: var(--v2-space-4);
+  padding: var(--v2-space-5);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-region-radius);
+  background: var(--v2-surface);
+}
+
+.active-workout--design-v2 .active-workout-hero {
+  gap: var(--v2-space-4);
+  padding: 0 0 var(--v2-space-4);
+  border: 0;
+  border-bottom: 1px solid var(--v2-border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.active-workout--design-v2 .active-workout-hero::before {
+  content: none;
+}
+
+.active-workout--design-v2 .active-workout-hero__copy .eyebrow,
+.active-workout--design-v2 .active-workout-exercise__step {
+  color: var(--v2-accent-text);
+}
+
+.active-workout--design-v2 .active-workout-hero__copy h2,
+.active-workout--design-v2 .active-workout-exercise__copy h3 {
+  color: var(--v2-text-primary);
+  font-weight: 750;
+}
+
+.active-workout--design-v2 .active-workout-progress__track {
+  height: 6px;
+  border-radius: 0;
+  background: var(--v2-surface-strong);
+}
+
+.active-workout--design-v2 .active-workout-progress__track > span {
+  border-radius: 0;
+  background: var(--v2-lime);
+}
+
+.active-workout--design-v2 .active-workout-sync {
+  border-radius: 0;
+  background: var(--v2-surface-secondary);
+}
+
+.active-workout--design-v2 .active-workout-sync__dot {
+  background: var(--v2-lime);
+}
+
+.active-workout--design-v2 .active-workout-exercises {
+  gap: var(--v2-space-5);
+}
+
+.active-workout--design-v2 .active-workout-exercise {
+  gap: var(--v2-space-4);
+  padding: var(--v2-space-5);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-region-radius);
+  background: var(--v2-surface-secondary);
+}
+
+.active-workout--design-v2 .active-workout-exercise:first-child {
+  border-top: 1px solid var(--v2-border);
+}
+
+.active-workout--design-v2 .active-workout-exercise.is-current {
+  border-color: var(--v2-lime);
+  background: var(--v2-surface);
+  box-shadow: none;
+}
+
+.active-workout--design-v2 .active-workout-exercise.is-completed:not(.is-current) {
+  background: var(--v2-surface-secondary);
+}
+
+.active-workout--design-v2 .active-workout-exercise.is-superset {
+  padding-left: var(--v2-space-3);
+  border-left: 2px solid var(--v2-lime);
+}
+
+.active-workout--design-v2 .active-workout-superset {
+  border-radius: var(--v2-compact-radius);
+  background: var(--v2-surface-secondary);
+  color: var(--v2-accent-text);
+}
+
+.active-workout--design-v2 .active-workout-exercise__sets {
+  gap: 0;
+  border-top: 1px solid var(--v2-border);
+}
+
+.active-workout--design-v2 .active-workout-set,
+.active-workout--design-v2 .active-workout-set.is-current {
+  gap: var(--v2-space-3);
+  padding: var(--v2-space-3) 0;
+  border: 0;
+  border-bottom: 1px solid var(--v2-border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.active-workout--design-v2 .active-workout-set__number {
+  width: 32px;
+  height: 32px;
+  flex-basis: 32px;
+  border-radius: 0;
+  background: var(--v2-surface-secondary);
+}
+
+.active-workout--design-v2 .active-workout-set.is-current .active-workout-set__number {
+  background: var(--v2-surface-secondary);
+  color: var(--v2-text-primary);
+}
+
+.active-workout--design-v2 .active-workout-set__complete-label {
+  color: var(--v2-accent-text);
+}
+
+.active-workout--design-v2 .active-workout-input input,
+.active-workout--design-v2 .active-workout-advanced-field select {
+  border: 0;
+  border-bottom: 2px solid var(--v2-text-primary);
+  border-radius: 0;
+  background: transparent;
+  color: var(--v2-text-primary);
+}
+
+.active-workout--design-v2 .active-workout-set.is-current .active-workout-input input {
+  font-size: 1.75rem;
+  text-align: left;
+}
+
+.active-workout--design-v2 .active-workout-set__done {
+  border-radius: var(--v2-control-radius);
+}
+
+.active-workout--design-v2 .active-workout-set__advanced {
+  border-color: var(--v2-border);
+}
+
+.active-workout--design-v2 .active-workout-rir__options button {
+  border-color: var(--v2-border);
+  border-radius: var(--v2-compact-radius);
+  background: transparent;
+  color: var(--v2-text-primary);
+}
+
+.active-workout--design-v2 .active-workout-rir__options button.is-selected {
+  border-color: var(--v2-lime);
+  background: var(--v2-lime);
+  color: var(--v2-on-lime);
+}
+
+.active-workout--design-v2 .active-workout-finish {
+  border-color: var(--v2-border);
+}
+
+.active-workout--design-v2 ~ .active-workout-rest {
+  border-color: var(--v2-lime);
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface);
+  color: var(--v2-text-primary);
+  box-shadow: none;
+}
+
+/* Login / public continuity */
+body.public-shell-mode.public-shell-mode:has(.auth-public-shell--design-v2) {
+  background: var(--v2-canvas);
+}
+
+.public-shell.auth-public-shell--design-v2 {
+  --landing-ink: var(--v2-text-primary);
+  --landing-muted: var(--v2-text-secondary);
+  --landing-paper: var(--v2-canvas);
+  --landing-card: var(--v2-surface);
+  --landing-border: var(--v2-border);
+  --landing-card-border: var(--v2-border);
+  --landing-kicker: var(--v2-accent-text);
+  --landing-secondary: var(--v2-surface-secondary);
+  --landing-green: var(--v2-lime);
+  overflow: visible;
+  background: var(--v2-canvas);
+  color: var(--v2-text-primary);
+}
+
+.public-shell.auth-public-shell--design-v2 .public-shell__header {
+  width: min(1180px, calc(100% - 48px));
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.public-shell.auth-public-shell--design-v2 .public-shell__brand {
+  color: var(--v2-text-primary);
+}
+
+.public-shell.auth-public-shell--design-v2 .public-shell__lockup .yfc-lockup__mark {
+  width: 40px;
+  height: 40px;
+  flex-basis: 40px;
+}
+
+.public-shell.auth-public-shell--design-v2
+  :is(.landing-theme-toggle, .landing-button--compact, .login-home-link) {
+  border-color: var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: transparent;
+  box-shadow: none;
+  color: var(--v2-text-primary) !important;
+}
+
+.public-shell.auth-public-shell--design-v2
+  :is(.landing-theme-toggle, .landing-button--compact, .login-home-link):hover {
+  border-color: var(--v2-text-secondary);
+  background: var(--v2-surface-secondary);
+  box-shadow: none;
+  transform: none;
+}
+
+.public-shell.auth-public-shell--design-v2 .login-home-link {
+  border-color: var(--v2-lime);
+  background: var(--v2-lime);
+  color: var(--v2-on-lime) !important;
+}
+
+.public-shell.auth-public-shell--design-v2 .login-home-link:hover {
+  border-color: var(--v2-lime-hover);
+  background: var(--v2-lime-hover);
+  color: var(--v2-on-lime) !important;
+}
+
+.auth-public-shell--design-v2 .login-layout {
+  grid-template-columns: minmax(0, 1.05fr) minmax(390px, 0.85fr);
+  align-items: center;
+  gap: clamp(48px, 7vw, 96px);
+  width: min(1180px, calc(100% - 48px));
+  min-height: calc(100dvh - 83px);
+  padding: var(--v2-space-6) 0;
+}
+
+.auth-public-shell--design-v2 .login-kicker {
+  color: var(--v2-accent-text);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+}
+
+.auth-public-shell--design-v2 .login-intro h1 {
+  max-width: 640px;
+  color: var(--v2-text-primary);
+  font-size: clamp(3rem, 5.3vw, 4.6rem);
+  font-weight: 750;
+  letter-spacing: -0.055em;
+  line-height: 0.95;
+}
+
+.auth-public-shell--design-v2 .login-intro > p:not(.login-kicker) {
+  max-width: 52ch;
+  color: var(--v2-text-secondary);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.auth-public-shell--design-v2 .login-intro ul {
+  display: none;
+}
+
+.auth-public-shell--design-v2 .login-card {
+  gap: var(--v2-space-4);
+  padding: 0 0 0 var(--v2-space-6);
+  border: 0;
+  border-left: 1px solid var(--v2-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.auth-public-shell--design-v2 .login-card .oauth-auth > p {
+  color: var(--v2-accent-text);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+}
+
+.auth-public-shell--design-v2 .login-card .oauth-button,
+.auth-public-shell--design-v2 .login-retry,
+.auth-public-shell--design-v2 .login-telegram-fallback {
+  min-height: 48px;
+  border-color: var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: transparent;
+  color: var(--v2-text-primary);
+  transform: none;
+}
+
+.auth-public-shell--design-v2 .login-card .oauth-button:hover,
+.auth-public-shell--design-v2 .login-retry:hover {
+  border-color: var(--v2-text-secondary);
+  background: var(--v2-surface-secondary);
+  color: var(--v2-text-primary);
+  transform: none;
+}
+
+.auth-public-shell--design-v2 .login-alert,
+.auth-public-shell--design-v2 .login-unavailable {
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface-secondary);
+}
+
+.auth-public-shell--design-v2 .login-dev .secondary {
+  min-height: 44px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface-secondary);
+  color: var(--v2-text-primary);
+}
+
+.auth-public-shell--design-v2 .login-dev .secondary:hover:not(:disabled) {
+  border-color: var(--v2-lime);
+  background: var(--v2-surface-strong);
+}
+
+.auth-public-shell--design-v2 .login-alert {
+  border-left-color: var(--v2-warning);
+}
+
+.auth-public-shell--design-v2 .login-privacy-note {
+  color: var(--v2-text-secondary);
+}
+
+@media (min-width: 900px) {
+  body:has(.app-shell--design-v2 #appBottomNav) {
+    padding: 28px 30px 44px 194px;
+  }
+
+  body:has(.app-shell--design-v2 #appBottomNav) .container:not(.narrow) {
+    max-width: 1180px;
+  }
+
+  .app-shell--design-v2 .app-bottom-nav {
+    width: 164px;
+    padding: 28px 12px 18px;
+  }
+
+  .app-shell--design-v2 .app-bottom-nav__brand {
+    margin-bottom: var(--v2-space-6);
+    padding: 0 6px;
+  }
+
+  .app-shell--design-v2 .app-bottom-nav__brand .yfc-lockup {
+    gap: 7px;
+  }
+
+  .app-shell--design-v2 .app-bottom-nav__brand .yfc-lockup__mark {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
+  }
+
+  .app-shell--design-v2 .app-bottom-nav__brand .yfc-lockup__wordmark {
+    font-size: 0.57rem;
+  }
+
+  .app-shell--design-v2 .app-bottom-nav__brand .yfc-lockup__wordmark > span {
+    font-size: 0.52rem;
+  }
+
+  .app-shell--design-v2 .app-bottom-nav__primary {
+    gap: var(--v2-space-3);
+  }
+
+  .app-shell--design-v2 .app-bottom-nav__primary .app-bottom-nav__btn {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr);
+    min-height: 40px;
+    gap: var(--v2-space-2);
+    padding: 4px 6px;
+  }
+
+  .app-shell--design-v2 .app-bottom-nav__primary .app-bottom-nav__icon {
+    display: inline-grid;
+    width: 24px;
+    height: 24px;
+    flex-basis: 24px;
+  }
+
+  .app-shell--design-v2 .app-bottom-nav__btn.is-active {
+    box-shadow: inset 3px 0 var(--v2-lime);
+  }
+
+  .app-shell--design-v2 .app-bottom-nav__secondary {
+    margin-top: var(--v2-space-4);
+  }
+
+  .app-shell--design-v2 .app-bottom-nav__secondary .app-bottom-nav__btn {
+    min-height: 38px;
+    gap: 7px;
+    padding-inline: 6px;
+  }
+
+  .app-shell--design-v2 .app-bottom-nav__secondary .app-bottom-nav__icon {
+    width: 24px;
+    height: 24px;
+    flex-basis: 24px;
+  }
+
+  .app-shell--design-v2 .app-bottom-nav__label {
+    font-size: 0.76rem;
+  }
+
+  .app-shell--design-v2 .app-bottom-nav__avatar {
+    display: none;
+  }
+}
+
+@media (max-width: 899px) {
+  .today-dashboard__overview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .today-dashboard--design-v2 .today-dashboard__facts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .today-dashboard--design-v2 .today-nutrition {
+    grid-column: 1 / -1;
+  }
+
+  .today-dashboard--design-v2 .today-progress-grid {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .nutrition-diary--design-v2 .nutrition-diary__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .nutrition-diary--design-v2 .nutrition-day-summary {
+    position: static;
+    order: -1;
+  }
+
+  .auth-public-shell--design-v2 .login-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--v2-space-5);
+  }
+
+  .auth-public-shell--design-v2 .login-card {
+    padding: var(--v2-space-5) 0 0;
+    border-top: 1px solid var(--v2-border);
+    border-left: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  body:has(.app-shell--design-v2) {
+    padding-top: max(var(--v2-space-3), env(safe-area-inset-top, 0px));
+    padding-right: max(var(--v2-space-3), env(safe-area-inset-right, 0px));
+    padding-left: max(var(--v2-space-3), env(safe-area-inset-left, 0px));
+  }
+
+  .today-dashboard--design-v2 {
+    gap: var(--v2-space-4);
+  }
+
+  .today-dashboard--design-v2 .today-dashboard__header h1 {
+    font-size: clamp(2.5rem, 13vw, 3.35rem);
+  }
+
+  .today-dashboard--design-v2 .today-workout-spotlight {
+    min-height: 0;
+    gap: var(--v2-space-4);
+    padding: var(--v2-space-5) var(--v2-space-4) var(--v2-space-4);
+    border-radius: var(--v2-region-radius);
+  }
+
+  .today-dashboard--design-v2 .today-workout-spotlight__label {
+    top: var(--v2-space-4);
+    left: var(--v2-space-4);
+  }
+
+  .today-dashboard--design-v2 .today-workout-copy h2 {
+    font-size: 2rem;
+  }
+
+  .today-dashboard--design-v2 .today-dashboard__facts,
+  .today-dashboard--design-v2 .today-progress-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .today-dashboard--design-v2 .today-nutrition {
+    grid-column: auto;
+  }
+
+  .today-dashboard--design-v2 .today-progress-grid {
+    grid-column: auto;
+  }
+
+  .nutrition-diary--design-v2 {
+    padding: var(--v2-space-4) var(--v2-space-3);
+  }
+
+  .nutrition-diary--design-v2 .nutrition-diary__intro {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--v2-space-4);
+  }
+
+  .nutrition-diary--design-v2 .nutrition-diary__intro h1 {
+    font-size: clamp(2.55rem, 13vw, 3.25rem);
+  }
+
+  .nutrition-diary--design-v2 .nutrition-date-nav {
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+  }
+
+  .nutrition-diary--design-v2 .nutrition-date-nav__today {
+    grid-column: 1 / -1;
+  }
+
+  .nutrition-diary--design-v2 .nutrition-diary__status {
+    justify-content: flex-start;
+    margin-top: calc(-1 * var(--v2-space-3));
+  }
+
+  .nutrition-diary--design-v2 .nutrition-day-summary {
+    padding: var(--v2-space-5) var(--v2-space-4);
+  }
+
+  .nutrition-diary--design-v2 .nutrition-meal__header {
+    align-items: flex-start;
+  }
+
+  .nutrition-diary--design-v2 .nutrition-meal__actions {
+    flex-direction: column-reverse;
+  }
+
+  .active-workout--design-v2 {
+    gap: var(--v2-space-4);
+    padding: var(--v2-space-4) var(--v2-space-3);
+  }
+
+  .today-workout-focus__header {
+    position: sticky;
+    z-index: 25;
+    top: max(0px, env(safe-area-inset-top, 0px));
+    gap: var(--v2-space-2);
+    margin: calc(-1 * var(--v2-space-3)) calc(-1 * var(--v2-space-3)) 0;
+    padding: var(--v2-space-3);
+    background: var(--v2-surface);
+  }
+
+  .today-workout-focus__header > span {
+    max-width: 84px;
+    text-align: right;
+  }
+
+  .active-workout--design-v2 .active-workout-hero {
+    padding: 0 0 var(--v2-space-4);
+  }
+
+  .active-workout--design-v2 .active-workout-hero__top,
+  .active-workout--design-v2 .active-workout-exercise__head {
+    gap: var(--v2-space-3);
+  }
+
+  .active-workout--design-v2 .active-workout-hero__copy h2 {
+    font-size: 1.5rem;
+  }
+
+  .active-workout--design-v2 .active-workout-exercise {
+    padding: var(--v2-space-4) var(--v2-space-3);
+  }
+
+  .active-workout--design-v2 .active-workout-exercise__copy h3 {
+    font-size: 1.75rem;
+  }
+
+  .active-workout--design-v2 .active-workout-set__controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .active-workout--design-v2 .active-workout-set__done {
+    grid-column: 1 / -1;
+  }
+
+  .active-workout--design-v2 ~ .active-workout-rest {
+    inset: max(0px, env(safe-area-inset-top, 0px)) 0 auto;
+    width: 100%;
+    border-width: 2px 0;
+    border-radius: 0;
+  }
+
+  .auth-public-shell--design-v2 .public-shell__header,
+  .auth-public-shell--design-v2 .login-layout {
+    width: min(100% - 28px, 680px);
+  }
+
+  .auth-public-shell--design-v2 .public-shell__brand .yfc-lockup__wordmark {
+    display: none;
+  }
+
+  .auth-public-shell--design-v2 .login-layout {
+    min-height: calc(100dvh - 71px);
+    padding: var(--v2-space-5) 0 max(var(--v2-space-6), env(safe-area-inset-bottom, 0px));
+  }
+
+  .auth-public-shell--design-v2 .login-intro h1 {
+    font-size: clamp(2.65rem, 13vw, 3.6rem);
+  }
+
+  .auth-public-shell--design-v2 .login-card {
+    padding-top: var(--v2-space-5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell--design-v2 *,
+  .auth-public-shell--design-v2 * {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -260,8 +260,8 @@ describe('TodayDashboard', () => {
 
   it('formats the day context in clear Russian', () => {
     expect(formatTodayHeading('2030-01-10')).toEqual({
-      eyebrow: 'Четверг',
-      title: 'Сегодня, 10 января',
+      eyebrow: 'Четверг · 10 января',
+      title: 'Сегодня',
     });
   });
 

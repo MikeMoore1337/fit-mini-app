@@ -1,5 +1,36 @@
 /* Shared semantic foundation. Legacy aliases remain available while screens migrate gradually. */
 :root {
+  /* Design V2 / Quiet Pace semantic contract. Pilot surfaces opt in explicitly. */
+  --v2-canvas: #101310;
+  --v2-surface: #161916;
+  --v2-surface-secondary: #1e221e;
+  --v2-surface-strong: #292e29;
+  --v2-text-primary: #eef0ea;
+  --v2-text-secondary: #afb5ad;
+  --v2-border: #3a413a;
+  --v2-lime: #a8e83a;
+  --v2-lime-hover: #98d62f;
+  --v2-accent-text: #b9ea72;
+  --v2-on-lime: #102015;
+  --v2-danger: #ef7474;
+  --v2-danger-surface: #2c1717;
+  --v2-warning: #e5b963;
+  --v2-warning-surface: #2b2314;
+  --v2-success: #a8e83a;
+  --v2-success-surface: #1e221e;
+  --v2-success-border: #596f38;
+  --v2-success-text: #b9ea72;
+  --v2-progress-fill: var(--v2-lime);
+  --v2-control-radius: 12px;
+  --v2-compact-radius: 8px;
+  --v2-region-radius: 16px;
+  --v2-space-1: 4px;
+  --v2-space-2: 8px;
+  --v2-space-3: 12px;
+  --v2-space-4: 18px;
+  --v2-space-5: 28px;
+  --v2-space-6: 44px;
+
   --color-canvas: var(--bg);
   --color-canvas-elevated: var(--bg-elev);
   --color-surface: var(--card);
@@ -41,7 +72,7 @@
   --space-8: 2rem;
   --space-10: 2.5rem;
   --space-12: 3rem;
-  --radius-control: 0.625rem;
+  --radius-control: 0.75rem;
   --radius-section: 1rem;
   --radius-panel: 1.25rem;
   --content-width: 61.25rem;
@@ -59,12 +90,68 @@
 }
 
 :root[data-color-scheme='light'] {
+  --v2-canvas: #f4f5f2;
+  --v2-surface: #ffffff;
+  --v2-surface-secondary: #ecede9;
+  --v2-surface-strong: #dadcd7;
+  --v2-text-primary: #161a17;
+  --v2-text-secondary: #59605b;
+  --v2-border: #c9cdc8;
+  --v2-lime: #9ee02b;
+  --v2-lime-hover: #8dce20;
+  --v2-accent-text: #486414;
+  --v2-on-lime: #102015;
+  --v2-danger: #b93838;
+  --v2-danger-surface: #f9e7e7;
+  --v2-warning: #98600f;
+  --v2-warning-surface: #f5ead5;
+  --v2-success: #486414;
+  --v2-success-surface: #ecede9;
+  --v2-success-border: #9aac7b;
+  --v2-success-text: #486414;
+  --v2-progress-fill: var(--v2-text-primary);
   --elevation-raised: 0 8px 24px rgba(23, 32, 24, 0.08);
   --elevation-overlay: 0 18px 42px rgba(23, 32, 24, 0.14);
 }
 
 body {
   font-family: var(--font-sans);
+}
+
+.yfc-lockup {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+}
+
+.yfc-lockup__mark {
+  display: block;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+}
+
+.yfc-lockup__wordmark {
+  display: grid;
+  min-width: 0;
+  color: currentColor;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.035em;
+  line-height: 1.02;
+  text-transform: uppercase;
+}
+
+.yfc-lockup__wordmark strong {
+  font: inherit;
+  white-space: nowrap;
+}
+
+.yfc-lockup__wordmark > span {
+  margin-top: 2px;
+  font-size: 0.64rem;
+  letter-spacing: 0.15em;
 }
 
 .container {

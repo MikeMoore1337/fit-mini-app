@@ -402,18 +402,21 @@ export function NutritionDiary({
   const meals = useMemo(() => normalizeMeals(diary.data?.meals ?? []), [diary.data?.meals]);
 
   return (
-    <div className="nutrition-diary">
+    <div className="nutrition-diary nutrition-diary--design-v2">
       <header className="nutrition-diary__intro">
         <div>
           <span className="eyebrow">Ежедневный дневник</span>
           <h1>Питание</h1>
-          <p>Записывайте продукты по мере дня — итоги и остаток пересчитаются автоматически.</p>
+          <p>{dateLabel.subtitle}</p>
         </div>
-        {diary.data?.targets ? (
-          <Badge tone="success">Цель КБЖУ настроена</Badge>
-        ) : (
-          <Badge>Без цели</Badge>
-        )}
+        <Button
+          className="nutrition-diary__primary-action"
+          type="button"
+          aria-label="Добавить продукт в завтрак"
+          onClick={() => setAddingTo('breakfast')}
+        >
+          <span aria-hidden="true">＋</span> Добавить продукт
+        </Button>
       </header>
 
       <nav className="nutrition-date-nav" aria-label="Дата дневника">
@@ -472,6 +475,14 @@ export function NutritionDiary({
           </button>
         </div>
       )}
+
+      <div className="nutrition-diary__status" aria-live="polite">
+        {diary.data?.targets ? (
+          <Badge tone="success">Цель КБЖУ настроена</Badge>
+        ) : diary.data ? (
+          <Badge>Без цели</Badge>
+        ) : null}
+      </div>
 
       {diary.isLoading && <LoadingState label="Загружаем дневник…" />}
       {diary.error && (
