@@ -346,3 +346,22 @@ test('progress remains clear and free of horizontal overflow at supported widths
   expect(consoleErrors).toEqual([]);
   expect(runtimeErrors).toEqual([]);
 });
+
+test('dark progress uses one lime accent for the adherence outcome', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('app-theme', 'dark'));
+  await mockProgress(page);
+  await page.goto('/app?section=progress');
+  await page.getByRole('button', { name: 'Клиент' }).click();
+  await page.getByRole('link', { name: 'Прогресс' }).click();
+
+  const summaryScore = page.locator('.progress-summary__score');
+  const adherenceScore = page.locator('.progress-adherence__score');
+  await expect(summaryScore).toHaveText('84%');
+  await expect(adherenceScore).toHaveText('84%');
+
+  const colors = await page.evaluate(() => ({
+    summary: getComputedStyle(document.querySelector('.progress-summary__score')!).color,
+    adherence: getComputedStyle(document.querySelector('.progress-adherence__score')!).color,
+  }));
+  expect(colors.summary).toBe(colors.adherence);
+});
