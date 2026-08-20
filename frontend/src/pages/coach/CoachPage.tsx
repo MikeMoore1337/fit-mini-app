@@ -832,7 +832,7 @@ export default function CoachPage() {
 
   return (
     <AppShell>
-      <div className="page-stack coach-workspace--design-v2">
+      <div className="page-stack app-section app-section--programs app-section--design-v2 coach-workspace--design-v2">
         <header className="coach-workspace-header">
           <div>
             <span className="eyebrow">Клиенты · рабочее пространство</span>

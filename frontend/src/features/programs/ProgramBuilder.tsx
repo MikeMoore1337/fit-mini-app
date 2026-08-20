@@ -711,45 +711,51 @@ export function ProgramBuilder({
                       </button>
                     )}
                   </label>
-                  {(
-                    [
-                      ['prescribed_sets', 'Рабочие подходы'],
-                      ['prescribed_reps', 'Повторы'],
-                      ['rest_seconds', 'Отдых, сек'],
-                    ] as const
-                  ).map(([key, label]) => (
-                    <label className="field" key={key}>
-                      <span>{label}</span>
-                      <input
-                        type={key === 'prescribed_reps' ? 'text' : 'number'}
-                        min={
-                          key === 'prescribed_sets' ? 1 : key === 'rest_seconds' ? 15 : undefined
-                        }
-                        max={
-                          key === 'prescribed_sets' ? 10 : key === 'rest_seconds' ? 600 : undefined
-                        }
-                        maxLength={key === 'prescribed_reps' ? 32 : undefined}
-                        required
-                        value={item[key] ?? ''}
-                        onChange={(e) =>
-                          updateDay(dayIndex, {
-                            ...day,
-                            exercises: day.exercises.map((row, index) =>
-                              index === exerciseIndex
-                                ? {
-                                    ...row,
-                                    [key]:
-                                      key === 'prescribed_reps'
-                                        ? e.target.value
-                                        : Number(e.target.value),
-                                  }
-                                : row,
-                            ),
-                          })
-                        }
-                      />
-                    </label>
-                  ))}
+                  <div className="program-exercise-row__metrics">
+                    {(
+                      [
+                        ['prescribed_sets', 'Рабочие подходы'],
+                        ['prescribed_reps', 'Повторы'],
+                        ['rest_seconds', 'Отдых, сек'],
+                      ] as const
+                    ).map(([key, label]) => (
+                      <label className="field" key={key}>
+                        <span>{label}</span>
+                        <input
+                          type={key === 'prescribed_reps' ? 'text' : 'number'}
+                          min={
+                            key === 'prescribed_sets' ? 1 : key === 'rest_seconds' ? 15 : undefined
+                          }
+                          max={
+                            key === 'prescribed_sets'
+                              ? 10
+                              : key === 'rest_seconds'
+                                ? 600
+                                : undefined
+                          }
+                          maxLength={key === 'prescribed_reps' ? 32 : undefined}
+                          required
+                          value={item[key] ?? ''}
+                          onChange={(e) =>
+                            updateDay(dayIndex, {
+                              ...day,
+                              exercises: day.exercises.map((row, index) =>
+                                index === exerciseIndex
+                                  ? {
+                                      ...row,
+                                      [key]:
+                                        key === 'prescribed_reps'
+                                          ? e.target.value
+                                          : Number(e.target.value),
+                                    }
+                                  : row,
+                              ),
+                            })
+                          }
+                        />
+                      </label>
+                    ))}
+                  </div>
                   <div className="program-exercise-row__actions">
                     <button
                       type="button"

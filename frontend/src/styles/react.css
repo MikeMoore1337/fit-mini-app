@@ -2609,7 +2609,7 @@ select:not([multiple]) {
 }
 .program-exercise-row {
   display: grid;
-  grid-template-columns: 32px minmax(220px, 2fr) repeat(3, minmax(92px, 1fr)) auto;
+  grid-template-columns: 32px minmax(220px, 2fr) minmax(300px, 3fr) auto;
   align-items: end;
   gap: 9px;
   min-width: 0;
@@ -2620,6 +2620,13 @@ select:not([multiple]) {
   align-self: center;
 }
 .program-exercise-row .exercise-select {
+  min-width: 0;
+}
+.program-exercise-row__metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 9px;
   min-width: 0;
 }
 .program-exercise-row__actions {
@@ -2900,14 +2907,21 @@ select:not([multiple]) {
     grid-template-columns: 1fr;
   }
   .program-exercise-row {
-    grid-template-columns: 28px repeat(2, minmax(0, 1fr));
+    grid-template-columns: 28px minmax(0, 1fr);
   }
   .program-exercise-row .exercise-select {
-    grid-column: 2 / -1;
+    grid-column: 2;
   }
+  .program-exercise-row__metrics,
   .program-exercise-row__actions,
   .program-exercise-advanced {
     grid-column: 1 / -1;
+  }
+  .program-exercise-row__metrics .field {
+    grid-template-rows: minmax(2.5em, auto) auto;
+  }
+  .program-exercise-row__metrics .field > span {
+    align-self: end;
   }
   .program-exercise-row__actions {
     justify-content: flex-end;
@@ -2962,11 +2976,10 @@ select:not([multiple]) {
     padding: 13px;
   }
   .program-day__head {
-    grid-template-columns: 28px minmax(0, 1fr);
+    grid-template-columns: 28px minmax(0, 1fr) auto;
   }
   .program-day__head .program-order-controls {
-    grid-column: 1 / -1;
-    justify-content: flex-end;
+    grid-column: auto;
   }
   .program-builder-footer {
     position: static;
