@@ -1750,6 +1750,11 @@ test('мастер подбора сохраняет ответы и ведёт 
   const wizard = page.getByRole('dialog', { name: 'Цель' });
   await expect(wizard).toBeVisible();
   await expect(wizard.getByText(/профиль от этого не обновится/i)).toBeVisible();
+  const progressBounds = await wizard.locator('.program-wizard__progress').boundingBox();
+  const prefillBounds = await wizard.locator('.program-wizard__prefill').boundingBox();
+  expect(progressBounds).not.toBeNull();
+  expect(prefillBounds).not.toBeNull();
+  expect(prefillBounds!.y - (progressBounds!.y + progressBounds!.height)).toBeGreaterThanOrEqual(8);
   expect(
     await wizard.locator('.program-wizard__panel').evaluate((element) => ({
       client: element.clientWidth,

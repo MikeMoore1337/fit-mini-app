@@ -1659,6 +1659,11 @@ body:has(.standalone-page--design-v2) {
   margin-inline: var(--v2-space-5);
 }
 
+.app-section--programs .program-wizard__prefill {
+  margin: var(--v2-space-2) var(--v2-space-5) 0;
+  border: 1px solid var(--v2-border);
+}
+
 .app-section--programs .program-wizard-choice {
   border-color: var(--v2-border);
   border-radius: var(--v2-control-radius);
@@ -2076,7 +2081,7 @@ body:has(.standalone-page--design-v2) {
     padding-inline: var(--v2-space-4);
   }
 
-  .app-section--programs .program-wizard__progress {
+  .app-section--programs :where(.program-wizard__progress, .program-wizard__prefill) {
     margin-inline: var(--v2-space-4);
   }
 
