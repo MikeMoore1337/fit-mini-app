@@ -120,16 +120,11 @@
   text-decoration: none;
 }
 
-.landing-brand > span:last-child {
-  white-space: nowrap;
-}
-
 .landing-brand__mark {
   display: block;
   width: 36px;
   height: 36px;
-  border-radius: 11px;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .landing-header .landing-brand__mark {
@@ -1159,10 +1154,6 @@
   .landing-brand {
     gap: 7px;
     font-size: 0.78rem;
-  }
-
-  .landing-header .landing-brand > span:last-child {
-    display: none;
   }
 
   .landing-button--compact {
