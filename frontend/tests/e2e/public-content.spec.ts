@@ -48,6 +48,20 @@ test('публичные страницы сохраняют hierarchy и не �
           viewport: window.innerWidth,
         })),
       ).toEqual({ content: viewport.width, viewport: viewport.width });
+
+      if (viewport.width === 1440) {
+        const heroGutters = await page.evaluate(() => {
+          const hero = document.querySelector('.public-hero')!.getBoundingClientRect();
+          const copy = document.querySelector('.public-hero__copy')!.getBoundingClientRect();
+          const summary = document.querySelector('.public-hero__summary')!.getBoundingClientRect();
+          return {
+            left: copy.left - hero.left,
+            right: hero.right - summary.right,
+          };
+        });
+        expect(heroGutters.left).toBeGreaterThanOrEqual(40);
+        expect(heroGutters.right).toBeGreaterThanOrEqual(40);
+      }
     }
   }
 });
