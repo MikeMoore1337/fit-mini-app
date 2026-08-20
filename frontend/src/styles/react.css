@@ -1735,6 +1735,15 @@ select:not([multiple]) {
 .exercise-guide-images {
   gap: 14px;
 }
+.exercise-guide-images__legend {
+  margin: -8px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+.exercise-guide-images__legend strong {
+  color: var(--text);
+}
 .exercise-guide-image {
   border-color: color-mix(in srgb, var(--border) 78%, transparent);
   box-shadow: 0 12px 30px color-mix(in srgb, var(--text) 8%, transparent);

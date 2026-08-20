@@ -21,6 +21,9 @@ export function ExerciseGuideMedia({
   const lightboxRef = useModalA11y<HTMLDivElement>(expandedIndex !== null, close);
   const activeItem = expandedIndex === null ? null : items[expandedIndex];
   const availableItemsCount = items.filter((item) => !failedUrls.has(item.url)).length;
+  const hasTempoPhases = items.some(
+    (item) => item.phase === 'Позитивная фаза' || item.phase === 'Негативная фаза',
+  );
 
   const showAdjacent = (direction: -1 | 1) => {
     if (expandedIndex === null) return;
@@ -42,6 +45,12 @@ export function ExerciseGuideMedia({
 
   return (
     <>
+      {hasTempoPhases && (
+        <p className="exercise-guide-images__legend">
+          <strong>Позитивная фаза</strong> — движение с усилием. <strong>Негативная фаза</strong> —
+          контролируемый возврат.
+        </p>
+      )}
       <div className="exercise-guide-images" aria-label="Фазы упражнения">
         {items.map((item, index) => {
           const failed = failedUrls.has(item.url);
