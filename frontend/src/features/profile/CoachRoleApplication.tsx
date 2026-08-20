@@ -55,8 +55,8 @@ export function CoachRoleApplicationCard() {
 
   return (
     <Card
-      title="Стать тренером"
-      description="Отправьте заявку администратору прямо из приложения. Писать кому-либо отдельно не нужно."
+      title="Для тренеров"
+      description="Статус доступа к кабинету тренера и существующая заявка."
     >
       {application.isLoading ? (
         <LoadingState label="Проверяем статус заявки…" />

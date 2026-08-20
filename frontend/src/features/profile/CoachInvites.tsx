@@ -130,8 +130,17 @@ export function CoachInvites({
             onChange={(event) => setInviteInput(event.target.value)}
             placeholder="Вставьте приглашение от тренера"
             autoComplete="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            aria-invalid={previewMutation.isError}
+            aria-describedby={previewMutation.isError ? 'coach-invite-error' : undefined}
             required
           />
+          {previewMutation.isError && (
+            <small className="field-error" id="coach-invite-error" role="alert">
+              {(previewMutation.error as Error).message}
+            </small>
+          )}
         </label>
         <button disabled={previewMutation.isPending}>
           {previewMutation.isPending ? 'Проверяем…' : 'Проверить приглашение'}

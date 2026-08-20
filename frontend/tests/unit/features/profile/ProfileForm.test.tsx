@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ProfileForm } from '../../../../src/features/profile/ProfileForm';
+import { ProfileForm, validateProfileForm } from '../../../../src/features/profile/ProfileForm';
 import { FeedbackProvider } from '../../../../src/shared/ui/FeedbackProvider';
 
 const apiMock = vi.hoisted(() => vi.fn());
@@ -124,5 +124,65 @@ describe('ProfileForm heart rate preview', () => {
     expect(
       apiMock.mock.calls.filter(([path]) => path.endsWith('/heart-rates/preview')),
     ).toHaveLength(0);
+  });
+
+  it('shows validation beside the field and keeps entered values after a recoverable error', async () => {
+    renderForm();
+    fireEvent.change(screen.getByLabelText('Цель'), { target: { value: 'maintenance' } });
+    fireEvent.change(screen.getByLabelText('Уровень подготовки'), {
+      target: { value: 'beginner' },
+    });
+    fireEvent.change(screen.getByLabelText('Рост, см'), { target: { value: '99' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить изменения' }));
+
+    expect(await screen.findByText('Укажите рост от 100 до 250 см.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Рост, см')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText('Рост, см')).toHaveValue(99);
+    expect(apiMock.mock.calls.filter(([path]) => path === '/api/v1/me/profile')).toHaveLength(0);
+
+    fireEvent.change(screen.getByLabelText('Рост, см'), { target: { value: '170' } });
+    fireEvent.change(screen.getByLabelText('Имя'), { target: { value: 'Анна' } });
+    apiMock.mockImplementation((path: string) => {
+      if (path.endsWith('/body-priority-options')) return Promise.resolve({ items: [] });
+      if (path === '/api/v1/me/profile') return Promise.reject(new Error('Нет соединения'));
+      return Promise.resolve(null);
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить изменения' }));
+
+    expect(
+      await screen.findByText(/Нет соединения.*Введённые данные сохранены в этом браузере/),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText('Имя')).toHaveValue('Анна');
+    expect(screen.getByLabelText('Вес, кг')).toHaveAttribute('inputmode', 'decimal');
+    expect(screen.getByLabelText('Силовых тренировок в неделю')).toHaveAttribute(
+      'inputmode',
+      'numeric',
+    );
+  });
+});
+
+describe('validateProfileForm', () => {
+  it('uses the backend profile ranges without making optional measurements required', () => {
+    expect(
+      validateProfileForm({
+        goal: 'maintenance',
+        level: 'beginner',
+        workouts_per_week: 3,
+        cardio_trainings_per_week: 0,
+        height_cm: null,
+        weight_kg: null,
+        resting_heart_rate: null,
+      }),
+    ).toEqual({
+      birth_date: undefined,
+      goal: undefined,
+      level: undefined,
+      height_cm: undefined,
+      weight_kg: undefined,
+      workouts_per_week: undefined,
+      cardio_trainings_per_week: undefined,
+      resting_heart_rate: undefined,
+    });
   });
 });

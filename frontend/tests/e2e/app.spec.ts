@@ -459,7 +459,12 @@ test('сценарии спортсмена и тренера ведут в ве
 
 async function mockApi(
   page: Page,
-  { withCoachClient = false, withCoachApplication = false, withCoachProgram = false } = {},
+  {
+    completeProfile = false,
+    withCoachClient = false,
+    withCoachApplication = false,
+    withCoachProgram = false,
+  } = {},
 ) {
   let role: 'client' | 'coach' | 'admin' = 'client';
   let coachApplication = withCoachApplication
@@ -547,6 +552,8 @@ async function mockApi(
           profile: {
             full_name: 'Демо пользователь',
             goal: 'maintenance',
+            level: completeProfile ? 'beginner' : null,
+            workouts_per_week: completeProfile ? 3 : null,
             timezone: 'Europe/Moscow',
             kbju: null,
           },
@@ -1415,7 +1422,6 @@ test('профиль содержит уведомления, а карточк�
   await page.getByRole('button', { name: 'Клиент' }).click();
 
   await openAppDestination(page, 'Профиль');
-  await openCard(page, 'Профиль');
   await openCard(page, 'Напоминания о тренировках');
   await expect(page.getByRole('heading', { name: 'Напоминания о тренировках' })).toBeVisible();
   await expect(page.getByText('Личные уведомления')).toBeVisible();
@@ -1529,12 +1535,91 @@ test('описание упражнения использует широкую 
   expect(noteColumns).toHaveLength(2);
 });
 
+test('профиль сохраняет иерархию Design V2 в light/dark и на целевых ширинах', async ({ page }) => {
+  const browserErrors: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error' && !message.text().startsWith('Failed to load resource')) {
+      browserErrors.push(message.text());
+    }
+  });
+  page.on('pageerror', (error) => browserErrors.push(error.message));
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await mockApi(page);
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Клиент' }).click();
+  await openAppDestination(page, 'Профиль');
+
+  const cases = [
+    { width: 1440, height: 900, theme: 'light' },
+    { width: 768, height: 900, theme: 'dark' },
+    { width: 390, height: 844, theme: 'light' },
+    { width: 360, height: 800, theme: 'dark' },
+  ] as const;
+
+  for (const current of cases) {
+    await page.setViewportSize({ width: current.width, height: current.height });
+    await page.evaluate((theme) => localStorage.setItem('app-theme', theme), current.theme);
+    await page.reload();
+
+    await expect(page.getByRole('heading', { name: 'Профиль и настройки' })).toBeVisible();
+    await expect(page.getByText('Профиль стоит дополнить')).toBeVisible();
+    await expect(page.getByText('1 из 3')).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Разделы профиля' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Личные данные и фитнес-профиль' }),
+    ).toBeVisible();
+    await expect(page.locator('html')).toHaveAttribute('data-color-scheme', current.theme);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+
+    if (current.width <= 390) {
+      const navTargets = await page
+        .getByRole('navigation', { name: 'Разделы профиля' })
+        .getByRole('link')
+        .evaluateAll((links) => links.map((link) => link.getBoundingClientRect().height));
+      expect(navTargets.every((height) => height >= 44)).toBe(true);
+    }
+  }
+
+  await page.getByLabel('Имя').fill('Черновик профиля');
+  await page.getByRole('button', { name: 'Сохранить изменения' }).click();
+  await expect(page.getByText('Выберите уровень подготовки.')).toBeVisible();
+  await expect(page.getByLabel('Уровень подготовки')).toBeFocused();
+  await expect(page.getByLabel('Имя')).toHaveValue('Черновик профиля');
+
+  await page.getByRole('link', { name: 'Доступ и безопасность' }).click();
+  await expect(page.getByRole('heading', { name: 'Доступ и безопасность' })).toBeInViewport();
+  const [securityHeading, dangerZone] = await Promise.all([
+    page.getByRole('heading', { name: 'Доступ и безопасность' }).boundingBox(),
+    page.locator('.profile-danger-zone').boundingBox(),
+  ]);
+  expect(securityHeading).not.toBeNull();
+  expect(dangerZone).not.toBeNull();
+  expect(dangerZone!.y).toBeGreaterThan(securityHeading!.y);
+  expect(browserErrors).toEqual([]);
+});
+
+test('профиль показывает завершённое состояние канонических параметров программы', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockApi(page, { completeProfile: true });
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Клиент' }).click();
+  await openAppDestination(page, 'Профиль');
+
+  await expect(page.getByText('Настройки программы заполнены')).toBeVisible();
+  await expect(page.getByText('3 из 3')).toBeVisible();
+  await expect(page.getByText('Готово', { exact: true })).toBeVisible();
+});
+
 test('клиент подаёт заявку на роль тренера из профиля', async ({ page }) => {
   await mockApi(page);
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
   await openAppDestination(page, 'Профиль');
-  await openCard(page, 'Стать тренером');
+  await openCard(page, 'Для тренеров');
 
   await page.getByRole('button', { name: 'Стать тренером' }).click();
   await page.getByRole('button', { name: 'Отправить заявку' }).click();
@@ -1551,7 +1636,7 @@ test('рекомендация кардио меняется с целью, а �
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
   await openAppDestination(page, 'Профиль');
-  await openCard(page, 'Профиль');
+  await page.getByText('Пульс и кардио-ориентиры').click();
 
   await page.getByLabel('Дата рождения').fill('1992-08-12');
   await page.getByText('Средний пульс в покое, уд/мин').locator('..').locator('input').fill('75');
@@ -1582,10 +1667,9 @@ test('поля профиля и питания выровнены на деск
   await page.getByRole('button', { name: 'Клиент' }).click();
 
   await openAppDestination(page, 'Профиль');
-  await openCard(page, 'Профиль');
-  const profileControlTops = await page.locator('.profile-form-grid').evaluate((grid) =>
+  const profileControlTops = await page.locator('.profile-form-grid--fitness').evaluate((grid) =>
     Array.from(grid.querySelectorAll<HTMLElement>(':scope > .field'))
-      .slice(6)
+      .slice(0, 3)
       .map((field) => {
         const control = field.querySelector<HTMLElement>('input, select, .date-control');
         return control?.getBoundingClientRect().top ?? 0;
@@ -1593,6 +1677,21 @@ test('поля профиля и питания выровнены на деск
   );
   expect(new Set(profileControlTops.map(Math.round)).size).toBe(1);
 
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobileProfileFields = await page.locator('.profile-form-grid--fitness').evaluate((grid) =>
+    Array.from(grid.querySelectorAll<HTMLElement>(':scope > .field')).map((field) => {
+      const box = field.getBoundingClientRect();
+      return { left: box.left, right: box.right, top: box.top };
+    }),
+  );
+  expect(mobileProfileFields.every((field) => field.left >= 0 && field.right <= 390)).toBe(true);
+  expect(
+    mobileProfileFields.every(
+      (field, index) => index === 0 || field.top > mobileProfileFields[index - 1]!.top,
+    ),
+  ).toBe(true);
+
+  await page.setViewportSize({ width: 1440, height: 900 });
   await openAppDestination(page, 'Питание');
   await openCard(page, 'КБЖУ');
   const nutritionControlTops = await page
