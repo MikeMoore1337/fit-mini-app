@@ -2,7 +2,7 @@ import { useEffect, type ReactNode } from 'react';
 import { AppLink } from '../navigation/router';
 import { useWebTheme } from '../useWebTheme';
 import { AppThemeToggle } from './AppThemeToggle';
-import { BrandLogo } from './BrandLogo';
+import { BrandLockup } from './BrandLogo';
 import './public-shell.css';
 
 type PublicShellProps = {
@@ -33,17 +33,10 @@ export function PublicShell({
   }, [colorScheme]);
 
   const brand = (
-    <>
-      <BrandLogo
-        className="public-shell__logo landing-brand__mark"
-        decorative
-        surface={colorScheme}
-        variant="full"
-        width={44}
-        height={44}
-      />
-      <span className="public-shell__brand-name">Your Fitness Coach</span>
-    </>
+    <BrandLockup
+      className="public-shell__lockup"
+      markClassName="public-shell__logo landing-brand__mark"
+    />
   );
 
   return (

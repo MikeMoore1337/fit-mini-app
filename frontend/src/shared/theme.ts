@@ -8,14 +8,14 @@ export const APP_THEME_CHANGE_EVENT = 'yfc-theme-preference-change';
 
 export const YFC_THEME_COLORS = {
   light: {
-    background: '#f1f3ec',
-    header: '#f7f9f3',
-    bottomBar: '#f7f9f3',
+    background: '#f4f5f2',
+    header: '#ffffff',
+    bottomBar: '#ffffff',
   },
   dark: {
-    background: '#0d120f',
-    header: '#111813',
-    bottomBar: '#111813',
+    background: '#101310',
+    header: '#161916',
+    bottomBar: '#161916',
   },
 } as const satisfies Record<AppColorScheme, Record<string, string>>;
 

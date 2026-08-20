@@ -55,6 +55,47 @@ async function mockAuthApi(
     if (path.endsWith('/workouts/today')) {
       return route.fulfill({ status: 404, json: { detail: 'На сегодня тренировка не назначена' } });
     }
+    if (path.endsWith('/workouts/progress/summary')) {
+      return route.fulfill({
+        json: {
+          user_id: 17,
+          period_days: 30,
+          period_start: '2026-07-22',
+          period_end: '2026-08-20',
+          training: { last_completed_workout_on: null, next_workout: null },
+          nutrition: { visible: false },
+          body: { latest_measurement: null, trends: [], priority: null, guidance: {} },
+          adherence: {
+            formula_version: 'adherence-v1',
+            overall_percent: null,
+            included_components: [],
+            workouts: {},
+            cardio: {},
+            calories: {},
+            protein: {},
+          },
+          data_sufficiency: {},
+        },
+      });
+    }
+    if (path.endsWith('/nutrition/diary')) {
+      return route.fulfill({
+        json: {
+          diary_date: '2026-08-20',
+          timezone: 'Europe/Moscow',
+          meals: [],
+          totals: {
+            energy_kcal: '0',
+            protein_g: '0',
+            fat_g: '0',
+            carbs_g: '0',
+            fiber_g: null,
+          },
+          targets: null,
+          remaining: null,
+        },
+      });
+    }
     if (path.endsWith('/workouts/progress')) {
       return route.fulfill({
         json: {
@@ -94,7 +135,9 @@ test('Landing ведёт на canonical Login, а protected route сохраня
   await page.getByRole('link', { name: 'Войти' }).click();
 
   await expect(page).toHaveURL(/\/login$/);
-  await expect(page.getByRole('heading', { name: 'Войти в Your Fitness Coach' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Продолжить в Your Fitness Coach' }),
+  ).toBeVisible();
 
   await page.goto('/coach');
   await expect(page).toHaveURL(/\/login\?next=%2Fcoach$/);
@@ -153,9 +196,9 @@ test('Повторить сохраняет контраст и единый hov
 
     expect(retryStyles).toEqual(providerStyles);
     expect(retryStyles.backgroundColor).toBe(
-      scheme === 'light' ? 'rgb(223, 230, 220)' : 'rgb(32, 42, 35)',
+      scheme === 'light' ? 'rgb(236, 237, 233)' : 'rgb(30, 34, 30)',
     );
-    expect(retryStyles.color).toBe(scheme === 'light' ? 'rgb(23, 32, 24)' : 'rgb(242, 246, 239)');
+    expect(retryStyles.color).toBe(scheme === 'light' ? 'rgb(22, 26, 23)' : 'rgb(238, 240, 234)');
   }
 });
 
@@ -195,7 +238,9 @@ test('valid Telegram launch authenticates automatically without browser Login', 
 
   await expect(page).toHaveURL(/\/app\?tgWebAppPlatform=android$/);
   await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Войти в Your Fitness Coach' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Продолжить в Your Fitness Coach' })).toHaveCount(
+    0,
+  );
 });
 
 test('linking callback показывает success и conflict без raw данных', async ({ page }) => {
@@ -220,7 +265,9 @@ test('Login адаптивен, доступен с клавиатуры и ув
     try {
       await mockAuthApi(page);
       await page.goto('/login?next=%2Fapp');
-      await expect(page.getByRole('heading', { name: 'Войти в Your Fitness Coach' })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: 'Продолжить в Your Fitness Coach' }),
+      ).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
 
       const themeControl = page.getByRole('button', { name: /Включить .* тему/ });
@@ -246,7 +293,7 @@ test('Login адаптивен, доступен с клавиатуры и ув
           cursor: styles.cursor,
         };
       });
-      expect(themeStyles.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+      expect(themeStyles.backgroundColor).toBe('rgba(0, 0, 0, 0)');
       expect(themeStyles.borderTopWidth).toBe('1px');
       expect(themeStyles.cursor).toBe('pointer');
 
@@ -261,6 +308,8 @@ test('Login адаптивен, доступен с клавиатуры и ув
         };
       });
       const homeLink = page.getByRole('link', { name: 'На главную', exact: true });
+      await expect(homeLink).toHaveCSS('background-color', 'rgb(158, 224, 43)');
+      await expect(homeLink).toHaveCSS('color', 'rgb(16, 32, 21)');
       await homeLink.hover();
       const homeHoverStyles = await homeLink.evaluate((element) => {
         const styles = getComputedStyle(element);
@@ -271,7 +320,15 @@ test('Login адаптивен, доступен с клавиатуры и ув
           transform: styles.transform,
         };
       });
-      expect(homeHoverStyles).toEqual(themeHoverStyles);
+      expect(themeHoverStyles.backgroundColor).toBe('rgb(236, 237, 233)');
+      expect(themeHoverStyles.boxShadow).toBe('none');
+      expect(themeHoverStyles.transform).toBe('none');
+      expect(homeHoverStyles).toEqual({
+        backgroundColor: 'rgb(141, 206, 32)',
+        borderColor: 'rgb(141, 206, 32)',
+        boxShadow: 'none',
+        transform: 'none',
+      });
 
       await themeControl.click();
       expect(await themeControl.evaluate((element) => element.matches(':focus-visible'))).toBe(
@@ -280,6 +337,9 @@ test('Login адаптивен, доступен с клавиатуры и ув
       await expect(page.getByRole('combobox')).toHaveCount(0);
 
       const google = page.getByRole('link', { name: 'Продолжить с Google' });
+      await expect(themeControl).toHaveCSS('border-radius', '12px');
+      await expect(homeLink).toHaveCSS('border-radius', '12px');
+      await expect(google).toHaveCSS('border-radius', '12px');
       await google.focus();
       await expect(google).toBeFocused();
       const transitionDuration = await google.evaluate((element) =>

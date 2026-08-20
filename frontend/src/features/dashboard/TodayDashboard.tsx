@@ -22,8 +22,8 @@ export function formatTodayHeading(value: string): { eyebrow: string; title: str
   const weekday = formatCalendarDate(value, { weekday: 'long' });
   const date = formatCalendarDate(value, { day: 'numeric', month: 'long' });
   return {
-    eyebrow: weekday.charAt(0).toUpperCase() + weekday.slice(1),
-    title: `Сегодня, ${date}`,
+    eyebrow: `${weekday.charAt(0).toUpperCase() + weekday.slice(1)} · ${date}`,
+    title: 'Сегодня',
   };
 }
 
@@ -253,6 +253,20 @@ function WorkoutOverview({
   const nextWorkout = progress.data?.training.next_workout;
 
   if (workout) {
+    if (workout.status === 'completed') {
+      return (
+        <>
+          <div className="today-workout-copy">
+            <Badge tone="success">Готово</Badge>
+            <h2 id="today-workout-title">Тренировка завершена</h2>
+            <p>Результат сохранён. Следующее действие — восстановиться и продолжить план.</p>
+          </div>
+          <AppLink className="button-link secondary-link" to="/app?section=progress">
+            Посмотреть результат
+          </AppLink>
+        </>
+      );
+    }
     const started = workout.status === 'in_progress';
     return (
       <>
@@ -395,78 +409,79 @@ export function TodayDashboard() {
 
   const workoutFailed = Boolean(workout.error && !noTodayWorkout && !visibleWorkout);
 
+  if (detailsOpen && visibleWorkout && visibleWorkout.status !== 'completed') {
+    return (
+      <div className="today-workout-focus" ref={detailsRef}>
+        <header className="today-workout-focus__header">
+          <button className="today-text-link" type="button" onClick={() => setDetailsOpen(false)}>
+            <span aria-hidden="true">←</span> К сводке
+          </button>
+          <div>
+            <span>{visibleWorkout.title}</span>
+            <strong>Текущая тренировка</strong>
+          </div>
+          <span>
+            День {visibleWorkout.day_number} ·{' '}
+            {visibleWorkout.status === 'in_progress' ? 'В процессе' : 'План'}
+          </span>
+        </header>
+        <TodayWorkout embedded />
+      </div>
+    );
+  }
+
   return (
-    <div className="today-dashboard">
+    <div className="today-dashboard today-dashboard--design-v2">
       <header className="today-dashboard__header">
         <span className="eyebrow">{heading.eyebrow}</span>
         <h1>{heading.title}</h1>
         <p>{firstName ? `${firstName}, ` : ''}вот главное на день.</p>
       </header>
 
-      <section className="today-workout-spotlight" aria-labelledby="today-workout-title">
-        <span className="today-workout-spotlight__label">Тренировка</span>
-        {workout.isLoading || (noTodayWorkout && progress.isLoading && user?.has_active_program) ? (
-          <div
-            className="today-summary-skeleton"
-            aria-label="Проверяем план на сегодня"
-            role="status"
-          >
-            <Skeleton height="34px" width="62%" />
-            <Skeleton height="20px" width="44%" />
-            <Skeleton height="48px" width="100%" />
-          </div>
-        ) : workoutFailed ? (
-          <div className="today-inline-state" role="alert">
-            <strong id="today-workout-title">Не удалось проверить тренировку</strong>
-            <span>Остальные данные на экране доступны.</span>
-            <button
-              className="today-text-link"
-              type="button"
-              onClick={() => void workout.refetch()}
+      <div className="today-dashboard__overview">
+        <section className="today-workout-spotlight" aria-labelledby="today-workout-title">
+          <span className="today-workout-spotlight__label">Тренировка</span>
+          {workout.isLoading ||
+          (noTodayWorkout && progress.isLoading && user?.has_active_program) ? (
+            <div
+              className="today-summary-skeleton"
+              aria-label="Проверяем план на сегодня"
+              role="status"
             >
-              Повторить
-            </button>
-          </div>
-        ) : (
-          <WorkoutOverview
-            today={today}
-            workout={visibleWorkout}
-            progress={progress}
-            detailsOpen={detailsOpen}
-            startPending={start.isPending}
-            onOpenDetails={() => setDetailsOpen(true)}
-            onStart={() => visibleWorkout && start.mutate(visibleWorkout.id)}
-          />
-        )}
-      </section>
+              <Skeleton height="34px" width="62%" />
+              <Skeleton height="20px" width="44%" />
+              <Skeleton height="48px" width="100%" />
+            </div>
+          ) : workoutFailed ? (
+            <div className="today-inline-state" role="alert">
+              <strong id="today-workout-title">Не удалось проверить тренировку</strong>
+              <span>Остальные данные на экране доступны.</span>
+              <button
+                className="today-text-link"
+                type="button"
+                onClick={() => void workout.refetch()}
+              >
+                Повторить
+              </button>
+            </div>
+          ) : (
+            <WorkoutOverview
+              today={today}
+              workout={visibleWorkout}
+              progress={progress}
+              detailsOpen={detailsOpen}
+              startPending={start.isPending}
+              onOpenDetails={() => setDetailsOpen(true)}
+              onStart={() => visibleWorkout && start.mutate(visibleWorkout.id)}
+            />
+          )}
+        </section>
 
-      {detailsOpen && visibleWorkout && (
-        <div className="today-workout-details" ref={detailsRef}>
-          <div className="today-workout-details__bar">
-            <strong>Текущая тренировка</strong>
-            <button className="today-text-link" type="button" onClick={() => setDetailsOpen(false)}>
-              Свернуть
-            </button>
-          </div>
-          <TodayWorkout embedded />
+        <div className="today-dashboard__facts">
+          <NutritionSummary today={today} />
+          <ProgressSummaryPanel summary={progress} />
         </div>
-      )}
-
-      <section className="today-dashboard__daily" aria-labelledby="today-daily-title">
-        <div className="today-dashboard__section-title">
-          <span className="eyebrow">Коротко</span>
-          <h2 id="today-daily-title">Сводка дня</h2>
-        </div>
-        <NutritionSummary today={today} />
-      </section>
-
-      <section className="today-dashboard__progress" aria-labelledby="today-progress-title">
-        <div className="today-dashboard__section-title">
-          <span className="eyebrow">Динамика</span>
-          <h2 id="today-progress-title">Главное о прогрессе</h2>
-        </div>
-        <ProgressSummaryPanel summary={progress} />
-      </section>
+      </div>
 
       {profileMissing && (
         <aside className="today-profile-nudge">

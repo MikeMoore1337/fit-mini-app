@@ -954,11 +954,6 @@ select:not([multiple]) {
   background: var(--accent);
   color: var(--button-text, #fff);
 }
-.exercise-guide-trigger > span:last-child {
-  font-size: 1.05em;
-  line-height: 1;
-}
-
 .toast > span {
   flex: 1;
   min-width: 0;

@@ -51,8 +51,12 @@ describe('LoginPage', () => {
   it('shows the required configured providers and preserves safe next', () => {
     renderLogin();
 
-    expect(screen.getByRole('heading', { name: 'Войти в Your Fitness Coach' })).toBeInTheDocument();
-    expect(screen.getByText('Выберите удобный способ')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Продолжить в Your Fitness Coach' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Тренировки, питание и измерения остаются в одном профиле.'),
+    ).toBeInTheDocument();
     for (const [name, provider] of [
       ['Войти через Telegram', 'telegram'],
       ['Продолжить с Google', 'google'],

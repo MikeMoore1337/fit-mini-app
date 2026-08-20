@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { AppLink, useNavigation } from '../shared/navigation/router';
 import { AppThemeToggle } from '../shared/ui/AppThemeToggle';
-import { BrandLogo } from '../shared/ui/BrandLogo';
+import { BrandLockup } from '../shared/ui/BrandLogo';
 import { AppNavigationIcon, type AppNavigationIconName } from './AppNavigationIcon';
 import { useAuth } from './AuthProvider';
 
@@ -109,7 +109,7 @@ export function AppShell({
   };
 
   return (
-    <div className="app-shell">
+    <div className="app-shell app-shell--design-v2">
       <main id="appContent" className={`container app-shell__content${narrow ? ' narrow' : ''}`}>
         {children}
       </main>
@@ -121,11 +121,7 @@ export function AppShell({
               to="/app?section=today"
               aria-label="Your Fitness Coach — сегодня"
             >
-              <BrandLogo className="app-bottom-nav__brand-mark" decorative variant="mark" />
-              <span>
-                <strong>Your Fitness</strong>
-                <small>Coach</small>
-              </span>
+              <BrandLockup markClassName="app-bottom-nav__brand-mark" />
             </AppLink>
 
             <div className="app-bottom-nav__primary">

@@ -1134,7 +1134,7 @@ test('клиент входит и видит экран тренировки', 
   await mockApi(page);
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
-  await expect(page.getByRole('heading', { name: /^Сегодня,/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Выберите тренировочный план' })).toBeVisible();
 });
 
@@ -1143,29 +1143,41 @@ test('цветовая система сохраняет иерархию в с�
   await page.goto('/app');
 
   const authPanel = page.locator('.login-card');
-  await expect(page.getByRole('heading', { name: 'Войти в Your Fitness Coach' })).toBeVisible();
-  await expect(authPanel).toHaveCSS('background-color', 'rgb(251, 252, 247)');
-  await expect(authPanel).toHaveCSS('border-color', 'rgb(213, 219, 209)');
+  await expect(
+    page.getByRole('heading', { name: 'Продолжить в Your Fitness Coach' }),
+  ).toBeVisible();
+  await expect(authPanel).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(authPanel).toHaveCSS('border-left-color', 'rgb(201, 205, 200)');
 
   const clientButton = page.getByRole('button', { name: 'Клиент' });
-  await expect(clientButton).toHaveCSS('background-color', 'rgb(232, 237, 228)');
-  await expect(clientButton).toHaveCSS('color', 'rgb(23, 32, 24)');
+  await expect(clientButton).toHaveCSS('border-radius', '12px');
+  await expect(clientButton).toHaveCSS('background-color', 'rgb(236, 237, 233)');
+  await expect(clientButton).toHaveCSS('color', 'rgb(22, 26, 23)');
 
   await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
-  await expect(authPanel).toHaveCSS('background-color', 'rgb(21, 28, 23)');
-  await expect(authPanel).toHaveCSS('border-color', 'rgb(43, 55, 47)');
-  await expect(clientButton).toHaveCSS('background-color', 'rgb(32, 42, 35)');
-  await expect(clientButton).toHaveCSS('color', 'rgb(242, 246, 239)');
+  await expect(authPanel).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(authPanel).toHaveCSS('border-left-color', 'rgb(58, 65, 58)');
+  await expect(clientButton).toHaveCSS('background-color', 'rgb(30, 34, 30)');
+  await expect(clientButton).toHaveCSS('color', 'rgb(238, 240, 234)');
 
   await clientButton.click();
   const selectedDestination = page.getByRole('link', { name: 'Сегодня', exact: true });
   const selectedDestinationIcon = selectedDestination.locator('.app-bottom-nav__icon');
+  const nutritionDestinationIcon = page
+    .getByRole('link', { name: 'Питание', exact: true })
+    .locator('.app-bottom-nav__icon');
   await expect(selectedDestination).toHaveAttribute('aria-current', 'page');
-  await expect(selectedDestinationIcon).toHaveCSS('background-color', 'rgb(182, 242, 56)');
-  await expect(selectedDestinationIcon).toHaveCSS('color', 'rgb(23, 32, 24)');
+  await expect(selectedDestination).toHaveCSS('border-radius', '8px');
+  await expect(selectedDestination).toHaveCSS('background-color', 'rgb(30, 34, 30)');
+  await expect(selectedDestinationIcon).toBeVisible();
+  await expect(nutritionDestinationIcon).toBeVisible();
+  await expect(nutritionDestinationIcon.locator('circle')).toHaveCount(1);
+  await expect(page.locator('.app-bottom-nav__sequence')).toHaveCount(0);
+  await expect(selectedDestinationIcon).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(selectedDestinationIcon).toHaveCSS('color', 'rgb(185, 234, 114)');
   await page.getByRole('button', { name: 'Включить светлую тему' }).click();
-  await expect(selectedDestinationIcon).toHaveCSS('background-color', 'rgb(24, 37, 29)');
-  await expect(selectedDestinationIcon).toHaveCSS('color', 'rgb(255, 255, 255)');
+  await expect(selectedDestinationIcon).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(selectedDestinationIcon).toHaveCSS('color', 'rgb(72, 100, 20)');
 });
 
 test('Web theme preference следует системе и сохраняет ручной выбор', async ({ page }) => {
@@ -1239,8 +1251,8 @@ test('Mobile Web и Telegram используют одну YFC palette и гео
   await webPage.goto('/app');
   await webPage.getByRole('button', { name: 'Клиент' }).click();
   await telegramPage.goto('/app');
-  await expect(webPage.getByRole('heading', { name: /^Сегодня,/ })).toBeVisible();
-  await expect(telegramPage.getByRole('heading', { name: /^Сегодня,/ })).toBeVisible();
+  await expect(webPage.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible();
+  await expect(telegramPage.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible();
   await expect(telegramPage.getByRole('button', { name: /Включить .* тему/ })).not.toBeAttached();
 
   const snapshot = (page: Page) =>
@@ -1289,7 +1301,7 @@ test('Mobile Web и Telegram используют одну YFC palette и гео
         window as unknown as Window & { __telegramShellColors: { background: string[] } }
       ).__telegramShellColors.background.at(-1),
     ),
-  ).toBe('#f1f3ec');
+  ).toBe('#f4f5f2');
 
   await webPage.getByRole('button', { name: 'Ещё', exact: true }).click();
   await webPage.getByRole('dialog').getByRole('button', { name: 'Включить тёмную тему' }).click();
@@ -1301,7 +1313,7 @@ test('Mobile Web и Telegram используют одну YFC palette и гео
   );
   await expect(telegramPage.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
   expect(await snapshot(telegramPage)).toEqual(await snapshot(webPage));
-  await expect(telegramPage.getByRole('heading', { name: /^Сегодня,/ })).toBeVisible();
+  await expect(telegramPage.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible();
 
   await webPage.close();
   await telegramPage.close();
@@ -1345,7 +1357,7 @@ test('app shell сохраняет композицию и доступност�
     await page.setViewportSize(viewport);
     const primaryNavigation = page.locator('.app-bottom-nav__primary');
     const visibleDestinations = primaryNavigation.locator('a:visible, button:visible');
-    await expect(visibleDestinations).toHaveCount(viewport.width >= 900 ? 4 : 5);
+    await expect(visibleDestinations).toHaveCount(5);
     for (const destination of await visibleDestinations.all()) {
       await expect(destination).toBeInViewport();
     }
@@ -1369,7 +1381,7 @@ test('app shell сохраняет композицию и доступност�
   await expect(page).toHaveURL('/app?section=nutrition');
 
   await openAppDestination(page, 'Сегодня');
-  await expect(page.getByRole('heading', { name: /^Сегодня,/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible();
 
   await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeInViewport();
   const moreButton = page.getByRole('button', { name: 'Ещё', exact: true });
@@ -1382,7 +1394,9 @@ test('app shell сохраняет композицию и доступност�
 
   await moreButton.click();
   await page.getByRole('dialog').getByRole('button', { name: 'Выйти из аккаунта' }).click();
-  await expect(page.getByRole('heading', { name: 'Войти в Your Fitness Coach' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Продолжить в Your Fitness Coach' }),
+  ).toBeVisible();
 });
 
 test('профиль содержит уведомления, а карточка упражнения открывает полное описание', async ({

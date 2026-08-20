@@ -36,8 +36,8 @@ export function AppNavigationIcon({ name }: { name: AppNavigationIconName }) {
     ),
     nutrition: (
       <>
-        <path d="M12 21c5-3 7-7.5 7-12-4.5 0-8 2-10 5" />
-        <path d="M5 21c0-6 3-10 9-13M5 21h14" />
+        <circle cx="12" cy="12" r="6.25" />
+        <path d="M3 4v5a2 2 0 0 0 2 2 2 2 0 0 0 2-2V4M5 4v17M21 4c-2 2-2 5.5 0 7.5V21" />
       </>
     ),
     more: (

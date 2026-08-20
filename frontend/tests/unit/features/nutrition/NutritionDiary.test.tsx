@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NutritionDiary } from '../../../../src/features/nutrition/NutritionDiary';
 import type { Food, FoodDiaryDay, FoodDiaryEntry } from '../../../../src/shared/api/types';
+import { dateInputValue } from '../../../../src/shared/dateTime';
 import { FeedbackProvider } from '../../../../src/shared/ui/FeedbackProvider';
 
 const apiMock = vi.hoisted(() => vi.fn());
@@ -485,6 +486,7 @@ describe('NutritionDiary', () => {
   });
 
   it('copies a product with an explicit target and blocks double submit', async () => {
+    const targetDate = dateInputValue(new Date(), 'Europe/Moscow');
     let resolveCopy: ((value: unknown) => void) | undefined;
     const copyPromise = new Promise((resolve) => {
       resolveCopy = resolve;
@@ -514,7 +516,7 @@ describe('NutritionDiary', () => {
         headers: { 'Idempotency-Key': expect.any(String) },
         body: {
           source_date: '2026-08-19',
-          target_date: '2026-08-19',
+          target_date: targetDate,
           source_entry_id: 41,
           source_meal_type: 'breakfast',
           target_meal_type: 'breakfast',
@@ -525,7 +527,7 @@ describe('NutritionDiary', () => {
       copy_scope: 'product',
       source_date: '2026-08-19',
       source_meal_type: 'breakfast',
-      target_date: '2026-08-19',
+      target_date: targetDate,
       target_meal_type: 'breakfast',
       entries: [entry],
       replayed: false,

@@ -9,6 +9,10 @@
 Рабочий воспроизводимый prototype находится в `.artifacts/design-v2/approved/` и не коммитится.
 Canonical assets содержат только representative crops, без тяжёлых full-board exports.
 
+Production pilot после owner checkpoint уточнил control radii и сделал Dark surfaces светлее.
+Актуальные production tokens зафиксированы в `docs/design/design-system-v2.md`; renders в этой
+папке сохраняются как композиционный reference, а не источник точных post-pilot цветов и radii.
+
 ## Каталог
 
 | Surface | Light | Dark |
@@ -34,8 +38,8 @@ node .artifacts/design-v2/approved/render-and-audit.mjs
 
 Проверены `1440`, `1280`, `768`, `390` и `360 px` в Light/Dark: horizontal overflow, broken images,
 console/page errors, внешние requests, semantic sections, core contrast, visible focus, minimum
-`44 px` controls, `6/4 px` button geometry, reduced motion, theme palettes, обязательные surfaces и
-ровно семь ключевых primary CTA с парой `lime`/`on-lime`.
+`44 px` controls, исходная `6/4 px` button geometry, reduced motion, theme palettes, обязательные
+surfaces и ровно семь ключевых primary CTA с парой `lime`/`on-lime`.
 
 Первый pass нашёл P2: program/mobile evidence создавали overflow `24 px` на `768 px`. Root cause —
 двухколоночная композиция сохранялась после того, как content переставал безопасно сжиматься.

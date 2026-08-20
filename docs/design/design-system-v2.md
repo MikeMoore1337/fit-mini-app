@@ -12,13 +12,13 @@
 
 | Role | YFC Light | YFC Dark | Назначение |
 |---|---:|---:|---|
-| `canvas` | `#F4F5F2` | `#090A09` | Фон страницы/application frame |
-| `surface` | `#FFFFFF` | `#0F1110` | Основной рабочий surface |
-| `surface-secondary` | `#ECEDE9` | `#171917` | Спокойная группировка/подложка |
-| `surface-strong` | `#DADCD7` | `#232623` | Выраженная нейтральная граница состояния |
-| `text-primary` | `#161A17` | `#F2F2EC` | Основной текст и числа |
-| `text-secondary` | `#59605B` | `#A4A7A1` | Meta, hints, secondary copy |
-| `border` | `#C9CDC8` | `#303330` | Rules и quiet boundaries |
+| `canvas` | `#F4F5F2` | `#101310` | Фон страницы/application frame |
+| `surface` | `#FFFFFF` | `#161916` | Основной рабочий surface |
+| `surface-secondary` | `#ECEDE9` | `#1E221E` | Спокойная группировка/подложка |
+| `surface-strong` | `#DADCD7` | `#292E29` | Выраженная нейтральная граница состояния |
+| `text-primary` | `#161A17` | `#EEF0EA` | Основной текст и числа |
+| `text-secondary` | `#59605B` | `#AFB5AD` | Meta, hints, secondary copy |
+| `border` | `#C9CDC8` | `#3A413A` | Rules и quiet boundaries |
 | `lime` | `#9EE02B` | `#A8E83A` | Primary/progress/focus/confirmed signal |
 | `accent-text` | `#486414` | `#B9EA72` | Малый текстовый accent на neutral surface |
 | `on-lime` | `#102015` | `#102015` | Текст и icon на lime fill |
@@ -27,6 +27,10 @@
 получают отдельные semantic roles: status text, border, subtle surface и foreground. Их нельзя
 выражать только цветом; label/icon/structure сохраняют смысл. Точные значения этих ролей являются
 implementation candidates до contrast-проверки в pilot.
+
+После owner checkpoint pilot success-состояния используют ту же lime family, что и брендовые
+confirmed signals, но на neutral secondary surface. Отдельный бирюзово-зелёный success hue не
+используется: в Dark это `#B9EA72` на `#1E221E`, в Light — `#486414` на `#ECEDE9`.
 
 ## Light/Dark behavior
 
@@ -86,8 +90,10 @@ content width.
 
 ## Radii, borders и shadows
 
-- Основные buttons: утверждённая geometry `6 px`; compact/icon controls — `4 px`.
-- Самостоятельные task regions используют умеренные radii; reference candidate — `10–14 px`.
+- Основные buttons и form controls: утверждённая geometry `12 px`; compact controls — `8 px`.
+  Круглые icon-only controls сохраняют круг только там, где это соответствует их семантике.
+- Самостоятельные task regions используют `16 px`; panels верхнего уровня могут использовать
+  `20 px`.
 - Больший mobile shell radius является presentation artifact, а не token для production cards.
 - Rules и borders являются главным способом группировки dense data.
 - Shadows редки, малоконтрастны и обозначают реальное elevation/overlay, а не каждую card.

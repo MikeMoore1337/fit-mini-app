@@ -220,7 +220,7 @@ async function mockDashboard(page: Page, state: DashboardState = {}) {
 async function openDashboard(page: Page) {
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
-  await expect(page.getByRole('heading', { name: /^Сегодня,/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible();
 }
 
 test('planned workout starts from the primary Today CTA', async ({ page }) => {
