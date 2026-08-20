@@ -14,24 +14,24 @@
       "media": [
         {
           "type": "image",
-          "path": "ab-wheel-active.jpg",
-          "poster_path": "ab-wheel-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "ab-wheel-start.jpg",
+          "poster_path": "ab-wheel-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 800,
           "height": 533,
-          "byte_size": 61976,
+          "byte_size": 58646,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "ab-wheel-start.jpg",
-          "poster_path": "ab-wheel-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "ab-wheel-active.jpg",
+          "poster_path": "ab-wheel-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 800,
           "height": 533,
-          "byte_size": 58646,
+          "byte_size": 61976,
           "sort_order": 1
         }
       ]
@@ -46,24 +46,24 @@
       "media": [
         {
           "type": "image",
-          "path": "arnold-press-start.jpg",
-          "poster_path": "arnold-press-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "arnold-press-active.jpg",
+          "poster_path": "arnold-press-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 54330,
+          "byte_size": 55084,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "arnold-press-active.jpg",
-          "poster_path": "arnold-press-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "arnold-press-start.jpg",
+          "poster_path": "arnold-press-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 55084,
+          "byte_size": 54330,
           "sort_order": 1
         }
       ]
@@ -81,7 +81,7 @@
           "path": "assault-bike-start.jpg",
           "poster_path": "assault-bike-start.jpg",
           "phase_id": "cycle_one",
-          "phase": "Первая фаза цикла",
+          "phase": "Первое положение",
           "width": 850,
           "height": 567,
           "byte_size": 62771,
@@ -92,7 +92,7 @@
           "path": "assault-bike-active.jpg",
           "poster_path": "assault-bike-active.jpg",
           "phase_id": "cycle_two",
-          "phase": "Вторая фаза цикла",
+          "phase": "Второе положение",
           "width": 850,
           "height": 567,
           "byte_size": 64017,
@@ -110,24 +110,24 @@
       "media": [
         {
           "type": "image",
-          "path": "barbell-curl-start.jpg",
-          "poster_path": "barbell-curl-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "barbell-curl-active.jpg",
+          "poster_path": "barbell-curl-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 60608,
+          "byte_size": 62920,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "barbell-curl-active.jpg",
-          "poster_path": "barbell-curl-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "barbell-curl-start.jpg",
+          "poster_path": "barbell-curl-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 62920,
+          "byte_size": 60608,
           "sort_order": 1
         }
       ]
@@ -142,24 +142,24 @@
       "media": [
         {
           "type": "image",
-          "path": "barbell-glute-bridge-start.jpg",
-          "poster_path": "barbell-glute-bridge-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "barbell-glute-bridge-active.jpg",
+          "poster_path": "barbell-glute-bridge-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 50945,
+          "byte_size": 48064,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "barbell-glute-bridge-active.jpg",
-          "poster_path": "barbell-glute-bridge-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "barbell-glute-bridge-start.jpg",
+          "poster_path": "barbell-glute-bridge-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 48064,
+          "byte_size": 50945,
           "sort_order": 1
         }
       ]
@@ -174,24 +174,24 @@
       "media": [
         {
           "type": "image",
-          "path": "barbell-row-start.jpg",
-          "poster_path": "barbell-row-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "barbell-row-active.jpg",
+          "poster_path": "barbell-row-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 64589,
+          "byte_size": 66556,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "barbell-row-active.jpg",
-          "poster_path": "barbell-row-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "barbell-row-start.jpg",
+          "poster_path": "barbell-row-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 66556,
+          "byte_size": 64589,
           "sort_order": 1
         }
       ]
@@ -206,24 +206,24 @@
       "media": [
         {
           "type": "image",
-          "path": "barbell-shrug-start.jpg",
-          "poster_path": "barbell-shrug-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "barbell-shrug-active.jpg",
+          "poster_path": "barbell-shrug-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 60819,
+          "byte_size": 62383,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "barbell-shrug-active.jpg",
-          "poster_path": "barbell-shrug-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "barbell-shrug-start.jpg",
+          "poster_path": "barbell-shrug-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 62383,
+          "byte_size": 60819,
           "sort_order": 1
         }
       ]
@@ -241,7 +241,7 @@
           "path": "battle-rope-start.jpg",
           "poster_path": "battle-rope-start.jpg",
           "phase_id": "cycle_one",
-          "phase": "Первая фаза цикла",
+          "phase": "Первое положение",
           "width": 500,
           "height": 750,
           "byte_size": 46106,
@@ -252,7 +252,7 @@
           "path": "battle-rope-active.jpg",
           "poster_path": "battle-rope-active.jpg",
           "phase_id": "cycle_two",
-          "phase": "Вторая фаза цикла",
+          "phase": "Второе положение",
           "width": 500,
           "height": 750,
           "byte_size": 45522,
@@ -273,7 +273,7 @@
           "path": "bear-crawl-start.jpg",
           "poster_path": "bear-crawl-start.jpg",
           "phase_id": "cycle_one",
-          "phase": "Первая фаза цикла",
+          "phase": "Первое положение",
           "width": 850,
           "height": 567,
           "byte_size": 34792,
@@ -284,7 +284,7 @@
           "path": "bear-crawl-active.jpg",
           "poster_path": "bear-crawl-active.jpg",
           "phase_id": "cycle_two",
-          "phase": "Вторая фаза цикла",
+          "phase": "Второе положение",
           "width": 850,
           "height": 567,
           "byte_size": 35146,
@@ -302,24 +302,24 @@
       "media": [
         {
           "type": "image",
-          "path": "belt-squat-active.jpg",
-          "poster_path": "belt-squat-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "belt-squat-start.jpg",
+          "poster_path": "belt-squat-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 760,
           "height": 760,
-          "byte_size": 106734,
+          "byte_size": 114305,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "belt-squat-start.jpg",
-          "poster_path": "belt-squat-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "belt-squat-active.jpg",
+          "poster_path": "belt-squat-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 760,
           "height": 760,
-          "byte_size": 114305,
+          "byte_size": 106734,
           "sort_order": 1
         }
       ]
@@ -334,24 +334,24 @@
       "media": [
         {
           "type": "image",
-          "path": "bench-dip-active.jpg",
-          "poster_path": "bench-dip-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "bench-dip-start.jpg",
+          "poster_path": "bench-dip-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 58433,
+          "byte_size": 58381,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "bench-dip-start.jpg",
-          "poster_path": "bench-dip-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "bench-dip-active.jpg",
+          "poster_path": "bench-dip-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 58381,
+          "byte_size": 58433,
           "sort_order": 1
         }
       ]
@@ -366,24 +366,24 @@
       "media": [
         {
           "type": "image",
-          "path": "bench-press-active.jpg",
-          "poster_path": "bench-press-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "bench-press-start.jpg",
+          "poster_path": "bench-press-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 72202,
+          "byte_size": 72816,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "bench-press-start.jpg",
-          "poster_path": "bench-press-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "bench-press-active.jpg",
+          "poster_path": "bench-press-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 72816,
+          "byte_size": 72202,
           "sort_order": 1
         }
       ]
@@ -411,8 +411,8 @@
           "type": "image",
           "path": "bird-dog-active.jpg",
           "poster_path": "bird-dog-active.jpg",
-          "phase_id": "hold",
-          "phase": "Удержание",
+          "phase_id": "work",
+          "phase": "Рабочее положение",
           "width": 850,
           "height": 567,
           "byte_size": 62125,
@@ -432,8 +432,8 @@
           "type": "image",
           "path": "box-jump-start.jpg",
           "poster_path": "box-jump-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "phase_id": "setup",
+          "phase": "Подготовка",
           "width": 850,
           "height": 567,
           "byte_size": 69962,
@@ -443,8 +443,8 @@
           "type": "image",
           "path": "box-jump-active.jpg",
           "poster_path": "box-jump-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "phase_id": "work",
+          "phase": "Рабочее положение",
           "width": 850,
           "height": 567,
           "byte_size": 69353,
@@ -462,24 +462,24 @@
       "media": [
         {
           "type": "image",
-          "path": "bulgarian-split-squat-active.jpg",
-          "poster_path": "bulgarian-split-squat-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "bulgarian-split-squat-start.jpg",
+          "poster_path": "bulgarian-split-squat-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 88596,
+          "byte_size": 89864,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "bulgarian-split-squat-start.jpg",
-          "poster_path": "bulgarian-split-squat-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "bulgarian-split-squat-active.jpg",
+          "poster_path": "bulgarian-split-squat-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 89864,
+          "byte_size": 88596,
           "sort_order": 1
         }
       ]
@@ -496,8 +496,8 @@
           "type": "image",
           "path": "burpee-start.jpg",
           "poster_path": "burpee-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "phase_id": "sequence_start",
+          "phase": "Начало движения",
           "width": 750,
           "height": 500,
           "byte_size": 38422,
@@ -507,8 +507,8 @@
           "type": "image",
           "path": "burpee-active.jpg",
           "poster_path": "burpee-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "phase_id": "sequence_next",
+          "phase": "Следующая позиция",
           "width": 750,
           "height": 500,
           "byte_size": 43839,
@@ -526,24 +526,24 @@
       "media": [
         {
           "type": "image",
-          "path": "cable-crunch-start.jpg",
-          "poster_path": "cable-crunch-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "cable-crunch-active.jpg",
+          "poster_path": "cable-crunch-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 67271,
+          "byte_size": 65445,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "cable-crunch-active.jpg",
-          "poster_path": "cable-crunch-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "cable-crunch-start.jpg",
+          "poster_path": "cable-crunch-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 65445,
+          "byte_size": 67271,
           "sort_order": 1
         }
       ]
@@ -558,24 +558,24 @@
       "media": [
         {
           "type": "image",
-          "path": "cable-curl-start.jpg",
-          "poster_path": "cable-curl-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "cable-curl-active.jpg",
+          "poster_path": "cable-curl-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 86338,
+          "byte_size": 86344,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "cable-curl-active.jpg",
-          "poster_path": "cable-curl-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "cable-curl-start.jpg",
+          "poster_path": "cable-curl-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 86344,
+          "byte_size": 86338,
           "sort_order": 1
         }
       ]
@@ -590,24 +590,24 @@
       "media": [
         {
           "type": "image",
-          "path": "cable-fly-start.jpg",
-          "poster_path": "cable-fly-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "cable-fly-active.jpg",
+          "poster_path": "cable-fly-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 74524,
+          "byte_size": 76451,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "cable-fly-active.jpg",
-          "poster_path": "cable-fly-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "cable-fly-start.jpg",
+          "poster_path": "cable-fly-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 76451,
+          "byte_size": 74524,
           "sort_order": 1
         }
       ]
@@ -622,24 +622,24 @@
       "media": [
         {
           "type": "image",
-          "path": "cable-kickback-start.jpg",
-          "poster_path": "cable-kickback-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "cable-kickback-active.jpg",
+          "poster_path": "cable-kickback-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 74142,
+          "byte_size": 75672,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "cable-kickback-active.jpg",
-          "poster_path": "cable-kickback-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "cable-kickback-start.jpg",
+          "poster_path": "cable-kickback-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 75672,
+          "byte_size": 74142,
           "sort_order": 1
         }
       ]
@@ -654,24 +654,24 @@
       "media": [
         {
           "type": "image",
-          "path": "cable-lateral-raise-start.jpg",
-          "poster_path": "cable-lateral-raise-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "cable-lateral-raise-active.jpg",
+          "poster_path": "cable-lateral-raise-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 64199,
+          "byte_size": 65938,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "cable-lateral-raise-active.jpg",
-          "poster_path": "cable-lateral-raise-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "cable-lateral-raise-start.jpg",
+          "poster_path": "cable-lateral-raise-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 65938,
+          "byte_size": 64199,
           "sort_order": 1
         }
       ]
@@ -686,24 +686,24 @@
       "media": [
         {
           "type": "image",
-          "path": "cable-pull-through-start.jpg",
-          "poster_path": "cable-pull-through-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "cable-pull-through-active.jpg",
+          "poster_path": "cable-pull-through-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 39927,
+          "byte_size": 33667,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "cable-pull-through-active.jpg",
-          "poster_path": "cable-pull-through-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "cable-pull-through-start.jpg",
+          "poster_path": "cable-pull-through-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 33667,
+          "byte_size": 39927,
           "sort_order": 1
         }
       ]
@@ -718,24 +718,24 @@
       "media": [
         {
           "type": "image",
-          "path": "cable-pushdown-start.jpg",
-          "poster_path": "cable-pushdown-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "cable-pushdown-active.jpg",
+          "poster_path": "cable-pushdown-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 77630,
+          "byte_size": 78235,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "cable-pushdown-active.jpg",
-          "poster_path": "cable-pushdown-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "cable-pushdown-start.jpg",
+          "poster_path": "cable-pushdown-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 78235,
+          "byte_size": 77630,
           "sort_order": 1
         }
       ]
@@ -750,24 +750,24 @@
       "media": [
         {
           "type": "image",
-          "path": "cable-row-one-arm-start.jpg",
-          "poster_path": "cable-row-one-arm-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "cable-row-one-arm-active.jpg",
+          "poster_path": "cable-row-one-arm-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 56804,
+          "byte_size": 56192,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "cable-row-one-arm-active.jpg",
-          "poster_path": "cable-row-one-arm-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "cable-row-one-arm-start.jpg",
+          "poster_path": "cable-row-one-arm-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 56192,
+          "byte_size": 56804,
           "sort_order": 1
         }
       ]
@@ -782,24 +782,24 @@
       "media": [
         {
           "type": "image",
-          "path": "calf-press-start.jpg",
-          "poster_path": "calf-press-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "calf-press-active.jpg",
+          "poster_path": "calf-press-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 1275,
-          "byte_size": 124744,
+          "byte_size": 126333,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "calf-press-active.jpg",
-          "poster_path": "calf-press-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "calf-press-start.jpg",
+          "poster_path": "calf-press-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 1275,
-          "byte_size": 126333,
+          "byte_size": 124744,
           "sort_order": 1
         }
       ]
@@ -814,24 +814,24 @@
       "media": [
         {
           "type": "image",
-          "path": "captain-chair-leg-raise-start.jpg",
-          "poster_path": "captain-chair-leg-raise-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "captain-chair-leg-raise-active.jpg",
+          "poster_path": "captain-chair-leg-raise-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 51687,
+          "byte_size": 56061,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "captain-chair-leg-raise-active.jpg",
-          "poster_path": "captain-chair-leg-raise-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "captain-chair-leg-raise-start.jpg",
+          "poster_path": "captain-chair-leg-raise-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 56061,
+          "byte_size": 51687,
           "sort_order": 1
         }
       ]
@@ -846,24 +846,24 @@
       "media": [
         {
           "type": "image",
-          "path": "chest-dip-active.jpg",
-          "poster_path": "chest-dip-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "chest-dip-start.jpg",
+          "poster_path": "chest-dip-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 72525,
+          "byte_size": 73206,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "chest-dip-start.jpg",
-          "poster_path": "chest-dip-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "chest-dip-active.jpg",
+          "poster_path": "chest-dip-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 73206,
+          "byte_size": 72525,
           "sort_order": 1
         }
       ]
@@ -878,24 +878,24 @@
       "media": [
         {
           "type": "image",
-          "path": "chest-supported-row-start.jpg",
-          "poster_path": "chest-supported-row-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "chest-supported-row-active.jpg",
+          "poster_path": "chest-supported-row-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 53821,
+          "byte_size": 56826,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "chest-supported-row-active.jpg",
-          "poster_path": "chest-supported-row-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "chest-supported-row-start.jpg",
+          "poster_path": "chest-supported-row-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 56826,
+          "byte_size": 53821,
           "sort_order": 1
         }
       ]
@@ -910,24 +910,24 @@
       "media": [
         {
           "type": "image",
-          "path": "chin-up-start.jpg",
-          "poster_path": "chin-up-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "chin-up-active.jpg",
+          "poster_path": "chin-up-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 45846,
+          "byte_size": 45627,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "chin-up-active.jpg",
-          "poster_path": "chin-up-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "chin-up-start.jpg",
+          "poster_path": "chin-up-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 45627,
+          "byte_size": 45846,
           "sort_order": 1
         }
       ]
@@ -942,24 +942,24 @@
       "media": [
         {
           "type": "image",
-          "path": "close-grip-bench-press-start.jpg",
-          "poster_path": "close-grip-bench-press-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "close-grip-bench-press-active.jpg",
+          "poster_path": "close-grip-bench-press-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 74240,
+          "byte_size": 76127,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "close-grip-bench-press-active.jpg",
-          "poster_path": "close-grip-bench-press-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "close-grip-bench-press-start.jpg",
+          "poster_path": "close-grip-bench-press-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 76127,
+          "byte_size": 74240,
           "sort_order": 1
         }
       ]
@@ -974,24 +974,24 @@
       "media": [
         {
           "type": "image",
-          "path": "close-grip-lat-pulldown-start.jpg",
-          "poster_path": "close-grip-lat-pulldown-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "close-grip-lat-pulldown-active.jpg",
+          "poster_path": "close-grip-lat-pulldown-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 66406,
+          "byte_size": 66198,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "close-grip-lat-pulldown-active.jpg",
-          "poster_path": "close-grip-lat-pulldown-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "close-grip-lat-pulldown-start.jpg",
+          "poster_path": "close-grip-lat-pulldown-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 66198,
+          "byte_size": 66406,
           "sort_order": 1
         }
       ]
@@ -1006,24 +1006,24 @@
       "media": [
         {
           "type": "image",
-          "path": "concentration-curl-start.jpg",
-          "poster_path": "concentration-curl-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "concentration-curl-active.jpg",
+          "poster_path": "concentration-curl-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 65228,
+          "byte_size": 64253,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "concentration-curl-active.jpg",
-          "poster_path": "concentration-curl-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "concentration-curl-start.jpg",
+          "poster_path": "concentration-curl-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 64253,
+          "byte_size": 65228,
           "sort_order": 1
         }
       ]
@@ -1038,24 +1038,24 @@
       "media": [
         {
           "type": "image",
-          "path": "crunch-start.jpg",
-          "poster_path": "crunch-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "crunch-active.jpg",
+          "poster_path": "crunch-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 69289,
+          "byte_size": 69225,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "crunch-active.jpg",
-          "poster_path": "crunch-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "crunch-start.jpg",
+          "poster_path": "crunch-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 69225,
+          "byte_size": 69289,
           "sort_order": 1
         }
       ]
@@ -1083,8 +1083,8 @@
           "type": "image",
           "path": "dead-bug-active.jpg",
           "poster_path": "dead-bug-active.jpg",
-          "phase_id": "hold",
-          "phase": "Удержание",
+          "phase_id": "work",
+          "phase": "Рабочее положение",
           "width": 1280,
           "height": 720,
           "byte_size": 46759,
@@ -1102,24 +1102,24 @@
       "media": [
         {
           "type": "image",
-          "path": "deadlift-start.jpg",
-          "poster_path": "deadlift-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "deadlift-active.jpg",
+          "poster_path": "deadlift-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 69854,
+          "byte_size": 67563,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "deadlift-active.jpg",
-          "poster_path": "deadlift-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "deadlift-start.jpg",
+          "poster_path": "deadlift-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 67563,
+          "byte_size": 69854,
           "sort_order": 1
         }
       ]
@@ -1134,24 +1134,24 @@
       "media": [
         {
           "type": "image",
-          "path": "decline-bench-press-start.jpg",
-          "poster_path": "decline-bench-press-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "decline-bench-press-active.jpg",
+          "poster_path": "decline-bench-press-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 84500,
+          "byte_size": 90450,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "decline-bench-press-active.jpg",
-          "poster_path": "decline-bench-press-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "decline-bench-press-start.jpg",
+          "poster_path": "decline-bench-press-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 90450,
+          "byte_size": 84500,
           "sort_order": 1
         }
       ]
@@ -1166,24 +1166,24 @@
       "media": [
         {
           "type": "image",
-          "path": "decline-dumbbell-press-start.jpg",
-          "poster_path": "decline-dumbbell-press-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "decline-dumbbell-press-active.jpg",
+          "poster_path": "decline-dumbbell-press-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 54163,
+          "byte_size": 54302,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "decline-dumbbell-press-active.jpg",
-          "poster_path": "decline-dumbbell-press-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "decline-dumbbell-press-start.jpg",
+          "poster_path": "decline-dumbbell-press-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 54302,
+          "byte_size": 54163,
           "sort_order": 1
         }
       ]
@@ -1198,24 +1198,24 @@
       "media": [
         {
           "type": "image",
-          "path": "donkey-calf-raise-start.jpg",
-          "poster_path": "donkey-calf-raise-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "donkey-calf-raise-active.jpg",
+          "poster_path": "donkey-calf-raise-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 87923,
+          "byte_size": 88967,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "donkey-calf-raise-active.jpg",
-          "poster_path": "donkey-calf-raise-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "donkey-calf-raise-start.jpg",
+          "poster_path": "donkey-calf-raise-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 88967,
+          "byte_size": 87923,
           "sort_order": 1
         }
       ]
@@ -1230,24 +1230,24 @@
       "media": [
         {
           "type": "image",
-          "path": "dumbbell-bench-press-start.jpg",
-          "poster_path": "dumbbell-bench-press-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "dumbbell-bench-press-active.jpg",
+          "poster_path": "dumbbell-bench-press-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 63319,
+          "byte_size": 64120,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "dumbbell-bench-press-active.jpg",
-          "poster_path": "dumbbell-bench-press-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "dumbbell-bench-press-start.jpg",
+          "poster_path": "dumbbell-bench-press-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 64120,
+          "byte_size": 63319,
           "sort_order": 1
         }
       ]
@@ -1262,24 +1262,24 @@
       "media": [
         {
           "type": "image",
-          "path": "dumbbell-curl-start.jpg",
-          "poster_path": "dumbbell-curl-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "dumbbell-curl-active.jpg",
+          "poster_path": "dumbbell-curl-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 57223,
+          "byte_size": 58066,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "dumbbell-curl-active.jpg",
-          "poster_path": "dumbbell-curl-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "dumbbell-curl-start.jpg",
+          "poster_path": "dumbbell-curl-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 58066,
+          "byte_size": 57223,
           "sort_order": 1
         }
       ]
@@ -1294,24 +1294,24 @@
       "media": [
         {
           "type": "image",
-          "path": "dumbbell-fly-active.jpg",
-          "poster_path": "dumbbell-fly-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "dumbbell-fly-start.jpg",
+          "poster_path": "dumbbell-fly-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 63977,
+          "byte_size": 63679,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "dumbbell-fly-start.jpg",
-          "poster_path": "dumbbell-fly-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "dumbbell-fly-active.jpg",
+          "poster_path": "dumbbell-fly-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 63679,
+          "byte_size": 63977,
           "sort_order": 1
         }
       ]
@@ -1326,24 +1326,24 @@
       "media": [
         {
           "type": "image",
-          "path": "dumbbell-front-raise-start.jpg",
-          "poster_path": "dumbbell-front-raise-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "dumbbell-front-raise-active.jpg",
+          "poster_path": "dumbbell-front-raise-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 51985,
+          "byte_size": 51321,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "dumbbell-front-raise-active.jpg",
-          "poster_path": "dumbbell-front-raise-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "dumbbell-front-raise-start.jpg",
+          "poster_path": "dumbbell-front-raise-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 51321,
+          "byte_size": 51985,
           "sort_order": 1
         }
       ]
@@ -1358,24 +1358,24 @@
       "media": [
         {
           "type": "image",
-          "path": "dumbbell-lateral-raise-start.jpg",
-          "poster_path": "dumbbell-lateral-raise-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "dumbbell-lateral-raise-active.jpg",
+          "poster_path": "dumbbell-lateral-raise-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 57101,
+          "byte_size": 56355,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "dumbbell-lateral-raise-active.jpg",
-          "poster_path": "dumbbell-lateral-raise-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "dumbbell-lateral-raise-start.jpg",
+          "poster_path": "dumbbell-lateral-raise-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 56355,
+          "byte_size": 57101,
           "sort_order": 1
         }
       ]
@@ -1392,8 +1392,8 @@
           "type": "image",
           "path": "dumbbell-overhead-extension-active.jpg",
           "poster_path": "dumbbell-overhead-extension-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
           "byte_size": 60767,
@@ -1403,8 +1403,8 @@
           "type": "image",
           "path": "dumbbell-overhead-extension-start.jpg",
           "poster_path": "dumbbell-overhead-extension-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
           "byte_size": 59013,
@@ -1422,24 +1422,24 @@
       "media": [
         {
           "type": "image",
-          "path": "dumbbell-pullover-active.jpg",
-          "poster_path": "dumbbell-pullover-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "dumbbell-pullover-start.jpg",
+          "poster_path": "dumbbell-pullover-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 61708,
+          "byte_size": 63149,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "dumbbell-pullover-start.jpg",
-          "poster_path": "dumbbell-pullover-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "dumbbell-pullover-active.jpg",
+          "poster_path": "dumbbell-pullover-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 63149,
+          "byte_size": 61708,
           "sort_order": 1
         }
       ]
@@ -1454,24 +1454,24 @@
       "media": [
         {
           "type": "image",
-          "path": "dumbbell-shrug-start.jpg",
-          "poster_path": "dumbbell-shrug-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "dumbbell-shrug-active.jpg",
+          "poster_path": "dumbbell-shrug-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 52882,
+          "byte_size": 53460,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "dumbbell-shrug-active.jpg",
-          "poster_path": "dumbbell-shrug-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "dumbbell-shrug-start.jpg",
+          "poster_path": "dumbbell-shrug-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 53460,
+          "byte_size": 52882,
           "sort_order": 1
         }
       ]
@@ -1507,24 +1507,24 @@
       "media": [
         {
           "type": "image",
-          "path": "ez-bar-curl-start.jpg",
-          "poster_path": "ez-bar-curl-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "ez-bar-curl-active.jpg",
+          "poster_path": "ez-bar-curl-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 67123,
+          "byte_size": 68174,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "ez-bar-curl-active.jpg",
-          "poster_path": "ez-bar-curl-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "ez-bar-curl-start.jpg",
+          "poster_path": "ez-bar-curl-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 68174,
+          "byte_size": 67123,
           "sort_order": 1
         }
       ]
@@ -1539,24 +1539,24 @@
       "media": [
         {
           "type": "image",
-          "path": "face-pull-start.jpg",
-          "poster_path": "face-pull-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "face-pull-active.jpg",
+          "poster_path": "face-pull-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 40188,
+          "byte_size": 46451,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "face-pull-active.jpg",
-          "poster_path": "face-pull-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "face-pull-start.jpg",
+          "poster_path": "face-pull-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 46451,
+          "byte_size": 40188,
           "sort_order": 1
         }
       ]
@@ -1574,7 +1574,7 @@
           "path": "farmer-walk-start.jpg",
           "poster_path": "farmer-walk-start.jpg",
           "phase_id": "cycle_one",
-          "phase": "Первая фаза цикла",
+          "phase": "Первое положение",
           "width": 850,
           "height": 567,
           "byte_size": 54501,
@@ -1585,7 +1585,7 @@
           "path": "farmer-walk-active.jpg",
           "poster_path": "farmer-walk-active.jpg",
           "phase_id": "cycle_two",
-          "phase": "Вторая фаза цикла",
+          "phase": "Второе положение",
           "width": 850,
           "height": 567,
           "byte_size": 51227,
@@ -1603,24 +1603,24 @@
       "media": [
         {
           "type": "image",
-          "path": "front-squat-active.jpg",
-          "poster_path": "front-squat-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "front-squat-start.jpg",
+          "poster_path": "front-squat-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 69555,
+          "byte_size": 71564,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "front-squat-start.jpg",
-          "poster_path": "front-squat-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "front-squat-active.jpg",
+          "poster_path": "front-squat-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 71564,
+          "byte_size": 69555,
           "sort_order": 1
         }
       ]
@@ -1635,24 +1635,24 @@
       "media": [
         {
           "type": "image",
-          "path": "glute-ham-raise-start.jpg",
-          "poster_path": "glute-ham-raise-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "glute-ham-raise-active.jpg",
+          "poster_path": "glute-ham-raise-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 42247,
+          "byte_size": 36712,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "glute-ham-raise-active.jpg",
-          "poster_path": "glute-ham-raise-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "glute-ham-raise-start.jpg",
+          "poster_path": "glute-ham-raise-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 36712,
+          "byte_size": 42247,
           "sort_order": 1
         }
       ]
@@ -1667,24 +1667,24 @@
       "media": [
         {
           "type": "image",
-          "path": "goblet-squat-active.jpg",
-          "poster_path": "goblet-squat-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "goblet-squat-start.jpg",
+          "poster_path": "goblet-squat-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 569,
-          "byte_size": 34362,
+          "byte_size": 34299,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "goblet-squat-start.jpg",
-          "poster_path": "goblet-squat-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "goblet-squat-active.jpg",
+          "poster_path": "goblet-squat-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 569,
-          "byte_size": 34299,
+          "byte_size": 34362,
           "sort_order": 1
         }
       ]
@@ -1699,24 +1699,24 @@
       "media": [
         {
           "type": "image",
-          "path": "good-morning-active.jpg",
-          "poster_path": "good-morning-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "good-morning-start.jpg",
+          "poster_path": "good-morning-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 45447,
+          "byte_size": 45191,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "good-morning-start.jpg",
-          "poster_path": "good-morning-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "good-morning-active.jpg",
+          "poster_path": "good-morning-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 45191,
+          "byte_size": 45447,
           "sort_order": 1
         }
       ]
@@ -1731,24 +1731,24 @@
       "media": [
         {
           "type": "image",
-          "path": "hack-squat-active.jpg",
-          "poster_path": "hack-squat-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "hack-squat-start.jpg",
+          "poster_path": "hack-squat-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 760,
           "height": 760,
-          "byte_size": 106734,
+          "byte_size": 114305,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "hack-squat-start.jpg",
-          "poster_path": "hack-squat-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "hack-squat-active.jpg",
+          "poster_path": "hack-squat-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 760,
           "height": 760,
-          "byte_size": 114305,
+          "byte_size": 106734,
           "sort_order": 1
         }
       ]
@@ -1763,24 +1763,24 @@
       "media": [
         {
           "type": "image",
-          "path": "hammer-curl-start.jpg",
-          "poster_path": "hammer-curl-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "hammer-curl-active.jpg",
+          "poster_path": "hammer-curl-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 51669,
+          "byte_size": 52323,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "hammer-curl-active.jpg",
-          "poster_path": "hammer-curl-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "hammer-curl-start.jpg",
+          "poster_path": "hammer-curl-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 52323,
+          "byte_size": 51669,
           "sort_order": 1
         }
       ]
@@ -1795,24 +1795,24 @@
       "media": [
         {
           "type": "image",
-          "path": "hanging-leg-raise-start.jpg",
-          "poster_path": "hanging-leg-raise-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "hanging-leg-raise-active.jpg",
+          "poster_path": "hanging-leg-raise-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 51687,
+          "byte_size": 56061,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "hanging-leg-raise-active.jpg",
-          "poster_path": "hanging-leg-raise-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "hanging-leg-raise-start.jpg",
+          "poster_path": "hanging-leg-raise-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 56061,
+          "byte_size": 51687,
           "sort_order": 1
         }
       ]
@@ -1827,24 +1827,24 @@
       "media": [
         {
           "type": "image",
-          "path": "hip-abduction-start.jpg",
-          "poster_path": "hip-abduction-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "hip-abduction-active.jpg",
+          "poster_path": "hip-abduction-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 82032,
+          "byte_size": 86241,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "hip-abduction-active.jpg",
-          "poster_path": "hip-abduction-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "hip-abduction-start.jpg",
+          "poster_path": "hip-abduction-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 86241,
+          "byte_size": 82032,
           "sort_order": 1
         }
       ]
@@ -1859,24 +1859,24 @@
       "media": [
         {
           "type": "image",
-          "path": "hip-adduction-start.jpg",
-          "poster_path": "hip-adduction-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "hip-adduction-active.jpg",
+          "poster_path": "hip-adduction-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 73875,
+          "byte_size": 71410,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "hip-adduction-active.jpg",
-          "poster_path": "hip-adduction-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "hip-adduction-start.jpg",
+          "poster_path": "hip-adduction-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 71410,
+          "byte_size": 73875,
           "sort_order": 1
         }
       ]
@@ -1891,24 +1891,24 @@
       "media": [
         {
           "type": "image",
-          "path": "hip-thrust-start.jpg",
-          "poster_path": "hip-thrust-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "hip-thrust-active.jpg",
+          "poster_path": "hip-thrust-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 53764,
+          "byte_size": 52252,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "hip-thrust-active.jpg",
-          "poster_path": "hip-thrust-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "hip-thrust-start.jpg",
+          "poster_path": "hip-thrust-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 52252,
+          "byte_size": 53764,
           "sort_order": 1
         }
       ]
@@ -1957,8 +1957,8 @@
           "type": "image",
           "path": "hyperextension-start.jpg",
           "poster_path": "hyperextension-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
           "byte_size": 72031,
@@ -1968,8 +1968,8 @@
           "type": "image",
           "path": "hyperextension-active.jpg",
           "poster_path": "hyperextension-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
           "byte_size": 71234,
@@ -1987,24 +1987,24 @@
       "media": [
         {
           "type": "image",
-          "path": "incline-bench-press-active.jpg",
-          "poster_path": "incline-bench-press-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "incline-bench-press-start.jpg",
+          "poster_path": "incline-bench-press-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 71198,
+          "byte_size": 72311,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "incline-bench-press-start.jpg",
-          "poster_path": "incline-bench-press-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "incline-bench-press-active.jpg",
+          "poster_path": "incline-bench-press-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 72311,
+          "byte_size": 71198,
           "sort_order": 1
         }
       ]
@@ -2019,24 +2019,24 @@
       "media": [
         {
           "type": "image",
-          "path": "incline-dumbbell-curl-start.jpg",
-          "poster_path": "incline-dumbbell-curl-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "incline-dumbbell-curl-active.jpg",
+          "poster_path": "incline-dumbbell-curl-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 53708,
+          "byte_size": 54063,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "incline-dumbbell-curl-active.jpg",
-          "poster_path": "incline-dumbbell-curl-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "incline-dumbbell-curl-start.jpg",
+          "poster_path": "incline-dumbbell-curl-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 54063,
+          "byte_size": 53708,
           "sort_order": 1
         }
       ]
@@ -2051,24 +2051,24 @@
       "media": [
         {
           "type": "image",
-          "path": "incline-dumbbell-fly-active.jpg",
-          "poster_path": "incline-dumbbell-fly-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "incline-dumbbell-fly-start.jpg",
+          "poster_path": "incline-dumbbell-fly-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 59395,
+          "byte_size": 60080,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "incline-dumbbell-fly-start.jpg",
-          "poster_path": "incline-dumbbell-fly-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "incline-dumbbell-fly-active.jpg",
+          "poster_path": "incline-dumbbell-fly-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 60080,
+          "byte_size": 59395,
           "sort_order": 1
         }
       ]
@@ -2083,24 +2083,24 @@
       "media": [
         {
           "type": "image",
-          "path": "incline-dumbbell-press-start.jpg",
-          "poster_path": "incline-dumbbell-press-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "incline-dumbbell-press-active.jpg",
+          "poster_path": "incline-dumbbell-press-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 61978,
+          "byte_size": 61629,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "incline-dumbbell-press-active.jpg",
-          "poster_path": "incline-dumbbell-press-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "incline-dumbbell-press-start.jpg",
+          "poster_path": "incline-dumbbell-press-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 61629,
+          "byte_size": 61978,
           "sort_order": 1
         }
       ]
@@ -2115,24 +2115,24 @@
       "media": [
         {
           "type": "image",
-          "path": "inverted-row-start.jpg",
-          "poster_path": "inverted-row-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "inverted-row-active.jpg",
+          "poster_path": "inverted-row-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 57494,
+          "byte_size": 59968,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "inverted-row-active.jpg",
-          "poster_path": "inverted-row-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "inverted-row-start.jpg",
+          "poster_path": "inverted-row-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 59968,
+          "byte_size": 57494,
           "sort_order": 1
         }
       ]
@@ -2150,7 +2150,7 @@
           "path": "jump-rope-start.jpg",
           "poster_path": "jump-rope-start.jpg",
           "phase_id": "cycle_one",
-          "phase": "Первая фаза цикла",
+          "phase": "Первое положение",
           "width": 850,
           "height": 569,
           "byte_size": 76449,
@@ -2161,7 +2161,7 @@
           "path": "jump-rope-active.jpg",
           "poster_path": "jump-rope-active.jpg",
           "phase_id": "cycle_two",
-          "phase": "Вторая фаза цикла",
+          "phase": "Второе положение",
           "width": 850,
           "height": 569,
           "byte_size": 77380,
@@ -2181,8 +2181,8 @@
           "type": "image",
           "path": "kettlebell-clean-start.jpg",
           "poster_path": "kettlebell-clean-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "phase_id": "sequence_start",
+          "phase": "Начало движения",
           "width": 850,
           "height": 569,
           "byte_size": 34252,
@@ -2192,8 +2192,8 @@
           "type": "image",
           "path": "kettlebell-clean-active.jpg",
           "poster_path": "kettlebell-clean-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "phase_id": "sequence_next",
+          "phase": "Следующая позиция",
           "width": 850,
           "height": 569,
           "byte_size": 34503,
@@ -2211,24 +2211,24 @@
       "media": [
         {
           "type": "image",
-          "path": "kettlebell-goblet-squat-active.jpg",
-          "poster_path": "kettlebell-goblet-squat-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "kettlebell-goblet-squat-start.jpg",
+          "poster_path": "kettlebell-goblet-squat-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 569,
-          "byte_size": 34362,
+          "byte_size": 34299,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "kettlebell-goblet-squat-start.jpg",
-          "poster_path": "kettlebell-goblet-squat-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "kettlebell-goblet-squat-active.jpg",
+          "poster_path": "kettlebell-goblet-squat-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 569,
-          "byte_size": 34299,
+          "byte_size": 34362,
           "sort_order": 1
         }
       ]
@@ -2245,8 +2245,8 @@
           "type": "image",
           "path": "kettlebell-snatch-start.jpg",
           "poster_path": "kettlebell-snatch-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "phase_id": "sequence_start",
+          "phase": "Начало движения",
           "width": 850,
           "height": 569,
           "byte_size": 36421,
@@ -2256,8 +2256,8 @@
           "type": "image",
           "path": "kettlebell-snatch-active.jpg",
           "poster_path": "kettlebell-snatch-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "phase_id": "sequence_next",
+          "phase": "Следующая позиция",
           "width": 850,
           "height": 569,
           "byte_size": 35968,
@@ -2275,24 +2275,24 @@
       "media": [
         {
           "type": "image",
-          "path": "kettlebell-swing-active.jpg",
-          "poster_path": "kettlebell-swing-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "kettlebell-swing-start.jpg",
+          "poster_path": "kettlebell-swing-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 569,
-          "byte_size": 35451,
+          "byte_size": 35521,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "kettlebell-swing-start.jpg",
-          "poster_path": "kettlebell-swing-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "kettlebell-swing-active.jpg",
+          "poster_path": "kettlebell-swing-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 569,
-          "byte_size": 35521,
+          "byte_size": 35451,
           "sort_order": 1
         }
       ]
@@ -2307,24 +2307,24 @@
       "media": [
         {
           "type": "image",
-          "path": "landmine-press-start.jpg",
-          "poster_path": "landmine-press-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "landmine-press-active.jpg",
+          "poster_path": "landmine-press-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 646,
           "height": 969,
-          "byte_size": 111593,
+          "byte_size": 112741,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "landmine-press-active.jpg",
-          "poster_path": "landmine-press-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "landmine-press-start.jpg",
+          "poster_path": "landmine-press-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 646,
           "height": 969,
-          "byte_size": 112741,
+          "byte_size": 111593,
           "sort_order": 1
         }
       ]
@@ -2339,24 +2339,24 @@
       "media": [
         {
           "type": "image",
-          "path": "lat-pulldown-start.jpg",
-          "poster_path": "lat-pulldown-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "lat-pulldown-active.jpg",
+          "poster_path": "lat-pulldown-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 71951,
+          "byte_size": 71400,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "lat-pulldown-active.jpg",
-          "poster_path": "lat-pulldown-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "lat-pulldown-start.jpg",
+          "poster_path": "lat-pulldown-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 71400,
+          "byte_size": 71951,
           "sort_order": 1
         }
       ]
@@ -2371,24 +2371,24 @@
       "media": [
         {
           "type": "image",
-          "path": "leg-curl-start.jpg",
-          "poster_path": "leg-curl-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "leg-curl-active.jpg",
+          "poster_path": "leg-curl-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 77402,
+          "byte_size": 87755,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "leg-curl-active.jpg",
-          "poster_path": "leg-curl-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "leg-curl-start.jpg",
+          "poster_path": "leg-curl-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 87755,
+          "byte_size": 77402,
           "sort_order": 1
         }
       ]
@@ -2403,24 +2403,24 @@
       "media": [
         {
           "type": "image",
-          "path": "leg-extension-start.jpg",
-          "poster_path": "leg-extension-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "leg-extension-active.jpg",
+          "poster_path": "leg-extension-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 81219,
+          "byte_size": 82758,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "leg-extension-active.jpg",
-          "poster_path": "leg-extension-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "leg-extension-start.jpg",
+          "poster_path": "leg-extension-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 82758,
+          "byte_size": 81219,
           "sort_order": 1
         }
       ]
@@ -2435,24 +2435,24 @@
       "media": [
         {
           "type": "image",
-          "path": "leg-press-active.jpg",
-          "poster_path": "leg-press-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "leg-press-start.jpg",
+          "poster_path": "leg-press-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 83900,
+          "byte_size": 84753,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "leg-press-start.jpg",
-          "poster_path": "leg-press-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "leg-press-active.jpg",
+          "poster_path": "leg-press-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 84753,
+          "byte_size": 83900,
           "sort_order": 1
         }
       ]
@@ -2467,24 +2467,24 @@
       "media": [
         {
           "type": "image",
-          "path": "low-to-high-cable-fly-start.jpg",
-          "poster_path": "low-to-high-cable-fly-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "low-to-high-cable-fly-active.jpg",
+          "poster_path": "low-to-high-cable-fly-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 750,
           "height": 500,
-          "byte_size": 39895,
+          "byte_size": 40322,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "low-to-high-cable-fly-active.jpg",
-          "poster_path": "low-to-high-cable-fly-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "low-to-high-cable-fly-start.jpg",
+          "poster_path": "low-to-high-cable-fly-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 750,
           "height": 500,
-          "byte_size": 40322,
+          "byte_size": 39895,
           "sort_order": 1
         }
       ]
@@ -2499,24 +2499,24 @@
       "media": [
         {
           "type": "image",
-          "path": "lunge-active.jpg",
-          "poster_path": "lunge-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "lunge-start.jpg",
+          "poster_path": "lunge-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 61678,
+          "byte_size": 55460,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "lunge-start.jpg",
-          "poster_path": "lunge-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "lunge-active.jpg",
+          "poster_path": "lunge-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 55460,
+          "byte_size": 61678,
           "sort_order": 1
         }
       ]
@@ -2533,8 +2533,8 @@
           "type": "image",
           "path": "lying-dumbbell-triceps-extension-active.jpg",
           "poster_path": "lying-dumbbell-triceps-extension-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
           "byte_size": 68005,
@@ -2544,8 +2544,8 @@
           "type": "image",
           "path": "lying-dumbbell-triceps-extension-start.jpg",
           "poster_path": "lying-dumbbell-triceps-extension-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
           "byte_size": 67781,
@@ -2563,24 +2563,24 @@
       "media": [
         {
           "type": "image",
-          "path": "machine-biceps-curl-start.jpg",
-          "poster_path": "machine-biceps-curl-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "machine-biceps-curl-active.jpg",
+          "poster_path": "machine-biceps-curl-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 96958,
+          "byte_size": 97022,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "machine-biceps-curl-active.jpg",
-          "poster_path": "machine-biceps-curl-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "machine-biceps-curl-start.jpg",
+          "poster_path": "machine-biceps-curl-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 97022,
+          "byte_size": 96958,
           "sort_order": 1
         }
       ]
@@ -2595,24 +2595,24 @@
       "media": [
         {
           "type": "image",
-          "path": "machine-chest-press-start.jpg",
-          "poster_path": "machine-chest-press-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "machine-chest-press-active.jpg",
+          "poster_path": "machine-chest-press-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 73844,
+          "byte_size": 72789,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "machine-chest-press-active.jpg",
-          "poster_path": "machine-chest-press-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "machine-chest-press-start.jpg",
+          "poster_path": "machine-chest-press-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 72789,
+          "byte_size": 73844,
           "sort_order": 1
         }
       ]
@@ -2627,24 +2627,24 @@
       "media": [
         {
           "type": "image",
-          "path": "machine-dip-start.jpg",
-          "poster_path": "machine-dip-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "machine-dip-active.jpg",
+          "poster_path": "machine-dip-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 79361,
+          "byte_size": 81821,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "machine-dip-active.jpg",
-          "poster_path": "machine-dip-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "machine-dip-start.jpg",
+          "poster_path": "machine-dip-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 81821,
+          "byte_size": 79361,
           "sort_order": 1
         }
       ]
@@ -2659,24 +2659,24 @@
       "media": [
         {
           "type": "image",
-          "path": "machine-lateral-raise-start.jpg",
-          "poster_path": "machine-lateral-raise-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "machine-lateral-raise-active.jpg",
+          "poster_path": "machine-lateral-raise-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 54479,
+          "byte_size": 55211,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "machine-lateral-raise-active.jpg",
-          "poster_path": "machine-lateral-raise-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "machine-lateral-raise-start.jpg",
+          "poster_path": "machine-lateral-raise-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 55211,
+          "byte_size": 54479,
           "sort_order": 1
         }
       ]
@@ -2691,24 +2691,24 @@
       "media": [
         {
           "type": "image",
-          "path": "machine-row-start.jpg",
-          "poster_path": "machine-row-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "machine-row-active.jpg",
+          "poster_path": "machine-row-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 57969,
+          "byte_size": 61444,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "machine-row-active.jpg",
-          "poster_path": "machine-row-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "machine-row-start.jpg",
+          "poster_path": "machine-row-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 61444,
+          "byte_size": 57969,
           "sort_order": 1
         }
       ]
@@ -2723,24 +2723,24 @@
       "media": [
         {
           "type": "image",
-          "path": "machine-shoulder-press-start.jpg",
-          "poster_path": "machine-shoulder-press-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "machine-shoulder-press-active.jpg",
+          "poster_path": "machine-shoulder-press-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 74210,
+          "byte_size": 73860,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "machine-shoulder-press-active.jpg",
-          "poster_path": "machine-shoulder-press-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "machine-shoulder-press-start.jpg",
+          "poster_path": "machine-shoulder-press-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 73860,
+          "byte_size": 74210,
           "sort_order": 1
         }
       ]
@@ -2755,24 +2755,24 @@
       "media": [
         {
           "type": "image",
-          "path": "meadows-row-start.jpg",
-          "poster_path": "meadows-row-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "meadows-row-active.jpg",
+          "poster_path": "meadows-row-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 500,
           "height": 750,
-          "byte_size": 46113,
+          "byte_size": 44884,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "meadows-row-active.jpg",
-          "poster_path": "meadows-row-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "meadows-row-start.jpg",
+          "poster_path": "meadows-row-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 500,
           "height": 750,
-          "byte_size": 44884,
+          "byte_size": 46113,
           "sort_order": 1
         }
       ]
@@ -2789,8 +2789,8 @@
           "type": "image",
           "path": "medicine-ball-slam-start.jpg",
           "poster_path": "medicine-ball-slam-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "phase_id": "sequence_start",
+          "phase": "Начало движения",
           "width": 500,
           "height": 750,
           "byte_size": 47442,
@@ -2800,8 +2800,8 @@
           "type": "image",
           "path": "medicine-ball-slam-active.jpg",
           "poster_path": "medicine-ball-slam-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "phase_id": "sequence_next",
+          "phase": "Следующая позиция",
           "width": 500,
           "height": 750,
           "byte_size": 46048,
@@ -2821,8 +2821,8 @@
           "type": "image",
           "path": "mountain-climber-start.jpg",
           "poster_path": "mountain-climber-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "phase_id": "cycle_one",
+          "phase": "Первое положение",
           "width": 850,
           "height": 567,
           "byte_size": 30166,
@@ -2832,8 +2832,8 @@
           "type": "image",
           "path": "mountain-climber-active.jpg",
           "poster_path": "mountain-climber-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "phase_id": "cycle_two",
+          "phase": "Второе положение",
           "width": 850,
           "height": 567,
           "byte_size": 30259,
@@ -2851,24 +2851,24 @@
       "media": [
         {
           "type": "image",
-          "path": "nordic-curl-active.jpg",
-          "poster_path": "nordic-curl-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "nordic-curl-start.jpg",
+          "poster_path": "nordic-curl-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 750,
           "height": 500,
-          "byte_size": 53582,
+          "byte_size": 51751,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "nordic-curl-start.jpg",
-          "poster_path": "nordic-curl-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "nordic-curl-active.jpg",
+          "poster_path": "nordic-curl-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 750,
           "height": 500,
-          "byte_size": 51751,
+          "byte_size": 53582,
           "sort_order": 1
         }
       ]
@@ -2883,24 +2883,24 @@
       "media": [
         {
           "type": "image",
-          "path": "one-arm-dumbbell-row-start.jpg",
-          "poster_path": "one-arm-dumbbell-row-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "one-arm-dumbbell-row-active.jpg",
+          "poster_path": "one-arm-dumbbell-row-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 70752,
+          "byte_size": 71407,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "one-arm-dumbbell-row-active.jpg",
-          "poster_path": "one-arm-dumbbell-row-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "one-arm-dumbbell-row-start.jpg",
+          "poster_path": "one-arm-dumbbell-row-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 71407,
+          "byte_size": 70752,
           "sort_order": 1
         }
       ]
@@ -2978,24 +2978,24 @@
       "media": [
         {
           "type": "image",
-          "path": "overhead-press-active.jpg",
-          "poster_path": "overhead-press-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "overhead-press-start.jpg",
+          "poster_path": "overhead-press-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 69354,
+          "byte_size": 70631,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "overhead-press-start.jpg",
-          "poster_path": "overhead-press-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "overhead-press-active.jpg",
+          "poster_path": "overhead-press-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 70631,
+          "byte_size": 69354,
           "sort_order": 1
         }
       ]
@@ -3010,24 +3010,24 @@
       "media": [
         {
           "type": "image",
-          "path": "overhead-triceps-extension-active.jpg",
-          "poster_path": "overhead-triceps-extension-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "overhead-triceps-extension-start.jpg",
+          "poster_path": "overhead-triceps-extension-start.jpg",
+          "phase_id": "setup",
+          "phase": "Подготовка",
           "width": 850,
           "height": 567,
-          "byte_size": 34406,
+          "byte_size": 33676,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "overhead-triceps-extension-start.jpg",
-          "poster_path": "overhead-triceps-extension-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "overhead-triceps-extension-active.jpg",
+          "poster_path": "overhead-triceps-extension-active.jpg",
+          "phase_id": "hold",
+          "phase": "Удержание",
           "width": 850,
           "height": 567,
-          "byte_size": 33676,
+          "byte_size": 34406,
           "sort_order": 1
         }
       ]
@@ -3044,8 +3044,8 @@
           "type": "image",
           "path": "pallof-press-start.jpg",
           "poster_path": "pallof-press-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "phase_id": "setup",
+          "phase": "Подготовка",
           "width": 1280,
           "height": 720,
           "byte_size": 59572,
@@ -3055,8 +3055,8 @@
           "type": "image",
           "path": "pallof-press-active.jpg",
           "poster_path": "pallof-press-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "phase_id": "hold",
+          "phase": "Удержание",
           "width": 1280,
           "height": 720,
           "byte_size": 51839,
@@ -3074,24 +3074,24 @@
       "media": [
         {
           "type": "image",
-          "path": "pec-deck-active.jpg",
-          "poster_path": "pec-deck-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "pec-deck-start.jpg",
+          "poster_path": "pec-deck-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 82097,
+          "byte_size": 85665,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "pec-deck-start.jpg",
-          "poster_path": "pec-deck-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "pec-deck-active.jpg",
+          "poster_path": "pec-deck-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 85665,
+          "byte_size": 82097,
           "sort_order": 1
         }
       ]
@@ -3106,24 +3106,24 @@
       "media": [
         {
           "type": "image",
-          "path": "pendlay-row-start.jpg",
-          "poster_path": "pendlay-row-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "pendlay-row-active.jpg",
+          "poster_path": "pendlay-row-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 64589,
+          "byte_size": 66556,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "pendlay-row-active.jpg",
-          "poster_path": "pendlay-row-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "pendlay-row-start.jpg",
+          "poster_path": "pendlay-row-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 66556,
+          "byte_size": 64589,
           "sort_order": 1
         }
       ]
@@ -3170,24 +3170,24 @@
       "media": [
         {
           "type": "image",
-          "path": "preacher-curl-start.jpg",
-          "poster_path": "preacher-curl-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "preacher-curl-active.jpg",
+          "poster_path": "preacher-curl-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 59261,
+          "byte_size": 59522,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "preacher-curl-active.jpg",
-          "poster_path": "preacher-curl-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "preacher-curl-start.jpg",
+          "poster_path": "preacher-curl-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 59522,
+          "byte_size": 59261,
           "sort_order": 1
         }
       ]
@@ -3202,24 +3202,24 @@
       "media": [
         {
           "type": "image",
-          "path": "pull-up-start.jpg",
-          "poster_path": "pull-up-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "pull-up-active.jpg",
+          "poster_path": "pull-up-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 42281,
+          "byte_size": 40018,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "pull-up-active.jpg",
-          "poster_path": "pull-up-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "pull-up-start.jpg",
+          "poster_path": "pull-up-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 40018,
+          "byte_size": 42281,
           "sort_order": 1
         }
       ]
@@ -3234,24 +3234,24 @@
       "media": [
         {
           "type": "image",
-          "path": "push-up-active.jpg",
-          "poster_path": "push-up-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "push-up-start.jpg",
+          "poster_path": "push-up-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 64283,
+          "byte_size": 66786,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "push-up-start.jpg",
-          "poster_path": "push-up-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "push-up-active.jpg",
+          "poster_path": "push-up-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 66786,
+          "byte_size": 64283,
           "sort_order": 1
         }
       ]
@@ -3266,24 +3266,24 @@
       "media": [
         {
           "type": "image",
-          "path": "rack-pull-start.jpg",
-          "poster_path": "rack-pull-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "rack-pull-active.jpg",
+          "poster_path": "rack-pull-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 44236,
+          "byte_size": 45236,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "rack-pull-active.jpg",
-          "poster_path": "rack-pull-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "rack-pull-start.jpg",
+          "poster_path": "rack-pull-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 45236,
+          "byte_size": 44236,
           "sort_order": 1
         }
       ]
@@ -3298,24 +3298,24 @@
       "media": [
         {
           "type": "image",
-          "path": "rear-delt-fly-start.jpg",
-          "poster_path": "rear-delt-fly-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "rear-delt-fly-active.jpg",
+          "poster_path": "rear-delt-fly-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 58354,
+          "byte_size": 59217,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "rear-delt-fly-active.jpg",
-          "poster_path": "rear-delt-fly-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "rear-delt-fly-start.jpg",
+          "poster_path": "rear-delt-fly-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 59217,
+          "byte_size": 58354,
           "sort_order": 1
         }
       ]
@@ -3330,24 +3330,24 @@
       "media": [
         {
           "type": "image",
-          "path": "renegade-row-start.jpg",
-          "poster_path": "renegade-row-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "renegade-row-active.jpg",
+          "poster_path": "renegade-row-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 569,
-          "byte_size": 33835,
+          "byte_size": 32913,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "renegade-row-active.jpg",
-          "poster_path": "renegade-row-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "renegade-row-start.jpg",
+          "poster_path": "renegade-row-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 569,
-          "byte_size": 32913,
+          "byte_size": 33835,
           "sort_order": 1
         }
       ]
@@ -3362,24 +3362,24 @@
       "media": [
         {
           "type": "image",
-          "path": "reverse-crunch-start.jpg",
-          "poster_path": "reverse-crunch-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "reverse-crunch-active.jpg",
+          "poster_path": "reverse-crunch-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 61594,
+          "byte_size": 56809,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "reverse-crunch-active.jpg",
-          "poster_path": "reverse-crunch-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "reverse-crunch-start.jpg",
+          "poster_path": "reverse-crunch-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 56809,
+          "byte_size": 61594,
           "sort_order": 1
         }
       ]
@@ -3394,24 +3394,24 @@
       "media": [
         {
           "type": "image",
-          "path": "reverse-curl-start.jpg",
-          "poster_path": "reverse-curl-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "reverse-curl-active.jpg",
+          "poster_path": "reverse-curl-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 57755,
+          "byte_size": 58110,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "reverse-curl-active.jpg",
-          "poster_path": "reverse-curl-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "reverse-curl-start.jpg",
+          "poster_path": "reverse-curl-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 58110,
+          "byte_size": 57755,
           "sort_order": 1
         }
       ]
@@ -3426,24 +3426,24 @@
       "media": [
         {
           "type": "image",
-          "path": "reverse-grip-lat-pulldown-start.jpg",
-          "poster_path": "reverse-grip-lat-pulldown-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "reverse-grip-lat-pulldown-active.jpg",
+          "poster_path": "reverse-grip-lat-pulldown-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 65340,
+          "byte_size": 63811,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "reverse-grip-lat-pulldown-active.jpg",
-          "poster_path": "reverse-grip-lat-pulldown-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "reverse-grip-lat-pulldown-start.jpg",
+          "poster_path": "reverse-grip-lat-pulldown-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 63811,
+          "byte_size": 65340,
           "sort_order": 1
         }
       ]
@@ -3458,24 +3458,24 @@
       "media": [
         {
           "type": "image",
-          "path": "reverse-lunge-active.jpg",
-          "poster_path": "reverse-lunge-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "reverse-lunge-start.jpg",
+          "poster_path": "reverse-lunge-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 49129,
+          "byte_size": 51169,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "reverse-lunge-start.jpg",
-          "poster_path": "reverse-lunge-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "reverse-lunge-active.jpg",
+          "poster_path": "reverse-lunge-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 51169,
+          "byte_size": 49129,
           "sort_order": 1
         }
       ]
@@ -3490,24 +3490,24 @@
       "media": [
         {
           "type": "image",
-          "path": "reverse-pec-deck-start.jpg",
-          "poster_path": "reverse-pec-deck-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "reverse-pec-deck-active.jpg",
+          "poster_path": "reverse-pec-deck-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 77240,
+          "byte_size": 77689,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "reverse-pec-deck-active.jpg",
-          "poster_path": "reverse-pec-deck-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "reverse-pec-deck-start.jpg",
+          "poster_path": "reverse-pec-deck-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 77689,
+          "byte_size": 77240,
           "sort_order": 1
         }
       ]
@@ -3524,8 +3524,8 @@
           "type": "image",
           "path": "romanian-deadlift-active.jpg",
           "poster_path": "romanian-deadlift-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
           "byte_size": 57367,
@@ -3535,8 +3535,8 @@
           "type": "image",
           "path": "romanian-deadlift-start.jpg",
           "poster_path": "romanian-deadlift-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
           "byte_size": 59859,
@@ -3554,24 +3554,24 @@
       "media": [
         {
           "type": "image",
-          "path": "rope-pushdown-start.jpg",
-          "poster_path": "rope-pushdown-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "rope-pushdown-active.jpg",
+          "poster_path": "rope-pushdown-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 88082,
+          "byte_size": 86992,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "rope-pushdown-active.jpg",
-          "poster_path": "rope-pushdown-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "rope-pushdown-start.jpg",
+          "poster_path": "rope-pushdown-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 86992,
+          "byte_size": 88082,
           "sort_order": 1
         }
       ]
@@ -3588,8 +3588,8 @@
           "type": "image",
           "path": "rowing-machine-start.jpg",
           "poster_path": "rowing-machine-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "phase_id": "cycle_one",
+          "phase": "Первое положение",
           "width": 850,
           "height": 569,
           "byte_size": 63420,
@@ -3599,8 +3599,8 @@
           "type": "image",
           "path": "rowing-machine-active.jpg",
           "poster_path": "rowing-machine-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "phase_id": "cycle_two",
+          "phase": "Второе положение",
           "width": 850,
           "height": 569,
           "byte_size": 61810,
@@ -3620,8 +3620,8 @@
           "type": "image",
           "path": "russian-twist-start.jpg",
           "poster_path": "russian-twist-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "phase_id": "cycle_one",
+          "phase": "Первое положение",
           "width": 850,
           "height": 567,
           "byte_size": 70925,
@@ -3631,8 +3631,8 @@
           "type": "image",
           "path": "russian-twist-active.jpg",
           "poster_path": "russian-twist-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "phase_id": "cycle_two",
+          "phase": "Второе положение",
           "width": 850,
           "height": 567,
           "byte_size": 70973,
@@ -3650,24 +3650,24 @@
       "media": [
         {
           "type": "image",
-          "path": "seated-cable-row-start.jpg",
-          "poster_path": "seated-cable-row-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "seated-cable-row-active.jpg",
+          "poster_path": "seated-cable-row-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 65319,
+          "byte_size": 65659,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "seated-cable-row-active.jpg",
-          "poster_path": "seated-cable-row-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "seated-cable-row-start.jpg",
+          "poster_path": "seated-cable-row-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 65659,
+          "byte_size": 65319,
           "sort_order": 1
         }
       ]
@@ -3682,24 +3682,24 @@
       "media": [
         {
           "type": "image",
-          "path": "seated-calf-raise-start.jpg",
-          "poster_path": "seated-calf-raise-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "seated-calf-raise-active.jpg",
+          "poster_path": "seated-calf-raise-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 60369,
+          "byte_size": 61832,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "seated-calf-raise-active.jpg",
-          "poster_path": "seated-calf-raise-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "seated-calf-raise-start.jpg",
+          "poster_path": "seated-calf-raise-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 61832,
+          "byte_size": 60369,
           "sort_order": 1
         }
       ]
@@ -3714,24 +3714,24 @@
       "media": [
         {
           "type": "image",
-          "path": "seated-dumbbell-press-active.jpg",
-          "poster_path": "seated-dumbbell-press-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "seated-dumbbell-press-start.jpg",
+          "poster_path": "seated-dumbbell-press-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 61379,
+          "byte_size": 60972,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "seated-dumbbell-press-start.jpg",
-          "poster_path": "seated-dumbbell-press-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "seated-dumbbell-press-active.jpg",
+          "poster_path": "seated-dumbbell-press-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 60972,
+          "byte_size": 61379,
           "sort_order": 1
         }
       ]
@@ -3746,24 +3746,24 @@
       "media": [
         {
           "type": "image",
-          "path": "seated-leg-curl-start.jpg",
-          "poster_path": "seated-leg-curl-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "seated-leg-curl-active.jpg",
+          "poster_path": "seated-leg-curl-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 91213,
+          "byte_size": 91286,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "seated-leg-curl-active.jpg",
-          "poster_path": "seated-leg-curl-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "seated-leg-curl-start.jpg",
+          "poster_path": "seated-leg-curl-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 91286,
+          "byte_size": 91213,
           "sort_order": 1
         }
       ]
@@ -3810,24 +3810,24 @@
       "media": [
         {
           "type": "image",
-          "path": "single-arm-cable-triceps-extension-start.jpg",
-          "poster_path": "single-arm-cable-triceps-extension-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "single-arm-cable-triceps-extension-active.jpg",
+          "poster_path": "single-arm-cable-triceps-extension-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 84630,
+          "byte_size": 84994,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "single-arm-cable-triceps-extension-active.jpg",
-          "poster_path": "single-arm-cable-triceps-extension-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "single-arm-cable-triceps-extension-start.jpg",
+          "poster_path": "single-arm-cable-triceps-extension-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 84994,
+          "byte_size": 84630,
           "sort_order": 1
         }
       ]
@@ -3842,24 +3842,24 @@
       "media": [
         {
           "type": "image",
-          "path": "single-leg-calf-raise-start.jpg",
-          "poster_path": "single-leg-calf-raise-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "single-leg-calf-raise-active.jpg",
+          "poster_path": "single-leg-calf-raise-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 60966,
+          "byte_size": 59984,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "single-leg-calf-raise-active.jpg",
-          "poster_path": "single-leg-calf-raise-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "single-leg-calf-raise-start.jpg",
+          "poster_path": "single-leg-calf-raise-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 59984,
+          "byte_size": 60966,
           "sort_order": 1
         }
       ]
@@ -3874,24 +3874,24 @@
       "media": [
         {
           "type": "image",
-          "path": "single-leg-hip-thrust-start.jpg",
-          "poster_path": "single-leg-hip-thrust-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "single-leg-hip-thrust-active.jpg",
+          "poster_path": "single-leg-hip-thrust-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 54678,
+          "byte_size": 55170,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "single-leg-hip-thrust-active.jpg",
-          "poster_path": "single-leg-hip-thrust-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "single-leg-hip-thrust-start.jpg",
+          "poster_path": "single-leg-hip-thrust-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 55170,
+          "byte_size": 54678,
           "sort_order": 1
         }
       ]
@@ -3906,24 +3906,24 @@
       "media": [
         {
           "type": "image",
-          "path": "single-leg-rdl-active.jpg",
-          "poster_path": "single-leg-rdl-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "single-leg-rdl-start.jpg",
+          "poster_path": "single-leg-rdl-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 569,
-          "byte_size": 42018,
+          "byte_size": 38772,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "single-leg-rdl-start.jpg",
-          "poster_path": "single-leg-rdl-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "single-leg-rdl-active.jpg",
+          "poster_path": "single-leg-rdl-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 569,
-          "byte_size": 38772,
+          "byte_size": 42018,
           "sort_order": 1
         }
       ]
@@ -3938,24 +3938,24 @@
       "media": [
         {
           "type": "image",
-          "path": "sissy-squat-active.jpg",
-          "poster_path": "sissy-squat-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "sissy-squat-start.jpg",
+          "poster_path": "sissy-squat-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 56599,
+          "byte_size": 56427,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "sissy-squat-start.jpg",
-          "poster_path": "sissy-squat-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "sissy-squat-active.jpg",
+          "poster_path": "sissy-squat-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 56427,
+          "byte_size": 56599,
           "sort_order": 1
         }
       ]
@@ -3991,24 +3991,24 @@
       "media": [
         {
           "type": "image",
-          "path": "skull-crusher-active.jpg",
-          "poster_path": "skull-crusher-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "skull-crusher-start.jpg",
+          "poster_path": "skull-crusher-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 750,
           "height": 500,
-          "byte_size": 37438,
+          "byte_size": 38566,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "skull-crusher-start.jpg",
-          "poster_path": "skull-crusher-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "skull-crusher-active.jpg",
+          "poster_path": "skull-crusher-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 750,
           "height": 500,
-          "byte_size": 38566,
+          "byte_size": 37438,
           "sort_order": 1
         }
       ]
@@ -4026,7 +4026,7 @@
           "path": "sled-pull-start.jpg",
           "poster_path": "sled-pull-start.jpg",
           "phase_id": "cycle_one",
-          "phase": "Первая фаза цикла",
+          "phase": "Первое положение",
           "width": 850,
           "height": 567,
           "byte_size": 32193,
@@ -4037,7 +4037,7 @@
           "path": "sled-pull-active.jpg",
           "poster_path": "sled-pull-active.jpg",
           "phase_id": "cycle_two",
-          "phase": "Вторая фаза цикла",
+          "phase": "Второе положение",
           "width": 850,
           "height": 567,
           "byte_size": 30134,
@@ -4058,7 +4058,7 @@
           "path": "sled-push-start.jpg",
           "poster_path": "sled-push-start.jpg",
           "phase_id": "cycle_one",
-          "phase": "Первая фаза цикла",
+          "phase": "Первое положение",
           "width": 850,
           "height": 567,
           "byte_size": 34209,
@@ -4069,7 +4069,7 @@
           "path": "sled-push-active.jpg",
           "poster_path": "sled-push-active.jpg",
           "phase_id": "cycle_two",
-          "phase": "Вторая фаза цикла",
+          "phase": "Второе положение",
           "width": 850,
           "height": 567,
           "byte_size": 36668,
@@ -4087,24 +4087,24 @@
       "media": [
         {
           "type": "image",
-          "path": "smith-bench-press-start.jpg",
-          "poster_path": "smith-bench-press-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "smith-bench-press-active.jpg",
+          "poster_path": "smith-bench-press-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 74906,
+          "byte_size": 74652,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "smith-bench-press-active.jpg",
-          "poster_path": "smith-bench-press-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "smith-bench-press-start.jpg",
+          "poster_path": "smith-bench-press-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 74652,
+          "byte_size": 74906,
           "sort_order": 1
         }
       ]
@@ -4119,24 +4119,24 @@
       "media": [
         {
           "type": "image",
-          "path": "smith-shoulder-press-start.jpg",
-          "poster_path": "smith-shoulder-press-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "smith-shoulder-press-active.jpg",
+          "poster_path": "smith-shoulder-press-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 86577,
+          "byte_size": 85543,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "smith-shoulder-press-active.jpg",
-          "poster_path": "smith-shoulder-press-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "smith-shoulder-press-start.jpg",
+          "poster_path": "smith-shoulder-press-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 85543,
+          "byte_size": 86577,
           "sort_order": 1
         }
       ]
@@ -4153,8 +4153,8 @@
           "type": "image",
           "path": "smith-squat-active.jpg",
           "poster_path": "smith-squat-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
           "byte_size": 85252,
@@ -4164,8 +4164,8 @@
           "type": "image",
           "path": "smith-squat-start.jpg",
           "poster_path": "smith-squat-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
           "byte_size": 82170,
@@ -4183,24 +4183,24 @@
       "media": [
         {
           "type": "image",
-          "path": "spider-curl-start.jpg",
-          "poster_path": "spider-curl-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "spider-curl-active.jpg",
+          "poster_path": "spider-curl-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 49046,
+          "byte_size": 47314,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "spider-curl-active.jpg",
-          "poster_path": "spider-curl-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "spider-curl-start.jpg",
+          "poster_path": "spider-curl-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 47314,
+          "byte_size": 49046,
           "sort_order": 1
         }
       ]
@@ -4215,24 +4215,24 @@
       "media": [
         {
           "type": "image",
-          "path": "split-squat-active.jpg",
-          "poster_path": "split-squat-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "split-squat-start.jpg",
+          "poster_path": "split-squat-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 31014,
+          "byte_size": 30777,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "split-squat-start.jpg",
-          "poster_path": "split-squat-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "split-squat-active.jpg",
+          "poster_path": "split-squat-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 30777,
+          "byte_size": 31014,
           "sort_order": 1
         }
       ]
@@ -4247,24 +4247,24 @@
       "media": [
         {
           "type": "image",
-          "path": "squat-active.jpg",
-          "poster_path": "squat-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "squat-start.jpg",
+          "poster_path": "squat-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 71334,
+          "byte_size": 72823,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "squat-start.jpg",
-          "poster_path": "squat-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "squat-active.jpg",
+          "poster_path": "squat-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 72823,
+          "byte_size": 71334,
           "sort_order": 1
         }
       ]
@@ -4300,24 +4300,24 @@
       "media": [
         {
           "type": "image",
-          "path": "standing-calf-raise-start.jpg",
-          "poster_path": "standing-calf-raise-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "standing-calf-raise-active.jpg",
+          "poster_path": "standing-calf-raise-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 60966,
+          "byte_size": 59984,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "standing-calf-raise-active.jpg",
-          "poster_path": "standing-calf-raise-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "standing-calf-raise-start.jpg",
+          "poster_path": "standing-calf-raise-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 59984,
+          "byte_size": 60966,
           "sort_order": 1
         }
       ]
@@ -4332,24 +4332,24 @@
       "media": [
         {
           "type": "image",
-          "path": "standing-leg-curl-start.jpg",
-          "poster_path": "standing-leg-curl-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "standing-leg-curl-active.jpg",
+          "poster_path": "standing-leg-curl-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 88574,
+          "byte_size": 88858,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "standing-leg-curl-active.jpg",
-          "poster_path": "standing-leg-curl-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "standing-leg-curl-start.jpg",
+          "poster_path": "standing-leg-curl-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 88858,
+          "byte_size": 88574,
           "sort_order": 1
         }
       ]
@@ -4385,24 +4385,24 @@
       "media": [
         {
           "type": "image",
-          "path": "step-up-active.jpg",
-          "poster_path": "step-up-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "step-up-start.jpg",
+          "poster_path": "step-up-start.jpg",
+          "phase_id": "sequence_start",
+          "phase": "Начало движения",
           "width": 850,
           "height": 567,
-          "byte_size": 70840,
+          "byte_size": 70516,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "step-up-start.jpg",
-          "poster_path": "step-up-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "step-up-active.jpg",
+          "poster_path": "step-up-active.jpg",
+          "phase_id": "sequence_next",
+          "phase": "Следующая позиция",
           "width": 850,
           "height": 567,
-          "byte_size": 70516,
+          "byte_size": 70840,
           "sort_order": 1
         }
       ]
@@ -4417,24 +4417,24 @@
       "media": [
         {
           "type": "image",
-          "path": "stiff-leg-deadlift-start.jpg",
-          "poster_path": "stiff-leg-deadlift-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "stiff-leg-deadlift-active.jpg",
+          "poster_path": "stiff-leg-deadlift-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 67855,
+          "byte_size": 68335,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "stiff-leg-deadlift-active.jpg",
-          "poster_path": "stiff-leg-deadlift-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "stiff-leg-deadlift-start.jpg",
+          "poster_path": "stiff-leg-deadlift-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 68335,
+          "byte_size": 67855,
           "sort_order": 1
         }
       ]
@@ -4449,24 +4449,24 @@
       "media": [
         {
           "type": "image",
-          "path": "straight-arm-pulldown-start.jpg",
-          "poster_path": "straight-arm-pulldown-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "straight-arm-pulldown-active.jpg",
+          "poster_path": "straight-arm-pulldown-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 66022,
+          "byte_size": 67261,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "straight-arm-pulldown-active.jpg",
-          "poster_path": "straight-arm-pulldown-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "straight-arm-pulldown-start.jpg",
+          "poster_path": "straight-arm-pulldown-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 67261,
+          "byte_size": 66022,
           "sort_order": 1
         }
       ]
@@ -4484,7 +4484,7 @@
           "path": "suitcase-carry-start.jpg",
           "poster_path": "suitcase-carry-start.jpg",
           "phase_id": "cycle_one",
-          "phase": "Первая фаза цикла",
+          "phase": "Первое положение",
           "width": 850,
           "height": 567,
           "byte_size": 59728,
@@ -4495,7 +4495,7 @@
           "path": "suitcase-carry-active.jpg",
           "poster_path": "suitcase-carry-active.jpg",
           "phase_id": "cycle_two",
-          "phase": "Вторая фаза цикла",
+          "phase": "Второе положение",
           "width": 850,
           "height": 567,
           "byte_size": 48204,
@@ -4513,24 +4513,24 @@
       "media": [
         {
           "type": "image",
-          "path": "sumo-deadlift-start.jpg",
-          "poster_path": "sumo-deadlift-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "sumo-deadlift-active.jpg",
+          "poster_path": "sumo-deadlift-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 44437,
+          "byte_size": 40578,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "sumo-deadlift-active.jpg",
-          "poster_path": "sumo-deadlift-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "sumo-deadlift-start.jpg",
+          "poster_path": "sumo-deadlift-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 40578,
+          "byte_size": 44437,
           "sort_order": 1
         }
       ]
@@ -4566,24 +4566,24 @@
       "media": [
         {
           "type": "image",
-          "path": "t-bar-row-start.jpg",
-          "poster_path": "t-bar-row-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "t-bar-row-active.jpg",
+          "poster_path": "t-bar-row-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 500,
           "height": 750,
-          "byte_size": 46113,
+          "byte_size": 44884,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "t-bar-row-active.jpg",
-          "poster_path": "t-bar-row-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "t-bar-row-start.jpg",
+          "poster_path": "t-bar-row-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 500,
           "height": 750,
-          "byte_size": 44884,
+          "byte_size": 46113,
           "sort_order": 1
         }
       ]
@@ -4600,8 +4600,8 @@
           "type": "image",
           "path": "thruster-start.jpg",
           "poster_path": "thruster-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "phase_id": "sequence_start",
+          "phase": "Начало движения",
           "width": 850,
           "height": 569,
           "byte_size": 35804,
@@ -4611,8 +4611,8 @@
           "type": "image",
           "path": "thruster-active.jpg",
           "poster_path": "thruster-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "phase_id": "sequence_next",
+          "phase": "Следующая позиция",
           "width": 850,
           "height": 569,
           "byte_size": 37473,
@@ -4633,7 +4633,7 @@
           "path": "treadmill-run-start.jpg",
           "poster_path": "treadmill-run-start.jpg",
           "phase_id": "cycle_one",
-          "phase": "Первая фаза цикла",
+          "phase": "Первое положение",
           "width": 850,
           "height": 569,
           "byte_size": 79903,
@@ -4644,7 +4644,7 @@
           "path": "treadmill-run-active.jpg",
           "poster_path": "treadmill-run-active.jpg",
           "phase_id": "cycle_two",
-          "phase": "Вторая фаза цикла",
+          "phase": "Второе положение",
           "width": 850,
           "height": 569,
           "byte_size": 61731,
@@ -4685,8 +4685,8 @@
           "type": "image",
           "path": "triceps-kickback-start.jpg",
           "poster_path": "triceps-kickback-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
           "byte_size": 52072,
@@ -4696,8 +4696,8 @@
           "type": "image",
           "path": "triceps-kickback-active.jpg",
           "poster_path": "triceps-kickback-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
           "byte_size": 50368,
@@ -4718,7 +4718,7 @@
           "path": "turkish-get-up-start.jpg",
           "poster_path": "turkish-get-up-start.jpg",
           "phase_id": "sequence_start",
-          "phase": "Начало последовательности",
+          "phase": "Начало движения",
           "width": 850,
           "height": 569,
           "byte_size": 37820,
@@ -4749,8 +4749,8 @@
           "type": "image",
           "path": "upright-row-start.jpg",
           "poster_path": "upright-row-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
           "byte_size": 55002,
@@ -4760,8 +4760,8 @@
           "type": "image",
           "path": "upright-row-active.jpg",
           "poster_path": "upright-row-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
           "byte_size": 54626,
@@ -4779,24 +4779,24 @@
       "media": [
         {
           "type": "image",
-          "path": "walking-lunge-active.jpg",
-          "poster_path": "walking-lunge-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "walking-lunge-start.jpg",
+          "poster_path": "walking-lunge-start.jpg",
+          "phase_id": "cycle_one",
+          "phase": "Первое положение",
           "width": 850,
           "height": 567,
-          "byte_size": 76877,
+          "byte_size": 77155,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "walking-lunge-start.jpg",
-          "poster_path": "walking-lunge-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "walking-lunge-active.jpg",
+          "poster_path": "walking-lunge-active.jpg",
+          "phase_id": "cycle_two",
+          "phase": "Второе положение",
           "width": 850,
           "height": 567,
-          "byte_size": 77155,
+          "byte_size": 76877,
           "sort_order": 1
         }
       ]
@@ -4813,8 +4813,8 @@
           "type": "image",
           "path": "wall-ball-start.jpg",
           "poster_path": "wall-ball-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "phase_id": "sequence_start",
+          "phase": "Начало движения",
           "width": 850,
           "height": 567,
           "byte_size": 51399,
@@ -4824,8 +4824,8 @@
           "type": "image",
           "path": "wall-ball-active.jpg",
           "poster_path": "wall-ball-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "phase_id": "sequence_next",
+          "phase": "Следующая позиция",
           "width": 850,
           "height": 567,
           "byte_size": 50964,
@@ -4843,24 +4843,24 @@
       "media": [
         {
           "type": "image",
-          "path": "wall-sit-active.jpg",
-          "poster_path": "wall-sit-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "wall-sit-start.jpg",
+          "poster_path": "wall-sit-start.jpg",
+          "phase_id": "setup",
+          "phase": "Подготовка",
           "width": 850,
           "height": 567,
-          "byte_size": 41546,
+          "byte_size": 37986,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "wall-sit-start.jpg",
-          "poster_path": "wall-sit-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "wall-sit-active.jpg",
+          "poster_path": "wall-sit-active.jpg",
+          "phase_id": "hold",
+          "phase": "Удержание",
           "width": 850,
           "height": 567,
-          "byte_size": 37986,
+          "byte_size": 41546,
           "sort_order": 1
         }
       ]
@@ -4875,24 +4875,24 @@
       "media": [
         {
           "type": "image",
-          "path": "weighted-dip-active.jpg",
-          "poster_path": "weighted-dip-active.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "weighted-dip-start.jpg",
+          "poster_path": "weighted-dip-start.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 72525,
+          "byte_size": 73206,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "weighted-dip-start.jpg",
-          "poster_path": "weighted-dip-start.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "weighted-dip-active.jpg",
+          "poster_path": "weighted-dip-active.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 73206,
+          "byte_size": 72525,
           "sort_order": 1
         }
       ]
@@ -4907,24 +4907,24 @@
       "media": [
         {
           "type": "image",
-          "path": "woodchopper-start.jpg",
-          "poster_path": "woodchopper-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "woodchopper-active.jpg",
+          "poster_path": "woodchopper-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 1275,
-          "byte_size": 107915,
+          "byte_size": 112505,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "woodchopper-active.jpg",
-          "poster_path": "woodchopper-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "woodchopper-start.jpg",
+          "poster_path": "woodchopper-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 1275,
-          "byte_size": 112505,
+          "byte_size": 107915,
           "sort_order": 1
         }
       ]
@@ -4939,24 +4939,24 @@
       "media": [
         {
           "type": "image",
-          "path": "y-raise-start.jpg",
-          "poster_path": "y-raise-start.jpg",
-          "phase_id": "positive",
-          "phase": "Позитивная фаза",
+          "path": "y-raise-active.jpg",
+          "poster_path": "y-raise-active.jpg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
           "width": 850,
           "height": 567,
-          "byte_size": 58234,
+          "byte_size": 58549,
           "sort_order": 0
         },
         {
           "type": "image",
-          "path": "y-raise-active.jpg",
-          "poster_path": "y-raise-active.jpg",
-          "phase_id": "negative",
-          "phase": "Негативная фаза",
+          "path": "y-raise-start.jpg",
+          "poster_path": "y-raise-start.jpg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
           "width": 850,
           "height": 567,
-          "byte_size": 58549,
+          "byte_size": 58234,
           "sort_order": 1
         }
       ]

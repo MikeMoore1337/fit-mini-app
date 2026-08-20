@@ -225,30 +225,30 @@ def test_seeded_exercise_metadata_and_alternatives_are_serialized(client) -> Non
     assert guide["source_license_url"].endswith("/LICENSE.md")
     assert guide["media"][0] == {
         "type": "image",
-        "url": "/static/exercise-guides/bench-press-active.jpg",
-        "poster": "/static/exercise-guides/bench-press-active.jpg",
-        "phase": "Позитивная фаза",
-        "alt": "Жим лежа: позитивная фаза",
+        "url": "/static/exercise-guides/bench-press-start.jpg",
+        "poster": "/static/exercise-guides/bench-press-start.jpg",
+        "phase": "Фаза усилия",
+        "alt": "Жим лежа: фаза усилия",
         "source_name": "free-exercise-db",
         "source_url": "https://github.com/yuhonas/free-exercise-db",
         "source_license": "Unlicense (общественное достояние)",
         "source_license_url": ("https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"),
         "width": 850,
         "height": 567,
-        "byte_size": 72202,
+        "byte_size": 72816,
         "sort_order": 0,
     }
-    assert guide["media"][1]["phase"] == "Негативная фаза"
+    assert guide["media"][1]["phase"] == "Фаза возврата"
     assert guide["images"] == [
         {
-            "phase": "Позитивная фаза",
-            "url": "/static/exercise-guides/bench-press-active.jpg",
-            "alt": "Жим лежа: позитивная фаза",
+            "phase": "Фаза усилия",
+            "url": "/static/exercise-guides/bench-press-start.jpg",
+            "alt": "Жим лежа: фаза усилия",
         },
         {
-            "phase": "Негативная фаза",
-            "url": "/static/exercise-guides/bench-press-start.jpg",
-            "alt": "Жим лежа: негативная фаза",
+            "phase": "Фаза возврата",
+            "url": "/static/exercise-guides/bench-press-active.jpg",
+            "alt": "Жим лежа: фаза возврата",
         },
     ]
     assert guide["safety_notes"]
@@ -273,8 +273,8 @@ def test_seeded_exercise_metadata_and_alternatives_are_serialized(client) -> Non
         headers=headers,
     ).json()
     assert [item["phase"] for item in lat_pulldown_guide["media"]] == [
-        "Позитивная фаза",
-        "Негативная фаза",
+        "Фаза усилия",
+        "Фаза возврата",
     ]
 
     plank = next(item for item in catalog.json() if item["slug"] == "plank")
@@ -283,6 +283,58 @@ def test_seeded_exercise_metadata_and_alternatives_are_serialized(client) -> Non
         headers=headers,
     ).json()
     assert [item["phase"] for item in plank_guide["media"]] == ["Подготовка", "Удержание"]
+
+    reviewed_pairs = {
+        "hyperextension": [
+            ("hyperextension-start.jpg", "Фаза усилия"),
+            ("hyperextension-active.jpg", "Фаза возврата"),
+        ],
+        "lying-dumbbell-triceps-extension": [
+            ("lying-dumbbell-triceps-extension-active.jpg", "Фаза усилия"),
+            ("lying-dumbbell-triceps-extension-start.jpg", "Фаза возврата"),
+        ],
+        "romanian-deadlift": [
+            ("romanian-deadlift-active.jpg", "Фаза усилия"),
+            ("romanian-deadlift-start.jpg", "Фаза возврата"),
+        ],
+        "smith-squat": [
+            ("smith-squat-active.jpg", "Фаза усилия"),
+            ("smith-squat-start.jpg", "Фаза возврата"),
+        ],
+        "triceps-kickback": [
+            ("triceps-kickback-start.jpg", "Фаза усилия"),
+            ("triceps-kickback-active.jpg", "Фаза возврата"),
+        ],
+        "upright-row": [
+            ("upright-row-start.jpg", "Фаза усилия"),
+            ("upright-row-active.jpg", "Фаза возврата"),
+        ],
+        "pallof-press": [
+            ("pallof-press-start.jpg", "Подготовка"),
+            ("pallof-press-active.jpg", "Удержание"),
+        ],
+        "rowing-machine": [
+            ("rowing-machine-start.jpg", "Первое положение"),
+            ("rowing-machine-active.jpg", "Второе положение"),
+        ],
+        "walking-lunge": [
+            ("walking-lunge-start.jpg", "Первое положение"),
+            ("walking-lunge-active.jpg", "Второе положение"),
+        ],
+        "wall-ball": [
+            ("wall-ball-start.jpg", "Начало движения"),
+            ("wall-ball-active.jpg", "Следующая позиция"),
+        ],
+    }
+    catalog_by_slug = {item["slug"]: item for item in catalog.json()}
+    for slug, expected_media in reviewed_pairs.items():
+        reviewed_guide = client.get(
+            f"/api/v1/programs/exercises/{catalog_by_slug[slug]['id']}/guide",
+            headers=headers,
+        ).json()
+        assert [
+            (item["url"].rsplit("/", 1)[-1], item["phase"]) for item in reviewed_guide["media"]
+        ] == expected_media
 
 
 def test_custom_exercise_structured_metadata_can_be_partial(client) -> None:

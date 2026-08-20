@@ -804,24 +804,24 @@ async function mockApi(
             alternatives: [],
             images: [
               {
-                phase: 'Позитивная фаза',
+                phase: 'Фаза усилия',
                 url: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>',
-                alt: 'Позитивная фаза',
+                alt: 'Фаза усилия',
               },
               {
-                phase: 'Негативная фаза',
+                phase: 'Фаза возврата',
                 url: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>',
-                alt: 'Негативная фаза',
+                alt: 'Фаза возврата',
               },
             ],
             media: [
               {
                 type: 'image',
-                phase: 'Позитивная фаза',
+                phase: 'Фаза усилия',
                 url: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>',
                 poster:
                   'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>',
-                alt: 'Позитивная фаза',
+                alt: 'Фаза усилия',
                 source_name: 'Test source',
                 source_url: 'https://example.com',
                 source_license: 'Public domain',
@@ -833,11 +833,11 @@ async function mockApi(
               },
               {
                 type: 'image',
-                phase: 'Негативная фаза',
+                phase: 'Фаза возврата',
                 url: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>%20',
                 poster:
                   'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>%20',
-                alt: 'Негативная фаза',
+                alt: 'Фаза возврата',
                 source_name: 'Test source',
                 source_url: 'https://example.com',
                 source_license: 'Public domain',
@@ -1495,7 +1495,7 @@ test('профиль содержит уведомления, а карточк�
   expect(
     Math.abs(guideHeadBox!.x + guideHeadBox!.width - (guidePanelBox!.x + guidePanelBox!.width)),
   ).toBeLessThanOrEqual(2);
-  const phaseImage = page.getByAltText('Позитивная фаза');
+  const phaseImage = page.getByAltText('Фаза усилия');
   await expect(phaseImage).toHaveAttribute('loading', 'lazy');
   await expect(phaseImage).toHaveAttribute('width', '400');
   expect(
@@ -1503,7 +1503,7 @@ test('профиль содержит уведомления, а карточк�
       Number.parseFloat(getComputedStyle(image).transitionDuration),
     ),
   ).toBeLessThanOrEqual(0.001);
-  await page.getByRole('button', { name: 'Увеличить: Позитивная фаза' }).click();
+  await page.getByRole('button', { name: 'Увеличить: Фаза усилия' }).click();
   await expect(page.locator('.exercise-lightbox')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.locator('.exercise-lightbox')).toHaveCount(0);
@@ -1721,15 +1721,15 @@ test('поля адаптируются к разным iPhone, а пример 
   ).toBeLessThanOrEqual(2);
   await page.getByRole('button', { name: 'Техника и детали' }).click();
   const exerciseGuide = page.locator('.exercise-guide-modal__panel');
-  await expect(exerciseGuide.getByRole('img', { name: 'Позитивная фаза' })).toBeVisible();
-  await expect(exerciseGuide.getByRole('img', { name: 'Негативная фаза' })).toBeVisible();
+  await expect(exerciseGuide.getByRole('img', { name: 'Фаза усилия' })).toBeVisible();
+  await expect(exerciseGuide.getByRole('img', { name: 'Фаза возврата' })).toBeVisible();
   await expect(
-    exerciseGuide.locator('.exercise-guide-images figcaption').getByText('Позитивная фаза'),
+    exerciseGuide.locator('.exercise-guide-images figcaption').getByText('Фаза усилия'),
   ).toBeVisible();
   await expect(
-    exerciseGuide.locator('.exercise-guide-images figcaption').getByText('Негативная фаза'),
+    exerciseGuide.locator('.exercise-guide-images figcaption').getByText('Фаза возврата'),
   ).toBeVisible();
-  await exerciseGuide.getByRole('button', { name: 'Увеличить: Позитивная фаза' }).click();
+  await exerciseGuide.getByRole('button', { name: 'Увеличить: Фаза усилия' }).click();
   await expect(page.locator('.exercise-lightbox')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.locator('.exercise-lightbox')).toHaveCount(0);

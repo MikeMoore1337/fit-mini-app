@@ -43,10 +43,10 @@ const fullExercise: Exercise = {
     media: [
       {
         type: 'image',
-        url: '/static/exercise-guides/lat-pulldown-start.jpg',
-        poster: '/static/exercise-guides/lat-pulldown-start.jpg',
-        phase: 'Позитивная фаза',
-        alt: 'Тяга верхнего блока: позитивная фаза',
+        url: '/static/exercise-guides/lat-pulldown-active.jpg',
+        poster: '/static/exercise-guides/lat-pulldown-active.jpg',
+        phase: 'Фаза усилия',
+        alt: 'Тяга верхнего блока: фаза усилия',
         source_name: 'Проверенный источник',
         source_url: 'https://example.com/source',
         source_license: 'Разрешённая лицензия',
@@ -58,10 +58,10 @@ const fullExercise: Exercise = {
       },
       {
         type: 'image',
-        url: '/static/exercise-guides/lat-pulldown-active.jpg',
-        poster: '/static/exercise-guides/lat-pulldown-active.jpg',
-        phase: 'Негативная фаза',
-        alt: 'Тяга верхнего блока: негативная фаза',
+        url: '/static/exercise-guides/lat-pulldown-start.jpg',
+        poster: '/static/exercise-guides/lat-pulldown-start.jpg',
+        phase: 'Фаза возврата',
+        alt: 'Тяга верхнего блока: фаза возврата',
         source_name: 'Проверенный источник',
         source_url: 'https://example.com/source',
         source_license: 'Разрешённая лицензия',
@@ -74,14 +74,14 @@ const fullExercise: Exercise = {
     ],
     images: [
       {
-        phase: 'Позитивная фаза',
-        url: '/static/exercise-guides/lat-pulldown-start.jpg',
-        alt: 'Тяга верхнего блока: позитивная фаза',
+        phase: 'Фаза усилия',
+        url: '/static/exercise-guides/lat-pulldown-active.jpg',
+        alt: 'Тяга верхнего блока: фаза усилия',
       },
       {
-        phase: 'Негативная фаза',
-        url: '/static/exercise-guides/lat-pulldown-active.jpg',
-        alt: 'Тяга верхнего блока: негативная фаза',
+        phase: 'Фаза возврата',
+        url: '/static/exercise-guides/lat-pulldown-start.jpg',
+        alt: 'Тяга верхнего блока: фаза возврата',
       },
     ],
     media_reference: 'exercise-guides:lat-pulldown',
@@ -138,8 +138,8 @@ describe('ExerciseGuideDialog', () => {
     renderGuide();
 
     expect(await screen.findByRole('heading', { name: 'Техника выполнения' })).toBeVisible();
-    expect(screen.getByAltText('Тяга верхнего блока: позитивная фаза')).toBeVisible();
-    expect(screen.getByAltText('Тяга верхнего блока: негативная фаза')).toBeVisible();
+    expect(screen.getByAltText('Тяга верхнего блока: фаза усилия')).toBeVisible();
+    expect(screen.getByAltText('Тяга верхнего блока: фаза возврата')).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Основные мышцы' })).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Дополнительные мышцы' })).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Оборудование' })).toBeVisible();
