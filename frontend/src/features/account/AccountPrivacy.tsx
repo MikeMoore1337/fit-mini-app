@@ -196,8 +196,12 @@ export function AccountPrivacy() {
         </div>
       </details>
 
-      <Card title="Данные и аккаунт" description="Скачайте копию данных или удалите аккаунт.">
-        <div className="toolbar wrap top-gap">
+      <Card
+        title="Копия данных"
+        description="Скачайте данные аккаунта перед удалением или для личного архива."
+      >
+        <div className="profile-data-export top-gap">
+          <p className="muted">Архив формируется в JSON и сохраняется только на ваше устройство.</p>
           <button
             type="button"
             className="secondary"
@@ -206,6 +210,19 @@ export function AccountPrivacy() {
           >
             {exportMutation.isPending ? 'Готовим архив…' : 'Скачать мои данные'}
           </button>
+        </div>
+      </Card>
+
+      <section className="profile-danger-zone" aria-labelledby="profile-danger-title">
+        <div>
+          <span className="eyebrow">Опасное действие</span>
+          <h3 id="profile-danger-title">Удаление аккаунта</h3>
+          <p>
+            Профиль, замеры, программы и история тренировок будут удалены без возможности
+            восстановления.
+          </p>
+        </div>
+        <div className="profile-danger-zone__action">
           <button
             type="button"
             className="btn-danger"
@@ -225,7 +242,7 @@ export function AccountPrivacy() {
             {deleteMutation.isPending ? 'Удаляем…' : 'Удалить аккаунт'}
           </button>
         </div>
-      </Card>
+      </section>
     </>
   );
 }

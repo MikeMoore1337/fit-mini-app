@@ -7,6 +7,7 @@ import type { WorkoutNavigationTarget } from '../../features/workouts/WorkoutHis
 import { useNavigation } from '../../shared/navigation/router';
 import { Badge } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
+import { programProfileReadiness } from '../../features/profile/programReadiness';
 
 const NotificationsPanel = lazy(() =>
   import('../../features/account/NotificationsPanel').then((module) => ({
@@ -148,6 +149,7 @@ export default function MiniAppPage() {
     );
   }, [toast]);
   const role = user?.is_admin ? 'Администратор' : user?.is_coach ? 'Тренер' : 'Клиент';
+  const profileReadiness = programProfileReadiness(user?.profile);
   const profileFormKey = JSON.stringify([
     user?.profile?.full_name,
     user?.profile?.birth_date,
@@ -162,24 +164,28 @@ export default function MiniAppPage() {
 
   return (
     <AppShell section={section}>
-      <div
-        className={`page-stack app-section app-section--${section}${
-          section === 'profile' ? '' : ' app-section--design-v2'
-        }`}
-      >
+      <div className={`page-stack app-section app-section--${section} app-section--design-v2`}>
         {section !== 'today' && section !== 'progress' && section !== 'nutrition' && (
           <header className="card hero-card">
             <div>
               <span className="eyebrow">Your Fitness Coach</span>
-              <h1>{user?.profile?.full_name || user?.first_name || 'Мой фитнес'}</h1>
-              <p className="muted">Тренировки, питание и прогресс в одном месте.</p>
+              <h1>
+                {section === 'profile'
+                  ? 'Профиль и настройки'
+                  : user?.profile?.full_name || user?.first_name || 'Мой фитнес'}
+              </h1>
+              <p className="muted">
+                {section === 'profile'
+                  ? 'Личные данные, связи, уведомления и безопасность аккаунта.'
+                  : 'Тренировки, питание и прогресс в одном месте.'}
+              </p>
             </div>
             <div className="hero-card__meta">
               <Badge>{role}</Badge>
             </div>
           </header>
         )}
-        {section !== 'today' && section !== 'nutrition' && <TelegramLinkPrompt />}
+        {(section === 'programs' || section === 'catalog') && <TelegramLinkPrompt />}
         <section className="page-stack">
           <Suspense
             fallback={
@@ -223,21 +229,86 @@ export default function MiniAppPage() {
               />
             )}
             {section === 'profile' && (
-              <>
+              <div className="profile-settings">
+                <section className="profile-status-shell" aria-labelledby="profile-status-title">
+                  <div className="profile-status-shell__copy">
+                    <span className="eyebrow">Основа рекомендаций</span>
+                    <h2 id="profile-status-title">
+                      {profileReadiness.isComplete
+                        ? 'Настройки программы заполнены'
+                        : 'Профиль стоит дополнить'}
+                    </h2>
+                    <p>
+                      Цель, уровень и число силовых тренировок в неделю помогают предложить
+                      подходящую программу.
+                    </p>
+                  </div>
+                  <div className="profile-status-shell__value">
+                    <span>Заполнено</span>
+                    <strong>
+                      {profileReadiness.completed} из {profileReadiness.total}
+                    </strong>
+                    <Badge tone={profileReadiness.isComplete ? 'success' : 'warning'}>
+                      {profileReadiness.isComplete ? 'Готово' : 'Нужны данные'}
+                    </Badge>
+                  </div>
+                </section>
+
+                <nav className="profile-settings-nav" aria-label="Разделы профиля">
+                  <a href="#profile-personal">Личные данные</a>
+                  <a href="#profile-fitness">Цели и параметры</a>
+                  <a href="#profile-trainer">Тренер и приглашения</a>
+                  <a href="#profile-notifications">Уведомления</a>
+                  <a href="#profile-security">Доступ и безопасность</a>
+                </nav>
+
                 <ProfileForm key={profileFormKey} />
-                <CoachRoleApplicationCard />
-                <CoachInvites
-                  initialToken={inviteToken}
-                  onInitialTokenHandled={() => setInviteToken(null)}
-                />
-                <NotificationsPanel
-                  onNavigate={(destination) => {
-                    setFocusedWorkout(null);
-                    navigate(`/app?section=${destination}`);
-                  }}
-                />
-                <AccountPrivacy />
-              </>
+                <section
+                  className="profile-settings-group"
+                  id="profile-trainer"
+                  aria-labelledby="profile-trainer-title"
+                >
+                  <header className="profile-settings-group__head">
+                    <span className="eyebrow">Связи</span>
+                    <h2 id="profile-trainer-title">Тренер и приглашения</h2>
+                    <p>Управляйте текущим тренером или проверьте статус доступа для тренеров.</p>
+                  </header>
+                  <CoachInvites
+                    initialToken={inviteToken}
+                    onInitialTokenHandled={() => setInviteToken(null)}
+                  />
+                  <CoachRoleApplicationCard />
+                </section>
+                <section
+                  className="profile-settings-group"
+                  id="profile-notifications"
+                  aria-labelledby="profile-notifications-title"
+                >
+                  <header className="profile-settings-group__head">
+                    <span className="eyebrow">Расписание</span>
+                    <h2 id="profile-notifications-title">Уведомления</h2>
+                    <p>Выберите полезные напоминания и время их отправки.</p>
+                  </header>
+                  <NotificationsPanel
+                    onNavigate={(destination) => {
+                      setFocusedWorkout(null);
+                      navigate(`/app?section=${destination}`);
+                    }}
+                  />
+                </section>
+                <section
+                  className="profile-settings-group profile-settings-group--security"
+                  id="profile-security"
+                  aria-labelledby="profile-security-title"
+                >
+                  <header className="profile-settings-group__head">
+                    <span className="eyebrow">Аккаунт</span>
+                    <h2 id="profile-security-title">Доступ и безопасность</h2>
+                    <p>Способы входа, копия ваших данных и действия с аккаунтом.</p>
+                  </header>
+                  <AccountPrivacy />
+                </section>
+              </div>
             )}
           </Suspense>
         </section>
