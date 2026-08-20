@@ -1,7 +1,7 @@
 # Final execution order
 
-## Completed
-`00-06`
+## Completed through Design V2 integration gate
+`00-46`, `46A-46J`, включая `46C.1-46C.6`
 
 ## Brand foundation
 `07`
@@ -24,17 +24,32 @@
 Каждая `46C.*` выполняется отдельной сессией и отдельным commit.
 
 ## Design V2 integration
-`46D -> 46E -> 46F -> 46G -> 46H -> 46I -> 46J`
+```text
+46D -> 46E
+    -> owner choice
+    -> 46F
+    -> owner approval
+    -> 46G
+    -> owner manual test
+    -> 46H
+    -> owner approval
+    -> 46I -> 46J -> 47
+```
 
 Task `46D` начинается только после завершения всех `46C.1-46C.6`.
+Task `46C.6` — уже завершённая owner-approved вставка для сохранения Telegram proxy-tunnel; она не
+меняет исходную нумерацию `47-93`.
 
 ## Remaining product UX
 `47-57`
 
+Следующая задача: `47-profile-account-experience.md`.
+
 ## Final core-product gaps
-`58-61`
+`58 -> 59 -> 59A -> 60 -> 61`
 - deterministic progression
 - notifications/reminders
+- main Telegram bot support/feedback
 - account lifecycle/export
 - guarded manual cardio
 

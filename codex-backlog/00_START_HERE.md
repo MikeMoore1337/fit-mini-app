@@ -3,36 +3,29 @@
 Это замороженный backlog до первого релиза живым пользователям.
 
 ## Уже выполнено
-Tasks `00-06` считаются выполненными и не запускаются повторно.
+Tasks `00-46` и integration gate `46A-46J`, включая `46C.1-46C.6`, считаются выполненными и не
+запускаются повторно. Approved Design V2 внедрён на завершённых surfaces, а будущий backlog
+синхронизирован с ним.
 
 ## Выбор модели Codex
 
 Перед каждой новой Codex-сессией вручную выбрать модель по `MODEL_SELECTION.md`. Backlog не переключает runtime-модель автоматически.
 
 ## Следующая задача
-`07-brand-logo-favicon-foundation.md`
+`47-profile-account-experience.md`
 
-Она фиксирует утверждённый logo reference как canonical production SVG assets и отдельный читаемый favicon без надписи.
+Не переходить к task `48` в той же сессии.
 
 ## Финальная структура
 
 ```text
-00-06  ✅ COMPLETED
-07     Brand logo + favicon foundation
-08     Unified YFC theme / Web + TMA sync
-09     Organic Growth
-10-13  Auth
-14     Progressive onboarding
-
-15-22  Food platform
-23-28  Training domain
-
-29-40  Advanced deterministic foundations
-41-54  Core UX / Trainer / Knowledge
-55-57  Advanced UX / product analytics
+00-46  ✅ COMPLETED
+46A-46J, включая 46C.1-46C.6  ✅ COMPLETED
+47-57  Remaining core + advanced UX
 
 58     Deterministic progression guidance
 59     Notifications / reminders
+59A    Main Telegram bot support / feedback
 60     Account export + lifecycle
 61     Cardio logging gap audit + minimal implementation
 
@@ -57,14 +50,17 @@ Tasks `00-06` считаются выполненными и не запуска
 
 Downstream tasks must reuse the canonical logo assets from task `07`, not create their own variants.
 
-## Landing visual source of truth
+## Design V2 source of truth
 
-- dark reference: `references/landing/landing-reference-dark.png`;
-- light reference: `references/landing/landing-reference-light.png`;
-- interpretation rules: `LANDING_REFERENCE_NOTES.md`;
-- implementation task: `tasks/73-landing-premium-refresh.md`.
+- integration contract: `DESIGN_V2_INTEGRATION_NOTES.md`;
+- approved specifications: релевантные `../docs/design/*v2*`;
+- approved renders: `../docs/design/references/design-v2/`;
+- implementation source: фактические shared Design V2 tokens/components;
+- Landing implementation task: `tasks/73-landing-premium-refresh.md`.
 
-The PNG references define composition and visual direction, not factual claims. Product truth, SEO, security and privacy requirements take precedence over text/data visible inside the reference images.
+`references/landing/landing-reference-dark.png`, `landing-reference-light.png` и
+`LANDING_REFERENCE_NOTES.md` являются только historical context и не участвуют в visual acceptance.
+Product truth, SEO, accessibility, security и privacy requirements имеют высший приоритет.
 
 
 ## Единый Web/TMA дизайн

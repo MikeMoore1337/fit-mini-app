@@ -1,15 +1,21 @@
-# Landing - canonical visual references
+# Landing - legacy visual references
 
-Для финального premium refresh лендинга пользователь утвердил два визуальных референса:
+Эти два файла использовались как historical input до утверждения Design V2:
 
 - `references/landing/landing-reference-dark.png` - тёмная тема;
 - `references/landing/landing-reference-light.png` - светлая тема.
 
-Эти изображения являются **визуальным направлением и композиционным ориентиром**, а не готовой спецификацией текста, данных или бизнес-логики.
+Они больше не являются source of truth или acceptance reference по hero, cards, testimonials,
+imagery, typography, section rhythm, geometry и composition. Канонический контракт задают
+`DESIGN_V2_INTEGRATION_NOTES.md`, релевантные `docs/design/*v2*`, approved renders в
+`docs/design/references/design-v2/` и фактическая shared Design V2 implementation.
+
+Оставшиеся разделы этого документа описывают только исторический контекст. Их нельзя использовать
+для возврата legacy UI или переопределения Approved Design V2.
 
 Главная implementation task: `tasks/73-landing-premium-refresh.md`.
 
-## Что считать утверждённым визуальным направлением
+## Историческое визуальное направление
 
 ### 1. Общий характер
 
@@ -143,7 +149,9 @@ Hero должен прежде всего объяснять ценность п
 - ссылки/страницы, которых нет;
 - любые screenshot details, которых нет в текущем product UI.
 
-Референсы задают **визуальную систему, ритм, hierarchy и состав блоков**, но production content должен исходить из кода, completed tasks и SEO/public content source of truth.
+Исторические PNG не задают production visual system, rhythm, hierarchy или состав блоков.
+Production content исходит из фактического продукта и SEO/public content source of truth, а
+визуальное решение — из Approved Design V2.
 
 ## Связь с логотипом
 
@@ -176,10 +184,11 @@ Landing не создаёт новый logo. Используется canonical 
 
 Для Landing использовать такой приоритет:
 
-1. фактический продукт и completed tasks;
-2. security/privacy/auth/SEO requirements текущего backlog;
-3. `LANDING_REFERENCE_NOTES.md` + два утверждённых PNG;
-4. task `73`;
-5. старый `masters/premium-redesign-master.md`.
+1. фактический product behavior и security/privacy/auth/SEO/accessibility requirements;
+2. Approved Design V2 в `docs/design/*v2*` и `docs/design/references/design-v2/`;
+3. фактическая shared Design V2 implementation;
+4. canonical logo/assets task `07`;
+5. task `73` как implementation scope.
 
-Старый master не должен переопределять более новые утверждённые landing references.
+Этот документ, два legacy PNG и `masters/premium-redesign-master.md` остаются только historical
+context и не переопределяют источники выше.

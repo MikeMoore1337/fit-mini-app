@@ -2,7 +2,7 @@
 
 Final pre-release quality-first policy.
 
-`00-06` are completed and are not rerun.
+`00-46` и integration gate `46A-46J`, включая `46C.1-46C.6`, завершены и не запускаются повторно.
 
 Важно: этот файл является рекомендацией. Codex не переключает runtime-модель автоматически из текста backlog. Перед запуском отдельной Codex-сессии модель/reasoning нужно выбрать вручную.
 
@@ -51,7 +51,7 @@ Final pre-release quality-first policy.
 08  unified theme / Web + TMA sync
 61  cardio gap audit + conditional implementation
 72  Telegram Mini App platform integration/hardening
-73  approved-reference Landing premium implementation
+73  Approved Design V2 Landing implementation
 74  responsive/accessibility/states cross-product hardening
 ```
 

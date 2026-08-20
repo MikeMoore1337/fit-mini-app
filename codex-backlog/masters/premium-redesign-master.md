@@ -1793,7 +1793,11 @@ Your Fitness Coach - один продукт с общим frontend/backend, д�
 
 ## Актуализация Landing reference
 
-> Для финальной реализации Landing этот исторический master дополнен более новым source of truth: `LANDING_REFERENCE_NOTES.md`, `references/landing/landing-reference-dark.png` и `references/landing/landing-reference-light.png`. При расхождении использовать новые reference rules и task `73`, сохраняя product truth, SEO, security и privacy требования.
+> Этот master и legacy Landing PNG сохранены только как historical context. Для финальной реализации
+> использовать `DESIGN_V2_INTEGRATION_NOTES.md`, релевантные `docs/design/*v2*`, approved renders в
+> `docs/design/references/design-v2/`, фактическую shared Design V2 implementation и task `73`.
+> Product truth, SEO, accessibility, security и privacy requirements имеют приоритет над визуальными
+> источниками.
 
 ## Цель
 

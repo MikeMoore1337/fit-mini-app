@@ -1,5 +1,9 @@
 # Your Fitness Coach - Premium Redesign
 
+> Исторический planning document. Он не является source of truth после Approved Design V2 и не
+> переопределяет `DESIGN_V2_INTEGRATION_NOTES.md`, релевантные `docs/design/*v2*`, approved renders,
+> фактическую shared Design V2 implementation или текущие tasks `47-93`.
+
 ## Цель пакета
 
 Поэтапно переработать UX/UI Your Fitness Coach так, чтобы:

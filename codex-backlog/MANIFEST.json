@@ -1,13 +1,13 @@
 {
   "package": "your-fitness-coach-release-backlog-final-with-trainer-application",
-  "generated_at": "2026-08-19T22:14:52+03:00",
+  "generated_at": "2026-08-20T14:15:29+03:00",
   "repository": "MikeMoore1337/fit-mini-app",
   "working_branch": "feature/yfc-platform-v2",
   "status": "FINAL_PRE_RELEASE_FEATURE_FREEZE",
-  "user_confirmed_completed_tasks": "00-46 plus 46A, 46B, 46B1 and 46C.1-46C.5",
-  "next_task": "46d-product-ux-ui-landing-baseline-audit",
-  "task_count": 114,
-  "task_range": "00-93 plus 46A-46J, 46C.1-46C.6, 69A, 70A and 71A",
+  "user_confirmed_completed_tasks": "00-46 plus 46A-46J and 46C.1-46C.6",
+  "next_task": "47-profile-account-experience",
+  "task_count": 115,
+  "task_range": "00-93 plus 46A-46J, 46C.1-46C.6, 59A, 69A, 70A and 71A",
   "core_product_complete_before_ai_through": "75",
   "ai_block": "76-91",
   "production_readiness": "92",
@@ -24,7 +24,15 @@
     "light": "references/landing/landing-reference-light.png",
     "requirements": "LANDING_REFERENCE_NOTES.md",
     "implementation_task": "73-landing-premium-refresh",
-    "policy": "visual direction only; factual product truth overrides reference text/data"
+    "policy": "historical context only; not a source of truth or visual acceptance input after Approved Design V2"
+  },
+  "approved_design_v2": {
+    "integration_contract": "DESIGN_V2_INTEGRATION_NOTES.md",
+    "specifications": "../docs/design/*v2*",
+    "approved_renders": "../docs/design/references/design-v2/",
+    "implementation": "shared production Design V2 tokens and components after task 46I",
+    "aligned_future_tasks": "47-93",
+    "alignment_gate": "46J completed before task 47"
   },
   "new_final_release_gaps": {
     "07": "canonical brand logo/favicon foundation",
@@ -51,8 +59,8 @@
   "files": [
     {
       "path": "00_START_HERE.md",
-      "bytes": 3555,
-      "sha256": "2cff43124bea1170111674b5ac9ca31f675a3891772c87e1b9b0864ee86c577a"
+      "bytes": 3645,
+      "sha256": "85f355b90c0e1e5785a075ed561cf244ab58a893866d9e63735a9217b062fda6"
     },
     {
       "path": "ADMIN_MODEL_NOTES.md",
@@ -81,8 +89,8 @@
     },
     {
       "path": "BRAND_ASSET_NOTES.md",
-      "bytes": 2367,
-      "sha256": "4304b57d124d3e75a9cf48b1c122cbb195b2f764ba7d50339a3efd21868c0b9a"
+      "bytes": 3028,
+      "sha256": "9be5d07cde1f27b10f06cfa85e3d0c7aa0fe865d0aab029a4dc773db2ba44373"
     },
     {
       "path": "CODEX_PROMPT_TEMPLATE.md",
@@ -91,8 +99,8 @@
     },
     {
       "path": "COMPLETION_CHECKLIST.md",
-      "bytes": 5875,
-      "sha256": "60b29b12c2fe5fcca9e8ca2718c8fdb7d5d4aa6e5faafb75a3f3d07b93b3f67d"
+      "bytes": 4547,
+      "sha256": "1250913fae4028810d3e55d442ba7734f73a97d4dfb007b5d4fd7deafd1f73fe"
     },
     {
       "path": "DEFERRED_NOT_IN_SCOPE.md",
@@ -106,18 +114,18 @@
     },
     {
       "path": "DEPENDENCY_GRAPH.md",
-      "bytes": 1659,
-      "sha256": "ebbc13daf7a680728401a8919c55850f2c147cfafd8062715c8dfceb0e632205"
+      "bytes": 2037,
+      "sha256": "fe422f0c695fea9ac63cb3242f805ce34f34b9a56d1d09e3aeee694ec94363db"
     },
     {
       "path": "DESIGN_V2_INTEGRATION_NOTES.md",
-      "bytes": 3227,
-      "sha256": "706b3f3f0e707311b3a7858cdb774a620301c21a38a79828356ae0eb2598fe1d"
+      "bytes": 10278,
+      "sha256": "554527053d42ad89ebd830c68cedb23bab409d0511c304bb9f4e2cb8b5d92f35"
     },
     {
       "path": "EXECUTION_STATUS.md",
-      "bytes": 638,
-      "sha256": "f6e67927b206ed059208fff699d54ef48f34cc238a993951f454912200a0e875"
+      "bytes": 619,
+      "sha256": "9e27066fc8758ca4b83639b715038b54b0320e603ee5c9ec80d371eac99ded25"
     },
     {
       "path": "FINAL_BACKLOG_CHANGELOG.md",
@@ -136,18 +144,18 @@
     },
     {
       "path": "LANDING_REFERENCE_NOTES.md",
-      "bytes": 10467,
-      "sha256": "34258780cbd2d09174a5c820e00a76e559df67c8d3ccf87afe2b72ba1ee9255b"
+      "bytes": 11033,
+      "sha256": "9b2ebde3fc246cda0059a8eba119ce0aad173c154e5ebc2f9a46c8c9d294b257"
     },
     {
       "path": "MODEL_SELECTION.md",
-      "bytes": 3244,
-      "sha256": "ee247ffd6d686eacc3e7d99d878b6d0fe669165b11982dcf55a72943bbae937b"
+      "bytes": 3337,
+      "sha256": "c658db377ecaa4812b7cd04441ca09e479fdb27c5378ea7cd1a04be460760f5d"
     },
     {
       "path": "NEW_TASKS_46A_46J_README.md",
-      "bytes": 1751,
-      "sha256": "2fc6c93f75414cd903d5192410672026fb853fb8f9ed84298175cc459230dd80"
+      "bytes": 2046,
+      "sha256": "9a1f4d5917a93f52470cfd27989964f6d41d9f85093beea18e0653776dffd89d"
     },
     {
       "path": "PLAIN_LANGUAGE_UX.md",
@@ -161,8 +169,8 @@
     },
     {
       "path": "PRIORITY_ORDER.md",
-      "bytes": 1421,
-      "sha256": "ac7936059c4f83567c55a9bb25f5d1f746e8d0a36fa580efcc4659a7619d4924"
+      "bytes": 1932,
+      "sha256": "71fef62d2de9f6d7b513cc4bf039724ae42cc6f133308e25ffcf4ad41574ffb9"
     },
     {
       "path": "RELEASE_SCOPE_FREEZE.md",
@@ -256,13 +264,13 @@
     },
     {
       "path": "masters/premium-redesign-master.md",
-      "bytes": 115122,
-      "sha256": "648ade0730b7b3e2e3bbb7918a23b01e2ef136232404964f9b5fa2287ffad8ae"
+      "bytes": 115196,
+      "sha256": "37158f087f0378de117a1a29f4687e85331160407efb11e1cc95993d8ce17cad"
     },
     {
       "path": "masters/premium-redesign-start-original.md",
-      "bytes": 5674,
-      "sha256": "b6a065a0ed6592e26f406fc252760e4ae84d8df764bfaeb34b21ecfc1d805d38"
+      "bytes": 6022,
+      "sha256": "03bb529d061b1afad7b0a12dd608b553490f28f0deb3c995ddf32e57c340aacf"
     },
     {
       "path": "masters/product-v3/MASTER.md",
@@ -616,53 +624,53 @@
     },
     {
       "path": "tasks/47-profile-account-experience.md",
-      "bytes": 3894,
-      "sha256": "0d9c484b1f158212abadbdcfaf748f6108f5203abb8e9e69927a92c7b07c3d99"
+      "bytes": 4547,
+      "sha256": "dd4e62a40c168f2102fbf7e4415fa2ab6cc3e62ff9ddc9adcd03d7eb742f8435"
     },
     {
       "path": "tasks/48-coach-workspace.md",
-      "bytes": 7527,
-      "sha256": "557869ba0cdf53fcef91341d4afd52adb272ba40d37f81b7a13ceb4b91ffbd58"
+      "bytes": 8307,
+      "sha256": "f500bb1aad76b316e2727e56b21dccfa983201a3c3c6facfaf9eaa5fec5bee77"
     },
     {
       "path": "tasks/49-trainer-context-comments-experience.md",
-      "bytes": 3024,
-      "sha256": "268a4a4ca3378ac22f75c86075e1e1fd2d6f317a394663e2cffd7e46a3042816"
+      "bytes": 3531,
+      "sha256": "7264270435315de292f678099f9c584b0629dda7be7200b7e42bb539101ecf5f"
     },
     {
       "path": "tasks/50-knowledge-base-contextual-integration.md",
-      "bytes": 4551,
-      "sha256": "6e81a64ff6ba1c1ee2bb73da432922df9d2e9cbf2766040a81b670589937ccf3"
+      "bytes": 5241,
+      "sha256": "164f2c8889a3b37366905c8461df4352a219d22a6ea86f0ce69a1d9a0033e747"
     },
     {
       "path": "tasks/51-weekly-check-in-experience.md",
-      "bytes": 2657,
-      "sha256": "e8daeacb4384ddc136085cd9456da6384acb81b499eac4332bdbd601de9ebc74"
+      "bytes": 3130,
+      "sha256": "9ee7fd029c77dd860f70d89c4143358b8c315a905878df5fbc47f0aed923a5a9"
     },
     {
       "path": "tasks/52-adaptive-energy-calibration-experience.md",
-      "bytes": 2421,
-      "sha256": "dd152ac2bf27a66234f55b4ca5d76014aed6bd633184bb6c7dee90ba6b1f38ed"
+      "bytes": 2922,
+      "sha256": "fdd4814a78c35bc4928493eb2df0ec1468e2da1ec2405dfa06086f2d0ec87b8c"
     },
     {
       "path": "tasks/53-workout-adaptation-experience.md",
-      "bytes": 2372,
-      "sha256": "687b675dcd486a3ba969c1116f1e0efc59ff35be93ea4e7e64defde831eac3c2"
+      "bytes": 2852,
+      "sha256": "9d1f93017aa94b55d761c8d09dadd94b0433b0fed98147cfe7c57c31c94875e3"
     },
     {
       "path": "tasks/54-program-history-and-training-blocks-experience.md",
-      "bytes": 2367,
-      "sha256": "22a68ee2468c36710a51423f91eee05ccef205d928036ee796b3114817f3991e"
+      "bytes": 2881,
+      "sha256": "9543609ddd6885ca7002810008d3f05e8f4dd77d80b77a777cd6a576e24b6da1"
     },
     {
       "path": "tasks/55-body-priorities-and-anthropometry-experience.md",
-      "bytes": 2519,
-      "sha256": "b2deaeaa1027f285ccb8dae0f4d6c700a28178ca19faf645ca53cd8420edf6a0"
+      "bytes": 3075,
+      "sha256": "a0132ed974c4de80f5192590fb3bb3515065b8e412053586747ffd5ca0dc1ea0"
     },
     {
       "path": "tasks/56-data-confidence-product-integration.md",
-      "bytes": 2837,
-      "sha256": "127ba12d7a942a971f3e1a83f89a387aab00ba15a29c6ef3b9a1c4adce5cb421"
+      "bytes": 3343,
+      "sha256": "0e0dcf6f199e8233330cdca0e1524efa550d4d06ddda965a142be6cc7f4ff684"
     },
     {
       "path": "tasks/57-product-analytics-core-instrumentation.md",
@@ -671,48 +679,53 @@
     },
     {
       "path": "tasks/58-deterministic-progression-guidance.md",
-      "bytes": 7729,
-      "sha256": "58dc65898121cd9fc3f052f160271fc73dacd5c9eb18b646bf72f6444a853998"
+      "bytes": 8297,
+      "sha256": "292bc850c8d62ff1779b30540623a6fe19edbb4bc4816a65c2a865bc1cae0865"
     },
     {
       "path": "tasks/59-notification-reminder-orchestration.md",
-      "bytes": 6165,
-      "sha256": "da2d4cfe37d8d49378f6aa0f2ae9ad6f986bb68adfc101b653722145014227ef"
+      "bytes": 6664,
+      "sha256": "783fcaa33f9c2619862cb861655b088054273d9335ebccb9a8cf6950a350c03c"
+    },
+    {
+      "path": "tasks/59a-main-telegram-bot-support-feedback.md",
+      "bytes": 35141,
+      "sha256": "2e8facd7472fbbccd35c559984c87b942cc84ba57c1be0430512bc39395c94e2"
     },
     {
       "path": "tasks/60-account-data-export-and-lifecycle.md",
-      "bytes": 6203,
-      "sha256": "e264975c835916cb2948e03dc38396e20e904212cfca1d8facf5fbc7d0de217b"
+      "bytes": 6789,
+      "sha256": "e1802db1a19068bddf0296b1de30690e495746a7f99ca29ee1f2db126e3feaa1"
     },
     {
       "path": "tasks/61-cardio-logging-gap-audit-and-minimal-implementation.md",
-      "bytes": 5981,
-      "sha256": "a1dbf9a407df4d265787f671d60d4805cb0b9a0d9a18bede376ed9908948c021"
+      "bytes": 6576,
+      "sha256": "bfa55f512d13a8fa678f98e2f5f5df0c2f0b416c0188644b9fc02d801407b193"
     },
     {
       "path": "tasks/62-demo-mode-audit-design.md",
-      "bytes": 3582,
-      "sha256": "936731794b0a83a7af628466c6ba6db55cbc66ceca85f9847d42efab7f3f8daa"
+      "bytes": 4172,
+      "sha256": "d34cbd789ad6cbfdb86fa4efa1dac7cfd7aa9679d0310e1701fdc166c31321aa"
     },
     {
       "path": "tasks/63-demo-mode-foundation.md",
-      "bytes": 3052,
-      "sha256": "2a705c26a31280885e958bffeb309e077866783df930b1039b35835afff2ad40"
+      "bytes": 3610,
+      "sha256": "155bd285e6c0b3f18a4e262755a0f5e55ee6b0d46e8f50736aaa6a74da3c7b6e"
     },
     {
       "path": "tasks/64-demo-fixtures-ephemeral-interactions.md",
-      "bytes": 6626,
-      "sha256": "fd2ccd4f2bf667082c98b4545723b178e88ffdd96c286be0011966275c106824"
+      "bytes": 7090,
+      "sha256": "7a736792f645823e2016663bdb78c26f5e9d060cff926b0c1d639c6769d17fba"
     },
     {
       "path": "tasks/65-demo-ux-conversion.md",
-      "bytes": 5535,
-      "sha256": "e6941572f2dc3457f3645e19aa8c8c2eead00f27841348b6e69a12119c280e15"
+      "bytes": 6133,
+      "sha256": "093b42e69fd16e233354b2d1e8f9e2eb9193a28abb7ed63e2cc028a698cfe442"
     },
     {
       "path": "tasks/66-demo-auth-handoff-migration.md",
-      "bytes": 3660,
-      "sha256": "642a90772d44382e7bd6813c8868e18c8be3230be383feabeb879dc35ec0524b"
+      "bytes": 4128,
+      "sha256": "5c30bc0108643047d57d666d80c07dc404fef07c29026cd82aab4a067b8d4daa"
     },
     {
       "path": "tasks/67-demo-security-restrictions.md",
@@ -721,8 +734,8 @@
     },
     {
       "path": "tasks/68-demo-final-verification.md",
-      "bytes": 3090,
-      "sha256": "5b6e6f4238d9c14bcfa306620529aed04a2f9c5b50adafc5e29d6cb262fab163"
+      "bytes": 3410,
+      "sha256": "f814bbc6953aa03e17f0fd3a3cc47b630bfbbcffdb320766f729de22a8fa9151"
     },
     {
       "path": "tasks/69-admin-root-capabilities-foundation.md",
@@ -746,33 +759,33 @@
     },
     {
       "path": "tasks/71-admin-workspace.md",
-      "bytes": 4681,
-      "sha256": "09e1241f957b40932139062e2e7235111beb2e78f40e04b094bd5b4cbfa260c9"
+      "bytes": 5464,
+      "sha256": "29dc9553561ed2a54553a0c6aa9d1d4456e56f631d5e376be210431256e8e677"
     },
     {
       "path": "tasks/71a-trainer-application-experience.md",
-      "bytes": 12094,
-      "sha256": "6765c2c5b7ffb08b828a6565ced97c7b6d4c6f3c0bf7e96efe52d197a7ffe216"
+      "bytes": 12828,
+      "sha256": "cab1e2d3fb897a1f783144450a458a0894e8f435b319388121979558e4a9b733"
     },
     {
       "path": "tasks/72-telegram-mini-app-adaptation.md",
-      "bytes": 8200,
-      "sha256": "76d0858e56f9c51175392e3189fd20676b7e163d9bfbb1b5026e0215e9a9dcdc"
+      "bytes": 9234,
+      "sha256": "6eb3b3f09b2bed69741e478490b1f54eb6364ff410ae181384dd34e51d37cdd4"
     },
     {
       "path": "tasks/73-landing-premium-refresh.md",
-      "bytes": 21383,
-      "sha256": "e2f4364b707d2491f30d0f9e9b06b2132a02ad066b95d0b772dc03b7a966796e"
+      "bytes": 22945,
+      "sha256": "88574888f194cd0df01d00d57c8ae0bf35a0062bacd1fea09b28dfa456eaac90"
     },
     {
       "path": "tasks/74-responsive-accessibility-states.md",
-      "bytes": 4774,
-      "sha256": "3bf44ae74c10b08098682896035f6b62eb0d330540729b90099974b5b928ad76"
+      "bytes": 5224,
+      "sha256": "d33af50c7278f68c25ade5b85d1328487123ac85d10c568ca54cf312a96fc7be"
     },
     {
       "path": "tasks/75-performance-motion-hardening.md",
-      "bytes": 5360,
-      "sha256": "0e1c0c19a7b2721c26c53da6efba402ab74ef136fa8a39ffb09250ccd27141f7"
+      "bytes": 5853,
+      "sha256": "23481518f2bc943b67235018fbc748cbefef475dd672fa1c71848b7090f3fe05"
     },
     {
       "path": "tasks/76-ai-integration-audit.md",
@@ -846,8 +859,8 @@
     },
     {
       "path": "tasks/90-ai-ui-integration.md",
-      "bytes": 4209,
-      "sha256": "151d7eade5badbbb52bf02b1d11d108f5adc1cea39af56ca7083757c9598011b"
+      "bytes": 5349,
+      "sha256": "193fad22f5fbb1c144384a5c2784ea48867ff21a2aa734d9418b3c2749abab3d"
     },
     {
       "path": "tasks/91-ai-security-evals-docs.md",
@@ -856,18 +869,18 @@
     },
     {
       "path": "tasks/92-production-operational-readiness.md",
-      "bytes": 8364,
-      "sha256": "10435d71a428b7cc037c16d3e1e543f1fe0212be527edab07cffb5dd7b17d118"
+      "bytes": 9088,
+      "sha256": "1d8550fab6bdcc8b1476e6160a2f217619b8315f9b32c5aa1584d769f94c2cc3"
     },
     {
       "path": "tasks/93-final-integrated-audit-regression.md",
-      "bytes": 19818,
-      "sha256": "8e5bf0f43dca69f54a2d798d8c12a9405f0d4cc0caa8e683640358a9e5f71f25"
+      "bytes": 21072,
+      "sha256": "cadc50d6145a7f6a87e2f133789ad792f3ceba673195c82dcf617e5ed1145f56"
     },
     {
       "path": "tasks/README.md",
-      "bytes": 531,
-      "sha256": "75cbe01a54d046c407ff77517771c6efea73258617d4a3f8666f16d9079f1ffc"
+      "bytes": 602,
+      "sha256": "7ba484cf3a7ba3765dd61cd01374783a74d7530e47043df8bb5c1e9caae09818"
     }
   ],
   "plain_language_ux": {
