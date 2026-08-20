@@ -66,6 +66,10 @@ units и доступные шаги веса.
 10. Будущий AI Coach читает deterministic suggestion и evidence,
 но не рассчитывает progression самостоятельно.
 
+## Design V2 contract
+
+Suggestion, evidence и `Почему?` используют shared Design V2 data/status/disclosure patterns и не превращаются в отдельную gamified card system. Перед UI-работой прочитать `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md` и релевантные `docs/design/*v2*`; semantic colors и geometry не переопределять локально. Проверить light/dark и desktop/mobile states в реальном браузере без перегрузки active workout.
+
 ## Out of scope
 
 Не использовать LLM.

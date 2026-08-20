@@ -20,6 +20,10 @@ Forms: правильные mobile keyboards, validation near field, loading/dis
 
 Task `47` отвечает только за понятное место раздела `Для тренеров` внутри Profile и сохранение существующего корректного состояния, если backend уже есть. Не создавать новую application schema, approve/reject API, capability mutation или Admin review по предположениям. Полный канонический flow реализуется в tasks `69A`, `70A`, `71A`. До них нельзя показывать ложное успешное отправление заявки.
 
+## Design V2 contract
+
+Перед UI-работой прочитать `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md` и релевантные `docs/design/*v2*`. Profile/Account собирается из существующих Design V2 form, button, panel, navigation и feedback primitives; не создавать локальные palette, typography, radii или settings-card system. Существенные изменения проверить в реальном браузере в light/dark на desktop и mobile; изменение канонического visual language требует отдельного owner checkpoint.
+
 ## Out of scope
 
 Не менять authentication architecture из tasks `09-12`, trainer invite logic, privacy model или KBJU formulas; не добавлять health integrations. Не реализовывать professional verification, документы или verified trainer badge.

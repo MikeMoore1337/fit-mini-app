@@ -168,6 +168,8 @@ Admin decision остаётся прежде всего audit event, а не mar
 
 ## Responsive, accessibility и states
 
+Перед UI-работой прочитать `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md` и релевантные `docs/design/*v2*`. Profile application, Admin review и Coach activation должны использовать одни shared Design V2 form, panel, action, status/permission и navigation primitives; не создавать локальную application/admin palette, radii или card system и не возвращать generic SaaS patterns. Изменение канонического visual language требует отдельного owner checkpoint.
+
 Проверить минимум 1440/1280/768/390/360:
 
 - keyboard navigation и focus;
@@ -178,6 +180,8 @@ Admin decision остаётся прежде всего audit event, а не mar
 - empty/partial/loading/error/retry/stale/permission denied;
 - reduced motion;
 - shared YFC Light/Dark design.
+
+Visual browser pass должен включать representative light/dark Profile, Admin queue/detail/decision и approved Coach entry states.
 
 Task `72` отдельно проверит platform-specific TMA behavior, safe area, BackButton, viewport и Telegram deep links.
 

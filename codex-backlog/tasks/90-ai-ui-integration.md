@@ -4,7 +4,7 @@
 - Приоритет: **90/93**
 - Зависит от: `05`, `38`, `87`, `88`, `89`
 - Рекомендуемый reasoning: **Medium**
-- Рекомендуемые skills: $product-designer`, `$frontend-engineer`, при необходимости `$qa-engineer
+- Рекомендуемые skills: `$product-designer`, `$frontend-engineer`, при необходимости `$qa-engineer`, `$ui-audit`
 
 ## Цель
 
@@ -30,7 +30,11 @@
 Streaming не использовать.
 
 Web и Telegram Mini App переиспользуют общий UI/state/API слой. На этом task нужна функциональная
-Telegram совместимость; финальный platform-specific polish всего продукта остаётся task 72.
+Telegram совместимость с сохранением platform contract task `72`; финальная интегрированная проверка остаётся task `93`.
+
+## Design V2 contract
+
+Перед UI-работой прочитать `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md` и релевантные `docs/design/*v2*`. AI Coach использует Approved Design V2 shell, navigation, typography, geometry, semantic colors, inputs, buttons, feedback/data-confidence states и shared Web/Mobile/TMA components. Не создавать отдельный generic chat/AI visual language: neon gradients, glass panels, assistant avatars, decorative message bubbles и provider-inspired styling не должны переопределять продукт. Существенные visual changes проверить в реальном браузере в light/dark на desktop/mobile и representative TMA state; изменение канонического дизайна требует owner checkpoint.
 
 ## Out of scope
 
@@ -42,6 +46,8 @@ AI или новый app shell.
 Component/e2e: empty/history/send/loading/retry, general/personal/app-help/out-of-scope, write request,
 all providers unavailable, no tool-capable provider, reload/persistence, safe script/HTML rendering,
 responsive 390/360 + desktop smoke, Telegram adapter compatibility.
+
+Browser visual verification включает empty/history/loading/error/unavailable/personal-tools-unavailable и long-content states в обеих темах; generic AI/SaaS fragments считаются regression.
 
 ## Done when
 

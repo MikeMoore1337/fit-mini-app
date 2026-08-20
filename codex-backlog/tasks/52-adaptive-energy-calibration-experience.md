@@ -13,6 +13,10 @@
 
 - Estimate/period/sufficiency; explain logged intake + weight trend; insufficient-data guidance; current->proposed diff; macros through deterministic rules; accept/reject; target history; knowledge link.
 
+## Design V2 contract
+
+Proposal, diff, confidence и decision states использовать из shared Design V2 data/form/action language. Перед UI-работой прочитать `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md` и релевантные `docs/design/*v2*`; semantic status colors не переопределять локально. Проверить light/dark и narrow/mobile states в реальном браузере, включая insufficient-data и error paths.
+
 ## Out of scope
 
 Без exact TDEE promise, AI и auto-apply.

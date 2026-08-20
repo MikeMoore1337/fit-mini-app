@@ -1,4 +1,4 @@
-# TASK 73. Лендинг - premium refresh по утверждённым light/dark референсам
+# TASK 73. Лендинг - production refresh в Approved Design V2
 
 - Фаза: **Marketing UX**
 - Приоритет: **73/93**
@@ -9,48 +9,54 @@
 
 ## Цель
 
-Пересобрать public Landing в финальном premium sport-tech направлении по утверждённым пользователем референсам, сохранив factual product truth, SEO, accessibility и лёгкую реализацию.
+Пересобрать public Landing в финальном premium sport-tech направлении Approved Design V2, сохранив factual product truth, SEO, accessibility и лёгкую реализацию.
 
 Landing должен выглядеть как один зрелый коммерческий продукт в light и dark темах и ясно продавать ценность двум аудиториям:
 
 1. самостоятельному пользователю;
 2. персональному тренеру.
 
-Не копировать PNG пиксель-в-пиксель и не переносить из них вымышленные тексты/данные. Использовать их как визуальный source of truth по композиции, плотности, hierarchy и характеру оформления.
+Approved Landing V2 renders задают визуальное направление, но не заменяют responsive implementation и не являются источником продуктовых фактов. Landing должен переиспользовать фактические shared Design V2 tokens/components и реальный product UI, а не рисовать параллельную marketing design system.
 
 ## Обязательные источники перед началом
 
 Прочитать и учитывать:
 
-- `codex-backlog/LANDING_REFERENCE_NOTES.md`;
-- `codex-backlog/references/landing/landing-reference-dark.png`;
-- `codex-backlog/references/landing/landing-reference-light.png`;
+- `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md`;
+- `docs/design/design-direction-v2.md`;
+- `docs/design/design-system-v2.md`;
+- `docs/design/component-principles-v2.md`;
+- `docs/design/responsive-and-platform-v2.md`;
+- `docs/design/motion-v2.md`;
+- `docs/design/references/design-v2/README.md` и утверждённые `landing-*-light.png` / `landing-*-dark.png` renders из этой директории;
 - `codex-backlog/BRAND_ASSET_NOTES.md`;
 - canonical logo assets из task `07`;
 - SEO/public IA результаты tasks `02`, `03`, `04`, `06`, `09`;
 - фактический текущий Landing и `/login`;
 - реальные product screens после product UX/TMA tasks.
 
-Если старый `masters/premium-redesign-master.md` расходится с новыми landing references, новые references имеют приоритет, если это не нарушает security/privacy/SEO/product truth.
+`codex-backlog/LANDING_REFERENCE_NOTES.md`, `codex-backlog/references/landing/landing-reference-dark.png`, `codex-backlog/references/landing/landing-reference-light.png` и старый `masters/premium-redesign-master.md` являются только historical context. Они не могут переопределять Approved Design V2 по hero, cards, testimonials, imagery, typography, section sequence, rhythm, geometry или composition.
+
+Приоритет источников: factual behavior и security/privacy/SEO/accessibility -> Approved Design V2 docs/renders -> проверенная shared V2 implementation -> canonical brand assets. Изменение утверждённого visual language требует отдельного owner checkpoint.
 
 ## 1. Visual direction
 
 Визуальная цель:
 
 - premium sport-tech;
-- lime accent + нейтральные светлая/тёмная поверхности;
+- lime accent + утверждённые neutral/graphite light/dark semantic surfaces;
 - clean typography и выраженная hierarchy;
-- аккуратные cards/surfaces, тонкие borders, умеренные radii;
+- shared V2 typography, controls, geometry, cards/surfaces, borders и radii;
 - минимум тяжёлых теней;
 - без neon/glassmorphism/crypto/gaming эстетики;
 - dark и light - полноценные варианты одной системы, а не две разные страницы;
 - canonical logo из task `07`, без нового редизайна mark/wordmark.
 
-Сохранить характер референса: много воздуха, ясная сетка, product UI как главный визуальный материал, lime применяется дозированно для акцента и CTA.
+Сохранить характер Approved Design V2: ясная editorial hierarchy, дисциплинированная сетка, product UI как главный визуальный материал и lime в роли семантического акцента/primary action, а не декоративной заливки всего интерфейса.
 
 ## 2. Header
 
-Ориентир - компактный desktop header из референсов:
+Header развивает approved Landing V2 composition и shared public controls:
 
 - слева canonical logo + wordmark;
 - по центру/рядом основные public anchors/routes;
@@ -64,7 +70,7 @@ Header не должен быть визуально тяжелее hero.
 
 ## 3. Hero
 
-Собрать hero по композиционному принципу референса:
+Собрать hero по утверждённым Landing V2 renders и responsive rules, адаптируя композицию под фактический контент и viewport:
 
 ### Left
 
@@ -95,7 +101,7 @@ AI Coach нельзя выдавать за доступную production featur
 
 ## 4. Capability strip
 
-Сразу под hero - компактный ряд/сетка из примерно 5-6 возможностей с простыми line icons в духе референсов.
+Сразу под hero допустим компактный ряд/сетка high-signal возможностей из фактического product scope. Количество и composition определяются Approved Design V2 hierarchy и responsive constraints, а icons берутся из общей product icon family.
 
 Выбирать только высокосигнальные реальные функции, например:
 
@@ -112,7 +118,7 @@ AI Coach нельзя выдавать за доступную production featur
 
 ## 5. Product showcase - «Что умеет Your Fitness Coach»
 
-Секция в стилистике четырёх крупных product cards из референса.
+Секция использует Approved Design V2 product-showcase grammar и shared surface geometry. Число и размер cards определяются фактическими сценариями и responsive composition, а не legacy reference grid.
 
 Предпочтительные реальные сценарии:
 
@@ -131,7 +137,7 @@ AI Coach нельзя выдавать за доступную production featur
 
 ## 6. Для клиентов / Для тренеров
 
-Сделать отдельную крупную dual-audience section по структуре референса.
+Сделать отдельную крупную dual-audience section в Approved Design V2, ясно разделяющую ценность для самостоятельного пользователя и тренера без второго visual language.
 
 ### Для клиентов
 
@@ -162,13 +168,11 @@ Trainer value proposition должен быть полноценным:
 
 ### Images
 
-Референс использует изображения спортсменов. Не загружать случайные изображения из интернета.
-
-Использовать их только если в проекте есть легальный production asset/source с понятной лицензией. Иначе сохранить структуру секции, но заменить people images на реальные product visuals/нейтральную brand composition.
+People imagery не является требованием Design V2. Использовать её только при наличии легального production asset/source с понятной лицензией; иначе опираться на реальные product visuals и нейтральную brand composition. Не загружать случайные изображения из интернета.
 
 ## 7. Demo Mode CTA
 
-Сделать отдельный выразительный horizontal CTA в духе референсов:
+Сделать отдельный выразительный CTA в Approved Design V2:
 
 - короткий title;
 - 1-2 строки;
@@ -186,7 +190,7 @@ AI Coach:
 
 ## 8. Platform section
 
-Секция по структуре трёх cards из референсов:
+Секция объясняет доступные platform contexts через shared Design V2 surfaces; число и раскладка blocks определяются содержанием и viewport:
 
 - Web application;
 - Telegram Mini App;
@@ -198,7 +202,7 @@ AI Coach:
 
 ## 9. Social proof - запрет на выдуманные отзывы
 
-В PNG присутствуют карточки отзывов со звёздами и именами. Они являются только композиционным примером.
+Legacy PNG с карточками отзывов не является ни visual requirement, ни источником social proof.
 
 Пока нет реального проверяемого social proof:
 
@@ -211,7 +215,7 @@ AI Coach:
 
 ## 10. FAQ
 
-Сделать clean accordion в структуре, близкой к референсу.
+Сделать доступный accordion из shared Design V2 disclosure primitives.
 
 FAQ должен:
 
@@ -285,7 +289,7 @@ Landing redesign должен сохранить и усилить SEO foundatio
 
 ## 14. Light / Dark contract
 
-Обе темы должны следовать утверждённым references:
+Обе темы должны следовать Approved Design V2 tokens и Landing V2 renders:
 
 - dark: глубокие нейтральные surfaces + white/soft-gray text + lime accents;
 - light: white/very-light surfaces + dark text + тот же lime accent;
@@ -339,7 +343,7 @@ Theme switching использовать из task `08`.
 
 ## 17. Content truth gate
 
-Reference PNG не является источником factual data.
+Ни Design V2 render, ни legacy PNG не является источником factual data.
 
 Перед переносом проверить любые элементы вроде:
 
@@ -402,14 +406,14 @@ Reference PNG не является источником factual data.
 
 - light/dark;
 - 1440/1280/1024/768/390/360;
-- сравнить composition/hierarchy с обоими утверждёнными references;
+- сравнить composition/hierarchy с утверждёнными Landing V2 desktop/mobile light/dark renders;
 - canonical logo;
 - readable text/CTA;
 - real product visuals;
 - no overflow;
 - no accidental legacy styles.
 
-Visual QA не означает pixel-perfect copy: задача - сохранить утверждённое направление и улучшить его под реальный продукт/responsive constraints.
+Visual QA не означает pixel-perfect copy: задача - сохранить Approved Design V2 и корректно реализовать его для реального продукта/responsive constraints. Legacy Landing PNG в visual acceptance не участвуют.
 
 ### Accessibility
 
@@ -442,7 +446,7 @@ Visual QA не означает pixel-perfect copy: задача - сохран�
 
 ## Done when
 
-- Landing явно узнаваем как реализация утверждённых light/dark references;
+- Landing явно узнаваем как реализация Approved Design V2 и утверждённых Landing V2 renders;
 - структура hero/capabilities/showcase/client-trainer/demo/platform/FAQ/footer реализована или осознанно адаптирована под factual product truth;
 - canonical logo из task `07` используется корректно;
 - favicon не дублируется и не переопределяется;
@@ -458,7 +462,7 @@ Visual QA не означает pixel-perfect copy: задача - сохран�
 
 ## Рекомендуемый commit
 
-`feat(landing): implement approved premium light dark direction`
+`feat(landing): implement approved design v2 direction`
 
 ## Процесс и отчёт
 
@@ -472,4 +476,4 @@ Visual QA не означает pixel-perfect copy: задача - сохран�
 2. проверить diff;
 3. сохранить visual artifacts только в `.artifacts/landing/`;
 4. создать один логический commit;
-5. в финальном отчёте перечислить изменения, ключевые файлы, реально запущенные проверки, visual deviations от reference и их причины, ограничения и commit hash.
+5. в финальном отчёте перечислить изменения, ключевые файлы, реально запущенные проверки, visual deviations от Approved Design V2 renders и их причины, ограничения и commit hash.

@@ -13,6 +13,10 @@
 
 - Current block/status/dates/purpose; block history; who/when/what changed; readable diff; trainer edits; historical workouts tied to correct revision.
 
+## Design V2 contract
+
+History, blocks и readable diff собираются из shared Design V2 timeline/data-region/status primitives и остаются визуально связаны с Programs и Coach workspace. Прочитать `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md` и релевантные `docs/design/*v2*`; не создавать локальную card/timeline system. Проверить light/dark, long history и desktop/mobile composition в реальном браузере.
+
 ## Out of scope
 
 Без complex periodization UI, auto-deload и AI.

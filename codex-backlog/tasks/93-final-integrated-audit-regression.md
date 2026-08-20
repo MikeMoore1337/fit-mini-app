@@ -149,7 +149,7 @@ Program -> workout -> nutrition -> progress -> trainer feedback -> knowledge/exp
 
 ## Unified Web / Telegram visual release gate
 
-Проверить финальный продукт как одну YFC Design System, а не две визуальные версии.
+Перед browser audit прочитать `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md`, релевантные `docs/design/*v2*` и approved renders. Проверить финальный продукт как одну Approved YFC Design V2 across Landing/Web/Mobile Web/TMA, а не несколько визуальных версий.
 
 Acceptance:
 
@@ -160,6 +160,9 @@ Acceptance:
 - desktop Web может использовать отдельную responsive-композицию без отдельного visual language;
 - нет Telegram-only component tree или дублированной palette;
 - canonical logo/mark одинаков по бренду на Web/TMA и меняется только между approved light/dark variants.
+- shared implementation не содержит legacy palette, typography, radii, cards, buttons, icons или navigation fragments;
+- AI Coach не вводит generic chat/AI/SaaS visual language;
+- реальные human-made browser flows дополняют automated checks и покрывают light/dark, desktop/mobile, keyboard/touch/reduced-motion и representative loading/empty/error/validation/permission/session states.
 
 Не считать platform chrome/safe-area различия дефектом. Считать release blocker необоснованный TMA redesign или расхождение основных component styles/colors.
 
@@ -317,7 +320,7 @@ Readiness/login/me smoke без product writes не закрывает `F-06`.
 
 ## Проверки
 
-Frontend минимум: typecheck/lint/format/tests/build/relevant Playwright; visual 1440/1280/768/390/360, light/dark/reduced motion. Targeted backend Food/AI/provider-router/security regression по изменённым и critical paths согласно `AGENTS.md`. Проверить отсутствие secrets/debug/temp `.artifacts/` в Git.
+Frontend минимум: typecheck/lint/format/tests/build/relevant Playwright; human-made browser visual/interaction pass на 1440/1280/768/390/360, light/dark/reduced motion. Targeted backend Food/AI/provider-router/security regression по изменённым и critical paths согласно `AGENTS.md`. Проверить отсутствие secrets/debug/temp `.artifacts/` в Git.
 
 ## Done when
 
@@ -442,13 +445,16 @@ Acceptance:
 - Web and TMA terminology is consistent;
 - AI Coach defaults to understandable language.
 
-## Landing reference final gate
+## Approved Design V2 final gate
 
-Before release, verify the final public Landing against:
+Перед release проверить Landing, Auth и representative product surfaces по:
 
-- `LANDING_REFERENCE_NOTES.md`;
-- `references/landing/landing-reference-dark.png`;
-- `references/landing/landing-reference-light.png`;
+- `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md`;
+- релевантным `docs/design/*v2*`;
+- approved renders в `docs/design/references/design-v2/`;
+- фактической shared Design V2 implementation;
 - canonical brand assets from task `07`.
 
-Acceptance is visual-direction parity, not pixel-perfect copying. Block release for obvious legacy styling, broken light/dark parity, wrong logo variants, fake social proof, stale non-factual pricing/trial/AI claims, broken responsive hierarchy, or Landing/Auth visual mismatch.
+Acceptance is Design V2 parity, not pixel-perfect copying. Legacy `codex-backlog/references/landing/landing-reference-*.png` — historical context only and не участвуют в gate. Block release for obvious legacy styling, broken light/dark parity, wrong logo variants, fake social proof, stale non-factual pricing/trial/AI claims, broken responsive hierarchy, Landing/Auth/product mismatch или отдельный TMA/AI visual language.
+
+Findings tasks `46A-46C` должны быть закрыты либо иметь явно документированное owner-approved решение; финальный отчёт обязан связать их с production-readiness, observability и release evidence из task `92`.

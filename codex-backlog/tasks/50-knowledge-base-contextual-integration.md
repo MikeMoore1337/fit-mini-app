@@ -30,6 +30,10 @@ TMA использует тот же reviewed source в mobile in-app renderer/s
 
 Editorial: people-first, sources for meaningful claims, no diagnosis/treatment/pharmacology/guaranteed results, update/review workflow.
 
+## Design V2 contract
+
+Public Web, in-app knowledge и TMA используют одну Design V2 grammar и один content source; различается только композиция под контекст чтения. Перед UI-работой прочитать `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md` и релевантные `docs/design/*v2*`, переиспользовать typography, links, panels, contextual help и navigation primitives и не создавать отдельную editorial palette/card system. Существенные public/app изменения проверить в light/dark на desktop/mobile и в representative TMA state.
+
 ## Out of scope
 
 Не создавать social/article comments, pharmacology, mass AI articles, copied Fitness Online/FatSecret text, separate TMA database или Trainer Copilot.

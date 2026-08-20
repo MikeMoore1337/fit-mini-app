@@ -67,6 +67,10 @@
    - delivery failure counts;
    - без PII/body data в обычных operational logs.
 
+## Design V2 contract
+
+Notification center, settings и deep-link fallback используют shared Design V2 list, form, status и feedback primitives; Telegram delivery не вводит отдельный product visual language. Перед UI-работой прочитать `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md` и релевантные `docs/design/*v2*`, проверить light/dark, desktop/mobile/TMA и empty/error/permission states в реальном браузере.
+
 ## Out of scope
 
 Не делать маркетинговые рассылки.

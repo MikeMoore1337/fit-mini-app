@@ -35,6 +35,10 @@ Demo writes не становятся обычными backend records.
 
 Unsupported persistent action должен давать продуктовый fallback.
 
+## Design V2 contract
+
+Fixtures обязаны упражнять реальные Design V2 components и representative states, а не mock-макеты или demo-only variants. Прочитать `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md` и релевантные `docs/design/*v2*`; synthetic content должен проверять shared navigation, forms, exercise/data regions, empty/filled/status states и light/dark parity на desktop/mobile.
+
 
 ## Demo personas
 

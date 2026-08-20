@@ -482,6 +482,8 @@ obsolete support_bot tests
 
 ## 9. Web, TMA, Profile и Landing
 
+Все затрагиваемые Web/TMA/Profile/Landing entry points должны переиспользовать Approved Design V2 по `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md` и релевантным `docs/design/*v2*`. Bot-specific Telegram controls не являются основанием для отдельной palette, typography, geometry, icon или navigation system внутри продукта.
+
 ### Profile/help
 
 Добавить или уточнить entry point:
@@ -554,7 +556,7 @@ Codex обязан подготовить, но не применять от и�
 - optional description media;
 - Main Mini App URL checklist;
 - menu button checklist;
-- splash screen values из canonical YFC Light/Dark tokens;
+- splash screen values из canonical Design V2 YFC Light/Dark tokens;
 - Main Mini App preview checklist;
 - privacy/group/inline settings;
 - verification и rollback checklist.

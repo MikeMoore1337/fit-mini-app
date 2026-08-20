@@ -59,6 +59,10 @@
 
 8. Web/TMA/mobile.
 
+## Design V2 contract
+
+Если подтверждён UI gap, cardio flow встраивается в существующие Design V2 Today/workout/history/Progress patterns и не создаёт отдельную activity-tracker визуальную систему. Прочитать `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md` и релевантные `docs/design/*v2*`; переиспользовать shared forms, units, data regions и navigation. Существенные изменения проверить в light/dark на desktop/mobile и representative TMA state.
+
 ## Out of scope
 
 Не делать GPS tracks.

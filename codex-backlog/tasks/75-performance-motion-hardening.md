@@ -8,11 +8,11 @@
 
 ## Цель
 
-Измерить и оптимизировать стоимость итогового редизайна/AI UI/motion на телефоне, не занимаясь premature optimization.
+Измерить и оптимизировать стоимость фактической Approved Design V2 implementation и motion на телефоне, не занимаясь premature optimization.
 
 ## In scope
 
-Измерить production build и оптимизировать только подтверждённые проблемы: JS/CSS bundle delta, animation work, layout/reflow, large assets, landing hero, backdrop-filter/shadows, long lists, lazy boundaries, initial authenticated render, AI chat list, Admin Workspace user/trainer lists, Coach workspace summaries, Demo Mode fixture/state overhead, Nutrition/Progress lists.
+Перед измерениями прочитать `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md` и релевантные `docs/design/*v2*`. Измерить production build и оптимизировать только подтверждённые проблемы: JS/CSS bundle delta, font/image loading, animation/main-thread work, layout/reflow, large assets, landing hero, Design V2 surfaces/shadows, long lists, lazy boundaries, initial authenticated render, Admin Workspace user/trainer lists, Coach workspace summaries, Demo Mode fixture/state overhead, Nutrition/Progress lists.
 
 Offscreen decorative animations не должны постоянно грузить CPU. Предпочитать transform/opacity. Проверить mobile backdrop-filter и large assets, включая canonical logo/favicon assets из task `07`: SVG не должен дублировать embedded raster data или тянуть внешние font/network dependencies. Не делать мигающие skeletons на мгновенных ответах. Сравнивать с доступным pre-redesign baseline/предыдущим build и фиксировать реальные измерения.
 
@@ -47,9 +47,9 @@ SEO/content не должен ухудшать performance через:
 
 
 
-## Landing reference assets
+## Design V2 assets and effects
 
-Approved Landing PNG references are design inputs only and must not be shipped as oversized production hero images. Production screenshots/mockups derived from real UI must use appropriate responsive formats/sizes, preserve intrinsic dimensions and avoid CLS.
+Approved Design V2 renders are design inputs only and must not be shipped as oversized production images. Production screenshots/mockups derived from real UI must use appropriate responsive formats/sizes, preserve intrinsic dimensions and avoid CLS. Legacy Landing PNG не участвуют в acceptance. Motion должен поддерживать hierarchy, causality или feedback, отключаться/упрощаться через `prefers-reduced-motion` и не добавлять тяжёлые декоративные effects.
 
 ## Проверки
 
@@ -76,7 +76,7 @@ Production build + asset comparison, landing/app/Mobile Web/TMA smoke, console e
 No eager WebM/animation, lazy load, poster/static fallback, cache, reserved dimensions/CLS, TMA bandwidth, reduced motion, public exercise page media weight. Heavy exercise assets не ухудшают Landing/Knowledge LCP.
 
 ## AI comes later
-Этот task hardens основное приложение до AI. AI-specific performance проверяется в `85-86` и финальном `87`.
+Этот task hardens основное приложение до AI UI. AI-specific frontend performance проверяется в task `90` и финальном task `93`.
 
 ## Final release integration: added performance surfaces
 

@@ -55,7 +55,7 @@ Cleanup: debug flags/logs, dead prototype code, PII/production fixture data, hid
 
 ## Проверки
 
-Relevant unit/integration/frontend/backend/typecheck/lint/format/targeted E2E, representative mobile+desktop, screenshots/visual checks по project conventions.
+Relevant unit/integration/frontend/backend/typecheck/lint/format/targeted E2E. В browser visual pass сверить representative mobile+desktop light/dark states с Approved Design V2 по `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md` и релевантным `docs/design/*v2*`: Demo не имеет отдельной palette, typography, radii, cards, navigation или generic SaaS conversion language. Screenshots/visual artifacts хранить по project conventions.
 
 ## Done when
 

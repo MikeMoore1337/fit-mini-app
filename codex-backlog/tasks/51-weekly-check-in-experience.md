@@ -13,6 +13,10 @@
 
 - Entry из Today/Progress; objective confidence-aware summary; 2-4 optional subjective questions + note; skip/history; trainer view by permission; notification/deep-link; mobile/TMA.
 
+## Design V2 contract
+
+Check-in компоновать из существующих Design V2 form, panel, action и data-confidence patterns. Прочитать `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md` и релевантные `docs/design/*v2*`; не вводить локальную palette, карточки, радиусы или wizard navigation. Проверить meaningful light/dark, desktop/mobile и TMA states в реальном браузере.
+
 ## Out of scope
 
 Без health questionnaire, AI conclusion и mandatory check-in.

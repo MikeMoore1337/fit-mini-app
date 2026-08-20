@@ -12,7 +12,7 @@
 
 ## In scope
 
-Audit + исправление подтверждённых P0-P2 для landing, auth app, Today, workout, Nutrition, Progress, Programs/Exercises, Profile, Coach, Admin Workspace, AI, Demo Mode, public SEO/content pages, Telegram adapter:
+Audit фактической Approved Design V2 implementation + исправление подтверждённых P0-P2 для landing, auth app, Today, workout, Nutrition, Progress, Programs/Exercises, Profile, Coach, Admin Workspace, AI, Demo Mode, public SEO/content pages, Telegram adapter. Перед проверкой прочитать `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md` и релевантные `docs/design/*v2*`:
 - responsive/touch/keyboard/focus/contrast;
 - labels/errors/aria-current/headings/landmarks;
 - icon buttons, modals/drawers/focus trap/Escape;
@@ -29,13 +29,13 @@ Viewports 1440/1280/768/390/360. Отдельно проверить canonical l
 
 
 
-## Landing reference regression
+## Design V2 regression
 
-Для public Landing использовать `LANDING_REFERENCE_NOTES.md` и оба файла `references/landing/landing-reference-*.png` как визуальный ориентир при responsive/a11y hardening. Не упрощать mobile layout так, чтобы терялись hierarchy, CTA или связь с real-product visuals. При этом не требуется pixel-perfect совпадение с desktop references.
+Для public Landing использовать утверждённые `docs/design/references/design-v2/landing-*.png`, а для product surfaces — релевантные Design V2 renders и фактическую shared implementation. Не упрощать mobile layout так, чтобы терялись hierarchy, CTA или связь с real-product visuals. Legacy `codex-backlog/references/landing/landing-reference-*.png` не участвуют в acceptance. Не менять канонический visual language под видом accessibility fix без отдельного owner checkpoint.
 
 ## Проверки
 
-После fixes повторить UI audit. Tests/typecheck/lint/format/build/targeted e2e. Screenshots в `.artifacts/ui-redesign/a11y-responsive/`.
+После fixes повторить browser UI audit в light/dark на 1440/1280/768/390/360 и representative Mobile Web/TMA states. Tests/typecheck/lint/format/build/targeted e2e. Screenshots в `.artifacts/ui-redesign/a11y-responsive/`.
 
 ## Done when
 

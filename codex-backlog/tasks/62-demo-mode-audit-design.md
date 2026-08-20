@@ -29,6 +29,8 @@ persistence, feature flags/application modes, tests и релевантный do
 9. безопасен ли optional import пользовательских demo-вводов;
 10. capability matrix и tests.
 
+В design-решении зафиксировать, что Demo использует реальный Approved Design V2 app shell и feature components, а не отдельную marketing/demo theme. Для этого прочитать `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md`, релевантные `docs/design/*v2*` и проверить текущую production V2 реализацию в браузере; любое изменение канонического visual language вынести на owner checkpoint, а не проектировать внутри Demo.
+
 Предпочитать centralized mode/capabilities вместо множества `if demo`.
 Raw audit: `.artifacts/codex-audits/demo-mode/`.
 Если решение долгоживущее и conventions проекта это предполагают - добавить короткую архитектурную заметку в docs.

@@ -4,6 +4,7 @@
 - Приоритет: **92/93**
 - Зависит от: `72`, `73`, `74`, `75`, `86`, `87`, `88`, `89`, `90`, `91`
 - Рекомендуемая модель: **GPT-5.6 Sol High**
+- Рекомендуемые skills: `$platform-engineer`, `$observability-engineer`, `$security-engineer`, `$privacy-engineer`, `$performance-engineer`, `$release-manager`, `$qa-engineer`, `$technical-writer`
 
 ## Цель
 
@@ -95,6 +96,11 @@ Core unaffected areas должны продолжать работать.
    - backup/restore;
    - deploy/rollback;
    - provider degradation.
+
+14. Design V2 operational states:
+   - frontend error boundary, degraded-provider и recovery UI переиспользуют фактические Approved Design V2 components/tokens;
+   - readiness task не создаёт отдельный аварийный visual language и не меняет утверждённый дизайн;
+   - targeted smoke использует реальные production-build light/dark Web/Mobile/TMA states и сохраняет evidence по conventions проекта.
 
 ## Carried finding acceptance: F46B-08
 

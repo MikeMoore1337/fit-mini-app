@@ -37,6 +37,10 @@
 Telegram continuation использует существующий canonical bot/deep-link/account-link flow.
 Demo state не является Telegram identity.
 
+## Design V2 contract
+
+Handoff, import/discard и error states продолжают shared Design V2 Demo/Auth surfaces. Прочитать `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md` и релевантные `docs/design/*v2*`; не создавать Demo-specific login skin, provider controls или navigation. Проверить demo -> auth -> product в light/dark на desktop/mobile и Telegram continuation layout в реальном браузере.
+
 
 ## Multi-provider auth integration
 

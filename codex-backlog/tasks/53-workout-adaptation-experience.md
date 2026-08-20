@@ -13,6 +13,10 @@
 
 - Entry Today/Active; presets; preview diff; curated alternatives; apply/cancel; history provenance; medical/pain boundary; mobile.
 
+## Design V2 contract
+
+Adaptation flow продолжает Design V2 active-workout language и использует shared sheet/dialog, selection, diff и action primitives. Прочитать `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md` и релевантные `docs/design/*v2*`; не создавать отдельный workout skin или navigation pattern. Проверить в реальном браузере light/dark, desktop/mobile и active/error states.
+
 ## Out of scope
 
 Без новой программы, AI и silent future changes.

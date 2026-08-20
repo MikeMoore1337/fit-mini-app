@@ -64,6 +64,10 @@ trainer relationships и data ownership/cascade behavior.
    tasks AI memory/conversations обязаны подключить свои данные к export/delete contract.
 До AI feature эта задача должна работать для core app.
 
+## Design V2 contract
+
+Export status, unlink и destructive confirmations используют shared Design V2 account/form/feedback primitives. Перед UI-работой прочитать `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md` и релевантные `docs/design/*v2*`; опасное действие отделять семантикой и иерархией, не локальной несогласованной palette/card system. Проверить light/dark, desktop/mobile и loading/error/expired/confirmation states в реальном браузере.
+
 ## Out of scope
 
 Не делать account merge.

@@ -10,10 +10,12 @@
 
 После появления основных экранов провести один финальный Telegram Mini App pass как **платформенную интеграцию общего Your Fitness Coach UI**, а не отдельный редизайн.
 
+Перед UI-работой прочитать `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md`, релевантные `docs/design/*v2*` и проверить фактическую shared Design V2 реализацию в Mobile Web. Утверждённый visual language не менять без отдельного owner checkpoint.
+
 Главный принцип:
 
 ```text
-same YFC UI
+Approved Design V2 shared UI
 + responsive mobile layout
 + Telegram platform adapter
 = Telegram Mini App
@@ -48,7 +50,7 @@ Mobile Web и TMA должны выглядеть как один продукт
 - account export/delete UX where permitted;
 - manual cardio;
 - Demo -> Telegram continuation/auth boundary;
-- AI chat states, включая provider unavailable/no suitable provider;
+- существующий AI entry/locked state, если он уже присутствует; полный AI Coach UI из task `90` обязан наследовать этот platform contract;
 - compact performance на реальном mobile-size viewport.
 
 Если TMA показывает logo/brand mark, использовать canonical assets task `07`.
@@ -65,6 +67,8 @@ Mobile Web и TMA должны выглядеть как один продукт
 - product navigation language.
 
 При одинаковом viewport representative Mobile Web и TMA должны иметь одинаковые YFC colors/components/spacing/hierarchy.
+
+Равенство включает semantic colors, typography, geometry, icon family, controls, forms, data/exercise regions и active-navigation language. Platform API не является основанием для локальных visual variants.
 
 Допустимые Telegram-specific различия:
 
@@ -144,9 +148,11 @@ Fixed/sticky UI учитывает safe area и keyboard.
 - trainer application flow и approved Coach entry;
 - trainer flows;
 - Demo auth continuation;
-- AI unavailable/degraded states;
+- существующий AI entry/locked state без отдельной TMA styling;
 - notification/cardio/account flows;
 - browser mode regression.
+
+Representative states проверять в реальном браузере в обеих темах; реальную проверку Telegram client заявлять только если она фактически выполнена.
 
 Запустить связанные unit/component/e2e adapter tests, typecheck/lint/build согласно `AGENTS.md`.
 

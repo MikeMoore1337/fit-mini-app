@@ -20,6 +20,10 @@ History показывает author/time/edit state. Notification ведёт к 
 
 Former/revoked relation: composer unavailable, history строго по backend policy. Mobile trainer workflow без table-like UI.
 
+## Design V2 contract
+
+Contextual feedback использовать как встроенный Design V2 region внутри workout/exercise, без отдельного chat visual language, bubbles или messenger shell. Прочитать `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md` и релевантные `docs/design/*v2*`, переиспользовать shared inputs, actions, status/permission states и проверить desktop/mobile light/dark в реальном браузере.
+
 ## Out of scope
 
 Не добавлять inbox/chat list/replies/reactions/read receipts/attachments/audio/video/AI.

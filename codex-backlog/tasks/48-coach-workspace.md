@@ -77,6 +77,10 @@ Client detail может использовать exercise progression/completed
 
 Текущий AI Coach MVP предназначен для самостоятельного пользователя. Не добавлять Trainer Copilot, AI summaries client base, AI program generation и не отправлять client data в LLM ради Coach workspace.
 
+## Design V2 contract
+
+Coach workspace развивает утверждённую Design V2, а не вводит отдельную admin/SaaS dashboard-систему. Перед UI-работой прочитать `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md` и релевантные `docs/design/*v2*`; переиспользовать shared shell, navigation, buttons, forms, data regions, semantic colors, typography, geometry и icon language. Desktop и mobile могут иметь разную композицию, но остаются одним продуктом; существенные visual changes проверить в реальном браузере в light/dark и не менять канонический дизайн без owner checkpoint.
+
 ## Out of scope
 
 Не менять relationship model, не расширять trainer data access, не добавлять marketplace/chat/video/Trainer Copilot/AI client analysis и не ослаблять backend permissions.

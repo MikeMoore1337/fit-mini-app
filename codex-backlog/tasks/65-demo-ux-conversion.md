@@ -38,6 +38,10 @@ AI Coach остаётся disabled. Допустим non-interactive teaser:
 
 Проверить desktop/mobile Web и Telegram continuation/auth layouts.
 
+## Design V2 contract
+
+Demo CTA, scenario choice, banner и contextual persistence prompts используют shared Design V2 buttons, panels, dialogs/sheets и auth transition language. Перед UI-работой прочитать `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md` и релевантные `docs/design/*v2*`; не вводить отдельную conversion/marketing palette и не возвращать generic SaaS takeover-модалы. Существенные changes проверить в light/dark на desktop/mobile и representative Telegram continuation state.
+
 
 ## User / Trainer demo entry
 

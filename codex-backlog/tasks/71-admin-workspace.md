@@ -76,6 +76,10 @@ Loading/empty/error/retry/permission denied/partial/pagination/long IDs.
 
 Desktop-first, но graceful Web layout на 768/390/360.
 
+## Design V2 contract
+
+Admin Workspace является operational context внутри Approved Design V2, а не отдельным generic admin-template/SaaS UI. Перед UI-работой прочитать `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md` и релевантные `docs/design/*v2*`; переиспользовать shared shell, navigation, tables/lists, forms, buttons, status/permission states, semantic colors, typography и geometry. Desktop может быть плотнее product surfaces, но mobile/desktop и light/dark остаются одной системой; существенные visual changes проверить в реальном браузере и не менять канонический дизайн без owner checkpoint.
+
 ## Out of scope
 
 Не добавлять Telegram admin panel, impersonation, automatic Admin=>Trainer, arbitrary DB editor, terminal/SQL console, secrets, billing UI или Trainer Copilot. Queue/detail/actions для trainer applications реализуются отдельно в task `71A` поверх готового Admin Workspace.

@@ -36,6 +36,10 @@
 
 Допустим только locked/teaser state. Никаких provider calls и demo AI quota.
 
+## Design V2 contract
+
+Demo использует тот же Approved Design V2 app shell, navigation, semantic tokens и components, что authenticated Web/Mobile/TMA. Перед UI-работой прочитать `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md` и релевантные `docs/design/*v2*`; indicator и locked state должны быть shared product states, а не отдельной demo palette/card system. Проверить public -> demo и demo states в light/dark на desktop/mobile в реальном браузере.
+
 ## Out of scope
 
 Не добавлять fixtures/core interactions, contextual conversion UX, новую auth систему или новые RBAC semantics.

@@ -13,6 +13,10 @@
 
 - balanced/priority muscle groups; measurement trends; consistency hints; no strong single-point inference; separate circumference facts from muscle analytics; trainer permissions; knowledge links.
 
+## Design V2 contract
+
+Measurements, priorities и charts используют Design V2 semantic tokens, typography, data regions и accessible chart conventions; цвет не должен быть единственным носителем смысла. Прочитать `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md` и релевантные `docs/design/*v2*`, не вводить локальную analytics palette/card system и проверить light/dark, empty/insufficient и desktop/mobile states в реальном браузере.
+
 ## Out of scope
 
 Никаких progress photos, AI/photo analysis, body-fat/ideal-proportion scores.

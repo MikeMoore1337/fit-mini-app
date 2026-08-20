@@ -13,6 +13,10 @@
 
 - Reusable sufficient/limited/insufficient state; concrete reason such as `4/14 days`; nutrition/weight/anthropometry/training; helpful CTA; no blocking; same metadata later AI.
 
+## Design V2 contract
+
+Confidence должен быть одним reusable Design V2 state pattern во всех surfaces, а не набором локальных badges и цветов. Прочитать `codex-backlog/DESIGN_V2_INTEGRATION_NOTES.md` и релевантные `docs/design/*v2*`; использовать semantic tokens, icon/text redundancy и shared feedback regions. Проверить light/dark, mobile/desktop и все confidence states в реальном браузере.
+
 ## Out of scope
 
 Без universal score, shame/gamification и AI.
