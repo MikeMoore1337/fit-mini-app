@@ -201,10 +201,6 @@ body.public-shell-mode #root {
   text-decoration: none;
 }
 
-.public-shell__brand-name {
-  white-space: nowrap;
-}
-
 .public-shell__logo {
   display: block;
   width: var(--landing-header-control-size);
@@ -232,7 +228,7 @@ body.public-shell-mode #root {
     font-size: 0.78rem;
   }
 
-  .public-shell__brand-name {
+  .public-shell__brand .yfc-lockup__wordmark {
     display: none;
   }
 }

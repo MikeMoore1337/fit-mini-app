@@ -10,15 +10,18 @@ const canonicalSvgPaths = [
   '/assets/brand/yfc-mark-dark.svg',
 ];
 
-async function assertHeaderMark(page: Page, surface: 'light' | 'dark') {
+async function assertHeaderMark(page: Page, surface: 'light' | 'dark', size: number) {
   const mark = page.locator('.landing-header .landing-brand__mark');
+  await expect(mark).toBeVisible();
   await expect(mark).toHaveAttribute('src', `/assets/brand/yfc-mark-${surface}.svg`);
-  await expect(mark).toHaveCSS('width', '44px');
-  await expect(mark).toHaveCSS('height', '44px');
+  await expect(mark).toHaveCSS('width', `${size}px`);
+  await expect(mark).toHaveCSS('height', `${size}px`);
+  await expect(mark).toHaveCSS('object-fit', 'contain');
   await expect(mark).toHaveAttribute('alt', '');
 }
 
 test('canonical brand assets render on light and dark public surfaces', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   for (const viewport of [
     { name: 'desktop', width: 1440, height: 900 },
     { name: 'mobile', width: 390, height: 844 },
@@ -30,7 +33,13 @@ test('canonical brand assets render on light and dark public surfaces', async ({
       window.localStorage.removeItem('landing-theme');
     });
     await page.reload();
-    await assertHeaderMark(page, 'light');
+    await assertHeaderMark(page, 'light', 44);
+    const wordmark = page.locator('.landing-header .yfc-lockup__wordmark');
+    if (viewport.name === 'mobile') {
+      await expect(wordmark).toBeHidden();
+    } else {
+      await expect(wordmark).toBeVisible();
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
 
     if (viewport.name === 'desktop') {
@@ -38,11 +47,20 @@ test('canonical brand assets render on light and dark public surfaces', async ({
     }
 
     await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
-    await assertHeaderMark(page, 'dark');
+    await assertHeaderMark(page, 'dark', 44);
+    await expect(page.locator('#landing-title')).toHaveCSS('color', 'rgb(242, 246, 239)');
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
 
     if (viewport.name === 'mobile') {
       await page.screenshot({ path: '../.artifacts/brand/landing-dark-mobile.png' });
+    }
+
+    await page.goto('/login');
+    await assertHeaderMark(page, 'dark', 40);
+    if (viewport.name === 'mobile') {
+      await expect(page.locator('.landing-header .yfc-lockup__wordmark')).toBeHidden();
+    } else {
+      await expect(page.locator('.landing-header .yfc-lockup__wordmark')).toBeVisible();
     }
   }
 });
