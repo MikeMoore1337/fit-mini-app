@@ -251,6 +251,10 @@ test('dashboard даёт обзор и фильтрует клиентов бе�
   await expect(page.getByText('Борис Александрович С Очень Длинной Фамилией')).toBeVisible();
   await expect(page.getByText('Сейчас открыт клиент')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Анна Петрова', exact: true })).toBeVisible();
+  await expect(page.locator('.coach-client-program .ui-badge--success')).toHaveCSS(
+    'border-radius',
+    '8px',
+  );
   expect(fullHistoryRequests).toEqual([]);
 
   if (captureAudit) {
@@ -258,16 +262,25 @@ test('dashboard даёт обзор и фильтрует клиентов бе�
       path: '../.artifacts/ui-audit/task-48/coach-desktop-light.png',
       fullPage: true,
     });
-    await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
-    await expect(page.getByRole('tab', { name: 'Клиенты' })).toHaveCSS(
-      'background-color',
-      'rgb(22, 25, 22)',
-    );
+  }
+
+  await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
+  await expect(page.getByRole('tab', { name: 'Клиенты' })).toHaveCSS(
+    'background-color',
+    'rgb(22, 25, 22)',
+  );
+  await expect(page.getByLabel('Найти клиента')).toHaveCSS('background-color', 'rgb(22, 25, 22)');
+  await expect(page.getByRole('button', { name: 'Пригласить клиента', exact: true })).toHaveCSS(
+    'background-color',
+    'rgb(168, 232, 58)',
+  );
+  if (captureAudit) {
     await page.screenshot({
       path: '../.artifacts/ui-audit/task-48/coach-desktop-dark.png',
       fullPage: true,
     });
   }
+  await page.getByRole('button', { name: 'Включить светлую тему' }).click();
 
   await page.getByLabel('Показать').selectOption('attention');
   await expect(page.getByText('Анна Петрова', { exact: true })).toHaveCount(1);
@@ -292,6 +305,7 @@ test('mobile использует список и отдельный конте�
   await page.setViewportSize({ width: 390, height: 844 });
   await openCoach(page);
 
+  expect((await page.locator('.coach-workspace-header').boundingBox())?.height).toBeLessThan(190);
   await expect(page.getByRole('heading', { name: 'Анна Петрова', exact: true })).toBeHidden();
   await page.getByRole('button', { name: /Борис Александрович/ }).click();
   await expect(
@@ -301,18 +315,65 @@ test('mobile использует список и отдельный конте�
     }),
   ).toBeVisible();
   await expect(page.getByText('Сейчас открыт клиент')).toBeVisible();
+  await expect(page.getByText('Цель: Набор мышц')).toBeVisible();
   await expect(page.getByRole('button', { name: 'К списку клиентов' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
+
+  await page.getByText('Назначить новую программу').click();
+  await expect(page.getByRole('heading', { name: 'Тренировочные дни' })).toBeVisible();
+  const trainingFields = page.locator('.program-exercise-row__metrics .field');
+  await expect(trainingFields).toHaveCount(3);
+  const fieldBoxes = await trainingFields.evaluateAll((fields) =>
+    fields.map((field) => field.getBoundingClientRect()),
+  );
+  expect(fieldBoxes.every((box) => box.width >= 70)).toBe(true);
+  expect(
+    Math.max(...fieldBoxes.map((box) => box.top)) - Math.min(...fieldBoxes.map((box) => box.top)),
+  ).toBeLessThan(2);
+  const dayHeader = page.locator('.program-day__head');
+  const dayInput = dayHeader.getByLabel('Название дня 1');
+  const dayControls = dayHeader.locator('.program-order-controls');
+  expect((await dayControls.boundingBox())?.y).toBeLessThan(
+    ((await dayInput.boundingBox())?.y ?? 0) + ((await dayInput.boundingBox())?.height ?? 0),
+  );
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
 
   if (captureAudit) {
     await page.screenshot({
-      path: '../.artifacts/ui-audit/task-48/coach-mobile-390.png',
+      path: '../.artifacts/ui-audit/task-48/coach-mobile-program-390.png',
       fullPage: true,
     });
   }
 
-  await page.getByRole('button', { name: 'К списку клиентов' }).click();
+  await page.getByRole('button', { name: 'Ещё', exact: true }).click();
+  await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
+  await page.keyboard.press('Escape');
+  await expect(dayInput).toHaveCSS('background-color', 'rgb(22, 25, 22)');
+  await expect(dayControls.getByRole('button', { name: 'Переместить день 1 выше' })).toHaveCSS(
+    'background-color',
+    'rgba(0, 0, 0, 0)',
+  );
+  if (captureAudit) {
+    await page.screenshot({
+      path: '../.artifacts/ui-audit/task-48/coach-mobile-program-dark-390.png',
+      fullPage: true,
+    });
+  }
+
   await page.setViewportSize({ width: 360, height: 800 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(360);
+  expect(
+    (
+      await trainingFields.evaluateAll((fields) =>
+        fields.map((field) => field.getBoundingClientRect().width),
+      )
+    ).every((width) => width >= 65),
+  ).toBe(true);
+  await page.getByRole('button', { name: 'Ещё', exact: true }).click();
+  await page.getByRole('button', { name: 'Включить светлую тему' }).click();
+  await page.keyboard.press('Escape');
+
+  await page.getByRole('button', { name: 'К списку клиентов' }).click();
   await expect(page.getByLabel('Найти клиента')).toBeVisible();
   await page.evaluate(() => window.scrollTo(0, 0));
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(360);
