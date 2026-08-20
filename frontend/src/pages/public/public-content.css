@@ -640,6 +640,12 @@
   }
 }
 
+@media (min-width: 681px) {
+  .public-page--design-v2 :where(.public-breadcrumbs, .public-hero) {
+    padding-inline: clamp(var(--v2-space-4), 4vw, var(--v2-space-6));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .public-related-card {
     transition: none;
