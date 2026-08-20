@@ -12,9 +12,9 @@ const canonicalSvgPaths = [
 
 async function assertHeaderMark(page: Page, surface: 'light' | 'dark') {
   const mark = page.locator('.landing-header .landing-brand__mark');
-  await expect(mark).toHaveAttribute('src', `/assets/brand/yfc-logo-${surface}.svg`);
-  await expect(mark).toHaveAttribute('width', '44');
-  await expect(mark).toHaveAttribute('height', '44');
+  await expect(mark).toHaveAttribute('src', `/assets/brand/yfc-mark-${surface}.svg`);
+  await expect(mark).toHaveCSS('width', '44px');
+  await expect(mark).toHaveCSS('height', '44px');
   await expect(mark).toHaveAttribute('alt', '');
 }
 
