@@ -3,8 +3,9 @@
 ## Статус
 
 Эти PNG фиксируют owner-selected направление A / Quiet Pace для финального checkpoint task `46F`.
-Они являются visual source of truth вместе с `docs/design/*v2*`, но не означают, что production UI
-уже изменён или что pilot разрешён.
+После task `46I` направление внедрено в общие primitives и основные пользовательские surfaces.
+PNG остаются композиционным visual source of truth вместе с `docs/design/*v2*`, а точные
+post-pilot tokens задаёт `docs/design/design-system-v2.md`.
 
 Рабочий воспроизводимый prototype находится в `.artifacts/design-v2/approved/` и не коммитится.
 Canonical assets содержат только representative crops, без тяжёлых full-board exports.
@@ -15,18 +16,18 @@ Production pilot после owner checkpoint уточнил control radii и с�
 
 ## Каталог
 
-| Surface | Light | Dark |
-|---|---|---|
-| Landing desktop | `landing-desktop-light.png` | `landing-desktop-dark.png` |
-| Landing mobile | `landing-mobile-light.png` | `landing-mobile-dark.png` |
-| `/login` + AppShell/Today desktop | `login-today-desktop-light.png` | `login-today-desktop-dark.png` |
-| Active Workout mobile | `active-workout-mobile-light.png` | `active-workout-mobile-dark.png` |
-| Mobile Web / TMA composition | `mobile-web-tma-light.png` | `mobile-web-tma-dark.png` |
-| Nutrition desktop | `nutrition-desktop-light.png` | `nutrition-desktop-dark.png` |
-| Nutrition mobile | `nutrition-mobile-light.png` | `nutrition-mobile-dark.png` |
-| Progress / analytics | `progress-analytics-light.png` | `progress-analytics-dark.png` |
-| Program wizard + exercise detail | `programs-exercise-detail-light.png` | `programs-exercise-detail-dark.png` |
-| Loading/empty/error/validation/access states | `system-states-light.png` | `system-states-dark.png` |
+| Surface                                      | Light                                | Dark                                |
+| -------------------------------------------- | ------------------------------------ | ----------------------------------- |
+| Landing desktop                              | `landing-desktop-light.png`          | `landing-desktop-dark.png`          |
+| Landing mobile                               | `landing-mobile-light.png`           | `landing-mobile-dark.png`           |
+| `/login` + AppShell/Today desktop            | `login-today-desktop-light.png`      | `login-today-desktop-dark.png`      |
+| Active Workout mobile                        | `active-workout-mobile-light.png`    | `active-workout-mobile-dark.png`    |
+| Mobile Web / TMA composition                 | `mobile-web-tma-light.png`           | `mobile-web-tma-dark.png`           |
+| Nutrition desktop                            | `nutrition-desktop-light.png`        | `nutrition-desktop-dark.png`        |
+| Nutrition mobile                             | `nutrition-mobile-light.png`         | `nutrition-mobile-dark.png`         |
+| Progress / analytics                         | `progress-analytics-light.png`       | `progress-analytics-dark.png`       |
+| Program wizard + exercise detail             | `programs-exercise-detail-light.png` | `programs-exercise-detail-dark.png` |
+| Loading/empty/error/validation/access states | `system-states-light.png`            | `system-states-dark.png`            |
 
 ## UI audit и refinement
 
@@ -72,6 +73,7 @@ navigation, secondary, recovery и destructive actions остались нейт
 
 ## Ограничения
 
-Static renders не доказывают production SEO, screen-reader semantics, focus order/traps, real API
-loading/error/offline behavior, keyboard viewport, CLS или Telegram lifecycle. Это обязательные
-проверки pilot после отдельного owner approval.
+Static renders сами по себе не доказывают production SEO, screen-reader semantics, focus
+order/traps, real API loading/error/offline behavior, keyboard viewport, CLS или Telegram
+lifecycle. Эти риски проверяются отдельно на production implementation и соответствующих
+платформах.

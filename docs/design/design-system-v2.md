@@ -6,22 +6,30 @@
 проверенная гипотеза reference prototype; её можно уточнить на реальном UI без изменения смысла.
 Нельзя превращать candidate value в локальное исключение одного экрана.
 
+## Статус внедрения
+
+После production pilot системные значения этой спецификации применены к общим primitives и
+основным пользовательским surfaces в task `46I`. Production CSS в
+`frontend/src/styles/design-v2.css` является технической реализацией этих ролей; локальные экраны
+не должны вводить параллельную палитру, scale или второй набор V2-компонентов. Сохранённые reference
+renders задают композиционное направление, но не переопределяют уточнённые здесь post-pilot tokens.
+
 ## Semantic color roles
 
 Следующие значения утверждены владельцем как palette baseline:
 
-| Role | YFC Light | YFC Dark | Назначение |
-|---|---:|---:|---|
-| `canvas` | `#F4F5F2` | `#101310` | Фон страницы/application frame |
-| `surface` | `#FFFFFF` | `#161916` | Основной рабочий surface |
-| `surface-secondary` | `#ECEDE9` | `#1E221E` | Спокойная группировка/подложка |
-| `surface-strong` | `#DADCD7` | `#292E29` | Выраженная нейтральная граница состояния |
-| `text-primary` | `#161A17` | `#EEF0EA` | Основной текст и числа |
-| `text-secondary` | `#59605B` | `#AFB5AD` | Meta, hints, secondary copy |
-| `border` | `#C9CDC8` | `#3A413A` | Rules и quiet boundaries |
-| `lime` | `#9EE02B` | `#A8E83A` | Primary/progress/focus/confirmed signal |
-| `accent-text` | `#486414` | `#B9EA72` | Малый текстовый accent на neutral surface |
-| `on-lime` | `#102015` | `#102015` | Текст и icon на lime fill |
+| Role                | YFC Light |  YFC Dark | Назначение                                |
+| ------------------- | --------: | --------: | ----------------------------------------- |
+| `canvas`            | `#F4F5F2` | `#101310` | Фон страницы/application frame            |
+| `surface`           | `#FFFFFF` | `#161916` | Основной рабочий surface                  |
+| `surface-secondary` | `#ECEDE9` | `#1E221E` | Спокойная группировка/подложка            |
+| `surface-strong`    | `#DADCD7` | `#292E29` | Выраженная нейтральная граница состояния  |
+| `text-primary`      | `#161A17` | `#EEF0EA` | Основной текст и числа                    |
+| `text-secondary`    | `#59605B` | `#AFB5AD` | Meta, hints, secondary copy               |
+| `border`            | `#C9CDC8` | `#3A413A` | Rules и quiet boundaries                  |
+| `lime`              | `#9EE02B` | `#A8E83A` | Primary/progress/focus/confirmed signal   |
+| `accent-text`       | `#486414` | `#B9EA72` | Малый текстовый accent на neutral surface |
+| `on-lime`           | `#102015` | `#102015` | Текст и icon на lime fill                 |
 
 Имена задают handoff contract, а не обязательные CSS identifiers. Success, warning, danger и info
 получают отдельные semantic roles: status text, border, subtle surface и foreground. Их нельзя

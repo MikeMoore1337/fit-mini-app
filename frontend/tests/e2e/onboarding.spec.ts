@@ -63,6 +63,56 @@ async function mockOnboardingApi(page: Page, initialStatus: OnboardingStatus = '
     if (path.endsWith('/workouts/today')) {
       return route.fulfill({ status: 404, json: { detail: 'На сегодня тренировка не назначена' } });
     }
+    if (path.endsWith('/nutrition/diary')) {
+      return route.fulfill({
+        json: {
+          diary_date: '2030-01-30',
+          timezone: 'Europe/Moscow',
+          meals: [],
+          totals: {
+            energy_kcal: '0',
+            protein_g: '0',
+            fat_g: '0',
+            carbs_g: '0',
+            fiber_g: null,
+          },
+          targets: null,
+          remaining: null,
+        },
+      });
+    }
+    if (path.endsWith('/workouts/progress/summary')) {
+      return route.fulfill({
+        json: {
+          user_id: 91,
+          period_days: 30,
+          period_start: '2030-01-01',
+          period_end: '2030-01-30',
+          training: {
+            planned_workouts: 0,
+            completed_workouts: 0,
+            frequency_per_week: 0,
+            volume_kg: 0,
+            new_personal_records: 0,
+            last_completed_workout_on: null,
+            next_workout: null,
+          },
+          nutrition: { visible: true },
+          body: { latest_measurement: null, trends: [], priority: null, guidance: {} },
+          adherence: {
+            formula_version: 'adherence-v1',
+            overall_percent: null,
+            included_components: [],
+            workouts: {},
+            cardio: {},
+            calories: {},
+            protein: {},
+          },
+          data_sufficiency: {},
+        },
+      });
+    }
+    if (path.endsWith('/me/coach-application')) return route.fulfill({ json: null });
     return route.fulfill({ json: [] });
   });
 
@@ -106,11 +156,13 @@ test('новый Web-пользователь проходит короткий 
     () => (window as typeof window & { __onboardingEvents: unknown[] }).__onboardingEvents ?? [],
   );
   expect(JSON.stringify(events)).not.toContain('maintenance');
-  expect(events).toContainEqual({
-    name: 'onboarding_next_action_selected',
-    surface: 'web',
-    next_action: 'nutrition',
-  });
+  expect(events).toContainEqual(
+    expect.objectContaining({
+      name: 'onboarding_next_action_selected',
+      surface: 'web',
+      next_action: 'nutrition',
+    }),
+  );
 });
 
 test('returning user skips onboarding, while the first-run layout stays responsive', async ({
@@ -120,7 +172,7 @@ test('returning user skips onboarding, while the first-run layout stays responsi
   await mockOnboardingApi(page, 'complete');
   await page.goto('/app');
   await expect(page).toHaveURL('/app');
-  await expect(page.getByRole('heading', { name: 'Новый пользователь' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Сегодня/ })).toBeVisible();
 
   await page.unroute('**/api/v1/**');
   await mockOnboardingApi(page, 'required');

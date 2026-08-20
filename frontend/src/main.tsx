@@ -16,7 +16,7 @@ import { isPublicContentPath } from './content/publicContent';
 import './styles/legacy.css';
 import './styles/react.css';
 import './styles/design-system.css';
-import './styles/design-v2-pilot.css';
+import './styles/design-v2.css';
 
 const MiniAppPage = lazy(() => import('./pages/miniapp/MiniAppPage'));
 const CoachPage = lazy(() => import('./pages/coach/CoachPage'));

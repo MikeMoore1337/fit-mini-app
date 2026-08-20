@@ -247,7 +247,7 @@ export default function PublicContentPage() {
   const appUrl = appUrlForHostname(window.location.hostname);
 
   return (
-    <div className={`landing-page landing-page--${theme} public-page`}>
+    <div className={`landing-page landing-page--${theme} public-page public-page--design-v2`}>
       <a
         className="landing-skip-link"
         href="#public-content"
