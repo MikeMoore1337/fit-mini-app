@@ -24,10 +24,189 @@ INTERNAL_SOURCE = {
     "license_url": None,
 }
 PHASES = {
-    "start": "Исходное положение",
-    "active": "Активная фаза",
-    "technique": "Две фазы движения",
+    "positive": "Позитивная фаза",
+    "negative": "Негативная фаза",
+    "setup": "Подготовка",
+    "hold": "Удержание",
+    "cycle_one": "Первая фаза цикла",
+    "cycle_two": "Вторая фаза цикла",
+    "sequence_start": "Начало последовательности",
+    "sequence_next": "Следующая позиция",
+    "technique": "Техника движения",
 }
+
+# The upstream images are ordered as two positions, not as physiological phases.
+# Their direction differs even inside one exercise family: for example, the
+# barbell bench press starts at lockout, while the machine press starts at the
+# chest. Keep the mapping explicit so the caption describes the movement that
+# begins in the shown position instead of blindly renaming start/active files.
+NEGATIVE_FIRST_SLUGS = {
+    "ab-wheel",
+    "bench-dip",
+    "bench-press",
+    "belt-squat",
+    "bulgarian-split-squat",
+    "chest-dip",
+    "dumbbell-fly",
+    "dumbbell-overhead-extension",
+    "dumbbell-pullover",
+    "front-squat",
+    "goblet-squat",
+    "good-morning",
+    "hack-squat",
+    "incline-bench-press",
+    "incline-dumbbell-fly",
+    "kettlebell-goblet-squat",
+    "kettlebell-swing",
+    "leg-press",
+    "lunge",
+    "lying-dumbbell-triceps-extension",
+    "nordic-curl",
+    "overhead-press",
+    "overhead-triceps-extension",
+    "pec-deck",
+    "push-up",
+    "reverse-lunge",
+    "romanian-deadlift",
+    "seated-dumbbell-press",
+    "single-leg-rdl",
+    "sissy-squat",
+    "skull-crusher",
+    "smith-squat",
+    "split-squat",
+    "squat",
+    "step-up",
+    "walking-lunge",
+    "wall-sit",
+    "weighted-dip",
+}
+
+POSITIVE_FIRST_SLUGS = {
+    "arnold-press",
+    "barbell-curl",
+    "barbell-glute-bridge",
+    "barbell-row",
+    "barbell-shrug",
+    "box-jump",
+    "burpee",
+    "cable-curl",
+    "cable-fly",
+    "cable-kickback",
+    "cable-lateral-raise",
+    "cable-pull-through",
+    "cable-pushdown",
+    "cable-row-one-arm",
+    "cable-crunch",
+    "calf-press",
+    "captain-chair-leg-raise",
+    "chin-up",
+    "chest-supported-row",
+    "close-grip-bench-press",
+    "close-grip-lat-pulldown",
+    "concentration-curl",
+    "crunch",
+    "deadlift",
+    "decline-bench-press",
+    "decline-dumbbell-press",
+    "donkey-calf-raise",
+    "dumbbell-bench-press",
+    "dumbbell-curl",
+    "dumbbell-front-raise",
+    "dumbbell-lateral-raise",
+    "dumbbell-shrug",
+    "ez-bar-curl",
+    "face-pull",
+    "glute-ham-raise",
+    "hammer-curl",
+    "hanging-leg-raise",
+    "hip-abduction",
+    "hip-adduction",
+    "hip-thrust",
+    "hyperextension",
+    "incline-dumbbell-press",
+    "incline-dumbbell-curl",
+    "inverted-row",
+    "landmine-press",
+    "lat-pulldown",
+    "leg-curl",
+    "leg-extension",
+    "low-to-high-cable-fly",
+    "machine-biceps-curl",
+    "machine-chest-press",
+    "machine-dip",
+    "machine-lateral-raise",
+    "machine-row",
+    "machine-shoulder-press",
+    "meadows-row",
+    "medicine-ball-slam",
+    "mountain-climber",
+    "one-arm-dumbbell-row",
+    "pallof-press",
+    "pendlay-row",
+    "preacher-curl",
+    "pull-up",
+    "rack-pull",
+    "rear-delt-fly",
+    "renegade-row",
+    "reverse-curl",
+    "reverse-crunch",
+    "reverse-grip-lat-pulldown",
+    "reverse-pec-deck",
+    "rope-pushdown",
+    "rowing-machine",
+    "russian-twist",
+    "seated-cable-row",
+    "seated-calf-raise",
+    "seated-leg-curl",
+    "single-arm-cable-triceps-extension",
+    "single-leg-calf-raise",
+    "single-leg-hip-thrust",
+    "smith-bench-press",
+    "smith-shoulder-press",
+    "spider-curl",
+    "standing-calf-raise",
+    "standing-leg-curl",
+    "stiff-leg-deadlift",
+    "straight-arm-pulldown",
+    "sumo-deadlift",
+    "t-bar-row",
+    "thruster",
+    "triceps-kickback",
+    "upright-row",
+    "wall-ball",
+    "woodchopper",
+    "y-raise",
+    "kettlebell-clean",
+    "kettlebell-snatch",
+}
+
+SPECIAL_PHASES_BY_SLUG = {
+    "plank": ("setup", "hold"),
+    "side-plank": ("setup", "hold"),
+    "hollow-hold": ("setup", "hold"),
+    "dead-bug": ("setup", "hold"),
+    "bird-dog": ("setup", "hold"),
+    "farmer-walk": ("cycle_one", "cycle_two"),
+    "suitcase-carry": ("cycle_one", "cycle_two"),
+    "treadmill-run": ("cycle_one", "cycle_two"),
+    "jump-rope": ("cycle_one", "cycle_two"),
+    "assault-bike": ("cycle_one", "cycle_two"),
+    "battle-rope": ("cycle_one", "cycle_two"),
+    "sled-push": ("cycle_one", "cycle_two"),
+    "sled-pull": ("cycle_one", "cycle_two"),
+    "bear-crawl": ("cycle_one", "cycle_two"),
+    "turkish-get-up": ("sequence_start", "sequence_next"),
+}
+
+
+def phase_ids_for_slug(slug: str) -> tuple[str, str]:
+    if slug in NEGATIVE_FIRST_SLUGS:
+        return "negative", "positive"
+    if slug in POSITIVE_FIRST_SLUGS:
+        return "positive", "negative"
+    if phases := SPECIAL_PHASES_BY_SLUG.get(slug):
+        return phases
+    raise ValueError(f"Exercise {slug} has no reviewed phase mapping")
 
 
 @lru_cache(maxsize=1)
@@ -45,13 +224,26 @@ def catalog_definition() -> tuple[
     )
     from sync_exercise_guide_assets import SOURCE_EXERCISES
 
-    result = {
-        slug: [
-            (f"{slug}-start.jpg", "start"),
-            (f"{slug}-active.jpg", "active"),
+    reviewed_slugs = NEGATIVE_FIRST_SLUGS | POSITIVE_FIRST_SLUGS | set(SPECIAL_PHASES_BY_SLUG)
+    source_slugs = set(SOURCE_EXERCISES)
+    if reviewed_slugs != source_slugs:
+        missing = sorted(source_slugs - reviewed_slugs)
+        unexpected = sorted(reviewed_slugs - source_slugs)
+        raise ValueError(
+            "Exercise phase mapping mismatch "
+            f"(missing={missing or 'none'}, unexpected={unexpected or 'none'})"
+        )
+
+    result = {}
+    for slug in SOURCE_EXERCISES:
+        start_phase, active_phase = phase_ids_for_slug(slug)
+        files = [
+            (f"{slug}-start.jpg", start_phase),
+            (f"{slug}-active.jpg", active_phase),
         ]
-        for slug in SOURCE_EXERCISES
-    }
+        if {start_phase, active_phase} == {"positive", "negative"}:
+            files.sort(key=lambda item: item[1] != "positive")
+        result[slug] = files
     result.update(
         {slug: [(f"{slug}-technique.jpg", "technique")] for slug in GENERATED_CARDIO_SLUGS}
     )

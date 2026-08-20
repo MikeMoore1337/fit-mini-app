@@ -225,19 +225,32 @@ def test_seeded_exercise_metadata_and_alternatives_are_serialized(client) -> Non
     assert guide["source_license_url"].endswith("/LICENSE.md")
     assert guide["media"][0] == {
         "type": "image",
-        "url": "/static/exercise-guides/bench-press-start.jpg",
-        "poster": "/static/exercise-guides/bench-press-start.jpg",
-        "phase": "Исходное положение",
-        "alt": "Жим лежа: исходное положение",
+        "url": "/static/exercise-guides/bench-press-active.jpg",
+        "poster": "/static/exercise-guides/bench-press-active.jpg",
+        "phase": "Позитивная фаза",
+        "alt": "Жим лежа: позитивная фаза",
         "source_name": "free-exercise-db",
         "source_url": "https://github.com/yuhonas/free-exercise-db",
         "source_license": "Unlicense (общественное достояние)",
         "source_license_url": ("https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md"),
         "width": 850,
         "height": 567,
-        "byte_size": 72816,
+        "byte_size": 72202,
         "sort_order": 0,
     }
+    assert guide["media"][1]["phase"] == "Негативная фаза"
+    assert guide["images"] == [
+        {
+            "phase": "Позитивная фаза",
+            "url": "/static/exercise-guides/bench-press-active.jpg",
+            "alt": "Жим лежа: позитивная фаза",
+        },
+        {
+            "phase": "Негативная фаза",
+            "url": "/static/exercise-guides/bench-press-start.jpg",
+            "alt": "Жим лежа: негативная фаза",
+        },
+    ]
     assert guide["safety_notes"]
     assert guide["equipment"] == [{"identifier": "barbell", "name": "Штанга"}]
     assert guide["muscles"][0]["identifier"] == "chest"
@@ -253,6 +266,23 @@ def test_seeded_exercise_metadata_and_alternatives_are_serialized(client) -> Non
     assert guide_response.status_code == 200
     assert guide_response.json()["media_reference"] == "exercise-guides:bench-press"
     assert guide_response.json()["source_license_url"].endswith("/LICENSE.md")
+
+    lat_pulldown = next(item for item in catalog.json() if item["slug"] == "lat-pulldown")
+    lat_pulldown_guide = client.get(
+        f"/api/v1/programs/exercises/{lat_pulldown['id']}/guide",
+        headers=headers,
+    ).json()
+    assert [item["phase"] for item in lat_pulldown_guide["media"]] == [
+        "Позитивная фаза",
+        "Негативная фаза",
+    ]
+
+    plank = next(item for item in catalog.json() if item["slug"] == "plank")
+    plank_guide = client.get(
+        f"/api/v1/programs/exercises/{plank['id']}/guide",
+        headers=headers,
+    ).json()
+    assert [item["phase"] for item in plank_guide["media"]] == ["Подготовка", "Удержание"]
 
 
 def test_custom_exercise_structured_metadata_can_be_partial(client) -> None:

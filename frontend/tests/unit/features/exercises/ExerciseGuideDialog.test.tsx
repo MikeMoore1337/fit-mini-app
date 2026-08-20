@@ -40,8 +40,50 @@ const fullExercise: Exercise = {
     equipment: [{ identifier: 'cable', name: 'Тросовый блок' }],
     safety_notes: ['Не тяните рукоять рывком.'],
     alternatives: [{ id: 2, slug: 'band-pulldown', title: 'Тяга резиновой ленты' }],
-    media: [],
-    images: [],
+    media: [
+      {
+        type: 'image',
+        url: '/static/exercise-guides/lat-pulldown-start.jpg',
+        poster: '/static/exercise-guides/lat-pulldown-start.jpg',
+        phase: 'Позитивная фаза',
+        alt: 'Тяга верхнего блока: позитивная фаза',
+        source_name: 'Проверенный источник',
+        source_url: 'https://example.com/source',
+        source_license: 'Разрешённая лицензия',
+        source_license_url: 'https://example.com/license',
+        width: 850,
+        height: 567,
+        byte_size: 75_000,
+        sort_order: 0,
+      },
+      {
+        type: 'image',
+        url: '/static/exercise-guides/lat-pulldown-active.jpg',
+        poster: '/static/exercise-guides/lat-pulldown-active.jpg',
+        phase: 'Негативная фаза',
+        alt: 'Тяга верхнего блока: негативная фаза',
+        source_name: 'Проверенный источник',
+        source_url: 'https://example.com/source',
+        source_license: 'Разрешённая лицензия',
+        source_license_url: 'https://example.com/license',
+        width: 850,
+        height: 567,
+        byte_size: 75_000,
+        sort_order: 1,
+      },
+    ],
+    images: [
+      {
+        phase: 'Позитивная фаза',
+        url: '/static/exercise-guides/lat-pulldown-start.jpg',
+        alt: 'Тяга верхнего блока: позитивная фаза',
+      },
+      {
+        phase: 'Негативная фаза',
+        url: '/static/exercise-guides/lat-pulldown-active.jpg',
+        alt: 'Тяга верхнего блока: негативная фаза',
+      },
+    ],
     media_reference: 'exercise-guides:lat-pulldown',
     source_name: 'Проверенный источник',
     source_url: 'https://example.com/source',
@@ -96,6 +138,8 @@ describe('ExerciseGuideDialog', () => {
     renderGuide();
 
     expect(await screen.findByRole('heading', { name: 'Техника выполнения' })).toBeVisible();
+    expect(screen.getByAltText('Тяга верхнего блока: позитивная фаза')).toBeVisible();
+    expect(screen.getByAltText('Тяга верхнего блока: негативная фаза')).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Основные мышцы' })).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Дополнительные мышцы' })).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Оборудование' })).toBeVisible();
