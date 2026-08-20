@@ -24,23 +24,24 @@ INTERNAL_SOURCE = {
     "license_url": None,
 }
 PHASES = {
-    "positive": "Позитивная фаза",
-    "negative": "Негативная фаза",
+    "concentric_end": "Фаза усилия",
+    "eccentric_end": "Фаза возврата",
     "setup": "Подготовка",
     "hold": "Удержание",
-    "cycle_one": "Первая фаза цикла",
-    "cycle_two": "Вторая фаза цикла",
-    "sequence_start": "Начало последовательности",
+    "work": "Рабочее положение",
+    "cycle_one": "Первое положение",
+    "cycle_two": "Второе положение",
+    "sequence_start": "Начало движения",
     "sequence_next": "Следующая позиция",
     "technique": "Техника движения",
 }
 
-# The upstream images are ordered as two positions, not as physiological phases.
-# Their direction differs even inside one exercise family: for example, the
-# barbell bench press starts at lockout, while the machine press starts at the
-# chest. Keep the mapping explicit so the caption describes the movement that
-# begins in the shown position instead of blindly renaming start/active files.
-NEGATIVE_FIRST_SLUGS = {
+# A still image is a position, not a physiological muscle action. For dynamic
+# strength exercises the caption describes the movement completed in the shown
+# position. The mapping is explicit because upstream image order differs even
+# inside one family: the barbell bench press starts at lockout, while the
+# machine press starts at the chest.
+CONCENTRIC_END_IN_START_IMAGE_SLUGS = {
     "ab-wheel",
     "bench-dip",
     "bench-press",
@@ -48,7 +49,6 @@ NEGATIVE_FIRST_SLUGS = {
     "bulgarian-split-squat",
     "chest-dip",
     "dumbbell-fly",
-    "dumbbell-overhead-extension",
     "dumbbell-pullover",
     "front-squat",
     "goblet-squat",
@@ -60,35 +60,29 @@ NEGATIVE_FIRST_SLUGS = {
     "kettlebell-swing",
     "leg-press",
     "lunge",
-    "lying-dumbbell-triceps-extension",
     "nordic-curl",
     "overhead-press",
-    "overhead-triceps-extension",
     "pec-deck",
     "push-up",
     "reverse-lunge",
-    "romanian-deadlift",
     "seated-dumbbell-press",
     "single-leg-rdl",
     "sissy-squat",
     "skull-crusher",
-    "smith-squat",
     "split-squat",
     "squat",
-    "step-up",
-    "walking-lunge",
-    "wall-sit",
+    "triceps-kickback",
+    "upright-row",
     "weighted-dip",
+    "hyperextension",
 }
 
-POSITIVE_FIRST_SLUGS = {
+ECCENTRIC_END_IN_START_IMAGE_SLUGS = {
     "arnold-press",
     "barbell-curl",
     "barbell-glute-bridge",
     "barbell-row",
     "barbell-shrug",
-    "box-jump",
-    "burpee",
     "cable-curl",
     "cable-fly",
     "cable-kickback",
@@ -122,7 +116,6 @@ POSITIVE_FIRST_SLUGS = {
     "hip-abduction",
     "hip-adduction",
     "hip-thrust",
-    "hyperextension",
     "incline-dumbbell-press",
     "incline-dumbbell-curl",
     "inverted-row",
@@ -138,10 +131,7 @@ POSITIVE_FIRST_SLUGS = {
     "machine-row",
     "machine-shoulder-press",
     "meadows-row",
-    "medicine-ball-slam",
-    "mountain-climber",
     "one-arm-dumbbell-row",
-    "pallof-press",
     "pendlay-row",
     "preacher-curl",
     "pull-up",
@@ -153,8 +143,6 @@ POSITIVE_FIRST_SLUGS = {
     "reverse-grip-lat-pulldown",
     "reverse-pec-deck",
     "rope-pushdown",
-    "rowing-machine",
-    "russian-twist",
     "seated-cable-row",
     "seated-calf-raise",
     "seated-leg-curl",
@@ -170,22 +158,31 @@ POSITIVE_FIRST_SLUGS = {
     "straight-arm-pulldown",
     "sumo-deadlift",
     "t-bar-row",
-    "thruster",
-    "triceps-kickback",
-    "upright-row",
-    "wall-ball",
     "woodchopper",
     "y-raise",
-    "kettlebell-clean",
-    "kettlebell-snatch",
+    "dumbbell-overhead-extension",
+    "lying-dumbbell-triceps-extension",
+    "romanian-deadlift",
+    "smith-squat",
 }
 
 SPECIAL_PHASES_BY_SLUG = {
     "plank": ("setup", "hold"),
     "side-plank": ("setup", "hold"),
     "hollow-hold": ("setup", "hold"),
-    "dead-bug": ("setup", "hold"),
-    "bird-dog": ("setup", "hold"),
+    "wall-sit": ("setup", "hold"),
+    "pallof-press": ("setup", "hold"),
+    "overhead-triceps-extension": ("setup", "hold"),
+    "dead-bug": ("setup", "work"),
+    "bird-dog": ("setup", "work"),
+    "box-jump": ("setup", "work"),
+    "burpee": ("sequence_start", "sequence_next"),
+    "kettlebell-clean": ("sequence_start", "sequence_next"),
+    "kettlebell-snatch": ("sequence_start", "sequence_next"),
+    "medicine-ball-slam": ("sequence_start", "sequence_next"),
+    "step-up": ("sequence_start", "sequence_next"),
+    "thruster": ("sequence_start", "sequence_next"),
+    "wall-ball": ("sequence_start", "sequence_next"),
     "farmer-walk": ("cycle_one", "cycle_two"),
     "suitcase-carry": ("cycle_one", "cycle_two"),
     "treadmill-run": ("cycle_one", "cycle_two"),
@@ -195,15 +192,19 @@ SPECIAL_PHASES_BY_SLUG = {
     "sled-push": ("cycle_one", "cycle_two"),
     "sled-pull": ("cycle_one", "cycle_two"),
     "bear-crawl": ("cycle_one", "cycle_two"),
+    "mountain-climber": ("cycle_one", "cycle_two"),
+    "rowing-machine": ("cycle_one", "cycle_two"),
+    "russian-twist": ("cycle_one", "cycle_two"),
+    "walking-lunge": ("cycle_one", "cycle_two"),
     "turkish-get-up": ("sequence_start", "sequence_next"),
 }
 
 
 def phase_ids_for_slug(slug: str) -> tuple[str, str]:
-    if slug in NEGATIVE_FIRST_SLUGS:
-        return "negative", "positive"
-    if slug in POSITIVE_FIRST_SLUGS:
-        return "positive", "negative"
+    if slug in CONCENTRIC_END_IN_START_IMAGE_SLUGS:
+        return "concentric_end", "eccentric_end"
+    if slug in ECCENTRIC_END_IN_START_IMAGE_SLUGS:
+        return "eccentric_end", "concentric_end"
     if phases := SPECIAL_PHASES_BY_SLUG.get(slug):
         return phases
     raise ValueError(f"Exercise {slug} has no reviewed phase mapping")
@@ -224,7 +225,25 @@ def catalog_definition() -> tuple[
     )
     from sync_exercise_guide_assets import SOURCE_EXERCISES
 
-    reviewed_slugs = NEGATIVE_FIRST_SLUGS | POSITIVE_FIRST_SLUGS | set(SPECIAL_PHASES_BY_SLUG)
+    phase_groups = (
+        CONCENTRIC_END_IN_START_IMAGE_SLUGS,
+        ECCENTRIC_END_IN_START_IMAGE_SLUGS,
+        set(SPECIAL_PHASES_BY_SLUG),
+    )
+    overlaps = sorted(
+        slug
+        for index, group in enumerate(phase_groups)
+        for other_group in phase_groups[index + 1 :]
+        for slug in group & other_group
+    )
+    if overlaps:
+        raise ValueError(f"Exercise phase mappings overlap: {overlaps}")
+
+    reviewed_slugs = (
+        CONCENTRIC_END_IN_START_IMAGE_SLUGS
+        | ECCENTRIC_END_IN_START_IMAGE_SLUGS
+        | set(SPECIAL_PHASES_BY_SLUG)
+    )
     source_slugs = set(SOURCE_EXERCISES)
     if reviewed_slugs != source_slugs:
         missing = sorted(source_slugs - reviewed_slugs)
@@ -241,8 +260,8 @@ def catalog_definition() -> tuple[
             (f"{slug}-start.jpg", start_phase),
             (f"{slug}-active.jpg", active_phase),
         ]
-        if {start_phase, active_phase} == {"positive", "negative"}:
-            files.sort(key=lambda item: item[1] != "positive")
+        if {start_phase, active_phase} == {"concentric_end", "eccentric_end"}:
+            files.sort(key=lambda item: item[1] != "concentric_end")
         result[slug] = files
     result.update(
         {slug: [(f"{slug}-technique.jpg", "technique")] for slug in GENERATED_CARDIO_SLUGS}
