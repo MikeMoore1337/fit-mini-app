@@ -362,11 +362,22 @@ test('dark progress uses one lime accent for the adherence outcome', async ({ pa
   const colors = await page.evaluate(() => ({
     summary: getComputedStyle(document.querySelector('.progress-summary__score')!).color,
     adherence: getComputedStyle(document.querySelector('.progress-adherence__score')!).color,
+    accent: (() => {
+      const probe = document.createElement('span');
+      probe.style.color = 'var(--v2-accent-text)';
+      document.body.append(probe);
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+      return color;
+    })(),
   }));
   expect(colors.summary).toBe(colors.adherence);
+  expect(colors.summary).toBe(colors.accent);
 });
 
-test('light progress uses one dark color for the adherence outcome', async ({ page }) => {
+test('light progress uses the restrained green accent for the adherence outcome', async ({
+  page,
+}) => {
   await page.addInitScript(() => localStorage.setItem('app-theme', 'light'));
   await mockProgress(page);
   await page.goto('/app?section=progress');
@@ -381,6 +392,15 @@ test('light progress uses one dark color for the adherence outcome', async ({ pa
   const colors = await page.evaluate(() => ({
     summary: getComputedStyle(document.querySelector('.progress-summary__score')!).color,
     adherence: getComputedStyle(document.querySelector('.progress-adherence__score')!).color,
+    accent: (() => {
+      const probe = document.createElement('span');
+      probe.style.color = 'var(--v2-accent-text)';
+      document.body.append(probe);
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+      return color;
+    })(),
   }));
   expect(colors.summary).toBe(colors.adherence);
+  expect(colors.summary).toBe(colors.accent);
 });
