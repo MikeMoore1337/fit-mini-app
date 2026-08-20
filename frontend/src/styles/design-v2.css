@@ -1496,13 +1496,8 @@ body:has(.standalone-page--design-v2) {
   color: inherit;
 }
 
+.app-section--progress .progress-summary__score,
 .app-section--progress .progress-adherence__score {
-  color: var(--v2-text-primary);
-}
-
-:root[data-color-scheme='dark']
-  .app-section--progress
-  :where(.progress-summary__score, .progress-adherence__score) {
   color: var(--v2-accent-text);
 }
 
