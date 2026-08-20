@@ -255,6 +255,13 @@ test('dashboard даёт обзор и фильтрует клиентов бе�
     'border-radius',
     '8px',
   );
+  await expect(page.locator('.coach-client-program .ui-badge--success')).toHaveCSS(
+    'padding-top',
+    '3px',
+  );
+  expect(
+    (await page.locator('.coach-client-program .ui-badge--success').boundingBox())?.height,
+  ).toBeLessThanOrEqual(26);
   expect(fullHistoryRequests).toEqual([]);
 
   if (captureAudit) {
@@ -317,6 +324,12 @@ test('mobile использует список и отдельный конте�
   await expect(page.getByText('Сейчас открыт клиент')).toBeVisible();
   await expect(page.getByText('Цель: Набор мышц')).toBeVisible();
   await expect(page.getByRole('button', { name: 'К списку клиентов' })).toBeVisible();
+  await expect(page.getByRole('tablist', { name: 'Разделы тренера' })).toBeHidden();
+  const headerBox = await page.locator('.coach-workspace-header').boundingBox();
+  const dashboardEyebrowBox = await page.locator('.coach-dashboard .eyebrow').boundingBox();
+  expect(
+    (dashboardEyebrowBox?.y ?? 0) - ((headerBox?.y ?? 0) + (headerBox?.height ?? 0)),
+  ).toBeLessThanOrEqual(44);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
 
   await page.getByText('Назначить новую программу').click();

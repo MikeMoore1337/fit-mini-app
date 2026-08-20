@@ -1390,10 +1390,13 @@ body:has(.standalone-page--design-v2) {
 }
 
 .app-section--design-v2 :where(.badge, .ui-badge, .metric-pill) {
+  min-height: 1.5rem;
+  padding: 0.1875rem var(--v2-space-2);
   border-color: var(--v2-border);
   border-radius: var(--v2-compact-radius);
   background: transparent;
   color: var(--v2-text-secondary);
+  line-height: 1.2;
 }
 
 .app-section--design-v2 .ui-badge--success {
@@ -2996,6 +2999,11 @@ body:has(.standalone-page--design-v2) {
   padding: 0 var(--v2-space-3) var(--v2-space-3);
 }
 
+.coach-client-program > .ui-badge {
+  align-self: start;
+  justify-self: end;
+}
+
 @media (max-width: 980px) {
   .coach-fact-strip {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3028,6 +3036,10 @@ body:has(.standalone-page--design-v2) {
 }
 
 @media (max-width: 760px) {
+  .coach-workspace--design-v2.is-client-detail-open > .react-tabs--coach {
+    display: none;
+  }
+
   .coach-dashboard__heading {
     align-items: stretch;
     flex-direction: column;
@@ -3162,6 +3174,10 @@ body:has(.standalone-page--design-v2) {
 
   .coach-client-facts > div:last-child {
     border-bottom: 0;
+  }
+
+  .coach-client-program > .ui-badge {
+    justify-self: start;
   }
 }
 
