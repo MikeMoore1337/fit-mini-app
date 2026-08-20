@@ -1496,6 +1496,10 @@ body:has(.standalone-page--design-v2) {
   color: inherit;
 }
 
+:root[data-color-scheme='dark'] .app-section--progress .progress-summary__score {
+  color: var(--v2-accent-text);
+}
+
 .app-section--progress :where(.progress-summary__facts, .progress-fact-strip) {
   gap: 0;
 }

@@ -105,7 +105,12 @@ function SummaryOverview({ summary }: { summary: ProgressSummary }) {
     <section className="progress-summary" aria-labelledby="progress-overview-title">
       <div className="progress-summary__lead">
         <span>Соблюдение плана</span>
-        <strong id="progress-overview-title">
+        <strong
+          id="progress-overview-title"
+          className={
+            summary.adherence.overall_percent == null ? undefined : 'progress-summary__score'
+          }
+        >
           {summary.adherence.overall_percent == null
             ? 'Пока не оценить'
             : `${formatNumber(summary.adherence.overall_percent)}%`}
