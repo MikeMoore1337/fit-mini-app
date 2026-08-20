@@ -1,6 +1,7 @@
 /*
- * Design V2 production pilot migration seam (task 46G).
- * Only explicit pilot markers opt in; task 46I can fold verified rules into shared components.
+ * Design V2 shared production foundation.
+ * Pilot-specific markers remain as stable component hooks; core rollout scopes inherit the same
+ * semantic contract without creating a parallel component tree.
  */
 
 body:has(.app-shell--design-v2) {
@@ -1201,6 +1202,898 @@ body.public-shell-mode.public-shell-mode:has(.auth-public-shell--design-v2) {
 @media (prefers-reduced-motion: reduce) {
   .app-shell--design-v2 *,
   .auth-public-shell--design-v2 * {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Core rollout: shared semantic scope for completed user surfaces (tasks 00-46). */
+:where(
+  .app-section--design-v2,
+  .onboarding-page--design-v2,
+  .public-shell--design-v2,
+  .public-page--design-v2,
+  .standalone-page--design-v2
+) {
+  --bg: var(--v2-canvas);
+  --bg-elev: var(--v2-surface);
+  --bg-soft: var(--v2-surface-secondary);
+  --card: var(--v2-surface);
+  --border: var(--v2-border);
+  --text: var(--v2-text-primary);
+  --muted: var(--v2-text-secondary);
+  --field-label: var(--v2-text-primary);
+  --placeholder: var(--v2-text-secondary);
+  --accent: var(--v2-text-primary);
+  --accent-hover: var(--v2-surface-strong);
+  --accent-strong: var(--v2-accent-text);
+  --accent-line: var(--v2-lime);
+  --accent-soft: var(--v2-surface-secondary);
+  --accent-alt: var(--v2-accent-text);
+  --accent-alt-soft: var(--v2-surface-secondary);
+  --accent-alt-line: var(--v2-border);
+  --button-text: var(--v2-surface);
+  --link-color: var(--v2-accent-text);
+  --focus-ring: var(--v2-lime);
+  --page-bg: var(--v2-canvas);
+  --card-bg: var(--v2-surface);
+  --surface: var(--v2-surface);
+  --surface-subtle: var(--v2-surface-secondary);
+  --surface-soft: var(--v2-surface-secondary);
+  --surface-hover: var(--v2-surface-secondary);
+  --surface-active: var(--v2-surface-strong);
+  --secondary-bg: transparent;
+  --secondary-hover: var(--v2-surface-secondary);
+  --segment-bg: var(--v2-surface-secondary);
+  --metric-bg: var(--v2-surface-secondary);
+  --metric-border: var(--v2-border);
+  --metric-text: var(--v2-text-primary);
+  --success: var(--v2-success);
+  --success-soft: var(--v2-success-surface);
+  --success-line: var(--v2-success-border);
+  --success-text: var(--v2-success-text);
+  --warning: var(--v2-warning);
+  --warning-soft: var(--v2-warning-surface);
+  --warning-line: var(--v2-warning);
+  --warning-text: var(--v2-warning);
+  --danger: var(--v2-danger);
+  --danger-button: var(--v2-danger);
+  --danger-hover: var(--v2-danger);
+  --danger-soft: var(--v2-danger-surface);
+  --danger-line: var(--v2-danger);
+  --danger-text: var(--v2-danger);
+  --shadow: none;
+  --radius: var(--v2-region-radius);
+  --radius-sm: var(--v2-control-radius);
+  color: var(--v2-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+body:has(.onboarding-page--design-v2),
+body:has(.public-shell--design-v2),
+body:has(.standalone-page--design-v2) {
+  background: var(--v2-canvas);
+}
+
+.app-shell--design-v2
+  .app-section--design-v2
+  :where(button, a, input, select, textarea, summary):focus-visible,
+.onboarding-page--design-v2 :where(button, a, input, select, textarea):focus-visible,
+.public-shell--design-v2 :where(button, a, input, select, textarea):focus-visible,
+.public-page--design-v2 :where(button, a, input, select, textarea):focus-visible,
+.standalone-page--design-v2 :where(button, a):focus-visible {
+  outline: 3px solid var(--v2-lime);
+  outline-offset: 3px;
+}
+
+.app-section--design-v2 {
+  gap: var(--v2-space-5);
+  min-width: 0;
+}
+
+.app-section--design-v2 > .page-stack {
+  gap: var(--v2-space-5);
+}
+
+.app-section--design-v2 .hero-card {
+  display: flex;
+  align-items: end;
+  min-height: 0;
+  padding: 0 0 var(--v2-space-4);
+  border: 0;
+  border-bottom: 1px solid var(--v2-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.app-section--design-v2 .hero-card h1 {
+  margin-top: var(--v2-space-2);
+  font-size: clamp(2.25rem, 4vw, 3.8rem);
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+
+.app-section--design-v2 .eyebrow,
+.onboarding-page--design-v2 .eyebrow,
+.public-shell--design-v2 .eyebrow,
+.public-page--design-v2 .landing-kicker {
+  color: var(--v2-accent-text);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.app-section--design-v2 :where(.card, details.card, .ui-surface) {
+  border-color: var(--v2-border);
+  border-radius: var(--v2-region-radius);
+  background: var(--v2-surface);
+  box-shadow: none;
+}
+
+.app-section--design-v2 :where(button, .button-link) {
+  border-radius: var(--v2-control-radius);
+  box-shadow: none;
+}
+
+.app-section--design-v2
+  :where(.secondary, .button-link.secondary, .ui-button--secondary, .ui-button--ghost) {
+  border-color: var(--v2-border);
+  background: transparent;
+  color: var(--v2-text-primary);
+}
+
+.app-section--design-v2
+  :where(.secondary, .button-link.secondary, .ui-button--secondary, .ui-button--ghost):hover:not(
+    :disabled
+  ) {
+  border-color: var(--v2-text-secondary);
+  background: var(--v2-surface-secondary);
+  color: var(--v2-text-primary);
+}
+
+.app-section--design-v2
+  .ui-button:not(.ui-button--secondary, .ui-button--ghost, .ui-button--danger),
+.app-section--design-v2 .program-selector-entry__actions > button,
+.app-section--design-v2 .program-wizard__footer > button[type='submit'],
+.app-section--programs
+  .program-wizard__footer:not(.program-wizard__footer--result)
+  > button:last-child:not(.secondary),
+.app-section--design-v2 .program-wizard__result-actions > button:first-child,
+.app-section--design-v2 .program-builder-footer__save > button:first-child {
+  border-color: transparent;
+  background: var(--v2-lime);
+  color: var(--v2-on-lime);
+}
+
+.app-section--design-v2
+  .ui-button:not(.ui-button--secondary, .ui-button--ghost, .ui-button--danger):hover:not(:disabled),
+.app-section--design-v2 .program-selector-entry__actions > button:hover:not(:disabled),
+.app-section--design-v2 .program-wizard__footer > button[type='submit']:hover:not(:disabled),
+.app-section--programs
+  .program-wizard__footer:not(.program-wizard__footer--result)
+  > button:last-child:not(.secondary):hover:not(:disabled),
+.app-section--design-v2 .program-wizard__result-actions > button:first-child:hover:not(:disabled),
+.app-section--design-v2 .program-builder-footer__save > button:first-child:hover:not(:disabled) {
+  background: var(--v2-lime-hover);
+}
+
+.app-section--design-v2 :where(input:not([type='checkbox'], [type='radio']), textarea, select) {
+  min-height: 44px;
+  border-color: var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface);
+  color: var(--v2-text-primary);
+}
+
+.app-section--design-v2 :where(.badge, .ui-badge, .metric-pill) {
+  border-color: var(--v2-border);
+  border-radius: var(--v2-compact-radius);
+  background: transparent;
+  color: var(--v2-text-secondary);
+}
+
+.app-section--design-v2 .ui-badge--success {
+  border-color: var(--v2-success-border);
+  background: var(--v2-success-surface);
+  color: var(--v2-success-text);
+}
+
+.app-section--design-v2 :where(.list-grid, .program-template-grid, .exercise-catalog-list) {
+  gap: 0;
+  border-top: 1px solid var(--v2-border);
+}
+
+.app-section--design-v2 :where(.list-row, .program-template-card, .exercise-catalog-item) {
+  padding: var(--v2-space-4) 0;
+  border: 0;
+  border-bottom: 1px solid var(--v2-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.app-section--design-v2 .metric-grid {
+  gap: 0;
+  border-block: 1px solid var(--v2-border);
+}
+
+.app-section--design-v2 .metric {
+  padding: var(--v2-space-4);
+  border: 0;
+  border-right: 1px solid var(--v2-border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.app-section--design-v2 .metric:last-child {
+  border-right: 0;
+}
+
+.app-section--design-v2
+  :where(
+    .modal__panel,
+    .assignment-modal,
+    .program-wizard__panel,
+    .program-example-modal__panel,
+    .exercise-guide-modal__panel
+  ) {
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-region-radius);
+  background: var(--v2-surface);
+  color: var(--v2-text-primary);
+  box-shadow: var(--elevation-overlay);
+}
+
+.app-section--design-v2 .modal__backdrop {
+  background: color-mix(in srgb, var(--v2-canvas) 72%, transparent);
+}
+
+.app-section--design-v2 :where(.empty-state, .ui-state, .auth-notice) {
+  border-color: var(--v2-border);
+  border-radius: var(--v2-region-radius);
+  background: var(--v2-surface-secondary);
+  box-shadow: none;
+}
+
+/* Progress: outcome -> evidence -> methodology, with rules instead of KPI card grids. */
+.app-section--progress .progress-experience {
+  gap: var(--v2-space-5);
+}
+
+.app-section--progress .progress-hero {
+  align-items: end;
+  padding: 0 0 var(--v2-space-4);
+  border: 0;
+  border-bottom: 1px solid var(--v2-border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.app-section--progress .progress-hero h1 {
+  font-size: clamp(2.65rem, 5vw, 4.4rem);
+  line-height: 0.96;
+  letter-spacing: -0.05em;
+}
+
+.app-section--progress .progress-summary {
+  overflow: hidden;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-region-radius);
+  background: var(--v2-surface);
+}
+
+.app-section--progress .progress-summary__lead {
+  border-radius: 0;
+  background: var(--v2-surface-secondary);
+  color: var(--v2-text-primary);
+}
+
+.app-section--progress .progress-summary__lead :where(span, strong, p) {
+  color: inherit;
+}
+
+.app-section--progress :where(.progress-summary__facts, .progress-fact-strip) {
+  gap: 0;
+}
+
+.app-section--progress :where(.progress-summary__facts, .progress-fact-strip) > div {
+  border-color: var(--v2-border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.app-section--progress .progress-section {
+  padding: var(--v2-space-5) 0 0;
+  border: 0;
+  border-top: 1px solid var(--v2-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.app-section--progress
+  :where(.progress-coverage, .progress-note, .progress-body-chart, .progress-adherence__score) {
+  border-color: var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface-secondary);
+}
+
+.app-section--progress .progress-exercise {
+  border-color: var(--v2-border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.app-section--progress .progress-exercise > summary {
+  min-height: 56px;
+}
+
+.app-section--progress .progress-session {
+  border-color: var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface-secondary);
+}
+
+.app-section--progress .progress-exposure__track,
+.app-section--progress .progress-compliance__track {
+  background: var(--v2-surface-strong);
+}
+
+.app-section--progress :where(.progress-exposure__track i, .progress-compliance__track i) {
+  background: var(--v2-lime);
+}
+
+.app-section--progress .ui-tabs {
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface-secondary);
+}
+
+.app-section--progress .ui-tab[aria-selected='true'] {
+  box-shadow: inset 0 -2px var(--v2-lime);
+}
+
+/* Programs and deterministic selection wizard. */
+.app-section--programs .program-selector-entry {
+  overflow: hidden;
+  padding: var(--v2-space-5);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-region-radius);
+  background: var(--v2-surface-secondary);
+  box-shadow: inset 3px 0 var(--v2-lime);
+}
+
+.app-section--programs .program-selector-entry::after,
+.app-section--programs .program-active::before {
+  display: none;
+}
+
+.app-section--programs .program-active {
+  padding: var(--v2-space-5);
+  border-color: var(--v2-border);
+  border-radius: var(--v2-region-radius);
+  background: var(--v2-surface);
+  box-shadow: inset 3px 0 var(--v2-lime);
+}
+
+.app-section--programs
+  :where(
+    .program-library,
+    .program-library__group,
+    .program-builder-basics,
+    .program-builder-section
+  ) {
+  border-color: var(--v2-border);
+  border-radius: var(--v2-region-radius);
+  background: var(--v2-surface);
+  box-shadow: none;
+}
+
+.app-section--programs .program-template-grid {
+  grid-template-columns: 1fr;
+}
+
+.app-section--programs .program-template-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--v2-space-4);
+}
+
+.app-section--programs :where(.program-day, .program-exercise-row) {
+  border-color: var(--v2-border);
+  border-radius: var(--v2-region-radius);
+  background: var(--v2-surface-secondary);
+  box-shadow: none;
+}
+
+.app-section--programs .program-exercise-row {
+  border-radius: var(--v2-control-radius);
+}
+
+.app-section--programs
+  :where(.program-builder-tools, .program-exercise-advanced, .compact-disclosure) {
+  border-color: var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: transparent;
+}
+
+.app-section--programs .program-wizard__panel {
+  width: min(860px, calc(100vw - 32px));
+  padding: 0;
+}
+
+.app-section--programs .program-wizard__panel:has(.program-wizard__prefill) {
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+}
+
+.app-section--programs .program-wizard__header,
+.app-section--programs .program-wizard__form,
+.app-section--programs .program-wizard-result,
+.app-section--programs .program-wizard__footer {
+  padding-inline: var(--v2-space-5);
+}
+
+.app-section--programs .program-wizard__header {
+  padding-top: var(--v2-space-5);
+}
+
+.app-section--programs .program-wizard__footer {
+  padding-bottom: var(--v2-space-5);
+}
+
+.app-section--programs .program-wizard__progress {
+  margin-inline: var(--v2-space-5);
+}
+
+.app-section--programs .program-wizard-choice {
+  border-color: var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: transparent;
+}
+
+.app-section--programs .program-wizard-choice.is-selected {
+  border-color: var(--v2-lime);
+  background: var(--v2-surface-secondary);
+  box-shadow: inset 3px 0 var(--v2-lime);
+}
+
+.app-section--programs .program-wizard-result__summary {
+  gap: 0;
+  border-block: 1px solid var(--v2-border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.app-section--programs .program-wizard-result__summary > div {
+  border-color: var(--v2-border);
+}
+
+.app-section--programs
+  :where(.program-wizard-result__facts, .program-wizard-result__next, .program-wizard__prefill) {
+  border-color: var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface-secondary);
+}
+
+/* Exercise catalog and guide. */
+.app-section--catalog .exercise-catalog {
+  gap: var(--v2-space-5);
+}
+
+.app-section--catalog .exercise-catalog__filters {
+  gap: var(--v2-space-2);
+}
+
+.app-section--catalog .exercise-catalog__filters > button.is-active {
+  border-color: var(--v2-lime);
+  background: var(--v2-surface-secondary);
+  box-shadow: inset 0 -2px var(--v2-lime);
+  color: var(--v2-text-primary);
+}
+
+.app-section--catalog .exercise-catalog-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--v2-space-4);
+}
+
+.app-section--catalog .exercise-create {
+  border-color: var(--v2-border);
+  border-radius: var(--v2-region-radius);
+  background: var(--v2-surface-secondary);
+}
+
+.app-section--catalog .exercise-guide-modal__panel {
+  width: min(1120px, calc(100vw - 32px));
+}
+
+.app-section--catalog .exercise-guide-modal__head {
+  padding-bottom: var(--v2-space-4);
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.app-section--catalog .exercise-guide-notes {
+  gap: 0;
+  border-top: 1px solid var(--v2-border);
+}
+
+.app-section--catalog .exercise-guide-note {
+  padding: var(--v2-space-4) 0;
+  border: 0;
+  border-bottom: 1px solid var(--v2-border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.app-section--catalog .exercise-guide-note--technique {
+  border-left: 3px solid var(--v2-lime);
+  padding-left: var(--v2-space-4);
+}
+
+.app-section--catalog .exercise-guide-note--warning {
+  border-left: 3px solid var(--v2-warning);
+  padding-left: var(--v2-space-4);
+  background: var(--v2-warning-surface);
+}
+
+.app-section--catalog .exercise-guide-muscle {
+  border-color: var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface-secondary);
+}
+
+.app-section--catalog .exercise-guide-source {
+  border-color: var(--v2-border);
+  background: transparent;
+}
+
+/* Nutrition discovery, recipes, barcode and copy flows inherit the diary foundation. */
+.app-section--nutrition :where(.nutrition-picker__panel, .nutrition-copy__panel) {
+  border-color: var(--v2-border);
+  border-radius: var(--v2-region-radius) var(--v2-region-radius) 0 0;
+  background: var(--v2-surface);
+  color: var(--v2-text-primary);
+  box-shadow: var(--elevation-overlay);
+}
+
+.app-section--nutrition
+  :where(
+    .nutrition-picker__tabs,
+    .nutrition-picker__selected,
+    .nutrition-barcode__found,
+    .nutrition-external-result,
+    .nutrition-recipe,
+    .nutrition-copy__notice
+  ) {
+  border-color: var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface-secondary);
+}
+
+.app-section--nutrition .nutrition-picker__tabs button.is-active {
+  border-color: var(--v2-lime);
+  background: var(--v2-surface);
+  box-shadow: inset 0 -2px var(--v2-lime);
+}
+
+.app-section--nutrition :where(.nutrition-food-result, .nutrition-ingredient) {
+  border-color: var(--v2-border);
+  border-radius: 0;
+  background: transparent;
+}
+
+/* Onboarding uses the same mobile composition that TMA will inherit later. */
+.onboarding-page--design-v2 {
+  max-width: 980px;
+  padding-top: max(var(--v2-space-4), env(safe-area-inset-top, 0px));
+}
+
+.onboarding-page--design-v2 .onboarding-header {
+  padding-bottom: var(--v2-space-4);
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.onboarding-page--design-v2 .onboarding-brand-lockup {
+  color: var(--v2-text-primary);
+}
+
+.onboarding-page--design-v2 .onboarding-panel {
+  overflow: hidden;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-region-radius);
+  background: var(--v2-surface);
+  box-shadow: none;
+}
+
+.onboarding-page--design-v2 .onboarding-panel::before {
+  width: 3px;
+  background: var(--v2-lime);
+}
+
+.onboarding-page--design-v2 .onboarding-progress {
+  border-color: var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface-secondary);
+}
+
+.onboarding-page--design-v2 .onboarding-intro h1 {
+  font-size: clamp(2.2rem, 5vw, 3.8rem);
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+
+.onboarding-page--design-v2 .onboarding-goal,
+.onboarding-page--design-v2 .onboarding-next-action {
+  min-height: 56px;
+  border-color: var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: transparent;
+  color: var(--v2-text-primary);
+  box-shadow: none;
+}
+
+.onboarding-page--design-v2 .onboarding-goal.is-selected {
+  border-color: var(--v2-lime);
+  background: var(--v2-surface-secondary);
+  box-shadow: inset 3px 0 var(--v2-lime);
+}
+
+.onboarding-page--design-v2 .onboarding-next-action:hover {
+  border-color: var(--v2-text-secondary);
+  background: var(--v2-surface-secondary);
+}
+
+.onboarding-page--design-v2 .onboarding-next-action--primary,
+.onboarding-page--design-v2 .ui-button {
+  border-color: transparent;
+  background: var(--v2-lime);
+  color: var(--v2-on-lime);
+}
+
+.onboarding-page--design-v2 .onboarding-next-action--primary small,
+.onboarding-page--design-v2 .onboarding-next-action--primary .ui-icon {
+  color: var(--v2-on-lime);
+}
+
+.onboarding-page--design-v2 .onboarding-complete__mark {
+  border-radius: 50%;
+  background: var(--v2-surface-secondary);
+  color: var(--v2-accent-text);
+  box-shadow: inset 0 0 0 1px var(--v2-border);
+}
+
+/* Public/auth shell continuity; the production Landing composition remains task 73. */
+:where(.public-shell--design-v2, .public-page--design-v2) {
+  --landing-ink: var(--v2-text-primary);
+  --landing-muted: var(--v2-text-secondary);
+  --landing-paper: var(--v2-canvas);
+  --landing-card: var(--v2-surface);
+  --landing-border: var(--v2-border);
+  --landing-card-border: var(--v2-border);
+  --landing-kicker: var(--v2-accent-text);
+  --landing-heading-muted: var(--v2-text-secondary);
+  --landing-primary: var(--v2-lime);
+  --landing-primary-hover: var(--v2-lime-hover);
+  --landing-primary-text: var(--v2-on-lime);
+  --landing-secondary: var(--v2-surface-secondary);
+  --landing-secondary-text: var(--v2-text-primary);
+  --landing-chart-axis: var(--v2-border);
+  --landing-chart-grid: var(--v2-border);
+  --landing-chart-accent: var(--v2-lime);
+  background: var(--v2-canvas);
+  color: var(--v2-text-primary);
+}
+
+.public-page--design-v2 .landing-skip-link {
+  position: fixed;
+  z-index: 100;
+  top: 10px;
+  left: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--v2-border-strong);
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface);
+  color: var(--v2-text-primary);
+  transform: translateY(calc(-100% - 16px));
+}
+
+.public-page--design-v2 .landing-skip-link:focus {
+  transform: translateY(0);
+}
+
+.public-shell--design-v2 .public-shell__header,
+.public-page--design-v2 .public-header {
+  border-color: var(--v2-border);
+  background: color-mix(in srgb, var(--v2-canvas) 94%, transparent);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.public-shell--design-v2 :where(.auth-panel, .card) {
+  border-color: var(--v2-border);
+  border-radius: var(--v2-region-radius);
+  background: var(--v2-surface);
+  box-shadow: none;
+}
+
+.public-shell--design-v2 :where(button:not(.public-shell__theme-toggle), .button-link) {
+  min-height: 44px;
+  border-radius: var(--v2-control-radius);
+  box-shadow: none;
+}
+
+.public-shell--design-v2 :where(input, select, textarea) {
+  min-height: 44px;
+  border-color: var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface);
+  color: var(--v2-text-primary);
+}
+
+.public-page--design-v2 {
+  background: var(--v2-canvas);
+}
+
+.public-page--design-v2 .public-hero {
+  border-color: var(--v2-border);
+  background: var(--v2-surface);
+  box-shadow: none;
+}
+
+.public-page--design-v2 .public-hero__summary {
+  border-color: var(--v2-border);
+  border-radius: var(--v2-region-radius);
+  background: var(--v2-surface-secondary);
+}
+
+.public-page--design-v2 :where(.public-guide-card, .public-related-card) {
+  border-color: var(--v2-border);
+  border-radius: var(--v2-region-radius);
+  background: var(--v2-surface);
+  box-shadow: none;
+}
+
+.public-page--design-v2 .public-disclaimer {
+  border-color: var(--v2-warning);
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-warning-surface);
+  color: var(--v2-text-primary);
+}
+
+.public-page--design-v2 .public-cta {
+  border-color: var(--v2-border);
+  border-radius: var(--v2-region-radius);
+  background: var(--v2-surface-secondary);
+  color: var(--v2-text-primary);
+  box-shadow: inset 3px 0 var(--v2-lime);
+}
+
+.public-page--design-v2 .landing-button {
+  border-radius: var(--v2-control-radius);
+}
+
+.standalone-page--design-v2 {
+  padding-block: var(--v2-space-6);
+}
+
+.standalone-page--design-v2 .card {
+  border-color: var(--v2-border);
+  border-radius: var(--v2-region-radius);
+  background: var(--v2-surface);
+  box-shadow: none;
+}
+
+@media (min-width: 900px) {
+  .app-section--progress .progress-schedule > .card,
+  .app-section--progress > .page-stack > .stack > .card,
+  .app-section--progress .diary-measurements-card {
+    padding-inline: 0;
+    border-inline: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+}
+
+@media (max-width: 899px) {
+  .app-section--design-v2 .hero-card {
+    align-items: start;
+  }
+
+  .app-section--programs .program-template-card,
+  .app-section--catalog .exercise-catalog-item {
+    grid-template-columns: 1fr;
+  }
+
+  .app-section--programs .program-wizard__panel,
+  .app-section--catalog .exercise-guide-modal__panel {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 100dvh;
+    border-inline: 0;
+    border-radius: var(--v2-region-radius) var(--v2-region-radius) 0 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-section--design-v2 {
+    gap: var(--v2-space-4);
+  }
+
+  .app-section--design-v2 .hero-card {
+    padding-bottom: var(--v2-space-3);
+  }
+
+  .app-section--design-v2 .hero-card h1,
+  .app-section--progress .progress-hero h1 {
+    font-size: clamp(2.2rem, 12vw, 3.1rem);
+  }
+
+  .app-section--design-v2 .metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .app-section--design-v2 .metric {
+    border-right: 0;
+    border-bottom: 1px solid var(--v2-border);
+  }
+
+  .app-section--design-v2 .metric:last-child {
+    border-bottom: 0;
+  }
+
+  .app-section--progress .progress-summary {
+    border-radius: var(--v2-region-radius);
+  }
+
+  .app-section--progress :where(.progress-summary__facts, .progress-fact-strip) > div {
+    border-right: 0;
+  }
+
+  .app-section--programs .program-selector-entry,
+  .app-section--programs .program-active {
+    padding: var(--v2-space-4);
+  }
+
+  .app-section--programs .program-wizard__header,
+  .app-section--programs .program-wizard__form,
+  .app-section--programs .program-wizard-result,
+  .app-section--programs .program-wizard__footer {
+    padding-inline: var(--v2-space-4);
+  }
+
+  .app-section--programs .program-wizard__progress {
+    margin-inline: var(--v2-space-4);
+  }
+
+  .onboarding-page--design-v2 {
+    padding-inline: var(--v2-space-3);
+  }
+
+  .onboarding-page--design-v2 .onboarding-panel {
+    padding: var(--v2-space-4);
+  }
+
+  .onboarding-page--design-v2 .onboarding-intro h1 {
+    font-size: clamp(2.1rem, 12vw, 3rem);
+  }
+
+  .public-page--design-v2 .public-hero,
+  .public-page--design-v2 .public-cta {
+    border-radius: var(--v2-region-radius);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-section--design-v2 *,
+  .onboarding-page--design-v2 *,
+  .public-shell--design-v2 *,
+  .public-page--design-v2 *,
+  .standalone-page--design-v2 * {
     scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;

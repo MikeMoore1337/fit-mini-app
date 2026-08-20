@@ -40,7 +40,9 @@ export function PublicShell({
   );
 
   return (
-    <div className={`public-shell public-shell--${colorScheme} ${className}`.trim()}>
+    <div
+      className={`public-shell public-shell--design-v2 public-shell--${colorScheme} ${className}`.trim()}
+    >
       <a
         className="public-shell__skip-link landing-skip-link"
         href={`#${skipTarget}`}

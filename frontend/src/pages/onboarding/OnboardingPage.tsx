@@ -84,7 +84,7 @@ export default function OnboardingPage() {
   };
 
   return (
-    <main className="container narrow onboarding-page" id="main-content">
+    <main className="container narrow onboarding-page onboarding-page--design-v2" id="main-content">
       <header className="onboarding-header">
         <div className="onboarding-brand-lockup">
           <BrandLogo className="onboarding-brand" decorative variant="mark" />

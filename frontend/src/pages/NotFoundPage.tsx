@@ -3,7 +3,7 @@ import { Card } from '../shared/ui/common';
 
 export default function NotFoundPage() {
   return (
-    <main className="container">
+    <main className="container standalone-page standalone-page--design-v2">
       <Card collapsible={false} title="Страница не найдена">
         <AppLink className="button-link" to="/app">
           Вернуться в Your Fitness Coach

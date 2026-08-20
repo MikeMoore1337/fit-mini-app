@@ -162,7 +162,11 @@ export default function MiniAppPage() {
 
   return (
     <AppShell section={section}>
-      <div className="page-stack">
+      <div
+        className={`page-stack app-section app-section--${section}${
+          section === 'profile' ? '' : ' app-section--design-v2'
+        }`}
+      >
         {section !== 'today' && section !== 'progress' && section !== 'nutrition' && (
           <header className="card hero-card">
             <div>
