@@ -1,55 +1,21 @@
 # Final pre-release completion checklist
 
 ## Completed
-- [x] 00 `platform-technical-baseline-audit`
-- [x] 01 `ui-baseline-audit-target-direction`
-- [x] 02 `seo-organic-growth-baseline-audit`
-- [x] 03 `technical-seo-indexation-foundation`
-- [x] 04 `search-webmaster-monitoring-foundation`
-- [x] 05 `design-system-foundation`
-- [x] 06 `seo-public-information-architecture-content-foundation`
+- [x] 00-46 — product foundation, domains and completed core UI
+- [x] 46A `completed-scope-production-quality-audit`
+- [x] 46B `security-privacy-data-integrity-audit`
+- [x] 46B1 `consolidated-audit-triage-owner-decision`
+- [x] 46C `critical-technical-remediation` umbrella
+- [x] 46C.1-46C.6 — owner-approved remediation sequence
+- [x] 46D `product-ux-ui-landing-baseline-audit`
+- [x] 46E `design-v2-visual-directions` + owner choice
+- [x] 46F `design-v2-approved-direction-specification` + owner approval
+- [x] 46G `design-v2-production-pilot` + owner manual test
+- [x] 46H `design-v2-pilot-refinement-approval` + owner approval
+- [x] 46I `design-v2-core-ui-rollout`
+- [x] 46J `remaining-backlog-design-v2-alignment`
 
 ## Pending
-- [ ] 07 `brand-logo-favicon-foundation`
-- [ ] 08 `theme-preference-and-platform-sync`
-- [ ] 09 `organic-promotion-distribution-foundation`
-- [ ] 10 `auth-multi-provider-baseline-audit`
-- [ ] 11 `auth-identity-session-linking-hardening`
-- [ ] 12 `auth-provider-production-readiness`
-- [ ] 13 `premium-auth-entry-and-linking-experience`
-- [ ] 14 `progressive-user-onboarding`
-- [ ] 15 `food-domain-foundation`
-- [ ] 16 `food-diary-backend`
-- [ ] 17 `food-product-library-search`
-- [ ] 18 `recipes-copying-backend`
-- [ ] 19 `external-food-provider`
-- [ ] 20 `barcode-lookup-backend`
-- [ ] 21 `progress-adherence-trainer-backend`
-- [ ] 22 `food-platform-hardening`
-- [ ] 23 `exercise-muscle-domain-foundation`
-- [ ] 24 `rir-workout-set-foundation`
-- [ ] 25 `deterministic-program-selection-engine`
-- [ ] 26 `trainer-context-comments-backend`
-- [ ] 27 `training-analytics-extension-backend`
-- [ ] 28 `exercise-guide-media-foundation`
-- [ ] 29 `advanced-set-semantics-and-supersets`
-- [ ] 30 `program-versioning-and-training-blocks`
-- [ ] 31 `body-priorities-and-anthropometry-foundation`
-- [ ] 32 `data-quality-and-confidence-contract`
-- [ ] 33 `adaptive-energy-calibration-engine`
-- [ ] 34 `weekly-check-in-foundation`
-- [ ] 35 `deterministic-workout-adaptation-engine`
-- [ ] 36 `offline-safe-active-workout`
-- [ ] 37 `product-analytics-foundation`
-- [ ] 38 `app-shell-navigation`
-- [ ] 39 `today-dashboard-integrated`
-- [ ] 40 `active-workout-experience`
-- [ ] 41 `nutrition-diary-core-ui`
-- [ ] 42 `nutrition-discovery-recipes-barcode-ui`
-- [ ] 43 `progress-experience`
-- [ ] 44 `programs-exercises-experience`
-- [ ] 45 `program-selection-wizard-experience`
-- [ ] 46 `exercise-guide-encyclopedia-experience`
 - [ ] 47 `profile-account-experience`
 - [ ] 48 `coach-workspace`
 - [ ] 49 `trainer-context-comments-experience`
@@ -63,6 +29,7 @@
 - [ ] 57 `product-analytics-core-instrumentation`
 - [ ] 58 `deterministic-progression-guidance`
 - [ ] 59 `notification-reminder-orchestration`
+- [ ] 59A `main-telegram-bot-support-feedback`
 - [ ] 60 `account-data-export-and-lifecycle`
 - [ ] 61 `cardio-logging-gap-audit-and-minimal-implementation`
 - [ ] 62 `demo-mode-audit-design`

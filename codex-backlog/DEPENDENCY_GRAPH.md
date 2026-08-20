@@ -1,7 +1,7 @@
 # Dependency graph - simplified
 
 ```text
-00-06 COMPLETED
+00-46 COMPLETED
    ↓
 07 Brand logo/favicon foundation
    ↓
@@ -28,13 +28,25 @@
 46C.5 HTTP limits/safe logging
 46C.6 Telegram auth proxy-tunnel preservation
    ↓
-46D-46I Design V2 discovery/pilot/rollout
+46D Baseline audit
+   ↓
+46E Visual directions
+   ↓ OWNER CHOICE
+46F Approved specification
+   ↓ OWNER APPROVAL
+46G Production pilot
+   ↓ OWNER MANUAL TEST
+46H Pilot refinement
+   ↓ OWNER APPROVAL
+46I Core UI rollout
+   ↓
 46J Remaining backlog alignment
    ↓
-47-57 Remaining core + advanced UX
+47-57 Remaining core + advanced UX (NEXT: 47)
    ↓
 58 Progression guidance
 59 Notifications
+59A Main Telegram bot support/feedback
 60 Account export/lifecycle
 61 Cardio gap closure
    ↓
@@ -65,3 +77,4 @@
 ```
 
 Task `07` is a shared visual dependency: theme, auth, AppShell, TMA and Landing must reuse its canonical assets.
+Tasks `00-46`, `46A-46J` и `46C.1-46C.6` завершены; исходные номера `47-93` не перенумеровываются.

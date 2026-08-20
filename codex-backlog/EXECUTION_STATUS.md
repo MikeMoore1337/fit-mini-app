@@ -1,18 +1,17 @@
 # Execution status
 
-User-confirmed state before this brand-integrated final release backlog:
+User-confirmed state after completion of the Design V2 integration gate:
 
-- [x] 00 Platform technical baseline audit
-- [x] 01 UI baseline audit / target direction
-- [x] 02 SEO / Organic Growth baseline audit
-- [x] 03 Technical SEO / indexation foundation
-- [x] 04 Search/Webmaster monitoring foundation
-- [x] 05 Design System foundation
-- [x] 06 Public SEO information architecture / content foundation
+- [x] Tasks `00-46`
+- [x] `46A -> 46B -> 46B1 -> 46C umbrella`
+- [x] `46C.1 -> 46C.2 -> 46C.3 -> 46C.4 -> 46C.5 -> 46C.6`
+- [x] `46D -> 46E -> owner choice -> 46F -> owner approval`
+- [x] `46G -> owner manual test -> 46H -> owner approval -> 46I -> 46J`
 
 Next:
-- [ ] 07 Brand logo and favicon foundation
+- [ ] 47 Profile, settings and account experience
 
-Do not rerun `00-06` unless a later task explicitly requires a narrow regression check.
+Do not rerun completed tasks unless a later task explicitly requires a narrow regression check.
 
-After task `07`, continue with `08-theme-preference-and-platform-sync.md`.
+Continue with `47-profile-account-experience.md` in a separate Codex session. Do not start task `48`
+automatically.
