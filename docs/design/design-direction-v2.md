@@ -65,7 +65,7 @@ Landing может иметь более спокойные поля и controll
 
 ## Правила узнаваемости
 
-- Canonical Y/C/barbell mark и protected textual wordmark `YOUR FITNESS COACH` обязательны на
+- Canonical YF/continuous-C mark и protected textual wordmark `YOUR FITNESS COACH` обязательны на
   Landing, `/login`, desktop AppShell, public shell и reference boards.
 - Mark-only допустим в favicon, app icon, compact mobile navigation, loading mark и Telegram header,
   если имя приложения уже видно рядом.
@@ -76,7 +76,8 @@ Landing может иметь более спокойные поля и controll
 
 На pilot canonical implementation contract для lockup — shared component `canonical mark + protected
 textual wordmark`. Создавать новые варианты SVG-логотипа или независимо набирать wordmark в каждом
-экране нельзя. Изменение geometry самого знака task `07` не входит в Design V2.
+экране нельзя. Утверждённая владельцем geometry C1.1 с цельной оптически асимметричной `C` и
+верхним окончанием под правой диагональю `YF` заменяет прежнюю geometry task `07` на всех surfaces.
 
 ## Approved и forbidden patterns
 
@@ -110,13 +111,13 @@ textual wordmark`. Создавать новые варианты SVG-логот
 
 ## Decision table по owner feedback
 
-| Статус | Решение |
-|---|---|
-| Принято | A / Quiet Pace, compact rail, tabular numerals, neutral Light, near-black Dark, theme-native surfaces и один lime primary CTA в локальном контексте |
-| Изменено | Неопределённый full-logo контракт сведён к shared lockup из canonical mark task `07` и protected textual wordmark; после production pilot Dark neutral surfaces немного осветлены, success приведён к lime family, active navigation усилена neutral surface, а exercises получили самостоятельные boundaries |
-| Отклонено | B и C как production themes, green-black Dark, warm-paper Light, inverted content cards, serif/italic и pill buttons |
-| Требует реализации позже | Shared tokens/components, production motion, реальный focus order, screen-reader и keyboard/safe-area проверка в pilot |
-| Невозможно без product behavior | Автоматически скрывать navigation во время workout или добавлять новые statuses/metrics; такие решения не входят в визуальную спецификацию |
+| Статус                          | Решение                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Принято                         | A / Quiet Pace, compact rail, tabular numerals, neutral Light, near-black Dark, theme-native surfaces и один lime primary CTA в локальном контексте                                                                                                                                                                                                         |
+| Изменено                        | Неопределённый full-logo контракт сведён к shared lockup из canonical mark и protected textual wordmark; mark обновлён до утверждённой владельцем geometry C1.1; после production pilot Dark neutral surfaces немного осветлены, success приведён к lime family, active navigation усилена neutral surface, а exercises получили самостоятельные boundaries |
+| Отклонено                       | B и C как production themes, green-black Dark, warm-paper Light, inverted content cards, serif/italic и pill buttons                                                                                                                                                                                                                                        |
+| Требует реализации позже        | Shared tokens/components, production motion, реальный focus order, screen-reader и keyboard/safe-area проверка в pilot                                                                                                                                                                                                                                      |
+| Невозможно без product behavior | Автоматически скрывать navigation во время workout или добавлять новые statuses/metrics; такие решения не входят в визуальную спецификацию                                                                                                                                                                                                                  |
 
 Отклонений от явного owner feedback нет. Изменение lockup — не новый знак, а единый способ применять
 уже сохранённый canonical logo без расхождения между surfaces.
@@ -141,4 +142,5 @@ textual wordmark`. Создавать новые варианты SVG-логот
 `landing-reference-light.png` остаются historical input. Они не задают hero, card layout,
 testimonials, product imagery, section order или rhythm. Lime + neutral palette сохраняются только
 в контракте Design V2. Старые визуальные указания tasks `01`, `05` и historical masters не
-переопределяют этот документ. Canonical logo task `07` сохраняется без изменений.
+переопределяют этот документ. Для logo действует утверждённая владельцем geometry C1.1 и canonical
+asset contract из `frontend/public/assets/brand/`.

@@ -123,7 +123,8 @@ describe('LandingPage', () => {
     expect(screen.queryByText('4 недели', { exact: true })).not.toBeInTheDocument();
 
     expect(screen.queryByText('@mikhail_murzaev')).not.toBeInTheDocument();
-    expect(container.querySelectorAll('img[src*="/assets/brand/yfc-logo-"]')).toHaveLength(2);
+    expect(container.querySelectorAll('img[src*="/assets/brand/yfc-mark-"]')).toHaveLength(1);
+    expect(container.querySelectorAll('img[src*="/assets/brand/yfc-logo-"]')).toHaveLength(1);
     const contact = screen.getByRole('link', { name: /задать вопрос в telegram/i });
     expect(contact).toHaveAttribute('href', 'https://t.me/your_fitness_support_bot');
     expect(contact).toHaveAttribute('target', '_blank');
