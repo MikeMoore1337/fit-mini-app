@@ -377,6 +377,13 @@ def test_deployment_has_one_main_token_owner_and_ignores_legacy_support_env(monk
     assert "SUPPORT_ADMIN_TELEGRAM_USER_IDS" not in compose
     assert "backend worker bot support-bot" not in deploy_script
     assert "--remove-orphans" in deploy_script
+    assert deploy_script.count("python -m fitminiapp_bot.profile_sync check") == 1
+    assert deploy_script.count("python -m fitminiapp_bot.profile_sync apply") == 1
+    assert deploy_script.count("docker compose run --rm --no-deps bot") == 2
+    assert deploy_script.index("profile_sync check") > deploy_script.index(
+        'scripts/check_deployment.py "$BASE_URL"'
+    )
+    assert "Public Telegram Bot API fields were applied and read back" in deploy_script
     settings_type = type(bot_module.settings)
     assert settings_type.model_fields["bot_token"].validation_alias == "TELEGRAM_BOT_TOKEN"
     assert "support_bot_token" not in settings_type.model_fields
