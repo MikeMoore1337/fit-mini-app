@@ -425,7 +425,7 @@ export default function LandingPage() {
             </a>
             <a
               className="landing-button landing-button--secondary landing-contact__link landing-action"
-              href="https://t.me/your_fitness_support_bot"
+              href="https://t.me/your_fitness_coach_bot?start=support"
               target="_blank"
               rel="noreferrer"
             >

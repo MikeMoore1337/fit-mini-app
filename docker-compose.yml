@@ -77,6 +77,7 @@ services:
       BOT_POLLING_ENABLED: ${BOT_POLLING_ENABLED:-true}
       BOT_POLLING_LOCK_DIR: /var/lock/fitminiapp-bot
       BOT_CONFLICT_RETRY_SECONDS: ${BOT_CONFLICT_RETRY_SECONDS:-300}
+      ADMIN_TELEGRAM_USER_IDS: ${ADMIN_TELEGRAM_USER_IDS:-}
     depends_on:
       backend:
         condition: service_healthy
@@ -89,7 +90,6 @@ services:
     command: ["python", "-m", "fitminiapp_bot.support_bot"]
     environment:
       SUPPORT_BOT_TOKEN: ${SUPPORT_BOT_TOKEN:-}
-      SUPPORT_ADMIN_TELEGRAM_USER_IDS: ${SUPPORT_ADMIN_TELEGRAM_USER_IDS:-}
       SUPPORT_BOT_ENABLED: ${SUPPORT_BOT_ENABLED:-false}
 
   edge:

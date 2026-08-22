@@ -14,6 +14,8 @@ from aiogram import Bot, Dispatcher
 from aiogram.dispatcher.dispatcher import DEFAULT_BACKOFF_CONFIG
 from aiogram.exceptions import TelegramConflictError
 from aiogram.filters import Command, CommandObject, CommandStart
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.storage.memory import SimpleEventIsolation
 from aiogram.methods import GetUpdates
 from aiogram.types import (
     CallbackQuery,
@@ -26,6 +28,9 @@ from aiogram.types import (
 from aiogram.utils.backoff import Backoff, BackoffConfig
 
 from .config import settings
+from .error_codes import safe_error_code
+from .feedback import handle_feedback_start_payload
+from .feedback import router as feedback_router
 from .logging_config import configure_logging
 
 try:
@@ -38,16 +43,6 @@ logger = logging.getLogger(__name__)
 
 TelegramLinkOutcome = Literal["linked", "already_linked", "invalid", "conflict", "failed"]
 TELEGRAM_LINK_PAYLOAD_PATTERN = re.compile(r"link_([A-Za-z0-9_-]{32,128})\Z")
-
-
-def safe_error_code(error: Exception) -> str:
-    if isinstance(error, httpx.HTTPStatusError):
-        return f"http_status:{error.response.status_code}"
-    if isinstance(error, httpx.TimeoutException):
-        return "timeout"
-    if isinstance(error, httpx.RequestError):
-        return "transport_error"
-    return f"unexpected:{type(error).__name__}"
 
 
 class PollingConflict(RuntimeError):
@@ -144,7 +139,7 @@ class PollingFileLock:
         self._file = None
 
 
-dp = StableDispatcher()
+dp = StableDispatcher(events_isolation=SimpleEventIsolation())
 MINI_APP_CACHE_VERSION = "56"
 TIMEZONE_PAGE_SIZE = 8
 TIMEZONE_REGIONS = [
@@ -378,7 +373,8 @@ async def answer_with_open_button(message: Message) -> None:
 
 
 @dp.message(CommandStart())
-async def start(message: Message, command: CommandObject) -> None:
+async def start(message: Message, command: CommandObject, state: FSMContext) -> None:
+    await state.clear()
     raw_token = telegram_link_token(command.args)
     if raw_token is not None:
         outcome = await link_telegram_from_bot(message.from_user, raw_token)
@@ -404,6 +400,9 @@ async def start(message: Message, command: CommandObject) -> None:
             )
             return
         await message.answer("Не удалось привязать Telegram. Попробуйте ещё раз позже.")
+        return
+
+    if await handle_feedback_start_payload(message, state, command.args):
         return
 
     menu_button_ok = await set_mini_app_menu_button(
@@ -468,6 +467,9 @@ async def timezone_callback(callback: CallbackQuery) -> None:
         await callback.answer("Не удалось сохранить часовой пояс", show_alert=True)
 
 
+dp.include_router(feedback_router)
+
+
 async def main() -> None:
     configure_logging()
     if not settings.bot_polling_enabled:
@@ -475,7 +477,7 @@ async def main() -> None:
         while True:
             await asyncio.sleep(3600)
 
-    if not settings.bot_token or settings.bot_token == "replace-me":
+    if not settings.bot_token or settings.bot_token in {"change-me", "replace-me"}:
         logger.warning("bot_token_not_configured")
         while True:
             await asyncio.sleep(3600)

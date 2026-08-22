@@ -196,11 +196,48 @@ def test_start_link_payload_is_validated_and_reports_success(monkeypatch):
     )
     monkeypatch.setattr(bot_module, "link_telegram_from_bot", AsyncMock(return_value="linked"))
     monkeypatch.setattr(bot_module, "set_mini_app_menu_button", AsyncMock(return_value=True))
+    feedback_start = AsyncMock(return_value=True)
+    monkeypatch.setattr(bot_module, "handle_feedback_start_payload", feedback_start)
 
-    asyncio.run(bot_module.start(message, SimpleNamespace(args=f"link_{'c' * 43}")))
+    asyncio.run(
+        bot_module.start(
+            message,
+            SimpleNamespace(args=f"link_{'c' * 43}"),
+            SimpleNamespace(clear=AsyncMock()),
+        )
+    )
 
     assert message.answer.await_count == 1
     assert "одни и те же данные" in message.answer.await_args.args[0]
+    feedback_start.assert_not_awaited()
+
+
+def test_support_start_payload_runs_before_generic_product_entry(monkeypatch):
+    message = SimpleNamespace(
+        from_user=SimpleNamespace(id=12345),
+        bot=object(),
+        answer=AsyncMock(),
+    )
+    state = SimpleNamespace(clear=AsyncMock())
+    feedback_start = AsyncMock(return_value=True)
+    menu_button = AsyncMock(return_value=True)
+    monkeypatch.setattr(bot_module, "handle_feedback_start_payload", feedback_start)
+    monkeypatch.setattr(bot_module, "set_mini_app_menu_button", menu_button)
+
+    asyncio.run(bot_module.start(message, SimpleNamespace(args="support_bug"), state))
+
+    feedback_start.assert_awaited_once_with(message, state, "support_bug")
+    menu_button.assert_not_awaited()
+
+
+def test_compose_has_one_main_token_owner_and_no_legacy_admin_contract() -> None:
+    root = Path(__file__).resolve().parents[2]
+    compose = (root / "docker-compose.yml").read_text(encoding="utf-8")
+    assert compose.count("TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}") == 1
+    assert "SUPPORT_ADMIN_TELEGRAM_USER_IDS" not in compose
+    assert (
+        type(bot_module.settings).model_fields["bot_token"].validation_alias == "TELEGRAM_BOT_TOKEN"
+    )
 
 
 def test_json_formatter_excludes_arbitrary_message_and_exception_values() -> None:

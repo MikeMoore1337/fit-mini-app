@@ -126,7 +126,7 @@ describe('LandingPage', () => {
     expect(container.querySelectorAll('img[src*="/assets/brand/yfc-mark-"]')).toHaveLength(1);
     expect(container.querySelectorAll('img[src*="/assets/brand/yfc-logo-"]')).toHaveLength(1);
     const contact = screen.getByRole('link', { name: /задать вопрос в telegram/i });
-    expect(contact).toHaveAttribute('href', 'https://t.me/your_fitness_support_bot');
+    expect(contact).toHaveAttribute('href', 'https://t.me/your_fitness_coach_bot?start=support');
     expect(contact).toHaveAttribute('target', '_blank');
   });
 

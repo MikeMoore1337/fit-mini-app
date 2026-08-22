@@ -99,3 +99,7 @@ ignore_errors = true
 [[tool.mypy.overrides]]
 module = ["fitminiapp_api.core.config"]
 disable_error_code = ["call-arg"]
+
+[[tool.mypy.overrides]]
+module = ["bot.fitminiapp_bot.config"]
+disable_error_code = ["call-arg"]

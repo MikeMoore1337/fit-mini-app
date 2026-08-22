@@ -409,7 +409,7 @@ test('сценарии спортсмена и тренера ведут в ве
     );
     await expect(page.getByRole('link', { name: /задать вопрос в telegram/i })).toHaveAttribute(
       'href',
-      'https://t.me/your_fitness_support_bot',
+      'https://t.me/your_fitness_coach_bot?start=support',
     );
     const actionArrows = page.locator('.landing-action__arrow');
     await expect(actionArrows).toHaveCount(6);
