@@ -1,92 +1,174 @@
-# Telegram-бот поддержки
+# Помощь и обратная связь в Telegram
 
-Публичный адрес поддержки: `https://t.me/your_fitness_support_bot`.
+Канонический публичный бот продукта и поддержки: `@your_fitness_coach_bot`.
 
-Это отдельный бот и отдельный токен. Он не заменяет Telegram-бот Mini App и не должен
-использовать значение `TELEGRAM_BOT_TOKEN`.
+Ссылка на общий вход в поддержку:
 
-## Как работает поддержка
+```text
+https://t.me/your_fitness_coach_bot?start=support
+```
 
-1. Пользователь пишет боту в личном чате и при необходимости прикладывает файл, фото,
-   видео или голосовое сообщение.
-2. Бот отправляет обращение каждому Telegram ID из
-   `SUPPORT_ADMIN_TELEGRAM_USER_IDS`.
-3. Администратор отвечает **на служебное сообщение** с меткой `#support_<id>`.
-4. Бот копирует ответ в чат пользователя. Имя и аккаунт администратора пользователю не
-   показываются.
+Команды `/support` и `/feedback` открывают категории обращения. Deep links
+`support_bug`, `support_account`, `support_idea` и `support_contact` сразу открывают
+соответствующий сценарий. Привязка аккаунта `/start link_<token>`, Mini App, часовой пояс и
+публичное меню продолжают работать в том же Dispatcher и используют только
+`TELEGRAM_BOT_TOKEN`.
 
-Бот не создаёт собственную базу сообщений и не пишет тексты обращений в логи. История
-диалога остаётся в Telegram. Не просите пользователей присылать пароли, токены, платёжные
-данные или избыточные медицинские сведения.
+## Публичный профиль и команды
 
-## Первичный запуск
+Канонические name, About, Description, avatar, private-chat commands и default Menu Button
+задаются единым контрактом в `bot/fitminiapp_bot/public_profile.py`. Публичный список содержит
+только `/start`, `/app`, `/support`, `/settings`, `/help` и `/privacy`; технические команды
+`/feedback`, `/cancel` и `/timezone` поддерживаются, но в default list не показываются. `/news`
+до отдельной продуктовой task отсутствует.
 
-Добавьте на сервере в `.env`:
+`/start` сначала обрабатывает `link_<token>`, затем support payload, после чего показывает меню с
+действиями «Открыть приложение», «Помощь и обратная связь», «Настройки» и «Что умеет бот».
+Неизвестный payload или команда не раскрывает входные данные и безопасно возвращает пользователя
+к меню. Все Web App кнопки используют стабильный `FRONTEND_BASE_URL/app` без cache-version query.
+Старый per-chat Menu Button обновляется до этого контракта при следующем взаимодействии.
+
+Команда `/privacy` использует только явно настроенный публичный HTTPS URL:
 
 ```dotenv
-SUPPORT_BOT_TOKEN=<токен от BotFather>
-SUPPORT_ADMIN_TELEGRAM_USER_IDS=
-SUPPORT_BOT_ENABLED=true
+PRIVACY_POLICY_URL=https://your-fitness-coach.ru/privacy
 ```
 
-Токен нельзя коммитить, пересылать в чате или добавлять в скриншоты. Если он раскрыт,
-выполните `/revoke` в BotFather и сразу замените значение на сервере.
+Пока реальная production-страница не опубликована или значение невалидно, бот показывает
+контролируемое состояние недоступности и предлагает `/support`; URL не выдумывается.
 
-Запустите только новый сервис:
+## Проверка и синхронизация Bot API metadata
 
-```bash
-docker compose up -d --build support-bot
-docker compose logs --tail=100 support-bot
+Одноразовая команда работает отдельно от polling и всегда начинает с `getMe`. Любые writes
+разрешены только при `is_bot == true` и exact username `your_fitness_coach_bot`.
+
+```powershell
+docker compose run --rm bot python -m fitminiapp_bot.profile_sync check
+docker compose run --rm bot python -m fitminiapp_bot.profile_sync apply
 ```
 
-Затем:
+`check` ничего не меняет и возвращает код `1`, если найден metadata diff или BotFather flag
+mismatch. `apply` меняет только отличающиеся поля, выполняет read-back и возвращает per-field JSON
+status. Исключение — первый безопасный
+bootstrap canonical avatar: Bot API не раскрывает исходный asset, поэтому после успешного upload
+его `file_unique_id` вместе с SHA-256 локального canonical asset сохраняется без секретов в
+`BOT_PROFILE_SYNC_STATE_PATH` на существующем persistent `bot_polling_lock` volume. Последующие
+запуски сравнивают эту identity и являются no-op, пока avatar не изменился.
 
-1. Откройте `@your_fitness_support_bot` со своего администраторского аккаунта и нажмите
-   **Start**.
-2. Отправьте `/id`. Команда доступна до настройки администраторов и вернёт числовой
-   Telegram ID.
-3. Запишите ID в `SUPPORT_ADMIN_TELEGRAM_USER_IDS`. Несколько ID разделяются запятыми:
-   `123456789,987654321`.
-4. Перезапустите сервис: `docker compose up -d --force-recreate support-bot`.
-5. С другого аккаунта отправьте тестовое обращение. На администраторском аккаунте
-   ответьте на служебное сообщение, а не на скопированный текст пользователя.
+Команда также выводит фактические `getMe` flags и точные `owner_actions` только для выявленных
+BotFather-only mismatch. Она не меняет Telegram modes, Main Mini App/Web Login, token, proxy или
+TLS и не отправляет сообщения пользователям.
 
-Каждый администратор из списка должен сначала самостоятельно открыть бота и нажать
-**Start**: Telegram запрещает боту первым начинать личный диалог.
+## Границы поддержки
 
-Чтобы временно отключить поддержку без удаления настроек, установите
-`SUPPORT_BOT_ENABLED=false` и пересоздайте сервис.
+Поддержка принимает сообщения об ошибках, вопросы о входе и аккаунте, предложения, вопросы
+о режиме тренера и другие нестандартные обращения. Это не чат тренера с клиентом, CRM,
+круглосуточная линия, медицинская или экстренная помощь. Бот не обещает SLA и не показывает
+статус «оператор онлайн».
 
-## Оформление в BotFather
+Пользователь должен выбрать категорию и отправить одно текстовое сообщение, фото или документ.
+Другие типы media не пересылаются. Свободный текст вне активного сценария не становится
+обращением. `/cancel` завершает сценарий, а состояние ввода истекает через 15 минут. После
+рестарта in-memory FSM намеренно сбрасывается: пользователь должен снова вызвать `/support`,
+поэтому случайный свободный текст не будет переслан.
 
-Загрузите [готовый аватар](assets/telegram-support-bot-avatar.png) через `/setuserpic`.
-Основной знак расположен с запасом под круглый кроп Telegram и остаётся различимым в
-маленьком размере.
+Перед вводом бот предупреждает не отправлять пароли, коды подтверждения, токены, платёжные
+данные и лишние документы. Файлы не загружаются на сервер: бот использует Telegram
+`copyMessage`.
 
-Рекомендуемые значения:
+## Маршрутизация и данные
 
-- **Name:** `Your Fitness Coach — Поддержка`
-- **About:** `Поддержка Your Fitness Coach: вопросы по аккаунту, тренировкам и работе сервиса.`
-- **Description:**
+Администраторы задаются существующей server-side настройкой
+`ADMIN_TELEGRAM_USER_IDS`. Видимость служебного сообщения не заменяет проверку полномочий:
+backend повторно проверяет ID администратора, а ответ атомарно привязывается к конкретному
+case ID и Telegram user ID.
 
-  ```text
-  Официальная поддержка приложения Your Fitness Coach.
+В PostgreSQL хранится только служебная метаинформация обращения:
 
-  Опишите вопрос одним сообщением и при необходимости приложите скриншот. Специалист ответит здесь от имени бота. Не отправляйте пароли, коды подтверждения и платёжные данные.
-  ```
+- случайный case ID;
+- Telegram user ID и ID исходного сообщения;
+- категория, статусы и timestamps;
+- ID администратора и его сообщения после попытки ответа.
 
-- **Commands** (`/setcommands`):
+Текст, подписи, фотографии и документы не сохраняются в БД, logs или telemetry. Они остаются
+в Telegram. Метаданные автоматически ограничивают обращения одной категории до трёх на
+пользователя в час, истекают для ответа через 7 дней и удаляются через 30 дней. При удалении
+связанного аккаунта его support metadata также удаляется. Audit events содержат только action,
+case ID, категорию и результат без текста обращения и Telegram user/admin IDs.
+Удаление из основной БД не стирает уже созданные резервные копии раньше срока их существующей
+backup-retention policy; содержимое обращения в database backups не попадает вовсе.
 
-  ```text
-  start - Открыть поддержку
-  id - Показать мой Telegram ID
-  ```
+Заблокированный или удалённый пользователь помечается как недоступный без фоновых повторов.
+Transient failure до отправки не запускает бесконечный retry: backend может снова открыть кейс
+только после подтверждённого результата `failed`. Если Telegram принял ответ, но backend не
+подтвердил запись результата, кейс остаётся заблокированным в состоянии `replying`, а
+администратор получает явное предупреждение не повторять ответ. Это сохраняет at-most-once
+доставку ценой ручного разбора такого редкого неопределённого случая. Ответ пользователю явно
+помечается как ответ команды Your Fitness Coach.
 
-- **Group privacy:** группы этому боту не нужны. В `/setjoingroups` выберите
-  `Turn groups off`, чтобы бот работал только в личных чатах.
-- **Menu button:** отдельная Web App-кнопка не нужна: главное действие в этом боте —
-  отправка сообщения поддержке.
+## Runtime и конфигурация
 
-Формулировка «официальная поддержка» и единая зелёно-чёрная айдентика помогают отличить
-бота от личного аккаунта и поддельных контактов. Ссылку на поддержку следует публиковать
-только как `https://t.me/your_fitness_support_bot`.
+Основной сервис `bot` — единственный polling owner для `TELEGRAM_BOT_TOKEN`. Он использует
+существующий общий volume lock, conflict detection и network backoff. `BOT_INTERNAL_TOKEN`
+аутентифицирует только внутренние bot-to-backend запросы. Настройки browser Telegram OAuth
+proxy/tunnel и TLS не передаются Bot API polling и не меняются этим flow.
+
+Минимальная production-конфигурация:
+
+```dotenv
+TELEGRAM_BOT_TOKEN=<BotFather token основного бота>
+TELEGRAM_BOT_USERNAME=your_fitness_coach_bot
+BOT_INTERNAL_TOKEN=<отдельный случайный секрет не короче 32 символов>
+ADMIN_TELEGRAM_USER_IDS=123456789,987654321
+PRIVACY_POLICY_URL=<подтверждённый production HTTPS URL либо пусто>
+BOT_PROFILE_SYNC_STATE_PATH=/var/lock/fitminiapp-bot/profile-sync-state.json
+```
+
+Каждый администратор должен заранее открыть `@your_fitness_coach_bot` и нажать **Start**:
+Telegram не разрешает боту первым начинать личный диалог. Реальные токены и ID не коммитятся и
+не добавляются в screenshots/logs.
+
+## Production rollout и rollback
+
+Production runtime не содержит отдельного `support-bot`: поддержку обслуживает только сервис
+`bot`, а deploy запускает один polling owner и удаляет orphan-контейнеры прежнего Compose contract.
+Legacy-переменные `SUPPORT_BOT_TOKEN`, `SUPPORT_BOT_ENABLED` и
+`SUPPORT_ADMIN_TELEGRAM_USER_IDS`, если они ещё остались в production `.env`, игнорируются и не
+создают второй процесс. Их следует удалить из secret store после подтверждённого rollout; токен
+не вращается и не отзывается автоматически.
+
+Порядок выпуска:
+
+1. Зафиксировать SHA текущего `master` как rollback baseline и создать штатную pre-deploy backup.
+2. Применить additive migration `0033_bot_support_cases`; она создаёт только таблицу routing
+   metadata и два индекса, не изменяя существующие данные.
+3. Развернуть `backend`, `worker` и единственный `bot`, затем проверить health, logs и отсутствие
+   `support-bot`/duplicate polling.
+4. Выполнить `profile_sync check`; при exact `getMe.username == "your_fitness_coach_bot"` и
+   ожидаемом diff выполнить `apply`, затем повторить read-back.
+5. Проверить `/start`, `/start link_<token>`, `/support`, `/app` и `/settings`.
+
+При runtime blocker используется существующий rollback mechanism или revert release commit без
+force-push. Additive таблицу безопаснее оставить для forward-fix: прежний runtime её игнорирует.
+Downgrade `0033_bot_support_cases` допустим только после остановки нового bot/worker и проверки,
+что support metadata больше не нужна. Public metadata не откатывается автоматически и token не
+вращается. Telegram browser login proxy-tunnel и TLS path этим rollout не меняются.
+
+BotFather остаётся owner-only только для Main Mini App, Web Login и platform mode toggles,
+которые Bot API не может безопасно изменить. Name, About, Description, avatar, commands и Menu
+Button синхронизируются CLI после exact identity guard.
+
+## Ручная проверка
+
+Реальная проверка Telegram выполняется только владельцем с тестовыми аккаунтами после deploy:
+
+1. `/start link_<token>` по-прежнему связывает один Web/Telegram account.
+2. `/support`, `/feedback` и canonical deep links открывают правильные категории.
+3. Text/photo/document доставляются разрешённым администраторам; unsupported media отклоняется.
+4. Обычный текст вне flow не пересылается; `/cancel` и истечение состояния работают.
+5. Ответ только на служебный case header доставляется нужному пользователю.
+6. Обычный пользователь не может подменить admin reply; второй ответ на закрытый case не уходит.
+7. Блокировка бота пользователем даёт администратору конечный понятный результат без retry loop.
+8. В logs отсутствуют токены, URL с секретами, support text и точные Telegram IDs.
+9. В `docker compose ps` только `bot` использует `TELEGRAM_BOT_TOKEN`; browser OAuth через свой
+   proxy/tunnel продолжает работать отдельно.

@@ -1,6 +1,7 @@
 import hmac
+from typing import Annotated, cast
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Path
 from sqlalchemy.orm import Session
 
 from fitminiapp_api.core.config import settings
@@ -9,6 +10,14 @@ from fitminiapp_api.db.session import get_session_context
 from fitminiapp_api.models.notification import NotificationSetting
 from fitminiapp_api.models.user import User, UserProfile
 from fitminiapp_api.schemas.bot import (
+    BotSupportCaseCreateRequest,
+    BotSupportCaseCreateResponse,
+    BotSupportCaseStatus,
+    BotSupportRelayResultRequest,
+    BotSupportReplyClaimRequest,
+    BotSupportReplyClaimResponse,
+    BotSupportReplyResultRequest,
+    BotSupportReplyResultResponse,
     BotTelegramLinkRequest,
     BotTelegramLinkResponse,
     BotTimezoneUpdateRequest,
@@ -19,6 +28,13 @@ from fitminiapp_api.services.account_linking import (
     TelegramLinkError,
     link_telegram_account,
 )
+from fitminiapp_api.services.bot_support import (
+    SupportRateLimitError,
+    claim_support_reply,
+    complete_support_reply,
+    create_support_case,
+    record_support_relay_result,
+)
 from fitminiapp_api.services.password_auth import PasswordAuthError
 from fitminiapp_api.services.telegram_auth import (
     get_or_insert_telegram_user,
@@ -26,6 +42,7 @@ from fitminiapp_api.services.telegram_auth import (
 )
 
 router = APIRouter()
+SupportCaseId = Annotated[str, Path(pattern=r"^[0-9a-f]{32}$")]
 
 
 def _check_bot_token(x_bot_token: str | None) -> None:
@@ -33,6 +50,11 @@ def _check_bot_token(x_bot_token: str | None) -> None:
     if not expected:
         raise HTTPException(status_code=503, detail="Bot internal token is not configured")
     if not x_bot_token or not hmac.compare_digest(x_bot_token, expected):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
+def _check_support_admin(telegram_user_id: int) -> None:
+    if telegram_user_id not in settings.admin_telegram_id_set:
         raise HTTPException(status_code=403, detail="Forbidden")
 
 
@@ -128,3 +150,88 @@ def link_telegram_from_bot(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except TelegramLinkError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/support/cases", response_model=BotSupportCaseCreateResponse)
+def create_support_case_from_bot(
+    payload: BotSupportCaseCreateRequest,
+    x_bot_token: str | None = Header(default=None),
+) -> BotSupportCaseCreateResponse:
+    _check_bot_token(x_bot_token)
+    try:
+        with get_session_context() as db:
+            result = create_support_case(
+                db,
+                telegram_user_id=payload.telegram_user_id,
+                request_message_id=payload.request_message_id,
+                category=payload.category,
+            )
+            return BotSupportCaseCreateResponse(
+                case_id=result.case.id,
+                status="created" if result.created else "duplicate",
+                case_status=cast(BotSupportCaseStatus, result.case.status),
+            )
+    except SupportRateLimitError as exc:
+        raise HTTPException(status_code=429, detail="Too many support requests") from exc
+
+
+@router.post("/support/cases/{case_id}/relay-result")
+def update_support_relay_result_from_bot(
+    case_id: SupportCaseId,
+    payload: BotSupportRelayResultRequest,
+    x_bot_token: str | None = Header(default=None),
+) -> dict[str, str]:
+    _check_bot_token(x_bot_token)
+    with get_session_context() as db:
+        case = record_support_relay_result(db, case_id=case_id, delivered=payload.delivered)
+        if case is None:
+            raise HTTPException(status_code=404, detail="Support case not found")
+        return {"status": case.status}
+
+
+@router.post(
+    "/support/cases/{case_id}/reply-claim",
+    response_model=BotSupportReplyClaimResponse,
+)
+def claim_support_reply_from_bot(
+    case_id: SupportCaseId,
+    payload: BotSupportReplyClaimRequest,
+    x_bot_token: str | None = Header(default=None),
+) -> BotSupportReplyClaimResponse:
+    _check_bot_token(x_bot_token)
+    _check_support_admin(payload.admin_telegram_user_id)
+    with get_session_context() as db:
+        claim = claim_support_reply(
+            db,
+            case_id=case_id,
+            admin_telegram_user_id=payload.admin_telegram_user_id,
+            reply_message_id=payload.reply_message_id,
+        )
+        return BotSupportReplyClaimResponse(
+            status=claim.status,
+            telegram_user_id=claim.telegram_user_id,
+        )
+
+
+@router.post(
+    "/support/cases/{case_id}/reply-result",
+    response_model=BotSupportReplyResultResponse,
+)
+def complete_support_reply_from_bot(
+    case_id: SupportCaseId,
+    payload: BotSupportReplyResultRequest,
+    x_bot_token: str | None = Header(default=None),
+) -> BotSupportReplyResultResponse:
+    _check_bot_token(x_bot_token)
+    _check_support_admin(payload.admin_telegram_user_id)
+    with get_session_context() as db:
+        recorded = complete_support_reply(
+            db,
+            case_id=case_id,
+            admin_telegram_user_id=payload.admin_telegram_user_id,
+            reply_message_id=payload.reply_message_id,
+            outcome=payload.outcome,
+        )
+        if not recorded:
+            raise HTTPException(status_code=409, detail="Support reply is not claimable")
+        return BotSupportReplyResultResponse(status="recorded")

@@ -51,9 +51,10 @@ echo "Starting application services"
 docker compose up \
   -d \
   --no-build \
+  --remove-orphans \
   --wait \
   --wait-timeout 180 \
-  backend worker bot support-bot
+  backend worker bot
 echo "Application services became ready in $((SECONDS - stage_started))s"
 
 docker compose ps

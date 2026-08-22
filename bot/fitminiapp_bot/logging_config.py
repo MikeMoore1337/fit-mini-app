@@ -7,7 +7,39 @@ import sys
 from datetime import UTC, datetime
 from typing import Any
 
-URL_PATTERN = re.compile(r"https?://[^\s\"'<>]+", re.IGNORECASE)
+SAFE_CODE_PATTERN = re.compile(r"[A-Za-z][A-Za-z0-9_.:-]{0,127}\Z")
+SAFE_EVENT_NAMES = frozenset(
+    {
+        "bot_token_not_configured",
+        "frontend_url_invalid",
+        "menu_button_configuration_failed",
+        "menu_button_configured",
+        "menu_button_verification_failed",
+        "open_button_delivery_failed",
+        "polling_disabled",
+        "polling_file_lock_acquired",
+        "polling_file_lock_unavailable",
+        "polling_file_lock_waiting",
+        "support_case_creation_failed",
+        "support_relay_result_failed",
+        "support_reply_claim_failed",
+        "support_reply_result_failed",
+        "support_request_delivery_failed",
+        "support_request_rate_limited",
+        "support_request_relayed",
+        "support_response_delivered",
+        "support_response_delivery_failed",
+        "support_response_preamble_cleanup_failed",
+        "support_response_undeliverable",
+        "telegram_account_link_failed",
+        "telegram_polling_failed",
+        "telegram_polling_recovered",
+        "telegram_polling_retry_scheduled",
+        "telegram_polling_started",
+        "telegram_polling_starting",
+        "timezone_backend_update_failed",
+    }
+)
 STRUCTURED_FIELDS = (
     "error_code",
     "retry_seconds",
@@ -16,21 +48,7 @@ STRUCTURED_FIELDS = (
 
 
 class JsonFormatter(logging.Formatter):
-    """JSON formatter that removes configured secrets and raw HTTP URLs."""
-
-    def __init__(self, *, sensitive_values: tuple[str, ...] = ()) -> None:
-        super().__init__()
-        self.sensitive_values = tuple(
-            sorted((value for value in sensitive_values if value), key=len, reverse=True)
-        )
-
-    def _sanitize(self, value: object) -> object:
-        if not isinstance(value, str):
-            return value
-        sanitized = value
-        for secret in self.sensitive_values:
-            sanitized = sanitized.replace(secret, "[redacted]")
-        return URL_PATTERN.sub("[url]", sanitized)
+    """JSON formatter that emits only allowlisted operational fields."""
 
     def format(self, record: logging.LogRecord) -> str:
         payload: dict[str, Any] = {
@@ -38,22 +56,31 @@ class JsonFormatter(logging.Formatter):
             "level": record.levelname,
             "service": "telegram-bot",
             "logger": record.name,
-            "message": self._sanitize(record.getMessage()),
+            "message": (
+                record.msg
+                if isinstance(record.msg, str) and record.msg in SAFE_EVENT_NAMES
+                else "application_log"
+            ),
         }
         for field in STRUCTURED_FIELDS:
             value = getattr(record, field, None)
-            if value is not None:
-                payload[field] = self._sanitize(value)
+            if field in {"retry_seconds", "retry_attempt"}:
+                if isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0:
+                    payload[field] = value
+            elif isinstance(value, str) and SAFE_CODE_PATTERN.fullmatch(value):
+                payload[field] = value
         if record.exc_info:
-            payload["exception"] = self._sanitize(self.formatException(record.exc_info))
+            exception_class = record.exc_info[0]
+            if exception_class is not None and SAFE_CODE_PATTERN.fullmatch(
+                exception_class.__name__
+            ):
+                payload["exception_type"] = exception_class.__name__
         return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
 
 
-def configure_logging(*, bot_token: str, internal_token: str) -> None:
+def configure_logging() -> None:
     handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(
-        JsonFormatter(sensitive_values=(bot_token, internal_token)),
-    )
+    handler.setFormatter(JsonFormatter())
 
     root = logging.getLogger()
     root.handlers.clear()
