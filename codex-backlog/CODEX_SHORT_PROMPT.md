@@ -14,10 +14,10 @@
 
 `Полный task lifecycle` определён в `codex-backlog/TASK_EXECUTION_LIFECYCLE.md`. Task сама задаёт минимальные роли и skills.
 
-Текущий resume:
+Текущая task:
 
 ```text
-Выполни `codex-backlog/tasks/49-trainer-context-comments-experience.md`.
+Выполни `codex-backlog/tasks/49b1-current-ui-consistency-mobile-first-normalization.md`.
 
 Соблюдай `AGENTS.md`, `codex-backlog/GLOBAL_RULES.md`
 и полный task lifecycle.

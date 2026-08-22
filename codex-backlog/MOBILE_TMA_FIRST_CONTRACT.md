@@ -1,4 +1,4 @@
-# Mobile/TMA-first contract - release backlog v8
+# Mobile/TMA-first contract - release backlog v11
 
 ## Product priority
 
@@ -12,7 +12,7 @@ Coach/Admin - desktop-first там, где важны таблицы, массо
 
 Это не означает отдельное мобильное приложение или отдельный TMA frontend. Web, Mobile Web и TMA используют общие backend, маршруты, доменные правила, Design V2 tokens и feature components.
 
-Tasks `00-48` завершены. Task `49` должна быть завершена текущим resume до design gate; после этого `00-49` не выполняются повторно. Task `50A` создаёт общий quality gate для оставшихся задач. Task `76` позднее проводит ретроспективный аудит фактического результата без переигрывания выполненного scope.
+Tasks `00-49B` завершены и не выполняются повторно. Current task `49B1` один раз проверяет и нормализует фактическую mobile/shared UI baseline текущего Design V2. После `49C-49G` task `50A` создаёт continuous quality gate для оставшихся задач. Task `76` позднее проводит ретроспективный release audit без повторения уже закрытого product-wide UI consistency pass.
 
 ## Обязательный gate для новых клиентских задач
 

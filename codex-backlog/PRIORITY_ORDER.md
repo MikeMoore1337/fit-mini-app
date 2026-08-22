@@ -1,21 +1,19 @@
-# Порядок выполнения release backlog v10
+# Порядок выполнения release backlog v11
 
 ## Completed
 
-`00-48`, включая Design V2 gate `46A-46J` и `46C.1-46C.6`.
+`00-49B`, включая Design V2 gate `46A-46J`, task `49`, design brief `49A` и три visual directions `49B`.
 
 ## Current
 
 ```text
-49 resume текущего UI refinement
+49B1 current Design V2 UI consistency + mobile-first normalization
 ```
 
-После завершения `49`:
+После завершения `49B1`:
 
 ```text
-49A brief/audit delta
- -> 49B three directions
- -> 49C owner selection
+49C owner selection using normalized V2 baseline
 
 KEEP_V2_UNCHANGED
  -> 49G closure

@@ -7,7 +7,7 @@ Use one fresh Codex chat per task. Select model/reasoning manually according to 
 
 Соблюдай `AGENTS.md`, `codex-backlog/GLOBAL_RULES.md` и полный task lifecycle.
 Перед любой visual work прочитай `codex-backlog/ACTIVE_DESIGN_SOURCE.md`.
-Для tasks `49A-49G` также соблюдай `codex-backlog/DESIGN_ALTERNATIVES_EXPLORATION_CONTRACT.md`.
+Для tasks `49B1-49G` также соблюдай применимые части `codex-backlog/DESIGN_ALTERNATIVES_EXPLORATION_CONTRACT.md`.
 Для client-facing task соблюдай `codex-backlog/MOBILE_TMA_FIRST_CONTRACT.md` и mobile/TMA acceptance текущей задачи.
 
 Перед началом проверь `feature/yfc-platform-v2`.
@@ -20,10 +20,10 @@ Use one fresh Codex chat per task. Select model/reasoning manually according to 
 
 ## Current start
 
-Task `49` была остановлена владельцем и продолжается как resume:
+Текущая task после подтверждённо завершённых `00-49B`:
 
 ```text
-Выполни `codex-backlog/tasks/49-trainer-context-comments-experience.md`.
+Выполни `codex-backlog/tasks/49b1-current-ui-consistency-mobile-first-normalization.md`.
 ```
 
-Сначала соблюдать её `Resume contract` и сохранить неидентифицированные пользовательские изменения worktree. После её завершения следующая task - `49A`.
+После успешного завершения `49B1` следующая task - `49C`. `49B1` должна использовать frozen finding set и не превращаться в новый design direction.

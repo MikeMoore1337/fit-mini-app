@@ -4,7 +4,7 @@
 
 Утверждённый Design V2 остаётся единственным production source of truth до явного решения владельца в task `49F` и закрытия task `49G`.
 
-Tasks `49A-49G` не отменяют и не переигрывают выполненные tasks `00-49`. Они создают новый независимый цикл визуального исследования с учётом:
+Tasks `49A-49G` вместе с consistency checkpoint `49B1` не отменяют и не переигрывают functional scope выполненных tasks `00-49`. Они создают независимый цикл visual exploration/decision, а `49B1` отдельно очищает production baseline текущего Design V2 перед сравнением, с учётом:
 
 - актуального фактического продукта после task `49`;
 - `.agents v4` и новых профильных skills;
@@ -12,7 +12,7 @@ Tasks `49A-49G` не отменяют и не переигрывают выпо�
 - необходимости одинаково сильного Landing на desktop и mobile;
 - отдельного качества `/login`, authenticated Web и TMA.
 
-До owner approval запрещено менять production UI, общие tokens, маршруты и публичный Landing ради нового направления.
+До owner approval запрещено менять production UI, общие tokens, маршруты и публичный Landing **ради нового направления**. Единственное исключение - task `49B1`: она может исправлять доказанные consistency/reuse/responsive defects текущего Design V2, но не переносить решения Direction A/B/C и не создавать V2.1.
 
 ## Цель исследования
 

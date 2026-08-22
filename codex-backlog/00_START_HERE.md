@@ -1,29 +1,30 @@
-# Your Fitness Coach - backlog первого публичного релиза v10
+# Your Fitness Coach - backlog первого публичного релиза v11
 
-Эта версия сохраняет production-качество, но делает lifecycle resource-aware: task сама задаёт минимально необходимый набор ролей/skills, review имеет конечный scope и только `BLOCKER/HIGH` блокируют завершение.
+Эта версия сохраняет production-качество и resource-aware lifecycle, но добавляет один ограниченный checkpoint для фактической UI consistency перед design owner decision.
 
 ## Текущее состояние
 
-- tasks `00-48` завершены;
-- task `49` остановлена владельцем во время review-driven UI refinement и сейчас является **RESUME** task;
-- её backend/functionality до остановки уже считались выполненными; продолжить нужно только текущий UI refinement по `Resume contract`;
+- tasks `00-49B` подтверждены как завершённые;
 - Design V2 остаётся текущим production source of truth;
-- после завершения/commit task `49` следующая task - `49A`.
+- `49A` и `49B` уже подготовили три design alternatives без изменения production UI;
+- из-за смены правил/ролей/skills на предыдущих этапах перед `49C` выполняется один current-state normalization checkpoint `49B1`;
+- `49B1` не выбирает новый дизайн - она приводит фактическую реализацию текущего V2 к общей component/token/mobile системе.
 
 ## Текущая задача
 
 ```text
-49-trainer-context-comments-experience.md
+49b1-current-ui-consistency-mobile-first-normalization.md
 ```
 
-Не начинать `49A`, пока `49` не завершена. Не сбрасывать текущий worktree целиком.
+Не запускать заново `00-49B`. После успешного `49B1` следующая task - `49C`.
 
-## Design alternatives flow после task 49
+## Design alternatives flow
 
 ```text
-49A  targeted brief/current-state delta
-49B  exactly three cross-surface directions + renders
-49C  compare V2/A/B/C + owner selection
+49A  targeted brief/current-state delta [done]
+49B  exactly three cross-surface directions + renders [done]
+49B1 current Design V2 UI consistency + mobile-first normalization [CURRENT]
+49C  compare normalized V2/A/B/C + owner selection
 
 KEEP_V2_UNCHANGED
   -> skip 49D-49F
@@ -40,13 +41,13 @@ V2.1 / A / B / C / explicit hybrid
 49G -> 50A mobile/TMA quality foundation
 ```
 
-## Что изменено в v10
+## Что изменено в v11
 
-- `Рекомендуемые skills` = core, `Условные skills` = только по trigger.
-- `Основная роль` + `Дополнительные роли lifecycle` = точный маршрут task.
-- Нет автоматической цепочки researcher/reviewer/QA.
-- Первый independent review - единственный full review; после blocking fix только targeted recheck.
-- `MEDIUM/LOW/NIT/OUT_OF_SCOPE` не блокируют commit и не создают новый backend/data/platform scope.
-- Для tasks `49-79` роли и skills пересмотрены по фактическому контексту каждой task.
+- Добавлена `49B1` с реальным browser visual audit, component inventory и mobile-first normalization.
+- Audit в `49B1` формирует один frozen finding set до fixes, поэтому review не превращается в бесконечный повторный поиск проблем.
+- В `GLOBAL_RULES.md` добавлен короткий `UI consistency contract` для всех будущих client-facing tasks.
+- Новые feature tasks обязаны сохранять shared tokens/components/sizes/states, но проверяют только свою изменённую поверхность, а не весь продукт.
+- `49C` сравнивает alternatives с актуальной normalized Design V2 baseline после `49B1`.
+- Resource-aware review policy `BLOCKER/HIGH only` сохранена.
 
-Подробности: `TASK_EXECUTION_LIFECYCLE.md`, `SKILL_ASSIGNMENT_MATRIX.md`, `BACKLOG_V10_CHANGELOG.md`.
+Подробности: `TASK_EXECUTION_LIFECYCLE.md`, `SKILL_ASSIGNMENT_MATRIX.md`, `BACKLOG_V11_CHANGELOG.md`.

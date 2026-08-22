@@ -1,0 +1,99 @@
+{
+  "package": "your-fitness-coach-telegram-core-release-backlog-v4",
+  "repository": "MikeMoore1337/fit-mini-app",
+  "working_branch": "feature/yfc-platform-v2",
+  "status": "PARALLEL_FIRST_RELEASE_WORKSTREAM",
+  "next_task": "00-current-state-audit-architecture",
+  "task_range": "00-04",
+  "skills_archive": "your-fitness-coach-agents-v3.zip",
+  "excluded": [
+    "news channel",
+    "news digest",
+    "English channel",
+    "AI Coach"
+  ],
+  "generated_at": "2026-08-20T20:56:19.205290+00:00",
+  "validation_errors": [],
+  "files": [
+    {
+      "path": "00_START_HERE.md",
+      "bytes": 848,
+      "sha256": "e3e43b3e2cf7558c071ff2dd45ead9c4658bbf5edf2e565c81f78792d55391e7"
+    },
+    {
+      "path": "BACKLOG_V4_CHANGELOG.md",
+      "bytes": 616,
+      "sha256": "c40b7add107338472d76ba8e9c005a2f13b3232e548de7c030f25bbb25697997"
+    },
+    {
+      "path": "BOTFATHER_OWNER_CHECKLIST.md",
+      "bytes": 447,
+      "sha256": "559ee843e8c4776c2e00a52af6d475d4411b0435a07762093acbfd02aa502e68"
+    },
+    {
+      "path": "CODEX_SHORT_PROMPT.md",
+      "bytes": 533,
+      "sha256": "13a060ddce47fef17c79eb881fd3b22a0c8d7787b08dc9f272aedf61d0ad6a1e"
+    },
+    {
+      "path": "EXECUTION_STATUS.md",
+      "bytes": 68,
+      "sha256": "620307af3024176c30c063db7a8af0761697968f5bc5cd60c35d974fd83de708"
+    },
+    {
+      "path": "GLOBAL_RULES.md",
+      "bytes": 1892,
+      "sha256": "936c60bc51de8bf1e720bd682747166dba31d9e74230c8c7a70b873d98f5d466"
+    },
+    {
+      "path": "PRIORITY_ORDER.md",
+      "bytes": 38,
+      "sha256": "462700f8219f9bad4b957536b9540e1eed06b5225d52ab71c74cfd436e6c4a45"
+    },
+    {
+      "path": "SKILL_ASSIGNMENT_MATRIX.md",
+      "bytes": 1126,
+      "sha256": "e74ed5b3eab9c7ca413c2c9601af05ba0bd0449bdb537146923adcac0cbd0b6f"
+    },
+    {
+      "path": "TASK_EXECUTION_LIFECYCLE.md",
+      "bytes": 14046,
+      "sha256": "a72df9c89d5716efe78931646c5a8c054ee1ee39b962d731f1d15f779fcda050"
+    },
+    {
+      "path": "tasks/00-current-state-audit-architecture.md",
+      "bytes": 2647,
+      "sha256": "7fc8884efac7b56c79ea204efebc6d72421734e38e4c2849c4df8ea49bc64a0a"
+    },
+    {
+      "path": "tasks/01-single-bot-support-feedback.md",
+      "bytes": 6270,
+      "sha256": "2de1ae895df8e4c87b63881dea9b5c9c74d982c4a8cb75501914a94a88ed4bb1"
+    },
+    {
+      "path": "tasks/02-botfather-commands-public-ux.md",
+      "bytes": 2598,
+      "sha256": "cdaa9073545710b6a0471e57d9f9ba49815c6025ea9a2466e47172c098fe6b80"
+    },
+    {
+      "path": "tasks/03-product-notifications-deeplinks.md",
+      "bytes": 1920,
+      "sha256": "425f7d25351544307e8dae7d58755298d2c18da254690c2a36e522f7f0fddf44"
+    },
+    {
+      "path": "tasks/04-final-e2e-release-gate.md",
+      "bytes": 1437,
+      "sha256": "958894148ff2b6ff9009ec81716e6c76a4b694d0f500a59e7118d88338d4c546"
+    },
+    {
+      "path": "tasks/README.md",
+      "bytes": 483,
+      "sha256": "a6428e94f736256a227399aaaa8d0a96d14ba5a8325427e89e1e848e6dd70a63"
+    }
+  ],
+  "task_lifecycle_version": 1,
+  "role_routing_enabled": true,
+  "task_lifecycle_file": "TASK_EXECUTION_LIFECYCLE.md",
+  "short_prompt_file": "CODEX_SHORT_PROMPT.md",
+  "lifecycle_updated_at": "2026-08-21T15:28:26.954796+00:00"
+}

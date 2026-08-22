@@ -1,4 +1,4 @@
-# Completion checklist - release backlog v10
+# Completion checklist - release backlog v11
 
 ## Per task
 
@@ -9,7 +9,8 @@
 - [ ] Ran only the exact additional lifecycle roles declared by the task.
 - [ ] Did not create an agent per skill or automatic researcher/reviewer/QA chain.
 - [ ] Read `ACTIVE_DESIGN_SOURCE.md` before visual work.
-- [ ] For tasks `49A-49G`, followed `DESIGN_ALTERNATIVES_EXPLORATION_CONTRACT.md`.
+- [ ] For tasks `49B1-49G`, followed applicable `DESIGN_ALTERNATIVES_EXPLORATION_CONTRACT.md`.
+- [ ] For client-facing UI, preserved `GLOBAL_RULES.md` UI consistency contract and did not create a local duplicate primitive/system.
 - [ ] For client-facing scope, followed applicable mobile/TMA contract/matrix.
 - [ ] Ran targeted checks and recorded exact commands.
 - [ ] Only `BLOCKER/HIGH` blocked completion.
@@ -21,17 +22,21 @@
 - [ ] Created one logical commit when applicable.
 - [ ] Did not start the next task.
 
-## Current task 49 resume
+## Current task 49B1 consistency checkpoint
 
-- [ ] Preserved and classified existing uncommitted worktree changes.
-- [ ] Finished only owner-requested UI/layout/compactness refinement and regressions caused by it.
-- [ ] Did not continue review-induced idempotency/schema/deep-link/Telegram architecture from non-blocking findings.
-- [ ] Did not automatically revert ambiguous user/foreign hunks.
+- [ ] Audited real rendered UI once and covered each distinct UI pattern family rather than every duplicate route.
+- [ ] Built component inventory and froze one baseline finding set before remediation.
+- [ ] Closed all in-scope `MUST_FIX` findings without importing Direction A/B/C.
+- [ ] Preserved business logic/API/schema/auth contracts.
+- [ ] Verified mobile-first baseline plus representative desktop/light/dark states.
+- [ ] Independent review/QA verified the frozen set and regressions instead of starting a second product-wide audit.
+
 
 ## Release gates
 
-- [ ] Task `49` completed before `49A`.
-- [ ] Design V2 remained active until explicit owner decision in `49A-49G`.
+- [ ] Tasks `00-49B` remained untouched as completed history.
+- [ ] Task `49B1` completed before `49C`.
+- [ ] Design V2 remained active through `49B1` and until explicit owner decision/closure in `49C-49G`.
 - [ ] Task `50A` did not start before `49G` closure.
 - [ ] Task `76` has no open release-blocking P0/P1.
 - [ ] Task `77` evidence is factual.

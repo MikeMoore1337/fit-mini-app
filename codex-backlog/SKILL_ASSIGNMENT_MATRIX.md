@@ -1,6 +1,6 @@
-# Матрица roles/skills для release backlog v10
+# Матрица roles/skills для release backlog v11
 
-Tasks `00-48` завершены и не переигрываются. Их исторические assignments остаются в соответствующих task-файлах. Ниже приведён только текущий и pending scope `49-79`, чтобы Codex не тратил контекст на уже выполненную работу.
+Tasks `00-49B` завершены и не переигрываются. Их исторические assignments остаются в соответствующих task-файлах. Ниже приведён только текущий и pending scope `49B1-79`, чтобы Codex не тратил контекст на уже выполненную работу.
 
 Правила:
 
@@ -12,9 +12,7 @@ Tasks `00-48` завершены и не переигрываются. Их ис
 
 | Task | Файл | Core skills | Conditional skills | Primary role | Дополнительные роли |
 |---:|---|---|---|---|---|
-| `49` | `49-trainer-context-comments-experience.md` | `$product-designer`, `$frontend-engineer`, `$mobile-engineer` | `$accessibility-engineer` только если меняются focus/semantics/controls; `$telegram-engineer` только если действительно затронут Telegram-specific platform code (для текущего resume обычно не требуется) | implementer | `independent-reviewer` |
-| `49A` | `49a-design-alternatives-mobile-tma-brief.md` | `$product-discovery`, `$product-designer`, `$landing-art-director`, `$mobile-engineer` | `$telegram-engineer` только для неразрешимого по существующим contracts Telegram-specific вопроса; `$performance-engineer`/`$accessibility-engineer` только при подтверждённом constraint gap | **`researcher`** | нет |
-| `49B` | `49b-design-alternatives-cross-surface-directions.md` | `$product-designer`, `$landing-art-director`, `$mobile-engineer` | `$accessibility-engineer` или `$performance-engineer` только если конкретное направление создаёт соответствующий feasibility risk | **`implementer`** | нет - task `49C` является отдельным decision/review gate |
+| `49B1` | `49b1-current-ui-consistency-mobile-first-normalization.md` | `$frontend-engineer`, `$mobile-engineer`, `$ui-audit` | `$accessibility-engineer` only for proven non-trivial a11y defect; `$telegram-engineer` only when remediation changes Telegram-specific runtime/adapter; `$performance-engineer` only for measured shared-UI regression | **`implementer`** | `independent-reviewer` -> `qa-verifier` |
 | `49C` | `49c-design-alternatives-owner-selection.md` | `$product-discovery`, `$product-designer`, `$landing-art-director`, `$mobile-engineer` | `$accessibility-engineer`/`$performance-engineer` только для спорного риска, который влияет на owner decision; `$ux-researcher` не подключать без реальных пользовательских данных | **`independent-reviewer`** | нет - основная роль уже `independent-reviewer` |
 | `49D` | `49d-selected-design-responsive-specification.md` | `$product-designer`, `$landing-art-director`, `$frontend-engineer`, `$mobile-engineer` | `$telegram-engineer` только при изменении platform-specific TMA contract; `$accessibility-engineer`/`$performance-engineer` только для конкретного unresolved constraint | **`implementer`** | нет - production feasibility проверяется pilot task `49E` |
 | `49E` | `49e-selected-design-production-pilot.md` | `$product-designer`, `$landing-art-director`, `$frontend-engineer`, `$mobile-engineer`, `$telegram-engineer` | `$accessibility-engineer` или `$performance-engineer` только если pilot evidence показывает соответствующую проблему, требующую изменения | **`implementer`** | `qa-verifier`; отдельный `independent-reviewer` не нужен, потому что `49F` является следующим независимым owner/review gate |

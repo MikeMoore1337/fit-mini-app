@@ -1,4 +1,4 @@
-# Использование YFC Codex lifecycle v2
+# Использование YFC Codex lifecycle v3
 
 Архив уже содержит согласованный набор:
 
@@ -32,15 +32,21 @@ codex-backlog/
 
 Task сама задаёт primary role, core skills, conditional skills и дополнительные lifecycle-роли. Не перечисляй их вручную в prompt.
 
-## Текущая task 49 - resume
+## Текущая task - 49B1
 
-После обновления этих правил продолжай остановленную task отдельной сессией тем же коротким prompt для:
+User-confirmed completed range: `00-49B`. Следующий запуск:
 
 ```text
-codex-backlog/tasks/49-trainer-context-comments-experience.md
+Выполни `codex-backlog/tasks/49b1-current-ui-consistency-mobile-first-normalization.md`.
+
+Соблюдай `AGENTS.md`, `codex-backlog/GLOBAL_RULES.md`
+и полный task lifecycle.
+
+Все предыдущие tasks считаются выполненными.
+Не переходи к следующей task.
 ```
 
-Codex должен сначала прочитать `Resume contract` и текущий незакоммиченный diff. Он не должен продолжать review-induced migration/idempotency/Telegram architecture из non-blocking findings. После успешного завершения/commit task `49` следующей становится `49A`.
+`49B1` сначала делает один evidence-based audit текущего rendered Design V2 и component foundation, замораживает finding set, затем исправляет только доказанные consistency/mobile defects. После неё следующая task - `49C`.
 
 ## Resource-aware схема
 

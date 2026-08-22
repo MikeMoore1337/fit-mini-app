@@ -104,6 +104,8 @@ Researcher возвращает компактные факты, файлы, з�
 
 Full repository suite, полный visual audit и полный security audit по умолчанию не нужны.
 
+Для dedicated `audit + remediation` task, где полный audit прямо является scope, primary pass сначала формирует и **замораживает один finding set** до массовых fixes. После этого remediation, independent review и QA работают от этого набора и regressions текущего diff; они не запускают второй product-wide audit ради новых non-blocking наблюдений.
+
 ## 5. Independent review - только если он указан
 
 Отдельный `independent-reviewer` выполняется только если:

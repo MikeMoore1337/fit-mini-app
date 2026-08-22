@@ -111,16 +111,17 @@ Functional scope перечисленных tasks не изменён: прав�
 | `98` | Readiness не перечисляла актуальные production skills и V2 recovery states. | Добавлены профильные skills и production-build state evidence без повторения закрытых audits. | Не изменён. |
 | `99` | Final gate не проверял весь Design V2 и решения findings `46A-46C`; bot-specific work ранее было смешано с main dependency list. | Добавлены human-made flows, legacy-fragment gate, связь с task `77` evidence и separate bot-workstream boundary. | Не изменён. |
 
-## Design alternatives после завершённых tasks 00-49
+## Design alternatives и consistency checkpoint после завершённых tasks 00-49
 
-Новый блок `49A-49G` не отменяет результаты `46D-46J` и не делает Design V2 устаревшим автоматически.
+Блок `49A-49G` и добавленный `49B1` не отменяют результаты `46D-46J` и не делают Design V2 устаревшим автоматически. `49B1` нужен только для устранения фактических расхождений реализации текущего Design V2 перед owner comparison.
 
 До явного owner decision в `49F` и closure/rollout task `49G`:
 
 - Design V2 остаётся production source of truth;
 - новые directions являются только exploration artifacts;
+- `49B1` может менять production UI только для consistency/reuse/responsive remediation текущего V2 и не может импортировать alternative motifs;
 - pending tasks читают `ACTIVE_DESIGN_SOURCE.md`;
 - production UI нельзя менять по неутверждённым renders;
-- completed task files `00-49` не редактируются.
+- completed task files `00-49B` не редактируются.
 
 Если владелец утверждает V2.1 или V3, task `49G` создаёт новый canonical integration contract и сохраняет этот документ как исторический источник Design V2.

@@ -1,11 +1,9 @@
-# Dependency graph - release backlog v10
+# Dependency graph - release backlog v11
 
 ```text
-completed 00-48
-  -> 49 RESUME current UI refinement
-  -> 49A design brief/delta audit
-  -> 49B three cross-surface visual directions
-  -> 49C owner selection
+completed 00-49B
+  -> 49B1 current Design V2 UI consistency/mobile normalization
+  -> 49C owner selection using normalized V2 baseline
 
   KEEP_V2_UNCHANGED
     -> 49G design source closure

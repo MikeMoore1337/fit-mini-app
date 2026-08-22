@@ -1,4 +1,4 @@
-# Model selection - release backlog v10
+# Model selection - release backlog v11
 
 The backlog recommends models but never switches Codex automatically.
 
@@ -13,6 +13,7 @@ The backlog recommends models but never switches Codex automatically.
 |---|---|
 | 49A | Sol High |
 | 49B | Terra High |
+| 49B1 | Sol High |
 | 49C | Sol High |
 | 49D | Terra High |
 | 49E | Terra High; use Sol High if pilot needs cross-platform architecture changes |

@@ -9,7 +9,7 @@ DECISION_STATE = EXPLORATION_PENDING
 
 Утверждённый Design V2 остаётся обязательным production source of truth для Landing, `/login`, authenticated Web, Mobile Web и TMA.
 
-Tasks `49A-49E` создают только альтернативы, specification candidate и pilot. Они не меняют этот статус.
+Tasks `49A/49B` создали alternatives, `49C-49E` являются decision/specification/pilot stages. Task `49B1` может исправлять только consistency/reuse/responsive defects **внутри текущего Design V2**. Ни одна из этих tasks не меняет `ACTIVE_DESIGN`: новый visual direction становится production source только по owner decision и closure contract.
 
 ## Порядок источников
 

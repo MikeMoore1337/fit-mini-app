@@ -1,8 +1,12 @@
-# Owner checkpoints - release backlog v10
+# Owner checkpoints - release backlog v11
 
 ## Task 49B - visual directions review
 
 Owner receives current Design V2 baseline plus three new cross-surface directions. This is review only, not approval.
+
+## Task 49B1 - consistency checkpoint
+
+No design decision token is required. Owner receives concise before/after evidence and the closed/deferred finding summary. Task may proceed to commit when its technical review/QA gates pass because it preserves the already-active Design V2 rather than choosing a new direction.
 
 ## Task 49C - direction selection
 
