@@ -11,9 +11,58 @@ from fitminiapp_api.db.session import get_session_context
 from fitminiapp_api.models.notification import Notification
 from fitminiapp_api.models.user import User
 from fitminiapp_api.services.notifications import mark_delivery_failed, safe_delivery_error
-from fitminiapp_api.services.worker import _log_delivery_failure, send_telegram_message
+from fitminiapp_api.services.worker import (
+    _log_delivery_failure,
+    send_telegram_message,
+    telegram_transport_options,
+)
 
 SECRET_TOKEN = "123456:telegram-secret-token"
+
+
+def test_worker_prefers_dedicated_bot_api_proxy(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "fitminiapp_api.services.worker.settings.telegram_bot_proxy_url",
+        "socks5://bot-proxy.test:1081",
+    )
+    monkeypatch.setattr(
+        "fitminiapp_api.services.worker.settings.telegram_oauth_proxy_url",
+        "socks5://oauth-proxy.test:1081",
+    )
+
+    assert telegram_transport_options() == {
+        "trust_env": False,
+        "proxy": "socks5://bot-proxy.test:1081",
+    }
+
+
+def test_worker_falls_back_to_telegram_oauth_proxy(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "fitminiapp_api.services.worker.settings.telegram_bot_proxy_url",
+        "",
+    )
+    monkeypatch.setattr(
+        "fitminiapp_api.services.worker.settings.telegram_oauth_proxy_url",
+        "socks5://telegram-proxy.test:1081",
+    )
+
+    assert telegram_transport_options() == {
+        "trust_env": False,
+        "proxy": "socks5://telegram-proxy.test:1081",
+    }
+
+
+def test_worker_does_not_inherit_ambient_proxy(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "fitminiapp_api.services.worker.settings.telegram_bot_proxy_url",
+        "",
+    )
+    monkeypatch.setattr(
+        "fitminiapp_api.services.worker.settings.telegram_oauth_proxy_url",
+        "",
+    )
+
+    assert telegram_transport_options() == {"trust_env": False}
 
 
 def telegram_http_error(status_code: int = 500) -> httpx.HTTPStatusError:
