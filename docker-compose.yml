@@ -72,11 +72,13 @@ services:
     environment:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
       FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-https://app.your-fitness-coach.ru}
+      PRIVACY_POLICY_URL: ${PRIVACY_POLICY_URL:-}
       BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:-http://backend:8000}
       BOT_INTERNAL_TOKEN: ${BOT_INTERNAL_TOKEN}
       BOT_POLLING_ENABLED: ${BOT_POLLING_ENABLED:-true}
       BOT_POLLING_LOCK_DIR: /var/lock/fitminiapp-bot
       BOT_CONFLICT_RETRY_SECONDS: ${BOT_CONFLICT_RETRY_SECONDS:-300}
+      BOT_PROFILE_SYNC_STATE_PATH: ${BOT_PROFILE_SYNC_STATE_PATH:-/var/lock/fitminiapp-bot/profile-sync-state.json}
       ADMIN_TELEGRAM_USER_IDS: ${ADMIN_TELEGRAM_USER_IDS:-}
     depends_on:
       backend:

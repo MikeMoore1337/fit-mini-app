@@ -9,9 +9,11 @@ from unittest.mock import AsyncMock
 import httpx
 import pytest
 from aiogram.exceptions import TelegramConflictError
+from aiogram.types import MenuButtonCommands
 from bot.fitminiapp_bot import bot as bot_module
 from bot.fitminiapp_bot.bot import PollingConflict, PollingFileLock, StableDispatcher
 from bot.fitminiapp_bot.logging_config import JsonFormatter
+from bot.fitminiapp_bot.public_profile import HIDDEN_COMMANDS, PUBLIC_COMMANDS
 
 BOT_TOKEN = "123456:telegram-bot-secret"
 INTERNAL_TOKEN = "backend-internal-secret"
@@ -210,6 +212,141 @@ def test_start_link_payload_is_validated_and_reports_success(monkeypatch):
     assert message.answer.await_count == 1
     assert "одни и те же данные" in message.answer.await_args.args[0]
     feedback_start.assert_not_awaited()
+
+
+def test_public_menu_uses_stable_https_url_and_mobile_friendly_plain_labels(monkeypatch):
+    monkeypatch.setattr(
+        bot_module.settings,
+        "frontend_base_url",
+        "https://app.your-fitness-coach.ru",
+    )
+
+    assert bot_module.mini_app_url() == "https://app.your-fitness-coach.ru/app"
+    assert "?" not in bot_module.mini_app_url()
+    keyboard = bot_module.main_menu_keyboard(bot_module.settings.frontend_base_url)
+    labels = [row[0].text for row in keyboard.inline_keyboard]
+    assert labels == [
+        "Открыть приложение",
+        "Помощь и обратная связь",
+        "Настройки",
+        "Что умеет бот",
+    ]
+    assert all(len(label) <= 32 for label in labels)
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://localhost/app",
+        "https://127.0.0.1/app",
+        "https://10.0.0.5/app",
+        "https://app.your-fitness-coach.ru/app?preview=1",
+        "https://app.your-fitness-coach.ru:8443/app",
+        "https://app.internal/app",
+    ],
+)
+def test_public_urls_reject_noncanonical_or_private_targets(url: str) -> None:
+    assert bot_module.is_https_url(url) is False
+
+
+def test_public_command_source_excludes_hidden_commands() -> None:
+    visible = [item.command for item in PUBLIC_COMMANDS]
+
+    assert visible == ["start", "app", "support", "settings", "help", "privacy"]
+    assert set(HIDDEN_COMMANDS) == {"feedback", "cancel", "timezone"}
+    assert "news" not in visible
+
+
+def test_unknown_start_payload_returns_main_menu_without_raw_error(monkeypatch):
+    message = SimpleNamespace(
+        from_user=SimpleNamespace(id=12345),
+        bot=object(),
+        answer=AsyncMock(),
+    )
+    monkeypatch.setattr(bot_module, "handle_feedback_start_payload", AsyncMock(return_value=False))
+    monkeypatch.setattr(bot_module, "set_mini_app_menu_button", AsyncMock(return_value=True))
+
+    asyncio.run(
+        bot_module.start(
+            message,
+            SimpleNamespace(args="unexpected_raw_payload"),
+            SimpleNamespace(clear=AsyncMock()),
+        )
+    )
+
+    text = message.answer.await_args.args[0]
+    assert "не распознан" in text
+    assert "unexpected_raw_payload" not in text
+    assert (
+        message.answer.await_args.kwargs["reply_markup"]
+        .inline_keyboard[0][0]
+        .web_app.url.endswith("/app")
+    )
+
+
+def test_app_command_uses_canonical_https_button(monkeypatch):
+    monkeypatch.setattr(
+        bot_module.settings,
+        "frontend_base_url",
+        "https://app.your-fitness-coach.ru",
+    )
+    message = SimpleNamespace(answer=AsyncMock())
+
+    asyncio.run(bot_module.app_command(message))
+
+    keyboard = message.answer.await_args.kwargs["reply_markup"]
+    button = keyboard.inline_keyboard[0][0]
+    assert button.text == "Открыть приложение"
+    assert button.web_app.url == "https://app.your-fitness-coach.ru/app"
+
+
+def test_unknown_command_returns_recovery_menu_without_echo() -> None:
+    message = SimpleNamespace(text="/unknown secret", answer=AsyncMock())
+
+    asyncio.run(bot_module.unknown_command(message))
+
+    assert "Такой команды нет" in message.answer.await_args.args[0]
+    assert "secret" not in message.answer.await_args.args[0]
+    assert message.answer.await_args.kwargs["reply_markup"] is not None
+
+
+def test_privacy_command_uses_valid_config_or_controlled_unavailable_state(monkeypatch):
+    message = SimpleNamespace(answer=AsyncMock())
+    monkeypatch.setattr(bot_module.settings, "privacy_policy_url", "http://invalid.example/privacy")
+    asyncio.run(bot_module.privacy_command(message))
+    assert "недоступна" in message.answer.await_args.args[0]
+
+    message.answer.reset_mock()
+    monkeypatch.setattr(
+        bot_module.settings,
+        "privacy_policy_url",
+        "https://your-fitness-coach.ru/privacy",
+    )
+    asyncio.run(bot_module.privacy_command(message))
+    keyboard = message.answer.await_args.kwargs["reply_markup"]
+    assert keyboard.inline_keyboard[0][0].url == "https://your-fitness-coach.ru/privacy"
+
+
+def test_menu_button_migration_updates_legacy_override_and_verifies(monkeypatch):
+    target = bot_module.menu_button(bot_module.settings.frontend_base_url)
+    fake_bot = SimpleNamespace(
+        get_chat_menu_button=AsyncMock(side_effect=[MenuButtonCommands(), target]),
+        set_chat_menu_button=AsyncMock(),
+    )
+
+    assert asyncio.run(bot_module.set_mini_app_menu_button(fake_bot, chat_id=101)) is True
+    fake_bot.set_chat_menu_button.assert_awaited_once()
+    assert fake_bot.set_chat_menu_button.await_args.kwargs["chat_id"] == 101
+
+
+def test_menu_button_api_timeout_is_bounded(monkeypatch):
+    fake_bot = SimpleNamespace(
+        get_chat_menu_button=AsyncMock(side_effect=TimeoutError("telegram timed out")),
+        set_chat_menu_button=AsyncMock(),
+    )
+
+    assert asyncio.run(bot_module.set_mini_app_menu_button(fake_bot, chat_id=101)) is False
+    fake_bot.set_chat_menu_button.assert_not_awaited()
 
 
 def test_support_start_payload_runs_before_generic_product_entry(monkeypatch):

@@ -21,7 +21,9 @@ class Settings(BaseSettings):
     )
     bot_polling_lock_dir: str = "/var/lock/fitminiapp-bot"
     bot_conflict_retry_seconds: int = Field(default=300, ge=30)
+    bot_profile_sync_state_path: str = "/var/lock/fitminiapp-bot/profile-sync-state.json"
     admin_telegram_user_ids: str = ""
+    privacy_policy_url: str = ""
 
     @property
     def admin_telegram_id_set(self) -> set[int]:
