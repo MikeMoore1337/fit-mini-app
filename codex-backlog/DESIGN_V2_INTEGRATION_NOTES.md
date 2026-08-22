@@ -84,29 +84,43 @@ Functional scope перечисленных tasks не изменён: прав�
 | `48` | Coach workspace мог стать отдельным generic admin/SaaS dashboard. | Зафиксированы shared shell, data regions, desktop/mobile и light/dark parity. | Не изменён. |
 | `49` | Комментарии могли получить messenger/chat visual language. | Закреплён встроенный feedback region на общих primitives. | Не изменён. |
 | `50` | Public и in-app knowledge могли разойтись по palette и components. | Закреплены единая content grammar и shared typography/navigation. | Не изменён. |
-| `51` | Check-in мог ввести локальный wizard/card language. | Указаны shared form, action и confidence patterns. | Не изменён. |
-| `52` | Calibration states могли переопределить semantic colors. | Указаны shared data/form/action и insufficient/error states. | Не изменён. |
-| `53` | Workout adaptation могла создать отдельный workout skin. | Закреплены существующие workout, sheet/dialog и diff patterns. | Не изменён. |
-| `54` | История могла ввести локальную timeline/card system. | Указаны shared timeline/data/status primitives. | Не изменён. |
-| `55` | Anthropometry могла создать отдельную analytics palette. | Закреплены semantic tokens, accessible charts и state coverage. | Не изменён. |
-| `56` | Confidence мог распасться на локальные badges и цвета. | Закреплён один reusable state pattern с text/icon redundancy. | Не изменён. |
-| `58` | Progression guidance могла стать отдельной gamified card system. | Указаны shared evidence/status/disclosure patterns. | Не изменён. |
-| `59` | Notifications и Telegram fallback могли разойтись визуально. | Закреплены shared lists/forms/states across Web/Mobile/TMA. | Не изменён. |
-| `59A` | Bot-specific controls могли протечь в Web/TMA visual language. | Отделены Telegram controls от Design V2 product UI. | Не изменён. |
-| `60` | Export/destructive flows могли получить локальную palette и cards. | Закреплены shared account/feedback primitives и recovery states. | Не изменён. |
-| `61` | Cardio gap мог породить отдельную activity-tracker систему. | Указана интеграция в Today/workout/history/Progress patterns. | Не изменён. |
-| `62` | Demo design мог стать отдельной marketing/demo theme. | Зафиксировано использование реального Design V2 shell/components. | Не изменён. |
-| `63` | Demo mode мог создать собственную palette/navigation. | Indicator и locked state привязаны к shared product states. | Не изменён. |
-| `64` | Fixtures могли проверять mock UI и demo-only variants. | Закреплены реальные components и representative V2 states. | Не изменён. |
-| `65` | Conversion flow мог вернуть generic SaaS takeover patterns. | CTA, prompts и auth transition привязаны к shared V2 primitives. | Не изменён. |
-| `66` | Demo handoff мог создать отдельный login/provider skin. | Закреплены shared Demo/Auth surfaces и browser states. | Не изменён. |
-| `68` | Финальная Demo-проверка не защищала Design V2 parity. | Добавлен browser gate для light/dark и отсутствия demo-only language. | Не изменён. |
-| `71` | Admin Workspace мог стать отдельным admin template. | Закреплена плотная, но общая Design V2 system и browser QA. | Не изменён. |
-| `71A` | Profile/Admin/Coach application flow мог разойтись визуально. | Зафиксированы общие form/status/navigation primitives и state pass. | Не изменён. |
-| `72` | TMA мог трактоваться как отдельный редизайн, а обязательная task `59A` отсутствовала в dependency line. | Зафиксирована формула shared UI + responsive composition + adapter, только platform differences и зависимость `59A`. | Не изменён. |
-| `73` | Legacy Landing PNG считались composition source of truth. | Источник заменён на Approved Design V2 renders/shared implementation; PNG оставлены historical. | Не изменён. |
-| `74` | Responsive/a11y audit мог проверять legacy UI и Landing PNG. | Gate переведён на фактический Design V2, parity, states и browser coverage. | Не изменён. |
-| `75` | Performance task могла измерять абстрактный redesign и legacy assets. | Уточнены реальные V2 assets, fonts/images, CLS, main-thread, motion и reduced motion. | Не изменён. |
-| `90` | AI UI мог создать отдельный generic chat/AI style. | Закреплены shared shell/components/states и запрет provider-inspired styling. | Не изменён. |
-| `92` | Readiness не перечисляла актуальные production skills и V2 recovery states. | Добавлены профильные skills и production-build state evidence без повторения закрытых audits. | Не изменён. |
-| `93` | Final gate не проверял весь Design V2 и решения findings `46A-46C`; в полном dependency list отсутствовала `59A`. | Добавлены human-made flows, legacy-fragment gate, связь с task `92` evidence и dependency `59A`. | Не изменён. |
+| `52` | Check-in мог ввести локальный wizard/card language. | Указаны shared form, action и confidence patterns. | Не изменён. |
+| `53` | Calibration states могли переопределить semantic colors. | Указаны shared data/form/action и insufficient/error states. | Не изменён. |
+| `55` | Workout adaptation могла создать отдельный workout skin. | Закреплены существующие workout, sheet/dialog и diff patterns. | Не изменён. |
+| `56` | История могла ввести локальную timeline/card system. | Указаны shared timeline/data/status primitives. | Не изменён. |
+| `57` | Anthropometry могла создать отдельную analytics palette. | Закреплены semantic tokens, accessible charts и state coverage. | Не изменён. |
+| `58` | Confidence мог распасться на локальные badges и цвета. | Закреплён один reusable state pattern с text/icon redundancy. | Не изменён. |
+| `60` | Progression guidance могла стать отдельной gamified card system. | Указаны shared evidence/status/disclosure patterns. | Не изменён. |
+| `61` | Notifications и Telegram fallback могли разойтись визуально. | Закреплены shared lists/forms/states across Web/Mobile/TMA. | Не изменён. |
+| former `59A` | Bot-specific controls могли протечь в Web/TMA visual language. | Полностью перенесено в отдельный Telegram backlog; main UI сохраняет только integration boundaries. | Не изменён. |
+| `62` | Export/destructive flows могли получить локальную palette и cards. | Закреплены shared account/feedback primitives и recovery states. | Не изменён. |
+| `63` | Cardio gap мог породить отдельную activity-tracker систему. | Указана интеграция в Today/workout/history/Progress patterns. | Не изменён. |
+| `65` | Demo design мог стать отдельной marketing/demo theme. | Зафиксировано использование реального Design V2 shell/components. | Не изменён. |
+| `66` | Demo mode мог создать собственную palette/navigation. | Indicator и locked state привязаны к shared product states. | Не изменён. |
+| `67` | Fixtures могли проверять mock UI и demo-only variants. | Закреплены реальные components и representative V2 states. | Не изменён. |
+| `68` | Conversion flow мог вернуть generic SaaS takeover patterns. | CTA, prompts и auth transition привязаны к shared V2 primitives. | Не изменён. |
+| `69` | Demo handoff мог создать отдельный login/provider skin. | Закреплены shared Demo/Auth surfaces и browser states. | Не изменён. |
+| `71` | Финальная Demo-проверка не защищала Design V2 parity. | Добавлен browser gate для light/dark и отсутствия demo-only language. | Не изменён. |
+| `76` | Admin Workspace мог стать отдельным admin template. | Закреплена плотная, но общая Design V2 system и browser QA. | Не изменён. |
+| `77` | Profile/Admin/Coach application flow мог разойтись визуально. | Зафиксированы общие form/status/navigation primitives и state pass. | Не изменён. |
+| `78` | TMA мог трактоваться как отдельный редизайн, а bot-specific work было смешано с main backlog в dependency line. | Зафиксирована формула shared UI + responsive composition + adapter, только platform differences и отдельная bot-workstream boundary без зависимости main backlog. | Не изменён. |
+| `79` | Legacy Landing PNG считались composition source of truth. | Источник заменён на Approved Design V2 renders/shared implementation; PNG оставлены historical. | Не изменён. |
+| `80` | Responsive/a11y audit мог проверять legacy UI и Landing PNG. | Gate переведён на фактический Design V2, parity, states и browser coverage. | Не изменён. |
+| `81` | Performance task могла измерять абстрактный redesign и legacy assets. | Уточнены реальные V2 assets, fonts/images, CLS, main-thread, motion и reduced motion. | Не изменён. |
+| `96` | AI UI мог создать отдельный generic chat/AI style. | Закреплены shared shell/components/states и запрет provider-inspired styling. | Не изменён. |
+| `98` | Readiness не перечисляла актуальные production skills и V2 recovery states. | Добавлены профильные skills и production-build state evidence без повторения закрытых audits. | Не изменён. |
+| `99` | Final gate не проверял весь Design V2 и решения findings `46A-46C`; bot-specific work ранее было смешано с main dependency list. | Добавлены human-made flows, legacy-fragment gate, связь с task `77` evidence и separate bot-workstream boundary. | Не изменён. |
+
+## Design alternatives после завершённых tasks 00-49
+
+Новый блок `49A-49G` не отменяет результаты `46D-46J` и не делает Design V2 устаревшим автоматически.
+
+До явного owner decision в `49F` и closure/rollout task `49G`:
+
+- Design V2 остаётся production source of truth;
+- новые directions являются только exploration artifacts;
+- pending tasks читают `ACTIVE_DESIGN_SOURCE.md`;
+- production UI нельзя менять по неутверждённым renders;
+- completed task files `00-49` не редактируются.
+
+Если владелец утверждает V2.1 или V3, task `49G` создаёт новый canonical integration contract и сохраняет этот документ как исторический источник Design V2.

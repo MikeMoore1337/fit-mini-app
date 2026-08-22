@@ -1,24 +1,37 @@
-# Auth integration notes
+# Auth integration notes - release v7
 
-Auth block is `10-13`:
-- 10 auth audit
-- 11 identity/session/linking hardening
-- 12 provider production readiness
-- 13 premium `/login`
+Auth foundation уже реализована tasks `10-13`:
 
-Brand task `07` is the visual source of truth for auth logo assets. `/login` must not invent its own wordmark or favicon.
+- `10` auth audit;
+- `11` identity/session/linking hardening;
+- `12` provider production readiness;
+- `13` premium `/login`.
 
-Current downstream positions:
-- Profile `47`
-- Coach `48`
-- Demo `62-68`
-- Admin + trainer activation `69 -> 69A -> 70 -> 70A -> 71 -> 71A`
-- Telegram `72`
-- Landing `73`
-- Responsive `74`
-- Performance `75`
-- AI `76-91`
-- Production readiness `92`
-- Final `93`
+Brand task `07` остаётся visual source of truth для logo/favicon. `/login` не создаёт собственный wordmark.
 
-Landing task `73` owns final visual parity between Landing and Login while preserving canonical brand assets from task `07`.
+## Current downstream positions
+
+- Profile/account: completed `47`.
+- Coach workspace: completed `48`.
+- Core product improvements: `50-67`.
+- Simplified Demo: `68-69`.
+- Direct Trainer activation: `70`.
+- Minimal Root Admin: `71`.
+- Telegram Mini App platform hardening: `72`.
+- Landing/Login final visual parity: `73`.
+- Responsive/accessibility/states: `74`.
+- Performance/motion: `75`.
+- Skill-aware retrospective audit: `76`.
+- Real-user validation: `77`.
+- Production readiness: `78`.
+- Final release gate: `79`.
+
+## Invariants
+
+- One internal account can link multiple verified identities.
+- Valid TMA `initData` launch does not show browser `/login`.
+- Direct Trainer activation does not change authentication or create a second account.
+- Root authority is server-configured and cannot be obtained through linking.
+- Demo continuation uses existing canonical auth/deep-link flow and never imports fixtures.
+- Landing task `73` owns final public/auth visual parity while preserving security, provider availability and canonical brand assets.
+- Post-release AI, translation and import work must reuse this auth foundation rather than add parallel identity systems.

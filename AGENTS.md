@@ -11,12 +11,30 @@ Main areas:
 - `scripts/` - project automation, checks, maintenance, deployment helpers;
 - Docker Compose - local and production-oriented orchestration.
 
-Preserve the current architecture and repository conventions unless the task explicitly
-requires a change or there is a concrete technical reason to change them.
+Preserve the current architecture and repository conventions unless the current task
+explicitly requires a change or there is a concrete technical reason to change them.
 
-Use relevant repository skills from `.agents/skills/` for specialized work. This file
-contains repository-wide rules and takes precedence over a generic skill when they conflict.
-Do not load unrelated specialized guidance merely because it exists.
+# Instruction precedence and source of truth
+
+Use this order for the current work:
+
+1. explicit user instructions in the current session;
+2. current task and its backlog `GLOBAL_RULES.md`;
+3. current backlog `TASK_EXECUTION_LIFECYCLE.md`;
+4. this root `AGENTS.md`;
+5. assigned role from `.agents/roles/`;
+6. task-recommended skills from `.agents/skills/`;
+7. relevant long-term documentation under `docs/`.
+
+Destructive, production-affecting, credential, billing and real-user operations still require
+explicit user authorization when required by the safety rules below.
+
+For already implemented behavior, current code, migrations, tests, Git history and active
+documentation are the source of truth. The task defines the intended change, not assumed
+current state.
+
+Do not load unrelated tasks, roles, skills, masters or historical documents merely because
+they exist.
 
 # Workspace hygiene
 
@@ -44,7 +62,7 @@ Do not load unrelated specialized guidance merely because it exists.
 Never use skipped/deleted tests, broad `# noqa`, unnecessary `type: ignore`, `@ts-ignore`,
 `@ts-nocheck`, ESLint disables, empty/swallowed exceptions, arbitrary sleeps, or `Any`/`any`
 merely to make checks pass. If an exception is genuinely required, keep it narrow and explain
-why in code or documentation where appropriate.
+why where appropriate.
 
 # Architecture and scope
 
@@ -61,31 +79,126 @@ For cross-cutting changes, identify all affected surfaces before implementation:
 frontend, Telegram Mini App, bot, database, generated API types, tests,
 deployment/configuration and documentation.
 
-# Workflow
+# Skills
 
-For substantial work, use logical stages. For each completed stage:
+Repository skills live under `.agents/skills/`.
 
-1. implement one coherent part;
-2. run checks directly related to that stage;
-3. fix failures caused by the change;
-4. review the diff for accidental changes;
-5. create a separate focused Git commit.
+- For a backlog task, `Рекомендуемые skills` are the **core skills** for the primary role. Open
+  only these initially.
+- `Условные skills` are not preload instructions. Open one only after inspection proves its
+  documented trigger is actually present in the current implementation/fix.
+- For code/diff review, reviewer may use `$code-reviewer`; QA uses `$qa-engineer`. These base
+  skills need not be repeated in task metadata. A non-code design/decision review does not load
+  `$code-reviewer` automatically. Add at most 1-2 task-specific review skills for a normal pass.
+- Do not load every skill merely because the product surface could theoretically involve it.
+  In particular, visible-in-TMA UI does not by itself require `$telegram-engineer`; ordinary UI
+  does not by itself require a separate `$accessibility-engineer` pass.
+- A skill never expands task scope. New schema/API/platform/product work requires the task or a
+  reproducible `BLOCKER/HIGH`, not a broad skill checklist.
+- Repository/backlog rules take precedence over generic skill guidance when they conflict.
 
-Do not commit a knowingly broken stage. Do not manufacture extra stages for trivial edits.
-Before finishing substantial work, run broader relevant verification for every touched
-subsystem.
+# Agent roles and subagents
 
-Normal local linting, formatting, type checking, tests, builds and browser verification do
-not require additional confirmation.
+Reusable role contracts live under `.agents/roles/`.
 
-When working in the Codex IDE extension, use Playwright MCP for visual and functional UI
-verification on local environments, including interactions, responsive states, screenshots
-and console errors. Do not use the Browser skill or In-app Browser in Codex IDE because that
-integration is not supported there. This restriction does not replace existing project e2e
-scripts or browser tooling in other environments.
+- Role defines responsibility; skill defines domain workflow; task defines result and scope.
+- For a backlog task, `Основная роль` and `Дополнительные роли lifecycle` are authoritative.
+- Read only the assigned primary role initially. Do not synthesize the old automatic chain
+  `researcher -> implementer -> independent-reviewer -> qa-verifier`.
+- Add a role only when the task explicitly lists it, it is the primary role, or the lifecycle
+  allows a narrowly triggered conditional role.
+- Keep one primary production writer for a normal task. A reviewer/QA pass is read-only; any
+  subsequent fix returns to the primary writer.
+- Do not create an agent per skill or re-read unchanged role/skill files after every pass.
+- Use `.agents/references/ROLE_ROUTING_GUIDE.md` only when routing/delegation is actually needed.
+- Do not let multiple write-agents edit the same working tree or core contract concurrently.
+- `orchestrator` or `integration-release` does not override branch/worktree restrictions.
+- If real subagents are unavailable, perform required role stages as clearly separated
+  sequential passes in the same session and report that accurately.
 
-Ask before operations that are destructive, production-affecting, use real paid external
-services, modify real user data, or are unusually expensive/outside the task scope.
+# Backlog routing and full task lifecycle
+
+Current backlog families include:
+
+- `codex-backlog/tasks/`;
+- `telegram-core-release-backlog/tasks/`;
+- `post-release-priority-backlog/tasks/`.
+
+When a task file is explicitly provided:
+
+1. identify its backlog root from the task path;
+2. read this `AGENTS.md`;
+3. read that backlog's `GLOBAL_RULES.md`;
+4. read that backlog's `TASK_EXECUTION_LIFECYCLE.md`;
+5. read the current task and its assigned role;
+6. open the task's core `Рекомендуемые skills`; open `Условные skills` only on their actual trigger;
+7. execute only the `Основная роль` plus the exact `Дополнительные роли lifecycle` declared by the task;
+8. execute only the current task;
+9. do not start the next task automatically.
+
+The phrase `полный task lifecycle` always means the `TASK_EXECUTION_LIFECYCLE.md` belonging to
+the current task's backlog. That file is the canonical implementation/review/QA/finalization
+workflow. Do not duplicate it with an improvised workflow.
+
+The phrase `Все предыдущие tasks считаются выполненными` is only a sequencing assumption. It
+does not pass owner checkpoints, create missing Trigger/evidence, authorize production or
+external actions, provide secrets/tokens, override conditional/skip rules, or prove real-user,
+Telegram, provider or production validation.
+
+For standardized backlog tasks, normally create one logical commit only after applicable
+review, QA and final verification. Do not create intermediate lifecycle commits unless the
+current task/backlog explicitly requires them. A read-only/no-code outcome does not require a
+manufactured commit.
+
+Do not read all files under `masters/`, completed tasks or historical changelogs unless the
+current task explicitly requires them.
+
+# Resource-aware review and stop policy
+
+For backlog tasks, severity determines whether work continues:
+
+- `BLOCKER` and `HIGH` block completion and must be fixed or reported as a blocker.
+- `MEDIUM`, `LOW`, `NIT` and `OUT_OF_SCOPE` are non-blocking. They must not trigger a new
+  architecture/data/API/platform workstream.
+- A finding cannot be labelled `MEDIUM` and still be used to prevent commit. If it truly makes
+  the task unacceptable, the reviewer must reclassify it as `HIGH/BLOCKER` with reproducible
+  evidence tied to the task or regression introduced by the current diff.
+- The first independent review is the only full review pass. After `BLOCKER/HIGH` fixes, perform
+  only the targeted recheck defined by the backlog lifecycle - do not restart a fresh audit.
+- Normal tasks have a finite review/QA budget. Respect `TASK_EXECUTION_LIFECYCLE.md` limits and
+  stop with an exact blocker instead of looping.
+- A dedicated later review/audit task is a reason not to duplicate the same full review in the
+  preceding implementation task unless that task explicitly requires it.
+
+Prefer targeted checks, relevant files, compact subagent context and closed finding sets. More
+roles, more skills and more passes are not inherently higher quality.
+
+# Git branch and worktree policy
+
+Before changing files for a backlog task, verify the branch with:
+
+`git branch --show-current`
+
+The current backlog's `GLOBAL_RULES.md` defines the expected branch.
+
+For `codex-backlog/tasks/` and `telegram-core-release-backlog/tasks/`, the expected long-lived
+implementation branch is:
+
+`feature/yfc-platform-v2`
+
+Unless the current backlog rules or user explicitly permit otherwise:
+
+- do not create another branch;
+- do not switch/checkout another branch;
+- do not merge or rebase unrelated branches;
+- do not modify another worktree;
+- do not push;
+- keep unrelated user changes intact.
+
+If the expected branch is not active, stop before tracked changes and report the mismatch.
+
+Parallel write-agents/worktrees are allowed only when the current backlog rules, task or user
+explicitly permits them. Do not infer permission from the existence of multi-agent roles.
 
 # Dependencies
 
@@ -94,7 +207,7 @@ services, modify real user data, or are unusually expensive/outside the task sco
 - Update the appropriate lock/compiled dependency files and keep dependency diffs intentional.
 - Do not perform broad dependency upgrades as part of unrelated work.
 
-# Testing baseline
+# Testing and verification
 
 Use risk-based testing. Changes to business logic, API behavior, permissions, state
 transitions, calculations, persistence, parsing/validation or regression-prone UI behavior
@@ -102,7 +215,34 @@ normally require appropriate tests.
 
 Test meaningful boundaries and failure paths, not only happy paths. Prefer deterministic
 waits/assertions over sleeps. Add a regression test for a meaningful bug fix when practical.
-Use the relevant engineering/QA skill for project-specific commands and deeper rules.
+
+For normal backlog tasks:
+
+- run targeted/profile-specific checks required by the task, affected subsystems,
+  `GLOBAL_RULES.md` and relevant skills;
+- do not run the full repository suite by default;
+- expand verification only when the actual risk justifies it.
+
+Broader/full verification is appropriate when explicitly required or when changes affect
+shared contracts, migrations, auth/RBAC, build/deployment infrastructure, broad generated
+artifacts, cross-cutting integration or a release/integration gate.
+
+Do not claim a check passed unless it was actually run. State exactly what could not be run
+and why.
+
+# UI verification
+
+For UI changes, verify the main affected user flow and relevant responsive states.
+
+When working in the Codex IDE extension, use Playwright MCP for local visual and functional
+verification, including interactions, responsive states, screenshots and console errors.
+
+Do not use the Browser skill or In-app Browser in Codex IDE when that integration is not
+supported in the current environment. This does not replace existing project e2e scripts or
+browser tooling in other environments.
+
+For Mobile Web/TMA/client-facing tasks, follow the current backlog's mobile/TMA contracts,
+acceptance matrix and relevant listed skills.
 
 # Security baseline
 
@@ -118,10 +258,10 @@ Use `security-engineer` for security-sensitive implementation, audit or threat m
 
 # Documentation baseline
 
-Treat `docs/` as long-term architectural and operational context. Before changing an
-existing subsystem, check for relevant documentation.
+Treat `docs/` as long-term architectural and operational context. Before changing an existing
+subsystem, check for relevant documentation.
 
-Update documentation in the same stage when a change makes documented setup, environment
+Update documentation in the same task when a change makes documented setup, environment
 variables, commands, API contracts, architecture, deployment, migrations, user-visible
 behavior, significant business rules, security constraints or operational procedures
 inaccurate.
@@ -129,98 +269,66 @@ inaccurate.
 Do not duplicate trivial implementation details when code is the better source of truth.
 Use `technical-writer` for substantial documentation work.
 
-- Russian is the mandatory primary language for all human-readable documentation
-  under `docs/`.
-- Do not create new English-language documentation under `docs/` unless the task
-  explicitly requires an English version.
+- Russian is the mandatory primary language for all human-readable documentation under
+  `docs/`.
+- Do not create new English-language documentation under `docs/` unless the task explicitly
+  requires an English version.
 - When updating an existing English-language document under `docs/`, translate the
   explanatory prose you modify into Russian when practical, but do not mass-translate
   unrelated documentation outside the current task scope.
 - Keep code, commands, configuration keys, API names, file paths, identifiers,
-  library/framework names, protocol names, and other technical literals in their
-  original form when translation would reduce clarity or accuracy.
+  library/framework names, protocol names and other technical literals in their original form
+  when translation would reduce clarity or accuracy.
 - Do not manually translate generated documentation or vendored third-party content.
 - Write all explanatory prose in Russian.
 
-# Codex backlog
-
-Large project work is decomposed into tasks under `codex-backlog/tasks/`.
-
-When a task file is explicitly provided:
-
-- read `codex-backlog/GLOBAL_RULES.md`;
-- work only within the scope of that task;
-- do not start later numbered tasks;
-- treat the current code, Git history, and current documentation as the source
-  of truth for completed previous stages;
-- do not read all files under `codex-backlog/masters/` unless the current task
-  explicitly requires clarification from a master specification.
-
-# Git branch policy
-
-The current long-lived implementation branch for the Codex backlog is:
-
-`feature/yfc-platform-v2`
-
-Before starting a backlog task, verify the current branch with:
-
-`git branch --show-current`
-
-For all tasks under `codex-backlog/tasks/`:
-
-- work only in the currently checked out `feature/yfc-platform-v2` branch;
-- do not create another branch;
-- do not switch or checkout another branch;
-- do not merge or rebase `main`, `master`, `develop`, or another branch;
-- do not modify another worktree;
-- do not push unless explicitly requested by the user;
-- create the task's logical commit in the current branch;
-- if the expected branch is not active, stop before making changes and report it;
-- keep unrelated user changes intact.
-
 # Production and infrastructure safety
 
-Treat schema migrations, deployment configuration and infrastructure changes as production
-changes. Do not run production deployment scripts, destructive production database actions,
-or modify production auth, secrets, DNS, Cloudflare or external infrastructure unless the
-user explicitly requested that operation.
+Treat schema migrations, deployment configuration and infrastructure changes as
+production-sensitive.
 
-# Environment safety
+Do not:
 
-During backlog implementation and testing:
+- deploy to production unless explicitly requested;
+- run database migrations against production;
+- modify production auth, secrets, DNS, Cloudflare or external infrastructure without explicit
+  user authorization;
+- rotate/revoke real tokens without explicit authorization;
+- modify real user data;
+- use production credentials for local or automated tests;
+- invoke real paid external services unless explicitly authorized.
 
-- never deploy to production unless explicitly requested;
-- never run database migrations against production;
-- never use production credentials for local or automated tests;
-- never modify production data;
-- prefer local/test/staging services;
-- before running any command that appears to target production, stop and ask the user.
+Prefer local/test/staging services.
 
-# Final verification
+Before a command that appears destructive, production-targeting, unusually expensive or
+outside task scope, stop and ask the user.
 
-Before declaring substantial work complete:
+Normal local linting, formatting, type checking, targeted tests, builds and local browser
+verification do not require additional confirmation.
 
-- review `git diff`;
+# Completion and final report
+
+Before declaring tracked backlog implementation complete:
+
+- complete the current backlog lifecycle;
+- inspect the final `git diff`;
 - confirm no accidental files exist outside `.artifacts/`;
 - confirm no secrets or debug artifacts were introduced;
-- run broad relevant checks for every touched subsystem;
-- confirm migrations and generated artifacts are intentional;
-- verify the main changed user flow;
-- visually verify UI when UI changed;
-- confirm relevant documentation is still accurate;
-- confirm the repository is not knowingly broken.
+- confirm migrations, generated files, dependencies and configuration changes are intentional;
+- confirm all blocking `BLOCKER/HIGH` review/QA findings are resolved or explicitly blocked;
+- keep `MEDIUM/LOW/NIT/OUT_OF_SCOPE` as concise non-blocking follow-ups rather than reopening scope;
+- create the task's one logical commit only after successful applicable verification;
+- do not start the next task.
 
-Do not claim a check passed unless it was actually run. If a relevant check could not be run,
-state exactly which check was skipped and why.
+For backlog tasks, follow the current `TASK_EXECUTION_LIFECYCLE.md` final-report contract.
 
-# Final report
-
-Report concisely:
+For other substantial work, report concisely:
 
 - what changed;
-- commits/stages created;
-- tests and checks actually run;
-- migration/deployment implications;
-- remaining risks or limitations.
+- checks actually run;
+- migration/config/deployment implications;
+- remaining risks or limitations;
+- commit hash or explicit `no commit`.
 
-Do not list hypothetical checks as completed.
+Never list hypothetical checks as completed or claim independent review, QA, real-user,
+Telegram, provider or production validation if it did not actually happen.

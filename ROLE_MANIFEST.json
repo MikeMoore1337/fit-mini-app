@@ -1,0 +1,17 @@
+{
+  "package": "yfc-codex-roles",
+  "version": "2.0.0",
+  "root": ".agents/roles",
+  "roles": [
+    "orchestrator",
+    "researcher",
+    "implementer",
+    "independent-reviewer",
+    "qa-verifier",
+    "integration-release"
+  ],
+  "routing": "task-declared-resource-aware",
+  "review_policy": "BLOCKER/HIGH only block; one full review plus targeted recheck",
+  "notes": "Task Основная роль + Дополнительные роли lifecycle are authoritative. No automatic researcher/reviewer/QA chain.",
+  "generated_at": "2026-08-22T10:28:23.459656+00:00"
+}

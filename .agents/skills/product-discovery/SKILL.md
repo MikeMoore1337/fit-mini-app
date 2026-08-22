@@ -39,6 +39,20 @@ description: >
 
 Не выдумывай исследования рынка, статистику, аналитику или поведение пользователей.
 
+## Primary device and context
+
+В product brief явно укажи основную поверхность и контекст использования.
+
+Для YFC Personal/client daily flows по умолчанию:
+
+- smartphone-first;
+- Mobile Web и TMA;
+- короткие действия в зале/в течение дня;
+- одна рука, keyboard, interruptions и плохая сеть;
+- desktop остаётся first-class для подробной настройки/аналитики.
+
+Не принимать desktop wireframe за полный acceptance. Если Coach/Admin task desktop-first, это должно быть записано явно вместе с mobile fallback и TMA boundary.
+
 ## Critical journeys
 
 Для каждого критического сценария определи минимум:

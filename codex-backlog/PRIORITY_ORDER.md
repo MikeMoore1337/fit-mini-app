@@ -1,76 +1,41 @@
-# Final execution order
+# Порядок выполнения release backlog v10
 
-## Completed through Design V2 integration gate
-`00-46`, `46A-46J`, включая `46C.1-46C.6`
+## Completed
 
-## Brand foundation
-`07`
-- canonical light/dark logo SVG
-- mark-only readable favicon
-- one brand source of truth for downstream surfaces
+`00-48`, включая Design V2 gate `46A-46J` и `46C.1-46C.6`.
 
-## Foundation and activation
-`08-14`
+## Current
 
-## Food and training domains
-`15-40`
-
-## Completed product UX before retrospective gate
-`41-46`
-
-## Retrospective audit and owner-approved remediation
-`46A -> 46B -> 46B1 -> 46C umbrella -> 46C.1 -> 46C.2 -> 46C.3 -> 46C.4 -> 46C.5 -> 46C.6`
-
-Каждая `46C.*` выполняется отдельной сессией и отдельным commit.
-
-## Design V2 integration
 ```text
-46D -> 46E
-    -> owner choice
-    -> 46F
-    -> owner approval
-    -> 46G
-    -> owner manual test
-    -> 46H
-    -> owner approval
-    -> 46I -> 46J -> 47
+49 resume текущего UI refinement
 ```
 
-Task `46D` начинается только после завершения всех `46C.1-46C.6`.
-Task `46C.6` — уже завершённая owner-approved вставка для сохранения Telegram proxy-tunnel; она не
-меняет исходную нумерацию `47-93`.
+После завершения `49`:
 
-## Remaining product UX
-`47-57`
+```text
+49A brief/audit delta
+ -> 49B three directions
+ -> 49C owner selection
 
-Следующая задача: `47-profile-account-experience.md`.
+KEEP_V2_UNCHANGED
+ -> 49G closure
 
-## Final core-product gaps
-`58 -> 59 -> 59A -> 60 -> 61`
-- deterministic progression
-- notifications/reminders
-- main Telegram bot support/feedback
-- account lifecycle/export
-- guarded manual cardio
+V2.1 / alternative / explicit hybrid
+ -> 49D specification
+ -> owner approval
+ -> 49E pilot
+ -> owner manual test
+ -> 49F final approval
+ -> 49G rollout/alignment
 
-## Release surfaces
-`62-75`
-- Demo
-- Admin and trainer activation: `69 -> 69A -> 70 -> 70A -> 71 -> 71A`
-- TMA platform integration over shared YFC UI
-- Landing
-- Responsive/A11y
-- Performance
+49G -> 50A mobile/TMA quality gate foundation
+ -> 50 -> 51 -> 52 -> 53 -> 54 -> 55 -> 56 -> 57
+ -> 58 -> 59 -> 60 -> 61 -> 62 -> 63 -> 64 -> 65 -> 66 -> 67
+ -> 68 -> 69 -> 70 -> 71 -> 72 -> 73 -> 74 -> 75
+ -> 76 skill-aware retrospective audit
+ -> 77 real-user results checkpoint
+ -> 78 production readiness
+ -> 79 final go/no-go
+```
 
-At task `75`, YFC must already be a complete usable product with AI disabled.
-
-## AI Coach last
-`76-91`
-
-## Operational release hardening
-`92`
-
-## Final release candidate gate
-`93`
-
-After `93`: no feature work before release except blockers.
+Design V2 остаётся active до явного решения и закрытия `49G`. Никакая task не запускает следующую автоматически.

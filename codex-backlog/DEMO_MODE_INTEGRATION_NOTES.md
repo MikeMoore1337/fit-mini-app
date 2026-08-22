@@ -1,23 +1,18 @@
-# Demo Mode integration notes
+# Demo Mode integration - simplified release contract
 
-Demo Mode is implemented as tasks `62-68`.
+Demo is tasks `68-69`, not a second full product.
 
-It is located:
-- after the complete non-AI core product;
-- before Telegram final polish;
-- before premium landing refresh;
-- before cross-product accessibility/performance/final regression.
+## Three curated scenarios
 
-This allows the project to:
-- demonstrate the factual product;
-- keep real AI UI/API/provider calls disabled in demo;
-- avoid polishing Telegram twice;
-- give the landing task a working demo CTA.
+1. Для себя: Today -> несколько подходов -> итог тренировки -> Progress.
+2. Питание: добавить продукт/quick add -> дневной итог -> nutrition report.
+3. Для тренера: открыть подготовленного клиента -> посмотреть факты -> временный contextual comment.
 
-AI Coach in demo is fully disabled. A non-interactive teaser is acceptable.
+## Boundaries
 
-Original decomposed demo package: `masters/demo-mode/`.
-Working tasks `62-68` are adapted to the current backlog and should be used instead of reading the full master package by default.
-
-## Training expansion
-Demo may use synthetic/ephemeral program recommendation, RIR, expanded exercise guide and one trainer contextual comment, with no real side effects.
+- demo writes are ephemeral and resettable;
+- no production notifications, support relay, trainer invitation, account export, deletion or external provider side effects;
+- no migration of demo state into a real account;
+- no arbitrary user data;
+- a single Design V2 implementation with explicit demo capability boundary;
+- conversion CTA appears after meaningful action, not on every screen.

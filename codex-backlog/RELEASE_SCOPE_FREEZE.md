@@ -1,49 +1,27 @@
-# Release scope freeze
+# Release scope freeze v10
 
-## Decision
-This is the final feature backlog for the first real-user release.
+## Design alternatives do not expand feature scope
 
-## Before release
-Do not add new product features after task `93`.
+Tasks `49A-49G` are a design exploration and conditional visual rollout. They do not add product features, change formulas, expand permissions or create a second application.
 
-Allowed work:
-- security/privacy fixes;
-- data-loss/corruption fixes;
-- broken auth/onboarding/payment-like critical flow fixes (billing is not currently in scope);
-- broken food/training/progress/trainer core flows;
-- severe accessibility/performance regressions;
-- operational release blockers.
+- `49A-49C` are non-production exploration/decision tasks.
+- `49D-49F` are conditional specification/pilot/approval tasks.
+- `49G` either closes Design V2 unchanged or rolls out only explicitly approved visual changes.
+- feature scope still ends at task `75`.
 
-Not a valid reason to expand pre-release scope:
-- competitor has feature X;
-- idea sounds useful;
-- AI could also do Y;
-- "nice to have";
-- speculative optimization without user evidence.
+Task `76` is retrospective audit, task `77` is real usability validation, tasks `78-79` close operational/release risks.
 
-## Explicitly deferred until after live users
-- progress photos / photo comparison / AI image-body analysis;
-- wearables, Apple/Google Health, Strava;
-- social network/feed/friends/followers;
-- trainer marketplace/ratings;
-- generic messenger/video calls;
-- Trainer Copilot;
-- autonomous AI writes;
-- AI-generated notification scheduling;
-- complex recovery/readiness scores;
-- advanced periodization engine;
-- broad imports from competitors;
-- billing/subscriptions until monetization is actually required.
+After task `75`, no new feature may be added except a fix required by factual P0/P1 evidence involving security, privacy, data loss, auth/TMA launch, core workout/nutrition/progress/trainer flow, domain correctness, severe accessibility or production operations.
 
-## After release
-Create a new backlog only from:
-1. real user feedback;
-2. product analytics;
-3. observed support problems;
-4. conversion/retention bottlenecks;
-5. security/reliability needs.
+## Explicitly post-release
 
-## UX language is a release-quality requirement
-
-Fixing confusing mandatory terminology is release-quality work, not feature expansion.
-Do not use terminology cleanup as a reason to redesign unrelated screens or add features.
+- progress photos;
+- XLSX/CSV/TXT/DOCX program import;
+- PWA installability;
+- monetization/entitlements;
+- AI Coach;
+- English localization;
+- news channel;
+- wearables/Health/Strava;
+- native mobile app;
+- delegated admin hierarchy.

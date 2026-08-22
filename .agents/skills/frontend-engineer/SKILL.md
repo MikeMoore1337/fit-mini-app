@@ -100,6 +100,20 @@ description: >
 - keyboard flow должен оставаться предсказуемым;
 - не блокируй ввод избыточной валидацией на каждый символ без необходимости.
 
+## Mobile Web/TMA-first
+
+Для YFC client-facing flow smartphone - основной контекст, если task явно не задаёт desktop-first исключение.
+
+- Реализуй mobile composition одновременно с feature, а не поздним patch.
+- Переиспользуй общий Mobile Web/TMA component tree и Design V2.
+- Проверяй `360/390/430`, touch, `hover: none`, keyboard, safe areas и stable viewport.
+- Не прячь primary action под bottom navigation, keyboard, sheet или toast.
+- Сохраняй recoverable form/route state при theme/viewport/background/offline transitions.
+- Расширяй reusable mobile/TMA smoke task `50A`, не создавай отдельный test harness.
+- Telegram-specific API меняй вместе с `$telegram-engineer`; smartphone runtime и acceptance - с `$mobile-engineer`.
+
+Полная матрица: `references/MOBILE_TMA_ACCEPTANCE_MATRIX.md`.
+
 ## Responsive
 
 Не воспринимай mobile как уменьшенный desktop.

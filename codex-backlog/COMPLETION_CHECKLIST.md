@@ -1,91 +1,39 @@
-# Final pre-release completion checklist
+# Completion checklist - release backlog v10
 
-## Completed
-- [x] 00-46 — product foundation, domains and completed core UI
-- [x] 46A `completed-scope-production-quality-audit`
-- [x] 46B `security-privacy-data-integrity-audit`
-- [x] 46B1 `consolidated-audit-triage-owner-decision`
-- [x] 46C `critical-technical-remediation` umbrella
-- [x] 46C.1-46C.6 — owner-approved remediation sequence
-- [x] 46D `product-ux-ui-landing-baseline-audit`
-- [x] 46E `design-v2-visual-directions` + owner choice
-- [x] 46F `design-v2-approved-direction-specification` + owner approval
-- [x] 46G `design-v2-production-pilot` + owner manual test
-- [x] 46H `design-v2-pilot-refinement-approval` + owner approval
-- [x] 46I `design-v2-core-ui-rollout`
-- [x] 46J `remaining-backlog-design-v2-alignment`
+## Per task
 
-## Pending
-- [ ] 47 `profile-account-experience`
-- [ ] 48 `coach-workspace`
-- [ ] 49 `trainer-context-comments-experience`
-- [ ] 50 `knowledge-base-contextual-integration`
-- [ ] 51 `weekly-check-in-experience`
-- [ ] 52 `adaptive-energy-calibration-experience`
-- [ ] 53 `workout-adaptation-experience`
-- [ ] 54 `program-history-and-training-blocks-experience`
-- [ ] 55 `body-priorities-and-anthropometry-experience`
-- [ ] 56 `data-confidence-product-integration`
-- [ ] 57 `product-analytics-core-instrumentation`
-- [ ] 58 `deterministic-progression-guidance`
-- [ ] 59 `notification-reminder-orchestration`
-- [ ] 59A `main-telegram-bot-support-feedback`
-- [ ] 60 `account-data-export-and-lifecycle`
-- [ ] 61 `cardio-logging-gap-audit-and-minimal-implementation`
-- [ ] 62 `demo-mode-audit-design`
-- [ ] 63 `demo-mode-foundation`
-- [ ] 64 `demo-fixtures-ephemeral-interactions`
-- [ ] 65 `demo-ux-conversion`
-- [ ] 66 `demo-auth-handoff-migration`
-- [ ] 67 `demo-security-restrictions`
-- [ ] 68 `demo-final-verification`
-- [ ] 69 `admin-root-capabilities-foundation`
-- [ ] 69A `trainer-application-domain-user-api`
-- [ ] 70 `admin-operations-backend`
-- [ ] 70A `trainer-application-review-capability-orchestration`
-- [ ] 71 `admin-workspace`
-- [ ] 71A `trainer-application-experience`
-- [ ] 72 `telegram-mini-app-adaptation`
-- [ ] 73 `landing-premium-refresh`
-- [ ] 74 `responsive-accessibility-states`
-- [ ] 75 `performance-motion-hardening`
-- [ ] 76 `ai-integration-audit`
-- [ ] 77 `ai-provider-core-free-only`
-- [ ] 78 `ai-provider-cloudflare`
-- [ ] 79 `ai-provider-openrouter`
-- [ ] 80 `ai-provider-orcarouter`
-- [ ] 81 `ai-router-failover-cooldown`
-- [ ] 82 `ai-domain-policy-topic-gate`
-- [ ] 83 `ai-app-knowledge-retrieval`
-- [ ] 84 `ai-readonly-tools-agent-loop`
-- [ ] 85 `ai-nutrition-context-tools`
-- [ ] 86 `ai-training-progress-anthropometry-context`
-- [ ] 87 `ai-personalized-memory-and-user-context`
-- [ ] 88 `ai-evidence-confidence-and-rationale`
-- [ ] 89 `ai-conversations-api-telemetry`
-- [ ] 90 `ai-ui-integration`
-- [ ] 91 `ai-security-evals-docs`
-- [ ] 92 `production-operational-readiness`
-- [ ] 93 `final-integrated-audit-regression`
+- [ ] Worked only in `feature/yfc-platform-v2`.
+- [ ] Read root `AGENTS.md`, `GLOBAL_RULES.md`, lifecycle, current task and primary role.
+- [ ] Loaded only core `Рекомендуемые skills` initially.
+- [ ] Loaded each `Условный skill` only after its actual trigger was proven.
+- [ ] Ran only the exact additional lifecycle roles declared by the task.
+- [ ] Did not create an agent per skill or automatic researcher/reviewer/QA chain.
+- [ ] Read `ACTIVE_DESIGN_SOURCE.md` before visual work.
+- [ ] For tasks `49A-49G`, followed `DESIGN_ALTERNATIVES_EXPLORATION_CONTRACT.md`.
+- [ ] For client-facing scope, followed applicable mobile/TMA contract/matrix.
+- [ ] Ran targeted checks and recorded exact commands.
+- [ ] Only `BLOCKER/HIGH` blocked completion.
+- [ ] `MEDIUM/LOW/NIT/OUT_OF_SCOPE` did not create new schema/API/platform/product scope.
+- [ ] If blocking findings were fixed, repeat review/QA was targeted rather than a new full audit.
+- [ ] Stayed within lifecycle review/QA pass limits.
+- [ ] Checked final `git diff`, migrations/config/dependencies/generated artifacts.
+- [ ] Did not claim real Telegram/device coverage without actual verification.
+- [ ] Created one logical commit when applicable.
+- [ ] Did not start the next task.
 
-## Final release conditions
-- [ ] Canonical light/dark logo assets come from task 07 and no conflicting legacy brand remains on main surfaces
-- [ ] Favicon is mark-only, readable at 16x16/32x32 and contains no `YOUR FITNESS COACH` wordmark
-- [ ] Web, Mobile Web and TMA use one YFC Light/Dark visual system and shared components
-- [ ] Telegram `colorScheme` selects YFC Light/Dark; `themeParams` do not create a separate product palette
-- [ ] Representative Mobile Web/TMA screens have visual parity except documented platform behavior
-- [ ] Core app is fully usable with AI disabled/unavailable
-- [ ] New user onboarding is short, resumable and non-blocking for optional data
-- [ ] Active workout is offline-safe
-- [ ] Progression guidance is deterministic and explainable
-- [ ] Manual cardio flow is adequate or existing implementation verified
-- [ ] Notifications respect timezone/preferences and do not duplicate
-- [ ] Trainer application is manually reviewed, separate from Trainer capability history, and approval opens Coach without claiming professional verification
-- [ ] User can export data and delete account safely
-- [ ] No progress photos / image-body analysis in release scope
-- [ ] AI is strict per-user, read-only and evidence-aware
-- [ ] Trainer personal AI cannot read client data
-- [ ] Backup restore was tested outside production
-- [ ] Deploy/rollback/degradation runbooks exist
-- [ ] Final task 93 has no unresolved release blocker
-- [ ] A novice user can complete core flows without searching unexplained fitness terminology
+## Current task 49 resume
+
+- [ ] Preserved and classified existing uncommitted worktree changes.
+- [ ] Finished only owner-requested UI/layout/compactness refinement and regressions caused by it.
+- [ ] Did not continue review-induced idempotency/schema/deep-link/Telegram architecture from non-blocking findings.
+- [ ] Did not automatically revert ambiguous user/foreign hunks.
+
+## Release gates
+
+- [ ] Task `49` completed before `49A`.
+- [ ] Design V2 remained active until explicit owner decision in `49A-49G`.
+- [ ] Task `50A` did not start before `49G` closure.
+- [ ] Task `76` has no open release-blocking P0/P1.
+- [ ] Task `77` evidence is factual.
+- [ ] Task `78` production evidence exists.
+- [ ] Task `79` contains go/no-go evidence.

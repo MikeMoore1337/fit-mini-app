@@ -1,72 +1,29 @@
-# Codex prompt template
+# Codex prompt template v10
 
-Use one fresh Codex chat per task.
-
-Перед созданием новой сессии вручную выбрать модель/reasoning по `MODEL_SELECTION.md`. Текст task/backlog не переключает модель Codex автоматически.
+Use one fresh Codex chat per task. Select model/reasoning manually according to `MODEL_SELECTION.md`.
 
 ```text
 Выполни `codex-backlog/tasks/NN-task-name.md`.
 
-Соблюдай `AGENTS.md` и `codex-backlog/GLOBAL_RULES.md`.
+Соблюдай `AGENTS.md`, `codex-backlog/GLOBAL_RULES.md` и полный task lifecycle.
+Перед любой visual work прочитай `codex-backlog/ACTIVE_DESIGN_SOURCE.md`.
+Для tasks `49A-49G` также соблюдай `codex-backlog/DESIGN_ALTERNATIVES_EXPLORATION_CONTRACT.md`.
+Для client-facing task соблюдай `codex-backlog/MOBILE_TMA_FIRST_CONTRACT.md` и mobile/TMA acceptance текущей задачи.
 
-Перед началом проверь, что работаешь в `feature/yfc-platform-v2`.
-
-Все предыдущие tasks считаются выполненными.
-Текущий код, Git history и актуальный `docs/` — source of truth по их результатам.
-
-ВАЖНО ПО КОНТЕКСТУ:
-
-Не проводи повторный полный аудит репозитория.
-Не перечитывай все предыдущие task-файлы.
-Не читай все `codex-backlog/masters/` без необходимости.
-
-Если текущий task явно относится к одному master-документу,
-прочитай только этот master, а не весь каталог `masters/`.
-
-Если предыдущий audit уже исследовал нужную область и его результат доступен,
-используй его вместо повторного полного исследования той же области.
-При необходимости точечно перепроверь только факты, которые могли измениться.
-
-Сначала прочитай текущий task, затем исследуй только релевантный набор
-файлов и подсистем, необходимый для корректного выполнения текущего task.
-
-Не исследуй unrelated части проекта.
-
-Если требуемая функциональность уже существует:
-- не реализовывай её заново;
-- переиспользуй текущую архитектуру;
-- меняй только то, что необходимо для текущего task.
-
-Не расширяй scope самостоятельно.
-
-Если для выполнения task потребуется крупное архитектурное изменение,
-которое явно не входит в scope текущей задачи:
-- не начинай его автоматически;
-- зафиксируй как follow-up;
-- выполни безопасную часть текущего task, если это возможно.
-
-Используй внешнюю документацию только если она реально нужна текущему task.
-Для security/API/protocol/SEO/provider требований используй преимущественно
-актуальные официальные источники.
-
-После реализации:
-- только профильные проверки согласно `AGENTS.md`;
-- не запускай полный test suite без необходимости;
-- проверь `git diff`;
-- создай один логический commit при tracked changes;
-- не переходи к следующему task.
-
-Финальный отчёт должен быть кратким:
-- что было переиспользовано;
-- что изменено;
-- ключевые файлы;
-- migrations/config;
-- проверки и их результат;
-- ограничения/follow-ups;
-- commit hash.
+Перед началом проверь `feature/yfc-platform-v2`.
+Открой только текущую task, её primary role и core skills. Conditional skills - только по фактическому trigger.
+Выполни только дополнительные lifecycle-роли, явно указанные task.
+Не запускай полный audit/suite и не подключай новые роли "для надёжности" без требования task/доказанного риска.
+Только BLOCKER/HIGH блокируют завершение; non-blocking findings не расширяют scope.
+Не deploy production. Не переходи к следующей task.
 ```
 
-## Release freeze
+## Current start
 
-Не проси Codex самостоятельно добавлять новые features, которые не входят в текущий task.
-После task `93` backlog считается feature-frozen до релиза.
+Task `49` была остановлена владельцем и продолжается как resume:
+
+```text
+Выполни `codex-backlog/tasks/49-trainer-context-comments-experience.md`.
+```
+
+Сначала соблюдать её `Resume contract` и сохранить неидентифицированные пользовательские изменения worktree. После её завершения следующая task - `49A`.

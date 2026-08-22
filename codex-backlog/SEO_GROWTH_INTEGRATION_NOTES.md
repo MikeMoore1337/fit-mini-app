@@ -1,28 +1,19 @@
-# SEO / Organic Growth integration notes
+# SEO and growth integration notes v6
 
-## Early public foundation
-- `02` SEO + organic growth baseline audit - read-only
-- `03` technical SEO/indexation foundation
-- `04` Search Console/Yandex Webmaster readiness
-- `05` design system
-- `06` public SEO IA/content foundation
-- `07` canonical brand logo/favicon assets
-- `08` theme preference/platform sync
-- `09` organic promotion/distribution
+Task `50` implements Public Web knowledge and public exercise pages from the existing SEO/content foundation.
 
-## Current late integration points
-- Demo `62-68`
-- Admin + trainer activation `69 -> 69A -> 70 -> 70A -> 71 -> 71A`
-- Telegram `72`
-- Landing `73`
-- Responsive/A11y `74`
-- Performance/CWV `75`
-- Final integrated audit `93`
+## TMA boundary
 
-## Knowledge/exercise integration
-Task `06` reserves public knowledge/exercise information architecture; task `50` implements public + contextual App/TMA knowledge integration. Custom/private exercises never become SEO pages.
+TMA does not expose a knowledge library, article index or long-form reader. It may show:
 
-## Brand/share integration
-Open Graph/social preview visuals should reuse task `07` canonical brand assets. Do not create a separate marketing logo or favicon.
+- a short inline definition;
+- a factual exercise guide;
+- an optional external link to a public article when the user deliberately asks for more detail.
 
-SEO philosophy remains: people-first content, no thin/doorway/mass AI pages, no bought links/PBN/spam, truthful structured data, private application surfaces excluded from indexing.
+No knowledge item in TMA bottom navigation. Public article reading remains on the website.
+
+## First-release content quantity
+
+Publish 6-10 reviewed high-signal materials rather than mass-generated pages. Draft and review content stays noindex and out of sitemap.
+
+News and automated content distribution are post-release Telegram work and do not affect release SEO scope.

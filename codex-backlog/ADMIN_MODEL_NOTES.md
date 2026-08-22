@@ -1,38 +1,44 @@
-# Admin model notes
+# Account capabilities и Admin model - release v6
 
-`ADMIN_TELEGRAM_USER_IDS` остаётся Root Admin / owner / break-glass source of truth.
+## Модель
 
-Root:
-- server-side only;
-- не создаётся/удаляется через UI;
-- может управлять delegated admins;
-- не получает Trainer автоматически.
+```text
+Authenticated Account
+├── Personal capabilities
+├── Trainer capability - user-enabled
+└── Root Admin - server-configured
+```
 
-Delegated admins:
-- DB-managed;
-- least privilege;
-- не могут создать Root.
+## Personal
 
-Personal - baseline.
-Trainer = Personal + Trainer.
-Admin = Personal + Admin.
-Trainer + Admin допустимы вместе.
+Каждый authenticated account сохраняет личные тренировки, программы, питание, цели КБЖУ, замеры и Progress независимо от дополнительных capabilities.
 
-Trainer application:
-- короткий manual access request, не professional verification;
-- application history хранится отдельно от current Trainer capability;
-- approve выполняется только Root/super_admin или explicit `trainer_applications.manage`;
-- support_admin read-only;
-- self-review запрещён;
-- approve атомарно активирует Trainer capability и пишет audit event;
-- документы/verified badge/marketplace не входят в первый релиз.
+## Trainer
 
-Текущая convenience-связь `admin => trainer` должна быть удалена без уничтожения реального trainer status.
+- Trainer mode включается пользователем напрямую в Profile/Settings.
+- Нет заявки, beta gate, очереди модерации, approve/reject, документов или статуса «проверенный тренер».
+- Перед включением показывается краткое объяснение возможностей и ответственности.
+- Trainer additive: личный режим остаётся доступен, client workspace открывается отдельно.
+- Не создавать связь тренера с самим собой.
+- Trainer не получает Admin автоматически.
+- Отключение режима не удаляет клиентские данные и не нарушает историю; активные связи обрабатываются предсказуемо и явно.
+- Доступ к клиенту существует только при действующей связи и разрешённом scope.
 
-Trainer может пользоваться AI Coach для собственных Personal данных.
-AI Coach не получает данные клиентов trainer.
-Trainer Copilot - отдельный будущий epic.
+## Root Admin
 
+- Root Admin определяется только server-side конфигурацией владельца/break-glass account.
+- Root нельзя назначить, передать, удалить или создать через UI, API или изменение обычной роли в БД.
+- Root capability независима от Trainer.
+- До первого релиза нет delegated admins, support_admin, super_admin, content_admin и интерфейса управления администраторами.
+- Frontend controls не являются security boundary; все операции проверяются backend.
 
-## Auth integration
-Admin tasks now run after auth tasks `10-13`. Root remains bound to trusted Telegram identity; multi-provider linking cannot transfer Root authority.
+## UI
+
+- Profile показывает отдельные Personal, Trainer и Root/Admin entry points только при фактическом capability.
+- При работе с клиентом интерфейс постоянно показывает имя клиента и способ возврата.
+- Destructive/assignment actions формулируются с именем клиента.
+- Нельзя использовать слово «верифицирован», «проверен» или аналогичное без реальной процедуры проверки.
+
+## Post-release
+
+Delegated/team roles возможны только по отдельной post-release task после появления реальной команды и доказанной потребности.

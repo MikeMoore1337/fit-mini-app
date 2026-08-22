@@ -52,6 +52,33 @@ description: >
 - критические usability states: loading/error/empty/recovery;
 - privacy-sensitive flows: export/deletion/telemetry leakage, если применимо.
 
+## Mobile/TMA continuous gate
+
+Для client-facing YFC task используй `references/MOBILE_TMA_ACCEPTANCE_MATRIX.md` и общий harness task `50A`.
+
+Минимум:
+
+- `360x800`, `390x844`, `430x932`;
+- touch и `hover: none`;
+- no horizontal overflow и touch-target review;
+- keyboard/focus/safe-area/stable viewport;
+- light/dark/reduced motion;
+- reload/background/offline/reconnect, если flow хранит состояние;
+- Mobile Web и mocked TMA parity;
+- desktop regression.
+
+Feature task должна добавить или расширить релевантный continuous smoke. Не создавать второй TMA fixture layer.
+
+Разделяй evidence:
+
+1. automated Mobile Web;
+2. mocked TMA adapter;
+3. real Telegram Android;
+4. real Telegram iOS;
+5. непроверенные среды.
+
+Не использовать skipped tests как способ закрыть platform gap и не писать `проверено на мобильных`, если был только desktop browser с узким viewport.
+
 ## Надёжность тестов
 
 Избегай sleeps и flaky selectors.

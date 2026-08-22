@@ -1,17 +1,16 @@
-# Execution status
+# Execution status v10
 
-User-confirmed state after completion of the Design V2 integration gate:
+User-confirmed state на 22.08.2026:
 
-- [x] Tasks `00-46`
-- [x] `46A -> 46B -> 46B1 -> 46C umbrella`
-- [x] `46C.1 -> 46C.2 -> 46C.3 -> 46C.4 -> 46C.5 -> 46C.6`
-- [x] `46D -> 46E -> owner choice -> 46F -> owner approval`
-- [x] `46G -> owner manual test -> 46H -> owner approval -> 46I -> 46J`
+- [x] tasks `00-48` complete;
+- [x] `46A-46J` and `46C.1-46C.6` complete;
+- [x] Design V2 is current production source of truth;
+- [ ] **current/resume:** `49-trainer-context-comments-experience.md`;
+- [ ] after task `49` commit: `49A` becomes next;
+- [ ] tasks `49A-49C` create and compare alternatives without production changes;
+- [ ] tasks `49D-49F` run only if owner selects a change;
+- [ ] task `49G` closes the design decision and unlocks `50A`;
+- [ ] task `50A` establishes the continuous Mobile Web/TMA gate;
+- [ ] tasks `76-79` close audit, usability, production and release risks.
 
-Next:
-- [ ] 47 Profile, settings and account experience
-
-Do not rerun completed tasks unless a later task explicitly requires a narrow regression check.
-
-Continue with `47-profile-account-experience.md` in a separate Codex session. Do not start task `48`
-automatically.
+Do not rerun tasks `00-48`. Task `49` is the only current resume exception. Do not start `49A` before it is committed, and do not start `50A` before a closed `49G`.

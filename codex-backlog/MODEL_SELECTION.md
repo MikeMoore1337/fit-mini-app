@@ -1,77 +1,32 @@
-# Recommended Codex model by task
+# Model selection - release backlog v10
 
-Final pre-release quality-first policy.
-
-`00-46` и integration gate `46A-46J`, включая `46C.1-46C.6`, завершены и не запускаются повторно.
-
-Важно: этот файл является рекомендацией. Codex не переключает runtime-модель автоматически из текста backlog. Перед запуском отдельной Codex-сессии модель/reasoning нужно выбрать вручную.
+The backlog recommends models but never switches Codex automatically.
 
 ## Default
 
-**GPT-5.6 Sol High** - architecture, security, auth, domain rules, migrations, cross-system behavior, audits, release hardening and high-polish cross-cutting work.
+- **GPT-5.6 Terra High** - focused design/frontend/UX tasks with stable architecture.
+- **GPT-5.6 Sol High** - cross-surface audits, owner decision synthesis, platform/security/data and release gates.
 
-**GPT-5.6 Terra High** - bounded implementation where architecture/contracts are already established.
+## Recommended
 
-## Terra High tasks
+| Tasks | Model |
+|---|---|
+| 49A | Sol High |
+| 49B | Terra High |
+| 49C | Sol High |
+| 49D | Terra High |
+| 49E | Terra High; use Sol High if pilot needs cross-platform architecture changes |
+| 49F | Sol High |
+| 49G | Sol High |
+| 50A | Sol High |
+| 50 | Sol High |
+| 51-54 | Terra High, use Sol High if backend/domain contract changes |
+| 55-57 | Sol High |
+| 58-61 | Terra High / Sol High by actual scope |
+| 62-67 | Sol High |
+| 68-69 | Terra High |
+| 70-72 | Sol High |
+| 73-75 | Terra High; 73/75 may use Sol High for full-stack/platform work |
+| 76-79 | Sol High |
 
-```text
-07  brand-logo-favicon-foundation
-16  food-diary-backend
-17  food-product-library-search
-18  recipes-copying-backend
-20  barcode-lookup-backend
-24  rir-workout-set-foundation
-34  weekly-check-in-foundation
-38  app-shell-navigation
-39  today-dashboard-integrated
-41  nutrition-diary-core-ui
-42  nutrition-discovery-recipes-barcode-ui
-43  progress-experience
-44  programs-exercises-experience
-45  program-selection-wizard-experience
-46  exercise-guide-encyclopedia-experience
-49  trainer-context-comments-experience
-51  weekly-check-in-experience
-52  adaptive-energy-calibration-experience
-53  workout-adaptation-experience
-54  program-history-and-training-blocks-experience
-55  body-priorities-and-anthropometry-experience
-56  data-confidence-product-integration
-57  product-analytics-core-instrumentation
-64  demo-fixtures-ephemeral-interactions
-65  demo-ux-conversion
-90  ai-ui-integration
-```
-
-## Sol High tasks
-
-Все остальные незавершённые tasks, в том числе cross-cutting задачи:
-
-```text
-08  unified theme / Web + TMA sync
-61  cardio gap audit + conditional implementation
-72  Telegram Mini App platform integration/hardening
-73  Approved Design V2 Landing implementation
-74  responsive/accessibility/states cross-product hardening
-```
-
-## Why these five are Sol High
-
-- `08` - cross-platform theme state, persistence, runtime system/Telegram changes and migration from legacy platform color mapping.
-- `61` - audit first, implementation path depends on findings.
-- `72` - cross-product Telegram integration across auth/navigation/theme/safe-area/keyboard/deep-links/product flows.
-- `73` - public commercial surface where visual judgment and polish matter.
-- `74` - product-wide audit/fixes across responsive, accessibility and async states.
-
-## New trainer application tasks
-
-`69A`, `70A` and `71A` require **GPT-5.6 Sol High** because they combine migrations, state transitions, RBAC, concurrency, audit, notifications and cross-context UX.
-
-## Retrospective remediation gate
-
-`46C.6` requires **GPT-5.6 Sol High** because it preserves a security-sensitive production
-network path across auth, configuration, deployment diagnostics and regression tests.
-
-## Borderline tasks
-
-Terra High can sometimes work for `40`, `47`, `48`, `71`, `75`, `80`, `83` when an implementation plan is already fixed and tests strongly guard behavior. Quality-first default remains **Sol High**.
+Do not downgrade owner decision, mobile/TMA integrity, auth, security, privacy, data migrations, domain integrity or release gates.

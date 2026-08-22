@@ -1,26 +1,28 @@
-# Deferred / not in current backlog
+# Deferred / not in first release
 
-## Photos
-- progress-photo feature
-- photo comparison
-- AI/computer-vision body analysis
-- body-fat estimation from photos
+See the post-release priority archive for executable follow-ups.
 
-## AI
-- autonomous writes
-- silent program/calorie changes
-- Trainer Copilot over client data
-- medical diagnosis/treatment
-- sports pharmacology/AAS/SARMs advice
+Not in first release:
 
-## Social/business
-- social feed/network
-- followers/friends
-- ratings
-- trainer marketplace
-- generic messenger
-- video calls
+- progress photos;
+- file import;
+- PWA;
+- monetization;
+- AI Coach;
+- news channel/digest;
+- English localization;
+- wearables;
+- delegated admins;
+- native apps.
 
-## Integrations
-- wearables/Health APIs
-- mandatory paid CDN/video/LLM dependency
+Not planned without separate validation:
+
+- social feed/friends/likes;
+- leaderboards and mandatory streaks;
+- generic health/readiness score;
+- full messenger/video calls;
+- GPS maps;
+- marketplace of trainers/supplements;
+- automatic program changes;
+- AI body analysis from photos;
+- AAS/SARM advice.

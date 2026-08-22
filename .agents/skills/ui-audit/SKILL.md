@@ -299,11 +299,28 @@ Mobile не должен выглядеть как уменьшенный deskto
 
 Не считай визуально красивый интерфейс качественным, если он плохо работает с клавиатурой или непонятен без мыши.
 
+## Mobile Web/TMA parity audit
+
+Для client-facing YFC flow сравни representative Mobile Web и mocked/real TMA на одинаковом viewport.
+
+Проверяй:
+
+- одинаковую hierarchy, typography, geometry, labels и feature behavior;
+- safe-area/keyboard/BackButton как platform differences, а не отдельный дизайн;
+- touch/no-hover и отсутствие stuck states;
+- сохранение route/form/dialog state при theme/viewport/background change;
+- bottom navigation и fixed controls;
+- отсутствие Telegram-only cards/buttons/palette;
+- no horizontal overflow на `360/390`;
+- честное разделение mock и real-device evidence.
+
+Используй `references/MOBILE_TMA_ACCEPTANCE_MATRIX.md`.
+
 ## Намеренные различия платформ
 
 Не путай намеренное различие тем с дефектом.
 
-Если web, mobile или Telegram Mini App используют разные темы, проверяй согласованность через:
+Если платформы намеренно различаются, сначала проверь, что это разрешено product contract. Для YFC Mobile Web и TMA используют одну YFC Light/Dark систему; допустимы только platform-runtime differences. Согласованность проверяй через:
 
 - geometry;
 - typography;

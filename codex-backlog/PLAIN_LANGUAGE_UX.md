@@ -1,10 +1,6 @@
-# Plain-language UX — release contract
+# Plain-language UX - release contract
 
-This is a release-wide language contract, not a separate feature.
-
-## Principle
-
-The default UI is beginner-friendly. Advanced terminology remains available for experienced users.
+Default UI is understandable to a person without prior fitness terminology. Advanced terminology remains available through progressive disclosure.
 
 ## Terminology
 
@@ -13,16 +9,16 @@ The default UI is beginner-friendly. Advanced terminology remains available for 
 | RIR | Повторы в запасе |
 | working set | Рабочий подход |
 | warm-up set | Разминочный подход |
-| drop set | Дроп-сет |
-| superset | Суперсет — два упражнения подряд |
+| drop set | Дроп-сет - объяснить при первом использовании |
+| superset | Суперсет - два упражнения подряд |
 | failure set | Подход до отказа |
 | adherence | Соблюдение плана |
-| progression | Увеличение нагрузки / прогрессия нагрузки |
+| progression | Увеличение нагрузки |
 | deload | Облегчённая неделя |
 | training block | Тренировочный блок |
 | primary muscle | Основная мышечная группа |
 | secondary muscle | Дополнительная мышечная группа |
-| data confidence | Достаточность данных |
+| data confidence | Достаточно ли данных для вывода |
 
 ## RIR control
 
@@ -39,28 +35,32 @@ The default UI is beginner-friendly. Advanced terminology remains available for 
 4+  Осталось много сил
 ```
 
-`RIR` may be secondary: `Повторы в запасе (RIR)`.
+`RIR` допустим вторично: `Повторы в запасе (RIR)`.
 
 ## Beginner workout
 
 Default:
+
 ```text
 Вес
 Повторы
 Готово
 ```
 
-Advanced:
+Advanced disclosure:
+
 ```text
 Дополнительно
   Повторы в запасе
   Тип подхода
   Суперсет
+  Заметка
 ```
 
 ## Analytics
 
 Bad:
+
 ```text
 Training adherence: 83%
 RIR coverage insufficient
@@ -68,8 +68,9 @@ Primary muscle exposure
 ```
 
 Good:
+
 ```text
-Выполнено 10 из 12 тренировок — 83%
+Выполнено 10 из 12 тренировок - 83%
 
 Пока мало данных об интенсивности.
 Повторы в запасе отмечены только в нескольких подходах.
@@ -77,12 +78,44 @@ Good:
 Рабочие подходы по мышечным группам
 ```
 
-## AI Coach
+Use three disclosure levels:
 
-Use ordinary Russian by default. Mirror professional terminology only when the user's own language shows familiarity.
+1. short conclusion;
+2. concrete factual reason;
+3. optional methodology/details.
+
+## Nutrition
+
+Clearly distinguish:
+
+- день заполнен;
+- день заполнен частично;
+- записей нет;
+- пользователь сознательно отметил, что не ел/не отслеживал.
+
+Never describe an unlogged day as `0 ккал`.
+
+## Trainer context
+
+Always show who is being managed:
+
+```text
+Клиент: Иван Петров
+```
+
+Actions name the target:
+
+```text
+Назначить программу Ивану Петрову
+Изменить цели КБЖУ Ивана Петрова
+```
+
+## TMA
+
+Use short action-oriented text. Long explanations belong to Public Web; TMA uses only concise contextual help and exercise technique.
 
 ## Release test
 
-A novice should be able to register, finish onboarding, choose a program, complete a workout,
-understand a progression hint, log food, add measurements, read Progress and ask Coach a basic question
-without external terminology lookup.
+A novice can register, finish onboarding, choose a program, complete a workout, understand a progression hint, log food, add measurements and read Progress without external terminology lookup.
+
+A trainer can directly enable Trainer mode, invite a client, assign a program and review results without interpreting internal role terminology.

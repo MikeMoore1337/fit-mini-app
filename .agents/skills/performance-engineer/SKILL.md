@@ -51,6 +51,21 @@ description: >
 - render churn;
 - virtualization для больших списков при необходимости.
 
+## Mobile Web/TMA performance
+
+Для client-facing YFC flow измеряй отдельно Mobile Web и TMA:
+
+- initial/core-flow JS/CSS/media cost;
+- low-end device main-thread blocking и memory;
+- keyboard/sheet/open-close jank;
+- foreground resume;
+- slow/unstable network;
+- duplicate platform bundles;
+- eager charts/exercise media;
+- fixed/sticky layout work при viewport/safe-area events.
+
+Не считай desktop localhost достаточным baseline. Используй task `50A` smoke и `references/MOBILE_TMA_ACCEPTANCE_MATRIX.md`. Telegram client performance и browser mobile lab data фиксируй отдельно.
+
 ## Web performance budget
 
 Для публичного или пользовательского web-интерфейса, если проект не задаёт другой budget, используй

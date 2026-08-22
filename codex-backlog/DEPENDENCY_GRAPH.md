@@ -1,80 +1,59 @@
-# Dependency graph - simplified
+# Dependency graph - release backlog v10
 
 ```text
-00-46 COMPLETED
-   ↓
-07 Brand logo/favicon foundation
-   ↓
-08 Unified YFC theme / Web + TMA sync
-09 Growth
-10-13 Auth
-14 Onboarding
-   ↓
-15-22 Food
-23-28 Training domain
-   ↓
-29-40 Advanced deterministic foundations
-   ↓
-41-46 Completed core UX
-   ↓
-46A Production quality audit
-46B Security/privacy/data audit
-46B1 Consolidated triage + owner decision
-46C Umbrella
-46C.1 Root/Admin/Trainer boundaries
-46C.2 Measurement state/concurrency
-46C.3 Cross-context recovery
-46C.4 Export/browser privacy
-46C.5 HTTP limits/safe logging
-46C.6 Telegram auth proxy-tunnel preservation
-   ↓
-46D Baseline audit
-   ↓
-46E Visual directions
-   ↓ OWNER CHOICE
-46F Approved specification
-   ↓ OWNER APPROVAL
-46G Production pilot
-   ↓ OWNER MANUAL TEST
-46H Pilot refinement
-   ↓ OWNER APPROVAL
-46I Core UI rollout
-   ↓
-46J Remaining backlog alignment
-   ↓
-47-57 Remaining core + advanced UX (NEXT: 47)
-   ↓
-58 Progression guidance
-59 Notifications
-59A Main Telegram bot support/feedback
-60 Account export/lifecycle
-61 Cardio gap closure
-   ↓
-62-68 Demo
-69 Admin/capability foundation
-69A Trainer application domain + applicant API
-70 Admin operations backend
-70A Trainer application moderation + atomic capability grant
-71 Web Admin Workspace
-71A Trainer application UX + notifications + onboarding
-72 TMA platform integration/hardening
-73 Landing
-74 Responsive/A11y
-75 Performance
-   ↓
-76 AI audit
-77-85 AI provider/policy/knowledge/tool foundations
-86 Training/cardio context
-87 Personalized memory
-88 Evidence/confidence
-89 Conversations/telemetry
-90 AI UI
-91 AI security/evals
-   ↓
-92 Production operational readiness
-   ↓
-93 Final release candidate audit
+completed 00-48
+  -> 49 RESUME current UI refinement
+  -> 49A design brief/delta audit
+  -> 49B three cross-surface visual directions
+  -> 49C owner selection
+
+  KEEP_V2_UNCHANGED
+    -> 49G design source closure
+
+  V2.1 / A / B / C / explicit hybrid
+    -> 49D selected responsive specification
+    -> owner approval
+    -> 49E production-realistic pilot
+    -> owner manual test
+    -> 49F final owner approval
+    -> 49G conditional rollout + backlog alignment
+
+49G
+  -> 50A Mobile/TMA quality gate foundation
+  -> 50 Public knowledge
+  -> 51 Today/week navigation
+  -> 52 Fast nutrition logging
+  -> 53 Workout completion summary
+  -> 54 Training preferences
+  -> 55 Manual targets/history
+  -> 56 Unified weekly review/adaptive calories
+  -> 57 Nutrition reports
+  -> 58 Workout adaptation UX
+  -> 59 Program history UX
+  -> 60 Body priorities UX
+  -> 61 Data confidence integration
+  -> 62 Product analytics
+  -> 63 Progression guidance
+  -> 64 Notifications
+  -> 65 Account lifecycle
+  -> 66 Cardio
+  -> 67 Progress report/print PDF
+  -> 68 Demo foundation
+  -> 69 Demo UX/verification
+  -> 70 Direct Trainer activation
+  -> 71 Minimal Root Admin
+  -> 72 Final TMA hardening
+  -> 73 Landing finalization
+  -> 74 Responsive/a11y/states
+  -> 75 Performance/motion
+  -> 76 Skill-aware retrospective audit
+  -> 77 Real-user usability checkpoint
+  -> 78 Production readiness
+  -> 79 Final audit
 ```
 
-Task `07` is a shared visual dependency: theme, auth, AppShell, TMA and Landing must reuse its canonical assets.
-Tasks `00-46`, `46A-46J` и `46C.1-46C.6` завершены; исходные номера `47-93` не перенумеровываются.
+Parallel before release:
+
+```text
+Telegram core backlog 00-04
+```

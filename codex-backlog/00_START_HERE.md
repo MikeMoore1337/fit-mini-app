@@ -1,82 +1,52 @@
-# Your Fitness Coach - FINAL pre-release backlog
+# Your Fitness Coach - backlog первого публичного релиза v10
 
-Это замороженный backlog до первого релиза живым пользователям.
+Эта версия сохраняет production-качество, но делает lifecycle resource-aware: task сама задаёт минимально необходимый набор ролей/skills, review имеет конечный scope и только `BLOCKER/HIGH` блокируют завершение.
 
-## Уже выполнено
-Tasks `00-46` и integration gate `46A-46J`, включая `46C.1-46C.6`, считаются выполненными и не
-запускаются повторно. Approved Design V2 внедрён на завершённых surfaces, а будущий backlog
-синхронизирован с ним.
+## Текущее состояние
 
-## Выбор модели Codex
+- tasks `00-48` завершены;
+- task `49` остановлена владельцем во время review-driven UI refinement и сейчас является **RESUME** task;
+- её backend/functionality до остановки уже считались выполненными; продолжить нужно только текущий UI refinement по `Resume contract`;
+- Design V2 остаётся текущим production source of truth;
+- после завершения/commit task `49` следующая task - `49A`.
 
-Перед каждой новой Codex-сессией вручную выбрать модель по `MODEL_SELECTION.md`. Backlog не переключает runtime-модель автоматически.
-
-## Следующая задача
-`47-profile-account-experience.md`
-
-Не переходить к task `48` в той же сессии.
-
-## Финальная структура
+## Текущая задача
 
 ```text
-00-46  ✅ COMPLETED
-46A-46J, включая 46C.1-46C.6  ✅ COMPLETED
-47-57  Remaining core + advanced UX
-
-58     Deterministic progression guidance
-59     Notifications / reminders
-59A    Main Telegram bot support / feedback
-60     Account export + lifecycle
-61     Cardio logging gap audit + minimal implementation
-
-62-68  Demo Mode
-69 -> 69A -> 70 -> 70A -> 71 -> 71A  Admin + trainer application activation
-72     Telegram Mini App platform integration / hardening
-73     Landing
-74     Responsive / Accessibility
-75     Performance
-
-76-91  AI Coach - last feature block
-
-92     Production operational readiness
-93     Final release candidate audit
+49-trainer-context-comments-experience.md
 ```
 
-## Brand source of truth
+Не начинать `49A`, пока `49` не завершена. Не сбрасывать текущий worktree целиком.
 
-- reference: `references/brand/your-fitness-coach-logo-reference-light-dark.png`;
-- rules: `BRAND_ASSET_NOTES.md`;
-- implementation task: `tasks/07-brand-logo-favicon-foundation.md`.
+## Design alternatives flow после task 49
 
-Downstream tasks must reuse the canonical logo assets from task `07`, not create their own variants.
+```text
+49A  targeted brief/current-state delta
+49B  exactly three cross-surface directions + renders
+49C  compare V2/A/B/C + owner selection
 
-## Design V2 source of truth
+KEEP_V2_UNCHANGED
+  -> skip 49D-49F
+  -> 49G closure
 
-- integration contract: `DESIGN_V2_INTEGRATION_NOTES.md`;
-- approved specifications: релевантные `../docs/design/*v2*`;
-- approved renders: `../docs/design/references/design-v2/`;
-- implementation source: фактические shared Design V2 tokens/components;
-- Landing implementation task: `tasks/73-landing-premium-refresh.md`.
+V2.1 / A / B / C / explicit hybrid
+  -> 49D final responsive specification
+  -> owner approval
+  -> 49E production-realistic pilot
+  -> owner manual test
+  -> 49F final owner approval
+  -> 49G conditional rollout + backlog alignment
 
-`references/landing/landing-reference-dark.png`, `landing-reference-light.png` и
-`LANDING_REFERENCE_NOTES.md` являются только historical context и не участвуют в visual acceptance.
-Product truth, SEO, accessibility, security и privacy requirements имеют высший приоритет.
+49G -> 50A mobile/TMA quality foundation
+```
 
+## Что изменено в v10
 
-## Единый Web/TMA дизайн
+- `Рекомендуемые skills` = core, `Условные skills` = только по trigger.
+- `Основная роль` + `Дополнительные роли lifecycle` = точный маршрут task.
+- Нет автоматической цепочки researcher/reviewer/QA.
+- Первый independent review - единственный full review; после blocking fix только targeted recheck.
+- `MEDIUM/LOW/NIT/OUT_OF_SCOPE` не блокируют commit и не создают новый backend/data/platform scope.
+- Для tasks `49-79` роли и skills пересмотрены по фактическому контексту каждой task.
 
-Release contract: один YFC visual system для Web, Mobile Web и Telegram Mini App. Web/TMA используют одинаковые YFC Light/Dark palettes и shared components. Telegram отличается только platform integration (auth/initData, safe areas, viewport/keyboard, BackButton, haptics, deep links и shell behavior). Source of truth: `GLOBAL_RULES.md`, task `08` и task `72`.
-
-## Freeze
-После `93` новые фичи до релиза не добавляются.
-Только release blockers, security/privacy, data-loss, broken core flow и severe regressions.
-
-Дальнейшее развитие - по данным и обратной связи живых пользователей.
-
-## Language / beginner UX
-
-Release-wide rule: default UI must be understandable to a beginner.
-
-See `PLAIN_LANGUAGE_UX.md`.
-
-Technical terms may remain in code, but cannot be required knowledge for core flows.
+Подробности: `TASK_EXECUTION_LIFECYCLE.md`, `SKILL_ASSIGNMENT_MATRIX.md`, `BACKLOG_V10_CHANGELOG.md`.

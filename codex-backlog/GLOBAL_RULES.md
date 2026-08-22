@@ -1,337 +1,332 @@
-# GLOBAL_RULES - общие правила выполнения сабтасков
+# GLOBAL_RULES - правила выполнения release backlog v10 resource-aware
 
-Этот файл действует для всех задач из `tasks/`.
-
-## Главный принцип
-
-Один task-файл = одна отдельная Codex-сессия = один законченный логический результат.
-Не переходить к следующему task автоматически.
-
-## Перед началом каждого task
-
-1. Прочитать корневой `AGENTS.md` и соблюдать его как главный репозиторный контракт.
-2. Прочитать этот `GLOBAL_RULES.md`.
-3. Проверить текущий код, релевантный `docs/` и последние коммиты затрагиваемой подсистемы.
-4. Считать текущий код и Git history источником истины по уже завершённым этапам.
-5. Не повторять полный аудит репозитория, если task этого прямо не требует.
-6. `masters/` - справочные полные ТЗ. Не читать их целиком по умолчанию. Открывать только релевантный фрагмент, если текущего task недостаточно для продуктового смысла.
-
-## Архитектурные ограничения
-
-- Не переписывать проект с нуля.
-- Не делать большой рефакторинг ради красоты, если он не нужен текущей задаче.
-- Web и Telegram Mini App остаются двумя поверхностями одного продукта с общей кодовой базой и backend.
-- Web, Mobile Web и Telegram Mini App используют одну YFC Design System и одну фирменную пару YFC Light/YFC Dark; TMA отличается платформенной интеграцией, а не отдельной продуктовой палитрой.
-- Не создавать второй frontend для Telegram или Web.
-- Не дублировать существующие модели, сервисы, формулы или API без доказанной необходимости.
-- Детерминированные расчёты должны иметь один источник истины в доменной/backend-логике.
-- Не менять бизнес-логику, права доступа или privacy semantics ради UI.
-- Не добавлять микросервисы, Redis, поисковый сервер, тяжёлый UI/animation framework или другой инфраструктурный компонент без реальной необходимости.
-- Не добавлять обязательные платные внешние зависимости.
-- Внешние интеграции должны иметь timeout, безопасные ошибки и локальный/продуктовый fallback там, где это предусмотрено task.
-
-## AI MVP - постоянные ограничения
-
-Для текущего AI Coach MVP:
-
-- `AI_FREE_ONLY=true` - обязательный инвариант.
-- Запрещены автоматический paid inference, paid fallback, покупка credits и автопополнение.
-- Promotional/trial/free credits не считаются production free tier при `AI_FREE_ONLY=true`; нужен подтверждённый recurring-free режим.
-- Персонализированный контекст нельзя отправлять provider/model с неподходящей или неизвестной data policy; при сомнении routing работает fail-closed.
-- Provider order по умолчанию: Cloudflare Workers AI -> OrcaRouter -> OpenRouter Free, но порядок конфигурируем.
-- Все LLM calls идут только через backend; provider secrets не попадают во frontend/Telegram/Git.
-- AI Coach read-only; write tools отсутствуют.
-- Streaming, платные embeddings/vector DB, локальная LLM/GPU и обязательный GigaChat не входят в MVP.
-- Tool request нельзя отправлять provider/model без подтверждённой capability `tools`.
-- Исчерпание/недоступность всех бесплатных подходящих providers заканчивается контролируемой недоступностью, а не расходами.
+Этот файл действует для resume task `49`, tasks `49A-49G`, task `50A` и tasks `50-79`.
 
 
+## Полный task lifecycle
 
-## SEO / Organic Growth invariants
+Перед каждой task обязательно прочитать и выполнить `codex-backlog/TASK_EXECUTION_LIFECYCLE.md`.
 
-Для tasks, затрагивающих public Web surface:
+Фраза владельца `полный task lifecycle` ссылается именно на этот контракт. Он выполняет только основную роль, core/conditional skills и дополнительные lifecycle-роли, которые явно применимы к текущей task, с конечными review/QA циклами и одним логическим commit.
 
-- использовать текущие official Google Search Central, Yandex Webmaster, Schema.org и web.dev docs как source of truth;
-- не полагаться на SEO folklore, guaranteed ranking claims или third-party "secret factors";
-- public indexable content должен быть crawlable, canonical и people-first;
-- private/authenticated/user-specific/Coach/Admin data не превращать в поисковые landing pages;
-- `robots.txt` не считать заменой `noindex` для доступной HTML-page;
-- sitemap содержит только canonical URLs, которые действительно должны индексироваться;
-- structured data соответствует visible content; никаких fake ratings/reviews/offers/authors;
-- не создавать doorway/thin/programmatic keyword pages;
-- не массово публиковать low-value AI-generated content;
-- не покупать ссылки, не использовать PBN, link farms, cloaking или spam outreach;
-- fitness/nutrition public content должен быть factual, с source/review process для значимых claims и без медицинских обещаний;
-- Google Search Console/Yandex Webmaster verification credentials не коммитить;
-- client-side behavioral analytics не подключать скрыто как побочный эффект SEO task;
-- public URL changes требуют redirect/canonical migration review;
-- landing/redesign/performance tasks не должны ломать SEO/public foundation из tasks `02-06` и `09`.
+Lifecycle не расширяет scope task и не отменяет owner checkpoints, Trigger/evidence gates, conditional/skip conditions, security/privacy rules или запрет внешних production actions без разрешения.
 
+## Skills: обязательный контракт выбора
 
-## Fitness Online-inspired training product invariants
+Каждая current/pending task начиная с `49` задаёт два уровня skills:
 
-- Развивать собственный Your Fitness Coach, не копировать Fitness Online.
-- Current code first: не дублировать programs/guides/analytics.
-- Program recommendation deterministic/explainable; no LLM selector.
-- RIR optional; no RPE/readiness/fatigue inference without validated model.
-- Primary/secondary muscles без arbitrary contribution coefficients.
-- Analytics formulas/units/missing-data/limitations documented; no pseudoscientific scores.
-- Trainer feedback contextual to workout/exercise; no generic messenger. Telegram only notification/deep-link.
-- Exercise media only own/legal; no Fitness Online assets/text; no mandatory paid CDN/API.
-- Knowledge/exercise pages use reviewed factual source; no mass low-value AI articles.
-- No social feed/friends/followers/ratings/trainer marketplace/video calls/sports pharmacology.
-- Public knowledge/exercise pages never expose private/custom user data.
-- Future AI may use reviewed knowledge/RIR/analytics via separate permissions; no Trainer Copilot here.
+- `Рекомендуемые skills` - core skills primary role. Их открыть в начале.
+- `Условные skills` - подключать **только** после фактического trigger из task. Не открывать заранее.
 
-## Authentication invariants
+Перед работой Codex обязан:
 
-- Не создавать вторую auth-систему: существующая multi-provider architecture является foundation.
-- Один internal account может иметь несколько verified provider identities.
-- Required Web set: Telegram, Google, Яндекс, VK ID.
-- Existing Apple сохранять optional, если корректен.
-- Email/password остаётся feature-flagged и не включается скрыто.
-- Telegram Mini App использует signed `initData` и при valid launch не проходит browser `/login`.
-- Canonical browser auth entry - `/login`.
-- Landing и `/login` используют один premium public visual language; final Landing task синхронизирует auth shell.
-- Auth/private pages `noindex` и не входят в sitemap.
-- Provider credentials только server-side; public config без secrets.
-- Никакого silent merge по email.
-- Identity другого account не переносится автоматически.
-- `next` только allowlisted internal path; open redirect запрещён.
-- Refresh token не хранить в localStorage.
-- Provider protocol details проверять по текущим official docs.
-- Root Telegram identity нельзя перенести через account linking.
+1. прочитать корневой `AGENTS.md`;
+2. открыть только core skills текущей task;
+3. использовать их как профильные рабочие контракты;
+4. открыть conditional skill только если inspection/diff подтверждает его trigger;
+5. не расширять scope только потому, что skill описывает более широкую практику;
+6. для code/diff `independent-reviewer` использовать `$code-reviewer`, для `qa-verifier` - `$qa-engineer`; не требовать дублировать base skill в каждой task; non-code design/decision gate не загружает `$code-reviewer` автоматически;
+7. для обычного review/QA ограничиваться применимым base skill роли и максимум 1-2 профильными skills текущего риска.
 
-## Account capabilities и Admin model
+Маршрутизация по фактическому scope:
+
+- `$mobile-engineer` + `$frontend-engineer` - нормальная основа client-facing smartphone UI.
+- `$telegram-engineer` нужен только при изменении Telegram-specific API/runtime/adapter/initData/BackButton/safe-area/deep-link/real-client behavior. То, что shared UI показывается внутри TMA, само по себе не является trigger.
+- `$accessibility-engineer` подключается отдельно при сложном/new interaction, подтверждённом accessibility finding или в dedicated hardening task. Базовые labels/focus/keyboard/touch требования остаются обязанностью frontend/mobile implementation.
+- `$fitness-domain-reviewer` нужен, когда меняются fitness/nutrition/cardio/anthropometry формулы, семантика данных или интерпретация. Простое отображение уже утверждённых значений не требует отдельного доменного прохода.
+- `$data-engineer` нужен при schema/migration/query/invariant scope; `$backend-engineer` - при реальном backend/API/domain change. Не подключать их только из-за теоретического edge case.
+- `$security-engineer`/`$privacy-engineer` подключаются при соответствующей trust/data boundary или dedicated audit, а не на каждый authenticated экран.
+- `$product-designer` нужен для реального UX/visual decision; `$ui-audit` - для dedicated visual audit/hardening, а не каждого UI diff.
+- `$solution-architect` нужен при cross-system contract conflict/architecture decision, а не для обычной реализации существующего паттерна.
+
+При конфликте соблюдать приоритет: безопасность и приватность -> фактическое поведение продукта -> текущая task -> профильные skills.
+
+## Главный процесс
+
+- Один task-файл = одна отдельная Codex-сессия = один законченный логический результат.
+- Работать только в `feature/yfc-platform-v2`.
+- Не переходить к следующему task автоматически.
+- Перед началом прочитать корневой `AGENTS.md`, этот файл, lifecycle и только текущую task.
+- Tasks `00-48` подтверждены как завершённые. Task `49` сейчас находится в состоянии **RESUME** после остановленной review-итерации; source of truth для продолжения - её `Resume contract` и текущий незакоммиченный worktree.
+- До завершения task `49` не начинать `49A`. После commit task `49` следующая task - `49A`. Tasks `49A-49G` закрывают design alternatives gate; только после `49G` task `50A` создаёт общий mobile/TMA gate.
+- Для task `49` сначала классифицировать текущий diff. Не продолжать review-induced backend/data/platform scope из non-blocking findings.
+- Перед client-facing task прочитать `MOBILE_TMA_FIRST_CONTRACT.md` и применимые пункты `.agents/references/MOBILE_TMA_ACCEPTANCE_MATRIX.md`.
+- Не повторять полный аудит репозитория без прямого требования task.
+- `masters/`, старые changelog и выполненные task-файлы являются историческим контекстом и не задают pending order.
+
+### Роли lifecycle
+
+`Основная роль` и `Дополнительные роли lifecycle` в task являются точным маршрутом. Не строить автоматическую цепочку `researcher -> reviewer -> QA` и не создавать отдельного агента на каждый skill.
+
+Если следующая task сама является dedicated review/approval gate, не дублировать полный аналогичный review в предыдущей task без явного требования. Примеры: `49B -> 49C`, `49E -> 49F`, `78 -> 79`.
+
+### Blocking policy review/QA
+
+- Только `BLOCKER/HIGH` блокируют завершение.
+- `MEDIUM/LOW/NIT/OUT_OF_SCOPE` не блокируют commit и не открывают новый workstream.
+- Результат `MEDIUM, но коммитить нельзя` запрещён: если task действительно неприемлема, finding должен быть `HIGH/BLOCKER` с воспроизводимым обоснованием.
+- Первый independent review - единственный полный review pass. После blocking fix выполняется только targeted recheck закрытого набора finding IDs.
+- Обычная task: максимум full review + один targeted recheck; QA - один pass + один targeted recheck при blocking defect. Дополнительные циклы только в исключениях lifecycle.
+- Non-blocking finding, требующий migration/schema/API/platform architecture/new dependency/new role/new skill, всегда уходит в follow-up/owner decision.
+
+## Active design source и alternatives gate
+
+- Перед любой visual work прочитать `ACTIVE_DESIGN_SOURCE.md`.
+- До явного owner approval и закрытия task `49G` production source остаётся Design V2.
+- Tasks `49A-49C` не меняют production UI.
+- Tasks `49D-49F` conditional и выполняются только для выбранного V2.1/new direction/explicit hybrid.
+- Owner checkpoint нельзя проходить по предположению, похвале или отсутствию замечаний.
+- Task `49G` оставляет ровно один active production design source и только затем разрешает task `50A`.
+- Новые skills улучшают качество exploration, но не являются доказательством, что V2 нужно заменить.
+- Для tasks `49A-49G` обязателен `DESIGN_ALTERNATIVES_EXPLORATION_CONTRACT.md`.
+- Landing оценивается как две самостоятельные responsive compositions: desktop и mobile.
+- TMA остаётся той же mobile product system, а не отдельным visual direction.
+
+## Архитектура
+
+- Не переписывать проект с нуля и не проводить большой рефакторинг ради красоты.
+- Web, Mobile Web и Telegram Mini App используют общую кодовую базу, backend и YFC Design System.
+- TMA отличается платформенной интеграцией, а не отдельной палитрой, компонентами или бизнес-логикой.
+- Не создавать второй frontend, вторую auth-систему или параллельные доменные модели.
+- Детерминированные расчёты имеют один источник истины в backend/domain logic.
+- Не добавлять Redis, микросервисы, отдельный search server, тяжёлую chart/animation framework или обязательную платную зависимость без доказанной необходимости.
+- Внешние интеграции обязаны иметь timeout, ограниченные повторы, безопасные ошибки и предусмотренный fallback.
+
+## Граница первого релиза
+
+До task `79` не входят и не могут становиться скрытыми зависимостями:
+
+- AI Coach и AI provider infrastructure;
+- английская локализация;
+- импорт программ из XLSX/CSV/TXT/DOCX;
+- новостной канал и редакционный конвейер;
+- progress photos;
+- PWA-installability;
+- monetization/entitlements;
+- wearables/Health/Strava;
+- delegated admin hierarchy;
+- native mobile application.
+
+Эти направления находятся только в отдельном post-release backlog. В release UI нельзя показывать фиктивные, locked или `coming soon` entry points для них.
+
+## Product core
+
+Первый релиз оптимизирует связный цикл:
+
+```text
+понять план на сегодня
+-> быстро выполнить тренировку
+-> быстро записать питание
+-> увидеть фактическую динамику
+-> при необходимости работать с тренером
+```
+
+- Today показывает одно главное действие и компактный недельный контекст, но не превращается в notification feed.
+- Workout logging по умолчанию остаётся простым: вес, повторы, завершение подхода. RIR, set type и supersets раскрываются дополнительно.
+- Active workout должен переживать ожидаемые сетевые сбои без потери подтверждённых действий.
+- Nutrition prioritizes recent/favorites/templates/quick add и различает полный, неполный, отсутствующий и осознанно не заполненный день.
+- Weekly review и adaptive calorie proposal являются одним пользовательским процессом; изменение цели требует явного подтверждения.
+- Progress, nutrition reports и downloadable report являются одной информационной архитектурой, а не конкурирующими верхнеуровневыми разделами.
+- Нет social feed, friends, followers, ratings, trainer marketplace, generic messenger, video calls, GPS tracks или универсального readiness score.
+
+## Public knowledge и SEO
+
+- Полная база знаний живёт на Public Web.
+- TMA не содержит самостоятельной библиотеки, article index, long-form reader или navigation entry на `/knowledge`.
+- В TMA допустимы короткие контекстные объяснения, `Что это?`, техника упражнения и переход на public source только из уместного контекста.
+- Public content people-first, reviewed, source-linked и не содержит диагнозов, лечения, спортивной фармакологии или гарантированных результатов.
+- Draft/private/user-specific pages не индексируются.
+- Sitemap содержит только canonical published URLs.
+- Structured data соответствует видимому содержимому; запрещены fake ratings, reviews, offers и authors.
+- Не создавать doorway/thin/programmatic pages и не публиковать массовый low-value generated content.
+- Изменение public URL требует redirect/canonical review.
+
+## Auth и account capabilities
 
 ```text
 Authenticated Account
 ├── Personal capabilities
-├── Trainer capability (optional)
-├── Admin capability (optional)
-└── Root Admin (server-configured)
+├── Trainer capability - включается пользователем напрямую
+└── Root Admin - только server-configured owner/break-glass
 ```
 
-- Personal functionality - baseline authenticated account.
-- Trainer additive: trainer сохраняет свои тренировки, программы, питание, КБЖУ, progress, measurements и AI Coach для собственного разрешённого context.
-- Не создавать self trainer-client relationship ради личных данных trainer.
-- Admin additive и независим от Trainer.
-- Admin не получает Trainer автоматически.
-- Trainer + Admin допустимы одновременно при независимом назначении.
-- `ADMIN_TELEGRAM_USER_IDS` - server-side source of truth для Root Admin/owner/break-glass.
-- Root нельзя создать/удалить/назначить через UI/API/БД.
-- Delegated admins назначаются отдельно и работают по least privilege.
-- Frontend visibility не является security boundary.
-- AI Coach не является Trainer Copilot и не получает client-base данные trainer.
+- Personal capabilities доступны каждому authenticated account.
+- Trainer mode включается из Profile/Settings сразу, без заявки, очереди, беты, ручной модерации, документов или обещания проверки квалификации.
+- Trainer capability additive: тренер сохраняет все личные возможности и отдельно получает client workspace.
+- Не создавать self trainer-client relationship ради личных данных тренера.
+- При работе с клиентом имя и контекст клиента постоянно видимы; опасные действия явно называют клиента.
+- Client data доступны только по действующей связи и разрешённому scope.
+- Root Admin определяется server-side (`ADMIN_TELEGRAM_USER_IDS` или актуальный эквивалент), не создаётся и не назначается через UI/API/БД.
+- До релиза нет delegated admins, support_admin/super_admin hierarchy и управления администраторами.
+- Admin и Trainer независимы: Root не получает Trainer автоматически, Trainer не получает Admin.
+- Frontend visibility никогда не является security boundary.
 
-## Demo Mode - постоянные ограничения
+## Authentication invariants
 
-- Demo - отдельный application state, не общий database demo-user.
-- Demo data/edits временные и не становятся обычными persistent user records.
-- Fixtures не содержат персональные или production user data.
-- AI Coach в demo полностью недоступен: no chat, no provider calls, no demo AI quota.
-- Identity-bound/external-side-effect операции блокируются: invitations, account linking,
-  notifications, payments/admin и writes к реальным пользователям.
-- UI hiding не является единственной security boundary; применимые ограничения enforce на backend.
-- Demo использует тот же app shell/design system и не является вторым приложением.
-- Conversion: сначала дать попробовать ценное действие, затем предлагать auth при попытке сохранить.
-- Demo -> auth не импортирует fixtures и не перезаписывает real account data автоматически.
-- Demo -> Telegram использует existing canonical continuation/deep-link flow; demo state не является Telegram identity.
+- Один internal account может иметь несколько verified identities.
+- Required browser providers: Telegram, Google, Яндекс, VK ID. Existing Apple сохраняется optional, если корректен.
+- Email/password остаётся feature-flagged и не включается скрыто.
+- Valid TMA launch использует signed `initData` и не показывает второй browser login.
+- Canonical browser auth entry - `/login`.
+- Никакого silent merge по email или автоматического переноса identity другого account.
+- `next` только allowlisted internal path; open redirect запрещён.
+- Provider credentials только server-side; refresh token не хранится в localStorage.
+- Root authority нельзя перенести через account linking.
 
-## Безопасность и приватность
+## Mobile/TMA-first delivery gate
 
-- Все новые endpoint'ы соблюдают текущие auth/RBAC/ownership правила.
-- Не доверять идентичности пользователя из frontend или LLM, если она уже определяется серверной сессией/auth context.
-- Не логировать секреты, токены, Telegram init data, лишние персональные данные и полный приватный пользовательский контент.
-- Не раскрывать внутренние stack traces и сырые upstream errors пользователю.
-- Не ослаблять TLS verification.
-- Не использовать небезопасный HTML rendering.
+Для Personal и client-facing Trainer flows смартфон является основной средой использования. Каждый pending feature task обязан закрывать свой mobile/TMA acceptance сразу, а не оставлять очевидные regressions до task `72`.
+
+Минимум:
+
+- `360x800`, `390x844`, `430x932`, touch и `hover: none`;
+- no horizontal overflow;
+- практически удобные touch targets;
+- keyboard не перекрывает active field, primary action и recovery;
+- fixed/sticky UI учитывает safe area/content safe area;
+- light/dark, loading/error/offline/long-content/reduced-motion;
+- recoverable state переживает reload/background/temporary network failure, если это релевантно;
+- feature-specific scenario добавлен или подтверждён в continuous mobile/TMA smoke task `50A`;
+- real Telegram client verification заявляется только если фактически выполнена.
+
+Coach/Admin сложные рабочие пространства могут быть desktop-first. Это должно быть явно указано в task; mobile smoke остаётся обязательным, а Admin не появляется в TMA без отдельного решения.
+
+## TMA product contract
+
+TMA оптимизирован для быстрых мобильных действий:
+
+- открыть Today;
+- начать/продолжить/завершить тренировку;
+- отметить подходы и отдых;
+- быстро записать питание;
+- посмотреть краткий Progress/итог;
+- открыть технику упражнения;
+- перейти к профилю и необходимым настройкам.
+
+Не добавлять в TMA:
+
+- отдельную базу знаний;
+- длинное чтение статей как основной сценарий;
+- дублирующий Telegram-only frontend;
+- отдельную Telegram product palette;
+- platform controls, дублирующие понятные shared controls без UX-причины.
+
+## Demo Mode
+
+- Demo использует ровно подготовленные безопасные сценарии из tasks `68-69`.
+- Demo - отдельное временное application state, не общий database demo-user.
+- Fixtures не содержат production/user data.
+- Demo edits не импортируются в реальный аккаунт.
+- Invitations, account linking, product notifications, Admin actions и writes к реальным пользователям блокируются server-side.
+- Demo использует тот же UI и не становится вторым приложением.
+
+## Data confidence и fitness safety
+
+- Не делать сильных выводов из редких данных и не изобретать magic score.
+- Anthropometry сравнивает пользователя прежде всего с собой; окружность не объявляется размером отдельной мышцы.
+- Не интерполировать отсутствующие замеры и не считать пропущенное питание нулём.
+- Strength volume и cardio metrics не смешиваются.
+- Program selection, progression, workout adaptation, analytics и calorie calibration детерминированы и объяснимы.
+- Не добавлять diagnosis/treatment, sports pharmacology, body-photo analysis или autonomous program/nutrition changes.
+
+## Privacy и безопасность
+
+- Все endpoint'ы соблюдают current auth/RBAC/ownership.
+- Не доверять user identity или target user id из frontend, если контекст определяется серверной сессией.
+- Не логировать secrets, tokens, Telegram init data, полные private notes, food contents, exact measurements или trainer comments без отдельной доказанной необходимости.
+- Не показывать stack traces и raw upstream errors.
+- Не ослаблять TLS verification и не использовать unsafe HTML rendering.
+- Export/delete/report links не раскрывают чужие данные и имеют ограниченный lifecycle.
 
 ## Миграции и данные
 
-- Использовать существующий механизм миграций.
-- Не удалять пользовательские данные без прямого требования.
-- Не генерировать выдуманный backfill.
-- Индексы добавлять только с понятной причиной и реальным query pattern.
+- Использовать существующий Alembic/data migration mechanism.
+- Не удалять пользовательские данные и не генерировать выдуманный backfill без прямого требования.
+- Исторические nutrition targets имеют период действия; отчёты используют цель, действовавшую в конкретную дату.
+- Индексы добавляются только под реальный query pattern.
+- File/artifact generation ограничена по размеру и времени, хранение временное и документированное.
 
-## UX/UI
+## UX и Design V2
 
-Целевое направление редизайна:
+Целевое направление:
 
 ```text
 premium sport-tech
-graphite / warm neutral / lime
-strong typography
-clear hierarchy
-fewer borders
+warm neutral / graphite / lime
+strong hierarchy
+one primary action
 fewer nested cards
+mobile-first interaction
 purposeful motion
-mobile-first interactions
 ```
 
-## Brand identity invariants
+- Default UI понятен новичку; профессиональные детали раскрываются постепенно.
+- Не передавать смысл только цветом.
+- Поддерживать keyboard, focus, labels, contrast и `prefers-reduced-motion`.
+- Loading, empty, partial, error, offline и long-data states являются частью acceptance criteria.
+- Не добавлять локальные palette/card/button systems поверх shared Design V2.
 
-- Canonical visual reference: `references/brand/your-fitness-coach-logo-reference-light-dark.png`.
-- Production logo source of truth is created in task `07`; downstream tasks must reuse it.
-- Full logo has light/dark transparent SVG variants.
-- Favicon uses only the mark, never the `YOUR FITNESS COACH` wordmark, and must remain readable at 16x16/32x32.
-- Do not embed the raster reference inside production SVG, do not keep its white/dark background or glow, and do not add external font/network dependencies to logo SVG.
-- Auth, AppShell, Telegram and Landing must not create independent logo variants.
-- A downstream redesign may change placement/size, but not redesign the approved mark without an explicit owner decision.
+## Plain-language contract
 
-При этом:
-- Web и TMA используют одинаковые фирменные YFC Light/YFC Dark colors и semantic tokens;
-- Telegram `colorScheme` выбирает YFC Light или YFC Dark, но `themeParams` не создают отдельную продуктовую palette;
-- Mobile Web и TMA при одинаковом viewport используют одинаковую типографику, geometry, spacing, components и visual hierarchy; различия допустимы только из-за safe area, viewport/keyboard, BackButton, haptics, auth/deep links и других реальных platform APIs;
-- desktop Web может иметь другую responsive-композицию, не становясь отдельным дизайном;
-- mobile-first не означает растянутую mobile-композицию на desktop;
-- lime использовать дозированно как акцент;
-- не превращать интерфейс в glassmorphism/neon/crypto-style;
-- motion должен улучшать feedback, а не мешать;
-- учитывать `prefers-reduced-motion`;
-- не передавать смысл только цветом.
+Primary labels:
 
-## Артефакты аудита
+| Internal term | User-facing Russian |
+|---|---|
+| RIR | Повторы в запасе |
+| working set | Рабочий подход |
+| warm-up set | Разминочный подход |
+| drop set | Дроп-сет - объяснить при первом использовании |
+| superset | Суперсет - два упражнения подряд |
+| adherence | Соблюдение плана |
+| deload | Облегчённая неделя |
+| progression | Увеличение нагрузки |
+| data confidence | Достаточно ли данных для вывода |
 
-Audit screenshots, traces, временные отчёты и другие рабочие материалы хранить только в `.artifacts/` и не коммитить. Audit findings не переносить в публичный `docs/`, если это не требуется для долгосрочной технической документации.
+Не показывать raw internal English values только потому, что они существуют в коде.
 
 ## Проверки и Git
 
-После завершения task:
+После task:
 
-1. Запустить только связанные с ним unit/API/component/e2e/typecheck/lint/build проверки согласно `AGENTS.md`.
-2. Не заявлять о проверке, если она реально не запускалась.
-3. Проверить `git diff`.
-4. Исправить подтверждённые регрессии текущего scope.
-5. Не запускать полный suite автоматически, если `AGENTS.md` требует отдельного решения владельца.
-6. Сделать один логический commit, если task изменяет tracked files.
-7. Для read-only audit без tracked changes commit не создавать.
+1. Запустить только связанные unit/API/component/e2e/typecheck/lint/build проверки по `AGENTS.md`.
+2. Не заявлять проверку, если она фактически не запускалась.
+3. Проверить `git diff`, migrations и config changes.
+4. Исправить все `BLOCKER/HIGH` текущего scope; `MEDIUM/LOW/NIT/OUT_OF_SCOPE` не использовать как основание расширить task.
+5. После blocking fix повторить только affected checks/recheck, а не полный audit.
+6. Не запускать полный suite автоматически, если его не требует task/доказанный риск.
+7. Создать один логический commit при tracked changes, даже если остались документированные non-blocking findings.
+8. Для read-only audit без изменений commit не создавать.
 
-## Финальный отчёт каждого task
+Финальный отчёт содержит: reused, changed, key files, migrations/config, exact checks, limitations/follow-ups и commit hash.
 
-Кратко указать:
-- что изменено;
-- ключевые изменённые файлы;
-- миграции, если были;
-- реально запущенные проверки и результат;
-- известные ограничения/отложенные вопросы;
-- hash commit, если создан.
+## Beginner release acceptance
 
-## Backlog v3 product invariants
+Новичок без внешнего поиска терминов способен пройти:
 
-- Core app must be fully usable with AI disabled; AI is implemented near the end.
-- Deterministic backend first for calculations, program selection, workout adaptation, analytics, sufficiency and energy calibration; AI explains/synthesizes.
-- No strong conclusions from sparse data; no magic confidence score.
-- Anthropometry compares user mainly with self/priorities; circumference is not a single-muscle measurement; no ideal-body score.
-- No progress-photo storage/comparison, computer vision, body-photo analysis or AI image analysis in current backlog.
-- AI authoritative facts come from backend tools, not durable text memory. Durable memory stores stable preferences only and is user-controlled.
-- Strict per-account AI isolation; trainer personal AI is self-only; Trainer Copilot is out of scope.
-- First AI release is read-only; no autonomous program/nutrition/profile writes.
-- Product analytics must not contain food contents, exact measurements/macros, trainer comments, AI conversation text, tokens/secrets or unnecessary raw IDs.
+```text
+registration
+-> onboarding
+-> choose program
+-> complete workout
+-> log food
+-> add measurement
+-> understand Progress
+```
 
-## Final pre-release scope freeze
+Тренер способен напрямую включить Trainer mode, пригласить тестового клиента, назначить программу, увидеть выполнение и оставить контекстный комментарий.
 
-This backlog is the frozen feature scope for the first real-user release.
+## Scope freeze
 
-After task `93`, do not add pre-release product features unless a finding is:
-- a security/privacy issue;
-- a data-loss/corruption risk;
-- a broken core user journey;
-- a legal/release blocker;
-- a severe accessibility/performance regression.
+После task `79` до решения о релизе добавляются только исправления:
 
-Everything else goes to the post-release discovery backlog and should be prioritized from real user behavior and feedback.
+- security/privacy;
+- data loss/corruption;
+- broken core journey;
+- legal/release blocker;
+- severe accessibility/performance regression.
 
-### Explicitly deferred
-- progress photos and all image/body-photo analysis;
-- wearables/Health/Strava;
-- social feed/friends/followers;
-- trainer marketplace;
-- generic messenger/video calls;
-- Trainer Copilot;
-- autonomous AI writes;
-- AI-triggered reminders;
-- complex readiness/recovery scores;
-- advanced sports periodization beyond current blocks.
+Все остальные идеи попадают в post-release backlog и приоритизируются по фактическому поведению и обратной связи пользователей.
 
-## Plain-language UX and fitness terminology
+## Выполненные tasks и новые skills
 
-The default user-facing language must be understandable to a person with no prior fitness terminology knowledge.
-
-Internal domain/API names may remain technically precise, but a user must not need English jargon,
-abbreviations or professional coaching vocabulary to complete core flows.
-
-### Preferred user-facing wording
-
-| Technical / advanced term | Primary UI wording |
-|---|---|
-| RIR | Повторы в запасе |
-| RIR 2 | Осталось примерно 2 повтора |
-| Working set | Рабочий подход |
-| Warm-up set | Разминочный подход |
-| Drop set | Дроп-сет — explain when first used |
-| Superset | Суперсет — два упражнения подряд |
-| Adherence | Соблюдение плана |
-| Deload | Облегчённая неделя / период сниженной нагрузки |
-| Progression | Увеличение / прогрессия нагрузки |
-| Training block | Тренировочный блок |
-| Primary muscle | Основная мышечная группа |
-| Secondary muscle | Дополнительная мышечная группа |
-| Data confidence / coverage | Достаточно ли данных для вывода |
-
-Do not expose raw internal English values merely because they exist in code.
-
-### RIR
-
-Primary label: `Повторы в запасе`.
-
-Explain:
-`Сколько повторов вы ещё могли бы сделать с хорошей техникой после завершения подхода?`
-
-Options:
-- `0 — больше не смог бы`
-- `1 — ещё примерно 1 повтор`
-- `2 — ещё примерно 2 повтора`
-- `3 — ещё примерно 3 повтора`
-- `4+ — осталось много сил`
-
-`RIR` may appear secondarily as `Повторы в запасе (RIR)`.
-It must not be the only beginner-facing label.
-
-### Progressive disclosure
-
-Default workout logging stays simple:
-`Вес -> Повторы -> Готово`.
-
-Advanced fields such as repetitions in reserve, set type, drop set, superset and failure
-must be optional/progressively disclosed when possible.
-
-### Contextual help
-
-For a non-obvious concept use:
-- clear Russian primary label;
-- one short helper sentence;
-- optional `Что это?` link/dialog to reviewed knowledge.
-
-### Analytics
-
-Do not show raw text such as `RIR coverage insufficient`, `adherence`, `primary exposure` or `confidence score`.
-
-Prefer factual language:
-- `Выполнено 10 из 12 запланированных тренировок — 83%`;
-- `Пока мало данных об интенсивности: повторы в запасе отмечены только в нескольких подходах`;
-- `Рабочие подходы по мышечным группам`;
-- `Данных пока мало для уверенного вывода`.
-
-### AI Coach
-
-Coach defaults to natural Russian and unexplained jargon is prohibited.
-If the user explicitly uses professional terminology, Coach may mirror it.
-
-### Beginner release acceptance criterion
-
-A novice must be able to complete:
-
-`onboarding -> program -> workout -> nutrition -> measurements -> progress -> basic AI Coach question`
-
-without searching the web for the meaning of a fitness abbreviation or English term.
+Tasks `00-48` не выполнять повторно из-за обновления `.agents` или нового design exploration. Task `49` является единственным текущим resume-исключением: продолжить существующий worktree строго по её `Resume contract`, затем считать её завершённой. После этого completed range становится `00-49`. Глубокая проверка фактического результата выполняется task `76`; реальные usability sessions - task `77`; production readiness - task `78`; final go/no-go - task `79`. Новый skill сам по себе не разрешает refactor без подтверждённого `BLOCKER/HIGH` или прямого требования task.

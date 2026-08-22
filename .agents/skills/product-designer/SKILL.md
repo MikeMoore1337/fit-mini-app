@@ -241,6 +241,17 @@ Premium означает restrained + precise + confident, а не "дорого
 
 ## Mobile
 
+Для Your Fitness Coach Personal/client flow проектируй smartphone-first. Учитывай не абстрактный phone mockup, а использование в зале:
+
+- одна рука и короткие паузы;
+- нестабильная сеть и частое сворачивание;
+- быстрый ввод чисел;
+- повторное касание;
+- яркий/тёмный свет;
+- необходимость сразу видеть текущее и следующее действие.
+
+Mobile Web и TMA должны выглядеть как один продукт. Telegram-specific safe areas/BackButton/haptics не являются основанием для отдельной palette, typography или feature components. Desktop может иметь более плотную композицию для Coach/Admin, но это явное решение, а не автоматический приоритет.
+
 Mobile - отдельная композиция, а не уменьшенный desktop.
 
 Для мобильной версии отдельно решай:
