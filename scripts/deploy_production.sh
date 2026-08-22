@@ -64,6 +64,30 @@ echo "Running the external deployment smoke check"
 python3 scripts/check_deployment.py "$BASE_URL"
 echo "External smoke check completed in $((SECONDS - stage_started))s"
 
+echo "Checking the public Telegram bot profile"
+set +e
+docker compose run --rm --no-deps bot \
+  python -m fitminiapp_bot.profile_sync check
+profile_check_status=$?
+set -e
+
+case "$profile_check_status" in
+  0)
+    echo "Public Telegram bot profile already matches the canonical contract"
+    ;;
+  1)
+    echo "Applying the bounded public Telegram bot profile diff"
+    docker compose run --rm --no-deps bot \
+      python -m fitminiapp_bot.profile_sync apply
+    echo "Public Telegram Bot API fields were applied and read back"
+    ;;
+  *)
+    echo "Public Telegram bot profile check failed safely" >&2
+    exit "$profile_check_status"
+    ;;
+esac
+echo "Public Telegram bot profile synchronization completed; review owner actions in the reports"
+
 install -d -m 700 .artifacts/deployments
 printf '%s\n' "$TARGET_SHA" > .artifacts/deployments/last-successful-revision
 echo "Production deployment completed: $TARGET_SHA"
