@@ -4,6 +4,7 @@ import { api } from '../../shared/api/client';
 import type { ProgressSummary, TrainingAnalytics } from '../../shared/api/types';
 import { queryKeys } from '../../shared/queryKeys';
 import { ContextualHelp } from '../../shared/ui/ContextualHelp';
+import { formatCalendarDate } from '../../shared/dateTime';
 import {
   Badge,
   EmptyState,
@@ -46,7 +47,7 @@ function formatNumber(value: number, maximumFractionDigits = 1): string {
 }
 
 function formatDate(value: string, withYear = false): string {
-  return new Date(`${value}T12:00:00`).toLocaleDateString('ru-RU', {
+  return formatCalendarDate(value, {
     day: 'numeric',
     month: 'short',
     ...(withYear ? { year: 'numeric' } : {}),

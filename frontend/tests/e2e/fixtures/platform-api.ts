@@ -1,10 +1,12 @@
 import type { Page, Route } from '@playwright/test';
 
-type WorkoutStatus = 'planned' | 'in_progress';
+type WorkoutStatus = 'planned' | 'in_progress' | 'completed' | 'none';
 
 export interface PlatformApiOptions {
   browserSession?: boolean;
   workoutStatus?: WorkoutStatus;
+  activeProgram?: boolean;
+  weeklyReviewAvailable?: boolean;
 }
 
 export interface PlatformApiController {
@@ -47,8 +49,14 @@ export async function installPlatformApi(
   options: PlatformApiOptions = {},
 ): Promise<PlatformApiController> {
   const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Moscow' });
+  const todayDate = new Date(`${today}T12:00:00Z`);
+  const contextDate = new Date(todayDate);
+  const contextIsCompleted = todayDate.getUTCDay() === 0;
+  contextDate.setUTCDate(todayDate.getUTCDate() + (contextIsCompleted ? -1 : 1));
+  const contextDay = contextDate.toISOString().slice(0, 10);
   let offline = false;
   let workoutStatus = options.workoutStatus ?? 'planned';
+  const activeProgram = options.activeProgram ?? true;
   let authInitCalls = 0;
   let patchCalls = 0;
   let setVersion = 1;
@@ -72,7 +80,7 @@ export async function installPlatformApi(
     day_number: 1,
     week_number: 1,
     started_at: workoutStatus === 'in_progress' ? `${today}T10:00:00` : null,
-    completed_at: null,
+    completed_at: workoutStatus === 'completed' ? `${today}T11:00:00` : null,
     exercises: [
       {
         id: 101,
@@ -101,6 +109,16 @@ export async function installPlatformApi(
     ],
   });
 
+  const contextWorkout = {
+    id: 43,
+    scheduled_date: contextDay,
+    scheduled_time: '09:00:00',
+    title: 'Контекст недели',
+    status: contextIsCompleted ? 'completed' : 'planned',
+    day_number: 2,
+    week_number: 1,
+  };
+
   const progressSummary = {
     user_id: 7,
     period_days: 30,
@@ -108,11 +126,11 @@ export async function installPlatformApi(
     period_end: today,
     training: {
       planned_workouts: 1,
-      completed_workouts: 0,
+      completed_workouts: workoutStatus === 'completed' ? 1 : 0,
       frequency_per_week: 0,
       volume_kg: 0,
       new_personal_records: 0,
-      last_completed_workout_on: null,
+      last_completed_workout_on: workoutStatus === 'completed' ? today : null,
       next_workout: null,
     },
     nutrition: {
@@ -176,7 +194,7 @@ export async function installPlatformApi(
           first_name: 'Анна',
           is_coach: false,
           is_admin: false,
-          has_active_program: true,
+          has_active_program: activeProgram,
           has_workout_history: false,
           onboarding: { status: 'complete', required_fields: [], missing_fields: [] },
           profile: {
@@ -194,7 +212,50 @@ export async function installPlatformApi(
         },
       });
     }
-    if (path.endsWith('/workouts/today')) return route.fulfill({ json: workout() });
+    if (path.endsWith('/workouts/today')) {
+      if (workoutStatus === 'completed' || workoutStatus === 'none') {
+        return route.fulfill({
+          status: 404,
+          json: { detail: 'На сегодня тренировка не назначена' },
+        });
+      }
+      return route.fulfill({ json: workout() });
+    }
+    if (path.endsWith('/workouts/week')) {
+      if (!activeProgram) return route.fulfill({ json: [] });
+      return route.fulfill({
+        json: [...(workoutStatus === 'none' ? [] : [workout()]), contextWorkout],
+      });
+    }
+    if (path.endsWith('/workouts/schedule')) {
+      return route.fulfill({ json: contextIsCompleted ? [] : [contextWorkout] });
+    }
+    if (path.endsWith('/workouts/history')) {
+      return route.fulfill({
+        json: contextIsCompleted
+          ? [
+              {
+                ...contextWorkout,
+                started_at: `${contextDay}T08:00:00`,
+                completed_at: `${contextDay}T09:00:00`,
+                completed_sets: 1,
+                volume_kg: 40,
+                exercises: [],
+                adaptations: [],
+              },
+            ]
+          : [],
+      });
+    }
+    if (path.endsWith('/workouts/history/summary')) {
+      return route.fulfill({
+        json: {
+          workouts_completed: contextIsCompleted ? 1 : 0,
+          completed_sets: contextIsCompleted ? 1 : 0,
+          volume_kg: contextIsCompleted ? 40 : 0,
+        },
+      });
+    }
     if (path.endsWith('/workouts/42/start')) {
       workoutStatus = 'in_progress';
       return route.fulfill({ json: workout() });
@@ -229,6 +290,24 @@ export async function installPlatformApi(
     if (path.endsWith('/workouts/progress/summary')) {
       return route.fulfill({ json: progressSummary });
     }
+    if (path.endsWith('/check-ins/weekly/current')) {
+      return route.fulfill({
+        json: {
+          week_start: today,
+          week_end: today,
+          submitted_on: today,
+          timezone: 'Europe/Moscow',
+          existing: options.weeklyReviewAvailable ? null : { id: 1 },
+          summary: {
+            training: { completed_workouts: 0, planned_workouts: 1 },
+            nutrition: { logged_days: nutritionEntries.length ? 1 : 0 },
+            progression: { new_personal_records: 0 },
+            weight_trend: null,
+          },
+        },
+      });
+    }
+    if (/\/workouts\/\d+\/comments$/.test(path)) return route.fulfill({ json: [] });
     if (path.endsWith('/nutrition/diary') && request.method() === 'GET') {
       return route.fulfill({
         json: {

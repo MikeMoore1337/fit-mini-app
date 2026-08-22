@@ -11,6 +11,7 @@ import {
   LoadingState,
 } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
+import { formatCalendarDate } from '../../shared/dateTime';
 
 export const WORKOUT_COMMENT_MAX_LENGTH = 2000;
 
@@ -40,7 +41,7 @@ interface WorkoutFeedbackProps {
 }
 
 function formatWorkoutDate(value: string): string {
-  return new Date(`${value}T12:00:00`).toLocaleDateString('ru-RU', {
+  return formatCalendarDate(value, {
     day: 'numeric',
     month: 'long',
     year: 'numeric',

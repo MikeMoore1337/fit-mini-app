@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type { WorkoutScheduleItem } from '../../shared/api/types';
-import { dateInputValue, detectedTimeZone } from '../../shared/dateTime';
+import { dateInputValue, detectedTimeZone, formatCalendarDate } from '../../shared/dateTime';
 import { workoutStatusLabel } from '../../shared/statusLabels';
 import { Badge, Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
@@ -12,7 +12,7 @@ import { WeeklyCheckInCard } from './WeeklyCheckInCard';
 import { WorkoutFeedbackDisclosure } from './WorkoutFeedback';
 
 function formatDate(value: string): string {
-  return new Date(`${value}T12:00:00`).toLocaleDateString('ru-RU', {
+  return formatCalendarDate(value, {
     day: 'numeric',
     month: 'short',
     weekday: 'short',
@@ -229,16 +229,18 @@ export function ProgressSchedule({
   focusedWorkoutId,
   focusedCommentId,
   focusedExerciseId,
+  focusWeeklyReview = false,
 }: {
   timeZone?: string | null;
   focusedWorkoutId?: number | null;
   focusedCommentId?: number | null;
   focusedExerciseId?: number | null;
+  focusWeeklyReview?: boolean;
 }) {
   return (
     <div className="stack progress-schedule">
       <ProgressExperience />
-      <WeeklyCheckInCard />
+      <WeeklyCheckInCard autoFocus={focusWeeklyReview} />
       <SchedulePanel
         timeZone={timeZone}
         focusedWorkoutId={focusedWorkoutId}

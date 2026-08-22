@@ -10,6 +10,26 @@ import {
 } from './fixtures/mobile-tma';
 import { installPlatformApi } from './fixtures/platform-api';
 
+const todayStates = [
+  { name: 'planned', options: { workoutStatus: 'planned' as const }, action: 'Начать тренировку' },
+  {
+    name: 'in-progress',
+    options: { workoutStatus: 'in_progress' as const },
+    action: 'Продолжить тренировку',
+  },
+  {
+    name: 'completed',
+    options: { workoutStatus: 'completed' as const },
+    action: 'Посмотреть итог',
+  },
+  { name: 'rest', options: { workoutStatus: 'none' as const }, action: 'Добавить питание' },
+  {
+    name: 'no-program',
+    options: { workoutStatus: 'none' as const, activeProgram: false },
+    action: 'Подобрать программу',
+  },
+] as const;
+
 test('TMA auth, shared UI, theme, viewport, safe areas and BackButton stay on one platform contract', async ({
   mobilePage,
   tma,
@@ -38,6 +58,7 @@ test('TMA auth, shared UI, theme, viewport, safe areas and BackButton stay on on
   await expectTouchTargets(
     tmaPage.locator('.app-bottom-nav__primary > a, .app-bottom-nav__primary > button'),
   );
+  await expectTouchTargets(tmaPage.locator('.today-week-day--interactive'));
   await expectNoOverlap(
     tmaPage.getByRole('button', { name: 'Начать тренировку' }),
     tmaPage.locator('#appBottomNav'),
@@ -66,12 +87,74 @@ test('TMA auth, shared UI, theme, viewport, safe areas and BackButton stay on on
   expect(lifecycleState.expand).toBeGreaterThan(0);
   expect(await tmaPage.evaluate(() => window.Telegram?.WebApp?.MainButton)).toBeUndefined();
 
-  await tmaPage.goto('/app?workout_id=42&comment_id=7');
+  const weekLink = tmaPage.getByRole('link', { name: /Открыть тренировку Контекст недели/ });
+  await weekLink.focus();
+  await expect(weekLink).toBeFocused();
+  await weekLink.press('Enter');
+  await expect(tmaPage).toHaveURL(/section=progress&workout_id=43/);
+  await expect(
+    tmaPage.locator('#workout-schedule-43').or(tmaPage.locator('#workout-history-43')),
+  ).toBeVisible();
   await expect.poll(async () => (await tma.state()).backButton.visible).toBe(true);
   await tma.clickBack();
   await expect(tmaPage).toHaveURL('/app?section=progress');
   await expect.poll(async () => (await tma.state()).backButton.visible).toBe(false);
 });
+
+test('weekly review focus exposes a predictable TMA BackButton return path', async ({
+  tma,
+  tmaPage,
+}) => {
+  await installPlatformApi(tmaPage, {
+    workoutStatus: 'none',
+    weeklyReviewAvailable: true,
+  });
+  await tmaPage.goto('/app');
+
+  await tmaPage.getByRole('link', { name: 'Пройти короткую проверку' }).click();
+  await expect(tmaPage).toHaveURL('/app?section=progress&weekly_review=1');
+  await expect.poll(async () => (await tma.state()).backButton.visible).toBe(true);
+
+  await tma.clickBack();
+  await expect(tmaPage).toHaveURL('/app');
+  await expect(tmaPage.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible();
+  await expect.poll(async () => (await tma.state()).backButton.visible).toBe(false);
+});
+
+for (const scenario of todayStates) {
+  test(`Today ${scenario.name} keeps one primary action in Mobile Web and mocked TMA`, async ({
+    mobilePage,
+    tma,
+    tmaPage,
+  }) => {
+    await installPlatformApi(tmaPage, scenario.options);
+    await installPlatformApi(mobilePage, { ...scenario.options, browserSession: true });
+
+    await Promise.all([tmaPage.goto('/app'), mobilePage.goto('/app')]);
+    const tmaAction = tmaPage
+      .getByRole('button', { name: scenario.action })
+      .or(tmaPage.getByRole('link', { name: scenario.action }));
+    const mobileAction = mobilePage
+      .getByRole('button', { name: scenario.action })
+      .or(mobilePage.getByRole('link', { name: scenario.action }));
+    await expect(tmaAction).toBeVisible();
+    await expect(mobileAction).toBeVisible();
+    await expect(tmaPage.getByRole('region', { name: 'Эта неделя' })).toBeVisible();
+    await expect(mobilePage.getByRole('region', { name: 'Эта неделя' })).toBeVisible();
+    expect(await sharedSurfaceSignature(tmaPage)).toEqual(await sharedSurfaceSignature(mobilePage));
+    await expectNoHorizontalOverflow(tmaPage);
+    await expectNoHorizontalOverflow(mobilePage);
+    await expectNoOverlap(tmaAction, tmaPage.locator('#appBottomNav'));
+
+    const routeBeforeRuntimeEvents = tmaPage.url();
+    await tma.setViewport(760, 844);
+    await tma.setTheme('dark');
+    await tma.setActive(false);
+    await tma.setActive(true);
+    await expect(tmaAction).toBeVisible();
+    expect(tmaPage.url()).toBe(routeBeforeRuntimeEvents);
+  });
+}
 
 test('active workout starts, logs offline and resumes once after reconnect and reload', async ({
   tma,

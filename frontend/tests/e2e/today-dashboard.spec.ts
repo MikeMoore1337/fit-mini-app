@@ -6,6 +6,8 @@ type DashboardState = {
   incompleteProfile?: boolean;
   failNutrition?: boolean;
   failProgress?: boolean;
+  weeklyReviewAvailable?: boolean;
+  trainerComment?: boolean;
 };
 
 function todayInMoscow(): string {
@@ -108,6 +110,23 @@ async function mockDashboard(page: Page, state: DashboardState = {}) {
       }
       return route.fulfill({ json: workout() });
     }
+    if (path.endsWith('/workouts/week')) {
+      if (!activeProgram) return route.fulfill({ json: [] });
+      if (workoutStatus === 'none') {
+        return route.fulfill({
+          json: [
+            {
+              ...workout(),
+              id: 55,
+              scheduled_date: addDays(today, 2),
+              status: 'planned',
+              title: 'Верх тела',
+            },
+          ],
+        });
+      }
+      return route.fulfill({ json: [{ ...workout(), status: workoutStatus }] });
+    }
     if (path.endsWith('/workouts/42/start')) {
       workoutStatus = 'in_progress';
       return route.fulfill({ json: workout() });
@@ -184,6 +203,37 @@ async function mockDashboard(page: Page, state: DashboardState = {}) {
         },
       });
     }
+    if (path.endsWith('/check-ins/weekly/current')) {
+      return route.fulfill({
+        json: {
+          week_start: addDays(today, -3),
+          week_end: addDays(today, 3),
+          submitted_on: today,
+          timezone: 'Europe/Moscow',
+          existing: state.weeklyReviewAvailable ? null : { id: 1 },
+          summary: {
+            training: { completed_workouts: 0, planned_workouts: 1 },
+            nutrition: { logged_days: 0 },
+            progression: { new_personal_records: 0 },
+            weight_trend: null,
+          },
+        },
+      });
+    }
+    if (/\/workouts\/\d+\/comments$/.test(path)) {
+      return route.fulfill({
+        json: state.trainerComment
+          ? [
+              {
+                id: 9,
+                workout_id: 42,
+                body: 'Сохрани спокойный темп в следующей тренировке.',
+                created_at: `${today}T12:00:00Z`,
+              },
+            ]
+          : [],
+      });
+    }
     if (path.endsWith('/nutrition/diary')) {
       if (state.failNutrition) return route.abort('failed');
       return route.fulfill({
@@ -234,6 +284,9 @@ test('planned workout starts from the primary Today CTA', async ({ page }) => {
   await expect(
     page.getByRole('spinbutton', { name: 'Повторы, Приседания, подход 1' }),
   ).toBeVisible();
+  await page.getByRole('button', { name: /К сводке/ }).click();
+  await expect(page.getByRole('group', { name: /сегодня, В процессе/i })).toBeVisible();
+  await expect(page.getByRole('group', { name: /сегодня, Запланировано/i })).not.toBeAttached();
 });
 
 test('started workout finishes into a factual completed state', async ({ page }) => {
@@ -246,7 +299,7 @@ test('started workout finishes into a factual completed state', async ({ page })
   await expect(page.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible();
 });
 
-test('new, incomplete and rest-day states stay factual', async ({ page }) => {
+test('new and incomplete profile states keep program selection primary', async ({ page }) => {
   await mockDashboard(page, {
     workout: 'none',
     activeProgram: false,
@@ -256,7 +309,35 @@ test('new, incomplete and rest-day states stay factual', async ({ page }) => {
 
   await expect(page.getByRole('heading', { name: 'Выберите тренировочный план' })).toBeVisible();
   await expect(page.getByText('Сделайте рекомендации точнее')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Выбрать программу' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Подобрать программу' })).toBeVisible();
+});
+
+test('rest, completed, weekly review and trainer comment use one primary action', async ({
+  page,
+}) => {
+  await mockDashboard(page, { workout: 'none' });
+  await openDashboard(page);
+  await expect(page.getByRole('link', { name: 'Добавить питание' })).toBeVisible();
+
+  await page.unrouteAll({ behavior: 'wait' });
+  await mockDashboard(page, { workout: 'completed' });
+  await page.reload();
+  await expect(page.getByRole('link', { name: 'Посмотреть итог' })).toBeVisible();
+
+  await page.unrouteAll({ behavior: 'wait' });
+  await mockDashboard(page, { workout: 'none', weeklyReviewAvailable: true });
+  await page.reload();
+  await expect(page.getByRole('link', { name: 'Пройти короткую проверку' })).toBeVisible();
+
+  await page.unrouteAll({ behavior: 'wait' });
+  await mockDashboard(page, {
+    workout: 'completed',
+    weeklyReviewAvailable: true,
+    trainerComment: true,
+  });
+  await page.reload();
+  await expect(page.getByRole('link', { name: 'Открыть комментарий' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Пройти короткую проверку' })).not.toBeAttached();
 });
 
 test('secondary API failure does not erase the dashboard', async ({ page }) => {
@@ -277,6 +358,7 @@ test('Today keeps hierarchy and has no horizontal overflow at required widths', 
   for (const viewport of [
     { width: 1440, height: 900 },
     { width: 768, height: 900 },
+    { width: 430, height: 932 },
     { width: 390, height: 844 },
     { width: 360, height: 800 },
   ]) {

@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../../../../src/shared/api/client';
 import type { FoodDiaryDay, ProgressSummary, Workout } from '../../../../src/shared/api/types';
-import { dateInputValue } from '../../../../src/shared/dateTime';
+import { calendarWeek, dateInputValue } from '../../../../src/shared/dateTime';
 import { FeedbackProvider } from '../../../../src/shared/ui/FeedbackProvider';
 import {
   formatTodayHeading,
@@ -233,6 +233,31 @@ function renderDashboard() {
   );
 }
 
+function auxiliaryResponse(
+  path: string,
+  options: {
+    week?: Array<Record<string, unknown>>;
+    weeklyReviewAvailable?: boolean;
+    comments?: Array<Record<string, unknown>>;
+  } = {},
+) {
+  if (path === '/api/v1/workouts/week') return Promise.resolve(options.week ?? []);
+  if (path === '/api/v1/check-ins/weekly/current') {
+    return Promise.resolve({
+      week_start: '2030-01-07',
+      week_end: '2030-01-13',
+      submitted_on: '2030-01-10',
+      timezone: 'Europe/Moscow',
+      existing: options.weeklyReviewAvailable ? null : { id: 1 },
+      summary: {},
+    });
+  }
+  if (/\/api\/v1\/workouts\/\d+\/comments$/.test(path)) {
+    return Promise.resolve(options.comments ?? []);
+  }
+  return undefined;
+}
+
 function useAvailableData() {
   apiMock.mockImplementation((path: string) => {
     if (path === '/api/v1/workouts/today') return Promise.resolve(plannedWorkout);
@@ -243,6 +268,10 @@ function useAvailableData() {
     if (path === '/api/v1/workouts/42/start') {
       return Promise.resolve({ ...plannedWorkout, status: 'in_progress' });
     }
+    const auxiliary = auxiliaryResponse(path, {
+      week: [plannedWorkout],
+    });
+    if (auxiliary) return auxiliary;
     throw new Error(`Unexpected API path: ${path}`);
   });
 }
@@ -256,13 +285,25 @@ describe('TodayDashboard', () => {
     authState.user.profile.workouts_per_week = 3;
   });
 
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+  });
 
   it('formats the day context in clear Russian', () => {
     expect(formatTodayHeading('2030-01-10')).toEqual({
       eyebrow: 'Четверг · 10 января',
       title: 'Сегодня',
     });
+    expect(calendarWeek('2029-12-31')).toEqual([
+      '2029-12-31',
+      '2030-01-01',
+      '2030-01-02',
+      '2030-01-03',
+      '2030-01-04',
+      '2030-01-05',
+      '2030-01-06',
+    ]);
   });
 
   it('puts the real workout CTA first and shows compact nutrition and progress data', async () => {
@@ -295,6 +336,8 @@ describe('TodayDashboard', () => {
       if (path.startsWith('/api/v1/nutrition/diary')) {
         return Promise.reject(new ApiError('Нет соединения', 0));
       }
+      const auxiliary = auxiliaryResponse(path, { week: [plannedWorkout] });
+      if (auxiliary) return auxiliary;
       throw new Error(`Unexpected API path: ${path}`);
     });
     renderDashboard();
@@ -322,6 +365,16 @@ describe('TodayDashboard', () => {
         });
       }
       if (path.startsWith('/api/v1/nutrition/diary')) return Promise.resolve(diary);
+      const auxiliary = auxiliaryResponse(path, {
+        week: [
+          {
+            ...plannedWorkout,
+            scheduled_date: dateInputValue(new Date(), 'Europe/Moscow'),
+            status: 'completed',
+          },
+        ],
+      });
+      if (auxiliary) return auxiliary;
       throw new Error(`Unexpected API path: ${path}`);
     });
     renderDashboard();
@@ -355,6 +408,8 @@ describe('TodayDashboard', () => {
         });
       }
       if (path.startsWith('/api/v1/nutrition/diary')) return Promise.resolve(diary);
+      const auxiliary = auxiliaryResponse(path);
+      if (auxiliary) return auxiliary;
       throw new Error(`Unexpected API path: ${path}`);
     });
     renderDashboard();
@@ -363,6 +418,14 @@ describe('TodayDashboard', () => {
       await screen.findByRole('heading', { name: 'Сегодня без тренировки' }),
     ).toBeInTheDocument();
     expect(screen.getByText(/Ближайшая .*Верх тела/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Добавить питание' })).toHaveAttribute(
+      'href',
+      '/app?section=nutrition',
+    );
+    expect(screen.getByRole('link', { name: 'Записать замер' })).toHaveAttribute(
+      'href',
+      '/app?section=progress',
+    );
   });
 
   it('guides a new user to a program and keeps incomplete profile secondary', async () => {
@@ -389,6 +452,8 @@ describe('TodayDashboard', () => {
       if (path.startsWith('/api/v1/nutrition/diary')) {
         return Promise.resolve({ ...diary, targets: null, remaining: null });
       }
+      const auxiliary = auxiliaryResponse(path);
+      if (auxiliary) return auxiliary;
       throw new Error(`Unexpected API path: ${path}`);
     });
     renderDashboard();
@@ -396,11 +461,158 @@ describe('TodayDashboard', () => {
     expect(
       await screen.findByRole('heading', { name: 'Выберите тренировочный план' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Выбрать программу' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Подобрать программу' })).toHaveAttribute(
       'href',
       '/app?section=programs',
     );
     expect(screen.getByText('Сделайте рекомендации точнее')).toBeInTheDocument();
     expect(screen.getByText('Пока мало данных для общей сводки.')).toBeInTheDocument();
+  });
+
+  it('shows a compact week with honest workout links and textual states', async () => {
+    const today = dateInputValue(new Date(), 'Europe/Moscow');
+    const days = calendarWeek(today);
+    const friday = days[4];
+    const pastDay = days
+      .slice()
+      .reverse()
+      .find((day) => day < today);
+    const futureDay = days.find((day) => day > today);
+    apiMock.mockImplementation((path: string) => {
+      if (path === '/api/v1/workouts/today') return Promise.resolve(plannedWorkout);
+      if (path.startsWith('/api/v1/workouts/progress/summary')) {
+        return Promise.resolve(progressSummary);
+      }
+      if (path.startsWith('/api/v1/nutrition/diary')) return Promise.resolve(diary);
+      const auxiliary = auxiliaryResponse(path, {
+        week: [
+          {
+            ...plannedWorkout,
+            id: 31,
+            scheduled_date: pastDay ?? today,
+            status: 'completed',
+          },
+          ...(futureDay
+            ? [{ ...plannedWorkout, id: 32, scheduled_date: futureDay, status: 'planned' }]
+            : []),
+          { ...plannedWorkout, id: 33, scheduled_date: friday, status: 'skipped' },
+        ],
+      });
+      if (auxiliary) return auxiliary;
+      throw new Error(`Unexpected API path: ${path}`);
+    });
+    renderDashboard();
+
+    const weekRegion = await screen.findByRole('region', { name: 'Эта неделя' });
+    await screen.findByLabelText(/Выполнено/i);
+    expect(weekRegion.querySelector('[aria-current="date"]')).toHaveAttribute(
+      'aria-current',
+      'date',
+    );
+    if (pastDay) {
+      expect(screen.getByRole('link', { name: /Выполнено.*Открыть тренировку/i })).toHaveAttribute(
+        'href',
+        '/app?section=progress&workout_id=31',
+      );
+    }
+    if (futureDay) {
+      expect(
+        screen.getByRole('link', { name: /Предстоит тренировка.*Открыть тренировку/i }),
+      ).toHaveAttribute('href', '/app?section=progress&workout_id=32');
+    }
+  });
+
+  it('uses weekly review and trainer feedback only when they outrank a rest-day action', async () => {
+    const today = dateInputValue(new Date(), 'Europe/Moscow');
+    apiMock.mockImplementation((path: string) => {
+      if (path === '/api/v1/workouts/today') {
+        return Promise.reject(new ApiError('На сегодня тренировка не назначена', 404));
+      }
+      if (path.startsWith('/api/v1/workouts/progress/summary')) {
+        return Promise.resolve({
+          ...progressSummary,
+          training: { ...progressSummary.training, last_completed_workout_on: today },
+        });
+      }
+      if (path.startsWith('/api/v1/nutrition/diary')) return Promise.resolve(diary);
+      const auxiliary = auxiliaryResponse(path, {
+        weeklyReviewAvailable: true,
+        week: [{ ...plannedWorkout, scheduled_date: today, status: 'completed' }],
+        comments: [
+          {
+            id: 9,
+            workout_id: 42,
+            body: 'Сохрани спокойный темп в следующей тренировке.',
+            created_at: '2030-01-10T12:00:00Z',
+          },
+        ],
+      });
+      if (auxiliary) return auxiliary;
+      throw new Error(`Unexpected API path: ${path}`);
+    });
+    renderDashboard();
+
+    expect(
+      await screen.findByRole('heading', { name: 'Тренировка завершена' }),
+    ).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'Открыть комментарий' })).toHaveAttribute(
+      'href',
+      '/app?section=progress&workout_id=42&comment_id=9',
+    );
+    expect(
+      screen.queryByRole('link', { name: 'Пройти короткую проверку' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('refreshes date-sensitive context after returning across the local midnight', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2030-01-06T20:59:30.000Z'));
+    let serverDay = '2030-01-06';
+
+    apiMock.mockImplementation((path: string) => {
+      const dayWorkout = {
+        ...plannedWorkout,
+        scheduled_date: serverDay,
+        title: serverDay === '2030-01-06' ? 'Воскресная тренировка' : 'Понедельничная тренировка',
+      };
+      if (path === '/api/v1/workouts/today') return Promise.resolve(dayWorkout);
+      if (path === '/api/v1/workouts/week') return Promise.resolve([dayWorkout]);
+      if (path.startsWith('/api/v1/workouts/progress/summary')) {
+        return Promise.resolve({
+          ...progressSummary,
+          period_end: serverDay,
+          training: {
+            ...progressSummary.training,
+            last_completed_workout_on: null,
+            next_workout: null,
+          },
+        });
+      }
+      if (path.startsWith('/api/v1/nutrition/diary')) {
+        return Promise.resolve({ ...diary, diary_date: serverDay });
+      }
+      const auxiliary = auxiliaryResponse(path, { week: [dayWorkout] });
+      if (auxiliary) return auxiliary;
+      throw new Error(`Unexpected API path: ${path}`);
+    });
+    renderDashboard();
+
+    expect(
+      await screen.findByRole('heading', { name: 'Воскресная тренировка' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Воскресенье · 6 января')).toBeInTheDocument();
+
+    serverDay = '2030-01-07';
+    vi.setSystemTime(new Date('2030-01-06T21:00:30.000Z'));
+    fireEvent(document, new Event('visibilitychange'));
+
+    expect(
+      await screen.findByRole('heading', { name: 'Понедельничная тренировка' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Понедельник · 7 января')).toBeInTheDocument();
+    expect(
+      screen.getByRole('group', { name: /7 января, сегодня, Запланировано/i }),
+    ).toHaveAttribute('aria-current', 'date');
+    expect(apiMock.mock.calls.filter(([path]) => path === '/api/v1/workouts/week')).toHaveLength(2);
   });
 });

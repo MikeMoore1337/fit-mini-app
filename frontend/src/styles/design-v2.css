@@ -205,6 +205,136 @@ body:has(.app-shell--design-v2) {
   display: none;
 }
 
+.today-week {
+  display: grid;
+  gap: var(--v2-space-3);
+  min-width: 0;
+  padding-bottom: var(--v2-space-4);
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.today-week__head {
+  display: flex;
+  min-width: 0;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--v2-space-3);
+}
+
+.today-week__head > div {
+  display: grid;
+  gap: 2px;
+}
+
+.today-week__head h2 {
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.today-week__head span {
+  color: var(--v2-text-secondary);
+  font-size: 0.72rem;
+}
+
+.today-week__days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  width: min(100%, 720px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.today-week__days > li {
+  min-width: 0;
+}
+
+.today-week-day {
+  display: grid;
+  min-width: 0;
+  min-height: 76px;
+  grid-template-rows: auto auto auto 12px;
+  place-items: center;
+  gap: 1px;
+  padding: 7px 2px 5px;
+  border: 1px solid transparent;
+  border-radius: var(--v2-control-radius);
+  color: var(--v2-text-secondary);
+  text-decoration: none;
+}
+
+.today-week-day[aria-current='date'] {
+  border-color: var(--v2-lime);
+  background: var(--v2-surface-secondary);
+  color: var(--v2-text-primary);
+}
+
+.today-week-day--interactive {
+  cursor: pointer;
+}
+
+.today-week-day--interactive:hover {
+  border-color: var(--v2-border-strong);
+  background: var(--v2-surface-secondary);
+  color: var(--v2-text-primary);
+}
+
+.today-week-day--interactive:focus-visible {
+  outline: 3px solid var(--v2-lime);
+  outline-offset: 2px;
+}
+
+.today-week-day__weekday {
+  overflow: hidden;
+  max-width: 100%;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+}
+
+.today-week-day strong {
+  color: var(--v2-text-primary);
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.today-week-day__context {
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--v2-accent-text);
+  font-size: 0.58rem;
+  font-weight: 750;
+  line-height: 1;
+  text-overflow: ellipsis;
+}
+
+.today-week-day__marker {
+  display: grid;
+  width: 12px;
+  height: 12px;
+  place-items: center;
+  color: var(--v2-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.today-week-day__marker--completed {
+  color: var(--v2-success-text);
+}
+
+.today-week-day__marker--in-progress,
+.today-week-day__marker--planned,
+.today-week-day__marker--upcoming {
+  color: var(--v2-accent-text);
+}
+
+.today-week-day__marker--skipped {
+  color: var(--v2-text-secondary);
+}
+
 .today-dashboard__overview {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
@@ -1051,6 +1181,20 @@ body.public-shell-mode.public-shell-mode:has(.auth-public-shell--design-v2) {
 
   .today-dashboard--design-v2 {
     gap: var(--v2-space-4);
+  }
+
+  .today-week {
+    gap: var(--v2-space-2);
+    padding-bottom: var(--v2-space-3);
+  }
+
+  .today-week__head {
+    align-items: center;
+  }
+
+  .today-week-day {
+    min-height: 72px;
+    padding-inline: 0;
   }
 
   .today-dashboard--design-v2 .today-dashboard__header h1 {

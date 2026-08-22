@@ -16,9 +16,14 @@ interface NavigationContextValue {
 
 const NavigationContext = createContext<NavigationContextValue | null>(null);
 
-function hasWorkoutFeedback(search: string): boolean {
-  const workoutId = new URLSearchParams(search).get('workout_id');
-  return Boolean(workoutId && /^\d+$/.test(workoutId) && Number(workoutId) > 0);
+function focusedContextReturn(search: string): string | null {
+  const params = new URLSearchParams(search);
+  const workoutId = params.get('workout_id');
+  if (workoutId && /^\d+$/.test(workoutId) && Number(workoutId) > 0) {
+    return '/app?section=progress';
+  }
+  if (params.get('weekly_review') === '1') return '/app';
+  return null;
 }
 
 export function NavigationProvider({ children }: { children: React.ReactNode }) {
@@ -44,17 +49,16 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     const backButton = window.Telegram?.WebApp?.BackButton;
     if (!backButton) return;
-    const workoutFeedbackOpen = location.path === '/app' && hasWorkoutFeedback(location.search);
+    const focusedReturn = location.path === '/app' ? focusedContextReturn(location.search) : null;
     if (
-      (location.path === '/app' && !workoutFeedbackOpen) ||
+      (location.path === '/app' && !focusedReturn) ||
       location.path === '/onboarding' ||
       location.path === '/'
     ) {
       backButton.hide();
       return;
     }
-    const goBack = () =>
-      navigate(workoutFeedbackOpen ? '/app?section=progress' : '/app', workoutFeedbackOpen);
+    const goBack = () => navigate(focusedReturn ?? '/app', Boolean(focusedReturn));
     backButton.onClick(goBack);
     backButton.show();
     return () => {

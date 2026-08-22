@@ -129,6 +129,7 @@ export default function MiniAppPage() {
   });
   const section = requestedSection(search) ?? fallbackSection;
   const requestedFeedback = requestedWorkoutFeedback(search);
+  const focusWeeklyReview = new URLSearchParams(search).get('weekly_review') === '1';
   const [focusedWorkout, setFocusedWorkout] = useState<{
     id: number;
     target: WorkoutNavigationTarget;
@@ -232,6 +233,7 @@ export default function MiniAppPage() {
                   focusedWorkoutId={scheduleFocusId}
                   focusedCommentId={requestedFeedback?.commentId}
                   focusedExerciseId={requestedFeedback?.workoutExerciseId}
+                  focusWeeklyReview={focusWeeklyReview}
                 />
                 <WorkoutHistory
                   timeZone={user?.profile?.timezone}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type {
@@ -8,12 +8,13 @@ import type {
 } from '../../shared/api/types';
 import { Badge, Card, ErrorState, LoadingState } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
+import { formatCalendarDate } from '../../shared/dateTime';
 
 const scoreOptions = [1, 2, 3, 4, 5] as const;
 
 function formatPeriod(start: string, end: string): string {
   const format = (value: string) =>
-    new Date(`${value}T12:00:00`).toLocaleDateString('ru-RU', {
+    formatCalendarDate(value, {
       day: 'numeric',
       month: 'short',
     });
@@ -24,7 +25,7 @@ function optionalScore(value: string): number | null {
   return value ? Number(value) : null;
 }
 
-export function WeeklyCheckInCard() {
+export function WeeklyCheckInCard({ autoFocus = false }: { autoFocus?: boolean }) {
   const queryClient = useQueryClient();
   const { toast, confirm } = useFeedback();
   const [trainingLoad, setTrainingLoad] = useState('');
@@ -32,6 +33,7 @@ export function WeeklyCheckInCard() {
   const [hunger, setHunger] = useState('');
   const [adherenceDifficulty, setAdherenceDifficulty] = useState('');
   const [note, setNote] = useState('');
+  const cardRef = useRef<HTMLDivElement>(null);
   const current = useQuery({
     queryKey: ['weekly-check-ins', 'current'],
     queryFn: () => api<WeeklyCheckInCurrent>('/api/v1/check-ins/weekly/current'),
@@ -57,6 +59,15 @@ export function WeeklyCheckInCard() {
     onError: (reason) => toast((reason as Error).message, 'error'),
   });
 
+  useEffect(() => {
+    if (!autoFocus || current.isLoading || !current.data) return;
+    cardRef.current?.focus({ preventScroll: true });
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    cardRef.current
+      ?.closest('.card')
+      ?.scrollIntoView?.({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+  }, [autoFocus, current.data, current.isLoading]);
+
   if (current.isLoading) return <LoadingState label="Собираем итоги недели…" />;
   if (current.error) {
     return (
@@ -72,7 +83,7 @@ export function WeeklyCheckInCard() {
       title="Еженедельные итоги"
       description={formatPeriod(current.data.week_start, current.data.week_end)}
     >
-      <div className="metric-grid top-gap">
+      <div id="weekly-review" ref={cardRef} tabIndex={-1} className="metric-grid top-gap">
         <div className="metric">
           <span>Тренировки</span>
           <strong>

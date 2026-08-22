@@ -2,8 +2,20 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
 import { ApiError, api } from '../../shared/api/client';
-import type { FoodDiaryDay, ProgressSummary, Workout } from '../../shared/api/types';
-import { dateInputValue, detectedTimeZone } from '../../shared/dateTime';
+import type {
+  FoodDiaryDay,
+  ProgressSummary,
+  WeeklyCheckInCurrent,
+  Workout,
+  WorkoutComment,
+  WorkoutScheduleItem,
+} from '../../shared/api/types';
+import {
+  calendarWeek,
+  dateInputValue,
+  detectedTimeZone,
+  formatCalendarDate,
+} from '../../shared/dateTime';
 import { AppLink } from '../../shared/navigation/router';
 import { queryKeys } from '../../shared/queryKeys';
 import {
@@ -14,10 +26,6 @@ import { TodayWorkout } from '../workouts/TodayWorkout';
 import { Badge, Button, Skeleton } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 
-function formatCalendarDate(value: string, options: Intl.DateTimeFormatOptions): string {
-  return new Intl.DateTimeFormat('ru-RU', options).format(new Date(`${value}T12:00:00`));
-}
-
 export function formatTodayHeading(value: string): { eyebrow: string; title: string } {
   const weekday = formatCalendarDate(value, { weekday: 'long' });
   const date = formatCalendarDate(value, { day: 'numeric', month: 'long' });
@@ -25,6 +33,146 @@ export function formatTodayHeading(value: string): { eyebrow: string; title: str
     eyebrow: `${weekday.charAt(0).toUpperCase() + weekday.slice(1)} · ${date}`,
     title: 'Сегодня',
   };
+}
+
+const weekStatusPriority = ['in_progress', 'completed', 'planned', 'skipped'] as const;
+
+function weekWorkoutForDate(
+  workouts: WorkoutScheduleItem[] | undefined,
+  value: string,
+): WorkoutScheduleItem | undefined {
+  const matches = workouts?.filter((item) => item.scheduled_date === value) ?? [];
+  const priority = (status: string) => {
+    const index = weekStatusPriority.indexOf(status as (typeof weekStatusPriority)[number]);
+    return index === -1 ? weekStatusPriority.length : index;
+  };
+  return matches.sort((left, right) => priority(left.status) - priority(right.status))[0];
+}
+
+function weekStatus(item: WorkoutScheduleItem | undefined, date: string, today: string) {
+  if (!item) return null;
+  if (item.status === 'completed') return { key: 'completed', label: 'Выполнено', icon: '✓' };
+  if (item.status === 'in_progress') return { key: 'in-progress', label: 'В процессе', icon: '›' };
+  if (item.status === 'skipped') return { key: 'skipped', label: 'Пропущено', icon: '—' };
+  if (item.status === 'planned' && date > today) {
+    return { key: 'upcoming', label: 'Предстоит тренировка', icon: '•' };
+  }
+  if (item.status === 'planned') return { key: 'planned', label: 'Запланировано', icon: '•' };
+  return null;
+}
+
+function formatWeekRange(days: string[]): string {
+  const first = days[0];
+  const last = days.at(-1);
+  if (!first || !last) return '';
+  const firstMonth = first.slice(0, 7);
+  const lastMonth = last.slice(0, 7);
+  const sameYear = first.slice(0, 4) === last.slice(0, 4);
+  const firstLabel = formatCalendarDate(first, {
+    day: 'numeric',
+    ...(firstMonth === lastMonth ? {} : { month: 'short' }),
+    ...(sameYear ? {} : { year: 'numeric' }),
+  });
+  const lastLabel = formatCalendarDate(last, {
+    day: 'numeric',
+    month: 'short',
+    ...(sameYear ? {} : { year: 'numeric' }),
+  });
+  return `${firstLabel} — ${lastLabel}`;
+}
+
+function WeekContext({
+  today,
+  workouts,
+  loading,
+  error,
+  onRetry,
+}: {
+  today: string;
+  workouts?: WorkoutScheduleItem[];
+  loading: boolean;
+  error: boolean;
+  onRetry(): void;
+}) {
+  const days = calendarWeek(today);
+  return (
+    <section className="today-week" aria-labelledby="today-week-title" aria-busy={loading}>
+      <div className="today-week__head">
+        <div>
+          <h2 id="today-week-title">Эта неделя</h2>
+          <span>{formatWeekRange(days)}</span>
+        </div>
+        {error && (
+          <button className="today-text-link" type="button" onClick={onRetry}>
+            Обновить план
+          </button>
+        )}
+      </div>
+      <ol className="today-week__days">
+        {days.map((date) => {
+          const item = weekWorkoutForDate(workouts, date);
+          const status = weekStatus(item, date, today);
+          const isToday = date === today;
+          const label = [
+            formatCalendarDate(date, { weekday: 'long', day: 'numeric', month: 'long' }),
+            isToday ? 'сегодня' : null,
+            status?.label,
+          ]
+            .filter(Boolean)
+            .join(', ');
+          const content = (
+            <>
+              <span className="today-week-day__weekday">
+                {formatCalendarDate(date, { weekday: 'short' }).replace('.', '')}
+              </span>
+              <strong>{formatCalendarDate(date, { day: 'numeric' })}</strong>
+              <span className="today-week-day__context">
+                {isToday ? 'сегодня' : <span aria-hidden="true">&nbsp;</span>}
+              </span>
+              <span
+                className={`today-week-day__marker${status ? ` today-week-day__marker--${status.key}` : ''}`}
+                aria-hidden="true"
+              >
+                {status?.icon ?? ''}
+              </span>
+            </>
+          );
+          const canOpenWorkout =
+            item &&
+            !isToday &&
+            (item.status === 'completed' ||
+              (date >= today && ['planned', 'in_progress', 'skipped'].includes(item.status)));
+          return (
+            <li key={date}>
+              {canOpenWorkout ? (
+                <AppLink
+                  className="today-week-day today-week-day--interactive"
+                  to={`/app?section=progress&workout_id=${item.id}`}
+                  aria-label={`${label}. Открыть тренировку ${item.title}`}
+                >
+                  {content}
+                </AppLink>
+              ) : (
+                <div
+                  className="today-week-day"
+                  role="group"
+                  aria-current={isToday ? 'date' : undefined}
+                  aria-label={label}
+                >
+                  {content}
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+      {loading && (
+        <span className="sr-only" role="status">
+          Загружаем план недели
+        </span>
+      )}
+    </section>
+  );
 }
 
 function formatWorkoutDate(value: string, today: string): string {
@@ -35,6 +183,13 @@ function formatWorkoutDate(value: string, today: string): string {
 function formatAmount(value: string | number): string {
   const numeric = Number(value);
   return Number.isFinite(numeric) ? String(Math.round(numeric)) : '—';
+}
+
+function compactSignal(value: string, maxLength = 140): string {
+  const normalized = value.replace(/\s+/g, ' ').trim();
+  return normalized.length > maxLength
+    ? `${normalized.slice(0, maxLength - 1).trimEnd()}…`
+    : normalized;
 }
 
 function workoutStatusLabel(status: string): string {
@@ -227,6 +382,9 @@ function useProgressSummary() {
 function WorkoutOverview({
   today,
   workout,
+  todayScheduleItem,
+  weeklyReview,
+  trainerComment,
   progress,
   detailsOpen,
   startPending,
@@ -235,6 +393,9 @@ function WorkoutOverview({
 }: {
   today: string;
   workout?: Workout;
+  todayScheduleItem?: WorkoutScheduleItem;
+  weeklyReview?: WeeklyCheckInCurrent;
+  trainerComment?: WorkoutComment;
   progress: ReturnType<typeof useProgressSummary>;
   detailsOpen: boolean;
   startPending: boolean;
@@ -251,6 +412,41 @@ function WorkoutOverview({
     ) ?? 0;
   const completedToday = !workout && progress.data?.training.last_completed_workout_on === today;
   const nextWorkout = progress.data?.training.next_workout;
+  const weeklyReviewAvailable = Boolean(weeklyReview && !weeklyReview.existing);
+  const feedbackWorkoutId = workout?.id ?? todayScheduleItem?.id;
+  const trainerCommentLink =
+    trainerComment && feedbackWorkoutId
+      ? `/app?section=progress&workout_id=${feedbackWorkoutId}&comment_id=${trainerComment.id}`
+      : null;
+
+  const completedAction = () => {
+    if (trainerCommentLink) {
+      return (
+        <AppLink className="button-link" to={trainerCommentLink}>
+          Открыть комментарий
+        </AppLink>
+      );
+    }
+    if (weeklyReviewAvailable) {
+      return (
+        <AppLink className="button-link" to="/app?section=progress&weekly_review=1">
+          Пройти короткую проверку
+        </AppLink>
+      );
+    }
+    return (
+      <AppLink
+        className="button-link"
+        to={
+          feedbackWorkoutId
+            ? `/app?section=progress&workout_id=${feedbackWorkoutId}`
+            : '/app?section=progress'
+        }
+      >
+        Посмотреть итог
+      </AppLink>
+    );
+  };
 
   if (workout) {
     if (workout.status === 'completed') {
@@ -261,9 +457,7 @@ function WorkoutOverview({
             <h2 id="today-workout-title">Тренировка завершена</h2>
             <p>Результат сохранён. Следующее действие — восстановиться и продолжить план.</p>
           </div>
-          <AppLink className="button-link secondary-link" to="/app?section=progress">
-            Посмотреть результат
-          </AppLink>
+          {completedAction()}
         </>
       );
     }
@@ -296,11 +490,15 @@ function WorkoutOverview({
           >
             {startPending ? 'Начинаем…' : started ? 'Продолжить тренировку' : 'Начать тренировку'}
           </Button>
-          {!detailsOpen && (
+          {trainerCommentLink ? (
+            <AppLink className="button-link secondary-link" to={trainerCommentLink}>
+              Открыть комментарий тренера
+            </AppLink>
+          ) : !detailsOpen ? (
             <Button fullWidth variant="secondary" type="button" onClick={onOpenDetails}>
               Посмотреть упражнения
             </Button>
-          )}
+          ) : null}
         </div>
       </>
     );
@@ -318,9 +516,7 @@ function WorkoutOverview({
               : 'На сегодня главное действие выполнено.'}
           </p>
         </div>
-        <AppLink className="button-link secondary-link" to="/app?section=progress">
-          Посмотреть результат
-        </AppLink>
+        {completedAction()}
       </>
     );
   }
@@ -336,7 +532,37 @@ function WorkoutOverview({
           <p>План создаст понятное расписание и покажет, с чего начать сегодня.</p>
         </div>
         <AppLink className="button-link" to="/app?section=programs">
-          Выбрать программу
+          Подобрать программу
+        </AppLink>
+      </>
+    );
+  }
+
+  if (trainerCommentLink) {
+    return (
+      <>
+        <div className="today-workout-copy">
+          <Badge tone="warning">Комментарий тренера</Badge>
+          <h2 id="today-workout-title">Тренер оставил комментарий</h2>
+          <p>{trainerComment ? compactSignal(trainerComment.body) : ''}</p>
+        </div>
+        <AppLink className="button-link" to={trainerCommentLink}>
+          Открыть комментарий
+        </AppLink>
+      </>
+    );
+  }
+
+  if (weeklyReviewAvailable) {
+    return (
+      <>
+        <div className="today-workout-copy">
+          <Badge>Итоги недели</Badge>
+          <h2 id="today-workout-title">Неделя готова к проверке</h2>
+          <p>Коротко отметьте нагрузку, восстановление и то, насколько легко было держать план.</p>
+        </div>
+        <AppLink className="button-link" to="/app?section=progress&weekly_review=1">
+          Пройти короткую проверку
         </AppLink>
       </>
     );
@@ -353,11 +579,66 @@ function WorkoutOverview({
             : 'В активном плане пока нет ближайшей тренировки.'}
         </p>
       </div>
-      <AppLink className="button-link secondary-link" to="/app?section=programs">
-        Открыть план
-      </AppLink>
+      <div className="today-workout-actions">
+        <AppLink className="button-link" to="/app?section=nutrition">
+          Добавить питание
+        </AppLink>
+        <AppLink className="button-link secondary-link" to="/app?section=progress">
+          Записать замер
+        </AppLink>
+      </div>
     </>
   );
+}
+
+function millisecondsUntilNextCalendarDay(timeZone: string): number {
+  const now = Date.now();
+  const currentDay = dateInputValue(new Date(now), timeZone);
+  let lowerBound = now;
+  let upperBound = now + 30 * 60 * 60 * 1000;
+
+  while (dateInputValue(new Date(upperBound), timeZone) === currentDay) {
+    upperBound += 12 * 60 * 60 * 1000;
+  }
+  while (upperBound - lowerBound > 1_000) {
+    const candidate = Math.floor((lowerBound + upperBound) / 2);
+    if (dateInputValue(new Date(candidate), timeZone) === currentDay) lowerBound = candidate;
+    else upperBound = candidate;
+  }
+  return Math.max(1_000, upperBound - now + 100);
+}
+
+function useCalendarDay(timeZone: string): string {
+  const [day, setDay] = useState(() => dateInputValue(new Date(), timeZone));
+
+  useEffect(() => {
+    let timer: number | undefined;
+    const scheduleNextDay = () => {
+      if (timer !== undefined) window.clearTimeout(timer);
+      timer = window.setTimeout(refresh, millisecondsUntilNextCalendarDay(timeZone));
+    };
+    const refresh = () => {
+      setDay((current) => {
+        const next = dateInputValue(new Date(), timeZone);
+        return next === current ? current : next;
+      });
+      scheduleNextDay();
+    };
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+
+    refresh();
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => {
+      if (timer !== undefined) window.clearTimeout(timer);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
+  }, [timeZone]);
+
+  return day;
 }
 
 export function TodayDashboard() {
@@ -367,10 +648,19 @@ export function TodayDashboard() {
   const detailsRef = useRef<HTMLDivElement>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const timeZone = user?.profile?.timezone || detectedTimeZone();
-  const today = dateInputValue(new Date(), timeZone);
+  const today = useCalendarDay(timeZone);
+  const calendarContextRef = useRef(`${timeZone}:${today}`);
   const heading = formatTodayHeading(today);
   const firstName = user?.profile?.full_name?.trim().split(/\s+/)[0] || user?.first_name;
   const progress = useProgressSummary();
+  const week = useQuery({
+    queryKey: ['workout', 'week'],
+    queryFn: () => api<WorkoutScheduleItem[]>('/api/v1/workouts/week'),
+  });
+  const weeklyReview = useQuery({
+    queryKey: ['weekly-check-ins', 'current'],
+    queryFn: () => api<WeeklyCheckInCurrent>('/api/v1/check-ins/weekly/current'),
+  });
   const workout = useQuery({
     queryKey: ['workout', 'today'],
     queryFn: () => api<Workout>('/api/v1/workouts/today'),
@@ -383,6 +673,33 @@ export function TodayDashboard() {
     user && workout.data && loadActiveWorkoutQueue(user.id, workout.data.id).queue.length > 0,
   );
   const visibleWorkout = noTodayWorkout && !hasPendingLocalChanges ? undefined : workout.data;
+  const todayScheduleItem =
+    weekWorkoutForDate(week.data, today) ??
+    (visibleWorkout
+      ? {
+          id: visibleWorkout.id,
+          scheduled_date: visibleWorkout.scheduled_date,
+          scheduled_time: visibleWorkout.scheduled_time,
+          title: visibleWorkout.title,
+          status: visibleWorkout.status,
+          day_number: visibleWorkout.day_number,
+          week_number: visibleWorkout.week_number,
+        }
+      : undefined);
+  const comments = useQuery({
+    queryKey: todayScheduleItem
+      ? queryKeys.workoutComments.client(todayScheduleItem.id)
+      : ['workout', 'comments', 'today', 'disabled'],
+    queryFn: () => api<WorkoutComment[]>(`/api/v1/workouts/${todayScheduleItem!.id}/comments`),
+    enabled: Boolean(todayScheduleItem),
+  });
+  const trainerComment = comments.data
+    ?.slice()
+    .sort(
+      (left, right) =>
+        new Date(right.created_at).getTime() - new Date(left.created_at).getTime() ||
+        right.id - left.id,
+    )[0];
   const profileMissing = useMemo(
     () =>
       Boolean(
@@ -396,8 +713,16 @@ export function TodayDashboard() {
       api<Workout>(`/api/v1/workouts/${workoutId}/start`, { method: 'POST' }),
     onSuccess: async (startedWorkout) => {
       queryClient.setQueryData(['workout', 'today'], startedWorkout);
+      queryClient.setQueryData<WorkoutScheduleItem[]>(['workout', 'week'], (items) =>
+        items?.map((item) =>
+          item.id === startedWorkout.id ? { ...item, status: startedWorkout.status } : item,
+        ),
+      );
       setDetailsOpen(true);
-      await queryClient.invalidateQueries({ queryKey: queryKeys.progress.summaries });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['workout', 'week'], exact: true }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.progress.summaries }),
+      ]);
     },
     onError: (reason) => toast((reason as Error).message, 'error'),
   });
@@ -407,7 +732,25 @@ export function TodayDashboard() {
     detailsRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
   }, [detailsOpen]);
 
+  useEffect(() => {
+    const calendarContext = `${timeZone}:${today}`;
+    if (calendarContextRef.current === calendarContext) return;
+    calendarContextRef.current = calendarContext;
+    setDetailsOpen(false);
+    void Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['workout', 'today'], exact: true }),
+      queryClient.invalidateQueries({ queryKey: ['workout', 'week'], exact: true }),
+      queryClient.invalidateQueries({ queryKey: ['weekly-check-ins', 'current'], exact: true }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.progress.summaries }),
+    ]);
+  }, [queryClient, timeZone, today]);
+
   const workoutFailed = Boolean(workout.error && !noTodayWorkout && !visibleWorkout);
+  const priorityContextLoading = Boolean(
+    !visibleWorkout &&
+    user?.has_active_program &&
+    (week.isLoading || weeklyReview.isLoading || (todayScheduleItem && comments.isLoading)),
+  );
 
   if (detailsOpen && visibleWorkout && visibleWorkout.status !== 'completed') {
     return (
@@ -438,10 +781,19 @@ export function TodayDashboard() {
         <p>{firstName ? `${firstName}, ` : ''}вот главное на день.</p>
       </header>
 
+      <WeekContext
+        today={today}
+        workouts={week.data}
+        loading={week.isLoading}
+        error={Boolean(week.error)}
+        onRetry={() => void week.refetch()}
+      />
+
       <div className="today-dashboard__overview">
         <section className="today-workout-spotlight" aria-labelledby="today-workout-title">
           <span className="today-workout-spotlight__label">Тренировка</span>
           {workout.isLoading ||
+          priorityContextLoading ||
           (noTodayWorkout && progress.isLoading && user?.has_active_program) ? (
             <div
               className="today-summary-skeleton"
@@ -468,6 +820,9 @@ export function TodayDashboard() {
             <WorkoutOverview
               today={today}
               workout={visibleWorkout}
+              todayScheduleItem={todayScheduleItem}
+              weeklyReview={weeklyReview.data}
+              trainerComment={trainerComment}
               progress={progress}
               detailsOpen={detailsOpen}
               startPending={start.isPending}
@@ -497,7 +852,7 @@ export function TodayDashboard() {
 
       <nav className="today-secondary-actions" aria-label="Быстрые действия">
         <AppLink to="/app?section=programs">План тренировок</AppLink>
-        <AppLink to="/app?section=progress">Записать замер</AppLink>
+        <AppLink to="/app?section=progress">Прогресс</AppLink>
         <AppLink to="/app?section=nutrition">Настроить питание</AppLink>
       </nav>
     </div>

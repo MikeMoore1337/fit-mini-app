@@ -6,6 +6,14 @@ export function detectedTimeZone(fallback = 'Europe/Moscow'): string {
   }
 }
 
+export function formatCalendarDate(
+  value: string,
+  options: Intl.DateTimeFormatOptions,
+  locale = 'ru-RU',
+): string {
+  return new Intl.DateTimeFormat(locale, options).format(new Date(`${value}T12:00:00`));
+}
+
 export function dateInputValue(date: Date, timeZone = detectedTimeZone()): string {
   try {
     const parts = new Intl.DateTimeFormat('en-CA', {
@@ -30,4 +38,17 @@ export function addCalendarDays(value: string, days: number): string {
   if (!year || !month || !day) return value;
   const date = new Date(Date.UTC(year, month - 1, day + days));
   return date.toISOString().slice(0, 10);
+}
+
+export function calendarWeek(value: string): string[] {
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) return [value];
+  const date = new Date(Date.UTC(year, month - 1, day));
+  const mondayOffset = (date.getUTCDay() + 6) % 7;
+  const monday = new Date(Date.UTC(year, month - 1, day - mondayOffset));
+  return Array.from({ length: 7 }, (_, index) => {
+    const weekDay = new Date(monday);
+    weekDay.setUTCDate(monday.getUTCDate() + index);
+    return weekDay.toISOString().slice(0, 10);
+  });
 }
