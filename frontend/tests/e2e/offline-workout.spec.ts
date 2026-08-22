@@ -35,6 +35,9 @@ test('active workout переживает offline edit, refresh и reconnect б�
           {
             id: 201,
             set_number: 1,
+            rir: null,
+            set_kind: 'working',
+            reached_failure: false,
             ...setState,
             version: setVersion,
           },
@@ -133,10 +136,30 @@ test('active workout переживает offline edit, refresh и reconnect б�
   await page.getByRole('button', { name: 'Продолжить тренировку' }).click();
 
   workoutOffline = true;
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false });
+    window.dispatchEvent(new Event('offline'));
+  });
   await page.getByRole('spinbutton', { name: 'Повторы, Жим штанги лежа, подход 1' }).fill('8');
   await page.getByRole('spinbutton', { name: 'Вес, Жим штанги лежа, подход 1' }).fill('40');
-  await page.getByRole('button', { name: 'Завершить: Жим штанги лежа, подход 1' }).click();
   await expect(page.getByText('Сохранено на устройстве')).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const key = Object.keys(localStorage).find((item) =>
+          item.startsWith('fit_active_workout_v1_user_7_workout_42'),
+        );
+        const queue = key ? JSON.parse(localStorage.getItem(key) || '{}').queue : [];
+        const values = queue?.at(-1)?.values;
+        return values ? [values.actual_reps, values.actual_weight] : null;
+      }),
+    )
+    .toEqual([8, 40]);
+  const completeSet = page.getByRole('button', {
+    name: 'Завершить: Жим штанги лежа, подход 1',
+  });
+  await completeSet.focus();
+  await completeSet.click();
   await expect(page.getByRole('timer').filter({ hasText: 'Отдых' })).toContainText('1:30');
   await expect
     .poll(() =>

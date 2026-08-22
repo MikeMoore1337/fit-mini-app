@@ -3,19 +3,16 @@ import {
   installMobileLayoutAdapter,
   readMobileViewportSnapshot,
 } from '../../../../src/shared/telegram/layout';
-import type { TelegramWebApp } from '../../../../src/shared/telegram/types';
+import { createTelegramMock } from '../../../helpers/telegramMock';
 
-function telegramLayoutMock(): TelegramWebApp {
-  return {
-    initData: 'signed',
+function telegramLayoutMock() {
+  return createTelegramMock({
     isActive: true,
     viewportHeight: 560,
     viewportStableHeight: 844,
     safeAreaInset: { top: 28, right: 2, bottom: 20, left: 2 },
     contentSafeAreaInset: { top: 44, right: 0, bottom: 16, left: 0 },
-    onEvent: vi.fn(),
-    offEvent: vi.fn(),
-  };
+  });
 }
 
 describe('Mobile Web/TMA layout adapter', () => {
@@ -29,7 +26,8 @@ describe('Mobile Web/TMA layout adapter', () => {
   });
 
   it('normalizes Telegram stable/current viewport and both safe-area layers', () => {
-    const telegram = telegramLayoutMock();
+    const controller = telegramLayoutMock();
+    const telegram = controller.webApp;
 
     expect(readMobileViewportSnapshot(telegram)).toEqual({
       active: true,
@@ -48,11 +46,17 @@ describe('Mobile Web/TMA layout adapter', () => {
     expect(root.style.getPropertyValue('--yfc-tg-content-safe-top')).toBe('44px');
 
     cleanup();
-    expect(telegram.offEvent).toHaveBeenCalledTimes(5);
+    expect(controller.calls.unsubscribed).toEqual([
+      'viewportChanged',
+      'safeAreaChanged',
+      'contentSafeAreaChanged',
+      'activated',
+      'deactivated',
+    ]);
   });
 
   it('hides navigation state only while an editable control owns focus', () => {
-    const telegram = telegramLayoutMock();
+    const telegram = telegramLayoutMock().webApp;
     const input = document.createElement('input');
     document.body.append(input);
     const cleanup = installMobileLayoutAdapter(telegram);
@@ -69,14 +73,11 @@ describe('Mobile Web/TMA layout adapter', () => {
   });
 
   it('updates layout values from Telegram events without recreating application state', () => {
-    const telegram = telegramLayoutMock();
-    const callbacks = new Map<string, () => void>();
-    telegram.onEvent = vi.fn((event, callback) => callbacks.set(event, callback));
+    const controller = telegramLayoutMock();
+    const telegram = controller.webApp;
     const cleanup = installMobileLayoutAdapter(telegram);
 
-    telegram.viewportHeight = 720;
-    telegram.viewportStableHeight = 900;
-    callbacks.get('viewportChanged')?.();
+    controller.setViewport(720, 900);
 
     expect(document.documentElement.style.getPropertyValue('--yfc-viewport-height')).toBe('720px');
     expect(document.documentElement.style.getPropertyValue('--yfc-viewport-stable-height')).toBe(

@@ -16,14 +16,18 @@ export interface TelegramThemeParams {
   bottom_bar_bg_color?: string;
 }
 
-export interface TelegramButton {
+export interface TelegramBackButton {
+  isVisible?: boolean;
   show(): void;
   hide(): void;
+  onClick(callback: () => void): void;
+  offClick(callback: () => void): void;
+}
+
+export interface TelegramButton extends TelegramBackButton {
   setText(text: string): void;
   enable(): void;
   disable(): void;
-  onClick(callback: () => void): void;
-  offClick(callback: () => void): void;
 }
 
 export interface TelegramInsets {
@@ -36,6 +40,8 @@ export interface TelegramInsets {
 export interface TelegramWebApp {
   initData: string;
   initDataUnsafe?: { start_param?: string };
+  version?: string;
+  platform?: string;
   colorScheme?: 'light' | 'dark';
   themeParams?: TelegramThemeParams;
   isActive?: boolean;
@@ -44,7 +50,7 @@ export interface TelegramWebApp {
   safeAreaInset?: Partial<TelegramInsets>;
   contentSafeAreaInset?: Partial<TelegramInsets>;
   MainButton?: TelegramButton;
-  BackButton?: TelegramButton;
+  BackButton?: TelegramBackButton;
   HapticFeedback?: {
     impactOccurred(style: string): void;
     notificationOccurred(type: string): void;
