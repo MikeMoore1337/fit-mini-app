@@ -13,6 +13,11 @@ def test_automated_deploy_keeps_revision_provenance_and_stale_run_guards() -> No
         "git reset --hard '$DEPLOY_SHA'"
     )
     assert "Skipping superseded deployment" in deploy_workflow
+    assert "if [ \\\"\\$LATEST_MASTER_SHA\\\" != '$DEPLOY_SHA' ]; then" in deploy_workflow
+    assert (
+        'echo \\"Skipping superseded deployment: tested revision $DEPLOY_SHA '
+        'is no longer master head (\\$LATEST_MASTER_SHA)\\"' in deploy_workflow
+    )
 
     assert 'verify_image_revision "$BACKEND_IMAGE"' in deploy_script
     assert 'verify_image_revision "$BOT_IMAGE"' in deploy_script
