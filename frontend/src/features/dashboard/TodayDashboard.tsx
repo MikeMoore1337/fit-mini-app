@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
 import { ApiError, api } from '../../shared/api/client';
@@ -13,6 +13,10 @@ import {
 import { TodayWorkout } from '../workouts/TodayWorkout';
 import { Badge, Button, Skeleton } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
+
+const SelectedTodayPilot49e = import.meta.env.DEV
+  ? lazy(() => import('../../dev/SelectedTodayPilot49e'))
+  : null;
 
 function formatCalendarDate(value: string, options: Intl.DateTimeFormatOptions): string {
   return new Intl.DateTimeFormat('ru-RU', options).format(new Date(`${value}T12:00:00`));
@@ -138,7 +142,13 @@ function NutritionSummary({ today }: { today: string }) {
   );
 }
 
-function ProgressSummaryPanel({ summary }: { summary: ReturnType<typeof useProgressSummary> }) {
+function ProgressSummaryPanel({
+  summary,
+  designPilot49e,
+}: {
+  summary: ReturnType<typeof useProgressSummary>;
+  designPilot49e: boolean;
+}) {
   if (summary.isLoading) {
     return (
       <section className="today-progress-grid" aria-label="Загружаем прогресс">
@@ -170,7 +180,12 @@ function ProgressSummaryPanel({ summary }: { summary: ReturnType<typeof useProgr
 
   return (
     <section className="today-progress-grid" aria-label="Главное о прогрессе">
-      <article className="today-panel today-signal">
+      {designPilot49e && SelectedTodayPilot49e && weightTrend && weightTrend.points.length > 1 && (
+        <Suspense fallback={null}>
+          <SelectedTodayPilot49e kind="progress" trend={weightTrend} />
+        </Suspense>
+      )}
+      <article className="today-panel today-signal today-signal--weight">
         <div className="today-panel__head">
           <div>
             <span className="today-panel__kicker">Последний замер</span>
@@ -232,6 +247,7 @@ function WorkoutOverview({
   startPending,
   onOpenDetails,
   onStart,
+  designPilot49e,
 }: {
   today: string;
   workout?: Workout;
@@ -240,6 +256,7 @@ function WorkoutOverview({
   startPending: boolean;
   onOpenDetails(): void;
   onStart(): void;
+  designPilot49e: boolean;
 }) {
   const { user } = useAuth();
   const totalSets =
@@ -286,6 +303,11 @@ function WorkoutOverview({
               ? `${completedSets} из ${totalSets} подходов отмечено`
               : `${workout.exercises.length} упражнений · ${totalSets} подходов`}
           </p>
+          {designPilot49e && SelectedTodayPilot49e && started && (
+            <Suspense fallback={null}>
+              <SelectedTodayPilot49e kind="workout" workout={workout} />
+            </Suspense>
+          )}
         </div>
         <div className="today-workout-actions">
           <Button
@@ -366,6 +388,8 @@ export function TodayDashboard() {
   const queryClient = useQueryClient();
   const detailsRef = useRef<HTMLDivElement>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const designPilot49e =
+    import.meta.env.DEV && document.documentElement.dataset.designPilot === '49e';
   const timeZone = user?.profile?.timezone || detectedTimeZone();
   const today = dateInputValue(new Date(), timeZone);
   const heading = formatTodayHeading(today);
@@ -473,13 +497,14 @@ export function TodayDashboard() {
               startPending={start.isPending}
               onOpenDetails={() => setDetailsOpen(true)}
               onStart={() => visibleWorkout && start.mutate(visibleWorkout.id)}
+              designPilot49e={designPilot49e}
             />
           )}
         </section>
 
         <div className="today-dashboard__facts">
           <NutritionSummary today={today} />
-          <ProgressSummaryPanel summary={progress} />
+          <ProgressSummaryPanel summary={progress} designPilot49e={designPilot49e} />
         </div>
       </div>
 

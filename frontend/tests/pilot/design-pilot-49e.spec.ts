@@ -7,9 +7,9 @@ const workout = {
   id: 42,
   scheduled_date: today,
   scheduled_time: '18:30:00',
-  title: 'Силовая база — длинное название для проверки реального переноса',
+  title: 'Силовая база',
   status: 'in_progress',
-  day_number: 2,
+  day_number: 1,
   week_number: 1,
   started_at: `${today}T15:00:00+03:00`,
   completed_at: null,
@@ -17,7 +17,7 @@ const workout = {
     {
       id: 101,
       exercise_id: 11,
-      exercise_title: 'Жим штанги лёжа с контролируемой паузой',
+      exercise_title: 'Жим штанги лёжа',
       sort_order: 1,
       prescribed_sets: 3,
       prescribed_reps: '8–10',
@@ -36,7 +36,41 @@ const workout = {
         version: 1,
       })),
     },
+    {
+      id: 102,
+      exercise_id: 12,
+      exercise_title: 'Тяга верхнего блока',
+      sort_order: 2,
+      prescribed_sets: 3,
+      prescribed_reps: '10–12',
+      rest_seconds: 90,
+      notes: null,
+      has_guide: false,
+      sets: [1, 2, 3].map((setNumber) => ({
+        id: 210 + setNumber,
+        set_number: setNumber,
+        actual_reps: null,
+        actual_weight: null,
+        rir: null,
+        set_kind: null,
+        reached_failure: null,
+        is_completed: false,
+        version: 1,
+      })),
+    },
   ],
+};
+
+const longWorkout = {
+  ...workout,
+  title: 'Силовая база — длинное название для проверки реального переноса',
+  exercises: workout.exercises.map((exercise, index) => ({
+    ...exercise,
+    exercise_title:
+      index === 0
+        ? 'Жим штанги лёжа с контролируемой паузой и длинным названием'
+        : 'Тяга верхнего блока с паузой в конечной позиции',
+  })),
 };
 
 const oatmeal = {
@@ -100,10 +134,10 @@ function diary(entries: Array<Record<string, unknown>> = []) {
       { meal_type: 'snacks', entries: [], totals: zero },
     ],
     totals: {
-      energy_kcal: '1450.00',
-      protein_g: '96.000',
-      fat_g: '48.000',
-      carbs_g: '160.000',
+      energy_kcal: '2020.00',
+      protein_g: '141.000',
+      fat_g: '69.000',
+      carbs_g: '221.000',
       fiber_g: '18.000',
     },
     targets: {
@@ -113,17 +147,17 @@ function diary(entries: Array<Record<string, unknown>> = []) {
       carbs_g: '230.000',
     },
     remaining: {
-      energy_kcal: '650.00',
-      protein_g: '44.000',
-      fat_g: '22.000',
-      carbs_g: '70.000',
+      energy_kcal: '-20.00',
+      protein_g: '-1.000',
+      fat_g: '1.000',
+      carbs_g: '-1.000',
     },
   };
 }
 
 async function mockApi(
   page: Page,
-  options: { authenticated?: boolean; holdConfig?: boolean } = {},
+  options: { authenticated?: boolean; holdConfig?: boolean; longContent?: boolean } = {},
 ): Promise<{ releaseConfig(): void }> {
   let entries: Array<Record<string, unknown>> = [];
   let releaseConfig: () => void = () => undefined;
@@ -145,7 +179,7 @@ async function mockApi(
       return route.fulfill({
         json: {
           app_env: 'dev',
-          enable_dev_auth: true,
+          enable_dev_auth: false,
           enable_web_auth: true,
           enable_email_auth: false,
           telegram_bot_username: 'yfc_pilot_bot',
@@ -157,7 +191,9 @@ async function mockApi(
       return route.fulfill({ status: 401, json: { detail: 'No refresh cookie' } });
     }
     if (apiPath === '/api/v1/me') return route.fulfill({ json: user });
-    if (apiPath === '/api/v1/workouts/today') return route.fulfill({ json: workout });
+    if (apiPath === '/api/v1/workouts/today') {
+      return route.fulfill({ json: options.longContent ? longWorkout : workout });
+    }
     if (apiPath === '/api/v1/workouts/progress/summary') {
       return route.fulfill({
         json: {
@@ -184,7 +220,31 @@ async function mockApi(
             target_protein_g: 140,
             target_effective_on: '2026-07-01',
           },
-          body: { latest_measurement: null, trends: [], priority: null, guidance: {} },
+          body: {
+            latest_measurement: { measured_on: '2026-08-21', weight_kg: 81.2 },
+            trends: [
+              {
+                metric: 'weight_kg',
+                first_value: 82,
+                latest_value: 81.2,
+                change: -0.8,
+                first_measured_on: '2026-07-25',
+                latest_measured_on: '2026-08-21',
+                point_count: 5,
+                span_days: 27,
+                interpretation_status: 'available',
+                points: [
+                  { measured_on: '2026-07-25', value: 82 },
+                  { measured_on: '2026-08-01', value: 81.8 },
+                  { measured_on: '2026-08-08', value: 81.65 },
+                  { measured_on: '2026-08-15', value: 81.4 },
+                  { measured_on: '2026-08-21', value: 81.2 },
+                ],
+              },
+            ],
+            priority: null,
+            guidance: {},
+          },
           adherence: {
             formula_version: 'adherence-v1',
             overall_percent: 84,
@@ -289,14 +349,22 @@ test('Landing pilot keeps Quiet Pace across the required responsive matrix', asy
     await page.goto('/?design_pilot=49e');
     await page.evaluate((theme) => {
       localStorage.setItem('app-theme', theme);
-      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new StorageEvent('storage', { key: 'app-theme' }));
     }, viewport.theme);
     await expect(page.locator('html')).toHaveAttribute('data-design-pilot', '49e');
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Знайте, что делать сегодня.' }),
+    ).toBeVisible();
+    await expect(page.locator('.pilot49e-landing-proof')).toBeVisible();
+    await expect(page.getByText('Следите, как растёт прогресс.')).toHaveCount(0);
     await expect(page.locator('#how-it-works')).toBeAttached();
     await expectNoHorizontalOverflow(page);
-    if (viewport.width <= 430) {
-      await expect(page.locator('.landing-hero__visual')).toHaveCSS('transform', 'none');
+    const copyBox = await page.locator('.pilot49e-landing-hero__copy').boundingBox();
+    const proofBox = await page.locator('.pilot49e-landing-proof').boundingBox();
+    if (viewport.width >= 1024) {
+      expect(proofBox?.x).toBeGreaterThan((copyBox?.x ?? 0) + (copyBox?.width ?? 0));
+    } else {
+      expect(proofBox?.y).toBeGreaterThan((copyBox?.y ?? 0) + (copyBox?.height ?? 0));
     }
     await page.screenshot({
       path: `${screenshots}/landing-${viewport.width}-${viewport.theme}.png`,
@@ -311,7 +379,7 @@ test('/login pilot renders the approved split and truthful provider error state'
   const api = await mockApi(page, { holdConfig: true });
   await setTheme(page, 'light');
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/login?design_pilot=49e&auth_error=provider_failure');
+  await page.goto('/login?design_pilot=49e');
   await expect(page.getByText('Проверяем авторизацию…')).toBeVisible();
   await page.screenshot({
     path: `${screenshots}/login-390-light-loading.png`,
@@ -319,21 +387,33 @@ test('/login pilot renders the approved split and truthful provider error state'
   });
   api.releaseConfig();
 
-  await expect(
-    page.getByRole('heading', { name: 'Продолжить в Your Fitness Coach' }),
-  ).toBeVisible();
-  await expect(page.getByRole('alert')).toContainText('Не удалось завершить вход');
+  await expect(page.getByRole('heading', { name: 'Войти и продолжить' })).toBeVisible();
   await expect(page.getByRole('link', { name: /Google/ })).toBeVisible();
+  await expect(page.locator('.public-shell__skip-link')).toBeHidden();
+  await page.keyboard.press('Tab');
+  await expect(page.locator('.public-shell__brand')).toBeFocused();
+  await page.locator('#login-content').focus();
+  await page.screenshot({ path: `${screenshots}/login-390-light.png`, fullPage: true });
 
   await page.setViewportSize({ width: 1440, height: 900 });
-  expect((await page.locator('.login-card').boundingBox())?.width).toBeLessThanOrEqual(270);
+  await expect(page.getByRole('heading', { name: 'Вернитесь к своему плану.' })).toBeVisible();
+  await expect(page.locator('.auth-public-shell .public-shell__header')).toBeHidden();
+  const layoutBox = await page.locator('.login-layout').boundingBox();
+  const authPlaneBox = await page.locator('.login-card').boundingBox();
+  expect(layoutBox?.width).toBe(1440);
+  expect((authPlaneBox?.x ?? 0) / (layoutBox?.width ?? 1)).toBeCloseTo(0.52, 2);
+  expect((await page.locator('.oauth-auth').boundingBox())?.width).toBe(240);
   await expectNoHorizontalOverflow(page);
+  await page.screenshot({ path: `${screenshots}/login-1440-light.png`, fullPage: true });
+  await page.goto('/login?design_pilot=49e&auth_error=provider_failure');
+  await expect(page.getByRole('alert')).toContainText('Не удалось завершить вход');
   await page.screenshot({
     path: `${screenshots}/login-1440-light-error.png`,
     fullPage: true,
   });
   await page.keyboard.press('Tab');
   await expect(page.locator(':focus')).toBeVisible();
+  await page.locator('#login-content').focus();
 
   await page.setViewportSize({ width: 1024, height: 900 });
   await expect(page.locator('.login-intro h1')).toHaveCSS('font-size', '35px');
@@ -345,9 +425,18 @@ test('/login pilot renders the approved split and truthful provider error state'
   });
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.evaluate(() => localStorage.setItem('app-theme', 'dark'));
-  await page.reload();
+  await page.evaluate(() => {
+    localStorage.setItem('app-theme', 'dark');
+    window.dispatchEvent(new StorageEvent('storage', { key: 'app-theme' }));
+  });
+  await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
+  await expect(page.getByRole('heading', { name: 'Войти и продолжить' })).toBeVisible();
   await expect(page.getByRole('alert')).toBeVisible();
+  await expect(page.locator('.oauth-button').first()).toHaveCSS(
+    'background-color',
+    'rgb(22, 25, 22)',
+  );
+  await expect(page.locator('.oauth-button').first()).toHaveCSS('color', 'rgb(238, 240, 234)');
   await expectNoHorizontalOverflow(page);
   await page.screenshot({
     path: `${screenshots}/login-390-dark-error.png`,
@@ -361,8 +450,30 @@ test('Today and active workout use real app components and mobile bottom navigat
   await mockApi(page, { authenticated: true });
   await setTheme(page, 'light');
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/app?design_pilot=49e');
+
+  await expect(page.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible();
+  expect((await page.locator('.app-bottom-nav').boundingBox())?.width).toBe(164);
+  await expectNoHorizontalOverflow(page);
+  await page.screenshot({ path: `${screenshots}/today-1440-light.png`, fullPage: true });
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.evaluate(() => {
+    localStorage.setItem('app-theme', 'dark');
+    window.dispatchEvent(new StorageEvent('storage', { key: 'app-theme' }));
+  });
+  await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
+  expect((await page.locator('.app-bottom-nav').boundingBox())?.width).toBe(164);
+  await expectNoHorizontalOverflow(page);
+  await page.screenshot({ path: `${screenshots}/today-1280-dark.png`, fullPage: true });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => {
+    localStorage.setItem('app-theme', 'light');
+    window.dispatchEvent(new StorageEvent('storage', { key: 'app-theme' }));
+  });
+  await page.reload();
 
   await expect(page.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible();
@@ -413,6 +524,29 @@ test('fast nutrition entry survives touch, focus and offline state', async ({ pa
   await expectNoHorizontalOverflow(page);
 });
 
+test('long workout content preserves the mobile action hierarchy', async ({ page }) => {
+  await mockApi(page, { authenticated: true, longContent: true });
+  await setTheme(page, 'light');
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.goto('/app?design_pilot=49e');
+
+  await expect(page.getByText('длинное название для проверки реального переноса')).toBeVisible();
+  await page.getByRole('button', { name: 'Продолжить тренировку' }).click();
+  await expect(
+    page.getByRole('heading', {
+      name: 'Жим штанги лёжа с контролируемой паузой и длинным названием',
+    }),
+  ).toBeVisible();
+  await expect(
+    page.locator('.active-workout-set[aria-current="step"] .active-workout-set__done'),
+  ).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  await page.screenshot({
+    path: `${screenshots}/workout-360-light-long-content.png`,
+    fullPage: true,
+  });
+});
+
 test('TMA mock applies safe areas, stable viewport, theme, BackButton object and keyboard resize', async ({
   page,
 }) => {
@@ -430,10 +564,12 @@ test('TMA mock applies safe areas, stable viewport, theme, BackButton object and
   await expect(root).toHaveAttribute('data-pilot-telegram-expanded', 'true');
   await expect(root).toHaveAttribute('data-pilot-back-button', 'hidden');
   await expect(page.locator('.app-bottom-nav')).toHaveCSS('padding-bottom', '20px');
+  await page.screenshot({ path: `${screenshots}/tma-390-dark-today.png`, fullPage: true });
 
   await page.getByRole('button', { name: 'Продолжить тренировку' }).click();
   const currentSet = page.locator('[data-workout-set-id="202"]');
   const weight = currentSet.getByRole('spinbutton', { name: /Вес/ });
+  await page.screenshot({ path: `${screenshots}/tma-390-dark-workout.png`, fullPage: true });
   await weight.focus();
   await page.setViewportSize({ width: 390, height: 560 });
   await page.evaluate(() => window.__YFC_DESIGN_PILOT_49E__?.setViewport(560, 844));
