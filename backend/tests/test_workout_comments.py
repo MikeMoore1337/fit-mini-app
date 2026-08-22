@@ -74,7 +74,7 @@ def test_contextual_comments_keep_chronology_plain_text_and_edit_revisions(clien
     first_body = "<script>alert('xss')</script>"
     first = client.post(
         f"/api/v1/coach/clients/{client_id}/workouts/{workout_id}/comments",
-        headers=trainer_headers,
+        headers={**trainer_headers, "Idempotency-Key": "comment-draft-0001"},
         json={"body": first_body},
     )
     assert first.status_code == 201, first.text
@@ -83,6 +83,20 @@ def test_contextual_comments_keep_chronology_plain_text_and_edit_revisions(clien
     assert first_payload["body_format"] == "plain_text"
     assert first_payload["workout_exercise_id"] is None
 
+    replay = client.post(
+        f"/api/v1/coach/clients/{client_id}/workouts/{workout_id}/comments",
+        headers={**trainer_headers, "Idempotency-Key": "comment-draft-0001"},
+        json={"body": first_body},
+    )
+    assert replay.status_code == 201, replay.text
+    assert replay.json()["id"] == first_payload["id"]
+    conflict = client.post(
+        f"/api/v1/coach/clients/{client_id}/workouts/{workout_id}/comments",
+        headers={**trainer_headers, "Idempotency-Key": "comment-draft-0001"},
+        json={"body": "Другой комментарий"},
+    )
+    assert conflict.status_code == 409
+
     second = client.post(
         f"/api/v1/coach/clients/{client_id}/workouts/{workout_id}/comments",
         headers=trainer_headers,
@@ -90,6 +104,13 @@ def test_contextual_comments_keep_chronology_plain_text_and_edit_revisions(clien
     )
     assert second.status_code == 201, second.text
     assert second.json()["body"] == "Держите спину ровно."
+
+    timeline = client.get(
+        f"/api/v1/coach/clients/{client_id}/workouts",
+        headers=trainer_headers,
+    )
+    assert timeline.status_code == 200, timeline.text
+    assert timeline.json()[0]["exercises"][0]["workout_exercise_id"] == workout_exercise_id
 
     history = client.get(f"/api/v1/workouts/{workout_id}/comments", headers=client_headers)
     assert history.status_code == 200

@@ -18,19 +18,31 @@ import { notificationDraftStorageKey } from '../../shared/userScopedStorage';
 import { notificationStatusLabel } from '../../shared/statusLabels';
 import { DateInput, TimeInput } from '../../shared/ui/PickerInput';
 
-type NotificationDestination = 'today' | 'nutrition';
+interface NotificationDestination {
+  path: string;
+  label: string;
+}
 
 function notificationDestination(item: NotificationItem): NotificationDestination | null {
-  if (item.title === 'Тренировка сегодня') return 'today';
-  if (item.title === 'КБЖУ пересчитаны') return 'nutrition';
+  if (item.action_url && /^\/app(?:\?|$)/.test(item.action_url)) {
+    return {
+      path: item.action_url,
+      label:
+        item.title === 'Комментарий тренера к тренировке'
+          ? `Открыть комментарий тренера: ${item.title}`
+          : `Открыть связанный раздел: ${item.title}`,
+    };
+  }
+  if (item.title === 'Тренировка сегодня') {
+    return { path: '/app?section=today', label: `Открыть тренировку: ${item.title}` };
+  }
+  if (item.title === 'КБЖУ пересчитаны') {
+    return { path: '/app?section=nutrition', label: `Открыть раздел питания: ${item.title}` };
+  }
   return null;
 }
 
-export function NotificationsPanel({
-  onNavigate,
-}: {
-  onNavigate?: (destination: NotificationDestination) => void;
-}) {
+export function NotificationsPanel({ onNavigate }: { onNavigate?: (path: string) => void }) {
   const queryClient = useQueryClient();
   const { toast, confirm } = useFeedback();
   const { user } = useAuth();
@@ -255,12 +267,8 @@ export function NotificationsPanel({
                       <button
                         type="button"
                         className="list-row__main text-button notification-action"
-                        aria-label={
-                          destination === 'today'
-                            ? `Открыть тренировку: ${item.title}`
-                            : `Открыть раздел питания: ${item.title}`
-                        }
-                        onClick={() => onNavigate(destination)}
+                        aria-label={destination.label}
+                        onClick={() => onNavigate(destination.path)}
                       >
                         {notificationCopy}
                       </button>

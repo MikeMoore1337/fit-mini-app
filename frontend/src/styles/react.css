@@ -922,7 +922,13 @@ select:not([multiple]) {
   justify-content: flex-end;
   margin: 0 0 12px;
 }
-
+.workout-history__footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
 /* Компактные карточки */
 .exercise-catalog-row,
 .coach-client-row {
@@ -2609,7 +2615,7 @@ select:not([multiple]) {
 }
 .program-exercise-row {
   display: grid;
-  grid-template-columns: 32px minmax(220px, 2fr) minmax(300px, 3fr) auto;
+  grid-template-columns: minmax(220px, 2fr) minmax(300px, 3fr);
   align-items: end;
   gap: 9px;
   min-width: 0;
@@ -2617,10 +2623,23 @@ select:not([multiple]) {
   border-top: 1px solid var(--border);
 }
 .program-exercise-row__number {
-  align-self: center;
+  flex: 0 0 auto;
 }
 .program-exercise-row .exercise-select {
+  grid-column: 1;
   min-width: 0;
+}
+.program-exercise-row__heading,
+.program-exercise-row__heading > span:first-child {
+  display: flex;
+  align-items: center;
+}
+.program-exercise-row__heading {
+  justify-content: space-between;
+  gap: 8px;
+}
+.program-exercise-row__heading > span:first-child {
+  gap: 8px;
 }
 .program-exercise-row__metrics {
   display: grid;
@@ -2633,9 +2652,22 @@ select:not([multiple]) {
   align-items: center;
 }
 .program-exercise-advanced {
-  grid-column: 2 / -1;
+  grid-column: 1 / -1;
   padding: 10px 12px;
   background: var(--surface-subtle);
+}
+.program-add-exercise {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  font-weight: 750;
+}
+.program-add-exercise > span {
+  font-size: 1.15rem;
+  line-height: 1;
 }
 .program-exercise-alternatives {
   display: grid;
@@ -2907,10 +2939,10 @@ select:not([multiple]) {
     grid-template-columns: 1fr;
   }
   .program-exercise-row {
-    grid-template-columns: 28px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
   }
   .program-exercise-row .exercise-select {
-    grid-column: 2;
+    grid-column: 1;
   }
   .program-exercise-row__metrics,
   .program-exercise-row__actions,

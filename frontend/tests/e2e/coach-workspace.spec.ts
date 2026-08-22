@@ -132,6 +132,31 @@ function summary(
 }
 
 async function mockCoachWorkspace(page: Page) {
+  const feedbackComments: Array<{
+    id: number;
+    trainer_author_id: number;
+    client_user_id: number;
+    workout_id: number;
+    workout_exercise_id: number | null;
+    body: string;
+    body_format: string;
+    created_at: string;
+    updated_at: string | null;
+    revisions: unknown[];
+  }> = [
+    {
+      id: 801,
+      trainer_author_id: 1,
+      client_user_id: 11,
+      workout_id: 501,
+      workout_exercise_id: null,
+      body: 'Хороший контроль темпа во всех подходах.',
+      body_format: 'plain_text',
+      created_at: '2026-08-19T19:30:00',
+      updated_at: null,
+      revisions: [],
+    },
+  ];
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
@@ -207,6 +232,72 @@ async function mockCoachWorkspace(page: Page) {
         ],
       });
     if (path.endsWith('/coach/clients')) return route.fulfill({ json: clients });
+    if (path.endsWith('/coach/clients/11/analytics'))
+      return route.fulfill({
+        json: {
+          adherence_percent: 80,
+          workouts_completed: 8,
+          workouts_skipped: 1,
+          workouts_missed: 1,
+          current_streak: 3,
+          weight_change_kg: -0.8,
+          personal_records: [],
+        },
+      });
+    if (path.endsWith('/coach/clients/11/workouts/501/comments')) {
+      if (request.method() === 'POST') {
+        const payload = request.postDataJSON() as {
+          body: string;
+          workout_exercise_id: number | null;
+        };
+        const created = {
+          ...feedbackComments[0]!,
+          id: 802,
+          body: payload.body,
+          workout_exercise_id: payload.workout_exercise_id,
+          created_at: '2026-08-20T15:00:00',
+        };
+        feedbackComments.push(created);
+        return route.fulfill({ status: 201, json: created });
+      }
+      return route.fulfill({ json: feedbackComments });
+    }
+    if (path.endsWith('/coach/clients/11/workouts'))
+      return route.fulfill({
+        json: [
+          {
+            id: 501,
+            scheduled_date: '2026-08-19',
+            scheduled_time: '18:30:00',
+            title: 'Ноги и корпус',
+            status: 'completed',
+            completed_at: '2026-08-19T19:20:00',
+            completed_sets: 4,
+            volume_kg: 1480,
+            exercises: [
+              {
+                workout_exercise_id: 551,
+                exercise_id: 51,
+                exercise_title: 'Присед со штангой',
+                notes: 'Спокойный темп',
+                superset_group: null,
+                superset_order: null,
+                sets: [
+                  {
+                    set_number: 1,
+                    actual_reps: 8,
+                    actual_weight: 60,
+                    rir: '2',
+                    set_kind: 'working',
+                    reached_failure: false,
+                    is_completed: true,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
     if (path.endsWith('/programs/exercises')) return route.fulfill({ json: [] });
     if (/\/programs\/assigned\/\d+\/(revisions|blocks)$/.test(path))
       return route.fulfill({ json: [] });
@@ -350,6 +441,51 @@ test('mobile использует список и отдельный конте�
     ((await dayInput.boundingBox())?.y ?? 0) + ((await dayInput.boundingBox())?.height ?? 0),
   );
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
+  const exerciseActions = page.locator('.program-exercise-row__actions').first();
+  const exerciseHeading = page.locator('.program-exercise-row__heading').first();
+  const exerciseAdvanced = page.locator('.program-exercise-advanced').first();
+  const exerciseActionsBox = await exerciseActions.boundingBox();
+  const exerciseHeadingBox = await exerciseHeading.boundingBox();
+  const exerciseAdvancedBox = await exerciseAdvanced.boundingBox();
+  expect(Math.abs((exerciseActionsBox?.y ?? 0) - (exerciseHeadingBox?.y ?? 0))).toBeLessThan(4);
+  expect((exerciseActionsBox?.y ?? 0) < (exerciseAdvancedBox?.y ?? 0)).toBe(true);
+  await expect(
+    exerciseActions.getByRole('button', { name: 'Переместить упражнение 1 выше' }),
+  ).toBeHidden();
+  await expect(
+    exerciseActions.getByRole('button', { name: 'Переместить упражнение 1 ниже' }),
+  ).toBeHidden();
+  await expect(exerciseAdvanced.getByText('Заметка, суперсет и замены')).toBeVisible();
+  await expect(exerciseAdvanced.getByText('Необязательные настройки упражнения')).toBeVisible();
+  expect(
+    (
+      await exerciseActions
+        .getByRole('button', { name: 'Удалить упражнение 1 из дня 1' })
+        .boundingBox()
+    )?.height,
+  ).toBeGreaterThanOrEqual(44);
+  const addExercise = page.getByRole('button', { name: 'Добавить упражнение' }).first();
+  await expect(addExercise).toHaveCSS('border-top-style', 'solid');
+  expect((await addExercise.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+
+  for (const viewport of [
+    { width: 430, height: 932 },
+    { width: 360, height: 800 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
+    const actionsBox = await exerciseActions.boundingBox();
+    const headingBox = await exerciseHeading.boundingBox();
+    expect(Math.abs((actionsBox?.y ?? 0) - (headingBox?.y ?? 0))).toBeLessThan(4);
+  }
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const desktopActionsBox = await exerciseActions.boundingBox();
+  const desktopAdvancedBox = await exerciseAdvanced.boundingBox();
+  expect((desktopActionsBox?.y ?? 0) < (desktopAdvancedBox?.y ?? 0)).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(1280);
+  await page.setViewportSize({ width: 390, height: 844 });
 
   if (captureAudit) {
     await page.screenshot({
@@ -393,6 +529,73 @@ test('mobile использует список и отдельный конте�
   if (captureAudit) {
     await page.screenshot({
       path: '../.artifacts/ui-audit/task-48/coach-mobile-360.png',
+      fullPage: true,
+    });
+  }
+});
+
+test('trainer leaves contextual workout and exercise feedback without messenger UI', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await mockCoachWorkspace(page);
+  await page.goto('/coach');
+  await page.getByRole('button', { name: 'Тренер' }).click();
+
+  const rosterBox = await page.locator('.coach-client-roster').boundingBox();
+  const detailBox = await page.locator('.coach-client-detail').boundingBox();
+  expect(Math.abs((rosterBox?.y ?? 0) - (detailBox?.y ?? 0))).toBeLessThan(2);
+
+  const progress = page.locator('#coach-client-progress');
+  await progress.locator(':scope > summary').click();
+  const workout = progress
+    .locator('details.compact-disclosure')
+    .filter({ hasText: 'Ноги и корпус' });
+  await workout.locator(':scope > summary').click();
+  const feedback = workout.locator('.workout-feedback-disclosure');
+  await feedback.locator(':scope > summary').click();
+
+  await expect(feedback.getByText('Анна Петрова · 19 августа 2026 г.')).toBeVisible();
+  await expect(feedback.getByText('Хороший контроль темпа во всех подходах.')).toBeVisible();
+  await feedback.getByRole('combobox', { name: 'Контекст комментария' }).selectOption('551');
+  await feedback
+    .getByRole('textbox', { name: 'Комментарий' })
+    .fill('Колени держите по направлению носков.');
+  await expect(feedback.getByText(/\d+ из 2000/)).toBeVisible();
+  await feedback.getByRole('button', { name: 'Отправить комментарий' }).click();
+  await expect(feedback.getByText('Колени держите по направлению носков.')).toBeVisible();
+  await expect(feedback.getByText('Упражнение · Присед со штангой')).toBeVisible();
+  await expect(page.locator('[class*="chat"], [class*="bubble"]')).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(1440);
+
+  if (captureAudit) {
+    await page.getByRole('button', { name: 'Закрыть сообщение' }).click();
+    await feedback.scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: '../.artifacts/ui-audit/task-49/trainer-feedback-desktop-light.png',
+      fullPage: false,
+    });
+  }
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page
+    .getByRole('button', { name: /Анна Петрова/ })
+    .first()
+    .click();
+  await page.getByRole('button', { name: 'Ещё', exact: true }).click();
+  await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
+  await page.keyboard.press('Escape');
+  await expect(feedback.getByText('Колени держите по направлению носков.')).toBeVisible();
+  await expect(feedback.getByRole('textbox', { name: 'Комментарий' })).toHaveCSS(
+    'background-color',
+    'rgb(22, 25, 22)',
+  );
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
+
+  if (captureAudit) {
+    await page.screenshot({
+      path: '../.artifacts/ui-audit/task-49/trainer-feedback-mobile-dark.png',
       fullPage: true,
     });
   }

@@ -8,6 +8,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    String,
     Text,
     UniqueConstraint,
 )
@@ -30,6 +31,11 @@ class WorkoutComment(Base):
             "workout_id",
             "created_at",
             "id",
+        ),
+        UniqueConstraint(
+            "trainer_author_id",
+            "idempotency_key",
+            name="uq_workout_comments_author_idempotency",
         ),
         Index(
             "ix_workout_comments_relation_workout_created",
@@ -56,6 +62,7 @@ class WorkoutComment(Base):
     workout_exercise_id: Mapped[int | None] = mapped_column(
         ForeignKey("user_workout_exercises.id", ondelete="SET NULL"), nullable=True
     )
+    idempotency_key: Mapped[str | None] = mapped_column(String(128), nullable=True)
     body: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now_msk_naive)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

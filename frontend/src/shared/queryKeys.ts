@@ -15,6 +15,11 @@ export const queryKeys = {
     clientSummary: (clientId: number) => ['coach', 'client', clientId, 'summary'] as const,
     clientSummaries: ['coach', 'client-summaries'] as const,
   },
+  workoutComments: {
+    client: (workoutId: number) => ['workout', workoutId, 'comments'] as const,
+    trainer: (clientId: number, workoutId: number) =>
+      ['coach', 'client', clientId, 'workout', workoutId, 'comments'] as const,
+  },
   nutrition: {
     diary: ['nutrition', 'diary'] as const,
     diaryDate: (diaryDate: string) => ['nutrition', 'diary', diaryDate] as const,

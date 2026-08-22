@@ -16,6 +16,11 @@ interface NavigationContextValue {
 
 const NavigationContext = createContext<NavigationContextValue | null>(null);
 
+function hasWorkoutFeedback(search: string): boolean {
+  const workoutId = new URLSearchParams(search).get('workout_id');
+  return Boolean(workoutId && /^\d+$/.test(workoutId) && Number(workoutId) > 0);
+}
+
 export function NavigationProvider({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useState(() => ({
     path: window.location.pathname,
@@ -39,18 +44,24 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     const backButton = window.Telegram?.WebApp?.BackButton;
     if (!backButton) return;
-    if (location.path === '/app' || location.path === '/onboarding' || location.path === '/') {
+    const workoutFeedbackOpen = location.path === '/app' && hasWorkoutFeedback(location.search);
+    if (
+      (location.path === '/app' && !workoutFeedbackOpen) ||
+      location.path === '/onboarding' ||
+      location.path === '/'
+    ) {
       backButton.hide();
       return;
     }
-    const goBack = () => navigate('/app');
+    const goBack = () =>
+      navigate(workoutFeedbackOpen ? '/app?section=progress' : '/app', workoutFeedbackOpen);
     backButton.onClick(goBack);
     backButton.show();
     return () => {
       backButton.offClick(goBack);
       backButton.hide();
     };
-  }, [navigate, location.path]);
+  }, [navigate, location.path, location.search]);
 
   const value = useMemo(
     () => ({ path: location.path, search: location.search, navigate }),

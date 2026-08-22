@@ -1,5 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
 
+const captureFeedbackAudit = Boolean(
+  (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
+    ?.CAPTURE_FEEDBACK_AUDIT,
+);
+
 const signal = (status: 'sufficient' | 'limited' | 'insufficient') => ({
   status,
   counters: {},
@@ -281,9 +286,85 @@ async function mockProgress(page: Page) {
     if (path.endsWith('/check-ins/weekly')) {
       return route.fulfill({ json: { items: [], total: 0, limit: 4, offset: 0 } });
     }
+    if (path.endsWith('/workouts/week')) {
+      return route.fulfill({
+        json: [
+          {
+            id: 43,
+            scheduled_date: '2030-01-28',
+            scheduled_time: '18:30:00',
+            title: 'Ноги и корпус',
+            status: 'completed',
+            day_number: 2,
+            week_number: 4,
+          },
+        ],
+      });
+    }
+    if (path.endsWith('/workouts/schedule')) {
+      return route.fulfill({
+        json: [
+          {
+            id: 43,
+            scheduled_date: '2030-01-28',
+            scheduled_time: '18:30:00',
+            title: 'Ноги и корпус',
+            status: 'completed',
+            day_number: 2,
+            week_number: 4,
+          },
+        ],
+      });
+    }
+    if (path.endsWith('/workouts/history')) {
+      return route.fulfill({
+        json: [
+          {
+            id: 43,
+            scheduled_date: '2030-01-28',
+            scheduled_time: '18:30:00',
+            title: 'Ноги и корпус',
+            status: 'completed',
+            started_at: '2030-01-28T18:30:00',
+            completed_at: '2030-01-28T19:20:00',
+            completed_sets: 4,
+            volume_kg: 1480,
+            exercises: [
+              {
+                workout_exercise_id: 55,
+                exercise_id: 11,
+                title: 'Присед со штангой',
+                prescribed_sets: 4,
+                prescribed_reps: '8',
+                sort_order: 1,
+              },
+            ],
+            adaptations: [],
+          },
+        ],
+      });
+    }
+    if (path.endsWith('/workouts/43/comments')) {
+      return route.fulfill({
+        json: [
+          {
+            id: 7,
+            trainer_author_id: 70,
+            client_user_id: 7,
+            workout_id: 43,
+            workout_exercise_id: 55,
+            body: 'Держите колени по направлению носков. <script>не HTML</script>',
+            body_format: 'plain_text',
+            created_at: '2030-01-28T20:00:00',
+            updated_at: '2030-01-28T20:05:00',
+            revisions: [],
+          },
+        ],
+      });
+    }
     if (path.endsWith('/workouts/history/summary')) {
       return route.fulfill({
-        json: { workouts_completed: 0, completed_sets: 0, volume_kg: 0 },
+        json: { workouts_completed: 1, completed_sets: 4, volume_kg: 1480 },
       });
     }
     return route.fulfill({ json: [] });
@@ -345,6 +426,94 @@ test('progress remains clear and free of horizontal overflow at supported widths
 
   expect(consoleErrors).toEqual([]);
   expect(runtimeErrors).toEqual([]);
+});
+
+test('notification deep-link opens exact workout feedback and preserves back navigation', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await mockProgress(page);
+
+  await page.goto('/app?section=today');
+  await page.getByRole('button', { name: 'Клиент' }).click();
+  await expect(page.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible();
+  await page.goto('/app?workout_id=43&comment_id=7&workout_exercise_id=55');
+
+  await expect(page.getByRole('heading', { name: 'Прогресс' })).toBeVisible();
+  await expect(
+    page.getByText('Держите колени по направлению носков.', { exact: false }),
+  ).toBeVisible();
+  await expect(page.locator('#workout-comment-7')).toHaveClass(/is-focused/);
+  await expect(page.locator('#workout-comment-7')).toHaveCount(1);
+  await expect(page.getByText('Упражнение · Присед со штангой')).toBeVisible();
+  await expect(page.getByText('Изменено')).toBeVisible();
+  await expect(page.locator('.workout-feedback script')).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
+  const historyCard = page.locator('.workout-history-card');
+  const clearHistory = historyCard.getByRole('button', { name: 'Очистить историю' });
+  const clearHistoryBox = await clearHistory.boundingBox();
+  const historyFeedbackBox = await historyCard.locator('.workout-feedback').boundingBox();
+  expect(clearHistoryBox?.y ?? 0).toBeGreaterThan(
+    (historyFeedbackBox?.y ?? 0) + (historyFeedbackBox?.height ?? 0),
+  );
+  expect(clearHistoryBox?.height).toBeGreaterThanOrEqual(44);
+  await clearHistory.click();
+  await expect(page.getByRole('dialog', { name: 'Очистить историю?' })).toBeVisible();
+  await page.getByRole('button', { name: 'Отмена' }).click();
+  await expect(historyCard).toHaveAttribute('open', '');
+  const historyMetricBoxes = await historyCard
+    .locator('.workout-history__metrics .metric')
+    .evaluateAll((metrics) => metrics.map((metric) => metric.getBoundingClientRect()));
+  expect(historyMetricBoxes).toHaveLength(3);
+  expect(
+    Math.max(...historyMetricBoxes.map((box) => box.top)) -
+      Math.min(...historyMetricBoxes.map((box) => box.top)),
+  ).toBeLessThan(2);
+  expect(historyMetricBoxes.every((box) => box.width >= 90)).toBe(true);
+
+  for (const viewport of [
+    { width: 360, height: 800 },
+    { width: 430, height: 932 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
+    const metricBoxes = await historyCard
+      .locator('.workout-history__metrics .metric')
+      .evaluateAll((metrics) => metrics.map((metric) => metric.getBoundingClientRect()));
+    expect(
+      Math.max(...metricBoxes.map((box) => box.top)) -
+        Math.min(...metricBoxes.map((box) => box.top)),
+    ).toBeLessThan(2);
+  }
+  const historyRowBox = await page.locator('#workout-history-43').boundingBox();
+  const feedbackBox = await page
+    .locator('#workout-history-43 .workout-feedback-disclosure')
+    .boundingBox();
+  expect(historyRowBox).not.toBeNull();
+  expect(feedbackBox).not.toBeNull();
+  expect(feedbackBox!.x).toBeGreaterThanOrEqual(historyRowBox!.x);
+  expect(feedbackBox!.x + feedbackBox!.width).toBeLessThanOrEqual(
+    historyRowBox!.x + historyRowBox!.width + 1,
+  );
+
+  await page.getByRole('button', { name: 'Ещё', exact: true }).click();
+  await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.workout-feedback').first()).toHaveCSS('color', 'rgb(238, 240, 234)');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
+
+  if (captureFeedbackAudit) {
+    await page.screenshot({
+      path: '../.artifacts/ui-audit/task-49/client-feedback-mobile-dark.png',
+      fullPage: true,
+    });
+  }
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/app(?:\?section=today)?$/);
+  await expect(page.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible();
 });
 
 test('dark progress uses one lime accent for the adherence outcome', async ({ page }) => {

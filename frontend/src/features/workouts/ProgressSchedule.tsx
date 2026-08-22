@@ -9,6 +9,7 @@ import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { DateInput, TimeInput } from '../../shared/ui/PickerInput';
 import { ProgressExperience } from './ProgressExperience';
 import { WeeklyCheckInCard } from './WeeklyCheckInCard';
+import { WorkoutFeedbackDisclosure } from './WorkoutFeedback';
 
 function formatDate(value: string): string {
   return new Date(`${value}T12:00:00`).toLocaleDateString('ru-RU', {
@@ -22,12 +23,16 @@ function ScheduleRow({
   item,
   minDate,
   pending,
+  focusedCommentId,
+  focusedExerciseId,
   onReschedule,
   onSkip,
 }: {
   item: WorkoutScheduleItem;
   minDate: string;
   pending: boolean;
+  focusedCommentId?: number | null;
+  focusedExerciseId?: number | null;
   onReschedule(date: string, time: string): void;
   onSkip(): void;
 }) {
@@ -35,7 +40,7 @@ function ScheduleRow({
   const [scheduledTime, setScheduledTime] = useState(item.scheduled_time?.slice(0, 5) ?? '');
   return (
     <article
-      className="list-row"
+      className="list-row workout-context-row"
       id={`workout-schedule-${item.id}`}
       tabIndex={-1}
       aria-label={`Тренировка ${item.title} в расписании`}
@@ -89,6 +94,16 @@ function ScheduleRow({
           </button>
         </form>
       )}
+      <WorkoutFeedbackDisclosure
+        workoutId={item.id}
+        workoutTitle={item.title}
+        workoutDate={item.scheduled_date}
+        exercises={[]}
+        viewer="client"
+        focusedCommentId={focusedCommentId}
+        focusedExerciseId={focusedExerciseId}
+        defaultOpen={Boolean(focusedCommentId)}
+      />
     </article>
   );
 }
@@ -96,9 +111,13 @@ function ScheduleRow({
 function SchedulePanel({
   timeZone,
   focusedWorkoutId,
+  focusedCommentId,
+  focusedExerciseId,
 }: {
   timeZone?: string | null;
   focusedWorkoutId?: number | null;
+  focusedCommentId?: number | null;
+  focusedExerciseId?: number | null;
 }) {
   const { toast, confirm } = useFeedback();
   const queryClient = useQueryClient();
@@ -138,8 +157,14 @@ function SchedulePanel({
   const today = dateInputValue(new Date(), timeZone || detectedTimeZone());
 
   useEffect(() => {
-    if (!focusedWorkoutId || !schedule.data?.some((item) => item.id === focusedWorkoutId)) return;
+    if (
+      !focusedWorkoutId ||
+      !schedule.data?.some((item) => item.id === focusedWorkoutId && item.status !== 'completed')
+    )
+      return;
     const row = document.getElementById(`workout-schedule-${focusedWorkoutId}`);
+    const disclosure = row?.closest<HTMLDetailsElement>('details.card-disclosure');
+    if (disclosure) disclosure.open = true;
     row?.focus({ preventScroll: true });
     row?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
   }, [focusedWorkoutId, schedule.data]);
@@ -163,6 +188,16 @@ function SchedulePanel({
               item={item}
               minDate={today}
               pending={mutation.isPending && mutation.variables?.workoutId === item.id}
+              focusedCommentId={
+                focusedWorkoutId === item.id && item.status !== 'completed'
+                  ? focusedCommentId
+                  : null
+              }
+              focusedExerciseId={
+                focusedWorkoutId === item.id && item.status !== 'completed'
+                  ? focusedExerciseId
+                  : null
+              }
               onReschedule={(scheduledDate, scheduledTime) =>
                 mutation.mutate({
                   action: 'reschedule',
@@ -192,15 +227,24 @@ function SchedulePanel({
 export function ProgressSchedule({
   timeZone,
   focusedWorkoutId,
+  focusedCommentId,
+  focusedExerciseId,
 }: {
   timeZone?: string | null;
   focusedWorkoutId?: number | null;
+  focusedCommentId?: number | null;
+  focusedExerciseId?: number | null;
 }) {
   return (
     <div className="stack progress-schedule">
       <ProgressExperience />
       <WeeklyCheckInCard />
-      <SchedulePanel timeZone={timeZone} focusedWorkoutId={focusedWorkoutId} />
+      <SchedulePanel
+        timeZone={timeZone}
+        focusedWorkoutId={focusedWorkoutId}
+        focusedCommentId={focusedCommentId}
+        focusedExerciseId={focusedExerciseId}
+      />
     </div>
   );
 }

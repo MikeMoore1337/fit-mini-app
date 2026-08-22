@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from fitminiapp_api.core.timezone import now_msk_naive
@@ -98,6 +99,41 @@ def _notification_preview(body: str, limit: int = 160) -> str:
     return f"{compact[: limit - 1].rstrip()}…"
 
 
+def _existing_idempotent_comment(
+    db: Session,
+    trainer_id: int,
+    *,
+    idempotency_key: str | None,
+    client_id: int,
+    workout_id: int,
+    workout_exercise_id: int | None,
+    body: str,
+) -> WorkoutComment | None:
+    if idempotency_key is None:
+        return None
+    existing = (
+        _comment_query(db)
+        .filter(
+            WorkoutComment.trainer_author_id == trainer_id,
+            WorkoutComment.idempotency_key == idempotency_key,
+        )
+        .first()
+    )
+    if existing is None:
+        return None
+    if (
+        existing.client_user_id != client_id
+        or existing.workout_id != workout_id
+        or existing.workout_exercise_id != workout_exercise_id
+        or existing.body != body
+    ):
+        raise WorkoutCommentError(
+            "Ключ повторной отправки уже использован для другого комментария",
+            status_code=409,
+        )
+    return existing
+
+
 def create_workout_comment(
     db: Session,
     trainer: User,
@@ -106,7 +142,20 @@ def create_workout_comment(
     workout_id: int,
     workout_exercise_id: int | None,
     body: str,
+    idempotency_key: str | None = None,
 ) -> WorkoutComment:
+    replay = _existing_idempotent_comment(
+        db,
+        trainer.id,
+        idempotency_key=idempotency_key,
+        client_id=client_id,
+        workout_id=workout_id,
+        workout_exercise_id=workout_exercise_id,
+        body=body,
+    )
+    if replay is not None:
+        return replay
+
     relation = _active_relation(db, trainer.id, client_id)
     workout = _workout_for_client(db, client_id, workout_id)
     _validate_exercise_target(db, workout.id, workout_exercise_id)
@@ -117,10 +166,26 @@ def create_workout_comment(
         client_user_id=client_id,
         workout_id=workout.id,
         workout_exercise_id=workout_exercise_id,
+        idempotency_key=idempotency_key,
         body=body,
     )
     db.add(comment)
-    db.flush()
+    try:
+        db.flush()
+    except IntegrityError:
+        db.rollback()
+        replay = _existing_idempotent_comment(
+            db,
+            trainer.id,
+            idempotency_key=idempotency_key,
+            client_id=client_id,
+            workout_id=workout_id,
+            workout_exercise_id=workout_exercise_id,
+            body=body,
+        )
+        if replay is None:
+            raise WorkoutCommentError("Комментарий не удалось сохранить", status_code=409)
+        return replay
 
     client = db.query(User).filter(User.id == client_id, User.is_active.is_(True)).first()
     if client is not None:

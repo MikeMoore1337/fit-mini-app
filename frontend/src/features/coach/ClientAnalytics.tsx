@@ -13,6 +13,7 @@ import {
 } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { DateInput, TimeInput } from '../../shared/ui/PickerInput';
+import { WorkoutFeedbackDisclosure } from '../workouts/WorkoutFeedback';
 
 function formatDate(value: string): string {
   return new Date(`${value}T12:00:00`).toLocaleDateString('ru-RU', {
@@ -68,7 +69,15 @@ function CoachScheduleForm({
   );
 }
 
-export function ClientAnalytics({ clientId }: { clientId: number }) {
+export function ClientAnalytics({
+  clientId,
+  clientName,
+  canComment = true,
+}: {
+  clientId: number;
+  clientName: string;
+  canComment?: boolean;
+}) {
   const { toast } = useFeedback();
   const queryClient = useQueryClient();
   const progress = useQuery({
@@ -201,7 +210,7 @@ export function ClientAnalytics({ clientId }: { clientId: number }) {
                     <p className="muted">Упражнения не добавлены.</p>
                   ) : (
                     workout.exercises.map((exercise) => (
-                      <div className="list-row" key={exercise.exercise_id}>
+                      <div className="list-row" key={exercise.workout_exercise_id}>
                         <div className="list-row__main">
                           <strong>{exercise.exercise_title}</strong>
                           {exercise.notes && <span className="muted">{exercise.notes}</span>}
@@ -217,6 +226,19 @@ export function ClientAnalytics({ clientId }: { clientId: number }) {
                       </div>
                     ))
                   )}
+                  <WorkoutFeedbackDisclosure
+                    workoutId={workout.id}
+                    workoutTitle={workout.title}
+                    workoutDate={workout.scheduled_date}
+                    exercises={workout.exercises.map((exercise) => ({
+                      workoutExerciseId: exercise.workout_exercise_id,
+                      title: exercise.exercise_title,
+                    }))}
+                    viewer="trainer"
+                    clientId={clientId}
+                    clientName={clientName}
+                    canCompose={canComment}
+                  />
                 </div>
               </details>
             ))}

@@ -274,6 +274,19 @@ export function CloseIcon({ className = '' }: { className?: string }) {
   );
 }
 
+export function TrashIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      className={`ui-icon ${className}`.trim()}
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M3 4.5h10M6 2.5h4l.75 2H5.25l.75-2ZM4.5 4.5l.5 9h6l.5-9M6.75 7v4M9.25 7v4" />
+    </svg>
+  );
+}
+
 export function ChevronIcon({
   direction = 'right',
   className = '',

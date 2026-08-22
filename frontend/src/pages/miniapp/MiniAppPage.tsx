@@ -78,8 +78,31 @@ const sections: ReadonlyArray<AppSection> = [
 ];
 
 function requestedSection(search: string): AppSection | null {
-  const section = new URLSearchParams(search).get('section');
-  return section && sections.includes(section as AppSection) ? (section as AppSection) : null;
+  const params = new URLSearchParams(search);
+  const section = params.get('section');
+  if (section && sections.includes(section as AppSection)) return section as AppSection;
+  return requestedWorkoutFeedback(search) ? 'progress' : null;
+}
+
+function positiveId(value: string | null): number | null {
+  if (!value || !/^\d+$/.test(value)) return null;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function requestedWorkoutFeedback(search: string): {
+  workoutId: number;
+  commentId: number | null;
+  workoutExerciseId: number | null;
+} | null {
+  const params = new URLSearchParams(search);
+  const workoutId = positiveId(params.get('workout_id'));
+  if (!workoutId) return null;
+  return {
+    workoutId,
+    commentId: positiveId(params.get('comment_id')),
+    workoutExerciseId: positiveId(params.get('workout_exercise_id')),
+  };
 }
 
 function launchInviteToken(): string | null {
@@ -105,11 +128,18 @@ export default function MiniAppPage() {
       : 'today';
   });
   const section = requestedSection(search) ?? fallbackSection;
+  const requestedFeedback = requestedWorkoutFeedback(search);
   const [focusedWorkout, setFocusedWorkout] = useState<{
     id: number;
     target: WorkoutNavigationTarget;
   } | null>(null);
   const [inviteToken, setInviteToken] = useState<string | null>(initialInviteToken);
+  const scheduleFocusId =
+    requestedFeedback?.workoutId ??
+    (focusedWorkout?.target === 'schedule' ? focusedWorkout.id : null);
+  const historyFocusId =
+    requestedFeedback?.workoutId ??
+    (focusedWorkout?.target === 'history' ? focusedWorkout.id : null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -199,13 +229,15 @@ export default function MiniAppPage() {
               <>
                 <ProgressSchedule
                   timeZone={user?.profile?.timezone}
-                  focusedWorkoutId={
-                    focusedWorkout?.target === 'schedule' ? focusedWorkout.id : null
-                  }
+                  focusedWorkoutId={scheduleFocusId}
+                  focusedCommentId={requestedFeedback?.commentId}
+                  focusedExerciseId={requestedFeedback?.workoutExerciseId}
                 />
                 <WorkoutHistory
                   timeZone={user?.profile?.timezone}
-                  focusedWorkoutId={focusedWorkout?.target === 'history' ? focusedWorkout.id : null}
+                  focusedWorkoutId={historyFocusId}
+                  focusedCommentId={requestedFeedback?.commentId}
+                  focusedExerciseId={requestedFeedback?.workoutExerciseId}
                   onWorkoutSelect={(id, target) => setFocusedWorkout({ id, target })}
                 />
                 <Diary onSaved={async () => void (await reloadUser())} />
@@ -292,7 +324,7 @@ export default function MiniAppPage() {
                   <NotificationsPanel
                     onNavigate={(destination) => {
                       setFocusedWorkout(null);
-                      navigate(`/app?section=${destination}`);
+                      navigate(destination);
                     }}
                   />
                 </section>

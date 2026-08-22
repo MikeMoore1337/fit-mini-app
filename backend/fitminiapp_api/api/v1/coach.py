@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
 from fitminiapp_api.api.dependencies.auth import require_coach
@@ -86,6 +88,11 @@ from fitminiapp_api.services.workout_comments import (
 
 router = APIRouter()
 
+WorkoutCommentIdempotencyKey = Annotated[
+    str | None,
+    Header(alias="Idempotency-Key", min_length=8, max_length=128),
+]
+
 
 def _comment_error(exc: WorkoutCommentError) -> HTTPException:
     return HTTPException(status_code=exc.status_code, detail=exc.detail)
@@ -119,6 +126,7 @@ def add_client_workout_comment(
     client_id: int,
     workout_id: int,
     payload: WorkoutCommentCreate,
+    idempotency_key: WorkoutCommentIdempotencyKey = None,
     current_user: User = Depends(require_coach),
     db: Session = Depends(get_db),
 ):
@@ -130,6 +138,7 @@ def add_client_workout_comment(
             workout_id=workout_id,
             workout_exercise_id=payload.workout_exercise_id,
             body=payload.body,
+            idempotency_key=idempotency_key,
         )
     except WorkoutCommentError as exc:
         raise _comment_error(exc) from exc

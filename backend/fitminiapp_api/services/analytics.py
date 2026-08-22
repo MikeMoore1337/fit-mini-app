@@ -583,6 +583,7 @@ def build_workout_timeline(db: Session, user: User, limit: int = 30) -> list[dic
                 )
             exercises.append(
                 {
+                    "workout_exercise_id": exercise.id,
                     "exercise_id": exercise.exercise_id,
                     "exercise_title": (
                         display_map[exercise.exercise_id].title

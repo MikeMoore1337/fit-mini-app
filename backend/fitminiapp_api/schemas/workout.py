@@ -369,6 +369,7 @@ class WorkoutTimelineSet(BaseModel):
 
 
 class WorkoutTimelineExercise(BaseModel):
+    workout_exercise_id: int
     exercise_id: int
     exercise_title: str
     notes: str | None = None

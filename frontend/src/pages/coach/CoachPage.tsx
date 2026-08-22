@@ -681,7 +681,11 @@ function CoachClientDetail({
         description={adherenceText(summary)}
         open={Boolean(focusedProgramId)}
       >
-        <ClientAnalytics clientId={client.id} />
+        <ClientAnalytics
+          clientId={client.id}
+          clientName={clientDisplayName(client)}
+          canComment={client.status === 'active'}
+        />
         <Diary key={`diary-${client.id}`} clientId={client.id} timeZone={client.timezone} />
       </ClientDataSection>
 

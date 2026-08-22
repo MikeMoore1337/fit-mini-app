@@ -11,6 +11,7 @@ import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { workoutStatusLabel } from '../../shared/statusLabels';
 import { dateInputValue, detectedTimeZone } from '../../shared/dateTime';
 import { ExerciseGuideDialog } from '../exercises/ExerciseGuideDialog';
+import { WorkoutFeedbackDisclosure } from './WorkoutFeedback';
 
 const HISTORY_PAGE_SIZE = 10;
 const adaptationReasonLabels: Record<string, string> = {
@@ -23,10 +24,14 @@ export type WorkoutNavigationTarget = 'schedule' | 'history';
 
 export function WorkoutHistory({
   focusedWorkoutId,
+  focusedCommentId,
+  focusedExerciseId,
   onWorkoutSelect,
   timeZone,
 }: {
   focusedWorkoutId?: number | null;
+  focusedCommentId?: number | null;
+  focusedExerciseId?: number | null;
   onWorkoutSelect?: (workoutId: number, target: WorkoutNavigationTarget) => void;
   timeZone?: string | null;
 }) {
@@ -65,6 +70,8 @@ export function WorkoutHistory({
   useEffect(() => {
     if (!focusedWorkoutId || !rows.some((item) => item.id === focusedWorkoutId)) return;
     const row = document.getElementById(`workout-history-${focusedWorkoutId}`);
+    const disclosure = row?.closest<HTMLDetailsElement>('details.card-disclosure');
+    if (disclosure) disclosure.open = true;
     row?.focus({ preventScroll: true });
     row?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
   }, [focusedWorkoutId, rows]);
@@ -121,29 +128,7 @@ export function WorkoutHistory({
           </div>
         )}
       </Card>
-      <Card
-        title="История"
-        actions={
-          rows.length ? (
-            <button
-              className="btn-danger"
-              disabled={clearHistory.isPending}
-              onClick={async () => {
-                if (
-                  await confirm({
-                    title: 'Очистить историю?',
-                    message: 'Завершённые тренировки и их подходы будут удалены безвозвратно.',
-                    confirmText: 'Очистить',
-                  })
-                )
-                  clearHistory.mutate();
-              }}
-            >
-              Очистить
-            </button>
-          ) : undefined
-        }
-      >
+      <Card className="workout-history-card" title="История">
         {history.isLoading || summary.isLoading ? (
           <LoadingState />
         ) : history.error || summary.error ? (
@@ -152,7 +137,7 @@ export function WorkoutHistory({
           <EmptyState title="История пока пуста" />
         ) : (
           <>
-            <div className="metric-grid top-gap">
+            <div className="metric-grid workout-history__metrics">
               <div className="metric">
                 <span>Тренировок</span>
                 <strong>{summary.data?.workouts_completed ?? 0}</strong>
@@ -169,7 +154,7 @@ export function WorkoutHistory({
             <div className="list-grid top-gap">
               {rows.map((item) => (
                 <article
-                  className="list-row"
+                  className="list-row workout-context-row"
                   id={`workout-history-${item.id}`}
                   key={item.id}
                   tabIndex={-1}
@@ -201,6 +186,19 @@ export function WorkoutHistory({
                     ))}
                   </div>
                   <strong>{item.volume_kg} кг</strong>
+                  <WorkoutFeedbackDisclosure
+                    workoutId={item.id}
+                    workoutTitle={item.title}
+                    workoutDate={item.scheduled_date}
+                    exercises={item.exercises.map((exercise) => ({
+                      workoutExerciseId: exercise.workout_exercise_id,
+                      title: exercise.title,
+                    }))}
+                    viewer="client"
+                    focusedCommentId={focusedWorkoutId === item.id ? focusedCommentId : null}
+                    focusedExerciseId={focusedWorkoutId === item.id ? focusedExerciseId : null}
+                    defaultOpen={focusedWorkoutId === item.id && Boolean(focusedCommentId)}
+                  />
                 </article>
               ))}
             </div>
@@ -213,6 +211,24 @@ export function WorkoutHistory({
                 {history.isFetchingNextPage ? 'Загружаем…' : 'Показать ещё'}
               </button>
             )}
+            <div className="workout-history__footer-actions">
+              <button
+                className="btn-danger"
+                disabled={clearHistory.isPending}
+                onClick={async () => {
+                  if (
+                    await confirm({
+                      title: 'Очистить историю?',
+                      message: 'Завершённые тренировки и их подходы будут удалены безвозвратно.',
+                      confirmText: 'Очистить',
+                    })
+                  )
+                    clearHistory.mutate();
+                }}
+              >
+                Очистить историю
+              </button>
+            </div>
           </>
         )}
       </Card>

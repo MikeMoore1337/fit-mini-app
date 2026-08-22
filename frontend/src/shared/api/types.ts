@@ -59,6 +59,7 @@ export type OAuthLinkCreate = ApiSchemas['OAuthLinkCreateResponse'];
 export type ProgressVolumePoint = ApiSchemas['ProgressVolumePoint'];
 export type WorkoutProgress = ApiSchemas['WorkoutProgressResponse'];
 export type WorkoutTimelineItem = ApiSchemas['WorkoutTimelineItem'];
+export type WorkoutComment = ApiSchemas['WorkoutCommentResponse'];
 export type ProgressSummary = ApiSchemas['ProgressSummaryResponse'];
 export type TrainingAnalytics = ApiSchemas['TrainingAnalyticsResponse'];
 export type TrainerClientProgressSummary = ApiSchemas['TrainerClientProgressSummary'];

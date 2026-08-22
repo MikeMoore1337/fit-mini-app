@@ -35,6 +35,15 @@ const notifications = [
     status: 'processing',
     sent_at: null,
   },
+  {
+    id: 4,
+    title: 'Комментарий тренера к тренировке',
+    body: 'К тренировке «Тренировка B»: Следите за темпом.',
+    scheduled_for: '2030-01-08T10:00:00',
+    status: 'sent',
+    sent_at: '2030-01-08T10:00:01',
+    action_url: '/app?workout_id=43&comment_id=7&workout_exercise_id=55',
+  },
 ];
 
 function renderPanel(onNavigate = vi.fn()) {
@@ -82,7 +91,7 @@ describe('NotificationsPanel', () => {
     fireEvent.click(screen.getByText('Личные уведомления'));
 
     expect(await screen.findByText('Ожидает отправки')).toBeInTheDocument();
-    expect(screen.getByText('Отправлено')).toBeInTheDocument();
+    expect(screen.getAllByText('Отправлено')).toHaveLength(2);
     expect(screen.getByText('Отправляется')).toBeInTheDocument();
     expect(screen.queryByText('queued')).not.toBeInTheDocument();
     expect(screen.queryByText('sent')).not.toBeInTheDocument();
@@ -92,14 +101,23 @@ describe('NotificationsPanel', () => {
         name: 'Открыть тренировку: Тренировка сегодня',
       }),
     );
-    expect(onNavigate).toHaveBeenLastCalledWith('today');
+    expect(onNavigate).toHaveBeenLastCalledWith('/app?section=today');
 
     fireEvent.click(
       screen.getByRole('button', {
         name: 'Открыть раздел питания: КБЖУ пересчитаны',
       }),
     );
-    expect(onNavigate).toHaveBeenLastCalledWith('nutrition');
+    expect(onNavigate).toHaveBeenLastCalledWith('/app?section=nutrition');
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Открыть комментарий тренера: Комментарий тренера к тренировке',
+      }),
+    );
+    expect(onNavigate).toHaveBeenLastCalledWith(
+      '/app?workout_id=43&comment_id=7&workout_exercise_id=55',
+    );
 
     expect(screen.getByText('Личная заметка').closest('button')).toBeNull();
   });

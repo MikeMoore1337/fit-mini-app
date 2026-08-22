@@ -5386,6 +5386,8 @@ export interface components {
         };
         /** WorkoutTimelineExercise */
         WorkoutTimelineExercise: {
+            /** Workout Exercise Id */
+            workout_exercise_id: number;
             /** Exercise Id */
             exercise_id: number;
             /** Exercise Title */
@@ -6978,7 +6980,9 @@ export interface operations {
     add_client_workout_comment_api_v1_coach_clients__client_id__workouts__workout_id__comments_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
             path: {
                 client_id: number;
                 workout_id: number;

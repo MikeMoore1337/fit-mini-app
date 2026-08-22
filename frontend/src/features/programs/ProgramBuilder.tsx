@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../shared/api/client';
 import type { Exercise, ProgramTemplate, ProgramTemplateCreate } from '../../shared/api/types';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
-import { Badge, Card, CloseIcon, LoadingState } from '../../shared/ui/common';
+import { Badge, Card, LoadingState, TrashIcon } from '../../shared/ui/common';
 import { difficultyLabels, orderExercisesForLevel } from './exerciseOrdering';
 import { buildStrengthPreset, resolveStrengthRule, type StrengthSplit } from './strengthPresets';
 import { usePersistentState } from '../../shared/storage';
@@ -669,16 +669,61 @@ export function ProgramBuilder({
                       aria-label={`Удалить день ${dayIndex + 1}`}
                       onClick={() => setDays(days.filter((_, index) => index !== dayIndex))}
                     >
-                      <CloseIcon />
+                      <TrashIcon />
                     </button>
                   )}
                 </div>
               </div>
               {day.exercises.map((item, exerciseIndex) => (
                 <div className="program-exercise-row" key={exerciseIndex}>
-                  <span className="program-exercise-row__number">{exerciseIndex + 1}</span>
-                  <label className="field exercise-select">
-                    <span>Упражнение</span>
+                  <div className="field exercise-select">
+                    <span className="program-exercise-row__heading">
+                      <span>
+                        <span className="program-exercise-row__number">{exerciseIndex + 1}</span>
+                        <strong>Упражнение</strong>
+                      </span>
+                      <span
+                        className="program-exercise-row__actions"
+                        aria-label={`Действия с упражнением ${exerciseIndex + 1}`}
+                      >
+                        <button
+                          type="button"
+                          className="secondary"
+                          aria-label={`Переместить упражнение ${exerciseIndex + 1} выше`}
+                          disabled={exerciseIndex === 0}
+                          onClick={() =>
+                            updateDay(dayIndex, {
+                              ...day,
+                              exercises: moveItem(day.exercises, exerciseIndex, exerciseIndex - 1),
+                            })
+                          }
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          className="secondary"
+                          aria-label={`Переместить упражнение ${exerciseIndex + 1} ниже`}
+                          disabled={exerciseIndex === day.exercises.length - 1}
+                          onClick={() =>
+                            updateDay(dayIndex, {
+                              ...day,
+                              exercises: moveItem(day.exercises, exerciseIndex, exerciseIndex + 1),
+                            })
+                          }
+                        >
+                          ↓
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-danger"
+                          aria-label={`Удалить упражнение ${exerciseIndex + 1} из дня ${dayIndex + 1}`}
+                          onClick={() => updateDay(dayIndex, removeExercise(day, exerciseIndex))}
+                        >
+                          <TrashIcon />
+                        </button>
+                      </span>
+                    </span>
                     <ExercisePicker
                       key={`${exerciseIndex}-${item.exercise_id}`}
                       exercises={exercises.data ?? []}
@@ -710,7 +755,7 @@ export function ProgramBuilder({
                           : 'Подробнее об упражнении'}
                       </button>
                     )}
-                  </label>
+                  </div>
                   <div className="program-exercise-row__metrics">
                     {(
                       [
@@ -756,49 +801,11 @@ export function ProgramBuilder({
                       </label>
                     ))}
                   </div>
-                  <div className="program-exercise-row__actions">
-                    <button
-                      type="button"
-                      className="secondary"
-                      aria-label={`Переместить упражнение ${exerciseIndex + 1} выше`}
-                      disabled={exerciseIndex === 0}
-                      onClick={() =>
-                        updateDay(dayIndex, {
-                          ...day,
-                          exercises: moveItem(day.exercises, exerciseIndex, exerciseIndex - 1),
-                        })
-                      }
-                    >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      className="secondary"
-                      aria-label={`Переместить упражнение ${exerciseIndex + 1} ниже`}
-                      disabled={exerciseIndex === day.exercises.length - 1}
-                      onClick={() =>
-                        updateDay(dayIndex, {
-                          ...day,
-                          exercises: moveItem(day.exercises, exerciseIndex, exerciseIndex + 1),
-                        })
-                      }
-                    >
-                      ↓
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-danger"
-                      aria-label={`Удалить упражнение ${exerciseIndex + 1} из дня ${dayIndex + 1}`}
-                      onClick={() => updateDay(dayIndex, removeExercise(day, exerciseIndex))}
-                    >
-                      <CloseIcon />
-                    </button>
-                  </div>
                   <details className="program-exercise-advanced compact-disclosure">
                     <summary>
                       <span>
-                        <strong>Дополнительно</strong>
-                        <small>Заметка, суперсет и проверенные замены</small>
+                        <strong>Заметка, суперсет и замены</strong>
+                        <small>Необязательные настройки упражнения</small>
                       </span>
                       <span aria-hidden="true">+</span>
                     </summary>
@@ -884,7 +891,7 @@ export function ProgramBuilder({
               {day.exercises.length < 20 ? (
                 <button
                   type="button"
-                  className="secondary"
+                  className="secondary program-add-exercise"
                   onClick={() =>
                     updateDay(dayIndex, {
                       ...day,
@@ -892,6 +899,7 @@ export function ProgramBuilder({
                     })
                   }
                 >
+                  <span aria-hidden="true">+</span>
                   Добавить упражнение
                 </button>
               ) : (
