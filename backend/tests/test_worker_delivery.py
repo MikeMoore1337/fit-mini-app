@@ -20,23 +20,18 @@ from fitminiapp_api.services.worker import (
 SECRET_TOKEN = "123456:telegram-secret-token"
 
 
-def test_worker_prefers_dedicated_bot_api_proxy(monkeypatch) -> None:
+def test_worker_uses_dedicated_bot_api_proxy(monkeypatch) -> None:
     monkeypatch.setattr(
         "fitminiapp_api.services.worker.settings.telegram_bot_proxy_url",
         "socks5://bot-proxy.test:1081",
     )
-    monkeypatch.setattr(
-        "fitminiapp_api.services.worker.settings.telegram_oauth_proxy_url",
-        "socks5://oauth-proxy.test:1081",
-    )
-
     assert telegram_transport_options() == {
         "trust_env": False,
         "proxy": "socks5://bot-proxy.test:1081",
     }
 
 
-def test_worker_falls_back_to_telegram_oauth_proxy(monkeypatch) -> None:
+def test_worker_does_not_reuse_telegram_oauth_proxy(monkeypatch) -> None:
     monkeypatch.setattr(
         "fitminiapp_api.services.worker.settings.telegram_bot_proxy_url",
         "",
@@ -46,10 +41,7 @@ def test_worker_falls_back_to_telegram_oauth_proxy(monkeypatch) -> None:
         "socks5://telegram-proxy.test:1081",
     )
 
-    assert telegram_transport_options() == {
-        "trust_env": False,
-        "proxy": "socks5://telegram-proxy.test:1081",
-    }
+    assert telegram_transport_options() == {"trust_env": False}
 
 
 def test_worker_does_not_inherit_ambient_proxy(monkeypatch) -> None:

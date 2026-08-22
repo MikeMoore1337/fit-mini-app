@@ -121,7 +121,7 @@ class Settings(BaseSettings):
 
     @property
     def bot_api_proxy_url(self) -> str:
-        return self.telegram_bot_proxy_url or self.telegram_oauth_proxy_url
+        return self.telegram_bot_proxy_url
 
     @property
     def admin_telegram_id_set(self) -> set[int]:
