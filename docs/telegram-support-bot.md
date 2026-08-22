@@ -155,7 +155,8 @@ Legacy-переменные `SUPPORT_BOT_TOKEN`, `SUPPORT_BOT_ENABLED` и
    повторяет read-back. Identity/config/verification error останавливает workflow до любых
    небезопасных writes. Только классифицированная недоступность внешнего Bot API оставляет sync в
    состоянии `pending` и не откатывает уже healthy runtime. BotFather-only mismatch выводится как
-   owner action.
+   owner action. Transient API error повторяется не более трёх раз с коротким bounded backoff;
+   повторный проход сначала читает remote state, поэтому уже применённые поля остаются idempotent.
 5. Проверить `/start`, `/start link_<token>`, `/support`, `/app` и `/settings`.
 
 Если прямой Bot API egress недоступен, сначала проверяется существующий Telegram OAuth tunnel.
