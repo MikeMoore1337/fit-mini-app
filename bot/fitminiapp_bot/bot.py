@@ -41,6 +41,7 @@ from .public_profile import (
     menu_button,
     menu_button_matches,
 )
+from .telegram_client import create_bot_api_session
 
 try:
     import fcntl
@@ -610,7 +611,7 @@ async def main() -> None:
 
     while True:
         await polling_lock.acquire()
-        bot = Bot(settings.bot_token)
+        bot = Bot(settings.bot_token, session=create_bot_api_session())
         conflict = False
         try:
             logger.info("telegram_polling_starting")

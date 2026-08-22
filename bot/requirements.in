@@ -1,7 +1,8 @@
 # pip install uv
-# uv pip compile --upgrade --python-version 3.14 --universal --output-file requirements.txt requirements.in
+# uv pip compile --python-version 3.14 --universal --output-file requirements.txt requirements.in
 # pip install -r requirements.txt
 aiogram
+aiohttp-socks
 httpx
 pydantic-settings
 tzdata
