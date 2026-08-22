@@ -1,0 +1,173 @@
+/* Development-only production-realistic pilot for the owner-approved 49D hybrid. */
+html[data-design-pilot='49e'] {
+  --pilot-safe-top: max(
+    env(safe-area-inset-top, 0px),
+    var(--tg-safe-area-inset-top, 0px),
+    var(--tg-content-safe-area-inset-top, 0px)
+  );
+  --pilot-safe-right: max(
+    env(safe-area-inset-right, 0px),
+    var(--tg-safe-area-inset-right, 0px),
+    var(--tg-content-safe-area-inset-right, 0px)
+  );
+  --pilot-safe-bottom: max(
+    env(safe-area-inset-bottom, 0px),
+    var(--tg-safe-area-inset-bottom, 0px),
+    var(--tg-content-safe-area-inset-bottom, 0px)
+  );
+  --pilot-safe-left: max(
+    env(safe-area-inset-left, 0px),
+    var(--tg-safe-area-inset-left, 0px),
+    var(--tg-content-safe-area-inset-left, 0px)
+  );
+}
+
+html[data-design-pilot='49e'] .app-shell--design-v2 {
+  min-height: var(--tg-viewport-stable-height, 100dvh);
+}
+
+html[data-design-pilot='49e'] body:has(#appBottomNav) {
+  padding-bottom: calc(72px + max(14px, var(--pilot-safe-bottom)));
+}
+
+html[data-design-pilot='49e'] body:has(#appBottomNav) .toast:not(.hidden) {
+  bottom: calc(72px + max(14px, var(--pilot-safe-bottom)));
+}
+
+html[data-design-pilot='49e'] .app-bottom-nav {
+  padding-right: max(6px, var(--pilot-safe-right));
+  padding-bottom: max(6px, var(--pilot-safe-bottom));
+  padding-left: max(6px, var(--pilot-safe-left));
+  backdrop-filter: none;
+}
+
+html[data-design-pilot='49e'][data-pilot-keyboard='visible'] .app-bottom-nav,
+html[data-design-pilot='49e'] body:has(.active-workout-set input:focus) .app-bottom-nav {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+html[data-design-pilot='49e'] .active-workout-set {
+  scroll-margin-block: 96px;
+}
+
+html[data-design-pilot='49e'] .app-more-layer {
+  padding-top: max(16px, var(--pilot-safe-top));
+}
+
+html[data-design-pilot='49e'] .app-more-panel {
+  max-height: calc(var(--tg-viewport-stable-height, 100dvh) - max(16px, var(--pilot-safe-top)));
+  padding-right: max(16px, var(--pilot-safe-right));
+  padding-bottom: max(18px, var(--pilot-safe-bottom));
+  padding-left: max(16px, var(--pilot-safe-left));
+}
+
+@media (min-width: 1024px) {
+  html[data-design-pilot='49e'] .auth-public-shell--design-v2 .login-layout {
+    grid-template-columns: minmax(0, 1fr) 240px;
+    align-items: stretch;
+    gap: 0;
+    width: 100%;
+    min-height: calc(100dvh - 83px);
+    padding: 0 32px 0 0;
+  }
+
+  html[data-design-pilot='49e'] .auth-public-shell--design-v2 .login-intro {
+    display: grid;
+    align-self: stretch;
+    align-content: center;
+    min-width: 0;
+    padding: 64px clamp(44px, 7vw, 112px);
+    background: #101310;
+    color: #eef0ea;
+  }
+
+  html[data-design-pilot='49e'] .auth-public-shell--design-v2 .login-intro h1 {
+    max-width: none;
+    color: #eef0ea;
+    font-size: 35px;
+    line-height: 1.04;
+    white-space: nowrap;
+  }
+
+  html[data-design-pilot='49e'] .auth-public-shell--design-v2 .login-intro > p:not(.login-kicker) {
+    color: #afb5ad;
+  }
+
+  html[data-design-pilot='49e'] .auth-public-shell--design-v2 .login-card {
+    align-content: center;
+    padding: 44px 0 44px 22px;
+    border-top: 0;
+    border-left: 1px solid var(--v2-border);
+  }
+}
+
+@media (max-width: 899px) {
+  html[data-design-pilot='49e'] .auth-public-shell--design-v2 .login-layout {
+    gap: 18px;
+  }
+
+  html[data-design-pilot='49e'] .auth-public-shell--design-v2 .login-intro h1 {
+    font-size: 26px;
+    line-height: 1.1;
+  }
+
+  html[data-design-pilot='49e'] .auth-public-shell--design-v2 .login-intro > p:not(.login-kicker) {
+    margin-top: 12px;
+    font-size: 0.88rem;
+  }
+
+  html[data-design-pilot='49e'] .auth-public-shell--design-v2 .login-card {
+    padding-top: 18px;
+  }
+}
+
+@media (max-width: 680px) {
+  html[data-design-pilot='49e'] .landing-hero {
+    gap: 24px;
+    padding-top: 42px;
+  }
+
+  html[data-design-pilot='49e'] .landing-hero h1 {
+    font-size: clamp(40px, 10.77vw, 44px);
+  }
+
+  html[data-design-pilot='49e'] .landing-hero__visual {
+    min-height: 400px;
+    margin-inline: 0;
+    transform: none;
+  }
+
+  html[data-design-pilot='49e'] body:has(.app-shell--design-v2) {
+    padding-top: max(var(--v2-space-3), var(--pilot-safe-top));
+    padding-right: max(var(--v2-space-3), var(--pilot-safe-right));
+    padding-left: max(var(--v2-space-3), var(--pilot-safe-left));
+  }
+
+  html[data-design-pilot='49e'] .today-workout-focus__header {
+    top: var(--pilot-safe-top);
+  }
+
+  html[data-design-pilot='49e'] .active-workout--design-v2 ~ .active-workout-rest {
+    inset: var(--pilot-safe-top) 0 auto;
+  }
+}
+
+@media (max-width: 400px) {
+  html[data-design-pilot='49e'] .landing-hero__visual {
+    min-height: 380px;
+    margin-inline: 0;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-design-pilot='49e'] *,
+  html[data-design-pilot='49e'] *::before,
+  html[data-design-pilot='49e'] *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

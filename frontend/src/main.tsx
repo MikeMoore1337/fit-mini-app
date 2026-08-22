@@ -153,8 +153,16 @@ function renderApp(): void {
   );
 }
 
-if (isTelegramLaunch(window.location)) {
-  void loadTelegramSdk().then(renderApp);
-} else {
+async function bootstrap(): Promise<void> {
+  if (import.meta.env.DEV) {
+    const { enableDesignPilot49e } = await import('./dev/designPilot49e');
+    await enableDesignPilot49e();
+  }
+
+  if (isTelegramLaunch(window.location)) {
+    await loadTelegramSdk();
+  }
   renderApp();
 }
+
+void bootstrap();
