@@ -10,7 +10,7 @@ import { OnlineStatus } from './shared/ui/OnlineStatus';
 import { LoadingState } from './shared/ui/common';
 import { isTelegramLaunch } from './shared/telegram/launch';
 import { applyPlatformTheme, useTelegram } from './shared/telegram/useTelegram';
-import { NavigationProvider, useNavigation } from './shared/navigation/router';
+import { NavigationProvider, Redirect, useNavigation } from './shared/navigation/router';
 import { applyRouteMetadata } from './shared/seo/metadata';
 import { isPublicContentPath } from './content/publicContent';
 import './styles/legacy.css';
@@ -62,7 +62,10 @@ function AppRoutes() {
   const { path } = useNavigation();
   useEffect(() => applyRouteMetadata(path), [path]);
   if (path === '/') return <LandingPage />;
-  if (isPublicContentPath(path)) return <PublicContentPage />;
+  if (isPublicContentPath(path)) {
+    if (window.Telegram?.WebApp?.initData) return <Redirect to="/app" />;
+    return <PublicContentPage />;
+  }
   if (path === '/login')
     return (
       <AuthProvider>

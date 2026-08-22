@@ -7,6 +7,7 @@ import { invalidateNutritionSummaries, queryKeys } from '../../shared/queryKeys'
 import { usePersistentState } from '../../shared/storage';
 import { nutritionDraftStorageKey } from '../../shared/userScopedStorage';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
+import { ContextualHelp } from '../../shared/ui/ContextualHelp';
 import { Card, DisclosureIcon } from '../../shared/ui/common';
 import { EnergyCalibrationCard } from './EnergyCalibrationCard';
 import { calculateNutritionEstimate, type NutritionCalculatorInput } from './nutritionCalculator';
@@ -276,6 +277,12 @@ export function NutritionForm({
 
   return (
     <Card title="КБЖУ" description="Рассчитайте ориентир и отслеживайте его рядом с дневником.">
+      <ContextualHelp articlePath="/knowledge/nutrition/kbju-as-a-reference">
+        <p>
+          КБЖУ — стартовая оценка калорий и макронутриентов, а не измерение вашего расхода и не
+          медицинская рекомендация.
+        </p>
+      </ContextualHelp>
       <form
         className="stack top-gap"
         onSubmit={(event) => {

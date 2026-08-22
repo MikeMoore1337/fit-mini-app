@@ -5,6 +5,7 @@ import { api, ApiError } from '../../shared/api/client';
 import type { Workout } from '../../shared/api/types';
 import { haptic } from '../../shared/telegram/useTelegram';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
+import { ContextualHelp } from '../../shared/ui/ContextualHelp';
 import {
   Badge,
   Button,
@@ -343,13 +344,12 @@ function WorkoutSetRow({
                 </button>
               ))}
             </div>
-            <details className="active-workout-rir__help">
-              <summary>Что это?</summary>
+            <ContextualHelp articlePath="/knowledge/training/repetitions-in-reserve">
               <p>
                 Сколько повторов вы ещё могли бы сделать с хорошей техникой после завершения
                 подхода? Поле необязательное.
               </p>
-            </details>
+            </ContextualHelp>
           </fieldset>
 
           <label className="active-workout-failure">

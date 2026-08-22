@@ -16,12 +16,19 @@ export interface PublicContentSource {
   title: string;
   publisher: string;
   url: string;
+  published?: string;
+  sourceType?: 'guideline' | 'systematic-review' | 'meta-analysis' | 'review' | 'domain-source';
 }
 
 export interface PublicContentPage {
-  kind: 'landing' | 'product' | 'knowledge-index' | 'guide';
+  kind: 'landing' | 'product' | 'knowledge-index' | 'guide' | 'exercise-index' | 'exercise';
+  id?: string;
+  slug?: string;
+  status?: 'draft' | 'review' | 'published' | 'archived';
   path: string;
   category?: string;
+  tags?: string[];
+  appContexts?: string[];
   title: string;
   description: string;
   ogDescription: string;
@@ -37,6 +44,8 @@ export interface PublicContentPage {
   };
   breadcrumbs: PublicContentLink[];
   updated?: string;
+  published?: string;
+  reviewed?: string;
   author?: {
     name: string;
     type: 'Organization' | 'Person';
@@ -62,8 +71,12 @@ interface PublicContentManifest {
 
 export const publicContent = manifest as PublicContentManifest;
 
+function isPublished(page: PublicContentPage): boolean {
+  return (page.status ?? 'published') === 'published';
+}
+
 export function getPublicContentPage(path: string): PublicContentPage | undefined {
-  return publicContent.pages.find((page) => page.path === path);
+  return publicContent.pages.find((page) => page.path === path && isPublished(page));
 }
 
 export function isPublicContentPath(path: string): boolean {
@@ -72,7 +85,11 @@ export function isPublicContentPath(path: string): boolean {
 }
 
 export function publicGuides(): PublicContentPage[] {
-  return publicContent.pages.filter((page) => page.kind === 'guide');
+  return publicContent.pages.filter((page) => page.kind === 'guide' && isPublished(page));
+}
+
+export function publicExercisePages(): PublicContentPage[] {
+  return publicContent.pages.filter((page) => page.kind === 'exercise' && isPublished(page));
 }
 
 export function categoryForSlug(slug: string | undefined): PublicContentCategory | undefined {

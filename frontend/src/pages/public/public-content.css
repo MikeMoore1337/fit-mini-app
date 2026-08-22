@@ -181,6 +181,37 @@
   line-height: 1.6;
 }
 
+.public-contents {
+  width: min(100%, 760px);
+  margin: 0 auto 48px;
+  padding: 24px;
+  border: 1px solid var(--landing-card-border);
+  border-radius: 20px;
+  background: var(--landing-card);
+}
+
+.public-contents strong {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.public-contents ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.public-contents a {
+  color: var(--landing-muted);
+  text-underline-offset: 0.18em;
+}
+
+.public-contents a:hover,
+.public-contents a:focus-visible {
+  color: var(--landing-ink);
+}
+
 .public-body {
   max-width: 820px;
   margin: 0 auto;
@@ -640,9 +671,66 @@
   }
 }
 
+.public-inline-error {
+  display: grid;
+  justify-items: start;
+  gap: var(--v2-space-3);
+  padding: var(--v2-space-4);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-region-radius);
+}
+
+.public-exercise-body {
+  margin-top: var(--v2-space-6);
+}
+
+.public-exercise-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--v2-space-3);
+  margin: var(--v2-space-4) 0;
+}
+
+.public-exercise-facts > div {
+  min-width: 0;
+  padding: var(--v2-space-3);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-region-radius);
+  background: var(--v2-surface-secondary);
+}
+
+.public-exercise-facts dt {
+  color: var(--v2-text-secondary);
+  font-size: 0.8125rem;
+}
+
+.public-exercise-facts dd {
+  margin: var(--v2-space-1) 0 0;
+  color: var(--v2-text-primary);
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.public-exercise-source {
+  margin-top: var(--v2-space-5);
+  padding-top: var(--v2-space-4);
+  border-top: 1px solid var(--v2-border);
+}
+
+.public-exercise-source a,
+.public-sources a {
+  overflow-wrap: anywhere;
+}
+
 @media (min-width: 681px) {
   .public-page--design-v2 :where(.public-breadcrumbs, .public-hero) {
     padding-inline: clamp(var(--v2-space-4), 4vw, var(--v2-space-6));
+  }
+}
+
+@media (max-width: 680px) {
+  .public-exercise-facts {
+    grid-template-columns: 1fr;
   }
 }
 

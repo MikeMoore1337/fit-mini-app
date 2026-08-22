@@ -39,6 +39,7 @@ describe('AppShell', () => {
     navigation.path = '/coach';
     navigation.search = '';
     logout.mockClear();
+    delete window.Telegram;
   });
 
   it('показывает основные направления и отделяет рабочее пространство тренера', () => {
@@ -94,6 +95,18 @@ describe('AppShell', () => {
       'aria-current',
       'page',
     );
+  });
+
+  it('не показывает библиотеку знаний в Telegram Mini App navigation', () => {
+    window.Telegram = { WebApp: { initData: 'signed-init-data' } };
+    navigation.path = '/app';
+    render(<AppShell section="today">Содержимое</AppShell>);
+
+    expect(screen.queryByRole('link', { name: 'База знаний' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Ещё' }));
+    expect(
+      within(screen.getByRole('dialog')).queryByRole('link', { name: 'База знаний' }),
+    ).not.toBeInTheDocument();
   });
 
   it('показывает тематическую заглушку, если аватар отсутствует или не загрузился', () => {

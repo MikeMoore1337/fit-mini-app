@@ -11,6 +11,7 @@ from typing import cast
 from urllib.parse import urlparse
 
 from fitminiapp_api.core.config import settings
+from fitminiapp_api.services.public_exercises import public_exercise
 
 INDEX_ROBOTS = "index, follow"
 NOINDEX_ROBOTS = "noindex, nofollow"
@@ -60,6 +61,7 @@ def public_pages() -> tuple[dict[str, object], ...]:
         raise RuntimeError("Public content manifest must contain a pages array")
     pages: list[dict[str, object]] = []
     seen_paths: set[str] = set()
+    seen_ids: set[str] = set()
     for raw_page in payload["pages"]:
         if not isinstance(raw_page, dict):
             raise RuntimeError("Every public content page must be an object")
@@ -71,13 +73,44 @@ def public_pages() -> tuple[dict[str, object], ...]:
             raise RuntimeError(f"Duplicate public content path: {path!r}")
         for field in ("kind", "title", "description", "ogDescription", "heading", "intro"):
             _required_string(page.get(field), field=field)
+        content_id = page.get("id")
+        if isinstance(content_id, str):
+            if content_id in seen_ids:
+                raise RuntimeError(f"Duplicate public content id: {content_id!r}")
+            seen_ids.add(content_id)
+        status = page.get("status", "published")
+        if status not in {"draft", "review", "published", "archived"}:
+            raise RuntimeError(f"Unsupported public content status: {status!r}")
+        kind = page["kind"]
+        if kind in {"guide", "exercise", "exercise-index"}:
+            _required_string(content_id, field="id")
+            _required_string(page.get("slug"), field="slug")
+            if "status" not in page:
+                raise RuntimeError(f"Public content {content_id!r} must declare a status")
+        if kind == "guide":
+            for field in ("published", "updated", "reviewed"):
+                _required_string(page.get(field), field=field)
+            for field in ("tags", "appContexts", "sections", "sources"):
+                if not isinstance(page.get(field), list) or not page[field]:
+                    raise RuntimeError(
+                        f"Public guide {content_id!r} field {field!r} must be a non-empty list"
+                    )
+            for field in ("author", "reviewer"):
+                if not isinstance(page.get(field), dict):
+                    raise RuntimeError(
+                        f"Public guide {content_id!r} field {field!r} must identify an editor"
+                    )
         seen_paths.add(path)
         pages.append(page)
     return tuple(pages)
 
 
 def public_page_paths() -> tuple[str, ...]:
-    return tuple(_required_string(page["path"], field="path") for page in public_pages())
+    return tuple(
+        _required_string(page["path"], field="path")
+        for page in public_pages()
+        if page.get("status", "published") == "published"
+    )
 
 
 def canonical_landing_domain() -> str:
@@ -101,7 +134,12 @@ def frontend_host() -> str:
 
 def public_page_for_path(path: str) -> dict[str, object] | None:
     return next(
-        (page for page in public_pages() if _required_string(page["path"], field="path") == path),
+        (
+            page
+            for page in public_pages()
+            if page.get("status", "published") == "published"
+            and _required_string(page["path"], field="path") == path
+        ),
         None,
     )
 
@@ -183,6 +221,8 @@ def _structured_data_for_page(page: dict[str, object]) -> tuple[dict[str, object
             main_entity["author"] = author_schema
         if isinstance(page.get("updated"), str):
             main_entity["dateModified"] = page["updated"]
+        if isinstance(page.get("published"), str):
+            main_entity["datePublished"] = page["published"]
     else:
         main_entity = {
             "@type": "CollectionPage" if kind == "knowledge-index" else "WebPage",
@@ -295,6 +335,7 @@ def render_public_fallback(path: str) -> str:
         '<nav aria-label="Публичные разделы"><a href="/">Главная</a> '
         '<a href="/training">Тренировки</a> <a href="/nutrition">Питание</a> '
         '<a href="/progress">Прогресс</a> <a href="/knowledge">База знаний</a> '
+        '<a href="/exercises">Упражнения</a> '
         '<a href="/for-trainers">Для тренеров</a></nav>',
     ]
     breadcrumbs = page.get("breadcrumbs")
@@ -359,6 +400,50 @@ def render_public_fallback(path: str) -> str:
         )
         parts.append(
             f"<section><h2>Опубликованные руководства</h2><ul>{guide_links}</ul></section>"
+        )
+    if page.get("kind") == "exercise-index":
+        exercise_links = "".join(
+            _link_markup(
+                {
+                    "path": exercise_page["path"],
+                    "label": exercise_page["heading"],
+                    "description": exercise_page["description"],
+                }
+            )
+            for exercise_page in public_pages()
+            if exercise_page.get("kind") == "exercise"
+            and exercise_page.get("status", "published") == "published"
+        )
+        parts.append(
+            f"<section><h2>Опубликованные карточки упражнений</h2><ul>{exercise_links}</ul></section>"
+        )
+    if page.get("kind") == "exercise" and isinstance(page.get("slug"), str):
+        exercise = public_exercise(cast(str, page["slug"]))
+        if exercise is None:
+            raise RuntimeError(f"Published exercise {page['slug']!r} has no domain record")
+        facts = (
+            f"Основная группа: {html.escape(cast(str, exercise['primary_muscle']))}. "
+            f"Оборудование: {html.escape(cast(str, exercise['equipment']))}."
+        )
+        parts.append(f"<section><h2>Краткие сведения</h2><p>{facts}</p></section>")
+        steps = "".join(
+            f"<li>{html.escape(step)}</li>" for step in cast(list[str], exercise["technique_steps"])
+        )
+        parts.append(f"<section><h2>Техника выполнения</h2><ol>{steps}</ol></section>")
+        parts.append(
+            "<section><h2>Дыхание</h2><p>"
+            f"{html.escape(cast(str, exercise['breathing']))}</p></section>"
+        )
+        mistakes = "".join(
+            f"<li>{html.escape(item)}</li>" for item in cast(list[str], exercise["common_mistakes"])
+        )
+        parts.append(f"<section><h2>Частые ошибки</h2><ul>{mistakes}</ul></section>")
+        source_url = html.escape(cast(str, exercise["source_url"]), quote=True)
+        source_name = html.escape(cast(str, exercise["source_name"]))
+        source_license = html.escape(cast(str, exercise["source_license"]))
+        parts.append(
+            "<footer><strong>Источник данных и лицензия</strong> "
+            f'<a href="{source_url}">{source_name}</a> — {source_license}</footer>'
         )
     sources = page.get("sources")
     if isinstance(sources, list) and sources:

@@ -9,3 +9,10 @@ export function loginUrlForHostname(hostname: string): string {
     ? 'https://app.your-fitness-coach.ru/login'
     : '/login';
 }
+
+export function publicUrlForHostname(hostname: string, path: string): string {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return ['app.your-fitness-coach.ru', 'www.app.your-fitness-coach.ru'].includes(hostname)
+    ? `https://your-fitness-coach.ru${normalizedPath}`
+    : normalizedPath;
+}

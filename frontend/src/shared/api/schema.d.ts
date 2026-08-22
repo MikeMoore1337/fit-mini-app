@@ -21,6 +21,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/exercises": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Public Exercises */
+        get: operations["get_public_exercises_api_v1_public_exercises_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/exercises/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Public Exercise */
+        get: operations["get_public_exercise_api_v1_public_exercises__slug__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/telegram/init": {
         parameters: {
             query?: never;
@@ -4381,6 +4415,58 @@ export interface components {
             /** Weight Kg */
             weight_kg: number;
         };
+        /** PublicExerciseDetail */
+        PublicExerciseDetail: {
+            /** Slug */
+            slug: string;
+            /** Title */
+            title: string;
+            /** Primary Muscle */
+            primary_muscle: string;
+            /** Secondary Muscles */
+            secondary_muscles: string[];
+            /** Equipment */
+            equipment: string;
+            /**
+             * Difficulty Level
+             * @enum {string}
+             */
+            difficulty_level: "beginner" | "intermediate" | "advanced";
+            /** Technique Steps */
+            technique_steps: string[];
+            /** Breathing */
+            breathing: string;
+            /** Common Mistakes */
+            common_mistakes: string[];
+            /** Safety Notes */
+            safety_notes: string[];
+            /** Source Name */
+            source_name: string;
+            /** Source Url */
+            source_url: string;
+            /** Source License */
+            source_license: string;
+            /** Source License Url */
+            source_license_url?: string | null;
+        };
+        /** PublicExerciseSummary */
+        PublicExerciseSummary: {
+            /** Slug */
+            slug: string;
+            /** Title */
+            title: string;
+            /** Primary Muscle */
+            primary_muscle: string;
+            /** Secondary Muscles */
+            secondary_muscles: string[];
+            /** Equipment */
+            equipment: string;
+            /**
+             * Difficulty Level
+             * @enum {string}
+             */
+            difficulty_level: "beginner" | "intermediate" | "advanced";
+        };
         /** RecipeCreate */
         RecipeCreate: {
             /** Name */
@@ -5638,6 +5724,57 @@ export interface operations {
                     "application/json": {
                         [key: string]: string | boolean | string[];
                     };
+                };
+            };
+        };
+    };
+    get_public_exercises_api_v1_public_exercises_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicExerciseSummary"][];
+                };
+            };
+        };
+    };
+    get_public_exercise_api_v1_public_exercises__slug__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicExerciseDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

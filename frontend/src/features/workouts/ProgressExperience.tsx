@@ -3,6 +3,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type { ProgressSummary, TrainingAnalytics } from '../../shared/api/types';
 import { queryKeys } from '../../shared/queryKeys';
+import { ContextualHelp } from '../../shared/ui/ContextualHelp';
 import {
   Badge,
   EmptyState,
@@ -698,6 +699,12 @@ export function ProgressExperience() {
           <span className="eyebrow">Ваша динамика</span>
           <h1>Прогресс</h1>
           <p>Что изменилось в тренировках, теле и питании — только по фактическим данным.</p>
+          <ContextualHelp articlePath="/knowledge/progress/how-to-read-progress">
+            <p>
+              Сначала смотрите на период и полноту данных. Одна точка не образует тренд, а
+              пропущенная запись не равна нулевому результату.
+            </p>
+          </ContextualHelp>
         </div>
         <SegmentedControl
           ariaLabel="Период прогресса"

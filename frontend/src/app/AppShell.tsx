@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { AppLink, useNavigation } from '../shared/navigation/router';
+import { publicUrlForHostname } from '../shared/navigation/appUrl';
 import { AppThemeToggle } from '../shared/ui/AppThemeToggle';
 import { BrandLockup } from '../shared/ui/BrandLogo';
 import { AppNavigationIcon, type AppNavigationIconName } from './AppNavigationIcon';
@@ -70,6 +71,8 @@ export function AppShell({
   const displayName =
     user?.profile?.full_name || user?.first_name || user?.username || 'Пользователь';
   const secondaryActive = section === 'catalog' || section === 'profile';
+  const isMiniApp = Boolean(window.Telegram?.WebApp?.initData);
+  const knowledgeUrl = publicUrlForHostname(window.location.hostname, '/knowledge');
 
   const closeMore = (restoreFocus = false) => {
     setMoreOpen(false);
@@ -174,10 +177,12 @@ export function AppShell({
                 <AppNavigationIcon name="profile" />
                 <span className="app-bottom-nav__label">Профиль</span>
               </AppLink>
-              <AppLink to="/knowledge" className="app-bottom-nav__btn">
-                <AppNavigationIcon name="knowledge" />
-                <span className="app-bottom-nav__label">База знаний</span>
-              </AppLink>
+              {!isMiniApp && (
+                <a href={knowledgeUrl} className="app-bottom-nav__btn">
+                  <AppNavigationIcon name="knowledge" />
+                  <span className="app-bottom-nav__label">База знаний</span>
+                </a>
+              )}
 
               {user.is_coach && (
                 <>
@@ -278,14 +283,16 @@ export function AppShell({
                     <AppNavigationIcon name="profile" />
                     <span>Профиль и настройки</span>
                   </AppLink>
-                  <AppLink
-                    to="/knowledge"
-                    className="app-more-panel__item"
-                    onClick={() => closeMore()}
-                  >
-                    <AppNavigationIcon name="knowledge" />
-                    <span>База знаний</span>
-                  </AppLink>
+                  {!isMiniApp && (
+                    <a
+                      href={knowledgeUrl}
+                      className="app-more-panel__item"
+                      onClick={() => closeMore()}
+                    >
+                      <AppNavigationIcon name="knowledge" />
+                      <span>База знаний</span>
+                    </a>
+                  )}
                   {user.is_coach && (
                     <AppLink
                       to="/coach"

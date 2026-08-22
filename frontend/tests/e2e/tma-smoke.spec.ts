@@ -151,3 +151,47 @@ test('nutrition keyboard draft and core Progress/Profile navigation survive plat
   await expect(tmaPage.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible();
   await expectNoHorizontalOverflow(tmaPage);
 });
+
+test('contextual help covers workout, nutrition and Progress without a TMA library', async ({
+  tma,
+  tmaPage,
+}) => {
+  await installPlatformApi(tmaPage, { workoutStatus: 'planned' });
+  await tmaPage.goto('/app');
+
+  await expect(tmaPage.getByRole('link', { name: 'База знаний' })).not.toBeAttached();
+  await tmaPage.getByRole('button', { name: 'Начать тренировку' }).click();
+  await tmaPage.getByText('Дополнительно', { exact: true }).first().click();
+  const rirDetails = tmaPage.locator('.active-workout-rir .contextual-help');
+  const rirHelp = rirDetails.getByText('Что это?', { exact: true });
+  await rirHelp.click();
+  await expect(
+    tmaPage.locator('.active-workout-rir').getByRole('link', { name: /Подробнее на сайте/ }),
+  ).toHaveAttribute('href', '/knowledge/training/repetitions-in-reserve');
+  await tma.setTheme('dark');
+  await expect(rirDetails).toHaveAttribute('open', '');
+  await rirHelp.click();
+  await expect(rirHelp).toBeFocused();
+  await expect(rirDetails).not.toHaveAttribute('open', '');
+
+  await tmaPage.getByRole('link', { name: 'Питание', exact: true }).click();
+  await tmaPage.getByRole('heading', { name: 'КБЖУ', exact: true }).click();
+  const nutritionHelp = tmaPage.locator('.contextual-help').getByText('Что это?', { exact: true });
+  await nutritionHelp.click();
+  await expect(
+    tmaPage.locator('.contextual-help').getByRole('link', { name: /Подробнее на сайте/ }),
+  ).toHaveAttribute('href', '/knowledge/nutrition/kbju-as-a-reference');
+
+  await tmaPage.getByRole('link', { name: 'Прогресс', exact: true }).click();
+  await tmaPage.locator('.progress-hero').getByText('Что это?', { exact: true }).click();
+  await expect(
+    tmaPage.locator('.progress-hero').getByRole('link', { name: /Подробнее на сайте/ }),
+  ).toHaveAttribute('href', '/knowledge/progress/how-to-read-progress');
+  await tma.setTheme('light');
+  await expectNoHorizontalOverflow(tmaPage);
+
+  await tmaPage.goto('/knowledge');
+  await expect(tmaPage).toHaveURL('/app');
+  await expect(tmaPage.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible();
+  await expect(tmaPage.getByRole('heading', { name: /База знаний/i })).not.toBeAttached();
+});

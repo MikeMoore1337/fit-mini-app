@@ -3410,16 +3410,20 @@ def test_robots_and_sitemap_publish_only_canonical_public_urls(client, monkeypat
         for element in root.findall("{http://www.sitemaps.org/schemas/sitemap/0.9}url")
         for element in element.findall("{http://www.sitemaps.org/schemas/sitemap/0.9}loc")
     ]
-    assert urls == [
+    assert len(urls) == 20
+    assert len(urls) == len(set(urls))
+    assert {
         "https://your-fitness-coach.ru/",
-        "https://your-fitness-coach.ru/training",
-        "https://your-fitness-coach.ru/nutrition",
-        "https://your-fitness-coach.ru/progress",
-        "https://your-fitness-coach.ru/for-trainers",
         "https://your-fitness-coach.ru/knowledge",
-        "https://your-fitness-coach.ru/knowledge/training/how-to-start-strength-training",
-        "https://your-fitness-coach.ru/knowledge/nutrition/kbju-as-a-reference",
-    ]
+        "https://your-fitness-coach.ru/knowledge/training/repetitions-in-reserve",
+        "https://your-fitness-coach.ru/knowledge/nutrition/creatine-monohydrate",
+        "https://your-fitness-coach.ru/knowledge/cardio/heart-rate-zones",
+        "https://your-fitness-coach.ru/knowledge/progress/how-to-read-progress",
+        "https://your-fitness-coach.ru/exercises",
+        "https://your-fitness-coach.ru/exercises/bench-press",
+        "https://your-fitness-coach.ru/exercises/lat-pulldown",
+        "https://your-fitness-coach.ru/exercises/squat",
+    }.issubset(urls)
     assert all(
         segment not in sitemap.text for segment in ("/app", "/admin", "/coach", "/join", "/login")
     )
@@ -3481,7 +3485,7 @@ def test_public_guide_has_visible_editorial_metadata_and_truthful_schema(client,
     assert response.status_code == 200
     assert '<nav aria-label="Хлебные крошки">' in response.text
     assert "Редакция Your Fitness Coach" in response.text
-    assert '<time datetime="2026-08-15">' in response.text
+    assert '<time datetime="2026-08-22">' in response.text
     assert "World Health Organization" in response.text
     structured_data = re.search(
         r'<script type="application/ld\+json">(.*?)</script>', response.text, re.DOTALL
@@ -3498,8 +3502,68 @@ def test_public_guide_has_visible_editorial_metadata_and_truthful_schema(client,
     assert "Опубликованные руководства" in knowledge.text
     assert (
         '<a href="/knowledge/training/how-to-start-strength-training">'
-        "Как начать силовые тренировки и не потерять план</a>" in knowledge.text
+        "Full Body и Split: выберите схему, которую сможете повторять</a>" in knowledge.text
     )
+
+
+def test_public_exercise_api_uses_allowlisted_domain_data_and_excludes_private_rows(client):
+    catalog = client.get("/api/v1/public/exercises")
+
+    assert catalog.status_code == 200
+    assert [item["slug"] for item in catalog.json()] == [
+        "bench-press",
+        "lat-pulldown",
+        "squat",
+    ]
+    assert all("created_by_user_id" not in item for item in catalog.json())
+
+    squat = client.get("/api/v1/public/exercises/squat")
+    assert squat.status_code == 200
+    assert squat.json()["title"] == "Приседания"
+    assert squat.json()["primary_muscle"] == "Квадрицепс"
+    assert squat.json()["technique_steps"]
+    assert squat.json()["source_name"] == "free-exercise-db"
+
+    private_slug = client.get("/api/v1/public/exercises/squat-u-private")
+    assert private_slug.status_code == 404
+
+
+def test_public_exercise_route_has_domain_fallback_and_webpage_schema(client, monkeypatch):
+    from fitminiapp_api.core.config import settings
+
+    monkeypatch.setattr(settings, "landing_domain", "your-fitness-coach.ru")
+    response = client.get("/exercises/squat", headers={"Host": "your-fitness-coach.ru"})
+
+    assert response.status_code == 200
+    assert response.headers["x-robots-tag"] == "index, follow"
+    assert "Основная группа: Квадрицепс" in response.text
+    assert "Техника выполнения" in response.text
+    assert "Колени заваливаются внутрь" in response.text
+    assert "free-exercise-db" in response.text
+    structured_data = re.search(
+        r'<script type="application/ld\+json">(.*?)</script>', response.text, re.DOTALL
+    )
+    assert structured_data is not None
+    payload = json.loads(structured_data.group(1))
+    assert [entry["@type"] for entry in payload["@graph"]] == ["WebPage", "BreadcrumbList"]
+
+
+def test_draft_public_content_is_noindex_and_absent_from_sitemap_source(monkeypatch):
+    from fitminiapp_api import seo
+
+    monkeypatch.setattr(
+        seo,
+        "public_pages",
+        lambda: (
+            {"path": "/published", "status": "published"},
+            {"path": "/draft", "status": "draft"},
+            {"path": "/review", "status": "review"},
+        ),
+    )
+
+    assert seo.public_page_paths() == ("/published",)
+    assert seo.metadata_for_path("/draft").robots == "noindex, nofollow"
+    assert seo.metadata_for_path("/review").canonical_url is None
 
 
 def test_public_fallback_replaces_the_built_vite_marker_without_stale_landing_copy():

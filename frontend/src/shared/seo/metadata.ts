@@ -79,6 +79,7 @@ export function structuredDataForPage(page: PublicContentPage): Record<string, u
           description: page.description,
           mainEntityOfPage: url,
           dateModified: page.updated,
+          datePublished: page.published,
           author: page.author ? { '@type': page.author.type, name: page.author.name } : undefined,
           publisher: { '@type': 'Organization', name: 'Your Fitness Coach' },
         }

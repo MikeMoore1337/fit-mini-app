@@ -524,3 +524,36 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+.contextual-help {
+  margin-top: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-body);
+}
+
+.contextual-help > summary {
+  min-height: 44px;
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-text);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.contextual-help__body {
+  max-width: 65ch;
+  padding: var(--space-2) 0 var(--space-1);
+}
+
+.contextual-help__body p {
+  margin: 0;
+}
+
+.contextual-help__link {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-accent);
+  font-weight: 700;
+}
