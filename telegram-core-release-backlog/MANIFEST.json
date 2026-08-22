@@ -1,99 +1,107 @@
 {
-  "package": "your-fitness-coach-telegram-core-release-backlog-v4",
+  "package": "your-fitness-coach-telegram-core-release-backlog-v5.1-from-02",
   "repository": "MikeMoore1337/fit-mini-app",
   "working_branch": "feature/yfc-platform-v2",
-  "status": "PARALLEL_FIRST_RELEASE_WORKSTREAM",
-  "next_task": "00-current-state-audit-architecture",
-  "task_range": "00-04",
-  "skills_archive": "your-fitness-coach-agents-v3.zip",
-  "excluded": [
-    "news channel",
-    "news digest",
-    "English channel",
-    "AI Coach"
+  "status": "CONTINUATION_AFTER_COMPLETED_TELEGRAM_00_01_MAX_AUTONOMY",
+  "completed_prerequisites": [
+    "telegram:00",
+    "telegram:01"
   ],
-  "generated_at": "2026-08-20T20:56:19.205290+00:00",
+  "main_backlog_current_completed_through": "49B1",
+  "next_task": "02-botfather-commands-public-ux",
+  "included_task_range": "02-04",
+  "execution_order": [
+    "telegram:02",
+    "wait:main:64",
+    "telegram:03",
+    "wait:main:72",
+    "telegram:04"
+  ],
+  "owner_manual_policy": "ONLY_TRUE_BOTFATHER_OR_SECRET_PRODUCTION_BOUNDARIES",
+  "bounded_bot_api_write_preapproval_task": "02-botfather-commands-public-ux",
+  "historical_tasks_intentionally_omitted": [
+    "00-current-state-audit-architecture.md",
+    "01-single-bot-support-feedback.md"
+  ],
+  "generated_at": "2026-08-22T14:06:52.852402+00:00",
   "validation_errors": [],
+  "task_lifecycle_version": 1,
+  "role_routing_enabled": true,
   "files": [
     {
       "path": "00_START_HERE.md",
-      "bytes": 848,
-      "sha256": "e3e43b3e2cf7558c071ff2dd45ead9c4658bbf5edf2e565c81f78792d55391e7"
+      "bytes": 2550,
+      "sha256": "8f393e2400976e376cf59ec5989ad7ff8985f7a6a17a0353e5db598ac170ce46"
     },
     {
-      "path": "BACKLOG_V4_CHANGELOG.md",
-      "bytes": 616,
-      "sha256": "c40b7add107338472d76ba8e9c005a2f13b3232e548de7c030f25bbb25697997"
+      "path": "BACKLOG_V5_1_CHANGELOG.md",
+      "bytes": 1121,
+      "sha256": "2bc49e6d50d4de610646046fe5dc96db61f089c053204a5699459c4041078a6d"
     },
     {
       "path": "BOTFATHER_OWNER_CHECKLIST.md",
-      "bytes": 447,
-      "sha256": "559ee843e8c4776c2e00a52af6d475d4411b0435a07762093acbfd02aa502e68"
+      "bytes": 3415,
+      "sha256": "893e33a806a0ab1b87d2b8111da5da78607a0610800a23d5a131048a7298fff6"
     },
     {
       "path": "CODEX_SHORT_PROMPT.md",
-      "bytes": 533,
-      "sha256": "13a060ddce47fef17c79eb881fd3b22a0c8d7787b08dc9f272aedf61d0ad6a1e"
+      "bytes": 1274,
+      "sha256": "1bf30c3ef6ece9ee118a65c1738784152244be41df978d69e695d66cc71e781c"
+    },
+    {
+      "path": "COMPLETED_PREREQUISITES.md",
+      "bytes": 1030,
+      "sha256": "67b0128b4aa9b1702d5fde5127627d135d792472c9c25314dadebde6320e24b4"
     },
     {
       "path": "EXECUTION_STATUS.md",
-      "bytes": 68,
-      "sha256": "620307af3024176c30c063db7a8af0761697968f5bc5cd60c35d974fd83de708"
+      "bytes": 274,
+      "sha256": "709821d7ab82444fd8b8d3ba70210f23e20ca9ccafc9822bcecd82f3bab5696d"
     },
     {
       "path": "GLOBAL_RULES.md",
-      "bytes": 1892,
-      "sha256": "936c60bc51de8bf1e720bd682747166dba31d9e74230c8c7a70b873d98f5d466"
+      "bytes": 4307,
+      "sha256": "690f88b2af1a4ede71708b7301c4c78cff90aeafe453b049a8952a0e16c3390e"
     },
     {
       "path": "PRIORITY_ORDER.md",
-      "bytes": 38,
-      "sha256": "462700f8219f9bad4b957536b9540e1eed06b5225d52ab71c74cfd436e6c4a45"
+      "bytes": 532,
+      "sha256": "78d8e782cf055b2107c5649aa3a3f261ea9eb678370377d729003a645ba5d59c"
     },
     {
       "path": "SKILL_ASSIGNMENT_MATRIX.md",
-      "bytes": 1126,
-      "sha256": "e74ed5b3eab9c7ca413c2c9601af05ba0bd0449bdb537146923adcac0cbd0b6f"
+      "bytes": 1246,
+      "sha256": "8536bbcf46ac10dd52ed636df3b6498acfd2e990f1afa895eb11fc7e65214abd"
     },
     {
       "path": "TASK_EXECUTION_LIFECYCLE.md",
-      "bytes": 14046,
-      "sha256": "a72df9c89d5716efe78931646c5a8c054ee1ee39b962d731f1d15f779fcda050"
+      "bytes": 14638,
+      "sha256": "283f0b93c6b51fe6c07d1ad6d8780b2754e0b67ed62fb5eba06bb77e32d64187"
     },
     {
-      "path": "tasks/00-current-state-audit-architecture.md",
-      "bytes": 2647,
-      "sha256": "7fc8884efac7b56c79ea204efebc6d72421734e38e4c2849c4df8ea49bc64a0a"
-    },
-    {
-      "path": "tasks/01-single-bot-support-feedback.md",
-      "bytes": 6270,
-      "sha256": "2de1ae895df8e4c87b63881dea9b5c9c74d982c4a8cb75501914a94a88ed4bb1"
+      "path": "TELEGRAM_AUTOMATION_BOUNDARY.md",
+      "bytes": 4033,
+      "sha256": "eb2ea201773911fc273101a55e0264b947be064b0b07de35da5da36f3a78f521"
     },
     {
       "path": "tasks/02-botfather-commands-public-ux.md",
-      "bytes": 2598,
-      "sha256": "cdaa9073545710b6a0471e57d9f9ba49815c6025ea9a2466e47172c098fe6b80"
+      "bytes": 13151,
+      "sha256": "126193987991d7f9931f3e887b874565e108ec7f02d2ab18078f33c9a3e51c9e"
     },
     {
       "path": "tasks/03-product-notifications-deeplinks.md",
-      "bytes": 1920,
-      "sha256": "425f7d25351544307e8dae7d58755298d2c18da254690c2a36e522f7f0fddf44"
+      "bytes": 7136,
+      "sha256": "79ce95b35281a6df25a01d39eaf30e6b5a46cd15d8e3d9d051f022a1c6cf09b0"
     },
     {
       "path": "tasks/04-final-e2e-release-gate.md",
-      "bytes": 1437,
-      "sha256": "958894148ff2b6ff9009ec81716e6c76a4b694d0f500a59e7118d88338d4c546"
+      "bytes": 8209,
+      "sha256": "ab419678174e25b675febf5df1dbe175e2db8f8d02b7d9371fa30ded3f61b054"
     },
     {
       "path": "tasks/README.md",
-      "bytes": 483,
-      "sha256": "a6428e94f736256a227399aaaa8d0a96d14ba5a8325427e89e1e848e6dd70a63"
+      "bytes": 675,
+      "sha256": "bee640b0cb0139a434994da63caa08a6471a2723703556b812adb45e92ede5be"
     }
-  ],
-  "task_lifecycle_version": 1,
-  "role_routing_enabled": true,
-  "task_lifecycle_file": "TASK_EXECUTION_LIFECYCLE.md",
-  "short_prompt_file": "CODEX_SHORT_PROMPT.md",
-  "lifecycle_updated_at": "2026-08-21T15:28:26.954796+00:00"
+  ]
 }
