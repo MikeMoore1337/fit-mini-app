@@ -70,8 +70,8 @@ jobs:
              cd '$PROD_PATH'
              git fetch --prune origin master
              LATEST_MASTER_SHA=\$(git rev-parse origin/master)
-             if [ "\$LATEST_MASTER_SHA" != '$DEPLOY_SHA' ]; then
-               echo "Skipping superseded deployment: tested revision $DEPLOY_SHA is no longer master head (\$LATEST_MASTER_SHA)"
+             if [ \"\$LATEST_MASTER_SHA\" != '$DEPLOY_SHA' ]; then
+               echo \"Skipping superseded deployment: tested revision $DEPLOY_SHA is no longer master head (\$LATEST_MASTER_SHA)\"
                exit 0
              fi
              git reset --hard '$DEPLOY_SHA'
