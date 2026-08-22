@@ -154,11 +154,6 @@ function renderApp(): void {
 }
 
 async function bootstrap(): Promise<void> {
-  if (import.meta.env.DEV) {
-    const { enableDesignPilot49e } = await import('./dev/designPilot49e');
-    await enableDesignPilot49e();
-  }
-
   if (isTelegramLaunch(window.location)) {
     await loadTelegramSdk();
   }

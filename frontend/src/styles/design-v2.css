@@ -1222,6 +1222,85 @@ body.public-shell-mode.public-shell-mode:has(.auth-public-shell--design-v2) {
   }
 }
 
+/* Design V2.1 shared Mobile Web/TMA viewport and safe-area contract. */
+:root {
+  --yfc-viewport-height: 100dvh;
+  --yfc-viewport-stable-height: 100dvh;
+  --yfc-tg-safe-top: 0px;
+  --yfc-tg-safe-right: 0px;
+  --yfc-tg-safe-bottom: 0px;
+  --yfc-tg-safe-left: 0px;
+  --yfc-tg-content-safe-top: 0px;
+  --yfc-tg-content-safe-right: 0px;
+  --yfc-tg-content-safe-bottom: 0px;
+  --yfc-tg-content-safe-left: 0px;
+  --yfc-safe-top: max(env(safe-area-inset-top, 0px), var(--yfc-tg-safe-top));
+  --yfc-safe-right: max(env(safe-area-inset-right, 0px), var(--yfc-tg-safe-right));
+  --yfc-safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--yfc-tg-safe-bottom));
+  --yfc-safe-left: max(env(safe-area-inset-left, 0px), var(--yfc-tg-safe-left));
+  --yfc-content-safe-top: var(--yfc-tg-content-safe-top);
+  --yfc-content-safe-right: var(--yfc-tg-content-safe-right);
+  --yfc-content-safe-bottom: var(--yfc-tg-content-safe-bottom);
+  --yfc-content-safe-left: var(--yfc-tg-content-safe-left);
+  --yfc-layout-safe-top: max(var(--yfc-safe-top), var(--yfc-content-safe-top));
+  --yfc-layout-safe-right: max(var(--yfc-safe-right), var(--yfc-content-safe-right));
+  --yfc-layout-safe-bottom: max(var(--yfc-safe-bottom), var(--yfc-content-safe-bottom));
+  --yfc-layout-safe-left: max(var(--yfc-safe-left), var(--yfc-content-safe-left));
+}
+
+.app-shell--design-v2 {
+  min-height: var(--yfc-viewport-stable-height);
+}
+
+.app-shell--design-v2 .app-more-layer {
+  padding-top: max(16px, var(--yfc-layout-safe-top));
+}
+
+.app-shell--design-v2 .app-more-panel {
+  max-height: calc(var(--yfc-viewport-stable-height) - max(16px, var(--yfc-layout-safe-top)));
+  padding-right: max(16px, var(--yfc-layout-safe-right));
+  padding-bottom: max(18px, var(--yfc-layout-safe-bottom));
+  padding-left: max(16px, var(--yfc-layout-safe-left));
+}
+
+@media (max-width: 899px) {
+  body:has(.app-shell--design-v2 #appBottomNav) {
+    padding-bottom: calc(72px + max(14px, var(--yfc-layout-safe-bottom)));
+  }
+
+  body:has(.app-shell--design-v2 #appBottomNav) .toast:not(.hidden) {
+    bottom: calc(72px + max(14px, var(--yfc-layout-safe-bottom)));
+  }
+
+  .app-shell--design-v2 .app-bottom-nav {
+    padding-right: max(6px, var(--yfc-layout-safe-right));
+    padding-bottom: max(6px, var(--yfc-layout-safe-bottom));
+    padding-left: max(6px, var(--yfc-layout-safe-left));
+    backdrop-filter: none;
+  }
+
+  html[data-yfc-keyboard='visible'] .app-shell--design-v2 .app-bottom-nav {
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+@media (max-width: 680px) {
+  body:has(.app-shell--design-v2) {
+    padding-top: max(var(--v2-space-3), var(--yfc-layout-safe-top));
+    padding-right: max(var(--v2-space-3), var(--yfc-layout-safe-right));
+    padding-left: max(var(--v2-space-3), var(--yfc-layout-safe-left));
+  }
+
+  .app-shell--design-v2 .today-workout-focus__header {
+    top: var(--yfc-layout-safe-top);
+  }
+
+  .app-shell--design-v2 .active-workout--design-v2 ~ .active-workout-rest {
+    inset: var(--yfc-layout-safe-top) 0 auto;
+  }
+}
+
 /* Core rollout: shared semantic scope for completed user surfaces (tasks 00-46). */
 :where(
   .app-section--design-v2,

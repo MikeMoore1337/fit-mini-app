@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BrandLogo } from '../../shared/ui/BrandLogo';
 import { PublicShell } from '../../shared/ui/PublicShell';
 import { applyRouteMetadata } from '../../shared/seo/metadata';
@@ -7,10 +7,6 @@ import { AppLink } from '../../shared/navigation/router';
 import './landing.css';
 
 export { appUrlForHostname, loginUrlForHostname } from '../../shared/navigation/appUrl';
-
-const SelectedLandingPilot49e = import.meta.env.DEV
-  ? lazy(() => import('../../dev/SelectedLandingPilot49e'))
-  : null;
 
 const features = [
   {
@@ -75,8 +71,6 @@ export default function LandingPage() {
   const appUrl = appUrlForHostname(window.location.hostname);
   const loginUrl = loginUrlForHostname(window.location.hostname);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const designPilot49e =
-    import.meta.env.DEV && document.documentElement.dataset.designPilot === '49e';
 
   useEffect(() => {
     applyRouteMetadata('/');
@@ -90,55 +84,6 @@ export default function LandingPage() {
     window.addEventListener('keydown', closeOnEscape);
     return () => window.removeEventListener('keydown', closeOnEscape);
   }, [mobileMenuOpen]);
-
-  if (designPilot49e && SelectedLandingPilot49e) {
-    return (
-      <PublicShell
-        className="landing-page"
-        homeHref="#top"
-        skipTarget="landing-content"
-        headerNavigation={
-          <nav
-            id="landing-navigation"
-            className={`landing-nav${mobileMenuOpen ? ' is-open' : ''}`}
-            aria-label="Навигация по странице"
-          >
-            <a href="#how-it-works" onClick={() => setMobileMenuOpen(false)}>
-              Как работает
-            </a>
-            <a href="#for-who" onClick={() => setMobileMenuOpen(false)}>
-              Для кого
-            </a>
-          </nav>
-        }
-        headerAction={
-          <>
-            <a className="landing-button landing-button--compact" href={loginUrl}>
-              Войти
-            </a>
-            <button
-              type="button"
-              className={`landing-menu-toggle${mobileMenuOpen ? ' is-open' : ''}`}
-              aria-label={mobileMenuOpen ? 'Закрыть меню' : 'Открыть меню'}
-              aria-expanded={mobileMenuOpen}
-              aria-controls="landing-navigation"
-              onClick={() => setMobileMenuOpen((open) => !open)}
-            >
-              <span />
-              <span />
-              <span />
-            </button>
-          </>
-        }
-      >
-        <Suspense
-          fallback={<main id="landing-content" className="pilot49e-landing" tabIndex={-1} />}
-        >
-          <SelectedLandingPilot49e appUrl={appUrl} />
-        </Suspense>
-      </PublicShell>
-    );
-  }
 
   return (
     <PublicShell

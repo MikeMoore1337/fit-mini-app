@@ -10,6 +10,7 @@ import {
   type AppColorScheme,
 } from '../theme';
 import type { TelegramThemeParams, TelegramWebApp } from './types';
+import { installMobileLayoutAdapter } from './layout';
 
 function hexLuminance(color: string | undefined): number | null {
   if (!color || !/^#[\da-f]{6}$/i.test(color)) return null;
@@ -84,6 +85,7 @@ export function useTelegram(): TelegramWebApp | null {
         onTheme();
       }
     };
+    const cleanupLayout = installMobileLayoutAdapter(telegram);
 
     onTheme();
     if (isMiniApp) {
@@ -96,6 +98,7 @@ export function useTelegram(): TelegramWebApp | null {
     telegram?.ready?.();
     telegram?.expand?.();
     return () => {
+      cleanupLayout();
       if (isMiniApp) telegram?.offEvent?.('themeChanged', onTheme);
       else {
         media?.removeEventListener?.('change', onTheme);

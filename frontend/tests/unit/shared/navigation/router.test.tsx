@@ -1,4 +1,4 @@
-import { act, cleanup, render, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NavigationProvider } from '../../../../src/shared/navigation/router';
 
@@ -42,5 +42,20 @@ describe('NavigationProvider Telegram BackButton', () => {
 
     await waitFor(() => expect(window.location.href).toMatch(/\/app\?section=progress$/));
     expect(backButton.hide).toHaveBeenCalled();
+  });
+
+  it('скрывает native BackButton на root active workout с видимым in-page back', () => {
+    window.history.replaceState({}, '', '/app?section=today');
+
+    render(
+      <NavigationProvider>
+        <button type="button">К сводке</button>
+      </NavigationProvider>,
+    );
+
+    expect(screen.getByRole('button', { name: 'К сводке' })).toBeInTheDocument();
+    expect(backButton.hide).toHaveBeenCalled();
+    expect(backButton.show).not.toHaveBeenCalled();
+    expect(callbacks.size).toBe(0);
   });
 });

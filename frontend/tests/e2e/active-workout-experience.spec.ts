@@ -92,6 +92,9 @@ async function mockActiveWorkout(page: Page) {
     if (path.endsWith('/auth/refresh')) {
       return route.fulfill({ status: 401, json: { detail: 'No refresh cookie' } });
     }
+    if (path.endsWith('/auth/telegram/init')) {
+      return route.fulfill({ json: { access_token: 'telegram-test-token', token_type: 'bearer' } });
+    }
     if (path.endsWith('/auth/dev-login')) {
       return route.fulfill({ json: { access_token: 'test-token', token_type: 'bearer' } });
     }
@@ -305,6 +308,97 @@ test('active workout has touch-size controls and no horizontal overflow', async 
       await expect(focusHeader.getByText('Текущая тренировка')).toBeVisible();
     }
   }
+});
+
+test('TMA active workout keeps in-page back while native back stays hidden and keyboard nav restores', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => {
+    const handlers = new Map<string, Set<() => void>>();
+    const backState = { hide: 0, show: 0 };
+    const backButton = {
+      show() {
+        backState.show += 1;
+      },
+      hide() {
+        backState.hide += 1;
+      },
+      setText() {},
+      enable() {},
+      disable() {},
+      onClick() {},
+      offClick() {},
+    };
+    const telegram = {
+      initData: 'signed-test-data',
+      initDataUnsafe: {},
+      isActive: true,
+      viewportHeight: 560,
+      viewportStableHeight: 844,
+      safeAreaInset: { top: 28, right: 2, bottom: 20, left: 2 },
+      contentSafeAreaInset: { top: 44, right: 0, bottom: 16, left: 0 },
+      colorScheme: 'dark' as const,
+      themeParams: {},
+      BackButton: backButton,
+      ready() {},
+      expand() {},
+      onEvent(event: string, callback: () => void) {
+        const callbacks = handlers.get(event) ?? new Set<() => void>();
+        callbacks.add(callback);
+        handlers.set(event, callbacks);
+      },
+      offEvent(event: string, callback: () => void) {
+        handlers.get(event)?.delete(callback);
+      },
+    };
+    Object.assign(window, {
+      Telegram: { WebApp: telegram },
+      __backButtonState: backState,
+    });
+  });
+  await mockActiveWorkout(page);
+
+  await page.goto('/app?tgWebAppPlatform=android');
+  await page.getByRole('button', { name: 'Продолжить тренировку' }).click();
+
+  await expect(page.getByRole('button', { name: 'К сводке' })).toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute('data-yfc-layout-surface', 'telegram');
+  await expect(page.locator('html')).toHaveAttribute('data-yfc-keyboard', 'hidden');
+  expect(
+    await page.evaluate(() =>
+      getComputedStyle(document.documentElement).getPropertyValue('--yfc-viewport-height').trim(),
+    ),
+  ).toBe('560px');
+  expect(
+    await page.evaluate(() =>
+      getComputedStyle(document.documentElement)
+        .getPropertyValue('--yfc-viewport-stable-height')
+        .trim(),
+    ),
+  ).toBe('844px');
+
+  const navigation = page.locator('#appBottomNav');
+  await expect(navigation).toBeVisible();
+  const weight = page.getByRole('spinbutton', { name: 'Вес, Жим штанги лёжа, подход 1' });
+  await weight.focus();
+  await expect(page.locator('html')).toHaveAttribute('data-yfc-keyboard', 'visible');
+  await expect(navigation).toBeHidden();
+
+  await page.getByRole('button', { name: 'К сводке' }).focus();
+  await expect(page.locator('html')).toHaveAttribute('data-yfc-keyboard', 'hidden');
+  await expect(navigation).toBeVisible();
+  await expect(page).toHaveURL(/\/app\?tgWebAppPlatform=android$/);
+  const backState = await page.evaluate(
+    () =>
+      (
+        window as unknown as Window & {
+          __backButtonState: { hide: number; show: number };
+        }
+      ).__backButtonState,
+  );
+  expect(backState.hide).toBeGreaterThanOrEqual(1);
+  expect(backState.show).toBe(0);
 });
 
 test('save failure stays compact, keeps controls open and retries explicitly', async ({ page }) => {

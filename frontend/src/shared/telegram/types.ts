@@ -26,11 +26,23 @@ export interface TelegramButton {
   offClick(callback: () => void): void;
 }
 
+export interface TelegramInsets {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
 export interface TelegramWebApp {
   initData: string;
   initDataUnsafe?: { start_param?: string };
   colorScheme?: 'light' | 'dark';
   themeParams?: TelegramThemeParams;
+  isActive?: boolean;
+  viewportHeight?: number;
+  viewportStableHeight?: number;
+  safeAreaInset?: Partial<TelegramInsets>;
+  contentSafeAreaInset?: Partial<TelegramInsets>;
   MainButton?: TelegramButton;
   BackButton?: TelegramButton;
   HapticFeedback?: {

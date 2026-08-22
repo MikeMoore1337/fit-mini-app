@@ -1192,20 +1192,24 @@
   }
 
   .landing-hero__visual {
-    min-height: 440px;
-    transform: scale(0.9);
+    display: block;
+    min-height: 0;
   }
 
-  .landing-orbit--one {
-    width: 430px;
-  }
-
-  .landing-rest-demo {
-    left: 0;
-  }
-
+  .landing-hero__visual::before,
+  .landing-orbit,
+  .landing-rest-demo,
   .landing-nutrition-demo {
-    right: 0;
+    display: none;
+  }
+
+  .landing-workout-demo {
+    width: 100%;
+    min-height: 0;
+    padding: 20px;
+    border-radius: 22px;
+    transform: none;
+    backdrop-filter: none;
   }
 
   .landing-problem,
@@ -1439,11 +1443,6 @@
 }
 
 @media (max-width: 400px) {
-  .landing-hero__visual {
-    margin-inline: -34px;
-    transform: scale(0.78);
-  }
-
   .landing-feature-grid {
     grid-template-columns: minmax(0, 1fr);
   }

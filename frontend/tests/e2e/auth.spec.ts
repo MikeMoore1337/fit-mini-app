@@ -135,9 +135,8 @@ test('Landing ведёт на canonical Login, а protected route сохраня
   await page.getByRole('link', { name: 'Войти' }).click();
 
   await expect(page).toHaveURL(/\/login$/);
-  await expect(
-    page.getByRole('heading', { name: 'Продолжить в Your Fitness Coach' }),
-  ).toBeVisible();
+  await expect(page.locator('#login-title .login-title--desktop')).toBeVisible();
+  await expect(page.locator('#login-title')).toContainText('Вернитесь к своему плану.');
 
   await page.goto('/coach');
   await expect(page).toHaveURL(/\/login\?next=%2Fcoach$/);
@@ -278,81 +277,45 @@ test('Login адаптивен, доступен с клавиатуры и ув
     try {
       await mockAuthApi(page);
       await page.goto('/login?next=%2Fapp');
+      const title = page.locator('#login-title');
+      await expect(title).toBeVisible();
       await expect(
-        page.getByRole('heading', { name: 'Продолжить в Your Fitness Coach' }),
+        title.locator(width >= 1024 ? '.login-title--desktop' : '.login-title--mobile'),
       ).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
 
       const themeControl = page.getByRole('button', { name: /Включить .* тему/ });
-      const themeIcon = themeControl.locator('.app-theme-toggle__icon');
-      const [controlBox, iconBox] = await Promise.all([
-        themeControl.boundingBox(),
-        themeIcon.boundingBox(),
-      ]);
-      expect(controlBox?.height).toBe(44);
-      expect(controlBox?.width).toBe(44);
-      expect(iconBox).not.toBeNull();
-      expect(
-        Math.abs(iconBox!.x + iconBox!.width / 2 - (controlBox!.x + controlBox!.width / 2)),
-      ).toBeLessThan(1);
-      expect(
-        Math.abs(iconBox!.y + iconBox!.height / 2 - (controlBox!.y + controlBox!.height / 2)),
-      ).toBeLessThan(1);
-      const themeStyles = await themeControl.evaluate((element) => {
-        const styles = getComputedStyle(element);
-        return {
-          backgroundColor: styles.backgroundColor,
-          borderTopWidth: styles.borderTopWidth,
-          cursor: styles.cursor,
-        };
-      });
-      expect(themeStyles.backgroundColor).toBe('rgba(0, 0, 0, 0)');
-      expect(themeStyles.borderTopWidth).toBe('1px');
-      expect(themeStyles.cursor).toBe('pointer');
-
-      await themeControl.hover();
-      const themeHoverStyles = await themeControl.evaluate((element) => {
-        const styles = getComputedStyle(element);
-        return {
-          backgroundColor: styles.backgroundColor,
-          borderColor: styles.borderColor,
-          boxShadow: styles.boxShadow,
-          transform: styles.transform,
-        };
-      });
-      const homeLink = page.getByRole('link', { name: 'На главную', exact: true });
-      await expect(homeLink).toHaveCSS('background-color', 'rgb(158, 224, 43)');
-      await expect(homeLink).toHaveCSS('color', 'rgb(16, 32, 21)');
-      await homeLink.hover();
-      const homeHoverStyles = await homeLink.evaluate((element) => {
-        const styles = getComputedStyle(element);
-        return {
-          backgroundColor: styles.backgroundColor,
-          borderColor: styles.borderColor,
-          boxShadow: styles.boxShadow,
-          transform: styles.transform,
-        };
-      });
-      expect(themeHoverStyles.backgroundColor).toBe('rgb(236, 237, 233)');
-      expect(themeHoverStyles.boxShadow).toBe('none');
-      expect(themeHoverStyles.transform).toBe('none');
-      expect(homeHoverStyles).toEqual({
-        backgroundColor: 'rgb(141, 206, 32)',
-        borderColor: 'rgb(141, 206, 32)',
-        boxShadow: 'none',
-        transform: 'none',
-      });
-
-      await themeControl.click();
-      expect(await themeControl.evaluate((element) => element.matches(':focus-visible'))).toBe(
-        false,
-      );
+      await expect(themeControl).toBeHidden();
       await expect(page.getByRole('combobox')).toHaveCount(0);
 
       const google = page.getByRole('link', { name: 'Продолжить с Google' });
-      await expect(themeControl).toHaveCSS('border-radius', '12px');
-      await expect(homeLink).toHaveCSS('border-radius', '12px');
       await expect(google).toHaveCSS('border-radius', '12px');
+      const googleBox = await google.boundingBox();
+      expect(googleBox).not.toBeNull();
+
+      if (width >= 1024) {
+        const [layoutBox, introBox, cardBox, titleStyles] = await Promise.all([
+          page.locator('.login-layout').boundingBox(),
+          page.locator('.login-intro').boundingBox(),
+          page.locator('.login-card').boundingBox(),
+          title.evaluate((element) => {
+            const styles = getComputedStyle(element);
+            return { fontSize: styles.fontSize, whiteSpace: styles.whiteSpace };
+          }),
+        ]);
+        expect(layoutBox).not.toBeNull();
+        expect(introBox).not.toBeNull();
+        expect(cardBox).not.toBeNull();
+        expect(introBox!.width / cardBox!.width).toBeCloseTo(1.04 / 0.96, 2);
+        expect(introBox!.width + cardBox!.width).toBeCloseTo(layoutBox!.width, 0);
+        expect(titleStyles).toEqual({ fontSize: '35px', whiteSpace: 'nowrap' });
+        expect(googleBox!.width).toBeCloseTo(240, 0);
+      } else {
+        await expect(page.locator('.login-title--desktop')).toBeHidden();
+        await expect(page.locator('.login-title--mobile')).toBeVisible();
+        expect(googleBox!.height).toBeGreaterThanOrEqual(48);
+      }
+
       await google.focus();
       await expect(google).toBeFocused();
       const transitionDuration = await google.evaluate((element) =>

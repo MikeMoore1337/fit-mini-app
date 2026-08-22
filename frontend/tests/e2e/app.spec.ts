@@ -158,6 +158,15 @@ test('первый экран лендинга объясняет продукт
     await expect(page.getByLabel('Пример интерфейса тренировки на сегодня')).toBeVisible();
     await expect(page.getByText('Жим гантелей лёжа')).toBeVisible();
     await expect(page.getByText('+18%')).toHaveCount(0);
+    if (viewport.width === 390) {
+      const mobileProof = await page.locator('.landing-hero__visual').evaluate((element) => {
+        const styles = getComputedStyle(element);
+        return { marginInline: styles.marginInline, transform: styles.transform };
+      });
+      expect(mobileProof).toEqual({ marginInline: '0px', transform: 'none' });
+      await expect(page.locator('.landing-rest-demo')).toBeHidden();
+      await expect(page.locator('.landing-nutrition-demo')).toBeHidden();
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
   }
 });
@@ -1214,13 +1223,12 @@ test('клиент входит и видит экран тренировки', 
 
 test('цветовая система сохраняет иерархию в светлой и тёмной темах', async ({ page }) => {
   await mockApi(page);
+  await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('/app');
 
   const authPanel = page.locator('.login-card');
-  await expect(
-    page.getByRole('heading', { name: 'Продолжить в Your Fitness Coach' }),
-  ).toBeVisible();
-  await expect(authPanel).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(page.getByRole('heading', { name: 'Вернитесь к своему плану.' })).toBeVisible();
+  await expect(authPanel).toHaveCSS('background-color', 'rgb(244, 245, 242)');
   await expect(authPanel).toHaveCSS('border-left-color', 'rgb(201, 205, 200)');
 
   const clientButton = page.getByRole('button', { name: 'Клиент' });
@@ -1228,8 +1236,8 @@ test('цветовая система сохраняет иерархию в с�
   await expect(clientButton).toHaveCSS('background-color', 'rgb(236, 237, 233)');
   await expect(clientButton).toHaveCSS('color', 'rgb(22, 26, 23)');
 
-  await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
-  await expect(authPanel).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(authPanel).toHaveCSS('background-color', 'rgb(16, 19, 16)');
   await expect(authPanel).toHaveCSS('border-left-color', 'rgb(58, 65, 58)');
   await expect(clientButton).toHaveCSS('background-color', 'rgb(30, 34, 30)');
   await expect(clientButton).toHaveCSS('color', 'rgb(238, 240, 234)');
@@ -1468,9 +1476,7 @@ test('app shell сохраняет композицию и доступност�
 
   await moreButton.click();
   await page.getByRole('dialog').getByRole('button', { name: 'Выйти из аккаунта' }).click();
-  await expect(
-    page.getByRole('heading', { name: 'Продолжить в Your Fitness Coach' }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Войти и продолжить' })).toBeVisible();
 });
 
 test('профиль содержит уведомления, а карточка упражнения открывает полное описание', async ({
@@ -1850,6 +1856,17 @@ test('поля адаптируются к разным iPhone, а пример 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
+
+  const bottomNavigation = page.locator('#appBottomNav');
+  await expect(search).toBeFocused();
+  await expect(page.locator('html')).toHaveAttribute('data-yfc-keyboard', 'visible');
+  await expect(bottomNavigation).toBeHidden();
+  await search.evaluate((element) => element.blur());
+  await expect(page.locator('html')).toHaveAttribute('data-yfc-keyboard', 'hidden');
+  await expect(bottomNavigation).toBeVisible();
+  await expect(page).toHaveURL('/app?section=catalog');
+  await expect(search).toHaveValue('Тяга');
+  await expect(page.getByText('Тяга блока', { exact: true })).toBeVisible();
 
   await openAppDestination(page, 'План');
   await expect(page.getByRole('heading', { name: 'Текущий план от тренера' })).toBeVisible();

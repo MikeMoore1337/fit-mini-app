@@ -3,7 +3,7 @@ import { useAuth } from '../../app/AuthProvider';
 import { EmailAuthPanel } from '../../features/auth/EmailAuthPanel';
 import { configuredOAuthProviders, OAuthButtons } from '../../features/auth/OAuthButtons';
 import { safeAuthNextPath } from '../../shared/auth/redirects';
-import { AppLink, useNavigation } from '../../shared/navigation/router';
+import { useNavigation } from '../../shared/navigation/router';
 import { ErrorState, LoadingState } from '../../shared/ui/common';
 import { BrandLockup } from '../../shared/ui/BrandLogo';
 import { PublicShell } from '../../shared/ui/PublicShell';
@@ -119,8 +119,6 @@ export default function LoginPage() {
   const telegramAppUrl = config?.telegram_bot_username
     ? telegramMiniAppUrl(config.telegram_bot_username)
     : null;
-  const designPilot49e =
-    import.meta.env.DEV && document.documentElement.dataset.designPilot === '49e';
 
   useEffect(() => {
     if (!loading && user) navigate(nextPath, true);
@@ -128,63 +126,40 @@ export default function LoginPage() {
 
   return (
     <PublicShell
-      className="auth-public-shell auth-public-shell--design-v2"
+      className="auth-public-shell auth-public-shell--design-v2 auth-public-shell--design-v2-1"
       headerAction={
-        designPilot49e ? (
-          <a className="login-home-link" href="#login-content">
-            Войти
-          </a>
-        ) : (
-          <AppLink className="login-home-link" to="/">
-            На главную
-          </AppLink>
-        )
+        <a className="login-home-link" href="#login-content">
+          Войти
+        </a>
       }
       skipTarget="login-content"
     >
       <main id="login-content" className="login-layout" tabIndex={-1}>
         <section className="login-intro" aria-labelledby="login-title">
-          {designPilot49e ? (
-            <>
-              <BrandLockup className="login-pilot-brand" />
-              <div className="login-pilot-continuation">
-                <p className="login-kicker">Продолжение</p>
-                <h1 id="login-title">
-                  <span className="login-pilot-title--desktop">Вернитесь к своему плану.</span>
-                  <span className="login-pilot-title--mobile">Войти и продолжить</span>
-                </h1>
-                <p className="login-pilot-copy--desktop">
-                  Вход связывает browser и Telegram с одной учётной записью. Аккаунты не
-                  объединяются автоматически.
-                </p>
-                <p className="login-pilot-copy--mobile">
-                  После входа откроется раздел «Питание». Используйте уже связанный способ.
-                </p>
-              </div>
-              <small className="login-pilot-surface-note">Web · защищённый переход</small>
-            </>
-          ) : (
-            <>
-              <p className="login-kicker">Безопасный доступ к вашему профилю</p>
-              <h1 id="login-title">Продолжить в Your Fitness Coach</h1>
-              <p>Тренировки, питание и измерения остаются в одном профиле.</p>
-              <ul aria-label="Что останется доступно после входа">
-                <li>Тренировки и программы</li>
-                <li>Питание и измерения</li>
-                <li>Один профиль в браузере и Telegram</li>
-              </ul>
-            </>
-          )}
+          <BrandLockup className="login-continuation-brand" />
+          <div className="login-continuation">
+            <p className="login-kicker">Продолжение</p>
+            <h1 id="login-title">
+              <span className="login-title--desktop">Вернитесь к своему плану.</span>
+              <span className="login-title--mobile">Войти и продолжить</span>
+            </h1>
+            <p className="login-copy--desktop">
+              Вход связывает browser и Telegram с одной учётной записью. Аккаунты не объединяются
+              автоматически.
+            </p>
+            <p className="login-copy--mobile">
+              После входа откроется запрошенный раздел. Используйте уже связанный способ.
+            </p>
+          </div>
+          <small className="login-surface-note">Web · защищённый переход</small>
         </section>
 
         <section className="login-card" aria-label="Способы входа">
-          {designPilot49e && (
-            <div className="login-pilot-auth-heading">
-              <p className="login-kicker">Вход</p>
-              <h2>Выберите способ</h2>
-              <p>После входа: Питание → Сегодня</p>
-            </div>
-          )}
+          <div className="login-auth-heading">
+            <p className="login-kicker">Вход</p>
+            <h2>Выберите способ</h2>
+            <p>После входа вы вернётесь к запрошенному разделу.</p>
+          </div>
           {loading || user ? (
             <LoadingState label={user ? 'Перенаправляем…' : 'Проверяем авторизацию…'} />
           ) : (
@@ -224,9 +199,7 @@ export default function LoginPage() {
             </div>
           )}
           <p className="login-privacy-note">
-            {designPilot49e
-              ? 'Valid TMA launch: browser providers не показываются.'
-              : 'Провайдер подтверждает личность, а данные тренировок остаются в Your Fitness Coach.'}
+            Провайдер подтверждает личность, а данные тренировок остаются в Your Fitness Coach.
           </p>
         </section>
       </main>
