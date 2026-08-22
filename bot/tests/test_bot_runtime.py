@@ -373,7 +373,6 @@ def test_deployment_has_one_main_token_owner_and_ignores_legacy_support_env(monk
     deploy_script = (root / "scripts" / "deploy_production.sh").read_text(encoding="utf-8")
     assert compose.count("TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}") == 1
     assert compose.count("TELEGRAM_BOT_PROXY_URL: ${TELEGRAM_BOT_PROXY_URL:-}") == 1
-    assert compose.count("TELEGRAM_OAUTH_PROXY_URL: ${TELEGRAM_OAUTH_PROXY_URL:-}") == 1
     assert compose.count('"host.docker.internal:host-gateway"') == 3
     assert "support-bot:" not in compose
     assert "SUPPORT_BOT_TOKEN" not in compose

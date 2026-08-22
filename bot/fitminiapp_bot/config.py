@@ -25,11 +25,10 @@ class Settings(BaseSettings):
     bot_conflict_retry_seconds: int = Field(default=300, ge=30)
     bot_profile_sync_state_path: str = "/var/lock/fitminiapp-bot/profile-sync-state.json"
     telegram_bot_proxy_url: str = Field(default="", validation_alias="TELEGRAM_BOT_PROXY_URL")
-    telegram_oauth_proxy_url: str = Field(default="", validation_alias="TELEGRAM_OAUTH_PROXY_URL")
     admin_telegram_user_ids: str = ""
     privacy_policy_url: str = ""
 
-    @field_validator("telegram_bot_proxy_url", "telegram_oauth_proxy_url")
+    @field_validator("telegram_bot_proxy_url")
     @classmethod
     def validate_telegram_proxy_url(cls, value: str) -> str:
         normalized = value.strip()
@@ -44,9 +43,9 @@ class Settings(BaseSettings):
 
     @property
     def bot_api_proxy_url(self) -> str:
-        """Prefer a dedicated Bot API route and reuse the Telegram route during migration."""
+        """Return only the explicitly configured Bot API route."""
 
-        return self.telegram_bot_proxy_url or self.telegram_oauth_proxy_url
+        return self.telegram_bot_proxy_url
 
     @property
     def admin_telegram_id_set(self) -> set[int]:

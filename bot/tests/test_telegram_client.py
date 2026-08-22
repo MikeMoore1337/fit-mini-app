@@ -9,20 +9,19 @@ from pydantic import ValidationError
 
 def test_bot_proxy_prefers_dedicated_route(monkeypatch) -> None:
     monkeypatch.setenv("TELEGRAM_BOT_PROXY_URL", "socks5://bot-proxy.test:1081")
-    monkeypatch.setenv("TELEGRAM_OAUTH_PROXY_URL", "socks5://oauth-proxy.test:1081")
 
     configured = Settings(_env_file=None)
 
     assert configured.bot_api_proxy_url == "socks5://bot-proxy.test:1081"
 
 
-def test_bot_proxy_falls_back_to_existing_telegram_route(monkeypatch) -> None:
+def test_bot_proxy_does_not_reuse_existing_telegram_route(monkeypatch) -> None:
     monkeypatch.delenv("TELEGRAM_BOT_PROXY_URL", raising=False)
     monkeypatch.setenv("TELEGRAM_OAUTH_PROXY_URL", "socks5://telegram-proxy.test:1081")
 
     configured = Settings(_env_file=None)
 
-    assert configured.bot_api_proxy_url == "socks5://telegram-proxy.test:1081"
+    assert configured.bot_api_proxy_url == ""
 
 
 @pytest.mark.parametrize(
