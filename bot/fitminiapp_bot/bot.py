@@ -3,30 +3,44 @@ import hashlib
 import logging
 import math
 import re
+from collections.abc import Awaitable, Callable
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal, TextIO
-from urllib.parse import urlparse
+from typing import Any, Literal, TextIO
 from zoneinfo import available_timezones
 
 import httpx
-from aiogram import Bot, Dispatcher
+from aiogram import BaseMiddleware, Bot, Dispatcher, F, Router
 from aiogram.dispatcher.dispatcher import DEFAULT_BACKOFF_CONFIG
 from aiogram.exceptions import TelegramConflictError
 from aiogram.filters import Command, CommandObject, CommandStart
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.storage.memory import SimpleEventIsolation
 from aiogram.methods import GetUpdates
 from aiogram.types import (
     CallbackQuery,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
-    MenuButtonWebApp,
     Message,
+    TelegramObject,
     WebAppInfo,
 )
 from aiogram.utils.backoff import Backoff, BackoffConfig
 
 from .config import settings
+from .error_codes import safe_error_code
+from .feedback import handle_feedback_start_payload, open_feedback_flow
+from .feedback import router as feedback_router
 from .logging_config import configure_logging
+from .public_profile import (
+    MENU_BUTTON_LABEL,
+    canonical_mini_app_url,
+    help_text,
+    is_valid_public_https_url,
+    main_menu_keyboard,
+    menu_button,
+    menu_button_matches,
+)
 
 try:
     import fcntl
@@ -38,16 +52,6 @@ logger = logging.getLogger(__name__)
 
 TelegramLinkOutcome = Literal["linked", "already_linked", "invalid", "conflict", "failed"]
 TELEGRAM_LINK_PAYLOAD_PATTERN = re.compile(r"link_([A-Za-z0-9_-]{32,128})\Z")
-
-
-def safe_error_code(error: Exception) -> str:
-    if isinstance(error, httpx.HTTPStatusError):
-        return f"http_status:{error.response.status_code}"
-    if isinstance(error, httpx.TimeoutException):
-        return "timeout"
-    if isinstance(error, httpx.RequestError):
-        return "transport_error"
-    return f"unexpected:{type(error).__name__}"
 
 
 class PollingConflict(RuntimeError):
@@ -144,8 +148,8 @@ class PollingFileLock:
         self._file = None
 
 
-dp = StableDispatcher()
-MINI_APP_CACHE_VERSION = "56"
+dp = StableDispatcher(events_isolation=SimpleEventIsolation())
+public_router = Router()
 TIMEZONE_PAGE_SIZE = 8
 TIMEZONE_REGIONS = [
     "Europe",
@@ -174,12 +178,11 @@ TIMEZONE_REGION_LABELS = {
 
 
 def mini_app_url() -> str:
-    return f"{settings.frontend_base_url.rstrip('/')}/app?v={MINI_APP_CACHE_VERSION}"
+    return canonical_mini_app_url(settings.frontend_base_url)
 
 
 def is_https_url(url: str) -> bool:
-    parsed = urlparse(url)
-    return parsed.scheme == "https" and bool(parsed.netloc)
+    return is_valid_public_https_url(url)
 
 
 def web_app_keyboard(url: str) -> InlineKeyboardMarkup:
@@ -187,7 +190,7 @@ def web_app_keyboard(url: str) -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="Открыть",
+                    text=MENU_BUTTON_LABEL,
                     web_app=WebAppInfo(url=url),
                 )
             ]
@@ -336,13 +339,17 @@ async def set_mini_app_menu_button(bot: Bot, chat_id: int | None = None) -> bool
         return False
 
     try:
+        current = await bot.get_chat_menu_button(chat_id=chat_id)
+        if menu_button_matches(current, settings.frontend_base_url):
+            return True
         await bot.set_chat_menu_button(
             chat_id=chat_id,
-            menu_button=MenuButtonWebApp(
-                text="Открыть",
-                web_app=WebAppInfo(url=url),
-            ),
+            menu_button=menu_button(settings.frontend_base_url),
         )
+        verified = await bot.get_chat_menu_button(chat_id=chat_id)
+        if not menu_button_matches(verified, settings.frontend_base_url):
+            logger.error("menu_button_verification_failed")
+            return False
         logger.info("menu_button_configured")
         return True
     except Exception as exc:
@@ -377,8 +384,48 @@ async def answer_with_open_button(message: Message) -> None:
     )
 
 
+async def show_main_menu(message: Message, *, unknown_payload: bool = False) -> None:
+    prefix = "Параметр запуска не распознан.\n\n" if unknown_payload else ""
+    await message.answer(
+        f"{prefix}Выберите, что хотите сделать.",
+        reply_markup=main_menu_keyboard(settings.frontend_base_url),
+    )
+
+
+class MenuButtonMigrationMiddleware(BaseMiddleware):
+    """Replace legacy per-chat cache-versioned menu buttons on the next interaction."""
+
+    def __init__(self) -> None:
+        self._checked_chat_ids: set[int] = set()
+
+    async def __call__(
+        self,
+        handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
+        event: TelegramObject,
+        data: dict[str, Any],
+    ) -> Any:
+        chat = getattr(event, "chat", None)
+        if chat is None:
+            chat = getattr(getattr(event, "message", None), "chat", None)
+        bot = data.get("bot")
+        if (
+            isinstance(bot, Bot)
+            and getattr(chat, "type", None) == "private"
+            and chat.id not in self._checked_chat_ids
+            and await set_mini_app_menu_button(bot, chat_id=chat.id)
+        ):
+            self._checked_chat_ids.add(chat.id)
+        return await handler(event, data)
+
+
+menu_button_migration = MenuButtonMigrationMiddleware()
+dp.message.outer_middleware(menu_button_migration)
+dp.callback_query.outer_middleware(menu_button_migration)
+
+
 @dp.message(CommandStart())
-async def start(message: Message, command: CommandObject) -> None:
+async def start(message: Message, command: CommandObject, state: FSMContext) -> None:
+    await state.clear()
     raw_token = telegram_link_token(command.args)
     if raw_token is not None:
         outcome = await link_telegram_from_bot(message.from_user, raw_token)
@@ -406,15 +453,82 @@ async def start(message: Message, command: CommandObject) -> None:
         await message.answer("Не удалось привязать Telegram. Попробуйте ещё раз позже.")
         return
 
-    menu_button_ok = await set_mini_app_menu_button(
+    if await handle_feedback_start_payload(message, state, command.args):
+        return
+
+    await set_mini_app_menu_button(
         message.bot,
         chat_id=message.from_user.id if message.from_user else None,
     )
-    if menu_button_ok:
-        await message.answer("Кнопка Your Fitness Coach закреплена внизу. Часовой пояс: /timezone")
-        return
+    await show_main_menu(message, unknown_payload=bool(command.args and command.args != "app"))
 
+
+@public_router.message(Command("app"), F.chat.type == "private")
+async def app_command(message: Message) -> None:
     await answer_with_open_button(message)
+
+
+async def answer_settings(message: Message) -> None:
+    await message.answer(
+        "Здесь можно настроить часовой пояс: /timezone",
+        reply_markup=main_menu_keyboard(settings.frontend_base_url),
+    )
+
+
+@public_router.message(Command("settings"), F.chat.type == "private")
+async def settings_command(message: Message) -> None:
+    await answer_settings(message)
+
+
+@public_router.message(Command("help"), F.chat.type == "private")
+async def help_command(message: Message) -> None:
+    await message.answer(
+        help_text(),
+        reply_markup=main_menu_keyboard(settings.frontend_base_url),
+    )
+
+
+@public_router.message(Command("privacy"), F.chat.type == "private")
+async def privacy_command(message: Message) -> None:
+    url = settings.privacy_policy_url.strip()
+    if not is_https_url(url):
+        await message.answer(
+            "Политика конфиденциальности пока недоступна по подтверждённой ссылке. "
+            "Попробуйте позже или напишите в поддержку: /support"
+        )
+        return
+    await message.answer(
+        "Политика конфиденциальности Your Fitness Coach:",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="Открыть политику", url=url)],
+            ]
+        ),
+    )
+
+
+@public_router.callback_query(F.data == "public:support")
+async def public_support_callback(callback: CallbackQuery, state: FSMContext) -> None:
+    await callback.answer()
+    if isinstance(callback.message, Message):
+        await open_feedback_flow(callback.message, state)
+
+
+@public_router.callback_query(F.data == "public:settings")
+async def public_settings_callback(callback: CallbackQuery) -> None:
+    await callback.answer()
+    if isinstance(callback.message, Message):
+        await answer_settings(callback.message)
+
+
+@public_router.callback_query(F.data == "public:help")
+async def public_help_callback(callback: CallbackQuery) -> None:
+    await callback.answer()
+    if isinstance(callback.message, Message):
+        await callback.message.answer(
+            help_text(),
+            reply_markup=main_menu_keyboard(settings.frontend_base_url),
+        )
 
 
 @dp.message(Command("timezone"))
@@ -468,17 +582,26 @@ async def timezone_callback(callback: CallbackQuery) -> None:
         await callback.answer("Не удалось сохранить часовой пояс", show_alert=True)
 
 
-async def main() -> None:
-    configure_logging(
-        bot_token=settings.bot_token,
-        internal_token=settings.bot_internal_token,
+@public_router.message(F.chat.type == "private", F.text.startswith("/"))
+async def unknown_command(message: Message) -> None:
+    await message.answer(
+        "Такой команды нет. Откройте главное меню или используйте /help.",
+        reply_markup=main_menu_keyboard(settings.frontend_base_url),
     )
+
+
+dp.include_router(feedback_router)
+dp.include_router(public_router)
+
+
+async def main() -> None:
+    configure_logging()
     if not settings.bot_polling_enabled:
         logger.warning("polling_disabled")
         while True:
             await asyncio.sleep(3600)
 
-    if not settings.bot_token or settings.bot_token == "replace-me":
+    if not settings.bot_token or settings.bot_token in {"change-me", "replace-me"}:
         logger.warning("bot_token_not_configured")
         while True:
             await asyncio.sleep(3600)

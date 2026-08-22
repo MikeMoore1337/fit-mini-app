@@ -1312,6 +1312,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/bot/support/cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Support Case From Bot */
+        post: operations["create_support_case_from_bot_api_v1_bot_support_cases_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bot/support/cases/{case_id}/relay-result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Update Support Relay Result From Bot */
+        post: operations["update_support_relay_result_from_bot_api_v1_bot_support_cases__case_id__relay_result_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bot/support/cases/{case_id}/reply-claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Claim Support Reply From Bot */
+        post: operations["claim_support_reply_from_bot_api_v1_bot_support_cases__case_id__reply_claim_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bot/support/cases/{case_id}/reply-result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Complete Support Reply From Bot */
+        post: operations["complete_support_reply_from_bot_api_v1_bot_support_cases__case_id__reply_result_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -1689,6 +1757,75 @@ export interface components {
             thigh_cm?: number | null;
             /** Note */
             note?: string | null;
+        };
+        /** BotSupportCaseCreateRequest */
+        BotSupportCaseCreateRequest: {
+            /** Telegram User Id */
+            telegram_user_id: number;
+            /** Request Message Id */
+            request_message_id: number;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "bug" | "account" | "idea" | "contact" | "other";
+        };
+        /** BotSupportCaseCreateResponse */
+        BotSupportCaseCreateResponse: {
+            /** Case Id */
+            case_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "created" | "duplicate";
+            /**
+             * Case Status
+             * @enum {string}
+             */
+            case_status: "pending_relay" | "open" | "replying" | "replied" | "relay_failed" | "undeliverable" | "expired";
+        };
+        /** BotSupportRelayResultRequest */
+        BotSupportRelayResultRequest: {
+            /** Delivered */
+            delivered: boolean;
+        };
+        /** BotSupportReplyClaimRequest */
+        BotSupportReplyClaimRequest: {
+            /** Admin Telegram User Id */
+            admin_telegram_user_id: number;
+            /** Reply Message Id */
+            reply_message_id: number;
+        };
+        /** BotSupportReplyClaimResponse */
+        BotSupportReplyClaimResponse: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "claimed" | "already_processed" | "unavailable" | "expired";
+            /** Telegram User Id */
+            telegram_user_id?: number | null;
+        };
+        /** BotSupportReplyResultRequest */
+        BotSupportReplyResultRequest: {
+            /** Admin Telegram User Id */
+            admin_telegram_user_id: number;
+            /** Reply Message Id */
+            reply_message_id: number;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "delivered" | "blocked" | "failed";
+        };
+        /** BotSupportReplyResultResponse */
+        BotSupportReplyResultResponse: {
+            /**
+             * Status
+             * @constant
+             */
+            status: "recorded";
         };
         /** BotTelegramLinkRequest */
         BotTelegramLinkRequest: {
@@ -5544,6 +5681,154 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BotTelegramLinkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_support_case_from_bot_api_v1_bot_support_cases_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-bot-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BotSupportCaseCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BotSupportCaseCreateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_support_relay_result_from_bot_api_v1_bot_support_cases__case_id__relay_result_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-bot-token"?: string | null;
+            };
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BotSupportRelayResultRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    claim_support_reply_from_bot_api_v1_bot_support_cases__case_id__reply_claim_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-bot-token"?: string | null;
+            };
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BotSupportReplyClaimRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BotSupportReplyClaimResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    complete_support_reply_from_bot_api_v1_bot_support_cases__case_id__reply_result_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-bot-token"?: string | null;
+            };
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BotSupportReplyResultRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BotSupportReplyResultResponse"];
                 };
             };
             /** @description Validation Error */
