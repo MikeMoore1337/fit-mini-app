@@ -19,6 +19,7 @@ from fitminiapp_api.models.program import (
     UserWorkoutExercise,
     UserWorkoutSet,
 )
+from fitminiapp_api.models.support import BotSupportCase
 from fitminiapp_api.models.token import RefreshToken
 from fitminiapp_api.models.user import (
     BodyMeasurement,
@@ -68,6 +69,11 @@ def _delete_user_programs(db: Session, user_program_ids: list[int]) -> None:
 
 def delete_user_cascade(db: Session, user: User) -> None:
     """Delete one account while preserving other users' historical snapshots."""
+
+    if user.telegram_user_id is not None:
+        db.query(BotSupportCase).filter(
+            BotSupportCase.telegram_user_id == user.telegram_user_id
+        ).delete(synchronize_session=False)
 
     db.query(HiddenProgramTemplate).filter(HiddenProgramTemplate.user_id == user.id).delete(
         synchronize_session=False

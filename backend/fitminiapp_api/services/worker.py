@@ -11,6 +11,7 @@ from fitminiapp_api.core.logging_config import configure_logging
 from fitminiapp_api.db.session import get_session_context
 from fitminiapp_api.models.notification import Notification
 from fitminiapp_api.models.user import User
+from fitminiapp_api.services.bot_support import prune_support_cases
 from fitminiapp_api.services.notifications import (
     claim_due_notifications,
     mark_delivery_failed,
@@ -64,6 +65,7 @@ async def send_telegram_message(
 async def run_once(*, sync_reminders: bool = True) -> None:
     with get_session_context() as db:
         if sync_reminders:
+            prune_support_cases(db)
             sync_workout_reminders(db)
         rows = claim_due_notifications(db)
         users = {
