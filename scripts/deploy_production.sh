@@ -5,6 +5,22 @@ readonly EXPECTED_ROOT="/root/fit-mini-app"
 readonly TARGET_SHA="${1:?usage: deploy_production.sh TARGET_SHA BASE_URL}"
 readonly BASE_URL="${2:?usage: deploy_production.sh TARGET_SHA BASE_URL}"
 
+profile_report_has_api_error() {
+  python3 -c '
+import json
+import sys
+
+report = json.load(sys.stdin)
+identity_status = report.get("identity", {}).get("status")
+field_statuses = {
+    field.get("status")
+    for field in report.get("fields", {}).values()
+    if isinstance(field, dict)
+}
+raise SystemExit(0 if identity_status == "API_ERROR" or "API_ERROR" in field_statuses else 1)
+'
+}
+
 cd "$EXPECTED_ROOT"
 
 if [[ "$(pwd -P)" != "$EXPECTED_ROOT" ]]; then
@@ -66,27 +82,51 @@ echo "External smoke check completed in $((SECONDS - stage_started))s"
 
 echo "Checking the public Telegram bot profile"
 set +e
-docker compose run --rm --no-deps bot \
-  python -m fitminiapp_bot.profile_sync check
+profile_check_output="$(
+  docker compose run --rm --no-deps bot \
+    python -m fitminiapp_bot.profile_sync check
+)"
 profile_check_status=$?
 set -e
+printf '%s\n' "$profile_check_output"
+profile_sync_result="pending"
 
 case "$profile_check_status" in
   0)
     echo "Public Telegram bot profile already matches the canonical contract"
+    profile_sync_result="matched"
     ;;
   1)
     echo "Applying the bounded public Telegram bot profile diff"
-    docker compose run --rm --no-deps bot \
-      python -m fitminiapp_bot.profile_sync apply
-    echo "Public Telegram Bot API fields were applied and read back"
+    set +e
+    profile_apply_output="$(
+      docker compose run --rm --no-deps bot \
+        python -m fitminiapp_bot.profile_sync apply
+    )"
+    profile_apply_status=$?
+    set -e
+    printf '%s\n' "$profile_apply_output"
+    if [[ "$profile_apply_status" -eq 0 ]]; then
+      echo "Public Telegram Bot API fields were applied and read back"
+      profile_sync_result="applied"
+    elif printf '%s\n' "$profile_apply_output" | profile_report_has_api_error; then
+      echo "Telegram Bot API is unavailable; metadata remains pending" >&2
+    else
+      echo "Public Telegram bot profile apply failed safely" >&2
+      exit "$profile_apply_status"
+    fi
     ;;
   *)
-    echo "Public Telegram bot profile check failed safely" >&2
-    exit "$profile_check_status"
+    if printf '%s\n' "$profile_check_output" | profile_report_has_api_error; then
+      echo "Telegram Bot API is unavailable; metadata remains pending" >&2
+    else
+      echo "Public Telegram bot profile check failed safely" >&2
+      exit "$profile_check_status"
+    fi
     ;;
 esac
-echo "Public Telegram bot profile synchronization completed; review owner actions in the reports"
+echo "Public Telegram bot profile sync result: $profile_sync_result"
+echo "Review owner actions in the profile reports when Telegram Bot API is reachable"
 
 install -d -m 700 .artifacts/deployments
 printf '%s\n' "$TARGET_SHA" > .artifacts/deployments/last-successful-revision

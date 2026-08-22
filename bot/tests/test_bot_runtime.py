@@ -384,6 +384,12 @@ def test_deployment_has_one_main_token_owner_and_ignores_legacy_support_env(monk
         'scripts/check_deployment.py "$BASE_URL"'
     )
     assert "Public Telegram Bot API fields were applied and read back" in deploy_script
+    assert 'profile_sync_result="pending"' in deploy_script
+    assert 'if [[ "$profile_apply_status" -eq 0 ]]' in deploy_script
+    assert 'identity_status == "API_ERROR"' in deploy_script
+    assert '"API_ERROR" in field_statuses' in deploy_script
+    assert 'exit "$profile_check_status"' in deploy_script
+    assert "Telegram Bot API is unavailable; metadata remains pending" in deploy_script
     settings_type = type(bot_module.settings)
     assert settings_type.model_fields["bot_token"].validation_alias == "TELEGRAM_BOT_TOKEN"
     assert "support_bot_token" not in settings_type.model_fields

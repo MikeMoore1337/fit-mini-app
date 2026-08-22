@@ -146,8 +146,10 @@ Legacy-переменные `SUPPORT_BOT_TOKEN`, `SUPPORT_BOT_ENABLED` и
    `support-bot`/duplicate polling.
 4. Штатный `scripts/deploy_production.sh` выполняет `profile_sync check`; при exact
    `getMe.username == "your_fitness_coach_bot"` и ожидаемом diff выполняет bounded `apply`, затем
-   повторяет read-back. Identity/API error останавливает workflow; BotFather-only mismatch
-   выводится как owner action и не откатывает исправный runtime.
+   повторяет read-back. Identity/config/verification error останавливает workflow до любых
+   небезопасных writes. Только классифицированная недоступность внешнего Bot API оставляет sync в
+   состоянии `pending` и не откатывает уже healthy runtime. BotFather-only mismatch выводится как
+   owner action.
 5. Проверить `/start`, `/start link_<token>`, `/support`, `/app` и `/settings`.
 
 При runtime blocker используется существующий rollback mechanism или revert release commit без
