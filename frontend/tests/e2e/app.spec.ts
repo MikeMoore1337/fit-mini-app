@@ -48,7 +48,6 @@ test('логотип и кнопки в шапке имеют одинакову
     expect(loginButton?.height).toBe(logo?.height);
 
     const themeControl = page.getByRole('button', { name: /Включить .* тему/ });
-    const loginControl = page.getByRole('link', { name: 'Войти' });
     await themeControl.hover();
     const themeHoverStyles = await themeControl.evaluate((element) => {
       const styles = getComputedStyle(element);
@@ -59,17 +58,6 @@ test('логотип и кнопки в шапке имеют одинакову
         transform: styles.transform,
       };
     });
-    await loginControl.hover();
-    const loginHoverStyles = await loginControl.evaluate((element) => {
-      const styles = getComputedStyle(element);
-      return {
-        backgroundColor: styles.backgroundColor,
-        borderColor: styles.borderColor,
-        boxShadow: styles.boxShadow,
-        transform: styles.transform,
-      };
-    });
-    expect(loginHoverStyles).toEqual(themeHoverStyles);
 
     const menuButton = page.getByRole('button', { name: 'Открыть меню' });
     if (viewport.width < 980) {
@@ -98,6 +86,34 @@ test('логотип и кнопки в шапке имеют одинакову
     } else {
       await expect(menuButton).toBeHidden();
     }
+  }
+});
+
+test('описания audience-карточек имеют одинаковый читаемый цвет', async ({ page }) => {
+  for (const scheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+
+    const selfDescription = page
+      .getByText('Занимаетесь самостоятельно?', { exact: true })
+      .locator('xpath=ancestor::article[1]')
+      .locator('p')
+      .nth(1);
+    const coachDescription = page
+      .getByText('Вы тренер?', { exact: true })
+      .locator('xpath=ancestor::article[1]')
+      .locator('p')
+      .nth(1);
+
+    await expect(selfDescription).toHaveCSS(
+      'color',
+      scheme === 'light' ? 'rgb(22, 26, 23)' : 'rgb(238, 240, 234)',
+    );
+    await expect(coachDescription).toHaveCSS(
+      'color',
+      scheme === 'light' ? 'rgb(22, 26, 23)' : 'rgb(238, 240, 234)',
+    );
   }
 });
 
@@ -1401,15 +1417,20 @@ test('Mobile Web и Telegram используют одну YFC palette и гео
   await telegramPage.close();
 });
 
-test('primary CTA лендинга остаётся lime в обеих темах', async ({ page }) => {
+test('primary CTA лендинга и Войти остаются lime в обеих темах', async ({ page }) => {
   await page.goto('/');
   const primary = page.getByRole('link', { name: /открыть приложение/i });
+  const login = page.getByRole('link', { name: 'Войти' });
 
   await expect(primary).toHaveCSS('background-color', 'rgb(158, 224, 43)');
   await expect(primary).toHaveCSS('color', 'rgb(16, 32, 21)');
+  await expect(login).toHaveCSS('background-color', 'rgb(158, 224, 43)');
+  await expect(login).toHaveCSS('color', 'rgb(16, 32, 21)');
   await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
   await expect(primary).toHaveCSS('background-color', 'rgb(168, 232, 58)');
   await expect(primary).toHaveCSS('color', 'rgb(16, 32, 21)');
+  await expect(login).toHaveCSS('background-color', 'rgb(168, 232, 58)');
+  await expect(login).toHaveCSS('color', 'rgb(16, 32, 21)');
 });
 
 test('deep link показывает тренера до явного подтверждения', async ({ page }) => {

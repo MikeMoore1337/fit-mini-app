@@ -528,3 +528,11 @@
     min-height: 48px;
   }
 }
+
+@media (max-width: 680px) {
+  .auth-public-shell--design-v2.auth-public-shell--design-v2-1
+    .public-shell__brand
+    .yfc-lockup__wordmark {
+    display: grid;
+  }
+}

@@ -127,16 +127,11 @@ export default function LoginPage() {
   return (
     <PublicShell
       className="auth-public-shell auth-public-shell--design-v2 auth-public-shell--design-v2-1"
-      headerAction={
-        <a className="login-home-link" href="#login-content">
-          Войти
-        </a>
-      }
       skipTarget="login-content"
     >
       <main id="login-content" className="login-layout" tabIndex={-1}>
         <section className="login-intro" aria-labelledby="login-title">
-          <BrandLockup className="login-continuation-brand" />
+          <BrandLockup className="login-continuation-brand" surface="dark" />
           <div className="login-continuation">
             <p className="login-kicker">Продолжение</p>
             <h1 id="login-title">

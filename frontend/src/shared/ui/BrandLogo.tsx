@@ -70,13 +70,20 @@ export function BrandLogo({
 export function BrandLockup({
   className = '',
   markClassName = '',
+  surface,
 }: {
   className?: string;
   markClassName?: string;
+  surface?: AppColorScheme;
 }) {
   return (
     <span className={`yfc-lockup ${className}`.trim()}>
-      <BrandLogo className={`yfc-lockup__mark ${markClassName}`.trim()} decorative variant="mark" />
+      <BrandLogo
+        className={`yfc-lockup__mark ${markClassName}`.trim()}
+        decorative
+        surface={surface}
+        variant="mark"
+      />
       <span className="yfc-lockup__wordmark" aria-hidden="true">
         <strong>Your Fitness</strong>
         <span>Coach</span>

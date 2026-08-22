@@ -66,6 +66,14 @@ describe('LoginPage', () => {
       );
     }
     expect(screen.queryByLabelText('Вход по email')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /^Войти$/ })).not.toBeInTheDocument();
+    expect(document.querySelector('.login-continuation-brand .yfc-lockup__mark')).toHaveAttribute(
+      'src',
+      '/assets/brand/yfc-mark-dark.svg',
+    );
+    expect(document.querySelector('.public-shell__header .yfc-lockup__wordmark')).toHaveTextContent(
+      'Your FitnessCoach',
+    );
   });
 
   it('falls back to Telegram when browser providers are unavailable', () => {

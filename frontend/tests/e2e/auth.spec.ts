@@ -146,6 +146,27 @@ test('Landing ведёт на canonical Login, а protected route сохраня
   );
 });
 
+test('Login использует surface-aware logo и не дублирует Войти в mobile header', async ({
+  page,
+}) => {
+  await mockAuthApi(page);
+  await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/login');
+
+  await expect(page.locator('.login-continuation-brand .yfc-lockup__mark')).toHaveAttribute(
+    'src',
+    '/assets/brand/yfc-mark-dark.svg',
+  );
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole('link', { name: 'Войти', exact: true })).toHaveCount(0);
+  await expect(page.locator('.public-shell__header .yfc-lockup__wordmark')).toBeVisible();
+  await expect(page.locator('.public-shell__header .yfc-lockup__wordmark')).toContainText(
+    'Your FitnessCoach',
+  );
+});
+
 test('Login показывает только configured providers и контролируемую OAuth ошибку', async ({
   page,
 }) => {

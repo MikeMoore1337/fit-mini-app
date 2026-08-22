@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { BrandLogo, brandAssetPaths } from '../../../../src/shared/ui/BrandLogo';
+import { BrandLockup, BrandLogo, brandAssetPaths } from '../../../../src/shared/ui/BrandLogo';
 
 describe('BrandLogo', () => {
   it('uses the canonical full logo variant with an accessible product name', () => {
@@ -19,6 +19,15 @@ describe('BrandLogo', () => {
     expect(image).toHaveAttribute('alt', '');
     expect(image).toHaveAttribute('aria-hidden', 'true');
     expect(image).toHaveAttribute('src', brandAssetPaths.mark.light);
+  });
+
+  it('lets a lockup select the asset for its local surface independently of the page theme', () => {
+    const { container } = render(<BrandLockup surface="dark" />);
+
+    expect(container.querySelector('.yfc-lockup__mark')).toHaveAttribute(
+      'src',
+      brandAssetPaths.mark.dark,
+    );
   });
 
   it('exposes theme-aware favicon variants with a legacy fallback', () => {

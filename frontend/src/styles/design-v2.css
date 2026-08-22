@@ -2565,6 +2565,18 @@ body.public-shell-mode:has(.public-shell.public-shell--design-v2) {
   transform: none;
 }
 
+.public-shell.public-shell--design-v2.landing-page .landing-button--compact {
+  border-color: var(--v2-lime);
+  background: var(--v2-lime);
+  color: var(--v2-on-lime) !important;
+}
+
+.public-shell.public-shell--design-v2.landing-page .landing-button--compact:hover {
+  border-color: var(--v2-lime-hover);
+  background: var(--v2-lime-hover);
+  color: var(--v2-on-lime) !important;
+}
+
 .public-shell.public-shell--design-v2.landing-page
   :where(.landing-brand, .landing-feature__link, .landing-footer a) {
   min-height: 44px;
@@ -2637,10 +2649,13 @@ body.public-shell-mode:has(.public-shell.public-shell--design-v2) {
     .landing-problem__result span,
     .landing-feature--coach p,
     .landing-workflow li p,
-    .landing-platforms__sync p > span,
-    .landing-audience article:first-child > p:last-of-type
+    .landing-platforms__sync p > span
   ) {
   color: var(--v2-text-secondary);
+}
+
+.public-shell.public-shell--design-v2.landing-page .landing-audience article > p:last-of-type {
+  color: var(--v2-text-primary);
 }
 
 .public-shell.public-shell--design-v2.landing-page .landing-problem__visual li {

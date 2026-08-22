@@ -138,6 +138,7 @@ describe('LandingPage', () => {
     );
 
     expect(screen.getByRole('link', { name: 'Войти' })).toHaveAttribute('href', '/login');
+    expect(screen.getByRole('link', { name: 'Войти' })).toHaveClass('landing-button--compact');
     expect(screen.getByRole('link', { name: /открыть приложение/i })).toHaveAttribute(
       'href',
       '/app',

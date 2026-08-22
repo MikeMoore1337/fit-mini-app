@@ -57,6 +57,11 @@ error states берут theme tokens из `frontend/src/styles/design-system.css
   `prefers-reduced-motion` safe.
 - Для product proof зарезервирована геометрия; hero content не ждёт JavaScript animation.
 - Raster evidence ниже fold получает responsive derivative и lazy loading без новой dependency.
+- Header action `Войти` является primary conversion action Landing и использует lime fill с
+  `on-lime` текстом в Light и Dark; theme/menu controls остаются нейтральными.
+- Описания в парных audience surfaces `Занимаетесь самостоятельно?` и `Вы тренер?` используют
+  одинаковый `text-primary`: различие сценариев задаётся композицией и lime-маркером, а не снижением
+  контраста одного из текстов.
 
 ## `/login` — выбранные A surfaces и V2 type
 
@@ -71,11 +76,15 @@ error states берут theme tokens из `frontend/src/styles/design-system.css
   `240px`; error/helper могут занимать до `360px` для читаемого recovery.
 - Четыре provider actions остаются вертикальным stack. Лишние header/home/theme controls для
   V2.1 исключены.
+- В continuation plane логотип выбирается по локальной тёмной поверхности (`dark` asset), а не по
+  глобальной Light/Dark теме страницы.
 
 ### Tablet/mobile
 
 - На `<1024` split становится одной document column. Mobile title — `Войти и продолжить`;
   continuation context остаётся фактическим и не занимает отдельный viewport.
+- Mobile header показывает полный lockup `YOUR FITNESS COACH` без дублирующей кнопки `Войти`:
+  пользователь уже находится на экране входа.
 - Provider actions занимают всю ширину, их высота `>=48px`, а внешний gutter — не менее `16px`.
 - Loading и error остаются in-flow. Light loading и Dark error в approved board — только representative
   states: оба состояния обязаны работать в обеих темах.
