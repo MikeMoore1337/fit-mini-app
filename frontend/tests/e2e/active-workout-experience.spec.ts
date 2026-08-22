@@ -298,6 +298,12 @@ test('active workout has touch-size controls and no horizontal overflow', async 
       .getByRole('button', { name: 'Завершить: Жим штанги лёжа, подход 1' })
       .boundingBox();
     expect(box?.height).toBeGreaterThanOrEqual(44);
+    if (viewport.width <= 430) {
+      const focusHeader = page.locator('.today-workout-focus__header');
+      await expect(focusHeader.locator(':scope > div > span')).toBeHidden();
+      await expect(focusHeader.locator(':scope > span')).toBeHidden();
+      await expect(focusHeader.getByText('Текущая тренировка')).toBeVisible();
+    }
   }
 });
 

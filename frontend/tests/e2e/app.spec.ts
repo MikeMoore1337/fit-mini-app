@@ -171,8 +171,8 @@ test('вторичные CTA сохраняют контрастный текс�
     await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
     await page.reload();
 
-    const expectedBackground = scheme === 'light' ? 'rgb(223, 230, 220)' : 'rgb(32, 42, 35)';
-    const expectedText = scheme === 'light' ? 'rgb(23, 32, 24)' : 'rgb(242, 246, 239)';
+    const expectedBackground = scheme === 'light' ? 'rgb(236, 237, 233)' : 'rgb(30, 34, 30)';
+    const expectedText = scheme === 'light' ? 'rgb(22, 26, 23)' : 'rgb(238, 240, 234)';
     for (const link of [
       page.getByRole('link', { name: /Посмотреть, как всё устроено/ }),
       page.getByRole('link', { name: /Задать вопрос в Telegram/ }),
@@ -257,6 +257,14 @@ test('блок возможностей показывает пользу спо
     const featureCards = page.locator('.landing-feature');
     for (const card of await featureCards.all()) {
       await expect(card).toHaveCSS('justify-content', 'flex-start');
+    }
+    if (viewport.width <= 430) {
+      const compactTextLinks = page.locator(
+        '.landing-brand, .landing-feature__link, .landing-footer a',
+      );
+      for (const link of await compactTextLinks.all()) {
+        expect((await link.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+      }
     }
     if (viewport.width === 1440) {
       const metaBoxes = await featureCards.locator('.landing-feature__meta').evaluateAll((items) =>
@@ -386,13 +394,13 @@ test('сценарии спортсмена и тренера ведут в ве
     await expect(audienceCards).toHaveCount(2);
     await expect(page.getByText(/занимаетесь самостоятельно/i)).toBeVisible();
     await expect(page.getByText(/вы тренер/i)).toBeVisible();
-    await expect(page.getByRole('link', { name: /начать самостоятельно/i })).toHaveAttribute(
+    await expect(page.getByRole('link', { name: /узнать о тренировках/i })).toHaveAttribute(
       'href',
-      '/app',
+      '/training',
     );
-    await expect(page.getByRole('link', { name: /войти и подать заявку/i })).toHaveAttribute(
+    await expect(page.getByRole('link', { name: /возможности для тренеров/i })).toHaveAttribute(
       'href',
-      '/app',
+      '/for-trainers',
     );
     await expect(page.getByText(/нажмите «стать тренером» в профиле/i)).toBeVisible();
     await expect(page.getByRole('link', { name: /перейти в веб-приложение/i })).toHaveAttribute(
@@ -423,12 +431,11 @@ test('сценарии спортсмена и тренера ведут в ве
     }
     if (viewport.width === 390) {
       const brand = page.locator('.landing-header .landing-brand');
-      await expect(brand.locator('span')).toHaveCSS('white-space', 'nowrap');
+      const brandWordmark = brand.locator('.yfc-lockup__wordmark');
+      await expect(brandWordmark).toBeHidden();
       const brandBox = await brand.boundingBox();
-      const brandTextBox = await brand.locator('span').boundingBox();
       expect(brandBox).not.toBeNull();
-      expect(brandTextBox).not.toBeNull();
-      expect(brandTextBox!.height).toBeLessThan(20);
+      expect(brandBox!.height).toBeGreaterThanOrEqual(44);
     }
 
     const clientCard = await audienceCards.first().boundingBox();
@@ -1386,15 +1393,15 @@ test('Mobile Web и Telegram используют одну YFC palette и гео
   await telegramPage.close();
 });
 
-test('primary CTA лендинга меняется вместе с темой', async ({ page }) => {
+test('primary CTA лендинга остаётся lime в обеих темах', async ({ page }) => {
   await page.goto('/');
   const primary = page.getByRole('link', { name: /открыть приложение/i });
 
-  await expect(primary).toHaveCSS('background-color', 'rgb(24, 37, 29)');
-  await expect(primary).toHaveCSS('color', 'rgb(255, 255, 255)');
+  await expect(primary).toHaveCSS('background-color', 'rgb(158, 224, 43)');
+  await expect(primary).toHaveCSS('color', 'rgb(16, 32, 21)');
   await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
-  await expect(primary).toHaveCSS('background-color', 'rgb(182, 242, 56)');
-  await expect(primary).toHaveCSS('color', 'rgb(23, 32, 24)');
+  await expect(primary).toHaveCSS('background-color', 'rgb(168, 232, 58)');
+  await expect(primary).toHaveCSS('color', 'rgb(16, 32, 21)');
 });
 
 test('deep link показывает тренера до явного подтверждения', async ({ page }) => {

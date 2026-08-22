@@ -164,6 +164,19 @@ test('Login показывает только configured providers и контр
   await expect(page.getByText('secret-code')).toHaveCount(0);
 });
 
+test('Telegram fallback сохраняет контраст, когда browser providers недоступны', async ({
+  page,
+}) => {
+  await mockAuthApi(page, { providers: [] });
+  await page.goto('/login');
+
+  const fallback = page.getByRole('link', { name: 'Открыть в Telegram' });
+  await expect(fallback).toBeVisible();
+  await expect(fallback).toHaveCSS('min-height', '48px');
+  await expect(fallback).toHaveCSS('background-color', 'rgb(236, 237, 233)');
+  await expect(fallback).toHaveCSS('color', 'rgb(22, 26, 23)');
+});
+
 test('Повторить сохраняет контраст и единый hover с provider-кнопками', async ({ page }) => {
   await mockAuthApi(page, { providers: ['google'] });
 

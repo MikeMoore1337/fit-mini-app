@@ -878,6 +878,11 @@ body.public-shell-mode.public-shell-mode:has(.auth-public-shell--design-v2) {
   transform: none;
 }
 
+.auth-public-shell--design-v2 .login-telegram-fallback {
+  background: var(--v2-surface-secondary);
+  color: var(--v2-text-primary) !important;
+}
+
 .auth-public-shell--design-v2 .login-card .oauth-button:hover,
 .auth-public-shell--design-v2 .login-retry:hover {
   border-color: var(--v2-text-secondary);
@@ -1135,9 +1140,17 @@ body.public-shell-mode.public-shell-mode:has(.auth-public-shell--design-v2) {
     background: var(--v2-surface);
   }
 
+  .today-workout-focus__header {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .today-workout-focus__header > div {
+    justify-items: end;
+  }
+
+  .today-workout-focus__header > div span,
   .today-workout-focus__header > span {
-    max-width: 84px;
-    text-align: right;
+    display: none;
   }
 
   .active-workout--design-v2 .active-workout-hero {
@@ -1216,7 +1229,9 @@ body.public-shell-mode.public-shell-mode:has(.auth-public-shell--design-v2) {
   .public-shell--design-v2,
   .public-page--design-v2,
   .standalone-page--design-v2
-) {
+),
+.public-shell.public-shell--design-v2,
+.public-page.public-page--design-v2 {
   --bg: var(--v2-canvas);
   --bg-elev: var(--v2-surface);
   --bg-soft: var(--v2-surface-secondary);
@@ -2178,7 +2193,8 @@ body:has(.standalone-page--design-v2) {
 }
 
 /* Public/auth shell continuity; the production Landing composition remains task 73. */
-:where(.public-shell--design-v2, .public-page--design-v2) {
+.public-shell.public-shell--design-v2,
+.public-page.public-page--design-v2 {
   --landing-ink: var(--v2-text-primary);
   --landing-muted: var(--v2-text-secondary);
   --landing-paper: var(--v2-canvas);
@@ -2187,6 +2203,8 @@ body:has(.standalone-page--design-v2) {
   --landing-card-border: var(--v2-border);
   --landing-kicker: var(--v2-accent-text);
   --landing-heading-muted: var(--v2-text-secondary);
+  --landing-green: var(--v2-lime);
+  --landing-dark: var(--v2-surface-strong);
   --landing-primary: var(--v2-lime);
   --landing-primary-hover: var(--v2-lime-hover);
   --landing-primary-text: var(--v2-on-lime);
@@ -2195,6 +2213,10 @@ body:has(.standalone-page--design-v2) {
   --landing-chart-axis: var(--v2-border);
   --landing-chart-grid: var(--v2-border);
   --landing-chart-accent: var(--v2-lime);
+  --landing-panel: var(--v2-surface);
+  --landing-panel-border: var(--v2-border);
+  --landing-float: var(--v2-surface);
+  --landing-float-border: var(--v2-border);
   background: var(--v2-canvas);
   color: var(--v2-text-primary);
 }
@@ -2285,6 +2307,155 @@ body:has(.standalone-page--design-v2) {
 
 .public-page--design-v2 .landing-button {
   border-radius: var(--v2-control-radius);
+}
+
+/* Landing keeps its content composition while inheriting the active Design V2 language. */
+body.public-shell-mode:has(.public-shell.public-shell--design-v2) {
+  background: var(--v2-canvas);
+}
+
+.public-shell.public-shell--design-v2.landing-page
+  :where(.landing-button, .landing-menu-toggle, .landing-theme-toggle) {
+  border-radius: var(--v2-control-radius);
+  box-shadow: none;
+  transform: none;
+}
+
+.public-shell.public-shell--design-v2.landing-page
+  :where(.landing-button, .landing-menu-toggle, .landing-theme-toggle):hover,
+.public-shell.public-shell--design-v2.landing-page
+  :where(.landing-button, .landing-menu-toggle, .landing-theme-toggle):active,
+.public-shell.public-shell--design-v2.landing-page .landing-contact__link:hover {
+  box-shadow: none;
+  transform: none;
+}
+
+.public-shell.public-shell--design-v2.landing-page
+  :where(.landing-brand, .landing-feature__link, .landing-footer a) {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.public-shell.public-shell--design-v2.landing-page .landing-hero__visual::before {
+  border: 1px solid var(--v2-border);
+  border-radius: var(--radius-panel);
+  background: var(--v2-surface-secondary);
+  box-shadow: none;
+}
+
+.public-shell.public-shell--design-v2.landing-page .landing-orbit {
+  display: none;
+}
+
+.public-shell.public-shell--design-v2.landing-page .landing-workout-demo {
+  border-color: var(--v2-border);
+  border-radius: var(--radius-panel);
+  background: var(--v2-surface);
+  box-shadow: none;
+  transform: none;
+  backdrop-filter: none;
+}
+
+.public-shell.public-shell--design-v2.landing-page
+  :where(.landing-rest-demo, .landing-nutrition-demo) {
+  border-color: var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.public-shell.public-shell--design-v2.landing-page
+  :where(
+    .landing-problem__copy,
+    .landing-problem__visual,
+    .landing-platform-card,
+    .landing-audience article
+  ) {
+  border-color: var(--v2-border);
+  border-radius: var(--radius-panel);
+}
+
+.public-shell.public-shell--design-v2.landing-page
+  :where(
+    .landing-problem__visual,
+    .landing-feature--wide,
+    .landing-feature--coach,
+    .landing-platform-card--telegram,
+    .landing-platforms__sync,
+    .landing-audience article
+  ) {
+  background: var(--v2-surface-secondary);
+  color: var(--v2-text-primary);
+}
+
+.public-shell.public-shell--design-v2.landing-page .landing-audience article:first-child {
+  background: var(--v2-surface-secondary);
+  color: var(--v2-text-primary);
+  box-shadow: inset 3px 0 var(--v2-lime);
+}
+
+.public-shell.public-shell--design-v2.landing-page
+  :where(
+    .landing-problem__sources > span,
+    .landing-problem__result span,
+    .landing-feature--coach p,
+    .landing-workflow li p,
+    .landing-platforms__sync p > span,
+    .landing-audience article:first-child > p:last-of-type
+  ) {
+  color: var(--v2-text-secondary);
+}
+
+.public-shell.public-shell--design-v2.landing-page .landing-problem__visual li {
+  border-color: var(--v2-border);
+  color: var(--v2-text-secondary);
+}
+
+.public-shell.public-shell--design-v2.landing-page .landing-feature {
+  border-color: var(--v2-border);
+  border-radius: var(--v2-region-radius);
+}
+
+.public-shell.public-shell--design-v2.landing-page .landing-workflow {
+  background: var(--v2-canvas);
+  color: var(--v2-text-primary);
+}
+
+.public-shell.public-shell--design-v2.landing-page .landing-workflow ol {
+  background: var(--v2-border);
+}
+
+.public-shell.public-shell--design-v2.landing-page .landing-workflow li {
+  background: var(--v2-surface);
+}
+
+.public-shell.public-shell--design-v2.landing-page
+  :where(
+    .landing-section__heading--light .landing-kicker,
+    .landing-workflow li > span,
+    .landing-feature--coach .landing-feature__meta span,
+    .landing-feature--coach .landing-feature__link,
+    .landing-platforms__sync strong,
+    .landing-audience article:first-child .landing-kicker
+  ) {
+  color: var(--v2-accent-text) !important;
+}
+
+.public-shell.public-shell--design-v2.landing-page .landing-platform-card__icon {
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface-strong);
+  color: var(--v2-text-primary);
+}
+
+.public-shell.public-shell--design-v2.landing-page
+  .landing-audience
+  article:first-child
+  .landing-audience__link {
+  border-color: var(--v2-lime);
+  background: var(--v2-lime);
+  color: var(--v2-on-lime) !important;
 }
 
 .standalone-page--design-v2 {
