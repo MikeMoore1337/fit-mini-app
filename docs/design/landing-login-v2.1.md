@@ -68,6 +68,10 @@ error states берут theme tokens из `frontend/src/styles/design-system.css
 ### Desktop
 
 - Split `1.04fr/.96fr`: слева continuation plane, справа auth plane.
+- Desktop-сцена использует тот же container, что и landing: `min(1180px, calc(100% - 48px))`.
+  На широких viewport, включая `2K`, полноэкранные фоновые плоскости сохраняются, но контент не
+  растягивается и не прижимается к внешним краям; граница фоновых плоскостей продолжает совпадать
+  с границей tracks центрированной сцены.
 - Левая плоскость использует более сильный V2 dark/surface contrast из approved board; правая остаётся
   спокойной theme-native plane. В Dark их semantic relationship не инвертируется механически.
 - Continuation group центрирована по вертикали. `Вернитесь к своему плану.` — `35px`, одна строка

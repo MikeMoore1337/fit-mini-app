@@ -324,7 +324,7 @@ test('linking callback показывает success и conflict без raw да�
 });
 
 test('Login адаптивен, доступен с клавиатуры и уважает reduced motion', async ({ browser }) => {
-  for (const width of [1440, 1280, 768, 390, 360]) {
+  for (const width of [2560, 1440, 1280, 1024, 768, 390, 360]) {
     const context = await browser.newContext({
       viewport: { width, height: width < 768 ? 844 : 900 },
       reducedMotion: 'reduce',
@@ -362,6 +362,9 @@ test('Login адаптивен, доступен с клавиатуры и ув
         expect(layoutBox).not.toBeNull();
         expect(introBox).not.toBeNull();
         expect(cardBox).not.toBeNull();
+        const expectedLayoutWidth = Math.min(width - 48, 1180);
+        expect(layoutBox!.width).toBeCloseTo(expectedLayoutWidth, 0);
+        expect(layoutBox!.x).toBeCloseTo((width - expectedLayoutWidth) / 2, 0);
         expect(introBox!.width / cardBox!.width).toBeCloseTo(1.04 / 0.96, 2);
         expect(introBox!.width + cardBox!.width).toBeCloseTo(layoutBox!.width, 0);
         expect(titleStyles).toEqual({ fontSize: '35px', whiteSpace: 'nowrap' });
