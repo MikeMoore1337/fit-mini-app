@@ -14,6 +14,7 @@ from fitminiapp_api.models.program import (
     UserWorkoutExercise,
     UserWorkoutSet,
 )
+from fitminiapp_api.models.support import BotSupportCase
 from fitminiapp_api.models.token import RefreshToken
 from fitminiapp_api.models.user import (
     BodyMeasurement,
@@ -29,6 +30,7 @@ __all__ = [
     "AuthActionToken",
     "AuthIdentity",
     "BodyMeasurement",
+    "BotSupportCase",
     "CoachClient",
     "CoachClientInvite",
     "CoachRoleApplication",
