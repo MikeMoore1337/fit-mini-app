@@ -90,6 +90,61 @@ def test_create_backup_refuses_to_overwrite_existing_dump(isolated_paths: Path) 
     assert target.read_bytes() == b"keep-me"
 
 
+def test_create_backup_validates_dump_before_publishing(
+    isolated_paths: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    target = isolated_paths / "backups" / "validated.dump"
+    calls: list[list[str]] = []
+
+    def fake_run(command: list[str], **kwargs: object) -> SimpleNamespace:
+        calls.append(command)
+        if command == db_maintenance._compose_exec(db_maintenance.BACKUP_SCRIPT):
+            stream = kwargs["stdout"]
+            assert hasattr(stream, "write")
+            stream.write(b"postgres-custom-dump")
+            return SimpleNamespace(returncode=0, stderr=b"")
+
+        assert command == db_maintenance._compose_exec(db_maintenance.VERIFY_DUMP_SCRIPT)
+        stream = kwargs["stdin"]
+        assert hasattr(stream, "read")
+        assert stream.read() == b"postgres-custom-dump"
+        assert kwargs["stdout"] is subprocess.DEVNULL
+        return SimpleNamespace(returncode=0, stderr=b"")
+
+    monkeypatch.setattr(db_maintenance.subprocess, "run", fake_run)
+
+    assert db_maintenance.create_backup(target) == target.resolve()
+    assert target.read_bytes() == b"postgres-custom-dump"
+    assert calls == [
+        db_maintenance._compose_exec(db_maintenance.BACKUP_SCRIPT),
+        db_maintenance._compose_exec(db_maintenance.VERIFY_DUMP_SCRIPT),
+    ]
+
+
+def test_create_backup_discards_dump_that_pg_restore_cannot_read(
+    isolated_paths: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    target = isolated_paths / "backups" / "invalid.dump"
+
+    def fake_run(command: list[str], **kwargs: object) -> SimpleNamespace:
+        if command == db_maintenance._compose_exec(db_maintenance.BACKUP_SCRIPT):
+            stream = kwargs["stdout"]
+            assert hasattr(stream, "write")
+            stream.write(b"invalid-dump")
+            return SimpleNamespace(returncode=0, stderr=b"")
+        return SimpleNamespace(returncode=1, stderr=b"invalid archive")
+
+    monkeypatch.setattr(db_maintenance.subprocess, "run", fake_run)
+
+    with pytest.raises(RuntimeError, match="could not read the new backup"):
+        db_maintenance.create_backup(target)
+
+    assert not target.exists()
+    assert not target.with_suffix(".dump.partial").exists()
+
+
 def test_cli_returns_error_for_output_outside_artifacts(
     isolated_paths: Path,
     monkeypatch: pytest.MonkeyPatch,

@@ -67,9 +67,14 @@ jobs:
              trap 'rm -rf \"\$DOCKER_CONFIG_DIR\"' EXIT
              export DOCKER_CONFIG=\"\$DOCKER_CONFIG_DIR\"
              printf '%s' \"\$GHCR_TOKEN\" | docker login ghcr.io --username '$GITHUB_ACTOR' --password-stdin >/dev/null
-             cd '$PROD_PATH' &&
-             git fetch --prune origin master &&
-             git reset --hard '$DEPLOY_SHA' &&
+             cd '$PROD_PATH'
+             git fetch --prune origin master
+             LATEST_MASTER_SHA=\$(git rev-parse origin/master)
+             if [ "\$LATEST_MASTER_SHA" != '$DEPLOY_SHA' ]; then
+               echo "Skipping superseded deployment: tested revision $DEPLOY_SHA is no longer master head (\$LATEST_MASTER_SHA)"
+               exit 0
+             fi
+             git reset --hard '$DEPLOY_SHA'
              BACKEND_IMAGE='$GHCR_BACKEND_IMAGE:$DEPLOY_SHA' \
              BOT_IMAGE='$GHCR_BOT_IMAGE:$DEPLOY_SHA' \
              bash scripts/deploy_production.sh '$DEPLOY_SHA' '$PROD_URL'"

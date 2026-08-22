@@ -371,6 +371,9 @@ jobs:
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
           load: true
           tags: ${{ matrix.tag }}
           cache-from: type=gha,scope=${{ matrix.image }}
