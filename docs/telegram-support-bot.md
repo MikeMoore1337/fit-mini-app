@@ -110,8 +110,10 @@ Transient failure до отправки не запускает бесконеч
 
 Основной сервис `bot` — единственный polling owner для `TELEGRAM_BOT_TOKEN`. Он использует
 существующий общий volume lock, conflict detection и network backoff. `BOT_INTERNAL_TOKEN`
-аутентифицирует только внутренние bot-to-backend запросы. Настройки browser Telegram OAuth
-proxy/tunnel и TLS не передаются Bot API polling и не меняются этим flow.
+аутентифицирует только внутренние bot-to-backend запросы. Bot API использует явный
+`TELEGRAM_BOT_PROXY_URL`; если отдельный маршрут не задан, временно переиспользуется существующий
+`TELEGRAM_OAUTH_PROXY_URL`. Ambient proxy не подхватывается, проверка TLS-сертификата и hostname
+остаётся включённой. Пустые обе переменные означают прямое соединение.
 
 Минимальная production-конфигурация:
 
@@ -122,6 +124,10 @@ BOT_INTERNAL_TOKEN=<отдельный случайный секрет не ко
 ADMIN_TELEGRAM_USER_IDS=123456789,987654321
 PRIVACY_POLICY_URL=<подтверждённый production HTTPS URL либо пусто>
 BOT_PROFILE_SYNC_STATE_PATH=/var/lock/fitminiapp-bot/profile-sync-state.json
+# Предпочтительный отдельный Bot API route; credentials не выводятся в logs.
+TELEGRAM_BOT_PROXY_URL=socks5://host.docker.internal:1081
+# Допустимый fallback для Bot API и отдельный route browser Telegram OAuth.
+TELEGRAM_OAUTH_PROXY_URL=socks5://host.docker.internal:1081
 ```
 
 Каждый администратор должен заранее открыть `@your_fitness_coach_bot` и нажать **Start**:
@@ -152,6 +158,12 @@ Legacy-переменные `SUPPORT_BOT_TOKEN`, `SUPPORT_BOT_ENABLED` и
    owner action.
 5. Проверить `/start`, `/start link_<token>`, `/support`, `/app` и `/settings`.
 
+Если прямой Bot API egress недоступен, сначала проверяется существующий Telegram OAuth tunnel.
+Bot runtime и profile sync используют одну session factory, а backend worker применяет тот же
+явный route через `httpx` с `trust_env=false`; apply/read-back, polling и Telegram delivery не
+расходятся по сетевому пути. Для последующего разделения достаточно задать
+`TELEGRAM_BOT_PROXY_URL`; менять token или отключать TLS не требуется.
+
 При runtime blocker используется существующий rollback mechanism или revert release commit без
 force-push. Additive таблицу безопаснее оставить для forward-fix: прежний runtime её игнорирует.
 Downgrade `0033_bot_support_cases` допустим только после остановки нового bot/worker и проверки,
@@ -175,5 +187,5 @@ Button синхронизируются deployment CLI после exact identity
 6. Обычный пользователь не может подменить admin reply; второй ответ на закрытый case не уходит.
 7. Блокировка бота пользователем даёт администратору конечный понятный результат без retry loop.
 8. В logs отсутствуют токены, URL с секретами, support text и точные Telegram IDs.
-9. В `docker compose ps` только `bot` использует `TELEGRAM_BOT_TOKEN`; browser OAuth через свой
-   proxy/tunnel продолжает работать отдельно.
+9. В `docker compose ps` только `bot` использует `TELEGRAM_BOT_TOKEN`; browser OAuth и Bot API
+   могут использовать один production tunnel, но остаются разными client/session contracts.
