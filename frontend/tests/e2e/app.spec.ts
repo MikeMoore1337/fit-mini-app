@@ -1217,7 +1217,7 @@ test('клиент входит и видит экран тренировки', 
   await mockApi(page);
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
-  await expect(page.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Сегодня ·/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Выберите тренировочный план' })).toBeVisible();
 });
 
@@ -1333,8 +1333,8 @@ test('Mobile Web и Telegram используют одну YFC palette и гео
   await webPage.goto('/app');
   await webPage.getByRole('button', { name: 'Клиент' }).click();
   await telegramPage.goto('/app');
-  await expect(webPage.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible();
-  await expect(telegramPage.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible();
+  await expect(webPage.getByRole('heading', { name: /^Сегодня ·/ })).toBeVisible();
+  await expect(telegramPage.getByRole('heading', { name: /^Сегодня ·/ })).toBeVisible();
   await expect(telegramPage.getByRole('button', { name: /Включить .* тему/ })).not.toBeAttached();
 
   const snapshot = (page: Page) =>
@@ -1395,7 +1395,7 @@ test('Mobile Web и Telegram используют одну YFC palette и гео
   );
   await expect(telegramPage.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
   expect(await snapshot(telegramPage)).toEqual(await snapshot(webPage));
-  await expect(telegramPage.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible();
+  await expect(telegramPage.getByRole('heading', { name: /^Сегодня ·/ })).toBeVisible();
 
   await webPage.close();
   await telegramPage.close();
@@ -1439,9 +1439,15 @@ test('app shell сохраняет композицию и доступност�
     await page.setViewportSize(viewport);
     const primaryNavigation = page.locator('.app-bottom-nav__primary');
     const visibleDestinations = primaryNavigation.locator('a:visible, button:visible');
-    await expect(visibleDestinations).toHaveCount(5);
+    await expect(visibleDestinations).toHaveCount(viewport.width >= 900 ? 4 : 5);
     for (const destination of await visibleDestinations.all()) {
       await expect(destination).toBeInViewport();
+    }
+    if (viewport.width >= 900) {
+      await expect(page.getByRole('button', { name: 'Ещё', exact: true })).not.toBeVisible();
+      await expect(page.getByRole('link', { name: 'Упражнения', exact: true })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Профиль', exact: true })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'База знаний', exact: true })).toBeVisible();
     }
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
@@ -1463,7 +1469,7 @@ test('app shell сохраняет композицию и доступност�
   await expect(page).toHaveURL('/app?section=nutrition');
 
   await openAppDestination(page, 'Сегодня');
-  await expect(page.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Сегодня ·/ })).toBeVisible();
 
   await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeInViewport();
   const moreButton = page.getByRole('button', { name: 'Ещё', exact: true });
@@ -1477,6 +1483,26 @@ test('app shell сохраняет композицию и доступност�
   await moreButton.click();
   await page.getByRole('dialog').getByRole('button', { name: 'Выйти из аккаунта' }).click();
   await expect(page.getByRole('heading', { name: 'Войти и продолжить' })).toBeVisible();
+});
+
+test('desktop sidebar keeps trainer workspaces reachable at a short viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 560 });
+  await mockApi(page);
+  await page.goto('/coach');
+  await page.getByRole('button', { name: 'Тренер' }).click();
+
+  const navigation = page.getByRole('navigation', { name: 'Основная навигация' });
+  await expect(navigation).toHaveCSS('overflow-y', 'auto');
+  await expect(page.getByRole('button', { name: 'Ещё', exact: true })).not.toBeVisible();
+  await expect(page.getByRole('link', { name: 'Тренер', exact: true })).toBeVisible();
+  expect(await navigation.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(
+    true,
+  );
+
+  const utility = navigation.locator('.app-bottom-nav__utility');
+  await utility.scrollIntoViewIfNeeded();
+  await expect(utility).toBeInViewport();
+  await expect(navigation.getByRole('button', { name: /Включить .* тему/ })).toBeVisible();
 });
 
 test('профиль содержит уведомления, а карточка упражнения открывает полное описание', async ({

@@ -26,12 +26,11 @@ import { TodayWorkout } from '../workouts/TodayWorkout';
 import { Badge, Button, Skeleton } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 
-export function formatTodayHeading(value: string): { eyebrow: string; title: string } {
+export function formatTodayHeading(value: string): { title: string } {
   const weekday = formatCalendarDate(value, { weekday: 'long' });
   const date = formatCalendarDate(value, { day: 'numeric', month: 'long' });
   return {
-    eyebrow: `${weekday.charAt(0).toUpperCase() + weekday.slice(1)} · ${date}`,
-    title: 'Сегодня',
+    title: `Сегодня · ${weekday}, ${date}`,
   };
 }
 
@@ -126,9 +125,6 @@ function WeekContext({
                 {formatCalendarDate(date, { weekday: 'short' }).replace('.', '')}
               </span>
               <strong>{formatCalendarDate(date, { day: 'numeric' })}</strong>
-              <span className="today-week-day__context">
-                {isToday ? 'сегодня' : <span aria-hidden="true">&nbsp;</span>}
-              </span>
               <span
                 className={`today-week-day__marker${status ? ` today-week-day__marker--${status.key}` : ''}`}
                 aria-hidden="true"
@@ -651,7 +647,6 @@ export function TodayDashboard() {
   const today = useCalendarDay(timeZone);
   const calendarContextRef = useRef(`${timeZone}:${today}`);
   const heading = formatTodayHeading(today);
-  const firstName = user?.profile?.full_name?.trim().split(/\s+/)[0] || user?.first_name;
   const progress = useProgressSummary();
   const week = useQuery({
     queryKey: ['workout', 'week'],
@@ -776,9 +771,7 @@ export function TodayDashboard() {
   return (
     <div className="today-dashboard today-dashboard--design-v2">
       <header className="today-dashboard__header">
-        <span className="eyebrow">{heading.eyebrow}</span>
         <h1>{heading.title}</h1>
-        <p>{firstName ? `${firstName}, ` : ''}вот главное на день.</p>
       </header>
 
       <WeekContext

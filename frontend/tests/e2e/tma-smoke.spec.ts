@@ -39,8 +39,8 @@ test('TMA auth, shared UI, theme, viewport, safe areas and BackButton stay on on
   await installPlatformApi(mobilePage, { browserSession: true });
 
   await Promise.all([tmaPage.goto('/app'), mobilePage.goto('/app')]);
-  await expect(tmaPage.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible();
-  await expect(mobilePage.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible();
+  await expect(tmaPage.getByRole('heading', { name: /^Сегодня ·/ })).toBeVisible();
+  await expect(mobilePage.getByRole('heading', { name: /^Сегодня ·/ })).toBeVisible();
   expect(tmaApi.authInitCalls()).toBe(1);
   await expect(tmaPage.getByRole('heading', { name: 'Вход' })).not.toBeAttached();
   await expect(tmaPage.locator('body')).not.toContainText('query_id=test');
@@ -117,7 +117,7 @@ test('weekly review focus exposes a predictable TMA BackButton return path', asy
 
   await tma.clickBack();
   await expect(tmaPage).toHaveURL('/app');
-  await expect(tmaPage.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible();
+  await expect(tmaPage.getByRole('heading', { name: /^Сегодня ·/ })).toBeVisible();
   await expect.poll(async () => (await tma.state()).backButton.visible).toBe(false);
 });
 
@@ -231,7 +231,7 @@ test('nutrition keyboard draft and core Progress/Profile navigation survive plat
     .click();
   await expect(tmaPage.getByRole('heading', { name: 'Профиль и настройки' })).toBeVisible();
   await tmaPage.getByRole('link', { name: 'Сегодня', exact: true }).click();
-  await expect(tmaPage.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible();
+  await expect(tmaPage.getByRole('heading', { name: /^Сегодня ·/ })).toBeVisible();
   await expectNoHorizontalOverflow(tmaPage);
 });
 
@@ -275,6 +275,6 @@ test('contextual help covers workout, nutrition and Progress without a TMA libra
 
   await tmaPage.goto('/knowledge');
   await expect(tmaPage).toHaveURL('/app');
-  await expect(tmaPage.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible();
+  await expect(tmaPage.getByRole('heading', { name: /^Сегодня ·/ })).toBeVisible();
   await expect(tmaPage.getByRole('heading', { name: /База знаний/i })).not.toBeAttached();
 });

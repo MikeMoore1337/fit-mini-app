@@ -292,8 +292,7 @@ describe('TodayDashboard', () => {
 
   it('formats the day context in clear Russian', () => {
     expect(formatTodayHeading('2030-01-10')).toEqual({
-      eyebrow: 'Четверг · 10 января',
-      title: 'Сегодня',
+      title: 'Сегодня · четверг, 10 января',
     });
     expect(calendarWeek('2029-12-31')).toEqual([
       '2029-12-31',
@@ -505,10 +504,10 @@ describe('TodayDashboard', () => {
 
     const weekRegion = await screen.findByRole('region', { name: 'Эта неделя' });
     await screen.findByLabelText(/Выполнено/i);
-    expect(weekRegion.querySelector('[aria-current="date"]')).toHaveAttribute(
-      'aria-current',
-      'date',
-    );
+    const currentDay = weekRegion.querySelector('[aria-current="date"]');
+    expect(currentDay).toHaveAttribute('aria-current', 'date');
+    expect(currentDay).toHaveAccessibleName(/сегодня/i);
+    expect(currentDay).not.toHaveTextContent(/сегодня/i);
     if (pastDay) {
       expect(screen.getByRole('link', { name: /Выполнено.*Открыть тренировку/i })).toHaveAttribute(
         'href',
@@ -600,7 +599,9 @@ describe('TodayDashboard', () => {
     expect(
       await screen.findByRole('heading', { name: 'Воскресная тренировка' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Воскресенье · 6 января')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Сегодня · воскресенье, 6 января' }),
+    ).toBeInTheDocument();
 
     serverDay = '2030-01-07';
     vi.setSystemTime(new Date('2030-01-06T21:00:30.000Z'));
@@ -609,7 +610,9 @@ describe('TodayDashboard', () => {
     expect(
       await screen.findByRole('heading', { name: 'Понедельничная тренировка' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Понедельник · 7 января')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Сегодня · понедельник, 7 января' }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('group', { name: /7 января, сегодня, Запланировано/i }),
     ).toHaveAttribute('aria-current', 'date');

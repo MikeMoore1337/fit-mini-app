@@ -437,7 +437,7 @@ test('notification deep-link opens exact workout feedback and preserves back nav
 
   await page.goto('/app?section=today');
   await page.getByRole('button', { name: 'Клиент' }).click();
-  await expect(page.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Сегодня ·/ })).toBeVisible();
   await page.goto('/app?workout_id=43&comment_id=7&workout_exercise_id=55');
 
   await expect(page.getByRole('heading', { name: 'Прогресс' })).toBeVisible();
@@ -513,7 +513,7 @@ test('notification deep-link opens exact workout feedback and preserves back nav
 
   await page.goBack();
   await expect(page).toHaveURL(/\/app(?:\?section=today)?$/);
-  await expect(page.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Сегодня ·/ })).toBeVisible();
 });
 
 test('dark progress uses one lime accent for the adherence outcome', async ({ page }) => {
