@@ -62,6 +62,8 @@ describe('PublicContentPage', () => {
     document.body.className = '';
     localStorage.clear();
     window.history.replaceState({}, '', '/');
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it.each([
@@ -174,6 +176,26 @@ describe('PublicContentPage', () => {
     );
     expect(document.querySelectorAll('.public-guide-card')).toHaveLength(3);
     expect(screen.queryByText(/пользовательское упражнение/i)).not.toBeInTheDocument();
+  });
+
+  it('uses the same persisted light and dark theme contract as the landing page', () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockReturnValue({
+        matches: true,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }),
+    );
+
+    const { container } = renderPath('/knowledge');
+
+    expect(container.firstChild).toHaveClass('public-shell--dark');
+    expect(document.body).toHaveClass('public-shell-mode', 'public-shell-dark-mode');
+    fireEvent.click(screen.getByRole('button', { name: 'Включить светлую тему' }));
+    expect(container.firstChild).toHaveClass('public-shell--light');
+    expect(document.body).not.toHaveClass('public-shell-dark-mode');
+    expect(localStorage.getItem('app-theme')).toBe('light');
   });
 
   it('supports keyboard skip navigation and an accessible mobile menu', () => {

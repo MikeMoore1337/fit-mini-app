@@ -2528,6 +2528,18 @@ body:has(.standalone-page--design-v2) {
   box-shadow: inset 3px 0 var(--v2-lime);
 }
 
+.public-page--design-v2 .public-cta .landing-kicker {
+  color: var(--v2-accent-text);
+}
+
+.public-page--design-v2 .public-cta h2 {
+  color: var(--v2-text-primary);
+}
+
+.public-page--design-v2 .public-cta p:not(.landing-kicker) {
+  color: var(--v2-text-secondary);
+}
+
 .public-page--design-v2 .landing-button {
   border-radius: var(--v2-control-radius);
 }

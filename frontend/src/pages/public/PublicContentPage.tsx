@@ -16,6 +16,7 @@ import { BrandLogo } from '../../shared/ui/BrandLogo';
 import { AppThemeToggle } from '../../shared/ui/AppThemeToggle';
 import { useWebTheme } from '../../shared/useWebTheme';
 import { applyRouteMetadata } from '../../shared/seo/metadata';
+import '../../shared/ui/public-shell.css';
 import '../landing/landing.css';
 import './public-content.css';
 
@@ -431,14 +432,13 @@ export default function PublicContentPage() {
 
   useEffect(() => {
     applyRouteMetadata(path);
-    document.body.classList.add('landing-mode');
-    return () => document.body.classList.remove('landing-mode');
   }, [path]);
 
   useEffect(() => {
-    document.body.classList.toggle('landing-dark-mode', theme === 'dark');
+    document.body.classList.add('public-shell-mode');
+    document.body.classList.toggle('public-shell-dark-mode', theme === 'dark');
     return () => {
-      document.body.classList.remove('landing-dark-mode');
+      document.body.classList.remove('public-shell-mode', 'public-shell-dark-mode');
     };
   }, [theme]);
 
@@ -447,7 +447,9 @@ export default function PublicContentPage() {
   const appUrl = appUrlForHostname(window.location.hostname);
 
   return (
-    <div className={`landing-page landing-page--${theme} public-page public-page--design-v2`}>
+    <div
+      className={`public-shell public-shell--design-v2 public-shell--${theme} landing-page landing-page--${theme} public-page public-page--design-v2`}
+    >
       <a
         className="landing-skip-link"
         href="#public-content"

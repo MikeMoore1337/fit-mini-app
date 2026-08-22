@@ -237,8 +237,11 @@
 .public-body p,
 .public-body li {
   color: var(--landing-muted);
-  font-size: 1.03rem;
-  line-height: 1.76;
+  font-size: clamp(1.1rem, 1.35vw, 1.2rem);
+  line-height: 1.8;
+  text-align: justify;
+  text-wrap: pretty;
+  hyphens: auto;
 }
 
 .public-body p:first-of-type {
@@ -549,7 +552,7 @@
 
   .public-hero {
     gap: 30px;
-    padding: 58px 0 68px;
+    padding: 48px 20px 56px;
   }
 
   .public-hero h1,
@@ -599,7 +602,7 @@
 
   .public-body p,
   .public-body li {
-    font-size: 0.95rem;
+    font-size: 1.0625rem;
   }
 
   .public-section-heading,
