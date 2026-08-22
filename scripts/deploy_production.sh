@@ -4,6 +4,23 @@ set -Eeuo pipefail
 readonly EXPECTED_ROOT="/root/fit-mini-app"
 readonly TARGET_SHA="${1:?usage: deploy_production.sh TARGET_SHA BASE_URL}"
 readonly BASE_URL="${2:?usage: deploy_production.sh TARGET_SHA BASE_URL}"
+readonly BACKEND_IMAGE="${BACKEND_IMAGE:?BACKEND_IMAGE must reference the tested backend image}"
+readonly BOT_IMAGE="${BOT_IMAGE:?BOT_IMAGE must reference the tested bot image}"
+
+verify_image_revision() {
+  local image_ref="$1"
+  local actual_revision
+
+  actual_revision="$(
+    docker image inspect \
+      --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' \
+      "$image_ref"
+  )"
+  if [[ "$actual_revision" != "$TARGET_SHA" ]]; then
+    echo "Image $image_ref revision $actual_revision does not match $TARGET_SHA" >&2
+    exit 1
+  fi
+}
 
 profile_report_has_api_error() {
   python3 -c '
@@ -22,6 +39,16 @@ raise SystemExit(0 if identity_status == "API_ERROR" or "API_ERROR" in field_sta
 }
 
 cd "$EXPECTED_ROOT"
+
+if [[ ! "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+  echo "TARGET_SHA must be a full lowercase Git commit SHA" >&2
+  exit 1
+fi
+
+if [[ "$BACKEND_IMAGE" != *:"$TARGET_SHA" || "$BOT_IMAGE" != *:"$TARGET_SHA" ]]; then
+  echo "Application image tags must end with the tested revision $TARGET_SHA" >&2
+  exit 1
+fi
 
 if [[ "$(pwd -P)" != "$EXPECTED_ROOT" ]]; then
   echo "Refusing to deploy outside $EXPECTED_ROOT" >&2
@@ -53,6 +80,8 @@ docker compose config --quiet
 stage_started=$SECONDS
 echo "Pulling tested application images"
 docker compose pull backend bot
+verify_image_revision "$BACKEND_IMAGE"
+verify_image_revision "$BOT_IMAGE"
 echo "Application images pulled in $((SECONDS - stage_started))s"
 
 stage_started=$SECONDS
@@ -77,7 +106,7 @@ docker compose ps
 
 stage_started=$SECONDS
 echo "Running the external deployment smoke check"
-python3 scripts/check_deployment.py "$BASE_URL"
+python3 scripts/check_deployment.py "$BASE_URL" --expect-app-env prod
 echo "External smoke check completed in $((SECONDS - stage_started))s"
 
 echo "Checking the public Telegram bot profile"
