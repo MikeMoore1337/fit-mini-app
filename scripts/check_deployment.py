@@ -24,6 +24,12 @@ def main() -> int:
     parser.add_argument("base_url", help="deployment origin, for example https://app.example.com")
     parser.add_argument("--timeout", type=float, default=10.0)
     parser.add_argument(
+        "--expect-app-env",
+        choices=("dev", "test", "prod"),
+        default=None,
+        help="require the public configuration to report this application environment",
+    )
+    parser.add_argument(
         "--allow-http",
         action="store_true",
         help="allow plain HTTP for a local/private smoke test",
@@ -49,6 +55,24 @@ def main() -> int:
         config = json.loads(config_body)
         if not isinstance(config, dict) or config_status != 200 or "app_env" not in config:
             raise RuntimeError(f"public config returned {config_status}: {config!r}")
+        if args.expect_app_env is not None and config["app_env"] != args.expect_app_env:
+            raise RuntimeError(
+                f"public config reported app_env={config['app_env']!r}, "
+                f"expected {args.expect_app_env!r}"
+            )
+        if args.expect_app_env == "prod":
+            expected_auth = {
+                "enable_dev_auth": False,
+                "enable_web_auth": True,
+                "enable_email_auth": False,
+            }
+            mismatches = {
+                key: config.get(key)
+                for key, expected in expected_auth.items()
+                if config.get(key) is not expected
+            }
+            if mismatches:
+                raise RuntimeError(f"public production auth flags are unsafe: {mismatches!r}")
 
         app_status, app_body, content_type = _read(args.base_url, "/app", timeout=args.timeout)
         if app_status != 200 or b'<div id="root"></div>' not in app_body:

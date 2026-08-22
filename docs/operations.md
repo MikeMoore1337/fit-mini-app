@@ -104,37 +104,47 @@ the retention period defined by the service owner.
 
 ## Automated production deployment
 
-The `Deploy production` GitHub Actions workflow deploys successful pushes to
-`master`. It connects to the existing checkout at `/root/fit-mini-app`, checks out
-the exact revision that passed CI, creates a database backup, rebuilds the
-application containers and runs the external smoke check. The active Caddy or
-Cloudflare profile is left unchanged.
+GitHub Actions workflow `Deploy production` автоматически разворачивает успешные
+push в `master`. Триггер остаётся автоматическим, но deployment выполняется только
+для актуального `origin/master`: queued run для уже заменённого SHA завершается без
+изменения production.
 
-The server checkout is deployment-only: each run resets tracked application code
-to the tested commit. Do not edit tracked files there. Ignored runtime state such
-as `.env`, `.artifacts/` and Docker volumes is not removed by the reset.
+CI собирает backend и bot один раз, сканирует образы и публикует их в GHCR с тегом
+точного commit SHA и OCI-меткой `org.opencontainers.image.revision`. Production
+сначала скачивает оба образа и проверяет, что их тег и revision label совпадают с
+SHA, прошедшим CI. Несовпадение блокирует deployment до миграций и перезапуска
+сервисов.
 
-Compose evaluates the backend, worker and bot build targets on every deployment.
-Docker layer caching avoids rebuilding unchanged layers, and Compose recreates a
-running container only when its resulting image or service configuration changed.
-Because the frontend is compiled into the backend image, frontend changes update
-the backend automatically; backend changes also update the worker, while bot-only
-changes update the bot image.
+Server checkout предназначен только для deployment: каждый запуск сбрасывает
+tracked application code до проверенного commit. Не редактируйте tracked files на
+сервере. Игнорируемое runtime state (`.env`, `.artifacts/` и Docker volumes) при
+reset не удаляется.
 
-Create a GitHub environment named `production` and add these environment secrets:
+Перед запуском новой версии pipeline валидирует Compose configuration, создаёт
+PostgreSQL custom-format backup и проверяет его читаемость через
+`pg_restore --list`. Затем Compose применяет setup/migrations, запускает backend,
+worker и bot и ждёт readiness. Внешний smoke check проверяет `/health/ready`,
+`/api/v1/public/config` и `/app`, включая `app_env=prod` и безопасные production
+auth flags. Только после этих проверок SHA записывается как
+`.artifacts/deployments/last-successful-revision`.
 
-- `PROD_SSH_KEY`: the private half of a dedicated key that may SSH to the
-  production server;
-- `PROD_SSH_KNOWN_HOSTS`: the verified `known_hosts` entry for
+Активный Caddy или Cloudflare profile не переключается. Frontend уже включён в
+проверенный backend image; backend image также используется worker, а bot получает
+собственный проверенный image.
+
+Создайте GitHub environment `production` и добавьте environment secrets:
+
+- `PROD_SSH_KEY`: приватная часть отдельного ключа для SSH-доступа к production;
+- `PROD_SSH_KNOWN_HOSTS`: проверенная запись `known_hosts` для
   `app.your-fitness-coach.ru`.
 
-The matching public SSH key must be present in `/root/.ssh/authorized_keys` on the
-server. For a private GitHub repository, the server also needs separate read-only
-GitHub credentials (prefer a repository deploy key) so `git fetch origin master`
-can run non-interactively. Never reuse the production server host key as either
-client key.
+Соответствующий публичный SSH key должен находиться в
+`/root/.ssh/authorized_keys`. Для private repository серверу также нужны отдельные
+read-only GitHub credentials (предпочтительно repository deploy key), чтобы
+`git fetch origin master` работал non-interactively. Не используйте production
+server host key как client key.
 
-Before enabling the workflow, verify once on the server:
+Перед включением workflow один раз проверьте на сервере:
 
 ```console
 cd /root/fit-mini-app
@@ -143,8 +153,9 @@ git fetch origin master
 docker compose config --quiet
 ```
 
-Manual production runs are available through the workflow's `workflow_dispatch`
-trigger. Deployments are serialized and are not cancelled midway by newer pushes.
+Ручной production run доступен через `workflow_dispatch`. Deployments выполняются
+последовательно и не прерываются новым push посередине; устаревший queued SHA при
+этом безопасно пропускается до изменения application state.
 
 ## Application rollback
 

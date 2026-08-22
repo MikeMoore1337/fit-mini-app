@@ -25,6 +25,7 @@ RESTORE_SCRIPT = (
     "--single-transaction "
     '--dbname="$POSTGRES_DB" --username="$POSTGRES_USER"'
 )
+VERIFY_DUMP_SCRIPT = "exec pg_restore --list"
 
 
 def _timestamp() -> str:
@@ -76,6 +77,19 @@ def create_backup(output: Path) -> Path:
         if process.returncode != 0:
             sys.stderr.buffer.write(process.stderr)
             raise RuntimeError(f"pg_dump failed with exit code {process.returncode}")
+
+        with partial.open("rb") as stream:
+            verification = subprocess.run(
+                _compose_exec(VERIFY_DUMP_SCRIPT),
+                cwd=ROOT,
+                check=False,
+                stdin=stream,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+            )
+        if verification.returncode != 0:
+            sys.stderr.buffer.write(verification.stderr)
+            raise RuntimeError("pg_restore could not read the new backup; refusing to accept it")
         partial.replace(target)
     except Exception:
         partial.unlink(missing_ok=True)
