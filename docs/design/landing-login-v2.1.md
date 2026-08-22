@@ -73,7 +73,8 @@ error states берут theme tokens из `frontend/src/styles/design-system.css
 - Continuation group центрирована по вертикали. `Вернитесь к своему плану.` — `35px`, одна строка
   и не менее `22px` inline clearance. Supporting copy не обещает автоматическое слияние accounts.
 - Auth stack центрирован по обеим осям. Eyebrow/title/context/provider выровнены по provider track
-  `240px`; error/helper могут занимать до `360px` для читаемого recovery.
+  `300px`; полные provider labels остаются на одной строке, а error/helper могут занимать до
+  `360px` для читаемого recovery.
 - Четыре provider actions остаются вертикальным stack. Лишние header/home/theme controls для
   V2.1 исключены.
 - В continuation plane логотип выбирается по локальной тёмной поверхности (`dark` asset), а не по
@@ -93,6 +94,11 @@ error states берут theme tokens из `frontend/src/styles/design-system.css
 ### Providers и OAuth return
 
 - Providers: Telegram, Google, Яндекс, VK ID — ровно по runtime configuration.
+- Каждый внешний provider action показывает узнаваемый фирменный знак в официальной палитре;
+  знак остаётся видимым на desktop/mobile и в Light/Dark. Нельзя заменять его общей пиктограммой,
+  первой буквой, emoji или скрывать ради более нейтрального списка.
+- Provider color ограничен компактным icon carrier; сама action сохраняет theme-native YFC surface,
+  читаемый текст и lime direction marker. Иконка декоративна, а доступное имя задаёт полный label.
 - Нажатие provider блокирует duplicate submit и сохраняет allowlisted return context.
 - Cancellation возвращает focus на исходный provider.
 - Provider unavailable, invalid state и conflict объясняют безопасное recovery без silent identity merge.

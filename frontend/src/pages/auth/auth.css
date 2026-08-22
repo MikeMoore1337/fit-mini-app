@@ -325,7 +325,7 @@
 .auth-public-shell--design-v2-1 .login-dev,
 .auth-public-shell--design-v2-1 .login-retry,
 .auth-public-shell--design-v2-1 .login-privacy-note {
-  width: 240px;
+  width: 300px;
   margin-inline: auto;
 }
 
@@ -373,6 +373,7 @@
   border-radius: var(--v2-control-radius);
   background: var(--v2-surface);
   color: var(--v2-text-primary);
+  white-space: nowrap;
 }
 
 .auth-public-shell--design-v2-1 .oauth-button::after {
@@ -383,7 +384,7 @@
 }
 
 .auth-public-shell--design-v2-1 .oauth-button__icon {
-  display: none;
+  display: inline-grid;
 }
 
 .auth-public-shell--design-v2.auth-public-shell--design-v2-1 .login-alert {

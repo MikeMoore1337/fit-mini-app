@@ -167,6 +167,44 @@ test('Login использует surface-aware logo и не дублирует �
   );
 });
 
+test('Login сохраняет фирменные provider icons во всех темах и viewport', async ({ page }) => {
+  await mockAuthApi(page);
+  const providerIcons = [
+    ['telegram', 'rgb(34, 158, 217)'],
+    ['google', 'rgb(255, 255, 255)'],
+    ['yandex', 'rgb(252, 63, 29)'],
+    ['vk', 'rgb(0, 119, 255)'],
+  ] as const;
+
+  for (const colorScheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+    for (const viewport of [
+      { width: 1440, height: 900 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await page.goto('/login');
+
+      if (viewport.width >= 1024) {
+        await expect(page.locator('.oauth-auth')).toHaveCSS('width', '300px');
+      }
+
+      for (const [provider, backgroundColor] of providerIcons) {
+        const icon = page.locator(`.oauth-button--${provider} .oauth-button__icon`);
+        const action = page.locator(`.oauth-button--${provider}`);
+        await expect(icon).toBeVisible();
+        await expect(icon).toHaveCSS('width', '28px');
+        await expect(icon).toHaveCSS('height', '28px');
+        await expect(icon).toHaveCSS('background-color', backgroundColor);
+        await expect(action).toHaveCSS('white-space', 'nowrap');
+        expect(await action.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
+          true,
+        );
+      }
+    }
+  }
+});
+
 test('Login показывает только configured providers и контролируемую OAuth ошибку', async ({
   page,
 }) => {
@@ -327,7 +365,7 @@ test('Login адаптивен, доступен с клавиатуры и ув
         expect(introBox!.width / cardBox!.width).toBeCloseTo(1.04 / 0.96, 2);
         expect(introBox!.width + cardBox!.width).toBeCloseTo(layoutBox!.width, 0);
         expect(titleStyles).toEqual({ fontSize: '35px', whiteSpace: 'nowrap' });
-        expect(googleBox!.width).toBeCloseTo(240, 0);
+        expect(googleBox!.width).toBeCloseTo(300, 0);
       } else {
         await expect(page.locator('.login-title--desktop')).toBeHidden();
         await expect(page.locator('.login-title--mobile')).toBeVisible();
