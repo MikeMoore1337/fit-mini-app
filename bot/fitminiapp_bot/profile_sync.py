@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Literal
 
 from aiogram import Bot
-from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.types import (
     BotCommand,
     BotCommandScopeAllPrivateChats,
@@ -31,6 +30,7 @@ from .public_profile import (
     menu_button,
     menu_button_matches,
 )
+from .telegram_client import create_bot_api_session
 
 SyncMode = Literal["check", "apply"]
 COMMAND_SCOPE = BotCommandScopeAllPrivateChats()
@@ -413,7 +413,7 @@ async def _run(mode: SyncMode) -> int:
         print(json.dumps(report.as_dict(), ensure_ascii=False, indent=2))
         return report.exit_code()
 
-    session = AiohttpSession(timeout=15)
+    session = create_bot_api_session(timeout=15)
     bot = Bot(settings.bot_token, session=session)
     try:
         report = await sync_public_profile(

@@ -18,6 +18,7 @@ class Settings(BaseSettings):
         extra="ignore",
         env_file=".env",
         env_file_encoding="utf-8",
+        hide_input_in_errors=True,
     )
 
     app_env: Literal["dev", "test", "prod"]
@@ -44,6 +45,7 @@ class Settings(BaseSettings):
     frontend_base_url: str = "https://app.your-fitness-coach.ru"
     telegram_bot_token: str
     telegram_bot_username: str = ""
+    telegram_bot_proxy_url: str = ""
     bot_internal_token: str = ""
 
     smtp_host: str = ""
@@ -104,7 +106,7 @@ class Settings(BaseSettings):
             raise ValueError("FRONTEND_BASE_URL must be an absolute HTTPS URL in prod")
         return self
 
-    @field_validator("oauth_proxy_url", "telegram_oauth_proxy_url")
+    @field_validator("oauth_proxy_url", "telegram_oauth_proxy_url", "telegram_bot_proxy_url")
     @classmethod
     def validate_oauth_proxy_url(cls, value: str) -> str:
         normalized = value.strip()
@@ -116,6 +118,10 @@ class Settings(BaseSettings):
         if parsed.query or parsed.fragment:
             raise ValueError("OAuth proxy URL must not contain query parameters or a fragment")
         return normalized
+
+    @property
+    def bot_api_proxy_url(self) -> str:
+        return self.telegram_bot_proxy_url or self.telegram_oauth_proxy_url
 
     @property
     def admin_telegram_id_set(self) -> set[int]:

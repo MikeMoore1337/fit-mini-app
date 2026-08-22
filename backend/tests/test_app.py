@@ -178,6 +178,7 @@ def test_production_oauth_does_not_require_smtp_when_email_auth_is_disabled():
         smtp_from_email="",
         oauth_proxy_url="",
         telegram_oauth_proxy_url="",
+        telegram_bot_proxy_url="",
     )
 
     assert configured.enable_web_auth is True
@@ -186,6 +187,7 @@ def test_production_oauth_does_not_require_smtp_when_email_auth_is_disabled():
     assert configured.oauth_force_ipv4 is True
     assert configured.oauth_proxy_url == ""
     assert configured.telegram_oauth_proxy_url == ""
+    assert configured.telegram_bot_proxy_url == ""
 
 
 def test_oauth_http_timeout_is_bounded():
@@ -210,6 +212,8 @@ def test_oauth_http_timeout_is_bounded():
         Settings(**common, oauth_proxy_url="socks5://proxy.example/?unsafe=true")
     with pytest.raises(ValidationError, match="OAuth proxy URL"):
         Settings(**common, telegram_oauth_proxy_url="file:///tmp/proxy")
+    with pytest.raises(ValidationError, match="OAuth proxy URL"):
+        Settings(**common, telegram_bot_proxy_url="file:///tmp/proxy")
 
 
 def test_oidc_clients_ignore_ambient_proxy_settings(monkeypatch):
