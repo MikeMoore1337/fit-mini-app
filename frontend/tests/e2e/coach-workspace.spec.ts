@@ -558,6 +558,17 @@ test('trainer leaves contextual workout and exercise feedback without messenger 
 
   await expect(feedback.getByText('Анна Петрова · 19 августа 2026 г.')).toBeVisible();
   await expect(feedback.getByText('Хороший контроль темпа во всех подходах.')).toBeVisible();
+  const desktopContextField = await feedback
+    .getByRole('combobox', { name: 'Контекст комментария' })
+    .locator('..')
+    .boundingBox();
+  const desktopCommentField = await feedback
+    .getByRole('textbox', { name: 'Комментарий' })
+    .locator('..')
+    .boundingBox();
+  expect(desktopContextField).not.toBeNull();
+  expect(desktopCommentField).not.toBeNull();
+  expect(Math.abs(desktopContextField!.y - desktopCommentField!.y)).toBeLessThan(2);
   await feedback.getByRole('combobox', { name: 'Контекст комментария' }).selectOption('551');
   await feedback
     .getByRole('textbox', { name: 'Комментарий' })
@@ -591,6 +602,17 @@ test('trainer leaves contextual workout and exercise feedback without messenger 
     'background-color',
     'rgb(22, 25, 22)',
   );
+  const mobileContextField = await feedback
+    .getByRole('combobox', { name: 'Контекст комментария' })
+    .locator('..')
+    .boundingBox();
+  const mobileCommentField = await feedback
+    .getByRole('textbox', { name: 'Комментарий' })
+    .locator('..')
+    .boundingBox();
+  expect(mobileContextField).not.toBeNull();
+  expect(mobileCommentField).not.toBeNull();
+  expect(mobileCommentField!.y).toBeGreaterThan(mobileContextField!.y + mobileContextField!.height);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
 
   if (captureAudit) {

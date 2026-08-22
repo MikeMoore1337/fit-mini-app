@@ -3027,7 +3027,7 @@ body:has(.standalone-page--design-v2) {
   display: flex;
   align-items: center;
   gap: var(--v2-space-3);
-  min-height: 52px;
+  min-height: 48px;
   padding: var(--v2-space-2) 0;
   cursor: pointer;
   list-style: none;
@@ -3054,8 +3054,8 @@ body:has(.standalone-page--design-v2) {
 
 .workout-feedback {
   display: grid;
-  gap: var(--v2-space-4);
-  padding: var(--v2-space-3) 0 var(--v2-space-2);
+  gap: var(--v2-space-3);
+  padding: var(--v2-space-2) 0;
 }
 
 .workout-feedback__header {
@@ -3086,6 +3086,10 @@ body:has(.standalone-page--design-v2) {
   border: 1px solid var(--v2-border);
   border-radius: var(--v2-control-radius);
   background: var(--v2-surface-secondary);
+}
+
+.workout-feedback__composer > .stack {
+  gap: var(--v2-space-2);
 }
 
 .workout-feedback__composer textarea,
@@ -3148,7 +3152,7 @@ body:has(.standalone-page--design-v2) {
 
 .workout-feedback__timeline > li {
   min-width: 0;
-  padding: var(--v2-space-3) 0;
+  padding: var(--v2-space-2) 0;
   border-bottom: 1px solid var(--v2-border);
   outline: none;
 }
@@ -3218,6 +3222,22 @@ body:has(.standalone-page--design-v2) {
   color: var(--v2-accent-text);
   text-decoration: underline;
   text-underline-offset: 4px;
+}
+
+@media (min-width: 840px) {
+  .workout-feedback__composer > form {
+    grid-template-columns: minmax(180px, 0.8fr) minmax(280px, 1.4fr);
+    align-items: start;
+    gap: var(--v2-space-3);
+  }
+
+  .workout-feedback__composer form > .workout-feedback__error {
+    grid-column: 1 / -1;
+  }
+
+  .workout-feedback__composer form > button {
+    grid-column: 2;
+  }
 }
 
 @media (max-width: 980px) {
@@ -3455,15 +3475,6 @@ body:has(.standalone-page--design-v2) {
 
   .coach-client-program > .ui-badge {
     justify-self: start;
-  }
-
-  .workout-feedback__header {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .workout-feedback__header .ui-badge {
-    align-self: start;
   }
 
   .workout-feedback__composer form > button,
