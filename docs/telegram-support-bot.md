@@ -144,8 +144,10 @@ Legacy-переменные `SUPPORT_BOT_TOKEN`, `SUPPORT_BOT_ENABLED` и
    metadata и два индекса, не изменяя существующие данные.
 3. Развернуть `backend`, `worker` и единственный `bot`, затем проверить health, logs и отсутствие
    `support-bot`/duplicate polling.
-4. Выполнить `profile_sync check`; при exact `getMe.username == "your_fitness_coach_bot"` и
-   ожидаемом diff выполнить `apply`, затем повторить read-back.
+4. Штатный `scripts/deploy_production.sh` выполняет `profile_sync check`; при exact
+   `getMe.username == "your_fitness_coach_bot"` и ожидаемом diff выполняет bounded `apply`, затем
+   повторяет read-back. Identity/API error останавливает workflow; BotFather-only mismatch
+   выводится как owner action и не откатывает исправный runtime.
 5. Проверить `/start`, `/start link_<token>`, `/support`, `/app` и `/settings`.
 
 При runtime blocker используется существующий rollback mechanism или revert release commit без
@@ -156,7 +158,8 @@ Downgrade `0033_bot_support_cases` допустим только после ос
 
 BotFather остаётся owner-only только для Main Mini App, Web Login и platform mode toggles,
 которые Bot API не может безопасно изменить. Name, About, Description, avatar, commands и Menu
-Button синхронизируются CLI после exact identity guard.
+Button синхронизируются deployment CLI после exact identity guard. Команды из раздела выше
+остаются безопасным ручным fallback для оператора с проверенным доступом к production host.
 
 ## Ручная проверка
 
