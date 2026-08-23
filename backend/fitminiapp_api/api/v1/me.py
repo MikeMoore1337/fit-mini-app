@@ -6,7 +6,6 @@ from sqlalchemy.orm.attributes import set_committed_value
 
 from fitminiapp_api.core.config import settings
 from fitminiapp_api.db.session import get_db
-from fitminiapp_api.models.nutrition import NutritionTarget
 from fitminiapp_api.models.program import UserProgram, UserWorkout
 from fitminiapp_api.models.user import CoachRoleApplication, User, UserProfile
 from fitminiapp_api.schemas.coach_application import CoachRoleApplicationResponse
@@ -51,6 +50,7 @@ from fitminiapp_api.services.exercise_domain import BODY_PRIORITY_TAXONOMY
 from fitminiapp_api.services.nutrition import (
     NutritionError,
     build_nutrition_target_response_for_user,
+    get_current_nutrition_target,
 )
 from fitminiapp_api.services.onboarding import build_onboarding_state
 from fitminiapp_api.services.profile import (
@@ -93,20 +93,19 @@ def _build_user_response(db: Session, user) -> UserResponse:
         .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
         .filter(UserProgram.user_id == user.id, UserWorkout.status == "completed")
     )
-    target, has_active_program, has_workout_history, profile = (
+    has_active_program, has_workout_history, profile = (
         db.query(
-            NutritionTarget,
             active_program_exists.exists(),
             workout_history_exists.exists(),
             UserProfile,
         )
         .select_from(User)
-        .outerjoin(NutritionTarget, NutritionTarget.user_id == User.id)
         .outerjoin(UserProfile, UserProfile.user_id == User.id)
         .filter(User.id == user.id)
         .one()
     )
     set_committed_value(user, "profile", profile)
+    target = get_current_nutrition_target(db, user.id)
     kbju = build_nutrition_target_response_for_user(db, target, user)
     trainer = get_current_trainer(db, user)
     heart_rates = calculate_profile_heart_rates(

@@ -67,7 +67,8 @@ estimated_expenditure = mean_logged_intake - (weight_delta_kg * 7700 / 21)
 имеет статус `no_change`.
 
 Preview не меняет `nutrition_targets`. Для предложения создаётся запись `pending` в
-`energy_calibrations`. Только отдельный запрос с решением `accept` обновляет калории и макросы.
+`energy_calibrations`. Только отдельный запрос с решением `accept` создаёт новую effective-версию
+калорий и макросов с `source=adaptive`; предыдущая версия закрывается без удаления истории.
 `reject` сохраняет цель без изменений. Если цель была изменена после preview, предложение получает
 статус `superseded`, а подтверждение отклоняется как устаревшее.
 

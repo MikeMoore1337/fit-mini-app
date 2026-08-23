@@ -15,7 +15,7 @@ export function NutritionPage({
     <div className="nutrition-experience">
       <NutritionDiary timeZone={timeZone} />
       <div id="nutrition-target-settings" className="nutrition-target-settings">
-        <NutritionForm initial={initial} onSaved={onSaved} />
+        <NutritionForm initial={initial} timeZone={timeZone} onSaved={onSaved} />
       </div>
     </div>
   );

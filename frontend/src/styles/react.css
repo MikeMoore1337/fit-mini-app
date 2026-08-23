@@ -2068,6 +2068,203 @@ select:not([multiple]) {
   flex: 1;
   min-width: 0;
 }
+.nutrition-target-mode {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-subtle);
+}
+.nutrition-target-mode > button {
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  box-shadow: none;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+.nutrition-target-mode > button.is-active {
+  background: var(--card-bg);
+  color: var(--text);
+  box-shadow: var(--elevation-card);
+}
+.nutrition-manual-form {
+  margin-top: 16px;
+}
+.nutrition-manual-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.nutrition-manual-grid__wide {
+  grid-column: span 2;
+}
+.nutrition-energy-check {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-subtle);
+}
+.nutrition-energy-check > strong {
+  font-variant-numeric: tabular-nums;
+}
+.nutrition-energy-check > small {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.nutrition-energy-warning p {
+  margin: 6px 0 0;
+}
+.nutrition-confirmation {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  margin-top: 12px;
+  font-weight: 650;
+}
+.nutrition-confirmation input {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+}
+.nutrition-target-save {
+  min-height: 48px;
+}
+.nutrition-target-history {
+  display: grid;
+  gap: 14px;
+  margin-top: 24px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+}
+.nutrition-target-history h3,
+.nutrition-target-history p {
+  margin: 0;
+}
+.nutrition-current-target {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-subtle);
+}
+.nutrition-current-target__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.nutrition-current-target__heading > div {
+  display: grid;
+  gap: 7px;
+}
+.nutrition-current-target__heading > span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.nutrition-current-target__metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.nutrition-current-target__metrics > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 10px;
+  border-radius: 10px;
+  background: var(--card-bg);
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+}
+.nutrition-current-target__metrics strong {
+  color: var(--text);
+  font-size: 1rem;
+}
+.nutrition-target-note {
+  padding-left: 10px;
+  border-left: 3px solid var(--accent);
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+.nutrition-target-history__list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nutrition-target-history__list > li {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card-bg);
+}
+.nutrition-target-history__list summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 10px 12px;
+  cursor: pointer;
+  list-style: none;
+}
+.nutrition-target-history__list summary::-webkit-details-marker {
+  display: none;
+}
+.nutrition-target-history__list summary > span {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+.nutrition-target-history__list summary small {
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nutrition-target-history__details {
+  display: grid;
+  gap: 10px;
+  padding: 0 12px 14px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+.nutrition-target-history__details ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+}
+@media (max-width: 640px) {
+  .nutrition-target-mode {
+    grid-template-columns: 1fr;
+  }
+  .nutrition-manual-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .nutrition-manual-grid__wide {
+    grid-column: 1 / -1;
+  }
+  .nutrition-current-target__heading {
+    display: grid;
+  }
+  .nutrition-current-target__metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 .ui-icon {
   display: block;
   width: 18px;

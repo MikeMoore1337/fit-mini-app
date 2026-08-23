@@ -115,8 +115,10 @@ describe('NutritionForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Добавить кардио' }));
     fireEvent.click(screen.getByRole('button', { name: 'Сохранить КБЖУ' }));
 
-    await waitFor(() => expect(apiMock).toHaveBeenCalledOnce());
-    const options = apiMock.mock.calls[0]![1];
+    await waitFor(() =>
+      expect(apiMock.mock.calls.some(([path]) => path === '/api/v1/nutrition/targets')).toBe(true),
+    );
+    const options = apiMock.mock.calls.find(([path]) => path === '/api/v1/nutrition/targets')![1];
     expect(options.body).toMatchObject({
       daily_routine: 'mixed',
       steps_range: 'from_7000_to_10000',
@@ -143,5 +145,56 @@ describe('NutritionForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Сохранить КБЖУ' }));
 
     await waitFor(() => expect(dependentQuery).toHaveBeenCalledTimes(2));
+  });
+
+  it('switches to accessible manual numeric inputs and explains implied energy', () => {
+    renderForm();
+    fireEvent.click(screen.getByRole('button', { name: 'Указать вручную' }));
+
+    const calories = screen.getByRole('spinbutton', { name: 'Калории, ккал' });
+    expect(calories).toHaveAttribute('inputmode', 'numeric');
+    expect(calories).toHaveAttribute('enterkeyhint', 'next');
+    expect(screen.getByText('2190 ккал')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Сохранить ручные ориентиры' })).toBeEnabled();
+  });
+
+  it('requires explicit confirmation for a large manual energy mismatch and keeps the draft', async () => {
+    renderForm();
+    fireEvent.click(screen.getByRole('button', { name: 'Указать вручную' }));
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Калории, ккал' }), {
+      target: { value: '1200' },
+    });
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Белки, г' }), {
+      target: { value: '200' },
+    });
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Жиры, г' }), {
+      target: { value: '100' },
+    });
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Углеводы, г' }), {
+      target: { value: '200' },
+    });
+
+    const save = screen.getByRole('button', { name: 'Сохранить ручные ориентиры' });
+    expect(screen.getByRole('alert')).toHaveTextContent('Проверьте разницу: 1300 ккал');
+    expect(save).toBeDisabled();
+    fireEvent.click(screen.getByRole('checkbox', { name: /Сохранить значения/ }));
+    expect(save).toBeEnabled();
+    fireEvent.click(save);
+
+    await waitFor(() =>
+      expect(apiMock.mock.calls.some(([path]) => path === '/api/v1/nutrition/targets/manual')).toBe(
+        true,
+      ),
+    );
+    const body = apiMock.mock.calls.find(
+      ([path]) => path === '/api/v1/nutrition/targets/manual',
+    )![1].body;
+    expect(body).toMatchObject({
+      calories: 1200,
+      protein_g: 200,
+      fat_g: 100,
+      carbs_g: 200,
+      confirm_energy_mismatch: true,
+    });
   });
 });

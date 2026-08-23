@@ -249,11 +249,29 @@ def test_preview_and_explicit_accept_update_target_and_history(client) -> None:
     assert exported.status_code == 200
     assert exported.json()["energy_calibrations"][0]["status"] == "accepted"
     with get_session_context() as db:
-        target = db.query(NutritionTarget).filter(NutritionTarget.user_id == user_id).one()
+        target = (
+            db.query(NutritionTarget)
+            .filter(
+                NutritionTarget.user_id == user_id,
+                NutritionTarget.effective_to.is_(None),
+            )
+            .one()
+        )
         record = db.query(EnergyCalibration).filter(EnergyCalibration.user_id == user_id).one()
         assert target.calories == 1700
+        assert target.source == "adaptive"
         assert target.tdee == proposal["estimated_expenditure_kcal"]
         assert abs(target.protein_g * 4 + target.fat_g * 9 + target.carbs_g * 4 - 1700) <= 2
+        target_history = (
+            db.query(NutritionTarget)
+            .filter(NutritionTarget.user_id == user_id)
+            .order_by(NutritionTarget.effective_from.asc(), NutritionTarget.id.asc())
+            .all()
+        )
+        assert len(target_history) == 2
+        assert target_history[0].effective_to == target.effective_from
+        assert target_history[0].superseded_by_id == target.id
+        assert sum(row.effective_to is None for row in target_history) == 1
         assert record.status == "accepted"
 
 

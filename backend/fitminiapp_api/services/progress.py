@@ -137,6 +137,21 @@ def is_protein_target_met(actual: Decimal, target: int) -> bool:
     return target > 0 and actual >= Decimal(target)
 
 
+def _effective_nutrition_target(
+    targets: list[NutritionTarget],
+    target_date: date,
+) -> NutritionTarget | None:
+    return next(
+        (
+            target
+            for target in targets
+            if target.effective_from <= target_date
+            and (target.effective_to is None or target_date < target.effective_to)
+        ),
+        None,
+    )
+
+
 def _user_date_filter(
     user_ids: Iterable[int],
     starts: dict[int, date],
@@ -451,7 +466,13 @@ def build_progress_summaries(
         if visible_nutrition_ids
         else []
     )
-    targets_by_user = {target.user_id: target for target in targets}
+    target_history_by_user: dict[int, list[NutritionTarget]] = defaultdict(list)
+    for target_row in sorted(targets, key=lambda row: (row.effective_from, row.id), reverse=True):
+        target_history_by_user[target_row.user_id].append(target_row)
+    targets_by_user = {
+        user_id: next((row for row in rows if row.effective_to is None), None)
+        for user_id, rows in target_history_by_user.items()
+    }
     nutrition_end_by_user = {
         user_id: current_day - timedelta(days=1) for user_id, current_day in today_by_user.items()
     }
@@ -660,22 +681,35 @@ def build_progress_summaries(
             for row in diary_days
             if row.status in {"complete", "fasted"} and row.calories is not None
         ]
-        adherence_diary_days = (
-            [row for row in complete_diary_days if row.diary_date >= target.saved_at.date()]
-            if target is not None
-            else []
-        )
-        protein_adherence_days = [row for row in adherence_diary_days if row.protein_g is not None]
+        adherence_target_days = [
+            (row, effective_target)
+            for row in complete_diary_days
+            if (
+                effective_target := _effective_nutrition_target(
+                    target_history_by_user[user.id],
+                    row.diary_date,
+                )
+            )
+            is not None
+        ]
+        protein_adherence_days = [
+            (row, effective_target)
+            for row, effective_target in adherence_target_days
+            if row.protein_g is not None
+        ]
         calorie_achieved = 0
         protein_achieved = 0
         if target is not None:
             calorie_achieved = sum(
-                is_calorie_target_met(cast(Decimal, row.calories), target.calories)
-                for row in adherence_diary_days
+                is_calorie_target_met(cast(Decimal, row.calories), effective_target.calories)
+                for row, effective_target in adherence_target_days
             )
             protein_achieved = sum(
-                is_protein_target_met(cast(Decimal, row.protein_g), target.protein_g)
-                for row in protein_adherence_days
+                is_protein_target_met(
+                    cast(Decimal, row.protein_g),
+                    effective_target.protein_g,
+                )
+                for row, effective_target in protein_adherence_days
             )
 
         nutrition_status: AdherenceStatus = "insufficient_data" if target else "not_applicable"
@@ -684,7 +718,7 @@ def build_progress_summaries(
         )
         calories_adherence = calculate_adherence_component(
             achieved=calorie_achieved,
-            evaluated=len(adherence_diary_days),
+            evaluated=len(adherence_target_days),
             weight=ADHERENCE_WEIGHTS["calories"],
             unavailable_status=nutrition_status,
             unavailable_reason=nutrition_reason,
@@ -712,7 +746,7 @@ def build_progress_summaries(
                 unavailable_reason="nutrition_access_not_granted",
             )
 
-        cardio_planned = bool(target and target.cardio_trainings_per_week > 0)
+        cardio_planned = bool(target and (target.cardio_trainings_per_week or 0) > 0)
         cardio_adherence = calculate_adherence_component(
             achieved=0,
             evaluated=0,
@@ -792,13 +826,15 @@ def build_progress_summaries(
                 "incomplete_days": incomplete_day_count if nutrition_visible else 0,
                 "fasted_days": fasted_day_count if nutrition_visible else 0,
                 "unlogged_days": unlogged_day_count if nutrition_visible else 0,
-                "adherence_evaluated_days": (len(adherence_diary_days) if nutrition_visible else 0),
+                "adherence_evaluated_days": (
+                    len(adherence_target_days) if nutrition_visible else 0
+                ),
                 "average_calories": average_calories if nutrition_visible else None,
                 "target_calories": target.calories if target and nutrition_visible else None,
                 "average_protein_g": average_protein if nutrition_visible else None,
                 "target_protein_g": target.protein_g if target and nutrition_visible else None,
                 "target_effective_on": (
-                    target.saved_at.date() if target and nutrition_visible else None
+                    target.effective_from if target and nutrition_visible else None
                 ),
             },
             "body": {

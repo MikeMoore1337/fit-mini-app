@@ -7,6 +7,7 @@ export interface PlatformApiOptions {
   workoutStatus?: WorkoutStatus;
   activeProgram?: boolean;
   weeklyReviewAvailable?: boolean;
+  nutritionTargetSource?: 'manual' | 'trainer';
 }
 
 export interface PlatformApiController {
@@ -14,6 +15,8 @@ export interface PlatformApiController {
   authInitCalls(): number;
   setPatchCalls(): number;
   finishCalls(): number;
+  manualTargetSaves(): number;
+  targetHistoryLength(): number;
   workoutValues(): { actualReps: number | null; actualWeight: number | null; completed: boolean };
   completionFeedback(): { feedback: string | null; note: string | null };
 }
@@ -65,6 +68,7 @@ export async function installPlatformApi(
   let authInitCalls = 0;
   let patchCalls = 0;
   let finishCalls = 0;
+  let manualTargetSaves = 0;
   let setVersion = 1;
   let setValues = {
     actualReps: workoutStatus === 'completed' ? 8 : (null as number | null),
@@ -74,6 +78,49 @@ export async function installPlatformApi(
   let nutritionEntries: Array<Record<string, unknown>> = [];
   let completionFeedback: string | null = null;
   let completionNote: string | null = null;
+  const previousTargetDate = new Date(todayDate);
+  previousTargetDate.setUTCDate(previousTargetDate.getUTCDate() - 30);
+  const targetSource = options.nutritionTargetSource ?? 'manual';
+  const targetAuthor =
+    targetSource === 'trainer'
+      ? { id: 11, telegram_user_id: 7011, full_name: 'Ирина Тренерова' }
+      : { id: 7, telegram_user_id: 7007, full_name: 'Анна Петрова' };
+  let currentTarget: Record<string, unknown> = {
+    id: 2,
+    user_id: 7,
+    telegram_user_id: 7007,
+    effective_from: today,
+    effective_to: null,
+    source: targetSource,
+    created_at: `${today}T08:00:00`,
+    note: 'Ориентир для текущего этапа',
+    superseded_by_id: null,
+    calories: 2100,
+    protein_g: 140,
+    fat_g: 70,
+    carbs_g: 230,
+    strength_rest: null,
+    cardio_trainings: [],
+    saved_at: `${today}T08:00:00`,
+    created_by: targetAuthor,
+    assigned_by: targetAuthor,
+  };
+  let targetHistory: Array<Record<string, unknown>> = [
+    currentTarget,
+    {
+      ...currentTarget,
+      id: 1,
+      effective_from: previousTargetDate.toISOString().slice(0, 10),
+      effective_to: today,
+      source: 'calculated',
+      note: 'Первичный расчёт',
+      superseded_by_id: 2,
+      calories: 2000,
+      protein_g: 135,
+      fat_g: 65,
+      carbs_g: 219,
+    },
+  ];
 
   if (options.browserSession) {
     await page.addInitScript(() => sessionStorage.setItem('fit_access_token', 'e2e-browser-token'));
@@ -264,7 +311,7 @@ export async function installPlatformApi(
             weight_kg: 67,
             workouts_per_week: 3,
             cardio_trainings_per_week: 1,
-            kbju: null,
+            kbju: currentTarget,
           },
           trainer: null,
         },
@@ -383,6 +430,50 @@ export async function installPlatformApi(
       });
     }
     if (/\/workouts\/\d+\/comments$/.test(path)) return route.fulfill({ json: [] });
+    if (path.endsWith('/nutrition/targets/history') && request.method() === 'GET') {
+      return route.fulfill({ json: { items: targetHistory } });
+    }
+    if (path.endsWith('/nutrition/targets/current') && request.method() === 'GET') {
+      return route.fulfill({ json: currentTarget });
+    }
+    if (path.endsWith('/nutrition/targets/manual') && request.method() === 'POST') {
+      manualTargetSaves += 1;
+      const body = request.postDataJSON() as {
+        calories: number;
+        protein_g: number;
+        fat_g: number;
+        carbs_g: number;
+        effective_from: string;
+        note?: string | null;
+      };
+      const repeated =
+        currentTarget.effective_from === body.effective_from &&
+        currentTarget.calories === body.calories &&
+        currentTarget.protein_g === body.protein_g &&
+        currentTarget.fat_g === body.fat_g &&
+        currentTarget.carbs_g === body.carbs_g &&
+        currentTarget.note === (body.note || null);
+      if (!repeated) {
+        const id = Number(currentTarget.id) + 1;
+        const closedCurrent = {
+          ...currentTarget,
+          effective_to: body.effective_from,
+          superseded_by_id: id,
+        };
+        currentTarget = {
+          ...currentTarget,
+          ...body,
+          id,
+          source: 'manual',
+          effective_to: null,
+          superseded_by_id: null,
+          created_at: `${today}T10:00:00`,
+          saved_at: `${today}T10:00:00`,
+        };
+        targetHistory = [currentTarget, closedCurrent, ...targetHistory.slice(1)];
+      }
+      return route.fulfill({ json: currentTarget });
+    }
     if (path.endsWith('/nutrition/diary') && request.method() === 'GET') {
       return route.fulfill({
         json: {
@@ -502,6 +593,12 @@ export async function installPlatformApi(
     },
     finishCalls() {
       return finishCalls;
+    },
+    manualTargetSaves() {
+      return manualTargetSaves;
+    },
+    targetHistoryLength() {
+      return targetHistory.length;
     },
     workoutValues() {
       return { ...setValues };

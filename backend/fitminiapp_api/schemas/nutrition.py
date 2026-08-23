@@ -37,6 +37,8 @@ class CardioTraining(BaseModel):
 
 class NutritionTargetSave(BaseModel):
     target_telegram_user_id: int | None = Field(default=None, ge=1)
+    effective_from: date | None = None
+    note: str | None = Field(default=None, max_length=500)
     sex: Literal["male", "female"]
     weight_kg: float = Field(ge=20, le=350, allow_inf_nan=False)
     height_cm: float = Field(ge=100, le=250, allow_inf_nan=False)
@@ -78,6 +80,17 @@ class NutritionTargetSave(BaseModel):
         return self
 
 
+class NutritionManualTargetSave(BaseModel):
+    target_telegram_user_id: int | None = Field(default=None, ge=1)
+    calories: int = Field(ge=800, le=6000)
+    protein_g: int = Field(ge=0, le=400)
+    fat_g: int = Field(ge=0, le=250)
+    carbs_g: int = Field(ge=0, le=800)
+    effective_from: date | None = None
+    note: str | None = Field(default=None, max_length=500)
+    confirm_energy_mismatch: bool = False
+
+
 class NutritionAssignedByResponse(BaseModel):
     id: int
     telegram_user_id: int | None = None
@@ -86,35 +99,47 @@ class NutritionAssignedByResponse(BaseModel):
 
 
 class NutritionTargetResponse(BaseModel):
+    id: int
     user_id: int
     telegram_user_id: int | None = None
-    sex: str
-    weight_kg: float
-    height_cm: float
-    age: float
-    daily_routine: str
-    steps_range: str
-    strength_trainings_per_week: int
-    strength_training_duration_minutes: int
-    strength_training_type: str
+    effective_from: date
+    effective_to: date | None = None
+    source: Literal["calculated", "manual", "trainer", "adaptive"]
+    created_at: datetime
+    note: str | None = None
+    superseded_by_id: int | None = None
+    sex: str | None = None
+    weight_kg: float | None = None
+    height_cm: float | None = None
+    age: float | None = None
+    daily_routine: str | None = None
+    steps_range: str | None = None
+    strength_trainings_per_week: int | None = None
+    strength_training_duration_minutes: int | None = None
+    strength_training_type: str | None = None
     strength_rest: str | None
-    cardio_trainings: list[CardioTraining]
-    goal: str
-    bmr: int
-    tdee: int
+    cardio_trainings: list[CardioTraining] = Field(default_factory=list)
+    goal: str | None = None
+    bmr: int | None = None
+    tdee: int | None = None
     calories: int
     protein_g: int
     fat_g: int
     carbs_g: int
     saved_at: datetime
+    created_by: NutritionAssignedByResponse | None = None
     assigned_by: NutritionAssignedByResponse | None = None
 
     # Returned during the transition so an older frontend can still render a
     # target saved by a newer server.
-    daily_activity_level: str
-    cardio_trainings_per_week: int
-    cardio_training_duration_minutes: int
-    cardio_intensity: str
+    daily_activity_level: str | None = None
+    cardio_trainings_per_week: int | None = None
+    cardio_training_duration_minutes: int | None = None
+    cardio_intensity: str | None = None
+
+
+class NutritionTargetHistoryResponse(BaseModel):
+    items: list[NutritionTargetResponse]
 
 
 EnergyCalibrationStatus = Literal[

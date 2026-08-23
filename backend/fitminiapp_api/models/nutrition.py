@@ -12,6 +12,8 @@ from sqlalchemy import (
     Integer,
     Numeric,
     String,
+    event,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -21,55 +23,109 @@ from fitminiapp_api.db.base import Base
 
 class NutritionTarget(Base):
     __tablename__ = "nutrition_targets"
+    __table_args__ = (
+        CheckConstraint(
+            "source IN ('calculated', 'manual', 'trainer', 'adaptive')",
+            name="ck_nutrition_targets_source",
+        ),
+        CheckConstraint(
+            "effective_to IS NULL OR effective_to >= effective_from",
+            name="ck_nutrition_targets_effective_period",
+        ),
+        CheckConstraint("calories > 0", name="ck_nutrition_targets_calories_positive"),
+        CheckConstraint("protein_g >= 0", name="ck_nutrition_targets_protein_nonnegative"),
+        CheckConstraint("fat_g >= 0", name="ck_nutrition_targets_fat_nonnegative"),
+        CheckConstraint("carbs_g >= 0", name="ck_nutrition_targets_carbs_nonnegative"),
+        Index(
+            "uq_nutrition_targets_active_user",
+            "user_id",
+            unique=True,
+            postgresql_where=text("effective_to IS NULL"),
+            sqlite_where=text("effective_to IS NULL"),
+        ),
+        Index(
+            "ix_nutrition_targets_user_effective",
+            "user_id",
+            "effective_from",
+            "effective_to",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True
-    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     assigned_by_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
 
-    sex: Mapped[str] = mapped_column(String(16), nullable=False)
-    weight_kg: Mapped[float] = mapped_column(Float, nullable=False)
-    height_cm: Mapped[float] = mapped_column(Float, nullable=False)
-    age: Mapped[float] = mapped_column(Float, nullable=False)
-    daily_activity_level: Mapped[str] = mapped_column(
-        String(16), nullable=False, default="sedentary"
+    sex: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
+    height_cm: Mapped[float | None] = mapped_column(Float, nullable=True)
+    age: Mapped[float | None] = mapped_column(Float, nullable=True)
+    daily_activity_level: Mapped[str | None] = mapped_column(
+        String(16), nullable=True, default="sedentary"
     )
-    daily_routine: Mapped[str] = mapped_column(String(24), nullable=False, default="mostly_sitting")
-    steps_range: Mapped[str] = mapped_column(String(32), nullable=False, default="unknown")
-    strength_trainings_per_week: Mapped[int] = mapped_column(Integer, nullable=False)
-    strength_training_duration_minutes: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=60
+    daily_routine: Mapped[str | None] = mapped_column(
+        String(24), nullable=True, default="mostly_sitting"
     )
-    strength_training_type: Mapped[str] = mapped_column(
-        String(16), nullable=False, default="regular"
+    steps_range: Mapped[str | None] = mapped_column(String(32), nullable=True, default="unknown")
+    strength_trainings_per_week: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    strength_training_duration_minutes: Mapped[int | None] = mapped_column(
+        Integer, nullable=True, default=60
+    )
+    strength_training_type: Mapped[str | None] = mapped_column(
+        String(16), nullable=True, default="regular"
     )
     strength_rest: Mapped[str | None] = mapped_column(String(16), nullable=True)
-    cardio_trainings_per_week: Mapped[int] = mapped_column(Integer, nullable=False)
-    cardio_training_duration_minutes: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=30
+    cardio_trainings_per_week: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    cardio_training_duration_minutes: Mapped[int | None] = mapped_column(
+        Integer, nullable=True, default=30
     )
-    cardio_intensity: Mapped[str] = mapped_column(String(16), nullable=False, default="moderate")
-    cardio_trainings: Mapped[list[dict[str, object]]] = mapped_column(
-        JSON, nullable=False, default=list
+    cardio_intensity: Mapped[str | None] = mapped_column(
+        String(16), nullable=True, default="moderate"
     )
-    goal: Mapped[str] = mapped_column(String(32), nullable=False)
+    cardio_trainings: Mapped[list[dict[str, object]] | None] = mapped_column(
+        JSON, nullable=True, default=list
+    )
+    goal: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
-    bmr: Mapped[int] = mapped_column(Integer, nullable=False)
-    tdee: Mapped[int] = mapped_column(Integer, nullable=False)
+    bmr: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    tdee: Mapped[int | None] = mapped_column(Integer, nullable=True)
     calories: Mapped[int] = mapped_column(Integer, nullable=False)
     protein_g: Mapped[int] = mapped_column(Integer, nullable=False)
     fat_g: Mapped[int] = mapped_column(Integer, nullable=False)
     carbs_g: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    effective_from: Mapped[date] = mapped_column(Date, nullable=False)
+    effective_to: Mapped[date | None] = mapped_column(Date, nullable=True)
+    source: Mapped[str] = mapped_column(String(16), nullable=False, default="calculated")
+    note: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    superseded_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("nutrition_targets.id", ondelete="SET NULL"), nullable=True
+    )
 
     saved_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
         default=now_msk_naive,
     )
+
+    @property
+    def created_by_user_id(self) -> int | None:
+        """Canonical author field backed by the legacy assigned-by column."""
+        return self.assigned_by_user_id
+
+    @property
+    def created_at(self) -> datetime:
+        """Canonical creation timestamp backed by the legacy saved-at column."""
+        return self.saved_at
+
+
+@event.listens_for(NutritionTarget, "before_insert")
+def _default_nutrition_target_effective_from(_mapper, _connection, target) -> None:
+    if target.effective_from is None:
+        created_at = target.saved_at or now_msk_naive()
+        target.effective_from = created_at.date()
 
 
 class EnergyCalibration(Base):

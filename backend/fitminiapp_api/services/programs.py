@@ -844,7 +844,10 @@ def list_clients(
                 UserProfile.body_priority_links
             )
         )
-        .filter(NutritionTarget.user_id.in_(users_by_id))
+        .filter(
+            NutritionTarget.user_id.in_(users_by_id),
+            NutritionTarget.effective_to.is_(None),
+        )
         .all()
         if users_by_id
         else []

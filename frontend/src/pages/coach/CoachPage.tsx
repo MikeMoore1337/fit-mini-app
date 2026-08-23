@@ -735,6 +735,7 @@ function CoachClientDetail({
             clientId={client.id}
             targetTelegramId={client.telegram_user_id}
             initial={client.kbju}
+            timeZone={client.timezone}
           />
         )}
       </ClientDataSection>

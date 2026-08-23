@@ -1,10 +1,15 @@
 import math
-from typing import TypedDict, cast
+from datetime import date
+from typing import Literal, TypedDict, cast
 
 from pydantic import ValidationError
 from sqlalchemy.orm import Session, joinedload
 
-from fitminiapp_api.core.timezone import now_for_user_naive, user_local_naive_to_utc_naive
+from fitminiapp_api.core.timezone import (
+    now_for_user_naive,
+    today_for_user,
+    user_local_naive_to_utc_naive,
+)
 from fitminiapp_api.models.notification import Notification
 from fitminiapp_api.models.nutrition import NutritionTarget
 from fitminiapp_api.models.user import CoachClient, User
@@ -12,6 +17,7 @@ from fitminiapp_api.schemas.nutrition import (
     CardioIntensity,
     CardioTraining,
     NutritionAssignedByResponse,
+    NutritionManualTargetSave,
     NutritionTargetResponse,
     NutritionTargetSave,
 )
@@ -118,10 +124,46 @@ NUTRITION_INPUT_FIELDS = (
     "cardio_trainings",
     "goal",
 )
+NUTRITION_CONTEXT_FIELDS = (
+    "sex",
+    "weight_kg",
+    "height_cm",
+    "age",
+    "daily_activity_level",
+    "daily_routine",
+    "steps_range",
+    "strength_trainings_per_week",
+    "strength_training_duration_minutes",
+    "strength_training_type",
+    "strength_rest",
+    "cardio_trainings_per_week",
+    "cardio_training_duration_minutes",
+    "cardio_intensity",
+    "cardio_trainings",
+    "goal",
+    "bmr",
+    "tdee",
+)
+MANUAL_ENERGY_MISMATCH_MIN_KCAL = 100
+MANUAL_ENERGY_MISMATCH_RATIO = 0.10
 
 
 class NutritionError(Exception):
     pass
+
+
+class NutritionConflictError(NutritionError):
+    pass
+
+
+class NutritionEnergyMismatchError(NutritionConflictError):
+    def __init__(self, *, implied_energy_kcal: int, difference_kcal: int) -> None:
+        super().__init__(
+            "Калорийность заметно отличается от энергии по БЖУ. "
+            "Подтвердите сохранение или исправьте значения."
+        )
+        self.implied_energy_kcal = implied_energy_kcal
+        self.difference_kcal = difference_kcal
 
 
 class NutritionMacros(TypedDict):
@@ -318,9 +360,20 @@ def build_nutrition_target_response_from_users(
     assigned_by: User | None,
 ) -> NutritionTargetResponse:
     """Serialize a target when its related users were loaded by the caller."""
+    author = _assigned_by_response(assigned_by)
     return NutritionTargetResponse(
+        id=target.id,
         user_id=target.user_id,
         telegram_user_id=user.telegram_user_id,
+        effective_from=target.effective_from,
+        effective_to=target.effective_to,
+        source=cast(
+            Literal["calculated", "manual", "trainer", "adaptive"],
+            target.source,
+        ),
+        created_at=target.saved_at,
+        note=target.note,
+        superseded_by_id=target.superseded_by_id,
         sex=target.sex,
         weight_kg=target.weight_kg,
         height_cm=target.height_cm,
@@ -332,7 +385,9 @@ def build_nutrition_target_response_from_users(
         strength_training_duration_minutes=target.strength_training_duration_minutes,
         strength_training_type=target.strength_training_type,
         strength_rest=target.strength_rest,
-        cardio_trainings=[CardioTraining.model_validate(row) for row in target.cardio_trainings],
+        cardio_trainings=[
+            CardioTraining.model_validate(row) for row in (target.cardio_trainings or [])
+        ],
         cardio_trainings_per_week=target.cardio_trainings_per_week,
         cardio_training_duration_minutes=target.cardio_training_duration_minutes,
         cardio_intensity=target.cardio_intensity,
@@ -344,7 +399,8 @@ def build_nutrition_target_response_from_users(
         fat_g=target.fat_g,
         carbs_g=target.carbs_g,
         saved_at=target.saved_at,
-        assigned_by=_assigned_by_response(assigned_by),
+        created_by=author,
+        assigned_by=author,
     )
 
 
@@ -375,8 +431,40 @@ def get_nutrition_target_for_user(
     db: Session,
     user: User,
 ) -> NutritionTargetResponse | None:
-    target = db.query(NutritionTarget).filter(NutritionTarget.user_id == user.id).first()
+    target = get_current_nutrition_target(db, user.id)
     return build_nutrition_target_response_for_user(db, target, user)
+
+
+def get_current_nutrition_target(
+    db: Session,
+    user_id: int,
+    *,
+    for_update: bool = False,
+) -> NutritionTarget | None:
+    query = db.query(NutritionTarget).filter(
+        NutritionTarget.user_id == user_id,
+        NutritionTarget.effective_to.is_(None),
+    )
+    if for_update:
+        query = query.with_for_update()
+    return query.first()
+
+
+def get_nutrition_target_for_date(
+    db: Session,
+    user_id: int,
+    target_date: date,
+) -> NutritionTarget | None:
+    return (
+        db.query(NutritionTarget)
+        .filter(
+            NutritionTarget.user_id == user_id,
+            NutritionTarget.effective_from <= target_date,
+            (NutritionTarget.effective_to.is_(None)) | (NutritionTarget.effective_to > target_date),
+        )
+        .order_by(NutritionTarget.effective_from.desc(), NutritionTarget.id.desc())
+        .first()
+    )
 
 
 def build_nutrition_target_response_for_user(
@@ -398,6 +486,8 @@ def build_nutrition_target_response_for_user(
 
 
 def _target_payload(target: NutritionTarget) -> NutritionTargetSave:
+    if any(getattr(target, field) is None for field in NUTRITION_INPUT_FIELDS):
+        raise NutritionError("Nutrition calculator context is incomplete")
     return NutritionTargetSave.model_validate(
         {
             "sex": target.sex,
@@ -433,15 +523,16 @@ def _queue_nutrition_updated_notification(
 ) -> None:
     scheduled_for = now_for_user_naive(target_user)
     actor_text = (
-        "Тренер обновил параметры питания."
+        "Тренер обновил ориентиры питания."
         if changed_by.id != target_user.id
-        else "Ваши параметры питания изменились."
+        else "Ваши ориентиры питания изменились."
     )
+    title = "КБЖУ пересчитаны" if target.source == "calculated" else "Ориентиры КБЖУ обновлены"
     db.add(
         Notification(
             user_id=target_user.id,
             channel="telegram",
-            title="КБЖУ пересчитаны",
+            title=title,
             body=(
                 f"{actor_text} Новые ориентиры: {target.calories} ккал · "
                 f"Б {target.protein_g} г · Ж {target.fat_g} г · У {target.carbs_g} г. "
@@ -454,38 +545,138 @@ def _queue_nutrition_updated_notification(
     )
 
 
+def nutrition_target_context(target: NutritionTarget | None) -> dict[str, object | None]:
+    return {
+        field: getattr(target, field) if target is not None else None
+        for field in NUTRITION_CONTEXT_FIELDS
+    }
+
+
+def _normalized_note(note: str | None) -> str | None:
+    normalized = note.strip() if note else ""
+    return normalized or None
+
+
+def _same_target_version(
+    target: NutritionTarget,
+    *,
+    source: str,
+    effective_from: date,
+    changed_by_user_id: int,
+    note: str | None,
+    values: dict[str, object | None],
+) -> bool:
+    return (
+        target.source == source
+        and target.effective_from == effective_from
+        and target.assigned_by_user_id == changed_by_user_id
+        and target.note == note
+        and all(getattr(target, field) == value for field, value in values.items())
+    )
+
+
+def create_nutrition_target_version(
+    db: Session,
+    *,
+    target_user: User,
+    changed_by: User,
+    source: str,
+    effective_from: date,
+    values: dict[str, object | None],
+    note: str | None = None,
+) -> tuple[NutritionTarget, bool]:
+    """Create one canonical half-open target period while serializing per user."""
+    db.query(User.id).filter(User.id == target_user.id).with_for_update().one()
+    current = get_current_nutrition_target(db, target_user.id, for_update=True)
+    current_day = today_for_user(target_user)
+    if effective_from > current_day:
+        raise NutritionConflictError("Дата начала цели не может быть в будущем")
+    if current is not None and effective_from < current.effective_from:
+        raise NutritionConflictError(
+            "Дата начала не может быть раньше начала текущей цели; "
+            "исторические периоды не переписываются"
+        )
+
+    normalized_note = _normalized_note(note)
+    if current is not None and _same_target_version(
+        current,
+        source=source,
+        effective_from=effective_from,
+        changed_by_user_id=changed_by.id,
+        note=normalized_note,
+        values=values,
+    ):
+        return current, False
+
+    target = NutritionTarget(
+        user_id=target_user.id,
+        assigned_by_user_id=changed_by.id,
+        effective_from=effective_from,
+        effective_to=None,
+        source=source,
+        note=normalized_note,
+        saved_at=now_for_user_naive(target_user),
+        **values,
+    )
+    if current is not None:
+        # effective_to is exclusive. A same-day replacement therefore creates a
+        # zero-length audit period without making two targets effective that day.
+        current.effective_to = effective_from
+    db.add(target)
+    db.flush()
+    if current is not None:
+        current.superseded_by_id = target.id
+    return target, True
+
+
 def recalculate_nutrition_target(
     db: Session,
     target_user: User,
     updates: dict[str, object],
     changed_by: User,
 ) -> bool:
-    """Update stored calculation inputs and queue an immediate client notification."""
-    target = db.query(NutritionTarget).filter(NutritionTarget.user_id == target_user.id).first()
-    if target is None:
+    """Version a calculated target; never silently rewrite manual/trainer values."""
+    target = get_current_nutrition_target(db, target_user.id)
+    if target is None or target.source != "calculated":
         return False
 
+    context = nutrition_target_context(target)
     changed = False
     for field in NUTRITION_INPUT_FIELDS:
         value = updates.get(field)
-        if value is None or getattr(target, field) == value:
+        if value is None or context[field] == value:
             continue
-        setattr(target, field, value)
+        context[field] = value
         changed = True
 
     if not changed:
         return False
 
     try:
-        payload = _target_payload(target)
+        candidate = NutritionTarget(**context)
+        payload = _target_payload(candidate)
     except ValidationError as exc:
         raise NutritionError("Nutrition inputs are outside supported ranges") from exc
     calculations = calculate_nutrition(payload)
-    _apply_calculation(target, calculations)
-    target.assigned_by_user_id = changed_by.id
-    target.saved_at = now_for_user_naive(target_user)
-    _queue_nutrition_updated_notification(db, target_user, target, changed_by)
-    return True
+    context.update(
+        bmr=calculations["bmr"],
+        tdee=calculations["tdee"],
+        calories=calculations["calories"],
+        protein_g=calculations["protein_g"],
+        fat_g=calculations["fat_g"],
+        carbs_g=calculations["carbs_g"],
+    )
+    version, created = create_nutrition_target_version(
+        db,
+        target_user=target_user,
+        changed_by=changed_by,
+        source="calculated" if changed_by.id == target_user.id else "trainer",
+        effective_from=today_for_user(target_user),
+        values=context,
+    )
+    if created:
+        _queue_nutrition_updated_notification(db, target_user, version, changed_by)
+    return created
 
 
 def save_nutrition_target(
@@ -496,46 +687,51 @@ def save_nutrition_target(
     target_user = _resolve_target_user(db, current_user, payload.target_telegram_user_id)
     calculations = calculate_nutrition(payload)
     ensure_profile(db, target_user)
-
-    target = db.query(NutritionTarget).filter(NutritionTarget.user_id == target_user.id).first()
-    previous_inputs = (
-        {field: getattr(target, field) for field in NUTRITION_INPUT_FIELDS} if target else None
-    )
-    if not target:
-        target = NutritionTarget(user_id=target_user.id)
-        db.add(target)
-
-    target.assigned_by_user_id = current_user.id
     daily_routine, steps_range, _ = _daily_activity(payload)
     cardio_trainings = _cardio_trainings(payload)
-    target.sex = payload.sex.strip().lower()
-    target.weight_kg = payload.weight_kg
-    target.height_cm = payload.height_cm
-    target.age = payload.age
-    target.daily_routine = daily_routine
-    target.steps_range = steps_range
-    target.daily_activity_level = payload.daily_activity_level or "sedentary"
-    target.strength_trainings_per_week = payload.strength_trainings_per_week
-    target.strength_training_duration_minutes = payload.strength_training_duration_minutes
-    target.strength_training_type = payload.strength_training_type or "regular"
-    target.strength_rest = payload.strength_rest
-    target.cardio_trainings = [training.model_dump() for training in cardio_trainings]
-    target.cardio_trainings_per_week = sum(
-        training.trainings_per_week for training in cardio_trainings
-    )
+    context: dict[str, object | None] = {
+        "sex": payload.sex.strip().lower(),
+        "weight_kg": payload.weight_kg,
+        "height_cm": payload.height_cm,
+        "age": payload.age,
+        "daily_routine": daily_routine,
+        "steps_range": steps_range,
+        "daily_activity_level": payload.daily_activity_level or "sedentary",
+        "strength_trainings_per_week": payload.strength_trainings_per_week,
+        "strength_training_duration_minutes": payload.strength_training_duration_minutes,
+        "strength_training_type": payload.strength_training_type or "regular",
+        "strength_rest": payload.strength_rest,
+        "cardio_trainings": [training.model_dump() for training in cardio_trainings],
+        "cardio_trainings_per_week": sum(
+            training.trainings_per_week for training in cardio_trainings
+        ),
+    }
     first_cardio = cardio_trainings[0] if cardio_trainings else None
-    target.cardio_training_duration_minutes = (
+    context["cardio_training_duration_minutes"] = (
         first_cardio.duration_minutes
         if first_cardio
         else (payload.cardio_training_duration_minutes or 30)
     )
-    target.cardio_intensity = payload.cardio_intensity or "moderate"
-    target.goal = payload.goal.strip()
-    _apply_calculation(target, calculations)
-    target.saved_at = now_for_user_naive(target_user)
-
-    current_inputs = {field: getattr(target, field) for field in NUTRITION_INPUT_FIELDS}
-    if previous_inputs is None or previous_inputs != current_inputs:
+    context.update(
+        cardio_intensity=payload.cardio_intensity or "moderate",
+        goal=payload.goal.strip(),
+        bmr=calculations["bmr"],
+        tdee=calculations["tdee"],
+        calories=calculations["calories"],
+        protein_g=calculations["protein_g"],
+        fat_g=calculations["fat_g"],
+        carbs_g=calculations["carbs_g"],
+    )
+    target, created = create_nutrition_target_version(
+        db,
+        target_user=target_user,
+        changed_by=current_user,
+        source="calculated" if current_user.id == target_user.id else "trainer",
+        effective_from=payload.effective_from or today_for_user(target_user),
+        values=context,
+        note=payload.note,
+    )
+    if created:
         _queue_nutrition_updated_notification(db, target_user, target, current_user)
 
     db.commit()
@@ -544,3 +740,75 @@ def save_nutrition_target(
     if response is None:
         raise NutritionError("Nutrition target not found")
     return response
+
+
+def save_manual_nutrition_target(
+    db: Session,
+    current_user: User,
+    payload: NutritionManualTargetSave,
+) -> NutritionTargetResponse:
+    target_user = _resolve_target_user(db, current_user, payload.target_telegram_user_id)
+    implied_energy = payload.protein_g * 4 + payload.fat_g * 9 + payload.carbs_g * 4
+    difference = abs(implied_energy - payload.calories)
+    allowed_difference = max(
+        MANUAL_ENERGY_MISMATCH_MIN_KCAL,
+        round(payload.calories * MANUAL_ENERGY_MISMATCH_RATIO),
+    )
+    if difference > allowed_difference and not payload.confirm_energy_mismatch:
+        raise NutritionEnergyMismatchError(
+            implied_energy_kcal=implied_energy,
+            difference_kcal=difference,
+        )
+
+    ensure_profile(db, target_user)
+    current = get_current_nutrition_target(db, target_user.id)
+    context = nutrition_target_context(current)
+    if current is None and target_user.profile is not None:
+        context["weight_kg"] = target_user.profile.weight_kg
+        context["height_cm"] = target_user.profile.height_cm
+        context["goal"] = (
+            target_user.profile.goal if target_user.profile.goal in VALID_GOALS else None
+        )
+    context.update(
+        calories=payload.calories,
+        protein_g=payload.protein_g,
+        fat_g=payload.fat_g,
+        carbs_g=payload.carbs_g,
+    )
+    target, created = create_nutrition_target_version(
+        db,
+        target_user=target_user,
+        changed_by=current_user,
+        source="manual" if current_user.id == target_user.id else "trainer",
+        effective_from=payload.effective_from or today_for_user(target_user),
+        values=context,
+        note=payload.note,
+    )
+    if created:
+        _queue_nutrition_updated_notification(db, target_user, target, current_user)
+    db.commit()
+    db.refresh(target)
+    response = build_nutrition_target_response(db, target)
+    if response is None:
+        raise NutritionError("Nutrition target not found")
+    return response
+
+
+def list_nutrition_target_history(
+    db: Session,
+    current_user: User,
+    target_telegram_user_id: int | None = None,
+) -> list[NutritionTargetResponse]:
+    target_user = _resolve_target_user(db, current_user, target_telegram_user_id)
+    rows = (
+        db.query(NutritionTarget)
+        .filter(NutritionTarget.user_id == target_user.id)
+        .order_by(NutritionTarget.effective_from.desc(), NutritionTarget.id.desc())
+        .limit(100)
+        .all()
+    )
+    return [
+        response
+        for row in rows
+        if (response := build_nutrition_target_response_for_user(db, row, target_user)) is not None
+    ]

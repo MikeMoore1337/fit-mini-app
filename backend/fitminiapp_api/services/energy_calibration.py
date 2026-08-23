@@ -20,7 +20,12 @@ from fitminiapp_api.schemas.nutrition import (
     EnergyCalibrationStatus,
     EnergyCalibrationSufficiency,
 )
-from fitminiapp_api.services.nutrition import calculate_macros
+from fitminiapp_api.services.nutrition import (
+    calculate_macros,
+    create_nutrition_target_version,
+    get_current_nutrition_target,
+    nutrition_target_context,
+)
 
 RULESET_VERSION = "adaptive-energy-v1"
 LOOKBACK_DAYS = 28
@@ -206,6 +211,31 @@ def evaluate_energy_calibration(
             proposed_target_calories=None,
             goal="maintenance",
             rationale_keys=["nutrition_target_missing"],
+        )
+
+    if target.goal not in GOAL_MULTIPLIERS or target.weight_kg is None:
+        return CalibrationEvaluation(
+            status="insufficient",
+            period_start=period_start,
+            period_end=period_end,
+            sufficiency_status="insufficient",
+            counters={
+                "logged_day_count": len(filtered_days),
+                "eligible_day_count": LOOKBACK_DAYS,
+                "weight_point_count": len(filtered_weights),
+            },
+            reason_keys=["nutrition_target_context_missing"],
+            average_intake_kcal=None,
+            smoothed_start_weight_kg=None,
+            smoothed_end_weight_kg=None,
+            estimated_expenditure_kcal=None,
+            estimate_low_kcal=None,
+            estimate_high_kcal=None,
+            current_target_calories=target.calories,
+            target_saved_at=target.saved_at,
+            proposed_target_calories=None,
+            goal=target.goal or "maintenance",
+            rationale_keys=["nutrition_target_context_missing"],
         )
 
     sufficiency, counters, reason_keys, first_weights, last_weights = _sufficiency(
@@ -496,7 +526,7 @@ def preview_energy_calibration(db: Session, user: User) -> EnergyCalibrationResp
     today = today_for_user(user)
     period_end = today - timedelta(days=1)
     period_start = period_end - timedelta(days=LOOKBACK_DAYS - 1)
-    target = db.query(NutritionTarget).filter(NutritionTarget.user_id == user.id).first()
+    target = get_current_nutrition_target(db, user.id)
     day_totals, weights = _load_inputs(db, user, period_start, period_end)
     evaluation = evaluate_energy_calibration(
         target=target,
@@ -579,7 +609,7 @@ def decide_energy_calibration(
         db.refresh(record)
         return _response_from_record(record)
 
-    target = db.query(NutritionTarget).filter(NutritionTarget.user_id == user.id).first()
+    target = get_current_nutrition_target(db, user.id, for_update=True)
     if (
         target is None
         or target.calories != record.previous_target_calories
@@ -593,14 +623,31 @@ def decide_energy_calibration(
             "Цель питания уже изменилась; выполните новую проверку по истории"
         )
 
+    if target.weight_kg is None or target.goal not in GOAL_MULTIPLIERS:
+        record.status = "superseded"
+        record.decided_at = decided_at
+        db.commit()
+        raise EnergyCalibrationConflictError(
+            "Для текущей цели больше нет данных калькулятора; выполните новую проверку"
+        )
     macros = calculate_macros(target.weight_kg, record.proposed_target_calories, target.goal)
-    target.tdee = record.estimated_expenditure_kcal
-    target.calories = record.proposed_target_calories
-    target.protein_g = macros["protein_g"]
-    target.fat_g = macros["fat_g"]
-    target.carbs_g = macros["carbs_g"]
-    target.assigned_by_user_id = user.id
-    target.saved_at = decided_at
+    context = nutrition_target_context(target)
+    context.update(
+        tdee=record.estimated_expenditure_kcal,
+        calories=record.proposed_target_calories,
+        protein_g=macros["protein_g"],
+        fat_g=macros["fat_g"],
+        carbs_g=macros["carbs_g"],
+    )
+    create_nutrition_target_version(
+        db,
+        target_user=user,
+        changed_by=user,
+        source="adaptive",
+        effective_from=today_for_user(user),
+        values=context,
+        note="Принято предложение адаптивной калибровки",
+    )
     record.status = "accepted"
     record.decided_at = decided_at
     db.commit()

@@ -1797,6 +1797,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/nutrition/targets/manual": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Save Manual Target */
+        post: operations["save_manual_target_api_v1_nutrition_targets_manual_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nutrition/targets/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Current Target */
+        get: operations["current_target_api_v1_nutrition_targets_current_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nutrition/targets/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Target History */
+        get: operations["target_history_api_v1_nutrition_targets_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/notifications/settings": {
         parameters: {
             query?: never;
@@ -3964,6 +4015,28 @@ export interface components {
             /** Full Name */
             full_name?: string | null;
         };
+        /** NutritionManualTargetSave */
+        NutritionManualTargetSave: {
+            /** Target Telegram User Id */
+            target_telegram_user_id?: number | null;
+            /** Calories */
+            calories: number;
+            /** Protein G */
+            protein_g: number;
+            /** Fat G */
+            fat_g: number;
+            /** Carbs G */
+            carbs_g: number;
+            /** Effective From */
+            effective_from?: string | null;
+            /** Note */
+            note?: string | null;
+            /**
+             * Confirm Energy Mismatch
+             * @default false
+             */
+            confirm_energy_mismatch: boolean;
+        };
         /** NutritionPeriodSummary */
         NutritionPeriodSummary: {
             /** Visible */
@@ -4009,40 +4082,68 @@ export interface components {
             /** Target Effective On */
             target_effective_on?: string | null;
         };
+        /** NutritionTargetHistoryResponse */
+        NutritionTargetHistoryResponse: {
+            /** Items */
+            items: components["schemas"]["NutritionTargetResponse"][];
+        };
         /** NutritionTargetResponse */
         NutritionTargetResponse: {
+            /** Id */
+            id: number;
             /** User Id */
             user_id: number;
             /** Telegram User Id */
             telegram_user_id?: number | null;
+            /**
+             * Effective From
+             * Format: date
+             */
+            effective_from: string;
+            /** Effective To */
+            effective_to?: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "calculated" | "manual" | "trainer" | "adaptive";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Note */
+            note?: string | null;
+            /** Superseded By Id */
+            superseded_by_id?: number | null;
             /** Sex */
-            sex: string;
+            sex?: string | null;
             /** Weight Kg */
-            weight_kg: number;
+            weight_kg?: number | null;
             /** Height Cm */
-            height_cm: number;
+            height_cm?: number | null;
             /** Age */
-            age: number;
+            age?: number | null;
             /** Daily Routine */
-            daily_routine: string;
+            daily_routine?: string | null;
             /** Steps Range */
-            steps_range: string;
+            steps_range?: string | null;
             /** Strength Trainings Per Week */
-            strength_trainings_per_week: number;
+            strength_trainings_per_week?: number | null;
             /** Strength Training Duration Minutes */
-            strength_training_duration_minutes: number;
+            strength_training_duration_minutes?: number | null;
             /** Strength Training Type */
-            strength_training_type: string;
+            strength_training_type?: string | null;
             /** Strength Rest */
             strength_rest: string | null;
             /** Cardio Trainings */
-            cardio_trainings: components["schemas"]["CardioTraining"][];
+            cardio_trainings?: components["schemas"]["CardioTraining"][];
             /** Goal */
-            goal: string;
+            goal?: string | null;
             /** Bmr */
-            bmr: number;
+            bmr?: number | null;
             /** Tdee */
-            tdee: number;
+            tdee?: number | null;
             /** Calories */
             calories: number;
             /** Protein G */
@@ -4056,20 +4157,25 @@ export interface components {
              * Format: date-time
              */
             saved_at: string;
+            created_by?: components["schemas"]["NutritionAssignedByResponse"] | null;
             assigned_by?: components["schemas"]["NutritionAssignedByResponse"] | null;
             /** Daily Activity Level */
-            daily_activity_level: string;
+            daily_activity_level?: string | null;
             /** Cardio Trainings Per Week */
-            cardio_trainings_per_week: number;
+            cardio_trainings_per_week?: number | null;
             /** Cardio Training Duration Minutes */
-            cardio_training_duration_minutes: number;
+            cardio_training_duration_minutes?: number | null;
             /** Cardio Intensity */
-            cardio_intensity: string;
+            cardio_intensity?: string | null;
         };
         /** NutritionTargetSave */
         NutritionTargetSave: {
             /** Target Telegram User Id */
             target_telegram_user_id?: number | null;
+            /** Effective From */
+            effective_from?: string | null;
+            /** Note */
+            note?: string | null;
             /**
              * Sex
              * @enum {string}
@@ -9755,6 +9861,90 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NutritionTargetResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_manual_target_api_v1_nutrition_targets_manual_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NutritionManualTargetSave"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NutritionTargetResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    current_target_api_v1_nutrition_targets_current_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NutritionTargetResponse"] | null;
+                };
+            };
+        };
+    };
+    target_history_api_v1_nutrition_targets_history_get: {
+        parameters: {
+            query?: {
+                target_telegram_user_id?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NutritionTargetHistoryResponse"];
                 };
             };
             /** @description Validation Error */

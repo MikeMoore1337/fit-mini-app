@@ -3,6 +3,7 @@ import {
   expectNoHorizontalOverflow,
   expectNoOverlap,
   expectTouchTargets,
+  installTelegramHarness,
   MOBILE_CONTEXTS,
   setNetworkOffline,
   sharedSurfaceSignature,
@@ -410,6 +411,165 @@ test('nutrition quick paths recover in TMA and match Mobile Web before core navi
   await expectNoHorizontalOverflow(tmaPage);
 });
 
+test('manual nutrition targets validate, preserve keyboard flow and expose effective history in Mobile Web and TMA', async ({
+  mobilePage,
+  tma,
+  tmaPage,
+}) => {
+  const api = await installPlatformApi(tmaPage);
+  await installPlatformApi(mobilePage, {
+    browserSession: true,
+    nutritionTargetSource: 'trainer',
+  });
+  await Promise.all([
+    tmaPage.goto('/app?section=nutrition'),
+    mobilePage.goto('/app?section=nutrition'),
+  ]);
+
+  for (const currentPage of [tmaPage, mobilePage]) {
+    await currentPage.getByRole('heading', { name: 'КБЖУ', exact: true }).click();
+    if (currentPage === mobilePage) {
+      await expect(currentPage.getByText('Назначено тренером', { exact: true })).toBeVisible();
+      await expect(
+        currentPage.getByLabel('Текущие ориентиры КБЖУ').getByText('Изменил: Ирина Тренерова'),
+      ).toBeVisible();
+      await currentPage.getByRole('button', { name: 'Указать вручную' }).click();
+    }
+    await expect(currentPage.getByRole('button', { name: 'Указать вручную' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await expect(
+      currentPage.getByText(currentPage === mobilePage ? 'Назначено тренером' : 'Указано вручную', {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      currentPage.getByLabel('Текущие ориентиры КБЖУ').getByText('Ориентир для текущего этапа'),
+    ).toBeVisible();
+    await expectNoHorizontalOverflow(currentPage);
+  }
+  expect(await sharedSurfaceSignature(tmaPage)).toEqual(await sharedSurfaceSignature(mobilePage));
+
+  const calories = tmaPage.getByRole('spinbutton', { name: 'Калории, ккал' });
+  const protein = tmaPage.getByRole('spinbutton', { name: 'Белки, г' });
+  const fat = tmaPage.getByRole('spinbutton', { name: 'Жиры, г' });
+  const carbs = tmaPage.getByRole('spinbutton', { name: 'Углеводы, г' });
+  await calories.fill('1200');
+  await protein.fill('200');
+  await fat.fill('100');
+  await carbs.fill('200');
+  const save = tmaPage.getByRole('button', { name: 'Сохранить ручные ориентиры' });
+  await expect(tmaPage.getByRole('alert')).toContainText('Проверьте разницу: 1300 ккал');
+  await expect(save).toBeDisabled();
+  await tmaPage.getByRole('checkbox', { name: /Сохранить значения/ }).check();
+
+  await tma.setSafeArea({ top: 24, right: 2, bottom: 22, left: 2 });
+  await tma.setContentSafeArea({ top: 36, right: 0, bottom: 18, left: 0 });
+  await carbs.focus();
+  await tma.setViewport(560, MOBILE_CONTEXTS.baseline.height, false);
+  await expect(tmaPage.locator('#appBottomNav')).toBeHidden();
+  await save.scrollIntoViewIfNeeded();
+  await expect(save).toBeInViewport();
+  await expectNoHorizontalOverflow(tmaPage);
+  await tma.setTheme('dark');
+  await tma.setActive(false);
+  await tma.setActive(true);
+  await expect(calories).toHaveValue('1200');
+  await expect(tmaPage.getByRole('checkbox', { name: /Сохранить значения/ })).toBeChecked();
+
+  await save.click();
+  await expect(tmaPage.getByText('Ручные ориентиры КБЖУ сохранены')).toBeVisible();
+  await expect(tmaPage.getByText('Калории 2100 → 1200 ккал')).toBeAttached();
+  expect(api.manualTargetSaves()).toBe(1);
+  expect(api.targetHistoryLength()).toBe(3);
+
+  const retry = await tmaPage.evaluate(async () => {
+    const response = await fetch('/api/v1/nutrition/targets/manual', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        calories: 1200,
+        protein_g: 200,
+        fat_g: 100,
+        carbs_g: 200,
+        effective_from: new Date().toLocaleDateString('sv-SE', {
+          timeZone: 'Europe/Moscow',
+        }),
+        note: null,
+        confirm_energy_mismatch: true,
+      }),
+    });
+    return { status: response.status, id: (await response.json()).id };
+  });
+  expect(retry.status).toBe(200);
+  expect(api.manualTargetSaves()).toBe(2);
+  expect(api.targetHistoryLength()).toBe(3);
+
+  const targetCard = tmaPage.locator('#nutrition-target-settings > details');
+  if ((await targetCard.getAttribute('open')) === null) {
+    await tmaPage.getByRole('heading', { name: 'КБЖУ', exact: true }).click();
+  }
+  for (const viewport of Object.values(MOBILE_CONTEXTS)) {
+    await tmaPage.setViewportSize(viewport);
+    await tma.setViewport(viewport.height, viewport.height);
+    await expectNoHorizontalOverflow(tmaPage);
+    await expectTouchTargets(tmaPage.locator('.nutrition-target-mode > button'));
+  }
+});
+
+test('manual nutrition target history screenshots cover all responsive surfaces and themes', async ({
+  browser,
+}) => {
+  const cases = [
+    { surface: 'mobile-web', width: 360, height: 800, theme: 'light' },
+    { surface: 'mobile-web', width: 390, height: 844, theme: 'dark' },
+    { surface: 'mobile-web', width: 430, height: 932, theme: 'light' },
+    { surface: 'mobile-web', width: 768, height: 900, theme: 'dark' },
+    { surface: 'desktop-web', width: 1440, height: 900, theme: 'light' },
+    { surface: 'tma-mock', width: 360, height: 800, theme: 'dark' },
+    { surface: 'tma-mock', width: 390, height: 844, theme: 'light' },
+    { surface: 'tma-mock', width: 430, height: 932, theme: 'dark' },
+  ] as const;
+
+  for (const current of cases) {
+    const page = await browser.newPage({
+      viewport: { width: current.width, height: current.height },
+      hasTouch: current.width <= 768,
+      isMobile: current.width <= 430,
+      reducedMotion: 'reduce',
+    });
+    if (current.surface === 'tma-mock') {
+      await installTelegramHarness(page, {
+        colorScheme: current.theme,
+        viewportHeight: current.height,
+        viewportStableHeight: current.height,
+      });
+      await installPlatformApi(page, { nutritionTargetSource: 'trainer' });
+    } else {
+      await page.addInitScript((theme) => localStorage.setItem('app-theme', theme), current.theme);
+      await installPlatformApi(page, { browserSession: true });
+    }
+
+    await page.goto('/app?section=nutrition');
+    await page.getByRole('heading', { name: 'КБЖУ', exact: true }).click();
+    if (current.surface === 'tma-mock') {
+      await expect(page.getByText('Назначено тренером', { exact: true })).toBeVisible();
+      await page.getByRole('button', { name: 'Указать вручную' }).click();
+    }
+    await expect(page.locator('html')).toHaveAttribute('data-color-scheme', current.theme);
+    await expect(page.getByLabel('Текущие ориентиры КБЖУ')).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+
+    const targetCard = page.locator('#nutrition-target-settings > details');
+    await targetCard.scrollIntoViewIfNeeded();
+    await targetCard.screenshot({
+      path: `../.artifacts/screenshots/task-55/${current.surface}-${current.width}x${current.height}-${current.theme}.png`,
+    });
+    await page.close();
+  }
+});
+
 test('contextual help covers workout, nutrition and Progress without a TMA library', async ({
   tma,
   tmaPage,
@@ -434,6 +594,7 @@ test('contextual help covers workout, nutrition and Progress without a TMA libra
 
   await tmaPage.getByRole('link', { name: 'Питание', exact: true }).click();
   await tmaPage.getByRole('heading', { name: 'КБЖУ', exact: true }).click();
+  await tmaPage.getByRole('button', { name: 'Рассчитать ориентиры' }).click();
   const nutritionHelp = tmaPage.locator('.contextual-help').getByText('Что это?', { exact: true });
   await nutritionHelp.click();
   await expect(

@@ -48,7 +48,7 @@ if TYPE_CHECKING:
     from fitminiapp_api.models.recipe import RecipeIngredient
 
 
-ACCOUNT_EXPORT_SCHEMA_VERSION = 1
+ACCOUNT_EXPORT_SCHEMA_VERSION = 2
 
 # Every ORM table whose rows can be reached from users through ownership or actor FKs must be
 # classified here. Tests compare this inventory with SQLAlchemy metadata so a new persistent user
@@ -152,6 +152,13 @@ SNAPSHOT_NUTRIENT_FIELDS = (
 
 NUTRITION_FIELDS = (
     "id",
+    "effective_from",
+    "effective_to",
+    "source",
+    "created_by_user_id",
+    "created_at",
+    "note",
+    "superseded_by_id",
     "sex",
     "weight_kg",
     "height_cm",
@@ -449,7 +456,13 @@ def build_account_export(db: Session, user: User) -> dict[str, object]:
         .order_by(BodyMeasurement.measured_on.asc(), BodyMeasurement.id.asc())
         .all()
     )
-    nutrition = db.query(NutritionTarget).filter(NutritionTarget.user_id == user.id).first()
+    nutrition_history = (
+        db.query(NutritionTarget)
+        .filter(NutritionTarget.user_id == user.id)
+        .order_by(NutritionTarget.effective_from.asc(), NutritionTarget.id.asc())
+        .all()
+    )
+    nutrition = next((row for row in nutrition_history if row.effective_to is None), None)
     energy_calibrations = (
         db.query(EnergyCalibration)
         .filter(EnergyCalibration.user_id == user.id)
@@ -671,6 +684,9 @@ def build_account_export(db: Session, user: User) -> dict[str, object]:
             else None
         ),
         "nutrition": (_fields(nutrition, NUTRITION_FIELDS) if nutrition else None),
+        "nutrition_target_history": [
+            _fields(target, NUTRITION_FIELDS) for target in nutrition_history
+        ],
         "energy_calibrations": [
             _fields(row, ENERGY_CALIBRATION_FIELDS) for row in energy_calibrations
         ],

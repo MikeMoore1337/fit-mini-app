@@ -181,7 +181,9 @@ def test_measurement_chronology_reconciles_current_state_and_preserves_future_hi
             .count()
             == 1
         )
-        assert db.query(NutritionTarget).filter(NutritionTarget.user_id == owner_id).count() == 1
+        targets = db.query(NutritionTarget).filter(NutritionTarget.user_id == owner_id).all()
+        assert len(targets) == 4
+        assert sum(target.effective_to is None for target in targets) == 1
 
 
 @pytest.mark.skipif(engine.dialect.name != "postgresql", reason="requires PostgreSQL concurrency")

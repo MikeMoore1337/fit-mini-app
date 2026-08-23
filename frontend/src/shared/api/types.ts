@@ -41,6 +41,7 @@ export type RecipeList = ApiSchemas['RecipeListResponse'];
 export type RecipeCreate = ApiSchemas['RecipeCreate'];
 export type FoodDiaryCopyResponse = ApiSchemas['FoodDiaryCopyResponse'];
 export type NutritionTarget = ApiSchemas['NutritionTargetResponse'];
+export type NutritionTargetHistory = ApiSchemas['NutritionTargetHistoryResponse'];
 export type NutritionTargetSave = ApiSchemas['NutritionTargetSave'];
 export type EnergyCalibration = ApiSchemas['EnergyCalibrationResponse'];
 export type EnergyCalibrationHistory = ApiSchemas['EnergyCalibrationHistoryResponse'];

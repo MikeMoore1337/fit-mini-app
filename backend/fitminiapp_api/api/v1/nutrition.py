@@ -31,6 +31,8 @@ from fitminiapp_api.schemas.nutrition import (
     EnergyCalibrationDecision,
     EnergyCalibrationHistoryResponse,
     EnergyCalibrationResponse,
+    NutritionManualTargetSave,
+    NutritionTargetHistoryResponse,
     NutritionTargetResponse,
     NutritionTargetSave,
 )
@@ -77,7 +79,16 @@ from fitminiapp_api.services.foods import (
     set_food_favorite,
     update_user_food,
 )
-from fitminiapp_api.services.nutrition import NutritionError, save_nutrition_target
+from fitminiapp_api.services.nutrition import (
+    NutritionConflictError,
+    NutritionEnergyMismatchError,
+    NutritionError,
+    build_nutrition_target_response_for_user,
+    get_current_nutrition_target,
+    list_nutrition_target_history,
+    save_manual_nutrition_target,
+    save_nutrition_target,
+)
 from fitminiapp_api.services.recipes import (
     RecipeError,
     RecipeNotFoundError,
@@ -502,6 +513,69 @@ def save_target(
 ):
     try:
         return save_nutrition_target(db, current_user, payload)
+    except NutritionError as exc:
+        detail = str(exc)
+        if detail == "Target user not found":
+            raise HTTPException(status_code=404, detail=detail)
+        if detail == "No permission to manage this user":
+            raise HTTPException(status_code=403, detail=detail)
+        if isinstance(exc, NutritionConflictError):
+            raise HTTPException(status_code=409, detail=detail)
+        raise HTTPException(status_code=400, detail=detail)
+
+
+@router.post("/targets/manual", response_model=NutritionTargetResponse)
+def save_manual_target(
+    payload: NutritionManualTargetSave,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        return save_manual_nutrition_target(db, current_user, payload)
+    except NutritionError as exc:
+        detail = str(exc)
+        if detail == "Target user not found":
+            raise HTTPException(status_code=404, detail=detail)
+        if detail == "No permission to manage this user":
+            raise HTTPException(status_code=403, detail=detail)
+        if isinstance(exc, NutritionEnergyMismatchError):
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "nutrition_energy_mismatch",
+                    "message": detail,
+                    "implied_energy_kcal": exc.implied_energy_kcal,
+                    "difference_kcal": exc.difference_kcal,
+                },
+            )
+        if isinstance(exc, NutritionConflictError):
+            raise HTTPException(status_code=409, detail=detail)
+        raise HTTPException(status_code=400, detail=detail)
+
+
+@router.get("/targets/current", response_model=NutritionTargetResponse | None)
+def current_target(
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    target = get_current_nutrition_target(db, current_user.id)
+    return build_nutrition_target_response_for_user(db, target, current_user)
+
+
+@router.get("/targets/history", response_model=NutritionTargetHistoryResponse)
+def target_history(
+    target_telegram_user_id: int | None = Query(default=None, ge=1),
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        return {
+            "items": list_nutrition_target_history(
+                db,
+                current_user,
+                target_telegram_user_id,
+            )
+        }
     except NutritionError as exc:
         detail = str(exc)
         if detail == "Target user not found":

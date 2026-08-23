@@ -10,8 +10,12 @@ const apiMock = vi.hoisted(() => vi.fn());
 vi.mock('../../../../src/shared/api/client', () => ({ api: apiMock }));
 
 const target: NutritionTarget = {
+  id: 1,
   user_id: 10,
   telegram_user_id: 1001,
+  effective_from: '2026-08-19',
+  source: 'calculated',
+  created_at: '2026-08-19T10:00:00',
   sex: 'male',
   weight_kg: 80,
   height_cm: 180,
