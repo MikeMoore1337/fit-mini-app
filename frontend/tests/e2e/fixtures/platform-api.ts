@@ -20,6 +20,7 @@ export interface PlatformApiController {
   targetHistoryLength(): number;
   weeklyDecisionCalls(): string[];
   weeklyReviewSubmits(): number;
+  nutritionReportPeriods(): string[];
   workoutValues(): { actualReps: number | null; actualWeight: number | null; completed: boolean };
   completionFeedback(): { feedback: string | null; note: string | null };
 }
@@ -74,6 +75,7 @@ export async function installPlatformApi(
   let manualTargetSaves = 0;
   let weeklyReviewSubmits = 0;
   const weeklyDecisions: string[] = [];
+  const requestedNutritionReportPeriods: string[] = [];
   let setVersion = 1;
   let setValues = {
     actualReps: workoutStatus === 'completed' ? 8 : (null as number | null),
@@ -313,6 +315,145 @@ export async function installPlatformApi(
     data_sufficiency: {},
   });
 
+  const nutritionReport = (period = 'days_7') => {
+    const dates = Array.from({ length: 7 }, (_, index) => {
+      const value = new Date(todayDate);
+      value.setUTCDate(todayDate.getUTCDate() - (6 - index));
+      return value.toISOString().slice(0, 10);
+    });
+    const changeDate = dates[3]!;
+    const statuses = [
+      'complete',
+      'missing',
+      'complete',
+      'missing',
+      'fasted',
+      'incomplete',
+      'missing',
+    ] as const;
+    const daily = dates.map((diaryDate, index) => {
+      const status = statuses[index]!;
+      const targetCalories = diaryDate < changeDate ? 2100 : 1950;
+      const targetProtein = diaryDate < changeDate ? 140 : 135;
+      const logged = status === 'complete' || status === 'fasted';
+      const calories =
+        status === 'fasted'
+          ? 0
+          : status === 'complete'
+            ? 2050 - index * 35
+            : status === 'incomplete'
+              ? 720
+              : null;
+      const protein =
+        status === 'fasted'
+          ? 0
+          : status === 'complete'
+            ? 145 - index * 2
+            : status === 'incomplete'
+              ? 48
+              : null;
+      const fat =
+        status === 'fasted'
+          ? 0
+          : status === 'complete'
+            ? 68 - index
+            : status === 'incomplete'
+              ? 25
+              : null;
+      const carbs =
+        status === 'fasted'
+          ? 0
+          : status === 'complete'
+            ? 210 - index * 3
+            : status === 'incomplete'
+              ? 82
+              : null;
+      return {
+        diary_date: diaryDate,
+        status,
+        is_current_day: diaryDate === today,
+        calories,
+        protein_g: protein,
+        fat_g: fat,
+        carbs_g: carbs,
+        target_calories: targetCalories,
+        target_protein_g: targetProtein,
+        target_fat_g: diaryDate < changeDate ? 70 : 65,
+        target_carbs_g: diaryDate < changeDate ? 230 : 210,
+        calorie_deviation: logged && calories != null ? calories - targetCalories : null,
+        protein_deviation_g: logged && protein != null ? protein - targetProtein : null,
+        fat_deviation_g: logged && fat != null ? fat - (diaryDate < changeDate ? 70 : 65) : null,
+        carbs_deviation_g:
+          logged && carbs != null ? carbs - (diaryDate < changeDate ? 230 : 210) : null,
+        within_calorie_tolerance:
+          logged && calories != null
+            ? Math.abs(calories - targetCalories) <= targetCalories * 0.1
+            : null,
+        meets_protein_target: logged && protein != null ? protein >= targetProtein : null,
+        target_changed: diaryDate === changeDate,
+      };
+    });
+    return {
+      period,
+      period_start: dates[0],
+      period_end: dates[6],
+      timezone: 'Europe/Moscow',
+      summary: {
+        logged_days: 3,
+        eligible_days: 7,
+        coverage_percent: 42.9,
+        complete_days: 2,
+        incomplete_days: 1,
+        fasted_days: 1,
+        missing_days: 3,
+        current_day_status: 'missing',
+        calories: { average: 1342, minimum: 0, maximum: 2050, sample_days: 3 },
+        protein_g: { average: 95, minimum: 0, maximum: 145, sample_days: 3 },
+        fat_g: { average: 44, minimum: 0, maximum: 68, sample_days: 3 },
+        carbs_g: { average: 137, minimum: 0, maximum: 210, sample_days: 3 },
+        calorie_comparison: {
+          average_actual: 1342,
+          average_target: 2000,
+          average_deviation: -658,
+          evaluated_days: 3,
+        },
+        protein_comparison: {
+          average_actual: 95,
+          average_target: 136.7,
+          average_deviation: -41.7,
+          evaluated_days: 3,
+        },
+        fat_comparison: {
+          average_actual: 44,
+          average_target: 66.7,
+          average_deviation: -22.7,
+          evaluated_days: 3,
+        },
+        carbs_comparison: {
+          average_actual: 137,
+          average_target: 216.7,
+          average_deviation: -79.7,
+          evaluated_days: 3,
+        },
+        days_within_calorie_tolerance: 2,
+        calorie_tolerance_evaluated_days: 3,
+        days_meeting_protein_target: 1,
+        protein_target_evaluated_days: 3,
+      },
+      daily,
+      target_changes: [
+        {
+          effective_from: changeDate,
+          source: 'adaptive',
+          calories: 1950,
+          protein_g: 135,
+          fat_g: 65,
+          carbs_g: 210,
+        },
+      ],
+    };
+  };
+
   await page.route('**/api/v1/**', async (route: Route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -463,6 +604,18 @@ export async function installPlatformApi(
     }
     if (path.endsWith('/workouts/progress/summary')) {
       return route.fulfill({ json: progressSummary() });
+    }
+    if (path.endsWith('/workouts/progress/nutrition-report')) {
+      const period = url.searchParams.get('period') ?? 'days_7';
+      requestedNutritionReportPeriods.push(period);
+      return route.fulfill({ json: nutritionReport(period) });
+    }
+    if (path.endsWith('/workouts/progress/nutrition-report.csv')) {
+      return route.fulfill({
+        body: '\ufeffrow_type,period_start,period_end\nsummary,' + today + ',' + today + '\n',
+        contentType: 'text/csv; charset=utf-8',
+        headers: { 'Content-Disposition': 'attachment; filename="nutrition-report.csv"' },
+      });
     }
     if (path.endsWith('/check-ins/weekly/current')) {
       return route.fulfill({
@@ -762,6 +915,9 @@ export async function installPlatformApi(
     },
     weeklyReviewSubmits() {
       return weeklyReviewSubmits;
+    },
+    nutritionReportPeriods() {
+      return [...requestedNutritionReportPeriods];
     },
     workoutValues() {
       return { ...setValues };

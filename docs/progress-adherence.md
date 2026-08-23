@@ -5,6 +5,8 @@ API сводки за период — серверный источник ис�
 
 Версионированный snapshot этой сводки для локальной календарной недели описан в
 [`weekly-check-ins.md`](weekly-check-ins.md).
+Отдельный отчёт по фактическому дневнику, историческим целям и произвольному периоду описан в
+[`nutrition-period-reports.md`](nutrition-period-reports.md).
 
 - `GET /api/v1/workouts/progress/summary?period_days=30` — данные авторизованного пользователя;
 - `GET /api/v1/coach/clients/{client_id}/summary?period_days=30` — данные одного клиента,

@@ -847,6 +847,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/coach/clients/{client_id}/nutrition-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Coach Client Nutrition Report */
+        get: operations["coach_client_nutrition_report_api_v1_coach_clients__client_id__nutrition_report_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/coach/clients/{client_id}/nutrition-report.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Coach Client Nutrition Report Export */
+        get: operations["coach_client_nutrition_report_export_api_v1_coach_clients__client_id__nutrition_report_csv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/coach/clients/{client_id}/weekly-check-ins": {
         parameters: {
             query?: never;
@@ -1218,6 +1252,40 @@ export interface paths {
         };
         /** Workout Progress Summary */
         get: operations["workout_progress_summary_api_v1_workouts_progress_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/progress/nutrition-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Workout Nutrition Report */
+        get: operations["workout_nutrition_report_api_v1_workouts_progress_nutrition_report_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/progress/nutrition-report.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Workout Nutrition Report Export */
+        get: operations["workout_nutrition_report_export_api_v1_workouts_progress_nutrition_report_csv_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4095,6 +4163,158 @@ export interface components {
             target_protein_g?: number | null;
             /** Target Effective On */
             target_effective_on?: string | null;
+        };
+        /** NutritionReportDailyPoint */
+        NutritionReportDailyPoint: {
+            /**
+             * Diary Date
+             * Format: date
+             */
+            diary_date: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "complete" | "incomplete" | "fasted" | "missing";
+            /** Is Current Day */
+            is_current_day: boolean;
+            /** Calories */
+            calories?: number | null;
+            /** Protein G */
+            protein_g?: number | null;
+            /** Fat G */
+            fat_g?: number | null;
+            /** Carbs G */
+            carbs_g?: number | null;
+            /** Target Calories */
+            target_calories?: number | null;
+            /** Target Protein G */
+            target_protein_g?: number | null;
+            /** Target Fat G */
+            target_fat_g?: number | null;
+            /** Target Carbs G */
+            target_carbs_g?: number | null;
+            /** Calorie Deviation */
+            calorie_deviation?: number | null;
+            /** Protein Deviation G */
+            protein_deviation_g?: number | null;
+            /** Fat Deviation G */
+            fat_deviation_g?: number | null;
+            /** Carbs Deviation G */
+            carbs_deviation_g?: number | null;
+            /** Within Calorie Tolerance */
+            within_calorie_tolerance?: boolean | null;
+            /** Meets Protein Target */
+            meets_protein_target?: boolean | null;
+            /**
+             * Target Changed
+             * @default false
+             */
+            target_changed: boolean;
+        };
+        /** NutritionReportMetricSummary */
+        NutritionReportMetricSummary: {
+            /** Average */
+            average?: number | null;
+            /** Minimum */
+            minimum?: number | null;
+            /** Maximum */
+            maximum?: number | null;
+            /** Sample Days */
+            sample_days: number;
+        };
+        /**
+         * NutritionReportPeriod
+         * @enum {string}
+         */
+        NutritionReportPeriod: "days_7" | "days_30" | "days_90" | "current_week" | "current_month" | "previous_month" | "custom";
+        /** NutritionReportResponse */
+        NutritionReportResponse: {
+            period: components["schemas"]["NutritionReportPeriod"];
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /** Timezone */
+            timezone: string;
+            summary: components["schemas"]["NutritionReportSummary"];
+            /** Daily */
+            daily: components["schemas"]["NutritionReportDailyPoint"][];
+            /** Target Changes */
+            target_changes: components["schemas"]["NutritionReportTargetChange"][];
+        };
+        /** NutritionReportSummary */
+        NutritionReportSummary: {
+            /** Logged Days */
+            logged_days: number;
+            /** Eligible Days */
+            eligible_days: number;
+            /** Coverage Percent */
+            coverage_percent: number;
+            /** Complete Days */
+            complete_days: number;
+            /** Incomplete Days */
+            incomplete_days: number;
+            /** Fasted Days */
+            fasted_days: number;
+            /** Missing Days */
+            missing_days: number;
+            /** Current Day Status */
+            current_day_status?: ("complete" | "incomplete" | "fasted" | "missing") | null;
+            calories: components["schemas"]["NutritionReportMetricSummary"];
+            protein_g: components["schemas"]["NutritionReportMetricSummary"];
+            fat_g: components["schemas"]["NutritionReportMetricSummary"];
+            carbs_g: components["schemas"]["NutritionReportMetricSummary"];
+            calorie_comparison: components["schemas"]["NutritionReportTargetComparison"];
+            protein_comparison: components["schemas"]["NutritionReportTargetComparison"];
+            fat_comparison: components["schemas"]["NutritionReportTargetComparison"];
+            carbs_comparison: components["schemas"]["NutritionReportTargetComparison"];
+            /** Days Within Calorie Tolerance */
+            days_within_calorie_tolerance: number;
+            /** Calorie Tolerance Evaluated Days */
+            calorie_tolerance_evaluated_days: number;
+            /** Days Meeting Protein Target */
+            days_meeting_protein_target: number;
+            /** Protein Target Evaluated Days */
+            protein_target_evaluated_days: number;
+        };
+        /** NutritionReportTargetChange */
+        NutritionReportTargetChange: {
+            /**
+             * Effective From
+             * Format: date
+             */
+            effective_from: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "calculated" | "manual" | "trainer" | "adaptive";
+            /** Calories */
+            calories: number;
+            /** Protein G */
+            protein_g: number;
+            /** Fat G */
+            fat_g: number;
+            /** Carbs G */
+            carbs_g: number;
+        };
+        /** NutritionReportTargetComparison */
+        NutritionReportTargetComparison: {
+            /** Average Actual */
+            average_actual?: number | null;
+            /** Average Target */
+            average_target?: number | null;
+            /** Average Deviation */
+            average_deviation?: number | null;
+            /** Evaluated Days */
+            evaluated_days: number;
         };
         /** NutritionTargetHistoryResponse */
         NutritionTargetHistoryResponse: {
@@ -7892,6 +8112,76 @@ export interface operations {
             };
         };
     };
+    coach_client_nutrition_report_api_v1_coach_clients__client_id__nutrition_report_get: {
+        parameters: {
+            query?: {
+                period?: components["schemas"]["NutritionReportPeriod"];
+                date_from?: string | null;
+                date_to?: string | null;
+            };
+            header?: never;
+            path: {
+                client_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NutritionReportResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    coach_client_nutrition_report_export_api_v1_coach_clients__client_id__nutrition_report_csv_get: {
+        parameters: {
+            query?: {
+                period?: components["schemas"]["NutritionReportPeriod"];
+                date_from?: string | null;
+                date_to?: string | null;
+            };
+            header?: never;
+            path: {
+                client_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     coach_client_weekly_check_ins_api_v1_coach_clients__client_id__weekly_check_ins_get: {
         parameters: {
             query?: {
@@ -8608,6 +8898,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProgressSummaryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    workout_nutrition_report_api_v1_workouts_progress_nutrition_report_get: {
+        parameters: {
+            query?: {
+                period?: components["schemas"]["NutritionReportPeriod"];
+                date_from?: string | null;
+                date_to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NutritionReportResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    workout_nutrition_report_export_api_v1_workouts_progress_nutrition_report_csv_get: {
+        parameters: {
+            query?: {
+                period?: components["schemas"]["NutritionReportPeriod"];
+                date_from?: string | null;
+                date_to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

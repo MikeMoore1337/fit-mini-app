@@ -20,10 +20,10 @@ Use one fresh Codex chat per task. Select model/reasoning manually according to 
 
 ## Current start
 
-Текущая task после подтверждённо завершённых и перенесённых в `tasks/done/` задач `00-55`:
+Текущая task после подтверждённо завершённых и перенесённых в `tasks/done/` задач `00-57`:
 
 ```text
-Выполни `codex-backlog/tasks/56-unified-weekly-review-adaptive-energy.md`.
+Выполни `codex-backlog/tasks/58-workout-adaptation-experience.md`.
 ```
 
-После успешного завершения `56` следующая task — `57`. Не переходить к ней в той же сессии.
+После успешного завершения `58` следующая task — `59`. Не переходить к ней в той же сессии.

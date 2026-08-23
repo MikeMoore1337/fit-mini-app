@@ -1,0 +1,440 @@
+from __future__ import annotations
+
+import csv
+import io
+from dataclasses import dataclass
+from datetime import date, timedelta
+from decimal import Decimal
+
+from sqlalchemy import and_, case, func, or_
+from sqlalchemy.orm import Session
+
+from fitminiapp_api.core.timezone import today_for_user
+from fitminiapp_api.models.food_diary import FoodDiaryDayStatus, FoodDiaryEntry
+from fitminiapp_api.models.nutrition import NutritionTarget
+from fitminiapp_api.models.user import User
+from fitminiapp_api.schemas.progress import NutritionReportPeriod
+from fitminiapp_api.services.progress import is_calorie_target_met, is_protein_target_met
+
+MAX_REPORT_DAYS = 366
+METRICS = ("calories", "protein_g", "fat_g", "carbs_g")
+
+
+class NutritionReportError(ValueError):
+    pass
+
+
+@dataclass(frozen=True)
+class ReportBounds:
+    period: NutritionReportPeriod
+    start: date
+    end: date
+
+
+@dataclass(frozen=True)
+class AggregatedDiaryDay:
+    diary_date: date
+    calories: Decimal | None
+    protein_g: Decimal | None
+    fat_g: Decimal | None
+    carbs_g: Decimal | None
+    has_entries: bool
+
+
+def resolve_report_bounds(
+    user: User,
+    period: NutritionReportPeriod,
+    *,
+    date_from: date | None = None,
+    date_to: date | None = None,
+) -> ReportBounds:
+    today = today_for_user(user)
+    if period == NutritionReportPeriod.CUSTOM:
+        if date_from is None or date_to is None:
+            raise NutritionReportError("Для произвольного периода укажите обе даты")
+        start, end = date_from, date_to
+    else:
+        if date_from is not None or date_to is not None:
+            raise NutritionReportError("Даты можно передавать только для произвольного периода")
+        if period == NutritionReportPeriod.DAYS_7:
+            start, end = today - timedelta(days=6), today
+        elif period == NutritionReportPeriod.DAYS_30:
+            start, end = today - timedelta(days=29), today
+        elif period == NutritionReportPeriod.DAYS_90:
+            start, end = today - timedelta(days=89), today
+        elif period == NutritionReportPeriod.CURRENT_WEEK:
+            start, end = today - timedelta(days=today.weekday()), today
+        elif period == NutritionReportPeriod.CURRENT_MONTH:
+            start, end = today.replace(day=1), today
+        elif period == NutritionReportPeriod.PREVIOUS_MONTH:
+            previous_end = today.replace(day=1) - timedelta(days=1)
+            start = previous_end.replace(day=1)
+            end = previous_end
+        else:  # pragma: no cover - enum validation owns this boundary
+            raise NutritionReportError("Неизвестный период отчёта")
+
+    if end < start:
+        raise NutritionReportError("Дата окончания не может быть раньше даты начала")
+    if end > today:
+        raise NutritionReportError("Отчёт нельзя построить за будущие даты")
+    if (end - start).days + 1 > MAX_REPORT_DAYS:
+        raise NutritionReportError(f"Период отчёта не может превышать {MAX_REPORT_DAYS} дней")
+    return ReportBounds(period=period, start=start, end=end)
+
+
+def _entry_value(quick_column, regular_column):
+    return case(
+        (FoodDiaryEntry.entry_kind == "quick_add", quick_column),
+        else_=FoodDiaryEntry.weight_g * regular_column / 100,
+    )
+
+
+def _aggregated_diary_days(
+    db: Session,
+    user_id: int,
+    bounds: ReportBounds,
+) -> dict[date, AggregatedDiaryDay]:
+    calories = _entry_value(
+        FoodDiaryEntry.quick_energy_kcal,
+        FoodDiaryEntry.energy_kcal_per_100g,
+    )
+    protein = _entry_value(FoodDiaryEntry.quick_protein_g, FoodDiaryEntry.protein_g_per_100g)
+    fat = _entry_value(FoodDiaryEntry.quick_fat_g, FoodDiaryEntry.fat_g_per_100g)
+    carbs = _entry_value(FoodDiaryEntry.quick_carbs_g, FoodDiaryEntry.carbs_g_per_100g)
+    missing_macros = case(
+        (
+            and_(
+                FoodDiaryEntry.entry_kind == "quick_add",
+                FoodDiaryEntry.quick_protein_g.is_(None),
+            ),
+            1,
+        ),
+        else_=0,
+    )
+    rows = (
+        db.query(
+            FoodDiaryEntry.diary_date,
+            func.sum(calories).label("calories"),
+            func.sum(protein).label("protein_g"),
+            func.sum(fat).label("fat_g"),
+            func.sum(carbs).label("carbs_g"),
+            func.sum(missing_macros).label("missing_macro_count"),
+        )
+        .filter(
+            FoodDiaryEntry.user_id == user_id,
+            FoodDiaryEntry.diary_date.between(bounds.start, bounds.end),
+        )
+        .group_by(FoodDiaryEntry.diary_date)
+        .order_by(FoodDiaryEntry.diary_date)
+        .all()
+    )
+    result: dict[date, AggregatedDiaryDay] = {}
+    for row in rows:
+        macros_missing = bool(row.missing_macro_count)
+        result[row.diary_date] = AggregatedDiaryDay(
+            diary_date=row.diary_date,
+            calories=Decimal(row.calories) if row.calories is not None else None,
+            protein_g=None if macros_missing else Decimal(row.protein_g),
+            fat_g=None if macros_missing else Decimal(row.fat_g),
+            carbs_g=None if macros_missing else Decimal(row.carbs_g),
+            has_entries=True,
+        )
+    return result
+
+
+def _effective_target(
+    targets: list[NutritionTarget],
+    diary_date: date,
+) -> NutritionTarget | None:
+    return next(
+        (
+            target
+            for target in targets
+            if target.effective_from <= diary_date
+            and (target.effective_to is None or diary_date < target.effective_to)
+        ),
+        None,
+    )
+
+
+def _metric_summary(points: list[dict], metric: str) -> dict:
+    values = [point[metric] for point in points if point[metric] is not None]
+    if not values:
+        return {"average": None, "minimum": None, "maximum": None, "sample_days": 0}
+    return {
+        "average": round(sum(values) / len(values), 1),
+        "minimum": round(min(values), 1),
+        "maximum": round(max(values), 1),
+        "sample_days": len(values),
+    }
+
+
+def _target_comparison(points: list[dict], metric: str, target_metric: str) -> dict:
+    comparable = [
+        point for point in points if point[metric] is not None and point[target_metric] is not None
+    ]
+    if not comparable:
+        return {
+            "average_actual": None,
+            "average_target": None,
+            "average_deviation": None,
+            "evaluated_days": 0,
+        }
+    actual = sum(point[metric] for point in comparable) / len(comparable)
+    target = sum(point[target_metric] for point in comparable) / len(comparable)
+    return {
+        "average_actual": round(actual, 1),
+        "average_target": round(target, 1),
+        "average_deviation": round(actual - target, 1),
+        "evaluated_days": len(comparable),
+    }
+
+
+def build_nutrition_report(
+    db: Session,
+    user: User,
+    period: NutritionReportPeriod,
+    *,
+    date_from: date | None = None,
+    date_to: date | None = None,
+) -> dict:
+    bounds = resolve_report_bounds(user, period, date_from=date_from, date_to=date_to)
+    today = today_for_user(user)
+    diary_by_date = _aggregated_diary_days(db, user.id, bounds)
+    statuses = {
+        row.diary_date: row.status
+        for row in db.query(FoodDiaryDayStatus)
+        .filter(
+            FoodDiaryDayStatus.user_id == user.id,
+            FoodDiaryDayStatus.diary_date.between(bounds.start, bounds.end),
+        )
+        .all()
+    }
+    targets = (
+        db.query(NutritionTarget)
+        .filter(
+            NutritionTarget.user_id == user.id,
+            NutritionTarget.effective_from <= bounds.end,
+            or_(
+                NutritionTarget.effective_to.is_(None), NutritionTarget.effective_to > bounds.start
+            ),
+        )
+        .order_by(NutritionTarget.effective_from.desc(), NutritionTarget.id.desc())
+        .all()
+    )
+    effective_change_dates = {
+        target.effective_from
+        for target in targets
+        if bounds.start <= target.effective_from <= bounds.end
+        and (target.effective_to is None or target.effective_to > target.effective_from)
+    }
+
+    daily: list[dict] = []
+    logged_points: list[dict] = []
+    for offset in range((bounds.end - bounds.start).days + 1):
+        diary_date = bounds.start + timedelta(days=offset)
+        aggregate = diary_by_date.get(diary_date)
+        explicit_status = statuses.get(diary_date)
+        status = explicit_status or ("incomplete" if aggregate else "missing")
+        if status == "fasted" and aggregate is None:
+            aggregate = AggregatedDiaryDay(
+                diary_date=diary_date,
+                calories=Decimal(0),
+                protein_g=Decimal(0),
+                fat_g=Decimal(0),
+                carbs_g=Decimal(0),
+                has_entries=False,
+            )
+        target = _effective_target(targets, diary_date)
+        is_logged = status in {"complete", "fasted"}
+        actual = {
+            metric: round(float(getattr(aggregate, metric)), 1)
+            if aggregate is not None and getattr(aggregate, metric) is not None
+            else None
+            for metric in METRICS
+        }
+        target_values = {
+            "target_calories": target.calories if target else None,
+            "target_protein_g": target.protein_g if target else None,
+            "target_fat_g": target.fat_g if target else None,
+            "target_carbs_g": target.carbs_g if target else None,
+        }
+        comparison_actual = actual if is_logged else dict.fromkeys(METRICS)
+        point = {
+            "diary_date": diary_date,
+            "status": status,
+            "is_current_day": diary_date == today,
+            **actual,
+            **target_values,
+            "calorie_deviation": (
+                round(comparison_actual["calories"] - target.calories, 1)
+                if comparison_actual["calories"] is not None and target
+                else None
+            ),
+            "protein_deviation_g": (
+                round(comparison_actual["protein_g"] - target.protein_g, 1)
+                if comparison_actual["protein_g"] is not None and target
+                else None
+            ),
+            "fat_deviation_g": (
+                round(comparison_actual["fat_g"] - target.fat_g, 1)
+                if comparison_actual["fat_g"] is not None and target
+                else None
+            ),
+            "carbs_deviation_g": (
+                round(comparison_actual["carbs_g"] - target.carbs_g, 1)
+                if comparison_actual["carbs_g"] is not None and target
+                else None
+            ),
+            "within_calorie_tolerance": (
+                is_calorie_target_met(Decimal(str(comparison_actual["calories"])), target.calories)
+                if comparison_actual["calories"] is not None and target
+                else None
+            ),
+            "meets_protein_target": (
+                is_protein_target_met(
+                    Decimal(str(comparison_actual["protein_g"])), target.protein_g
+                )
+                if comparison_actual["protein_g"] is not None and target
+                else None
+            ),
+            "target_changed": diary_date in effective_change_dates,
+        }
+        daily.append(point)
+        if is_logged:
+            logged_points.append({**comparison_actual, **target_values, **point})
+
+    counts = {
+        status: sum(point["status"] == status for point in daily) for status in statuses_set()
+    }
+    logged_days = counts["complete"] + counts["fasted"]
+    calorie_evaluated = [point for point in daily if point["within_calorie_tolerance"] is not None]
+    protein_evaluated = [point for point in daily if point["meets_protein_target"] is not None]
+    current_day = next((point for point in daily if point["is_current_day"]), None)
+    summary = {
+        "logged_days": logged_days,
+        "eligible_days": len(daily),
+        "coverage_percent": round(logged_days * 100 / len(daily), 1),
+        "complete_days": counts["complete"],
+        "incomplete_days": counts["incomplete"],
+        "fasted_days": counts["fasted"],
+        "missing_days": counts["missing"],
+        "current_day_status": current_day["status"] if current_day else None,
+        **{metric: _metric_summary(logged_points, metric) for metric in METRICS},
+        "calorie_comparison": _target_comparison(logged_points, "calories", "target_calories"),
+        "protein_comparison": _target_comparison(logged_points, "protein_g", "target_protein_g"),
+        "fat_comparison": _target_comparison(logged_points, "fat_g", "target_fat_g"),
+        "carbs_comparison": _target_comparison(logged_points, "carbs_g", "target_carbs_g"),
+        "days_within_calorie_tolerance": sum(
+            point["within_calorie_tolerance"] is True for point in calorie_evaluated
+        ),
+        "calorie_tolerance_evaluated_days": len(calorie_evaluated),
+        "days_meeting_protein_target": sum(
+            point["meets_protein_target"] is True for point in protein_evaluated
+        ),
+        "protein_target_evaluated_days": len(protein_evaluated),
+    }
+    target_changes = [
+        {
+            "effective_from": target.effective_from,
+            "source": target.source,
+            "calories": target.calories,
+            "protein_g": target.protein_g,
+            "fat_g": target.fat_g,
+            "carbs_g": target.carbs_g,
+        }
+        for target in sorted(targets, key=lambda item: (item.effective_from, item.id))
+        if target.effective_from in effective_change_dates
+    ]
+    return {
+        "period": bounds.period,
+        "period_start": bounds.start,
+        "period_end": bounds.end,
+        "timezone": user.profile.timezone
+        if user.profile and user.profile.timezone
+        else "Europe/Moscow",
+        "summary": summary,
+        "daily": daily,
+        "target_changes": target_changes,
+    }
+
+
+def statuses_set() -> tuple[str, ...]:
+    return "complete", "incomplete", "fasted", "missing"
+
+
+def _safe_csv_value(value: object) -> object:
+    if not isinstance(value, str):
+        return value
+    if value.lstrip().startswith(("=", "+", "-", "@", "\t", "\r")):
+        return "'" + value
+    return value
+
+
+def nutrition_report_csv(report: dict) -> str:
+    columns = [
+        "row_type",
+        "period_start",
+        "period_end",
+        "diary_date",
+        "day_status",
+        "is_current_day",
+        "calories_kcal",
+        "protein_g",
+        "fat_g",
+        "carbs_g",
+        "target_calories_kcal",
+        "target_protein_g",
+        "target_fat_g",
+        "target_carbs_g",
+        "calorie_deviation_kcal",
+        "protein_deviation_g",
+        "fat_deviation_g",
+        "carbs_deviation_g",
+        "within_calorie_tolerance",
+        "meets_protein_target",
+        "target_changed",
+        "summary_logged_days",
+        "summary_eligible_days",
+        "summary_coverage_percent",
+    ]
+    output = io.StringIO(newline="")
+    writer = csv.DictWriter(output, fieldnames=columns, extrasaction="ignore", lineterminator="\n")
+    writer.writeheader()
+    summary = report["summary"]
+    writer.writerow(
+        {
+            "row_type": "summary",
+            "period_start": report["period_start"],
+            "period_end": report["period_end"],
+            "summary_logged_days": summary["logged_days"],
+            "summary_eligible_days": summary["eligible_days"],
+            "summary_coverage_percent": summary["coverage_percent"],
+        }
+    )
+    for point in report["daily"]:
+        row = {
+            "row_type": "daily",
+            "period_start": report["period_start"],
+            "period_end": report["period_end"],
+            "diary_date": point["diary_date"],
+            "day_status": point["status"],
+            "is_current_day": point["is_current_day"],
+            "calories_kcal": point["calories"],
+            "protein_g": point["protein_g"],
+            "fat_g": point["fat_g"],
+            "carbs_g": point["carbs_g"],
+            "target_calories_kcal": point["target_calories"],
+            "target_protein_g": point["target_protein_g"],
+            "target_fat_g": point["target_fat_g"],
+            "target_carbs_g": point["target_carbs_g"],
+            "calorie_deviation_kcal": point["calorie_deviation"],
+            "protein_deviation_g": point["protein_deviation_g"],
+            "fat_deviation_g": point["fat_deviation_g"],
+            "carbs_deviation_g": point["carbs_deviation_g"],
+            "within_calorie_tolerance": point["within_calorie_tolerance"],
+            "meets_protein_target": point["meets_protein_target"],
+            "target_changed": point["target_changed"],
+        }
+        writer.writerow({key: _safe_csv_value(value) for key, value in row.items()})
+    return output.getvalue()

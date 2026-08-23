@@ -8,8 +8,8 @@ Current execution order is defined only by:
 - `EXECUTION_STATUS.md`;
 - `PRIORITY_ORDER.md`;
 - `DEPENDENCY_GRAPH.md`;
-- current task `56`;
-- then tasks `57-79`, включая `76A`.
+- current task `58`;
+- then tasks `59-79`, включая `76A`.
 
 History:
 
@@ -17,4 +17,4 @@ History:
 - v9: design alternatives `49A-49G` were inserted before `50A`;
 - v10: owner status temporarily returned task `49` to `RESUME`;
 - v11: owner confirmed `00-49B` completed and inserted `49B1` as a one-time UI consistency/mobile-first normalization checkpoint before `49C`.
-- current state: owner confirmed `00-55` completed; их task-файлы перенесены в `tasks/done/`, следующая task — `56`.
+- current state: owner confirmed `00-57` completed; их task-файлы перенесены в `tasks/done/`, следующая task — `58`.

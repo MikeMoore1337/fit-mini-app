@@ -17,7 +17,7 @@
 Текущая task:
 
 ```text
-Выполни `codex-backlog/tasks/56-unified-weekly-review-adaptive-energy.md`.
+Выполни `codex-backlog/tasks/58-workout-adaptation-experience.md`.
 
 Соблюдай `AGENTS.md`, `codex-backlog/GLOBAL_RULES.md`
 и полный task lifecycle.

@@ -1,8 +1,13 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ProgressExperience } from '../../../../src/features/workouts/ProgressExperience';
-import type { ProgressSummary, TrainingAnalytics } from '../../../../src/shared/api/types';
+import type {
+  NutritionReport,
+  ProgressSummary,
+  TrainingAnalytics,
+} from '../../../../src/shared/api/types';
+import { NavigationProvider } from '../../../../src/shared/navigation/router';
 
 const signal = (
   status: 'sufficient' | 'limited' | 'insufficient',
@@ -192,6 +197,46 @@ function makeAnalytics(): TrainingAnalytics {
   };
 }
 
+function makeNutritionReport(): NutritionReport {
+  const emptyMetric = { average: null, minimum: null, maximum: null, sample_days: 0 };
+  const emptyComparison = {
+    average_actual: null,
+    average_target: null,
+    average_deviation: null,
+    evaluated_days: 0,
+  };
+  return {
+    period: 'days_30',
+    period_start: '2030-01-01',
+    period_end: '2030-01-30',
+    timezone: 'Europe/Moscow',
+    summary: {
+      logged_days: 0,
+      eligible_days: 30,
+      coverage_percent: 0,
+      complete_days: 0,
+      incomplete_days: 0,
+      fasted_days: 0,
+      missing_days: 30,
+      current_day_status: 'missing',
+      calories: emptyMetric,
+      protein_g: emptyMetric,
+      fat_g: emptyMetric,
+      carbs_g: emptyMetric,
+      calorie_comparison: emptyComparison,
+      protein_comparison: emptyComparison,
+      fat_comparison: emptyComparison,
+      carbs_comparison: emptyComparison,
+      days_within_calorie_tolerance: 0,
+      calorie_tolerance_evaluated_days: 0,
+      days_meeting_protein_target: 0,
+      protein_target_evaluated_days: 0,
+    },
+    daily: [],
+    target_changes: [],
+  };
+}
+
 function installApi({
   analytics = makeAnalytics(),
   failSummary = false,
@@ -218,6 +263,9 @@ function installApi({
     if (path.startsWith('/api/v1/workouts/progress/training-analytics')) {
       return new Response(JSON.stringify({ ...analytics, period_days: period }), { status: 200 });
     }
+    if (path.startsWith('/api/v1/workouts/progress/nutrition-report')) {
+      return new Response(JSON.stringify(makeNutritionReport()), { status: 200 });
+    }
     return new Response(JSON.stringify({ detail: 'Unexpected request' }), { status: 500 });
   });
 }
@@ -227,9 +275,11 @@ function renderExperience() {
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
-    <QueryClientProvider client={queryClient}>
-      <ProgressExperience />
-    </QueryClientProvider>,
+    <NavigationProvider>
+      <QueryClientProvider client={queryClient}>
+        <ProgressExperience />
+      </QueryClientProvider>
+    </NavigationProvider>,
   );
 }
 
@@ -262,7 +312,11 @@ describe('ProgressExperience', () => {
     renderExperience();
     await screen.findAllByText('84%');
 
-    fireEvent.click(screen.getByRole('tab', { name: '7 дней' }));
+    fireEvent.click(
+      within(screen.getByRole('tablist', { name: 'Период прогресса' })).getByRole('tab', {
+        name: '7 дней',
+      }),
+    );
 
     await waitFor(() => {
       expect(globalThis.fetch).toHaveBeenCalledWith(

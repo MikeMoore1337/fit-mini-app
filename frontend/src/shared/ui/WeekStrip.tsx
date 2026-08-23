@@ -1,5 +1,5 @@
 import { useId, type ReactNode } from 'react';
-import { calendarWeek, formatCalendarDate } from '../dateTime';
+import { addCalendarDays, calendarWeek, formatCalendarDate } from '../dateTime';
 import { AppLink } from '../navigation/router';
 import { ChevronIcon } from './common';
 
@@ -35,6 +35,8 @@ interface WeekStripCommonProps {
   navigation?: WeekStripNavigation;
   title: string;
   today: string;
+  /** Optional exact first day for rolling seven-day report contexts. */
+  rangeStart?: string;
 }
 
 type WeekStripProps = WeekStripCommonProps &
@@ -77,7 +79,9 @@ export function formatWeekRange(days: string[]): string {
 
 export function WeekStrip(props: WeekStripProps) {
   const headingId = useId();
-  const days = calendarWeek(props.anchorDate);
+  const days = props.rangeStart
+    ? Array.from({ length: 7 }, (_, index) => addCalendarDays(props.rangeStart!, index))
+    : calendarWeek(props.anchorDate);
   const isPicker = props.mode === 'picker';
   const Root = isPicker ? 'nav' : 'section';
 

@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
@@ -27,6 +28,8 @@ from fitminiapp_api.schemas.program import (
     ProgramAssignmentResponse,
 )
 from fitminiapp_api.schemas.progress import (
+    NutritionReportPeriod,
+    NutritionReportResponse,
     ProgressPeriodDays,
     ProgressSummaryResponse,
     TrainerClientProgressListResponse,
@@ -64,6 +67,11 @@ from fitminiapp_api.services.measurements import (
 )
 from fitminiapp_api.services.notifications import queue_telegram_notification
 from fitminiapp_api.services.nutrition import NutritionError
+from fitminiapp_api.services.nutrition_reports import (
+    NutritionReportError,
+    build_nutrition_report,
+    nutrition_report_csv,
+)
 from fitminiapp_api.services.profile import ProfileError, update_profile
 from fitminiapp_api.services.program_common import ProgramError, assignment_error_status
 from fitminiapp_api.services.program_versioning import upsert_future_program_exercise
@@ -230,6 +238,60 @@ def coach_client_progress_summary(
 ):
     client = _managed_client(db, current_user, client_id)
     return build_progress_summary(db, client, period_days)
+
+
+def _client_nutrition_report_or_422(
+    db: Session,
+    client: User,
+    period: NutritionReportPeriod,
+    date_from: date | None,
+    date_to: date | None,
+) -> dict:
+    try:
+        return build_nutrition_report(
+            db,
+            client,
+            period,
+            date_from=date_from,
+            date_to=date_to,
+        )
+    except NutritionReportError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc))
+
+
+@router.get(
+    "/clients/{client_id}/nutrition-report",
+    response_model=NutritionReportResponse,
+)
+def coach_client_nutrition_report(
+    client_id: int,
+    period: NutritionReportPeriod = NutritionReportPeriod.DAYS_30,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    current_user: User = Depends(require_coach),
+    db: Session = Depends(get_db),
+):
+    client = _managed_client(db, current_user, client_id)
+    return _client_nutrition_report_or_422(db, client, period, date_from, date_to)
+
+
+@router.get("/clients/{client_id}/nutrition-report.csv")
+def coach_client_nutrition_report_export(
+    client_id: int,
+    period: NutritionReportPeriod = NutritionReportPeriod.DAYS_30,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    current_user: User = Depends(require_coach),
+    db: Session = Depends(get_db),
+):
+    client = _managed_client(db, current_user, client_id)
+    report = _client_nutrition_report_or_422(db, client, period, date_from, date_to)
+    filename = f"nutrition-report-{report['period_start']}-{report['period_end']}.csv"
+    return Response(
+        content="\ufeff" + nutrition_report_csv(report),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.get(

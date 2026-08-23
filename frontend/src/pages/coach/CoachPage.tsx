@@ -6,6 +6,7 @@ import { Diary } from '../../features/diary/Diary';
 import { ClientAnalytics } from '../../features/coach/ClientAnalytics';
 import { ExerciseCatalog } from '../../features/exercises/ExerciseCatalog';
 import { NutritionForm } from '../../features/nutrition/NutritionForm';
+import { NutritionPeriodReport } from '../../features/workouts/NutritionReport';
 import { ProgramBuilder } from '../../features/programs/ProgramBuilder';
 import { AssignedProgramDetails } from '../../features/programs/AssignedProgramDetails';
 import { api } from '../../shared/api/client';
@@ -730,13 +731,18 @@ function CoachClientDetail({
             text="Раздел не показывает дневник или состав приёмов пищи без разрешённого доступа."
           />
         ) : (
-          <NutritionForm
-            key={JSON.stringify([client.id, client.kbju])}
-            clientId={client.id}
-            targetTelegramId={client.telegram_user_id}
-            initial={client.kbju}
-            timeZone={client.timezone}
-          />
+          <>
+            {client.status === 'active' && (
+              <NutritionPeriodReport key={`nutrition-report-${client.id}`} clientId={client.id} />
+            )}
+            <NutritionForm
+              key={JSON.stringify([client.id, client.kbju])}
+              clientId={client.id}
+              targetTelegramId={client.telegram_user_id}
+              initial={client.kbju}
+              timeZone={client.timezone}
+            />
+          </>
         )}
       </ClientDataSection>
 

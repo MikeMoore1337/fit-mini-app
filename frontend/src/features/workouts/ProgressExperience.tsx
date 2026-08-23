@@ -12,6 +12,7 @@ import {
   LoadingState,
   SegmentedControl,
 } from '../../shared/ui/common';
+import { NutritionPeriodReport } from './NutritionReport';
 
 type PeriodDays = 7 | 30 | 90;
 type BodyTrend = ProgressSummary['body']['trends'][number];
@@ -730,6 +731,7 @@ export function ProgressExperience() {
           <TrainingSection analytics={analytics} summary={summary.data} />
           <BodySection summary={summary.data} />
           <NutritionSection summary={summary.data} />
+          <NutritionPeriodReport />
           <AdherenceSection summary={summary.data} />
         </>
       ) : null}

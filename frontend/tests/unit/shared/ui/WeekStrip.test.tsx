@@ -11,6 +11,23 @@ vi.mock('../../../../src/shared/navigation/router', () => ({
 }));
 
 describe('WeekStrip', () => {
+  it('supports an exact rolling seven-day range for report contexts', () => {
+    render(
+      <WeekStrip
+        anchorDate="2026-08-23"
+        ariaLabel="Неделя отчёта"
+        mode="overview"
+        rangeStart="2026-08-17"
+        title="Дни отчёта"
+        today="2026-08-23"
+      />,
+    );
+
+    expect(screen.getByText('17 — 23 авг.')).toBeVisible();
+    expect(screen.getByLabelText(/понедельник, 17 августа/)).toBeVisible();
+    expect(screen.getByLabelText(/воскресенье, 23 августа, сегодня/)).toBeVisible();
+  });
+
   it('separates the selected diary date from today and navigates by week', () => {
     const onSelect = vi.fn();
     const onPrevious = vi.fn();

@@ -273,3 +273,45 @@ export async function api<T>(path: string, options: ApiOptions = {}): Promise<T>
     signal?.removeEventListener('abort', abortFromCaller);
   }
 }
+
+export interface ApiFile {
+  blob: Blob;
+  filename: string | null;
+}
+
+function responseFilename(response: Response): string | null {
+  const disposition = response.headers.get('Content-Disposition');
+  const match = disposition?.match(/filename="([^"\\/]+)"/i);
+  return match?.[1] ?? null;
+}
+
+export async function apiFile(
+  path: string,
+  { retryAuth = true }: { retryAuth?: boolean } = {},
+): Promise<ApiFile> {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), 15_000);
+  const token = getAccessToken();
+  try {
+    const response = await fetch(path, {
+      credentials: 'same-origin',
+      signal: controller.signal,
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    if (response.status === 401 && retryAuth && (await refreshAccessToken())) {
+      return apiFile(path, { retryAuth: false });
+    }
+    if (!response.ok) throw await responseError(response);
+    return { blob: await response.blob(), filename: responseFilename(response) };
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new ApiError('Сервер не ответил вовремя. Попробуйте снова.', 0);
+    }
+    if (error instanceof TypeError) {
+      throw new ApiError('Нет соединения с сервером. Проверьте интернет и попробуйте снова.', 0);
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timer);
+  }
+}

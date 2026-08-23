@@ -84,6 +84,26 @@ function requestedSection(search: string): AppSection | null {
   return requestedWorkoutFeedback(search) ? 'progress' : null;
 }
 
+function requestedNutritionDate(search: string): string | undefined {
+  const value = new URLSearchParams(search).get('date');
+  return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined;
+}
+
+function requestedProgressReturn(search: string): string | undefined {
+  const value = new URLSearchParams(search).get('return_to');
+  if (!value) return undefined;
+  try {
+    const parsed = new URL(value, window.location.origin);
+    return parsed.origin === window.location.origin &&
+      parsed.pathname === '/app' &&
+      parsed.searchParams.get('section') === 'progress'
+      ? `${parsed.pathname}${parsed.search}${parsed.hash}`
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function positiveId(value: string | null): number | null {
   if (!value || !/^\d+$/.test(value)) return null;
   const parsed = Number(value);
@@ -261,6 +281,8 @@ export default function MiniAppPage() {
               <NutritionPage
                 key={JSON.stringify(user?.profile?.kbju ?? null)}
                 initial={user?.profile?.kbju}
+                initialDate={requestedNutritionDate(search)}
+                returnPath={requestedProgressReturn(search)}
                 timeZone={user?.profile?.timezone}
                 onSaved={async () => void (await reloadUser())}
               />

@@ -131,6 +131,81 @@ function summary(
   };
 }
 
+function coachNutritionReport(url: URL) {
+  const period = url.searchParams.get('period') ?? 'days_30';
+  const dayCount = period === 'days_7' ? 7 : period === 'days_90' ? 90 : 30;
+  const periodEnd = new Date('2026-08-20T12:00:00Z');
+  const periodStart = new Date(periodEnd);
+  periodStart.setUTCDate(periodEnd.getUTCDate() - (dayCount - 1));
+  const dates = Array.from({ length: dayCount }, (_, index) => {
+    const date = new Date(periodStart);
+    date.setUTCDate(periodStart.getUTCDate() + index);
+    return date.toISOString().slice(0, 10);
+  });
+  const daily = dates.map((diaryDate, index) => ({
+    diary_date: diaryDate,
+    status: index === 0 ? 'complete' : index === dayCount - 1 ? 'incomplete' : 'missing',
+    is_current_day: false,
+    calories: index === 0 ? 2050 : index === dayCount - 1 ? 720 : null,
+    protein_g: index === 0 ? 142 : index === dayCount - 1 ? 48 : null,
+    fat_g: index === 0 ? 68 : index === dayCount - 1 ? 25 : null,
+    carbs_g: index === 0 ? 210 : index === dayCount - 1 ? 82 : null,
+    target_calories: 2100,
+    target_protein_g: 140,
+    target_fat_g: 70,
+    target_carbs_g: 220,
+    calorie_deviation: index === 0 ? -50 : null,
+    protein_deviation_g: index === 0 ? 2 : null,
+    fat_deviation_g: index === 0 ? -2 : null,
+    carbs_deviation_g: index === 0 ? -10 : null,
+    within_calorie_tolerance: index === 0 ? true : null,
+    meets_protein_target: index === 0 ? true : null,
+    target_changed: false,
+  }));
+  const metric = (average: number) => ({
+    average,
+    minimum: average,
+    maximum: average,
+    sample_days: 1,
+  });
+  const comparison = (actual: number, target: number) => ({
+    average_actual: actual,
+    average_target: target,
+    average_deviation: actual - target,
+    evaluated_days: 1,
+  });
+  return {
+    period,
+    period_start: dates[0],
+    period_end: dates.at(-1),
+    timezone: 'Europe/Moscow',
+    summary: {
+      logged_days: 1,
+      eligible_days: dayCount,
+      coverage_percent: Math.round(1000 / dayCount) / 10,
+      complete_days: 1,
+      incomplete_days: 1,
+      fasted_days: 0,
+      missing_days: dayCount - 2,
+      current_day_status: null,
+      calories: metric(2050),
+      protein_g: metric(142),
+      fat_g: metric(68),
+      carbs_g: metric(210),
+      calorie_comparison: comparison(2050, 2100),
+      protein_comparison: comparison(142, 140),
+      fat_comparison: comparison(68, 70),
+      carbs_comparison: comparison(210, 220),
+      days_within_calorie_tolerance: 1,
+      calorie_tolerance_evaluated_days: 1,
+      days_meeting_protein_target: 1,
+      protein_target_evaluated_days: 1,
+    },
+    daily,
+    target_changes: [],
+  };
+}
+
 async function mockCoachWorkspace(page: Page) {
   const feedbackComments: Array<{
     id: number;
@@ -159,7 +234,8 @@ async function mockCoachWorkspace(page: Page) {
   ];
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request();
-    const path = new URL(request.url()).pathname;
+    const url = new URL(request.url());
+    const path = url.pathname;
     if (path.endsWith('/public/config'))
       return route.fulfill({
         json: { app_env: 'dev', enable_dev_auth: true, telegram_bot_username: 'fit_bot' },
@@ -232,6 +308,14 @@ async function mockCoachWorkspace(page: Page) {
         ],
       });
     if (path.endsWith('/coach/clients')) return route.fulfill({ json: clients });
+    if (/\/coach\/clients\/\d+\/nutrition-report\.csv$/.test(path))
+      return route.fulfill({
+        body: '\ufeffrow_type,period_start,period_end\nsummary,2026-07-22,2026-08-20\n',
+        contentType: 'text/csv; charset=utf-8',
+        headers: { 'Content-Disposition': 'attachment; filename="nutrition-report.csv"' },
+      });
+    if (/\/coach\/clients\/\d+\/nutrition-report$/.test(path))
+      return route.fulfill({ json: coachNutritionReport(url) });
     if (path.endsWith('/coach/clients/11/analytics'))
       return route.fulfill({
         json: {
@@ -397,6 +481,43 @@ test('dashboard даёт обзор и фильтрует клиентов бе�
     'https://example.test/join/test',
   );
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(1440);
+});
+
+test('trainer nutrition report stays scoped to the active client and remains read-only', async ({
+  page,
+}) => {
+  const reportRequests: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().includes('/nutrition-report')) reportRequests.push(request.url());
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openCoach(page);
+  await page
+    .getByRole('button', { name: /Анна Петрова/ })
+    .first()
+    .click();
+
+  const nutrition = page.locator('#coach-client-nutrition');
+  await nutrition.locator(':scope > summary').click();
+  const report = nutrition.locator('#nutrition-period-report');
+  await expect(report.getByRole('heading', { name: 'Отчёт по питанию' })).toBeVisible();
+  await expect(report.getByText('Заполнено 1 из 30 дней')).toBeVisible();
+  await expect(report.getByRole('table')).toBeAttached();
+  await expect(report.getByRole('link', { name: /Открыть дневник/ })).toHaveCount(0);
+  expect(reportRequests.some((url) => url.includes('/coach/clients/11/nutrition-report'))).toBe(
+    true,
+  );
+  expect(reportRequests.some((url) => url.includes('/workouts/progress/nutrition-report'))).toBe(
+    false,
+  );
+
+  await report.getByRole('button', { name: 'Скачать CSV' }).click();
+  await expect
+    .poll(() =>
+      reportRequests.some((url) => url.includes('/coach/clients/11/nutrition-report.csv')),
+    )
+    .toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
 });
 
 test('mobile использует список и отдельный контекст клиента', async ({ page }) => {

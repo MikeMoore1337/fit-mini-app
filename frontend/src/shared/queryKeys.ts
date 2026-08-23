@@ -8,6 +8,8 @@ export const queryKeys = {
   progress: {
     summaries: ['workout', 'progress-summary'] as const,
     summary: (periodDays: number) => ['workout', 'progress-summary', periodDays] as const,
+    nutritionReport: (subject: number | 'me', period: string, dateFrom?: string, dateTo?: string) =>
+      ['workout', 'nutrition-report', subject, period, dateFrom ?? null, dateTo ?? null] as const,
   },
   trainer: {
     clients: ['coach', 'clients'] as const,

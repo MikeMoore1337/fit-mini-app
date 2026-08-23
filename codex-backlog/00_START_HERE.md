@@ -4,18 +4,18 @@ Backlog использует resource-aware lifecycle. Завершённые з
 
 ## Текущее состояние
 
-- tasks `00-55`, включая буквенные подзадачи, подтверждены как завершённые;
+- tasks `00-57`, включая буквенные подзадачи, подтверждены как завершённые;
 - завершённые task-файлы перенесены в `tasks/done/` без переименования;
 - `DESIGN_V2_1` остаётся единственным active production source of truth;
-- следующая task — `56`.
+- следующая task — `58`.
 
 ## Текущая задача
 
 ```text
-56-unified-weekly-review-adaptive-energy.md
+58-workout-adaptation-experience.md
 ```
 
-Не запускать заново `00-55`. После успешной task `56` следующая task — `57`.
+Не запускать заново `00-57`. После успешной task `58` следующая task — `59`.
 
 ## Design alternatives flow
 
@@ -38,8 +38,8 @@ V2.1 / A / B / C / explicit hybrid
   -> 49G conditional rollout + backlog alignment
 
 49G -> 50A mobile/TMA quality foundation [done]
-50-55 feature tasks [done]
-56 unified weekly review + adaptive energy [CURRENT]
+50-57 feature tasks [done]
+58 workout adaptation experience [CURRENT]
 ```
 
 ## Что изменено в v11

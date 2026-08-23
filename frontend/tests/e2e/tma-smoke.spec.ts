@@ -102,6 +102,100 @@ test('TMA auth, shared UI, theme, viewport, safe areas and BackButton stay on on
   await expect.poll(async () => (await tma.state()).backButton.visible).toBe(false);
 });
 
+test('nutrition report keeps period analytics and diary return aligned in Mobile Web and TMA', async ({
+  mobilePage,
+  tma,
+  tmaPage,
+}) => {
+  const tmaApi = await installPlatformApi(tmaPage);
+  const mobileApi = await installPlatformApi(mobilePage, { browserSession: true });
+  await Promise.all([
+    tmaPage.goto('/app?section=progress&nutrition_period=days_7'),
+    mobilePage.goto('/app?section=progress&nutrition_period=days_7'),
+  ]);
+
+  for (const currentPage of [tmaPage, mobilePage]) {
+    const report = currentPage.locator('#nutrition-period-report');
+    await expect(report.getByRole('heading', { name: 'Отчёт по питанию' })).toBeVisible();
+    await expect(report.getByText('Заполнено 3 из 7 дней')).toBeVisible();
+    await expect(report.getByText('Изменения цели в периоде')).toBeVisible();
+    await expect(report.getByRole('table')).toBeVisible();
+  }
+  expect(await sharedSurfaceSignature(tmaPage)).toEqual(await sharedSurfaceSignature(mobilePage));
+
+  const tmaReport = tmaPage.locator('#nutrition-period-report');
+  const tmaSelector = tmaReport.getByRole('tablist', { name: 'Период отчёта по питанию' });
+  const mobileSelector = mobilePage
+    .locator('#nutrition-period-report')
+    .getByRole('tablist', { name: 'Период отчёта по питанию' });
+  for (const period of ['30 дней', '90 дней', '7 дней']) {
+    await Promise.all([
+      tmaSelector.getByRole('tab', { name: period }).click(),
+      mobileSelector.getByRole('tab', { name: period }).click(),
+    ]);
+  }
+  await expect
+    .poll(() => tmaApi.nutritionReportPeriods())
+    .toEqual(expect.arrayContaining(['days_7', 'days_30', 'days_90']));
+  await expect
+    .poll(() => mobileApi.nutritionReportPeriods())
+    .toEqual(expect.arrayContaining(['days_7', 'days_30', 'days_90']));
+
+  for (const viewport of Object.values(MOBILE_CONTEXTS)) {
+    await tmaPage.setViewportSize(viewport);
+    await tma.setViewport(viewport.height, viewport.height);
+    await expectNoHorizontalOverflow(tmaPage);
+    await expectTouchTargets(tmaSelector.getByRole('tab'));
+  }
+  const diaryLink = tmaReport.locator('.nutrition-report-days tbody a').first();
+  await diaryLink.scrollIntoViewIfNeeded();
+  await expectNoOverlap(diaryLink, tmaPage.locator('#appBottomNav'));
+
+  await tmaPage.setViewportSize({ width: 390, height: 844 });
+  await tma.setViewport(844, 844);
+  await tma.setTheme('dark');
+  await expect(tmaPage.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
+  await expect
+    .poll(() =>
+      tmaReport
+        .locator('.nutrition-report-chart__point')
+        .first()
+        .evaluate((point) => {
+          const style = getComputedStyle(point);
+          return {
+            fill: style.fill,
+            stroke: style.stroke,
+            theme: document.documentElement.dataset.colorScheme,
+          };
+        }),
+    )
+    .toEqual({
+      fill: 'rgb(255, 255, 255)',
+      stroke: 'rgb(255, 255, 255)',
+      theme: 'dark',
+    });
+  await tmaReport.evaluate((element) => element.scrollIntoView({ block: 'start' }));
+  await tmaPage.screenshot({
+    path: '../.artifacts/screenshots/task-57/tma-390x844-dark-compact.png',
+  });
+  await tmaReport.screenshot({
+    path: '../.artifacts/screenshots/task-57/tma-390x844-dark-partial.png',
+  });
+  await tmaReport.locator('.nutrition-report-chart').screenshot({
+    path: '../.artifacts/screenshots/task-57/tma-390x844-dark-chart.png',
+  });
+
+  await diaryLink.click();
+  await expect(tmaPage).toHaveURL(/section=nutrition&date=.*return_to=/);
+  await expect(tmaPage.getByRole('heading', { name: 'Питание', exact: true })).toBeVisible();
+  await tmaPage.getByRole('link', { name: 'К отчёту по питанию' }).click();
+  await expect(tmaPage).toHaveURL(/section=progress&nutrition_period=days_7/);
+  await expect(tmaSelector.getByRole('tab', { name: '7 дней' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+});
+
 test('weekly review focus exposes a predictable TMA BackButton return path', async ({
   tma,
   tmaPage,

@@ -19,7 +19,12 @@ from fitminiapp_api.models.program import (
 from fitminiapp_api.models.user import User
 from fitminiapp_api.schemas.feedback import WorkoutCommentResponse
 from fitminiapp_api.schemas.program import EquipmentIdentifier
-from fitminiapp_api.schemas.progress import ProgressPeriodDays, ProgressSummaryResponse
+from fitminiapp_api.schemas.progress import (
+    NutritionReportPeriod,
+    NutritionReportResponse,
+    ProgressPeriodDays,
+    ProgressSummaryResponse,
+)
 from fitminiapp_api.schemas.workout import (
     BodyMeasurementResponse,
     BodyMeasurementSave,
@@ -52,6 +57,11 @@ from fitminiapp_api.services.measurements import (
     serialize_measurement,
 )
 from fitminiapp_api.services.notifications import queue_telegram_notification
+from fitminiapp_api.services.nutrition_reports import (
+    NutritionReportError,
+    build_nutrition_report,
+    nutrition_report_csv,
+)
 from fitminiapp_api.services.progress import build_progress_summary
 from fitminiapp_api.services.workout_adaptation import (
     WorkoutAdaptationError,
@@ -470,6 +480,53 @@ def workout_progress_summary(
     db: Session = Depends(get_db),
 ):
     return build_progress_summary(db, current_user, period_days)
+
+
+def _nutrition_report_or_422(
+    db: Session,
+    user: User,
+    period: NutritionReportPeriod,
+    date_from: date | None,
+    date_to: date | None,
+) -> dict:
+    try:
+        return build_nutrition_report(
+            db,
+            user,
+            period,
+            date_from=date_from,
+            date_to=date_to,
+        )
+    except NutritionReportError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc))
+
+
+@router.get("/progress/nutrition-report", response_model=NutritionReportResponse)
+def workout_nutrition_report(
+    period: NutritionReportPeriod = NutritionReportPeriod.DAYS_30,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    return _nutrition_report_or_422(db, current_user, period, date_from, date_to)
+
+
+@router.get("/progress/nutrition-report.csv")
+def workout_nutrition_report_export(
+    period: NutritionReportPeriod = NutritionReportPeriod.DAYS_30,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    report = _nutrition_report_or_422(db, current_user, period, date_from, date_to)
+    filename = f"nutrition-report-{report['period_start']}-{report['period_end']}.csv"
+    return Response(
+        content="\ufeff" + nutrition_report_csv(report),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.get("/progress/training-analytics", response_model=TrainingAnalyticsResponse)

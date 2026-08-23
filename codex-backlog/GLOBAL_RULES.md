@@ -1,6 +1,6 @@
 # GLOBAL_RULES - правила выполнения release backlog v11 resource-aware
 
-Этот файл действует для current task `56` и remaining tasks `57-79`. Completed tasks `00-55` не переигрываются и хранятся в `tasks/done/`.
+Этот файл действует для current task `58` и remaining tasks `59-79`. Completed tasks `00-57` не переигрываются и хранятся в `tasks/done/`.
 
 
 ## Полный task lifecycle
@@ -47,9 +47,9 @@ Lifecycle не расширяет scope task и не отменяет owner chec
 - Работать только в `feature/yfc-platform-v2`.
 - Не переходить к следующему task автоматически.
 - Перед началом прочитать корневой `AGENTS.md`, этот файл, lifecycle и только текущую task.
-- Tasks `00-55`, включая буквенные подзадачи, подтверждены владельцем как завершённые, перенесены в `tasks/done/` и не выполняются повторно.
-- Current task — `56`: единый weekly review и подтверждаемая adaptive energy adjustment.
-- После commit task `56` следующая task — `57`; она выполняется только в отдельной сессии.
+- Tasks `00-57`, включая буквенные подзадачи, подтверждены владельцем как завершённые, перенесены в `tasks/done/` и не выполняются повторно.
+- Current task — `58`: адаптация сегодняшней тренировки — UX.
+- После commit task `58` следующая task — `59`; она выполняется только в отдельной сессии.
 - Task `50A` уже создала общий continuous Mobile Web/TMA gate, который переиспользуют последующие client-facing tasks.
 - Перед client-facing task прочитать `MOBILE_TMA_FIRST_CONTRACT.md` и применимые пункты `.agents/references/MOBILE_TMA_ACCEPTANCE_MATRIX.md`.
 - Не повторять полный аудит репозитория без прямого требования task.

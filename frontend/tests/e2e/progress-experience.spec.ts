@@ -11,7 +11,194 @@ const signal = (status: 'sufficient' | 'limited' | 'insufficient') => ({
   reason_keys: status === 'sufficient' ? ['thresholds_met'] : ['too_few_points'],
 });
 
-async function mockProgress(page: Page) {
+type NutritionReportState = 'partial' | 'no-data' | 'long';
+
+function shiftDate(value: string, days: number): string {
+  const date = new Date(`${value}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function nutritionReportFixture(url: URL, state: NutritionReportState) {
+  const period = url.searchParams.get('period') ?? 'days_30';
+  let periodEnd = '2030-01-30';
+  let periodStart = shiftDate(
+    periodEnd,
+    period === 'days_7' ? -6 : period === 'days_90' ? -89 : -29,
+  );
+  if (period === 'current_week') periodStart = '2030-01-28';
+  if (period === 'current_month') periodStart = '2030-01-01';
+  if (period === 'previous_month') {
+    periodStart = '2029-12-01';
+    periodEnd = '2029-12-31';
+  }
+  if (period === 'custom') {
+    periodStart = url.searchParams.get('date_from') ?? periodStart;
+    periodEnd = url.searchParams.get('date_to') ?? periodEnd;
+  }
+  const dayCount =
+    Math.round(
+      (Date.parse(`${periodEnd}T12:00:00Z`) - Date.parse(`${periodStart}T12:00:00Z`)) / 86_400_000,
+    ) + 1;
+  const targetChangeDate = shiftDate(
+    periodStart,
+    Math.min(Math.max(1, Math.floor(dayCount * 0.45)), dayCount - 1),
+  );
+  const daily = Array.from({ length: dayCount }, (_, index) => {
+    const diaryDate = shiftDate(periodStart, index);
+    const targetCalories = diaryDate < targetChangeDate ? 2100 : 1950;
+    const targetProtein = diaryDate < targetChangeDate ? 140 : 135;
+    const targetFat = diaryDate < targetChangeDate ? 70 : 65;
+    const targetCarbs = diaryDate < targetChangeDate ? 230 : 210;
+    const status =
+      state === 'no-data'
+        ? 'missing'
+        : index === dayCount - 1
+          ? 'incomplete'
+          : index === dayCount - 3
+            ? 'fasted'
+            : index % (state === 'long' ? 6 : 4) === 0
+              ? 'complete'
+              : 'missing';
+    const logged = status === 'complete' || status === 'fasted';
+    const calories =
+      status === 'fasted'
+        ? 0
+        : status === 'complete'
+          ? 2020 + (index % 5) * 35
+          : status === 'incomplete'
+            ? 760
+            : null;
+    const protein =
+      status === 'fasted'
+        ? 0
+        : status === 'complete'
+          ? 138 + (index % 4) * 3
+          : status === 'incomplete'
+            ? 52
+            : null;
+    const fat =
+      status === 'fasted'
+        ? 0
+        : status === 'complete'
+          ? 64 + (index % 4) * 2
+          : status === 'incomplete'
+            ? 24
+            : null;
+    const carbs =
+      status === 'fasted'
+        ? 0
+        : status === 'complete'
+          ? 205 + (index % 4) * 4
+          : status === 'incomplete'
+            ? 85
+            : null;
+    return {
+      diary_date: diaryDate,
+      status,
+      is_current_day: diaryDate === '2030-01-30',
+      calories,
+      protein_g: protein,
+      fat_g: fat,
+      carbs_g: carbs,
+      target_calories: targetCalories,
+      target_protein_g: targetProtein,
+      target_fat_g: targetFat,
+      target_carbs_g: targetCarbs,
+      calorie_deviation: logged && calories != null ? calories - targetCalories : null,
+      protein_deviation_g: logged && protein != null ? protein - targetProtein : null,
+      fat_deviation_g: logged && fat != null ? fat - targetFat : null,
+      carbs_deviation_g: logged && carbs != null ? carbs - targetCarbs : null,
+      within_calorie_tolerance:
+        logged && calories != null
+          ? Math.abs(calories - targetCalories) <= targetCalories * 0.1
+          : null,
+      meets_protein_target: logged && protein != null ? protein >= targetProtein : null,
+      target_changed: state !== 'no-data' && diaryDate === targetChangeDate,
+    };
+  });
+  const logged = daily.filter((point) => point.status === 'complete' || point.status === 'fasted');
+  const values = (key: 'calories' | 'protein_g' | 'fat_g' | 'carbs_g') =>
+    logged.map((point) => point[key] as number);
+  const metric = (key: 'calories' | 'protein_g' | 'fat_g' | 'carbs_g') => {
+    const items = values(key);
+    return items.length
+      ? {
+          average: items.reduce((sum, value) => sum + value, 0) / items.length,
+          minimum: Math.min(...items),
+          maximum: Math.max(...items),
+          sample_days: items.length,
+        }
+      : { average: null, minimum: null, maximum: null, sample_days: 0 };
+  };
+  const comparison = (
+    actualKey: 'calories' | 'protein_g' | 'fat_g' | 'carbs_g',
+    targetKey: 'target_calories' | 'target_protein_g' | 'target_fat_g' | 'target_carbs_g',
+  ) => {
+    if (!logged.length)
+      return {
+        average_actual: null,
+        average_target: null,
+        average_deviation: null,
+        evaluated_days: 0,
+      };
+    const actual =
+      logged.reduce((sum, point) => sum + (point[actualKey] as number), 0) / logged.length;
+    const target =
+      logged.reduce((sum, point) => sum + (point[targetKey] as number), 0) / logged.length;
+    return {
+      average_actual: actual,
+      average_target: target,
+      average_deviation: actual - target,
+      evaluated_days: logged.length,
+    };
+  };
+  return {
+    period,
+    period_start: periodStart,
+    period_end: periodEnd,
+    timezone: 'Europe/Moscow',
+    summary: {
+      logged_days: logged.length,
+      eligible_days: daily.length,
+      coverage_percent: Math.round((logged.length * 1000) / daily.length) / 10,
+      complete_days: daily.filter((point) => point.status === 'complete').length,
+      incomplete_days: daily.filter((point) => point.status === 'incomplete').length,
+      fasted_days: daily.filter((point) => point.status === 'fasted').length,
+      missing_days: daily.filter((point) => point.status === 'missing').length,
+      current_day_status: daily.find((point) => point.is_current_day)?.status ?? null,
+      calories: metric('calories'),
+      protein_g: metric('protein_g'),
+      fat_g: metric('fat_g'),
+      carbs_g: metric('carbs_g'),
+      calorie_comparison: comparison('calories', 'target_calories'),
+      protein_comparison: comparison('protein_g', 'target_protein_g'),
+      fat_comparison: comparison('fat_g', 'target_fat_g'),
+      carbs_comparison: comparison('carbs_g', 'target_carbs_g'),
+      days_within_calorie_tolerance: logged.filter((point) => point.within_calorie_tolerance)
+        .length,
+      calorie_tolerance_evaluated_days: logged.length,
+      days_meeting_protein_target: logged.filter((point) => point.meets_protein_target).length,
+      protein_target_evaluated_days: logged.length,
+    },
+    daily,
+    target_changes:
+      state === 'no-data'
+        ? []
+        : [
+            {
+              effective_from: targetChangeDate,
+              source: 'adaptive',
+              calories: 1950,
+              protein_g: 135,
+              fat_g: 65,
+              carbs_g: 210,
+            },
+          ],
+  };
+}
+
+async function mockProgress(page: Page, reportState: NutritionReportState = 'partial') {
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -49,9 +236,11 @@ async function mockProgress(page: Page) {
     if (path.endsWith('/nutrition/diary')) {
       return route.fulfill({
         json: {
-          diary_date: '2030-01-30',
+          diary_date: url.searchParams.get('diary_date') || '2030-01-30',
           timezone: 'Europe/Moscow',
           meals: [],
+          status: 'unlogged',
+          status_is_explicit: false,
           totals: {
             energy_kcal: '0',
             protein_g: '0',
@@ -181,6 +370,16 @@ async function mockProgress(page: Page) {
         },
       });
     }
+    if (path.endsWith('/workouts/progress/nutrition-report')) {
+      return route.fulfill({ json: nutritionReportFixture(url, reportState) });
+    }
+    if (path.endsWith('/workouts/progress/nutrition-report.csv')) {
+      return route.fulfill({
+        body: '\ufeffrow_type,period_start,period_end\nsummary,2030-01-01,2030-01-30\n',
+        contentType: 'text/csv; charset=utf-8',
+        headers: { 'Content-Disposition': 'attachment; filename="nutrition-report.csv"' },
+      });
+    }
     if (path.endsWith('/workouts/progress/training-analytics')) {
       return route.fulfill({
         json: {
@@ -273,12 +472,52 @@ async function mockProgress(page: Page) {
           week_end: '2030-02-03',
           submitted_on: '2030-01-30',
           timezone: 'Europe/Moscow',
-          existing: { status: 'completed', note: null },
+          existing: {
+            id: 1,
+            status: 'completed',
+            note: null,
+            summary: { adaptive_energy: null },
+          },
           summary: {
-            training: { planned_workouts: 2, completed_workouts: 2 },
-            nutrition: { logged_days: 3 },
+            ruleset_version: 'weekly-review-summary-v2',
+            period_start: '2030-01-28',
+            period_end: '2030-02-03',
+            goal: 'maintenance',
+            training: { planned_workouts: 2, completed_workouts: 2, adherence: {} },
+            nutrition: {
+              logged_days: 3,
+              complete_days: 2,
+              incomplete_days: 1,
+              fasted_days: 0,
+              unlogged_days: 4,
+              average_calories: 1980,
+              target_calories: 2100,
+              average_protein_g: 132,
+              target_protein_g: 140,
+              calories_adherence: {},
+              protein_adherence: {},
+              current_target: {
+                effective_from: '2030-01-01',
+                source: 'manual',
+                calories: 2100,
+                protein_g: 140,
+                fat_g: 70,
+                carbs_g: 230,
+              },
+              suspicious_low_days: [],
+            },
             progression: { new_personal_records: 1 },
             weight_trend: null,
+            anthropometry_trends: [],
+            body_priority: null,
+            data_sufficiency: {
+              weight_trend: {
+                status: 'insufficient',
+                counters: { point_count: 0 },
+                reason_keys: ['no_measurements'],
+              },
+            },
+            adaptive_energy: null,
           },
         },
       });
@@ -388,7 +627,10 @@ test('progress remains clear and free of horizontal overflow at supported widths
   await mockProgress(page);
   await page.goto('/app?section=progress');
   await page.getByRole('button', { name: 'Клиент' }).click();
-  await page.getByRole('link', { name: 'Прогресс' }).click();
+  await page
+    .getByRole('navigation', { name: 'Основная навигация' })
+    .getByRole('link', { name: 'Прогресс' })
+    .click();
   await expect(
     page
       .getByRole('heading', { name: 'Прогресс' })
@@ -401,8 +643,11 @@ test('progress remains clear and free of horizontal overflow at supported widths
 
   await page.getByText('Жим штанги лёжа').click();
   await expect(page.getByText('Детали тренировки')).toBeVisible();
-  await page.getByRole('tab', { name: '7 дней' }).click();
-  await expect(page.getByRole('tab', { name: '7 дней' })).toHaveAttribute('aria-selected', 'true');
+  await page.locator('.progress-hero').getByRole('tab', { name: '7 дней' }).click();
+  await expect(page.locator('.progress-hero').getByRole('tab', { name: '7 дней' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
 
   for (const viewport of [
     { width: 1440, height: 1000 },
@@ -418,7 +663,9 @@ test('progress remains clear and free of horizontal overflow at supported widths
         ),
       )
       .toBe(true);
-    await expect(page.getByRole('tab', { name: '30 дней' })).toBeVisible();
+    await expect(
+      page.locator('.progress-hero').getByRole('tab', { name: '30 дней' }),
+    ).toBeVisible();
     await expect(
       page.getByRole('progressbar', { name: /Запланированные тренировки/ }),
     ).toBeVisible();
@@ -426,6 +673,231 @@ test('progress remains clear and free of horizontal overflow at supported widths
 
   expect(consoleErrors).toEqual([]);
   expect(runtimeErrors).toEqual([]);
+});
+
+test('nutrition report preserves truthful period context, daily drill-down and responsive hierarchy', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'light' });
+  await mockProgress(page, 'long');
+  await page.goto('/app?section=progress&nutrition_period=days_7');
+  await page.getByRole('button', { name: 'Клиент' }).click();
+  await page
+    .getByRole('navigation', { name: 'Основная навигация' })
+    .getByRole('link', { name: 'Прогресс' })
+    .click();
+
+  const report = page.locator('#nutrition-period-report');
+  const selector = report.getByRole('tablist', { name: 'Период отчёта по питанию' });
+  await expect(report.getByRole('heading', { name: 'Отчёт по питанию' })).toBeVisible();
+  await selector.getByRole('tab', { name: '7 дней' }).click();
+  await expect(report.getByText('Заполнено 2 из 7 дней')).toBeVisible();
+  await expect(
+    report.getByText('Средние значения рассчитаны только по заполненным дням.'),
+  ).toBeVisible();
+  await expect(report.getByRole('img', { name: /Калории по дням/ })).toBeVisible();
+  await expect(report.getByText('Изменения цели в периоде')).toBeVisible();
+  await expect(report.getByRole('table')).toBeVisible();
+  await expect(report.getByText('Нет данных').first()).toBeVisible();
+  await expect(report.getByText('0 ккал', { exact: true }).first()).toBeVisible();
+
+  for (const period of ['30 дней', '90 дней']) {
+    await selector.getByRole('tab', { name: period }).click();
+    await expect(selector.getByRole('tab', { name: period })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    const densePicker = report.locator('.nutrition-report-chart__day-picker');
+    await expect(densePicker.getByLabel('Выбранный день графика')).toBeVisible();
+    await expect(report.locator('.nutrition-report-chart svg a')).toHaveCount(0);
+    expect(
+      (await densePicker.getByLabel('Выбранный день графика').boundingBox())?.height,
+    ).toBeGreaterThanOrEqual(44);
+  }
+  await expect(page).toHaveURL(/nutrition_period=days_90/);
+  await expect(report.getByText(/Заполнено \d+ из 90 дней/)).toBeVisible();
+
+  await selector.getByRole('tab', { name: 'Свой период' }).click();
+  await report.getByLabel('Начало периода').fill('2025-01-01');
+  await report.getByLabel('Конец периода').fill('2025-12-31');
+  await report.getByRole('button', { name: 'Показать период' }).click();
+  await expect(page).toHaveURL(/nutrition_period=custom/);
+  await expect(report.getByText(/Заполнено \d+ из 365 дней/)).toBeVisible();
+  const longRangePicker = report.getByLabel('Выбранный день графика');
+  await longRangePicker.focus();
+  await page.keyboard.press('Home');
+  await expect(longRangePicker).toHaveValue('0');
+  await page.keyboard.press('ArrowRight');
+  await expect(longRangePicker).toHaveValue('1');
+  await expect(report.locator('.nutrition-report-chart svg a')).toHaveCount(0);
+  const selectedDayLink = report.getByRole('link', { name: /Открыть дневник за 2 янв/ });
+  await expect(selectedDayLink).toHaveAttribute('href', /date=2025-01-02/);
+  for (const viewport of [
+    { width: 360, height: 800 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        ),
+      )
+      .toBe(true);
+    expect((await longRangePicker.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    expect((await selectedDayLink.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    await expect(report.locator('.nutrition-report-chart svg a')).toHaveCount(0);
+  }
+  await report.locator('.nutrition-report-chart').screenshot({
+    path: '../.artifacts/screenshots/task-57/mobile-web-390x844-light-long-range-chart.png',
+  });
+  await page.setViewportSize({ width: 768, height: 900 });
+  await report.screenshot({
+    path: '../.artifacts/screenshots/task-57/tablet-768x900-light-long-range.png',
+  });
+
+  await selector.getByRole('tab', { name: '7 дней' }).click();
+  const dayLink = report.getByRole('link', { name: /ккал. Открыть дневник/ }).first();
+  const reportUrl = page.url();
+  await dayLink.click();
+  await expect(page).toHaveURL(/section=nutrition&date=/);
+  const returnTo = await page.evaluate(() => new URLSearchParams(location.search).get('return_to'));
+  expect(returnTo).toBe(
+    new URL(reportUrl).pathname + new URL(reportUrl).search + '#nutrition-period-report',
+  );
+  await expect(page.getByRole('heading', { name: 'Питание', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'К отчёту по питанию' }).click();
+  await expect(page).toHaveURL(`${reportUrl}#nutrition-period-report`);
+  await expect(selector.getByRole('tab', { name: '7 дней' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 430, height: 932 },
+    { width: 390, height: 844 },
+    { width: 360, height: 800 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        ),
+      )
+      .toBe(true);
+    const selectorTargets = await selector
+      .getByRole('tab')
+      .evaluateAll((tabs) => tabs.map((tab) => tab.getBoundingClientRect().height));
+    expect(selectorTargets.every((height) => height >= 44)).toBe(true);
+    if (viewport.width <= 430) {
+      const selectorScroller = report.locator('.nutrition-period-report__selector');
+      const selectorScrollState = await selectorScroller.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return {
+          clientWidth: element.clientWidth,
+          overflowX: style.overflowX,
+          scrollWidth: element.scrollWidth,
+          touchAction: style.touchAction,
+        };
+      });
+      expect(selectorScrollState.scrollWidth).toBeGreaterThan(selectorScrollState.clientWidth);
+      expect(selectorScrollState.overflowX).toBe('auto');
+      expect(selectorScrollState.touchAction).toBe('pan-x');
+      await selectorScroller.evaluate((element) => {
+        element.scrollLeft = element.scrollWidth;
+      });
+      await expect
+        .poll(() => selectorScroller.evaluate((element) => element.scrollLeft))
+        .toBeGreaterThan(0);
+      expect(
+        await selector.getByRole('tab', { name: 'Свой период' }).evaluate((tab) => {
+          const scroller = tab.closest('.nutrition-period-report__selector');
+          if (!scroller) return false;
+          const tabBox = tab.getBoundingClientRect();
+          const scrollerBox = scroller.getBoundingClientRect();
+          return tabBox.left >= scrollerBox.left && tabBox.right <= scrollerBox.right;
+        }),
+      ).toBe(true);
+      await selectorScroller.evaluate((element) => {
+        element.scrollLeft = 0;
+      });
+    }
+    const reportBox = await report.boundingBox();
+    const nextSectionBox = await page.locator('.progress-adherence').boundingBox();
+    expect(reportBox).not.toBeNull();
+    expect(nextSectionBox).not.toBeNull();
+    expect(reportBox!.y + reportBox!.height).toBeLessThanOrEqual(nextSectionBox!.y + 1);
+    if (viewport.width === 1440) {
+      expect(reportBox!.x).toBeGreaterThanOrEqual(32);
+      expect(reportBox!.x + reportBox!.width).toBeLessThanOrEqual(viewport.width - 32);
+      await report.evaluate((element) => element.scrollIntoView({ block: 'start' }));
+      await page.screenshot({
+        path: '../.artifacts/screenshots/task-57/desktop-1440x900-light-report.png',
+      });
+      await report.screenshot({
+        path: '../.artifacts/screenshots/task-57/desktop-1440x900-light-partial.png',
+      });
+      await report.locator('.nutrition-report-chart').screenshot({
+        path: '../.artifacts/screenshots/task-57/desktop-1440x900-light-chart.png',
+      });
+    }
+    if (viewport.width === 360) {
+      const pointStyle = await report
+        .locator('.nutrition-report-chart__point')
+        .first()
+        .evaluate((point) => {
+          const style = getComputedStyle(point);
+          return { fill: style.fill, stroke: style.stroke };
+        });
+      expect(pointStyle).toEqual({ fill: 'rgb(16, 19, 16)', stroke: 'rgb(16, 19, 16)' });
+      await expect(report.locator('.nutrition-report-chart__point-line')).toHaveCount(0);
+      expect((await report.locator('.nutrition-report-chart svg').boundingBox())?.height).toBe(160);
+      const pointTargets = await report
+        .locator('.nutrition-report-chart svg a')
+        .evaluateAll((links) =>
+          links.map((link) => {
+            const box = link.getBoundingClientRect();
+            return { width: box.width, height: box.height };
+          }),
+        );
+      expect(pointTargets.length).toBeGreaterThan(0);
+      expect(
+        Math.min(...pointTargets.map((box) => Math.min(box.width, box.height))),
+      ).toBeGreaterThanOrEqual(44);
+      await report.evaluate((element) => element.scrollIntoView({ block: 'start' }));
+      await page.screenshot({
+        path: '../.artifacts/screenshots/task-57/mobile-web-360x800-light-compact.png',
+      });
+      await report.screenshot({
+        path: '../.artifacts/screenshots/task-57/mobile-web-360x800-light-partial.png',
+      });
+    }
+  }
+});
+
+test('nutrition report no-data state keeps missing days distinct from zero', async ({ page }) => {
+  await page.setViewportSize({ width: 430, height: 932 });
+  await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'light' });
+  await mockProgress(page, 'no-data');
+  await page.goto('/app?section=progress&nutrition_period=days_30');
+  await page.getByRole('button', { name: 'Клиент' }).click();
+  await page
+    .getByRole('navigation', { name: 'Основная навигация' })
+    .getByRole('link', { name: 'Прогресс' })
+    .click();
+
+  const report = page.locator('#nutrition-period-report');
+  await expect(report.getByText('Заполнено 0 из 30 дней')).toBeVisible();
+  await expect(report.getByText('Нет заполненных дней за период')).toBeVisible();
+  await expect(report.getByRole('link', { name: 'Открыть дневник питания' })).toBeVisible();
+  await expect(report.getByRole('img')).not.toBeAttached();
+  await expect(report.getByText('0 ккал', { exact: true })).not.toBeAttached();
+  await expect(report.locator('.nutrition-report-days')).not.toHaveAttribute('open', '');
+  await report.screenshot({
+    path: '../.artifacts/screenshots/task-57/mobile-web-430x932-light-no-data.png',
+  });
 });
 
 test('notification deep-link opens exact workout feedback and preserves back navigation', async ({
@@ -521,7 +993,10 @@ test('dark progress uses one lime accent for the adherence outcome', async ({ pa
   await mockProgress(page);
   await page.goto('/app?section=progress');
   await page.getByRole('button', { name: 'Клиент' }).click();
-  await page.getByRole('link', { name: 'Прогресс' }).click();
+  await page
+    .getByRole('navigation', { name: 'Основная навигация' })
+    .getByRole('link', { name: 'Прогресс' })
+    .click();
 
   const summaryScore = page.locator('.progress-summary__score');
   const adherenceScore = page.locator('.progress-adherence__score');
@@ -551,7 +1026,10 @@ test('light progress uses the restrained green accent for the adherence outcome'
   await mockProgress(page);
   await page.goto('/app?section=progress');
   await page.getByRole('button', { name: 'Клиент' }).click();
-  await page.getByRole('link', { name: 'Прогресс' }).click();
+  await page
+    .getByRole('navigation', { name: 'Основная навигация' })
+    .getByRole('link', { name: 'Прогресс' })
+    .click();
 
   const summaryScore = page.locator('.progress-summary__score');
   const adherenceScore = page.locator('.progress-adherence__score');

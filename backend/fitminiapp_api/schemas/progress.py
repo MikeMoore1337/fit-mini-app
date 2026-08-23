@@ -1,5 +1,5 @@
 from datetime import date, time
-from enum import IntEnum
+from enum import IntEnum, StrEnum
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -12,6 +12,16 @@ class ProgressPeriodDays(IntEnum):
     DAYS_7 = 7
     DAYS_30 = 30
     DAYS_90 = 90
+
+
+class NutritionReportPeriod(StrEnum):
+    DAYS_7 = "days_7"
+    DAYS_30 = "days_30"
+    DAYS_90 = "days_90"
+    CURRENT_WEEK = "current_week"
+    CURRENT_MONTH = "current_month"
+    PREVIOUS_MONTH = "previous_month"
+    CUSTOM = "custom"
 
 
 AdherenceStatus = Literal["available", "not_applicable", "insufficient_data", "unsupported"]
@@ -67,6 +77,83 @@ class NutritionPeriodSummary(BaseModel):
     average_protein_g: float | None = None
     target_protein_g: int | None = None
     target_effective_on: date | None = None
+
+
+class NutritionReportMetricSummary(BaseModel):
+    average: float | None = None
+    minimum: float | None = None
+    maximum: float | None = None
+    sample_days: int = Field(ge=0)
+
+
+class NutritionReportTargetComparison(BaseModel):
+    average_actual: float | None = None
+    average_target: float | None = None
+    average_deviation: float | None = None
+    evaluated_days: int = Field(ge=0)
+
+
+class NutritionReportDailyPoint(BaseModel):
+    diary_date: date
+    status: Literal["complete", "incomplete", "fasted", "missing"]
+    is_current_day: bool
+    calories: float | None = None
+    protein_g: float | None = None
+    fat_g: float | None = None
+    carbs_g: float | None = None
+    target_calories: int | None = None
+    target_protein_g: int | None = None
+    target_fat_g: int | None = None
+    target_carbs_g: int | None = None
+    calorie_deviation: float | None = None
+    protein_deviation_g: float | None = None
+    fat_deviation_g: float | None = None
+    carbs_deviation_g: float | None = None
+    within_calorie_tolerance: bool | None = None
+    meets_protein_target: bool | None = None
+    target_changed: bool = False
+
+
+class NutritionReportTargetChange(BaseModel):
+    effective_from: date
+    source: Literal["calculated", "manual", "trainer", "adaptive"]
+    calories: int
+    protein_g: int
+    fat_g: int
+    carbs_g: int
+
+
+class NutritionReportSummary(BaseModel):
+    logged_days: int = Field(ge=0)
+    eligible_days: int = Field(ge=1)
+    coverage_percent: float = Field(ge=0, le=100)
+    complete_days: int = Field(ge=0)
+    incomplete_days: int = Field(ge=0)
+    fasted_days: int = Field(ge=0)
+    missing_days: int = Field(ge=0)
+    current_day_status: Literal["complete", "incomplete", "fasted", "missing"] | None = None
+    calories: NutritionReportMetricSummary
+    protein_g: NutritionReportMetricSummary
+    fat_g: NutritionReportMetricSummary
+    carbs_g: NutritionReportMetricSummary
+    calorie_comparison: NutritionReportTargetComparison
+    protein_comparison: NutritionReportTargetComparison
+    fat_comparison: NutritionReportTargetComparison
+    carbs_comparison: NutritionReportTargetComparison
+    days_within_calorie_tolerance: int = Field(ge=0)
+    calorie_tolerance_evaluated_days: int = Field(ge=0)
+    days_meeting_protein_target: int = Field(ge=0)
+    protein_target_evaluated_days: int = Field(ge=0)
+
+
+class NutritionReportResponse(BaseModel):
+    period: NutritionReportPeriod
+    period_start: date
+    period_end: date
+    timezone: str
+    summary: NutritionReportSummary
+    daily: list[NutritionReportDailyPoint]
+    target_changes: list[NutritionReportTargetChange]
 
 
 class BodyMetricPoint(BaseModel):
