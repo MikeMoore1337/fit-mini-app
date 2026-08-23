@@ -4404,33 +4404,37 @@ body:has(#appBottomNav) .toast:not(.hidden) {
     display: flex;
   }
   .app-bottom-nav__account {
-    display: flex;
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) 34px;
+    grid-template-rows: repeat(2, auto);
     min-width: 0;
     align-items: center;
-    gap: 9px;
+    gap: 2px 9px;
     padding: 3px 4px;
   }
-  .app-bottom-nav__account-copy {
-    min-width: 0;
-    flex: 1;
-  }
-  .app-bottom-nav__account-copy strong,
-  .app-bottom-nav__account-copy small {
+  .app-bottom-nav__account-name,
+  .app-bottom-nav__account-role {
     overflow: hidden;
     display: block;
+    min-width: 0;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .app-bottom-nav__account-copy strong {
+  .app-bottom-nav__account-name {
+    grid-column: 2;
+    grid-row: 1;
     color: var(--text);
     font-size: 0.78rem;
   }
-  .app-bottom-nav__account-copy small {
-    margin-top: 2px;
+  .app-bottom-nav__account-role {
+    grid-column: 2;
+    grid-row: 2;
     color: var(--muted);
     font-size: 0.68rem;
   }
   .app-bottom-nav__avatar {
+    grid-column: 1;
+    grid-row: 1 / span 2;
     width: 36px;
     height: 36px;
     flex-basis: 36px;
@@ -4438,6 +4442,8 @@ body:has(#appBottomNav) .toast:not(.hidden) {
     font-size: 1rem;
   }
   .app-bottom-nav__logout {
+    grid-column: 3;
+    grid-row: 1 / span 2;
     display: grid;
     place-items: center;
     width: 34px;
@@ -5486,78 +5492,6 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   justify-content: flex-end;
   gap: 8px;
 }
-.nutrition-week {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-  padding: 4px 10px;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: var(--surface-subtle);
-}
-.nutrition-week__head {
-  display: grid;
-  grid-template-columns: minmax(80px, auto) minmax(0, 1fr) minmax(80px, auto);
-  align-items: center;
-  gap: 8px;
-}
-.nutrition-week__head strong {
-  overflow: hidden;
-  font-size: 0.8rem;
-  text-align: center;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.nutrition-week__head button,
-.nutrition-week ol button {
-  min-height: 44px;
-  background: transparent;
-  color: var(--muted);
-}
-.nutrition-week__head button {
-  padding: 6px 8px;
-  font-size: 0.76rem;
-}
-.nutrition-week ol {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 4px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.nutrition-week li {
-  min-width: 0;
-}
-.nutrition-week ol button {
-  display: grid;
-  width: 100%;
-  min-width: 0;
-  place-items: center;
-  gap: 2px;
-  padding: 4px 1px;
-  border: 1px solid transparent;
-  border-radius: 10px;
-}
-.nutrition-week ol button[aria-current='date'] {
-  border-color: var(--accent-line);
-  background: var(--surface);
-  color: var(--text);
-}
-.nutrition-week ol button:disabled {
-  opacity: 0.42;
-}
-.nutrition-week ol span {
-  overflow: hidden;
-  max-width: 100%;
-  font-size: 0.64rem;
-  font-weight: 700;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-}
-.nutrition-week ol strong {
-  font-size: 0.9rem;
-}
 .nutrition-picker__back {
   min-height: 36px;
   padding: 7px 10px;
@@ -6432,16 +6366,6 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   .nutrition-diary__intro-actions .ui-button {
     min-width: 0;
     padding-inline: 8px;
-  }
-  .nutrition-week {
-    margin-inline: -4px;
-    padding: 4px;
-  }
-  .nutrition-week__head {
-    grid-template-columns: 72px minmax(0, 1fr) 72px;
-  }
-  .nutrition-week__head button {
-    padding-inline: 3px;
   }
   .nutrition-diary__intro .ui-badge {
     justify-self: start;

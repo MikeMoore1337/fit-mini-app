@@ -493,6 +493,7 @@ async function mockApi(
   page: Page,
   {
     completeProfile = false,
+    fullName = 'Демо пользователь',
     withCoachClient = false,
     withCoachApplication = false,
     withCoachProgram = false,
@@ -582,7 +583,7 @@ async function mockApi(
           has_workout_history: false,
           onboarding: { status: 'complete', required_fields: ['goal'], missing_fields: [] },
           profile: {
-            full_name: 'Демо пользователь',
+            full_name: fullName,
             goal: 'maintenance',
             level: completeProfile ? 'beginner' : null,
             workouts_per_week: completeProfile ? 3 : null,
@@ -707,6 +708,8 @@ async function mockApi(
           },
           targets: null,
           remaining: null,
+          status: 'unlogged',
+          status_is_explicit: false,
         },
       });
     if (path.endsWith('/workouts/progress')) return route.fulfill({ json: emptyProgress });
@@ -1469,6 +1472,25 @@ test('app shell сохраняет композицию и доступност�
       await expect(page.getByRole('link', { name: 'Упражнения', exact: true })).toBeVisible();
       await expect(page.getByRole('link', { name: 'Профиль', exact: true })).toBeVisible();
       await expect(page.getByRole('link', { name: 'База знаний', exact: true })).toBeVisible();
+      const accountName = page.locator('.app-bottom-nav__account-name');
+      const logout = page
+        .getByRole('navigation', { name: 'Основная навигация' })
+        .getByRole('button', {
+          name: 'Выйти из аккаунта',
+        });
+      await expect(accountName).toHaveText('Демо пользователь');
+      const accountNameSize = await accountName.evaluate((element) => ({
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+      }));
+      expect(accountNameSize.scrollWidth).toBeLessThanOrEqual(accountNameSize.clientWidth);
+      const [nameBox, logoutBox] = await Promise.all([
+        accountName.boundingBox(),
+        logout.boundingBox(),
+      ]);
+      expect(nameBox).not.toBeNull();
+      expect(logoutBox).not.toBeNull();
+      expect(logoutBox!.y).toBeGreaterThanOrEqual(nameBox!.y + nameBox!.height);
     }
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
@@ -1504,6 +1526,29 @@ test('app shell сохраняет композицию и доступност�
   await moreButton.click();
   await page.getByRole('dialog').getByRole('button', { name: 'Выйти из аккаунта' }).click();
   await expect(page.getByRole('heading', { name: 'Войти и продолжить' })).toBeVisible();
+});
+
+test('desktop sidebar keeps long client names contained and logout reachable', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await mockApi(page, { fullName: 'Александра Константинопольская-Северная' });
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Клиент' }).click();
+
+  const navigation = page.getByRole('navigation', { name: 'Основная навигация' });
+  const accountName = navigation.locator('.app-bottom-nav__account-name');
+  const logout = navigation.getByRole('button', { name: 'Выйти из аккаунта' });
+
+  await expect(accountName).toHaveText('Александра Константинопольская-Северная');
+  await expect(accountName).toHaveCSS('text-overflow', 'ellipsis');
+  expect(await accountName.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(
+    true,
+  );
+  await expect(logout).toBeInViewport();
+  await logout.focus();
+  await expect(logout).toBeFocused();
+  expect(await navigation.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
+    true,
+  );
 });
 
 test('desktop sidebar keeps trainer workspaces reachable at a short viewport', async ({ page }) => {

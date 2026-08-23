@@ -1,13 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
-import {
-  addCalendarDays,
-  calendarWeek,
-  dateInputValue,
-  formatCalendarDate,
-} from '../../shared/dateTime';
+import { addCalendarDays, calendarWeek, dateInputValue } from '../../shared/dateTime';
 import { invalidateNutritionSummaries, queryKeys } from '../../shared/queryKeys';
+import { WeekStrip } from '../../shared/ui/WeekStrip';
 import type {
   FoodDiaryDay,
   FoodDiaryEntry,
@@ -524,46 +520,22 @@ function NutritionWeekSelector({
   today: string;
   onSelect: (value: string) => void;
 }) {
-  const days = calendarWeek(selectedDate);
   return (
-    <nav className="nutrition-week" aria-label="Неделя дневника">
-      <div className="nutrition-week__head">
-        <button type="button" onClick={() => onSelect(addCalendarDays(selectedDate, -7))}>
-          ← Неделя
-        </button>
-        <strong>
-          {formatCalendarDate(days[0] ?? selectedDate, { day: 'numeric', month: 'short' })} —{' '}
-          {formatCalendarDate(days.at(-1) ?? selectedDate, { day: 'numeric', month: 'short' })}
-        </strong>
-        <button
-          type="button"
-          disabled={(days.at(-1) ?? selectedDate) >= today}
-          onClick={() => onSelect(addCalendarDays(selectedDate, 7))}
-        >
-          Неделя →
-        </button>
-      </div>
-      <ol>
-        {days.map((date) => (
-          <li key={date}>
-            <button
-              type="button"
-              aria-current={date === selectedDate ? 'date' : undefined}
-              disabled={date > today}
-              aria-label={formatCalendarDate(date, {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-              })}
-              onClick={() => onSelect(date)}
-            >
-              <span>{formatCalendarDate(date, { weekday: 'short' }).replace('.', '')}</span>
-              <strong>{formatCalendarDate(date, { day: 'numeric' })}</strong>
-            </button>
-          </li>
-        ))}
-      </ol>
-    </nav>
+    <WeekStrip
+      anchorDate={selectedDate}
+      ariaLabel="Неделя дневника"
+      isDateDisabled={(date) => date > today}
+      mode="picker"
+      navigation={{
+        nextDisabled: addCalendarDays(selectedDate, 7) > today,
+        onNext: () => onSelect(addCalendarDays(selectedDate, 7)),
+        onPrevious: () => onSelect(addCalendarDays(selectedDate, -7)),
+      }}
+      onSelect={onSelect}
+      selectedDate={selectedDate}
+      title={calendarWeek(selectedDate).includes(today) ? 'Эта неделя' : 'Неделя'}
+      today={today}
+    />
   );
 }
 

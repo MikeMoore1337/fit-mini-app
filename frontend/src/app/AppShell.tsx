@@ -213,10 +213,10 @@ export function AppShell({
               <AppThemeToggle navigation />
               <div className="app-bottom-nav__account">
                 <Avatar name={displayName} photoUrl={user.photo_url} />
-                <span className="app-bottom-nav__account-copy">
-                  <strong>{displayName}</strong>
-                  <small>{accountRole(user.is_admin, user.is_coach)}</small>
-                </span>
+                <strong className="app-bottom-nav__account-name">{displayName}</strong>
+                <small className="app-bottom-nav__account-role">
+                  {accountRole(user.is_admin, user.is_coach)}
+                </small>
                 <button
                   type="button"
                   className="app-bottom-nav__logout"

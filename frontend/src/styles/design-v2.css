@@ -22,7 +22,7 @@ body:has(.app-shell--design-v2) {
 
 .app-shell--design-v2 .app-bottom-nav__brand,
 .app-shell--design-v2 .app-bottom-nav__btn,
-.app-shell--design-v2 .app-bottom-nav__account-copy strong {
+.app-shell--design-v2 .app-bottom-nav__account-name {
   color: var(--v2-text-primary);
 }
 
@@ -58,7 +58,7 @@ body:has(.app-shell--design-v2) {
 }
 
 .app-shell--design-v2 .app-bottom-nav__group-label,
-.app-shell--design-v2 .app-bottom-nav__account-copy small {
+.app-shell--design-v2 .app-bottom-nav__account-role {
   color: var(--v2-text-secondary);
 }
 
@@ -199,53 +199,112 @@ body:has(.app-shell--design-v2) {
   line-height: 1.35;
 }
 
-.today-week {
+/* Shared week context/date-picker used by Today, Nutrition and future weekly surfaces. */
+.week-strip {
   display: grid;
   gap: var(--v2-space-2);
   min-width: 0;
-  padding-bottom: var(--v2-space-2);
-  border-bottom: 1px solid var(--v2-border);
+  padding: 10px 12px 8px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface-secondary);
 }
 
-.today-week__head {
-  display: flex;
-  min-width: 0;
-  align-items: end;
-  justify-content: space-between;
-  gap: var(--v2-space-3);
-}
-
-.today-week__head > div {
+.week-strip__head {
   display: grid;
+  min-width: 0;
+  align-items: center;
+  gap: var(--v2-space-2);
+}
+
+.week-strip__head--navigation {
+  grid-template-areas: 'previous context next';
+  grid-template-columns: minmax(80px, 1fr) minmax(0, auto) minmax(80px, 1fr);
+}
+
+.week-strip__head--static {
+  grid-template-areas: 'context action';
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.week-strip__context {
+  display: grid;
+  grid-area: context;
   gap: 2px;
 }
 
-.today-week__head h2 {
+.week-strip__head--navigation .week-strip__context {
+  text-align: center;
+}
+
+.week-strip__context h2 {
+  margin: 0;
   font-size: 0.88rem;
   font-weight: 700;
 }
 
-.today-week__head span {
-  color: var(--v2-text-secondary);
-  font-size: 0.72rem;
+.week-strip--picker .week-strip__context h2 {
+  display: none;
 }
 
-.today-week__days {
+.week-strip__context > span {
+  color: var(--v2-text-secondary);
+  font-size: 0.76rem;
+}
+
+.week-strip__nav {
+  display: inline-flex;
+  min-width: 80px;
+  min-height: 44px;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--v2-text-secondary);
+  font-size: 0.76rem;
+}
+
+.week-strip__nav:hover:not(:disabled) {
+  background: var(--v2-surface-strong);
+  color: var(--v2-text-primary);
+}
+
+.week-strip__nav:disabled {
+  opacity: 0.42;
+}
+
+.week-strip__nav--previous {
+  grid-area: previous;
+  justify-self: start;
+}
+
+.week-strip__nav--next {
+  grid-area: next;
+  justify-self: end;
+}
+
+.week-strip__header-action {
+  grid-area: action;
+}
+
+.week-strip__days {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 4px;
-  width: min(100%, 720px);
+  width: 100%;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.today-week__days > li {
+.week-strip__days > li {
   min-width: 0;
 }
 
-.today-week-day {
+.week-strip__day {
   display: grid;
+  width: 100%;
   min-width: 0;
   min-height: 56px;
   grid-template-rows: auto auto 12px;
@@ -254,47 +313,66 @@ body:has(.app-shell--design-v2) {
   padding: 4px 2px;
   border: 1px solid transparent;
   border-radius: var(--v2-control-radius);
+  background: transparent;
   color: var(--v2-text-secondary);
   text-decoration: none;
 }
 
-.today-week-day[aria-current='date'] {
+.week-strip--overview .week-strip__day[aria-current='date'],
+.week-strip--picker .week-strip__day[aria-pressed='true'] {
   border-color: var(--v2-lime);
-  background: var(--v2-surface-secondary);
+  background: var(--v2-surface);
   color: var(--v2-text-primary);
 }
 
-.today-week-day--interactive {
+.week-strip--picker
+  .week-strip__day[aria-current='date']:not([aria-pressed='true'])
+  .week-strip__weekday {
+  color: var(--v2-accent-text);
+  text-decoration: underline;
+  text-decoration-color: var(--v2-lime);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.week-strip__day--interactive,
+.week-strip--picker .week-strip__day:not(:disabled) {
   cursor: pointer;
 }
 
-.today-week-day--interactive:hover {
+.week-strip__day--interactive:hover:not([aria-current='date']),
+.week-strip--picker .week-strip__day:hover:not(:disabled):not([aria-pressed='true']) {
   border-color: var(--v2-border-strong);
-  background: var(--v2-surface-secondary);
+  background: var(--v2-surface);
   color: var(--v2-text-primary);
 }
 
-.today-week-day--interactive:focus-visible {
+.week-strip__day:focus-visible,
+.week-strip__nav:focus-visible {
   outline: 3px solid var(--v2-lime);
   outline-offset: 2px;
 }
 
-.today-week-day__weekday {
+.week-strip__day:disabled {
+  opacity: 0.42;
+}
+
+.week-strip__weekday {
   overflow: hidden;
   max-width: 100%;
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   font-weight: 700;
   text-overflow: ellipsis;
   text-transform: uppercase;
 }
 
-.today-week-day strong {
+.week-strip__day strong {
   color: var(--v2-text-primary);
   font-size: 1rem;
   font-variant-numeric: tabular-nums;
 }
 
-.today-week-day__marker {
+.week-strip__marker {
   display: grid;
   width: 12px;
   height: 12px;
@@ -305,17 +383,18 @@ body:has(.app-shell--design-v2) {
   line-height: 1;
 }
 
-.today-week-day__marker--completed {
+.week-strip__marker--completed {
   color: var(--v2-success-text);
 }
 
-.today-week-day__marker--in-progress,
-.today-week-day__marker--planned,
-.today-week-day__marker--upcoming {
+.week-strip__marker--in-progress,
+.week-strip__marker--planned,
+.week-strip__marker--upcoming {
   color: var(--v2-accent-text);
 }
 
-.today-week-day__marker--skipped {
+.week-strip__marker--skipped,
+.week-strip__marker--neutral {
   color: var(--v2-text-secondary);
 }
 
@@ -564,13 +643,12 @@ body:has(.app-shell--design-v2) {
   min-height: 44px;
 }
 
-.nutrition-diary--design-v2 :where(.nutrition-week, .nutrition-completeness) {
+.nutrition-diary--design-v2 .nutrition-completeness {
   border-color: var(--v2-border);
   border-radius: var(--v2-control-radius);
   background: var(--v2-surface-secondary);
 }
 
-.nutrition-diary--design-v2 .nutrition-week ol button[aria-current='date'],
 .nutrition-diary--design-v2 .nutrition-completeness__actions .ui-button[aria-pressed='true'] {
   border-color: var(--v2-lime);
   background: var(--v2-surface);
@@ -587,7 +665,6 @@ body:has(.app-shell--design-v2) {
   display: flex;
   min-height: 24px;
   justify-content: flex-end;
-  margin-top: calc(-1 * var(--v2-space-5));
 }
 
 .nutrition-diary--design-v2 .nutrition-diary__layout {
@@ -1116,6 +1193,32 @@ body.public-shell-mode.public-shell-mode:has(.auth-public-shell--design-v2) {
   .app-shell--design-v2 .app-bottom-nav__avatar {
     display: none;
   }
+
+  .app-shell--design-v2 .app-bottom-nav__account {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 34px;
+    gap: 2px var(--v2-space-1);
+    padding-inline: 0;
+  }
+
+  .app-shell--design-v2 .app-bottom-nav__account-name {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  .app-shell--design-v2 .app-bottom-nav__account-role {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: center;
+    min-width: 0;
+  }
+
+  .app-shell--design-v2 .app-bottom-nav__logout {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: end;
+  }
 }
 
 @media (max-width: 899px) {
@@ -1168,16 +1271,50 @@ body.public-shell-mode.public-shell-mode:has(.auth-public-shell--design-v2) {
     gap: var(--v2-space-3);
   }
 
-  .today-week {
+  .week-strip {
     gap: var(--v2-space-1);
-    padding-bottom: var(--v2-space-2);
+    padding: 0 0 var(--v2-space-2);
+    border-width: 0 0 1px;
+    border-radius: 0;
+    background: transparent;
   }
 
-  .today-week__head {
-    align-items: center;
+  .week-strip__head--navigation {
+    grid-template-areas: 'context previous next';
+    grid-template-columns: minmax(0, 1fr) 44px 44px;
+    gap: 4px;
   }
 
-  .today-week-day {
+  .week-strip__head--static {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .week-strip__head--navigation .week-strip__context {
+    text-align: left;
+  }
+
+  .week-strip--picker .week-strip__context h2 {
+    display: block;
+  }
+
+  .week-strip__nav {
+    width: 44px;
+    min-width: 44px;
+    padding: 0;
+    justify-content: center;
+    border: 1px solid var(--v2-border);
+    border-radius: var(--v2-compact-radius);
+  }
+
+  .week-strip__nav span {
+    display: none;
+  }
+
+  .week-strip__days {
+    gap: 2px;
+  }
+
+  .week-strip__day {
     min-height: 56px;
     padding-inline: 0;
   }
@@ -1240,7 +1377,6 @@ body.public-shell-mode.public-shell-mode:has(.auth-public-shell--design-v2) {
 
   .nutrition-diary--design-v2 .nutrition-diary__status {
     justify-content: flex-start;
-    margin-top: calc(-1 * var(--v2-space-3));
   }
 
   .nutrition-diary--design-v2 .nutrition-day-summary {

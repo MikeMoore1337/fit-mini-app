@@ -10,12 +10,7 @@ import type {
   WorkoutComment,
   WorkoutScheduleItem,
 } from '../../shared/api/types';
-import {
-  calendarWeek,
-  dateInputValue,
-  detectedTimeZone,
-  formatCalendarDate,
-} from '../../shared/dateTime';
+import { dateInputValue, detectedTimeZone, formatCalendarDate } from '../../shared/dateTime';
 import { AppLink } from '../../shared/navigation/router';
 import { queryKeys } from '../../shared/queryKeys';
 import {
@@ -25,6 +20,7 @@ import {
 import { TodayWorkout } from '../workouts/TodayWorkout';
 import { Badge, Button, Skeleton } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
+import { WeekStrip, type WeekStripDayMeta, type WeekStripStatus } from '../../shared/ui/WeekStrip';
 
 export function formatTodayHeading(value: string): { title: string } {
   const weekday = formatCalendarDate(value, { weekday: 'long' });
@@ -48,7 +44,11 @@ function weekWorkoutForDate(
   return matches.sort((left, right) => priority(left.status) - priority(right.status))[0];
 }
 
-function weekStatus(item: WorkoutScheduleItem | undefined, date: string, today: string) {
+function weekStatus(
+  item: WorkoutScheduleItem | undefined,
+  date: string,
+  today: string,
+): (WeekStripStatus & { icon: string }) | null {
   if (!item) return null;
   if (item.status === 'completed') return { key: 'completed', label: 'Выполнено', icon: '✓' };
   if (item.status === 'in_progress') return { key: 'in-progress', label: 'В процессе', icon: '›' };
@@ -58,26 +58,6 @@ function weekStatus(item: WorkoutScheduleItem | undefined, date: string, today: 
   }
   if (item.status === 'planned') return { key: 'planned', label: 'Запланировано', icon: '•' };
   return null;
-}
-
-function formatWeekRange(days: string[]): string {
-  const first = days[0];
-  const last = days.at(-1);
-  if (!first || !last) return '';
-  const firstMonth = first.slice(0, 7);
-  const lastMonth = last.slice(0, 7);
-  const sameYear = first.slice(0, 4) === last.slice(0, 4);
-  const firstLabel = formatCalendarDate(first, {
-    day: 'numeric',
-    ...(firstMonth === lastMonth ? {} : { month: 'short' }),
-    ...(sameYear ? {} : { year: 'numeric' }),
-  });
-  const lastLabel = formatCalendarDate(last, {
-    day: 'numeric',
-    month: 'short',
-    ...(sameYear ? {} : { year: 'numeric' }),
-  });
-  return `${firstLabel} — ${lastLabel}`;
 }
 
 function WeekContext({
@@ -93,81 +73,42 @@ function WeekContext({
   error: boolean;
   onRetry(): void;
 }) {
-  const days = calendarWeek(today);
   return (
-    <section className="today-week" aria-labelledby="today-week-title" aria-busy={loading}>
-      <div className="today-week__head">
-        <div>
-          <h2 id="today-week-title">Эта неделя</h2>
-          <span>{formatWeekRange(days)}</span>
-        </div>
-        {error && (
+    <WeekStrip
+      anchorDate={today}
+      ariaLabel="Эта неделя"
+      getDayMeta={(date): WeekStripDayMeta => {
+        const item = weekWorkoutForDate(workouts, date);
+        const status = weekStatus(item, date, today);
+        const isToday = date === today;
+        const canOpenWorkout =
+          item &&
+          !isToday &&
+          (item.status === 'completed' ||
+            (date >= today && ['planned', 'in_progress', 'skipped'].includes(item.status)));
+        return {
+          status: status ? { ...status, marker: status.icon } : null,
+          link: canOpenWorkout
+            ? {
+                label: `Открыть тренировку ${item.title}`,
+                to: `/app?section=progress&workout_id=${item.id}`,
+              }
+            : undefined,
+        };
+      }}
+      headerAction={
+        error ? (
           <button className="today-text-link" type="button" onClick={onRetry}>
             Обновить план
           </button>
-        )}
-      </div>
-      <ol className="today-week__days">
-        {days.map((date) => {
-          const item = weekWorkoutForDate(workouts, date);
-          const status = weekStatus(item, date, today);
-          const isToday = date === today;
-          const label = [
-            formatCalendarDate(date, { weekday: 'long', day: 'numeric', month: 'long' }),
-            isToday ? 'сегодня' : null,
-            status?.label,
-          ]
-            .filter(Boolean)
-            .join(', ');
-          const content = (
-            <>
-              <span className="today-week-day__weekday">
-                {formatCalendarDate(date, { weekday: 'short' }).replace('.', '')}
-              </span>
-              <strong>{formatCalendarDate(date, { day: 'numeric' })}</strong>
-              <span
-                className={`today-week-day__marker${status ? ` today-week-day__marker--${status.key}` : ''}`}
-                aria-hidden="true"
-              >
-                {status?.icon ?? ''}
-              </span>
-            </>
-          );
-          const canOpenWorkout =
-            item &&
-            !isToday &&
-            (item.status === 'completed' ||
-              (date >= today && ['planned', 'in_progress', 'skipped'].includes(item.status)));
-          return (
-            <li key={date}>
-              {canOpenWorkout ? (
-                <AppLink
-                  className="today-week-day today-week-day--interactive"
-                  to={`/app?section=progress&workout_id=${item.id}`}
-                  aria-label={`${label}. Открыть тренировку ${item.title}`}
-                >
-                  {content}
-                </AppLink>
-              ) : (
-                <div
-                  className="today-week-day"
-                  role="group"
-                  aria-current={isToday ? 'date' : undefined}
-                  aria-label={label}
-                >
-                  {content}
-                </div>
-              )}
-            </li>
-          );
-        })}
-      </ol>
-      {loading && (
-        <span className="sr-only" role="status">
-          Загружаем план недели
-        </span>
-      )}
-    </section>
+        ) : undefined
+      }
+      loading={loading}
+      loadingLabel="Загружаем план недели"
+      mode="overview"
+      title="Эта неделя"
+      today={today}
+    />
   );
 }
 

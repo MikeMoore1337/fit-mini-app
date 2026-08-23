@@ -58,7 +58,7 @@ test('TMA auth, shared UI, theme, viewport, safe areas and BackButton stay on on
   await expectTouchTargets(
     tmaPage.locator('.app-bottom-nav__primary > a, .app-bottom-nav__primary > button'),
   );
-  await expectTouchTargets(tmaPage.locator('.today-week-day--interactive'));
+  await expectTouchTargets(tmaPage.locator('.week-strip__day--interactive'));
   await expectNoOverlap(
     tmaPage.getByRole('button', { name: 'Начать тренировку' }),
     tmaPage.locator('#appBottomNav'),
@@ -213,13 +213,14 @@ test('nutrition quick paths recover in TMA and match Mobile Web before core navi
   for (const currentPage of [tmaPage, mobilePage]) {
     const week = currentPage.getByRole('navigation', { name: 'Неделя дневника' });
     await expect(week.locator('button[aria-current="date"]')).toBeVisible();
+    await expect(week.locator('button[aria-pressed="true"]')).toBeVisible();
     await expect(currentPage.getByRole('navigation', { name: 'Дата дневника' })).not.toBeAttached();
     expect(
       await week.evaluate((element) => {
         const style = getComputedStyle(element);
         return [Number.parseFloat(style.paddingTop), Number.parseFloat(style.paddingBottom)];
       }),
-    ).toEqual([4, 4]);
+    ).toEqual([0, 8]);
   }
 
   const breakfast = tmaPage.getByRole('region', { name: 'Завтрак' });

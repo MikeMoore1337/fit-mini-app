@@ -245,17 +245,30 @@ test('nutrition diary is responsive, keyboard-safe and supports local quick add'
     ).toBe(true);
     const week = page.getByRole('navigation', { name: 'Неделя дневника' });
     await expect(week.locator('button[aria-current="date"]')).toBeVisible();
+    await expect(week.locator('button[aria-pressed="true"]')).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Дата дневника' })).not.toBeAttached();
-    expect(
-      await week.evaluate((element) => {
-        const style = getComputedStyle(element);
-        return {
-          top: Number.parseFloat(style.paddingTop),
-          bottom: Number.parseFloat(style.paddingBottom),
-        };
-      }),
-    ).toEqual({ top: 4, bottom: 4 });
+    const selectedDay = week.locator('button[aria-pressed="true"]');
+    expect((await selectedDay.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    const borderTop = await week.evaluate((element) => getComputedStyle(element).borderTopWidth);
+    expect(borderTop).toBe(viewport.width <= 640 ? '0px' : '1px');
+    const status = page.locator('.nutrition-diary__status');
+    const targetBadge = status.getByText('Цель КБЖУ настроена', { exact: true });
+    const [weekBox, statusBox, targetBadgeBox] = await Promise.all([
+      week.boundingBox(),
+      status.boundingBox(),
+      targetBadge.boundingBox(),
+    ]);
+    expect(weekBox).not.toBeNull();
+    expect(statusBox).not.toBeNull();
+    expect(targetBadgeBox).not.toBeNull();
+    expect(statusBox!.y).toBeGreaterThanOrEqual(weekBox!.y + weekBox!.height);
+    expect(targetBadgeBox!.y).toBeGreaterThanOrEqual(weekBox!.y + weekBox!.height);
   }
+
+  await page.getByRole('button', { name: 'Предыдущая неделя' }).click();
+  await expect(page.getByRole('heading', { name: 'Неделя', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Следующая неделя' }).click();
+  await expect(page.getByRole('heading', { name: 'Эта неделя', exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: /Быстрый ввод/ }).click();
   const calories = page.getByRole('spinbutton', { name: 'Калории' });

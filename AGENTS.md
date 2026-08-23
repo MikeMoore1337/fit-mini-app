@@ -79,6 +79,12 @@ For cross-cutting changes, identify all affected surfaces before implementation:
 frontend, Telegram Mini App, bot, database, generated API types, tests,
 deployment/configuration and documentation.
 
+For any user-facing seven-day week context or date selector, reuse the shared frontend
+`WeekStrip` component and its documented `overview`/`picker` modes. Do not create page-local week
+markup or a parallel responsive visual system. Keep adjacent page content in normal layout flow;
+do not overlap the week strip with negative margins or absolute positioning. Verify adjacent
+bounding boxes at desktop and relevant mobile widths; see `docs/design/component-principles-v2.md`.
+
 # Skills
 
 Repository skills live under `.agents/skills/`.
