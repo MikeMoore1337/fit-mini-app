@@ -2192,7 +2192,7 @@ select:not([multiple]) {
 }
 .nutrition-target-note {
   padding-left: 10px;
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--accent-line);
   color: var(--muted);
   font-size: 0.82rem;
   line-height: 1.45;
@@ -2222,7 +2222,7 @@ select:not([multiple]) {
 .nutrition-target-history__list summary::-webkit-details-marker {
   display: none;
 }
-.nutrition-target-history__list summary > span {
+.nutrition-target-history__list summary > span:first-child {
   display: grid;
   flex: 1;
   gap: 2px;

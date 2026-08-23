@@ -561,6 +561,51 @@ test('manual nutrition target history screenshots cover all responsive surfaces 
     await expect(page.getByLabel('Текущие ориентиры КБЖУ')).toBeVisible();
     await expectNoHorizontalOverflow(page);
 
+    const brandContract = await page.evaluate(() => {
+      const tokenColor = (token: string) => {
+        const sample = document.createElement('span');
+        sample.style.color = `var(${token})`;
+        document.body.append(sample);
+        const color = getComputedStyle(sample).color;
+        sample.remove();
+        return color;
+      };
+      const save = document.querySelector<HTMLElement>('.nutrition-target-save');
+      const activeMode = document.querySelector<HTMLElement>(
+        '.nutrition-target-mode > button.is-active',
+      );
+      const note = document.querySelector<HTMLElement>('.nutrition-target-note');
+      const disclosureIcons = Array.from(
+        document.querySelectorAll<HTMLElement>('.nutrition-target-history__list .disclosure-icon'),
+      );
+      return {
+        lime: tokenColor('--v2-lime'),
+        onLime: tokenColor('--v2-on-lime'),
+        saveBackground: save ? getComputedStyle(save).backgroundColor : null,
+        saveColor: save ? getComputedStyle(save).color : null,
+        activeModeShadow: activeMode ? getComputedStyle(activeMode).boxShadow : null,
+        noteBorder: note ? getComputedStyle(note).borderLeftColor : null,
+        disclosureIcons: disclosureIcons.map((icon) => {
+          const rect = icon.getBoundingClientRect();
+          return {
+            width: rect.width,
+            height: rect.height,
+            radius: getComputedStyle(icon).borderRadius,
+          };
+        }),
+      };
+    });
+    expect(brandContract.saveBackground).toBe(brandContract.lime);
+    expect(brandContract.saveColor).toBe(brandContract.onLime);
+    expect(brandContract.activeModeShadow).toContain(brandContract.lime);
+    expect(brandContract.noteBorder).toBe(brandContract.lime);
+    expect(brandContract.disclosureIcons.length).toBeGreaterThan(0);
+    expect(
+      brandContract.disclosureIcons.every(
+        ({ width, height, radius }) => width === 28 && height === 28 && radius === '50%',
+      ),
+    ).toBe(true);
+
     const targetCard = page.locator('#nutrition-target-settings > details');
     await targetCard.scrollIntoViewIfNeeded();
     await targetCard.screenshot({

@@ -2669,6 +2669,25 @@ body:has(.standalone-page--design-v2) {
   box-shadow: inset 0 -2px var(--v2-lime);
 }
 
+.app-section--nutrition .nutrition-target-mode > button.is-active {
+  background: var(--v2-surface);
+  color: var(--v2-text-primary);
+  box-shadow: inset 0 -2px 0 var(--v2-lime);
+}
+
+.app-section--nutrition .nutrition-target-save {
+  border-color: var(--v2-lime);
+  background: var(--v2-lime);
+  color: var(--v2-on-lime);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .app-section--nutrition .nutrition-target-save:hover:not(:disabled) {
+    border-color: var(--v2-lime-hover);
+    background: var(--v2-lime-hover);
+  }
+}
+
 .app-section--nutrition :where(.nutrition-food-result, .nutrition-ingredient) {
   border-color: var(--v2-border);
   border-radius: 0;
