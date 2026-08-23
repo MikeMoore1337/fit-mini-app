@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProgressSchedule } from '../../../../src/features/workouts/ProgressSchedule';
+import { NavigationProvider } from '../../../../src/shared/navigation/router';
 import { FeedbackProvider } from '../../../../src/shared/ui/FeedbackProvider';
 
 const progress = {
@@ -246,11 +247,13 @@ function renderPanel(userId: number | 'anonymous' = 'anonymous') {
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
-    <QueryClientProvider client={queryClient}>
-      <FeedbackProvider>
-        <ProgressSchedule userId={userId} />
-      </FeedbackProvider>
-    </QueryClientProvider>,
+    <NavigationProvider>
+      <QueryClientProvider client={queryClient}>
+        <FeedbackProvider>
+          <ProgressSchedule userId={userId} />
+        </FeedbackProvider>
+      </QueryClientProvider>
+    </NavigationProvider>,
   );
 }
 

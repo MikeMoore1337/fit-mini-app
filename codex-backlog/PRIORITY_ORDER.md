@@ -1,19 +1,19 @@
-# Порядок выполнения release backlog v11
+# Порядок выполнения release backlog v12
 
 ## Completed
 
-`00-59`, включая буквенные подзадачи. Task-файлы находятся в `tasks/done/`.
+`00-60`, включая буквенные подзадачи. Task-файлы находятся в `tasks/done/`.
 
 ## Current
 
 ```text
-60 Body priorities and anthropometry
+61 Data confidence product integration
 ```
 
-После завершения `60`:
+После завершения `61`:
 
 ```text
-61 -> 62 -> 63 -> 64 -> 65 -> 66 -> 67
+62 -> 63 -> 64 -> 65 -> 66 -> 67
  -> 68 -> 69 -> 70 -> 71 -> 72 -> 73 -> 74 -> 75
  -> 76 skill-aware retrospective audit -> 76A adversarial gate
  -> 77 real-user results checkpoint

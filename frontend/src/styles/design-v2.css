@@ -2194,6 +2194,10 @@ body:has(.standalone-page--design-v2) {
   background: var(--v2-lime-hover);
 }
 
+.app-section--progress .measurement-diary__save {
+  min-height: 48px;
+}
+
 .app-section--design-v2 :where(input:not([type='checkbox'], [type='radio']), textarea, select) {
   min-height: 44px;
   border-color: var(--v2-border);
@@ -2813,6 +2817,39 @@ body:has(.standalone-page--design-v2) {
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+}
+
+.app-section--progress .progress-priority {
+  border-color: var(--v2-border);
+  background: var(--v2-surface-secondary);
+}
+
+.app-section--progress .progress-priority.is-selected {
+  border-left-color: var(--v2-lime);
+  background: var(--v2-surface-secondary);
+}
+
+.app-section--progress .progress-priority > a {
+  color: var(--v2-accent-text);
+}
+
+.app-section--progress .progress-body-metric {
+  border-color: var(--v2-border);
+  background: var(--v2-surface-secondary);
+}
+
+.app-section--progress .measurement-diary--embedded .auth-notice,
+.app-section--progress .measurement-history,
+.app-section--progress .measurement-history__row,
+.app-section--progress .progress-body-guidance,
+.app-section--progress .measurement-diary--embedded {
+  border-color: var(--v2-border);
+}
+
+.app-section--progress .measurement-diary__error {
+  border-left-color: var(--v2-danger);
+  background: var(--v2-danger-surface);
+  color: var(--v2-danger);
 }
 
 .app-section--progress

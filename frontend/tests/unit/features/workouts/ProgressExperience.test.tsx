@@ -266,6 +266,17 @@ function installApi({
     if (path.startsWith('/api/v1/workouts/progress/nutrition-report')) {
       return new Response(JSON.stringify(makeNutritionReport()), { status: 200 });
     }
+    if (path.startsWith('/api/v1/me/profile/body-priority-options')) {
+      return new Response(
+        JSON.stringify({
+          items: [
+            { id: 'back', name: 'Мышцы спины' },
+            { id: 'posterior_chain', name: 'Задняя поверхность тела' },
+          ],
+        }),
+        { status: 200 },
+      );
+    }
     return new Response(JSON.stringify({ detail: 'Unexpected request' }), { status: 500 });
   });
 }
@@ -296,7 +307,7 @@ describe('ProgressExperience', () => {
     expect(await screen.findAllByText('84%')).toHaveLength(2);
     expect(screen.getByRole('heading', { name: 'Прогресс' })).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Тренировки' })).toBeVisible();
-    expect(screen.getByRole('heading', { name: 'Тело' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Замеры и приоритеты' })).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Питание' })).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Соблюдение плана' })).toBeVisible();
     expect(screen.getByRole('img', { name: /Вес: 2 янв. — 69,4 кг/ })).toBeVisible();
@@ -305,6 +316,32 @@ describe('ProgressExperience', () => {
     expect(screen.getByText('Детали тренировки')).toBeVisible();
     expect(screen.getByText('Показаны последние 20 тренировок упражнения.')).toBeVisible();
     expect(screen.queryByText('too_few_points')).not.toBeInTheDocument();
+  });
+
+  it('shows selected priorities as preferences without treating circumference as muscle analytics', async () => {
+    const summary = makeSummary();
+    summary.body.priority = {
+      mode: 'muscle_groups',
+      muscle_group_ids: ['back', 'posterior_chain'],
+    };
+    summary.body.guidance.consistency_tips = ['Снимайте замеры в похожее время суток.'];
+    summary.body.guidance.circumference_limitations = [
+      'Окружность плеча не измеряет отдельно бицепс или трицепс.',
+    ];
+    installApi({ summary });
+    renderExperience();
+
+    expect(await screen.findByText('Мышцы спины')).toBeVisible();
+    expect(screen.getByText('Задняя поверхность тела')).toBeVisible();
+    expect(
+      screen.getByText(/Это предпочтение для планирования\. Оно не оценивает тело/),
+    ).toBeVisible();
+    expect(screen.getAllByText('Окружность').length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByText('Как сравнивать замеры'));
+    expect(screen.getByText('Снимайте замеры в похожее время суток.')).toBeVisible();
+    expect(
+      screen.getByText('Окружность плеча не измеряет отдельно бицепс или трицепс.'),
+    ).toBeVisible();
   });
 
   it('requests both backend aggregates when the period changes', async () => {
@@ -387,7 +424,10 @@ describe('ProgressExperience', () => {
     expect(
       screen.getByText('0 частичных и 29 отсутствующих дней не входят в средние значения.'),
     ).toBeVisible();
-    expect(screen.getByText('Один замер')).toBeVisible();
+    expect(screen.getByText(/1 точка/)).toBeVisible();
+    expect(
+      screen.getByText('Одна точка сохраняет факт, но ещё не показывает направление изменений.'),
+    ).toBeVisible();
     expect(screen.getByText('Нет цели или плана')).toBeVisible();
     expect(screen.getAllByText('Мало данных').length).toBeGreaterThan(0);
   });

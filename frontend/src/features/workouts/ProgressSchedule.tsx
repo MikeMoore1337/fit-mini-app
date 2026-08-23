@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type { WorkoutScheduleItem } from '../../shared/api/types';
@@ -231,6 +231,7 @@ export function ProgressSchedule({
   focusedExerciseId,
   focusWeeklyReview = false,
   userId = 'anonymous',
+  measurementDiary,
 }: {
   timeZone?: string | null;
   focusedWorkoutId?: number | null;
@@ -238,10 +239,11 @@ export function ProgressSchedule({
   focusedExerciseId?: number | null;
   focusWeeklyReview?: boolean;
   userId?: number | 'anonymous';
+  measurementDiary?: ReactNode;
 }) {
   return (
     <div className="stack progress-schedule">
-      <ProgressExperience />
+      <ProgressExperience measurementDiary={measurementDiary} />
       <WeeklyCheckInCard autoFocus={focusWeeklyReview} userId={userId} />
       <SchedulePanel
         timeZone={timeZone}

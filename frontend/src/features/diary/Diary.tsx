@@ -1,11 +1,12 @@
+import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type { BodyMeasurement, BodyMeasurementSave } from '../../shared/api/types';
 import { LIVE_DATA_REFETCH_INTERVAL_MS } from '../../shared/sync';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
-import { Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
+import { Button, Card, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
 import { useAuth } from '../../app/AuthProvider';
-import { dateInputValue, detectedTimeZone } from '../../shared/dateTime';
+import { dateInputValue, detectedTimeZone, formatCalendarDate } from '../../shared/dateTime';
 import { usePersistentState } from '../../shared/storage';
 import { measurementDraftStorageKey } from '../../shared/userScopedStorage';
 import { DateInput } from '../../shared/ui/PickerInput';
@@ -15,14 +16,19 @@ export function Diary({
   clientId,
   timeZone: clientTimeZone,
   onSaved,
+  embedded = false,
 }: {
   clientId?: number;
   timeZone?: string | null;
   onSaved?: () => void | Promise<void>;
+  embedded?: boolean;
 }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { toast, confirm } = useFeedback();
+  const formRef = useRef<HTMLFormElement>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [editingDate, setEditingDate] = useState<string | null>(null);
   const timeZone = clientId
     ? clientTimeZone || detectedTimeZone()
     : user?.profile?.timezone || detectedTimeZone();
@@ -43,13 +49,23 @@ export function Diary({
   const mutation = useMutation({
     mutationFn: ({ path, method, body }: { path: string; method: string; body?: unknown }) =>
       api(path, { method, body }),
+    onMutate: () => setSubmitError(null),
     onSuccess: async () => {
+      const activeElement = document.activeElement;
+      if (activeElement instanceof HTMLElement && formRef.current?.contains(activeElement)) {
+        activeElement.blur();
+      }
+      setEditingDate(null);
       clearDraft({ measured_on: today });
       await invalidateMeasurementMutation(queryClient, clientId);
       await onSaved?.();
       toast('Дневник обновлён');
     },
-    onError: (reason) => toast((reason as Error).message, 'error'),
+    onError: (reason) => {
+      const message = (reason as Error).message;
+      setSubmitError(message);
+      toast(message, 'error');
+    },
   });
   const numeric = [
     'weight_kg',
@@ -67,10 +83,52 @@ export function Diary({
     biceps_cm: { min: 0.1, max: 150 },
     thigh_cm: { min: 0.1, max: 200 },
   };
-  return (
-    <Card title="Дневник замеров">
+  const editingMeasurement = rows.data?.find((item) => item.measured_on === editingDate);
+  const resetForm = () => {
+    setSubmitError(null);
+    setEditingDate(null);
+    clearDraft({ measured_on: today });
+  };
+  const editMeasurement = (item: BodyMeasurement) => {
+    setSubmitError(null);
+    setEditingDate(item.measured_on);
+    setForm({
+      measured_on: item.measured_on,
+      weight_kg: item.weight_kg,
+      chest_cm: item.chest_cm,
+      waist_cm: item.waist_cm,
+      hips_cm: item.hips_cm,
+      biceps_cm: item.biceps_cm,
+      thigh_cm: item.thigh_cm,
+      note: item.note,
+    });
+    requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView?.({ block: 'center' });
+      formRef.current?.querySelector<HTMLInputElement>('input')?.focus();
+    });
+  };
+  const content = (
+    <>
+      <header className="measurement-diary__header">
+        <div>
+          <span className="progress-section__eyebrow">Фактические данные</span>
+          <h3>{editingMeasurement ? 'Изменить замер' : 'Новый замер'}</h3>
+          <p>
+            {editingMeasurement
+              ? `Обновится запись за ${formatCalendarDate(editingMeasurement.measured_on, { day: 'numeric', month: 'long', year: 'numeric' })}.`
+              : 'Достаточно одного показателя. Остальные поля можно заполнить позже.'}
+          </p>
+        </div>
+        {editingMeasurement && (
+          <Button type="button" variant="secondary" onClick={resetForm}>
+            Отменить изменение
+          </Button>
+        )}
+      </header>
       <form
-        className="stack top-gap"
+        ref={formRef}
+        className="stack measurement-diary__form"
+        aria-busy={mutation.isPending}
         onSubmit={(e) => {
           e.preventDefault();
           mutation.mutate({ path: base, method: 'POST', body: form });
@@ -81,6 +139,7 @@ export function Diary({
             <span>Дата</span>
             <DateInput
               controlClassName="diary-date-control"
+              disabled={Boolean(editingMeasurement)}
               value={form.measured_on || ''}
               max={today}
               onChange={(e) => setForm({ ...form, measured_on: e.target.value })}
@@ -102,6 +161,8 @@ export function Diary({
               </span>
               <input
                 type="number"
+                inputMode="decimal"
+                enterKeyHint={key === 'thigh_cm' ? 'done' : 'next'}
                 step="0.1"
                 min={numericLimits[key].min}
                 max={numericLimits[key].max}
@@ -132,50 +193,116 @@ export function Diary({
             onChange={(e) => setForm({ ...form, note: e.target.value })}
           />
         </label>
-        <button disabled={mutation.isPending}>Сохранить замер</button>
+        {submitError && (
+          <p className="measurement-diary__error" role="alert">
+            {submitError} Введённые значения сохранены — исправьте данные или повторите попытку.
+          </p>
+        )}
+        <div className="measurement-diary__save-dock">
+          <Button
+            className="measurement-diary__save"
+            disabled={mutation.isPending}
+            fullWidth
+            onPointerDown={(event) => {
+              const activeElement = document.activeElement;
+              if (
+                activeElement instanceof HTMLElement &&
+                formRef.current?.contains(activeElement)
+              ) {
+                event.preventDefault();
+              }
+            }}
+            type="submit"
+          >
+            {mutation.isPending
+              ? 'Сохраняем…'
+              : editingMeasurement
+                ? 'Сохранить изменения'
+                : 'Сохранить замер'}
+          </Button>
+        </div>
       </form>
       {rows.isLoading ? (
-        <LoadingState />
+        <LoadingState label="Загружаем историю замеров…" />
       ) : rows.error ? (
-        <ErrorState message={(rows.error as Error).message} />
+        <ErrorState message={(rows.error as Error).message} retry={() => void rows.refetch()} />
       ) : !rows.data?.length ? (
-        <EmptyState title="Замеров пока нет" />
+        <EmptyState
+          title="Замеров пока нет"
+          text="После первой записи здесь появится история с датами и единицами измерения."
+        />
       ) : (
-        <div className="list-grid top-gap">
+        <section className="measurement-history" aria-labelledby="measurement-history-title">
+          <div className="measurement-history__heading">
+            <h3 id="measurement-history-title">История замеров</h3>
+            <span>{rows.data.length} записей</span>
+          </div>
           {rows.data.map((item) => (
-            <article className="list-row" key={item.id}>
-              <div className="list-row__main">
-                <strong>{item.measured_on}</strong>
-                <span>
+            <article className="measurement-history__row" key={item.id}>
+              <div className="measurement-history__facts">
+                <time dateTime={item.measured_on}>
+                  {formatCalendarDate(item.measured_on, {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  })}
+                </time>
+                <p>
                   {numeric
                     .filter((key) => item[key] != null)
                     .map(
                       (key) =>
-                        `${{ weight_kg: 'Вес', chest_cm: 'Грудь', waist_cm: 'Талия', hips_cm: 'Бёдра', biceps_cm: 'Окружность плеча', thigh_cm: 'Окружность бедра' }[key]}: ${item[key]}`,
+                        `${{ weight_kg: 'Вес', chest_cm: 'Грудь', waist_cm: 'Талия', hips_cm: 'Бёдра', biceps_cm: 'Окружность плеча', thigh_cm: 'Окружность бедра' }[key]}: ${item[key]} ${key === 'weight_kg' ? 'кг' : 'см'}`,
                     )
                     .join(' · ')}
-                </span>
-                {item.note && <span className="muted">{item.note}</span>}
+                </p>
+                {item.note && <p className="measurement-history__note">{item.note}</p>}
               </div>
-              <button
-                className="btn-danger"
-                onClick={async () => {
-                  if (
-                    await confirm({
-                      title: 'Удалить замер?',
-                      message: item.measured_on,
-                      confirmText: 'Удалить',
-                    })
-                  )
-                    mutation.mutate({ path: `${base}/${item.id}`, method: 'DELETE' });
-                }}
-              >
-                Удалить
-              </button>
+              <div className="measurement-history__actions">
+                <Button type="button" variant="secondary" onClick={() => editMeasurement(item)}>
+                  Изменить
+                </Button>
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={async () => {
+                    if (
+                      await confirm({
+                        title: 'Удалить замер?',
+                        message: formatCalendarDate(item.measured_on, {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        }),
+                        confirmText: 'Удалить',
+                      })
+                    )
+                      mutation.mutate({ path: `${base}/${item.id}`, method: 'DELETE' });
+                  }}
+                >
+                  Удалить
+                </Button>
+              </div>
             </article>
           ))}
-        </div>
+        </section>
       )}
+    </>
+  );
+  if (embedded) {
+    return (
+      <section className="measurement-diary measurement-diary--embedded" id="measurement-diary">
+        {content}
+      </section>
+    );
+  }
+  return (
+    <Card
+      className="diary-measurements-card measurement-diary"
+      id="measurement-diary"
+      title="Дневник замеров"
+    >
+      {content}
     </Card>
   );
 }

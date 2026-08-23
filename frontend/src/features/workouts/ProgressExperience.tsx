@@ -1,8 +1,9 @@
 import { useState, type ReactNode } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
-import type { ProgressSummary, TrainingAnalytics } from '../../shared/api/types';
+import type { ApiSchemas, ProgressSummary, TrainingAnalytics } from '../../shared/api/types';
 import { queryKeys } from '../../shared/queryKeys';
+import { AppLink } from '../../shared/navigation/router';
 import { ContextualHelp } from '../../shared/ui/ContextualHelp';
 import { formatCalendarDate } from '../../shared/dateTime';
 import {
@@ -59,6 +60,20 @@ function formatChange(change: number | null | undefined, unit: string): string {
   if (change == null) return 'Пока без динамики';
   const sign = change > 0 ? '+' : '';
   return `${sign}${formatNumber(change)} ${unit}`;
+}
+
+function trendInterpretationText(
+  trend: BodyTrend,
+  guidance: ProgressSummary['body']['guidance'],
+): string | null {
+  if (trend.interpretation_status === 'available') return null;
+  if (trend.interpretation_status === 'single_point') {
+    return 'Одна точка сохраняет факт, но ещё не показывает направление изменений.';
+  }
+  if (trend.interpretation_status === 'insufficient_points') {
+    return `Нужно минимум ${guidance.minimum_points_for_interpretation} замера: разовое изменение не считаем трендом.`;
+  }
+  return `Точек достаточно, но период короче ${guidance.minimum_span_days_for_interpretation} дней — вывод пока преждевременный.`;
 }
 
 function plural(value: number, one: string, few: string, many: string): string {
@@ -448,6 +463,15 @@ function BodyChart({ trend }: { trend: BodyTrend }) {
           <circle key={`${point.measured_on}-${point.value}`} cx={pointX} cy={pointY} r="4" />
         ))}
       </svg>
+      <div className="progress-body-chart__range" aria-hidden="true">
+        <span>
+          {formatNumber(minValue)} {unit}
+        </span>
+        <span>диапазон серии</span>
+        <span>
+          {formatNumber(maxValue)} {unit}
+        </span>
+      </div>
       <div className="progress-body-chart__scale" aria-hidden="true">
         <span>{formatDate(trend.first_measured_on)}</span>
         <span>{formatDate(trend.latest_measured_on)}</span>
@@ -469,62 +493,152 @@ function BodyChart({ trend }: { trend: BodyTrend }) {
   );
 }
 
-function BodySection({ summary }: { summary: ProgressSummary }) {
+function BodySection({
+  measurementDiary,
+  summary,
+}: {
+  measurementDiary?: ReactNode;
+  summary: ProgressSummary;
+}) {
   const { body } = summary;
+  const priorityOptions = useQuery({
+    queryKey: ['body-priority-options'],
+    queryFn: () =>
+      api<ApiSchemas['BodyPriorityOptionsResponse']>('/api/v1/me/profile/body-priority-options'),
+    enabled: body.priority?.mode === 'muscle_groups',
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  const priorityNames =
+    body.priority?.mode === 'muscle_groups'
+      ? (body.priority.muscle_group_ids ?? [])
+          .map((id) => priorityOptions.data?.items.find((option) => option.id === id)?.name)
+          .filter((name): name is string => Boolean(name))
+      : [];
+  const hasGuidance =
+    body.guidance.consistency_tips.length > 0 || body.guidance.circumference_limitations.length > 0;
   return (
     <section className="progress-section" id="progress-body" aria-labelledby="progress-body-title">
       <SectionHeading
         eyebrow="Замеры"
-        title="Тело"
+        title="Замеры и приоритеты"
         titleId="progress-body-title"
-        description="Сравнение только с вашими предыдущими замерами в одинаковых единицах."
+        description="Фактические значения по датам и выбранный контекст развития — без идеальных пропорций и оценки тела."
         trailing={
           body.latest_measurement && (
             <Badge>Последний замер {formatDate(body.latest_measurement.measured_on)}</Badge>
           )
         }
       />
-      {!body.trends.length ? (
-        <EmptyState
-          title="Замеров за этот период нет"
-          text="Добавьте вес или окружности в дневник замеров — одной точки достаточно для начала истории."
-        />
-      ) : (
-        <>
-          <div className="progress-body-grid">
-            {body.trends.map((trend) => (
-              <article className="progress-body-metric" key={trend.metric}>
-                <header>
-                  <div>
-                    <h3>{bodyMetricLabels[trend.metric]}</h3>
-                    <p>
-                      {trend.point_count === 1
-                        ? 'Один замер'
-                        : `${trend.point_count} ${plural(trend.point_count, 'замер', 'замера', 'замеров')} за ${trend.span_days} ${plural(trend.span_days, 'день', 'дня', 'дней')}`}
-                    </p>
-                  </div>
-                  <strong>{formatChange(trend.change, bodyMetricUnits[trend.metric])}</strong>
-                </header>
-                <BodyChart trend={trend} />
-                {trend.interpretation_status !== 'available' && (
-                  <p className="progress-note">
-                    {sufficiencyText(
-                      trend.metric === 'weight_kg'
-                        ? summary.data_sufficiency.weight_trend
-                        : summary.data_sufficiency.anthropometry,
-                      `динамика показателя «${bodyMetricLabels[trend.metric].toLowerCase()}»`,
-                    )}
-                  </p>
+      <div
+        className={`progress-priority${body.priority ? ' is-selected' : ' is-empty'}`}
+        aria-label="Выбранный приоритет развития"
+      >
+        <div>
+          <span>Приоритет развития</span>
+          <strong>
+            {!body.priority
+              ? 'Не выбран'
+              : body.priority.mode === 'balanced'
+                ? 'Сбалансированное развитие'
+                : 'Выбранные мышечные группы'}
+          </strong>
+        </div>
+        {body.priority?.mode === 'muscle_groups' &&
+          (priorityOptions.isLoading ? (
+            <p role="status">Загружаем названия выбранных групп…</p>
+          ) : priorityOptions.error ? (
+            <p role="alert">
+              Не удалось загрузить названия групп. Выбрано:{' '}
+              {body.priority.muscle_group_ids?.length ?? 0}.
+            </p>
+          ) : (
+            <ul>
+              {priorityNames.map((name) => (
+                <li key={name}>{name}</li>
+              ))}
+            </ul>
+          ))}
+        <p>
+          {body.priority
+            ? 'Это предпочтение для планирования. Оно не оценивает тело и не объясняет изменение окружностей.'
+            : 'Можно оставить развитие без отдельного акцента или выбрать предпочтения в профиле.'}
+        </p>
+        <AppLink to="/app?section=profile#profile-fitness">
+          {body.priority ? 'Изменить в профиле' : 'Выбрать в профиле'}
+        </AppLink>
+      </div>
+      <div className="progress-body-flow">
+        {measurementDiary && <div className="progress-body-diary">{measurementDiary}</div>}
+        <div className="progress-body-trends" aria-label="Динамика замеров">
+          {!body.trends.length ? (
+            <EmptyState
+              title="Замеров за этот период нет"
+              text="Добавьте вес или окружности — первая точка начнёт историю, но ещё не станет трендом."
+            />
+          ) : (
+            <>
+              <div className="progress-body-grid">
+                {body.trends.map((trend) => {
+                  const unit = bodyMetricUnits[trend.metric];
+                  const interpretation = trendInterpretationText(trend, body.guidance);
+                  return (
+                    <article className="progress-body-metric" key={trend.metric}>
+                      <header>
+                        <div>
+                          <span className="progress-body-metric__kind">
+                            {trend.metric === 'weight_kg' ? 'Масса тела' : 'Окружность'}
+                          </span>
+                          <h3>{bodyMetricLabels[trend.metric]}</h3>
+                          <p>
+                            {trend.point_count === 1
+                              ? `1 точка · ${formatDate(trend.latest_measured_on, true)}`
+                              : `${trend.point_count} ${plural(trend.point_count, 'точка', 'точки', 'точек')} · ${trend.span_days} ${plural(trend.span_days, 'день', 'дня', 'дней')}`}
+                          </p>
+                        </div>
+                        <div className="progress-body-metric__value">
+                          <strong>
+                            {formatNumber(trend.latest_value)} {unit}
+                          </strong>
+                          <span>{formatChange(trend.change, unit)}</span>
+                        </div>
+                      </header>
+                      <BodyChart trend={trend} />
+                      {interpretation && <p className="progress-note">{interpretation}</p>}
+                    </article>
+                  );
+                })}
+              </div>
+              <p className="progress-coverage">
+                Точки показывают только даты фактических замеров; промежутки не заполнены
+                предположениями.
+              </p>
+            </>
+          )}
+          {hasGuidance && (
+            <details className="progress-body-guidance">
+              <summary>Как сравнивать замеры</summary>
+              <div>
+                {body.guidance.consistency_tips.length > 0 && (
+                  <ul>
+                    {body.guidance.consistency_tips.map((tip) => (
+                      <li key={tip}>{tip}</li>
+                    ))}
+                  </ul>
                 )}
-              </article>
-            ))}
-          </div>
-          <p className="progress-coverage">
-            Точки показывают только даты фактических замеров; промежутки не заполнены
-            предположениями.
-          </p>
-        </>
-      )}
+                {body.guidance.circumference_limitations.map((limitation) => (
+                  <p key={limitation}>{limitation}</p>
+                ))}
+              </div>
+            </details>
+          )}
+          <ContextualHelp articlePath="/knowledge/progress/how-to-read-progress">
+            <p>
+              Сравнивайте значения только с собственной историей. Окружность участка тела не
+              показывает рост отдельной мышцы.
+            </p>
+          </ContextualHelp>
+        </div>
+      </div>
     </section>
   );
 }
@@ -687,7 +801,7 @@ function useTrainingAnalytics(period: PeriodDays) {
   });
 }
 
-export function ProgressExperience() {
+export function ProgressExperience({ measurementDiary }: { measurementDiary?: ReactNode } = {}) {
   const [period, setPeriod] = useState<PeriodDays>(30);
   const summary = useQuery({
     queryKey: queryKeys.progress.summary(period),
@@ -729,7 +843,7 @@ export function ProgressExperience() {
         <>
           <SummaryOverview summary={summary.data} />
           <TrainingSection analytics={analytics} summary={summary.data} />
-          <BodySection summary={summary.data} />
+          <BodySection measurementDiary={measurementDiary} summary={summary.data} />
           <NutritionSection summary={summary.data} />
           <NutritionPeriodReport />
           <AdherenceSection summary={summary.data} />

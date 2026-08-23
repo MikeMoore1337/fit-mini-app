@@ -500,6 +500,94 @@ test('nutrition report keeps period analytics and diary return aligned in Mobile
   );
 });
 
+test('measurement add, edit, history and insufficient trend keep Mobile Web and TMA parity', async ({
+  mobilePage,
+  tma,
+  tmaPage,
+}) => {
+  const tmaApi = await installPlatformApi(tmaPage);
+  await installPlatformApi(mobilePage, { browserSession: true });
+  await Promise.all([
+    tmaPage.goto('/app?section=progress'),
+    mobilePage.goto('/app?section=progress'),
+  ]);
+
+  for (const currentPage of [tmaPage, mobilePage]) {
+    const body = currentPage.locator('#progress-body');
+    await expect(body.getByText('Сбалансированное развитие')).toBeVisible();
+    await expect(body.getByText('Замеров за этот период нет')).toBeVisible();
+    await expect(body.getByText('Замеров пока нет')).toBeVisible();
+    await expect(body.getByLabel('Вес, кг')).toHaveAttribute('inputmode', 'decimal');
+    await body.getByLabel('Вес, кг').fill('74.2');
+    await body.getByLabel('Плечо (окружность), см').fill('31.6');
+  }
+  expect(await sharedSurfaceSignature(tmaPage)).toEqual(await sharedSurfaceSignature(mobilePage));
+
+  const tmaBody = tmaPage.locator('#progress-body');
+  await tmaBody.getByLabel('Вес, кг').focus();
+  await expect(tmaPage.locator('html')).toHaveAttribute('data-yfc-keyboard', 'visible');
+  await expect(tmaPage.locator('#appBottomNav')).toBeHidden();
+  await expect(tmaBody.locator('.measurement-diary__save-dock')).toHaveCSS('position', 'sticky');
+  await tma.setTheme('dark');
+  await tma.setActive(false);
+  await tma.setActive(true);
+  await expect(tmaBody.getByLabel('Вес, кг')).toHaveValue('74.2');
+  await expect(tmaBody.getByLabel('Плечо (окружность), см')).toHaveValue('31.6');
+
+  tmaApi.failNextMeasurementSave();
+  expect(
+    await tmaBody
+      .locator('.measurement-diary__form :invalid')
+      .evaluateAll((elements) => elements.map((element) => element.getAttribute('aria-label'))),
+  ).toEqual([]);
+  await tmaBody.getByRole('button', { name: 'Сохранить замер' }).click();
+  await expect.poll(() => tmaApi.measurementSaveCalls()).toBe(1);
+  await expect(tmaBody.getByText(/Введённые значения сохранены/)).toBeVisible();
+  await expect(tmaBody.getByLabel('Вес, кг')).toHaveValue('74.2');
+  await tmaBody.getByRole('button', { name: 'Сохранить замер' }).click();
+  await expect.poll(() => tmaApi.measurementSaveCalls()).toBe(2);
+
+  const mobileBody = mobilePage.locator('#progress-body');
+  await mobileBody.getByRole('button', { name: 'Сохранить замер' }).click();
+
+  for (const currentPage of [tmaPage, mobilePage]) {
+    const body = currentPage.locator('#progress-body');
+    await expect(body.getByText(/Вес: 74\.2 кг · Окружность плеча: 31\.6 см/)).toBeVisible();
+    const singlePointHints = body.getByText(
+      'Одна точка сохраняет факт, но ещё не показывает направление изменений.',
+    );
+    await expect(singlePointHints).toHaveCount(2);
+    await expect(singlePointHints.first()).toBeVisible();
+    await expect(body.getByText('Пока без динамики').first()).toBeVisible();
+    const row = body.locator('.measurement-history__row').filter({ hasText: '74.2 кг' });
+    await row.getByRole('button', { name: 'Изменить' }).click();
+    await body.getByLabel('Вес, кг').fill('74.6');
+    await body.getByRole('button', { name: 'Сохранить изменения' }).click();
+    await expect(body.getByText(/Вес: 74\.6 кг · Окружность плеча: 31\.6 см/)).toBeVisible();
+    await expectNoHorizontalOverflow(currentPage);
+    await expectTouchTargets(body.locator('.measurement-history__actions .ui-button'));
+  }
+
+  for (const viewport of Object.values(MOBILE_CONTEXTS)) {
+    await tmaPage.setViewportSize(viewport);
+    await tma.setViewport(viewport.height, viewport.height);
+    await expectNoHorizontalOverflow(tmaPage);
+    const save = tmaBody.getByRole('button', { name: 'Сохранить замер' });
+    await save.scrollIntoViewIfNeeded();
+    await expectNoOverlap(save, tmaPage.locator('#appBottomNav'));
+  }
+
+  await tmaPage.setViewportSize({ width: 390, height: 844 });
+  await tma.setViewport(844, 844);
+  const toastClose = tmaPage.getByRole('button', { name: 'Закрыть сообщение' });
+  if (await toastClose.isVisible()) await toastClose.click();
+  const editedRow = tmaBody.locator('.measurement-history__row').filter({ hasText: '74.6 кг' });
+  await editedRow.evaluate((element) => element.scrollIntoView({ block: 'center' }));
+  await tmaPage.screenshot({
+    path: '../.artifacts/screenshots/task-60/tma-390x844-dark.png',
+  });
+});
+
 test('weekly review focus exposes a predictable TMA BackButton return path', async ({
   tma,
   tmaPage,

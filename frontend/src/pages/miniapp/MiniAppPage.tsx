@@ -283,6 +283,9 @@ export default function MiniAppPage() {
                     focusedCommentId={requestedFeedback?.commentId}
                     focusedExerciseId={requestedFeedback?.workoutExerciseId}
                     focusWeeklyReview={focusWeeklyReview}
+                    measurementDiary={
+                      <Diary embedded onSaved={async () => void (await reloadUser())} />
+                    }
                   />
                   <WorkoutHistory
                     timeZone={user?.profile?.timezone}
@@ -292,7 +295,6 @@ export default function MiniAppPage() {
                     onWorkoutSelect={(id, target) => setFocusedWorkout({ id, target })}
                   />
                 </div>
-                <Diary onSaved={async () => void (await reloadUser())} />
               </>
             )}
             {section === 'programs' && (

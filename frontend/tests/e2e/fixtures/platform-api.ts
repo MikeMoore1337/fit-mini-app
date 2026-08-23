@@ -14,6 +14,8 @@ export interface PlatformApiOptions {
 
 export interface PlatformApiController {
   setOffline(offline: boolean): void;
+  failNextMeasurementSave(): void;
+  measurementSaveCalls(): number;
   authInitCalls(): number;
   setPatchCalls(): number;
   finishCalls(): number;
@@ -86,6 +88,19 @@ export async function installPlatformApi(
     completed: workoutStatus === 'completed',
   };
   let nutritionEntries: Array<Record<string, unknown>> = [];
+  let measurements: Array<{
+    id: number;
+    measured_on: string;
+    weight_kg: number | null;
+    chest_cm: number | null;
+    waist_cm: number | null;
+    hips_cm: number | null;
+    biceps_cm: number | null;
+    thigh_cm: number | null;
+    note: string | null;
+  }> = [];
+  let failNextMeasurementSave = false;
+  let measurementSaveCalls = 0;
   let completionFeedback: string | null = null;
   let completionNote: string | null = null;
   let adaptationApplyCalls = 0;
@@ -522,6 +537,52 @@ export async function installPlatformApi(
     days: [{ id: 1, day_number: 1, title: 'Силовая', exercises: [] }],
   };
 
+  const measurementTrends = () => {
+    const metrics = [
+      ['weight_kg', 'weight_kg'],
+      ['chest_cm', 'chest_cm'],
+      ['waist_cm', 'waist_cm'],
+      ['hips_cm', 'hips_cm'],
+      ['biceps_cm', 'biceps_cm'],
+      ['thigh_cm', 'thigh_cm'],
+    ] as const;
+    return metrics.flatMap(([metric, field]) => {
+      const points = measurements
+        .filter((item) => item[field] != null)
+        .map((item) => ({ measured_on: item.measured_on, value: item[field] as number }))
+        .sort((left, right) => left.measured_on.localeCompare(right.measured_on));
+      const first = points[0];
+      const latest = points.at(-1);
+      if (!first || !latest) return [];
+      const spanDays = Math.round(
+        (Date.parse(`${latest.measured_on}T12:00:00Z`) -
+          Date.parse(`${first.measured_on}T12:00:00Z`)) /
+          86_400_000,
+      );
+      return [
+        {
+          metric,
+          first_value: first.value,
+          latest_value: latest.value,
+          change: points.length > 1 ? latest.value - first.value : null,
+          first_measured_on: first.measured_on,
+          latest_measured_on: latest.measured_on,
+          point_count: points.length,
+          span_days: spanDays,
+          interpretation_status:
+            points.length === 1
+              ? 'single_point'
+              : points.length < 3
+                ? 'insufficient_points'
+                : spanDays < 14
+                  ? 'insufficient_period'
+                  : 'available',
+          points,
+        },
+      ];
+    });
+  };
+
   const progressSummary = () => ({
     user_id: 7,
     period_days: 30,
@@ -550,7 +611,18 @@ export async function installPlatformApi(
       target_protein_g: 140,
       target_effective_on: today,
     },
-    body: { latest_measurement: null, trends: [], priority: null, guidance: {} },
+    body: {
+      latest_measurement: measurements[0] ?? null,
+      trends: measurementTrends(),
+      priority: { mode: 'balanced', muscle_group_ids: [] },
+      guidance: {
+        comparison_basis: 'self',
+        minimum_points_for_interpretation: 3,
+        minimum_span_days_for_interpretation: 14,
+        consistency_tips: ['Снимайте замеры в похожее время суток.'],
+        circumference_limitations: ['Окружность участка тела не показывает рост отдельной мышцы.'],
+      },
+    },
     adherence: {
       formula_version: 'adherence-v1',
       overall_percent: null,
@@ -946,6 +1018,51 @@ export async function installPlatformApi(
     if (path.endsWith('/workouts/progress/summary')) {
       return route.fulfill({ json: progressSummary() });
     }
+    if (path.endsWith('/me/profile/body-priority-options')) {
+      return route.fulfill({
+        json: {
+          items: [
+            { id: 'back', name: 'Мышцы спины' },
+            { id: 'glutes', name: 'Ягодичные мышцы' },
+          ],
+        },
+      });
+    }
+    if (path.endsWith('/workouts/diary') && request.method() === 'GET') {
+      return route.fulfill({ json: measurements });
+    }
+    if (path.endsWith('/workouts/diary') && request.method() === 'POST') {
+      measurementSaveCalls += 1;
+      if (failNextMeasurementSave) {
+        failNextMeasurementSave = false;
+        return route.fulfill({
+          status: 503,
+          json: { detail: 'Замер временно не удалось сохранить' },
+        });
+      }
+      const body = request.postDataJSON() as Partial<(typeof measurements)[number]> & {
+        measured_on: string;
+      };
+      const existing = measurements.find((item) => item.measured_on === body.measured_on);
+      const saved = {
+        id: existing?.id ?? measurements.length + 1,
+        measured_on: body.measured_on,
+        weight_kg: body.weight_kg ?? null,
+        chest_cm: body.chest_cm ?? null,
+        waist_cm: body.waist_cm ?? null,
+        hips_cm: body.hips_cm ?? null,
+        biceps_cm: body.biceps_cm ?? null,
+        thigh_cm: body.thigh_cm ?? null,
+        note: body.note ?? null,
+      };
+      measurements = [saved, ...measurements.filter((item) => item.id !== saved.id)];
+      return route.fulfill({ json: saved });
+    }
+    if (/\/workouts\/diary\/\d+$/.test(path) && request.method() === 'DELETE') {
+      const id = Number(path.split('/').at(-1));
+      measurements = measurements.filter((item) => item.id !== id);
+      return route.fulfill({ status: 204, body: '' });
+    }
     if (path.endsWith('/workouts/progress/nutrition-report')) {
       const period = url.searchParams.get('period') ?? 'days_7';
       requestedNutritionReportPeriods.push(period);
@@ -1235,6 +1352,12 @@ export async function installPlatformApi(
   return {
     setOffline(value) {
       offline = value;
+    },
+    failNextMeasurementSave() {
+      failNextMeasurementSave = true;
+    },
+    measurementSaveCalls() {
+      return measurementSaveCalls;
     },
     authInitCalls() {
       return authInitCalls;

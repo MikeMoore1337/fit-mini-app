@@ -28,6 +28,7 @@ function renderDiary(options?: {
   clientId?: number;
   timeZone?: string;
   dependentQuery?: () => Promise<unknown>;
+  embedded?: boolean;
 }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -38,7 +39,11 @@ function renderDiary(options?: {
         {options?.dependentQuery && (
           <QueryProbe clientId={options.clientId} queryFn={options.dependentQuery} />
         )}
-        <Diary clientId={options?.clientId} timeZone={options?.timeZone} />
+        <Diary
+          clientId={options?.clientId}
+          embedded={options?.embedded}
+          timeZone={options?.timeZone}
+        />
       </FeedbackProvider>
     </QueryClientProvider>,
   );
@@ -54,14 +59,71 @@ describe('Diary measurement guidance', () => {
   afterEach(cleanup);
 
   it('uses honest circumference labels and consistency guidance', async () => {
-    renderDiary();
+    renderDiary({ embedded: true });
 
     expect(screen.getByLabelText('Плечо (окружность), см')).toBeInTheDocument();
     expect(screen.getByLabelText('Бедро (окружность), см')).toBeInTheDocument();
+    expect(screen.getByLabelText('Вес, кг')).toHaveAttribute('inputmode', 'decimal');
     expect(screen.getByLabelText('Как делать замеры')).toHaveTextContent(
       'Окружность плеча не показывает отдельно размер бицепса',
     );
     expect(await screen.findByText('Замеров пока нет')).toBeInTheDocument();
+  });
+
+  it('keeps units in history and supports an explicit same-date edit', async () => {
+    const row = {
+      id: 5,
+      measured_on: '2026-08-20',
+      weight_kg: 74.2,
+      chest_cm: null,
+      waist_cm: 81.4,
+      hips_cm: null,
+      biceps_cm: null,
+      thigh_cm: null,
+      note: 'После тренировки',
+    };
+    apiMock.mockImplementation((path: string, options?: { method?: string; body?: unknown }) => {
+      if (path === '/api/v1/workouts/diary' && options?.method === 'POST') {
+        return Promise.resolve({ ...row, ...(options.body as object) });
+      }
+      return Promise.resolve([row]);
+    });
+    renderDiary({ embedded: true });
+
+    expect(await screen.findByText(/Вес: 74\.2 кг · Талия: 81\.4 см/)).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Изменить' }));
+    expect(screen.getByRole('heading', { name: 'Изменить замер' })).toBeVisible();
+    expect(screen.getByLabelText('Вес, кг')).toHaveValue(74.2);
+    fireEvent.change(screen.getByLabelText('Вес, кг'), { target: { value: '74.6' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить изменения' }));
+
+    await waitFor(() =>
+      expect(apiMock).toHaveBeenCalledWith(
+        '/api/v1/workouts/diary',
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.objectContaining({ measured_on: '2026-08-20', weight_kg: 74.6 }),
+        }),
+      ),
+    );
+  });
+
+  it('preserves a recoverable draft and shows the save error beside the form', async () => {
+    apiMock.mockImplementation((path: string, options?: { method?: string }) => {
+      if (path === '/api/v1/workouts/diary' && options?.method === 'POST') {
+        return Promise.reject(new Error('Сеть временно недоступна'));
+      }
+      return Promise.resolve([]);
+    });
+    renderDiary({ embedded: true });
+
+    fireEvent.change(screen.getByLabelText('Вес, кг'), { target: { value: '73.8' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить замер' }));
+
+    expect(await screen.findByText(/Введённые значения сохранены/)).toHaveTextContent(
+      'Сеть временно недоступна',
+    );
+    expect(screen.getByLabelText('Вес, кг')).toHaveValue(73.8);
   });
 
   it('refetches personal progress after a measurement mutation', async () => {

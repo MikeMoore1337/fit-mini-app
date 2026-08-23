@@ -5641,6 +5641,185 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   gap: 14px;
 }
 
+.progress-priority {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(0, 1.2fr) auto;
+  align-items: center;
+  gap: 8px 18px;
+  min-width: 0;
+  padding: 16px 18px;
+  border-left: 3px solid var(--border);
+  background: var(--surface-subtle);
+}
+
+.progress-priority.is-selected {
+  border-left-color: var(--accent);
+  background: var(--surface-active);
+}
+
+.progress-priority > div {
+  display: grid;
+  gap: 2px;
+}
+
+.progress-priority > div > span,
+.progress-priority > p,
+.progress-priority li {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.progress-priority > p {
+  margin: 0;
+}
+
+.progress-priority ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.progress-priority li {
+  color: var(--text);
+  font-weight: 750;
+}
+
+.progress-priority li + li {
+  padding-left: 12px;
+  border-left: 1px solid var(--border);
+}
+
+.progress-priority > a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-strong, var(--accent));
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.progress-body-flow,
+.progress-body-trends,
+.measurement-diary,
+.measurement-history {
+  display: grid;
+  min-width: 0;
+  gap: 18px;
+}
+
+.progress-body-flow {
+  display: flex;
+  flex-direction: column;
+}
+
+.progress-body-trends {
+  order: 1;
+}
+
+.progress-body-diary {
+  order: 2;
+  min-width: 0;
+}
+
+.measurement-diary--embedded {
+  padding-top: 28px;
+  border-top: 1px solid var(--border);
+}
+
+.measurement-diary__header,
+.measurement-history__heading,
+.measurement-history__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.measurement-diary__header > div,
+.measurement-history__facts {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.measurement-diary__header h3,
+.measurement-history__heading h3 {
+  margin: 0;
+}
+
+.measurement-diary__header p,
+.measurement-history__heading span,
+.measurement-history__facts p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.measurement-diary__form {
+  scroll-margin-block: 24px;
+}
+
+.measurement-diary--embedded .auth-notice {
+  padding: 14px 0;
+  border: 0;
+  border-block: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.measurement-diary__error {
+  margin: 0;
+  padding: 12px;
+  border-left: 3px solid var(--danger);
+  background: var(--danger-soft, var(--surface-subtle));
+  color: var(--danger-text, var(--text));
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.measurement-diary__save {
+  min-height: 48px;
+}
+
+.measurement-diary__save-dock {
+  display: grid;
+  margin-top: 8px;
+}
+
+.measurement-history {
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.measurement-history__heading {
+  align-items: baseline;
+}
+
+.measurement-history__row {
+  padding-block: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.measurement-history__facts time {
+  font-weight: 800;
+}
+
+.measurement-history__note {
+  font-style: italic;
+}
+
+.measurement-history__actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
 .progress-body-metric {
   display: grid;
   gap: 12px;
@@ -5648,10 +5827,6 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   padding: 16px;
   border-top: 3px solid var(--border);
   background: var(--surface-subtle);
-}
-
-.progress-body-metric:first-child {
-  border-top-color: var(--accent);
 }
 
 .progress-body-metric > header {
@@ -5666,9 +5841,29 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   gap: 2px;
 }
 
-.progress-body-metric > header strong {
+.progress-body-metric__kind {
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.progress-body-metric__value {
+  display: grid;
   flex: 0 0 auto;
+  gap: 2px;
+  text-align: right;
+}
+
+.progress-body-metric__value strong {
   font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-body-metric__value span {
+  color: var(--muted);
+  font-size: 0.7rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -5713,6 +5908,23 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   font-size: 0.65rem;
 }
 
+.progress-body-chart__range {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-body-chart__range span:nth-child(2) {
+  text-align: center;
+}
+
+.progress-body-chart__range span:last-child {
+  text-align: right;
+}
+
 .progress-body-chart > details {
   margin-top: 8px;
   font-size: 0.72rem;
@@ -5736,6 +5948,31 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   justify-content: space-between;
   gap: 12px;
   font-variant-numeric: tabular-nums;
+}
+
+.progress-body-guidance {
+  padding-block: 14px;
+  border-block: 1px solid var(--border);
+  font-size: 0.78rem;
+}
+
+.progress-body-guidance > summary {
+  min-height: 44px;
+  align-content: center;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.progress-body-guidance > div {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.progress-body-guidance ul,
+.progress-body-guidance p {
+  margin-block: 0;
 }
 
 .progress-nutrition-summary {
@@ -5956,6 +6193,74 @@ body:has(#appBottomNav) .toast:not(.hidden) {
 
   .progress-section__head .ui-badge {
     align-self: flex-start;
+  }
+
+  .progress-priority {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 12px 14px 4px;
+  }
+
+  .progress-priority > a {
+    width: fit-content;
+    justify-content: flex-start;
+  }
+
+  .progress-priority ul {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .progress-priority li + li {
+    padding-top: 6px;
+    padding-left: 0;
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+
+  .progress-body-diary {
+    order: 1;
+  }
+
+  .progress-body-trends {
+    order: 2;
+  }
+
+  .measurement-diary--embedded {
+    padding-top: 0;
+    padding-bottom: 18px;
+    border-top: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .measurement-diary__header,
+  .measurement-history__row {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .measurement-diary__header .ui-button {
+    width: 100%;
+  }
+
+  .measurement-history__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .measurement-history__actions .ui-button {
+    min-width: 0;
+  }
+
+  html[data-yfc-keyboard='visible'] .measurement-diary__save-dock {
+    position: sticky;
+    z-index: 2;
+    bottom: max(6px, var(--yfc-layout-safe-bottom, env(safe-area-inset-bottom, 0px)));
+    padding-top: 12px;
+    background: var(--card-bg);
+    box-shadow: 0 -12px 20px var(--card-bg);
   }
 
   .progress-fact-strip > div {

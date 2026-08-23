@@ -12,7 +12,7 @@ description: >
 
 Работай как инженер smartphone-first продукта. Для Your Fitness Coach мобильный интерфейс - не уменьшенный desktop и не поздний responsive patch. Personal и client-facing flows должны быть удобны в Mobile Web и TMA с момента реализации функции.
 
-Перед работой прочитай `references/MOBILE_TMA_ACCEPTANCE_MATRIX.md`, текущую task, shared frontend/Design V2 и существующий platform adapter.
+Перед работой прочитай `../../references/MOBILE_TMA_ACCEPTANCE_MATRIX.md`, текущую task, shared frontend/Design V2 и существующий platform adapter.
 
 ## Primary surface contract
 

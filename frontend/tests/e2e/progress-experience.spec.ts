@@ -199,6 +199,31 @@ function nutritionReportFixture(url: URL, state: NutritionReportState) {
 }
 
 async function mockProgress(page: Page, reportState: NutritionReportState = 'partial') {
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Moscow' });
+  const previousDate = shiftDate(today, -7);
+  let measurements: Array<{
+    id: number;
+    measured_on: string;
+    weight_kg: number | null;
+    chest_cm: number | null;
+    waist_cm: number | null;
+    hips_cm: number | null;
+    biceps_cm: number | null;
+    thigh_cm: number | null;
+    note: string | null;
+  }> = [
+    {
+      id: 1,
+      measured_on: previousDate,
+      weight_kg: 69.1,
+      chest_cm: null,
+      waist_cm: 72.5,
+      hips_cm: null,
+      biceps_cm: null,
+      thigh_cm: null,
+      note: 'Утром до завтрака',
+    },
+  ];
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -273,6 +298,10 @@ async function mockProgress(page: Page, reportState: NutritionReportState = 'par
             visible: true,
             logged_days: 20,
             adherence_evaluated_days: 18,
+            complete_days: 18,
+            incomplete_days: 2,
+            fasted_days: 0,
+            unlogged_days: 10,
             average_calories: 1980,
             target_calories: 2100,
             average_protein_g: 132,
@@ -315,13 +344,18 @@ async function mockProgress(page: Page, reportState: NutritionReportState = 'par
                 ],
               },
             ],
-            priority: null,
+            priority: {
+              mode: 'muscle_groups',
+              muscle_group_ids: ['back', 'posterior_chain'],
+            },
             guidance: {
               comparison_basis: 'self',
               minimum_points_for_interpretation: 3,
               minimum_span_days_for_interpretation: 14,
-              consistency_tips: [],
-              circumference_limitations: [],
+              consistency_tips: ['Снимайте замеры в похожее время суток и в одинаковых условиях.'],
+              circumference_limitations: [
+                'Окружность плеча не измеряет отдельно бицепс или трицепс.',
+              ],
             },
           },
           adherence: {
@@ -464,6 +498,42 @@ async function mockProgress(page: Page, reportState: NutritionReportState = 'par
           },
         },
       });
+    }
+    if (path.endsWith('/me/profile/body-priority-options')) {
+      return route.fulfill({
+        json: {
+          items: [
+            { id: 'back', name: 'Мышцы спины' },
+            { id: 'posterior_chain', name: 'Задняя поверхность тела и ягодичные мышцы' },
+          ],
+        },
+      });
+    }
+    if (path.endsWith('/workouts/diary') && request.method() === 'GET') {
+      return route.fulfill({ json: measurements });
+    }
+    if (path.endsWith('/workouts/diary') && request.method() === 'POST') {
+      const body = request.postDataJSON() as Record<string, unknown> & { measured_on: string };
+      const existing = measurements.find((item) => item.measured_on === body.measured_on);
+      const saved = {
+        id: existing?.id ?? measurements.length + 1,
+        weight_kg: null,
+        chest_cm: null,
+        waist_cm: null,
+        hips_cm: null,
+        biceps_cm: null,
+        thigh_cm: null,
+        note: null,
+        ...existing,
+        ...body,
+      };
+      measurements = [saved, ...measurements.filter((item) => item.id !== saved.id)];
+      return route.fulfill({ json: saved });
+    }
+    if (/\/workouts\/diary\/\d+$/.test(path) && request.method() === 'DELETE') {
+      const id = Number(path.split('/').at(-1));
+      measurements = measurements.filter((item) => item.id !== id);
+      return route.fulfill({ status: 204, body: '' });
     }
     if (path.endsWith('/check-ins/weekly/current')) {
       return route.fulfill({
@@ -652,6 +722,7 @@ test('progress remains clear and free of horizontal overflow at supported widths
   for (const viewport of [
     { width: 1440, height: 1000 },
     { width: 768, height: 900 },
+    { width: 430, height: 932 },
     { width: 390, height: 844 },
     { width: 360, height: 800 },
   ]) {
@@ -673,6 +744,99 @@ test('progress remains clear and free of horizontal overflow at supported widths
 
   expect(consoleErrors).toEqual([]);
   expect(runtimeErrors).toEqual([]);
+});
+
+test('measurements keep priority context, units, mobile order and add/edit history', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'light' });
+  await mockProgress(page);
+  await page.goto('/app?section=progress');
+  await page.getByRole('button', { name: 'Клиент' }).click();
+  await page
+    .getByRole('navigation', { name: 'Основная навигация' })
+    .getByRole('link', { name: 'Прогресс' })
+    .click();
+
+  const body = page.locator('#progress-body');
+  await expect(body.getByRole('heading', { name: 'Замеры и приоритеты' })).toBeVisible();
+  await expect(body.getByText('Мышцы спины')).toBeVisible();
+  await expect(body.getByText('Задняя поверхность тела и ягодичные мышцы')).toBeVisible();
+  await expect(body.getByText(/не оценивает тело/)).toBeVisible();
+  await expect(body.getByText(/Вес: 69\.1 кг · Талия: 72\.5 см/)).toBeVisible();
+  await expect(body.getByText(/разовое изменение не считаем трендом/)).toBeVisible();
+
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const desktopTrend = await body.locator('.progress-body-trends').boundingBox();
+  const desktopDiary = await body.locator('.progress-body-diary').boundingBox();
+  expect(desktopTrend).not.toBeNull();
+  expect(desktopDiary).not.toBeNull();
+  expect(desktopTrend!.y).toBeLessThan(desktopDiary!.y);
+  await body.evaluate((element) => element.scrollIntoView({ block: 'start' }));
+  await page.screenshot({
+    path: '../.artifacts/screenshots/task-60/desktop-1440x1000-light.png',
+  });
+
+  await page.setViewportSize({ width: 360, height: 800 });
+  await expect
+    .poll(async () => {
+      const mobileTrend = await body.locator('.progress-body-trends').boundingBox();
+      const mobileDiary = await body.locator('.progress-body-diary').boundingBox();
+      return Boolean(mobileTrend && mobileDiary && mobileDiary.y < mobileTrend.y);
+    })
+    .toBe(true);
+  await expect(body.getByLabel('Вес, кг')).toHaveAttribute('inputmode', 'decimal');
+  await body.evaluate((element) => element.scrollIntoView({ block: 'start' }));
+  await expect(body.locator('.measurement-diary__save-dock')).toHaveCSS('position', 'static');
+  await page.screenshot({
+    path: '../.artifacts/screenshots/task-60/mobile-web-360x800-light.png',
+  });
+  const mobileSave = body.getByRole('button', { name: 'Сохранить замер' });
+  await mobileSave.scrollIntoViewIfNeeded();
+  const noteField = await body.getByLabel('Заметка').boundingBox();
+  const saveButton = await mobileSave.boundingBox();
+  expect(noteField).not.toBeNull();
+  expect(saveButton).not.toBeNull();
+  expect(saveButton!.y - (noteField!.y + noteField!.height)).toBeGreaterThanOrEqual(18);
+  await page.screenshot({
+    path: '../.artifacts/screenshots/task-60/mobile-web-360x800-light-save.png',
+  });
+
+  await body.getByLabel('Вес, кг').fill('68.7');
+  await body.getByLabel('Талия, см').fill('71.9');
+  expect(
+    await body
+      .locator('.measurement-diary__form :invalid')
+      .evaluateAll((elements) => elements.map((element) => element.getAttribute('aria-label'))),
+  ).toEqual([]);
+  const createRequest = page.waitForRequest(
+    (request) => request.url().endsWith('/workouts/diary') && request.method() === 'POST',
+  );
+  await body.getByRole('button', { name: 'Сохранить замер' }).click();
+  await createRequest;
+  await expect(body.getByText(/Вес: 68\.7 кг · Талия: 71\.9 см/)).toBeVisible();
+
+  const todayRow = body.locator('.measurement-history__row').filter({ hasText: '68.7 кг' });
+  await todayRow.getByRole('button', { name: 'Изменить' }).click();
+  await expect(body.getByRole('heading', { name: 'Изменить замер' })).toBeVisible();
+  await body.getByLabel('Вес, кг').fill('68.5');
+  const editRequest = page.waitForRequest(
+    (request) => request.url().endsWith('/workouts/diary') && request.method() === 'POST',
+  );
+  await body.getByRole('button', { name: 'Сохранить изменения' }).click();
+  await editRequest;
+  await expect(body.getByText(/Вес: 68\.5 кг · Талия: 71\.9 см/)).toBeVisible();
+  await expect(body.getByText(/Вес: 68\.7 кг/)).not.toBeAttached();
+
+  const save = body.getByRole('button', { name: 'Сохранить замер' });
+  expect((await save.boundingBox())?.height).toBeGreaterThanOrEqual(48);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
+    )
+    .toBe(true);
 });
 
 test('nutrition report preserves truthful period context, daily drill-down and responsive hierarchy', async ({
