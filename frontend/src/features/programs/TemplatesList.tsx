@@ -295,6 +295,19 @@ export function TemplatesList() {
                 <span>Вы можете посмотреть состав или изменить будущий шаблон.</span>
               )}
             </div>
+            {activeTemplate.assigned_program_id &&
+              activeTemplate.assigned_program_start_date &&
+              activeTemplate.assigned_program_duration_weeks != null &&
+              activeTemplate.current_revision_number != null && (
+                <AssignedProgramDetails
+                  key={activeTemplate.assigned_program_id}
+                  programId={activeTemplate.assigned_program_id}
+                  currentRevisionNumber={activeTemplate.current_revision_number}
+                  startDate={activeTemplate.assigned_program_start_date}
+                  durationWeeks={activeTemplate.assigned_program_duration_weeks}
+                  workoutHistoryReturnPath="/app?section=programs"
+                />
+              )}
             <div className="program-active__actions">
               <button
                 type="button"
@@ -312,6 +325,7 @@ export function TemplatesList() {
               </button>
               <button
                 type="button"
+                className="program-active__edit-action"
                 onClick={() => {
                   setSaveAsCopy(shouldSaveTemplateAsCopy(activeTemplate));
                   setEditingTemplate(activeTemplate);
@@ -322,17 +336,6 @@ export function TemplatesList() {
                   : 'Редактировать шаблон'}
               </button>
             </div>
-            {activeTemplate.assigned_program_id &&
-              activeTemplate.assigned_program_start_date &&
-              activeTemplate.assigned_program_duration_weeks != null &&
-              activeTemplate.current_revision_number != null && (
-                <AssignedProgramDetails
-                  programId={activeTemplate.assigned_program_id}
-                  currentRevisionNumber={activeTemplate.current_revision_number}
-                  startDate={activeTemplate.assigned_program_start_date}
-                  durationWeeks={activeTemplate.assigned_program_duration_weeks}
-                />
-              )}
           </>
         ) : (
           <div className="program-active__empty">

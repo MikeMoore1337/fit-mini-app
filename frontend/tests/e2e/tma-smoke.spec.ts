@@ -102,6 +102,310 @@ test('TMA auth, shared UI, theme, viewport, safe areas and BackButton stay on on
   await expect.poll(async () => (await tma.state()).backButton.visible).toBe(false);
 });
 
+test('program history keeps current block, readable revisions and workout return in Mobile Web/TMA parity', async ({
+  mobilePage,
+  tma,
+  tmaPage,
+}) => {
+  await installPlatformApi(tmaPage, { programHistory: 'many' });
+  await installPlatformApi(mobilePage, { browserSession: true, programHistory: 'many' });
+  await Promise.all([
+    tmaPage.goto('/app?section=programs'),
+    mobilePage.goto('/app?section=programs'),
+  ]);
+
+  for (const page of [tmaPage, mobilePage]) {
+    const history = page.locator('.program-history');
+    await expect(history.getByText('Текущий тренировочный блок')).toBeVisible();
+    await expect(
+      history.getByRole('heading', {
+        name: 'Устойчивый рабочий объём с постепенным усложнением основных движений без потери техники',
+      }),
+    ).toBeVisible();
+    await expect(history.locator('.program-current-block__note')).toContainText(
+      'Тренер скорректировал цель',
+    );
+    await history.getByText('Все этапы и изменения').click();
+    await expect(history.getByRole('heading', { name: 'Тренировочные блоки' })).toBeVisible();
+    const blockTimeline = history.locator('.program-block-timeline');
+    await expect(blockTimeline.getByText('Вводный этап')).toBeVisible();
+    await expect(
+      blockTimeline.getByText('Облегчённая неделя перед следующим рабочим циклом'),
+    ).toBeVisible();
+
+    const revision = history.locator('#program-revision-77-4');
+    await revision.locator('summary').click();
+    await expect(revision.getByText(/Пользователь уверенно выполняет план/)).toBeVisible();
+    await expect(
+      revision.getByText('Сохранять рабочий объём без изменения сложности.'),
+    ).toBeVisible();
+    await expect(
+      revision.getByText(
+        'Увеличить рабочий объём, сохраняя стабильную технику и понятный запас повторов в каждом подходе.',
+      ),
+    ).toBeVisible();
+    await expect(revision.getByRole('link', { name: /Контекст версии/ })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+  }
+  expect(await sharedSurfaceSignature(tmaPage)).toEqual(await sharedSurfaceSignature(mobilePage));
+
+  for (const viewport of Object.values(MOBILE_CONTEXTS)) {
+    await tmaPage.setViewportSize(viewport);
+    await tma.setViewport(viewport.height, viewport.height);
+    await expectNoHorizontalOverflow(tmaPage);
+    await expectTouchTargets(tmaPage.locator('.program-history summary:visible'));
+  }
+
+  const tmaWorkoutLink = tmaPage
+    .locator('#program-revision-77-4')
+    .getByRole('link', { name: /Контекст версии/ });
+  await tmaWorkoutLink.click();
+  await expect(tmaPage).toHaveURL(
+    /section=progress&workout_id=943&program_history=77&program_revision=4&return_to=/,
+  );
+  await expect(tmaPage.getByRole('link', { name: 'К истории программы' })).toBeVisible();
+  await expect(tmaPage.getByRole('heading', { name: 'Контекст версии' })).toBeVisible();
+  await expect(tmaPage.getByText('4 подх. · 6–8 повт. · отдых 120 сек.')).toBeVisible();
+  await expect(tmaPage.getByText(/доступен только для просмотра/)).toBeVisible();
+  await expect.poll(async () => (await tma.state()).backButton.visible).toBe(true);
+  await tma.clickBack();
+  await expect(tmaPage).toHaveURL('/app?section=programs&program_history=77&program_revision=4');
+  await expect(tmaPage.locator('.program-history__disclosure')).toHaveJSProperty('open', true);
+  await expect(tmaPage.locator('#program-revision-77-4')).toHaveJSProperty('open', true);
+  await expect(tmaPage.locator('#program-revision-77-4 > summary')).toBeFocused();
+  await expect(tmaPage.locator('#program-revision-77-4 > summary')).not.toHaveAttribute('tabindex');
+
+  const olderRevision = tmaPage.locator('#program-revision-77-3');
+  await olderRevision.locator('summary').click();
+  await olderRevision.getByRole('link', { name: /Контекст версии/ }).click();
+  await expect(tmaPage).toHaveURL(/program_revision=3/);
+  await expect(tmaPage.getByText('3 подх. · 8–10 повт. · отдых 90 сек.')).toBeVisible();
+  await expect(tmaPage.getByText('4 подх. · 6–8 повт. · отдых 120 сек.')).not.toBeAttached();
+  await tma.clickBack();
+  await expect(tmaPage).toHaveURL('/app?section=programs&program_history=77&program_revision=3');
+  await expect(tmaPage.locator('#program-revision-77-3')).toHaveJSProperty('open', true);
+
+  await mobilePage
+    .locator('#program-revision-77-4')
+    .getByRole('link', { name: /Контекст версии/ })
+    .click();
+  await expect(mobilePage.getByText('4 подх. · 6–8 повт. · отдых 120 сек.')).toBeVisible();
+  await mobilePage.getByRole('link', { name: 'К истории программы' }).click();
+  await expect(mobilePage).toHaveURL('/app?section=programs&program_history=77&program_revision=4');
+  await expect(mobilePage.locator('#program-revision-77-4')).toHaveJSProperty('open', true);
+});
+
+test('program history renders empty, one-block and full lifecycle states honestly', async ({
+  browser,
+}) => {
+  for (const state of ['empty', 'one', 'many'] as const) {
+    const page = await browser.newPage({ viewport: MOBILE_CONTEXTS.baseline });
+    await installPlatformApi(page, { browserSession: true, programHistory: state });
+    await page.goto('/app?section=programs');
+    const history = page.locator('.program-history');
+
+    if (state === 'empty') {
+      await expect(history.getByText('Тренировочные блоки ещё не настроены')).toBeVisible();
+    } else {
+      await expect(history.getByText('Текущий тренировочный блок')).toBeVisible();
+    }
+    await history.getByText('Все этапы и изменения').click();
+    if (state === 'empty') {
+      await expect(
+        history.getByText('История появится после первого сохранённого изменения'),
+      ).toBeVisible();
+    } else if (state === 'one') {
+      await expect(history.locator('.program-block-timeline > li')).toHaveCount(1);
+      await expect(history.locator('.program-revision-timeline > li')).toHaveCount(2);
+    } else {
+      const timeline = history.locator('.program-block-timeline');
+      await expect(timeline.locator(':scope > li')).toHaveCount(4);
+      await expect(timeline.getByText('В архиве')).toBeVisible();
+      await expect(timeline.getByText('Идёт сейчас')).toBeVisible();
+      await expect(timeline.getByText('Запланирован')).toBeVisible();
+    }
+    await expectNoHorizontalOverflow(page);
+    await page.close();
+  }
+});
+
+test('program history visual evidence covers compact Mobile Web, dark TMA and desktop', async ({
+  browser,
+}) => {
+  const cases = [
+    {
+      surface: 'mobile-web',
+      viewport: MOBILE_CONTEXTS.compact,
+      theme: 'light' as const,
+      telegram: false,
+      screenshot: true,
+    },
+    {
+      surface: 'tma',
+      viewport: MOBILE_CONTEXTS.baseline,
+      theme: 'dark' as const,
+      telegram: true,
+      screenshot: true,
+    },
+    {
+      surface: 'mobile-web',
+      viewport: MOBILE_CONTEXTS.large,
+      theme: 'light' as const,
+      telegram: false,
+      screenshot: false,
+    },
+    {
+      surface: 'tablet',
+      viewport: { width: 768, height: 900 },
+      theme: 'light' as const,
+      telegram: false,
+      screenshot: false,
+    },
+    {
+      surface: 'desktop',
+      viewport: { width: 1280, height: 900 },
+      theme: 'light' as const,
+      telegram: false,
+      screenshot: true,
+    },
+  ];
+
+  for (const current of cases) {
+    const page = await browser.newPage({
+      viewport: current.viewport,
+      hasTouch: current.telegram,
+    });
+    if (current.telegram) {
+      await installTelegramHarness(page, { colorScheme: current.theme });
+    } else {
+      await page.addInitScript((theme) => localStorage.setItem('app-theme', theme), current.theme);
+    }
+    await installPlatformApi(page, {
+      browserSession: !current.telegram,
+      programHistory: 'many',
+    });
+    await page.goto('/app?section=programs');
+    const program = page.locator('.program-active');
+    const history = program.locator('.program-history');
+    await expect(history.getByText('Текущий тренировочный блок')).toBeVisible();
+    if (current.screenshot) {
+      await history
+        .locator('.program-current-block')
+        .evaluate((element) => element.scrollIntoView({ block: 'start' }));
+      await page.screenshot({
+        path: `../.artifacts/screenshots/task-59/${current.surface}-${current.viewport.width}x${current.viewport.height}-${current.theme}-current-viewport.png`,
+      });
+      await page.locator('#appBottomNav').evaluate((element) => {
+        element.style.visibility = 'hidden';
+      });
+      await history.locator('.program-current-block').screenshot({
+        path: `../.artifacts/screenshots/task-59/${current.surface}-${current.viewport.width}x${current.viewport.height}-${current.theme}-current-block.png`,
+      });
+      await page.locator('#appBottomNav').evaluate((element) => {
+        element.style.visibility = '';
+      });
+    }
+    if (current.viewport.width < 900) {
+      const lastCurrentAction = history.getByRole('button', { name: 'В архив' });
+      await lastCurrentAction.scrollIntoViewIfNeeded();
+      await expectNoOverlap(lastCurrentAction, page.locator('#appBottomNav'));
+    }
+    await history.getByText('Все этапы и изменения').click();
+    await history.locator('#program-revision-77-4 > summary').click();
+    await expect(history.locator('#program-revision-77-4')).toHaveJSProperty('open', true);
+    if (current.screenshot) {
+      await history
+        .locator('.program-current-block')
+        .evaluate((element) => element.scrollIntoView({ block: 'start' }));
+      await page.screenshot({
+        path: `../.artifacts/screenshots/task-59/${current.surface}-${current.viewport.width}x${current.viewport.height}-${current.theme}-current-viewport.png`,
+      });
+    }
+    await expectNoHorizontalOverflow(page);
+    await expectTouchTargets(history.locator('summary:visible'));
+    await expectNoOverlap(
+      history.locator('.program-current-block'),
+      history.locator('.program-history__disclosure > summary'),
+    );
+
+    const brandContract = await history.evaluate((element) => {
+      const rootStyle = getComputedStyle(document.documentElement);
+      const colorSample = document.createElement('span');
+      colorSample.style.color = 'var(--v2-lime)';
+      const onLimeSample = document.createElement('span');
+      onLimeSample.style.color = 'var(--v2-on-lime)';
+      element.append(colorSample);
+      element.append(onLimeSample);
+      const lime = getComputedStyle(colorSample).color;
+      const onLime = getComputedStyle(onLimeSample).color;
+      colorSample.remove();
+      onLimeSample.remove();
+      const radius = rootStyle.getPropertyValue('--radius-action').trim();
+      const currentBlock = element.querySelector<HTMLElement>('.program-current-block');
+      const action = element.querySelector<HTMLElement>('.program-block-actions .ui-button');
+      const editAction = element
+        .closest('.program-active')
+        ?.querySelector<HTMLElement>('.program-active__edit-action');
+      const disclosure = element.querySelector<HTMLElement>('.disclosure-icon');
+      const disclosureRect = disclosure?.getBoundingClientRect();
+      return {
+        lime,
+        onLime,
+        radius,
+        boundaryShadow: currentBlock ? getComputedStyle(currentBlock).boxShadow : null,
+        actionRadius: action ? getComputedStyle(action).borderRadius : null,
+        editActionBackground: editAction ? getComputedStyle(editAction).backgroundColor : null,
+        editActionColor: editAction ? getComputedStyle(editAction).color : null,
+        disclosure: disclosureRect
+          ? { width: disclosureRect.width, height: disclosureRect.height }
+          : null,
+      };
+    });
+    expect(brandContract.boundaryShadow).toContain(brandContract.lime);
+    expect(brandContract.actionRadius).toBe(brandContract.radius);
+    expect(brandContract.editActionBackground).toBe(brandContract.lime);
+    expect(brandContract.editActionColor).toBe(brandContract.onLime);
+    expect(brandContract.disclosure).toEqual({ width: 28, height: 28 });
+
+    if (current.screenshot) {
+      await history
+        .locator('#program-revision-77-4')
+        .evaluate((element) => element.scrollIntoView({ block: 'start' }));
+      await page.screenshot({
+        path: `../.artifacts/screenshots/task-59/${current.surface}-${current.viewport.width}x${current.viewport.height}-${current.theme}-revision-v4-viewport.png`,
+      });
+      await page.locator('#appBottomNav').evaluate((element) => {
+        element.style.visibility = 'hidden';
+      });
+      await history.locator('#program-revision-77-4').screenshot({
+        path: `../.artifacts/screenshots/task-59/${current.surface}-${current.viewport.width}x${current.viewport.height}-${current.theme}-revision-v4.png`,
+      });
+      await page.locator('#appBottomNav').evaluate((element) => {
+        element.style.visibility = '';
+      });
+      await program.screenshot({
+        path: `../.artifacts/screenshots/task-59/${current.surface}-${current.viewport.width}x${current.viewport.height}-${current.theme}-history.png`,
+      });
+      await history
+        .locator('#program-revision-77-4')
+        .getByRole('link', { name: /Контекст версии/ })
+        .click();
+      const historicalWorkout = page.locator('.program-history-workout');
+      await expect(
+        historicalWorkout.getByRole('heading', { name: 'Контекст версии' }),
+      ).toBeVisible();
+      await expectNoHorizontalOverflow(page);
+      await page.locator('#appBottomNav').evaluate((element) => {
+        element.style.visibility = 'hidden';
+      });
+      await historicalWorkout.screenshot({
+        path: `../.artifacts/screenshots/task-59/${current.surface}-${current.viewport.width}x${current.viewport.height}-${current.theme}-historical-workout-v4.png`,
+      });
+    }
+    await page.close();
+  }
+});
+
 test('nutrition report keeps period analytics and diary return aligned in Mobile Web and TMA', async ({
   mobilePage,
   tma,

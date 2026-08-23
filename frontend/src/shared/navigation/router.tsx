@@ -16,11 +16,32 @@ interface NavigationContextValue {
 
 const NavigationContext = createContext<NavigationContextValue | null>(null);
 
-function focusedContextReturn(search: string): string | null {
+function programHistoryReturn(value: string | null): string | null {
+  if (!value) return null;
+  try {
+    const parsed = new URL(value, window.location.origin);
+    const programId = parsed.searchParams.get('program_history');
+    if (
+      parsed.origin !== window.location.origin ||
+      parsed.pathname !== '/app' ||
+      parsed.searchParams.get('section') !== 'programs' ||
+      !programId ||
+      !/^\d+$/.test(programId) ||
+      Number(programId) <= 0
+    ) {
+      return null;
+    }
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return null;
+  }
+}
+
+export function focusedContextReturn(search: string): string | null {
   const params = new URLSearchParams(search);
   const workoutId = params.get('workout_id');
   if (workoutId && /^\d+$/.test(workoutId) && Number(workoutId) > 0) {
-    return '/app?section=progress';
+    return programHistoryReturn(params.get('return_to')) ?? '/app?section=progress';
   }
   if (params.get('weekly_review') === '1') return '/app';
   return null;

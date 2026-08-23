@@ -9,6 +9,7 @@ export interface PlatformApiOptions {
   weeklyReviewAvailable?: boolean;
   weeklyCalibration?: 'insufficient' | 'pending';
   nutritionTargetSource?: 'manual' | 'trainer';
+  programHistory?: 'empty' | 'one' | 'many';
 }
 
 export interface PlatformApiController {
@@ -278,6 +279,249 @@ export async function installPlatformApi(
     week_number: 1,
   };
 
+  const shiftedDay = (days: number) => {
+    const value = new Date(todayDate);
+    value.setUTCDate(todayDate.getUTCDate() + days);
+    return value.toISOString().slice(0, 10);
+  };
+  const programHistory = options.programHistory ?? null;
+  const archivedBlock = {
+    id: 300,
+    user_program_id: 77,
+    title: 'Вводный этап',
+    start_date: shiftedDay(-42),
+    end_date: shiftedDay(-29),
+    duration_days: 14,
+    purpose: 'Спокойно вернуться к регулярным тренировкам.',
+    priority_muscle_ids: [],
+    notes: null,
+    is_deload: false,
+    status: 'archived',
+    created_by_user_id: 7,
+    created_at: `${shiftedDay(-42)}T08:00:00`,
+    updated_at: `${shiftedDay(-29)}T08:00:00`,
+  };
+  const completedBlock = {
+    id: 301,
+    user_program_id: 77,
+    title: 'Техническая база',
+    start_date: shiftedDay(-28),
+    end_date: shiftedDay(-15),
+    duration_days: 14,
+    purpose: 'Закрепить технику основных движений.',
+    priority_muscle_ids: [],
+    notes: 'Без отказных повторов.',
+    is_deload: false,
+    status: 'completed',
+    created_by_user_id: 7,
+    created_at: `${shiftedDay(-28)}T08:00:00`,
+    updated_at: `${shiftedDay(-15)}T08:00:00`,
+  };
+  const activeBlock = {
+    id: 302,
+    user_program_id: 77,
+    title:
+      'Устойчивый рабочий объём с постепенным усложнением основных движений без потери техники',
+    start_date: shiftedDay(-14),
+    end_date: shiftedDay(6),
+    duration_days: 21,
+    purpose:
+      'Увеличить рабочий объём, сохраняя стабильную технику и понятный запас повторов в каждом подходе.',
+    priority_muscle_ids: [],
+    notes: 'Тренер скорректировал цель после уверенного выполнения предыдущего этапа.',
+    is_deload: false,
+    status: 'active',
+    created_by_user_id: 11,
+    created_at: `${shiftedDay(-14)}T08:00:00`,
+    updated_at: `${shiftedDay(-2)}T12:00:00`,
+  };
+  const plannedBlock = {
+    id: 303,
+    user_program_id: 77,
+    title: 'Облегчённая неделя перед следующим рабочим циклом',
+    start_date: shiftedDay(7),
+    end_date: shiftedDay(13),
+    duration_days: 7,
+    purpose: 'Снизить объём перед следующим этапом программы.',
+    priority_muscle_ids: [],
+    notes: null,
+    is_deload: true,
+    status: 'planned',
+    created_by_user_id: 11,
+    created_at: `${shiftedDay(-2)}T12:00:00`,
+    updated_at: null,
+  };
+  const programBlocks =
+    programHistory === 'empty'
+      ? []
+      : programHistory === 'one'
+        ? [activeBlock]
+        : [archivedBlock, completedBlock, activeBlock, plannedBlock];
+  const programSnapshotWorkoutInitial = {
+    id: 943,
+    scheduled_date: contextDay,
+    title: 'Контекст версии',
+    status: 'completed',
+    day_number: 2,
+    week_number: 3,
+    exercises: [
+      {
+        exercise_id: 11,
+        sort_order: 1,
+        prescribed_sets: 2,
+        prescribed_reps: '10–12',
+        rest_seconds: 75,
+        notes: null,
+        superset_group: null,
+        superset_order: null,
+      },
+    ],
+  };
+  const programSnapshotWorkoutBefore = {
+    ...programSnapshotWorkoutInitial,
+    exercises: [
+      {
+        ...programSnapshotWorkoutInitial.exercises[0],
+        prescribed_sets: 3,
+        prescribed_reps: '8–10',
+        rest_seconds: 90,
+      },
+    ],
+  };
+  const programSnapshotWorkout = {
+    ...programSnapshotWorkoutBefore,
+    exercises: [
+      {
+        ...programSnapshotWorkoutBefore.exercises[0],
+        prescribed_sets: 4,
+        prescribed_reps: '6–8',
+        rest_seconds: 120,
+      },
+    ],
+  };
+  const activeBlockBefore = {
+    ...activeBlock,
+    purpose: 'Сохранять рабочий объём без изменения сложности.',
+  };
+  const currentRevisionNumber = programHistory === 'empty' ? 0 : programHistory === 'one' ? 2 : 4;
+  const programRevisions =
+    programHistory === 'empty'
+      ? []
+      : programHistory === 'one'
+        ? [
+            {
+              id: 2,
+              user_program_id: 77,
+              revision_number: 2,
+              changed_by_user_id: 7,
+              actor_role: 'self',
+              change_kind: 'block_created',
+              reason: 'Разделить программу на понятные этапы',
+              changed_fields: { block_id: 302, status: 'active' },
+              snapshot: { training_blocks: [activeBlock], workouts: [programSnapshotWorkout] },
+              created_at: `${shiftedDay(-14)}T08:00:00`,
+            },
+            {
+              id: 1,
+              user_program_id: 77,
+              revision_number: 1,
+              changed_by_user_id: 7,
+              actor_role: 'self',
+              change_kind: 'assigned',
+              reason: null,
+              changed_fields: {},
+              snapshot: { training_blocks: [], workouts: [programSnapshotWorkout] },
+              created_at: `${shiftedDay(-42)}T08:00:00`,
+            },
+          ]
+        : [
+            {
+              id: 4,
+              user_program_id: 77,
+              revision_number: 4,
+              changed_by_user_id: 11,
+              actor_role: 'trainer',
+              change_kind: 'block_updated',
+              reason:
+                'Пользователь уверенно выполняет план, поэтому этап уточнён без изменения исторических тренировок.',
+              changed_fields: { block_id: 302, fields: ['purpose'] },
+              snapshot: { training_blocks: programBlocks, workouts: [programSnapshotWorkout] },
+              created_at: `${shiftedDay(-2)}T12:00:00`,
+            },
+            {
+              id: 3,
+              user_program_id: 77,
+              revision_number: 3,
+              changed_by_user_id: 11,
+              actor_role: 'trainer',
+              change_kind: 'plan_updated',
+              reason: 'Уточнить объём тренировки для следующего шага программы',
+              changed_fields: {
+                operation: 'exercise_upserted',
+                day_number: 2,
+                exercise_id: 11,
+                workouts_updated: 1,
+              },
+              snapshot: {
+                training_blocks: [archivedBlock, completedBlock, activeBlockBefore, plannedBlock],
+                workouts: [programSnapshotWorkoutBefore],
+              },
+              created_at: `${shiftedDay(-3)}T12:00:00`,
+            },
+            {
+              id: 2,
+              user_program_id: 77,
+              revision_number: 2,
+              changed_by_user_id: 7,
+              actor_role: 'self',
+              change_kind: 'block_status_changed',
+              reason: 'Технический этап завершён по плану',
+              changed_fields: { block_id: 301, fields: ['status'] },
+              snapshot: {
+                training_blocks: [archivedBlock, completedBlock, activeBlockBefore],
+                workouts: [programSnapshotWorkoutInitial],
+              },
+              created_at: `${shiftedDay(-15)}T09:00:00`,
+            },
+            {
+              id: 1,
+              user_program_id: 77,
+              revision_number: 1,
+              changed_by_user_id: 7,
+              actor_role: 'self',
+              change_kind: 'assigned',
+              reason: null,
+              changed_fields: {},
+              snapshot: { training_blocks: [], workouts: [programSnapshotWorkoutInitial] },
+              created_at: `${shiftedDay(-42)}T08:00:00`,
+            },
+          ];
+  const activeProgramTemplate = {
+    id: 700,
+    slug: 'strength-base-history',
+    title: 'Силовая база: длинный цикл для устойчивого прогресса',
+    goal: 'recomposition',
+    level: 'intermediate',
+    split_type: 'full_body',
+    owner_user_id: 7,
+    owner_telegram_user_id: 7007,
+    owner_full_name: 'Анна Петрова',
+    created_by_user_id: 7,
+    is_public: false,
+    is_example: false,
+    can_edit: true,
+    is_assigned_to_current_user: true,
+    is_active_for_current_user: true,
+    assigned_by_user_id: null,
+    assigned_by_full_name: null,
+    assigned_program_id: 77,
+    assigned_program_status: 'active',
+    assigned_program_start_date: shiftedDay(-42),
+    assigned_program_duration_weeks: 10,
+    current_revision_number: currentRevisionNumber,
+    days: [{ id: 1, day_number: 1, title: 'Силовая', exercises: [] }],
+  };
+
   const progressSummary = () => ({
     user_id: 7,
     period_days: 30,
@@ -512,6 +756,43 @@ export async function installPlatformApi(
           },
           trainer: null,
         },
+      });
+    }
+    if (programHistory && path.endsWith('/programs/templates/mine')) {
+      return route.fulfill({ json: [activeProgramTemplate] });
+    }
+    if (programHistory && path.endsWith('/programs/templates/hidden')) {
+      return route.fulfill({ json: [] });
+    }
+    if (programHistory && path.endsWith('/programs/assigned/77/blocks')) {
+      return route.fulfill({ json: programBlocks });
+    }
+    if (programHistory && path.endsWith('/programs/assigned/77/revisions')) {
+      return route.fulfill({ json: programRevisions });
+    }
+    if (programHistory && path.endsWith('/programs/exercises')) {
+      return route.fulfill({
+        json: [
+          {
+            id: 11,
+            title: 'Присед со штангой',
+            primary_muscle: 'Квадрицепс',
+            equipment: 'Штанга',
+            primary_muscle_ids: ['quadriceps'],
+            secondary_muscle_ids: [],
+            equipment_ids: ['barbell'],
+            alternatives: [],
+            difficulty_level: 'intermediate',
+            edit_target_id: null,
+            slug: 'barbell-squat',
+            is_custom: false,
+            is_personalized: false,
+            created_by_user_id: null,
+            source_exercise_id: null,
+            has_guide: false,
+            guide: null,
+          },
+        ],
       });
     }
     if (path.endsWith('/workouts/today')) {

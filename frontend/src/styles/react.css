@@ -2860,8 +2860,6 @@ select:not([multiple]) {
 .program-library__group > div:first-child,
 .program-builder-days-heading,
 .program-day__head,
-.program-block__head,
-.program-advanced__heading,
 .coach-client-programs__head {
   display: flex;
   align-items: flex-start;
@@ -2871,7 +2869,6 @@ select:not([multiple]) {
 .program-active__head > div,
 .program-template-card__main,
 .program-day__head > input,
-.program-block__head > div,
 .coach-client-programs__head > div,
 .coach-program-row__main {
   min-width: 0;
@@ -2880,10 +2877,7 @@ select:not([multiple]) {
 .program-active p,
 .program-builder h3,
 .program-builder p,
-.program-library h3,
-.program-block p,
-.program-advanced h3,
-.program-advanced p {
+.program-library h3 {
   margin: 0;
 }
 .program-active h2 {
@@ -2915,9 +2909,6 @@ select:not([multiple]) {
 .program-template-grid,
 .program-builder-tools__body,
 .program-exercise-advanced__body,
-.program-advanced__body,
-.program-advanced__section,
-.program-block-list,
 .coach-client-programs {
   display: grid;
   gap: 14px;
@@ -3050,8 +3041,7 @@ select:not([multiple]) {
   font-weight: 750;
 }
 .program-order-controls,
-.program-exercise-row__actions,
-.program-block__actions {
+.program-exercise-row__actions {
   display: flex;
   gap: 5px;
 }
@@ -3146,88 +3136,6 @@ select:not([multiple]) {
 }
 .program-builder-footer__save {
   min-width: min(240px, 100%);
-}
-.program-advanced {
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--surface-subtle);
-}
-.program-advanced__body {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
-}
-.program-advanced__section + .program-advanced__section {
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
-}
-.program-advanced__heading p {
-  margin-top: 3px;
-  color: var(--muted);
-  font-size: 0.78rem;
-}
-.program-block-form {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  padding: 14px;
-  border-radius: 13px;
-  background: var(--surface);
-}
-.program-block-form__wide {
-  grid-column: 1 / -1;
-}
-.program-block-list {
-  gap: 8px;
-}
-.program-block {
-  display: grid;
-  gap: 8px;
-  padding: 13px;
-  border-left: 3px solid var(--accent-line);
-  background: var(--surface);
-}
-.program-block__head > div,
-.program-block__head > div > span,
-.program-block > small {
-  display: grid;
-  gap: 3px;
-}
-.program-block__head span,
-.program-block > small {
-  color: var(--muted);
-  font-size: 0.76rem;
-}
-.program-revision-list {
-  display: grid;
-  gap: 0;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.program-revision-list li {
-  display: grid;
-  grid-template-columns: 12px minmax(0, 1fr) auto;
-  gap: 10px;
-  padding: 10px 0;
-}
-.program-revision-list__marker {
-  width: 8px;
-  height: 8px;
-  margin-top: 5px;
-  border-radius: 50%;
-  background: var(--accent);
-}
-.program-revision-list li > div {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-.program-revision-list li span,
-.program-revision-list li small {
-  color: var(--muted);
-  font-size: 0.74rem;
 }
 .exercise-catalog__search {
   max-width: 720px;
@@ -3352,9 +3260,6 @@ select:not([multiple]) {
 .coach-client-program.is-focused {
   border-color: var(--accent-line);
 }
-.coach-client-program > .program-advanced {
-  grid-column: 1 / -1;
-}
 .coach-program-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
@@ -3377,9 +3282,6 @@ select:not([multiple]) {
 .coach-program-row__actions {
   display: grid;
   gap: 6px;
-}
-.coach-program-row > .program-advanced {
-  grid-column: 1 / -1;
 }
 
 @media (max-width: 760px) {
@@ -3437,7 +3339,6 @@ select:not([multiple]) {
   .program-active__actions,
   .program-template-card__actions,
   .program-builder-footer,
-  .program-block-form,
   .exercise-create__form,
   .coach-program-row__actions {
     display: grid;
@@ -3469,7 +3370,6 @@ select:not([multiple]) {
   .program-builder-footer__save {
     min-width: 0;
   }
-  .program-block-form__wide,
   .exercise-create__title {
     grid-column: auto;
   }
@@ -3489,9 +3389,6 @@ select:not([multiple]) {
   }
   .coach-client-program {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .coach-client-program > .program-advanced {
-    grid-column: auto;
   }
 }
 

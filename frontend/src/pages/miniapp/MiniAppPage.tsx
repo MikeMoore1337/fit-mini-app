@@ -4,7 +4,7 @@ import { useAuth } from '../../app/AuthProvider';
 import { TelegramLinkPrompt } from '../../features/account/TelegramLinkPrompt';
 import { TodayDashboard } from '../../features/dashboard/TodayDashboard';
 import type { WorkoutNavigationTarget } from '../../features/workouts/WorkoutHistory';
-import { useNavigation } from '../../shared/navigation/router';
+import { AppLink, focusedContextReturn, useNavigation } from '../../shared/navigation/router';
 import { Badge } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { programProfileReadiness } from '../../features/profile/programReadiness';
@@ -50,6 +50,11 @@ const ProfileForm = lazy(() =>
 const ProgramBuilder = lazy(() =>
   import('../../features/programs/ProgramBuilder').then((module) => ({
     default: module.ProgramBuilder,
+  })),
+);
+const HistoricalProgramWorkout = lazy(() =>
+  import('../../features/programs/HistoricalProgramWorkout').then((module) => ({
+    default: module.HistoricalProgramWorkout,
   })),
 );
 const TemplatesList = lazy(() =>
@@ -125,6 +130,18 @@ function requestedWorkoutFeedback(search: string): {
   };
 }
 
+function requestedHistoricalProgramWorkout(search: string): {
+  programId: number;
+  revisionNumber: number;
+  workoutId: number;
+} | null {
+  const params = new URLSearchParams(search);
+  const workoutId = positiveId(params.get('workout_id'));
+  const programId = positiveId(params.get('program_history'));
+  const revisionNumber = positiveId(params.get('program_revision'));
+  return workoutId && programId && revisionNumber ? { workoutId, programId, revisionNumber } : null;
+}
+
 function launchInviteToken(): string | null {
   const params = new URLSearchParams(window.location.search);
   const startParam =
@@ -149,6 +166,8 @@ export default function MiniAppPage() {
   });
   const section = requestedSection(search) ?? fallbackSection;
   const requestedFeedback = requestedWorkoutFeedback(search);
+  const historicalProgramWorkout = requestedHistoricalProgramWorkout(search);
+  const workoutReturnPath = requestedFeedback ? focusedContextReturn(search) : null;
   const focusWeeklyReview = new URLSearchParams(search).get('weekly_review') === '1';
   const [focusedWorkout, setFocusedWorkout] = useState<{
     id: number;
@@ -248,18 +267,26 @@ export default function MiniAppPage() {
             {section === 'today' && <TodayDashboard />}
             {section === 'progress' && (
               <>
+                {workoutReturnPath?.includes('section=programs') && (
+                  <AppLink className="program-history-return" to={workoutReturnPath}>
+                    К истории программы
+                  </AppLink>
+                )}
+                {historicalProgramWorkout && (
+                  <HistoricalProgramWorkout {...historicalProgramWorkout} />
+                )}
                 <div className="stack progress-workout-stack">
                   <ProgressSchedule
                     userId={user?.id}
                     timeZone={user?.profile?.timezone}
-                    focusedWorkoutId={scheduleFocusId}
+                    focusedWorkoutId={historicalProgramWorkout ? null : scheduleFocusId}
                     focusedCommentId={requestedFeedback?.commentId}
                     focusedExerciseId={requestedFeedback?.workoutExerciseId}
                     focusWeeklyReview={focusWeeklyReview}
                   />
                   <WorkoutHistory
                     timeZone={user?.profile?.timezone}
-                    focusedWorkoutId={historyFocusId}
+                    focusedWorkoutId={historicalProgramWorkout ? null : historyFocusId}
                     focusedCommentId={requestedFeedback?.commentId}
                     focusedExerciseId={requestedFeedback?.workoutExerciseId}
                     onWorkoutSelect={(id, target) => setFocusedWorkout({ id, target })}

@@ -2,18 +2,18 @@
 
 ## Completed
 
-`00-58`, включая буквенные подзадачи. Task-файлы находятся в `tasks/done/`.
+`00-59`, включая буквенные подзадачи. Task-файлы находятся в `tasks/done/`.
 
 ## Current
 
 ```text
-59 Program history and training blocks
+60 Body priorities and anthropometry
 ```
 
-После завершения `59`:
+После завершения `60`:
 
 ```text
-60 -> 61 -> 62 -> 63 -> 64 -> 65 -> 66 -> 67
+61 -> 62 -> 63 -> 64 -> 65 -> 66 -> 67
  -> 68 -> 69 -> 70 -> 71 -> 72 -> 73 -> 74 -> 75
  -> 76 skill-aware retrospective audit -> 76A adversarial gate
  -> 77 real-user results checkpoint

@@ -3479,7 +3479,562 @@ body:has(.standalone-page--design-v2) {
   border-color: var(--v2-border);
   border-radius: var(--v2-region-radius);
   background: var(--v2-surface);
+  box-shadow: none;
+}
+
+.app-section--programs .program-active__edit-action {
+  border-color: var(--v2-lime);
+  background: var(--v2-lime);
+  color: var(--v2-on-lime);
+}
+
+.app-section--programs .program-active__edit-action:hover:not(:disabled) {
+  border-color: var(--v2-lime-hover);
+  background: var(--v2-lime-hover);
+  color: var(--v2-on-lime);
+}
+
+.app-section--programs .program-history {
+  display: grid;
+  gap: var(--v2-space-3);
+  min-width: 0;
+  padding-block: var(--v2-space-4);
+  border-block: 1px solid var(--v2-border);
+}
+
+.app-section--programs :where(.coach-client-program, .coach-program-row) > .program-history {
+  grid-column: 1 / -1;
+}
+
+.app-section--programs .program-history__intro,
+.app-section--programs .program-history__heading,
+.app-section--programs .program-current-block__topline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--v2-space-3);
+  min-width: 0;
+}
+
+.app-section--programs .program-history__intro h3,
+.app-section--programs .program-history__heading h4,
+.app-section--programs .program-history__heading p,
+.app-section--programs .program-current-block h4,
+.app-section--programs .program-current-block p,
+.app-section--programs .program-current-block dl,
+.app-section--programs .program-revision-timeline dl {
+  margin: 0;
+}
+
+.app-section--programs .program-history__intro h3 {
+  margin-top: var(--v2-space-1);
+  font-size: clamp(1.15rem, 2.2vw, 1.45rem);
+}
+
+.app-section--programs .program-history__version {
+  flex: 0 0 auto;
+  color: var(--v2-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.app-section--programs .program-current-block {
+  display: grid;
+  gap: var(--v2-space-3);
+  min-width: 0;
+  padding: var(--v2-space-4);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-region-radius);
+  background: var(--v2-surface-secondary);
+}
+
+.app-section--programs .program-current-block.is-active,
+.app-section--programs .program-current-block.is-planned {
   box-shadow: inset 3px 0 var(--v2-lime);
+}
+
+.app-section--programs .program-current-block__topline > span:first-child {
+  color: var(--v2-accent-text);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.app-section--programs .program-current-block__content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(210px, auto);
+  align-items: end;
+  gap: var(--v2-space-4);
+  min-width: 0;
+}
+
+.app-section--programs .program-current-block__content > div {
+  display: grid;
+  gap: var(--v2-space-2);
+  min-width: 0;
+}
+
+.app-section--programs .program-current-block h4 {
+  overflow-wrap: anywhere;
+  font-size: clamp(1.25rem, 2.6vw, 1.75rem);
+  line-height: 1.08;
+}
+
+.app-section--programs .program-current-block__content p,
+.app-section--programs .program-current-block__note {
+  max-width: 62ch;
+  color: var(--v2-text-secondary);
+}
+
+.app-section--programs .program-current-block__facts {
+  display: grid;
+  gap: var(--v2-space-2);
+  min-width: 0;
+}
+
+.app-section--programs .program-current-block__facts > div {
+  display: grid;
+  gap: var(--v2-space-1);
+  padding-top: var(--v2-space-2);
+  border-top: 1px solid var(--v2-border);
+}
+
+.app-section--programs .program-current-block__facts dt {
+  color: var(--v2-text-secondary);
+  font-size: 0.72rem;
+}
+
+.app-section--programs .program-current-block__facts dd {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.app-section--programs .program-block-actions,
+.app-section--programs .program-block-editor__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--v2-space-2);
+}
+
+.app-section--programs .program-history__disclosure {
+  min-width: 0;
+}
+
+.app-section--programs .program-history__disclosure > summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: var(--v2-space-3);
+  min-height: 56px;
+  padding-block: var(--v2-space-2);
+  cursor: pointer;
+  list-style: none;
+}
+
+.app-section--programs .program-history__disclosure > summary::-webkit-details-marker,
+.app-section--programs .program-block-timeline summary::-webkit-details-marker,
+.app-section--programs .program-revision-timeline summary::-webkit-details-marker {
+  display: none;
+}
+
+.app-section--programs .program-history__summary-copy,
+.app-section--programs .program-block-timeline__copy,
+.app-section--programs .program-revision-timeline__copy {
+  display: grid;
+  gap: var(--v2-space-1);
+  min-width: 0;
+}
+
+.app-section--programs
+  :where(
+    .program-history__summary-copy,
+    .program-block-timeline__copy,
+    .program-revision-timeline__copy
+  )
+  strong {
+  overflow-wrap: anywhere;
+}
+
+.app-section--programs
+  :where(
+    .program-history__summary-copy,
+    .program-block-timeline__copy,
+    .program-revision-timeline__copy
+  )
+  small {
+  color: var(--v2-text-secondary);
+  font-size: 0.75rem;
+}
+
+.app-section--programs
+  :where(
+    .program-history__disclosure,
+    .program-block-timeline details,
+    .program-revision-timeline details
+  )[open]
+  > summary
+  .disclosure-icon__vertical {
+  opacity: 0;
+}
+
+.app-section--programs .program-history__body {
+  display: grid;
+  gap: var(--v2-space-5);
+  padding-top: var(--v2-space-3);
+  border-top: 1px solid var(--v2-border);
+}
+
+.app-section--programs .program-history__region {
+  display: grid;
+  gap: var(--v2-space-3);
+  min-width: 0;
+}
+
+.app-section--programs .program-history__region + .program-history__region {
+  padding-top: var(--v2-space-5);
+  border-top: 1px solid var(--v2-border);
+}
+
+.app-section--programs .program-history__heading p,
+.app-section--programs .program-history__quiet {
+  margin-top: var(--v2-space-1);
+  color: var(--v2-text-secondary);
+  font-size: 0.78rem;
+}
+
+.app-section--programs .program-block-editor {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--v2-space-3);
+  padding: var(--v2-space-4);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-region-radius);
+  background: var(--v2-surface-secondary);
+}
+
+.app-section--programs
+  .program-block-editor
+  > :where(:first-child, :nth-child(4), :nth-child(5), :nth-child(7)),
+.app-section--programs .program-block-editor__check,
+.app-section--programs .program-block-editor__actions {
+  grid-column: 1 / -1;
+}
+
+.app-section--programs .program-block-editor textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+
+.app-section--programs .program-block-editor__check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--v2-space-2);
+  min-height: 44px;
+  color: var(--v2-text-secondary);
+}
+
+.app-section--programs .program-block-editor__check input {
+  flex: 0 0 auto;
+  margin-top: 0.2rem;
+}
+
+.app-section--programs .program-block-editor__actions {
+  justify-content: flex-end;
+}
+
+.app-section--programs :where(.program-block-timeline, .program-revision-timeline) {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app-section--programs :where(.program-block-timeline, .program-revision-timeline) > li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: var(--v2-space-2);
+  min-width: 0;
+}
+
+.app-section--programs :where(.program-block-timeline__rail, .program-revision-timeline__rail) {
+  position: relative;
+  min-height: 100%;
+}
+
+.app-section--programs
+  :where(.program-block-timeline__rail, .program-revision-timeline__rail)::before {
+  position: absolute;
+  inset: 0 auto 0 6px;
+  width: 1px;
+  background: var(--v2-border);
+  content: '';
+}
+
+.app-section--programs
+  :where(.program-block-timeline__rail, .program-revision-timeline__rail)::after {
+  position: absolute;
+  top: 24px;
+  left: 3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--v2-text-secondary);
+  content: '';
+}
+
+.app-section--programs
+  .program-block-timeline
+  > li.is-current
+  .program-block-timeline__rail::after {
+  background: var(--v2-lime);
+  box-shadow: 0 0 0 3px var(--v2-surface-secondary);
+}
+
+.app-section--programs :where(.program-block-timeline, .program-revision-timeline) details {
+  min-width: 0;
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.app-section--programs :where(.program-block-timeline, .program-revision-timeline) summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 28px;
+  align-items: center;
+  gap: var(--v2-space-2);
+  min-height: 56px;
+  padding-block: var(--v2-space-2);
+  cursor: pointer;
+  list-style: none;
+}
+
+.app-section--programs
+  :where(.program-block-timeline__details, .program-revision-timeline__details) {
+  display: grid;
+  gap: var(--v2-space-3);
+  padding: 0 0 var(--v2-space-4);
+}
+
+.app-section--programs .program-block-timeline__details > p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.app-section--programs .program-revision-reason {
+  display: grid;
+  gap: var(--v2-space-1);
+  padding: var(--v2-space-3);
+  border-left: 3px solid var(--v2-border);
+  background: var(--v2-surface-secondary);
+}
+
+.app-section--programs .program-revision-reason p {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--v2-text-secondary);
+}
+
+.app-section--programs .program-revision-diff {
+  display: grid;
+  border-top: 1px solid var(--v2-border);
+}
+
+.app-section--programs .program-revision-diff > div {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.5fr) minmax(0, 1.5fr);
+  gap: var(--v2-space-3);
+  padding-block: var(--v2-space-2);
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.app-section--programs .program-revision-diff dt {
+  color: var(--v2-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.app-section--programs .program-revision-diff dd {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: var(--v2-space-2);
+  min-width: 0;
+  margin: 0;
+}
+
+.app-section--programs .program-revision-diff dd > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.app-section--programs .program-revision-diff dd > span:first-child {
+  color: var(--v2-text-secondary);
+}
+
+.app-section--programs .program-revision-workouts {
+  display: grid;
+  gap: var(--v2-space-2);
+}
+
+.app-section--programs .program-revision-workouts ul {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--v2-border);
+  list-style: none;
+}
+
+.app-section--programs .program-revision-workouts li {
+  min-width: 0;
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.app-section--programs .program-revision-workouts :where(a, li > span) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--v2-space-3);
+  min-height: 52px;
+  min-width: 0;
+  padding-block: var(--v2-space-2);
+  color: var(--v2-text-primary);
+  text-decoration: none;
+}
+
+.app-section--programs .program-revision-workouts :where(a, li > span) > span:first-child {
+  display: grid;
+  gap: var(--v2-space-1);
+  min-width: 0;
+}
+
+.app-section--programs .program-revision-workouts small {
+  color: var(--v2-text-secondary);
+}
+
+.app-section--programs .program-revision-workouts a > span:last-child {
+  flex: 0 0 auto;
+  color: var(--v2-accent-text);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.app-section--progress .program-history-return {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  min-height: 44px;
+  padding-inline: var(--v2-space-3);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--radius-action);
+  background: var(--v2-surface);
+  color: var(--v2-text-primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.app-section--progress .program-history-workout {
+  display: grid;
+  gap: var(--v2-space-4);
+  min-width: 0;
+  padding: var(--v2-space-4);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-region-radius);
+  background: var(--v2-surface);
+  box-shadow: inset 3px 0 var(--v2-lime);
+}
+
+.app-section--progress .program-history-workout__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--v2-space-3);
+  min-width: 0;
+}
+
+.app-section--progress .program-history-workout__header > div {
+  display: grid;
+  gap: var(--v2-space-1);
+  min-width: 0;
+}
+
+.app-section--progress .program-history-workout__header h2,
+.app-section--progress .program-history-workout__notice,
+.app-section--progress .program-history-workout__facts,
+.app-section--progress .program-history-workout__plan h3,
+.app-section--progress .program-history-workout__plan p {
+  margin: 0;
+}
+
+.app-section--progress .program-history-workout__header h2 {
+  overflow-wrap: anywhere;
+  font-size: clamp(1.35rem, 3vw, 1.8rem);
+  line-height: 1.08;
+}
+
+.app-section--progress .program-history-workout__notice {
+  max-width: 72ch;
+  padding: var(--v2-space-3);
+  border-left: 3px solid var(--v2-border);
+  background: var(--v2-surface-secondary);
+  color: var(--v2-text-secondary);
+}
+
+.app-section--progress .program-history-workout__facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-block: 1px solid var(--v2-border);
+}
+
+.app-section--progress .program-history-workout__facts > div {
+  display: grid;
+  gap: var(--v2-space-1);
+  padding: var(--v2-space-3);
+}
+
+.app-section--progress .program-history-workout__facts > div + div {
+  border-left: 1px solid var(--v2-border);
+}
+
+.app-section--progress .program-history-workout__facts dt {
+  color: var(--v2-text-secondary);
+  font-size: 0.72rem;
+}
+
+.app-section--progress .program-history-workout__facts dd {
+  margin: 0;
+  font-weight: 750;
+}
+
+.app-section--progress .program-history-workout__plan {
+  display: grid;
+  gap: var(--v2-space-2);
+}
+
+.app-section--progress .program-history-workout__plan ol {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--v2-border);
+  list-style: none;
+}
+
+.app-section--progress .program-history-workout__plan li {
+  display: grid;
+  gap: var(--v2-space-1);
+  min-width: 0;
+  padding-block: var(--v2-space-3);
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.app-section--progress .program-history-workout__plan li > div {
+  display: grid;
+  gap: var(--v2-space-1);
+}
+
+.app-section--progress .program-history-workout__plan li span,
+.app-section--progress .program-history-workout__plan li p {
+  color: var(--v2-text-secondary);
 }
 
 .app-section--programs
@@ -5098,6 +5653,49 @@ body.public-shell-mode:has(.public-shell.public-shell--design-v2) {
 }
 
 @media (max-width: 760px) {
+  .app-section--programs .program-history__intro,
+  .app-section--programs .program-history__heading,
+  .app-section--programs .program-current-block__topline {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .app-section--programs .program-current-block__topline {
+    flex-direction: row;
+  }
+
+  .app-section--programs .program-current-block__content {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .app-section--programs .program-current-block__facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .app-section--programs .program-block-editor {
+    grid-template-columns: minmax(0, 1fr);
+    padding: var(--v2-space-3);
+  }
+
+  .app-section--programs .program-block-editor > *,
+  .app-section--programs
+    .program-block-editor
+    > :where(:first-child, :nth-child(4), :nth-child(5), :nth-child(7)),
+  .app-section--programs .program-block-editor__check,
+  .app-section--programs .program-block-editor__actions {
+    grid-column: 1;
+  }
+
+  .app-section--programs .program-revision-diff > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--v2-space-1);
+  }
+
+  .app-section--programs .program-revision-diff dd {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  }
+
   .app-section--programs .program-exercise-row__actions,
   .app-section--programs .program-exercise-advanced {
     grid-column: 1 / -1;
@@ -5227,6 +5825,80 @@ body.public-shell-mode:has(.public-shell.public-shell--design-v2) {
 }
 
 @media (max-width: 520px) {
+  .app-section--progress .program-history-workout {
+    padding: var(--v2-space-3);
+  }
+
+  .app-section--progress .program-history-workout__header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .app-section--progress .program-history-workout__header .ui-badge {
+    align-self: flex-start;
+  }
+
+  .app-section--progress .program-history-workout__facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-section--progress .program-history-workout__facts > div + div {
+    border-top: 1px solid var(--v2-border);
+    border-left: 0;
+  }
+
+  .app-section--programs .program-current-block,
+  .app-section--programs .program-block-editor {
+    padding: var(--v2-space-3);
+  }
+
+  .app-section--programs .program-history__heading > .ui-button,
+  .app-section--programs .program-block-actions .ui-button,
+  .app-section--programs .program-block-editor__actions .ui-button {
+    width: 100%;
+  }
+
+  .app-section--programs .program-block-actions,
+  .app-section--programs .program-block-editor__actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-section--programs .program-current-block__facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-section--programs :where(.program-block-timeline, .program-revision-timeline) summary {
+    grid-template-columns: minmax(0, 1fr) 28px;
+  }
+
+  .app-section--programs
+    :where(.program-block-timeline, .program-revision-timeline)
+    summary
+    > .ui-badge {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: start;
+  }
+
+  .app-section--programs
+    :where(.program-block-timeline, .program-revision-timeline)
+    summary
+    > .disclosure-icon {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .app-section--programs .program-revision-diff dd {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--v2-space-1);
+  }
+
+  .app-section--programs .program-revision-diff dd > span[aria-hidden='true'] {
+    transform: rotate(90deg);
+    justify-self: start;
+  }
+
   .coach-workspace--design-v2 {
     gap: var(--v2-space-3);
   }

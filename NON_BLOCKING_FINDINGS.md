@@ -58,6 +58,7 @@ audit-артефактам. В неё включены только findings, д
 | `F46B-07` | `MEDIUM` | `FIXED` | Same-day measurement read-then-insert допускал race и uncontrolled error. | Audit `46B`; закрыт `codex-backlog/tasks/done/46c2-measurement-state-concurrency-remediation.md`. | История сохраняется; повторно не открывать без regression evidence. | 2026-08-23 |
 | `F46B-08` | `MEDIUM` | `ROUTED` | Не определён полный retention/deletion lifecycle для audit events, logs и backups. | Audit `46B/46B1`; code/policy gap подтверждён, external operator controls не проверялись. | `codex-backlog/tasks/78-production-operational-readiness.md`: explicit retention/access/restore acceptance и owner decisions. | 2026-08-23 |
 | `F46B-09` | `LOW` | `ROUTED` | SQLite account deletion мог оставлять nutrition orphans из-за выключенного FK enforcement; production PostgreSQL regression отдельно не доказан. | Audit `46B/46B1`; SQLite boundary подтверждён, PostgreSQL deletion probe не выполнен. | `codex-backlog/tasks/79-final-integrated-release-audit.md`: SQLite/PostgreSQL account-deletion regression. | 2026-08-23 |
+| `R59-004` | `MEDIUM` | `FIXED` | После возврата из historical workout строка нужной revision исключалась из последовательной keyboard navigation из-за `tabIndex=-1`. | Independent review task `59`; исправлено в `AssignedProgramDetails` и подтверждено targeted recheck, unit и Playwright-проверками. | История сохраняется; повторно не открывать без regression evidence. | 2026-08-23 |
 
 ## Ограничение начальной инвентаризации
 
