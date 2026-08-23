@@ -205,7 +205,10 @@ def _alternative_candidates(
     visible: dict[int, Exercise] | None = None,
     pairs: list[ExerciseAlternative] | None = None,
 ) -> list[AlternativeCandidate]:
+    from fitminiapp_api.services.training_preferences import avoided_exercise_ids
+
     visible = visible or get_visible_exercise_display_map(db, current_user)
+    avoided_ids = avoided_exercise_ids(current_user.profile)
     target_id = _effective_exercise_id(target.exercise)
     if pairs is None:
         pairs = (
@@ -226,7 +229,7 @@ def _alternative_candidates(
     candidates = []
     for candidate_id in candidate_ids:
         exercise = visible.get(candidate_id)
-        if exercise is None:
+        if exercise is None or _effective_exercise_id(exercise) in avoided_ids:
             continue
         equipment_ids = _equipment_ids(exercise)
         if equipment_ids and set(equipment_ids).issubset(available_equipment_ids):

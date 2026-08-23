@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, time
 
 from sqlalchemy import (
     BIGINT,
+    JSON,
     Boolean,
     CheckConstraint,
     Date,
@@ -14,6 +15,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    Time,
     UniqueConstraint,
     text,
 )
@@ -46,7 +48,12 @@ class User(Base):
     )
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now_msk_naive)
 
-    profile = relationship("UserProfile", back_populates="user", uselist=False)
+    profile = relationship(
+        "UserProfile",
+        back_populates="user",
+        uselist=False,
+        foreign_keys="UserProfile.user_id",
+    )
     auth_identities = relationship(
         "AuthIdentity", back_populates="user", cascade="all, delete-orphan"
     )
@@ -63,6 +70,26 @@ class UserProfile(Base):
             "body_priority_mode IS NULL OR body_priority_mode IN ('balanced', 'muscle_groups')",
             name="ck_user_profiles_body_priority_mode",
         ),
+        CheckConstraint(
+            "preferred_workout_duration_min IS NULL OR "
+            "preferred_workout_duration_min BETWEEN 10 AND 240",
+            name="ck_user_profiles_preferred_duration_min",
+        ),
+        CheckConstraint(
+            "preferred_workout_duration_max IS NULL OR "
+            "preferred_workout_duration_max BETWEEN 10 AND 240",
+            name="ck_user_profiles_preferred_duration_max",
+        ),
+        CheckConstraint(
+            "preferred_workout_duration_min IS NULL OR "
+            "preferred_workout_duration_max IS NULL OR "
+            "preferred_workout_duration_min <= preferred_workout_duration_max",
+            name="ck_user_profiles_preferred_duration_order",
+        ),
+        CheckConstraint(
+            "training_preferences_note IS NULL OR length(training_preferences_note) <= 500",
+            name="ck_user_profiles_training_preferences_note_length",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -77,6 +104,28 @@ class UserProfile(Base):
     cardio_trainings_per_week: Mapped[int | None] = mapped_column(Integer, nullable=True)
     resting_heart_rate: Mapped[int | None] = mapped_column(Integer, nullable=True)
     body_priority_mode: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    preferred_workout_duration_min: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    preferred_workout_duration_max: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    preferred_training_weekdays: Mapped[list[int]] = mapped_column(
+        JSON, nullable=False, default=list, server_default=text("'[]'")
+    )
+    preferred_training_time: Mapped[time | None] = mapped_column(Time, nullable=True)
+    training_location_profiles: Mapped[list[dict]] = mapped_column(
+        JSON, nullable=False, default=list, server_default=text("'[]'")
+    )
+    preferred_exercise_ids: Mapped[list[int]] = mapped_column(
+        JSON, nullable=False, default=list, server_default=text("'[]'")
+    )
+    avoided_exercises: Mapped[list[dict]] = mapped_column(
+        JSON, nullable=False, default=list, server_default=text("'[]'")
+    )
+    training_preferences_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    training_preferences_updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True
+    )
+    training_preferences_updated_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
     timezone: Mapped[str] = mapped_column(
         String(64),
         nullable=False,
@@ -84,7 +133,7 @@ class UserProfile(Base):
         server_default=DEFAULT_TIMEZONE,
     )
 
-    user = relationship("User", back_populates="profile")
+    user = relationship("User", back_populates="profile", foreign_keys=[user_id])
     body_priority_links: Mapped[list[UserProfilePriorityMuscle]] = relationship(
         "UserProfilePriorityMuscle",
         back_populates="profile",

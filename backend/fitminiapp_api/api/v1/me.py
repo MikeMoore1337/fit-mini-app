@@ -2,12 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import set_committed_value
 
 from fitminiapp_api.core.config import settings
 from fitminiapp_api.db.session import get_db
 from fitminiapp_api.models.nutrition import NutritionTarget
 from fitminiapp_api.models.program import UserProgram, UserWorkout
-from fitminiapp_api.models.user import CoachRoleApplication, User
+from fitminiapp_api.models.user import CoachRoleApplication, User, UserProfile
 from fitminiapp_api.schemas.coach_application import CoachRoleApplicationResponse
 from fitminiapp_api.schemas.invite import CoachInvitePreviewResponse, CoachInviteTokenRequest
 from fitminiapp_api.schemas.user import (
@@ -61,6 +62,7 @@ from fitminiapp_api.services.profile import (
 from fitminiapp_api.services.program_common import ProgramError
 from fitminiapp_api.services.root_admin import has_verified_root_identity, is_root_user
 from fitminiapp_api.services.security import get_current_user
+from fitminiapp_api.services.training_preferences import serialize_training_preferences
 
 router = APIRouter()
 
@@ -91,17 +93,20 @@ def _build_user_response(db: Session, user) -> UserResponse:
         .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
         .filter(UserProgram.user_id == user.id, UserWorkout.status == "completed")
     )
-    target, has_active_program, has_workout_history = (
+    target, has_active_program, has_workout_history, profile = (
         db.query(
             NutritionTarget,
             active_program_exists.exists(),
             workout_history_exists.exists(),
+            UserProfile,
         )
         .select_from(User)
         .outerjoin(NutritionTarget, NutritionTarget.user_id == User.id)
+        .outerjoin(UserProfile, UserProfile.user_id == User.id)
         .filter(User.id == user.id)
         .one()
     )
+    set_committed_value(user, "profile", profile)
     kbju = build_nutrition_target_response_for_user(db, target, user)
     trainer = get_current_trainer(db, user)
     heart_rates = calculate_profile_heart_rates(
@@ -139,6 +144,9 @@ def _build_user_response(db: Session, user) -> UserResponse:
                 BodyPriorityPreference.model_validate(body_priority)
                 if (body_priority := serialize_body_priority(user.profile)) is not None
                 else None
+            ),
+            training_preferences=(
+                serialize_training_preferences(db, user, user.profile) if user.profile else None
             ),
             timezone=user.profile.timezone if user.profile else "Europe/Moscow",
             estimated_max_heart_rate=heart_rates.maximum if heart_rates else None,

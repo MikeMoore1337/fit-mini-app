@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from sqlalchemy.orm import Session, selectinload
 
@@ -15,6 +15,12 @@ from fitminiapp_api.models.user import User, UserProfile
 from fitminiapp_api.schemas.program import ProgramRecommendationRequest
 from fitminiapp_api.services.exercise_domain import EQUIPMENT_NAME_BY_IDENTIFIER
 from fitminiapp_api.services.programs import LEGACY_DEMO_TEMPLATE_SLUG
+from fitminiapp_api.services.training_preferences import (
+    avoided_exercise_ids,
+    equipment_for_location,
+    preferred_exercise_ids,
+    single_training_location,
+)
 
 GOAL_ORDER = {
     "fat_loss": ("fat_loss", "recomposition", "maintenance"),
@@ -65,7 +71,9 @@ class RecommendationCriteria:
     workouts_per_week: int | None
     training_location: str | None
     available_equipment_ids: frozenset[str] | None
-    profile_fields_used: tuple[str, ...]
+    preferred_exercise_ids: frozenset[int] = field(default_factory=frozenset)
+    avoided_exercise_ids: frozenset[int] = field(default_factory=frozenset)
+    profile_fields_used: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -73,6 +81,7 @@ class ProgramCandidate:
     template: ProgramTemplate
     required_equipment_ids: frozenset[str]
     equipment_metadata_complete: bool
+    exercise_ids: frozenset[int] = field(default_factory=frozenset)
 
     @property
     def training_days(self) -> int:
@@ -82,7 +91,7 @@ class ProgramCandidate:
 @dataclass(frozen=True)
 class RankedProgramCandidate:
     candidate: ProgramCandidate
-    rank: tuple[int, int, int, int, str, int]
+    rank: tuple[int, int, int, int, int, str, int]
     reason: str
     fit_facts: tuple[str, ...]
     limitations: tuple[str, ...]
@@ -126,16 +135,31 @@ def _resolve_criteria(
         workouts_per_week = profile.workouts_per_week
         profile_fields_used.append("workouts_per_week")
 
+    training_location = payload.training_location or single_training_location(profile)
+    equipment = (
+        frozenset(payload.available_equipment_ids)
+        if payload.available_equipment_ids is not None
+        else equipment_for_location(profile, training_location)
+    )
+    preferred_ids = preferred_exercise_ids(profile)
+    avoided_ids = avoided_exercise_ids(profile)
+    if payload.training_location is None and training_location is not None:
+        profile_fields_used.append("training_location")
+    if payload.available_equipment_ids is None and equipment is not None:
+        profile_fields_used.append("available_equipment")
+    if preferred_ids:
+        profile_fields_used.append("preferred_exercises")
+    if avoided_ids:
+        profile_fields_used.append("avoided_exercises")
+
     return RecommendationCriteria(
         goal=goal,
         experience=experience,
         workouts_per_week=workouts_per_week,
-        training_location=payload.training_location,
-        available_equipment_ids=(
-            frozenset(payload.available_equipment_ids)
-            if payload.available_equipment_ids is not None
-            else None
-        ),
+        training_location=training_location,
+        available_equipment_ids=equipment,
+        preferred_exercise_ids=preferred_ids,
+        avoided_exercise_ids=avoided_ids,
         profile_fields_used=tuple(profile_fields_used),
     )
 
@@ -143,9 +167,11 @@ def _resolve_criteria(
 def _candidate_from_template(template: ProgramTemplate) -> ProgramCandidate:
     required_equipment: set[str] = set()
     metadata_complete = True
+    exercise_ids: set[int] = set()
     for day in template.days:
         for template_exercise in day.exercises:
             exercise = template_exercise.exercise
+            exercise_ids.add(exercise.source_exercise_id or exercise.id)
             links = exercise.equipment_links
             if exercise.equipment and not links:
                 metadata_complete = False
@@ -157,6 +183,7 @@ def _candidate_from_template(template: ProgramTemplate) -> ProgramCandidate:
         template=template,
         required_equipment_ids=frozenset(required_equipment),
         equipment_metadata_complete=metadata_complete,
+        exercise_ids=frozenset(exercise_ids),
     )
 
 
@@ -212,6 +239,8 @@ def _rank_candidate(
             return None
         if not candidate.required_equipment_ids.issubset(criteria.available_equipment_ids):
             return None
+    if candidate.exercise_ids & criteria.avoided_exercise_ids:
+        return None
 
     preferences = SPLIT_PREFERENCES[
         (criteria.experience, _frequency_bucket(criteria.workouts_per_week))
@@ -259,6 +288,11 @@ def _rank_candidate(
             criteria.training_location
         ]
         fit_facts.append(f"Указанное место тренировок: {location}.")
+    preferred_matches = candidate.exercise_ids & criteria.preferred_exercise_ids
+    if preferred_matches:
+        fit_facts.append(f"В составе есть предпочитаемые упражнения: {len(preferred_matches)}.")
+    if criteria.avoided_exercise_ids:
+        fit_facts.append("Упражнения из списка «избегать» исключены.")
     if candidate.training_days == 8:
         limitations.append(
             "Это восьмидневный последовательный цикл, а не восемь тренировок в календарную неделю."
@@ -282,6 +316,7 @@ def _rank_candidate(
             frequency_distance,
             split_rank,
             level_gap,
+            len(criteria.preferred_exercise_ids - candidate.exercise_ids),
             template.slug,
             template.id,
         ),

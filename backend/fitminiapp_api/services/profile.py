@@ -6,7 +6,11 @@ from fitminiapp_api.core.timezone import DEFAULT_TIMEZONE, is_valid_timezone
 from fitminiapp_api.models.exercise import Muscle
 from fitminiapp_api.models.notification import NotificationSetting
 from fitminiapp_api.models.user import User, UserProfile, UserProfilePriorityMuscle
-from fitminiapp_api.schemas.user import BodyPriorityPreference, UserProfileUpdate
+from fitminiapp_api.schemas.user import (
+    BodyPriorityPreference,
+    TrainingPreferencesUpdate,
+    UserProfileUpdate,
+)
 from fitminiapp_api.services.exercise_domain import BODY_PRIORITY_TAXONOMY
 from fitminiapp_api.services.heart_rate import (
     HeartRateCalculation,
@@ -110,6 +114,7 @@ def update_profile(
     profile = ensure_profile(db, user, commit=commit)
     changes = payload.model_dump(exclude_unset=True)
     body_priority = changes.pop("body_priority", ...)
+    training_preferences = changes.pop("training_preferences", ...)
     birth_date = changes.get("birth_date", profile.birth_date)
     resting_heart_rate = changes.get("resting_heart_rate", profile.resting_heart_rate)
     if birth_date is not None and resting_heart_rate is not None:
@@ -147,6 +152,22 @@ def update_profile(
             if body_priority is not None
             else None,
         )
+
+    if training_preferences is not ...:
+        from fitminiapp_api.services.training_preferences import replace_training_preferences
+
+        try:
+            replace_training_preferences(
+                db,
+                profile,
+                user,
+                TrainingPreferencesUpdate.model_validate(training_preferences)
+                if training_preferences is not None
+                else None,
+                changed_by or user,
+            )
+        except ValueError as exc:
+            raise ProfileError(str(exc)) from exc
 
     if nutrition_updates:
         # Local import avoids a module cycle: nutrition uses ensure_profile on first save.

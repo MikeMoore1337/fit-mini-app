@@ -8,6 +8,12 @@ const authState = vi.hoisted(() => ({
     goal?: string | null;
     level?: string | null;
     workouts_per_week?: number | null;
+    training_preferences?: {
+      location_profiles?: Array<{
+        location: 'gym' | 'home' | 'other';
+        equipment_ids?: Array<'bodyweight' | 'dumbbell' | 'barbell'>;
+      }>;
+    };
   } | null,
 }));
 
@@ -141,6 +147,11 @@ describe('ProgramRecommendation wizard', () => {
       goal: 'strength',
       level: 'intermediate',
       workouts_per_week: 4,
+      training_preferences: {
+        location_profiles: [
+          { location: 'gym', equipment_ids: ['bodyweight', 'dumbbell', 'barbell'] },
+        ],
+      },
     };
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(
@@ -172,6 +183,7 @@ describe('ProgramRecommendation wizard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Далее' }));
     expect(screen.getByRole('radio', { name: /^4тренировки/ })).toBeChecked();
     fireEvent.click(screen.getByRole('button', { name: 'Далее' }));
+    expect(screen.getByRole('radio', { name: /Тренажёрный зал/ })).toBeChecked();
     fireEvent.click(screen.getByRole('radio', { name: /Место не важно/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Далее' }));
     fireEvent.click(screen.getByRole('radio', { name: /Не проверять оборудование/ }));
@@ -187,5 +199,61 @@ describe('ProgramRecommendation wizard', () => {
       'href',
       '#program-builder',
     );
+  });
+
+  it('requires a location choice for multiple profiles and switches to its equipment', async () => {
+    authState.profile = {
+      goal: 'recomposition',
+      level: 'beginner',
+      workouts_per_week: 3,
+      training_preferences: {
+        location_profiles: [
+          { location: 'gym', equipment_ids: ['bodyweight', 'dumbbell', 'barbell'] },
+          { location: 'home', equipment_ids: ['bodyweight'] },
+        ],
+      },
+    };
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          status: 'no_match',
+          criteria: {
+            goal: 'recomposition',
+            experience: 'beginner',
+            workouts_per_week: 3,
+            training_location: 'home',
+            available_equipment_ids: ['bodyweight'],
+            profile_fields_used: [],
+          },
+          missing_fields: [],
+          message: 'Совместимого шаблона нет.',
+          recommendation: null,
+          alternatives: [],
+          requires_explicit_start: true,
+        }),
+        { status: 200 },
+      ),
+    );
+    renderWizard();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Далее' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Далее' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Далее' }));
+    expect(screen.getByRole('radio', { name: /Тренажёрный зал/ })).not.toBeChecked();
+    expect(screen.getByRole('radio', { name: /Дома/ })).not.toBeChecked();
+    fireEvent.click(screen.getByRole('radio', { name: /Дома/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Далее' }));
+
+    expect(screen.getByRole('radio', { name: /Учесть только доступное/ })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Только собственный вес' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Гантели' })).not.toBeChecked();
+    fireEvent.click(screen.getByRole('button', { name: 'Показать рекомендацию' }));
+    await screen.findByRole('heading', { name: 'Совпадений нет' });
+
+    const [, request] = vi.mocked(globalThis.fetch).mock.calls[0]!;
+    expect(JSON.parse(String(request?.body))).toMatchObject({
+      training_location: 'home',
+      available_equipment_ids: ['bodyweight'],
+    });
   });
 });

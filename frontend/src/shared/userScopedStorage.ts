@@ -26,6 +26,7 @@ export const USER_SCOPED_PERSISTENT_STORAGE_REGISTRY = [
   { domain: 'measurement_draft', prefixes: ['fit_measurement_draft_'] },
   { domain: 'nutrition_draft', prefixes: ['fit_nutrition_draft_v2_', 'fit_nutrition_draft_'] },
   { domain: 'profile_draft', prefixes: ['fit_profile_draft_'] },
+  { domain: 'training_preferences_draft', prefixes: ['fit_training_preferences_draft_'] },
   { domain: 'coach_client_profile_draft', prefixes: ['fit_coach_client_profile_draft_'] },
   { domain: 'notification_draft', prefixes: ['fit_notification_draft_'] },
   {
@@ -91,6 +92,10 @@ export function nutritionDraftStorageKey(scope: string): string {
 
 export function profileDraftStorageKey(userId: number | 'anonymous'): string {
   return `fit_profile_draft_${userId}`;
+}
+
+export function trainingPreferencesDraftStorageKey(userId: number | 'anonymous'): string {
+  return `fit_training_preferences_draft_${userId}`;
 }
 
 export function coachClientProfileDraftStorageKey(clientId: number | null | undefined): string {

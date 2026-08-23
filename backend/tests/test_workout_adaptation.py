@@ -144,6 +144,29 @@ def test_replacement_requires_curated_compatible_alternative_and_fresh_preview(c
     )
     assert alternatives.status_code == 200
     replacement = next(item for item in alternatives.json() if item["title"] == "Жим гантелей лежа")
+    avoided = client.patch(
+        "/api/v1/me/profile",
+        headers=headers,
+        json={
+            "training_preferences": {
+                "avoided_exercises": [{"exercise_id": replacement["exercise_id"]}]
+            }
+        },
+    )
+    assert avoided.status_code == 200, avoided.text
+    filtered = client.get(
+        f"/api/v1/workouts/{workout['id']}/exercises/{workout_exercise_id}/alternatives?{query}",
+        headers=headers,
+    )
+    assert replacement["exercise_id"] not in {item["exercise_id"] for item in filtered.json()}
+    assert (
+        client.patch(
+            "/api/v1/me/profile",
+            headers=headers,
+            json={"training_preferences": {}},
+        ).status_code
+        == 200
+    )
     payload = {
         "reason": "replace_exercise",
         "target_workout_exercise_id": workout_exercise_id,

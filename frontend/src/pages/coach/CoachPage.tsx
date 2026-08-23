@@ -29,7 +29,6 @@ import {
 } from '../../shared/ui/common';
 import { AppLink, Redirect } from '../../shared/navigation/router';
 import { LIVE_DATA_REFETCH_INTERVAL_MS } from '../../shared/sync';
-import { usePersistentState } from '../../shared/storage';
 import { coachClientProfileDraftStorageKey } from '../../shared/userScopedStorage';
 import { handleTabKeyDown } from '../../shared/ui/tabs';
 import { DateInput } from '../../shared/ui/PickerInput';
@@ -37,6 +36,13 @@ import {
   BodyPriorityPicker,
   isBodyPriorityComplete,
 } from '../../features/profile/BodyPriorityPicker';
+import {
+  TrainingPreferencesFields,
+  trainingPreferencesDraft,
+  trainingPreferencesValidationError,
+  useRevisionedDraft,
+  type TrainingPreferencesDraft,
+} from '../../features/profile/TrainingPreferencesForm';
 import {
   activityLabel,
   clientDisplayName,
@@ -76,7 +82,7 @@ type ClientProfileDraft = Pick<
   | 'cardio_trainings_per_week'
   | 'resting_heart_rate'
   | 'body_priority'
->;
+> & { training_preferences: TrainingPreferencesDraft };
 
 function clientProfileDraft(client: Client): ClientProfileDraft {
   return {
@@ -90,6 +96,7 @@ function clientProfileDraft(client: Client): ClientProfileDraft {
     cardio_trainings_per_week: client.cardio_trainings_per_week,
     resting_heart_rate: client.resting_heart_rate,
     body_priority: client.body_priority,
+    training_preferences: trainingPreferencesDraft(client.training_preferences),
   };
 }
 
@@ -106,6 +113,7 @@ function clientProfileKey(client: Client): string {
     client.cardio_trainings_per_week,
     client.resting_heart_rate,
     client.body_priority,
+    client.training_preferences,
   ]);
 }
 
@@ -145,9 +153,11 @@ function ClientDataSection({
 function ClientProfileEditor({ client }: { client: Client }) {
   const queryClient = useQueryClient();
   const { toast } = useFeedback();
-  const [form, setForm, clearDraft] = usePersistentState<ClientProfileDraft>(
+  const serverDraft = useMemo(() => clientProfileDraft(client), [client]);
+  const [form, setForm, clearDraft] = useRevisionedDraft<ClientProfileDraft>(
     coachClientProfileDraftStorageKey(client.id),
-    () => clientProfileDraft(client),
+    client.training_preferences?.updated_at ?? null,
+    serverDraft,
   );
   const validBirthDate = /^\d{4}-\d{2}-\d{2}$/.test(form.birth_date ?? '');
   const validRestingHeartRate =
@@ -190,10 +200,11 @@ function ClientProfileEditor({ client }: { client: Client }) {
           cardio_trainings_per_week: form.cardio_trainings_per_week ?? null,
           resting_heart_rate: form.resting_heart_rate ?? null,
           body_priority: form.body_priority ?? null,
+          training_preferences: form.training_preferences,
         },
       }),
     onSuccess: async (updatedClient) => {
-      clearDraft();
+      clearDraft(clientProfileDraft(updatedClient));
       queryClient.setQueryData<Client[]>(queryKeys.trainer.clients, (clients) =>
         clients?.map((item) => (item.id === updatedClient.id ? updatedClient : item)),
       );
@@ -210,6 +221,11 @@ function ClientProfileEditor({ client }: { client: Client }) {
         e.preventDefault();
         if (!isBodyPriorityComplete(form.body_priority)) {
           toast('Выберите хотя бы одну приоритетную мышечную группу', 'error');
+          return;
+        }
+        const trainingError = trainingPreferencesValidationError(form.training_preferences);
+        if (trainingError) {
+          toast(trainingError, 'error');
           return;
         }
         mutation.mutate();
@@ -323,6 +339,16 @@ function ClientProfileEditor({ client }: { client: Client }) {
         value={form.body_priority}
         onChange={(body_priority) => setForm({ ...form, body_priority })}
       />
+      <ClientDataSection
+        title="Тренировочные предпочтения"
+        description="Длительность, расписание, места, инвентарь и упражнения"
+      >
+        <TrainingPreferencesFields
+          value={form.training_preferences}
+          ownerUserId={client.id}
+          onChange={(training_preferences) => setForm({ ...form, training_preferences })}
+        />
+      </ClientDataSection>
       {heartRate && (
         <div className="auth-notice stack">
           <strong>Пульсовые зоны · максимум {heartRate.estimated_max_heart_rate} уд/мин</strong>

@@ -4,7 +4,7 @@ from datetime import date, timedelta
 from uuid import uuid4
 
 from sqlalchemy import or_
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, aliased, contains_eager, joinedload
 
 from fitminiapp_api.core.timezone import now_msk_naive, today_for_user
 from fitminiapp_api.models.exercise import Exercise
@@ -799,7 +799,12 @@ def update_template_for_user(
     return get_template_for_user(db, current_user, template.id)
 
 
-def list_clients(db: Session, coach: User) -> list[dict]:
+def list_clients(
+    db: Session,
+    coach: User,
+    *,
+    include_preferences_context: bool = False,
+) -> list[dict]:
     clients = (
         db.query(User, CoachClient.private_name)
         .join(CoachClient, CoachClient.client_user_id == User.id)
@@ -828,42 +833,39 @@ def list_clients(db: Session, coach: User) -> list[dict]:
 
     client_users = [user for user, _private_name in clients]
     users_by_id = {user.id: user for user in client_users}
-    nutrition_targets = (
-        db.query(NutritionTarget).filter(NutritionTarget.user_id.in_(users_by_id)).all()
+    assigner_user = aliased(User)
+    assigner_profile = aliased(UserProfile)
+    nutrition_rows = (
+        db.query(NutritionTarget, assigner_user)
+        .outerjoin(assigner_user, assigner_user.id == NutritionTarget.assigned_by_user_id)
+        .outerjoin(assigner_profile, assigner_profile.user_id == assigner_user.id)
+        .options(
+            contains_eager(assigner_user.profile, alias=assigner_profile).noload(
+                UserProfile.body_priority_links
+            )
+        )
+        .filter(NutritionTarget.user_id.in_(users_by_id))
+        .all()
         if users_by_id
         else []
-    )
-    assigner_ids = {
-        target.assigned_by_user_id
-        for target in nutrition_targets
-        if target.assigned_by_user_id is not None
-    }
-    assigners = (
-        {
-            user.id: user
-            for user in db.query(User)
-            .options(joinedload(User.profile))
-            .filter(User.id.in_(assigner_ids))
-            .all()
-        }
-        if assigner_ids
-        else {}
     )
     nutrition_by_user_id = {
         target.user_id: build_nutrition_target_response_from_users(
             target,
             users_by_id[target.user_id],
-            (
-                assigners.get(target.assigned_by_user_id)
-                if target.assigned_by_user_id is not None
-                else None
-            ),
+            assigned_by,
         )
-        for target in nutrition_targets
+        for target, assigned_by in nutrition_rows
     }
 
     return [
-        _client_entry_from_user(user, private_name, nutrition_by_user_id.get(user.id))
+        _client_entry_from_user(
+            db,
+            user,
+            private_name,
+            nutrition_by_user_id.get(user.id),
+            include_preferences_context=include_preferences_context,
+        )
         for user, private_name in clients
     ] + [_client_entry_from_invite(invite) for invite in invites]
 

@@ -6,7 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
 from fitminiapp_api.schemas.nutrition import NutritionTargetResponse
-from fitminiapp_api.schemas.user import BodyPriorityPreference
+from fitminiapp_api.schemas.user import BodyPriorityPreference, TrainingPreferencesResponse
 
 ProgramRecommendationGoal = Literal[
     "fat_loss", "recomposition", "maintenance", "muscle_gain", "strength"
@@ -156,7 +156,17 @@ class ProgramRecommendationCriteria(BaseModel):
     workouts_per_week: int | None = None
     training_location: TrainingLocation | None = None
     available_equipment_ids: list[EquipmentIdentifier] | None = None
-    profile_fields_used: list[Literal["goal", "experience", "workouts_per_week"]]
+    profile_fields_used: list[
+        Literal[
+            "goal",
+            "experience",
+            "workouts_per_week",
+            "training_location",
+            "available_equipment",
+            "preferred_exercises",
+            "avoided_exercises",
+        ]
+    ]
 
 
 class ProgramRecommendationItem(BaseModel):
@@ -484,6 +494,7 @@ class ClientResponse(BaseModel):
     cardio_trainings_per_week: int | None = None
     resting_heart_rate: int | None = None
     body_priority: BodyPriorityPreference | None = None
+    training_preferences: TrainingPreferencesResponse | None = None
     timezone: str | None = None
     kbju: NutritionTargetResponse | None = None
     status: Literal["active", "pending"]

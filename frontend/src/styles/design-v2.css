@@ -1967,8 +1967,195 @@ body:has(.standalone-page--design-v2) {
 }
 
 .profile-primary-card,
+.training-preferences-card,
 .profile-settings-group {
   scroll-margin-top: var(--v2-space-4);
+}
+
+.app-section--profile .training-preferences-card {
+  padding: var(--v2-space-5);
+}
+
+.training-preferences-fields {
+  gap: var(--v2-space-3);
+}
+
+.training-preferences-status,
+.training-preferences-conflict {
+  display: grid;
+  gap: var(--v2-space-2);
+  padding: var(--v2-space-4);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface-secondary);
+}
+
+.training-preferences-status > span,
+.training-preferences-editor,
+.training-preferences-disclosure summary small {
+  color: var(--v2-text-secondary);
+  line-height: 1.45;
+}
+
+.training-preferences-status .secondary,
+.training-preferences-conflict .secondary {
+  justify-self: start;
+}
+
+.training-preferences-conflict {
+  border-left: 3px solid var(--v2-warning);
+  background: var(--v2-warning-surface);
+}
+
+.training-preferences-conflict ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.training-preferences-disclosure {
+  overflow: clip;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface-primary);
+}
+
+.training-preferences-disclosure > summary {
+  display: flex;
+  min-height: 64px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--v2-space-3);
+  padding: var(--v2-space-3) var(--v2-space-4);
+  cursor: pointer;
+  list-style: none;
+}
+
+.training-preferences-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.training-preferences-disclosure > summary > span:first-child {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.training-preferences-disclosure[open] > summary {
+  border-bottom: 1px solid var(--v2-border);
+  background: var(--v2-surface-secondary);
+}
+
+.training-preferences-disclosure[open] > summary .disclosure-icon__vertical {
+  transform: rotate(90deg);
+}
+
+.training-preferences-disclosure__body {
+  padding: var(--v2-space-4);
+}
+
+.training-preferences-duration {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--v2-space-3);
+}
+
+.training-preferences-weekdays,
+.training-preferences-locations > fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.training-preferences-weekdays legend,
+.training-preferences-locations legend {
+  margin-bottom: var(--v2-space-2);
+  font-weight: 750;
+}
+
+.training-preferences-weekdays > div,
+.training-preferences-equipment {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.training-preferences-weekdays label,
+.training-preferences-equipment label,
+.training-preferences-locations legend label {
+  position: relative;
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface-secondary);
+  cursor: pointer;
+}
+
+.training-preferences-weekdays label:has(input:checked),
+.training-preferences-equipment label:has(input:checked),
+.training-preferences-locations legend label:has(input:checked) {
+  border-color: var(--v2-lime-strong);
+  background: var(--v2-lime-soft);
+}
+
+.training-preferences-locations {
+  display: grid;
+  gap: var(--v2-space-4);
+}
+
+.training-preferences-locations > fieldset {
+  display: grid;
+  gap: var(--v2-space-2);
+}
+
+.training-preferences-exercise-list {
+  display: grid;
+  max-height: 320px;
+  overflow-y: auto;
+  border-block: 1px solid var(--v2-border);
+}
+
+.training-preferences-choice {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  min-height: 54px;
+  align-items: center;
+  gap: var(--v2-space-3);
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--v2-border);
+  cursor: pointer;
+}
+
+.training-preferences-choice:last-child {
+  border-bottom: 0;
+}
+
+.training-preferences-choice > span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+  overflow-wrap: anywhere;
+}
+
+.training-preferences-choice small {
+  color: var(--v2-text-secondary);
+}
+
+.training-preferences-reasons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--v2-space-3);
+}
+
+.training-preferences-safety-copy {
+  margin: 0;
+  padding: var(--v2-space-3) var(--v2-space-4);
+  border-left: 3px solid var(--v2-border-strong);
+  color: var(--v2-text-secondary);
+  line-height: 1.5;
 }
 
 .app-section--profile .profile-primary-card {
@@ -3023,7 +3210,8 @@ body.public-shell-mode:has(.public-shell.public-shell--design-v2) {
     border-bottom: 0;
   }
 
-  .app-section--profile .profile-primary-card {
+  .app-section--profile .profile-primary-card,
+  .app-section--profile .training-preferences-card {
     padding: var(--v2-space-4);
   }
 
@@ -3056,6 +3244,22 @@ body.public-shell-mode:has(.public-shell.public-shell--design-v2) {
 
   .profile-danger-zone {
     padding: var(--v2-space-4);
+  }
+
+  .training-preferences-duration,
+  .training-preferences-reasons {
+    grid-template-columns: 1fr;
+  }
+
+  .training-preferences-disclosure > summary,
+  .training-preferences-disclosure__body {
+    padding-inline: var(--v2-space-3);
+  }
+
+  .training-preferences-status .secondary,
+  .training-preferences-conflict .secondary,
+  .training-preferences-card form > button[type='submit'] {
+    width: 100%;
   }
 }
 

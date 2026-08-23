@@ -184,6 +184,8 @@ export function ProgramRecommendation({
   const profileGoal = user?.profile?.goal;
   const profileExperience = user?.profile?.level;
   const profileWorkouts = user?.profile?.workouts_per_week;
+  const profileLocations = user?.profile?.training_preferences?.location_profiles ?? [];
+  const profileLocation = profileLocations.length === 1 ? profileLocations[0] : undefined;
   const initialGoal = goals.some((item) => item.value === profileGoal)
     ? (profileGoal as RecommendationGoal)
     : '';
@@ -192,17 +194,23 @@ export function ProgramRecommendation({
     : '';
   const initialWorkouts =
     profileWorkouts && profileWorkouts >= 1 && profileWorkouts <= 8 ? profileWorkouts : '';
+  const initialLocation = profileLocation?.location ?? '';
+  const initialEquipment = (profileLocation?.equipment_ids ?? []) as EquipmentId[];
   const [step, setStep] = useState(0);
   const [showResult, setShowResult] = useState(false);
   const [goal, setGoal] = useState<RecommendationGoal | ''>(initialGoal);
   const [experience, setExperience] = useState<RecommendationExperience | ''>(initialExperience);
   const [workoutsPerWeek, setWorkoutsPerWeek] = useState<number | ''>(initialWorkouts);
-  const [location, setLocation] = useState<TrainingLocation | 'not_set' | ''>('');
-  const [equipmentMode, setEquipmentMode] = useState<EquipmentMode | ''>('');
-  const [equipmentIds, setEquipmentIds] = useState<EquipmentId[]>([]);
+  const [location, setLocation] = useState<TrainingLocation | 'not_set' | ''>(initialLocation);
+  const [equipmentMode, setEquipmentMode] = useState<EquipmentMode | ''>(
+    initialLocation ? 'exact' : '',
+  );
+  const [equipmentIds, setEquipmentIds] = useState<EquipmentId[]>(initialEquipment);
   const close = () => onOpenChange(false);
   const panelRef = useModalA11y<HTMLDivElement>(open, close, '.program-wizard__close');
-  const hasProfilePrefill = Boolean(initialGoal || initialExperience || initialWorkouts);
+  const hasProfilePrefill = Boolean(
+    initialGoal || initialExperience || initialWorkouts || initialLocation,
+  );
 
   const recommendation = useMutation({
     mutationFn: (payload: ProgramRecommendationRequest) =>
@@ -404,7 +412,16 @@ export function ProgramRecommendation({
                             key={item.value}
                             label={item.label}
                             name="recommendation-location"
-                            onChange={() => setLocation(item.value)}
+                            onChange={() => {
+                              setLocation(item.value);
+                              const savedLocation = profileLocations.find(
+                                (profile) => profile.location === item.value,
+                              );
+                              setEquipmentMode(savedLocation ? 'exact' : '');
+                              setEquipmentIds(
+                                (savedLocation?.equipment_ids ?? []) as EquipmentId[],
+                              );
+                            }}
                             value={item.value}
                           />
                         ))}

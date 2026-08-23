@@ -12,6 +12,7 @@ import { getTimezoneOptions } from './timezones';
 import { DateInput } from '../../shared/ui/PickerInput';
 import { profileGoals } from './goals';
 import { BodyPriorityPicker, isBodyPriorityComplete } from './BodyPriorityPicker';
+import { TrainingPreferencesForm } from './TrainingPreferencesForm';
 
 const emptyProfile: UserProfileUpdate = {
   full_name: '',
@@ -131,9 +132,17 @@ export function ProfileForm() {
       user?.profile
         ? {
             ...emptyProfile,
-            ...user.profile,
+            full_name: user.profile.full_name,
+            birth_date: user.profile.birth_date,
             goal: (user.profile.goal as UserProfileUpdate['goal']) ?? null,
             level: (user.profile.level as UserProfileUpdate['level']) ?? null,
+            height_cm: user.profile.height_cm,
+            weight_kg: user.profile.weight_kg,
+            workouts_per_week: user.profile.workouts_per_week,
+            cardio_trainings_per_week: user.profile.cardio_trainings_per_week,
+            resting_heart_rate: user.profile.resting_heart_rate,
+            body_priority: user.profile.body_priority,
+            timezone: user.profile.timezone,
           }
         : emptyProfile,
   );
@@ -186,7 +195,8 @@ export function ProfileForm() {
     mutation.reset();
   };
   return (
-    <Card
+    <>
+      <Card
       id="profile-personal"
       className="profile-primary-card"
       title="Личные данные и фитнес-профиль"
@@ -565,6 +575,8 @@ export function ProfileForm() {
           </button>
         </div>
       </form>
-    </Card>
+      </Card>
+      <TrainingPreferencesForm />
+    </>
   );
 }

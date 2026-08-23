@@ -2510,6 +2510,13 @@ export interface components {
             /** Token */
             token: string;
         };
+        /** AvoidedExercisePreference */
+        AvoidedExercisePreference: {
+            /** Exercise Id */
+            exercise_id: number;
+            /** Reason */
+            reason?: ("not_enjoyable" | "uncomfortable" | "not_confident" | "other") | null;
+        };
         /** BodyMeasurementGuidance */
         BodyMeasurementGuidance: {
             /**
@@ -2803,6 +2810,7 @@ export interface components {
             /** Resting Heart Rate */
             resting_heart_rate?: number | null;
             body_priority?: components["schemas"]["BodyPriorityPreference"] | null;
+            training_preferences?: components["schemas"]["TrainingPreferencesResponse"] | null;
             /** Timezone */
             timezone?: string | null;
             kbju?: components["schemas"]["NutritionTargetResponse"] | null;
@@ -4174,7 +4182,7 @@ export interface components {
             /** Available Equipment Ids */
             available_equipment_ids?: ("bodyweight" | "dumbbell" | "barbell" | "bench" | "cable" | "machine" | "kettlebell" | "cardio" | "other")[] | null;
             /** Profile Fields Used */
-            profile_fields_used: ("goal" | "experience" | "workouts_per_week")[];
+            profile_fields_used: ("goal" | "experience" | "workouts_per_week" | "training_location" | "available_equipment" | "preferred_exercises" | "avoided_exercises")[];
         };
         /** ProgramRecommendationItem */
         ProgramRecommendationItem: {
@@ -4959,6 +4967,16 @@ export interface components {
             working_sets: components["schemas"]["DataSufficiencySignal"];
             rir_coverage: components["schemas"]["DataSufficiencySignal"];
         };
+        /** TrainingLocationPreference */
+        TrainingLocationPreference: {
+            /**
+             * Location
+             * @enum {string}
+             */
+            location: "gym" | "home" | "other";
+            /** Equipment Ids */
+            equipment_ids?: ("bodyweight" | "dumbbell" | "barbell" | "bench" | "cable" | "machine" | "kettlebell" | "cardio" | "other")[];
+        };
         /** TrainingPeriodSummary */
         TrainingPeriodSummary: {
             /** Planned Workouts */
@@ -4974,6 +4992,73 @@ export interface components {
             /** Last Completed Workout On */
             last_completed_workout_on?: string | null;
             next_workout?: components["schemas"]["NextWorkoutSummary"] | null;
+        };
+        /** TrainingPreferencesConflictResponse */
+        TrainingPreferencesConflictResponse: {
+            /**
+             * Status
+             * @default none
+             * @enum {string}
+             */
+            status: "none" | "review_required";
+            /** Active Program Id */
+            active_program_id?: number | null;
+            /** Reasons */
+            reasons?: string[];
+        };
+        /** TrainingPreferencesEditorResponse */
+        TrainingPreferencesEditorResponse: {
+            /** User Id */
+            user_id: number;
+            /** Display Name */
+            display_name: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "self" | "trainer";
+        };
+        /** TrainingPreferencesResponse */
+        TrainingPreferencesResponse: {
+            /** Preferred Duration Min */
+            preferred_duration_min?: number | null;
+            /** Preferred Duration Max */
+            preferred_duration_max?: number | null;
+            /** Preferred Weekdays */
+            preferred_weekdays?: number[];
+            /** Preferred Time */
+            preferred_time?: string | null;
+            /** Location Profiles */
+            location_profiles?: components["schemas"]["TrainingLocationPreference"][];
+            /** Preferred Exercise Ids */
+            preferred_exercise_ids?: number[];
+            /** Avoided Exercises */
+            avoided_exercises?: components["schemas"]["AvoidedExercisePreference"][];
+            /** Note */
+            note?: string | null;
+            /** Updated At */
+            updated_at?: string | null;
+            updated_by?: components["schemas"]["TrainingPreferencesEditorResponse"] | null;
+            conflict?: components["schemas"]["TrainingPreferencesConflictResponse"];
+        };
+        /** TrainingPreferencesUpdate */
+        TrainingPreferencesUpdate: {
+            /** Preferred Duration Min */
+            preferred_duration_min?: number | null;
+            /** Preferred Duration Max */
+            preferred_duration_max?: number | null;
+            /** Preferred Weekdays */
+            preferred_weekdays?: number[];
+            /** Preferred Time */
+            preferred_time?: string | null;
+            /** Location Profiles */
+            location_profiles?: components["schemas"]["TrainingLocationPreference"][];
+            /** Preferred Exercise Ids */
+            preferred_exercise_ids?: number[];
+            /** Avoided Exercises */
+            avoided_exercises?: components["schemas"]["AvoidedExercisePreference"][];
+            /** Note */
+            note?: string | null;
         };
         /** UserFoodCreate */
         UserFoodCreate: {
@@ -5046,6 +5131,7 @@ export interface components {
             /** Resting Heart Rate */
             resting_heart_rate?: number | null;
             body_priority?: components["schemas"]["BodyPriorityPreference"] | null;
+            training_preferences?: components["schemas"]["TrainingPreferencesResponse"] | null;
             /**
              * Timezone
              * @default Europe/Moscow
@@ -5083,6 +5169,7 @@ export interface components {
             /** Resting Heart Rate */
             resting_heart_rate?: number | null;
             body_priority?: components["schemas"]["BodyPriorityPreference"] | null;
+            training_preferences?: components["schemas"]["TrainingPreferencesUpdate"] | null;
             /** Timezone */
             timezone?: string | null;
         };

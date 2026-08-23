@@ -117,10 +117,15 @@ def _can_manage_user_id(db: Session, current_user: User, owner_user_id: int | No
 
 
 def _client_entry_from_user(
+    db: Session,
     user: User,
     private_name: str | None,
     nutrition_target: NutritionTargetResponse | None,
+    *,
+    include_preferences_context: bool,
 ) -> dict:
+    from fitminiapp_api.services.training_preferences import serialize_training_preferences
+
     profile = user.profile
     return {
         "id": user.id,
@@ -137,6 +142,16 @@ def _client_entry_from_user(
         "cardio_trainings_per_week": (profile.cardio_trainings_per_week if profile else None),
         "resting_heart_rate": profile.resting_heart_rate if profile else None,
         "body_priority": serialize_body_priority(profile),
+        "training_preferences": (
+            serialize_training_preferences(
+                db,
+                user,
+                profile,
+                include_runtime_context=include_preferences_context,
+            )
+            if profile
+            else None
+        ),
         "timezone": get_user_timezone_name(user),
         "kbju": nutrition_target,
         "status": "active",
@@ -162,6 +177,7 @@ def _client_entry_from_invite(invite: CoachClientInvite) -> dict:
         "cardio_trainings_per_week": None,
         "resting_heart_rate": None,
         "body_priority": None,
+        "training_preferences": None,
         "timezone": None,
         "kbju": None,
         "status": "pending",

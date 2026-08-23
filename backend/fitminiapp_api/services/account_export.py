@@ -653,6 +653,18 @@ def build_account_export(db: Session, user: User) -> dict[str, object]:
                 "cardio_trainings_per_week": profile.cardio_trainings_per_week,
                 "resting_heart_rate": profile.resting_heart_rate,
                 "body_priority": serialize_body_priority(profile),
+                "training_preferences": {
+                    "preferred_duration_min": profile.preferred_workout_duration_min,
+                    "preferred_duration_max": profile.preferred_workout_duration_max,
+                    "preferred_weekdays": profile.preferred_training_weekdays,
+                    "preferred_time": profile.preferred_training_time,
+                    "location_profiles": profile.training_location_profiles,
+                    "preferred_exercise_ids": profile.preferred_exercise_ids,
+                    "avoided_exercises": profile.avoided_exercises,
+                    "note": profile.training_preferences_note,
+                    "updated_at": profile.training_preferences_updated_at,
+                    "updated_by_user_id": profile.training_preferences_updated_by_user_id,
+                },
                 "timezone": profile.timezone,
             }
             if profile

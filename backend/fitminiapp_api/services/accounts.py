@@ -191,6 +191,12 @@ def delete_user_cascade(db: Session, user: User) -> None:
     db.query(CoachRoleApplication).filter(CoachRoleApplication.user_id == user.id).delete(
         synchronize_session=False
     )
+    db.query(UserProfile).filter(
+        UserProfile.training_preferences_updated_by_user_id == user.id
+    ).update(
+        {"training_preferences_updated_by_user_id": None},
+        synchronize_session=False,
+    )
 
     db.query(EnergyCalibration).filter(EnergyCalibration.user_id == user.id).delete(
         synchronize_session=False

@@ -269,6 +269,52 @@ def test_tie_break_and_legacy_metadata_are_deterministic_without_database():
     ]
 
 
+def test_preferred_exercise_breaks_tie_and_avoided_exercise_excludes_candidate():
+    def candidate(template_id: int, slug: str, exercise_ids: set[int]) -> ProgramCandidate:
+        template = ProgramTemplate(
+            id=template_id,
+            slug=slug,
+            title=slug,
+            goal="recomposition",
+            level="intermediate",
+            split_type="upper_lower",
+            is_public=True,
+        )
+        template.days = [
+            ProgramTemplateDay(day_number=index, title=f"Day {index}") for index in range(1, 5)
+        ]
+        return ProgramCandidate(
+            template=template,
+            required_equipment_ids=frozenset(),
+            equipment_metadata_complete=True,
+            exercise_ids=frozenset(exercise_ids),
+        )
+
+    criteria = RecommendationCriteria(
+        goal="recomposition",
+        experience="intermediate",
+        workouts_per_week=4,
+        training_location=None,
+        available_equipment_ids=None,
+        preferred_exercise_ids=frozenset({22}),
+        avoided_exercise_ids=frozenset({99}),
+    )
+
+    result = rank_program_candidates(
+        [
+            candidate(1, "without-preferred", {1}),
+            candidate(2, "with-preferred", {22}),
+            candidate(3, "with-avoided", {22, 99}),
+        ],
+        criteria,
+    )
+
+    assert [item.candidate.template.slug for item in result.ranked_candidates] == [
+        "with-preferred",
+        "without-preferred",
+    ]
+
+
 def test_request_rejects_duplicate_equipment():
     with pytest.raises(ValidationError, match="must be unique"):
         ProgramRecommendationRequest(

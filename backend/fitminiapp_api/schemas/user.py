@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, time
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -7,6 +7,93 @@ from fitminiapp_api.core.timezone import is_valid_timezone
 from fitminiapp_api.schemas.nutrition import NutritionTargetResponse
 
 ProfileGoal = Literal["muscle_gain", "fat_loss", "maintenance", "recomposition"]
+TrainingLocation = Literal["gym", "home", "other"]
+TrainingEquipmentIdentifier = Literal[
+    "bodyweight",
+    "dumbbell",
+    "barbell",
+    "bench",
+    "cable",
+    "machine",
+    "kettlebell",
+    "cardio",
+    "other",
+]
+TrainingAvoidReason = Literal["not_enjoyable", "uncomfortable", "not_confident", "other"]
+
+
+class TrainingLocationPreference(BaseModel):
+    location: TrainingLocation
+    equipment_ids: list[TrainingEquipmentIdentifier] = Field(default_factory=list, max_length=9)
+
+    @field_validator("equipment_ids")
+    @classmethod
+    def validate_unique_equipment(
+        cls, value: list[TrainingEquipmentIdentifier]
+    ) -> list[TrainingEquipmentIdentifier]:
+        if len(set(value)) != len(value):
+            raise ValueError("equipment_ids must be unique")
+        return value
+
+
+class AvoidedExercisePreference(BaseModel):
+    exercise_id: int = Field(ge=1)
+    reason: TrainingAvoidReason | None = None
+
+
+class TrainingPreferencesUpdate(BaseModel):
+    preferred_duration_min: int | None = Field(default=None, ge=10, le=240)
+    preferred_duration_max: int | None = Field(default=None, ge=10, le=240)
+    preferred_weekdays: list[int] = Field(default_factory=list, max_length=7)
+    preferred_time: time | None = None
+    location_profiles: list[TrainingLocationPreference] = Field(default_factory=list, max_length=3)
+    preferred_exercise_ids: list[int] = Field(default_factory=list, max_length=32)
+    avoided_exercises: list[AvoidedExercisePreference] = Field(default_factory=list, max_length=32)
+    note: str | None = Field(default=None, max_length=500)
+
+    @model_validator(mode="after")
+    def validate_training_preferences(self):
+        if (
+            self.preferred_duration_min is not None
+            and self.preferred_duration_max is not None
+            and self.preferred_duration_min > self.preferred_duration_max
+        ):
+            raise ValueError("preferred_duration_min must not exceed preferred_duration_max")
+        if any(day < 0 or day > 6 for day in self.preferred_weekdays):
+            raise ValueError("preferred_weekdays values must be between 0 and 6")
+        if len(set(self.preferred_weekdays)) != len(self.preferred_weekdays):
+            raise ValueError("preferred_weekdays must be unique")
+        locations = [profile.location for profile in self.location_profiles]
+        if len(set(locations)) != len(locations):
+            raise ValueError("location profiles must be unique")
+        if len(set(self.preferred_exercise_ids)) != len(self.preferred_exercise_ids):
+            raise ValueError("preferred_exercise_ids must be unique")
+        avoided_ids = [item.exercise_id for item in self.avoided_exercises]
+        if len(set(avoided_ids)) != len(avoided_ids):
+            raise ValueError("avoided exercise ids must be unique")
+        if set(self.preferred_exercise_ids) & set(avoided_ids):
+            raise ValueError("an exercise cannot be both preferred and avoided")
+        return self
+
+
+class TrainingPreferencesEditorResponse(BaseModel):
+    user_id: int
+    display_name: str
+    role: Literal["self", "trainer"]
+
+
+class TrainingPreferencesConflictResponse(BaseModel):
+    status: Literal["none", "review_required"] = "none"
+    active_program_id: int | None = None
+    reasons: list[str] = Field(default_factory=list)
+
+
+class TrainingPreferencesResponse(TrainingPreferencesUpdate):
+    updated_at: datetime | None = None
+    updated_by: TrainingPreferencesEditorResponse | None = None
+    conflict: TrainingPreferencesConflictResponse = Field(
+        default_factory=TrainingPreferencesConflictResponse
+    )
 
 
 class BodyPriorityPreference(BaseModel):
@@ -44,6 +131,7 @@ class UserProfileUpdate(BaseModel):
     cardio_trainings_per_week: int | None = Field(default=None, ge=0, le=14)
     resting_heart_rate: int | None = Field(default=None, ge=30, le=120)
     body_priority: BodyPriorityPreference | None = None
+    training_preferences: TrainingPreferencesUpdate | None = None
     timezone: str | None = Field(default=None, max_length=64)
 
     @field_validator("timezone")
@@ -125,6 +213,7 @@ class UserProfileResponse(BaseModel):
     cardio_trainings_per_week: int | None = None
     resting_heart_rate: int | None = None
     body_priority: BodyPriorityPreference | None = None
+    training_preferences: TrainingPreferencesResponse | None = None
     timezone: str = "Europe/Moscow"
     estimated_max_heart_rate: int | None = None
     heart_rate_reserve: int | None = None

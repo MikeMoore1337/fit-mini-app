@@ -179,7 +179,11 @@ def _managed_client(db: Session, coach: User, client_id: int) -> User:
 
 
 def _client_list_entry(db: Session, coach: User, client_id: int) -> dict:
-    return next(row for row in list_clients(db, coach) if row["id"] == client_id)
+    return next(
+        row
+        for row in list_clients(db, coach, include_preferences_context=True)
+        if row["id"] == client_id
+    )
 
 
 @router.get("/clients", response_model=list[ClientResponse])

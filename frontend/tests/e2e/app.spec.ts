@@ -497,9 +497,47 @@ async function mockApi(
     withCoachClient = false,
     withCoachApplication = false,
     withCoachProgram = false,
+    withTrainingPreferences = false,
   } = {},
 ) {
   let role: 'client' | 'coach' | 'admin' = 'client';
+  let trainingPreferences = {
+    preferred_duration_min: withTrainingPreferences ? 40 : null,
+    preferred_duration_max: withTrainingPreferences ? 70 : null,
+    preferred_weekdays: withTrainingPreferences ? [0, 2, 4] : [],
+    preferred_time: withTrainingPreferences ? '18:30:00' : null,
+    location_profiles: withTrainingPreferences
+      ? [
+          {
+            location: 'gym' as const,
+            equipment_ids: ['bodyweight', 'dumbbell', 'barbell', 'bench', 'cable', 'machine'],
+          },
+        ]
+      : [],
+    preferred_exercise_ids: withTrainingPreferences ? [2] : [],
+    avoided_exercises: withTrainingPreferences
+      ? [{ exercise_id: 1, reason: 'not_enjoyable' as const }]
+      : [],
+    note: withTrainingPreferences ? 'Не ставить тяжёлые жимы в два дня подряд.' : null,
+    updated_at: withTrainingPreferences ? '2030-01-10T12:00:00' : null,
+    updated_by: withTrainingPreferences
+      ? {
+          user_id: 9,
+          display_name: 'Тренер Анна',
+          role: 'trainer' as 'trainer' | 'self',
+        }
+      : null,
+    conflict: withTrainingPreferences
+      ? {
+          status: 'review_required' as const,
+          active_program_id: 501,
+          reasons: [
+            'В активной программе есть упражнение из списка «избегать».',
+            'Для активной программы может не хватать оборудования: Гиря.',
+          ],
+        }
+      : { status: 'none' as const, active_program_id: null, reasons: [] },
+  };
   let coachApplication = withCoachApplication
     ? {
         id: 42,
@@ -570,6 +608,22 @@ async function mockApi(
         },
       });
     }
+    if (path.endsWith('/me/profile') && request.method() === 'PATCH') {
+      const body = request.postDataJSON() as {
+        training_preferences?: typeof trainingPreferences;
+      };
+      if (body.training_preferences) {
+        trainingPreferences = {
+          ...trainingPreferences,
+          ...body.training_preferences,
+          updated_at: '2030-01-10T12:30:00',
+          updated_by: { user_id: 1, display_name: fullName, role: 'self' },
+        };
+      }
+      return route.fulfill({
+        json: { id: 1, profile: { training_preferences: trainingPreferences } },
+      });
+    }
     if (path.endsWith('/me'))
       return route.fulfill({
         json: {
@@ -589,6 +643,7 @@ async function mockApi(
             workouts_per_week: completeProfile ? 3 : null,
             timezone: 'Europe/Moscow',
             kbju: null,
+            training_preferences: trainingPreferences,
           },
           trainer: null,
         },
@@ -1777,6 +1832,168 @@ test('профиль показывает завершённое состоян�
   await expect(page.getByText('Настройки программы заполнены')).toBeVisible();
   await expect(page.getByText('3 из 3')).toBeVisible();
   await expect(page.getByText('Готово', { exact: true })).toBeVisible();
+});
+
+test('training preferences сохраняют Mobile Web/TMA композицию и скриншоты всех версий', async ({
+  browser,
+}) => {
+  const cases = [
+    { surface: 'mobile-web', width: 360, height: 800, theme: 'light' },
+    { surface: 'mobile-web', width: 390, height: 844, theme: 'dark' },
+    { surface: 'mobile-web', width: 430, height: 932, theme: 'light' },
+    { surface: 'mobile-web', width: 768, height: 900, theme: 'dark' },
+    { surface: 'desktop-web', width: 1440, height: 900, theme: 'light' },
+    { surface: 'tma-mock', width: 360, height: 800, theme: 'dark' },
+    { surface: 'tma-mock', width: 390, height: 844, theme: 'light' },
+    { surface: 'tma-mock', width: 430, height: 932, theme: 'dark' },
+  ] as const;
+
+  for (const current of cases) {
+    const page = await browser.newPage({
+      viewport: { width: current.width, height: current.height },
+      hasTouch: current.width <= 768,
+    });
+    if (current.surface === 'tma-mock') {
+      await page.addInitScript(
+        ({ theme }) => {
+          const handlers = new Map<string, Set<() => void>>();
+          const telegram = {
+            initData: 'signed-task-54-data',
+            colorScheme: theme,
+            themeParams: {},
+            viewportHeight: window.innerHeight,
+            viewportStableHeight: window.innerHeight,
+            isActive: true,
+            safeAreaInset: { top: 0, right: 0, bottom: 16, left: 0 },
+            contentSafeAreaInset: { top: 0, right: 0, bottom: 16, left: 0 },
+            ready() {},
+            expand() {},
+            setHeaderColor() {},
+            setBackgroundColor() {},
+            setBottomBarColor() {},
+            onEvent(event: string, callback: () => void) {
+              const callbacks = handlers.get(event) ?? new Set();
+              callbacks.add(callback);
+              handlers.set(event, callbacks);
+            },
+            offEvent(event: string, callback: () => void) {
+              handlers.get(event)?.delete(callback);
+            },
+            emit(event: string) {
+              handlers.get(event)?.forEach((callback) => callback());
+            },
+            BackButton: { show() {}, hide() {}, onClick() {}, offClick() {} },
+          };
+          Object.assign(window, { Telegram: { WebApp: telegram } });
+        },
+        { theme: current.theme },
+      );
+    } else {
+      await page.addInitScript((theme) => localStorage.setItem('app-theme', theme), current.theme);
+    }
+    await mockApi(page, { completeProfile: true, withTrainingPreferences: true });
+    await page.goto('/app');
+    if (current.surface !== 'tma-mock') {
+      await page.getByRole('button', { name: 'Клиент' }).click();
+    }
+    await openAppDestination(page, 'Профиль');
+    const card = page.locator('.training-preferences-card');
+    await expect(card).toBeVisible();
+    await expect(card.getByText('Текущую программу нужно проверить')).toBeVisible();
+    await card.getByText('Упражнения и движения, которых хотите избегать').click();
+    await expect(card.getByText(/Это не медицинская оценка/)).toBeVisible();
+    if (current.surface === 'tma-mock') {
+      const durationMax = card.getByLabel('До, минут');
+      await durationMax.fill('75');
+      await durationMax.blur();
+      const otherTheme = current.theme === 'light' ? 'dark' : 'light';
+      await page.evaluate((theme) => {
+        const webApp = (
+          window as unknown as {
+            Telegram: {
+              WebApp: { colorScheme: string; emit: (event: string) => void };
+            };
+          }
+        ).Telegram.WebApp;
+        webApp.colorScheme = theme;
+        webApp.emit('themeChanged');
+      }, otherTheme);
+      await page.setViewportSize({ width: current.width, height: current.height - 40 });
+      await page.evaluate((height) => {
+        const webApp = (
+          window as unknown as {
+            Telegram: {
+              WebApp: {
+                viewportHeight: number;
+                viewportStableHeight: number;
+                emit: (event: string) => void;
+              };
+            };
+          }
+        ).Telegram.WebApp;
+        webApp.viewportHeight = height;
+        webApp.viewportStableHeight = height;
+        webApp.emit('viewportChanged');
+      }, current.height - 40);
+      await page.setViewportSize({ width: current.width, height: current.height });
+      await page.evaluate(({ height, theme }) => {
+        const webApp = (
+          window as unknown as {
+            Telegram: {
+              WebApp: {
+                colorScheme: string;
+                viewportHeight: number;
+                viewportStableHeight: number;
+                emit: (event: string) => void;
+              };
+            };
+          }
+        ).Telegram.WebApp;
+        webApp.colorScheme = theme;
+        webApp.viewportHeight = height;
+        webApp.viewportStableHeight = height;
+        webApp.emit('themeChanged');
+        webApp.emit('viewportChanged');
+      }, current);
+      await expect(durationMax).toHaveValue('75');
+    }
+    await expect(page.locator('html')).toHaveAttribute('data-color-scheme', current.theme);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(current.width);
+    const targets = await card
+      .locator('summary, button, input:not([type="checkbox"]), select, textarea, a')
+      .evaluateAll((items) =>
+        items
+          .filter((item) => {
+            const style = getComputedStyle(item);
+            return style.display !== 'none' && style.visibility !== 'hidden';
+          })
+          .map((item) => ({
+            target: `${item.tagName.toLowerCase()}.${item.className}`,
+            label: item.getAttribute('aria-label') ?? item.textContent?.trim().slice(0, 60) ?? '',
+            height: item.getBoundingClientRect().height,
+          })),
+      );
+    expect(
+      targets.filter(({ height }) => height > 0 && height < 40),
+      'Все интерактивные цели должны иметь высоту не меньше 40px',
+    ).toEqual([]);
+    await card.getByText('Упражнения и движения, которых хотите избегать').click();
+    await card.getByText('Текущую программу нужно проверить').scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: `../.artifacts/task-54-training-preferences/${current.surface}-${current.width}x${current.height}-${current.theme}.png`,
+    });
+    await openAppDestination(page, 'План');
+    await page.getByRole('button', { name: 'Начать подбор' }).click();
+    const wizard = page.getByRole('dialog', { name: 'Цель' });
+    await expect(wizard).toBeVisible();
+    await expect(wizard.getByText(/подставили достоверные ответы из профиля/i)).toBeVisible();
+    expect(
+      await wizard
+        .locator('.program-wizard__panel')
+        .evaluate((element) => element.scrollWidth <= element.clientWidth),
+    ).toBe(true);
+    await page.close();
+  }
 });
 
 test('клиент подаёт заявку на роль тренера из профиля', async ({ page }) => {
