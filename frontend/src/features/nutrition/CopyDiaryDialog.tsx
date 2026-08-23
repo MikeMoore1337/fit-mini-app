@@ -15,10 +15,11 @@ const mealLabels: Record<MealType, string> = {
   snacks: 'Перекусы',
 };
 
-export type CopySubject =
+export type CopySubject = (
   | { scope: 'product'; sourceDate: string; sourceMeal: MealType; entryId: number; label: string }
   | { scope: 'meal'; sourceDate: string; sourceMeal: MealType; label: string }
-  | { scope: 'day'; sourceDate: string; label: string };
+  | { scope: 'day'; sourceDate: string; label: string }
+) & { initialTargetDate?: string };
 
 function idempotencyKey(): string {
   return (
@@ -46,7 +47,7 @@ export function CopyDiaryDialog({
   const queryClient = useQueryClient();
   const { toast } = useFeedback();
   const panelRef = useModalA11y<HTMLDivElement>(true, onClose, '#nutrition-copy-target-date');
-  const [targetDate, setTargetDate] = useState(today);
+  const [targetDate, setTargetDate] = useState(subject.initialTargetDate ?? today);
   const [targetMeal, setTargetMeal] = useState<MealType>(
     subject.scope === 'day' ? 'breakfast' : subject.sourceMeal,
   );

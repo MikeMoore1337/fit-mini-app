@@ -39,6 +39,10 @@ function summary(
     nutrition: {
       visible: true,
       logged_days: 14,
+      complete_days: 12,
+      incomplete_days: 2,
+      fasted_days: 0,
+      unlogged_days: 15,
       adherence_evaluated_days: 12,
       average_calories: 2000,
       target_calories: 2100,

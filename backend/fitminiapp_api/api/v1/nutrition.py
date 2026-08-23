@@ -22,6 +22,7 @@ from fitminiapp_api.schemas.food_diary import (
     FoodDiaryCopyProduct,
     FoodDiaryCopyResponse,
     FoodDiaryDayResponse,
+    FoodDiaryDayStatusUpdate,
     FoodDiaryEntryCreate,
     FoodDiaryEntryResponse,
     FoodDiaryEntryUpdate,
@@ -60,6 +61,7 @@ from fitminiapp_api.services.food_diary import (
     create_food_diary_entry,
     delete_food_diary_entry,
     get_food_diary_day,
+    set_food_diary_day_status,
     update_food_diary_entry,
 )
 from fitminiapp_api.services.food_provider import FoodProvider, get_food_provider
@@ -113,6 +115,10 @@ def _raise_recipe_http_error(exc: RecipeError) -> None:
 
 IdempotencyKey = Annotated[
     str,
+    Header(alias="Idempotency-Key", min_length=8, max_length=128),
+]
+OptionalIdempotencyKey = Annotated[
+    str | None,
     Header(alias="Idempotency-Key", min_length=8, max_length=128),
 ]
 
@@ -389,11 +395,24 @@ def get_diary_day(
 )
 def create_diary_entry(
     payload: FoodDiaryEntryCreate,
+    idempotency_key: OptionalIdempotencyKey = None,
     current_user: User = Depends(require_user),
     db: Session = Depends(get_db),
 ):
     try:
-        return create_food_diary_entry(db, current_user, payload)
+        return create_food_diary_entry(db, current_user, payload, idempotency_key)
+    except FoodDiaryError as exc:
+        _raise_diary_http_error(exc)
+
+
+@router.put("/diary/status", response_model=FoodDiaryDayResponse)
+def update_diary_day_status(
+    payload: FoodDiaryDayStatusUpdate,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        return set_food_diary_day_status(db, current_user, payload)
     except FoodDiaryError as exc:
         _raise_diary_http_error(exc)
 

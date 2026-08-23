@@ -1677,6 +1677,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/nutrition/diary/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Diary Day Status */
+        put: operations["update_diary_day_status_api_v1_nutrition_diary_status_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/nutrition/diary/entries/{entry_id}": {
         parameters: {
             query?: never;
@@ -3483,6 +3500,26 @@ export interface components {
             totals: components["schemas"]["FoodDiaryNutrition"];
             targets: components["schemas"]["FoodDiaryTargets"] | null;
             remaining: components["schemas"]["FoodDiaryTargets"] | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "complete" | "incomplete" | "unlogged" | "fasted";
+            /** Status Is Explicit */
+            status_is_explicit: boolean;
+        };
+        /** FoodDiaryDayStatusUpdate */
+        FoodDiaryDayStatusUpdate: {
+            /**
+             * Diary Date
+             * Format: date
+             */
+            diary_date: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "complete" | "incomplete" | "unlogged" | "fasted";
         };
         /** FoodDiaryEntryCreate */
         FoodDiaryEntryCreate: {
@@ -3490,6 +3527,7 @@ export interface components {
             food_id?: number | null;
             /** Recipe Id */
             recipe_id?: number | null;
+            quick_add?: components["schemas"]["FoodDiaryQuickAdd"] | null;
             /**
              * Diary Date
              * Format: date
@@ -3500,6 +3538,8 @@ export interface components {
              * @enum {string}
              */
             meal_type: "breakfast" | "lunch" | "dinner" | "snacks";
+            /** Logged At */
+            logged_at?: string | null;
             /** Amount */
             amount: number | string;
             /**
@@ -3527,6 +3567,13 @@ export interface components {
             food_id: number | null;
             /** Recipe Id */
             recipe_id: number | null;
+            /**
+             * Entry Kind
+             * @enum {string}
+             */
+            entry_kind: "food" | "recipe" | "quick_add";
+            /** Logged At */
+            logged_at: string | null;
             /** Food Name */
             food_name: string;
             /** Food Brand */
@@ -3568,6 +3615,8 @@ export interface components {
             diary_date?: string | null;
             /** Meal Type */
             meal_type?: ("breakfast" | "lunch" | "dinner" | "snacks") | null;
+            /** Logged At */
+            logged_at?: string | null;
             /** Amount */
             amount?: number | string | null;
             /** Amount Unit */
@@ -3589,24 +3638,37 @@ export interface components {
             /** Energy Kcal */
             energy_kcal: string;
             /** Protein G */
-            protein_g: string;
+            protein_g: string | null;
             /** Fat G */
-            fat_g: string;
+            fat_g: string | null;
             /** Carbs G */
-            carbs_g: string;
+            carbs_g: string | null;
             /** Fiber G */
             fiber_g: string | null;
+        };
+        /** FoodDiaryQuickAdd */
+        FoodDiaryQuickAdd: {
+            /** Name */
+            name?: string | null;
+            /** Energy Kcal */
+            energy_kcal: number | string;
+            /** Protein G */
+            protein_g?: number | string | null;
+            /** Fat G */
+            fat_g?: number | string | null;
+            /** Carbs G */
+            carbs_g?: number | string | null;
         };
         /** FoodDiaryTargets */
         FoodDiaryTargets: {
             /** Energy Kcal */
             energy_kcal: string;
             /** Protein G */
-            protein_g: string;
+            protein_g: string | null;
             /** Fat G */
-            fat_g: string;
+            fat_g: string | null;
             /** Carbs G */
-            carbs_g: string;
+            carbs_g: string | null;
         };
         /** FoodListResponse */
         FoodListResponse: {
@@ -3886,6 +3948,26 @@ export interface components {
              * @default 0
              */
             logged_days: number;
+            /**
+             * Complete Days
+             * @default 0
+             */
+            complete_days: number;
+            /**
+             * Incomplete Days
+             * @default 0
+             */
+            incomplete_days: number;
+            /**
+             * Fasted Days
+             * @default 0
+             */
+            fasted_days: number;
+            /**
+             * Unlogged Days
+             * @default 0
+             */
+            unlogged_days: number;
             /**
              * Adherence Evaluated Days
              * @default 0
@@ -9192,7 +9274,9 @@ export interface operations {
     create_diary_entry_api_v1_nutrition_diary_entries_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -9209,6 +9293,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FoodDiaryEntryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_diary_day_status_api_v1_nutrition_diary_status_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FoodDiaryDayStatusUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodDiaryDayResponse"];
                 };
             };
             /** @description Validation Error */

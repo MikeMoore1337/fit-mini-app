@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, time
 from decimal import Decimal
 
 from sqlalchemy import (
@@ -10,6 +10,7 @@ from sqlalchemy import (
     Integer,
     Numeric,
     String,
+    Time,
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -65,6 +66,52 @@ class FoodDiaryEntry(Base):
             "NOT (food_id IS NOT NULL AND recipe_id IS NOT NULL)",
             name="ck_food_diary_entries_single_source",
         ),
+        CheckConstraint(
+            "entry_kind IN ('food', 'recipe', 'quick_add')",
+            name="ck_food_diary_entries_kind",
+        ),
+        CheckConstraint(
+            "entry_kind <> 'quick_add' OR (food_id IS NULL AND recipe_id IS NULL)",
+            name="ck_food_diary_entries_quick_source",
+        ),
+        CheckConstraint(
+            "(entry_kind = 'quick_add' AND quick_energy_kcal IS NOT NULL) OR "
+            "(entry_kind <> 'quick_add' AND quick_energy_kcal IS NULL AND "
+            "quick_protein_g IS NULL AND quick_fat_g IS NULL AND quick_carbs_g IS NULL)",
+            name="ck_food_diary_entries_quick_nutrition",
+        ),
+        CheckConstraint(
+            "(quick_protein_g IS NULL AND quick_fat_g IS NULL AND quick_carbs_g IS NULL) OR "
+            "(quick_protein_g IS NOT NULL AND quick_fat_g IS NOT NULL AND "
+            "quick_carbs_g IS NOT NULL)",
+            name="ck_food_diary_entries_quick_macros_complete",
+        ),
+        CheckConstraint(
+            "quick_energy_kcal IS NULL OR quick_energy_kcal > 0 AND quick_energy_kcal <= 10000",
+            name="ck_food_diary_entries_quick_energy_range",
+        ),
+        CheckConstraint(
+            "quick_protein_g IS NULL OR quick_protein_g BETWEEN 0 AND 1000",
+            name="ck_food_diary_entries_quick_protein_range",
+        ),
+        CheckConstraint(
+            "quick_fat_g IS NULL OR quick_fat_g BETWEEN 0 AND 1000",
+            name="ck_food_diary_entries_quick_fat_range",
+        ),
+        CheckConstraint(
+            "quick_carbs_g IS NULL OR quick_carbs_g BETWEEN 0 AND 1000",
+            name="ck_food_diary_entries_quick_carbs_range",
+        ),
+        CheckConstraint(
+            "(idempotency_key IS NULL AND request_fingerprint IS NULL) OR "
+            "(idempotency_key IS NOT NULL AND request_fingerprint IS NOT NULL)",
+            name="ck_food_diary_entries_idempotency_pair",
+        ),
+        UniqueConstraint(
+            "user_id",
+            "idempotency_key",
+            name="uq_food_diary_entries_user_idempotency",
+        ),
         Index(
             "ix_food_diary_entries_user_date_meal",
             "user_id",
@@ -97,6 +144,8 @@ class FoodDiaryEntry(Base):
     )
     diary_date: Mapped[date] = mapped_column(Date, nullable=False)
     meal_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    logged_at: Mapped[time | None] = mapped_column(Time, nullable=True)
+    entry_kind: Mapped[str] = mapped_column(String(16), nullable=False, default="food")
 
     amount: Mapped[Decimal] = mapped_column(Numeric(10, 3), nullable=False)
     amount_unit: Mapped[str] = mapped_column(String(16), nullable=False)
@@ -109,16 +158,51 @@ class FoodDiaryEntry(Base):
     fat_g_per_100g: Mapped[Decimal] = mapped_column(Numeric(8, 3), nullable=False)
     carbs_g_per_100g: Mapped[Decimal] = mapped_column(Numeric(8, 3), nullable=False)
     fiber_g_per_100g: Mapped[Decimal | None] = mapped_column(Numeric(8, 3), nullable=True)
+    quick_energy_kcal: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    quick_protein_g: Mapped[Decimal | None] = mapped_column(Numeric(8, 3), nullable=True)
+    quick_fat_g: Mapped[Decimal | None] = mapped_column(Numeric(8, 3), nullable=True)
+    quick_carbs_g: Mapped[Decimal | None] = mapped_column(Numeric(8, 3), nullable=True)
 
     serving_amount: Mapped[Decimal | None] = mapped_column(Numeric(10, 3), nullable=True)
     serving_unit: Mapped[str | None] = mapped_column(String(16), nullable=True)
     serving_weight_g: Mapped[Decimal | None] = mapped_column(Numeric(10, 3), nullable=True)
+    idempotency_key: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    request_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
         default=now_msk_naive,
     )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=now_msk_naive,
+        onupdate=now_msk_naive,
+    )
+
+
+class FoodDiaryDayStatus(Base):
+    __tablename__ = "food_diary_day_statuses"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('complete', 'incomplete', 'fasted')",
+            name="ck_food_diary_day_statuses_status",
+        ),
+        Index(
+            "ix_food_diary_day_statuses_user_status_date",
+            "user_id",
+            "status",
+            "diary_date",
+        ),
+    )
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    diary_date: Mapped[date] = mapped_column(Date, primary_key=True)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,

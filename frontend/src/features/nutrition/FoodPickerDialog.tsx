@@ -39,7 +39,16 @@ const mealLabels: Record<MealType, string> = {
   snacks: 'перекусы',
 };
 type PickerSource = 'recent' | 'favorites';
-type PickerView = 'browse' | 'food-editor' | 'recipes' | 'barcode';
+type PickerView = 'browse' | 'quick-add' | 'food-editor' | 'recipes' | 'barcode';
+
+interface QuickAddDraft {
+  name: string;
+  calories: string;
+  protein: string;
+  fat: string;
+  carbs: string;
+  loggedAt: string;
+}
 
 type FoodDraftSelection = Pick<
   Food,
@@ -58,6 +67,24 @@ interface AddDraft {
   food: FoodDraftSelection | null;
   amount: string;
   amountUnit: 'g' | 'serving';
+  quick?: QuickAddDraft;
+  requestId?: string;
+}
+
+const emptyQuickAdd: QuickAddDraft = {
+  name: '',
+  calories: '',
+  protein: '',
+  fat: '',
+  carbs: '',
+  loggedAt: '',
+};
+
+function newEntryRequestId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `entry-${crypto.randomUUID()}`;
+  }
+  return `entry-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 function foodSourceLabel(food: Pick<Food, 'food_type'>): string {
@@ -211,17 +238,25 @@ function ExternalResults({ response }: { response: FoodSearch }) {
 export function FoodPickerDialog({
   diaryDate,
   mealType,
+  initialView = 'browse',
+  disabled = false,
   onClose,
 }: {
   diaryDate: string;
   mealType: MealType;
+  initialView?: 'browse' | 'quick-add';
+  disabled?: boolean;
   onClose: () => void;
 }) {
   const { user } = useAuth();
   const { toast } = useFeedback();
   const queryClient = useQueryClient();
-  const panelRef = useModalA11y<HTMLDivElement>(true, onClose, '#nutrition-food-search');
-  const [view, setView] = useState<PickerView>('browse');
+  const panelRef = useModalA11y<HTMLDivElement>(
+    true,
+    onClose,
+    initialView === 'quick-add' ? '#nutrition-quick-calories' : '#nutrition-food-search',
+  );
+  const [view, setView] = useState<PickerView>(initialView);
   const [source, setSource] = useState<PickerSource>('recent');
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -232,8 +267,24 @@ export function FoodPickerDialog({
   const [recipeAmount, setRecipeAmount] = useState('100');
   const [draft, setDraft, clearDraft] = usePersistentState<AddDraft>(
     foodDraftStorageKey(user?.id ?? 'anonymous', diaryDate, mealType),
-    { food: null, amount: '100', amountUnit: 'g' },
+    {
+      food: null,
+      amount: '100',
+      amountUnit: 'g',
+      quick: emptyQuickAdd,
+      requestId: newEntryRequestId(),
+    },
   );
+  const quick = draft.quick ?? emptyQuickAdd;
+
+  useEffect(() => {
+    if (draft.requestId && draft.quick) return;
+    setDraft({
+      ...draft,
+      quick,
+      requestId: draft.requestId ?? newEntryRequestId(),
+    });
+  }, [draft, quick, setDraft]);
 
   useEffect(() => {
     const normalized = searchInput.trim().replace(/\s+/g, ' ');
@@ -282,49 +333,101 @@ export function FoodPickerDialog({
   const activeLoading = searchQuery.length >= 2 ? search.isFetching : activeCollection.isLoading;
 
   const addEntry = useMutation({
-    mutationFn: () => {
-      const selected = draft.food
-        ? {
-            food_id: draft.food.id,
-            amount: Number(draft.amount.replace(',', '.')),
-            amount_unit: draft.amountUnit,
-          }
-        : selectedRecipe
-          ? {
-              recipe_id: selectedRecipe.id,
-              amount: Number(recipeAmount.replace(',', '.')),
-              amount_unit: 'g' as const,
-            }
-          : null;
+    mutationFn: (submission: { closeAfter: boolean }) => {
+      void submission.closeAfter;
+      if (disabled) throw new Error('Сначала снимите отметку поста для этого дня');
+      const selected =
+        view === 'quick-add'
+          ? (() => {
+              const energy = Number(quick.calories.replace(',', '.'));
+              if (!Number.isFinite(energy) || energy <= 0)
+                throw new Error('Введите калории больше нуля');
+              const macroValues = [quick.protein, quick.fat, quick.carbs];
+              const filledMacros = macroValues.filter((value) => value.trim() !== '');
+              if (filledMacros.length > 0 && filledMacros.length < 3)
+                throw new Error('Укажите все три макронутриента или оставьте их пустыми');
+              const parsedMacros = macroValues.map((value) => Number(value.replace(',', '.')));
+              if (
+                filledMacros.length === 3 &&
+                parsedMacros.some((value) => !Number.isFinite(value) || value < 0)
+              ) {
+                throw new Error('Макронутриенты должны быть неотрицательными числами');
+              }
+              return {
+                quick_add: {
+                  name: quick.name.trim() || null,
+                  energy_kcal: energy,
+                  protein_g: filledMacros.length === 3 ? parsedMacros[0] : null,
+                  fat_g: filledMacros.length === 3 ? parsedMacros[1] : null,
+                  carbs_g: filledMacros.length === 3 ? parsedMacros[2] : null,
+                },
+                amount: 1,
+                amount_unit: 'serving' as const,
+                logged_at: quick.loggedAt || null,
+              };
+            })()
+          : draft.food
+            ? {
+                food_id: draft.food.id,
+                amount: Number(draft.amount.replace(',', '.')),
+                amount_unit: draft.amountUnit,
+                logged_at: null,
+              }
+            : selectedRecipe
+              ? {
+                  recipe_id: selectedRecipe.id,
+                  amount: Number(recipeAmount.replace(',', '.')),
+                  amount_unit: 'g' as const,
+                  logged_at: null,
+                }
+              : null;
       if (!selected) throw new Error('Сначала выберите продукт или рецепт');
       if (!Number.isFinite(selected.amount) || selected.amount <= 0)
         throw new Error('Введите количество больше нуля');
       return api<FoodDiaryEntry>('/api/v1/nutrition/diary/entries', {
         method: 'POST',
         body: { ...selected, diary_date: diaryDate, meal_type: mealType },
+        headers: { 'Idempotency-Key': draft.requestId ?? newEntryRequestId() },
       });
     },
-    onSuccess: async () => {
-      clearDraft({ food: null, amount: '100', amountUnit: 'g' });
+    onSuccess: async (_entry, variables) => {
+      clearDraft({
+        food: null,
+        amount: '100',
+        amountUnit: 'g',
+        quick: emptyQuickAdd,
+        requestId: newEntryRequestId(),
+      });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['nutrition', 'foods', 'recent'] }),
         invalidateNutritionSummaries(queryClient),
       ]);
       trackProductEvent({ name: 'food_logged', surface: productEventSurface() });
       toast(`Добавлено в ${mealLabels[mealType]}`);
-      onClose();
+      if (variables.closeAfter) onClose();
+      else {
+        setSelectedRecipe(null);
+        setView(initialView);
+      }
     },
   });
+  const updateDraft = (changes: Partial<AddDraft>) => {
+    addEntry.reset();
+    setDraft({ ...draft, ...changes, requestId: newEntryRequestId() });
+  };
+  const updateQuick = (changes: Partial<QuickAddDraft>) => {
+    updateDraft({ quick: { ...quick, ...changes } });
+  };
   const selectFood = (food: Food) => {
     setSelectedRecipe(null);
-    setDraft({
+    updateDraft({
       food: foodDraftSelection(food),
       amount: food.standard_serving_weight_g ? '1' : '100',
       amountUnit: food.standard_serving_weight_g ? 'serving' : 'g',
     });
   };
   const selectRecipe = (recipe: Recipe) => {
-    setDraft({ ...draft, food: null });
+    updateDraft({ food: null });
     setSelectedRecipe(recipe);
     setRecipeAmount('100');
   };
@@ -334,6 +437,7 @@ export function FoodPickerDialog({
     (
       {
         browse: 'Выберите продукт',
+        'quick-add': 'Быстрый ввод',
         'food-editor': editingFood ? 'Изменить продукт' : 'Новый продукт',
         recipes: 'Рецепты',
         barcode: 'Штрихкод',
@@ -359,12 +463,19 @@ export function FoodPickerDialog({
             <CloseIcon />
           </Button>
         </header>
-        {quantityMode ? (
+        {disabled ? (
+          <div className="nutrition-picker__browse">
+            <div className="nutrition-provider-fallback" role="status">
+              <strong>День отмечен как пост</strong>
+              <span>Снимите отметку поста в блоке полноты дня, чтобы добавить запись.</span>
+            </div>
+          </div>
+        ) : quantityMode ? (
           <form
             className="nutrition-picker__quantity"
             onSubmit={(event) => {
               event.preventDefault();
-              if (!addEntry.isPending) addEntry.mutate();
+              if (!addEntry.isPending) addEntry.mutate({ closeAfter: true });
             }}
           >
             <button
@@ -373,7 +484,7 @@ export function FoodPickerDialog({
               onClick={() => {
                 addEntry.reset();
                 setSelectedRecipe(null);
-                setDraft({ ...draft, food: null });
+                updateDraft({ food: null });
               }}
             >
               ← Выбрать другое
@@ -399,7 +510,8 @@ export function FoodPickerDialog({
                       step="any"
                       required
                       value={draft.amount}
-                      onChange={(event) => setDraft({ ...draft, amount: event.target.value })}
+                      enterKeyHint="next"
+                      onChange={(event) => updateDraft({ amount: event.target.value })}
                     />
                   </Field>
                   <Field label="Единица" labelFor="nutrition-food-unit">
@@ -407,7 +519,7 @@ export function FoodPickerDialog({
                       id="nutrition-food-unit"
                       value={draft.amountUnit}
                       onChange={(event) =>
-                        setDraft({ ...draft, amountUnit: event.target.value as 'g' | 'serving' })
+                        updateDraft({ amountUnit: event.target.value as 'g' | 'serving' })
                       }
                     >
                       <option value="g">граммы</option>
@@ -459,15 +571,128 @@ export function FoodPickerDialog({
                 <button
                   type="button"
                   disabled={addEntry.isPending}
-                  onClick={() => addEntry.mutate()}
+                  onClick={() => addEntry.mutate({ closeAfter: true })}
                 >
                   Повторить
                 </button>
               </div>
             )}
-            <Button fullWidth disabled={addEntry.isPending} type="submit">
-              {addEntry.isPending ? 'Добавляем…' : 'Добавить в дневник'}
-            </Button>
+            <div className="nutrition-picker__submit">
+              <Button fullWidth disabled={addEntry.isPending} type="submit">
+                {addEntry.isPending ? 'Добавляем…' : 'Добавить в дневник'}
+              </Button>
+              <Button
+                fullWidth
+                disabled={addEntry.isPending}
+                type="button"
+                variant="secondary"
+                onClick={() => addEntry.mutate({ closeAfter: false })}
+              >
+                Добавить и выбрать ещё
+              </Button>
+            </div>
+          </form>
+        ) : view === 'quick-add' ? (
+          <form
+            className="nutrition-picker__quantity nutrition-quick-add"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!addEntry.isPending) addEntry.mutate({ closeAfter: true });
+            }}
+          >
+            <button
+              className="nutrition-picker__back"
+              type="button"
+              onClick={() => setView('browse')}
+            >
+              ← К продуктам
+            </button>
+            <p className="nutrition-quick-add__context">
+              {mealLabels[mealType]} · {diaryDate}. Название и время можно не указывать.
+            </p>
+            <Field label="Название (необязательно)" labelFor="nutrition-quick-name">
+              <Input
+                id="nutrition-quick-name"
+                value={quick.name}
+                enterKeyHint="next"
+                onChange={(event) => updateQuick({ name: event.target.value })}
+                placeholder="Например, обед вне дома"
+              />
+            </Field>
+            <div className="nutrition-quick-add__primary-fields">
+              <Field label="Калории" labelFor="nutrition-quick-calories">
+                <Input
+                  id="nutrition-quick-calories"
+                  type="number"
+                  inputMode="decimal"
+                  enterKeyHint="next"
+                  min="0.01"
+                  max="10000"
+                  step="any"
+                  required
+                  value={quick.calories}
+                  onChange={(event) => updateQuick({ calories: event.target.value })}
+                />
+              </Field>
+              <Field label="Время (необязательно)" labelFor="nutrition-quick-time">
+                <Input
+                  id="nutrition-quick-time"
+                  type="time"
+                  value={quick.loggedAt}
+                  onChange={(event) => updateQuick({ loggedAt: event.target.value })}
+                />
+              </Field>
+            </div>
+            <fieldset className="nutrition-quick-add__macros">
+              <legend>Макронутриенты (все три или ни одного)</legend>
+              {(
+                [
+                  ['Белки', 'protein'],
+                  ['Жиры', 'fat'],
+                  ['Углеводы', 'carbs'],
+                ] as const
+              ).map(([label, field], index) => (
+                <Field key={field} label={label} labelFor={`nutrition-quick-${field}`}>
+                  <Input
+                    id={`nutrition-quick-${field}`}
+                    type="number"
+                    inputMode="decimal"
+                    enterKeyHint={index === 2 ? 'done' : 'next'}
+                    min="0"
+                    max="1000"
+                    step="any"
+                    value={quick[field]}
+                    onChange={(event) => updateQuick({ [field]: event.target.value })}
+                  />
+                </Field>
+              ))}
+            </fieldset>
+            {addEntry.error && (
+              <div className="nutrition-inline-error" role="alert">
+                <span>{(addEntry.error as Error).message}</span>
+                <button
+                  type="button"
+                  disabled={addEntry.isPending}
+                  onClick={() => addEntry.mutate({ closeAfter: true })}
+                >
+                  Повторить
+                </button>
+              </div>
+            )}
+            <div className="nutrition-picker__submit">
+              <Button fullWidth disabled={addEntry.isPending} type="submit">
+                {addEntry.isPending ? 'Сохраняем…' : 'Сохранить Quick Add'}
+              </Button>
+              <Button
+                fullWidth
+                disabled={addEntry.isPending}
+                type="button"
+                variant="secondary"
+                onClick={() => addEntry.mutate({ closeAfter: false })}
+              >
+                Сохранить и добавить ещё
+              </Button>
+            </div>
           </form>
         ) : view === 'food-editor' ? (
           <div className="nutrition-picker__browse">
@@ -515,6 +740,9 @@ export function FoodPickerDialog({
         ) : (
           <div className="nutrition-picker__browse">
             <div className="nutrition-picker__tools" aria-label="Способы добавления">
+              <Button type="button" onClick={() => setView('quick-add')}>
+                ＋ Быстрый ввод
+              </Button>
               <Button
                 type="button"
                 variant="secondary"

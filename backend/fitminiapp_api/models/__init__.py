@@ -13,7 +13,11 @@ from fitminiapp_api.models.exercise import (
 )
 from fitminiapp_api.models.feedback import WorkoutComment, WorkoutCommentRevision
 from fitminiapp_api.models.food import Food, FoodFavorite
-from fitminiapp_api.models.food_diary import FoodDiaryCopyOperation, FoodDiaryEntry
+from fitminiapp_api.models.food_diary import (
+    FoodDiaryCopyOperation,
+    FoodDiaryDayStatus,
+    FoodDiaryEntry,
+)
 from fitminiapp_api.models.notification import Notification, NotificationSetting
 from fitminiapp_api.models.nutrition import EnergyCalibration, NutritionTarget
 from fitminiapp_api.models.program import (
@@ -62,6 +66,7 @@ __all__ = [
     "ExerciseMuscle",
     "Food",
     "FoodDiaryCopyOperation",
+    "FoodDiaryDayStatus",
     "FoodDiaryEntry",
     "FoodFavorite",
     "HiddenProgramTemplate",

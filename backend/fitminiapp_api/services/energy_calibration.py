@@ -8,11 +8,11 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Literal, cast
 
-from sqlalchemy import func
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from fitminiapp_api.core.timezone import now_for_user_naive, today_for_user
-from fitminiapp_api.models.food_diary import FoodDiaryEntry
+from fitminiapp_api.models.food_diary import FoodDiaryDayStatus, FoodDiaryEntry
 from fitminiapp_api.models.nutrition import EnergyCalibration, NutritionTarget
 from fitminiapp_api.models.user import BodyMeasurement, User
 from fitminiapp_api.schemas.nutrition import (
@@ -97,6 +97,8 @@ def _median(values: Sequence[float]) -> float:
 
 
 def _variation(values: Sequence[float]) -> float:
+    if not values:
+        return 0.0
     mean = statistics.fmean(values)
     return statistics.pstdev(values) / mean if len(values) > 1 and mean > 0 else 0.0
 
@@ -174,7 +176,7 @@ def evaluate_energy_calibration(
     filtered_days = {
         logged_on: float(total)
         for logged_on, total in day_totals.items()
-        if period_start <= logged_on <= period_end and total > 0
+        if period_start <= logged_on <= period_end and total >= 0
     }
     filtered_weights = sorted(
         (measured_on, float(value))
@@ -440,14 +442,35 @@ def _load_inputs(
     period_start: date,
     period_end: date,
 ) -> tuple[dict[date, float], list[tuple[date, float]]]:
-    energy = FoodDiaryEntry.energy_kcal_per_100g * FoodDiaryEntry.weight_g / Decimal("100")
+    energy = case(
+        (
+            FoodDiaryEntry.entry_kind == "quick_add",
+            FoodDiaryEntry.quick_energy_kcal,
+        ),
+        else_=FoodDiaryEntry.energy_kcal_per_100g * FoodDiaryEntry.weight_g / Decimal("100"),
+    )
     diary_rows = (
         db.query(FoodDiaryEntry.diary_date, func.sum(energy))
+        .join(
+            FoodDiaryDayStatus,
+            (FoodDiaryDayStatus.user_id == FoodDiaryEntry.user_id)
+            & (FoodDiaryDayStatus.diary_date == FoodDiaryEntry.diary_date),
+        )
         .filter(
             FoodDiaryEntry.user_id == user.id,
             FoodDiaryEntry.diary_date.between(period_start, period_end),
+            FoodDiaryDayStatus.status == "complete",
         )
         .group_by(FoodDiaryEntry.diary_date)
+        .all()
+    )
+    fasted_dates = (
+        db.query(FoodDiaryDayStatus.diary_date)
+        .filter(
+            FoodDiaryDayStatus.user_id == user.id,
+            FoodDiaryDayStatus.diary_date.between(period_start, period_end),
+            FoodDiaryDayStatus.status == "fasted",
+        )
         .all()
     )
     weight_rows = (
@@ -461,7 +484,10 @@ def _load_inputs(
         .all()
     )
     return (
-        {logged_on: float(total) for logged_on, total in diary_rows if total is not None},
+        {
+            **{logged_on: float(total) for logged_on, total in diary_rows if total is not None},
+            **{logged_on: 0.0 for (logged_on,) in fasted_dates},
+        },
         [(measured_on, float(weight)) for measured_on, weight in weight_rows if weight is not None],
     )
 

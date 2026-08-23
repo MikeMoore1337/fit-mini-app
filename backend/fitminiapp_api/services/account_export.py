@@ -17,7 +17,11 @@ from fitminiapp_api.models.exercise import (
 )
 from fitminiapp_api.models.feedback import WorkoutComment
 from fitminiapp_api.models.food import Food, FoodFavorite
-from fitminiapp_api.models.food_diary import FoodDiaryCopyOperation, FoodDiaryEntry
+from fitminiapp_api.models.food_diary import (
+    FoodDiaryCopyOperation,
+    FoodDiaryDayStatus,
+    FoodDiaryEntry,
+)
 from fitminiapp_api.models.notification import Notification, NotificationSetting
 from fitminiapp_api.models.nutrition import EnergyCalibration, NutritionTarget
 from fitminiapp_api.models.program import (
@@ -64,6 +68,7 @@ ACCOUNT_EXPORT_DATA_INVENTORY: dict[str, str] = {
     "recipes": "recipes",
     "recipe_ingredients": "recipes",
     "food_diary_entries": "food_diary_entries",
+    "food_diary_day_statuses": "food_diary_day_statuses",
     "food_diary_copy_operations": "food_diary_copy_operations",
     "program_templates": "program_templates",
     "program_template_days": "program_templates",
@@ -490,6 +495,12 @@ def build_account_export(db: Session, user: User) -> dict[str, object]:
         .order_by(FoodDiaryEntry.diary_date.asc(), FoodDiaryEntry.id.asc())
         .all()
     )
+    diary_day_statuses = (
+        db.query(FoodDiaryDayStatus)
+        .filter(FoodDiaryDayStatus.user_id == user.id)
+        .order_by(FoodDiaryDayStatus.diary_date.asc())
+        .all()
+    )
     diary_copy_operations = (
         db.query(FoodDiaryCopyOperation)
         .filter(FoodDiaryCopyOperation.user_id == user.id)
@@ -676,9 +687,15 @@ def build_account_export(db: Session, user: User) -> dict[str, object]:
                         "copied_from_entry_id",
                         "diary_date",
                         "meal_type",
+                        "logged_at",
+                        "entry_kind",
                         "amount",
                         "amount_unit",
                         "weight_g",
+                        "quick_energy_kcal",
+                        "quick_protein_g",
+                        "quick_fat_g",
+                        "quick_carbs_g",
                     ),
                 ),
                 **_fields(row, SNAPSHOT_NUTRIENT_FIELDS),
@@ -686,6 +703,9 @@ def build_account_export(db: Session, user: User) -> dict[str, object]:
                 "updated_at": row.updated_at,
             }
             for row in diary_entries
+        ],
+        "food_diary_day_statuses": [
+            _fields(row, ("diary_date", "status", "updated_at")) for row in diary_day_statuses
         ],
         "food_diary_copy_operations": [
             _fields(

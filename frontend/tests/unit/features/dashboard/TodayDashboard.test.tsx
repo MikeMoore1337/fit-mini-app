@@ -135,6 +135,10 @@ const progressSummary = {
   nutrition: {
     visible: true,
     logged_days: 20,
+    complete_days: 18,
+    incomplete_days: 2,
+    fasted_days: 0,
+    unlogged_days: 9,
     adherence_evaluated_days: 20,
     average_calories: 1980,
     target_calories: 2100,
@@ -218,6 +222,8 @@ const diary = {
     fat_g: '22.0',
     carbs_g: '70.0',
   },
+  status: 'incomplete',
+  status_is_explicit: false,
 } as FoodDiaryDay;
 
 function renderDashboard() {

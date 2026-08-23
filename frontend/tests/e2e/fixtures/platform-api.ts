@@ -136,6 +136,10 @@ export async function installPlatformApi(
     nutrition: {
       visible: true,
       logged_days: nutritionEntries.length ? 1 : 0,
+      complete_days: 0,
+      incomplete_days: nutritionEntries.length ? 1 : 0,
+      fasted_days: 0,
+      unlogged_days: nutritionEntries.length ? 28 : 29,
       adherence_evaluated_days: 0,
       average_calories: null,
       target_calories: 2100,
@@ -332,6 +336,8 @@ export async function installPlatformApi(
             fat_g: '70.000',
             carbs_g: '230.000',
           },
+          status: nutritionEntries.length ? 'incomplete' : 'unlogged',
+          status_is_explicit: false,
         },
       });
     }
@@ -339,14 +345,28 @@ export async function installPlatformApi(
       return route.fulfill({ json: { items: [oatmeal], total: 1, limit: 12, offset: 0 } });
     }
     if (path.endsWith('/nutrition/diary/entries') && request.method() === 'POST') {
-      const body = request.postDataJSON() as { diary_date: string; meal_type: string };
+      const body = request.postDataJSON() as {
+        diary_date: string;
+        meal_type: string;
+        logged_at?: string | null;
+        quick_add?: {
+          name?: string | null;
+          energy_kcal: number;
+          protein_g?: number | null;
+          fat_g?: number | null;
+          carbs_g?: number | null;
+        };
+      };
+      const isQuick = Boolean(body.quick_add);
       const entry = {
-        id: 21,
+        id: 21 + nutritionEntries.length,
         diary_date: body.diary_date,
         meal_type: body.meal_type,
-        food_id: oatmeal.id,
+        food_id: isQuick ? null : oatmeal.id,
         recipe_id: null,
-        food_name: oatmeal.name,
+        entry_kind: isQuick ? 'quick_add' : 'food',
+        logged_at: body.logged_at ?? null,
+        food_name: body.quick_add?.name || (isQuick ? 'Быстрый ввод' : oatmeal.name),
         food_brand: null,
         amount: '1.000',
         amount_unit: 'serving',
@@ -354,18 +374,44 @@ export async function installPlatformApi(
         serving_amount: '1.000',
         serving_unit: 'serving',
         serving_weight_g: '50.000',
-        nutrition: {
-          energy_kcal: '180.00',
-          protein_g: '6.000',
-          fat_g: '3.000',
-          carbs_g: '31.000',
-          fiber_g: '4.000',
-        },
+        nutrition: isQuick
+          ? {
+              energy_kcal: String(body.quick_add?.energy_kcal ?? 0),
+              protein_g:
+                body.quick_add?.protein_g == null ? null : String(body.quick_add.protein_g),
+              fat_g: body.quick_add?.fat_g == null ? null : String(body.quick_add.fat_g),
+              carbs_g: body.quick_add?.carbs_g == null ? null : String(body.quick_add.carbs_g),
+              fiber_g: null,
+            }
+          : {
+              energy_kcal: '180.00',
+              protein_g: '6.000',
+              fat_g: '3.000',
+              carbs_g: '31.000',
+              fiber_g: '4.000',
+            },
         created_at: `${today}T07:00:00Z`,
         updated_at: `${today}T07:00:00Z`,
       };
       nutritionEntries = [...nutritionEntries, entry];
       return route.fulfill({ status: 201, json: entry });
+    }
+    if (path.endsWith('/nutrition/diary/copy/product') && request.method() === 'POST') {
+      const source = nutritionEntries.find(
+        (entry) => entry.id === request.postDataJSON().source_entry_id,
+      );
+      if (!source) return route.fulfill({ status: 404, json: { detail: 'Entry not found' } });
+      const copied = {
+        ...source,
+        id: 21 + nutritionEntries.length,
+        created_at: `${today}T08:00:00Z`,
+        updated_at: `${today}T08:00:00Z`,
+      };
+      nutritionEntries = [...nutritionEntries, copied];
+      return route.fulfill({
+        status: 201,
+        json: { copy_scope: 'product', replayed: false, entries: [copied] },
+      });
     }
     return route.fulfill({
       status: 404,

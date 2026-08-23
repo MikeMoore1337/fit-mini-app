@@ -20,7 +20,8 @@ from fitminiapp_api.db.base import Base
 
 
 def normalize_food_search_text(name: str, brand: str | None) -> str:
-    return " ".join(part for part in (name, brand or "") if part).casefold()
+    normalized = " ".join(" ".join(part for part in (name, brand or "") if part).split())
+    return normalized.casefold().replace("ё", "е")
 
 
 class Food(Base):

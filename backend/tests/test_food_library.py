@@ -340,6 +340,36 @@ def test_local_search_ranking_normalization_pagination_and_query_bound(client) -
     assert metrics.query_count == 2
 
 
+def test_local_search_normalizes_yo_and_recovers_one_simple_typo(client) -> None:
+    headers = _auth(client, 17_021)
+    yo_id = client.post(
+        "/api/v1/nutrition/foods",
+        headers=headers,
+        json=_food_payload(name="Тёртый сыр", barcode=None),
+    ).json()["id"]
+    typo_id = client.post(
+        "/api/v1/nutrition/foods",
+        headers=headers,
+        json=_food_payload(name="Гречневая каша", barcode=None),
+    ).json()["id"]
+
+    yo_search = client.get(
+        "/api/v1/nutrition/foods/search",
+        headers=headers,
+        params={"q": "  ТЕРТЫЙ  "},
+    )
+    assert yo_search.status_code == 200
+    assert yo_id in {item["id"] for item in yo_search.json()["items"]}
+
+    typo_search = client.get(
+        "/api/v1/nutrition/foods/search",
+        headers=headers,
+        params={"q": "гречнева"},
+    )
+    assert typo_search.status_code == 200
+    assert [item["id"] for item in typo_search.json()["items"]] == [typo_id]
+
+
 def test_food_library_migration_upgrades_from_diary_head(tmp_path: Path) -> None:
     migration_path = (
         Path(main_module.__file__).resolve().parents[1]

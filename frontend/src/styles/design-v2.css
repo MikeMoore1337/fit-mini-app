@@ -564,29 +564,23 @@ body:has(.app-shell--design-v2) {
   min-height: 44px;
 }
 
-.nutrition-diary--design-v2 .nutrition-date-nav {
-  grid-template-columns: 44px minmax(180px, 340px) 44px auto;
-  justify-content: start;
-  gap: var(--v2-space-2);
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
+.nutrition-diary--design-v2 :where(.nutrition-week, .nutrition-completeness) {
+  border-color: var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface-secondary);
 }
 
-.nutrition-diary--design-v2 .nutrition-date-nav__current span {
+.nutrition-diary--design-v2 .nutrition-week ol button[aria-current='date'],
+.nutrition-diary--design-v2 .nutrition-completeness__actions .ui-button[aria-pressed='true'] {
+  border-color: var(--v2-lime);
+  background: var(--v2-surface);
   color: var(--v2-text-primary);
 }
 
-.nutrition-diary--design-v2 .nutrition-date-nav__current small,
 .nutrition-diary--design-v2 .nutrition-entry__title > div > span,
 .nutrition-diary--design-v2 .nutrition-entry__amount,
 .nutrition-diary--design-v2 .nutrition-entry__macros {
   color: var(--v2-text-secondary);
-}
-
-.nutrition-diary--design-v2 .nutrition-date-nav__today {
-  color: var(--v2-text-primary);
 }
 
 .nutrition-diary--design-v2 .nutrition-diary__status {
@@ -1242,14 +1236,6 @@ body.public-shell-mode.public-shell-mode:has(.auth-public-shell--design-v2) {
 
   .nutrition-diary--design-v2 .nutrition-diary__intro h1 {
     font-size: clamp(2.55rem, 13vw, 3.25rem);
-  }
-
-  .nutrition-diary--design-v2 .nutrition-date-nav {
-    grid-template-columns: 44px minmax(0, 1fr) 44px;
-  }
-
-  .nutrition-diary--design-v2 .nutrition-date-nav__today {
-    grid-column: 1 / -1;
   }
 
   .nutrition-diary--design-v2 .nutrition-diary__status {

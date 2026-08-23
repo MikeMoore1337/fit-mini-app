@@ -30,6 +30,10 @@ function makeSummary(): ProgressSummary {
     nutrition: {
       visible: true,
       logged_days: 20,
+      complete_days: 18,
+      incomplete_days: 2,
+      fasted_days: 0,
+      unlogged_days: 9,
       adherence_evaluated_days: 18,
       average_calories: 1980,
       target_calories: 2100,
@@ -278,6 +282,11 @@ describe('ProgressExperience', () => {
     summary.training.completed_workouts = 0;
     summary.training.new_personal_records = 0;
     summary.nutrition.logged_days = 0;
+    summary.nutrition.complete_days = 0;
+    summary.nutrition.incomplete_days = 0;
+    summary.nutrition.fasted_days = 0;
+    summary.nutrition.unlogged_days = 29;
+    summary.nutrition.adherence_evaluated_days = 0;
     const weightTrend = summary.body.trends[0];
     if (!weightTrend) throw new Error('Weight trend fixture is missing');
     summary.body.trends = [
@@ -320,7 +329,10 @@ describe('ProgressExperience', () => {
     expect(await screen.findByText('Пока не оценить')).toBeVisible();
     expect(screen.getByText('0 новых рекордов')).toBeVisible();
     expect(screen.getByText('История упражнений пока пуста')).toBeVisible();
-    expect(screen.getByText('Питание за период не записано')).toBeVisible();
+    expect(screen.getByText('Нет подтверждённых дней питания')).toBeVisible();
+    expect(
+      screen.getByText('0 частичных и 29 отсутствующих дней не входят в средние значения.'),
+    ).toBeVisible();
     expect(screen.getByText('Один замер')).toBeVisible();
     expect(screen.getByText('Нет цели или плана')).toBeVisible();
     expect(screen.getAllByText('Мало данных').length).toBeGreaterThan(0);

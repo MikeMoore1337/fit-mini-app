@@ -9,6 +9,7 @@ from typing import cast
 from sqlalchemy import and_, case, func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.elements import ColumnElement
 
 from fitminiapp_api.models.food import Food, FoodFavorite
 from fitminiapp_api.models.food_diary import FoodDiaryEntry
@@ -38,6 +39,41 @@ class FoodNotFoundError(FoodError):
 
 class FoodConflictError(FoodError):
     pass
+
+
+def _edit_distance_at_most_one(left: str, right: str) -> bool:
+    if left == right:
+        return True
+    if abs(len(left) - len(right)) > 1:
+        return False
+    if len(left) > len(right):
+        left, right = right, left
+    left_index = right_index = differences = 0
+    while left_index < len(left) and right_index < len(right):
+        if left[left_index] == right[right_index]:
+            left_index += 1
+            right_index += 1
+            continue
+        differences += 1
+        if differences > 1:
+            return False
+        if len(left) == len(right):
+            left_index += 1
+        right_index += 1
+    return True
+
+
+def _simple_typo_match(search_text: str, normalized_query: str) -> bool:
+    query_tokens = normalized_query.split()
+    candidate_tokens = search_text.split()
+    return all(
+        any(
+            query_token in candidate_token
+            or (len(query_token) >= 4 and _edit_distance_at_most_one(query_token, candidate_token))
+            for candidate_token in candidate_tokens
+        )
+        for query_token in query_tokens
+    )
 
 
 @dataclass(frozen=True)
@@ -391,7 +427,7 @@ def search_foods(
     limit: int,
     offset: int,
 ) -> FoodListResponse:
-    normalized = " ".join(query_text.split()).casefold()
+    normalized = " ".join(query_text.split()).casefold().replace("ё", "е")
     if len(normalized) < 2:
         raise FoodError("query must contain at least 2 non-whitespace characters")
 
@@ -400,8 +436,47 @@ def search_foods(
     prefix = f"{escaped}%"
     contains = f"%{escaped}%"
     query, favorites, recent = _food_metadata_query(db, current_user)
-    filtered = query.filter(Food.search_text.like(contains, escape="\\"))
+    is_postgresql = db.get_bind().dialect.name == "postgresql"
+    similarity = func.similarity(Food.search_text, normalized)
+    match_condition: ColumnElement[bool] = Food.search_text.like(contains, escape="\\")
+    if is_postgresql:
+        match_condition = or_(match_condition, Food.search_text.op("%")(normalized))
+    filtered = query.filter(match_condition)
     total = filtered.count()
+    if total == 0 and not is_postgresql:
+        candidates = query.all()
+        fuzzy_rows = [
+            row for row in candidates if _simple_typo_match(row[0].search_text, normalized)
+        ]
+
+        def fuzzy_order(row):
+            food, favorite_food_id, favorite_created_at, last_used_at = row
+            category = (
+                0
+                if last_used_at is not None
+                else 1
+                if favorite_food_id is not None
+                else 2
+                if food.food_type == "user"
+                else 3
+                if food.food_type == "system"
+                else 4
+            )
+            return (
+                category,
+                -(last_used_at.timestamp() if last_used_at is not None else 0),
+                -(favorite_created_at.timestamp() if favorite_created_at is not None else 0),
+                food.name,
+                food.id,
+            )
+
+        fuzzy_rows.sort(key=fuzzy_order)
+        return FoodListResponse(
+            items=_serialize_rows(fuzzy_rows[offset : offset + limit]),
+            total=len(fuzzy_rows),
+            limit=limit,
+            offset=offset,
+        )
     category_rank = case(
         (recent.c.last_used_at.is_not(None), 0),
         (favorites.c.food_id.is_not(None), 1),
@@ -420,6 +495,7 @@ def search_foods(
             recent.c.last_used_at.desc(),
             favorites.c.favorite_created_at.desc(),
             match_rank.asc(),
+            *((similarity.desc(),) if is_postgresql else ()),
             Food.name.asc(),
             Food.id.asc(),
         )

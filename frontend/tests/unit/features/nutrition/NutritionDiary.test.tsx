@@ -26,6 +26,8 @@ const entry: FoodDiaryEntry = {
   meal_type: 'breakfast',
   food_id: 7,
   recipe_id: null,
+  entry_kind: 'food',
+  logged_at: null,
   food_name: 'Овсяная каша',
   food_brand: null,
   amount: '100.000',
@@ -82,6 +84,8 @@ function makeDay(entries: FoodDiaryEntry[] = [entry]): FoodDiaryDay {
       fat_g: entries.length ? '58.000' : '70.000',
       carbs_g: entries.length ? '166.000' : '220.000',
     },
+    status: entries.length ? 'incomplete' : 'unlogged',
+    status_is_explicit: false,
   };
 }
 
@@ -131,7 +135,8 @@ describe('NutritionDiary', () => {
     expect(screen.getByRole('progressbar', { name: /Калории: 420 из 2.+000 ккал/ })).toBeVisible();
     expect(screen.getByText('Б 18,5')).toBeVisible();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Предыдущий день' }));
+    expect(screen.queryByRole('navigation', { name: 'Дата дневника' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /18 августа/i }));
     await waitFor(() =>
       expect(apiMock).toHaveBeenCalledWith('/api/v1/nutrition/diary?diary_date=2026-08-18'),
     );
@@ -181,6 +186,99 @@ describe('NutritionDiary', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(await screen.findByText('Овсяная каша')).toBeVisible();
     expect(localStorage.getItem('fit_food_draft_10_2026-08-19_breakfast')).toBeNull();
+  });
+
+  it('keeps a calories-only Quick Add draft and reuses its idempotency key on retry', async () => {
+    let attempts = 0;
+    apiMock.mockImplementation(
+      (
+        path: string,
+        options?: { method?: string; body?: unknown; headers?: Record<string, string> },
+      ) => {
+        if (path.startsWith('/api/v1/nutrition/diary?')) return Promise.resolve(makeDay([]));
+        if (path.startsWith('/api/v1/nutrition/foods/recent'))
+          return Promise.resolve({ items: [], total: 0, limit: 12, offset: 0 });
+        if (path.startsWith('/api/v1/nutrition/foods/favorites'))
+          return Promise.resolve({ items: [], total: 0, limit: 12, offset: 0 });
+        if (path === '/api/v1/nutrition/diary/entries' && options?.method === 'POST') {
+          attempts += 1;
+          if (attempts === 1) return Promise.reject(new Error('Временная ошибка сети'));
+          return Promise.resolve({ ...entry, entry_kind: 'quick_add', food_id: null });
+        }
+        throw new Error(`Unexpected API call: ${path}`);
+      },
+    );
+    renderDiary();
+    await screen.findAllByText('Пока без записей');
+
+    fireEvent.click(screen.getByRole('button', { name: /Быстрый ввод/ }));
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Калории' }), {
+      target: { value: '530' },
+    });
+    fireEvent.change(screen.getByLabelText('Время (необязательно)'), {
+      target: { value: '13:25' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить Quick Add' }));
+
+    expect(await screen.findByText('Временная ошибка сети')).toBeVisible();
+    expect(screen.getByRole('spinbutton', { name: 'Калории' })).toHaveValue(530);
+    const firstSubmission = apiMock.mock.calls.find(
+      ([path, options]) => path === '/api/v1/nutrition/diary/entries' && options?.method === 'POST',
+    );
+    expect(firstSubmission?.[1]).toEqual(
+      expect.objectContaining({
+        body: expect.objectContaining({
+          quick_add: {
+            name: null,
+            energy_kcal: 530,
+            protein_g: null,
+            fat_g: null,
+            carbs_g: null,
+          },
+          logged_at: '13:25',
+        }),
+        headers: { 'Idempotency-Key': expect.any(String) },
+      }),
+    );
+    const requestId = firstSubmission?.[1]?.headers?.['Idempotency-Key'];
+
+    fireEvent.click(screen.getByRole('button', { name: 'Повторить' }));
+    await waitFor(() => expect(attempts).toBe(2));
+    const submissions = apiMock.mock.calls.filter(
+      ([path, options]) => path === '/api/v1/nutrition/diary/entries' && options?.method === 'POST',
+    );
+    expect(submissions[1]?.[1]?.headers?.['Idempotency-Key']).toBe(requestId);
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('marks a populated day complete only after explicit confirmation', async () => {
+    let complete = false;
+    apiMock.mockImplementation((path: string, options?: { method?: string; body?: unknown }) => {
+      if (path.startsWith('/api/v1/nutrition/diary?')) {
+        return Promise.resolve({
+          ...makeDay(),
+          status: complete ? 'complete' : 'incomplete',
+          status_is_explicit: complete,
+        });
+      }
+      if (path === '/api/v1/nutrition/diary/status' && options?.method === 'PUT') {
+        complete = true;
+        return Promise.resolve({ ...makeDay(), status: 'complete', status_is_explicit: true });
+      }
+      throw new Error(`Unexpected API call: ${path}`);
+    });
+    renderDiary();
+    expect(await screen.findByRole('heading', { name: 'Заполнен частично' })).toBeVisible();
+
+    fireEvent.click(screen.getByRole('button', { name: 'День заполнен' }));
+
+    await waitFor(() =>
+      expect(apiMock).toHaveBeenCalledWith('/api/v1/nutrition/diary/status', {
+        method: 'PUT',
+        body: { diary_date: '2026-08-19', status: 'complete' },
+      }),
+    );
+    expect(await screen.findByText('Подтверждено')).toBeVisible();
   });
 
   it('keeps the quantity draft through a recoverable failure and remount', async () => {

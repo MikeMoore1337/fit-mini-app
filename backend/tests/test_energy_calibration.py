@@ -5,7 +5,7 @@ import pytest
 
 from fitminiapp_api.core.timezone import today_msk
 from fitminiapp_api.db.session import get_session_context
-from fitminiapp_api.models.food_diary import FoodDiaryEntry
+from fitminiapp_api.models.food_diary import FoodDiaryDayStatus, FoodDiaryEntry
 from fitminiapp_api.models.nutrition import EnergyCalibration, NutritionTarget
 from fitminiapp_api.models.user import BodyMeasurement, User
 from fitminiapp_api.services.energy_calibration import evaluate_energy_calibration
@@ -200,6 +200,13 @@ def _seed_full_history(telegram_user_id: int, *, calories: int = 2600) -> int:
                     protein_g_per_100g=Decimal("0"),
                     fat_g_per_100g=Decimal("0"),
                     carbs_g_per_100g=Decimal("0"),
+                )
+            )
+            db.add(
+                FoodDiaryDayStatus(
+                    user_id=user.id,
+                    diary_date=logged_on,
+                    status="complete",
                 )
             )
         for measured_on, weight in _weights(today):

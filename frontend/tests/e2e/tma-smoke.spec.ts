@@ -196,31 +196,83 @@ test('active workout starts, logs offline and resumes once after reconnect and r
   await expectNoHorizontalOverflow(tmaPage);
 });
 
-test('nutrition keyboard draft and core Progress/Profile navigation survive platform events', async ({
+test('nutrition quick paths recover in TMA and match Mobile Web before core navigation', async ({
+  mobilePage,
   tma,
   tmaPage,
 }) => {
-  await installPlatformApi(tmaPage, { workoutStatus: 'in_progress' });
-  await tmaPage.goto('/app');
-  await tmaPage.getByRole('link', { name: 'Питание', exact: true }).click();
+  const api = await installPlatformApi(tmaPage, { workoutStatus: 'in_progress' });
+  await installPlatformApi(mobilePage, { workoutStatus: 'in_progress', browserSession: true });
+  await Promise.all([
+    tmaPage.goto('/app?section=nutrition'),
+    mobilePage.goto('/app?section=nutrition'),
+  ]);
   await expect(tmaPage.getByRole('heading', { name: 'Питание', exact: true })).toBeVisible();
+  await expect(mobilePage.getByRole('heading', { name: 'Питание', exact: true })).toBeVisible();
+  expect(await sharedSurfaceSignature(tmaPage)).toEqual(await sharedSurfaceSignature(mobilePage));
+  for (const currentPage of [tmaPage, mobilePage]) {
+    const week = currentPage.getByRole('navigation', { name: 'Неделя дневника' });
+    await expect(week.locator('button[aria-current="date"]')).toBeVisible();
+    await expect(currentPage.getByRole('navigation', { name: 'Дата дневника' })).not.toBeAttached();
+    expect(
+      await week.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return [Number.parseFloat(style.paddingTop), Number.parseFloat(style.paddingBottom)];
+      }),
+    ).toEqual([4, 4]);
+  }
 
   const breakfast = tmaPage.getByRole('region', { name: 'Завтрак' });
   await breakfast.getByRole('button', { name: /Добавить/ }).click();
-  const search = tmaPage.getByRole('searchbox', { name: 'Поиск по названию или бренду' });
-  await search.fill('О');
-  await tma.setViewport(560, 844, false);
+  await expect(tmaPage.getByRole('button', { name: 'Добавить Овсяная каша' })).toBeVisible();
+  await tmaPage.getByRole('button', { name: 'Избранное' }).click();
+  await expect(tmaPage.getByRole('button', { name: 'Добавить Овсяная каша' })).toBeVisible();
+  await tmaPage.getByRole('button', { name: '＋ Быстрый ввод' }).click();
+  await tma.setSafeArea({ top: 20, right: 2, bottom: 24, left: 2 });
+  await tma.setContentSafeArea({ top: 32, right: 0, bottom: 18, left: 0 });
+  const calories = tmaPage.getByRole('spinbutton', { name: 'Калории' });
+  await calories.fill('510');
+  await tmaPage.getByRole('textbox', { name: 'Название (необязательно)' }).fill('TMA перекус');
+  for (const viewport of [MOBILE_CONTEXTS.compact, MOBILE_CONTEXTS.baseline]) {
+    await tmaPage.setViewportSize(viewport);
+    await tma.setViewport(560, viewport.height, false);
+    const lastAction = tmaPage.locator('.nutrition-picker__submit .ui-button').last();
+    await lastAction.scrollIntoViewIfNeeded();
+    const geometry = await tmaPage.locator('.nutrition-picker__submit').evaluate((submit) => {
+      const action = submit.querySelector('.ui-button:last-child');
+      if (!(action instanceof HTMLElement)) throw new Error('Quick Add action is missing');
+      return {
+        actionBottom: action.getBoundingClientRect().bottom,
+        paddingBottom: Number.parseFloat(getComputedStyle(submit).paddingBottom),
+        viewportHeight: window.innerHeight,
+      };
+    });
+    expect(geometry.paddingBottom).toBeGreaterThanOrEqual(24);
+    expect(geometry.actionBottom).toBeLessThanOrEqual(geometry.viewportHeight - 23);
+    await expectNoHorizontalOverflow(tmaPage);
+  }
   await expect(tmaPage.locator('html')).toHaveAttribute('data-yfc-keyboard', 'visible');
   await expect(tmaPage.locator('#appBottomNav')).toBeHidden();
   await tma.setTheme('dark');
   await tma.setActive(false);
   await tma.setActive(true);
-  await expect(search).toHaveValue('О');
+  await expect(calories).toHaveValue('510');
   await expect(tmaPage.getByRole('dialog')).toBeVisible();
 
-  await tmaPage.getByRole('button', { name: 'Добавить Овсяная каша' }).click();
-  await tmaPage.getByRole('button', { name: 'Добавить в дневник' }).click();
-  await expect(tmaPage.getByText('Овсяная каша')).toBeVisible();
+  api.setOffline(true);
+  await tmaPage.getByRole('button', { name: 'Сохранить Quick Add' }).click();
+  await expect(tmaPage.getByRole('alert')).toBeVisible();
+  await expect(calories).toHaveValue('510');
+  api.setOffline(false);
+  await tmaPage.getByRole('button', { name: 'Повторить', exact: true }).click();
+  await expect(tmaPage.getByRole('dialog')).not.toBeAttached();
+  await expect(tmaPage.getByText('TMA перекус')).toBeVisible();
+
+  const entry = tmaPage.locator('.nutrition-entry').filter({ hasText: 'TMA перекус' });
+  await entry.getByRole('button', { name: 'Повторить' }).click();
+  await tmaPage.getByRole('dialog').getByRole('button', { name: 'Повторить продукт' }).click();
+  await expect(tmaPage.getByText('Скопировано записей: 1')).toBeVisible();
+  await expectNoHorizontalOverflow(tmaPage);
 
   await tmaPage.getByRole('link', { name: 'Прогресс', exact: true }).click();
   await expect(tmaPage).toHaveURL('/app?section=progress');

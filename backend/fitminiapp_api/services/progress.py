@@ -2,15 +2,16 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Iterable
+from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal
-from typing import Literal
+from typing import Literal, cast
 
-from sqlalchemy import and_, func, or_
+from sqlalchemy import and_, case, func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from fitminiapp_api.core.timezone import today_for_user
-from fitminiapp_api.models.food_diary import FoodDiaryEntry
+from fitminiapp_api.models.food_diary import FoodDiaryDayStatus, FoodDiaryEntry
 from fitminiapp_api.models.nutrition import NutritionTarget
 from fitminiapp_api.models.program import (
     UserProgram,
@@ -63,6 +64,17 @@ BODY_MEASUREMENT_GUIDANCE = {
     ],
 }
 AdherenceStatus = Literal["available", "not_applicable", "insufficient_data", "unsupported"]
+NutritionDiaryStatus = Literal["complete", "incomplete", "fasted"]
+
+
+@dataclass(frozen=True)
+class NutritionDiaryDay:
+    user_id: int
+    diary_date: date
+    calories: Decimal | None
+    protein_g: Decimal | None
+    status: NutritionDiaryStatus
+    has_entries: bool
 
 
 def calculate_adherence_component(
@@ -444,17 +456,39 @@ def build_progress_summaries(
         user_id: current_day - timedelta(days=1) for user_id, current_day in today_by_user.items()
     }
     diary_rows = []
+    diary_status_rows = []
     if visible_nutrition_ids:
+        energy_value = case(
+            (
+                FoodDiaryEntry.entry_kind == "quick_add",
+                FoodDiaryEntry.quick_energy_kcal,
+            ),
+            else_=FoodDiaryEntry.weight_g * FoodDiaryEntry.energy_kcal_per_100g / 100,
+        )
+        protein_value = case(
+            (
+                FoodDiaryEntry.entry_kind == "quick_add",
+                FoodDiaryEntry.quick_protein_g,
+            ),
+            else_=FoodDiaryEntry.weight_g * FoodDiaryEntry.protein_g_per_100g / 100,
+        )
+        missing_protein = case(
+            (
+                and_(
+                    FoodDiaryEntry.entry_kind == "quick_add",
+                    FoodDiaryEntry.quick_protein_g.is_(None),
+                ),
+                1,
+            ),
+            else_=0,
+        )
         diary_rows = (
             db.query(
                 FoodDiaryEntry.user_id,
                 FoodDiaryEntry.diary_date,
-                func.sum(FoodDiaryEntry.weight_g * FoodDiaryEntry.energy_kcal_per_100g / 100).label(
-                    "calories"
-                ),
-                func.sum(FoodDiaryEntry.weight_g * FoodDiaryEntry.protein_g_per_100g / 100).label(
-                    "protein_g"
-                ),
+                func.sum(energy_value).label("calories"),
+                func.sum(protein_value).label("protein_g"),
+                func.sum(missing_protein).label("missing_protein_count"),
             )
             .filter(
                 _user_date_filter(
@@ -469,9 +503,52 @@ def build_progress_summaries(
             .order_by(FoodDiaryEntry.user_id, FoodDiaryEntry.diary_date)
             .all()
         )
-    diary_by_user: dict[int, list] = defaultdict(list)
+        diary_status_rows = (
+            db.query(FoodDiaryDayStatus)
+            .filter(
+                _user_date_filter(
+                    visible_nutrition_ids,
+                    start_by_user,
+                    nutrition_end_by_user,
+                    FoodDiaryDayStatus.user_id,
+                    FoodDiaryDayStatus.diary_date,
+                )
+            )
+            .all()
+        )
+    statuses_by_key = {(row.user_id, row.diary_date): row.status for row in diary_status_rows}
+    diary_by_user: dict[int, list[NutritionDiaryDay]] = defaultdict(list)
     for diary_row in diary_rows:
-        diary_by_user[diary_row.user_id].append(diary_row)
+        diary_by_user[diary_row.user_id].append(
+            NutritionDiaryDay(
+                user_id=diary_row.user_id,
+                diary_date=diary_row.diary_date,
+                calories=Decimal(diary_row.calories),
+                protein_g=(
+                    None if diary_row.missing_protein_count else Decimal(diary_row.protein_g)
+                ),
+                status=cast(
+                    NutritionDiaryStatus,
+                    statuses_by_key.get((diary_row.user_id, diary_row.diary_date), "incomplete"),
+                ),
+                has_entries=True,
+            )
+        )
+    populated_keys = {(row.user_id, row.diary_date) for row in diary_rows}
+    for status_row in diary_status_rows:
+        key = (status_row.user_id, status_row.diary_date)
+        if key in populated_keys:
+            continue
+        diary_by_user[status_row.user_id].append(
+            NutritionDiaryDay(
+                user_id=status_row.user_id,
+                diary_date=status_row.diary_date,
+                calories=Decimal("0") if status_row.status == "fasted" else None,
+                protein_g=Decimal("0") if status_row.status == "fasted" else None,
+                status=cast(NutritionDiaryStatus, status_row.status),
+                has_entries=False,
+            )
+        )
 
     training_counts_by_user = collect_training_data_counts(
         db,
@@ -511,9 +588,9 @@ def build_progress_summaries(
         weight = float(set_row.actual_weight or 0)
         volume = weight * float(set_row.actual_reps or 0)
         volume_by_user[set_row.user_id] += volume
-        key = (set_row.user_id, set_row.exercise_id)
-        best_weight, best_volume = period_best.get(key, (0.0, 0.0))
-        period_best[key] = (max(best_weight, weight), max(best_volume, volume))
+        set_key = (set_row.user_id, cast(int, set_row.exercise_id))
+        best_weight, best_volume = period_best.get(set_key, (0.0, 0.0))
+        period_best[set_key] = (max(best_weight, weight), max(best_volume, volume))
 
     previous_best_rows = (
         db.query(
@@ -578,21 +655,27 @@ def build_progress_summaries(
         nutrition_visible = user.id in visible_nutrition_ids
         target = targets_by_user.get(user.id)
         diary_days = diary_by_user[user.id]
+        complete_diary_days = [
+            row
+            for row in diary_days
+            if row.status in {"complete", "fasted"} and row.calories is not None
+        ]
         adherence_diary_days = (
-            [row for row in diary_days if row.diary_date >= target.saved_at.date()]
+            [row for row in complete_diary_days if row.diary_date >= target.saved_at.date()]
             if target is not None
             else []
         )
+        protein_adherence_days = [row for row in adherence_diary_days if row.protein_g is not None]
         calorie_achieved = 0
         protein_achieved = 0
         if target is not None:
             calorie_achieved = sum(
-                is_calorie_target_met(Decimal(row.calories), target.calories)
+                is_calorie_target_met(cast(Decimal, row.calories), target.calories)
                 for row in adherence_diary_days
             )
             protein_achieved = sum(
-                is_protein_target_met(Decimal(row.protein_g), target.protein_g)
-                for row in adherence_diary_days
+                is_protein_target_met(cast(Decimal, row.protein_g), target.protein_g)
+                for row in protein_adherence_days
             )
 
         nutrition_status: AdherenceStatus = "insufficient_data" if target else "not_applicable"
@@ -608,7 +691,7 @@ def build_progress_summaries(
         )
         protein_adherence = calculate_adherence_component(
             achieved=protein_achieved,
-            evaluated=len(adherence_diary_days),
+            evaluated=len(protein_adherence_days),
             weight=ADHERENCE_WEIGHTS["protein"],
             unavailable_status=nutrition_status,
             unavailable_reason=nutrition_reason,
@@ -658,15 +741,30 @@ def build_progress_summaries(
                 "status": next_row.status,
             }
         average_calories = (
-            round(sum(float(row.calories) for row in diary_days) / len(diary_days), 1)
-            if diary_days
+            round(
+                sum(float(cast(Decimal, row.calories)) for row in complete_diary_days)
+                / len(complete_diary_days),
+                1,
+            )
+            if complete_diary_days
             else None
         )
+        protein_days = [row for row in complete_diary_days if row.protein_g is not None]
         average_protein = (
-            round(sum(float(row.protein_g) for row in diary_days) / len(diary_days), 1)
-            if diary_days
+            round(
+                sum(float(cast(Decimal, row.protein_g)) for row in protein_days)
+                / len(protein_days),
+                1,
+            )
+            if protein_days
             else None
         )
+        logged_day_count = sum(row.has_entries for row in diary_days)
+        complete_day_count = sum(row.status == "complete" for row in diary_days)
+        incomplete_day_count = sum(row.status == "incomplete" for row in diary_days)
+        fasted_day_count = sum(row.status == "fasted" for row in diary_days)
+        observed_day_count = len({row.diary_date for row in diary_days})
+        unlogged_day_count = max(0, period_days - 1 - observed_day_count)
         body_trends = _body_trends(measurements_by_user[user.id])
         weight_trend = next(
             (trend for trend in body_trends if trend["metric"] == "weight_kg"),
@@ -689,7 +787,11 @@ def build_progress_summaries(
             },
             "nutrition": {
                 "visible": nutrition_visible,
-                "logged_days": len(diary_days) if nutrition_visible else 0,
+                "logged_days": logged_day_count if nutrition_visible else 0,
+                "complete_days": complete_day_count if nutrition_visible else 0,
+                "incomplete_days": incomplete_day_count if nutrition_visible else 0,
+                "fasted_days": fasted_day_count if nutrition_visible else 0,
+                "unlogged_days": unlogged_day_count if nutrition_visible else 0,
                 "adherence_evaluated_days": (len(adherence_diary_days) if nutrition_visible else 0),
                 "average_calories": average_calories if nutrition_visible else None,
                 "target_calories": target.calories if target and nutrition_visible else None,
@@ -714,7 +816,7 @@ def build_progress_summaries(
             "data_sufficiency": {
                 **training_sufficiency,
                 "nutrition_coverage": build_nutrition_coverage_signal(
-                    logged_day_count=len(diary_days) if nutrition_visible else 0,
+                    logged_day_count=len(complete_diary_days) if nutrition_visible else 0,
                     eligible_day_count=period_days - 1,
                     visible=nutrition_visible,
                 ),

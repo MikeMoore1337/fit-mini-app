@@ -141,9 +141,9 @@ function SummaryOverview({ summary }: { summary: ProgressSummary }) {
           <dd>
             {weight
               ? formatChange(weight.change, bodyMetricUnits[weight.metric])
-              : summary.nutrition.logged_days}
+              : summary.nutrition.complete_days + summary.nutrition.fasted_days}
           </dd>
-          <small>{weight ? 'сравнение с собой' : 'заполнено за период'}</small>
+          <small>{weight ? 'сравнение с собой' : 'подтверждено за период'}</small>
         </div>
       </dl>
     </section>
@@ -544,10 +544,10 @@ function NutritionSection({ summary }: { summary: ProgressSummary }) {
       />
       {!nutrition.visible ? (
         <EmptyState title="Данные питания недоступны" />
-      ) : nutrition.logged_days === 0 ? (
+      ) : nutrition.complete_days + nutrition.fasted_days === 0 ? (
         <EmptyState
-          title="Питание за период не записано"
-          text="Заполните хотя бы один завершённый день — текущий день не входит в средние значения."
+          title="Нет подтверждённых дней питания"
+          text={`${nutrition.incomplete_days} частичных и ${nutrition.unlogged_days} отсутствующих дней не входят в средние значения.`}
         />
       ) : (
         <>
@@ -579,9 +579,11 @@ function NutritionSection({ summary }: { summary: ProgressSummary }) {
               </small>
             </div>
             <div>
-              <span>Заполнено</span>
-              <strong>{nutrition.logged_days} дней</strong>
-              <small>{nutrition.adherence_evaluated_days} можно сравнить с текущей целью</small>
+              <span>Подтверждено</span>
+              <strong>{nutrition.complete_days + nutrition.fasted_days} дней</strong>
+              <small>
+                {nutrition.incomplete_days} частичных · {nutrition.unlogged_days} без записей
+              </small>
             </div>
           </div>
           <div className="progress-nutrition-compliance">

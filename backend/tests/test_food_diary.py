@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
@@ -432,6 +432,138 @@ def test_empty_day_invalid_values_and_missing_serving_contract(client) -> None:
     assert client.get("/api/v1/nutrition/diary").status_code == 401
 
 
+def test_quick_add_is_idempotent_and_day_completeness_is_explicit(client) -> None:
+    headers = _auth(client, 16_040)
+    selected_date = timezone_module.today_in_timezone("Europe/Moscow")
+    request_headers = {**headers, "Idempotency-Key": "quick-entry-0001"}
+    payload = {
+        "quick_add": {"name": "  Обед   вне дома ", "energy_kcal": "640"},
+        "diary_date": selected_date.isoformat(),
+        "meal_type": "lunch",
+        "logged_at": "13:25",
+        "amount": "1",
+        "amount_unit": "serving",
+    }
+
+    created = client.post(
+        "/api/v1/nutrition/diary/entries",
+        headers=request_headers,
+        json=payload,
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["entry_kind"] == "quick_add"
+    assert created.json()["food_id"] is None
+    assert created.json()["recipe_id"] is None
+    assert created.json()["food_name"] == "Обед вне дома"
+    assert created.json()["logged_at"] == "13:25:00"
+    assert created.json()["nutrition"] == {
+        "energy_kcal": "640.00",
+        "protein_g": None,
+        "fat_g": None,
+        "carbs_g": None,
+        "fiber_g": None,
+    }
+
+    replay = client.post(
+        "/api/v1/nutrition/diary/entries",
+        headers=request_headers,
+        json=payload,
+    )
+    assert replay.status_code == 201
+    assert replay.json()["id"] == created.json()["id"]
+    conflict = client.post(
+        "/api/v1/nutrition/diary/entries",
+        headers=request_headers,
+        json={**payload, "quick_add": {"energy_kcal": "700"}},
+    )
+    assert conflict.status_code == 409
+
+    day = client.get(
+        "/api/v1/nutrition/diary",
+        headers=headers,
+        params={"diary_date": selected_date.isoformat()},
+    ).json()
+    assert day["status"] == "incomplete"
+    assert day["status_is_explicit"] is False
+    assert day["totals"]["energy_kcal"] == "640.00"
+    assert day["totals"]["protein_g"] is None
+
+    complete = client.put(
+        "/api/v1/nutrition/diary/status",
+        headers=headers,
+        json={"diary_date": selected_date.isoformat(), "status": "complete"},
+    )
+    assert complete.status_code == 200
+    assert complete.json()["status"] == "complete"
+    assert complete.json()["status_is_explicit"] is True
+
+    empty_date = selected_date - timedelta(days=1)
+    fasted = client.put(
+        "/api/v1/nutrition/diary/status",
+        headers=headers,
+        json={"diary_date": empty_date.isoformat(), "status": "fasted"},
+    )
+    assert fasted.status_code == 200
+    assert fasted.json()["status"] == "fasted"
+    blocked = client.post(
+        "/api/v1/nutrition/diary/entries",
+        headers={**headers, "Idempotency-Key": "quick-entry-0002"},
+        json={**payload, "diary_date": empty_date.isoformat()},
+    )
+    assert blocked.status_code == 409
+    reset = client.put(
+        "/api/v1/nutrition/diary/status",
+        headers=headers,
+        json={"diary_date": empty_date.isoformat(), "status": "unlogged"},
+    )
+    assert reset.status_code == 200
+    assert reset.json()["status"] == "unlogged"
+    assert reset.json()["status_is_explicit"] is False
+
+
+def test_quick_add_full_macros_remain_available_to_day_totals(client) -> None:
+    headers = _auth(client, 16_041)
+    selected_date = timezone_module.today_in_timezone("Europe/Moscow") - timedelta(days=2)
+    response = client.post(
+        "/api/v1/nutrition/diary/entries",
+        headers={**headers, "Idempotency-Key": "quick-entry-full-1"},
+        json={
+            "quick_add": {
+                "energy_kcal": "520",
+                "protein_g": "35",
+                "fat_g": "18",
+                "carbs_g": "52",
+            },
+            "diary_date": selected_date.isoformat(),
+            "meal_type": "dinner",
+            "amount": "1",
+            "amount_unit": "serving",
+        },
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["nutrition"] == {
+        "energy_kcal": "520.00",
+        "protein_g": "35.000",
+        "fat_g": "18.000",
+        "carbs_g": "52.000",
+        "fiber_g": None,
+    }
+    copied = client.post(
+        "/api/v1/nutrition/diary/copy/product",
+        headers={**headers, "Idempotency-Key": "copy-quick-entry-full-1"},
+        json={
+            "source_entry_id": response.json()["id"],
+            "source_date": selected_date.isoformat(),
+            "source_meal_type": "dinner",
+            "target_date": (selected_date + timedelta(days=1)).isoformat(),
+            "target_meal_type": "lunch",
+        },
+    )
+    assert copied.status_code == 201, copied.text
+    assert copied.json()["entries"][0]["entry_kind"] == "quick_add"
+    assert copied.json()["entries"][0]["nutrition"] == response.json()["nutrition"]
+
+
 def test_diary_day_query_count_is_constant() -> None:
     selected_date = timezone_module.today_in_timezone("Europe/Moscow")
     with get_session_context() as db:
@@ -466,7 +598,7 @@ def test_diary_day_query_count_is_constant() -> None:
             reset_sql_metrics(token)
 
     assert len(result.meals[-1].entries) == 25
-    assert metrics.query_count == 2
+    assert metrics.query_count == 3
 
 
 def test_food_diary_migration_upgrades_from_food_domain_head(tmp_path: Path) -> None:
@@ -493,11 +625,23 @@ def test_food_diary_migration_upgrades_from_food_domain_head(tmp_path: Path) -> 
         migration.upgrade()
         schema = inspect(connection)
         assert "food_diary_entries" in schema.get_table_names()
-        task_18_columns = {"recipe_id", "copy_operation_id", "copied_from_entry_id"}
+        later_columns = {
+            "recipe_id",
+            "copy_operation_id",
+            "copied_from_entry_id",
+            "logged_at",
+            "entry_kind",
+            "quick_energy_kcal",
+            "quick_protein_g",
+            "quick_fat_g",
+            "quick_carbs_g",
+            "idempotency_key",
+            "request_fingerprint",
+        }
         assert {column["name"] for column in schema.get_columns("food_diary_entries")} == {
             column.name
             for column in FoodDiaryEntry.__table__.columns
-            if column.name not in task_18_columns
+            if column.name not in later_columns
         }
         assert {
             constraint["name"] for constraint in schema.get_check_constraints("food_diary_entries")
@@ -505,7 +649,19 @@ def test_food_diary_migration_upgrades_from_food_domain_head(tmp_path: Path) -> 
             constraint.name
             for constraint in FoodDiaryEntry.__table__.constraints
             if isinstance(constraint, CheckConstraint)
-            and constraint.name != "ck_food_diary_entries_single_source"
+            and constraint.name
+            not in {
+                "ck_food_diary_entries_single_source",
+                "ck_food_diary_entries_kind",
+                "ck_food_diary_entries_quick_source",
+                "ck_food_diary_entries_quick_nutrition",
+                "ck_food_diary_entries_quick_macros_complete",
+                "ck_food_diary_entries_quick_energy_range",
+                "ck_food_diary_entries_quick_protein_range",
+                "ck_food_diary_entries_quick_fat_range",
+                "ck_food_diary_entries_quick_carbs_range",
+                "ck_food_diary_entries_idempotency_pair",
+            }
         }
         assert {index["name"] for index in schema.get_indexes("food_diary_entries")} == {
             "ix_food_diary_entries_user_date_meal"

@@ -57,6 +57,10 @@ class TrainingPeriodSummary(BaseModel):
 class NutritionPeriodSummary(BaseModel):
     visible: bool
     logged_days: int = 0
+    complete_days: int = 0
+    incomplete_days: int = 0
+    fasted_days: int = 0
+    unlogged_days: int = 0
     adherence_evaluated_days: int = 0
     average_calories: float | None = None
     target_calories: int | None = None

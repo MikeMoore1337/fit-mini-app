@@ -5480,59 +5480,84 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   color: var(--muted);
   line-height: 1.5;
 }
-.nutrition-date-nav {
-  display: grid;
-  grid-template-columns: 44px minmax(180px, 1fr) 44px auto;
-  align-items: center;
+.nutrition-diary__intro-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
-  padding: 7px;
+}
+.nutrition-week {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 4px 10px;
   border: 1px solid var(--border);
   border-radius: 16px;
   background: var(--surface-subtle);
 }
-.nutrition-date-nav > .ui-button {
-  min-width: 44px;
-  padding-inline: 0;
-  font-size: 1.2rem;
-}
-.nutrition-date-nav__current {
-  position: relative;
+.nutrition-week__head {
   display: grid;
-  justify-items: center;
-  min-width: 0;
-  cursor: pointer;
+  grid-template-columns: minmax(80px, auto) minmax(0, 1fr) minmax(80px, auto);
+  align-items: center;
+  gap: 8px;
 }
-.nutrition-date-nav__current span {
-  color: var(--text);
-  font-size: 0.98rem;
-  font-weight: 800;
-  line-height: 1.2;
-}
-.nutrition-date-nav__current small {
+.nutrition-week__head strong {
   overflow: hidden;
-  max-width: 100%;
-  margin-top: 2px;
-  color: var(--muted);
-  font-size: 0.74rem;
+  font-size: 0.8rem;
+  text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.nutrition-date-nav__current input {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+.nutrition-week__head button,
+.nutrition-week ol button {
+  min-height: 44px;
+  background: transparent;
+  color: var(--muted);
+}
+.nutrition-week__head button {
+  padding: 6px 8px;
+  font-size: 0.76rem;
+}
+.nutrition-week ol {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  margin: 0;
   padding: 0;
-  border: 0;
-  opacity: 0;
-  cursor: pointer;
+  list-style: none;
 }
-.nutrition-date-nav__current:focus-within {
-  border-radius: 8px;
-  outline: 3px solid var(--focus-ring);
-  outline-offset: 3px;
+.nutrition-week li {
+  min-width: 0;
 }
-.nutrition-date-nav__today,
+.nutrition-week ol button {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  place-items: center;
+  gap: 2px;
+  padding: 4px 1px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+}
+.nutrition-week ol button[aria-current='date'] {
+  border-color: var(--accent-line);
+  background: var(--surface);
+  color: var(--text);
+}
+.nutrition-week ol button:disabled {
+  opacity: 0.42;
+}
+.nutrition-week ol span {
+  overflow: hidden;
+  max-width: 100%;
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+}
+.nutrition-week ol strong {
+  font-size: 0.9rem;
+}
 .nutrition-picker__back {
   min-height: 36px;
   padding: 7px 10px;
@@ -5540,7 +5565,6 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   color: var(--accent-strong);
   font-size: 0.8rem;
 }
-.nutrition-date-nav__today:hover,
 .nutrition-picker__back:hover {
   background: var(--accent-soft);
 }
@@ -5588,6 +5612,47 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+.nutrition-completeness {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-subtle);
+}
+.nutrition-completeness__copy {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.nutrition-completeness__copy h2 {
+  margin-top: 3px;
+  font-size: 1rem;
+}
+.nutrition-completeness > p {
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+.nutrition-completeness__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.nutrition-completeness__actions .ui-button[aria-pressed='true'] {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.nutrition-completeness__reset {
+  min-height: 44px;
+  padding: 7px 10px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-decoration: underline;
 }
 .nutrition-meal__actions > button:not(.ui-button),
 .nutrition-day-actions > button {
@@ -5801,6 +5866,11 @@ body:has(#appBottomNav) .toast:not(.hidden) {
 .nutrition-target.is-over > small {
   color: var(--warning-text);
 }
+.nutrition-target--unknown {
+  padding: 10px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+}
 .nutrition-day-summary__totals {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -5853,7 +5923,7 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   grid-template-rows: auto minmax(0, 1fr);
   width: min(620px, 100%);
   max-width: 620px;
-  max-height: min(760px, calc(100dvh - 32px));
+  max-height: min(760px, calc(var(--yfc-viewport-height, 100dvh) - 32px));
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 22px;
@@ -5883,6 +5953,40 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 18px 20px 22px;
+}
+.nutrition-picker__submit {
+  position: sticky;
+  z-index: 2;
+  bottom: calc(-1 * var(--yfc-layout-safe-bottom, env(safe-area-inset-bottom, 0px)));
+  display: grid;
+  gap: 7px;
+  margin: 4px -4px -6px;
+  padding: 10px 4px max(6px, var(--yfc-layout-safe-bottom, env(safe-area-inset-bottom, 0px)));
+  background: linear-gradient(to bottom, transparent, var(--card-bg) 18%);
+}
+.nutrition-quick-add__context {
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+.nutrition-quick-add__primary-fields,
+.nutrition-quick-add__macros {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.nutrition-quick-add__macros {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.nutrition-quick-add__macros legend {
+  padding: 0 4px;
+  color: var(--muted);
+  font-size: 0.74rem;
 }
 .nutrition-picker__browse {
   display: grid;
@@ -6320,16 +6424,27 @@ body:has(#appBottomNav) .toast:not(.hidden) {
     display: grid;
     gap: 10px;
   }
+  .nutrition-diary__intro-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-content: stretch;
+  }
+  .nutrition-diary__intro-actions .ui-button {
+    min-width: 0;
+    padding-inline: 8px;
+  }
+  .nutrition-week {
+    margin-inline: -4px;
+    padding: 4px;
+  }
+  .nutrition-week__head {
+    grid-template-columns: 72px minmax(0, 1fr) 72px;
+  }
+  .nutrition-week__head button {
+    padding-inline: 3px;
+  }
   .nutrition-diary__intro .ui-badge {
     justify-self: start;
-  }
-  .nutrition-date-nav {
-    grid-template-columns: 42px minmax(0, 1fr) 42px;
-    gap: 4px;
-    padding: 5px;
-  }
-  .nutrition-date-nav__today {
-    grid-column: 1 / -1;
   }
   .nutrition-day-summary {
     gap: 13px;
@@ -6353,14 +6468,28 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   .nutrition-entry-editor__actions .ui-button {
     flex: 1 1 0;
   }
+  .nutrition-completeness__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .nutrition-completeness__actions .ui-button,
+  .nutrition-completeness__reset {
+    width: 100%;
+    min-width: 0;
+    padding-inline: 6px;
+    font-size: 0.73rem;
+  }
   .nutrition-picker {
     align-items: flex-end;
-    padding: max(8px, env(safe-area-inset-top, 0px)) 0 0;
+    padding: max(8px, var(--yfc-layout-safe-top, env(safe-area-inset-top, 0px))) 0 0;
   }
   .nutrition-picker__panel {
     width: 100%;
     max-width: none;
-    max-height: calc(100dvh - max(8px, env(safe-area-inset-top, 0px)));
+    max-height: calc(
+      var(--yfc-viewport-height, 100dvh) -
+        max(8px, var(--yfc-layout-safe-top, env(safe-area-inset-top, 0px)))
+    );
     border-right: 0;
     border-bottom: 0;
     border-left: 0;
@@ -6371,8 +6500,9 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   }
   .nutrition-picker__browse,
   .nutrition-picker__quantity {
-    padding: 14px max(14px, env(safe-area-inset-right, 0px))
-      max(18px, env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
+    padding: 14px max(14px, var(--yfc-layout-safe-right, env(safe-area-inset-right, 0px)))
+      max(18px, var(--yfc-layout-safe-bottom, env(safe-area-inset-bottom, 0px)))
+      max(14px, var(--yfc-layout-safe-left, env(safe-area-inset-left, 0px)));
   }
   .nutrition-food-result {
     min-height: 56px;
@@ -6385,6 +6515,13 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   }
   .nutrition-picker__tools .ui-button {
     justify-content: flex-start;
+  }
+  .nutrition-picker__submit {
+    bottom: calc(-1 * max(18px, var(--yfc-layout-safe-bottom, env(safe-area-inset-bottom, 0px))));
+    margin-bottom: calc(
+      -1 * max(18px, var(--yfc-layout-safe-bottom, env(safe-area-inset-bottom, 0px)))
+    );
+    padding-bottom: max(18px, var(--yfc-layout-safe-bottom, env(safe-area-inset-bottom, 0px)));
   }
   .nutrition-editor__grid,
   .nutrition-recipe-editor__heading,
@@ -6422,6 +6559,10 @@ body:has(#appBottomNav) .toast:not(.hidden) {
     padding: 8px 6px;
   }
   .nutrition-picker__amount-grid {
+    grid-template-columns: 1fr;
+  }
+  .nutrition-quick-add__primary-fields,
+  .nutrition-quick-add__macros {
     grid-template-columns: 1fr;
   }
   .nutrition-meal__header {

@@ -15,6 +15,8 @@ const yogurtEntry: FoodDiaryEntry = {
   meal_type: 'breakfast',
   food_id: 3,
   recipe_id: null,
+  entry_kind: 'food',
+  logged_at: null,
   food_name: 'Греческий йогурт',
   food_brand: 'YFC Foods',
   amount: '180.000',
@@ -56,6 +58,7 @@ const oatmealFood = {
 
 async function mockNutritionApi(page: Page) {
   let entries: FoodDiaryEntry[] = [yogurtEntry];
+  let dayStatus: 'incomplete' | 'complete' = 'incomplete';
 
   await page.addInitScript(() => {
     sessionStorage.setItem('fit_access_token', 'e2e-token');
@@ -132,6 +135,8 @@ async function mockNutritionApi(page: Page) {
             fat_g: '1.000',
             carbs_g: '-1.000',
           },
+          status: entries.length ? dayStatus : 'unlogged',
+          status_is_explicit: dayStatus === 'complete',
         },
       });
     }
@@ -141,18 +146,49 @@ async function mockNutritionApi(page: Page) {
     if (path === '/api/v1/nutrition/foods/favorites') {
       return route.fulfill({ json: { items: [oatmealFood], total: 1, limit: 12, offset: 0 } });
     }
+    if (path === '/api/v1/nutrition/diary/status' && request.method() === 'PUT') {
+      dayStatus = 'complete';
+      return route.fulfill({
+        json: {
+          diary_date: '2026-08-19',
+          timezone: 'Europe/Moscow',
+          meals: [
+            { meal_type: 'breakfast', entries, totals: yogurtEntry.nutrition },
+            { meal_type: 'lunch', entries: [], totals: zeroNutrition },
+            { meal_type: 'dinner', entries: [], totals: zeroNutrition },
+            { meal_type: 'snacks', entries: [], totals: zeroNutrition },
+          ],
+          totals: yogurtEntry.nutrition,
+          targets: null,
+          remaining: null,
+          status: dayStatus,
+          status_is_explicit: true,
+        },
+      });
+    }
     if (path === '/api/v1/nutrition/diary/entries' && request.method() === 'POST') {
       const body = request.postDataJSON() as {
         diary_date: string;
         meal_type: FoodDiaryEntry['meal_type'];
+        logged_at?: string | null;
+        quick_add?: {
+          name?: string | null;
+          energy_kcal: number;
+          protein_g?: number | null;
+          fat_g?: number | null;
+          carbs_g?: number | null;
+        };
       };
+      const isQuick = Boolean(body.quick_add);
       const created: FoodDiaryEntry = {
         ...yogurtEntry,
         id: 22,
         diary_date: body.diary_date,
         meal_type: body.meal_type,
-        food_id: oatmealFood.id,
-        food_name: oatmealFood.name,
+        food_id: isQuick ? null : oatmealFood.id,
+        entry_kind: isQuick ? 'quick_add' : 'food',
+        logged_at: body.logged_at ?? null,
+        food_name: body.quick_add?.name || (isQuick ? 'Быстрый ввод' : oatmealFood.name),
         food_brand: null,
         amount: '1.000',
         amount_unit: 'serving',
@@ -160,13 +196,22 @@ async function mockNutritionApi(page: Page) {
         serving_amount: '1.000',
         serving_unit: 'serving',
         serving_weight_g: '50.000',
-        nutrition: {
-          energy_kcal: '180.00',
-          protein_g: '6.000',
-          fat_g: '3.000',
-          carbs_g: '31.000',
-          fiber_g: '4.000',
-        },
+        nutrition: isQuick
+          ? {
+              energy_kcal: String(body.quick_add?.energy_kcal ?? 0),
+              protein_g:
+                body.quick_add?.protein_g == null ? null : String(body.quick_add.protein_g),
+              fat_g: body.quick_add?.fat_g == null ? null : String(body.quick_add.fat_g),
+              carbs_g: body.quick_add?.carbs_g == null ? null : String(body.quick_add.carbs_g),
+              fiber_g: null,
+            }
+          : {
+              energy_kcal: '180.00',
+              protein_g: '6.000',
+              fat_g: '3.000',
+              carbs_g: '31.000',
+              fiber_g: '4.000',
+            },
       };
       entries = [...entries, created];
       return route.fulfill({ status: 201, json: created });
@@ -198,9 +243,36 @@ test('nutrition diary is responsive, keyboard-safe and supports local quick add'
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);
-    await expect(page.getByRole('button', { name: 'Предыдущий день' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Следующий день' })).toBeDisabled();
+    const week = page.getByRole('navigation', { name: 'Неделя дневника' });
+    await expect(week.locator('button[aria-current="date"]')).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Дата дневника' })).not.toBeAttached();
+    expect(
+      await week.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return {
+          top: Number.parseFloat(style.paddingTop),
+          bottom: Number.parseFloat(style.paddingBottom),
+        };
+      }),
+    ).toEqual({ top: 4, bottom: 4 });
   }
+
+  await page.getByRole('button', { name: /Быстрый ввод/ }).click();
+  const calories = page.getByRole('spinbutton', { name: 'Калории' });
+  await expect(calories).toHaveAttribute('inputmode', 'decimal');
+  await expect(calories).toHaveAttribute('enterkeyhint', 'next');
+  await page.getByRole('textbox', { name: 'Название (необязательно)' }).fill('Обед вне дома');
+  await calories.fill('640');
+  await page.getByLabel('Время (необязательно)').fill('13:10');
+  await expect(page.getByRole('button', { name: 'Сохранить Quick Add' })).toBeInViewport();
+  await page.getByRole('button', { name: 'Сохранить Quick Add' }).click();
+  await expect(page.getByRole('dialog')).not.toBeAttached();
+  await expect(page.getByText('Обед вне дома')).toBeVisible();
+  await expect(page.getByText('Быстрый ввод · 13:10')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(360);
+
+  await page.getByRole('button', { name: 'День заполнен' }).click();
+  await expect(page.getByText('Подтверждено')).toBeVisible();
 
   const breakfast = page.getByRole('region', { name: 'Завтрак' });
   const addButton = breakfast.getByRole('button', { name: /Добавить/ });

@@ -100,9 +100,9 @@ def _sum_nutrition(values: list[FoodDiaryNutrition]) -> FoodDiaryNutrition:
         fiber = sum((value for value in fiber_values if value is not None), start=ZERO)
     return FoodDiaryNutrition(
         energy_kcal=sum((value.energy_kcal for value in values), start=ZERO),
-        protein_g=sum((value.protein_g for value in values), start=ZERO),
-        fat_g=sum((value.fat_g for value in values), start=ZERO),
-        carbs_g=sum((value.carbs_g for value in values), start=ZERO),
+        protein_g=sum((cast(Decimal, value.protein_g) for value in values), start=ZERO),
+        fat_g=sum((cast(Decimal, value.fat_g) for value in values), start=ZERO),
+        carbs_g=sum((cast(Decimal, value.carbs_g) for value in values), start=ZERO),
         fiber_g=fiber,
     )
 
@@ -123,9 +123,11 @@ def calculate_recipe(recipe: Recipe) -> RecipeCalculation:
     totals = _sum_nutrition(ingredient_values)
     nutrients = RecipeNutrientsPer100g(
         energy_kcal_per_100g=_per_100(totals.energy_kcal, effective_weight, ENERGY_QUANTUM),
-        protein_g_per_100g=_per_100(totals.protein_g, effective_weight, MACRO_QUANTUM),
-        fat_g_per_100g=_per_100(totals.fat_g, effective_weight, MACRO_QUANTUM),
-        carbs_g_per_100g=_per_100(totals.carbs_g, effective_weight, MACRO_QUANTUM),
+        protein_g_per_100g=_per_100(
+            cast(Decimal, totals.protein_g), effective_weight, MACRO_QUANTUM
+        ),
+        fat_g_per_100g=_per_100(cast(Decimal, totals.fat_g), effective_weight, MACRO_QUANTUM),
+        carbs_g_per_100g=_per_100(cast(Decimal, totals.carbs_g), effective_weight, MACRO_QUANTUM),
         fiber_g_per_100g=(
             None
             if totals.fiber_g is None

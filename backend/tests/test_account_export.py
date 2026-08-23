@@ -10,7 +10,11 @@ from fitminiapp_api.db.base import Base
 from fitminiapp_api.db.session import get_session_context
 from fitminiapp_api.models.auth_identity import AuthActionToken, AuthIdentity, LocalCredential
 from fitminiapp_api.models.food import Food, FoodFavorite
-from fitminiapp_api.models.food_diary import FoodDiaryCopyOperation, FoodDiaryEntry
+from fitminiapp_api.models.food_diary import (
+    FoodDiaryCopyOperation,
+    FoodDiaryDayStatus,
+    FoodDiaryEntry,
+)
 from fitminiapp_api.models.recipe import Recipe, RecipeIngredient
 from fitminiapp_api.models.token import RefreshToken
 from fitminiapp_api.models.user import CoachClient, User, UserProfile
@@ -172,6 +176,13 @@ def test_account_export_includes_current_nutrition_domains_and_omits_secrets() -
             )
         )
         db.add(
+            FoodDiaryDayStatus(
+                user_id=owner.id,
+                diary_date=date(2026, 8, 19),
+                status="complete",
+            )
+        )
+        db.add(
             CoachClient(
                 coach_user_id=owner.id,
                 client_user_id=foreign_user.id,
@@ -202,6 +213,7 @@ def test_account_export_includes_current_nutrition_domains_and_omits_secrets() -
     assert payload["recipes"][0]["ingredients"][0]["food_name"] == "Снимок ингредиента"
     assert payload["food_diary_entries"][0]["food_name"] == "Снимок дневника"
     assert payload["food_diary_entries"][0]["energy_kcal_per_100g"] == Decimal("205")
+    assert payload["food_diary_day_statuses"][0]["status"] == "complete"
     assert payload["food_diary_copy_operations"][0]["copy_scope"] == "product"
     assert set(ACCOUNT_EXPORT_DATA_INVENTORY.values()) <= set(payload)
 

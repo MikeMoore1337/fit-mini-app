@@ -13,7 +13,7 @@ from fitminiapp_api.db.performance import (
 )
 from fitminiapp_api.db.session import get_session_context
 from fitminiapp_api.models.exercise import Exercise
-from fitminiapp_api.models.food_diary import FoodDiaryEntry
+from fitminiapp_api.models.food_diary import FoodDiaryDayStatus, FoodDiaryEntry
 from fitminiapp_api.models.nutrition import NutritionTarget
 from fitminiapp_api.models.program import (
     UserProgram,
@@ -87,6 +87,14 @@ def _diary_entry(user_id: int, diary_date, *, weight_g: str = "200") -> FoodDiar
         protein_g_per_100g=Decimal("75"),
         fat_g_per_100g=Decimal("10"),
         carbs_g_per_100g=Decimal("10"),
+    )
+
+
+def _complete_day(user_id: int, diary_date) -> FoodDiaryDayStatus:
+    return FoodDiaryDayStatus(
+        user_id=user_id,
+        diary_date=diary_date,
+        status="complete",
     )
 
 
@@ -253,9 +261,12 @@ def test_user_progress_summary_handles_periods_current_day_and_isolation(client)
                 ),
                 _nutrition_target(other_user_id),
                 _diary_entry(user_id, today - timedelta(days=60), weight_g="20"),
+                _complete_day(user_id, today - timedelta(days=60)),
                 _diary_entry(user_id, today - timedelta(days=1)),
+                _complete_day(user_id, today - timedelta(days=1)),
                 _diary_entry(user_id, today, weight_g="20"),
                 _diary_entry(other_user_id, today - timedelta(days=1), weight_g="25"),
+                _complete_day(other_user_id, today - timedelta(days=1)),
             ]
         )
 
@@ -281,6 +292,10 @@ def test_user_progress_summary_handles_periods_current_day_and_isolation(client)
     assert payload["nutrition"] == {
         "visible": True,
         "logged_days": 1,
+        "complete_days": 1,
+        "incomplete_days": 0,
+        "fasted_days": 0,
+        "unlogged_days": 5,
         "adherence_evaluated_days": 1,
         "average_calories": 2000.0,
         "target_calories": 2000,
@@ -320,6 +335,47 @@ def test_user_progress_summary_handles_periods_current_day_and_isolation(client)
     other = client.get("/api/v1/workouts/progress/summary?period_days=7", headers=other_headers)
     assert other.status_code == 200
     assert other.json()["body"]["latest_measurement"]["weight_kg"] == 250.0
+
+
+def test_progress_uses_calories_only_quick_add_without_inventing_protein(client) -> None:
+    headers = _auth(client, 21_050)
+    user_id = _user_id(21_050)
+    diary_date = today_msk() - timedelta(days=1)
+
+    with get_session_context() as db:
+        db.add(_nutrition_target(user_id, cardio_per_week=0))
+        db.add(
+            FoodDiaryEntry(
+                user_id=user_id,
+                diary_date=diary_date,
+                meal_type="dinner",
+                entry_kind="quick_add",
+                amount=Decimal("1"),
+                amount_unit="serving",
+                weight_g=Decimal("1"),
+                food_name="Быстрый ввод",
+                energy_kcal_per_100g=Decimal("0"),
+                protein_g_per_100g=Decimal("0"),
+                fat_g_per_100g=Decimal("0"),
+                carbs_g_per_100g=Decimal("0"),
+                serving_amount=Decimal("1"),
+                serving_unit="serving",
+                serving_weight_g=Decimal("1"),
+                quick_energy_kcal=Decimal("2000"),
+            )
+        )
+        db.add(_complete_day(user_id, diary_date))
+
+    response = client.get("/api/v1/workouts/progress/summary?period_days=7", headers=headers)
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["nutrition"]["average_calories"] == 2000.0
+    assert payload["nutrition"]["average_protein_g"] is None
+    assert payload["adherence"]["calories"]["evaluated"] == 1
+    assert payload["adherence"]["calories"]["percent"] == 100.0
+    assert payload["adherence"]["protein"]["evaluated"] == 0
+    assert payload["adherence"]["protein"]["status"] == "insufficient_data"
 
 
 def test_trainer_summary_requires_current_relationship_and_revokes_access(client) -> None:
@@ -424,6 +480,7 @@ def test_bulk_trainer_summaries_use_constant_query_count() -> None:
             if index == 0:
                 db.add(_nutrition_target(user.id))
                 db.add(_diary_entry(user.id, today - timedelta(days=1)))
+                db.add(_complete_day(user.id, today - timedelta(days=1)))
         db.commit()
         db.refresh(coach)
 
@@ -449,7 +506,7 @@ def test_bulk_trainer_summaries_use_constant_query_count() -> None:
     assert summaries_by_name["Private 19"]["body"]["latest_measurement"]["weight_kg"] == 89
     assert summaries_by_name["Private 10"]["body"]["latest_measurement"]["weight_kg"] == 80
     assert all(summary["nutrition"]["target_calories"] is None for summary in summaries)
-    assert metrics.query_count == 12
+    assert metrics.query_count == 13
 
 
 def test_nutrition_target_effective_date_keeps_client_local_wall_date(client) -> None:
@@ -468,7 +525,9 @@ def test_nutrition_target_effective_date_keeps_client_local_wall_date(client) ->
         db.add_all(
             [
                 _diary_entry(user_id, saved_local_date),
+                _complete_day(user_id, saved_local_date),
                 _diary_entry(user_id, saved_local_date + timedelta(days=1)),
+                _complete_day(user_id, saved_local_date + timedelta(days=1)),
             ]
         )
 

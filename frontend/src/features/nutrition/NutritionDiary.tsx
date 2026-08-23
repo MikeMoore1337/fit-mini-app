@@ -1,7 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
-import { addCalendarDays, dateInputValue } from '../../shared/dateTime';
+import {
+  addCalendarDays,
+  calendarWeek,
+  dateInputValue,
+  formatCalendarDate,
+} from '../../shared/dateTime';
 import { invalidateNutritionSummaries, queryKeys } from '../../shared/queryKeys';
 import type {
   FoodDiaryDay,
@@ -38,7 +43,11 @@ const emptyNutrition: FoodDiaryNutrition = {
   fiber_g: null,
 };
 
-function formatNumber(value: string | number, maximumFractionDigits = 0): string {
+function formatNumber(
+  value: string | number | null | undefined,
+  maximumFractionDigits = 0,
+): string {
+  if (value === null || value === undefined) return '—';
   const number = Number(value);
   if (!Number.isFinite(number)) return '—';
   return new Intl.NumberFormat('ru-RU', { maximumFractionDigits }).format(number);
@@ -80,11 +89,22 @@ function MacroProgress({
   unit,
 }: {
   label: string;
-  total: string;
-  target: string;
-  remaining: string;
+  total: string | null;
+  target: string | null;
+  remaining: string | null;
   unit: 'г' | 'ккал';
 }) {
+  if (total === null || target === null || remaining === null) {
+    return (
+      <div className="nutrition-target nutrition-target--unknown">
+        <div className="nutrition-target__heading">
+          <span>{label}</span>
+          <strong>Нет данных</strong>
+        </div>
+        <small>Quick Add содержит только калории; макронутриенты не считаются нулевыми.</small>
+      </div>
+    );
+  }
   const totalNumber = Number(total);
   const targetNumber = Number(target);
   const remainingNumber = Number(remaining);
@@ -225,13 +245,19 @@ function EntryRow({ entry, onCopy }: { entry: FoodDiaryEntry; onCopy: () => void
         <div className="nutrition-entry__title">
           <div>
             <strong>{entry.food_name}</strong>
-            <span>{entry.food_brand || amountLabel(entry)}</span>
+            <span>
+              {entry.entry_kind === 'quick_add'
+                ? `Быстрый ввод${entry.logged_at ? ` · ${entry.logged_at.slice(0, 5)}` : ''}`
+                : entry.food_brand || amountLabel(entry)}
+            </span>
           </div>
           <strong className="nutrition-entry__calories">
             {formatNumber(entry.nutrition.energy_kcal)} ккал
           </strong>
         </div>
-        {entry.food_brand && <span className="nutrition-entry__amount">{amountLabel(entry)}</span>}
+        {entry.entry_kind !== 'quick_add' && entry.food_brand && (
+          <span className="nutrition-entry__amount">{amountLabel(entry)}</span>
+        )}
         <div className="nutrition-entry__macros" aria-label="Пищевая ценность записи">
           <span>Б {formatNumber(entry.nutrition.protein_g, 1)}</span>
           <span>Ж {formatNumber(entry.nutrition.fat_g, 1)}</span>
@@ -243,9 +269,11 @@ function EntryRow({ entry, onCopy }: { entry: FoodDiaryEntry; onCopy: () => void
           <button type="button" onClick={onCopy} disabled={remove.isPending}>
             Повторить
           </button>
-          <button type="button" onClick={() => setEditing(true)} disabled={remove.isPending}>
-            Изменить
-          </button>
+          {entry.entry_kind !== 'quick_add' && (
+            <button type="button" onClick={() => setEditing(true)} disabled={remove.isPending}>
+              Изменить
+            </button>
+          )}
           <button type="button" onClick={() => void requestDelete()} disabled={remove.isPending}>
             {remove.isPending ? 'Удаляем…' : 'Удалить'}
           </button>
@@ -330,11 +358,13 @@ function MealSection({
   meal,
   onAdd,
   onCopy,
+  onRepeatYesterday,
   onCopyEntry,
 }: {
   meal: FoodDiaryMeal;
   onAdd: () => void;
   onCopy: () => void;
+  onRepeatYesterday: () => void;
   onCopyEntry: (entry: FoodDiaryEntry) => void;
 }) {
   return (
@@ -349,6 +379,9 @@ function MealSection({
           </span>
         </div>
         <div className="nutrition-meal__actions">
+          <button type="button" onClick={onRepeatYesterday}>
+            Повторить вчера
+          </button>
           {meal.entries.length > 0 && (
             <button type="button" onClick={onCopy}>
               Копировать
@@ -383,6 +416,175 @@ function normalizeMeals(meals: FoodDiaryMeal[]): FoodDiaryMeal[] {
   );
 }
 
+const completenessCopy: Record<FoodDiaryDay['status'], { label: string; description: string }> = {
+  complete: {
+    label: 'День заполнен',
+    description: 'Эти данные можно использовать в средних значениях и калибровке.',
+  },
+  incomplete: {
+    label: 'Заполнен частично',
+    description: 'Записи сохранены, но день не участвует в средних до подтверждения.',
+  },
+  unlogged: {
+    label: 'Нет записей',
+    description: 'Отсутствующий день не считается как 0 ккал.',
+  },
+  fasted: {
+    label: 'Пост отмечен',
+    description: 'Нулевое потребление сохранено только по вашей явной отметке.',
+  },
+};
+
+function DayCompleteness({ day }: { day: FoodDiaryDay }) {
+  const queryClient = useQueryClient();
+  const { toast } = useFeedback();
+  const update = useMutation({
+    mutationFn: (status: FoodDiaryDay['status']) =>
+      api<FoodDiaryDay>('/api/v1/nutrition/diary/status', {
+        method: 'PUT',
+        body: { diary_date: day.diary_date, status },
+      }),
+    onSuccess: async (updated) => {
+      queryClient.setQueryData(queryKeys.nutrition.diaryDate(day.diary_date), updated);
+      await invalidateNutritionSummaries(queryClient);
+      toast('Полнота дня обновлена');
+    },
+  });
+  const hasEntries = day.meals.some((meal) => meal.entries.length > 0);
+  const copy = completenessCopy[day.status];
+  return (
+    <section className="nutrition-completeness" aria-labelledby="nutrition-completeness-title">
+      <div className="nutrition-completeness__copy">
+        <div>
+          <span className="eyebrow">Полнота данных</span>
+          <h2 id="nutrition-completeness-title">{copy.label}</h2>
+        </div>
+        <Badge tone={day.status === 'complete' || day.status === 'fasted' ? 'success' : undefined}>
+          {day.status_is_explicit ? 'Подтверждено' : 'Не подтверждено'}
+        </Badge>
+      </div>
+      <p>{copy.description}</p>
+      <div className="nutrition-completeness__actions">
+        <Button
+          type="button"
+          variant="secondary"
+          aria-pressed={day.status === 'complete'}
+          disabled={!hasEntries || update.isPending}
+          onClick={() => update.mutate('complete')}
+        >
+          День заполнен
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          aria-pressed={day.status === 'incomplete'}
+          disabled={update.isPending}
+          onClick={() => update.mutate('incomplete')}
+        >
+          Заполнен частично
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          aria-pressed={day.status === 'fasted'}
+          disabled={hasEntries || update.isPending}
+          onClick={() => update.mutate('fasted')}
+        >
+          Отметить пост
+        </Button>
+        {day.status_is_explicit && (
+          <button
+            type="button"
+            className="nutrition-completeness__reset"
+            disabled={update.isPending}
+            onClick={() => update.mutate('unlogged')}
+          >
+            Снять отметку
+          </button>
+        )}
+      </div>
+      {update.error && (
+        <div className="nutrition-inline-error" role="alert">
+          <span>{(update.error as Error).message}</span>
+          <button type="button" onClick={() => update.mutate(update.variables ?? day.status)}>
+            Повторить
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function NutritionWeekSelector({
+  selectedDate,
+  today,
+  onSelect,
+}: {
+  selectedDate: string;
+  today: string;
+  onSelect: (value: string) => void;
+}) {
+  const days = calendarWeek(selectedDate);
+  return (
+    <nav className="nutrition-week" aria-label="Неделя дневника">
+      <div className="nutrition-week__head">
+        <button type="button" onClick={() => onSelect(addCalendarDays(selectedDate, -7))}>
+          ← Неделя
+        </button>
+        <strong>
+          {formatCalendarDate(days[0] ?? selectedDate, { day: 'numeric', month: 'short' })} —{' '}
+          {formatCalendarDate(days.at(-1) ?? selectedDate, { day: 'numeric', month: 'short' })}
+        </strong>
+        <button
+          type="button"
+          disabled={(days.at(-1) ?? selectedDate) >= today}
+          onClick={() => onSelect(addCalendarDays(selectedDate, 7))}
+        >
+          Неделя →
+        </button>
+      </div>
+      <ol>
+        {days.map((date) => (
+          <li key={date}>
+            <button
+              type="button"
+              aria-current={date === selectedDate ? 'date' : undefined}
+              disabled={date > today}
+              aria-label={formatCalendarDate(date, {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+              })}
+              onClick={() => onSelect(date)}
+            >
+              <span>{formatCalendarDate(date, { weekday: 'short' }).replace('.', '')}</span>
+              <strong>{formatCalendarDate(date, { day: 'numeric' })}</strong>
+            </button>
+          </li>
+        ))}
+      </ol>
+    </nav>
+  );
+}
+
+function defaultMealType(timeZone?: string | null): MealType {
+  try {
+    const hour = Number(
+      new Intl.DateTimeFormat('en-GB', {
+        timeZone: timeZone || undefined,
+        hour: '2-digit',
+        hourCycle: 'h23',
+      }).format(new Date()),
+    );
+    if (hour < 11) return 'breakfast';
+    if (hour < 16) return 'lunch';
+    if (hour < 21) return 'dinner';
+  } catch {
+    // A missing or invalid timezone falls back to snacks without changing the diary date.
+  }
+  return 'snacks';
+}
+
 export function NutritionDiary({
   timeZone,
   initialDate,
@@ -392,7 +594,10 @@ export function NutritionDiary({
 }) {
   const today = dateInputValue(new Date(), timeZone || undefined);
   const [selectedDate, setSelectedDate] = useState(initialDate || today);
-  const [addingTo, setAddingTo] = useState<MealType | null>(null);
+  const [addingTo, setAddingTo] = useState<{
+    mealType: MealType;
+    initialView?: 'browse' | 'quick-add';
+  } | null>(null);
   const [copySubject, setCopySubject] = useState<CopySubject | null>(null);
   const diary = useQuery({
     queryKey: queryKeys.nutrition.diaryDate(selectedDate),
@@ -409,55 +614,28 @@ export function NutritionDiary({
           <h1>Питание</h1>
           <p>{dateLabel.subtitle}</p>
         </div>
-        <Button
-          className="nutrition-diary__primary-action"
-          type="button"
-          aria-label="Добавить продукт в завтрак"
-          onClick={() => setAddingTo('breakfast')}
-        >
-          <span aria-hidden="true">＋</span> Добавить продукт
-        </Button>
+        <div className="nutrition-diary__intro-actions">
+          <Button
+            className="nutrition-diary__primary-action"
+            type="button"
+            onClick={() =>
+              setAddingTo({ mealType: defaultMealType(timeZone), initialView: 'quick-add' })
+            }
+          >
+            <span aria-hidden="true">＋</span> Быстрый ввод
+          </Button>
+          <Button
+            variant="secondary"
+            type="button"
+            aria-label="Найти продукт для текущего приёма пищи"
+            onClick={() => setAddingTo({ mealType: defaultMealType(timeZone) })}
+          >
+            Найти продукт
+          </Button>
+        </div>
       </header>
 
-      <nav className="nutrition-date-nav" aria-label="Дата дневника">
-        <Button
-          variant="ghost"
-          type="button"
-          aria-label="Предыдущий день"
-          onClick={() => setSelectedDate(addCalendarDays(selectedDate, -1))}
-        >
-          ←
-        </Button>
-        <label className="nutrition-date-nav__current">
-          <span>{dateLabel.title}</span>
-          <small>{dateLabel.subtitle}</small>
-          <input
-            type="date"
-            aria-label="Выбрать дату"
-            max={today}
-            value={selectedDate}
-            onChange={(event) => event.target.value && setSelectedDate(event.target.value)}
-          />
-        </label>
-        <Button
-          variant="ghost"
-          type="button"
-          aria-label="Следующий день"
-          disabled={selectedDate >= today}
-          onClick={() => setSelectedDate(addCalendarDays(selectedDate, 1))}
-        >
-          →
-        </Button>
-        {selectedDate !== today && (
-          <button
-            className="nutrition-date-nav__today"
-            type="button"
-            onClick={() => setSelectedDate(today)}
-          >
-            К сегодня
-          </button>
-        )}
-      </nav>
+      <NutritionWeekSelector selectedDate={selectedDate} today={today} onSelect={setSelectedDate} />
 
       {diary.data && diary.data.meals.some((meal) => meal.entries.length > 0) && (
         <div className="nutrition-day-actions">
@@ -489,41 +667,57 @@ export function NutritionDiary({
         <ErrorState message={(diary.error as Error).message} retry={() => void diary.refetch()} />
       )}
       {diary.data && (
-        <div className="nutrition-diary__layout">
-          <div className="nutrition-meals">
-            {meals.map((meal) => (
-              <MealSection
-                key={meal.meal_type}
-                meal={meal}
-                onAdd={() => setAddingTo(meal.meal_type as MealType)}
-                onCopy={() =>
-                  setCopySubject({
-                    scope: 'meal',
-                    sourceDate: selectedDate,
-                    sourceMeal: meal.meal_type as MealType,
-                    label: `${mealLabels[meal.meal_type as MealType]} — ${meal.entries.length} записей`,
-                  })
-                }
-                onCopyEntry={(entry) =>
-                  setCopySubject({
-                    scope: 'product',
-                    sourceDate: selectedDate,
-                    sourceMeal: meal.meal_type as MealType,
-                    entryId: entry.id,
-                    label: entry.food_name,
-                  })
-                }
-              />
-            ))}
+        <>
+          <DayCompleteness day={diary.data} />
+          <div className="nutrition-diary__layout">
+            <div className="nutrition-meals">
+              {meals.map((meal) => (
+                <MealSection
+                  key={meal.meal_type}
+                  meal={meal}
+                  onAdd={() =>
+                    setAddingTo({ mealType: meal.meal_type as MealType, initialView: 'browse' })
+                  }
+                  onCopy={() =>
+                    setCopySubject({
+                      scope: 'meal',
+                      sourceDate: selectedDate,
+                      sourceMeal: meal.meal_type as MealType,
+                      label: `${mealLabels[meal.meal_type as MealType]} — ${meal.entries.length} записей`,
+                    })
+                  }
+                  onRepeatYesterday={() =>
+                    setCopySubject({
+                      scope: 'meal',
+                      sourceDate: addCalendarDays(selectedDate, -1),
+                      sourceMeal: meal.meal_type as MealType,
+                      initialTargetDate: selectedDate,
+                      label: `${mealLabels[meal.meal_type as MealType]} за предыдущий день`,
+                    })
+                  }
+                  onCopyEntry={(entry) =>
+                    setCopySubject({
+                      scope: 'product',
+                      sourceDate: selectedDate,
+                      sourceMeal: meal.meal_type as MealType,
+                      entryId: entry.id,
+                      label: entry.food_name,
+                    })
+                  }
+                />
+              ))}
+            </div>
+            <DaySummary day={diary.data} />
           </div>
-          <DaySummary day={diary.data} />
-        </div>
+        </>
       )}
 
       {addingTo && (
         <FoodPickerDialog
           diaryDate={selectedDate}
-          mealType={addingTo}
+          mealType={addingTo.mealType}
+          initialView={addingTo.initialView}
+          disabled={diary.data?.status === 'fasted'}
           onClose={() => setAddingTo(null)}
         />
       )}

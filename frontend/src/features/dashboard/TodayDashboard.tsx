@@ -176,7 +176,8 @@ function formatWorkoutDate(value: string, today: string): string {
   return formatCalendarDate(value, { weekday: 'long', day: 'numeric', month: 'short' });
 }
 
-function formatAmount(value: string | number): string {
+function formatAmount(value: string | number | null | undefined): string {
+  if (value === null || value === undefined) return '—';
   const numeric = Number(value);
   return Number.isFinite(numeric) ? String(Math.round(numeric)) : '—';
 }
@@ -210,13 +211,27 @@ function formatIncludedComponents(components: string[]): string {
   return `${labels.slice(0, -1).join(', ')} и ${labels.at(-1)}`;
 }
 
-function Macro({ label, total, target }: { label: string; total: string; target?: string }) {
+function Macro({
+  label,
+  total,
+  target,
+}: {
+  label: string;
+  total: string | null;
+  target?: string | null;
+}) {
   return (
     <div className="today-macro">
       <span>{label}</span>
       <strong>
         {formatAmount(total)}
-        {target ? <small> / {formatAmount(target)} г</small> : <small> г</small>}
+        {total === null ? (
+          <small> не указано</small>
+        ) : target ? (
+          <small> / {formatAmount(target)} г</small>
+        ) : (
+          <small> г</small>
+        )}
       </strong>
     </div>
   );

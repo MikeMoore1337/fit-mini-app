@@ -13,6 +13,7 @@ from fitminiapp_api.schemas.invite import CoachInvitePreviewResponse, CoachInvit
 from fitminiapp_api.schemas.user import (
     AccountDeleteRequest,
     BodyPriorityOptionsResponse,
+    BodyPriorityPreference,
     HeartRatePreviewRequest,
     HeartRatePreviewResponse,
     HeartRateRangeResponse,
@@ -134,7 +135,11 @@ def _build_user_response(db: Session, user) -> UserResponse:
                 user.profile.cardio_trainings_per_week if user.profile else None
             ),
             resting_heart_rate=user.profile.resting_heart_rate if user.profile else None,
-            body_priority=serialize_body_priority(user.profile),
+            body_priority=(
+                BodyPriorityPreference.model_validate(body_priority)
+                if (body_priority := serialize_body_priority(user.profile)) is not None
+                else None
+            ),
             timezone=user.profile.timezone if user.profile else "Europe/Moscow",
             estimated_max_heart_rate=heart_rates.maximum if heart_rates else None,
             heart_rate_reserve=heart_rates.reserve if heart_rates else None,
