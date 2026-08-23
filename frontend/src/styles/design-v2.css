@@ -769,6 +769,352 @@ body:has(.app-shell--design-v2) {
 }
 
 /* Active workout */
+.workout-adaptation-entry {
+  min-width: 0;
+}
+
+.workout-adaptation-entry--workout {
+  justify-self: start;
+}
+
+.today-dashboard--design-v2 .workout-adaptation-entry--today,
+.today-dashboard--design-v2 .workout-adaptation-entry--today .ui-button {
+  width: 100%;
+}
+
+.today-dashboard--design-v2 .workout-adaptation-entry--today .ui-button {
+  min-height: 44px;
+  color: var(--v2-text-secondary);
+}
+
+.app-section--design-v2.workout-adaptation-dialog {
+  padding: max(var(--v2-space-4), var(--yfc-layout-safe-top, 0px))
+    max(var(--v2-space-4), var(--yfc-layout-safe-right, 0px))
+    max(var(--v2-space-4), var(--yfc-layout-safe-bottom, 0px))
+    max(var(--v2-space-4), var(--yfc-layout-safe-left, 0px));
+}
+
+.app-section--design-v2 .workout-adaptation-dialog__panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: min(760px, calc(100vw - 64px));
+  max-width: 760px;
+  max-height: min(calc(var(--yfc-viewport-stable-height, 100dvh) - 64px), calc(100dvh - 64px));
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-panel-radius);
+  background: var(--v2-surface);
+  color: var(--v2-text-primary);
+  box-shadow: var(--elevation-overlay);
+}
+
+.workout-adaptation-dialog__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--v2-space-4);
+  align-items: start;
+  padding: var(--v2-space-5) var(--v2-space-6);
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.workout-adaptation-dialog__header > div {
+  display: grid;
+  gap: var(--v2-space-2);
+  min-width: 0;
+}
+
+.workout-adaptation-dialog__header h2,
+.workout-adaptation-dialog__header p,
+.adaptation-preview h3,
+.adaptation-preview p,
+.adaptation-safety-note p,
+.adaptation-error p,
+.adaptation-section > p {
+  margin: 0;
+}
+
+.workout-adaptation-dialog__header h2 {
+  font-size: clamp(1.6rem, 3vw, 2rem);
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+}
+
+.workout-adaptation-dialog__header p,
+.adaptation-section > p,
+.adaptation-choice small {
+  color: var(--v2-text-secondary);
+}
+
+.workout-adaptation-dialog__close {
+  flex: 0 0 44px;
+}
+
+.workout-adaptation-dialog__body {
+  display: grid;
+  gap: var(--v2-space-6);
+  min-height: 0;
+  padding: var(--v2-space-6);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.adaptation-section {
+  display: grid;
+  gap: var(--v2-space-3);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.adaptation-section > legend {
+  margin: 0 0 var(--v2-space-2);
+  padding: 0;
+  font-size: 1.125rem;
+  font-weight: 750;
+  line-height: 1.2;
+}
+
+.adaptation-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--v2-space-3);
+}
+
+.adaptation-choice-grid .adaptation-choice:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+.adaptation-choice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--v2-space-3);
+  align-items: start;
+  min-height: 68px;
+  padding: var(--v2-space-3);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface-secondary);
+  cursor: pointer;
+}
+
+.adaptation-choice.is-selected {
+  border-color: var(--v2-lime);
+  background: var(--v2-surface);
+  box-shadow: inset 3px 0 0 var(--v2-lime);
+}
+
+.adaptation-choice input,
+.adaptation-equipment__grid input {
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: var(--v2-lime);
+}
+
+.adaptation-choice > span {
+  display: grid;
+  gap: var(--v2-space-1);
+  min-width: 0;
+}
+
+.adaptation-choice strong,
+.adaptation-choice small {
+  overflow-wrap: anywhere;
+}
+
+.adaptation-choice small {
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.adaptation-time__presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--v2-space-2);
+}
+
+.app-section--design-v2 .adaptation-time__presets .ui-button[aria-pressed='true'] {
+  border-color: var(--v2-lime);
+  background: var(--v2-surface-secondary);
+  color: var(--v2-text-primary);
+  box-shadow: inset 0 -3px 0 var(--v2-lime);
+}
+
+.adaptation-time .ui-field {
+  max-width: 180px;
+}
+
+.adaptation-equipment__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--v2-space-2);
+}
+
+.adaptation-equipment__grid label {
+  display: flex;
+  gap: var(--v2-space-2);
+  align-items: center;
+  min-width: 0;
+  min-height: 44px;
+  padding: var(--v2-space-2) var(--v2-space-3);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface-secondary);
+  cursor: pointer;
+}
+
+.adaptation-equipment__grid label.is-selected {
+  border-color: var(--v2-lime);
+  background: var(--v2-surface);
+  box-shadow: inset 0 -3px 0 var(--v2-lime);
+}
+
+.adaptation-equipment__grid span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.adaptation-alternatives__list {
+  display: grid;
+  gap: var(--v2-space-2);
+}
+
+.adaptation-inline-status,
+.adaptation-inline-error,
+.adaptation-safety-note,
+.adaptation-error {
+  margin: 0;
+  padding: var(--v2-space-4);
+  border-left: 3px solid var(--v2-border);
+  background: var(--v2-surface-secondary);
+}
+
+.adaptation-inline-error,
+.adaptation-error {
+  display: grid;
+  gap: var(--v2-space-2);
+  border-left-color: var(--v2-danger);
+  background: var(--v2-danger-surface);
+  color: var(--v2-danger);
+}
+
+.adaptation-inline-error .ui-button {
+  justify-self: start;
+}
+
+.adaptation-safety-note {
+  display: grid;
+  gap: var(--v2-space-2);
+  border-left-color: var(--v2-danger);
+  background: var(--v2-danger-surface);
+}
+
+.adaptation-safety-note p,
+.adaptation-error p {
+  color: inherit;
+}
+
+.adaptation-preview {
+  display: grid;
+  gap: var(--v2-space-4);
+  padding: var(--v2-space-5) 0 0;
+  border-top: 1px solid var(--v2-border);
+  background: transparent;
+}
+
+.adaptation-preview header {
+  display: grid;
+  gap: var(--v2-space-2);
+}
+
+.adaptation-preview h3 {
+  font-size: 1.375rem;
+  line-height: 1.15;
+}
+
+.adaptation-preview .adaptation-preview__reason {
+  color: var(--v2-text-secondary);
+  font-size: 0.8rem;
+}
+
+.adaptation-preview__reason strong {
+  color: var(--v2-text-primary);
+}
+
+.adaptation-preview.is-safety_stop {
+  padding: var(--v2-space-4);
+  border: 0;
+  border-left: 3px solid var(--v2-danger);
+  background: var(--v2-danger-surface);
+}
+
+.adaptation-diff {
+  border-top: 1px solid var(--v2-border);
+}
+
+.adaptation-diff__row {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: var(--v2-space-4);
+  align-items: center;
+  padding: var(--v2-space-3) 0;
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.adaptation-diff__row > span:first-child {
+  color: var(--v2-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.adaptation-diff__values {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: var(--v2-space-3);
+  align-items: center;
+  min-width: 0;
+}
+
+.adaptation-diff__values > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.adaptation-diff__values > span:nth-child(2) {
+  color: var(--v2-text-secondary);
+}
+
+.adaptation-diff__values strong {
+  color: var(--v2-text-primary);
+}
+
+.adaptation-warning {
+  margin: 0;
+  padding: var(--v2-space-3);
+  border-left: 3px solid var(--v2-warning);
+  background: var(--v2-warning-surface);
+  color: var(--v2-warning);
+}
+
+.workout-adaptation-dialog__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--v2-space-2);
+  justify-content: flex-end;
+  padding: var(--v2-space-4) var(--v2-space-6);
+  border-top: 1px solid var(--v2-border);
+  background: var(--v2-surface);
+}
+
+.workout-adaptation-dialog__footer .ui-button {
+  min-height: 44px;
+}
+
 .active-workout--design-v2 {
   gap: var(--v2-space-4);
   padding: var(--v2-space-5);
@@ -1465,6 +1811,82 @@ body.public-shell-mode.public-shell-mode:has(.auth-public-shell--design-v2) {
 
   .active-workout--design-v2 .active-workout-hero__copy h2 {
     font-size: 1.5rem;
+  }
+
+  .app-section--design-v2.workout-adaptation-dialog {
+    align-items: flex-end;
+    padding: max(var(--v2-space-2), var(--yfc-layout-safe-top, 0px)) 0 0;
+  }
+
+  .app-section--design-v2 .workout-adaptation-dialog__panel {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: min(
+      calc(
+        var(--yfc-viewport-stable-height, 100dvh) -
+          max(var(--v2-space-2), var(--yfc-layout-safe-top, 0px))
+      ),
+      calc(100dvh - max(var(--v2-space-2), var(--yfc-layout-safe-top, 0px)))
+    );
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: var(--v2-panel-radius) var(--v2-panel-radius) 0 0;
+  }
+
+  .workout-adaptation-dialog__header {
+    gap: var(--v2-space-3);
+    padding: var(--v2-space-4);
+  }
+
+  .workout-adaptation-dialog__header h2 {
+    font-size: 1.5rem;
+  }
+
+  .workout-adaptation-dialog__body {
+    gap: var(--v2-space-5);
+    padding: var(--v2-space-5) var(--v2-space-4);
+  }
+
+  .adaptation-choice-grid,
+  .adaptation-equipment__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .adaptation-choice-grid .adaptation-choice:last-child:nth-child(odd) {
+    grid-column: auto;
+  }
+
+  .adaptation-choice {
+    min-height: 64px;
+  }
+
+  .adaptation-time .ui-field {
+    max-width: none;
+  }
+
+  .adaptation-diff__row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--v2-space-2);
+  }
+
+  .adaptation-diff__values {
+    gap: var(--v2-space-2);
+  }
+
+  .workout-adaptation-dialog__footer {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: var(--v2-space-3) var(--v2-space-4)
+      calc(var(--v2-space-3) + var(--yfc-layout-safe-bottom, 0px));
+  }
+
+  .workout-adaptation-dialog__footer .ui-button {
+    width: 100%;
+  }
+
+  .workout-adaptation-dialog__footer .ui-button:not(.ui-button--secondary, .ui-button--ghost) {
+    grid-column: 1 / -1;
   }
 
   .active-workout--design-v2 .active-workout-exercise {

@@ -17,6 +17,7 @@ import {
   loadActiveWorkoutQueue,
   loadCurrentActiveWorkoutSnapshot,
 } from '../workouts/activeWorkoutQueue';
+import { WorkoutAdaptation } from '../workouts/WorkoutAdaptation';
 import { TodayWorkout } from '../workouts/TodayWorkout';
 import { Badge, Button, Skeleton } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
@@ -451,6 +452,7 @@ function WorkoutOverview({
               Посмотреть упражнения
             </Button>
           ) : null}
+          {!started && <WorkoutAdaptation workout={workout} entryContext="today" />}
         </div>
       </>
     );

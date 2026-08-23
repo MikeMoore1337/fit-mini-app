@@ -689,10 +689,6 @@ export function TodayWorkout({
           )}
         </header>
 
-        {(data.status === 'planned' || started) && (
-          <WorkoutAdaptation workout={data} safetyOnly={started} />
-        )}
-
         {data.status === 'planned' && (
           <Button
             fullWidth
@@ -703,6 +699,10 @@ export function TodayWorkout({
           >
             Начать тренировку
           </Button>
+        )}
+
+        {(data.status === 'planned' || started) && (
+          <WorkoutAdaptation workout={data} safetyOnly={started} />
         )}
 
         <div className="active-workout-exercises">

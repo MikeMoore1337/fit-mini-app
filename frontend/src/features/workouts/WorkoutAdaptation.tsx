@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api } from '../../shared/api/client';
+import { api, ApiError } from '../../shared/api/client';
 import type {
   Workout,
   WorkoutAdaptationApply,
@@ -9,17 +10,47 @@ import type {
   WorkoutAlternative,
 } from '../../shared/api/types';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
+import { useTelegramOverlayBackButton } from '../../shared/telegram/useTelegramOverlayBackButton';
+import { Button, CloseIcon, Field, IconButton, Input, Select } from '../../shared/ui/common';
+import { useModalA11y } from '../../shared/ui/useModalA11y';
 
 type AdaptationReason = WorkoutAdaptationRequest['reason'];
 type EquipmentId = NonNullable<WorkoutAdaptationRequest['available_equipment_ids']>[number];
+type ErrorKind = 'validation' | 'preview' | 'apply' | 'conflict';
 
-const reasons: ReadonlyArray<{ value: AdaptationReason; label: string }> = [
-  { value: 'limited_time', label: 'Мало времени' },
-  { value: 'unavailable_equipment', label: 'Оборудование недоступно' },
-  { value: 'replace_exercise', label: 'Хочу заменить упражнение' },
-  { value: 'different_environment', label: 'Тренируюсь в другом месте' },
-  { value: 'pain_or_injury', label: 'Есть боль или травма' },
+const reasons: ReadonlyArray<{
+  value: AdaptationReason;
+  label: string;
+  description: string;
+}> = [
+  {
+    value: 'limited_time',
+    label: 'Мало времени',
+    description: 'Сохраним главное и уберём менее приоритетные упражнения.',
+  },
+  {
+    value: 'unavailable_equipment',
+    label: 'Нет оборудования',
+    description: 'Подберём проверенную замену для одного упражнения.',
+  },
+  {
+    value: 'replace_exercise',
+    label: 'Заменить упражнение',
+    description: 'Вы выберете замену из проверенного каталога.',
+  },
+  {
+    value: 'different_environment',
+    label: 'Другое место',
+    description: 'Проверим всю тренировку по доступному оборудованию.',
+  },
+  {
+    value: 'pain_or_injury',
+    label: 'Боль или травма',
+    description: 'Без медицинских рекомендаций и автоматической замены.',
+  },
 ];
+
+const timePresets = [20, 30, 45] as const;
 
 const equipment: ReadonlyArray<{ value: EquipmentId; label: string }> = [
   { value: 'bodyweight', label: 'Собственный вес' },
@@ -43,15 +74,26 @@ function alternativesPath(
   return `/api/v1/workouts/${workoutId}/exercises/${workoutExerciseId}/alternatives?${params}`;
 }
 
+function errorTitle(kind: ErrorKind): string {
+  if (kind === 'conflict') return 'Тренировка уже изменилась';
+  if (kind === 'apply') return 'Не удалось применить изменения';
+  if (kind === 'preview') return 'Не удалось подготовить изменения';
+  return 'Проверьте выбранные условия';
+}
+
 export function WorkoutAdaptation({
   workout,
   safetyOnly = false,
+  entryContext = 'workout',
 }: {
   workout: Workout;
   safetyOnly?: boolean;
+  entryContext?: 'today' | 'workout';
 }) {
   const queryClient = useQueryClient();
-  const { confirm, toast } = useFeedback();
+  const { toast } = useFeedback();
+  const titleId = useId();
+  const descriptionId = useId();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<AdaptationReason>('limited_time');
   const [timeBudget, setTimeBudget] = useState('30');
@@ -59,11 +101,15 @@ export function WorkoutAdaptation({
   const [replacementId, setReplacementId] = useState('');
   const [equipmentIds, setEquipmentIds] = useState<EquipmentId[]>([]);
   const [preview, setPreview] = useState<WorkoutAdaptationPreview | null>(null);
-  const [validationError, setValidationError] = useState('');
+  const [error, setError] = useState<{ kind: ErrorKind; message: string } | null>(null);
   const activeReason: AdaptationReason = safetyOnly ? 'pain_or_injury' : reason;
   const availableReasons = safetyOnly
     ? reasons.filter((item) => item.value === 'pain_or_injury')
     : reasons;
+  const selectedReason = reasons.find((item) => item.value === activeReason)!;
+  const close = () => setOpen(false);
+  useTelegramOverlayBackButton(open, close);
+  const panelRef = useModalA11y<HTMLDivElement>(open, close, '.workout-adaptation-dialog__close');
 
   const needsEquipment = [
     'unavailable_equipment',
@@ -85,32 +131,45 @@ export function WorkoutAdaptation({
 
   const resetPreview = () => {
     setPreview(null);
-    setValidationError('');
+    setError(null);
+  };
+
+  const resetDraft = () => {
+    setReason('limited_time');
+    setTimeBudget('30');
+    setTargetId('');
+    setReplacementId('');
+    setEquipmentIds([]);
+    setPreview(null);
+    setError(null);
   };
 
   const buildRequest = (): WorkoutAdaptationRequest | null => {
     if (activeReason === 'limited_time') {
       const minutes = Number(timeBudget);
       if (!Number.isInteger(minutes) || minutes < 10 || minutes > 240) {
-        setValidationError('Укажите от 10 до 240 минут.');
+        setError({ kind: 'validation', message: 'Укажите от 10 до 240 минут.' });
         return null;
       }
       return { reason: activeReason, time_budget_minutes: minutes };
     }
     if (activeReason === 'pain_or_injury') return { reason: activeReason };
     if (needsEquipment && equipmentIds.length === 0) {
-      setValidationError('Отметьте всё оборудование, которое сейчас доступно.');
+      setError({
+        kind: 'validation',
+        message: 'Отметьте всё оборудование, которое сейчас доступно.',
+      });
       return null;
     }
     if (activeReason === 'different_environment') {
       return { reason: activeReason, available_equipment_ids: equipmentIds };
     }
     if (!targetId) {
-      setValidationError('Выберите упражнение.');
+      setError({ kind: 'validation', message: 'Выберите упражнение.' });
       return null;
     }
     if (activeReason === 'replace_exercise' && !replacementId) {
-      setValidationError('Выберите проверенную замену.');
+      setError({ kind: 'validation', message: 'Выберите проверенную замену.' });
       return null;
     }
     return {
@@ -128,8 +187,11 @@ export function WorkoutAdaptation({
         method: 'POST',
         body: request,
       }),
-    onSuccess: (result) => setPreview(result),
-    onError: (reason) => setValidationError((reason as Error).message),
+    onSuccess: (result) => {
+      setPreview(result);
+      setError(null);
+    },
+    onError: (reason) => setError({ kind: 'preview', message: (reason as Error).message }),
   });
   const applyMutation = useMutation({
     mutationFn: ({ request, token }: { request: WorkoutAdaptationRequest; token: string }) =>
@@ -141,228 +203,386 @@ export function WorkoutAdaptation({
       await queryClient.invalidateQueries({ queryKey: ['workout'] });
       toast('Изменения применены только к сегодняшней тренировке');
       setOpen(false);
-      setPreview(null);
+      resetDraft();
     },
-    onError: (reason) => setValidationError((reason as Error).message),
+    onError: (reason) => {
+      const conflict = reason instanceof ApiError && reason.status === 409;
+      if (conflict) setPreview(null);
+      setError({
+        kind: conflict ? 'conflict' : 'apply',
+        message: conflict
+          ? 'Состав тренировки изменился после предпросмотра. Ваш выбор сохранён — обновите изменения перед применением.'
+          : (reason as Error).message,
+      });
+    },
   });
 
-  if (!open) {
-    return (
-      <button type="button" className="secondary" onClick={() => setOpen(true)}>
-        {safetyOnly ? 'Боль или травма во время тренировки' : 'Адаптировать тренировку'}
-      </button>
-    );
-  }
+  const requestPreview = () => {
+    const request = buildRequest();
+    if (!request) return;
+    setError(null);
+    previewMutation.mutate(request);
+  };
+
+  const entryLabel = safetyOnly ? 'Боль или травма во время тренировки' : 'Адаптировать тренировку';
 
   return (
-    <section className="workout-adaptation stack" aria-labelledby="adaptation-title">
-      <div>
-        <h3 id="adaptation-title">Адаптировать только эту тренировку</h3>
-        <p className="muted">
-          Сначала покажем изменения. Будущие тренировки и программа не изменятся.
-        </p>
-      </div>
-      <label className="field">
-        <span>Почему нужно изменить тренировку?</span>
-        <select
-          value={activeReason}
-          onChange={(event) => {
-            setReason(event.target.value as AdaptationReason);
-            setTargetId('');
-            setReplacementId('');
-            resetPreview();
-          }}
-        >
-          {availableReasons.map((item) => (
-            <option value={item.value} key={item.value}>
-              {item.label}
-            </option>
-          ))}
-        </select>
-      </label>
+    <div
+      className={`workout-adaptation-entry workout-adaptation-entry--${entryContext}`}
+      data-testid="workout-adaptation-entry"
+    >
+      <Button
+        fullWidth={entryContext === 'today'}
+        type="button"
+        variant={entryContext === 'today' ? 'ghost' : 'secondary'}
+        onClick={() => setOpen(true)}
+      >
+        {entryLabel}
+      </Button>
 
-      {activeReason === 'limited_time' && (
-        <label className="field">
-          <span>Сколько минут есть на тренировку?</span>
-          <input
-            type="number"
-            min={10}
-            max={240}
-            value={timeBudget}
-            onChange={(event) => {
-              setTimeBudget(event.target.value);
-              resetPreview();
-            }}
-          />
-        </label>
-      )}
-
-      {(activeReason === 'unavailable_equipment' || activeReason === 'replace_exercise') && (
-        <label className="field">
-          <span>Какое упражнение изменить?</span>
-          <select
-            value={targetId}
-            onChange={(event) => {
-              setTargetId(event.target.value);
-              setReplacementId('');
-              resetPreview();
-            }}
+      {open &&
+        createPortal(
+          <div
+            className="modal app-section--design-v2 workout-adaptation-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            aria-describedby={descriptionId}
           >
-            <option value="">Выберите упражнение</option>
-            {workout.exercises.map((item) => (
-              <option value={item.id} key={item.id}>
-                {item.exercise_title}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
+            <button
+              className="modal__backdrop"
+              type="button"
+              aria-label="Закрыть адаптацию тренировки"
+              onClick={close}
+            />
+            <div
+              className="modal__panel workout-adaptation-dialog__panel"
+              ref={panelRef}
+              tabIndex={-1}
+            >
+              <header className="workout-adaptation-dialog__header">
+                <div>
+                  <span className="eyebrow">Только сегодняшняя тренировка</span>
+                  <h2 id={titleId}>Подстроить тренировку</h2>
+                  <p id={descriptionId}>
+                    Сначала покажем точные изменения. Программа и будущие тренировки не изменятся.
+                  </p>
+                </div>
+                <IconButton
+                  className="workout-adaptation-dialog__close"
+                  type="button"
+                  aria-label="Закрыть адаптацию тренировки"
+                  onClick={close}
+                >
+                  <CloseIcon />
+                </IconButton>
+              </header>
 
-      {needsEquipment && (
-        <fieldset className="adaptation-equipment">
-          <legend>Что доступно сейчас?</legend>
-          <p className="muted">Отметьте всё подходящее оборудование.</p>
-          <div className="adaptation-equipment__grid">
-            {equipment.map((item) => (
-              <label key={item.value}>
-                <input
-                  type="checkbox"
-                  checked={equipmentIds.includes(item.value)}
-                  onChange={(event) => {
-                    setEquipmentIds((current) =>
-                      event.target.checked
-                        ? [...current, item.value]
-                        : current.filter((value) => value !== item.value),
-                    );
-                    setReplacementId('');
-                    resetPreview();
-                  }}
-                />
-                <span>{item.label}</span>
-              </label>
-            ))}
-          </div>
-        </fieldset>
-      )}
+              <div className="workout-adaptation-dialog__body">
+                {!safetyOnly && (
+                  <fieldset className="adaptation-section adaptation-reasons">
+                    <legend>Что изменилось сегодня?</legend>
+                    <div className="adaptation-choice-grid">
+                      {availableReasons.map((item) => (
+                        <label
+                          className={`adaptation-choice ${activeReason === item.value ? 'is-selected' : ''}`}
+                          key={item.value}
+                        >
+                          <input
+                            type="radio"
+                            name={`${titleId}-reason`}
+                            value={item.value}
+                            checked={activeReason === item.value}
+                            onChange={() => {
+                              setReason(item.value);
+                              resetPreview();
+                            }}
+                          />
+                          <span>
+                            <strong>{item.label}</strong>
+                            <small>{item.description}</small>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                )}
 
-      {activeReason === 'replace_exercise' && targetId && equipmentIds.length > 0 && (
-        <label className="field">
-          <span>Проверенная замена для «{selectedTarget?.exercise_title}»</span>
-          <select
-            value={replacementId}
-            disabled={alternatives.isLoading || alternatives.isError}
-            onChange={(event) => {
-              setReplacementId(event.target.value);
-              resetPreview();
-            }}
-          >
-            <option value="">{alternatives.isLoading ? 'Ищем…' : 'Выберите замену'}</option>
-            {(alternatives.data ?? []).map((item) => (
-              <option value={item.exercise_id} key={item.exercise_id}>
-                {item.title}
-              </option>
-            ))}
-          </select>
-          {!alternatives.isLoading && alternatives.data?.length === 0 && (
-            <small className="field-error">
-              Для выбранного оборудования нет проверенной замены.
-            </small>
-          )}
-          {alternatives.isError && (
-            <small className="field-error">{(alternatives.error as Error).message}</small>
-          )}
-        </label>
-      )}
+                {activeReason === 'limited_time' && (
+                  <fieldset className="adaptation-section adaptation-time">
+                    <legend>Сколько времени есть?</legend>
+                    <p>Быстрый выбор или точное значение от 10 до 240 минут.</p>
+                    <div className="adaptation-time__presets" aria-label="Бюджет времени">
+                      {timePresets.map((minutes) => (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          aria-pressed={timeBudget === String(minutes)}
+                          key={minutes}
+                          onClick={() => {
+                            setTimeBudget(String(minutes));
+                            resetPreview();
+                          }}
+                        >
+                          {minutes} мин
+                        </Button>
+                      ))}
+                    </div>
+                    <Field
+                      label="Свои минуты"
+                      labelFor={`${titleId}-time-budget`}
+                      hint="Минимум 10, максимум 240 минут."
+                    >
+                      <Input
+                        id={`${titleId}-time-budget`}
+                        type="number"
+                        inputMode="numeric"
+                        min={10}
+                        max={240}
+                        value={timeBudget}
+                        onChange={(event) => {
+                          setTimeBudget(event.target.value);
+                          resetPreview();
+                        }}
+                      />
+                    </Field>
+                  </fieldset>
+                )}
 
-      {activeReason === 'pain_or_injury' && (
-        <p className="adaptation-safety-note">
-          Приложение не будет подбирать медицинскую замену. Покажем безопасную границу сценария.
-        </p>
-      )}
+                {(activeReason === 'unavailable_equipment' ||
+                  activeReason === 'replace_exercise') && (
+                  <div className="adaptation-section">
+                    <Field label="Какое упражнение изменить?" labelFor={`${titleId}-target`}>
+                      <Select
+                        id={`${titleId}-target`}
+                        value={targetId}
+                        onChange={(event) => {
+                          setTargetId(event.target.value);
+                          setReplacementId('');
+                          resetPreview();
+                        }}
+                      >
+                        <option value="">Выберите упражнение</option>
+                        {workout.exercises.map((item) => (
+                          <option value={item.id} key={item.id}>
+                            {item.exercise_title}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+                  </div>
+                )}
 
-      {validationError && (
-        <p className="field-error" role="alert">
-          {validationError}
-        </p>
-      )}
+                {needsEquipment && (
+                  <fieldset className="adaptation-section adaptation-equipment">
+                    <legend>Что доступно сейчас?</legend>
+                    <p>Отметьте всё подходящее оборудование.</p>
+                    <div className="adaptation-equipment__grid">
+                      {equipment.map((item) => (
+                        <label
+                          className={equipmentIds.includes(item.value) ? 'is-selected' : ''}
+                          key={item.value}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={equipmentIds.includes(item.value)}
+                            onChange={(event) => {
+                              setEquipmentIds((current) =>
+                                event.target.checked
+                                  ? [...current, item.value]
+                                  : current.filter((value) => value !== item.value),
+                              );
+                              setReplacementId('');
+                              resetPreview();
+                            }}
+                          />
+                          <span>{item.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                )}
 
-      {preview && (
-        <div className="adaptation-preview stack" aria-live="polite">
-          <strong>
-            {preview.status === 'safety_stop' ? 'Безопасность прежде всего' : 'Предпросмотр'}
-          </strong>
-          <p>{preview.message}</p>
-          {preview.status !== 'safety_stop' && (
-            <p className="muted">
-              Расчётное время: {preview.original_estimated_minutes} →{' '}
-              {preview.adapted_estimated_minutes} мин.
-            </p>
-          )}
-          {preview.changes.length > 0 && (
-            <ul>
-              {preview.changes.map((change) => (
-                <li key={`${change.kind}-${change.workout_exercise_id}`}>
-                  {change.kind === 'removed'
-                    ? `Убрать «${change.from_title}»`
-                    : `«${change.from_title}» → «${change.to_title}»`}
-                </li>
-              ))}
-            </ul>
-          )}
-          {preview.warnings.map((warning) => (
-            <p className="adaptation-warning" key={warning}>
-              {warning}
-            </p>
-          ))}
-        </div>
-      )}
+                {activeReason === 'replace_exercise' && targetId && equipmentIds.length > 0 && (
+                  <fieldset className="adaptation-section adaptation-alternatives">
+                    <legend>Проверенная замена для «{selectedTarget?.exercise_title}»</legend>
+                    <p>Совместимость задана в каталоге, а не только совпадением основной мышцы.</p>
+                    {alternatives.isLoading ? (
+                      <p className="adaptation-inline-status" role="status">
+                        Ищем подходящие варианты…
+                      </p>
+                    ) : alternatives.isError ? (
+                      <div className="adaptation-inline-error" role="alert">
+                        <span>{(alternatives.error as Error).message}</span>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => void alternatives.refetch()}
+                        >
+                          Повторить
+                        </Button>
+                      </div>
+                    ) : alternatives.data?.length ? (
+                      <div className="adaptation-alternatives__list">
+                        {alternatives.data.map((item) => (
+                          <label
+                            className={`adaptation-choice ${replacementId === String(item.exercise_id) ? 'is-selected' : ''}`}
+                            key={item.exercise_id}
+                          >
+                            <input
+                              type="radio"
+                              name={`${titleId}-alternative`}
+                              value={item.exercise_id}
+                              checked={replacementId === String(item.exercise_id)}
+                              onChange={(event) => {
+                                setReplacementId(event.target.value);
+                                resetPreview();
+                              }}
+                            />
+                            <span>
+                              <strong>{item.title}</strong>
+                              <small>
+                                {item.equipment_ids
+                                  .map(
+                                    (id) =>
+                                      equipment.find((entry) => entry.value === id)?.label ?? id,
+                                  )
+                                  .join(' · ')}
+                              </small>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="adaptation-inline-status">
+                        Для выбранного оборудования нет проверенной замены. Измените условия или
+                        оставьте упражнение без изменений.
+                      </p>
+                    )}
+                  </fieldset>
+                )}
 
-      <div className="toolbar wrap">
-        <button
-          type="button"
-          className="secondary"
-          disabled={previewMutation.isPending || applyMutation.isPending}
-          onClick={() => {
-            const request = buildRequest();
-            if (!request) return;
-            setValidationError('');
-            previewMutation.mutate(request);
-          }}
-        >
-          {previewMutation.isPending ? 'Считаем…' : 'Показать изменения'}
-        </button>
-        {preview?.status === 'preview' && preview.preview_token && (
-          <button
-            type="button"
-            disabled={applyMutation.isPending}
-            onClick={async () => {
-              const request = buildRequest();
-              if (!request) return;
-              const accepted = await confirm({
-                title: 'Применить изменения?',
-                message: 'Изменится только сегодняшняя тренировка. Это действие попадёт в историю.',
-                confirmText: 'Применить',
-                danger: false,
-              });
-              if (accepted) applyMutation.mutate({ request, token: preview.preview_token! });
-            }}
-          >
-            {applyMutation.isPending ? 'Применяем…' : 'Подтвердить и применить'}
-          </button>
+                {activeReason === 'pain_or_injury' && (
+                  <div className="adaptation-safety-note">
+                    <strong>Не подбираем «лечебную» замену</strong>
+                    <p>
+                      При боли приложение покажет только безопасную границу сценария. Диагноз и
+                      упражнение для восстановления должен определять квалифицированный специалист.
+                    </p>
+                  </div>
+                )}
+
+                {error && (
+                  <div className="adaptation-error" role="alert">
+                    <strong>{errorTitle(error.kind)}</strong>
+                    <p>{error.message}</p>
+                  </div>
+                )}
+
+                {preview && (
+                  <section
+                    className={`adaptation-preview is-${preview.status}`}
+                    aria-labelledby={`${titleId}-preview`}
+                    aria-live="polite"
+                  >
+                    <header>
+                      <span className="eyebrow">Предпросмотр</span>
+                      <h3 id={`${titleId}-preview`}>
+                        {preview.status === 'safety_stop'
+                          ? 'Безопасность прежде всего'
+                          : preview.status === 'no_changes'
+                            ? 'План остаётся прежним'
+                            : 'Что изменится'}
+                      </h3>
+                      <p>{preview.message}</p>
+                      <p className="adaptation-preview__reason">
+                        Причина: <strong>{selectedReason.label}</strong>
+                      </p>
+                    </header>
+                    {preview.status !== 'safety_stop' && (
+                      <div
+                        className="adaptation-diff"
+                        role="list"
+                        aria-label="Сравнение тренировки"
+                      >
+                        <div className="adaptation-diff__row" role="listitem">
+                          <span>Расчётное время</span>
+                          <span className="adaptation-diff__values">
+                            <span>{preview.original_estimated_minutes} мин</span>
+                            <span aria-hidden="true">→</span>
+                            <strong>{preview.adapted_estimated_minutes} мин</strong>
+                          </span>
+                        </div>
+                        {preview.changes.map((change) => (
+                          <div
+                            className="adaptation-diff__row adaptation-diff__row--exercise"
+                            role="listitem"
+                            key={`${change.kind}-${change.workout_exercise_id}`}
+                          >
+                            <span>Упражнение</span>
+                            <span className="adaptation-diff__values">
+                              <span>{change.from_title}</span>
+                              <span aria-hidden="true">→</span>
+                              <strong>
+                                {change.kind === 'removed' ? 'Убрать' : change.to_title}
+                              </strong>
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {preview.warnings.map((warning) => (
+                      <p className="adaptation-warning" key={warning}>
+                        {warning}
+                      </p>
+                    ))}
+                  </section>
+                )}
+              </div>
+
+              <footer className="workout-adaptation-dialog__footer">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={applyMutation.isPending}
+                  onClick={close}
+                >
+                  Отмена
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={previewMutation.isPending || applyMutation.isPending}
+                  aria-busy={previewMutation.isPending}
+                  onClick={requestPreview}
+                >
+                  {previewMutation.isPending
+                    ? 'Считаем…'
+                    : preview || error?.kind === 'conflict'
+                      ? 'Обновить изменения'
+                      : activeReason === 'pain_or_injury'
+                        ? 'Показать рекомендации'
+                        : 'Показать изменения'}
+                </Button>
+                {preview?.status === 'preview' && preview.preview_token && (
+                  <Button
+                    type="button"
+                    disabled={applyMutation.isPending}
+                    aria-busy={applyMutation.isPending}
+                    onClick={() => {
+                      const request = buildRequest();
+                      if (!request) return;
+                      applyMutation.mutate({ request, token: preview.preview_token! });
+                    }}
+                  >
+                    {applyMutation.isPending ? 'Применяем…' : 'Применить'}
+                  </Button>
+                )}
+              </footer>
+            </div>
+          </div>,
+          document.body,
         )}
-        <button
-          type="button"
-          className="secondary"
-          disabled={applyMutation.isPending}
-          onClick={() => {
-            setOpen(false);
-            setPreview(null);
-            setValidationError('');
-          }}
-        >
-          Отмена
-        </button>
-      </div>
-    </section>
+    </div>
   );
 }

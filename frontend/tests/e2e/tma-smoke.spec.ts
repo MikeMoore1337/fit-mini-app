@@ -216,6 +216,161 @@ test('weekly review focus exposes a predictable TMA BackButton return path', asy
   await expect.poll(async () => (await tma.state()).backButton.visible).toBe(false);
 });
 
+test('workout adaptation keeps preview, cancel, apply and conflict recovery in Mobile Web/TMA parity', async ({
+  mobilePage,
+  tma,
+  tmaPage,
+}) => {
+  const mobileApi = await installPlatformApi(mobilePage, {
+    browserSession: true,
+    workoutStatus: 'planned',
+  });
+  const tmaApi = await installPlatformApi(tmaPage, { workoutStatus: 'planned' });
+  await Promise.all([mobilePage.goto('/app'), tmaPage.goto('/app')]);
+
+  await expect(mobilePage.getByRole('dialog', { name: 'Подстроить тренировку' })).toHaveCount(0);
+  await expect(tmaPage.getByRole('dialog', { name: 'Подстроить тренировку' })).toHaveCount(0);
+  expect(mobileApi.adaptationApplyCalls()).toBe(0);
+  expect(tmaApi.adaptationApplyCalls()).toBe(0);
+  await expect(mobilePage.getByRole('button', { name: 'Адаптировать тренировку' })).toBeVisible();
+  await expect(tmaPage.getByRole('button', { name: 'Адаптировать тренировку' })).toBeVisible();
+
+  await mobilePage.setViewportSize({ width: 1440, height: 900 });
+  await mobilePage.screenshot({
+    path: '../.artifacts/screenshots/task-58/desktop-1440-light-entry.png',
+    fullPage: true,
+  });
+  await mobilePage.setViewportSize(MOBILE_CONTEXTS.baseline);
+
+  for (const page of [mobilePage, tmaPage]) {
+    await page.getByRole('button', { name: 'Адаптировать тренировку' }).click();
+    await page.getByRole('button', { name: '20 мин' }).click();
+    await page.getByRole('button', { name: 'Показать изменения' }).click();
+    await expect(page.getByRole('heading', { name: 'Что изменится' })).toBeVisible();
+    await expect(page.getByRole('list', { name: 'Сравнение тренировки' })).toContainText('56 мин');
+    await expect(page.getByRole('list', { name: 'Сравнение тренировки' })).toContainText('20 мин');
+  }
+
+  const tmaRouteWithDraft = tmaPage.url();
+  await expect.poll(async () => (await tma.state()).backButton.visible).toBe(true);
+  await tma.clickBack();
+  await expect(tmaPage.getByRole('dialog', { name: 'Подстроить тренировку' })).toHaveCount(0);
+  expect(tmaPage.url()).toBe(tmaRouteWithDraft);
+  await expect.poll(async () => (await tma.state()).backButton.visible).toBe(false);
+  await tmaPage.getByRole('button', { name: 'Адаптировать тренировку' }).click();
+  await expect(tmaPage.getByRole('button', { name: '20 мин' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(tmaPage.getByRole('button', { name: 'Применить' })).toBeVisible();
+  await expect.poll(async () => (await tma.state()).backButton.visible).toBe(true);
+
+  const dialogCopy = async (page: typeof mobilePage) =>
+    page
+      .getByRole('dialog', { name: 'Подстроить тренировку' })
+      .locator('h2, h3, legend, .adaptation-diff__row')
+      .allTextContents();
+  expect(await dialogCopy(tmaPage)).toEqual(await dialogCopy(mobilePage));
+
+  for (const viewport of [
+    { width: 360, height: 800 },
+    { width: 390, height: 844 },
+    { width: 430, height: 932 },
+    { width: 768, height: 900 },
+    { width: 1440, height: 900 },
+  ]) {
+    await mobilePage.setViewportSize(viewport);
+    await expect.poll(() => mobilePage.evaluate(() => window.innerHeight)).toBe(viewport.height);
+    await expectNoHorizontalOverflow(mobilePage);
+    const panel = mobilePage.locator('.workout-adaptation-dialog__panel');
+    const box = await panel.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.y, `${viewport.width}x${viewport.height}`).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width + 1);
+    expect(box!.y + box!.height).toBeLessThanOrEqual(viewport.height + 1);
+    await expectTouchTargets(mobilePage.locator('.workout-adaptation-dialog button:visible'));
+  }
+
+  const apply = mobilePage.getByRole('button', { name: 'Применить' });
+  await expect(mobilePage.locator('.workout-adaptation-dialog__panel')).toHaveCSS(
+    'border-radius',
+    '20px',
+  );
+  await expect(apply).toHaveCSS('background-color', 'rgb(158, 224, 43)');
+  await expect(apply).toHaveCSS('border-radius', '12px');
+  await expect(mobilePage.getByRole('button', { name: '20 мин' })).toHaveCSS(
+    'border-top-color',
+    'rgb(158, 224, 43)',
+  );
+  await mobilePage.locator('.adaptation-preview').scrollIntoViewIfNeeded();
+  await mobilePage.screenshot({
+    path: '../.artifacts/screenshots/task-58/desktop-1440-light-preview.png',
+  });
+
+  await mobilePage.getByRole('button', { name: 'Отмена' }).click();
+  await expect(mobilePage.getByRole('dialog', { name: 'Подстроить тренировку' })).toHaveCount(0);
+  expect(mobileApi.adaptationApplyCalls()).toBe(0);
+  await mobilePage.getByRole('button', { name: 'Адаптировать тренировку' }).click();
+  await expect(mobilePage.getByRole('button', { name: '20 мин' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(mobilePage.getByRole('button', { name: 'Применить' })).toBeVisible();
+  await mobilePage.setViewportSize(MOBILE_CONTEXTS.compact);
+  await mobilePage.locator('.adaptation-preview').scrollIntoViewIfNeeded();
+  await mobilePage.screenshot({
+    path: '../.artifacts/screenshots/task-58/mobile-360-light-restored-preview.png',
+  });
+
+  await tma.setTheme('dark');
+  await tma.setActive(false);
+  await tma.setActive(true);
+  await expect(tmaPage.getByRole('dialog', { name: 'Подстроить тренировку' })).toBeVisible();
+  await expect(tmaPage.getByRole('button', { name: '20 мин' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await tmaPage.locator('.adaptation-preview').scrollIntoViewIfNeeded();
+  await tmaPage.screenshot({
+    path: '../.artifacts/screenshots/task-58/tma-390-dark-preview.png',
+  });
+  await tmaPage.getByRole('button', { name: 'Применить' }).click();
+  await expect(
+    tmaPage.getByText('Изменения применены только к сегодняшней тренировке'),
+  ).toBeVisible();
+  expect(tmaApi.adaptationApplyCalls()).toBe(1);
+  await tmaPage.screenshot({
+    path: '../.artifacts/screenshots/task-58/tma-390-dark-applied.png',
+    fullPage: true,
+  });
+
+  mobileApi.setAdaptationApplyMode('conflict');
+  await mobilePage.getByRole('button', { name: 'Применить' }).click();
+  await expect(mobilePage.getByText('Тренировка уже изменилась')).toBeVisible();
+  await expect(mobilePage.getByText(/Ваш выбор сохранён/)).toBeVisible();
+  await expect(mobilePage.getByRole('button', { name: '20 мин' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(mobilePage.getByRole('button', { name: 'Обновить изменения' })).toBeVisible();
+  await mobilePage.setViewportSize(MOBILE_CONTEXTS.baseline);
+  await mobilePage.locator('.adaptation-error').scrollIntoViewIfNeeded();
+  await mobilePage.screenshot({
+    path: '../.artifacts/screenshots/task-58/mobile-390-light-conflict.png',
+  });
+
+  mobileApi.setAdaptationApplyMode('error');
+  await mobilePage.getByRole('button', { name: 'Обновить изменения' }).click();
+  await mobilePage.getByRole('button', { name: 'Применить' }).click();
+  await expect(mobilePage.getByText('Не удалось применить изменения')).toBeVisible();
+  await expect(mobilePage.getByRole('button', { name: '20 мин' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  expect(mobileApi.adaptationApplyCalls()).toBe(2);
+});
+
 test('unified weekly review keeps Mobile Web/TMA parity and distinct adaptive decisions', async ({
   browser,
   mobilePage,
@@ -245,8 +400,9 @@ test('unified weekly review keeps Mobile Web/TMA parity and distinct adaptive de
     await expect(page.getByRole('heading', { name: 'Короткие уточнения' })).toBeVisible();
     await page.getByRole('button', { name: 'Пропустить вопросы' }).click();
     await expect(page.getByText('Есть предложение')).toBeVisible();
-    await expect(page.getByText('2100 ккал', { exact: true })).toBeVisible();
-    await expect(page.getByText('2300 ккал', { exact: true })).toBeVisible();
+    const targetDecision = page.getByLabel('Решение по цели');
+    await expect(targetDecision.getByText('2100 ккал', { exact: true })).toBeVisible();
+    await expect(targetDecision.getByText('2300 ккал', { exact: true })).toBeVisible();
     await expectNoHorizontalOverflow(page);
   }
   expect(await sharedSurfaceSignature(tmaPage)).toEqual(await sharedSurfaceSignature(mobilePage));

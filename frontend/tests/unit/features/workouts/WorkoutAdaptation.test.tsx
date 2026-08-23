@@ -75,36 +75,45 @@ function renderAdaptation(safetyOnly = false) {
   );
 }
 
+async function openTimePreview(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: 'Адаптировать тренировку' }));
+  await user.click(screen.getByRole('button', { name: '20 мин' }));
+  await user.click(screen.getByRole('button', { name: 'Показать изменения' }));
+  await screen.findByRole('heading', { name: 'Что изменится' });
+}
+
 describe('WorkoutAdaptation', () => {
   afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
   });
 
-  it('показывает diff до применения и позволяет отменить без записи', async () => {
+  it('показывает плоский diff и сохраняет выбор после отмены sheet', async () => {
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValue(new Response(JSON.stringify(preview), { status: 200 }));
     const user = userEvent.setup();
     renderAdaptation();
 
-    await user.click(screen.getByRole('button', { name: 'Адаптировать тренировку' }));
-    await user.clear(screen.getByRole('spinbutton', { name: 'Сколько минут есть на тренировку?' }));
-    await user.type(
-      screen.getByRole('spinbutton', { name: 'Сколько минут есть на тренировку?' }),
-      '20',
-    );
-    await user.click(screen.getByRole('button', { name: 'Показать изменения' }));
+    await openTimePreview(user);
 
-    expect(await screen.findByText('Убрать «Разведение гантелей»')).toBeInTheDocument();
-    expect(screen.getByText('Расчётное время: 32 → 18 мин.')).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Сравнение тренировки' })).toHaveTextContent(
+      '32 мин→18 мин',
+    );
+    expect(screen.getByRole('list', { name: 'Сравнение тренировки' })).toHaveTextContent(
+      'Разведение гантелей→Убрать',
+    );
     expect(fetchMock).toHaveBeenCalledTimes(1);
+
     await user.click(screen.getByRole('button', { name: 'Отмена' }));
-    expect(screen.getByRole('button', { name: 'Адаптировать тренировку' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Подстроить тренировку' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Адаптировать тренировку' }));
+    expect(screen.getByRole('button', { name: '20 мин' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('heading', { name: 'Что изменится' })).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it('применяет только после отдельного подтверждения', async () => {
+  it('применяет только после preview и явного действия Применить', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const path = String(input);
       if (path.endsWith('/adaptations/preview')) {
@@ -121,17 +130,7 @@ describe('WorkoutAdaptation', () => {
     const user = userEvent.setup();
     renderAdaptation();
 
-    await user.click(screen.getByRole('button', { name: 'Адаптировать тренировку' }));
-    await user.clear(screen.getByRole('spinbutton', { name: 'Сколько минут есть на тренировку?' }));
-    await user.type(
-      screen.getByRole('spinbutton', { name: 'Сколько минут есть на тренировку?' }),
-      '20',
-    );
-    await user.click(screen.getByRole('button', { name: 'Показать изменения' }));
-    await screen.findByText('Убрать «Разведение гантелей»');
-    await user.click(screen.getByRole('button', { name: 'Подтвердить и применить' }));
-
-    expect(screen.getByRole('dialog', { name: 'Применить изменения?' })).toBeInTheDocument();
+    await openTimePreview(user);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     await user.click(screen.getByRole('button', { name: 'Применить' }));
 
@@ -139,9 +138,55 @@ describe('WorkoutAdaptation', () => {
     const applyCall = fetchMock.mock.calls[1]!;
     expect(String(applyCall[0])).toContain('/adaptations/apply');
     expect(String((applyCall[1] as RequestInit).body)).toContain('"preview_token"');
+    expect(
+      await screen.findByText('Изменения применены только к сегодняшней тренировке'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Подстроить тренировку' })).not.toBeInTheDocument();
   });
 
-  it('во время тренировки оставляет только безопасный сценарий боли', async () => {
+  it('при conflict сохраняет условия и требует обновить preview', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const path = String(input);
+      if (path.endsWith('/adaptations/preview')) {
+        return new Response(JSON.stringify(preview), { status: 200 });
+      }
+      return new Response(
+        JSON.stringify({ detail: 'Тренировка или условия изменились. Сформируйте preview заново' }),
+        { status: 409 },
+      );
+    });
+    const user = userEvent.setup();
+    renderAdaptation();
+
+    await openTimePreview(user);
+    await user.click(screen.getByRole('button', { name: 'Применить' }));
+
+    expect(await screen.findByText('Тренировка уже изменилась')).toBeInTheDocument();
+    expect(screen.getByText(/Ваш выбор сохранён/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '20 мин' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Обновить изменения' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Применить' })).not.toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('показывает честный missing-alternative state', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify([]), { status: 200 }),
+    );
+    const user = userEvent.setup();
+    renderAdaptation();
+
+    await user.click(screen.getByRole('button', { name: 'Адаптировать тренировку' }));
+    await user.click(screen.getByRole('radio', { name: /Заменить упражнение/ }));
+    await user.selectOptions(screen.getByLabelText('Какое упражнение изменить?'), '101');
+    await user.click(screen.getByRole('checkbox', { name: 'Гантели' }));
+
+    expect(
+      await screen.findByText(/Для выбранного оборудования нет проверенной замены/),
+    ).toBeInTheDocument();
+  });
+
+  it('во время тренировки оставляет только controlled safety boundary', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -159,14 +204,10 @@ describe('WorkoutAdaptation', () => {
     renderAdaptation(true);
 
     await user.click(screen.getByRole('button', { name: 'Боль или травма во время тренировки' }));
-    expect(screen.getByRole('combobox', { name: 'Почему нужно изменить тренировку?' })).toHaveValue(
-      'pain_or_injury',
-    );
-    expect(screen.getAllByRole('option')).toHaveLength(1);
-    await user.click(screen.getByRole('button', { name: 'Показать изменения' }));
+    expect(screen.queryByText('Что изменилось сегодня?')).not.toBeInTheDocument();
+    expect(screen.getByText('Не подбираем «лечебную» замену')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Показать рекомендации' }));
     expect(await screen.findByText('Безопасность прежде всего')).toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: 'Подтвердить и применить' }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Применить' })).not.toBeInTheDocument();
   });
 });

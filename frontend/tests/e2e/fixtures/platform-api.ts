@@ -23,6 +23,8 @@ export interface PlatformApiController {
   nutritionReportPeriods(): string[];
   workoutValues(): { actualReps: number | null; actualWeight: number | null; completed: boolean };
   completionFeedback(): { feedback: string | null; note: string | null };
+  adaptationApplyCalls(): number;
+  setAdaptationApplyMode(mode: 'success' | 'conflict' | 'error'): void;
 }
 
 const zeroNutrition = {
@@ -85,6 +87,8 @@ export async function installPlatformApi(
   let nutritionEntries: Array<Record<string, unknown>> = [];
   let completionFeedback: string | null = null;
   let completionNote: string | null = null;
+  let adaptationApplyCalls = 0;
+  let adaptationApplyMode: 'success' | 'conflict' | 'error' = 'success';
   const previousTargetDate = new Date(todayDate);
   previousTargetDate.setUTCDate(previousTargetDate.getUTCDate() - 30);
   const targetSource = options.nutritionTargetSource ?? 'manual';
@@ -558,6 +562,62 @@ export async function installPlatformApi(
       workoutStatus = 'in_progress';
       return route.fulfill({ json: workout() });
     }
+    if (path.endsWith('/workouts/42/adaptations/preview') && request.method() === 'POST') {
+      const body = request.postDataJSON() as {
+        reason: string;
+        time_budget_minutes?: number;
+      };
+      const safety = body.reason === 'pain_or_injury';
+      return route.fulfill({
+        json: {
+          status: safety ? 'safety_stop' : 'preview',
+          workout_id: 42,
+          reason: body.reason,
+          ruleset_version: 'workout-adaptation-v1',
+          original_estimated_minutes: 56,
+          adapted_estimated_minutes: safety ? 56 : 20,
+          time_budget_minutes: body.time_budget_minutes ?? null,
+          changes: safety
+            ? []
+            : [
+                {
+                  kind: 'removed',
+                  workout_exercise_id: 102,
+                  from_exercise_id: 12,
+                  from_title: 'Разведение гантелей на наклонной скамье',
+                  to_exercise_id: null,
+                  to_title: null,
+                },
+              ],
+          original_exercises: [],
+          adapted_exercises: [],
+          warnings: safety ? [] : ['Основные упражнения и их порядок сохранены.'],
+          message: safety
+            ? 'Приложение не подбирает медицинскую замену. Остановите упражнение и обратитесь к квалифицированному специалисту.'
+            : 'Проверьте изменения перед применением. Будет изменена только эта тренировка.',
+          preview_token: safety ? null : 'a'.repeat(64),
+        },
+      });
+    }
+    if (path.endsWith('/workouts/42/adaptations/apply') && request.method() === 'POST') {
+      adaptationApplyCalls += 1;
+      if (adaptationApplyMode === 'conflict') {
+        return route.fulfill({
+          status: 409,
+          json: { detail: 'Тренировка или условия изменились. Сформируйте preview заново' },
+        });
+      }
+      if (adaptationApplyMode === 'error') {
+        return route.fulfill({ status: 503, json: { detail: 'Временная ошибка сервера' } });
+      }
+      return route.fulfill({
+        json: {
+          adaptation_id: 9,
+          applied_at: `${today}T10:15:00`,
+          workout: workout(),
+        },
+      });
+    }
     if (path.endsWith('/workouts/42/finish')) {
       finishCalls += 1;
       if (!setValues.completed) {
@@ -924,6 +984,12 @@ export async function installPlatformApi(
     },
     completionFeedback() {
       return { feedback: completionFeedback, note: completionNote };
+    },
+    adaptationApplyCalls() {
+      return adaptationApplyCalls;
+    },
+    setAdaptationApplyMode(mode) {
+      adaptationApplyMode = mode;
     },
   };
 }
