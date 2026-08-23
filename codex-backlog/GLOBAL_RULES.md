@@ -1,6 +1,6 @@
 # GLOBAL_RULES - правила выполнения release backlog v11 resource-aware
 
-Этот файл действует для current task `49B1`, remaining tasks `49C-49G`, task `50A` и tasks `50-79`. Completed tasks `00-49B` не переигрываются.
+Этот файл действует для current task `56` и remaining tasks `57-79`. Completed tasks `00-55` не переигрываются и хранятся в `tasks/done/`.
 
 
 ## Полный task lifecycle
@@ -13,7 +13,7 @@ Lifecycle не расширяет scope task и не отменяет owner chec
 
 ## Skills: обязательный контракт выбора
 
-Каждая current/pending task начиная с `49B1` задаёт два уровня skills:
+Каждая current/pending task задаёт два уровня skills:
 
 - `Рекомендуемые skills` - core skills primary role. Их открыть в начале.
 - `Условные skills` - подключать **только** после фактического trigger из task. Не открывать заранее.
@@ -47,10 +47,10 @@ Lifecycle не расширяет scope task и не отменяет owner chec
 - Работать только в `feature/yfc-platform-v2`.
 - Не переходить к следующему task автоматически.
 - Перед началом прочитать корневой `AGENTS.md`, этот файл, lifecycle и только текущую task.
-- Tasks `00-49B` подтверждены владельцем как завершённые и не выполняются повторно.
-- Current task - `49B1`: один production UI consistency/mobile-first normalization checkpoint текущего Design V2 перед owner comparison `49C`.
-- После commit `49B1` следующая task - `49C`. Tasks `49C-49G` закрывают оставшуюся часть design alternatives gate; только после `49G` task `50A` создаёт общий mobile/TMA gate.
-- `49B1` не выбирает новый visual direction: она исправляет только доказанные inconsistencies текущего active Design V2 и shared component foundation.
+- Tasks `00-55`, включая буквенные подзадачи, подтверждены владельцем как завершённые, перенесены в `tasks/done/` и не выполняются повторно.
+- Current task — `56`: единый weekly review и подтверждаемая adaptive energy adjustment.
+- После commit task `56` следующая task — `57`; она выполняется только в отдельной сессии.
+- Task `50A` уже создала общий continuous Mobile Web/TMA gate, который переиспользуют последующие client-facing tasks.
 - Перед client-facing task прочитать `MOBILE_TMA_FIRST_CONTRACT.md` и применимые пункты `.agents/references/MOBILE_TMA_ACCEPTANCE_MATRIX.md`.
 - Не повторять полный аудит репозитория без прямого требования task.
 - `masters/`, старые changelog и выполненные task-файлы являются историческим контекстом и не задают pending order.
@@ -73,13 +73,12 @@ Lifecycle не расширяет scope task и не отменяет owner chec
 ## Active design source и alternatives gate
 
 - Перед любой visual work прочитать `ACTIVE_DESIGN_SOURCE.md`.
-- До явного owner approval и закрытия task `49G` production source остаётся Design V2.
-- Tasks `49A` и `49B` уже завершили non-production exploration. Task `49B1` является единственным pre-decision production exception: она может нормализовать только текущий Design V2 без переноса альтернатив.
-- Task `49C` не меняет production UI. Tasks `49D-49F` conditional и выполняются только для выбранного V2.1/new direction/explicit hybrid.
-- Owner checkpoint нельзя проходить по предположению, похвале или отсутствию замечаний.
-- Task `49G` оставляет ровно один active production design source и только затем разрешает task `50A`.
+- `DESIGN_V2_1` является единственным active production source согласно `ACTIVE_DESIGN_SOURCE.md`.
+- Tasks `49A-49G` завершили exploration, owner selection и rollout Design V2.1.
+- Закрытые owner checkpoints `49C` и `49F` не переигрываются без прямого решения владельца.
+- Task `49G` оставила ровно один active production design source; task `50A` завершила следующий mobile/TMA quality foundation gate.
 - Новые skills улучшают качество exploration, но не являются доказательством, что V2 нужно заменить.
-- Для `49B1-49G` соблюдать применимые части `DESIGN_ALTERNATIVES_EXPLORATION_CONTRACT.md`; `49B1` дополнительно следует своему строгому normalization scope и не импортирует alternative visuals.
+- Исторические требования tasks `49B1-49G` сохраняются в task-файлах и `DESIGN_ALTERNATIVES_EXPLORATION_CONTRACT.md`, но не расширяют scope текущих tasks.
 - Landing оценивается как две самостоятельные responsive compositions: desktop и mobile.
 - TMA остаётся той же mobile product system, а не отдельным visual direction.
 
@@ -348,4 +347,4 @@ registration
 
 ## Выполненные tasks и новые skills
 
-Tasks `00-49B` не выполнять повторно из-за обновления `.agents`, новых skills или нового design exploration. Task `49B1` является отдельным ограниченным checkpoint для уже накопленной UI consistency/mobile-first normalization; она не переигрывает функциональные acceptance criteria выполненных tasks. Поздняя task `76` остаётся release-stage retrospective audit и не является причиной откладывать доказанные UI consistency defects из `49B1`. Реальные usability sessions - task `77`; production readiness - task `78`; final go/no-go - task `79`. Новый skill сам по себе не разрешает refactor без прямого требования текущей task или доказанного blocking defect.
+Tasks `00-55` не выполнять повторно из-за обновления `.agents`, новых skills или последующего design exploration. Поздняя task `76` остаётся release-stage retrospective audit. Реальные usability sessions — task `77`; production readiness — task `78`; final go/no-go — task `79`. Новый skill сам по себе не разрешает refactor без прямого требования текущей task или доказанного blocking defect.

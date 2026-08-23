@@ -2,11 +2,11 @@
 
 ## Решение
 
-Tasks `00-49B` не выполняются повторно. Их task-файлы остаются историческим evidence того, как scope был закрыт. Новые roles/skills сами по себе не являются основанием переигрывать функциональность. Отдельная task `49B1` разрешена только как one-time UI consistency/mobile-first normalization checkpoint текущего Design V2.
+Tasks `00-55` не выполняются повторно. Их task-файлы находятся в `tasks/done/` и остаются историческим evidence того, как scope был закрыт. Новые roles/skills сами по себе не являются основанием переигрывать функциональность.
 
 ## Mobile/TMA-first without rerunning completed tasks
 
-Task `49B1` закрывает доказанные visual/component/mobile consistency gaps completed production UI без изменения feature scope. Task `50A` затем создаёт continuous mobile/TMA gate и не повторяет feature work `00-49B`. Невизуальные или более глубокие completed-scope проблемы остаются входом task `76`, если они не являются текущим release blocker.
+Task `49B1` закрыла доказанные visual/component/mobile consistency gaps completed production UI без изменения feature scope. Task `50A` создала continuous mobile/TMA gate и не повторяла завершённый feature work. Невизуальные или более глубокие completed-scope проблемы остаются входом task `76`, если они не являются текущим release blocker.
 
 ## Почему одного финального audit недостаточно
 

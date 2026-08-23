@@ -20,10 +20,10 @@ Use one fresh Codex chat per task. Select model/reasoning manually according to 
 
 ## Current start
 
-Текущая task после подтверждённо завершённых `00-49B`:
+Текущая task после подтверждённо завершённых и перенесённых в `tasks/done/` задач `00-55`:
 
 ```text
-Выполни `codex-backlog/tasks/49b1-current-ui-consistency-mobile-first-normalization.md`.
+Выполни `codex-backlog/tasks/56-unified-weekly-review-adaptive-energy.md`.
 ```
 
-После успешного завершения `49B1` следующая task - `49C`. `49B1` должна использовать frozen finding set и не превращаться в новый design direction.
+После успешного завершения `56` следующая task — `57`. Не переходить к ней в той же сессии.

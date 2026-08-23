@@ -1,30 +1,29 @@
 # Your Fitness Coach - backlog первого публичного релиза v11
 
-Эта версия сохраняет production-качество и resource-aware lifecycle, но добавляет один ограниченный checkpoint для фактической UI consistency перед design owner decision.
+Backlog использует resource-aware lifecycle. Завершённые задачи архивируются в `tasks/done/` и остаются доступными для чтения.
 
 ## Текущее состояние
 
-- tasks `00-49B` подтверждены как завершённые;
-- Design V2 остаётся текущим production source of truth;
-- `49A` и `49B` уже подготовили три design alternatives без изменения production UI;
-- из-за смены правил/ролей/skills на предыдущих этапах перед `49C` выполняется один current-state normalization checkpoint `49B1`;
-- `49B1` не выбирает новый дизайн - она приводит фактическую реализацию текущего V2 к общей component/token/mobile системе.
+- tasks `00-55`, включая буквенные подзадачи, подтверждены как завершённые;
+- завершённые task-файлы перенесены в `tasks/done/` без переименования;
+- `DESIGN_V2_1` остаётся единственным active production source of truth;
+- следующая task — `56`.
 
 ## Текущая задача
 
 ```text
-49b1-current-ui-consistency-mobile-first-normalization.md
+56-unified-weekly-review-adaptive-energy.md
 ```
 
-Не запускать заново `00-49B`. После успешного `49B1` следующая task - `49C`.
+Не запускать заново `00-55`. После успешной task `56` следующая task — `57`.
 
 ## Design alternatives flow
 
 ```text
 49A  targeted brief/current-state delta [done]
 49B  exactly three cross-surface directions + renders [done]
-49B1 current Design V2 UI consistency + mobile-first normalization [CURRENT]
-49C  compare normalized V2/A/B/C + owner selection
+49B1 current Design V2 UI consistency + mobile-first normalization [done]
+49C  compare normalized V2/A/B/C + owner selection [done]
 
 KEEP_V2_UNCHANGED
   -> skip 49D-49F
@@ -38,7 +37,9 @@ V2.1 / A / B / C / explicit hybrid
   -> 49F final owner approval
   -> 49G conditional rollout + backlog alignment
 
-49G -> 50A mobile/TMA quality foundation
+49G -> 50A mobile/TMA quality foundation [done]
+50-55 feature tasks [done]
+56 unified weekly review + adaptive energy [CURRENT]
 ```
 
 ## Что изменено в v11

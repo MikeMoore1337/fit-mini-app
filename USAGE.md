@@ -12,6 +12,7 @@ codex-backlog/
   GLOBAL_RULES.md
   TASK_EXECUTION_LIFECYCLE.md
   tasks/
+    done/
 ```
 
 Дополнительные snippet-файлы не нужны. Содержимое архива копируется в корень репозитория с сохранением структуры.
@@ -32,12 +33,12 @@ codex-backlog/
 
 Task сама задаёт primary role, core skills, conditional skills и дополнительные lifecycle-роли. Не перечисляй их вручную в prompt.
 
-## Текущая task - 49B1
+## Текущая task — 56
 
-User-confirmed completed range: `00-49B`. Следующий запуск:
+Подтверждённый выполненный диапазон `00-55` хранится в `codex-backlog/tasks/done/`. Следующий запуск:
 
 ```text
-Выполни `codex-backlog/tasks/49b1-current-ui-consistency-mobile-first-normalization.md`.
+Выполни `codex-backlog/tasks/56-unified-weekly-review-adaptive-energy.md`.
 
 Соблюдай `AGENTS.md`, `codex-backlog/GLOBAL_RULES.md`
 и полный task lifecycle.
@@ -46,7 +47,7 @@ User-confirmed completed range: `00-49B`. Следующий запуск:
 Не переходи к следующей task.
 ```
 
-`49B1` сначала делает один evidence-based audit текущего rendered Design V2 и component foundation, замораживает finding set, затем исправляет только доказанные consistency/mobile defects. После неё следующая task - `49C`.
+После task `56` следующей будет `57`, но она выполняется в отдельной сессии.
 
 ## Resource-aware схема
 

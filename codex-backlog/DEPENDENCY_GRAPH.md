@@ -1,29 +1,7 @@
 # Dependency graph - release backlog v11
 
 ```text
-completed 00-49B
-  -> 49B1 current Design V2 UI consistency/mobile normalization
-  -> 49C owner selection using normalized V2 baseline
-
-  KEEP_V2_UNCHANGED
-    -> 49G design source closure
-
-  V2.1 / A / B / C / explicit hybrid
-    -> 49D selected responsive specification
-    -> owner approval
-    -> 49E production-realistic pilot
-    -> owner manual test
-    -> 49F final owner approval
-    -> 49G conditional rollout + backlog alignment
-
-49G
-  -> 50A Mobile/TMA quality gate foundation
-  -> 50 Public knowledge
-  -> 51 Today/week navigation
-  -> 52 Fast nutrition logging
-  -> 53 Workout completion summary
-  -> 54 Training preferences
-  -> 55 Manual targets/history
+completed 00-55 (archived under tasks/done)
   -> 56 Unified weekly review/adaptive calories
   -> 57 Nutrition reports
   -> 58 Workout adaptation UX
@@ -45,6 +23,7 @@ completed 00-49B
   -> 74 Responsive/a11y/states
   -> 75 Performance/motion
   -> 76 Skill-aware retrospective audit
+  -> 76A Adversarial negative/destructive testing gate
   -> 77 Real-user usability checkpoint
   -> 78 Production readiness
   -> 79 Final audit

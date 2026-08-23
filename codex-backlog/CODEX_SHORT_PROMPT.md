@@ -17,7 +17,7 @@
 Текущая task:
 
 ```text
-Выполни `codex-backlog/tasks/49b1-current-ui-consistency-mobile-first-normalization.md`.
+Выполни `codex-backlog/tasks/56-unified-weekly-review-adaptive-energy.md`.
 
 Соблюдай `AGENTS.md`, `codex-backlog/GLOBAL_RULES.md`
 и полный task lifecycle.

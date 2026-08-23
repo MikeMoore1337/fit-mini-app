@@ -18,7 +18,7 @@
 Начните с:
 
 ```text
-Выполни `codex-backlog/tasks/46a-completed-scope-production-quality-audit.md`.
+Выполни `codex-backlog/tasks/done/46a-completed-scope-production-quality-audit.md`.
 
 Соблюдай `AGENTS.md` и `codex-backlog/GLOBAL_RULES.md`.
 Не переходи к следующей задаче.

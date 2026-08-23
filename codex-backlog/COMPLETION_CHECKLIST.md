@@ -22,7 +22,7 @@
 - [ ] Created one logical commit when applicable.
 - [ ] Did not start the next task.
 
-## Current task 49B1 consistency checkpoint
+## Исторический checkpoint 49B1
 
 - [ ] Audited real rendered UI once and covered each distinct UI pattern family rather than every duplicate route.
 - [ ] Built component inventory and froze one baseline finding set before remediation.
@@ -34,10 +34,9 @@
 
 ## Release gates
 
-- [ ] Tasks `00-49B` remained untouched as completed history.
-- [ ] Task `49B1` completed before `49C`.
-- [ ] Design V2 remained active through `49B1` and until explicit owner decision/closure in `49C-49G`.
-- [ ] Task `50A` did not start before `49G` closure.
+- [ ] Tasks `00-55` remained untouched as completed history under `tasks/done/`.
+- [ ] Current task did not alter the closed `49A-49G` design decision.
+- [ ] Current client-facing task reused the continuous gate established by completed task `50A`.
 - [ ] Task `76` has no open release-blocking P0/P1.
 - [ ] Task `77` evidence is factual.
 - [ ] Task `78` production evidence exists.
