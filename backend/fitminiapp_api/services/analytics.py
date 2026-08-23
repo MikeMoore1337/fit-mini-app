@@ -610,6 +610,8 @@ def build_workout_timeline(db: Session, user: User, limit: int = 30) -> list[dic
                 "completed_at": workout.completed_at,
                 "completed_sets": completed_sets,
                 "volume_kg": round(volume, 2),
+                "completion_feedback": workout.completion_feedback,
+                "completion_note": workout.completion_note,
                 "exercises": exercises,
             }
         )

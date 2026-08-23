@@ -1,7 +1,7 @@
 from datetime import date, datetime, time
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from fitminiapp_api.schemas.data_quality import TrainingDataSufficiency
 from fitminiapp_api.schemas.program import EquipmentIdentifier
@@ -19,6 +19,9 @@ WorkoutAdaptationReason = Literal[
     "different_environment",
     "pain_or_injury",
 ]
+WorkoutCompletionFeedback = Literal["easier_than_expected", "as_expected", "harder_than_expected"]
+WorkoutPersonalRecordKind = Literal["max_load", "best_set_volume"]
+WORKOUT_COMPLETION_NOTE_MAX_LENGTH = 500
 
 
 class WorkoutAdaptationRequest(BaseModel):
@@ -157,6 +160,47 @@ class WorkoutExerciseItem(BaseModel):
     sets: list[LoggedSetItem]
 
 
+class WorkoutCompletionExercise(BaseModel):
+    workout_exercise_id: int
+    exercise_id: int
+    exercise_title: str
+    completed_sets: int
+    reps_total: int | None = None
+    reps_recorded_sets: int
+    max_load_kg: float | None = None
+    load_recorded_sets: int
+
+
+class WorkoutPersonalRecord(BaseModel):
+    exercise_id: int
+    exercise_title: str
+    kinds: list[WorkoutPersonalRecordKind]
+    max_load_kg: float | None = None
+    best_set_volume_kg: float | None = None
+
+
+class WorkoutCompletionNextWorkout(BaseModel):
+    id: int
+    scheduled_date: date
+    scheduled_time: time | None = None
+    title: str
+
+
+class WorkoutCompletionSummary(BaseModel):
+    duration_seconds: int | None = Field(default=None, ge=0)
+    performed_exercises: int = Field(ge=0)
+    completed_sets: int = Field(ge=0)
+    total_sets: int = Field(ge=0)
+    reps_total: int | None = Field(default=None, ge=0)
+    reps_recorded_sets: int = Field(ge=0)
+    load_recorded_sets: int = Field(ge=0)
+    exercises: list[WorkoutCompletionExercise]
+    personal_records: list[WorkoutPersonalRecord]
+    next_workout: WorkoutCompletionNextWorkout | None = None
+    feedback: WorkoutCompletionFeedback | None = None
+    note: str | None = None
+
+
 class WorkoutTodayResponse(BaseModel):
     id: int
     scheduled_date: date
@@ -168,6 +212,7 @@ class WorkoutTodayResponse(BaseModel):
     started_at: datetime | None = None
     completed_at: datetime | None = None
     exercises: list[WorkoutExerciseItem]
+    completion_summary: WorkoutCompletionSummary | None = None
 
 
 class WorkoutAdaptationApplyResponse(BaseModel):
@@ -207,6 +252,23 @@ class WorkoutFinishRequest(BaseModel):
     confirm_incomplete: bool = False
 
 
+class WorkoutCompletionFeedbackUpdate(BaseModel):
+    feedback: WorkoutCompletionFeedback | None = None
+    note: str | None = Field(default=None, max_length=WORKOUT_COMPLETION_NOTE_MAX_LENGTH)
+
+    @field_validator("note")
+    @classmethod
+    def normalize_note(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.replace("\r\n", "\n").replace("\r", "\n").strip()
+        if not normalized:
+            return None
+        if any(ord(character) < 32 and character not in {"\n", "\t"} for character in normalized):
+            raise ValueError("Заметка содержит недопустимые управляющие символы")
+        return normalized
+
+
 class WorkoutHistoryItem(BaseModel):
     id: int
     scheduled_date: date
@@ -217,6 +279,8 @@ class WorkoutHistoryItem(BaseModel):
     completed_at: datetime | None = None
     completed_sets: int
     volume_kg: float
+    completion_feedback: WorkoutCompletionFeedback | None = None
+    completion_note: str | None = None
     exercises: list[WorkoutHistoryExerciseItem]
     adaptations: list[WorkoutAdaptationHistoryItem]
 
@@ -387,6 +451,8 @@ class WorkoutTimelineItem(BaseModel):
     completed_at: datetime | None = None
     completed_sets: int
     volume_kg: float
+    completion_feedback: WorkoutCompletionFeedback | None = None
+    completion_note: str | None = None
     exercises: list[WorkoutTimelineExercise]
 
 

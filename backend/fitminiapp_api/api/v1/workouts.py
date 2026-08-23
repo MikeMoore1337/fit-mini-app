@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import func
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session, joinedload
 
 from fitminiapp_api.api.dependencies.auth import require_user
@@ -29,6 +29,7 @@ from fitminiapp_api.schemas.workout import (
     WorkoutAdaptationPreviewResponse,
     WorkoutAdaptationRequest,
     WorkoutAlternativeItem,
+    WorkoutCompletionFeedbackUpdate,
     WorkoutFinishRequest,
     WorkoutHistoryItem,
     WorkoutHistorySummary,
@@ -63,6 +64,7 @@ from fitminiapp_api.services.workout_comments import (
     list_client_workout_comments,
     serialize_workout_comment,
 )
+from fitminiapp_api.services.workout_completion import build_workout_completion_summary
 from fitminiapp_api.services.workout_sync import (
     WorkoutSetSyncError,
     apply_workout_set_update,
@@ -195,6 +197,14 @@ def _delete_workouts(db: Session, workout_ids: list[int]) -> int:
 
 def _serialize_workout(workout: UserWorkout, db: Session, current_user: User) -> dict:
     visible_map = get_visible_exercise_display_map(db, current_user)
+    exercise_titles = {
+        item.id: (
+            visible_map[item.exercise_id].title
+            if item.exercise_id in visible_map
+            else (item.exercise.title if item.exercise else f"Упражнение {item.exercise_id}")
+        )
+        for item in workout.exercises
+    }
 
     return {
         "id": workout.id,
@@ -210,13 +220,7 @@ def _serialize_workout(workout: UserWorkout, db: Session, current_user: User) ->
             {
                 "id": item.id,
                 "exercise_id": item.exercise_id,
-                "exercise_title": (
-                    visible_map[item.exercise_id].title
-                    if item.exercise_id in visible_map
-                    else (
-                        item.exercise.title if item.exercise else f"Упражнение {item.exercise_id}"
-                    )
-                ),
+                "exercise_title": exercise_titles[item.id],
                 "sort_order": item.sort_order,
                 "prescribed_sets": item.prescribed_sets,
                 "prescribed_reps": item.prescribed_reps,
@@ -245,6 +249,12 @@ def _serialize_workout(workout: UserWorkout, db: Session, current_user: User) ->
             }
             for item in sorted(workout.exercises, key=lambda x: x.sort_order)
         ],
+        "completion_summary": build_workout_completion_summary(
+            db,
+            current_user,
+            workout,
+            exercise_titles,
+        ),
     }
 
 
@@ -264,11 +274,23 @@ def get_today_workout(
         )
         .filter(
             UserProgram.user_id == current_user.id,
-            UserProgram.is_active.is_(True),
             UserWorkout.scheduled_date == today,
-            UserWorkout.status.in_({"planned", "in_progress"}),
+            UserWorkout.status.in_({"planned", "in_progress", "completed"}),
         )
-        .order_by(UserWorkout.id.asc())
+        .order_by(
+            case(
+                (UserWorkout.status == "in_progress", 0),
+                (UserWorkout.status == "planned", 1),
+                else_=2,
+            ),
+            case((UserWorkout.completed_at.is_(None), 1), else_=0),
+            UserWorkout.completed_at.desc(),
+            case(
+                (UserWorkout.status == "completed", UserWorkout.id),
+                else_=None,
+            ).desc(),
+            UserWorkout.id.asc(),
+        )
         .first()
     )
 
@@ -586,6 +608,29 @@ def finish_workout(
     return _serialize_workout(workout, db, current_user)
 
 
+@router.put("/{workout_id}/completion-feedback", response_model=WorkoutTodayResponse)
+def update_workout_completion_feedback(
+    workout_id: int,
+    payload: WorkoutCompletionFeedbackUpdate,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    workout = _get_user_workout_or_404(db, current_user, workout_id)
+    if workout.status != "completed":
+        raise HTTPException(
+            status_code=409,
+            detail="Обратную связь можно сохранить после завершения тренировки",
+        )
+    if workout.completion_feedback != payload.feedback or workout.completion_note != payload.note:
+        workout.completion_feedback = payload.feedback
+        workout.completion_note = payload.note
+        workout.completion_feedback_updated_at = now_for_user_naive(current_user)
+        db.commit()
+        db.refresh(workout)
+        workout = _get_user_workout_or_404(db, current_user, workout_id)
+    return _serialize_workout(workout, db, current_user)
+
+
 @router.patch("/sets/{set_id}", response_model=WorkoutStatusResponse)
 def update_workout_set(
     set_id: int,
@@ -789,6 +834,8 @@ def workout_history(
                 "completed_at": item.completed_at.isoformat() if item.completed_at else None,
                 "completed_sets": len(completed_sets),
                 "volume_kg": round(volume_kg, 1),
+                "completion_feedback": item.completion_feedback,
+                "completion_note": item.completion_note,
                 "exercises": [
                     {
                         "workout_exercise_id": exercise.id,

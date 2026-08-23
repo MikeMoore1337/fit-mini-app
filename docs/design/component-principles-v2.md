@@ -12,8 +12,12 @@
   Несколько соседних lime fills запрещены.
 - Primary обозначает следующий безопасный шаг; provider choices, navigation, secondary и recovery
   сохраняют neutral surface/border; danger используется только для действительно опасного действия.
-- Основная geometry buttons и form controls — `12 px`, compact controls — `8 px`; pill не является
-  default. Круглая geometry допустима для icon-only controls с соответствующей семантикой.
+- Все action buttons приложения, Mobile Web/TMA, публичных auth surfaces и лендинга используют
+  единый token `--radius-action` (`12 px`). Локальный `border-radius` для action button запрещён:
+  responsive-состояние, primary/secondary/danger и ссылка, оформленная как кнопка, сохраняют ту же
+  geometry. `8 px` остаётся только для compact controls, которые не являются action buttons; pill
+  не является default. Круглая geometry допустима только для icon-only controls с соответствующей
+  семантикой.
 - Loading не меняет ширину и блокирует double submit. Disabled объясняет причину, если она не
   очевидна. Icon-only control имеет accessible name и touch target не меньше `44 px`.
 
@@ -76,6 +80,11 @@ inside card и универсальная `surface` вокруг каждого 
   группой.
 - Offline save, pending sync, retry и duplicate-safe recovery видимы и сформулированы фактически.
 - Exercise detail разделяет media, параметры программы, технику и long text; media не auto-play.
+- Заголовок post-workout summary остаётся в normal flow и не перекрывает факты, PR или feedback при
+  scroll/full-page capture. На mobile его крайние действия имеют безопасные боковые отступы.
+- Compact disclosure «Записанные результаты» центрирует label и не получает вертикальный padding
+  card-секции. Legend post-workout feedback визуально отделён от первой кнопки минимум одним
+  spacing step.
 
 ## Nutrition patterns
 

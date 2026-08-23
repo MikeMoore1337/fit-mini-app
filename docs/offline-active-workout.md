@@ -82,6 +82,13 @@ timestamps, progression или других terminal side effects. Это вос
 queue, snapshot и rest timer. Ownership, проверка состояния до первого завершения, подтверждение
 незаполненных подходов и server-side scheduled-day rules остаются обязательными.
 
+Завершённое представление содержит детерминированный `completion_summary`. В день выполнения его
+можно повторно получить через `GET /api/v1/workouts/today`, даже если завершение сделало программу
+неактивной. Необязательная субъективная оценка и заметка сохраняются отдельным идемпотентным `PUT`,
+но не входят в offline queue подходов: при ошибке форма сохраняет введённый текст в текущем UI и
+позволяет повторить отправку после восстановления сети. Полный контракт описан в
+`docs/workout-completion-summary.md`.
+
 Ownership по-прежнему определяется связью `user_workout_sets -> user_workouts -> user_programs`
 и текущей server-side auth-сессией. `user_id` из localStorage никогда не используется как
 авторизация API-запроса.

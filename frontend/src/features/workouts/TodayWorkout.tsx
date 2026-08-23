@@ -25,6 +25,7 @@ import {
 } from './activeWorkoutQueue';
 import { legacyWorkoutRestStorageKey } from '../../shared/userScopedStorage';
 import { WorkoutAdaptation } from './WorkoutAdaptation';
+import { WorkoutCompletionSummary } from './WorkoutCompletionSummary';
 import { reconcileFinishedWorkout } from './finishWorkoutRecovery';
 import { useActiveWorkoutQueue } from './useActiveWorkoutQueue';
 
@@ -465,7 +466,13 @@ function RestTimer({
   );
 }
 
-export function TodayWorkout({ embedded = false }: { embedded?: boolean }) {
+export function TodayWorkout({
+  embedded = false,
+  onCompletionClose,
+}: {
+  embedded?: boolean;
+  onCompletionClose?: () => void;
+}) {
   const { toast, confirm } = useFeedback();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -605,6 +612,10 @@ export function TodayWorkout({ embedded = false }: { embedded?: boolean }) {
     activeSync.pendingCount > 0 &&
     activeSync.syncState !== 'syncing' &&
     activeSync.syncState !== 'pending';
+
+  if (data.status === 'completed') {
+    return <WorkoutCompletionSummary workout={data} onReturnToday={onCompletionClose} />;
+  }
 
   return (
     <>
@@ -775,7 +786,7 @@ export function TodayWorkout({ embedded = false }: { embedded?: boolean }) {
               <strong>{currentSet ? 'Закончить раньше' : 'Тренировка готова'}</strong>
               <span>
                 {currentSet
-                  ? 'Незаполненные подходы останутся в плане без результата.'
+                  ? `${total - completed} незаполненных подходов останутся в плане без результата.`
                   : 'Все подходы отмечены — можно завершать.'}
               </span>
             </div>

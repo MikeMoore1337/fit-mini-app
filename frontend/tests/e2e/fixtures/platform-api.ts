@@ -13,7 +13,9 @@ export interface PlatformApiController {
   setOffline(offline: boolean): void;
   authInitCalls(): number;
   setPatchCalls(): number;
+  finishCalls(): number;
   workoutValues(): { actualReps: number | null; actualWeight: number | null; completed: boolean };
+  completionFeedback(): { feedback: string | null; note: string | null };
 }
 
 const zeroNutrition = {
@@ -51,6 +53,9 @@ export async function installPlatformApi(
   const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Moscow' });
   const todayDate = new Date(`${today}T12:00:00Z`);
   const contextDate = new Date(todayDate);
+  const nextWorkoutDate = new Date(todayDate);
+  nextWorkoutDate.setUTCDate(todayDate.getUTCDate() + 3);
+  const nextWorkoutDay = nextWorkoutDate.toISOString().slice(0, 10);
   const contextIsCompleted = todayDate.getUTCDay() === 0;
   contextDate.setUTCDate(todayDate.getUTCDate() + (contextIsCompleted ? -1 : 1));
   const contextDay = contextDate.toISOString().slice(0, 10);
@@ -59,13 +64,16 @@ export async function installPlatformApi(
   const activeProgram = options.activeProgram ?? true;
   let authInitCalls = 0;
   let patchCalls = 0;
+  let finishCalls = 0;
   let setVersion = 1;
   let setValues = {
-    actualReps: null as number | null,
-    actualWeight: null as number | null,
-    completed: false,
+    actualReps: workoutStatus === 'completed' ? 8 : (null as number | null),
+    actualWeight: workoutStatus === 'completed' ? 40 : (null as number | null),
+    completed: workoutStatus === 'completed',
   };
   let nutritionEntries: Array<Record<string, unknown>> = [];
+  let completionFeedback: string | null = null;
+  let completionNote: string | null = null;
 
   if (options.browserSession) {
     await page.addInitScript(() => sessionStorage.setItem('fit_access_token', 'e2e-browser-token'));
@@ -107,6 +115,52 @@ export async function installPlatformApi(
         ],
       },
     ],
+    completion_summary:
+      workoutStatus === 'completed'
+        ? {
+            duration_seconds: 3600,
+            performed_exercises: 1,
+            completed_sets: setValues.completed ? 1 : 0,
+            total_sets: 1,
+            reps_total: setValues.actualReps,
+            reps_recorded_sets: setValues.actualReps == null ? 0 : 1,
+            load_recorded_sets: setValues.actualWeight == null ? 0 : 1,
+            exercises: setValues.completed
+              ? [
+                  {
+                    workout_exercise_id: 101,
+                    exercise_id: 11,
+                    exercise_title: 'Приседания',
+                    completed_sets: 1,
+                    reps_total: setValues.actualReps,
+                    reps_recorded_sets: setValues.actualReps == null ? 0 : 1,
+                    max_load_kg: setValues.actualWeight,
+                    load_recorded_sets: setValues.actualWeight == null ? 0 : 1,
+                  },
+                ]
+              : [],
+            personal_records:
+              setValues.completed && setValues.actualWeight != null
+                ? [
+                    {
+                      exercise_id: 11,
+                      exercise_title: 'Приседания',
+                      kinds: ['max_load'],
+                      max_load_kg: setValues.actualWeight,
+                      best_set_volume_kg: null,
+                    },
+                  ]
+                : [],
+            next_workout: {
+              id: 44,
+              scheduled_date: nextWorkoutDay,
+              scheduled_time: '09:00:00',
+              title: 'Верх тела',
+            },
+            feedback: completionFeedback,
+            note: completionNote,
+          }
+        : null,
   });
 
   const contextWorkout = {
@@ -119,7 +173,7 @@ export async function installPlatformApi(
     week_number: 1,
   };
 
-  const progressSummary = {
+  const progressSummary = () => ({
     user_id: 7,
     period_days: 30,
     period_start: today,
@@ -158,7 +212,7 @@ export async function installPlatformApi(
       protein: {},
     },
     data_sufficiency: {},
-  };
+  });
 
   await page.route('**/api/v1/**', async (route: Route) => {
     const request = route.request();
@@ -217,7 +271,7 @@ export async function installPlatformApi(
       });
     }
     if (path.endsWith('/workouts/today')) {
-      if (workoutStatus === 'completed' || workoutStatus === 'none') {
+      if (workoutStatus === 'none') {
         return route.fulfill({
           status: 404,
           json: { detail: 'На сегодня тренировка не назначена' },
@@ -264,6 +318,23 @@ export async function installPlatformApi(
       workoutStatus = 'in_progress';
       return route.fulfill({ json: workout() });
     }
+    if (path.endsWith('/workouts/42/finish')) {
+      finishCalls += 1;
+      if (!setValues.completed) {
+        return route.fulfill({
+          status: 409,
+          json: { detail: 'Отметьте хотя бы один выполненный подход' },
+        });
+      }
+      workoutStatus = 'completed';
+      return route.fulfill({ json: workout() });
+    }
+    if (path.endsWith('/workouts/42/completion-feedback') && request.method() === 'PUT') {
+      const body = request.postDataJSON() as { feedback: string | null; note: string | null };
+      completionFeedback = body.feedback;
+      completionNote = body.note;
+      return route.fulfill({ json: workout() });
+    }
     if (path.endsWith('/workouts/sets/201')) {
       patchCalls += 1;
       const body = request.postDataJSON() as {
@@ -292,7 +363,7 @@ export async function installPlatformApi(
       });
     }
     if (path.endsWith('/workouts/progress/summary')) {
-      return route.fulfill({ json: progressSummary });
+      return route.fulfill({ json: progressSummary() });
     }
     if (path.endsWith('/check-ins/weekly/current')) {
       return route.fulfill({
@@ -429,8 +500,14 @@ export async function installPlatformApi(
     setPatchCalls() {
       return patchCalls;
     },
+    finishCalls() {
+      return finishCalls;
+    },
     workoutValues() {
       return { ...setValues };
+    },
+    completionFeedback() {
+      return { feedback: completionFeedback, note: completionNote };
     },
   };
 }

@@ -22,6 +22,7 @@
   --v2-success-text: #b9ea72;
   --v2-progress-fill: var(--v2-lime);
   --v2-control-radius: 12px;
+  --radius-action: var(--v2-control-radius);
   --v2-compact-radius: 8px;
   --v2-region-radius: 16px;
   --v2-space-1: 4px;
@@ -179,7 +180,7 @@ body {
 .ui-icon-button {
   min-height: var(--touch-target);
   border: 1px solid transparent;
-  border-radius: var(--radius-control);
+  border-radius: var(--radius-action);
   font: inherit;
   font-weight: var(--font-weight-strong);
   cursor: pointer;

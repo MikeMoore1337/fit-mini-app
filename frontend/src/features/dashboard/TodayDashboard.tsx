@@ -598,6 +598,7 @@ export function TodayDashboard() {
   const { toast } = useFeedback();
   const queryClient = useQueryClient();
   const detailsRef = useRef<HTMLDivElement>(null);
+  const autoOpenedCompletionRef = useRef<number | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const timeZone = user?.profile?.timezone || detectedTimeZone();
   const today = useCalendarDay(timeZone);
@@ -651,6 +652,16 @@ export function TodayDashboard() {
         new Date(right.created_at).getTime() - new Date(left.created_at).getTime() ||
         right.id - left.id,
     )[0];
+
+  useEffect(() => {
+    if (
+      visibleWorkout?.status !== 'completed' ||
+      autoOpenedCompletionRef.current === visibleWorkout.id
+    )
+      return;
+    autoOpenedCompletionRef.current = visibleWorkout.id;
+    setDetailsOpen(true);
+  }, [visibleWorkout?.id, visibleWorkout?.status]);
   const profileMissing = useMemo(
     () =>
       Boolean(
@@ -703,7 +714,7 @@ export function TodayDashboard() {
     (week.isLoading || weeklyReview.isLoading || (todayScheduleItem && comments.isLoading)),
   );
 
-  if (detailsOpen && visibleWorkout && visibleWorkout.status !== 'completed') {
+  if (detailsOpen && visibleWorkout) {
     return (
       <div className="today-workout-focus" ref={detailsRef}>
         <header className="today-workout-focus__header">
@@ -712,14 +723,20 @@ export function TodayDashboard() {
           </button>
           <div>
             <span>{visibleWorkout.title}</span>
-            <strong>Текущая тренировка</strong>
+            <strong>
+              {visibleWorkout.status === 'completed' ? 'Итог тренировки' : 'Текущая тренировка'}
+            </strong>
           </div>
           <span>
             День {visibleWorkout.day_number} ·{' '}
-            {visibleWorkout.status === 'in_progress' ? 'В процессе' : 'План'}
+            {visibleWorkout.status === 'completed'
+              ? 'Завершена'
+              : visibleWorkout.status === 'in_progress'
+                ? 'В процессе'
+                : 'План'}
           </span>
         </header>
-        <TodayWorkout embedded />
+        <TodayWorkout embedded onCompletionClose={() => setDetailsOpen(false)} />
       </div>
     );
   }

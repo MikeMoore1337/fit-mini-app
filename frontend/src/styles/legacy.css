@@ -963,7 +963,7 @@ button,
 .button-link {
     appearance: none;
     border: none;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-action);
     padding: 11px 15px;
     min-height: 44px;
     background: var(--accent);

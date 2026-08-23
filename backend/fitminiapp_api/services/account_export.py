@@ -357,6 +357,9 @@ def _serialize_program(program: UserProgram) -> dict[str, object]:
                         "status",
                         "started_at",
                         "completed_at",
+                        "completion_feedback",
+                        "completion_note",
+                        "completion_feedback_updated_at",
                     ),
                 ),
                 "adaptations": [

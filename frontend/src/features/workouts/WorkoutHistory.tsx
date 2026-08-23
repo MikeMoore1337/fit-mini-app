@@ -12,6 +12,7 @@ import { workoutStatusLabel } from '../../shared/statusLabels';
 import { dateInputValue, detectedTimeZone } from '../../shared/dateTime';
 import { ExerciseGuideDialog } from '../exercises/ExerciseGuideDialog';
 import { WorkoutFeedbackDisclosure } from './WorkoutFeedback';
+import { workoutCompletionFeedbackLabels } from './WorkoutCompletionSummary';
 
 const HISTORY_PAGE_SIZE = 10;
 const adaptationReasonLabels: Record<string, string> = {
@@ -184,6 +185,16 @@ export function WorkoutHistory({
                         Изменено перед тренировкой: {adaptationReasonLabels[adaptation.reason]}
                       </p>
                     ))}
+                    {(item.completion_feedback || item.completion_note) && (
+                      <div className="workout-completion-context">
+                        {item.completion_feedback && (
+                          <strong>
+                            Самооценка: {workoutCompletionFeedbackLabels[item.completion_feedback]}
+                          </strong>
+                        )}
+                        {item.completion_note && <p>{item.completion_note}</p>}
+                      </div>
+                    )}
                   </div>
                   <strong>{item.volume_kg} кг</strong>
                   <WorkoutFeedbackDisclosure

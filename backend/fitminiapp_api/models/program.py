@@ -344,6 +344,15 @@ class UserWorkout(Base):
             "scheduled_date",
             "status",
         ),
+        CheckConstraint(
+            "completion_feedback IS NULL OR completion_feedback IN "
+            "('easier_than_expected', 'as_expected', 'harder_than_expected')",
+            name="ck_user_workouts_completion_feedback",
+        ),
+        CheckConstraint(
+            "completion_note IS NULL OR length(completion_note) <= 500",
+            name="ck_user_workouts_completion_note_length",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -356,6 +365,9 @@ class UserWorkout(Base):
     status: Mapped[str] = mapped_column(String(32), default="planned")
     started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    completion_feedback: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    completion_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    completion_feedback_updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     user_program: Mapped[UserProgram] = relationship("UserProgram", back_populates="workouts")
     exercises: Mapped[list[UserWorkoutExercise]] = relationship(

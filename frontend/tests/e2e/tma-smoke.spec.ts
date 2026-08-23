@@ -20,7 +20,7 @@ const todayStates = [
   {
     name: 'completed',
     options: { workoutStatus: 'completed' as const },
-    action: 'Посмотреть итог',
+    action: 'Вернуться в Сегодня',
   },
   { name: 'rest', options: { workoutStatus: 'none' as const }, action: 'Добавить питание' },
   {
@@ -139,8 +139,13 @@ for (const scenario of todayStates) {
       .or(mobilePage.getByRole('link', { name: scenario.action }));
     await expect(tmaAction).toBeVisible();
     await expect(mobileAction).toBeVisible();
-    await expect(tmaPage.getByRole('region', { name: 'Эта неделя' })).toBeVisible();
-    await expect(mobilePage.getByRole('region', { name: 'Эта неделя' })).toBeVisible();
+    if (scenario.name === 'completed') {
+      await expect(tmaPage.getByRole('region', { name: 'Эта неделя' })).not.toBeAttached();
+      await expect(mobilePage.getByRole('region', { name: 'Эта неделя' })).not.toBeAttached();
+    } else {
+      await expect(tmaPage.getByRole('region', { name: 'Эта неделя' })).toBeVisible();
+      await expect(mobilePage.getByRole('region', { name: 'Эта неделя' })).toBeVisible();
+    }
     expect(await sharedSurfaceSignature(tmaPage)).toEqual(await sharedSurfaceSignature(mobilePage));
     await expectNoHorizontalOverflow(tmaPage);
     await expectNoHorizontalOverflow(mobilePage);
@@ -194,6 +199,123 @@ test('active workout starts, logs offline and resumes once after reconnect and r
     '40',
   );
   await expectNoHorizontalOverflow(tmaPage);
+});
+
+test('completion summary survives finish retry, feedback error, reload and TMA lifecycle', async ({
+  mobilePage,
+  tma,
+  tmaPage,
+}) => {
+  const api = await installPlatformApi(tmaPage, { workoutStatus: 'planned' });
+  await tmaPage.goto('/app');
+  await tmaPage.getByRole('button', { name: 'Начать тренировку' }).click();
+  await tmaPage.getByRole('spinbutton', { name: 'Повторы, Приседания, подход 1' }).fill('8');
+  await tmaPage.getByRole('spinbutton', { name: 'Вес, Приседания, подход 1' }).fill('40');
+  await tmaPage.getByRole('button', { name: 'Завершить: Приседания, подход 1' }).click();
+  await expect(tmaPage.getByText('Синхронизировано')).toBeVisible();
+  await tmaPage.getByRole('button', { name: 'Завершить тренировку' }).click();
+
+  await expect(tmaPage.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible();
+  await expect(tmaPage.getByText('1 ч')).toBeVisible();
+  await expect(tmaPage.getByText(/максимальный вес 40 кг/)).toBeVisible();
+  await expect(tmaPage.getByText(/Следующая тренировка/)).toBeVisible();
+  expect(api.finishCalls()).toBe(1);
+  await expectNoHorizontalOverflow(tmaPage);
+  const focusHeader = tmaPage.locator('.today-workout-focus__header');
+  const backAction = focusHeader.getByRole('button', { name: 'К сводке' });
+  const focusTitle = focusHeader.getByText('Итог тренировки');
+  const [backBox, titleBox] = await Promise.all([
+    backAction.boundingBox(),
+    focusTitle.boundingBox(),
+  ]);
+  expect(backBox?.x ?? 0).toBeGreaterThanOrEqual(24);
+  expect((titleBox?.x ?? 0) + (titleBox?.width ?? 0)).toBeLessThanOrEqual(
+    (await tmaPage.evaluate(() => window.innerWidth)) - 24,
+  );
+  await expect(focusHeader).toHaveCSS('position', 'static');
+
+  const resultsDisclosure = tmaPage.locator('.workout-completion__results');
+  const resultsSummary = resultsDisclosure.locator('summary');
+  const [resultsBox, resultsTextBox] = await Promise.all([
+    resultsDisclosure.boundingBox(),
+    resultsSummary.boundingBox(),
+  ]);
+  expect(resultsBox?.height ?? Infinity).toBeLessThanOrEqual(54);
+  expect(
+    Math.abs(
+      (resultsTextBox?.x ?? 0) +
+        (resultsTextBox?.width ?? 0) / 2 -
+        ((resultsBox?.x ?? 0) + (resultsBox?.width ?? 0) / 2),
+    ),
+  ).toBeLessThanOrEqual(2);
+
+  const feedbackLegend = tmaPage.locator('.workout-completion__feedback legend');
+  const firstFeedback = tmaPage.getByRole('button', { name: 'Легче ожидаемого' });
+  const [legendBox, firstFeedbackBox] = await Promise.all([
+    feedbackLegend.boundingBox(),
+    firstFeedback.boundingBox(),
+  ]);
+  expect(
+    (firstFeedbackBox?.y ?? 0) - ((legendBox?.y ?? 0) + (legendBox?.height ?? 0)),
+  ).toBeGreaterThanOrEqual(12);
+  await expect(firstFeedback).toHaveCSS('border-radius', '12px');
+  await expect(tmaPage.getByRole('button', { name: 'Вернуться в Сегодня' })).toHaveCSS(
+    'border-radius',
+    '12px',
+  );
+
+  const duplicateStatus = await tmaPage.evaluate(async () => {
+    const response = await fetch('/api/v1/workouts/42/finish', { method: 'POST' });
+    return response.status;
+  });
+  expect(duplicateStatus).toBe(200);
+  expect(api.finishCalls()).toBe(2);
+  await expect(tmaPage.getByRole('heading', { name: 'Тренировка завершена' })).toHaveCount(1);
+
+  await tma.setSafeArea({ top: 28, right: 2, bottom: 22, left: 2 });
+  await tma.setContentSafeArea({ top: 40, right: 0, bottom: 18, left: 0 });
+  const note = tmaPage.getByRole('textbox', { name: 'Заметка' });
+  await note.fill('Сохранить ровный темп');
+  await tmaPage.getByRole('button', { name: 'Нормально' }).click();
+  await note.focus();
+  await tma.setViewport(560, MOBILE_CONTEXTS.baseline.height, false);
+  await expect(tmaPage.locator('#appBottomNav')).toBeHidden();
+  await tmaPage.getByRole('button', { name: 'Сохранить' }).scrollIntoViewIfNeeded();
+  await expectNoHorizontalOverflow(tmaPage);
+
+  api.setOffline(true);
+  await tmaPage.getByRole('button', { name: 'Сохранить' }).click();
+  await expect(tmaPage.getByRole('alert')).toContainText('Введённый текст сохранён в форме');
+  await expect(note).toHaveValue('Сохранить ровный темп');
+  api.setOffline(false);
+  await tmaPage.getByRole('button', { name: 'Сохранить' }).click();
+  await expect(tmaPage.getByText('Обратная связь сохранена')).toBeVisible();
+  expect(api.completionFeedback()).toEqual({
+    feedback: 'as_expected',
+    note: 'Сохранить ровный темп',
+  });
+
+  await tma.setTheme('dark');
+  await tma.setActive(false);
+  await tma.setActive(true);
+  await tma.setViewport(MOBILE_CONTEXTS.baseline.height, MOBILE_CONTEXTS.baseline.height);
+  await tmaPage.reload();
+  await expect(tmaPage.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible();
+  await expect(tmaPage.getByRole('textbox', { name: 'Заметка' })).toHaveValue(
+    'Сохранить ровный темп',
+  );
+  await expect(
+    tmaPage.getByRole('spinbutton', { name: 'Повторы, Приседания, подход 1' }),
+  ).not.toBeAttached();
+  await expect.poll(async () => (await tma.state()).backButton.visible).toBe(false);
+  for (const viewport of Object.values(MOBILE_CONTEXTS)) {
+    await tmaPage.setViewportSize(viewport);
+    await tma.setViewport(viewport.height, viewport.height);
+    await expectNoHorizontalOverflow(tmaPage);
+  }
+
+  await mobilePage.goto('/');
+  await expect(mobilePage.locator('.landing-button').first()).toHaveCSS('border-radius', '12px');
 });
 
 test('nutrition quick paths recover in TMA and match Mobile Web before core navigation', async ({

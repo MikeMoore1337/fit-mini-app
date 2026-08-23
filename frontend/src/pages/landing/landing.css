@@ -36,7 +36,7 @@
   height: var(--landing-header-control-size);
   padding: 0 11px;
   border: 1px solid var(--landing-border);
-  border-radius: 14px;
+  border-radius: var(--radius-action);
   background: var(--landing-card);
   color: var(--landing-ink);
   cursor: pointer;
@@ -160,7 +160,7 @@
   width: fit-content;
   padding: 0 22px;
   border: 1px solid var(--landing-primary);
-  border-radius: 14px;
+  border-radius: var(--radius-action);
   background: var(--landing-primary);
   color: var(--landing-primary-text) !important;
   font-size: 0.86rem;
@@ -1188,7 +1188,7 @@
   .landing-contact__actions .landing-button {
     min-height: 58px;
     padding-inline: 20px;
-    border-radius: 14px;
+    border-radius: var(--radius-action);
   }
 
   .landing-hero__visual {

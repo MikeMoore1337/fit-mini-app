@@ -14,6 +14,7 @@ import {
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { DateInput, TimeInput } from '../../shared/ui/PickerInput';
 import { WorkoutFeedbackDisclosure } from '../workouts/WorkoutFeedback';
+import { workoutCompletionFeedbackLabels } from '../workouts/WorkoutCompletionSummary';
 
 function formatDate(value: string): string {
   return new Date(`${value}T12:00:00`).toLocaleDateString('ru-RU', {
@@ -225,6 +226,17 @@ export function ClientAnalytics({
                         </div>
                       </div>
                     ))
+                  )}
+                  {(workout.completion_feedback || workout.completion_note) && (
+                    <div className="workout-completion-context">
+                      {workout.completion_feedback && (
+                        <strong>
+                          Самооценка клиента:{' '}
+                          {workoutCompletionFeedbackLabels[workout.completion_feedback]}
+                        </strong>
+                      )}
+                      {workout.completion_note && <p>{workout.completion_note}</p>}
+                    </div>
                   )}
                   <WorkoutFeedbackDisclosure
                     workoutId={workout.id}

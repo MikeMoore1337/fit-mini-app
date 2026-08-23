@@ -1277,6 +1277,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workouts/{workout_id}/completion-feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Workout Completion Feedback */
+        put: operations["update_workout_completion_feedback_api_v1_workouts__workout_id__completion_feedback_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workouts/sets/{set_id}": {
         parameters: {
             query?: never;
@@ -5497,6 +5514,72 @@ export interface components {
             /** Body */
             body: string;
         };
+        /** WorkoutCompletionExercise */
+        WorkoutCompletionExercise: {
+            /** Workout Exercise Id */
+            workout_exercise_id: number;
+            /** Exercise Id */
+            exercise_id: number;
+            /** Exercise Title */
+            exercise_title: string;
+            /** Completed Sets */
+            completed_sets: number;
+            /** Reps Total */
+            reps_total?: number | null;
+            /** Reps Recorded Sets */
+            reps_recorded_sets: number;
+            /** Max Load Kg */
+            max_load_kg?: number | null;
+            /** Load Recorded Sets */
+            load_recorded_sets: number;
+        };
+        /** WorkoutCompletionFeedbackUpdate */
+        WorkoutCompletionFeedbackUpdate: {
+            /** Feedback */
+            feedback?: ("easier_than_expected" | "as_expected" | "harder_than_expected") | null;
+            /** Note */
+            note?: string | null;
+        };
+        /** WorkoutCompletionNextWorkout */
+        WorkoutCompletionNextWorkout: {
+            /** Id */
+            id: number;
+            /**
+             * Scheduled Date
+             * Format: date
+             */
+            scheduled_date: string;
+            /** Scheduled Time */
+            scheduled_time?: string | null;
+            /** Title */
+            title: string;
+        };
+        /** WorkoutCompletionSummary */
+        WorkoutCompletionSummary: {
+            /** Duration Seconds */
+            duration_seconds?: number | null;
+            /** Performed Exercises */
+            performed_exercises: number;
+            /** Completed Sets */
+            completed_sets: number;
+            /** Total Sets */
+            total_sets: number;
+            /** Reps Total */
+            reps_total?: number | null;
+            /** Reps Recorded Sets */
+            reps_recorded_sets: number;
+            /** Load Recorded Sets */
+            load_recorded_sets: number;
+            /** Exercises */
+            exercises: components["schemas"]["WorkoutCompletionExercise"][];
+            /** Personal Records */
+            personal_records: components["schemas"]["WorkoutPersonalRecord"][];
+            next_workout?: components["schemas"]["WorkoutCompletionNextWorkout"] | null;
+            /** Feedback */
+            feedback?: ("easier_than_expected" | "as_expected" | "harder_than_expected") | null;
+            /** Note */
+            note?: string | null;
+        };
         /** WorkoutExerciseItem */
         WorkoutExerciseItem: {
             /** Id */
@@ -5573,6 +5656,10 @@ export interface components {
             completed_sets: number;
             /** Volume Kg */
             volume_kg: number;
+            /** Completion Feedback */
+            completion_feedback?: ("easier_than_expected" | "as_expected" | "harder_than_expected") | null;
+            /** Completion Note */
+            completion_note?: string | null;
             /** Exercises */
             exercises: components["schemas"]["WorkoutHistoryExerciseItem"][];
             /** Adaptations */
@@ -5586,6 +5673,19 @@ export interface components {
             completed_sets: number;
             /** Volume Kg */
             volume_kg: number;
+        };
+        /** WorkoutPersonalRecord */
+        WorkoutPersonalRecord: {
+            /** Exercise Id */
+            exercise_id: number;
+            /** Exercise Title */
+            exercise_title: string;
+            /** Kinds */
+            kinds: ("max_load" | "best_set_volume")[];
+            /** Max Load Kg */
+            max_load_kg?: number | null;
+            /** Best Set Volume Kg */
+            best_set_volume_kg?: number | null;
         };
         /** WorkoutProgressResponse */
         WorkoutProgressResponse: {
@@ -5727,6 +5827,10 @@ export interface components {
             completed_sets: number;
             /** Volume Kg */
             volume_kg: number;
+            /** Completion Feedback */
+            completion_feedback?: ("easier_than_expected" | "as_expected" | "harder_than_expected") | null;
+            /** Completion Note */
+            completion_note?: string | null;
             /** Exercises */
             exercises: components["schemas"]["WorkoutTimelineExercise"][];
         };
@@ -5778,6 +5882,7 @@ export interface components {
             completed_at?: string | null;
             /** Exercises */
             exercises: components["schemas"]["WorkoutExerciseItem"][];
+            completion_summary?: components["schemas"]["WorkoutCompletionSummary"] | null;
         };
     };
     responses: never;
@@ -8316,6 +8421,41 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": components["schemas"]["WorkoutFinishRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkoutTodayResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_workout_completion_feedback_api_v1_workouts__workout_id__completion_feedback_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workout_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkoutCompletionFeedbackUpdate"];
             };
         };
         responses: {
