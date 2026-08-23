@@ -125,6 +125,8 @@ Reviewer:
 - использует `$code-reviewer` и только нужные профильные skills;
 - проверяет correctness, security/privacy, data integrity, compatibility, races/retry/idempotency, критичные tests, UX/a11y/performance по поверхности task;
 - возвращает findings с severity и минимальным вариантом исправления;
+- для каждого `MEDIUM/LOW` возвращает registry-ready ID, scenario/impact, source, route и
+  verification для корневого `NON_BLOCKING_FINDINGS.md`;
 - production-код не исправляет.
 
 Повторный reviewer не нужен для чистой read-only research/decision task, если `independent-reviewer` уже является основной ролью и task не создаёт implementation diff.
@@ -186,10 +188,13 @@ QA не обязан запускать полный suite. Использова
 3. Проверить итоговый `git diff`.
 4. Убедиться, что нет изменений вне scope и случайных generated/secrets artifacts.
 5. Проверить migrations/config/dependency changes.
-6. Создать один логический commit только после успешного lifecycle, если есть tracked changes.
-7. Для read-only/no-code/defer/No-Go outcome commit не создавать, если task не создала tracked artifacts.
-8. Не выполнять merge/deploy/production/external owner actions без явного разрешения.
-9. Не переходить к следующей task.
+6. Добавить или обновить каждый новый/изменённый `MEDIUM/LOW` в корневом
+   `NON_BLOCKING_FINDINGS.md`, включая исправленные в этой task; закрытые записи не удалять.
+7. Создать один логический commit только после успешного lifecycle, если есть tracked changes.
+8. Для read-only/no-code/defer/No-Go outcome без findings и tracked artifacts commit не создавать;
+   новый registry entry сам является tracked artifact и должен быть commit-нут.
+9. Не выполнять merge/deploy/production/external owner actions без явного разрешения.
+10. Не переходить к следующей task.
 
 ## 10. Финальный отчёт
 
@@ -206,6 +211,7 @@ QA не обязан запускать полный suite. Использова
 - что не удалось проверить;
 - owner/manual checks, если нужны;
 - оставшиеся риски/blockers/follow-ups;
+- затронутые `NON_BLOCKING_FINDINGS.md` IDs и statuses;
 - commit hash либо явный `no commit`.
 
 Нельзя утверждать, что independent review, QA, real-user check, real Telegram check, provider verification или production validation выполнены, если они фактически не выполнялись.

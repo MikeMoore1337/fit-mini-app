@@ -15,6 +15,8 @@
 - [ ] Ran targeted checks and recorded exact commands.
 - [ ] Only `BLOCKER/HIGH` blocked completion.
 - [ ] `MEDIUM/LOW/NIT/OUT_OF_SCOPE` did not create new schema/API/platform/product scope.
+- [ ] Added or updated every `MEDIUM/LOW` in root `NON_BLOCKING_FINDINGS.md`, including findings
+      fixed in the same task, and recorded their IDs/statuses in the final report.
 - [ ] If blocking findings were fixed, repeat review/QA was targeted rather than a new full audit.
 - [ ] Stayed within lifecycle review/QA pass limits.
 - [ ] Checked final `git diff`, migrations/config/dependencies/generated artifacts.

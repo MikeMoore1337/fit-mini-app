@@ -15,6 +15,7 @@ Use one fresh Codex chat per task. Select model/reasoning manually according to 
 Выполни только дополнительные lifecycle-роли, явно указанные task.
 Не запускай полный audit/suite и не подключай новые роли "для надёжности" без требования task/доказанного риска.
 Только BLOCKER/HIGH блокируют завершение; non-blocking findings не расширяют scope.
+Каждый MEDIUM/LOW до commit добавь или обнови в корневом `NON_BLOCKING_FINDINGS.md`.
 Не deploy production. Не переходи к следующей task.
 ```
 

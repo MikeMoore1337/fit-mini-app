@@ -166,6 +166,12 @@ For backlog tasks, severity determines whether work continues:
 - `BLOCKER` and `HIGH` block completion and must be fixed or reported as a blocker.
 - `MEDIUM`, `LOW`, `NIT` and `OUT_OF_SCOPE` are non-blocking. They must not trigger a new
   architecture/data/API/platform workstream.
+- Every `MEDIUM` or `LOW` finding from any task, review, QA or audit must be added or updated in
+  the root `NON_BLOCKING_FINDINGS.md` before commit and finalization, even when fixed in the same
+  task. A chat final report or an ignored `.artifacts/` report is not durable tracking.
+- Keep resolved entries in that registry and update their status/verification instead of deleting
+  them. The primary agent owns registry synchronization; read-only reviewer/QA roles return the
+  required registry-ready details.
 - A finding cannot be labelled `MEDIUM` and still be used to prevent commit. If it truly makes
   the task unacceptable, the reviewer must reclassify it as `HIGH/BLOCKER` with reproducible
   evidence tied to the task or regression introduced by the current diff.
@@ -323,6 +329,8 @@ Before declaring tracked backlog implementation complete:
 - confirm migrations, generated files, dependencies and configuration changes are intentional;
 - confirm all blocking `BLOCKER/HIGH` review/QA findings are resolved or explicitly blocked;
 - keep `MEDIUM/LOW/NIT/OUT_OF_SCOPE` as concise non-blocking follow-ups rather than reopening scope;
+- confirm every new or changed `MEDIUM/LOW` is synchronized in `NON_BLOCKING_FINDINGS.md` and cite
+  its ID/status in the final report;
 - create the task's one logical commit only after successful applicable verification;
 - do not start the next task.
 

@@ -38,6 +38,8 @@ Production-код сам не меняй. Write-work делегируй `impleme
 
 - blocking findings передавай узкому implementer pass;
 - `MEDIUM/LOW/OUT_OF_SCOPE` не создают новый workstream автоматически;
+- перед convergence/commit убедись, что primary writer добавил или обновил каждый `MEDIUM/LOW` в
+  корневом `NON_BLOCKING_FINDINGS.md`;
 - после fix не запускай новый полный audit - только targeted recheck по затронутому stream.
 
 ## Выходной контракт

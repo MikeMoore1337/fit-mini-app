@@ -7,6 +7,9 @@
 - Preserve `/start link_<token>`, signed TMA auth and login proxy-tunnel/TLS.
 - No news/channel/digest scope.
 - Run focused tests, inspect diff, one logical commit, do not start next task.
+- Add or update every `MEDIUM/LOW` from any review, QA or audit in root
+  `NON_BLOCKING_FINDINGS.md` before commit/finalization, including findings fixed in the same task.
+  Chat reports and `.artifacts/` are not durable tracking.
 - Read `TELEGRAM_AUTOMATION_BOUNDARY.md` before every task that touches Telegram profile/BotFather/platform settings.
 
 
