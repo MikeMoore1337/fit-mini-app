@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
+from decimal import Decimal
 
 from fitminiapp_api.db.session import get_session_context
 from fitminiapp_api.models.check_in import WeeklyCheckIn
+from fitminiapp_api.models.food_diary import FoodDiaryDayStatus, FoodDiaryEntry
 from fitminiapp_api.models.notification import Notification, NotificationSetting
+from fitminiapp_api.models.nutrition import NutritionTarget
 from fitminiapp_api.models.user import BodyMeasurement, CoachClient, User
 from fitminiapp_api.services import notifications as notifications_service
 from fitminiapp_api.services import weekly_check_ins as check_in_service
@@ -68,7 +71,7 @@ def test_weekly_check_in_uses_local_week_snapshots_summary_and_rejects_duplicate
     assert current.json()["week_end"] == "2030-01-13"
     assert current.json()["timezone"] == "Pacific/Kiritimati"
     summary = current.json()["summary"]
-    assert summary["ruleset_version"] == "weekly-check-in-summary-v1"
+    assert summary["ruleset_version"] == "weekly-review-summary-v2"
     assert summary["period_start"] == "2030-01-07"
     assert summary["period_end"] == "2030-01-10"
     assert summary["goal"] == "muscle_gain"
@@ -90,7 +93,11 @@ def test_weekly_check_in_uses_local_week_snapshots_summary_and_rejects_duplicate
     )
     assert created.status_code == 201, created.text
     assert created.json()["note"] == "Хорошая неделя"
-    assert created.json()["summary"] == summary
+    assert created.json()["summary"] == {
+        **summary,
+        "adaptive_energy": created.json()["summary"]["adaptive_energy"],
+    }
+    assert created.json()["summary"]["adaptive_energy"]["decision"] == "not_available"
 
     with get_session_context() as db:
         user = db.get(User, user_id)
@@ -115,9 +122,7 @@ def test_weekly_check_in_uses_local_week_snapshots_summary_and_rejects_duplicate
     assert history.json()["items"][0]["user_id"] == user_id
     exported = client.get("/api/v1/me/export", headers=headers)
     assert exported.status_code == 200
-    assert exported.json()["weekly_check_ins"][0]["summary_version"] == (
-        "weekly-check-in-summary-v1"
-    )
+    assert exported.json()["weekly_check_ins"][0]["summary_version"] == ("weekly-review-summary-v2")
     assert client.get("/api/v1/check-ins/weekly", headers=other_headers).json()["items"] == []
 
 
@@ -176,6 +181,126 @@ def test_weekly_check_in_skip_optional_validation_and_timezone_week_boundary(
         json={"status": "completed", "recovery": 6},
     )
     assert invalid.status_code == 422
+
+
+def test_weekly_review_separates_diary_states_and_only_marks_selected_low_days(
+    client, monkeypatch
+) -> None:
+    headers = _auth(client, 34_150)
+    user_id = _user_id(34_150)
+    fixed_local_day = date(2026, 8, 21)
+    monkeypatch.setattr(check_in_service, "today_for_user", lambda _user: fixed_local_day)
+
+    with get_session_context() as db:
+        db.add(
+            NutritionTarget(
+                user_id=user_id,
+                assigned_by_user_id=user_id,
+                effective_from=date(2026, 8, 1),
+                source="manual",
+                calories=2000,
+                protein_g=140,
+                fat_g=70,
+                carbs_g=200,
+            )
+        )
+        for diary_date, calories, status in (
+            (date(2026, 8, 18), 600, "complete"),
+            (date(2026, 8, 19), 300, "incomplete"),
+        ):
+            db.add(
+                FoodDiaryEntry(
+                    user_id=user_id,
+                    diary_date=diary_date,
+                    meal_type="lunch",
+                    amount=Decimal("100"),
+                    amount_unit="g",
+                    weight_g=Decimal("100"),
+                    food_name="Тестовый день",
+                    energy_kcal_per_100g=Decimal(calories),
+                    protein_g_per_100g=Decimal("0"),
+                    fat_g_per_100g=Decimal("0"),
+                    carbs_g_per_100g=Decimal("0"),
+                )
+            )
+            db.add(FoodDiaryDayStatus(user_id=user_id, diary_date=diary_date, status=status))
+        db.add(FoodDiaryDayStatus(user_id=user_id, diary_date=date(2026, 8, 20), status="fasted"))
+
+    summary = client.get("/api/v1/check-ins/weekly/current", headers=headers).json()["summary"]
+    assert summary["nutrition"]["complete_days"] == 1
+    assert summary["nutrition"]["incomplete_days"] == 1
+    assert summary["nutrition"]["fasted_days"] == 1
+    assert summary["nutrition"]["unlogged_days"] == 1
+    assert summary["nutrition"]["current_target"] == {
+        "effective_from": "2026-08-01",
+        "source": "manual",
+        "calories": 2000,
+        "protein_g": 140,
+        "fat_g": 70,
+        "carbs_g": 200,
+    }
+    assert summary["nutrition"]["suspicious_low_days"] == [
+        {
+            "diary_date": "2026-08-18",
+            "calories": 600,
+            "target_calories": 2000,
+        }
+    ]
+
+    marked = client.put(
+        "/api/v1/nutrition/diary/status",
+        headers=headers,
+        json={"diary_date": "2026-08-18", "status": "incomplete"},
+    )
+    assert marked.status_code == 200
+    updated = client.get("/api/v1/check-ins/weekly/current", headers=headers).json()["summary"]
+    assert updated["nutrition"]["complete_days"] == 0
+    assert updated["nutrition"]["incomplete_days"] == 2
+    assert updated["nutrition"]["fasted_days"] == 1
+    assert updated["nutrition"]["unlogged_days"] == 1
+    assert updated["nutrition"]["suspicious_low_days"] == []
+
+
+def test_weekly_review_flags_explicitly_complete_zero_day_without_counting_unlogged_day(
+    client, monkeypatch
+) -> None:
+    headers = _auth(client, 34_151)
+    user_id = _user_id(34_151)
+    monkeypatch.setattr(check_in_service, "today_for_user", lambda _user: date(2026, 8, 19))
+
+    with get_session_context() as db:
+        db.add(
+            NutritionTarget(
+                user_id=user_id,
+                assigned_by_user_id=user_id,
+                effective_from=date(2026, 8, 1),
+                source="manual",
+                calories=2000,
+                protein_g=140,
+                fat_g=70,
+                carbs_g=200,
+            )
+        )
+        db.add(
+            FoodDiaryDayStatus(
+                user_id=user_id,
+                diary_date=date(2026, 8, 17),
+                status="complete",
+            )
+        )
+
+    nutrition = client.get("/api/v1/check-ins/weekly/current", headers=headers).json()["summary"][
+        "nutrition"
+    ]
+    assert nutrition["complete_days"] == 1
+    assert nutrition["unlogged_days"] == 1
+    assert nutrition["suspicious_low_days"] == [
+        {
+            "diary_date": "2026-08-17",
+            "calories": 0,
+            "target_calories": 2000,
+        }
+    ]
 
 
 def test_trainer_weekly_check_in_access_is_revoked_with_relationship(client, monkeypatch) -> None:

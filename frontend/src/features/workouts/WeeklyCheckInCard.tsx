@@ -1,16 +1,64 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type {
+  EnergyCalibration,
   WeeklyCheckInCurrent,
   WeeklyCheckInHistory,
   WeeklyCheckInSubmit,
 } from '../../shared/api/types';
-import { Badge, Card, ErrorState, LoadingState } from '../../shared/ui/common';
-import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { formatCalendarDate } from '../../shared/dateTime';
+import { invalidateNutritionSummaries } from '../../shared/queryKeys';
+import { usePersistentState } from '../../shared/storage';
+import { weeklyReviewDraftStorageKey } from '../../shared/userScopedStorage';
+import { Badge, Card, DisclosureIcon, ErrorState, LoadingState } from '../../shared/ui/common';
+import { useFeedback } from '../../shared/ui/FeedbackProvider';
 
 const scoreOptions = [1, 2, 3, 4, 5] as const;
+
+type ReviewStep = 'facts' | 'questions' | 'adjustment';
+type ScoreField = 'training_load' | 'recovery' | 'hunger' | 'adherence_difficulty';
+
+interface WeeklyReviewDraft {
+  weekStart: string | null;
+  step: ReviewStep;
+  training_load: string;
+  recovery: string;
+  hunger: string;
+  adherence_difficulty: string;
+  note: string;
+  selectedLowDays: string[];
+  calibration: EnergyCalibration | null;
+}
+
+const emptyDraft: WeeklyReviewDraft = {
+  weekStart: null,
+  step: 'facts',
+  training_load: '',
+  recovery: '',
+  hunger: '',
+  adherence_difficulty: '',
+  note: '',
+  selectedLowDays: [],
+  calibration: null,
+};
+
+const calibrationStatusLabels: Record<EnergyCalibration['status'], string> = {
+  insufficient: 'Данных пока недостаточно',
+  limited: 'Данные пока нестабильны',
+  no_change: 'Изменение не требуется',
+  pending: 'Есть предложение',
+  accepted: 'Новая цель принята',
+  rejected: 'Текущая цель сохранена',
+  superseded: 'Предложение устарело',
+};
+
+const targetSourceLabels = {
+  calculated: 'Расчёт',
+  manual: 'Вручную',
+  trainer: 'Тренер',
+  adaptive: 'Адаптивная проверка',
+} as const;
 
 function formatPeriod(start: string, end: string): string {
   const format = (value: string) =>
@@ -21,18 +69,81 @@ function formatPeriod(start: string, end: string): string {
   return `${format(start)} — ${format(end)}`;
 }
 
+function formatDate(value: string): string {
+  return formatCalendarDate(value, { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
 function optionalScore(value: string): number | null {
   return value ? Number(value) : null;
 }
 
-export function WeeklyCheckInCard({ autoFocus = false }: { autoFocus?: boolean }) {
+function sufficiencyLabel(status: 'sufficient' | 'limited' | 'insufficient'): string {
+  if (status === 'sufficient') return 'Достаточно данных';
+  if (status === 'limited') return 'Данные ограничены';
+  return 'Мало данных';
+}
+
+function questionFields(current: WeeklyCheckInCurrent): Array<{
+  key: ScoreField;
+  label: string;
+  hint: string;
+}> {
+  const fields: Array<{ key: ScoreField; label: string; hint: string }> = [
+    {
+      key: 'recovery',
+      label: 'Как вы восстанавливались на этой неделе?',
+      hint: '1 — плохо, 5 — отлично',
+    },
+    {
+      key: 'hunger',
+      label: 'Насколько часто мешал голод?',
+      hint: '1 — почти не мешал, 5 — мешал очень часто',
+    },
+  ];
+  if (current.summary.training.completed_workouts > 0) {
+    fields.push({
+      key: 'training_load',
+      label: 'Насколько тяжёлой ощущалась тренировочная неделя?',
+      hint: '1 — легко, 5 — очень тяжело',
+    });
+  }
+  if (
+    current.summary.nutrition.current_target ||
+    current.summary.nutrition.incomplete_days > 0 ||
+    current.summary.training.planned_workouts > current.summary.training.completed_workouts
+  ) {
+    fields.push({
+      key: 'adherence_difficulty',
+      label: 'Насколько сложно было следовать плану?',
+      hint: '1 — легко, 5 — очень сложно',
+    });
+  }
+  return fields.slice(0, 4);
+}
+
+function macroLine(calibration: EnergyCalibration, proposed: boolean): string | null {
+  const protein = proposed
+    ? calibration.proposed_target_protein_g
+    : calibration.current_target_protein_g;
+  const fat = proposed ? calibration.proposed_target_fat_g : calibration.current_target_fat_g;
+  const carbs = proposed ? calibration.proposed_target_carbs_g : calibration.current_target_carbs_g;
+  if (protein == null || fat == null || carbs == null) return null;
+  return `Б ${protein} г · Ж ${fat} г · У ${carbs} г`;
+}
+
+export function WeeklyCheckInCard({
+  autoFocus = false,
+  userId,
+}: {
+  autoFocus?: boolean;
+  userId: number | 'anonymous';
+}) {
   const queryClient = useQueryClient();
   const { toast, confirm } = useFeedback();
-  const [trainingLoad, setTrainingLoad] = useState('');
-  const [recovery, setRecovery] = useState('');
-  const [hunger, setHunger] = useState('');
-  const [adherenceDifficulty, setAdherenceDifficulty] = useState('');
-  const [note, setNote] = useState('');
+  const [draft, setDraft, clearDraft] = usePersistentState<WeeklyReviewDraft>(
+    weeklyReviewDraftStorageKey(userId),
+    emptyDraft,
+  );
   const cardRef = useRef<HTMLDivElement>(null);
   const current = useQuery({
     queryKey: ['weekly-check-ins', 'current'],
@@ -42,31 +153,109 @@ export function WeeklyCheckInCard({ autoFocus = false }: { autoFocus?: boolean }
     queryKey: ['weekly-check-ins', 'history'],
     queryFn: () => api<WeeklyCheckInHistory>('/api/v1/check-ins/weekly?limit=4&offset=0'),
   });
-  const mutation = useMutation({
+
+  useEffect(() => {
+    if (!current.data || current.data.week_start === draft.weekStart) return;
+    setDraft({ ...emptyDraft, weekStart: current.data.week_start });
+  }, [current.data, draft.weekStart, setDraft]);
+
+  const submit = useMutation({
     mutationFn: (payload: WeeklyCheckInSubmit) =>
       api('/api/v1/check-ins/weekly', { method: 'POST', body: payload }),
     onSuccess: async (_result, payload) => {
+      clearDraft({ ...emptyDraft, weekStart: current.data?.week_start ?? null });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['weekly-check-ins'] }),
         queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+        invalidateNutritionSummaries(queryClient),
       ]);
-      toast(
-        payload.status === 'skipped'
-          ? 'Итоги недели отмечены как пропущенные'
-          : 'Итоги недели сохранены',
+      toast(payload.status === 'skipped' ? 'Недельный обзор пропущен' : 'Недельный обзор сохранён');
+    },
+    onError: (reason) => toast((reason as Error).message, 'error'),
+  });
+  const preview = useMutation({
+    mutationFn: () =>
+      api<EnergyCalibration>('/api/v1/nutrition/energy-calibration/preview', {
+        method: 'POST',
+      }),
+    onSuccess: (calibration) =>
+      setDraft((value) => ({ ...value, step: 'adjustment', calibration })),
+    onError: (reason) => toast((reason as Error).message, 'error'),
+  });
+  const decision = useMutation({
+    mutationFn: ({ id, value }: { id: number; value: 'accept' | 'reject' }) =>
+      api<EnergyCalibration>(`/api/v1/nutrition/energy-calibration/${id}/decision`, {
+        method: 'POST',
+        body: { decision: value },
+      }),
+    onSuccess: async (calibration) => {
+      setDraft((value) => ({ ...value, calibration }));
+      if (calibration.status === 'accepted') await invalidateNutritionSummaries(queryClient);
+      finishReview(calibration);
+    },
+    onError: (reason) => toast((reason as Error).message, 'error'),
+  });
+  const markIncomplete = useMutation({
+    mutationFn: async (dates: string[]) => {
+      await Promise.all(
+        dates.map((diaryDate) =>
+          api('/api/v1/nutrition/diary/status', {
+            method: 'PUT',
+            body: { diary_date: diaryDate, status: 'incomplete' },
+          }),
+        ),
       );
+    },
+    onSuccess: async () => {
+      setDraft((value) => ({ ...value, selectedLowDays: [], calibration: null }));
+      await queryClient.invalidateQueries({ queryKey: ['weekly-check-ins', 'current'] });
+      toast('Выбранные дни отмечены как неполные');
     },
     onError: (reason) => toast((reason as Error).message, 'error'),
   });
 
+  function finishReview(calibration: EnergyCalibration | null = draft.calibration): void {
+    submit.mutate({
+      status: 'completed',
+      training_load: optionalScore(draft.training_load),
+      recovery: optionalScore(draft.recovery),
+      hunger: optionalScore(draft.hunger),
+      adherence_difficulty: optionalScore(draft.adherence_difficulty),
+      note: draft.note.trim() || null,
+      energy_calibration_id: calibration?.id ?? null,
+    });
+  }
+
+  function openAdjustment(skipQuestions = false): void {
+    const next = skipQuestions
+      ? {
+          ...draft,
+          training_load: '',
+          recovery: '',
+          hunger: '',
+          adherence_difficulty: '',
+          note: '',
+          step: 'adjustment' as const,
+        }
+      : { ...draft, step: 'adjustment' as const };
+    setDraft(next);
+    if (!next.calibration) preview.mutate();
+  }
+
   useEffect(() => {
-    if (!autoFocus || current.isLoading || !current.data) return;
+    if (
+      !autoFocus ||
+      current.isLoading ||
+      !current.data ||
+      draft.weekStart !== current.data.week_start
+    )
+      return;
     cardRef.current?.focus({ preventScroll: true });
     const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     cardRef.current
       ?.closest('.card')
       ?.scrollIntoView?.({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
-  }, [autoFocus, current.data, current.isLoading]);
+  }, [autoFocus, current.data, current.isLoading, draft.weekStart]);
 
   if (current.isLoading) return <LoadingState label="Собираем итоги недели…" />;
   if (current.error) {
@@ -75,166 +264,420 @@ export function WeeklyCheckInCard({ autoFocus = false }: { autoFocus?: boolean }
     );
   }
   if (!current.data) return null;
+  if (draft.weekStart !== current.data.week_start) {
+    return <LoadingState label="Восстанавливаем недельный обзор…" />;
+  }
 
   const { summary, existing } = current.data;
-  const weightChange = summary.weight_trend?.change;
+  const target = summary.nutrition.current_target;
+  const weightSignal = summary.data_sufficiency.weight_trend;
+  const weightPoints = Number(weightSignal.counters.point_count ?? 0);
+  const questions = questionFields(current.data);
+  const calibration = draft.calibration;
+  const suspiciousLowDays = summary.nutrition.suspicious_low_days ?? [];
+  const isBusy = submit.isPending || preview.isPending || decision.isPending;
+
   return (
     <Card
-      title="Еженедельные итоги"
-      description={formatPeriod(current.data.week_start, current.data.week_end)}
+      className="weekly-review-card"
+      title="Итоги недели"
+      description={`${formatPeriod(summary.period_start, summary.period_end)} · ${current.data.timezone}`}
+      collapsible={!autoFocus}
     >
-      <div id="weekly-review" ref={cardRef} tabIndex={-1} className="metric-grid top-gap">
-        <div className="metric">
-          <span>Тренировки</span>
-          <strong>
-            {summary.training.completed_workouts} из {summary.training.planned_workouts}
-          </strong>
-        </div>
-        <div className="metric">
-          <span>Дней с питанием</span>
-          <strong>{summary.nutrition.logged_days}</strong>
-        </div>
-        <div className="metric">
-          <span>Новых рекордов</span>
-          <strong>{summary.progression.new_personal_records}</strong>
-        </div>
-        <div className="metric">
-          <span>Изменение веса</span>
-          <strong>
-            {weightChange == null
-              ? 'Мало данных'
-              : `${weightChange > 0 ? '+' : ''}${weightChange} кг`}
-          </strong>
-        </div>
-      </div>
+      <div id="weekly-review" ref={cardRef} tabIndex={-1} className="weekly-review stack top-gap">
+        {existing ? (
+          <div className="weekly-review__complete">
+            <Badge>{existing.status === 'skipped' ? 'Пропущено' : 'Готово'}</Badge>
+            <div>
+              <strong>
+                {existing.status === 'skipped' ? 'Обзор этой недели пропущен' : 'Обзор сохранён'}
+              </strong>
+              <p className="muted">
+                {existing.status === 'skipped'
+                  ? 'Цель питания не менялась.'
+                  : existing.summary.adaptive_energy?.decision === 'accepted'
+                    ? 'Новая цель была явно подтверждена.'
+                    : 'Автоматических изменений цели не было.'}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <ol className="weekly-review__steps" aria-label="Шаги недельного обзора">
+              {[
+                ['facts', 'Факты'],
+                ['questions', 'Уточнения'],
+                ['adjustment', 'Решение'],
+              ].map(([step, label], index) => (
+                <li key={step} aria-current={draft.step === step ? 'step' : undefined}>
+                  <span aria-hidden="true">{index + 1}</span>
+                  <strong>{label}</strong>
+                </li>
+              ))}
+            </ol>
 
-      {existing ? (
-        <div className="list-row top-gap">
-          <div>
-            <strong>
-              {existing.status === 'skipped' ? 'Неделя пропущена' : 'Итоги сохранены'}
-            </strong>
-            <p className="muted">{existing.note || 'Самооценки и заметка не обязательны.'}</p>
-          </div>
-          <Badge>{existing.status === 'skipped' ? 'Пропущено' : 'Готово'}</Badge>
-        </div>
-      ) : (
-        <form
-          className="stack top-gap"
-          onSubmit={(event) => {
-            event.preventDefault();
-            mutation.mutate({
-              status: 'completed',
-              training_load: optionalScore(trainingLoad),
-              recovery: optionalScore(recovery),
-              hunger: optionalScore(hunger),
-              adherence_difficulty: optionalScore(adherenceDifficulty),
-              note: note.trim() || null,
-            });
-          }}
-        >
-          <p className="muted">
-            Оценки необязательны. Шкала от 1 до 5 помогает сравнивать недели между собой.
-          </p>
-          <div className="form-grid">
-            {[
-              {
-                label: 'Насколько тяжёлой была тренировочная неделя?',
-                value: trainingLoad,
-                setValue: setTrainingLoad,
-                hint: '1 — легко, 5 — очень тяжело',
-              },
-              {
-                label: 'Как вы восстановились?',
-                value: recovery,
-                setValue: setRecovery,
-                hint: '1 — плохо, 5 — отлично',
-              },
-              {
-                label: 'Насколько сильным был голод?',
-                value: hunger,
-                setValue: setHunger,
-                hint: '1 — почти не беспокоил, 5 — очень сильный',
-              },
-              {
-                label: 'Насколько сложно было соблюдать план?',
-                value: adherenceDifficulty,
-                setValue: setAdherenceDifficulty,
-                hint: '1 — легко, 5 — очень сложно',
-              },
-            ].map((field) => (
-              <label className="field" key={field.label}>
-                <span>{field.label}</span>
-                <select
-                  value={field.value}
-                  onChange={(event) => field.setValue(event.target.value)}
-                >
-                  <option value="">Не указывать</option>
-                  {scoreOptions.map((score) => (
-                    <option key={score} value={score}>
-                      {score}
-                    </option>
-                  ))}
-                </select>
-                <small>{field.hint}</small>
-              </label>
-            ))}
-          </div>
-          <label className="field">
-            <span>Заметка о неделе</span>
-            <textarea
-              value={note}
-              maxLength={2000}
-              rows={3}
-              placeholder="Что помогало или мешало?"
-              onChange={(event) => setNote(event.target.value)}
-            />
-          </label>
-          <div className="button-row">
-            <button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Сохраняем…' : 'Сохранить итоги'}
-            </button>
-            <button
-              type="button"
-              className="secondary"
-              disabled={mutation.isPending}
-              onClick={async () => {
-                if (
-                  await confirm({
-                    title: 'Пропустить итоги этой недели?',
-                    message: 'Это необязательно. Неделя останется в истории без самооценок.',
-                    confirmText: 'Пропустить',
-                  })
-                ) {
-                  mutation.mutate({ status: 'skipped' });
-                }
-              }}
-            >
-              Пропустить эту неделю
-            </button>
-          </div>
-        </form>
-      )}
-
-      {history.data?.items.length ? (
-        <details className="top-gap">
-          <summary>Предыдущие недели</summary>
-          <div className="list-grid top-gap">
-            {history.data.items.map((item) => (
-              <div className="list-row" key={item.id}>
+            {draft.step === 'facts' && (
+              <section className="stack" aria-labelledby="weekly-facts-heading">
                 <div>
-                  <strong>{formatPeriod(item.week_start, item.week_end)}</strong>
+                  <h3 id="weekly-facts-heading">Что известно приложению</h3>
                   <p className="muted">
-                    {item.summary.training.completed_workouts} из{' '}
-                    {item.summary.training.planned_workouts} тренировок
+                    Факты собраны на {formatDate(current.data.submitted_on)}. Отсутствующий день не
+                    считается нулевым потреблением.
                   </p>
                 </div>
-                <Badge>{item.status === 'skipped' ? 'Пропущено' : 'Готово'}</Badge>
-              </div>
-            ))}
-          </div>
-        </details>
-      ) : null}
+                <div className="weekly-review__facts" aria-label="Ключевые факты недели">
+                  <div>
+                    <span>Тренировки</span>
+                    <strong>
+                      {summary.training.completed_workouts} из {summary.training.planned_workouts}
+                    </strong>
+                    <small>завершено по плану</small>
+                  </div>
+                  <div>
+                    <span>Динамика массы</span>
+                    <strong>{sufficiencyLabel(weightSignal.status)}</strong>
+                    <small>{weightPoints} замеров за окно тренда</small>
+                  </div>
+                </div>
+                <dl className="weekly-review__coverage" aria-label="Полнота дневника питания">
+                  <div>
+                    <dt>Полных</dt>
+                    <dd>{summary.nutrition.complete_days}</dd>
+                  </div>
+                  <div>
+                    <dt>Неполных</dt>
+                    <dd>{summary.nutrition.incomplete_days}</dd>
+                  </div>
+                  <div>
+                    <dt>Без еды</dt>
+                    <dd>{summary.nutrition.fasted_days}</dd>
+                  </div>
+                  <div>
+                    <dt>Без записей</dt>
+                    <dd>{summary.nutrition.unlogged_days}</dd>
+                  </div>
+                </dl>
+                {target ? (
+                  <div className="weekly-review__target">
+                    <div>
+                      <span className="eyebrow">Текущая цель</span>
+                      <strong>{target.calories} ккал</strong>
+                      <p>
+                        Б {target.protein_g} г · Ж {target.fat_g} г · У {target.carbs_g} г
+                      </p>
+                    </div>
+                    <Badge>
+                      {targetSourceLabels[target.source]} · с {formatDate(target.effective_from)}
+                    </Badge>
+                  </div>
+                ) : (
+                  <p className="weekly-review__notice">Текущая цель КБЖУ ещё не задана.</p>
+                )}
+
+                {suspiciousLowDays.length > 0 && (
+                  <fieldset className="weekly-review__partial">
+                    <legend>Проверьте необычно низкие дни</legend>
+                    <p className="muted">
+                      В эти дни записано меньше половины действовавшей цели. Приложение ничего не
+                      меняет само: отметьте только действительно неполные дни. Осознанный день без
+                      еды остаётся отдельным статусом.
+                    </p>
+                    {suspiciousLowDays.map((day) => (
+                      <label key={day.diary_date}>
+                        <input
+                          type="checkbox"
+                          checked={draft.selectedLowDays.includes(day.diary_date)}
+                          onChange={(event) =>
+                            setDraft((value) => ({
+                              ...value,
+                              selectedLowDays: event.target.checked
+                                ? [...value.selectedLowDays, day.diary_date]
+                                : value.selectedLowDays.filter((value) => value !== day.diary_date),
+                            }))
+                          }
+                        />
+                        <span>
+                          <strong>{formatDate(day.diary_date)}</strong>
+                          {day.calories} из {day.target_calories} ккал
+                        </span>
+                      </label>
+                    ))}
+                    <button
+                      type="button"
+                      className="secondary"
+                      disabled={!draft.selectedLowDays.length || markIncomplete.isPending}
+                      onClick={() => markIncomplete.mutate(draft.selectedLowDays)}
+                    >
+                      {markIncomplete.isPending ? 'Сохраняем…' : 'Отметить выбранные как неполные'}
+                    </button>
+                  </fieldset>
+                )}
+
+                <div className="button-row weekly-review__actions">
+                  <button
+                    type="button"
+                    className="weekly-review__primary"
+                    onClick={() => setDraft((value) => ({ ...value, step: 'questions' }))}
+                  >
+                    Всё верно, продолжить
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => void skipEntireReview()}
+                  >
+                    Пропустить обзор
+                  </button>
+                </div>
+              </section>
+            )}
+
+            {draft.step === 'questions' && (
+              <section className="stack" aria-labelledby="weekly-questions-heading">
+                <div>
+                  <h3 id="weekly-questions-heading">Короткие уточнения</h3>
+                  <p className="muted">
+                    Каждый ответ необязателен. Он помогает понять контекст, но сам не меняет цель.
+                  </p>
+                </div>
+                <div className="form-grid">
+                  {questions.map((field) => (
+                    <label className="field" key={field.key}>
+                      <span>{field.label}</span>
+                      <select
+                        value={draft[field.key]}
+                        onChange={(event) =>
+                          setDraft((value) => ({ ...value, [field.key]: event.target.value }))
+                        }
+                      >
+                        <option value="">Пропустить вопрос</option>
+                        {scoreOptions.map((score) => (
+                          <option key={score} value={score}>
+                            {score}
+                          </option>
+                        ))}
+                      </select>
+                      <small>{field.hint}</small>
+                    </label>
+                  ))}
+                </div>
+                <label className="field">
+                  <span>Заметка о неделе</span>
+                  <textarea
+                    value={draft.note}
+                    maxLength={2000}
+                    rows={3}
+                    placeholder="Что повлияло на питание, тренировки или восстановление?"
+                    onChange={(event) =>
+                      setDraft((value) => ({ ...value, note: event.target.value }))
+                    }
+                  />
+                  <small>
+                    Черновик сохраняется только на этом устройстве и очищается при выходе.
+                  </small>
+                </label>
+                <div className="button-row weekly-review__actions">
+                  <button
+                    type="button"
+                    className="weekly-review__primary"
+                    disabled={preview.isPending}
+                    onClick={() => openAdjustment()}
+                  >
+                    {preview.isPending ? 'Проверяем данные…' : 'Перейти к решению'}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={preview.isPending}
+                    onClick={() => openAdjustment(true)}
+                  >
+                    Пропустить вопросы
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => setDraft((value) => ({ ...value, step: 'facts' }))}
+                  >
+                    Назад
+                  </button>
+                </div>
+              </section>
+            )}
+
+            {draft.step === 'adjustment' && (
+              <section className="stack" aria-labelledby="weekly-adjustment-heading">
+                <div>
+                  <h3 id="weekly-adjustment-heading">Решение по цели</h3>
+                  <p className="muted">
+                    Проверка использует заполненный дневник и сглаженный тренд массы за 28 дней. Это
+                    оценка, а не точный TDEE.
+                  </p>
+                </div>
+                {preview.isPending ? (
+                  <LoadingState label="Сопоставляем питание и динамику массы…" />
+                ) : preview.isError && !calibration ? (
+                  <div className="weekly-review__notice" role="alert">
+                    <strong>Не удалось выполнить проверку.</strong>
+                    <p>
+                      Цель не менялась. Можно повторить запрос или завершить обзор без изменения.
+                    </p>
+                    <div className="button-row">
+                      <button type="button" onClick={() => preview.mutate()}>
+                        Повторить
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => finishReview(null)}
+                      >
+                        Завершить без изменения
+                      </button>
+                    </div>
+                  </div>
+                ) : calibration ? (
+                  <div className="weekly-review__calibration" aria-live="polite">
+                    <div className="weekly-review__calibration-heading">
+                      <div>
+                        <Badge>{sufficiencyLabel(calibration.sufficiency.status)}</Badge>
+                        <strong>{calibrationStatusLabels[calibration.status]}</strong>
+                      </div>
+                      <span>{formatPeriod(calibration.period_start, calibration.period_end)}</span>
+                    </div>
+                    {calibration.estimated_expenditure_kcal != null && (
+                      <p className="weekly-review__estimate">
+                        Оценочный диапазон расхода:{' '}
+                        <strong>
+                          {calibration.estimate_low_kcal}–{calibration.estimate_high_kcal} ккал
+                        </strong>
+                      </p>
+                    )}
+                    <ul>
+                      {calibration.rationale.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+
+                    {calibration.proposed_target_calories != null && (
+                      <div className="weekly-review__diff" aria-label="Изменение цели питания">
+                        <div>
+                          <span>Сейчас</span>
+                          <strong>{calibration.current_target_calories} ккал</strong>
+                          {macroLine(calibration, false) && (
+                            <small>{macroLine(calibration, false)}</small>
+                          )}
+                        </div>
+                        <span aria-hidden="true">→</span>
+                        <div>
+                          <span>Предложение</span>
+                          <strong>{calibration.proposed_target_calories} ккал</strong>
+                          {macroLine(calibration, true) && (
+                            <small>{macroLine(calibration, true)}</small>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {calibration.status === 'pending' && calibration.id ? (
+                      <div className="weekly-review__decision">
+                        <p className="weekly-review__decision-note">
+                          При принятии новая версия начнёт действовать{' '}
+                          <strong>
+                            {formatDate(
+                              calibration.proposed_effective_from ?? current.data.submitted_on,
+                            )}
+                          </strong>
+                          . До подтверждения ничего не изменится.
+                        </p>
+                        <button
+                          type="button"
+                          className="weekly-review__primary"
+                          disabled={isBusy}
+                          onClick={() => decision.mutate({ id: calibration.id!, value: 'accept' })}
+                        >
+                          {decision.isPending ? 'Применяем…' : 'Принять новую цель'}
+                        </button>
+                        <button
+                          type="button"
+                          className="secondary"
+                          disabled={isBusy}
+                          onClick={() => decision.mutate({ id: calibration.id!, value: 'reject' })}
+                        >
+                          Оставить текущую цель
+                        </button>
+                        <button
+                          type="button"
+                          className="secondary"
+                          disabled={isBusy}
+                          onClick={() => finishReview(calibration)}
+                        >
+                          Отложить решение
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="button-row weekly-review__actions">
+                        <button
+                          type="button"
+                          className="weekly-review__primary"
+                          disabled={isBusy}
+                          onClick={() => finishReview(calibration)}
+                        >
+                          {submit.isPending ? 'Сохраняем…' : 'Завершить обзор'}
+                        </button>
+                        <button
+                          type="button"
+                          className="secondary"
+                          disabled={isBusy}
+                          onClick={() => setDraft((value) => ({ ...value, step: 'questions' }))}
+                        >
+                          Назад к вопросам
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+              </section>
+            )}
+          </>
+        )}
+
+        {history.data?.items.length ? (
+          <details className="weekly-review__history">
+            <summary>
+              <span>Предыдущие недели</span>
+              <DisclosureIcon />
+            </summary>
+            <div className="list-grid top-gap">
+              {history.data.items.map((item) => (
+                <div className="list-row" key={item.id}>
+                  <div>
+                    <strong>{formatPeriod(item.week_start, item.week_end)}</strong>
+                    <p className="muted">
+                      {item.summary.training.completed_workouts} из{' '}
+                      {item.summary.training.planned_workouts} тренировок
+                      {item.summary.adaptive_energy?.calibration.proposed_target_calories
+                        ? ` · ${item.summary.adaptive_energy.calibration.current_target_calories} → ${item.summary.adaptive_energy.calibration.proposed_target_calories} ккал`
+                        : ''}
+                    </p>
+                  </div>
+                  <Badge>{item.status === 'skipped' ? 'Пропущено' : 'Готово'}</Badge>
+                </div>
+              ))}
+            </div>
+          </details>
+        ) : null}
+      </div>
     </Card>
   );
+
+  async function skipEntireReview(): Promise<void> {
+    if (
+      await confirm({
+        title: 'Пропустить недельный обзор?',
+        message: 'Это необязательно. Цель питания останется без изменений.',
+        confirmText: 'Пропустить',
+      })
+    ) {
+      submit.mutate({ status: 'skipped' });
+    }
+  }
 }

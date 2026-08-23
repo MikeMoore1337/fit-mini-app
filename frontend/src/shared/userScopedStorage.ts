@@ -29,6 +29,7 @@ export const USER_SCOPED_PERSISTENT_STORAGE_REGISTRY = [
   { domain: 'training_preferences_draft', prefixes: ['fit_training_preferences_draft_'] },
   { domain: 'coach_client_profile_draft', prefixes: ['fit_coach_client_profile_draft_'] },
   { domain: 'notification_draft', prefixes: ['fit_notification_draft_'] },
+  { domain: 'weekly_review_draft', prefixes: ['fit_weekly_review_draft_v1_'] },
   {
     domain: 'program_draft',
     prefixes: [
@@ -104,6 +105,10 @@ export function coachClientProfileDraftStorageKey(clientId: number | null | unde
 
 export function notificationDraftStorageKey(userId: number | 'anonymous'): string {
   return `fit_notification_draft_${userId}`;
+}
+
+export function weeklyReviewDraftStorageKey(userId: number | 'anonymous'): string {
+  return `fit_weekly_review_draft_v1_${userId}`;
 }
 
 export function programDraftStorageKey(

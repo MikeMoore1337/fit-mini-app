@@ -9,7 +9,6 @@ import { nutritionDraftStorageKey } from '../../shared/userScopedStorage';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { ContextualHelp } from '../../shared/ui/ContextualHelp';
 import { Card, DisclosureIcon } from '../../shared/ui/common';
-import { EnergyCalibrationCard } from './EnergyCalibrationCard';
 import { ManualNutritionTargetForm } from './ManualNutritionTargetForm';
 import { NutritionTargetHistory } from './NutritionTargetHistory';
 import { calculateNutritionEstimate, type NutritionCalculatorInput } from './nutritionCalculator';
@@ -730,9 +729,6 @@ export function NutritionForm({
               {mutation.isPending ? 'Сохраняем…' : 'Сохранить КБЖУ'}
             </button>
           </form>
-          {!targetTelegramId && initial && (
-            <EnergyCalibrationCard target={initial} onAccepted={onSaved} />
-          )}
         </>
       )}
       <NutritionTargetHistory targetTelegramId={targetTelegramId} />

@@ -7,6 +7,7 @@ export interface PlatformApiOptions {
   workoutStatus?: WorkoutStatus;
   activeProgram?: boolean;
   weeklyReviewAvailable?: boolean;
+  weeklyCalibration?: 'insufficient' | 'pending';
   nutritionTargetSource?: 'manual' | 'trainer';
 }
 
@@ -17,6 +18,8 @@ export interface PlatformApiController {
   finishCalls(): number;
   manualTargetSaves(): number;
   targetHistoryLength(): number;
+  weeklyDecisionCalls(): string[];
+  weeklyReviewSubmits(): number;
   workoutValues(): { actualReps: number | null; actualWeight: number | null; completed: boolean };
   completionFeedback(): { feedback: string | null; note: string | null };
 }
@@ -69,6 +72,8 @@ export async function installPlatformApi(
   let patchCalls = 0;
   let finishCalls = 0;
   let manualTargetSaves = 0;
+  let weeklyReviewSubmits = 0;
+  const weeklyDecisions: string[] = [];
   let setVersion = 1;
   let setValues = {
     actualReps: workoutStatus === 'completed' ? 8 : (null as number | null),
@@ -121,6 +126,53 @@ export async function installPlatformApi(
       carbs_g: 219,
     },
   ];
+  let calibrationStatus: 'insufficient' | 'pending' | 'accepted' | 'rejected' =
+    options.weeklyCalibration ?? 'insufficient';
+  const calibration = () => ({
+    id: calibrationStatus === 'insufficient' ? null : 17,
+    status: calibrationStatus,
+    ruleset_version: 'adaptive-energy-v1',
+    period_start: previousTargetDate.toISOString().slice(0, 10),
+    period_end: today,
+    sufficiency: {
+      status: calibrationStatus === 'insufficient' ? 'insufficient' : 'sufficient',
+      counters: {
+        logged_day_count: calibrationStatus === 'insufficient' ? 3 : 24,
+        eligible_day_count: 28,
+        weight_point_count: calibrationStatus === 'insufficient' ? 0 : 6,
+      },
+      reason_keys:
+        calibrationStatus === 'insufficient' ? ['too_few_logged_days'] : ['thresholds_met'],
+    },
+    average_intake_kcal: calibrationStatus === 'insufficient' ? null : 2300,
+    smoothed_start_weight_kg: calibrationStatus === 'insufficient' ? null : 80,
+    smoothed_end_weight_kg: calibrationStatus === 'insufficient' ? null : 80,
+    estimated_expenditure_kcal: calibrationStatus === 'insufficient' ? null : 2300,
+    estimate_low_kcal: calibrationStatus === 'insufficient' ? null : 2050,
+    estimate_high_kcal: calibrationStatus === 'insufficient' ? null : 2550,
+    goal: 'maintenance',
+    current_target_calories: 2100,
+    current_target_protein_g: 140,
+    current_target_fat_g: 70,
+    current_target_carbs_g: 230,
+    proposed_target_calories: calibrationStatus === 'insufficient' ? null : 2300,
+    proposed_target_protein_g: calibrationStatus === 'insufficient' ? null : 140,
+    proposed_target_fat_g: calibrationStatus === 'insufficient' ? null : 70,
+    proposed_target_carbs_g: calibrationStatus === 'insufficient' ? null : 280,
+    proposed_effective_from: today,
+    rationale:
+      calibrationStatus === 'insufficient'
+        ? ['Пока недостаточно заполненных дней питания и регулярных замеров массы для оценки.']
+        : ['Среднее потребление по заполненным дням: 2300 ккал.', 'Тренд массы стабилен.'],
+    created_at: `${today}T10:00:00`,
+    decided_at:
+      calibrationStatus === 'accepted' || calibrationStatus === 'rejected'
+        ? `${today}T11:00:00`
+        : null,
+  });
+  let weeklyExisting: Record<string, unknown> | null = options.weeklyReviewAvailable
+    ? null
+    : { id: 1, status: 'completed', summary: { adaptive_energy: null } };
 
   if (options.browserSession) {
     await page.addInitScript(() => sessionStorage.setItem('fit_access_token', 'e2e-browser-token'));
@@ -419,15 +471,120 @@ export async function installPlatformApi(
           week_end: today,
           submitted_on: today,
           timezone: 'Europe/Moscow',
-          existing: options.weeklyReviewAvailable ? null : { id: 1 },
+          existing: weeklyExisting,
           summary: {
-            training: { completed_workouts: 0, planned_workouts: 1 },
-            nutrition: { logged_days: nutritionEntries.length ? 1 : 0 },
+            ruleset_version: 'weekly-review-summary-v2',
+            period_start: today,
+            period_end: today,
+            goal: 'maintenance',
+            training: { completed_workouts: 0, planned_workouts: 1, adherence: {} },
+            nutrition: {
+              logged_days: nutritionEntries.length ? 1 : 0,
+              complete_days: 0,
+              incomplete_days: nutritionEntries.length ? 1 : 0,
+              fasted_days: 0,
+              unlogged_days: nutritionEntries.length ? 0 : 1,
+              average_calories: null,
+              target_calories: 2100,
+              average_protein_g: null,
+              target_protein_g: 140,
+              calories_adherence: {},
+              protein_adherence: {},
+              current_target: {
+                effective_from: today,
+                source: currentTarget.source,
+                calories: currentTarget.calories,
+                protein_g: currentTarget.protein_g,
+                fat_g: currentTarget.fat_g,
+                carbs_g: currentTarget.carbs_g,
+              },
+              suspicious_low_days: [],
+            },
             progression: { new_personal_records: 0 },
             weight_trend: null,
+            anthropometry_trends: [],
+            body_priority: null,
+            data_sufficiency: {
+              weight_trend: {
+                status: 'insufficient',
+                counters: { point_count: 0 },
+                reason_keys: ['no_measurements'],
+              },
+            },
+            adaptive_energy: null,
           },
         },
       });
+    }
+    if (path.endsWith('/check-ins/weekly') && request.method() === 'GET') {
+      return route.fulfill({
+        json: {
+          items: [
+            {
+              id: 1,
+              user_id: 7,
+              week_start: today,
+              week_end: today,
+              submitted_on: today,
+              timezone: 'Europe/Moscow',
+              status: 'completed',
+              summary_version: 'weekly-review-summary-v2',
+              summary: {
+                training: { completed_workouts: 1, planned_workouts: 1 },
+                adaptive_energy: null,
+              },
+              training_load: null,
+              recovery: null,
+              hunger: null,
+              adherence_difficulty: null,
+              note: null,
+              created_at: `${today}T10:00:00`,
+            },
+          ],
+          total: 1,
+          limit: 4,
+          offset: 0,
+        },
+      });
+    }
+    if (path.endsWith('/check-ins/weekly') && request.method() === 'POST') {
+      weeklyReviewSubmits += 1;
+      const body = request.postDataJSON() as { status: 'completed' | 'skipped' };
+      weeklyExisting = {
+        id: 2,
+        status: body.status,
+        summary: {
+          adaptive_energy:
+            body.status === 'completed'
+              ? {
+                  decision:
+                    calibrationStatus === 'accepted'
+                      ? 'accepted'
+                      : calibrationStatus === 'rejected'
+                        ? 'kept'
+                        : calibrationStatus === 'pending'
+                          ? 'deferred'
+                          : 'not_available',
+                  calibration: calibration(),
+                }
+              : null,
+        },
+      };
+      return route.fulfill({ status: 201, json: weeklyExisting });
+    }
+    if (path.endsWith('/nutrition/energy-calibration/preview') && request.method() === 'POST') {
+      return route.fulfill({ json: calibration() });
+    }
+    if (
+      /\/nutrition\/energy-calibration\/17\/decision$/.test(path) &&
+      request.method() === 'POST'
+    ) {
+      const decision = String(request.postDataJSON().decision);
+      weeklyDecisions.push(decision);
+      calibrationStatus = decision === 'accept' ? 'accepted' : 'rejected';
+      if (decision === 'accept')
+        currentTarget = { ...currentTarget, calories: 2300, source: 'adaptive' };
+      return route.fulfill({ json: calibration() });
     }
     if (/\/workouts\/\d+\/comments$/.test(path)) return route.fulfill({ json: [] });
     if (path.endsWith('/nutrition/targets/history') && request.method() === 'GET') {
@@ -599,6 +756,12 @@ export async function installPlatformApi(
     },
     targetHistoryLength() {
       return targetHistory.length;
+    },
+    weeklyDecisionCalls() {
+      return [...weeklyDecisions];
+    },
+    weeklyReviewSubmits() {
+      return weeklyReviewSubmits;
     },
     workoutValues() {
       return { ...setValues };

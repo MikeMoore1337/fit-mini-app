@@ -174,7 +174,14 @@ class EnergyCalibrationResponse(BaseModel):
     estimate_high_kcal: int | None = None
     goal: str
     current_target_calories: int | None = None
+    current_target_protein_g: int | None = None
+    current_target_fat_g: int | None = None
+    current_target_carbs_g: int | None = None
     proposed_target_calories: int | None = None
+    proposed_target_protein_g: int | None = None
+    proposed_target_fat_g: int | None = None
+    proposed_target_carbs_g: int | None = None
+    proposed_effective_from: date | None = None
     rationale: list[str]
     created_at: datetime | None = None
     decided_at: datetime | None = None

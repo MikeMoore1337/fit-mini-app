@@ -4,6 +4,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from fitminiapp_api.schemas.data_quality import ProgressDataSufficiency
+from fitminiapp_api.schemas.nutrition import EnergyCalibrationResponse
 from fitminiapp_api.schemas.progress import (
     AdherenceComponent,
     BodyMetricTrend,
@@ -17,14 +18,40 @@ class WeeklyCheckInTrainingSummary(BaseModel):
     adherence: AdherenceComponent
 
 
+class WeeklyCheckInTargetSummary(BaseModel):
+    effective_from: date
+    source: Literal["calculated", "manual", "trainer", "adaptive"]
+    calories: int = Field(ge=0)
+    protein_g: int = Field(ge=0)
+    fat_g: int = Field(ge=0)
+    carbs_g: int = Field(ge=0)
+
+
+class WeeklyCheckInSuspiciousNutritionDay(BaseModel):
+    diary_date: date
+    calories: int = Field(ge=0)
+    target_calories: int = Field(ge=0)
+
+
 class WeeklyCheckInNutritionSummary(BaseModel):
     logged_days: int = Field(ge=0)
+    complete_days: int = Field(default=0, ge=0)
+    incomplete_days: int = Field(default=0, ge=0)
+    fasted_days: int = Field(default=0, ge=0)
+    unlogged_days: int = Field(default=0, ge=0)
     average_calories: float | None = None
     target_calories: int | None = None
     average_protein_g: float | None = None
     target_protein_g: int | None = None
     calories_adherence: AdherenceComponent
     protein_adherence: AdherenceComponent
+    current_target: WeeklyCheckInTargetSummary | None = None
+    suspicious_low_days: list[WeeklyCheckInSuspiciousNutritionDay] = Field(default_factory=list)
+
+
+class WeeklyCheckInAdaptiveSummary(BaseModel):
+    decision: Literal["accepted", "kept", "deferred", "no_change", "not_available"]
+    calibration: EnergyCalibrationResponse
 
 
 class WeeklyCheckInProgressionSummary(BaseModel):
@@ -33,7 +60,7 @@ class WeeklyCheckInProgressionSummary(BaseModel):
 
 
 class WeeklyCheckInSummary(BaseModel):
-    ruleset_version: Literal["weekly-check-in-summary-v1"]
+    ruleset_version: Literal["weekly-check-in-summary-v1", "weekly-review-summary-v2"]
     period_start: date
     period_end: date
     goal: str | None = None
@@ -44,6 +71,7 @@ class WeeklyCheckInSummary(BaseModel):
     body_priority: BodyPriorityPreference | None = None
     progression: WeeklyCheckInProgressionSummary
     data_sufficiency: ProgressDataSufficiency
+    adaptive_energy: WeeklyCheckInAdaptiveSummary | None = None
 
 
 class WeeklyCheckInSubmitRequest(BaseModel):
@@ -53,6 +81,7 @@ class WeeklyCheckInSubmitRequest(BaseModel):
     hunger: int | None = Field(default=None, ge=1, le=5)
     adherence_difficulty: int | None = Field(default=None, ge=1, le=5)
     note: str | None = Field(default=None, max_length=2000)
+    energy_calibration_id: int | None = Field(default=None, ge=1)
 
 
 class WeeklyCheckInResponse(BaseModel):
@@ -63,7 +92,7 @@ class WeeklyCheckInResponse(BaseModel):
     submitted_on: date
     timezone: str
     status: Literal["completed", "skipped"]
-    summary_version: Literal["weekly-check-in-summary-v1"]
+    summary_version: Literal["weekly-check-in-summary-v1", "weekly-review-summary-v2"]
     summary: WeeklyCheckInSummary
     training_load: int | None = None
     recovery: int | None = None

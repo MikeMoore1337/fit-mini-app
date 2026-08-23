@@ -82,6 +82,96 @@ Lifecycle не расширяет scope task и не отменяет owner chec
 - Landing оценивается как две самостоятельные responsive compositions: desktop и mobile.
 - TMA остаётся той же mobile product system, а не отдельным visual direction.
 
+## Обязательный design delivery contract для tasks `57-79`
+
+Этот раздел применяется ко всем remaining tasks и устраняет расплывчатое требование «учесть
+дизайн». Task-specific раздел уточняет поверхность и evidence, но не может ослабить этот baseline.
+
+### Источники до visual work
+
+Перед изменением пользовательского UI обязательно прочитать:
+
+1. `codex-backlog/ACTIVE_DESIGN_SOURCE.md`;
+2. `docs/design/design-direction-v2.1.md`;
+3. `docs/design/component-principles-v2.md`;
+4. только релевантные текущей поверхности документы из canonical списка active source;
+5. фактическую production implementation и representative browser render соседней поверхности.
+
+Historical renders и завершённые tasks не являются вторым source of truth. Если новая композиция
+существенно расходится с active source или требует новой semantic role, остановиться на owner
+checkpoint до массовой реализации.
+
+### Design brief до реализации
+
+Для новой или существенно меняющейся композиции implementer до кода фиксирует в working notes:
+
+- пользователя и контекст использования;
+- одно главное действие текущего состояния и secondary/recovery actions;
+- порядок информации `главное -> подтверждающие факты -> детали`;
+- какие shared components/tokens переиспользуются;
+- mobile и desktop composition, включая max-width, gutters, adjacent spacing и bottom navigation;
+- loading/empty/error/partial/disabled/permission/offline states;
+- какие browser screenshots и geometry assertions докажут результат.
+
+Это не отдельный redesign artifact и не расширение scope. Brief нужен, чтобы visual decisions не
+возникали случайно во время CSS-правок.
+
+### Неизменяемые component rules
+
+- На одной decision surface один primary action: `--v2-lime` + `--v2-on-lime`. Secondary,
+  navigation и recovery остаются neutral. Compatibility token `--accent` нельзя использовать как
+  единственное доказательство brand-primary.
+- Selected/current state использует neutral active surface, усиленный label и lime boundary; lime
+  fill не размножается на соседние controls.
+- Все action buttons используют `--radius-action`; icon-only controls сохраняют не меньше `44px`
+  touch target. Shared `DisclosureIcon` всегда имеет `28 x 28px`, `flex: 0 0 28px` и круг
+  `border-radius: 50%`.
+- Для любого реального семидневного контекста используется shared `WeekStrip`; page-local week
+  markup/CSS запрещены.
+- Card разрешена для самостоятельной task/entity/selection/recovery boundary. Rules, typography и
+  whitespace предпочтительнее универсальных subsection cards; card-inside-card и KPI-card grid
+  для каждой цифры запрещены.
+- Использовать semantic tokens и spacing scale `4/8/12/18/28/44px`. Literal feature palette,
+  локальная button geometry, отрицательные margin и absolute overlay для соседних content regions
+  запрещены.
+- Desktop content сохраняет canonical max-width и responsive gutters; mobile compactness
+  достигается удалением лишних wrapper padding/gaps, а не microtype или уменьшением touch target.
+- Charts имеют units, period, truthful scale, empty/insufficient state и text/table alternative;
+  цвет и hover не являются единственным носителем смысла.
+- Mobile Web и TMA используют одну component tree, typography, geometry и YFC Light/Dark. Telegram
+  может отличаться только platform behavior, описанным TMA contract.
+
+### Browser evidence и regression
+
+Для visual implementation до завершения task обязательно:
+
+- проверить фактический render минимум на `360x800`, `390x844`, `430x932`, `768x900` и desktop
+  `1280` или `1440`; применимые Mobile Web и mocked TMA states сравнить при одинаковом viewport;
+- покрыть Light/Dark, основной state и хотя бы один релевантный empty/error/partial/long-content
+  state; реальный Telegram отмечать отдельно от mock;
+- проверить no horizontal overflow, touch targets, keyboard/safe area/bottom navigation и
+  `prefers-reduced-motion` там, где они затронуты;
+- измерить bounding boxes соседних regions на desktop и контрольных mobile widths, чтобы gutters,
+  gaps, fixed navigation и disclosures не пересекались;
+- для brand-critical controls закрепить browser assertions по computed token colors, boundary,
+  `--radius-action` и фиксированной geometry, а не только screenshot;
+- выполнить Human Design Test из `$product-designer`: brand swap, screenshot, card, decoration и
+  designer-intent checks; после первого browser render сделать минимум один refinement pass;
+- сохранить representative screenshots в `.artifacts/screenshots/task-XX/`; `.artifacts/` не
+  коммитить.
+
+### Owner visual checkpoint
+
+Если task создаёт новую пользовательскую поверхность, существенно меняет композицию или primary
+action, до единственного логического commit показать owner representative screenshots: desktop,
+compact Mobile Web и Dark TMA/эквивалентный Dark mobile state. Без явного owner approval task не
+архивировать и commit не создавать. Для чисто non-visual task записать `visual checkpoint: N/A` с
+обоснованием; скрытые UI-изменения под этим исключением запрещены.
+
+Нарушение explicit active design/component contract является `HIGH`, если из-за него task не
+соответствует acceptance. Субъективное предпочтение без ссылки на contract/evidence не становится
+blocking finding.
+
 ## Архитектура
 
 - Не переписывать проект с нуля и не проводить большой рефакторинг ради красоты.

@@ -3087,6 +3087,10 @@ body.public-shell-mode:has(.public-shell.public-shell--design-v2) {
     border-radius: 0;
     background: transparent;
   }
+
+  .app-section--progress .progress-schedule > .weekly-review-card {
+    padding-inline: var(--v2-space-4);
+  }
 }
 
 @media (max-width: 899px) {

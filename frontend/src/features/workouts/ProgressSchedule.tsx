@@ -230,17 +230,19 @@ export function ProgressSchedule({
   focusedCommentId,
   focusedExerciseId,
   focusWeeklyReview = false,
+  userId = 'anonymous',
 }: {
   timeZone?: string | null;
   focusedWorkoutId?: number | null;
   focusedCommentId?: number | null;
   focusedExerciseId?: number | null;
   focusWeeklyReview?: boolean;
+  userId?: number | 'anonymous';
 }) {
   return (
     <div className="stack progress-schedule">
       <ProgressExperience />
-      <WeeklyCheckInCard autoFocus={focusWeeklyReview} />
+      <WeeklyCheckInCard autoFocus={focusWeeklyReview} userId={userId} />
       <SchedulePanel
         timeZone={timeZone}
         focusedWorkoutId={focusedWorkoutId}

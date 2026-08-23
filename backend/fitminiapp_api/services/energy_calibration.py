@@ -21,6 +21,7 @@ from fitminiapp_api.schemas.nutrition import (
     EnergyCalibrationSufficiency,
 )
 from fitminiapp_api.services.nutrition import (
+    NutritionMacros,
     calculate_macros,
     create_nutrition_target_version,
     get_current_nutrition_target,
@@ -79,8 +80,15 @@ class CalibrationEvaluation:
     estimate_low_kcal: int | None
     estimate_high_kcal: int | None
     current_target_calories: int | None
+    current_target_protein_g: int | None
+    current_target_fat_g: int | None
+    current_target_carbs_g: int | None
     target_saved_at: datetime | None
     proposed_target_calories: int | None
+    proposed_target_protein_g: int | None
+    proposed_target_fat_g: int | None
+    proposed_target_carbs_g: int | None
+    proposed_effective_from: date | None
     goal: str
     rationale_keys: list[str]
 
@@ -207,8 +215,15 @@ def evaluate_energy_calibration(
             estimate_low_kcal=None,
             estimate_high_kcal=None,
             current_target_calories=None,
+            current_target_protein_g=None,
+            current_target_fat_g=None,
+            current_target_carbs_g=None,
             target_saved_at=None,
             proposed_target_calories=None,
+            proposed_target_protein_g=None,
+            proposed_target_fat_g=None,
+            proposed_target_carbs_g=None,
+            proposed_effective_from=None,
             goal="maintenance",
             rationale_keys=["nutrition_target_missing"],
         )
@@ -232,8 +247,15 @@ def evaluate_energy_calibration(
             estimate_low_kcal=None,
             estimate_high_kcal=None,
             current_target_calories=target.calories,
+            current_target_protein_g=target.protein_g,
+            current_target_fat_g=target.fat_g,
+            current_target_carbs_g=target.carbs_g,
             target_saved_at=target.saved_at,
             proposed_target_calories=None,
+            proposed_target_protein_g=None,
+            proposed_target_fat_g=None,
+            proposed_target_carbs_g=None,
+            proposed_effective_from=None,
             goal=target.goal or "maintenance",
             rationale_keys=["nutrition_target_context_missing"],
         )
@@ -259,8 +281,15 @@ def evaluate_energy_calibration(
             estimate_low_kcal=None,
             estimate_high_kcal=None,
             current_target_calories=target.calories,
+            current_target_protein_g=target.protein_g,
+            current_target_fat_g=target.fat_g,
+            current_target_carbs_g=target.carbs_g,
             target_saved_at=target.saved_at,
             proposed_target_calories=None,
+            proposed_target_protein_g=None,
+            proposed_target_fat_g=None,
+            proposed_target_carbs_g=None,
+            proposed_effective_from=None,
             goal=target.goal,
             rationale_keys=reason_keys,
         )
@@ -307,6 +336,7 @@ def evaluate_energy_calibration(
     rationale_keys.extend(["energy_balance_estimate", f"goal_{target.goal}"])
 
     proposed_target: int | None = None
+    proposed_macros: NutritionMacros | None = None
     status = "limited" if sufficiency == "limited" else "no_change"
     if sufficiency == "limited":
         rationale_keys.append("limited_data_no_proposal")
@@ -330,10 +360,12 @@ def evaluate_energy_calibration(
                 macro_floor = proposed_macros["protein_g"] * 4 + proposed_macros["fat_g"] * 9
                 proposed_target = math.ceil(macro_floor / 50) * 50
             if proposed_target != target.calories:
+                proposed_macros = calculate_macros(target.weight_kg, proposed_target, target.goal)
                 status = "pending"
                 rationale_keys.append("gradual_target_change_proposed")
             else:
                 proposed_target = None
+                proposed_macros = None
         if proposed_target is None:
             rationale_keys.append("current_target_within_range")
 
@@ -351,8 +383,19 @@ def evaluate_energy_calibration(
         estimate_low_kcal=estimate_low,
         estimate_high_kcal=estimate_high,
         current_target_calories=target.calories,
+        current_target_protein_g=target.protein_g,
+        current_target_fat_g=target.fat_g,
+        current_target_carbs_g=target.carbs_g,
         target_saved_at=target.saved_at,
         proposed_target_calories=proposed_target,
+        proposed_target_protein_g=(
+            proposed_macros["protein_g"] if proposed_macros is not None else None
+        ),
+        proposed_target_fat_g=(proposed_macros["fat_g"] if proposed_macros is not None else None),
+        proposed_target_carbs_g=(
+            proposed_macros["carbs_g"] if proposed_macros is not None else None
+        ),
+        proposed_effective_from=today if proposed_target is not None else None,
         goal=target.goal,
         rationale_keys=rationale_keys,
     )
@@ -417,7 +460,14 @@ def _response_from_evaluation(evaluation: CalibrationEvaluation) -> EnergyCalibr
         estimate_high_kcal=evaluation.estimate_high_kcal,
         goal=evaluation.goal,
         current_target_calories=evaluation.current_target_calories,
+        current_target_protein_g=evaluation.current_target_protein_g,
+        current_target_fat_g=evaluation.current_target_fat_g,
+        current_target_carbs_g=evaluation.current_target_carbs_g,
         proposed_target_calories=evaluation.proposed_target_calories,
+        proposed_target_protein_g=evaluation.proposed_target_protein_g,
+        proposed_target_fat_g=evaluation.proposed_target_fat_g,
+        proposed_target_carbs_g=evaluation.proposed_target_carbs_g,
+        proposed_effective_from=evaluation.proposed_effective_from,
         rationale=_rationale(
             average_intake_kcal=evaluation.average_intake_kcal,
             start_weight=evaluation.smoothed_start_weight_kg,
@@ -429,7 +479,26 @@ def _response_from_evaluation(evaluation: CalibrationEvaluation) -> EnergyCalibr
     )
 
 
-def _response_from_record(record: EnergyCalibration) -> EnergyCalibrationResponse:
+def _response_from_record(
+    record: EnergyCalibration,
+    *,
+    target: NutritionTarget | None = None,
+    proposed_effective_from: date | None = None,
+) -> EnergyCalibrationResponse:
+    current_macros: NutritionMacros | None = None
+    proposed_macros: NutritionMacros | None = None
+    if target is not None and target.weight_kg is not None and record.goal in GOAL_MULTIPLIERS:
+        current_macros = calculate_macros(
+            target.weight_kg,
+            record.previous_target_calories,
+            record.goal,
+        )
+        if record.proposed_target_calories is not None:
+            proposed_macros = calculate_macros(
+                target.weight_kg,
+                record.proposed_target_calories,
+                record.goal,
+            )
     return EnergyCalibrationResponse(
         id=record.id,
         status=cast(EnergyCalibrationStatus, record.status),
@@ -452,7 +521,20 @@ def _response_from_record(record: EnergyCalibration) -> EnergyCalibrationRespons
         estimate_high_kcal=record.estimate_high_kcal,
         goal=record.goal,
         current_target_calories=record.previous_target_calories,
+        current_target_protein_g=(
+            current_macros["protein_g"] if current_macros is not None else None
+        ),
+        current_target_fat_g=(current_macros["fat_g"] if current_macros is not None else None),
+        current_target_carbs_g=(current_macros["carbs_g"] if current_macros is not None else None),
         proposed_target_calories=record.proposed_target_calories,
+        proposed_target_protein_g=(
+            proposed_macros["protein_g"] if proposed_macros is not None else None
+        ),
+        proposed_target_fat_g=(proposed_macros["fat_g"] if proposed_macros is not None else None),
+        proposed_target_carbs_g=(
+            proposed_macros["carbs_g"] if proposed_macros is not None else None
+        ),
+        proposed_effective_from=proposed_effective_from,
         rationale=_rationale(
             average_intake_kcal=record.average_intake_kcal,
             start_weight=float(record.smoothed_start_weight_kg),
@@ -578,7 +660,7 @@ def preview_energy_calibration(db: Session, user: User) -> EnergyCalibrationResp
     db.add(record)
     db.commit()
     db.refresh(record)
-    return _response_from_record(record)
+    return _response_from_record(record, target=target, proposed_effective_from=today)
 
 
 def decide_energy_calibration(
@@ -598,6 +680,15 @@ def decide_energy_calibration(
     )
     if record is None:
         raise EnergyCalibrationNotFoundError("Калибровка не найдена")
+    resolved_status = "accepted" if decision == "accept" else "rejected"
+    if record.status == resolved_status:
+        return _response_from_record(
+            record,
+            target=get_current_nutrition_target(db, user.id),
+            proposed_effective_from=(
+                record.decided_at.date() if record.decided_at is not None else today_for_user(user)
+            ),
+        )
     if record.status != "pending" or record.proposed_target_calories is None:
         raise EnergyCalibrationConflictError("Это предложение уже не ожидает решения")
 
@@ -607,7 +698,11 @@ def decide_energy_calibration(
         record.decided_at = decided_at
         db.commit()
         db.refresh(record)
-        return _response_from_record(record)
+        return _response_from_record(
+            record,
+            target=get_current_nutrition_target(db, user.id),
+            proposed_effective_from=today_for_user(user),
+        )
 
     target = get_current_nutrition_target(db, user.id, for_update=True)
     if (
@@ -652,7 +747,11 @@ def decide_energy_calibration(
     record.decided_at = decided_at
     db.commit()
     db.refresh(record)
-    return _response_from_record(record)
+    return _response_from_record(
+        record,
+        target=target,
+        proposed_effective_from=today_for_user(user),
+    )
 
 
 def list_energy_calibrations(db: Session, user: User) -> list[EnergyCalibrationResponse]:
@@ -664,3 +763,47 @@ def list_energy_calibrations(db: Session, user: User) -> list[EnergyCalibrationR
         .all()
     )
     return [_response_from_record(row) for row in rows]
+
+
+def inspect_energy_calibration(db: Session, user: User) -> EnergyCalibrationResponse:
+    """Build the current deterministic result without creating history."""
+    today = today_for_user(user)
+    period_end = today - timedelta(days=1)
+    period_start = period_end - timedelta(days=LOOKBACK_DAYS - 1)
+    target = get_current_nutrition_target(db, user.id)
+    day_totals, weights = _load_inputs(db, user, period_start, period_end)
+    evaluation = evaluate_energy_calibration(
+        target=target,
+        day_totals=day_totals,
+        weights=weights,
+        today=today,
+    )
+    return _response_from_evaluation(evaluation)
+
+
+def get_energy_calibration_snapshot(
+    db: Session,
+    user: User,
+    calibration_id: int,
+) -> EnergyCalibrationResponse:
+    record = (
+        db.query(EnergyCalibration)
+        .filter(
+            EnergyCalibration.id == calibration_id,
+            EnergyCalibration.user_id == user.id,
+        )
+        .first()
+    )
+    if record is None:
+        raise EnergyCalibrationNotFoundError("Калибровка не найдена")
+    target = get_current_nutrition_target(db, user.id)
+    effective_from = (
+        record.decided_at.date()
+        if record.status == "accepted" and record.decided_at is not None
+        else today_for_user(user)
+    )
+    return _response_from_record(
+        record,
+        target=target,
+        proposed_effective_from=effective_from,
+    )

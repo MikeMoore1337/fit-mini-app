@@ -7,7 +7,7 @@ from fitminiapp_api.core.timezone import today_msk
 from fitminiapp_api.db.session import get_session_context
 from fitminiapp_api.models.food_diary import FoodDiaryDayStatus, FoodDiaryEntry
 from fitminiapp_api.models.nutrition import EnergyCalibration, NutritionTarget
-from fitminiapp_api.models.user import BodyMeasurement, User
+from fitminiapp_api.models.user import BodyMeasurement, CoachClient, User
 from fitminiapp_api.services.energy_calibration import evaluate_energy_calibration
 
 
@@ -169,10 +169,10 @@ def test_full_data_proposes_only_a_gradual_change_for_each_goal(goal: str) -> No
     assert result.proposed_target_calories == 1700
 
 
-def _auth(client, telegram_user_id: int) -> dict[str, str]:
+def _auth(client, telegram_user_id: int, *, is_coach: bool = False) -> dict[str, str]:
     response = client.post(
         "/api/v1/auth/dev-login",
-        json={"telegram_user_id": telegram_user_id},
+        json={"telegram_user_id": telegram_user_id, "is_coach": is_coach},
     )
     assert response.status_code == 200
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
@@ -233,6 +233,9 @@ def test_preview_and_explicit_accept_update_target_and_history(client) -> None:
     assert proposal["status"] == "pending"
     assert proposal["current_target_calories"] == 1500
     assert proposal["proposed_target_calories"] == 1700
+    assert proposal["current_target_protein_g"] == 144
+    assert proposal["proposed_target_protein_g"] == 144
+    assert proposal["proposed_effective_from"] is not None
 
     accepted = client.post(
         f"/api/v1/nutrition/energy-calibration/{proposal['id']}/decision",
@@ -242,6 +245,39 @@ def test_preview_and_explicit_accept_update_target_and_history(client) -> None:
 
     assert accepted.status_code == 200
     assert accepted.json()["status"] == "accepted"
+    replayed = client.post(
+        f"/api/v1/nutrition/energy-calibration/{proposal['id']}/decision",
+        json={"decision": "accept"},
+        headers=headers,
+    )
+    assert replayed.status_code == 200
+    assert replayed.json()["status"] == "accepted"
+    review = client.post(
+        "/api/v1/check-ins/weekly",
+        json={
+            "status": "completed",
+            "recovery": 4,
+            "energy_calibration_id": proposal["id"],
+        },
+        headers=headers,
+    )
+    assert review.status_code == 201, review.text
+    adaptive = review.json()["summary"]["adaptive_energy"]
+    assert adaptive["decision"] == "accepted"
+    assert adaptive["calibration"]["status"] == "accepted"
+    assert adaptive["calibration"]["current_target_calories"] == 1500
+    assert adaptive["calibration"]["proposed_target_calories"] == 1700
+
+    coach_headers = _auth(client, 933_011, is_coach=True)
+    with get_session_context() as db:
+        coach_id = db.query(User.id).filter(User.telegram_user_id == 933_011).scalar()
+        db.add(CoachClient(coach_user_id=coach_id, client_user_id=user_id, status="active"))
+    trainer_history = client.get(
+        f"/api/v1/coach/clients/{user_id}/weekly-check-ins",
+        headers=coach_headers,
+    )
+    assert trainer_history.status_code == 200
+    assert trainer_history.json()["items"][0]["summary"]["adaptive_energy"] == adaptive
     history = client.get("/api/v1/nutrition/energy-calibration/history", headers=headers)
     assert history.status_code == 200
     assert history.json()["items"][0]["status"] == "accepted"
@@ -292,6 +328,19 @@ def test_explicit_reject_preserves_current_target(client) -> None:
 
     assert rejected.status_code == 200
     assert rejected.json()["status"] == "rejected"
+    replayed = client.post(
+        f"/api/v1/nutrition/energy-calibration/{preview['id']}/decision",
+        json={"decision": "reject"},
+        headers=headers,
+    )
+    assert replayed.status_code == 200
+    assert replayed.json()["status"] == "rejected"
+    changed_decision = client.post(
+        f"/api/v1/nutrition/energy-calibration/{preview['id']}/decision",
+        json={"decision": "accept"},
+        headers=headers,
+    )
+    assert changed_decision.status_code == 409
     with get_session_context() as db:
         target = db.query(NutritionTarget).filter(NutritionTarget.user_id == user_id).one()
         assert target.calories == 1500

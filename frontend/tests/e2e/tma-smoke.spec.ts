@@ -122,6 +122,259 @@ test('weekly review focus exposes a predictable TMA BackButton return path', asy
   await expect.poll(async () => (await tma.state()).backButton.visible).toBe(false);
 });
 
+test('unified weekly review keeps Mobile Web/TMA parity and distinct adaptive decisions', async ({
+  browser,
+  mobilePage,
+  tma,
+  tmaPage,
+}) => {
+  const tmaApi = await installPlatformApi(tmaPage, {
+    workoutStatus: 'none',
+    weeklyReviewAvailable: true,
+    weeklyCalibration: 'pending',
+  });
+  const mobileApi = await installPlatformApi(mobilePage, {
+    browserSession: true,
+    workoutStatus: 'none',
+    weeklyReviewAvailable: true,
+    weeklyCalibration: 'pending',
+  });
+  await Promise.all([
+    tmaPage.goto('/app?section=progress&weekly_review=1'),
+    mobilePage.goto('/app?section=progress&weekly_review=1'),
+  ]);
+
+  for (const page of [tmaPage, mobilePage]) {
+    await expect(page.getByRole('heading', { name: 'Что известно приложению' })).toBeVisible();
+    await expect(page.locator('#weekly-review')).toBeFocused();
+    await page.getByRole('button', { name: 'Всё верно, продолжить' }).click();
+    await expect(page.getByRole('heading', { name: 'Короткие уточнения' })).toBeVisible();
+    await page.getByRole('button', { name: 'Пропустить вопросы' }).click();
+    await expect(page.getByText('Есть предложение')).toBeVisible();
+    await expect(page.getByText('2100 ккал', { exact: true })).toBeVisible();
+    await expect(page.getByText('2300 ккал', { exact: true })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+  }
+  expect(await sharedSurfaceSignature(tmaPage)).toEqual(await sharedSurfaceSignature(mobilePage));
+  for (const viewport of Object.values(MOBILE_CONTEXTS)) {
+    await tmaPage.setViewportSize(viewport);
+    await tma.setViewport(viewport.height, viewport.height);
+    await expectNoHorizontalOverflow(tmaPage);
+    await expectTouchTargets(tmaPage.locator('.weekly-review__decision button'));
+  }
+  const deferDecision = tmaPage.getByRole('button', { name: 'Отложить решение' });
+  await deferDecision.scrollIntoViewIfNeeded();
+  await expectNoOverlap(deferDecision, tmaPage.locator('#appBottomNav'));
+  await tma.setActive(false);
+  await tma.setActive(true);
+  await expect(tmaPage.getByText('Есть предложение')).toBeVisible();
+
+  await tmaPage.getByRole('button', { name: 'Принять новую цель' }).click();
+  await mobilePage.getByRole('button', { name: 'Оставить текущую цель' }).click();
+  await expect.poll(() => tmaApi.weeklyDecisionCalls()).toEqual(['accept']);
+  await expect.poll(() => mobileApi.weeklyDecisionCalls()).toEqual(['reject']);
+  await expect.poll(() => tmaApi.weeklyReviewSubmits()).toBe(1);
+  await expect.poll(() => mobileApi.weeklyReviewSubmits()).toBe(1);
+
+  const deferPage = await browser.newPage({ viewport: MOBILE_CONTEXTS.compact, hasTouch: true });
+  const deferApi = await installPlatformApi(deferPage, {
+    browserSession: true,
+    weeklyReviewAvailable: true,
+    weeklyCalibration: 'pending',
+  });
+  await deferPage.goto('/app?section=progress&weekly_review=1');
+  await deferPage.getByRole('button', { name: 'Всё верно, продолжить' }).click();
+  await deferPage.getByRole('button', { name: 'Пропустить вопросы' }).click();
+  await deferPage.getByRole('button', { name: 'Отложить решение' }).click();
+  await expect.poll(() => deferApi.weeklyDecisionCalls()).toEqual([]);
+  await expect.poll(() => deferApi.weeklyReviewSubmits()).toBe(1);
+  await deferPage.close();
+
+  const insufficientPage = await browser.newPage({
+    viewport: MOBILE_CONTEXTS.baseline,
+    hasTouch: true,
+  });
+  const insufficientApi = await installPlatformApi(insufficientPage, {
+    browserSession: true,
+    weeklyReviewAvailable: true,
+    weeklyCalibration: 'insufficient',
+  });
+  await insufficientPage.goto('/app?section=progress&weekly_review=1');
+  await insufficientPage.getByRole('button', { name: 'Всё верно, продолжить' }).click();
+  const note = insufficientPage.getByLabel('Заметка о неделе');
+  await insufficientPage.setViewportSize({ width: 390, height: 560 });
+  await note.focus();
+  const skipQuestions = insufficientPage.getByRole('button', { name: 'Пропустить вопросы' });
+  await skipQuestions.scrollIntoViewIfNeeded();
+  await expectNoOverlap(skipQuestions, insufficientPage.locator('#appBottomNav'));
+  await note.fill('Черновик переживает background и reload');
+  await insufficientPage.reload();
+  await expect(insufficientPage.getByLabel('Заметка о неделе')).toHaveValue(
+    'Черновик переживает background и reload',
+  );
+  await skipQuestions.click();
+  await expect(insufficientPage.getByText('Данных пока недостаточно')).toBeVisible();
+  await insufficientPage.getByRole('button', { name: 'Завершить обзор' }).click();
+  await expect.poll(() => insufficientApi.weeklyDecisionCalls()).toEqual([]);
+  await expect.poll(() => insufficientApi.weeklyReviewSubmits()).toBe(1);
+  await insufficientPage.close();
+});
+
+test('weekly review visual evidence covers compact Mobile Web, dark TMA and desktop', async ({
+  browser,
+}) => {
+  const cases = [
+    {
+      surface: 'mobile-web',
+      viewport: MOBILE_CONTEXTS.compact,
+      theme: 'light' as const,
+      step: 'facts' as const,
+      telegram: false,
+    },
+    {
+      surface: 'tma',
+      viewport: MOBILE_CONTEXTS.baseline,
+      theme: 'dark' as const,
+      step: 'decision' as const,
+      telegram: true,
+    },
+    {
+      surface: 'desktop',
+      viewport: { width: 1440, height: 960 },
+      theme: 'light' as const,
+      step: 'decision' as const,
+      telegram: false,
+    },
+  ];
+
+  for (const current of cases) {
+    const page = await browser.newPage({ viewport: current.viewport, hasTouch: current.telegram });
+    if (current.telegram) {
+      await installTelegramHarness(page, { colorScheme: current.theme });
+    } else {
+      await page.addInitScript((theme) => localStorage.setItem('app-theme', theme), current.theme);
+    }
+    await installPlatformApi(page, {
+      browserSession: !current.telegram,
+      weeklyReviewAvailable: true,
+      weeklyCalibration: 'pending',
+    });
+    await page.goto('/app?section=progress&weekly_review=1');
+    await expect(page.getByRole('heading', { name: 'Что известно приложению' })).toBeVisible();
+    if (current.step === 'decision') {
+      await page.getByRole('button', { name: 'Всё верно, продолжить' }).click();
+      await page.getByRole('button', { name: 'Пропустить вопросы' }).click();
+      await expect(page.getByText('Есть предложение')).toBeVisible();
+    }
+    await expectNoHorizontalOverflow(page);
+
+    const brandContract = await page.evaluate((step) => {
+      const tokenValue = (property: 'color' | 'borderRadius', token: string) => {
+        const sample = document.createElement('span');
+        sample.style[property] = `var(${token})`;
+        document.body.append(sample);
+        const value = getComputedStyle(sample)[property];
+        sample.remove();
+        return value;
+      };
+      const primary = document.querySelector<HTMLElement>('.weekly-review__primary');
+      const activeStep = document.querySelector<HTMLElement>(
+        '.weekly-review__steps li[aria-current="step"]',
+      );
+      const boundary = document.querySelector<HTMLElement>(
+        step === 'facts' ? '.weekly-review__target' : '.weekly-review__diff > div:last-child',
+      );
+      const decisionNote = document.querySelector<HTMLElement>('.weekly-review__decision-note');
+      const disclosure = document.querySelector<HTMLElement>(
+        '.weekly-review__history .disclosure-icon',
+      );
+      const disclosureRect = disclosure?.getBoundingClientRect();
+      return {
+        lime: tokenValue('color', '--v2-lime'),
+        onLime: tokenValue('color', '--v2-on-lime'),
+        actionRadius: tokenValue('borderRadius', '--radius-action'),
+        primaryBackground: primary ? getComputedStyle(primary).backgroundColor : null,
+        primaryColor: primary ? getComputedStyle(primary).color : null,
+        primaryRadius: primary ? getComputedStyle(primary).borderRadius : null,
+        activeStepBoundary: activeStep ? getComputedStyle(activeStep).borderBottomColor : null,
+        boundaryBorder: boundary ? getComputedStyle(boundary).borderLeftColor : null,
+        boundaryShadow: boundary ? getComputedStyle(boundary).boxShadow : null,
+        noteBorder: decisionNote ? getComputedStyle(decisionNote).borderLeftColor : null,
+        disclosure: disclosureRect
+          ? {
+              width: disclosureRect.width,
+              height: disclosureRect.height,
+              radius: getComputedStyle(disclosure!).borderRadius,
+            }
+          : null,
+      };
+    }, current.step);
+    expect(brandContract.primaryBackground).toBe(brandContract.lime);
+    expect(brandContract.primaryColor).toBe(brandContract.onLime);
+    expect(brandContract.primaryRadius).toBe(brandContract.actionRadius);
+    expect(brandContract.activeStepBoundary).toBe(brandContract.lime);
+    if (current.step === 'facts') {
+      expect(brandContract.boundaryBorder).toBe(brandContract.lime);
+    } else {
+      expect(brandContract.boundaryShadow).toContain(brandContract.lime);
+      expect(brandContract.noteBorder).toBe(brandContract.lime);
+    }
+    expect(brandContract.disclosure).toEqual({ width: 28, height: 28, radius: '50%' });
+
+    if (current.viewport.width >= 900) {
+      const desktopPadding = await page.locator('.weekly-review-card').evaluate((card) => {
+        const styles = getComputedStyle(card);
+        return {
+          left: styles.paddingLeft,
+          right: styles.paddingRight,
+          token: getComputedStyle(document.documentElement).getPropertyValue('--v2-space-4').trim(),
+        };
+      });
+      expect(desktopPadding.left).toBe(desktopPadding.token);
+      expect(desktopPadding.right).toBe(desktopPadding.token);
+    }
+
+    await page
+      .locator('#weekly-review')
+      .locator('..')
+      .screenshot({
+        path: `../.artifacts/screenshots/task-56/${current.surface}-${current.viewport.width}x${current.viewport.height}-${current.theme}-${current.step}.png`,
+      });
+    if (current.step === 'facts') {
+      const primaryAction = page.getByRole('button', { name: 'Всё верно, продолжить' });
+      await primaryAction.scrollIntoViewIfNeeded();
+      await expectNoOverlap(primaryAction, page.locator('#appBottomNav'));
+      const scheduleCard = page.locator('details.card').filter({
+        has: page.getByRole('heading', { name: 'Расписание', exact: true }),
+      });
+      const weekCard = page.locator('details.card').filter({
+        has: page.getByRole('heading', { name: 'Неделя', exact: true }),
+      });
+      const [scheduleBox, weekBox] = await Promise.all([
+        scheduleCard.boundingBox(),
+        weekCard.boundingBox(),
+      ]);
+      expect(scheduleBox).not.toBeNull();
+      expect(weekBox).not.toBeNull();
+      const adjacentGap = weekBox!.y - (scheduleBox!.y + scheduleBox!.height);
+      expect(adjacentGap).toBeGreaterThanOrEqual(8);
+      expect(adjacentGap).toBeLessThanOrEqual(16);
+      await page.screenshot({
+        path: `../.artifacts/screenshots/task-56/${current.surface}-${current.viewport.width}x${current.viewport.height}-${current.theme}-facts-actions.png`,
+      });
+    }
+    if (current.telegram && current.step === 'decision') {
+      const deferDecision = page.getByRole('button', { name: 'Отложить решение' });
+      await deferDecision.scrollIntoViewIfNeeded();
+      await expectNoOverlap(deferDecision, page.locator('#appBottomNav'));
+      await page.screenshot({
+        path: `../.artifacts/screenshots/task-56/${current.surface}-${current.viewport.width}x${current.viewport.height}-${current.theme}-decision-actions.png`,
+      });
+    }
+    await page.close();
+  }
+});
+
 for (const scenario of todayStates) {
   test(`Today ${scenario.name} keeps one primary action in Mobile Web and mocked TMA`, async ({
     mobilePage,

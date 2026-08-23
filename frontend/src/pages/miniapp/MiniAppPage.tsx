@@ -228,20 +228,23 @@ export default function MiniAppPage() {
             {section === 'today' && <TodayDashboard />}
             {section === 'progress' && (
               <>
-                <ProgressSchedule
-                  timeZone={user?.profile?.timezone}
-                  focusedWorkoutId={scheduleFocusId}
-                  focusedCommentId={requestedFeedback?.commentId}
-                  focusedExerciseId={requestedFeedback?.workoutExerciseId}
-                  focusWeeklyReview={focusWeeklyReview}
-                />
-                <WorkoutHistory
-                  timeZone={user?.profile?.timezone}
-                  focusedWorkoutId={historyFocusId}
-                  focusedCommentId={requestedFeedback?.commentId}
-                  focusedExerciseId={requestedFeedback?.workoutExerciseId}
-                  onWorkoutSelect={(id, target) => setFocusedWorkout({ id, target })}
-                />
+                <div className="stack progress-workout-stack">
+                  <ProgressSchedule
+                    userId={user?.id}
+                    timeZone={user?.profile?.timezone}
+                    focusedWorkoutId={scheduleFocusId}
+                    focusedCommentId={requestedFeedback?.commentId}
+                    focusedExerciseId={requestedFeedback?.workoutExerciseId}
+                    focusWeeklyReview={focusWeeklyReview}
+                  />
+                  <WorkoutHistory
+                    timeZone={user?.profile?.timezone}
+                    focusedWorkoutId={historyFocusId}
+                    focusedCommentId={requestedFeedback?.commentId}
+                    focusedExerciseId={requestedFeedback?.workoutExerciseId}
+                    onWorkoutSelect={(id, target) => setFocusedWorkout({ id, target })}
+                  />
+                </div>
                 <Diary onSaved={async () => void (await reloadUser())} />
               </>
             )}

@@ -3136,8 +3136,22 @@ export interface components {
             goal: string;
             /** Current Target Calories */
             current_target_calories?: number | null;
+            /** Current Target Protein G */
+            current_target_protein_g?: number | null;
+            /** Current Target Fat G */
+            current_target_fat_g?: number | null;
+            /** Current Target Carbs G */
+            current_target_carbs_g?: number | null;
             /** Proposed Target Calories */
             proposed_target_calories?: number | null;
+            /** Proposed Target Protein G */
+            proposed_target_protein_g?: number | null;
+            /** Proposed Target Fat G */
+            proposed_target_fat_g?: number | null;
+            /** Proposed Target Carbs G */
+            proposed_target_carbs_g?: number | null;
+            /** Proposed Effective From */
+            proposed_effective_from?: string | null;
             /** Rationale */
             rationale: string[];
             /** Created At */
@@ -5337,6 +5351,15 @@ export interface components {
             /** Context */
             ctx?: Record<string, never>;
         };
+        /** WeeklyCheckInAdaptiveSummary */
+        WeeklyCheckInAdaptiveSummary: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "accepted" | "kept" | "deferred" | "no_change" | "not_available";
+            calibration: components["schemas"]["EnergyCalibrationResponse"];
+        };
         /** WeeklyCheckInCurrentResponse */
         WeeklyCheckInCurrentResponse: {
             /**
@@ -5374,6 +5397,26 @@ export interface components {
         WeeklyCheckInNutritionSummary: {
             /** Logged Days */
             logged_days: number;
+            /**
+             * Complete Days
+             * @default 0
+             */
+            complete_days: number;
+            /**
+             * Incomplete Days
+             * @default 0
+             */
+            incomplete_days: number;
+            /**
+             * Fasted Days
+             * @default 0
+             */
+            fasted_days: number;
+            /**
+             * Unlogged Days
+             * @default 0
+             */
+            unlogged_days: number;
             /** Average Calories */
             average_calories?: number | null;
             /** Target Calories */
@@ -5384,6 +5427,9 @@ export interface components {
             target_protein_g?: number | null;
             calories_adherence: components["schemas"]["AdherenceComponent"];
             protein_adherence: components["schemas"]["AdherenceComponent"];
+            current_target?: components["schemas"]["WeeklyCheckInTargetSummary"] | null;
+            /** Suspicious Low Days */
+            suspicious_low_days?: components["schemas"]["WeeklyCheckInSuspiciousNutritionDay"][];
         };
         /** WeeklyCheckInProgressionSummary */
         WeeklyCheckInProgressionSummary: {
@@ -5422,9 +5468,9 @@ export interface components {
             status: "completed" | "skipped";
             /**
              * Summary Version
-             * @constant
+             * @enum {string}
              */
-            summary_version: "weekly-check-in-summary-v1";
+            summary_version: "weekly-check-in-summary-v1" | "weekly-review-summary-v2";
             summary: components["schemas"]["WeeklyCheckInSummary"];
             /** Training Load */
             training_load?: number | null;
@@ -5460,14 +5506,16 @@ export interface components {
             adherence_difficulty?: number | null;
             /** Note */
             note?: string | null;
+            /** Energy Calibration Id */
+            energy_calibration_id?: number | null;
         };
         /** WeeklyCheckInSummary */
         WeeklyCheckInSummary: {
             /**
              * Ruleset Version
-             * @constant
+             * @enum {string}
              */
-            ruleset_version: "weekly-check-in-summary-v1";
+            ruleset_version: "weekly-check-in-summary-v1" | "weekly-review-summary-v2";
             /**
              * Period Start
              * Format: date
@@ -5488,6 +5536,40 @@ export interface components {
             body_priority?: components["schemas"]["BodyPriorityPreference"] | null;
             progression: components["schemas"]["WeeklyCheckInProgressionSummary"];
             data_sufficiency: components["schemas"]["ProgressDataSufficiency"];
+            adaptive_energy?: components["schemas"]["WeeklyCheckInAdaptiveSummary"] | null;
+        };
+        /** WeeklyCheckInSuspiciousNutritionDay */
+        WeeklyCheckInSuspiciousNutritionDay: {
+            /**
+             * Diary Date
+             * Format: date
+             */
+            diary_date: string;
+            /** Calories */
+            calories: number;
+            /** Target Calories */
+            target_calories: number;
+        };
+        /** WeeklyCheckInTargetSummary */
+        WeeklyCheckInTargetSummary: {
+            /**
+             * Effective From
+             * Format: date
+             */
+            effective_from: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "calculated" | "manual" | "trainer" | "adaptive";
+            /** Calories */
+            calories: number;
+            /** Protein G */
+            protein_g: number;
+            /** Fat G */
+            fat_g: number;
+            /** Carbs G */
+            carbs_g: number;
         };
         /** WeeklyCheckInTrainingSummary */
         WeeklyCheckInTrainingSummary: {

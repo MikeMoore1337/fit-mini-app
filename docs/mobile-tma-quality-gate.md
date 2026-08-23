@@ -54,6 +54,8 @@ context; feature API mock может одновременно моделиров
 7. открытие/возврат Today, Progress и Profile;
 8. touch, отсутствие horizontal overflow и отсутствие Telegram-only palette/component tree;
 9. browser Mobile Web regression на том же API seam.
+10. единый недельный обзор: insufficient/sufficient data, пропуск вопросов, accept/keep/defer,
+    восстановление черновика после reload и одинаковое поведение Mobile Web/TMA.
 
 Глубокие бизнес-сценарии остаются в существующих feature e2e:
 `active-workout-experience.spec.ts`, `offline-workout.spec.ts`, `nutrition-diary.spec.ts`,
