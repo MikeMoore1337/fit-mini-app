@@ -4,10 +4,10 @@
 
 ### Telegram core bot
 
-Separate archive:
+Самостоятельный вложенный backlog:
 
 ```text
-your-fitness-coach-telegram-core-release-backlog-v4.zip
+codex-backlog/telegram-core-release-backlog/
 ```
 
 Scope: one bot runtime, TMA entry, account linking regression, support/feedback, BotFather commands and product notification delivery. No news/channel/digest.

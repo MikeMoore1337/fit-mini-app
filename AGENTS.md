@@ -127,7 +127,7 @@ Reusable role contracts live under `.agents/roles/`.
 Current backlog families include:
 
 - `codex-backlog/tasks/`;
-- `telegram-core-release-backlog/tasks/`;
+- `codex-backlog/telegram-core-release-backlog/tasks/`;
 - `post-release-priority-backlog/tasks/`.
 
 When a task file is explicitly provided:
@@ -193,7 +193,7 @@ Before changing files for a backlog task, verify the branch with:
 
 The current backlog's `GLOBAL_RULES.md` defines the expected branch.
 
-For `codex-backlog/tasks/` and `telegram-core-release-backlog/tasks/`, the expected long-lived
+For `codex-backlog/tasks/` and `codex-backlog/telegram-core-release-backlog/tasks/`, the expected long-lived
 implementation branch is:
 
 `feature/yfc-platform-v2`

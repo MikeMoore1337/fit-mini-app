@@ -21,7 +21,7 @@ overlay `49F` → canonical specification/renders `49D` → pilot evidence `49E`
 
 | Изменение | Классификация | Решение |
 | --- | --- | --- |
-| `telegram-core-release-backlog/tasks/02a-production-master-backport.md` (untracked) | `UNRELATED_USER_CHANGE` | Не читать, не изменять и не включать в commit `49G`. |
+| `codex-backlog/telegram-core-release-backlog/tasks/done/02a-production-master-backport.md` (на момент `49G` — untracked) | `HISTORICAL_UNRELATED_USER_CHANGE` | Исторический контекст: не включалась в commit `49G`; позднее task `02A` завершена и архивирована. |
 
 Tracked diff `49G` на этом снимке отсутствовал. Новые изменения, перечисленные ниже, созданы
 implementer-pass task `49G` и относятся к `REQUIRED_CHANGE`.
