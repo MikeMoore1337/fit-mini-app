@@ -198,3 +198,12 @@ export function resetDemoSession(scenario: DemoScenario): Promise<DemoSessionSna
 export function clearDemoSession(scenario: DemoScenario): void {
   writeToken(scenario, null);
 }
+
+export function clearAllDemoSessions(): void {
+  memoryTokens = {};
+  try {
+    window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
+  } catch {
+    // The in-memory credentials are still discarded in restrictive WebViews.
+  }
+}

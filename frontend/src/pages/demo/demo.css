@@ -426,6 +426,43 @@
   text-decoration: none;
 }
 
+.demo-conversion {
+  display: grid;
+  gap: var(--v2-space-4);
+  padding-top: var(--v2-space-4);
+  border-top: 1px solid var(--v2-border);
+}
+
+.demo-conversion > div {
+  display: grid;
+  gap: var(--v2-space-2);
+  padding-left: var(--v2-space-3);
+  border-left: 3px solid var(--v2-lime);
+}
+
+.demo-conversion :where(p, h3, span) {
+  margin: 0;
+}
+
+.demo-conversion p {
+  color: var(--v2-accent-text);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.demo-conversion h3 {
+  font-size: 1.18rem;
+  letter-spacing: -0.02em;
+}
+
+.demo-conversion span {
+  color: var(--v2-text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
 .demo-error-state {
   display: grid;
   gap: var(--v2-space-3);
@@ -463,8 +500,17 @@
 
 @media (max-width: 560px) {
   .demo-header {
+    grid-template-columns: auto 1fr auto;
     gap: var(--v2-space-2);
     padding-inline: max(16px, var(--yfc-safe-right, 0px)) max(16px, var(--yfc-safe-left, 0px));
+  }
+
+  .demo-header__status {
+    grid-row: auto;
+    grid-column: auto;
+    justify-content: center;
+    padding-top: 0;
+    border-top: 0;
   }
 
   .demo-header__brand .yfc-lockup__wordmark,
@@ -499,6 +545,22 @@
   .demo-stage {
     gap: var(--v2-space-4);
     padding: var(--v2-space-4);
+  }
+
+  .demo-stage--training-action .demo-stage__heading {
+    order: 1;
+  }
+
+  .demo-stage--training-action .demo-workout-progress {
+    order: 2;
+  }
+
+  .demo-stage--training-action .demo-training-action {
+    order: 3;
+  }
+
+  .demo-stage--training-action .demo-fact-list {
+    order: 4;
   }
 
   .demo-metrics {

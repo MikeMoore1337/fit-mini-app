@@ -14,11 +14,11 @@ import {
 
 const CAPTURE =
   (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
-    ?.YFC_CAPTURE_TASK_68 === '1';
+    ?.YFC_CAPTURE_TASK_69 === '1';
 const LIVE_DEMO =
   (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
     ?.YFC_DEMO_LIVE === '1';
-const SCREENSHOT_DIR = '../.artifacts/screenshots/task-68';
+const SCREENSHOT_DIR = '../.artifacts/screenshots/task-69';
 
 function demoFixture(scenario: DemoScenario): DemoSessionSnapshot {
   const base = {
@@ -185,6 +185,55 @@ async function installDemoApi(page: Page, forcedCurrentStatus?: 403 | 410) {
   };
 }
 
+async function installAuthApi(page: Page) {
+  let authenticated = false;
+  await page.route('**/api/v1/**', async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.includes('/demo/')) return route.fallback();
+    if (path.endsWith('/public/config')) {
+      return route.fulfill({
+        json: {
+          app_env: 'prod',
+          enable_dev_auth: false,
+          enable_web_auth: true,
+          enable_email_auth: false,
+          telegram_bot_username: 'fitness_bot',
+          oauth_providers: ['telegram', 'google', 'yandex', 'vk'],
+        },
+      });
+    }
+    if (path.endsWith('/auth/refresh')) {
+      return route.fulfill({ status: 401, json: { detail: 'Сессия отсутствует' } });
+    }
+    if (path.endsWith('/auth/telegram/init')) {
+      authenticated = true;
+      return route.fulfill({ json: { access_token: 'telegram-demo-handoff-token' } });
+    }
+    if (path.endsWith('/me')) {
+      return authenticated
+        ? route.fulfill({
+            json: {
+              id: 69,
+              is_coach: false,
+              is_admin: false,
+              is_root: false,
+              has_active_program: false,
+              has_workout_history: false,
+              onboarding: {
+                status: 'required',
+                required_fields: ['goal'],
+                missing_fields: ['goal'],
+              },
+              profile: null,
+              trainer: null,
+            },
+          })
+        : route.fulfill({ status: 401, json: { detail: 'Требуется вход' } });
+    }
+    return route.fallback();
+  });
+}
+
 async function completeScenario(page: Page, scenario: DemoScenario) {
   if (scenario === 'self_training') {
     await page.getByRole('button', { name: 'Начать тренировку' }).click();
@@ -205,7 +254,24 @@ async function completeScenario(page: Page, scenario: DemoScenario) {
   } else {
     await page.getByRole('button', { name: 'Сохранить комментарий' }).click();
   }
-  await expect(page.getByRole('link', { name: 'Открыть приложение' })).toBeVisible();
+  const authHandoff = page.getByRole('link', { name: 'Войти и начать настройку' });
+  await expect(authHandoff).toBeVisible();
+  await expect(authHandoff).toBeInViewport();
+
+  const isTma = await page.evaluate(() => Boolean(window.Telegram?.WebApp?.initData?.trim()));
+  if (CAPTURE && !isTma) {
+    const width = page.viewportSize()?.width;
+    const shouldCapture =
+      (scenario === 'self_training' && width === 360) ||
+      (scenario === 'nutrition' && width === 390) ||
+      (scenario === 'trainer' && width === 390);
+    if (shouldCapture) {
+      await page.screenshot({
+        path: `${SCREENSHOT_DIR}/mobile-web-${width}-${scenario}-conversion-light.png`,
+        fullPage: true,
+      });
+    }
+  }
 }
 
 async function expectMetricSpacing(page: Page) {
@@ -239,6 +305,28 @@ async function expectPrimaryContract(page: Page) {
   await expect(primary).toHaveCSS('border-radius', contract.expectedRadius);
 }
 
+async function expectSelectionContract(page: Page) {
+  const active = page.locator('.demo-scenario-nav button.is-active');
+  const contract = await active.evaluate(() => {
+    const sample = document.createElement('span');
+    sample.style.backgroundColor = 'var(--v2-surface-secondary)';
+    sample.style.borderLeftColor = 'var(--v2-lime)';
+    sample.style.borderRadius = 'var(--v2-compact-radius)';
+    document.body.append(sample);
+    const expected = getComputedStyle(sample);
+    const result = {
+      background: expected.backgroundColor,
+      boundary: expected.borderLeftColor,
+      radius: expected.borderRadius,
+    };
+    sample.remove();
+    return result;
+  });
+  await expect(active).toHaveCSS('background-color', contract.background);
+  await expect(active).toHaveCSS('border-left-color', contract.boundary);
+  await expect(active).toHaveCSS('border-radius', contract.radius);
+}
+
 async function openMobilePage(browser: Browser, scenario: DemoScenario, width: 360 | 390 | 430) {
   const viewport =
     width === 360
@@ -270,6 +358,7 @@ test('three curated scenarios work at compact Mobile Web widths without visual f
       await expectTouchTargets(themeToggle);
       await expectNoHorizontalOverflow(page);
       await expectTouchTargets(page.locator('.demo-scenario-nav button'));
+      await expectSelectionContract(page);
       if (width === 360 && scenario === 'self_training') {
         await themeToggle.click();
         await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
@@ -283,9 +372,16 @@ test('three curated scenarios work at compact Mobile Web widths without visual f
         expect(buttonBox).not.toBeNull();
         expect(labelBox).not.toBeNull();
         expect(labelBox!.x - buttonBox!.x).toBeGreaterThanOrEqual(8);
-        expect(buttonBox!.x + buttonBox!.width - labelBox!.x - labelBox!.width).toBeGreaterThanOrEqual(
-          8,
-        );
+        expect(
+          buttonBox!.x + buttonBox!.width - labelBox!.x - labelBox!.width,
+        ).toBeGreaterThanOrEqual(8);
+        await expect(page.getByRole('button', { name: 'Начать тренировку' })).toBeInViewport();
+        if (CAPTURE) {
+          await page.screenshot({
+            path: `${SCREENSHOT_DIR}/mobile-web-360-training-entry-light.png`,
+            fullPage: true,
+          });
+        }
       }
       await expectPrimaryContract(page);
       await completeScenario(page, scenario);
@@ -330,12 +426,14 @@ test('mocked Dark TMA keeps the same demo composition and never calls auth or li
     await tma.setActive(true);
     await expect(page.getByText('Демо', { exact: true })).toBeVisible();
     await expectNoHorizontalOverflow(page);
+    await expectSelectionContract(page);
+    await completeScenario(page, scenario);
     expect(requestedPaths.some((path) => path.includes('/auth/'))).toBe(false);
     expect(requestedPaths.some((path) => path.includes('/notifications'))).toBe(false);
     expect(requestedPaths.some((path) => path.includes('/coach/invit'))).toBe(false);
     if (CAPTURE && scenario === 'trainer') {
       await page.screenshot({
-        path: `${SCREENSHOT_DIR}/tma-390-trainer-dark.png`,
+        path: `${SCREENSHOT_DIR}/tma-390-trainer-conversion-dark.png`,
         fullPage: true,
       });
     }
@@ -393,6 +491,10 @@ test('desktop keeps the canonical content width and separated adjacent regions',
   if (!LIVE_DEMO) await installDemoApi(page);
   await page.goto('/demo?scenario=self_training');
   await expect(page.getByText('Демо', { exact: true })).toBeVisible();
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('link', { name: 'К демо-сценарию' })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#demoContent')).toBeFocused();
 
   const geometry = await page.evaluate(() => {
     const main = document.querySelector<HTMLElement>('.demo-main')!.getBoundingClientRect();
@@ -420,9 +522,10 @@ test('desktop keeps the canonical content width and separated adjacent regions',
   await page.getByRole('button', { name: 'Завершить текущий подход' }).click();
   await page.getByRole('button', { name: 'Завершить тренировку' }).click();
   await expectMetricSpacing(page);
+  await page.getByRole('button', { name: 'Перейти к прогрессу' }).click();
   if (CAPTURE) {
     await page.screenshot({
-      path: `${SCREENSHOT_DIR}/desktop-1280-training-summary-spacing.png`,
+      path: `${SCREENSHOT_DIR}/desktop-1280-training-conversion-light.png`,
       fullPage: true,
     });
   }
@@ -430,4 +533,81 @@ test('desktop keeps the canonical content width and separated adjacent regions',
   await page.setViewportSize({ width: 768, height: 900 });
   await expectNoHorizontalOverflow(page);
   await expectNoOverlap(page.locator('.demo-stage'), page.locator('.demo-boundary'));
+});
+
+test('Landing entry, deep-link scenario history and browser auth return stay explicit', async ({
+  browser,
+}) => {
+  const context = await browser.newContext({
+    viewport: MOBILE_CONTEXTS.baseline,
+    hasTouch: true,
+    isMobile: true,
+    reducedMotion: 'reduce',
+  });
+  const page = await context.newPage();
+  await installAuthApi(page);
+  await installDemoApi(page);
+
+  await page.goto('/');
+  await page.getByRole('link', { name: /Попробовать демо/ }).click();
+  await expect(page).toHaveURL(/\/demo$/);
+  await page.getByRole('button', { name: 'Начать тренировку' }).click();
+  await page.getByRole('button', { name: 'Завершить текущий подход' }).click();
+  await page.getByRole('button', { name: 'Завершить тренировку' }).click();
+  await page.getByRole('button', { name: 'Перейти к прогрессу' }).click();
+  const demoTokenBeforeHandoff = await page.evaluate(() =>
+    sessionStorage.getItem('fit_demo_sessions_v1'),
+  );
+  expect(demoTokenBeforeHandoff).not.toBeNull();
+
+  await page.getByRole('link', { name: 'Войти и начать настройку' }).click();
+  await expect(page).toHaveURL(/\/login\?next=%2Fapp&from=demo&scenario=self_training$/);
+  await expect(page.getByText('После демо — чистый профиль')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Продолжить с Google' })).toBeVisible();
+  expect(await page.evaluate(() => sessionStorage.getItem('fit_demo_sessions_v1'))).toBeNull();
+  if (CAPTURE) {
+    await page.screenshot({
+      path: `${SCREENSHOT_DIR}/mobile-web-390-auth-handoff-light.png`,
+      fullPage: true,
+    });
+  }
+
+  await page.getByRole('link', { name: 'Вернуться в демо' }).click();
+  await expect(page).toHaveURL(/\/demo\?scenario=self_training$/);
+  await expect(page.getByRole('button', { name: 'Начать тренировку' })).toBeVisible();
+  const demoTokenAfterReturn = await page.evaluate(() =>
+    sessionStorage.getItem('fit_demo_sessions_v1'),
+  );
+  expect(demoTokenAfterReturn).not.toBe(demoTokenBeforeHandoff);
+
+  await page.getByRole('button', { name: /Питание/ }).click();
+  await expect(page).toHaveURL(/scenario=nutrition$/);
+  await page.getByRole('button', { name: /Тренеру/ }).click();
+  await expect(page).toHaveURL(/scenario=trainer$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/scenario=nutrition$/);
+  await context.close();
+});
+
+test('mocked TMA auth handoff clears demo state and starts clean onboarding', async ({
+  browser,
+}) => {
+  const context = await browser.newContext({
+    viewport: MOBILE_CONTEXTS.baseline,
+    hasTouch: true,
+    isMobile: true,
+    reducedMotion: 'reduce',
+  });
+  const page = await context.newPage();
+  await installTelegramHarness(page, { colorScheme: 'dark' });
+  await installAuthApi(page);
+  await installDemoApi(page);
+  await page.goto('/demo?scenario=nutrition&tgWebAppPlatform=android');
+  await completeScenario(page, 'nutrition');
+
+  await page.getByRole('link', { name: 'Войти и начать настройку' }).click();
+  await expect(page).toHaveURL(/\/onboarding\?next=%2Fapp$/);
+  await expect(page.getByRole('heading', { name: 'Какая у вас главная цель?' })).toBeVisible();
+  expect(await page.evaluate(() => sessionStorage.getItem('fit_demo_sessions_v1'))).toBeNull();
+  await context.close();
 });

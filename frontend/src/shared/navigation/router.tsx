@@ -15,6 +15,14 @@ interface NavigationContextValue {
 }
 
 const NavigationContext = createContext<NavigationContextValue | null>(null);
+const DEMO_SCENARIOS = new Set(['self_training', 'nutrition', 'trainer']);
+
+export function demoReturnPathFromLogin(search: string): string | null {
+  const params = new URLSearchParams(search);
+  const scenario = params.get('scenario');
+  if (params.get('from') !== 'demo' || !scenario || !DEMO_SCENARIOS.has(scenario)) return null;
+  return `/demo?scenario=${scenario}`;
+}
 
 function programHistoryReturn(value: string | null): string | null {
   if (!value) return null;
@@ -105,6 +113,8 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
           ? progressReportReturn(location.search)
           : null;
     const publicReturn = location.path === '/demo' ? '/' : null;
+    const demoHandoffReturn =
+      location.path === '/login' ? demoReturnPathFromLogin(location.search) : null;
     if (
       (location.path === '/app' && !focusedReturn) ||
       location.path === '/onboarding' ||
@@ -113,8 +123,10 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       backButton.hide();
       return;
     }
-    const goBack = () =>
-      navigate(focusedReturn ?? publicReturn ?? '/app', Boolean(focusedReturn || publicReturn));
+    const goBack = () => {
+      const returnPath = focusedReturn ?? publicReturn ?? demoHandoffReturn;
+      navigate(returnPath ?? '/app', Boolean(returnPath));
+    };
     backButton.onClick(goBack);
     backButton.show();
     return () => {

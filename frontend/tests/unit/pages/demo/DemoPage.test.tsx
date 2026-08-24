@@ -11,6 +11,7 @@ import {
 
 const mocks = vi.hoisted(() => ({
   apply: vi.fn(),
+  clearAll: vi.fn(),
   clear: vi.fn(),
   load: vi.fn(),
   reset: vi.fn(),
@@ -23,6 +24,7 @@ vi.mock('../../../../src/features/demo/demoApi', async (importOriginal) => {
   return {
     ...actual,
     applyDemoAction: mocks.apply,
+    clearAllDemoSessions: mocks.clearAll,
     clearDemoSession: mocks.clear,
     loadDemoSession: mocks.load,
     resetDemoSession: mocks.reset,
@@ -159,5 +161,30 @@ describe('DemoPage', () => {
 
     expect(mocks.apply).toHaveBeenCalledWith('trainer', 'save_comment', 'Техника стабильна.');
     expect(await screen.findByText(/сохранён до конца демо-сессии/)).toBeVisible();
+  });
+
+  it('uses a contextual auth handoff and discards hidden demo state', async () => {
+    mocks.load.mockResolvedValue({
+      ...trainingSnapshot,
+      state: {
+        ...(trainingSnapshot.state as DemoSelfTrainingState),
+        screen: 'progress',
+        progress_change_percent: 6.5,
+      },
+    });
+    const user = userEvent.setup();
+    renderPage('/demo?scenario=self_training');
+
+    expect(await screen.findByText('Начните с чистого профиля')).toBeVisible();
+    expect(screen.getByText(/Демо-изменения не переносятся/)).toBeVisible();
+    const handoff = screen.getByRole('link', { name: 'Войти и начать настройку' });
+    expect(handoff).toHaveAttribute('href', '/login?next=%2Fapp&from=demo&scenario=self_training');
+    await user.click(handoff);
+
+    expect(mocks.clearAll).toHaveBeenCalledOnce();
+    expect(mocks.track).toHaveBeenCalledWith(
+      { name: 'demo_login_selected', surface: 'mobile_web' },
+      { dedupe: 'session', dedupeKey: 'self_training' },
+    );
   });
 });

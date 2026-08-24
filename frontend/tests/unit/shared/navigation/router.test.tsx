@@ -1,6 +1,10 @@
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { focusedContextReturn, NavigationProvider } from '../../../../src/shared/navigation/router';
+import {
+  demoReturnPathFromLogin,
+  focusedContextReturn,
+  NavigationProvider,
+} from '../../../../src/shared/navigation/router';
 
 describe('NavigationProvider Telegram BackButton', () => {
   const callbacks = new Set<() => void>();
@@ -96,5 +100,19 @@ describe('NavigationProvider Telegram BackButton', () => {
 
     await waitFor(() => expect(window.location.pathname).toBe('/'));
     expect(window.location.pathname).not.toBe('/app');
+  });
+
+  it('возвращает из demo auth handoff в allowlisted scenario', async () => {
+    window.history.replaceState({}, '', '/login?next=%2Fapp&from=demo&scenario=nutrition');
+
+    render(
+      <NavigationProvider>
+        <div>login</div>
+      </NavigationProvider>,
+    );
+    act(() => callbacks.values().next().value?.());
+
+    await waitFor(() => expect(window.location.href).toMatch(/\/demo\?scenario=nutrition$/));
+    expect(demoReturnPathFromLogin('?from=demo&scenario=https://evil.example')).toBeNull();
   });
 });

@@ -110,4 +110,16 @@ describe('LoginPage', () => {
 
     await waitFor(() => expect(window.location.pathname).toBe('/coach'));
   });
+
+  it('explains clean onboarding and provides an explicit return to the demo scenario', () => {
+    window.history.replaceState(null, '', '/login?next=%2Fapp&from=demo&scenario=trainer');
+    renderLogin();
+
+    expect(screen.getByText('После демо — чистый профиль')).toBeVisible();
+    expect(screen.getByText(/Изменения не переносятся/)).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Вернуться в демо' })).toHaveAttribute(
+      'href',
+      '/demo?scenario=trainer',
+    );
+  });
 });

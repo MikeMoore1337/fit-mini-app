@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  clearAllDemoSessions,
   DemoApiError,
   loadDemoSession,
   startDemoSession,
@@ -27,8 +28,33 @@ const snapshot = {
 
 describe('demoApi', () => {
   beforeEach(() => {
+    clearAllDemoSessions();
     sessionStorage.clear();
     vi.restoreAllMocks();
+  });
+
+  it('discards every demo credential before the auth handoff', async () => {
+    const fetchMock = vi
+      .spyOn(window, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ ...snapshot, session_token: 'D'.repeat(43) }), {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ ...snapshot, session_token: 'E'.repeat(43) }), {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+
+    await startDemoSession('self_training');
+    clearAllDemoSessions();
+    expect(sessionStorage.getItem('fit_demo_sessions_v1')).toBeNull();
+
+    await loadDemoSession('self_training');
+    expect(fetchMock.mock.calls[1]?.[0]).toBe('/api/v1/demo/sessions');
   });
 
   it('creates an isolated credential-free session and keeps only its demo token', async () => {

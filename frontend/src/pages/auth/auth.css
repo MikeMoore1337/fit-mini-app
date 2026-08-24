@@ -321,12 +321,42 @@
 }
 
 .auth-public-shell--design-v2-1 .login-auth-heading,
+.auth-public-shell--design-v2-1 .login-demo-context,
 .auth-public-shell--design-v2-1 .oauth-auth,
 .auth-public-shell--design-v2-1 .login-dev,
 .auth-public-shell--design-v2-1 .login-retry,
 .auth-public-shell--design-v2-1 .login-privacy-note {
   width: 300px;
   margin-inline: auto;
+}
+
+.auth-public-shell--design-v2-1 .login-demo-context {
+  display: grid;
+  gap: 10px;
+  padding: 0 0 12px 12px;
+  border-bottom: 1px solid var(--v2-border);
+  border-left: 3px solid var(--v2-lime);
+}
+
+.auth-public-shell--design-v2-1 .login-demo-context > div {
+  display: grid;
+  gap: 4px;
+}
+
+.auth-public-shell--design-v2-1 .login-demo-context span {
+  color: var(--v2-text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.auth-public-shell--design-v2-1 .login-demo-context a {
+  width: fit-content;
+  min-height: 44px;
+  color: var(--v2-text-primary);
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 44px;
+  text-underline-offset: 3px;
 }
 
 .auth-public-shell--design-v2-1 .login-auth-heading h2 {
@@ -522,7 +552,14 @@
   }
 
   .auth-public-shell--design-v2-1
-    :is(.login-auth-heading, .oauth-auth, .login-dev, .login-retry, .login-privacy-note) {
+    :is(
+      .login-auth-heading,
+      .login-demo-context,
+      .oauth-auth,
+      .login-dev,
+      .login-retry,
+      .login-privacy-note
+    ) {
     width: 100%;
   }
 

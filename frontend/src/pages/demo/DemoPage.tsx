@@ -14,6 +14,7 @@ import { AppLink, useNavigation } from '../../shared/navigation/router';
 import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
 import {
   applyDemoAction,
+  clearAllDemoSessions,
   clearDemoSession,
   DemoApiError,
   loadDemoSession,
@@ -38,17 +39,32 @@ function scenarioFromSearch(search: string): DemoScenario {
   return value === 'nutrition' || value === 'trainer' ? value : 'self_training';
 }
 
-function DemoLoginAction() {
+function DemoLoginAction({ scenario }: { scenario: DemoScenario }) {
+  const loginPath = `/login?next=%2Fapp&from=demo&scenario=${scenario}`;
+
   return (
-    <AppLink
-      className="ui-button demo-login-action"
-      to="/login?next=%2Fapp"
-      onClick={() =>
-        trackProductEvent({ name: 'demo_login_selected', surface: productEventSurface() })
-      }
-    >
-      Открыть приложение
-    </AppLink>
+    <section className="demo-conversion" aria-labelledby={`demoConversion-${scenario}`}>
+      <div>
+        <p>Продолжить после демо</p>
+        <h3 id={`demoConversion-${scenario}`}>Начните с чистого профиля</h3>
+        <span>
+          Демо-изменения не переносятся. После входа начнётся обычная настройка приложения.
+        </span>
+      </div>
+      <AppLink
+        className="ui-button demo-login-action"
+        to={loginPath}
+        onClick={() => {
+          clearAllDemoSessions();
+          trackProductEvent(
+            { name: 'demo_login_selected', surface: productEventSurface() },
+            { dedupe: 'session', dedupeKey: scenario },
+          );
+        }}
+      >
+        Войти и начать настройку
+      </AppLink>
+    </section>
   );
 }
 
@@ -94,7 +110,7 @@ function TrainingScenario({
           <strong>+{state.progress_change_percent}%</strong>
           <small>по подтверждённым тренировкам этого сценария</small>
         </div>
-        <DemoLoginAction />
+        <DemoLoginAction scenario="self_training" />
       </>
     );
   }
@@ -138,7 +154,12 @@ function TrainingScenario({
           </article>
         ))}
       </div>
-      <Button disabled={busy} fullWidth onClick={() => onAction(action)}>
+      <Button
+        className="demo-training-action"
+        disabled={busy}
+        fullWidth
+        onClick={() => onAction(action)}
+      >
         {busy ? 'Обновляем…' : label}
       </Button>
     </>
@@ -173,7 +194,7 @@ function NutritionScenario({
           <strong>Данных достаточно для дневного итога</strong>
           <span>Отчёт основан только на подготовленных записях текущей демо-сессии.</span>
         </div>
-        <DemoLoginAction />
+        <DemoLoginAction scenario="nutrition" />
       </>
     );
   }
@@ -246,13 +267,10 @@ function TrainerScenario({
         ))}
       </dl>
       {state.comment ? (
-        <>
-          <div className="demo-comment-saved" role="status">
-            <strong>Контекстный комментарий сохранён до конца демо-сессии</strong>
-            <span>{state.comment}</span>
-          </div>
-          <DemoLoginAction />
-        </>
+        <div className="demo-comment-saved" role="status">
+          <strong>Контекстный комментарий сохранён до конца демо-сессии</strong>
+          <span>{state.comment}</span>
+        </div>
       ) : (
         <>
           <Field
@@ -282,6 +300,7 @@ function TrainerScenario({
           В демо нет реальных приглашений и отношений тренер–клиент.
         </span>
       </div>
+      {state.comment && <DemoLoginAction scenario="trainer" />}
     </>
   );
 }
@@ -391,6 +410,11 @@ export default function DemoPage() {
         );
       }
       return next;
+    }).then(() => {
+      if (!['open_progress', 'open_nutrition_report', 'save_comment'].includes(action)) return;
+      window.requestAnimationFrame(() => {
+        document.querySelector('.demo-conversion')?.scrollIntoView({ block: 'nearest' });
+      });
     });
   };
 
@@ -412,6 +436,9 @@ export default function DemoPage() {
 
   const reset = () => void updateSnapshot(() => resetDemoSession(scenario));
   const isLoading = loading || loadedScenario !== scenario;
+  const prioritizesTrainingAction =
+    snapshot?.state.kind === 'self_training' &&
+    (snapshot.state.screen === 'today' || snapshot.state.screen === 'active_workout');
 
   return (
     <div className="demo-page app-shell--design-v2">
@@ -470,16 +497,17 @@ export default function DemoPage() {
             </p>
           </aside>
 
-          <Surface className="demo-stage" aria-live="polite">
+          <Surface
+            className={`demo-stage${prioritizesTrainingAction ? ' demo-stage--training-action' : ''}`}
+            aria-live="polite"
+          >
             {isLoading ? (
               <LoadingState label="Готовим демо-сценарий…" />
             ) : error ? (
               <div className="demo-error-state">
                 <ErrorState
                   message={error.message}
-                  retry={
-                    error.status === 410 || error.status === 403 ? newSession : retryLoad
-                  }
+                  retry={error.status === 410 || error.status === 403 ? newSession : retryLoad}
                 />
                 {(error.status === 410 || error.status === 403) && (
                   <p>

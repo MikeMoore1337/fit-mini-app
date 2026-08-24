@@ -3,7 +3,7 @@ import { useAuth } from '../../app/AuthProvider';
 import { EmailAuthPanel } from '../../features/auth/EmailAuthPanel';
 import { configuredOAuthProviders, OAuthButtons } from '../../features/auth/OAuthButtons';
 import { safeAuthNextPath } from '../../shared/auth/redirects';
-import { useNavigation } from '../../shared/navigation/router';
+import { AppLink, demoReturnPathFromLogin, useNavigation } from '../../shared/navigation/router';
 import { ErrorState, LoadingState } from '../../shared/ui/common';
 import { BrandLockup } from '../../shared/ui/BrandLogo';
 import { PublicShell } from '../../shared/ui/PublicShell';
@@ -120,6 +120,7 @@ export default function LoginPage() {
   const { navigate } = useNavigation();
   const params = useMemo(() => new URLSearchParams(window.location.search), []);
   const nextPath = safeAuthNextPath(params.get('next'));
+  const demoReturnPath = demoReturnPathFromLogin(window.location.search);
   const authErrorCode = params.get('auth_error');
   const providers = configuredOAuthProviders(config?.enable_web_auth ? config.oauth_providers : []);
   const telegramAppUrl = config?.telegram_bot_username
@@ -160,6 +161,15 @@ export default function LoginPage() {
         </section>
 
         <section className="login-card" aria-label="Способы входа">
+          {demoReturnPath && (
+            <aside className="login-demo-context" aria-label="Переход из демо">
+              <div>
+                <strong>После демо — чистый профиль</strong>
+                <span>Изменения не переносятся, настройка начнётся заново.</span>
+              </div>
+              <AppLink to={demoReturnPath}>Вернуться в демо</AppLink>
+            </aside>
+          )}
           <div className="login-auth-heading">
             <p className="login-kicker">Вход</p>
             <h2>Выберите способ</h2>
