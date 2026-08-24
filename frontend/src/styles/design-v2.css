@@ -2500,10 +2500,18 @@ body.public-shell-mode.public-shell-mode:has(.auth-public-shell--design-v2) {
 
   .app-shell--design-v2 .app-bottom-nav__utility > .app-theme-toggle--nav {
     display: grid;
-    grid-template-columns: 24px max-content;
+    grid-template-columns: 18px max-content;
     align-items: center;
     justify-content: center;
     gap: var(--v2-space-2);
+    border: 1px solid var(--v2-border);
+    background: transparent;
+  }
+
+  .app-shell--design-v2 .app-bottom-nav__utility > .app-theme-toggle--nav .app-bottom-nav__icon {
+    width: 18px;
+    height: 24px;
+    flex-basis: 18px;
   }
 
   .app-shell--design-v2 .app-bottom-nav__account-name {

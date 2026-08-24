@@ -1604,8 +1604,15 @@ test('desktop app shell centers the brand lockup and navigation surfaces', async
           element.querySelector('.app-bottom-nav__account-role')!,
         ).fontSize,
         themeContentOffset: themeButton
-          ? groupCenterOffset(Array.from(themeButton.children), themeButton.getBoundingClientRect())
+          ? groupCenterOffset(
+              Array.from(
+                themeButton.querySelectorAll('.app-bottom-nav__icon svg, .app-bottom-nav__label'),
+              ),
+              themeButton.getBoundingClientRect(),
+            )
           : Number.POSITIVE_INFINITY,
+        themeBorderStyle: themeButton ? window.getComputedStyle(themeButton).borderTopStyle : null,
+        themeBorderWidth: themeButton ? window.getComputedStyle(themeButton).borderTopWidth : null,
         themeButtonOffset: centerOffset(themeButton),
         themeLabelSize: window.getComputedStyle(
           element.querySelector('.app-theme-toggle--nav .app-bottom-nav__label')!,
@@ -1642,6 +1649,8 @@ test('desktop app shell centers the brand lockup and navigation surfaces', async
     expect(desktopAlignment.buttonOffsets.length).toBeGreaterThan(0);
     expect(desktopAlignment.buttonOffsets.every((offset) => offset <= 1)).toBe(true);
     expect(desktopAlignment.themeContentOffset).toBeLessThanOrEqual(1);
+    expect(desktopAlignment.themeBorderStyle).toBe('solid');
+    expect(desktopAlignment.themeBorderWidth).toBe('1px');
     expect(desktopAlignment.themeButtonOffset).toBeLessThanOrEqual(1);
     expect(desktopAlignment.themeLabelSize).toBe('12.8px');
     expect(contentAlignment).not.toBeNull();

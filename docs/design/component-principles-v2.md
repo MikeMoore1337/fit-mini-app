@@ -61,6 +61,9 @@
   правую колонку во второй строке. Нельзя
   независимо центрировать theme, name и meta: такой stack образует визуальную «горку». Logout
   остаётся самостоятельным focusable action.
+- Desktop theme button всегда показывает спокойный `1px` contour. Для визуального центрирования
+  измеряется фактическая pictogram geometry, а не более широкий служебный icon cell; pictogram и
+  label должны образовывать единую группу по центру видимого button border.
 - После расширения desktop rail типографика сохраняет уверенную, но не растянутую иерархию:
   primary labels — `13px`, secondary/theme — около `12.8px`, account name — `12.8px`, account meta —
   около `11.5px`. Свободное место справа не заполняют чрезмерным font-size и не ломают общие

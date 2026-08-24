@@ -80,6 +80,8 @@ Desktop and mobile are one system but different compositions. Mobile never uses 
   левому краю внутри центрированной account-колонки `144px`, с logout в отдельной правой колонке
   второй строки. Независимое центрирование трёх строк запрещено, потому что создаёт расширяющийся
   вниз силуэт.
+  Theme button сохраняет видимый `1px` contour; центр проверяется по фактическим границам pictogram
+  и label относительно этого contour, а не по служебному icon box.
 - Desktop typography scale для rail: primary destination `13px`, secondary/theme `12.8px`, account
   name `12.8px`, account meta около `11.5px`. Демо использует короткое plain-language meta
   `Отдельная сессия`, а не техническую формулировку, нарушающую ритм utility block.
