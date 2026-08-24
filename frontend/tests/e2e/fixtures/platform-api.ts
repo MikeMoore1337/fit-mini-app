@@ -1,6 +1,7 @@
 import type { Page, Route } from '@playwright/test';
 
 type WorkoutStatus = 'planned' | 'in_progress' | 'completed' | 'none';
+type ProgressionOutcome = 'consider_progressing' | 'hold' | 'review' | 'consider_reducing' | 'none';
 
 export interface PlatformApiOptions {
   browserSession?: boolean;
@@ -10,6 +11,8 @@ export interface PlatformApiOptions {
   weeklyCalibration?: 'insufficient' | 'pending';
   nutritionTargetSource?: 'manual' | 'trainer';
   programHistory?: 'empty' | 'one' | 'many';
+  progressionOutcome?: ProgressionOutcome;
+  longExerciseName?: boolean;
 }
 
 export interface PlatformApiController {
@@ -105,6 +108,7 @@ export async function installPlatformApi(
   let completionNote: string | null = null;
   let adaptationApplyCalls = 0;
   let adaptationApplyMode: 'success' | 'conflict' | 'error' = 'success';
+  const progressionOutcome = options.progressionOutcome ?? 'review';
   const previousTargetDate = new Date(todayDate);
   previousTargetDate.setUTCDate(previousTargetDate.getUTCDate() - 30);
   const targetSource = options.nutritionTargetSource ?? 'manual';
@@ -204,6 +208,79 @@ export async function installPlatformApi(
     await page.addInitScript(() => sessionStorage.setItem('fit_access_token', 'e2e-browser-token'));
   }
 
+  const progressionGuidance = () => {
+    if (progressionOutcome === 'none') return null;
+    const sessionCount = progressionOutcome === 'review' ? 0 : 2;
+    const requiredSessionCount =
+      progressionOutcome === 'hold' ? 3 : progressionOutcome === 'review' ? 2 : 2;
+    const reps = progressionOutcome === 'consider_reducing' ? [6, 7] : [10, 10];
+    const messages = {
+      consider_progressing: 'Можно рассмотреть небольшое увеличение веса',
+      hold: 'Пока оставьте текущую нагрузку',
+      review: 'Данных недостаточно — сначала закрепите текущий диапазон повторений',
+      consider_reducing: 'Можно рассмотреть небольшое снижение веса',
+    } as const;
+    return {
+      ruleset_version: 'progression-guidance-v1',
+      outcome: progressionOutcome,
+      message: messages[progressionOutcome],
+      detail:
+        progressionOutcome === 'consider_progressing'
+          ? 'Верхняя граница повторений стабильно достигнута. Доступный шаг оборудования учтён; решение остаётся за вами.'
+          : progressionOutcome === 'consider_reducing'
+            ? 'В двух сопоставимых тренировках рабочие подходы оставались ниже заданного диапазона. Это не оценка восстановления или перетренированности.'
+            : progressionOutcome === 'hold'
+              ? 'Последние результаты ещё не подтверждают устойчивое изменение нагрузки.'
+              : 'Нужны полные сопоставимые рабочие подходы в текущем контексте программы.',
+      suggested_increment:
+        progressionOutcome === 'consider_progressing'
+          ? 2.5
+          : progressionOutcome === 'consider_reducing'
+            ? -2.5
+            : null,
+      suggested_weight:
+        progressionOutcome === 'consider_progressing'
+          ? 42.5
+          : progressionOutcome === 'consider_reducing'
+            ? 37.5
+            : null,
+      load_unit: 'kg',
+      evidence: {
+        target_reps_min: 8,
+        target_reps_max: 10,
+        prescribed_sets: 1,
+        comparable_session_count: sessionCount,
+        required_session_count: requiredSessionCount,
+        working_set_count: sessionCount,
+        rir_recorded_set_count: progressionOutcome === 'consider_progressing' ? sessionCount : 0,
+        reason_keys:
+          progressionOutcome === 'consider_progressing'
+            ? ['top_range_repeated', 'full_rir_coverage']
+            : progressionOutcome === 'consider_reducing'
+              ? ['below_range_two_sessions']
+              : progressionOutcome === 'hold'
+                ? ['need_one_more_stable_session']
+                : ['too_few_comparable_sessions'],
+        sessions: Array.from({ length: sessionCount }, (_, index) => ({
+          workout_id: 30 + index,
+          scheduled_date: new Date(todayDate.getTime() - (index + 1) * 7 * 86_400_000)
+            .toISOString()
+            .slice(0, 10),
+          working_set_count: 1,
+          load: 40,
+          load_unit: 'kg',
+          reps_min: reps[index],
+          reps_max: reps[index],
+          rir_recorded_set_count: progressionOutcome === 'consider_progressing' ? 1 : 0,
+          rir_values:
+            progressionOutcome === 'consider_progressing' ? [index === 0 ? '1' : '2'] : [],
+          reached_failure: progressionOutcome === 'consider_reducing',
+          completion_feedback: index === 0 ? 'as_expected' : null,
+        })),
+      },
+    };
+  };
+
   const workout = () => ({
     id: 42,
     scheduled_date: today,
@@ -218,13 +295,16 @@ export async function installPlatformApi(
       {
         id: 101,
         exercise_id: 11,
-        exercise_title: 'Приседания',
+        exercise_title: options.longExerciseName
+          ? 'Приседания со штангой с контролируемой паузой в нижней точке'
+          : 'Приседания',
         sort_order: 1,
         prescribed_sets: 1,
         prescribed_reps: '8–10',
         rest_seconds: 90,
         notes: null,
         has_guide: false,
+        progression_guidance: progressionGuidance(),
         sets: [
           {
             id: 201,

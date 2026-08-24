@@ -37,6 +37,26 @@ const workout: Workout = {
       prescribed_reps: '8-10',
       rest_seconds: 90,
       has_guide: false,
+      progression_guidance: {
+        ruleset_version: 'progression-guidance-v1',
+        outcome: 'review',
+        message: 'Данных недостаточно — сначала закрепите текущий диапазон повторений',
+        detail: 'Нужны полные сопоставимые рабочие подходы в текущем контексте программы.',
+        suggested_increment: null,
+        suggested_weight: null,
+        load_unit: 'kg',
+        evidence: {
+          target_reps_min: 8,
+          target_reps_max: 10,
+          prescribed_sets: 1,
+          comparable_session_count: 0,
+          required_session_count: 2,
+          working_set_count: 0,
+          rir_recorded_set_count: 0,
+          reason_keys: ['too_few_comparable_sessions'],
+          sessions: [],
+        },
+      },
       sets: [
         {
           id: 201,
@@ -129,6 +149,7 @@ describe('active workout durable queue', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(loadActiveWorkoutQueue(7, 42).queue).toEqual([]);
     expect(loadCurrentActiveWorkoutSnapshot(7)?.id).toBe(42);
+    expect(loadCurrentActiveWorkoutSnapshot(7)?.exercises[0]?.progression_guidance).toBeUndefined();
   });
 
   it('сохраняет локальные данные при stale server вместо бесконечного retry', async () => {

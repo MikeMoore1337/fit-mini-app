@@ -4862,6 +4862,85 @@ export interface components {
             /** Weight Kg */
             weight_kg: number;
         };
+        /** ProgressionEvidence */
+        ProgressionEvidence: {
+            /** Target Reps Min */
+            target_reps_min?: number | null;
+            /** Target Reps Max */
+            target_reps_max?: number | null;
+            /** Prescribed Sets */
+            prescribed_sets: number;
+            /** Comparable Session Count */
+            comparable_session_count: number;
+            /** Required Session Count */
+            required_session_count: number;
+            /** Working Set Count */
+            working_set_count: number;
+            /** Rir Recorded Set Count */
+            rir_recorded_set_count: number;
+            /** Reason Keys */
+            reason_keys: string[];
+            /** Sessions */
+            sessions: components["schemas"]["ProgressionSessionEvidence"][];
+        };
+        /** ProgressionGuidance */
+        ProgressionGuidance: {
+            /**
+             * Ruleset Version
+             * @constant
+             */
+            ruleset_version: "progression-guidance-v1";
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "consider_progressing" | "hold" | "review" | "consider_reducing";
+            /** Message */
+            message: string;
+            /** Detail */
+            detail: string;
+            /** Suggested Increment */
+            suggested_increment?: number | null;
+            /** Suggested Weight */
+            suggested_weight?: number | null;
+            /**
+             * Load Unit
+             * @enum {string}
+             */
+            load_unit: "kg" | "lb";
+            evidence: components["schemas"]["ProgressionEvidence"];
+        };
+        /** ProgressionSessionEvidence */
+        ProgressionSessionEvidence: {
+            /** Workout Id */
+            workout_id: number;
+            /**
+             * Scheduled Date
+             * Format: date
+             */
+            scheduled_date: string;
+            /** Working Set Count */
+            working_set_count: number;
+            /** Load */
+            load?: number | null;
+            /**
+             * Load Unit
+             * @enum {string}
+             */
+            load_unit: "kg" | "lb";
+            /** Reps Min */
+            reps_min?: number | null;
+            /** Reps Max */
+            reps_max?: number | null;
+            /** Rir Recorded Set Count */
+            rir_recorded_set_count: number;
+            /** Rir Values */
+            rir_values: ("0" | "1" | "2" | "3" | "4+")[];
+            /** Reached Failure */
+            reached_failure: boolean;
+            /** Completion Feedback */
+            completion_feedback?: ("easier_than_expected" | "as_expected" | "harder_than_expected") | null;
+        };
         /** PublicExerciseDetail */
         PublicExerciseDetail: {
             /** Slug */
@@ -6102,6 +6181,7 @@ export interface components {
              * @default false
              */
             has_guide: boolean;
+            progression_guidance?: components["schemas"]["ProgressionGuidance"] | null;
             /** Sets */
             sets: components["schemas"]["LoggedSetItem"][];
         };

@@ -1234,6 +1234,217 @@ test('active workout starts, logs offline and resumes once after reconnect and r
   await expectNoHorizontalOverflow(tmaPage);
 });
 
+test('progression guidance applies a configured step once, stays optional and matches Mobile Web', async ({
+  mobilePage,
+  tma,
+  tmaPage,
+}) => {
+  await tmaPage.addInitScript(() => {
+    const events: unknown[] = [];
+    Object.defineProperty(window, '__progressionEvents', { value: events, writable: false });
+    window.addEventListener('yfc:product-event', (event) => {
+      events.push((event as CustomEvent).detail);
+    });
+  });
+  const api = await installPlatformApi(tmaPage, {
+    workoutStatus: 'in_progress',
+    progressionOutcome: 'consider_progressing',
+  });
+  await installPlatformApi(mobilePage, {
+    browserSession: true,
+    workoutStatus: 'in_progress',
+    progressionOutcome: 'consider_progressing',
+  });
+
+  await Promise.all([tmaPage.goto('/app'), mobilePage.goto('/app')]);
+  await Promise.all([
+    tmaPage.getByRole('button', { name: 'Продолжить тренировку' }).click(),
+    mobilePage.getByRole('button', { name: 'Продолжить тренировку' }).click(),
+  ]);
+  const tmaGuidance = tmaPage.getByRole('region', { name: 'Рекомендация по следующей нагрузке' });
+  const mobileGuidance = mobilePage.getByRole('region', {
+    name: 'Рекомендация по следующей нагрузке',
+  });
+  await expect(tmaGuidance).toContainText('Можно рассмотреть небольшое увеличение веса');
+  await expect(mobileGuidance).toContainText('Можно рассмотреть небольшое увеличение веса');
+  expect(await tmaGuidance.textContent()).toBe(await mobileGuidance.textContent());
+  await expect(tmaGuidance.locator('.ui-button--primary')).not.toBeAttached();
+
+  await tmaGuidance.getByText('Почему?', { exact: true }).click();
+  await expect(tmaGuidance.getByText('Цель: 1 × 8–10')).toBeVisible();
+  await expect(tmaGuidance.getByText(/запас записан: 1/)).toBeVisible();
+  const disclosureGeometry = await tmaGuidance.locator('.disclosure-icon').evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return {
+      width: rect.width,
+      height: rect.height,
+      radius: getComputedStyle(element).borderRadius,
+    };
+  });
+  expect(disclosureGeometry).toEqual({ width: 28, height: 28, radius: '50%' });
+  await expectTouchTargets(tmaGuidance.locator('summary, button'));
+  await expectNoHorizontalOverflow(tmaPage);
+
+  api.setOffline(true);
+  await setNetworkOffline(tmaPage, true);
+  await tmaGuidance.getByRole('button', { name: 'Подставить 42,5 кг' }).dblclick();
+  const weight = tmaPage.getByRole('spinbutton', { name: 'Вес, Приседания, подход 1' });
+  await expect(weight).toHaveValue('42.5');
+  await expect(tmaPage.getByText('Сохранено на устройстве')).toBeVisible();
+
+  api.setOffline(false);
+  await setNetworkOffline(tmaPage, false);
+  await expect(tmaPage.getByText('Синхронизировано')).toBeVisible();
+  expect(api.setPatchCalls()).toBe(1);
+  expect(api.workoutValues().actualWeight).toBe(42.5);
+
+  await tma.setTheme('dark');
+  await tma.setActive(false);
+  await tma.setActive(true);
+  await tmaPage.reload();
+  await tmaPage.getByRole('button', { name: 'Продолжить тренировку' }).click();
+  await expect(tmaPage.getByRole('spinbutton', { name: 'Вес, Приседания, подход 1' })).toHaveValue(
+    '42.5',
+  );
+  await expect(tmaPage.getByRole('button', { name: 'Вес подставлен' })).toBeDisabled();
+  expect(api.setPatchCalls()).toBe(1);
+
+  await tmaPage.getByRole('button', { name: 'Скрыть подсказку' }).click();
+  await expect(
+    tmaPage.getByRole('region', { name: 'Рекомендация по следующей нагрузке' }),
+  ).not.toBeAttached();
+  const events = await tmaPage.evaluate(
+    () =>
+      (
+        window as typeof window & {
+          __progressionEvents: Array<Record<string, unknown>>;
+        }
+      ).__progressionEvents,
+  );
+  expect(events.map((event) => event.name)).toEqual(
+    expect.arrayContaining(['progression_suggestion_shown', 'progression_suggestion_dismissed']),
+  );
+  expect(JSON.stringify(events)).not.toContain('Приседания');
+});
+
+test('progression guidance screenshots cover outcomes, long content and responsive themes', async ({
+  browser,
+}) => {
+  const cases = [
+    {
+      surface: 'mobile-web',
+      width: 360,
+      height: 800,
+      theme: 'light',
+      outcome: 'review',
+      label: 'review-insufficient',
+    },
+    {
+      surface: 'mobile-web',
+      width: 390,
+      height: 844,
+      theme: 'light',
+      outcome: 'hold',
+      label: 'hold-without-rir',
+    },
+    {
+      surface: 'mobile-web',
+      width: 430,
+      height: 932,
+      theme: 'light',
+      outcome: 'consider_reducing',
+      label: 'reduce',
+    },
+    {
+      surface: 'tablet-web',
+      width: 768,
+      height: 900,
+      theme: 'dark',
+      outcome: 'hold',
+      label: 'hold-dark',
+    },
+    {
+      surface: 'desktop-web',
+      width: 1440,
+      height: 900,
+      theme: 'light',
+      outcome: 'consider_progressing',
+      label: 'increase',
+    },
+    {
+      surface: 'tma-mock',
+      width: 390,
+      height: 844,
+      theme: 'dark',
+      outcome: 'consider_progressing',
+      label: 'increase-long-name-with-rir',
+      longExerciseName: true,
+    },
+  ] as const;
+
+  for (const current of cases) {
+    const page = await browser.newPage({
+      viewport: { width: current.width, height: current.height },
+      hasTouch: current.width <= 768,
+      isMobile: current.width <= 430,
+      reducedMotion: 'reduce',
+    });
+    if (current.surface === 'tma-mock') {
+      await installTelegramHarness(page, {
+        colorScheme: current.theme,
+        viewportHeight: current.height,
+        viewportStableHeight: current.height,
+      });
+      await installPlatformApi(page, {
+        workoutStatus: 'in_progress',
+        progressionOutcome: current.outcome,
+        longExerciseName: current.longExerciseName,
+      });
+    } else {
+      await page.addInitScript((theme) => localStorage.setItem('app-theme', theme), current.theme);
+      await installPlatformApi(page, {
+        browserSession: true,
+        workoutStatus: 'in_progress',
+        progressionOutcome: current.outcome,
+        longExerciseName: Boolean('longExerciseName' in current && current.longExerciseName),
+      });
+    }
+
+    await page.goto('/app');
+    await page.getByRole('button', { name: 'Продолжить тренировку' }).click();
+    const exercise = page.locator('.active-workout-exercise').first();
+    const guidance = exercise.getByRole('region', { name: 'Рекомендация по следующей нагрузке' });
+    await guidance.getByText('Почему?', { exact: true }).click();
+    await expect(guidance).toBeVisible();
+    await expect(page.locator('html')).toHaveAttribute('data-color-scheme', current.theme);
+    await expectNoHorizontalOverflow(page);
+    await expectTouchTargets(guidance.locator('summary, button'));
+
+    const geometry = await exercise.evaluate((element) => {
+      const head = element.querySelector<HTMLElement>('.active-workout-exercise__head');
+      const guidanceRegion = element.querySelector<HTMLElement>('.progression-guidance');
+      const sets = element.querySelector<HTMLElement>('.active-workout-exercise__sets');
+      if (!head || !guidanceRegion || !sets) throw new Error('Progression layout region missing');
+      const headBox = head.getBoundingClientRect();
+      const guidanceBox = guidanceRegion.getBoundingClientRect();
+      const setsBox = sets.getBoundingClientRect();
+      return {
+        headBottom: headBox.bottom,
+        guidanceTop: guidanceBox.top,
+        guidanceBottom: guidanceBox.bottom,
+        setsTop: setsBox.top,
+      };
+    });
+    expect(geometry.headBottom).toBeLessThanOrEqual(geometry.guidanceTop);
+    expect(geometry.guidanceBottom).toBeLessThanOrEqual(geometry.setsTop);
+
+    await exercise.screenshot({
+      path: `../.artifacts/screenshots/task-63/${current.surface}-${current.width}x${current.height}-${current.theme}-${current.label}.png`,
+    });
+    await page.close();
+  }
+});
+
 test('completion summary survives finish retry, feedback error, reload and TMA lifecycle', async ({
   mobilePage,
   tma,

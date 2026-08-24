@@ -29,6 +29,7 @@ import { WorkoutCompletionSummary } from './WorkoutCompletionSummary';
 import { reconcileFinishedWorkout } from './finishWorkoutRecovery';
 import { useActiveWorkoutQueue } from './useActiveWorkoutQueue';
 import { productEventSurface, trackCoreProductEvent } from '../../shared/analytics/productEvents';
+import { ProgressionGuidance } from './ProgressionGuidance';
 
 type WorkoutSet = Workout['exercises'][number]['sets'][number];
 type RirValue = NonNullable<WorkoutSet['rir']>;
@@ -478,6 +479,7 @@ export function TodayWorkout({
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [guide, setGuide] = useState<{ id: number; title: string } | null>(null);
+  const [dismissedGuidance, setDismissedGuidance] = useState<Set<number>>(() => new Set());
   const workout = useQuery({
     queryKey: ['workout', 'today'],
     queryFn: () => api<Workout>('/api/v1/workouts/today'),
@@ -725,6 +727,20 @@ export function TodayWorkout({
             const supersetLabel = exercise.superset_group
               ? `Суперсет — упражнение ${exercise.superset_order ?? exerciseIndex + 1} из 2`
               : null;
+            const suggestedWeight = exercise.progression_guidance?.suggested_weight ?? null;
+            const applicableSets = exercise.sets.filter((set) => {
+              const pending = activeSync.pendingBySet.get(set.id)?.values;
+              const completedSet = pending?.is_completed ?? set.is_completed;
+              const kind = pending?.set_kind ?? set.set_kind ?? 'working';
+              return !completedSet && kind === 'working';
+            });
+            const guidanceApplied =
+              suggestedWeight != null &&
+              applicableSets.length > 0 &&
+              applicableSets.every((set) => {
+                const pending = activeSync.pendingBySet.get(set.id)?.values;
+                return (pending?.actual_weight ?? set.actual_weight) === suggestedWeight;
+              });
 
             return (
               <article
@@ -756,6 +772,35 @@ export function TodayWorkout({
                     <span>{exercise.has_guide ? 'Техника' : 'Подробнее'}</span>
                   </button>
                 </header>
+
+                {exercise.progression_guidance && !dismissedGuidance.has(exercise.id) && (
+                  <ProgressionGuidance
+                    applied={guidanceApplied}
+                    exerciseKey={exercise.id}
+                    guidance={exercise.progression_guidance}
+                    onApply={
+                      started && suggestedWeight != null && applicableSets.length > 0
+                        ? () => {
+                            for (const set of applicableSets) {
+                              const pending = activeSync.pendingBySet.get(set.id)?.values;
+                              activeSync.enqueue(set.id, set.version ?? 1, {
+                                actual_reps: pending?.actual_reps ?? set.actual_reps ?? null,
+                                actual_weight: suggestedWeight,
+                                rir: pending?.rir ?? set.rir ?? null,
+                                set_kind: pending?.set_kind ?? set.set_kind ?? 'working',
+                                reached_failure:
+                                  pending?.reached_failure ?? set.reached_failure ?? false,
+                                is_completed: pending?.is_completed ?? set.is_completed,
+                              });
+                            }
+                          }
+                        : undefined
+                    }
+                    onDismiss={() =>
+                      setDismissedGuidance((current) => new Set(current).add(exercise.id))
+                    }
+                  />
+                )}
 
                 <div className="active-workout-exercise__sets">
                   {exercise.sets.map((set, setIndex) => {

@@ -145,6 +145,43 @@ class LoggedSetItem(BaseModel):
     version: int = Field(default=1, ge=1)
 
 
+class ProgressionSessionEvidence(BaseModel):
+    workout_id: int
+    scheduled_date: date
+    working_set_count: int = Field(ge=0)
+    load: float | None = Field(default=None, ge=0)
+    load_unit: Literal["kg", "lb"]
+    reps_min: int | None = Field(default=None, ge=0)
+    reps_max: int | None = Field(default=None, ge=0)
+    rir_recorded_set_count: int = Field(ge=0)
+    rir_values: list[RirValue]
+    reached_failure: bool
+    completion_feedback: WorkoutCompletionFeedback | None = None
+
+
+class ProgressionEvidence(BaseModel):
+    target_reps_min: int | None = Field(default=None, ge=1)
+    target_reps_max: int | None = Field(default=None, ge=1)
+    prescribed_sets: int = Field(ge=1)
+    comparable_session_count: int = Field(ge=0)
+    required_session_count: int = Field(ge=2)
+    working_set_count: int = Field(ge=0)
+    rir_recorded_set_count: int = Field(ge=0)
+    reason_keys: list[str]
+    sessions: list[ProgressionSessionEvidence]
+
+
+class ProgressionGuidance(BaseModel):
+    ruleset_version: Literal["progression-guidance-v1"]
+    outcome: Literal["consider_progressing", "hold", "review", "consider_reducing"]
+    message: str
+    detail: str
+    suggested_increment: float | None = None
+    suggested_weight: float | None = Field(default=None, ge=0)
+    load_unit: Literal["kg", "lb"]
+    evidence: ProgressionEvidence
+
+
 class WorkoutExerciseItem(BaseModel):
     id: int
     exercise_id: int
@@ -157,6 +194,7 @@ class WorkoutExerciseItem(BaseModel):
     superset_group: int | None = None
     superset_order: int | None = None
     has_guide: bool = False
+    progression_guidance: ProgressionGuidance | None = None
     sets: list[LoggedSetItem]
 
 

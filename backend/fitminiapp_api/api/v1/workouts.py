@@ -63,6 +63,7 @@ from fitminiapp_api.services.nutrition_reports import (
     nutrition_report_csv,
 )
 from fitminiapp_api.services.progress import build_progress_summary
+from fitminiapp_api.services.progression_guidance import build_progression_guidance
 from fitminiapp_api.services.workout_adaptation import (
     WorkoutAdaptationError,
     apply_adaptation,
@@ -215,6 +216,7 @@ def _serialize_workout(workout: UserWorkout, db: Session, current_user: User) ->
         )
         for item in workout.exercises
     }
+    progression_guidance = build_progression_guidance(db, current_user, workout)
 
     return {
         "id": workout.id,
@@ -242,6 +244,7 @@ def _serialize_workout(workout: UserWorkout, db: Session, current_user: User) ->
                     (visible_map.get(item.exercise_id) or item.exercise)
                     and get_exercise_guide(visible_map.get(item.exercise_id) or item.exercise)
                 ),
+                "progression_guidance": progression_guidance[item.id],
                 "sets": [
                     {
                         "id": set_item.id,

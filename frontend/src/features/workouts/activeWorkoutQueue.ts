@@ -355,7 +355,15 @@ export function saveActiveWorkoutSnapshot(
         },
       });
     }
-    const next = { ...current, workout_snapshot: workout };
+    const workoutSnapshot: Workout = {
+      ...workout,
+      exercises: workout.exercises.map((exercise) => {
+        const exerciseSnapshot = { ...exercise };
+        delete exerciseSnapshot.progression_guidance;
+        return exerciseSnapshot;
+      }),
+    };
+    const next = { ...current, workout_snapshot: workoutSnapshot };
     if (saveActiveWorkoutQueue(next)) {
       for (const legacyKey of legacyKeys) localStorage.removeItem(legacyKey);
       localStorage.setItem(pointerKey, String(workout.id));
