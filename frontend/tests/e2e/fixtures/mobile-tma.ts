@@ -44,6 +44,8 @@ export interface TelegramHarnessState {
   viewportStableHeight: number;
   backButton: { visible: boolean; shown: number; hidden: number; clicks: number };
   shellColors: { header: string[]; background: string[]; bottomBar: string[] };
+  downloads: Array<{ url: string; fileName: string }>;
+  openedLinks: string[];
 }
 
 interface TelegramWindowBridge {
@@ -82,6 +84,8 @@ export async function installTelegramHarness(
       bottomBar: [] as string[],
     };
     const backState = { visible: false, shown: 0, hidden: 0, clicks: 0 };
+    const downloads: Array<{ url: string; fileName: string }> = [];
+    const openedLinks: string[] = [];
     let ready = 0;
     let expand = 0;
     const emit = (event: string, payload?: { isStateStable: boolean }) => {
@@ -125,6 +129,16 @@ export async function installTelegramHarness(
       },
       expand() {
         expand += 1;
+      },
+      downloadFile(
+        params: { url: string; file_name: string },
+        callback?: (accepted: boolean) => void,
+      ) {
+        downloads.push({ url: params.url, fileName: params.file_name });
+        callback?.(true);
+      },
+      openLink(url: string) {
+        openedLinks.push(url);
       },
       onEvent(event: string, callback: EventHandler) {
         const callbacks = handlers.get(event) ?? new Set<EventHandler>();
@@ -190,6 +204,8 @@ export async function installTelegramHarness(
               background: [...shellColors.background],
               bottomBar: [...shellColors.bottomBar],
             },
+            downloads: [...downloads],
+            openedLinks: [...openedLinks],
           };
         },
       },

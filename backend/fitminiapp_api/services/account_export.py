@@ -97,6 +97,7 @@ ACCOUNT_EXPORT_DATA_INVENTORY: dict[str, str] = {
 }
 
 ACCOUNT_EXPORT_EXCLUDED_DATA_INVENTORY: dict[str, str] = {
+    "account_data_exports": "short-lived generated archive bytes and download capability metadata",
     "auth_action_tokens": "hashed authentication actions and session-family metadata",
     "refresh_tokens": "hashed session credentials and revocation metadata",
     "coach_client_invites": "hashed invitations and managed-client identity data",

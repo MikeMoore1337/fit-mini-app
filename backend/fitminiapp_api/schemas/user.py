@@ -157,6 +157,23 @@ class AccountDeleteRequest(BaseModel):
     confirmation: Literal["DELETE"]
 
 
+class AccountExportStatusResponse(BaseModel):
+    status: Literal["none", "generating", "ready", "expired", "error"]
+    export_id: str | None = None
+    created_at: datetime | None = None
+    completed_at: datetime | None = None
+    expires_at: datetime | None = None
+    filename: str | None = None
+    content_size_bytes: int | None = None
+    error_code: str | None = None
+
+
+class AccountExportDownloadLinkResponse(BaseModel):
+    url: str
+    filename: str
+    expires_at: datetime
+
+
 class TelegramLinkCreateResponse(BaseModel):
     telegram_url: str
     expires_in_seconds: int

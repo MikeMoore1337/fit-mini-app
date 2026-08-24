@@ -57,6 +57,11 @@ export interface TelegramWebApp {
   };
   ready?(): void;
   expand?(): void;
+  downloadFile?(
+    params: { url: string; file_name: string },
+    callback?: (accepted: boolean) => void,
+  ): void;
+  openLink?(url: string, options?: { try_instant_view?: boolean }): void;
   onEvent?(event: string, callback: () => void): void;
   offEvent?(event: string, callback: () => void): void;
   setHeaderColor?(color: string): void;

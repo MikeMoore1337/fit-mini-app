@@ -5,7 +5,7 @@ import { AccountPrivacy } from '../../../../src/features/account/AccountPrivacy'
 import { ApiError } from '../../../../src/shared/api/client';
 import { clearSensitiveUserScopedStorage } from '../../../../src/shared/userScopedStorage';
 
-const { apiMock, authState, confirmMock, logoutMock, toastMock } = vi.hoisted(() => ({
+const { apiMock, authState, confirmMock, logoutMock, reloadUserMock, toastMock } = vi.hoisted(() => ({
   apiMock: vi.fn(),
   authState: {
     user: {
@@ -19,6 +19,7 @@ const { apiMock, authState, confirmMock, logoutMock, toastMock } = vi.hoisted(()
   },
   confirmMock: vi.fn(),
   logoutMock: vi.fn(),
+  reloadUserMock: vi.fn(),
   toastMock: vi.fn(),
 }));
 
@@ -36,7 +37,12 @@ vi.mock('../../../../src/shared/api/client', () => ({
   },
 }));
 vi.mock('../../../../src/app/AuthProvider', () => ({
-  useAuth: () => ({ user: authState.user, config: authState.config, logout: logoutMock }),
+  useAuth: () => ({
+    user: authState.user,
+    config: authState.config,
+    logout: logoutMock,
+    reloadUser: reloadUserMock,
+  }),
 }));
 vi.mock('../../../../src/shared/ui/FeedbackProvider', () => ({
   useFeedback: () => ({ toast: toastMock, confirm: confirmMock }),
@@ -46,7 +52,7 @@ function renderPrivacy() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  render(
+  return render(
     <QueryClientProvider client={queryClient}>
       <AccountPrivacy />
     </QueryClientProvider>,
@@ -59,6 +65,17 @@ function openLoginMethods() {
   fireEvent.click(summary);
 }
 
+const emptyExport = {
+  status: 'none',
+  export_id: null,
+  created_at: null,
+  completed_at: null,
+  expires_at: null,
+  filename: null,
+  content_size_bytes: null,
+  error_code: null,
+};
+
 describe('AccountPrivacy Telegram linking', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -67,9 +84,14 @@ describe('AccountPrivacy Telegram linking', () => {
     authState.user.auth_providers = [];
     authState.config.oauth_providers = [];
     apiMock.mockReset();
+    apiMock.mockImplementation((path: string) =>
+      Promise.resolve(path === '/api/v1/me/exports/current' ? emptyExport : undefined),
+    );
     confirmMock.mockReset();
     logoutMock.mockReset();
     logoutMock.mockImplementation(async () => clearSensitiveUserScopedStorage());
+    reloadUserMock.mockReset();
+    reloadUserMock.mockResolvedValue(authState.user);
     toastMock.mockReset();
   });
 
@@ -110,6 +132,7 @@ describe('AccountPrivacy Telegram linking', () => {
 
   it('shows linked status and does not offer another link', () => {
     authState.user.telegram_user_id = 12345;
+    authState.user.auth_providers = ['telegram'];
     renderPrivacy();
     openLoginMethods();
 
@@ -185,14 +208,77 @@ describe('AccountPrivacy Telegram linking', () => {
     expect(screen.queryByText(/account 991/i)).not.toBeInTheDocument();
   });
 
+  it('keeps the last login method and explains how to unlock unlink', () => {
+    authState.user.telegram_user_id = 12345;
+    authState.user.auth_providers = ['telegram'];
+    renderPrivacy();
+    openLoginMethods();
+
+    expect(screen.getByRole('button', { name: 'Отключить Telegram' })).toBeDisabled();
+    expect(screen.getByText('Сначала привяжите другой способ входа.')).toBeInTheDocument();
+  });
+
+  it('unlinks a login method without deleting the account', async () => {
+    authState.user.telegram_user_id = 12345;
+    authState.user.auth_providers = ['telegram', 'google'];
+    authState.config.oauth_providers = ['google'];
+    confirmMock.mockResolvedValue(true);
+    renderPrivacy();
+    openLoginMethods();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Отключить Google' }));
+
+    await waitFor(() =>
+      expect(apiMock).toHaveBeenCalledWith('/api/v1/me/auth/identities/google', {
+        method: 'DELETE',
+      }),
+    );
+    expect(confirmMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Отключить Google?',
+        danger: false,
+      }),
+    );
+    expect(reloadUserMock).toHaveBeenCalledOnce();
+    expect(logoutMock).not.toHaveBeenCalled();
+  });
+
+  it('restores ready and expired export lifecycle states from the server', async () => {
+    apiMock.mockResolvedValueOnce({
+      ...emptyExport,
+      status: 'ready',
+      export_id: 'ready-export',
+      filename: 'account.zip',
+      expires_at: '2030-01-02T12:00:00',
+      content_size_bytes: 1234,
+    });
+    const { unmount } = renderPrivacy();
+
+    expect(await screen.findByText('Готово')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Скачать ZIP' })).toBeEnabled();
+    unmount();
+
+    cleanup();
+    apiMock.mockResolvedValueOnce({ ...emptyExport, status: 'expired', export_id: 'expired-export' });
+    renderPrivacy();
+    expect(await screen.findByText('Срок истёк')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Подготовить архив' })).toBeEnabled();
+  });
+
   it('cleans sensitive browser state only after successful account deletion', async () => {
     localStorage.setItem('fit_food_draft_77_2026-08-19_breakfast', '{"private":true}');
     localStorage.setItem('app-theme', 'dark');
-    confirmMock.mockResolvedValue(true);
-    apiMock.mockResolvedValue(undefined);
+    apiMock.mockImplementation((path: string) => {
+      if (path === '/api/v1/me/exports/current') return Promise.resolve(emptyExport);
+      return Promise.resolve(undefined);
+    });
     renderPrivacy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Удалить аккаунт' }));
+    fireEvent.change(screen.getByLabelText('Введите УДАЛИТЬ, чтобы подтвердить'), {
+      target: { value: 'УДАЛИТЬ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Удалить аккаунт навсегда' }));
 
     await waitFor(() => expect(logoutMock).toHaveBeenCalledOnce());
     expect(apiMock).toHaveBeenCalledWith('/api/v1/me/account', {
@@ -205,13 +291,22 @@ describe('AccountPrivacy Telegram linking', () => {
 
   it('keeps browser state when account deletion fails', async () => {
     localStorage.setItem('fit_measurement_draft_user_77', '{"private":true}');
-    confirmMock.mockResolvedValue(true);
-    apiMock.mockRejectedValue(new ApiError('Удаление не выполнено', 500, {}));
+    apiMock.mockImplementation((path: string) => {
+      if (path === '/api/v1/me/exports/current') return Promise.resolve(emptyExport);
+      if (path === '/api/v1/me/account') {
+        return Promise.reject(new ApiError('Удаление не выполнено', 500, {}));
+      }
+      return Promise.resolve(undefined);
+    });
     renderPrivacy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Удалить аккаунт' }));
+    fireEvent.change(screen.getByLabelText('Введите УДАЛИТЬ, чтобы подтвердить'), {
+      target: { value: 'УДАЛИТЬ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Удалить аккаунт навсегда' }));
 
-    await waitFor(() => expect(toastMock).toHaveBeenCalledWith('Удаление не выполнено', 'error'));
+    expect(await screen.findByText('Удаление не выполнено')).toBeInTheDocument();
     expect(logoutMock).not.toHaveBeenCalled();
     expect(localStorage.getItem('fit_measurement_draft_user_77')).toBe('{"private":true}');
   });

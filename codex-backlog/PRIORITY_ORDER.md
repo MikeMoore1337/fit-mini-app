@@ -1,19 +1,19 @@
-# Порядок выполнения release backlog v15
+# Порядок выполнения release backlog v16
 
 ## Completed
 
-`00-64`, включая буквенные подзадачи. Task-файлы находятся в `tasks/done/`.
+`00-65`, включая буквенные подзадачи. Task-файлы находятся в `tasks/done/`.
 
 ## Current
 
 ```text
-65 Account data export and lifecycle
+66 Cardio logging gap audit and minimal implementation
 ```
 
-После завершения `65`:
+После завершения `66`:
 
 ```text
-66 -> 67 -> 68 -> 69 -> 70 -> 71 -> 72 -> 73 -> 74 -> 75
+67 -> 68 -> 69 -> 70 -> 71 -> 72 -> 73 -> 74 -> 75
  -> 76 skill-aware retrospective audit -> 76A adversarial gate
  -> 77 real-user results checkpoint
  -> 78 production readiness

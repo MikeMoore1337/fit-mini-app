@@ -14,6 +14,8 @@ export interface PlatformApiOptions {
   progressionOutcome?: ProgressionOutcome;
   longExerciseName?: boolean;
   notificationState?: 'empty' | 'populated' | 'unlinked' | 'stale';
+  accountExportState?: 'none' | 'ready' | 'expired' | 'error';
+  authProviders?: string[];
 }
 
 export interface PlatformApiController {
@@ -32,6 +34,9 @@ export interface PlatformApiController {
   completionFeedback(): { feedback: string | null; note: string | null };
   adaptationApplyCalls(): number;
   setAdaptationApplyMode(mode: 'success' | 'conflict' | 'error'): void;
+  accountExportCreates(): number;
+  accountUnlinks(): string[];
+  accountDeletes(): number;
 }
 
 const zeroNutrition = {
@@ -83,6 +88,11 @@ export async function installPlatformApi(
   let finishCalls = 0;
   let manualTargetSaves = 0;
   let weeklyReviewSubmits = 0;
+  let accountExportCreates = 0;
+  let accountDeletes = 0;
+  let accountExportState = options.accountExportState ?? 'none';
+  let authProviders = [...(options.authProviders ?? ['telegram'])];
+  const accountUnlinks: string[] = [];
   let notificationsRead = false;
   const weeklyDecisions: string[] = [];
   const requestedNutritionReportPeriods: string[] = [];
@@ -954,7 +964,9 @@ export async function installPlatformApi(
           enable_web_auth: false,
           enable_email_auth: false,
           telegram_bot_username: 'fit_test_bot',
-          oauth_providers: [],
+          oauth_providers: authProviders.filter(
+            (provider) => provider !== 'telegram' && provider !== 'password',
+          ),
         },
       });
     }
@@ -970,17 +982,69 @@ export async function installPlatformApi(
     if (path.endsWith('/auth/dev-login')) {
       return route.fulfill({ json: { access_token: 'dev-test-token', token_type: 'bearer' } });
     }
+    if (path.endsWith('/me/exports/current') && request.method() === 'GET') {
+      const ready = accountExportState === 'ready';
+      return route.fulfill({
+        json: {
+          status: accountExportState,
+          export_id: accountExportState === 'none' ? null : 'task-65-export',
+          created_at: accountExportState === 'none' ? null : '2030-01-02T11:45:00',
+          completed_at: accountExportState === 'none' ? null : '2030-01-02T11:45:05',
+          expires_at: ready ? '2030-01-02T12:00:00' : null,
+          filename: ready ? 'your-fitness-coach-data.zip' : null,
+          content_size_bytes: ready ? 4096 : null,
+          error_code: accountExportState === 'error' ? 'generation_failed' : null,
+        },
+      });
+    }
+    if (path.endsWith('/me/exports') && request.method() === 'POST') {
+      accountExportCreates += 1;
+      accountExportState = 'ready';
+      return route.fulfill({
+        status: 201,
+        json: {
+          status: 'ready',
+          export_id: 'task-65-export',
+          created_at: '2030-01-02T11:45:00',
+          completed_at: '2030-01-02T11:45:05',
+          expires_at: '2030-01-02T12:00:00',
+          filename: 'your-fitness-coach-data.zip',
+          content_size_bytes: 4096,
+          error_code: null,
+        },
+      });
+    }
+    if (/\/me\/exports\/[^/]+\/download-link$/.test(path) && request.method() === 'POST') {
+      return route.fulfill({
+        json: {
+          url: `${url.origin}/api/v1/me/exports/file/task-65-short-token`,
+          filename: 'your-fitness-coach-data.zip',
+          expires_at: '2030-01-02T11:47:00',
+        },
+      });
+    }
+    if (/\/me\/auth\/identities\/[^/]+$/.test(path) && request.method() === 'DELETE') {
+      const provider = path.split('/').at(-1) ?? '';
+      accountUnlinks.push(provider);
+      authProviders = authProviders.filter((candidate) => candidate !== provider);
+      return route.fulfill({ json: {} });
+    }
+    if (path.endsWith('/me/account') && request.method() === 'DELETE') {
+      accountDeletes += 1;
+      return route.fulfill({ status: 204 });
+    }
     if (path.endsWith('/me')) {
       return route.fulfill({
         json: {
           id: 7,
-          telegram_user_id: 7007,
+          telegram_user_id: authProviders.includes('telegram') ? 7007 : null,
           username: 'mobile_user',
           first_name: 'Анна',
           is_coach: false,
           is_admin: false,
           has_active_program: activeProgram,
           has_workout_history: false,
+          auth_providers: authProviders,
           onboarding: { status: 'complete', required_fields: [], missing_fields: [] },
           profile: {
             full_name: 'Анна Петрова',
@@ -1663,6 +1727,15 @@ export async function installPlatformApi(
     },
     setAdaptationApplyMode(mode) {
       adaptationApplyMode = mode;
+    },
+    accountExportCreates() {
+      return accountExportCreates;
+    },
+    accountUnlinks() {
+      return [...accountUnlinks];
+    },
+    accountDeletes() {
+      return accountDeletes;
     },
   };
 }

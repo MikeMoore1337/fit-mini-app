@@ -16,6 +16,7 @@ from fitminiapp_api.core.logging_config import configure_logging
 from fitminiapp_api.db.session import get_session_context
 from fitminiapp_api.models.notification import Notification, NotificationSetting
 from fitminiapp_api.models.user import User
+from fitminiapp_api.services.account_exports import prune_account_exports
 from fitminiapp_api.services.bot_support import prune_support_cases
 from fitminiapp_api.services.notifications import (
     NotificationDeliveryError,
@@ -220,6 +221,7 @@ def _prepare_delivery(
 
 async def run_once(*, sync_reminders: bool = True) -> None:
     with get_session_context() as db:
+        prune_account_exports(db)
         if sync_reminders:
             prune_support_cases(db)
             sync_workout_reminders(db)

@@ -1,3 +1,4 @@
+from fitminiapp_api.models.account import AccountDataExport
 from fitminiapp_api.models.audit import AuditEvent
 from fitminiapp_api.models.auth_identity import AuthActionToken, AuthIdentity, LocalCredential
 from fitminiapp_api.models.billing import Payment, Plan, Subscription
@@ -49,6 +50,7 @@ from fitminiapp_api.models.user import (
 )
 
 __all__ = [
+    "AccountDataExport",
     "AuditEvent",
     "AuthActionToken",
     "AuthIdentity",

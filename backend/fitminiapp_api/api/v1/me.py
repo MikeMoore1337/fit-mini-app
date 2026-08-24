@@ -1,17 +1,23 @@
+from typing import Literal, cast
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import set_committed_value
 
 from fitminiapp_api.core.config import settings
+from fitminiapp_api.core.rate_limit import limiter
 from fitminiapp_api.db.session import get_db
+from fitminiapp_api.models.account import AccountDataExport
 from fitminiapp_api.models.program import UserProgram, UserWorkout
 from fitminiapp_api.models.user import CoachRoleApplication, User, UserProfile
 from fitminiapp_api.schemas.coach_application import CoachRoleApplicationResponse
 from fitminiapp_api.schemas.invite import CoachInvitePreviewResponse, CoachInviteTokenRequest
 from fitminiapp_api.schemas.user import (
     AccountDeleteRequest,
+    AccountExportDownloadLinkResponse,
+    AccountExportStatusResponse,
     BodyPriorityOptionsResponse,
     BodyPriorityPreference,
     HeartRatePreviewRequest,
@@ -24,6 +30,23 @@ from fitminiapp_api.schemas.user import (
     UserProfileResponse,
     UserProfileUpdate,
     UserResponse,
+)
+from fitminiapp_api.services.account_exports import (
+    AccountExportError,
+    account_export_by_download_token,
+    build_account_export_archive,
+    complete_account_export,
+    create_account_export_download_token,
+    expire_account_export,
+    fail_account_export,
+    lock_account_export_generation,
+    start_account_export,
+)
+from fitminiapp_api.services.account_identities import (
+    IdentityNotFoundError,
+    LastIdentityError,
+    ProtectedIdentityError,
+    unlink_auth_identity,
 )
 from fitminiapp_api.services.account_linking import (
     OAUTH_LINK_PROVIDERS,
@@ -65,6 +88,38 @@ from fitminiapp_api.services.security import get_current_user
 from fitminiapp_api.services.training_preferences import serialize_training_preferences
 
 router = APIRouter()
+
+
+def _account_export_status(row: AccountDataExport | None) -> AccountExportStatusResponse:
+    if row is None:
+        return AccountExportStatusResponse(status="none")
+    return AccountExportStatusResponse(
+        status=cast(
+            Literal["none", "generating", "ready", "expired", "error"],
+            row.status,
+        ),
+        export_id=row.export_id,
+        created_at=row.created_at,
+        completed_at=row.completed_at,
+        expires_at=row.expires_at,
+        filename=row.filename,
+        content_size_bytes=row.content_size_bytes,
+        error_code=row.error_code,
+    )
+
+
+def _account_export_file_response(row: AccountDataExport) -> StreamingResponse:
+    if row.archive_bytes is None or row.filename is None:
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Архив больше недоступен")
+    return StreamingResponse(
+        iter((row.archive_bytes,)),
+        media_type="application/zip",
+        headers={
+            "Cache-Control": "no-store, private",
+            "Content-Disposition": f'attachment; filename="{row.filename}"',
+            "Content-Length": str(len(row.archive_bytes)),
+        },
+    )
 
 
 def _heart_rate_response(heart_rates) -> HeartRatePreviewResponse:
@@ -267,6 +322,25 @@ def create_oauth_link(
     )
 
 
+@router.delete("/auth/identities/{provider}", response_model=UserResponse)
+def unlink_login_method(
+    provider: str,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+) -> UserResponse:
+    try:
+        unlink_auth_identity(db, user, provider)
+    except IdentityNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except LastIdentityError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    except ProtectedIdentityError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+    db.commit()
+    db.refresh(user)
+    return _build_user_response(db, user)
+
+
 @router.patch("/profile", response_model=UserResponse)
 def patch_profile(
     payload: UserProfileUpdate, db: Session = Depends(get_db), user=Depends(get_current_user)
@@ -315,6 +389,151 @@ def export_account_data(
             "Content-Disposition": f'attachment; filename="fitmini-account-{user.id}.json"',
         },
     )
+
+
+@router.get("/exports/current", response_model=AccountExportStatusResponse)
+def current_account_export(
+    user=Depends(get_current_user), db: Session = Depends(get_db)
+) -> AccountExportStatusResponse:
+    row = db.query(AccountDataExport).filter(AccountDataExport.user_id == user.id).first()
+    if row is not None and expire_account_export(row):
+        db.commit()
+    return _account_export_status(row)
+
+
+@router.post(
+    "/exports",
+    response_model=AccountExportStatusResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+@limiter.limit("5/hour")
+def create_account_export(
+    request: Request,
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> AccountExportStatusResponse:
+    del request
+    row = start_account_export(db, user)
+    generation_id = row.export_id
+    db.commit()
+    try:
+        archive_bytes, filename = build_account_export_archive(db, user)
+        current_row = lock_account_export_generation(db, user.id, generation_id)
+        if current_row is None:
+            latest = db.query(AccountDataExport).filter(AccountDataExport.user_id == user.id).one()
+            return _account_export_status(latest)
+        complete_account_export(current_row, archive_bytes, filename)
+        record_audit_event(
+            db,
+            action="account.export_created",
+            resource_type="account_data_export",
+            actor_user_id=user.id,
+            target_user_id=user.id,
+            resource_id=current_row.export_id,
+            details={"content_size_bytes": len(archive_bytes)},
+        )
+    except AccountExportError as exc:
+        current_row = lock_account_export_generation(db, user.id, generation_id)
+        if current_row is None:
+            latest = db.query(AccountDataExport).filter(AccountDataExport.user_id == user.id).one()
+            return _account_export_status(latest)
+        fail_account_export(current_row, exc.error_code)
+        record_audit_event(
+            db,
+            action="account.export_failed",
+            resource_type="account_data_export",
+            actor_user_id=user.id,
+            target_user_id=user.id,
+            resource_id=current_row.export_id,
+            details={"error_code": exc.error_code},
+        )
+    except Exception as exc:
+        db.rollback()
+        current_row = lock_account_export_generation(db, user.id, generation_id)
+        if current_row is None:
+            latest = db.query(AccountDataExport).filter(AccountDataExport.user_id == user.id).one()
+            return _account_export_status(latest)
+        fail_account_export(current_row, "generation_failed")
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Не удалось подготовить архив данных",
+        ) from exc
+    db.commit()
+    db.refresh(current_row)
+    return _account_export_status(current_row)
+
+
+@router.get("/exports/{export_id}/download")
+def download_account_export(
+    export_id: str,
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
+    row = (
+        db.query(AccountDataExport)
+        .filter(
+            AccountDataExport.user_id == user.id,
+            AccountDataExport.export_id == export_id,
+        )
+        .first()
+    )
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Архив не найден")
+    if expire_account_export(row):
+        db.commit()
+    if row.status == "expired":
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Срок хранения архива истёк")
+    if row.status != "ready":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Архив ещё не готов")
+    return _account_export_file_response(row)
+
+
+@router.post(
+    "/exports/{export_id}/download-link",
+    response_model=AccountExportDownloadLinkResponse,
+)
+def create_account_export_download_link(
+    export_id: str,
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> AccountExportDownloadLinkResponse:
+    row = (
+        db.query(AccountDataExport)
+        .filter(
+            AccountDataExport.user_id == user.id,
+            AccountDataExport.export_id == export_id,
+        )
+        .with_for_update()
+        .first()
+    )
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Архив не найден")
+    if expire_account_export(row):
+        db.commit()
+    if row.status != "ready" or row.filename is None:
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Архив больше недоступен")
+    token, expires_at = create_account_export_download_token(row)
+    db.commit()
+    return AccountExportDownloadLinkResponse(
+        url=f"{settings.frontend_base_url.rstrip('/')}/api/v1/me/exports/file/{token}",
+        filename=row.filename,
+        expires_at=expires_at,
+    )
+
+
+@router.get("/exports/file/{download_token}")
+def download_account_export_by_token(
+    download_token: str,
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
+    row = account_export_by_download_token(db, download_token)
+    if row is None:
+        db.commit()
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ссылка недействительна")
+    response = _account_export_file_response(row)
+    response.headers["Access-Control-Allow-Origin"] = "https://web.telegram.org"
+    return response
 
 
 @router.delete("/account", status_code=status.HTTP_204_NO_CONTENT)

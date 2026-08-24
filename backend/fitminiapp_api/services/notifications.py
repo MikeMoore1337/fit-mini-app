@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, date, datetime, time, timedelta
-from typing import Literal
+from typing import Literal, cast
 from urllib.parse import parse_qs, urlsplit
 
 import httpx
@@ -576,12 +576,14 @@ def sync_measurement_reminders(db: Session) -> int:
     if not rows:
         return 0
 
-    last_measurement_by_user = dict(
+    last_measurement_rows = cast(
+        list[tuple[int, date]],
         db.query(BodyMeasurement.user_id, func.max(BodyMeasurement.measured_on))
         .filter(BodyMeasurement.user_id.in_([user.id for _setting, user, _timezone in rows]))
         .group_by(BodyMeasurement.user_id)
-        .all()
+        .all(),
     )
+    last_measurement_by_user: dict[int, date] = dict(last_measurement_rows)
     active: dict[str, tuple[User, str | None, datetime]] = {}
     for setting, user, timezone in rows:
         local_day = today_in_timezone(timezone)

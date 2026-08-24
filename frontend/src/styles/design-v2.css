@@ -3143,6 +3143,120 @@ button.notification-row__main:focus-visible {
   width: auto;
 }
 
+.account-session-operation,
+.account-export-region {
+  display: grid;
+  gap: var(--v2-space-4);
+  padding: var(--v2-space-5) 0;
+  border-block: 1px solid var(--v2-border);
+}
+
+.account-session-operation {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.account-session-operation > div,
+.account-export-region__head > div,
+.account-export-region__status {
+  display: grid;
+  gap: var(--v2-space-2);
+}
+
+.account-session-operation h3,
+.account-session-operation p,
+.account-export-region h3,
+.account-export-region p,
+.account-delete-modal h3,
+.account-delete-modal p {
+  margin: 0;
+}
+
+.account-session-operation p,
+.account-export-region__head p,
+.account-export-region__status > p,
+.account-delete-modal__panel > p {
+  color: var(--v2-text-secondary);
+  line-height: 1.5;
+}
+
+.account-export-region {
+  border-top: 0;
+}
+
+.account-export-region__head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--v2-space-4);
+}
+
+.account-export-region__status {
+  padding-left: var(--v2-space-4);
+  border-left: 3px solid var(--v2-lime);
+}
+
+.account-export-region__actions,
+.account-delete-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--v2-space-3);
+}
+
+.account-inline-error {
+  color: var(--v2-danger);
+}
+
+@media (hover: none) {
+  .account-export-region .ui-button--primary:hover:not(:disabled) {
+    background: var(--v2-lime);
+  }
+}
+
+.auth-method-row .list-row__actions {
+  flex-wrap: wrap;
+}
+
+.account-delete-modal__panel {
+  position: relative;
+  display: grid;
+  gap: var(--v2-space-4);
+  width: min(100%, 560px);
+  max-height: min(760px, calc(var(--yfc-viewport-stable-height) - var(--v2-space-6)));
+  padding: var(--v2-space-5);
+  overflow-y: auto;
+  border: 1px solid var(--v2-danger);
+  border-radius: var(--v2-panel-radius);
+  background: var(--v2-surface);
+  box-shadow: var(--elevation-overlay);
+}
+
+.account-delete-modal__panel > .eyebrow,
+.account-delete-modal__panel > h3 {
+  color: var(--v2-danger);
+}
+
+.account-delete-modal__close {
+  position: absolute;
+  top: var(--v2-space-3);
+  right: var(--v2-space-3);
+  display: grid;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid var(--v2-border);
+  border-radius: 50%;
+  color: var(--v2-text-primary);
+  background: var(--v2-surface-secondary);
+}
+
+.account-delete-modal__panel > .eyebrow,
+.account-delete-modal__panel > h3,
+.account-delete-modal__panel > p {
+  padding-right: var(--v2-space-6);
+}
+
 .profile-danger-zone {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -5269,7 +5383,8 @@ body.public-shell-mode:has(.public-shell.public-shell--design-v2) {
 
   .profile-form__save,
   .profile-data-export,
-  .profile-danger-zone {
+  .profile-danger-zone,
+  .account-session-operation {
     align-items: stretch;
     flex-direction: column;
     grid-template-columns: 1fr;
@@ -5281,7 +5396,10 @@ body.public-shell-mode:has(.public-shell.public-shell--design-v2) {
 
   .profile-form__save > button,
   .profile-data-export > button,
-  .profile-danger-zone__action > button {
+  .profile-danger-zone__action > button,
+  .account-session-operation > button,
+  .account-export-region__actions > button,
+  .account-delete-modal__actions > button {
     width: 100%;
   }
 
@@ -5291,6 +5409,35 @@ body.public-shell-mode:has(.public-shell.public-shell--design-v2) {
 
   .profile-danger-zone {
     padding: var(--v2-space-4);
+  }
+
+  .account-session-operation,
+  .account-export-region {
+    padding-block: var(--v2-space-4);
+  }
+
+  .account-export-region__head {
+    align-items: start;
+  }
+
+  .account-export-region__actions,
+  .account-delete-modal__actions {
+    display: grid;
+  }
+
+  .account-delete-modal {
+    align-items: end;
+    padding: var(--v2-space-3) var(--v2-space-3)
+      max(var(--v2-space-3), var(--yfc-layout-safe-bottom));
+  }
+
+  .account-delete-modal__panel {
+    max-height: calc(
+      var(--yfc-viewport-stable-height) - var(--yfc-safe-top) - var(--v2-space-4)
+    );
+    padding: var(--v2-space-4);
+    border-radius: var(--v2-panel-radius) var(--v2-panel-radius) var(--v2-region-radius)
+      var(--v2-region-radius);
   }
 
   .training-preferences-duration,
