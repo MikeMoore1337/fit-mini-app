@@ -6,6 +6,7 @@ from fitminiapp_api.api.v1 import (
     bot,
     check_ins,
     coach,
+    demo,
     me,
     notifications,
     nutrition,
@@ -17,6 +18,7 @@ from fitminiapp_api.api.v1 import (
 api_router = APIRouter(prefix="/v1")
 
 api_router.include_router(public.router, tags=["public"])
+api_router.include_router(demo.router, prefix="/demo", tags=["demo"])
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(me.router, prefix="/me", tags=["me"])
 api_router.include_router(programs.router, prefix="/programs", tags=["programs"])

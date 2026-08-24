@@ -203,6 +203,11 @@ def miniapp() -> HTMLResponse:
     return _frontend_index("/app")
 
 
+@app.get("/demo")
+def demo_page() -> HTMLResponse:
+    return _frontend_index("/demo")
+
+
 @app.get("/")
 def landing_page() -> HTMLResponse:
     return _frontend_index("/")

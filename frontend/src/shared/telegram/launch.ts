@@ -1,4 +1,4 @@
-const TELEGRAM_SDK_PATHS = new Set(['/app', '/coach', '/admin']);
+const TELEGRAM_SDK_PATHS = new Set(['/app', '/coach', '/admin', '/demo']);
 const TELEGRAM_LAUNCH_PARAMS = ['tgWebAppData', 'tgWebAppPlatform', 'tgWebAppVersion'];
 
 export function isTelegramLaunch(

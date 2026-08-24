@@ -2,12 +2,16 @@ import { useEffect, useState } from 'react';
 import { BrandLogo } from '../../shared/ui/BrandLogo';
 import { PublicShell } from '../../shared/ui/PublicShell';
 import { applyRouteMetadata } from '../../shared/seo/metadata';
-import { appUrlForHostname, loginUrlForHostname } from '../../shared/navigation/appUrl';
+import {
+  appUrlForHostname,
+  demoUrlForHostname,
+  loginUrlForHostname,
+} from '../../shared/navigation/appUrl';
 import { AppLink } from '../../shared/navigation/router';
 import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
 import './landing.css';
 
-export { appUrlForHostname, loginUrlForHostname } from '../../shared/navigation/appUrl';
+export { appUrlForHostname, demoUrlForHostname, loginUrlForHostname } from '../../shared/navigation/appUrl';
 
 const features = [
   {
@@ -71,6 +75,7 @@ const workflow = [
 export default function LandingPage() {
   const appUrl = appUrlForHostname(window.location.hostname);
   const loginUrl = loginUrlForHostname(window.location.hostname);
+  const demoUrl = demoUrlForHostname(window.location.hostname);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -169,9 +174,15 @@ export default function LandingPage() {
               </a>
               <a
                 className="landing-button landing-button--secondary landing-action"
-                href="#how-it-works"
+                href={demoUrl}
+                onClick={() =>
+                  trackProductEvent({
+                    name: 'landing_demo_selected',
+                    surface: productEventSurface(),
+                  })
+                }
               >
-                Посмотреть, как всё устроено
+                Попробовать демо
                 <span className="landing-action__arrow" aria-hidden="true">
                   ↗
                 </span>

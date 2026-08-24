@@ -15,7 +15,7 @@
     "test:watch": "vitest",
     "e2e": "npm run build && playwright test",
     "e2e:ci": "playwright test",
-    "e2e:tma-smoke": "npm run build && playwright test tma-smoke.spec.ts",
+    "e2e:tma-smoke": "npm run build && playwright test tma-smoke.spec.ts demo-mode.spec.ts",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm run test && vite build",
     "api:schema": "node ../scripts/run_python.mjs ../scripts/export_openapi.py openapi.json",
     "api:types": "npm run api:schema && openapi-typescript openapi.json -o src/shared/api/schema.d.ts"

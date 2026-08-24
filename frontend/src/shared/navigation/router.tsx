@@ -104,6 +104,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
         : location.path === '/app/report'
           ? progressReportReturn(location.search)
           : null;
+    const publicReturn = location.path === '/demo' ? '/' : null;
     if (
       (location.path === '/app' && !focusedReturn) ||
       location.path === '/onboarding' ||
@@ -112,7 +113,8 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       backButton.hide();
       return;
     }
-    const goBack = () => navigate(focusedReturn ?? '/app', Boolean(focusedReturn));
+    const goBack = () =>
+      navigate(focusedReturn ?? publicReturn ?? '/app', Boolean(focusedReturn || publicReturn));
     backButton.onClick(goBack);
     backButton.show();
     return () => {

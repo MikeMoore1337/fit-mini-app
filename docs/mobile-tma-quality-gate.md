@@ -25,6 +25,8 @@ Task `72` является финальным platform hardening перед ре
   lifecycle/network helpers и layout assertions для Playwright;
 - `frontend/tests/e2e/fixtures/platform-api.ts` — компактный stateful API seam для platform smoke;
 - `frontend/tests/e2e/tma-smoke.spec.ts` — continuous Mobile Web/TMA smoke.
+- `frontend/tests/e2e/demo-mode.spec.ts` — три изолированных demo scenario, reset/expiry и TMA
+  boundary без auth/linking side effects.
 
 Playwright harness задаёт `360x800`, `390x844` и `430x932`, настоящий touch context и
 `hover: none`. Telegram mock содержит официальные поля `initData`, `version`, `platform`,
@@ -56,6 +58,8 @@ context; feature API mock может одновременно моделиров
 9. browser Mobile Web regression на том же API seam.
 10. единый недельный обзор: insufficient/sufficient data, пропуск вопросов, accept/keep/defer,
     восстановление черновика после reload и одинаковое поведение Mobile Web/TMA.
+11. три demo scenario на `360/390`, Dark TMA mock, reset/reload, expired/forbidden states и
+    отсутствие auth/notification/invitation запросов.
 
 Глубокие бизнес-сценарии остаются в существующих feature e2e:
 `active-workout-experience.spec.ts`, `offline-workout.spec.ts`, `nutrition-diary.spec.ts`,
@@ -68,7 +72,7 @@ cd frontend
 npm run e2e:tma-smoke
 ```
 
-Обычный `npm run e2e:ci` также включает `tma-smoke.spec.ts`, поэтому smoke является частью
+Обычный `npm run e2e:ci` также включает `tma-smoke.spec.ts` и `demo-mode.spec.ts`, поэтому smoke является частью
 репозиторного CI, а не отдельной ручной проверкой.
 
 ## Checklist для client-facing tasks 50–70

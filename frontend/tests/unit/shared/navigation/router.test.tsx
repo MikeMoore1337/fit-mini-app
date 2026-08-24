@@ -81,4 +81,20 @@ describe('NavigationProvider Telegram BackButton', () => {
       ),
     ).toBe('/app?section=progress');
   });
+
+  it('возвращает из публичного demo на landing без запуска защищённого TMA auth', async () => {
+    window.history.replaceState({}, '', '/demo?scenario=trainer');
+
+    render(
+      <NavigationProvider>
+        <div>demo</div>
+      </NavigationProvider>,
+    );
+
+    expect(backButton.show).toHaveBeenCalledOnce();
+    act(() => callbacks.values().next().value?.());
+
+    await waitFor(() => expect(window.location.pathname).toBe('/'));
+    expect(window.location.pathname).not.toBe('/app');
+  });
 });

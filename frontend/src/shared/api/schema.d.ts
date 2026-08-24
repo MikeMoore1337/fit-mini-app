@@ -55,6 +55,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/demo/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Demo Session */
+        post: operations["create_demo_session_api_v1_demo_sessions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/demo/sessions/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Demo Session */
+        get: operations["get_demo_session_api_v1_demo_sessions_current_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/demo/sessions/current/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Apply Demo Action */
+        post: operations["apply_demo_action_api_v1_demo_sessions_current_actions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/demo/sessions/current/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reset Demo Session */
+        post: operations["reset_demo_session_api_v1_demo_sessions_current_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/telegram/init": {
         parameters: {
             query?: never;
@@ -2550,6 +2618,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/demo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Demo Page */
+        get: operations["demo_page_demo_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/": {
         parameters: {
             query?: never;
@@ -3507,6 +3592,192 @@ export interface components {
             };
             /** Reason Keys */
             reason_keys: ("thresholds_met" | "nutrition_access_not_granted" | "no_logged_days" | "below_required_coverage" | "no_measurements" | "no_anthropometry_measurements" | "too_few_points" | "timespan_too_short" | "no_completed_workouts" | "no_prescribed_sets" | "no_logged_working_sets" | "partial_workout_logging" | "no_working_sets" | "too_few_working_sets" | "too_few_workout_sessions" | "no_rir_observations" | "too_few_rir_observations" | "rir_coverage_too_low" | "no_evaluable_planned_workouts" | "too_few_evaluable_workouts")[];
+        };
+        /** DemoActionRequest */
+        DemoActionRequest: {
+            /** Action */
+            action: string;
+            /** Comment */
+            comment?: string | null;
+        };
+        /** DemoExercise */
+        DemoExercise: {
+            /** Name */
+            name: string;
+            /** Prescription */
+            prescription: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "completed" | "current" | "next";
+        };
+        /** DemoNutritionItem */
+        DemoNutritionItem: {
+            /** Name */
+            name: string;
+            /** Serving */
+            serving: string;
+            /** Calories */
+            calories: number;
+            /** Protein G */
+            protein_g: number;
+        };
+        /** DemoNutritionState */
+        DemoNutritionState: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "nutrition";
+            /**
+             * Screen
+             * @enum {string}
+             */
+            screen: "diary" | "report";
+            /** Date Label */
+            date_label: string;
+            /** Item Added */
+            item_added: boolean;
+            recent_item: components["schemas"]["DemoNutritionItem"];
+            /** Calories */
+            calories: number;
+            /** Calorie Target */
+            calorie_target: number;
+            /** Protein G */
+            protein_g: number;
+            /** Protein Target G */
+            protein_target_g: number;
+            /** Meals Logged */
+            meals_logged: number;
+        };
+        /** DemoSelfTrainingState */
+        DemoSelfTrainingState: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "self_training";
+            /**
+             * Screen
+             * @enum {string}
+             */
+            screen: "today" | "active_workout" | "summary" | "progress";
+            /** Workout Title */
+            workout_title: string;
+            /** Workout Subtitle */
+            workout_subtitle: string;
+            /** Completed Sets */
+            completed_sets: number;
+            /** Total Sets */
+            total_sets: number;
+            /** Exercises */
+            exercises: components["schemas"]["DemoExercise"][];
+            /** Duration Minutes */
+            duration_minutes: number;
+            /** Total Volume Kg */
+            total_volume_kg: number;
+            /** Progress Change Percent */
+            progress_change_percent: number;
+        };
+        /** DemoSessionCreateRequest */
+        DemoSessionCreateRequest: {
+            /**
+             * Scenario
+             * @enum {string}
+             */
+            scenario: "self_training" | "nutrition" | "trainer";
+        };
+        /** DemoSessionCreated */
+        DemoSessionCreated: {
+            /**
+             * Capability
+             * @default demo
+             * @constant
+             */
+            capability: "demo";
+            /**
+             * Scenario
+             * @enum {string}
+             */
+            scenario: "self_training" | "nutrition" | "trainer";
+            /**
+             * Fixture Version
+             * @default demo-curated-v1
+             * @constant
+             */
+            fixture_version: "demo-curated-v1";
+            /** Revision */
+            revision: number;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** State */
+            state: components["schemas"]["DemoSelfTrainingState"] | components["schemas"]["DemoNutritionState"] | components["schemas"]["DemoTrainerState"];
+            /** Session Token */
+            session_token: string;
+        };
+        /** DemoSessionSnapshot */
+        DemoSessionSnapshot: {
+            /**
+             * Capability
+             * @default demo
+             * @constant
+             */
+            capability: "demo";
+            /**
+             * Scenario
+             * @enum {string}
+             */
+            scenario: "self_training" | "nutrition" | "trainer";
+            /**
+             * Fixture Version
+             * @default demo-curated-v1
+             * @constant
+             */
+            fixture_version: "demo-curated-v1";
+            /** Revision */
+            revision: number;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** State */
+            state: components["schemas"]["DemoSelfTrainingState"] | components["schemas"]["DemoNutritionState"] | components["schemas"]["DemoTrainerState"];
+        };
+        /** DemoTrainerFact */
+        DemoTrainerFact: {
+            /** Label */
+            label: string;
+            /** Value */
+            value: string;
+        };
+        /** DemoTrainerState */
+        DemoTrainerState: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "trainer";
+            /**
+             * Screen
+             * @default client
+             * @constant
+             */
+            screen: "client";
+            /** Client Name */
+            client_name: string;
+            /** Context Label */
+            context_label: string;
+            /** Workout Title */
+            workout_title: string;
+            /** Facts */
+            facts: components["schemas"]["DemoTrainerFact"][];
+            /** Comment */
+            comment?: string | null;
         };
         /** DevLoginRequest */
         DevLoginRequest: {
@@ -7171,6 +7442,136 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicExerciseDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_demo_session_api_v1_demo_sessions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DemoSessionCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoSessionCreated"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_demo_session_api_v1_demo_sessions_current_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-demo-session"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoSessionSnapshot"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_demo_action_api_v1_demo_sessions_current_actions_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-demo-session"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DemoActionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoSessionSnapshot"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_demo_session_api_v1_demo_sessions_current_reset_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-demo-session"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoSessionSnapshot"];
                 };
             };
             /** @description Validation Error */
@@ -12366,6 +12767,26 @@ export interface operations {
         };
     };
     miniapp_app_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    demo_page_demo_get: {
         parameters: {
             query?: never;
             header?: never;

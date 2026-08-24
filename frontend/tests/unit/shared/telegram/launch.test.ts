@@ -19,5 +19,8 @@ describe('isTelegramLaunch', () => {
     expect(
       isTelegramLaunch({ pathname: '/join/token', search: '?tgWebAppVersion=8.0', hash: '' }),
     ).toBe(true);
+    expect(
+      isTelegramLaunch({ pathname: '/demo', search: '?tgWebAppPlatform=android', hash: '' }),
+    ).toBe(true);
   });
 });

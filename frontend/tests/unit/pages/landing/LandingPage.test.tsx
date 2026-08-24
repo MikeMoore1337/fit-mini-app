@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import LandingPage, {
   appUrlForHostname,
+  demoUrlForHostname,
   loginUrlForHostname,
 } from '../../../../src/pages/landing/LandingPage';
 import { NavigationProvider } from '../../../../src/shared/navigation/router';
@@ -160,6 +161,13 @@ describe('LandingPage', () => {
     );
     expect(loginUrlForHostname('your-fitness-coach.ru')).toBe(
       'https://app.your-fitness-coach.ru/login',
+    );
+    expect(demoUrlForHostname('your-fitness-coach.ru')).toBe(
+      'https://app.your-fitness-coach.ru/demo',
+    );
+    expect(screen.getByRole('link', { name: /попробовать демо/i })).toHaveAttribute(
+      'href',
+      '/demo',
     );
     expect(screen.getAllByRole('link', { name: /подробнее/i })).toHaveLength(6);
   });

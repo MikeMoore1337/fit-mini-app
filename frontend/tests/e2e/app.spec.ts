@@ -199,7 +199,7 @@ test('вторичные CTA сохраняют контрастный текс�
     const expectedBackground = scheme === 'light' ? 'rgb(236, 237, 233)' : 'rgb(30, 34, 30)';
     const expectedText = scheme === 'light' ? 'rgb(22, 26, 23)' : 'rgb(238, 240, 234)';
     for (const link of [
-      page.getByRole('link', { name: /Посмотреть, как всё устроено/ }),
+      page.getByRole('link', { name: /Попробовать демо/ }),
       page.getByRole('link', { name: /Задать вопрос в Telegram/ }),
     ]) {
       await link.hover();

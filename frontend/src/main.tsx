@@ -23,6 +23,7 @@ const ProgressReportPage = lazy(() => import('./pages/reports/ProgressReportPage
 const CoachPage = lazy(() => import('./pages/coach/CoachPage'));
 const AdminPage = lazy(() => import('./pages/admin/AdminPage'));
 const LandingPage = lazy(() => import('./pages/landing/LandingPage'));
+const DemoPage = lazy(() => import('./pages/demo/DemoPage'));
 const PublicContentPage = lazy(() => import('./pages/public/PublicContentPage'));
 const VerifyEmailPage = lazy(() => import('./pages/auth/VerifyEmailPage'));
 const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
@@ -63,6 +64,7 @@ function AppRoutes() {
   const { path } = useNavigation();
   useEffect(() => applyRouteMetadata(path), [path]);
   if (path === '/') return <LandingPage />;
+  if (path === '/demo') return <DemoPage />;
   if (isPublicContentPath(path)) {
     if (window.Telegram?.WebApp?.initData) return <Redirect to="/app" />;
     return <PublicContentPage />;
