@@ -56,7 +56,7 @@ from fitminiapp_api.services.measurements import (
     save_measurement,
     serialize_measurement,
 )
-from fitminiapp_api.services.notifications import queue_telegram_notification
+from fitminiapp_api.services.notifications import queue_notification
 from fitminiapp_api.services.nutrition_reports import (
     NutritionReportError,
     build_nutrition_report,
@@ -797,14 +797,16 @@ def reschedule_workout(
             time_text = (
                 f" в {payload.scheduled_time.strftime('%H:%M')}" if payload.scheduled_time else ""
             )
-            queue_telegram_notification(
+            queue_notification(
                 db,
                 trainer,
+                category="workout_change",
                 title="Клиент изменил тренировку",
                 body=(
                     f"Клиент перенёс тренировку «{workout.title}» на "
                     f"{payload.scheduled_date:%d.%m.%Y}{time_text}."
                 ),
+                action_url="/app?section=progress",
             )
     db.commit()
     return {

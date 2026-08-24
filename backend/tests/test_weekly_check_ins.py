@@ -377,7 +377,7 @@ def test_weekly_check_in_notification_respects_preference_completion_and_dedupe(
             .one()
         )
         assert reminder.scheduled_for == datetime(2030, 3, 10, 18)
-        assert reminder.action_url == "/app?section=progress"
+        assert reminder.action_url == "/app?section=progress&weekly_review=1"
 
         db.add(
             WeeklyCheckIn(

@@ -853,7 +853,11 @@ def build_account_export(db: Session, user: User) -> dict[str, object]:
                 (
                     "workout_reminders_enabled",
                     "weekly_check_in_reminders_enabled",
+                    "measurement_reminders_enabled",
+                    "telegram_enabled",
                     "reminder_hour",
+                    "quiet_hours_start",
+                    "quiet_hours_end",
                 ),
             )
             if setting
@@ -865,12 +869,15 @@ def build_account_export(db: Session, user: User) -> dict[str, object]:
                 (
                     "id",
                     "channel",
+                    "category",
+                    "event_kind",
                     "title",
                     "body",
                     "scheduled_for",
                     "status",
                     "created_at",
                     "sent_at",
+                    "read_at",
                     "action_url",
                 ),
             )

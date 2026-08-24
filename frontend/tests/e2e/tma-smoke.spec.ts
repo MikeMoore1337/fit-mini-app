@@ -118,6 +118,66 @@ test('TMA auth, shared UI, theme, viewport, safe areas and BackButton stay on on
   await expect.poll(async () => (await tma.state()).backButton.visible).toBe(false);
 });
 
+test('notification center keeps Mobile Web/TMA parity, unread geometry and an explicit return path', async ({
+  mobilePage,
+  tma,
+  tmaPage,
+}) => {
+  await installPlatformApi(tmaPage, { notificationState: 'populated' });
+  await installPlatformApi(mobilePage, {
+    browserSession: true,
+    notificationState: 'populated',
+  });
+  await Promise.all([
+    tmaPage.goto('/app?section=profile#profile-notifications'),
+    mobilePage.goto('/app?section=profile#profile-notifications'),
+  ]);
+
+  for (const page of [tmaPage, mobilePage]) {
+    await expect(page.getByRole('heading', { name: 'Каналы' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Непрочитанные · 2' })).toBeVisible();
+    await expect(page.getByText('Комментарий тренера к тренировке')).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await expectTouchTargets(page.locator('.notification-settings .switch-row'));
+    await expectTouchTargets(page.locator('.notification-row button:visible'));
+    await expectLimeStartBoundary(page.locator('.notification-row--unread').first());
+    await expect(page.getByRole('button', { name: 'Отметить всё' })).toHaveCSS(
+      'border-top-style',
+      'solid',
+    );
+    await expect(page.getByRole('button', { name: 'Удалить' }).first()).toHaveCSS(
+      'border-top-style',
+      'solid',
+    );
+    const [lastRow, personal] = await Promise.all([
+      page.locator('.notification-row').last().boundingBox(),
+      page.locator('.notification-personal').boundingBox(),
+    ]);
+    expect(lastRow).not.toBeNull();
+    expect(personal).not.toBeNull();
+    expect(personal!.y - (lastRow!.y + lastRow!.height)).toBeLessThanOrEqual(20);
+  }
+
+  const signature = (page: typeof tmaPage) =>
+    page.locator('#profile-notifications').evaluate((section) => ({
+      headings: Array.from(section.querySelectorAll('h2, h3')).map((node) => node.textContent),
+      switches: section.querySelectorAll('input[type="checkbox"]').length,
+      rows: section.querySelectorAll('.notification-row').length,
+    }));
+  expect(await signature(tmaPage)).toEqual(await signature(mobilePage));
+
+  await tma.setTheme('dark');
+  await expect(tmaPage.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
+  await expect(tmaPage.getByRole('heading', { name: 'Непрочитанные · 2' })).toBeVisible();
+
+  await tmaPage.getByRole('button', { name: 'Открыть: Комментарий тренера к тренировке' }).click();
+  await expect(tmaPage).toHaveURL(/workout_id=43&comment_id=91/);
+  await expect.poll(async () => (await tma.state()).backButton.visible).toBe(true);
+  await tma.clickBack();
+  await expect(tmaPage).toHaveURL('/app?section=profile#profile-notifications');
+  await expect(tmaPage.getByRole('heading', { name: 'Всё прочитано' })).toBeVisible();
+});
+
 test('program history keeps current block, readable revisions and workout return in Mobile Web/TMA parity', async ({
   mobilePage,
   tma,

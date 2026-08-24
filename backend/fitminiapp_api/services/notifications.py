@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from datetime import UTC, date, datetime, time, timedelta
+from urllib.parse import parse_qs, urlsplit
 
 import httpx
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -16,14 +17,164 @@ from fitminiapp_api.core.timezone import (
     user_local_naive_to_utc_naive,
 )
 from fitminiapp_api.models.check_in import WeeklyCheckIn
+from fitminiapp_api.models.feedback import WorkoutComment
 from fitminiapp_api.models.notification import Notification, NotificationSetting
 from fitminiapp_api.models.program import UserProgram, UserWorkout
-from fitminiapp_api.models.user import CoachClientInvite, User, UserProfile
+from fitminiapp_api.models.user import BodyMeasurement, CoachClientInvite, User, UserProfile
 
 MAX_DELIVERY_ATTEMPTS = 5
 PROCESSING_TIMEOUT = timedelta(minutes=5)
 TERMINAL_RETENTION = timedelta(days=90)
 RETENTION_BATCH_SIZE = 1000
+WORKOUT_REMINDER_LEAD = timedelta(hours=2)
+NOTIFICATION_FALLBACK = "/app?section=profile#profile-notifications"
+ALLOWED_NOTIFICATION_QUERY_KEYS = frozenset(
+    {
+        "section",
+        "workout_id",
+        "comment_id",
+        "workout_exercise_id",
+        "weekly_review",
+        "date",
+        "return_to",
+    }
+)
+ALLOWED_NOTIFICATION_SECTIONS = frozenset({"today", "progress", "programs", "nutrition", "profile"})
+
+
+def normalize_notification_action_url(action_url: str | None) -> str | None:
+    if action_url is None:
+        return None
+    parsed = urlsplit(action_url)
+    if parsed.scheme or parsed.netloc or parsed.path != "/app" or parsed.fragment:
+        raise ValueError("unsafe notification action URL")
+    query = parse_qs(parsed.query, keep_blank_values=True)
+    if any(key not in ALLOWED_NOTIFICATION_QUERY_KEYS for key in query):
+        raise ValueError("unsupported notification action URL")
+    if any(len(values) != 1 for values in query.values()):
+        raise ValueError("duplicate notification action parameter")
+    section = query.get("section", [None])[0]
+    if section is not None and section not in ALLOWED_NOTIFICATION_SECTIONS:
+        raise ValueError("unsupported notification section")
+    for key in ("workout_id", "comment_id", "workout_exercise_id"):
+        value = query.get(key, [None])[0]
+        if value is not None and (not value.isdigit() or int(value) <= 0):
+            raise ValueError("invalid notification entity identifier")
+    weekly_review = query.get("weekly_review", [None])[0]
+    if weekly_review is not None and weekly_review != "1":
+        raise ValueError("invalid weekly review destination")
+    return_to = query.get("return_to", [None])[0]
+    if return_to is not None and return_to != "/app?section=profile#profile-notifications":
+        raise ValueError("invalid notification return destination")
+    return action_url
+
+
+def neutral_telegram_text(notification: Notification) -> str:
+    copy_by_category = {
+        "workout_reminder": "Пора готовиться к тренировке. Подробности — в приложении.",
+        "trainer_comment": "У вас новый комментарий тренера. Подробности — в приложении.",
+        "trainer_program_update": "Тренер обновил программу. Подробности — в приложении.",
+        "weekly_check_in_reminder": "Пора подвести итоги недели. Подробности — в приложении.",
+        "measurement_reminder": "Можно обновить замеры. Подробности — в приложении.",
+        "relationship_event": "Статус связи с тренером изменился. Подробности — в приложении.",
+        "nutrition_update": "Ориентиры питания обновлены. Подробности — в приложении.",
+        "workout_change": "Расписание тренировки изменилось. Подробности — в приложении.",
+        "custom_reminder": "У вас запланировано личное напоминание. Подробности — в приложении.",
+    }
+    return copy_by_category.get(
+        notification.category,
+        "В приложении есть новое уведомление.",
+    )
+
+
+def reminder_category_enabled(
+    notification: Notification,
+    setting: NotificationSetting,
+) -> bool:
+    if notification.event_kind != "reminder":
+        return True
+    category_flags = {
+        "workout_reminder": setting.workout_reminders_enabled,
+        "weekly_check_in_reminder": setting.weekly_check_in_reminders_enabled,
+        "measurement_reminder": setting.measurement_reminders_enabled,
+    }
+    return category_flags.get(notification.category, True)
+
+
+def quiet_hours_retry_at(
+    setting: NotificationSetting,
+    user: User,
+    *,
+    now_local: datetime | None = None,
+) -> datetime | None:
+    start = setting.quiet_hours_start
+    end = setting.quiet_hours_end
+    if start is None or end is None or start == end:
+        return None
+    local_now = now_local or now_for_user_naive(user)
+    local_time = local_now.time().replace(tzinfo=None)
+    if start < end:
+        if not start <= local_time < end:
+            return None
+        end_date = local_now.date()
+    else:
+        if not (local_time >= start or local_time < end):
+            return None
+        end_date = local_now.date() + (timedelta(days=1) if local_time >= start else timedelta())
+    local_end = datetime.combine(end_date, end)
+    return user_local_naive_to_utc_naive(local_end, user)
+
+
+def resolve_notification_destination(
+    db: Session,
+    user: User,
+    notification: Notification,
+) -> tuple[str, bool]:
+    default_destinations = {
+        "workout_reminder": "/app?section=today",
+        "trainer_program_update": "/app?section=programs",
+        "weekly_check_in_reminder": "/app?section=progress&weekly_review=1",
+        "measurement_reminder": "/app?section=progress",
+        "relationship_event": "/app?section=profile",
+        "nutrition_update": "/app?section=nutrition",
+        "workout_change": "/app?section=progress",
+    }
+    try:
+        destination = normalize_notification_action_url(notification.action_url)
+    except ValueError:
+        return NOTIFICATION_FALLBACK, True
+    destination = destination or default_destinations.get(notification.category)
+    if destination is None:
+        return NOTIFICATION_FALLBACK, True
+
+    query = parse_qs(urlsplit(destination).query)
+    workout_id_value = query.get("workout_id", [None])[0]
+    if workout_id_value is not None:
+        workout_id = int(workout_id_value)
+        workout_exists = (
+            db.query(UserWorkout.id)
+            .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
+            .filter(UserWorkout.id == workout_id, UserProgram.user_id == user.id)
+            .first()
+            is not None
+        )
+        if not workout_exists:
+            return NOTIFICATION_FALLBACK, True
+        comment_id_value = query.get("comment_id", [None])[0]
+        if comment_id_value is not None:
+            comment_exists = (
+                db.query(WorkoutComment.id)
+                .filter(
+                    WorkoutComment.id == int(comment_id_value),
+                    WorkoutComment.workout_id == workout_id,
+                    WorkoutComment.client_user_id == user.id,
+                )
+                .first()
+                is not None
+            )
+            if not comment_exists:
+                return NOTIFICATION_FALLBACK, True
+    return destination, False
 
 
 def utcnow() -> datetime:
@@ -53,6 +204,8 @@ def get_or_create_settings(db: Session, user: User) -> NotificationSetting:
                 user_id=user.id,
                 workout_reminders_enabled=True,
                 weekly_check_in_reminders_enabled=True,
+                measurement_reminders_enabled=False,
+                telegram_enabled=True,
                 reminder_hour=9,
             )
             db.add(setting)
@@ -166,8 +319,19 @@ def sync_workout_reminders(db: Session) -> int:
         setting, user, timezone = settings_by_user[user_id]
         if not setting.workout_reminders_enabled:
             continue
-        if workout.scheduled_date < now_for_user_naive(user).date():
+        local_now = now_for_user_naive(user)
+        if workout.scheduled_date < local_now.date():
             continue
+        if workout.scheduled_time is not None:
+            workout_at = datetime.combine(workout.scheduled_date, workout.scheduled_time)
+            if workout_at <= local_now:
+                continue
+            scheduled_for = max(workout_at - WORKOUT_REMINDER_LEAD, local_now)
+        else:
+            scheduled_for = datetime.combine(
+                workout.scheduled_date,
+                time(hour=setting.reminder_hour),
+            )
         dedupe_key = f"workout:{workout.id}:reminder"
         active_keys.add(dedupe_key)
         scheduled_workouts.append(
@@ -175,7 +339,7 @@ def sync_workout_reminders(db: Session) -> int:
                 workout,
                 user,
                 timezone,
-                datetime.combine(workout.scheduled_date, time(hour=setting.reminder_hour)),
+                scheduled_for,
             )
         )
 
@@ -218,12 +382,15 @@ def sync_workout_reminders(db: Session) -> int:
         notification = Notification(
             user_id=user.id,
             channel="telegram",
-            title="Тренировка сегодня",
+            category="workout_reminder",
+            event_kind="reminder",
+            title="Скоро тренировка",
             body=f"По плану: {workout.title}",
             scheduled_for=scheduled_for,
             scheduled_for_utc=local_naive_to_utc_naive(scheduled_for, timezone),
             status="queued",
             dedupe_key=dedupe_key,
+            action_url="/app?section=today",
         )
         db.add(notification)
         reminders_by_key[dedupe_key] = notification
@@ -323,8 +490,98 @@ def sync_weekly_check_in_reminders(db: Session) -> int:
             Notification(
                 user_id=user.id,
                 channel="telegram",
+                category="weekly_check_in_reminder",
+                event_kind="reminder",
                 title="Еженедельные итоги",
                 body="Подведите итоги недели: тренировки, питание и самочувствие.",
+                scheduled_for=scheduled_for,
+                scheduled_for_utc=local_naive_to_utc_naive(scheduled_for, timezone),
+                status="queued",
+                dedupe_key=dedupe_key,
+                action_url="/app?section=progress&weekly_review=1",
+            )
+        )
+        created += 1
+
+    for reminder in reminders:
+        if reminder.status == "queued" and reminder.dedupe_key not in active_keys:
+            reminder.status = "cancelled"
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        return 0
+    return created
+
+
+def sync_measurement_reminders(db: Session) -> int:
+    created = 0
+    rows = (
+        db.query(NotificationSetting, User, UserProfile.timezone)
+        .join(User, User.id == NotificationSetting.user_id)
+        .outerjoin(UserProfile, UserProfile.user_id == User.id)
+        .filter(User.is_active.is_(True))
+        .all()
+    )
+    if not rows:
+        return 0
+
+    last_measurement_by_user = dict(
+        db.query(BodyMeasurement.user_id, func.max(BodyMeasurement.measured_on))
+        .filter(BodyMeasurement.user_id.in_([user.id for _setting, user, _timezone in rows]))
+        .group_by(BodyMeasurement.user_id)
+        .all()
+    )
+    active: dict[str, tuple[User, str | None, datetime]] = {}
+    for setting, user, timezone in rows:
+        local_day = today_in_timezone(timezone)
+        last_measurement = last_measurement_by_user.get(user.id)
+        if not setting.measurement_reminders_enabled or (
+            last_measurement is not None and local_day - last_measurement < timedelta(days=14)
+        ):
+            continue
+        week_start = local_day - timedelta(days=local_day.weekday())
+        week_end = week_start + timedelta(days=6)
+        dedupe_key = f"measurement:{user.id}:{week_start.isoformat()}"
+        active[dedupe_key] = (
+            user,
+            timezone,
+            datetime.combine(week_end, time(hour=setting.reminder_hour)),
+        )
+
+    active_keys = set(active)
+    reminder_scope = [Notification.status == "queued"]
+    if active_keys:
+        reminder_scope.append(Notification.dedupe_key.in_(active_keys))
+    reminders = (
+        db.query(Notification)
+        .filter(Notification.dedupe_key.like("measurement:%"), or_(*reminder_scope))
+        .all()
+    )
+    reminders_by_key = {row.dedupe_key: row for row in reminders}
+    for dedupe_key, (user, timezone, scheduled_for) in active.items():
+        existing = reminders_by_key.get(dedupe_key)
+        if existing:
+            if existing.status in {"queued", "cancelled"}:
+                was_cancelled = existing.status == "cancelled"
+                existing.status = "queued"
+                existing.scheduled_for = scheduled_for
+                existing.scheduled_for_utc = local_naive_to_utc_naive(scheduled_for, timezone)
+                if was_cancelled:
+                    existing.attempt_count = 0
+                    existing.last_error = None
+                    existing.next_attempt_at = None
+                    existing.processing_started_at = None
+            continue
+        db.add(
+            Notification(
+                user_id=user.id,
+                channel="telegram",
+                category="measurement_reminder",
+                event_kind="reminder",
+                title="Пора обновить замеры",
+                body="Регулярные замеры помогают видеть фактическую динамику без оценочных выводов.",
                 scheduled_for=scheduled_for,
                 scheduled_for_utc=local_naive_to_utc_naive(scheduled_for, timezone),
                 status="queued",
@@ -430,11 +687,13 @@ def create_manual_notification(
     title: str,
     body: str,
     scheduled_for: datetime,
-    channel: str = "app",
+    channel: str = "telegram",
 ) -> Notification:
     notification = Notification(
         user_id=user.id,
         channel=channel,
+        category="custom_reminder",
+        event_kind="reminder",
         title=title.strip(),
         body=body.strip(),
         scheduled_for=to_user_timezone_naive(scheduled_for, user),
@@ -451,30 +710,60 @@ def create_manual_notification(
     return notification
 
 
-def queue_telegram_notification(
+def queue_notification(
     db: Session,
     user: User,
     *,
+    category: str,
     title: str,
     body: str,
     dedupe_key: str | None = None,
     action_url: str | None = None,
+    event_kind: str = "transactional",
 ) -> Notification:
-    """Add an immediate Telegram notification to the current transaction."""
+    """Add one canonical in-app event with optional Telegram delivery."""
     scheduled_for = now_for_user_naive(user)
     notification = Notification(
         user_id=user.id,
         channel="telegram",
+        category=category,
+        event_kind=event_kind,
         title=title.strip(),
         body=body.strip(),
         scheduled_for=scheduled_for,
         scheduled_for_utc=user_local_naive_to_utc_naive(scheduled_for, user),
         status="queued",
         dedupe_key=dedupe_key,
-        action_url=action_url,
+        action_url=normalize_notification_action_url(action_url),
     )
     db.add(notification)
     return notification
+
+
+def mark_notification_read(db: Session, user: User, notification_id: int) -> Notification | None:
+    notification = (
+        db.query(Notification)
+        .filter(Notification.id == notification_id, Notification.user_id == user.id)
+        .first()
+    )
+    if notification is None:
+        return None
+    if notification.read_at is None:
+        notification.read_at = now_for_user_naive(user)
+        db.commit()
+        db.refresh(notification)
+    return notification
+
+
+def mark_all_notifications_read(db: Session, user: User) -> int:
+    read_at = now_for_user_naive(user)
+    updated = (
+        db.query(Notification)
+        .filter(Notification.user_id == user.id, Notification.read_at.is_(None))
+        .update({Notification.read_at: read_at}, synchronize_session=False)
+    )
+    db.commit()
+    return updated
 
 
 def delete_notification_for_user(

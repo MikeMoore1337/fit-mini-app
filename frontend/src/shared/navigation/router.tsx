@@ -37,11 +37,30 @@ function programHistoryReturn(value: string | null): string | null {
   }
 }
 
+function notificationCenterReturn(value: string | null): string | null {
+  if (!value) return null;
+  try {
+    const parsed = new URL(value, window.location.origin);
+    return parsed.origin === window.location.origin &&
+      parsed.pathname === '/app' &&
+      parsed.searchParams.get('section') === 'profile' &&
+      parsed.hash === '#profile-notifications'
+      ? `${parsed.pathname}${parsed.search}${parsed.hash}`
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export function focusedContextReturn(search: string): string | null {
   const params = new URLSearchParams(search);
   const workoutId = params.get('workout_id');
   if (workoutId && /^\d+$/.test(workoutId) && Number(workoutId) > 0) {
-    return programHistoryReturn(params.get('return_to')) ?? '/app?section=progress';
+    return (
+      notificationCenterReturn(params.get('return_to')) ??
+      programHistoryReturn(params.get('return_to')) ??
+      '/app?section=progress'
+    );
   }
   if (params.get('weekly_review') === '1') return '/app';
   return null;

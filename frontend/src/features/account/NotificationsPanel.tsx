@@ -1,46 +1,60 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../../app/AuthProvider';
 import { api } from '../../shared/api/client';
 import type { NotificationItem, NotificationSetting } from '../../shared/api/types';
-import { useFeedback } from '../../shared/ui/FeedbackProvider';
-import {
-  Badge,
-  Card,
-  DisclosureIcon,
-  EmptyState,
-  ErrorState,
-  LoadingState,
-} from '../../shared/ui/common';
-import { useAuth } from '../../app/AuthProvider';
 import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
 import { addCalendarDays, dateInputValue, detectedTimeZone } from '../../shared/dateTime';
 import { usePersistentState } from '../../shared/storage';
 import { notificationDraftStorageKey } from '../../shared/userScopedStorage';
-import { notificationStatusLabel } from '../../shared/statusLabels';
+import { DisclosureIcon, EmptyState, ErrorState, LoadingState } from '../../shared/ui/common';
+import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { DateInput, TimeInput } from '../../shared/ui/PickerInput';
 
-interface NotificationDestination {
-  path: string;
-  label: string;
+interface NotificationOpenResponse {
+  destination: string;
+  stale: boolean;
+  message?: string | null;
 }
 
-function notificationDestination(item: NotificationItem): NotificationDestination | null {
-  if (item.action_url && /^\/app(?:\?|$)/.test(item.action_url)) {
-    return {
-      path: item.action_url,
-      label:
-        item.title === 'Комментарий тренера к тренировке'
-          ? `Открыть комментарий тренера: ${item.title}`
-          : `Открыть связанный раздел: ${item.title}`,
-    };
-  }
-  if (item.title === 'Тренировка сегодня') {
-    return { path: '/app?section=today', label: `Открыть тренировку: ${item.title}` };
-  }
-  if (item.title === 'КБЖУ пересчитаны') {
-    return { path: '/app?section=nutrition', label: `Открыть раздел питания: ${item.title}` };
-  }
-  return null;
+const categoryLabels: Record<string, string> = {
+  workout_reminder: 'Тренировка',
+  trainer_comment: 'Комментарий тренера',
+  trainer_program_update: 'Программа',
+  weekly_check_in_reminder: 'Итоги недели',
+  measurement_reminder: 'Замеры',
+  relationship_event: 'Связь с тренером',
+  nutrition_update: 'Питание',
+  workout_change: 'Расписание',
+  custom_reminder: 'Личное напоминание',
+};
+
+const navigableCategories = new Set([
+  'workout_reminder',
+  'trainer_comment',
+  'trainer_program_update',
+  'weekly_check_in_reminder',
+  'measurement_reminder',
+  'relationship_event',
+  'nutrition_update',
+  'workout_change',
+]);
+
+function timeValue(value: string | null | undefined, fallback: string): string {
+  return value ? value.slice(0, 5) : fallback;
+}
+
+function formatWallTime(value: string): string {
+  const normalized = value.length === 16 ? `${value}:00` : value;
+  const parsed = new Date(`${normalized}Z`);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return new Intl.DateTimeFormat('ru-RU', {
+    timeZone: 'UTC',
+    day: 'numeric',
+    month: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(parsed);
 }
 
 export function NotificationsPanel({ onNavigate }: { onNavigate?: (path: string) => void }) {
@@ -57,8 +71,8 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (path: string)
     queryFn: () => api<NotificationItem[]>('/api/v1/notifications'),
   });
   const defaultNotification = () => ({
-    title: 'Тренировка',
-    body: 'Пора выполнить тренировку по плану',
+    title: 'Личное напоминание',
+    body: 'Откройте приложение и проверьте запланированное действие',
     scheduledDate: addCalendarDays(dateInputValue(new Date(), timeZone), 1),
   });
   const [notificationDraft, setNotificationDraft, clearNotificationDraft] = usePersistentState(
@@ -70,16 +84,26 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (path: string)
   const settingsDirty = Boolean(
     settings.data &&
     settingsDraft &&
-    (settings.data.reminder_hour !== settingsDraft.reminder_hour ||
-      settings.data.workout_reminders_enabled !== settingsDraft.workout_reminders_enabled ||
-      settings.data.weekly_check_in_reminders_enabled !==
-        settingsDraft.weekly_check_in_reminders_enabled),
+    JSON.stringify(settings.data) !== JSON.stringify(settingsDraft),
   );
+  const unreadCount = useMemo(
+    () => notifications.data?.filter((item) => !item.read_at).length ?? 0,
+    [notifications.data],
+  );
+
   const settingsMutation = useMutation({
     mutationFn: (payload: NotificationSetting) =>
       api<NotificationSetting>('/api/v1/notifications/settings', {
         method: 'PATCH',
-        body: payload,
+        body: {
+          workout_reminders_enabled: payload.workout_reminders_enabled,
+          weekly_check_in_reminders_enabled: payload.weekly_check_in_reminders_enabled,
+          measurement_reminders_enabled: payload.measurement_reminders_enabled,
+          telegram_enabled: payload.telegram_enabled,
+          reminder_hour: payload.reminder_hour,
+          quiet_hours_start: payload.quiet_hours_start,
+          quiet_hours_end: payload.quiet_hours_end,
+        },
       }),
     onSuccess: (saved) => {
       trackProductEvent({
@@ -88,34 +112,48 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (path: string)
       });
       queryClient.setQueryData(['notifications', 'settings'], saved);
       setSettingsDraft(null);
-      toast('Настройки напоминаний сохранены');
+      toast('Настройки уведомлений сохранены');
     },
     onError: (reason) => toast((reason as Error).message, 'error'),
   });
-  const mutation = useMutation({
-    mutationFn: ({
-      path,
-      method,
-      body: payload,
-    }: {
-      path: string;
-      method: string;
-      body?: unknown;
-    }) => api(path, { method, body: payload }),
+  const listMutation = useMutation({
+    mutationFn: ({ path, method, body }: { path: string; method: string; body?: unknown }) =>
+      api(path, { method, body }),
     onSuccess: async (_data, variables) => {
       await queryClient.invalidateQueries({ queryKey: ['notifications'] });
       if (variables.method === 'POST') {
         clearNotificationDraft(defaultNotification());
-        toast('Уведомление создано');
+        toast('Личное напоминание создано');
       } else {
         toast('Уведомление удалено');
       }
     },
     onError: (reason) => toast((reason as Error).message, 'error'),
   });
+  const openMutation = useMutation({
+    mutationFn: (notificationId: number) =>
+      api<NotificationOpenResponse>(`/api/v1/notifications/${notificationId}/open`, {
+        method: 'POST',
+      }),
+    onSuccess: (result) => {
+      if (result.message) toast(result.message, result.stale ? 'error' : 'success');
+      onNavigate?.(result.destination);
+      void queryClient.invalidateQueries({ queryKey: ['notifications', 'list'] });
+    },
+    onError: (reason) => toast((reason as Error).message, 'error'),
+  });
+  const readAllMutation = useMutation({
+    mutationFn: () => api('/api/v1/notifications/read-all', { method: 'PATCH' }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['notifications', 'list'] });
+      toast('Все уведомления отмечены прочитанными');
+    },
+    onError: (reason) => toast((reason as Error).message, 'error'),
+  });
+
   return (
-    <div className="stack">
-      <Card title="Напоминания о тренировках">
+    <div className="notification-preferences stack">
+      <section className="notification-settings" aria-labelledby="notification-channels-title">
         {settings.isLoading ? (
           <LoadingState />
         ) : settings.error ? (
@@ -123,75 +161,287 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (path: string)
         ) : (
           visibleSettings && (
             <form
-              className="stack top-gap"
+              className="stack"
               onSubmit={(event) => {
                 event.preventDefault();
                 settingsMutation.mutate(visibleSettings);
               }}
             >
-              <div className="form-grid">
+              <div className="notification-settings__group">
+                <div className="notification-settings__heading">
+                  <h3 id="notification-channels-title">Каналы</h3>
+                  <p>
+                    Подробности всегда остаются в приложении; Telegram показывает нейтральный текст.
+                  </p>
+                </div>
+                <div className="notification-channel-row">
+                  <span>
+                    <strong>В приложении</strong>
+                    <small>Всегда доступно в центре уведомлений</small>
+                  </span>
+                  <span className="notification-channel-state">Включено</span>
+                </div>
+                <label
+                  className={`switch-row ${!visibleSettings.telegram_linked ? 'is-disabled' : ''}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={visibleSettings.telegram_enabled && visibleSettings.telegram_linked}
+                    disabled={!visibleSettings.telegram_linked}
+                    onChange={(event) =>
+                      setSettingsDraft({
+                        ...visibleSettings,
+                        telegram_enabled: event.target.checked,
+                      })
+                    }
+                  />
+                  <span>
+                    <strong>Telegram</strong>
+                    <small>
+                      {visibleSettings.telegram_linked
+                        ? 'Получать внешние уведомления в связанном аккаунте'
+                        : 'Недоступно: сначала свяжите Telegram в разделе доступа'}
+                    </small>
+                  </span>
+                </label>
+              </div>
+
+              <div className="notification-settings__group">
+                <div className="notification-settings__heading">
+                  <h3>Полезные напоминания</h3>
+                  <p>
+                    Системные сообщения тренера и изменения программы остаются отдельными событиями.
+                  </p>
+                </div>
                 <label className="switch-row">
                   <input
                     type="checkbox"
                     checked={visibleSettings.workout_reminders_enabled}
-                    onChange={(e) =>
+                    onChange={(event) =>
                       setSettingsDraft({
                         ...visibleSettings,
-                        workout_reminders_enabled: e.target.checked,
+                        workout_reminders_enabled: event.target.checked,
                       })
                     }
                   />
-                  <span>Напоминать о тренировках</span>
+                  <span>
+                    <strong>Предстоящая тренировка</strong>
+                    <small>За 2 часа до точного времени или в выбранный час дня</small>
+                  </span>
                 </label>
                 <label className="switch-row">
                   <input
                     type="checkbox"
                     checked={visibleSettings.weekly_check_in_reminders_enabled}
-                    onChange={(e) =>
+                    onChange={(event) =>
                       setSettingsDraft({
                         ...visibleSettings,
-                        weekly_check_in_reminders_enabled: e.target.checked,
+                        weekly_check_in_reminders_enabled: event.target.checked,
                       })
                     }
                   />
-                  <span>Напоминать о еженедельных итогах</span>
+                  <span>
+                    <strong>Итоги недели</strong>
+                    <small>Одно напоминание в воскресенье, если итоги ещё не заполнены</small>
+                  </span>
                 </label>
+                <label className="switch-row">
+                  <input
+                    type="checkbox"
+                    checked={visibleSettings.measurement_reminders_enabled}
+                    onChange={(event) =>
+                      setSettingsDraft({
+                        ...visibleSettings,
+                        measurement_reminders_enabled: event.target.checked,
+                      })
+                    }
+                  />
+                  <span>
+                    <strong>Замеры</strong>
+                    <small>Не чаще раза в неделю и только если замеров не было 14 дней</small>
+                  </span>
+                </label>
+              </div>
+
+              <div className="notification-settings__group notification-schedule-grid">
                 <label className="field">
-                  <span>Час отправки</span>
+                  <span>Час для напоминаний без точного времени</span>
                   <TimeInput
                     controlClassName="reminder-time-control"
                     step="3600"
                     value={`${String(visibleSettings.reminder_hour).padStart(2, '0')}:00`}
-                    onChange={(e) =>
+                    onChange={(event) =>
                       setSettingsDraft({
                         ...visibleSettings,
-                        reminder_hour: Number(e.target.value.split(':')[0]),
+                        reminder_hour: Number(event.target.value.split(':')[0]),
                       })
                     }
                   />
                 </label>
+                <label className="switch-row notification-quiet-toggle">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(visibleSettings.quiet_hours_start)}
+                    onChange={(event) =>
+                      setSettingsDraft({
+                        ...visibleSettings,
+                        quiet_hours_start: event.target.checked ? '22:00:00' : null,
+                        quiet_hours_end: event.target.checked ? '08:00:00' : null,
+                      })
+                    }
+                  />
+                  <span>
+                    <strong>Тихие часы</strong>
+                    <small>Доставка подождёт до окончания выбранного периода</small>
+                  </span>
+                </label>
+                {visibleSettings.quiet_hours_start && visibleSettings.quiet_hours_end && (
+                  <div className="notification-quiet-hours">
+                    <label className="field">
+                      <span>С</span>
+                      <TimeInput
+                        value={timeValue(visibleSettings.quiet_hours_start, '22:00')}
+                        onChange={(event) =>
+                          setSettingsDraft({
+                            ...visibleSettings,
+                            quiet_hours_start: `${event.target.value}:00`,
+                          })
+                        }
+                      />
+                    </label>
+                    <label className="field">
+                      <span>До</span>
+                      <TimeInput
+                        value={timeValue(visibleSettings.quiet_hours_end, '08:00')}
+                        onChange={(event) =>
+                          setSettingsDraft({
+                            ...visibleSettings,
+                            quiet_hours_end: `${event.target.value}:00`,
+                          })
+                        }
+                      />
+                    </label>
+                  </div>
+                )}
               </div>
-              <button type="submit" disabled={!settingsDirty || settingsMutation.isPending}>
-                {settingsMutation.isPending ? 'Сохраняем…' : 'Сохранить настройки'}
-              </button>
+              <div className="notification-settings__save">
+                <button type="submit" disabled={!settingsDirty || settingsMutation.isPending}>
+                  {settingsMutation.isPending ? 'Сохраняем…' : 'Сохранить настройки'}
+                </button>
+              </div>
             </form>
           )
         )}
-      </Card>
-      <details className="card profile-disclosure">
+      </section>
+
+      <section className="notification-center" aria-labelledby="notification-center-title">
+        <header className="notification-center__head">
+          <div>
+            <span className="eyebrow">Центр уведомлений</span>
+            <h3 id="notification-center-title">
+              {unreadCount ? `Непрочитанные · ${unreadCount}` : 'Всё прочитано'}
+            </h3>
+          </div>
+          {unreadCount > 0 && (
+            <button
+              type="button"
+              className="secondary"
+              disabled={readAllMutation.isPending}
+              onClick={() => readAllMutation.mutate()}
+            >
+              Отметить всё
+            </button>
+          )}
+        </header>
+        {notifications.isLoading ? (
+          <LoadingState />
+        ) : notifications.error ? (
+          <ErrorState message={(notifications.error as Error).message} />
+        ) : !notifications.data?.length ? (
+          <EmptyState
+            title="Уведомлений пока нет"
+            text="Здесь появятся напоминания и важные изменения от тренера."
+          />
+        ) : (
+          <div className="notification-list">
+            {notifications.data.map((item) => {
+              const canOpen = navigableCategories.has(item.category);
+              const copy = (
+                <>
+                  <span className="notification-row__meta">
+                    {categoryLabels[item.category] ?? 'Событие'}
+                    {!item.read_at && <span>Новое</span>}
+                  </span>
+                  <strong>{item.title}</strong>
+                  <span>{item.body}</span>
+                  <span className="muted">
+                    {item.event_kind === 'reminder' ? 'Запланировано' : 'Создано'}:{' '}
+                    {formatWallTime(item.scheduled_for)}
+                  </span>
+                </>
+              );
+              return (
+                <article
+                  className={`notification-row ${item.read_at ? '' : 'notification-row--unread'}`}
+                  key={item.id}
+                >
+                  {canOpen && onNavigate ? (
+                    <button
+                      type="button"
+                      className="notification-row__main text-button notification-action"
+                      aria-label={`Открыть: ${item.title}`}
+                      disabled={openMutation.isPending}
+                      onClick={() => openMutation.mutate(item.id)}
+                    >
+                      {copy}
+                    </button>
+                  ) : (
+                    <div className="notification-row__main">{copy}</div>
+                  )}
+                  <button
+                    type="button"
+                    className="notification-row__delete"
+                    onClick={async () => {
+                      if (
+                        await confirm({
+                          title: 'Удалить уведомление?',
+                          message: item.title,
+                          confirmText: 'Удалить',
+                        })
+                      ) {
+                        listMutation.mutate({
+                          path: `/api/v1/notifications/${item.id}`,
+                          method: 'DELETE',
+                        });
+                      }
+                    }}
+                  >
+                    Удалить
+                  </button>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <details className="notification-personal profile-disclosure">
         <summary>
           <span>
-            <strong>Личные уведомления</strong>
-            <small>Создание и история уведомлений</small>
+            <strong>Личное напоминание</strong>
+            <small>Свободный текст остаётся внутри приложения</small>
           </span>
           <DisclosureIcon />
         </summary>
         <div className="profile-disclosure__body">
+          <p className="muted">
+            В Telegram придёт только нейтральная фраза без текста напоминания.
+          </p>
           <form
             className="stack"
-            onSubmit={(e) => {
-              e.preventDefault();
-              mutation.mutate({
+            onSubmit={(event) => {
+              event.preventDefault();
+              listMutation.mutate({
                 path: '/api/v1/notifications',
                 method: 'POST',
                 body: {
@@ -210,8 +460,8 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (path: string)
                 <input
                   value={notificationDraft.title}
                   maxLength={128}
-                  onChange={(e) =>
-                    setNotificationDraft({ ...notificationDraft, title: e.target.value })
+                  onChange={(event) =>
+                    setNotificationDraft({ ...notificationDraft, title: event.target.value })
                   }
                   required
                 />
@@ -222,8 +472,11 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (path: string)
                   controlClassName="notification-date-control"
                   min={dateInputValue(new Date(), timeZone)}
                   value={notificationDraft.scheduledDate}
-                  onChange={(e) =>
-                    setNotificationDraft({ ...notificationDraft, scheduledDate: e.target.value })
+                  onChange={(event) =>
+                    setNotificationDraft({
+                      ...notificationDraft,
+                      scheduledDate: event.target.value,
+                    })
                   }
                   required
                 />
@@ -233,79 +486,20 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (path: string)
               </label>
             </div>
             <label className="field">
-              <span>Текст</span>
+              <span>Текст внутри приложения</span>
               <textarea
                 value={notificationDraft.body}
                 maxLength={2000}
-                onChange={(e) =>
-                  setNotificationDraft({ ...notificationDraft, body: e.target.value })
+                onChange={(event) =>
+                  setNotificationDraft({ ...notificationDraft, body: event.target.value })
                 }
                 required
               />
             </label>
-            <button disabled={mutation.isPending}>
-              {mutation.isPending ? 'Создаём…' : 'Создать уведомление'}
+            <button className="secondary" disabled={listMutation.isPending}>
+              {listMutation.isPending ? 'Создаём…' : 'Создать напоминание'}
             </button>
           </form>
-          {notifications.isLoading ? (
-            <LoadingState />
-          ) : notifications.error ? (
-            <ErrorState message={(notifications.error as Error).message} />
-          ) : !notifications.data?.length ? (
-            <EmptyState title="Уведомлений пока нет" />
-          ) : (
-            <div className="list-grid">
-              {notifications.data.map((item) => {
-                const destination = notificationDestination(item);
-                const notificationCopy = (
-                  <>
-                    <strong>{item.title}</strong>
-                    <span>{item.body}</span>
-                    <span className="muted">
-                      {new Date(item.scheduled_for).toLocaleString('ru-RU')}
-                    </span>
-                  </>
-                );
-                return (
-                  <article className="list-row" key={item.id}>
-                    {destination && onNavigate ? (
-                      <button
-                        type="button"
-                        className="list-row__main text-button notification-action"
-                        aria-label={destination.label}
-                        onClick={() => onNavigate(destination.path)}
-                      >
-                        {notificationCopy}
-                      </button>
-                    ) : (
-                      <div className="list-row__main">{notificationCopy}</div>
-                    )}
-                    <div className="list-row__actions">
-                      <Badge>{notificationStatusLabel(item.status)}</Badge>
-                      <button
-                        className="btn-danger"
-                        onClick={async () => {
-                          if (
-                            await confirm({
-                              title: 'Удалить уведомление?',
-                              message: item.title,
-                              confirmText: 'Удалить',
-                            })
-                          )
-                            mutation.mutate({
-                              path: `/api/v1/notifications/${item.id}`,
-                              method: 'DELETE',
-                            });
-                        }}
-                      >
-                        Удалить
-                      </button>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
         </div>
       </details>
     </div>

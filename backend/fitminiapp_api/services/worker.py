@@ -12,14 +12,18 @@ import httpx
 from fitminiapp_api.core.config import settings
 from fitminiapp_api.core.logging_config import configure_logging
 from fitminiapp_api.db.session import get_session_context
-from fitminiapp_api.models.notification import Notification
+from fitminiapp_api.models.notification import Notification, NotificationSetting
 from fitminiapp_api.models.user import User
 from fitminiapp_api.services.bot_support import prune_support_cases
 from fitminiapp_api.services.notifications import (
     claim_due_notifications,
     mark_delivery_failed,
     mark_delivery_succeeded,
+    neutral_telegram_text,
+    quiet_hours_retry_at,
+    reminder_category_enabled,
     safe_delivery_error,
+    sync_measurement_reminders,
     sync_weekly_check_in_reminders,
     sync_workout_reminders,
 )
@@ -85,10 +89,17 @@ async def run_once(*, sync_reminders: bool = True) -> None:
             prune_support_cases(db)
             sync_workout_reminders(db)
             sync_weekly_check_in_reminders(db)
+            sync_measurement_reminders(db)
         rows = claim_due_notifications(db)
         users = {
             user.id: user
             for user in db.query(User).filter(User.id.in_({row.user_id for row in rows})).all()
+        }
+        notification_settings = {
+            row.user_id: row
+            for row in db.query(NotificationSetting)
+            .filter(NotificationSetting.user_id.in_(users))
+            .all()
         }
         deliveries: list[tuple[int, int, str, str | None]] = []
         for row in rows:
@@ -97,11 +108,32 @@ async def run_once(*, sync_reminders: bool = True) -> None:
                 row.status = "cancelled"
                 row.processing_started_at = None
                 continue
-            if row.channel == "telegram" and user.telegram_user_id is None:
+            if row.channel != "telegram":
+                mark_delivery_succeeded(db, row, user, commit=False)
+                continue
+            if user.telegram_user_id is None:
                 row.status = "cancelled"
                 row.last_error = "telegram_identity_not_linked"
                 row.processing_started_at = None
                 continue
+            setting = notification_settings.get(user.id)
+            if setting is None or not setting.telegram_enabled:
+                row.status = "cancelled"
+                row.last_error = "telegram_channel_disabled"
+                row.processing_started_at = None
+                continue
+            if not reminder_category_enabled(row, setting):
+                row.status = "cancelled"
+                row.last_error = "reminder_category_disabled"
+                row.processing_started_at = None
+                continue
+            if row.event_kind != "security":
+                retry_at = quiet_hours_retry_at(setting, user)
+                if retry_at is not None:
+                    row.status = "queued"
+                    row.next_attempt_at = retry_at
+                    row.processing_started_at = None
+                    continue
             open_app_path = row.action_url
             if (
                 open_app_path is None
@@ -113,7 +145,7 @@ async def run_once(*, sync_reminders: bool = True) -> None:
                 (
                     row.id,
                     user.telegram_user_id,
-                    f"{row.title}\n\n{row.body}",
+                    neutral_telegram_text(row),
                     open_app_path,
                 )
             )

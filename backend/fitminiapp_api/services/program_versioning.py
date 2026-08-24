@@ -26,7 +26,7 @@ from fitminiapp_api.services.exercise_catalog import (
     _effective_exercise_id,
     _load_visible_exercise_rows,
 )
-from fitminiapp_api.services.notifications import queue_telegram_notification
+from fitminiapp_api.services.notifications import queue_notification
 from fitminiapp_api.services.program_common import ProgramError
 
 MUTABLE_PROGRAM_STATUSES = {"scheduled", "active"}
@@ -574,11 +574,13 @@ def upsert_future_program_exercise(
         },
     )
     if role == "trainer":
-        queue_telegram_notification(
+        queue_notification(
             db,
             target_user,
+            category="trainer_program_update",
             title="Программа тренировок изменена",
             body="Тренер обновил предстоящие тренировки. История изменений сохранена.",
+            action_url="/app?section=programs",
         )
     db.commit()
     return len(planned_workouts), revision.revision_number

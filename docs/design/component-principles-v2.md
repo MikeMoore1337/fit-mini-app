@@ -20,6 +20,9 @@
   семантикой.
 - Loading не меняет ширину и блокирует double submit. Disabled объясняет причину, если она не
   очевидна. Icon-only control имеет accessible name и touch target не меньше `44 px`.
+- Самостоятельное secondary, danger или destructive text-action визуально остаётся кнопкой:
+  имеет постоянный контур, достаточный padding и `44 px` touch target. Borderless допустим только
+  для очевидного inline navigation/action внутри текста; появление контура лишь на hover запрещено.
 
 ## Inputs и forms
 
@@ -54,6 +57,8 @@ inside card и универсальная `surface` вокруг каждого 
   grouped rows или controlled disclosure, а не горизонтальный squeeze.
 - Empty row не выглядит как populated zero. Row action остаётся рядом с сущностью и имеет понятный
   destructive/undo contract.
+- Между соседними list/settings groups не резервируется пустая высота без content, action или
+  смысловой паузы. Разделение строится одним spacing step и rule, а не суммой padding двух блоков.
 
 ## Dialogs, drawers и sheets
 
@@ -151,6 +156,9 @@ inside card и универсальная `surface` вокруг каждого 
 - **Expired session:** ведёт к canonical `/login`, не смешивает данные аккаунтов.
 - **Offline/stale:** сообщает, что сохранено локально, что устарело и когда будет sync.
 - **Disabled:** остаётся различимым и сопровождается причиной.
+- **Density:** короткий empty/error/permission state без действия использует compact vertical
+  padding; он не должен выглядеть как самостоятельная hero-card. Заголовок следующего account или
+  settings section также не получает двойной отступ от parent gap и собственного padding.
 
 ## Запрет локальных visual systems
 

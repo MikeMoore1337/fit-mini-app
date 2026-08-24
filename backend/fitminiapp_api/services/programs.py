@@ -35,7 +35,7 @@ from fitminiapp_api.services.exercise_catalog import (
     get_visible_exercise_display_map,
 )
 from fitminiapp_api.services.exercise_guides import get_exercise_guide
-from fitminiapp_api.services.notifications import queue_telegram_notification
+from fitminiapp_api.services.notifications import queue_notification
 from fitminiapp_api.services.nutrition import build_nutrition_target_response_from_users
 from fitminiapp_api.services.program_common import ProgramError
 from fitminiapp_api.services.program_versioning import record_program_revision
@@ -483,9 +483,10 @@ def assign_template_to_user(
         },
     )
     if assigned_by.id != target_user.id:
-        queue_telegram_notification(
+        queue_notification(
             db,
             target_user,
+            category="trainer_program_update",
             title="Назначена программа тренировок",
             body=(
                 f"Тренер назначил вам программу «{template.title}». "
@@ -493,6 +494,7 @@ def assign_template_to_user(
                 "Откройте раздел «Программы», чтобы посмотреть план."
             ),
             dedupe_key=f"program_assignment:{user_program.id}",
+            action_url="/app?section=programs",
         )
     return user_program, created
 
@@ -785,14 +787,16 @@ def update_template_for_user(
     if target_user.id != current_user.id:
         notification_users[target_user.id] = target_user
     for user in notification_users.values():
-        queue_telegram_notification(
+        queue_notification(
             db,
             user,
+            category="trainer_program_update",
             title="Программа тренировок изменена",
             body=(
                 f"Тренер обновил программу «{template.title}». "
                 "Откройте раздел «Программы», чтобы посмотреть изменения."
             ),
+            action_url="/app?section=programs",
         )
 
     db.commit()

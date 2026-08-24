@@ -149,6 +149,7 @@ def test_contextual_comments_keep_chronology_plain_text_and_edit_revisions(clien
         assert len(notifications) == 2
         assert notifications[1].action_url == (
             f"/app?workout_id={workout_id}&comment_id={second.json()['id']}"
+            "&return_to=%2Fapp%3Fsection%3Dprofile%23profile-notifications"
             f"&workout_exercise_id={workout_exercise_id}"
         )
         export_user = db.get(User, client_id)
@@ -324,9 +325,11 @@ def test_comment_notification_delivery_uses_context_deep_link_and_handles_unlink
     assert delivered == [
         (
             26_202,
-            "Комментарий тренера к тренировке\n\n"
-            "К тренировке «Тестовая тренировка»: Проверьте темп движения",
-            f"/app?workout_id={linked_workout_id}&comment_id={linked.json()['id']}",
+            "У вас новый комментарий тренера. Подробности — в приложении.",
+            (
+                f"/app?workout_id={linked_workout_id}&comment_id={linked.json()['id']}"
+                "&return_to=%2Fapp%3Fsection%3Dprofile%23profile-notifications"
+            ),
         )
     ]
     with get_session_context() as db:
@@ -337,4 +340,5 @@ def test_comment_notification_delivery_uses_context_deep_link_and_handles_unlink
         assert unlinked_notification.last_error == "telegram_identity_not_linked"
         assert unlinked_notification.action_url == (
             f"/app?workout_id={unlinked_workout_id}&comment_id={unlinked.json()['id']}"
+            "&return_to=%2Fapp%3Fsection%3Dprofile%23profile-notifications"
         )

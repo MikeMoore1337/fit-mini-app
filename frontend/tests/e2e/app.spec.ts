@@ -498,6 +498,9 @@ async function mockApi(
     withCoachApplication = false,
     withCoachProgram = false,
     withTrainingPreferences = false,
+    notificationItems = [] as Array<Record<string, unknown>>,
+    telegramLinked = true,
+    staleNotificationIds = [] as number[],
   } = {},
 ) {
   let role: 'client' | 'coach' | 'admin' = 'client';
@@ -857,10 +860,31 @@ async function mockApi(
         json: {
           workout_reminders_enabled: true,
           weekly_check_in_reminders_enabled: true,
+          measurement_reminders_enabled: false,
+          telegram_enabled: true,
+          telegram_linked: telegramLinked,
           reminder_hour: 9,
+          quiet_hours_start: null,
+          quiet_hours_end: null,
         },
       });
-    if (path.endsWith('/notifications')) return route.fulfill({ json: [] });
+    if (path.endsWith('/notifications/read-all'))
+      return route.fulfill({ json: { updated: notificationItems.length } });
+    const notificationOpenMatch = path.match(/\/notifications\/(\d+)\/open$/);
+    if (notificationOpenMatch) {
+      const notificationId = Number(notificationOpenMatch[1]);
+      const stale = staleNotificationIds.includes(notificationId);
+      return route.fulfill({
+        json: {
+          destination: stale ? '/app?section=profile#profile-notifications' : '/app?section=today',
+          stale,
+          message: stale
+            ? 'Связанный объект больше недоступен. Вы вернулись в центр уведомлений.'
+            : null,
+        },
+      });
+    }
+    if (path.endsWith('/notifications')) return route.fulfill({ json: notificationItems });
     if (path.endsWith('/programs/exercises/1'))
       return route.fulfill({
         json: {
@@ -1642,9 +1666,8 @@ test('профиль содержит уведомления, а карточк�
   await page.getByRole('button', { name: 'Клиент' }).click();
 
   await openAppDestination(page, 'Профиль');
-  await openCard(page, 'Напоминания о тренировках');
-  await expect(page.getByRole('heading', { name: 'Напоминания о тренировках' })).toBeVisible();
-  await expect(page.getByText('Личные уведомления')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Каналы' })).toBeVisible();
+  await expect(page.getByText('Личное напоминание', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Подписка' })).toHaveCount(0);
 
   const birthDate = page.getByLabel('Дата рождения');
@@ -1660,7 +1683,7 @@ test('профиль содержит уведомления, а карточк�
     birthDateControlBox!.x + birthDateControlBox!.width,
   );
 
-  const reminderTime = page.getByLabel('Час отправки');
+  const reminderTime = page.getByLabel('Час для напоминаний без точного времени');
   const reminderTimeControl = page.locator('.reminder-time-control');
   const [reminderTimeBox, reminderTimeControlBox] = await Promise.all([
     reminderTime.boundingBox(),
@@ -1674,7 +1697,7 @@ test('профиль содержит уведомления, а карточк�
   );
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
 
-  await page.getByText('Личные уведомления').click();
+  await page.getByText('Личное напоминание', { exact: true }).click();
   const notificationDate = page.locator('.notification-date-control input');
   await expect(notificationDate).toHaveAttribute('type', 'date');
   await expect(notificationDate).toHaveCSS('text-align', 'center');
@@ -1694,14 +1717,14 @@ test('профиль содержит уведомления, а карточк�
     (request) =>
       new URL(request.url()).pathname.endsWith('/notifications') && request.method() === 'POST',
   );
-  await page.getByRole('button', { name: 'Создать уведомление' }).click();
+  await page.getByRole('button', { name: 'Создать напоминание' }).click();
   const notificationPayload = (await notificationRequest).postDataJSON() as {
     scheduled_for: string;
   };
   expect(notificationPayload.scheduled_for).toMatch(/^\d{4}-\d{2}-\d{2}T09:00:00$/);
 
   await openAppDestination(page, 'Питание');
-  await expect(page.getByRole('heading', { name: 'Напоминания о тренировках' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Каналы' })).toHaveCount(0);
 
   await openAppDestination(page, 'Упражнения');
   await expect(page.getByRole('heading', { name: 'Упражнения', exact: true })).toBeVisible();
@@ -1733,6 +1756,110 @@ test('профиль содержит уведомления, а карточк�
   await expect(page.locator('.exercise-lightbox')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.locator('.exercise-lightbox')).toHaveCount(0);
+});
+
+test('notification settings explain unavailable Telegram and stale targets recover in place', async ({
+  page,
+}) => {
+  const notificationItems = [
+    {
+      id: 64,
+      category: 'trainer_comment',
+      event_kind: 'transactional',
+      title: 'Комментарий тренера к тренировке',
+      body: 'Сохраняйте контролируемый темп в эксцентрической фазе и не ускоряйте последний повтор очень длинного рабочего подхода.',
+      created_at: '2030-01-10T10:15:00',
+      scheduled_for: '2030-01-10T10:15:00',
+      delivery_status: 'cancelled',
+      sent_at: null,
+      read_at: null,
+      action_url: '/app?workout_id=999&comment_id=991',
+    },
+  ];
+  await mockApi(page, {
+    notificationItems,
+    telegramLinked: false,
+    staleNotificationIds: [64],
+  });
+  await page.goto('/app?section=profile#profile-notifications');
+  await page.getByRole('button', { name: 'Клиент' }).click();
+  await openAppDestination(page, 'Профиль');
+
+  for (const viewport of [
+    { width: 360, height: 800 },
+    { width: 390, height: 844 },
+    { width: 430, height: 932 },
+    { width: 768, height: 900 },
+    { width: 1280, height: 900 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await expect(
+      page.getByText('Недоступно: сначала свяжите Telegram в разделе доступа'),
+    ).toBeVisible();
+    await expect(page.getByLabel('Telegram')).toBeDisabled();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
+  }
+
+  const unread = page.locator('.notification-row--unread');
+  const unreadColors = await unread.evaluate((element) => {
+    const styles = getComputedStyle(element);
+    const boundarySample = document.createElement('span');
+    boundarySample.style.color = 'var(--v2-lime)';
+    const surfaceSample = document.createElement('span');
+    surfaceSample.style.backgroundColor = 'var(--v2-surface-secondary)';
+    document.body.append(boundarySample, surfaceSample);
+    const expectedBoundary = getComputedStyle(boundarySample).color;
+    const expectedSurface = getComputedStyle(surfaceSample).backgroundColor;
+    boundarySample.remove();
+    surfaceSample.remove();
+    return {
+      boundary: styles.borderInlineStartColor,
+      expected: expectedBoundary,
+      surface: styles.backgroundColor,
+      expectedSurface,
+    };
+  });
+  expect(unreadColors.boundary).toBe(unreadColors.expected);
+  expect(unreadColors.surface).toBe(unreadColors.expectedSurface);
+
+  await page.getByRole('button', { name: 'Открыть: Комментарий тренера к тренировке' }).click();
+  await expect(page).toHaveURL('/app?section=profile#profile-notifications');
+  await expect(page.getByText(/Связанный объект больше недоступен/)).toBeVisible();
+});
+
+test('notification empty and error states keep compact profile rhythm', async ({ page }) => {
+  await mockApi(page, { notificationItems: [] });
+  await page.route('**/api/v1/notifications/settings', (route) =>
+    route.fulfill({ status: 503, json: { detail: 'Настройки временно недоступны' } }),
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Клиент' }).click();
+  await openAppDestination(page, 'Профиль');
+  await expect(page.getByText('Настройки временно недоступны')).toBeVisible();
+  await expect(page.getByText('Уведомлений пока нет')).toBeVisible();
+
+  const stateHeights = await page
+    .locator('#profile-notifications .ui-state')
+    .evaluateAll((states) => states.map((state) => state.getBoundingClientRect().height));
+  expect(stateHeights).toHaveLength(2);
+  expect(Math.max(...stateHeights)).toBeLessThanOrEqual(150);
+
+  const sectionRhythm = await page.evaluate(() => {
+    const notificationSection = document.querySelector<HTMLElement>('#profile-notifications');
+    const securitySection = document.querySelector<HTMLElement>('#profile-security');
+    return [notificationSection, securitySection].map((section) => {
+      const styles = getComputedStyle(section!);
+      return {
+        gap: Number.parseFloat(styles.rowGap),
+        paddingTop: Number.parseFloat(styles.paddingTop),
+      };
+    });
+  });
+  for (const rhythm of sectionRhythm) {
+    expect(rhythm.gap).toBeLessThanOrEqual(12);
+    expect(rhythm.paddingTop).toBeLessThanOrEqual(18);
+  }
 });
 
 test('описание упражнения использует широкую панель в веб-версии', async ({ page }) => {

@@ -13,6 +13,7 @@ export interface PlatformApiOptions {
   programHistory?: 'empty' | 'one' | 'many';
   progressionOutcome?: ProgressionOutcome;
   longExerciseName?: boolean;
+  notificationState?: 'empty' | 'populated' | 'unlinked' | 'stale';
 }
 
 export interface PlatformApiController {
@@ -82,6 +83,7 @@ export async function installPlatformApi(
   let finishCalls = 0;
   let manualTargetSaves = 0;
   let weeklyReviewSubmits = 0;
+  let notificationsRead = false;
   const weeklyDecisions: string[] = [];
   const requestedNutritionReportPeriods: string[] = [];
   let setVersion = 1;
@@ -1393,6 +1395,76 @@ export async function installPlatformApi(
       if (decision === 'accept')
         currentTarget = { ...currentTarget, calories: 2300, source: 'adaptive' };
       return route.fulfill({ json: calibration() });
+    }
+    if (path.endsWith('/notifications/settings')) {
+      const linked = options.notificationState !== 'unlinked';
+      return route.fulfill({
+        json: {
+          workout_reminders_enabled: true,
+          weekly_check_in_reminders_enabled: true,
+          measurement_reminders_enabled: false,
+          telegram_enabled: true,
+          telegram_linked: linked,
+          reminder_hour: 9,
+          quiet_hours_start: '22:00:00',
+          quiet_hours_end: '08:00:00',
+        },
+      });
+    }
+    if (path.endsWith('/notifications/read-all')) {
+      notificationsRead = true;
+      return route.fulfill({ json: { updated: 2 } });
+    }
+    if (/\/notifications\/\d+\/open$/.test(path)) {
+      const stale = options.notificationState === 'stale';
+      notificationsRead = true;
+      return route.fulfill({
+        json: {
+          destination: stale
+            ? '/app?section=profile#profile-notifications'
+            : '/app?workout_id=43&comment_id=91&return_to=%2Fapp%3Fsection%3Dprofile%23profile-notifications',
+          stale,
+          message: stale
+            ? 'Связанный объект больше недоступен. Вы вернулись в центр уведомлений.'
+            : null,
+        },
+      });
+    }
+    if (path.endsWith('/notifications') && request.method() === 'GET') {
+      if (!options.notificationState || options.notificationState === 'empty') {
+        return route.fulfill({ json: [] });
+      }
+      return route.fulfill({
+        json: [
+          {
+            id: 91,
+            category: 'trainer_comment',
+            event_kind: 'transactional',
+            title: 'Комментарий тренера к тренировке',
+            body: 'Сохраняйте контролируемый темп в эксцентрической фазе и не ускоряйте последний повтор длинного рабочего подхода.',
+            created_at: `${today}T10:15:00`,
+            scheduled_for: `${today}T10:15:00`,
+            delivery_status: 'sent',
+            sent_at: `${today}T10:15:05`,
+            read_at: notificationsRead ? `${today}T10:20:00` : null,
+            action_url:
+              '/app?workout_id=43&comment_id=91&return_to=%2Fapp%3Fsection%3Dprofile%23profile-notifications',
+          },
+          {
+            id: 92,
+            category: 'measurement_reminder',
+            event_kind: 'reminder',
+            title: 'Пора обновить замеры',
+            body: 'Регулярные замеры помогают видеть фактическую динамику без оценочных выводов.',
+            created_at: `${today}T08:00:00`,
+            scheduled_for: `${today}T09:00:00`,
+            delivery_status: 'queued',
+            sent_at: null,
+            read_at: notificationsRead ? `${today}T10:20:00` : null,
+            action_url: '/app?section=progress',
+          },
+        ],
+      });
     }
     if (/\/workouts\/\d+\/comments$/.test(path)) return route.fulfill({ json: [] });
     if (path.endsWith('/nutrition/targets/history') && request.method() === 'GET') {

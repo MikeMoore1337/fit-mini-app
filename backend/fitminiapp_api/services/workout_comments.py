@@ -7,7 +7,7 @@ from fitminiapp_api.core.timezone import now_msk_naive
 from fitminiapp_api.models.feedback import WorkoutComment, WorkoutCommentRevision
 from fitminiapp_api.models.program import UserProgram, UserWorkout, UserWorkoutExercise
 from fitminiapp_api.models.user import CoachClient, User
-from fitminiapp_api.services.notifications import queue_telegram_notification
+from fitminiapp_api.services.notifications import queue_notification
 
 
 class WorkoutCommentError(Exception):
@@ -189,12 +189,16 @@ def create_workout_comment(
 
     client = db.query(User).filter(User.id == client_id, User.is_active.is_(True)).first()
     if client is not None:
-        action_url = f"/app?workout_id={workout.id}&comment_id={comment.id}"
+        action_url = (
+            f"/app?workout_id={workout.id}&comment_id={comment.id}"
+            "&return_to=%2Fapp%3Fsection%3Dprofile%23profile-notifications"
+        )
         if workout_exercise_id is not None:
             action_url += f"&workout_exercise_id={workout_exercise_id}"
-        queue_telegram_notification(
+        queue_notification(
             db,
             client,
+            category="trainer_comment",
             title="Комментарий тренера к тренировке",
             body=f"К тренировке «{workout.title}»: {_notification_preview(body)}",
             dedupe_key=f"trainer_feedback:{comment.id}",

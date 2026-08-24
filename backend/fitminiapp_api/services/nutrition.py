@@ -8,9 +8,7 @@ from sqlalchemy.orm import Session, joinedload
 from fitminiapp_api.core.timezone import (
     now_for_user_naive,
     today_for_user,
-    user_local_naive_to_utc_naive,
 )
-from fitminiapp_api.models.notification import Notification
 from fitminiapp_api.models.nutrition import NutritionTarget
 from fitminiapp_api.models.user import CoachClient, User
 from fitminiapp_api.schemas.nutrition import (
@@ -21,6 +19,7 @@ from fitminiapp_api.schemas.nutrition import (
     NutritionTargetResponse,
     NutritionTargetSave,
 )
+from fitminiapp_api.services.notifications import queue_notification
 from fitminiapp_api.services.profile import ensure_profile
 
 VALID_SEXES = {"male", "female"}
@@ -521,27 +520,23 @@ def _queue_nutrition_updated_notification(
     target: NutritionTarget,
     changed_by: User,
 ) -> None:
-    scheduled_for = now_for_user_naive(target_user)
     actor_text = (
         "Тренер обновил ориентиры питания."
         if changed_by.id != target_user.id
         else "Ваши ориентиры питания изменились."
     )
     title = "КБЖУ пересчитаны" if target.source == "calculated" else "Ориентиры КБЖУ обновлены"
-    db.add(
-        Notification(
-            user_id=target_user.id,
-            channel="telegram",
-            title=title,
-            body=(
-                f"{actor_text} Новые ориентиры: {target.calories} ккал · "
-                f"Б {target.protein_g} г · Ж {target.fat_g} г · У {target.carbs_g} г. "
-                "Проверьте раздел «КБЖУ»."
-            ),
-            scheduled_for=scheduled_for,
-            scheduled_for_utc=user_local_naive_to_utc_naive(scheduled_for, target_user),
-            status="queued",
-        )
+    queue_notification(
+        db,
+        target_user,
+        category="nutrition_update",
+        title=title,
+        body=(
+            f"{actor_text} Новые ориентиры: {target.calories} ккал · "
+            f"Б {target.protein_g} г · Ж {target.fat_g} г · У {target.carbs_g} г. "
+            "Проверьте раздел «КБЖУ»."
+        ),
+        action_url="/app?section=nutrition",
     )
 
 

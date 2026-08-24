@@ -1952,6 +1952,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Read All Notifications */
+        patch: operations["read_all_notifications_api_v1_notifications_read_all_patch"];
+        trace?: never;
+    };
+    "/api/v1/notifications/{notification_id}/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Open Notification */
+        post: operations["open_notification_api_v1_notifications__notification_id__open_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/{notification_id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Read Notification */
+        patch: operations["read_notification_api_v1_notifications__notification_id__read_patch"];
+        trace?: never;
+    };
     "/api/v1/notifications/{notification_id}": {
         parameters: {
             query?: never;
@@ -4048,14 +4099,37 @@ export interface components {
              */
             scheduled_for: string;
         };
+        /** NotificationOpenResponse */
+        NotificationOpenResponse: {
+            /** Destination */
+            destination: string;
+            /** Stale */
+            stale: boolean;
+            /** Message */
+            message?: string | null;
+        };
+        /** NotificationReadAllResponse */
+        NotificationReadAllResponse: {
+            /** Updated */
+            updated: number;
+        };
         /** NotificationResponse */
         NotificationResponse: {
             /** Id */
             id: number;
+            /** Category */
+            category: string;
+            /** Event Kind */
+            event_kind: string;
             /** Title */
             title: string;
             /** Body */
             body: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
             /**
              * Scheduled For
              * Format: date-time
@@ -4063,8 +4137,12 @@ export interface components {
             scheduled_for: string;
             /** Status */
             status: string;
+            /** Delivery Status */
+            delivery_status: string;
             /** Sent At */
             sent_at?: string | null;
+            /** Read At */
+            read_at?: string | null;
             /** Action Url */
             action_url?: string | null;
         };
@@ -4074,17 +4152,35 @@ export interface components {
             workout_reminders_enabled: boolean;
             /** Weekly Check In Reminders Enabled */
             weekly_check_in_reminders_enabled: boolean;
+            /** Measurement Reminders Enabled */
+            measurement_reminders_enabled: boolean;
+            /** Telegram Enabled */
+            telegram_enabled: boolean;
+            /** Telegram Linked */
+            telegram_linked: boolean;
             /** Reminder Hour */
             reminder_hour: number;
+            /** Quiet Hours Start */
+            quiet_hours_start?: string | null;
+            /** Quiet Hours End */
+            quiet_hours_end?: string | null;
         };
         /** NotificationSettingUpdate */
         NotificationSettingUpdate: {
             /** Workout Reminders Enabled */
-            workout_reminders_enabled: boolean;
+            workout_reminders_enabled?: boolean | null;
             /** Weekly Check In Reminders Enabled */
             weekly_check_in_reminders_enabled?: boolean | null;
+            /** Measurement Reminders Enabled */
+            measurement_reminders_enabled?: boolean | null;
+            /** Telegram Enabled */
+            telegram_enabled?: boolean | null;
             /** Reminder Hour */
-            reminder_hour: number;
+            reminder_hour?: number | null;
+            /** Quiet Hours Start */
+            quiet_hours_start?: string | null;
+            /** Quiet Hours End */
+            quiet_hours_end?: string | null;
         };
         /** NutritionAssignedByResponse */
         NutritionAssignedByResponse: {
@@ -10564,6 +10660,88 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_all_notifications_api_v1_notifications_read_all_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationReadAllResponse"];
+                };
+            };
+        };
+    };
+    open_notification_api_v1_notifications__notification_id__open_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notification_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationOpenResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_notification_api_v1_notifications__notification_id__read_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notification_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
