@@ -1,4 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
+import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
 import { useAuth } from '../../app/AuthProvider';
 import { api, ApiError } from '../../shared/api/client';
 import type { OAuthLinkCreate, TelegramLinkCreate } from '../../shared/api/types';
@@ -62,6 +63,7 @@ export function AccountPrivacy() {
   const exportMutation = useMutation({
     mutationFn: () => api<unknown>('/api/v1/me/export'),
     onSuccess: (payload) => {
+      trackProductEvent({ name: 'data_export_requested', surface: productEventSurface() });
       downloadJson(payload);
       toast('Архив данных скачан');
     },
@@ -74,6 +76,7 @@ export function AccountPrivacy() {
         body: { confirmation: 'DELETE' },
       }),
     onSuccess: async () => {
+      trackProductEvent({ name: 'account_delete_completed', surface: productEventSurface() });
       toast('Аккаунт удалён');
       await logout();
     },
@@ -235,8 +238,13 @@ export function AccountPrivacy() {
                     'Профиль, замеры, программы и история тренировок будут удалены безвозвратно. Перед удалением можно скачать копию данных.',
                   confirmText: 'Удалить навсегда',
                 })
-              )
+              ) {
+                trackProductEvent({
+                  name: 'account_delete_started',
+                  surface: productEventSurface(),
+                });
                 deleteMutation.mutate();
+              }
             }}
           >
             {deleteMutation.isPending ? 'Удаляем…' : 'Удалить аккаунт'}

@@ -9,6 +9,7 @@ import type {
 } from '../../shared/api/types';
 import { Badge, Card, CloseIcon, ErrorState } from '../../shared/ui/common';
 import { useModalA11y } from '../../shared/ui/useModalA11y';
+import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
 
 type RecommendationGoal = NonNullable<ProgramRecommendationRequest['goal']>;
 type RecommendationExperience = NonNullable<ProgramRecommendationRequest['experience']>;
@@ -218,7 +219,13 @@ export function ProgramRecommendation({
         method: 'POST',
         body: payload,
       }),
-    onSuccess: () => setShowResult(true),
+    onSuccess: () => {
+      trackProductEvent({
+        name: 'program_recommendation_completed',
+        surface: productEventSurface(),
+      });
+      setShowResult(true);
+    },
   });
 
   const canContinue =
@@ -231,6 +238,12 @@ export function ProgramRecommendation({
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!canContinue) return;
+    if (step === 0) {
+      trackProductEvent({
+        name: 'program_recommendation_started',
+        surface: productEventSurface(),
+      });
+    }
     if (step < stepTitles.length - 1) {
       setStep((current) => current + 1);
       return;

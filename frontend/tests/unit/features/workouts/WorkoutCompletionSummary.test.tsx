@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Workout } from '../../../../src/shared/api/types';
@@ -9,6 +9,10 @@ import {
   formatCompletionDuration,
   WorkoutCompletionSummary,
 } from '../../../../src/features/workouts/WorkoutCompletionSummary';
+import {
+  PRODUCT_EVENT_NAME,
+  type ProductEventEnvelope,
+} from '../../../../src/shared/analytics/productEvents';
 
 const apiMock = vi.fn();
 
@@ -135,6 +139,10 @@ describe('WorkoutCompletionSummary', () => {
   });
 
   it('shows factual confirmation, next step, recorded load and canonical records', async () => {
+    const analyticsEvents: ProductEventEnvelope[] = [];
+    const listener = (event: Event) =>
+      analyticsEvents.push((event as CustomEvent<ProductEventEnvelope>).detail);
+    window.addEventListener(PRODUCT_EVENT_NAME, listener);
     const { onReturnToday } = renderSummary();
 
     expect(screen.getByRole('heading', { name: 'Тренировка завершена' })).toBeInTheDocument();
@@ -145,6 +153,16 @@ describe('WorkoutCompletionSummary', () => {
     expect(
       screen.queryByText(/performance score|readiness|перетренирован/i),
     ).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(analyticsEvents).toContainEqual(
+        expect.objectContaining({
+          name: 'workout_completion_summary_viewed',
+          surface: 'desktop_web',
+        }),
+      ),
+    );
+    expect(JSON.stringify(analyticsEvents)).not.toContain('Приседания');
+    expect(JSON.stringify(analyticsEvents)).not.toContain('actual_weight');
 
     await userEvent.click(screen.getByRole('button', { name: 'Вернуться в Сегодня' }));
     expect(onReturnToday).toHaveBeenCalledOnce();
@@ -152,6 +170,7 @@ describe('WorkoutCompletionSummary', () => {
       'href',
       '/app?section=progress',
     );
+    window.removeEventListener(PRODUCT_EVENT_NAME, listener);
   });
 
   it('keeps the optional note after a recoverable save error and retries idempotent PUT', async () => {

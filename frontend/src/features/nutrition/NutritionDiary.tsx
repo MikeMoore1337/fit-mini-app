@@ -22,6 +22,7 @@ import {
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { FoodPickerDialog, type MealType } from './FoodPickerDialog';
 import { CopyDiaryDialog, type CopySubject } from './CopyDiaryDialog';
+import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
 
 const mealOrder: MealType[] = ['breakfast', 'lunch', 'dinner', 'snacks'];
 const mealLabels: Record<MealType, string> = {
@@ -440,7 +441,13 @@ function DayCompleteness({ day }: { day: FoodDiaryDay }) {
         method: 'PUT',
         body: { diary_date: day.diary_date, status },
       }),
-    onSuccess: async (updated) => {
+    onSuccess: async (updated, status) => {
+      if (status === 'incomplete') {
+        trackProductEvent({
+          name: 'nutrition_incomplete_day_confirmed',
+          surface: productEventSurface(),
+        });
+      }
       queryClient.setQueryData(queryKeys.nutrition.diaryDate(day.diary_date), updated);
       await invalidateNutritionSummaries(queryClient);
       toast('Полнота дня обновлена');

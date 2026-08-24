@@ -14,6 +14,11 @@ import { weeklyReviewDraftStorageKey } from '../../shared/userScopedStorage';
 import { Badge, Card, DisclosureIcon, ErrorState, LoadingState } from '../../shared/ui/common';
 import { DataConfidence } from '../../shared/ui/DataConfidence';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
+import {
+  productEventSurface,
+  trackCoreProductEvent,
+  trackProductEvent,
+} from '../../shared/analytics/productEvents';
 
 const scoreOptions = [1, 2, 3, 4, 5] as const;
 
@@ -172,6 +177,16 @@ export function WeeklyCheckInCard({
     mutationFn: (payload: WeeklyCheckInSubmit) =>
       api('/api/v1/check-ins/weekly', { method: 'POST', body: payload }),
     onSuccess: async (_result, payload) => {
+      const surface = productEventSurface();
+      if (payload.status === 'skipped') {
+        trackProductEvent({ name: 'weekly_review_skipped', surface });
+      } else {
+        trackProductEvent({ name: 'check_in_logged', surface });
+        trackCoreProductEvent(
+          { name: 'weekly_review_completed', surface },
+          'weekly_review_completed',
+        );
+      }
       clearDraft({ ...emptyDraft, weekStart: current.data?.week_start ?? null });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['weekly-check-ins'] }),
@@ -197,7 +212,14 @@ export function WeeklyCheckInCard({
         method: 'POST',
         body: { decision: value },
       }),
-    onSuccess: async (calibration) => {
+    onSuccess: async (calibration, variables) => {
+      trackProductEvent({
+        name:
+          variables.value === 'accept'
+            ? 'weekly_review_proposal_accepted'
+            : 'weekly_review_proposal_rejected',
+        surface: productEventSurface(),
+      });
       setDraft((value) => ({ ...value, calibration }));
       if (calibration.status === 'accepted') await invalidateNutritionSummaries(queryClient);
       finishReview(calibration);
@@ -216,6 +238,10 @@ export function WeeklyCheckInCard({
       );
     },
     onSuccess: async () => {
+      trackProductEvent({
+        name: 'nutrition_incomplete_day_confirmed',
+        surface: productEventSurface(),
+      });
       setDraft((value) => ({ ...value, selectedLowDays: [], calibration: null }));
       await queryClient.invalidateQueries({ queryKey: ['weekly-check-ins', 'current'] });
       toast('Выбранные дни отмечены как неполные');
@@ -427,7 +453,13 @@ export function WeeklyCheckInCard({
                   <button
                     type="button"
                     className="weekly-review__primary"
-                    onClick={() => setDraft((value) => ({ ...value, step: 'questions' }))}
+                    onClick={() => {
+                      trackProductEvent({
+                        name: 'weekly_review_started',
+                        surface: productEventSurface(),
+                      });
+                      setDraft((value) => ({ ...value, step: 'questions' }));
+                    }}
                   >
                     Всё верно, продолжить
                   </button>

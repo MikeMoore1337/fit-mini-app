@@ -1,13 +1,18 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   createProductAnalytics,
+  clearProductLoginAttempt,
   isProductEvent,
   isProductEventEnvelope,
+  markProductLoginStarted,
   PRODUCT_ANALYTICS_STATUS_NAME,
   PRODUCT_EVENT_NAME,
   PRODUCT_EVENT_SCHEMA_VERSION,
   productAnalyticsEnvironment,
+  productEventSurface,
+  trackProductLoginCompletedIfStarted,
   type ProductAnalyticsStatus,
+  type ProductAnalyticsProvider,
   type ProductEvent,
   type ProductEventEnvelope,
 } from '../../../../src/shared/analytics/productEvents';
@@ -18,63 +23,129 @@ function testAnalytics(target = new EventTarget()) {
     analytics: createProductAnalytics({
       target,
       environment: 'test',
-      now: () => new Date('2026-08-19T10:00:00.000Z'),
+      now: () => new Date('2026-08-24T10:00:00.000Z'),
     }),
   };
 }
 
+function allowedProvider(send: ProductAnalyticsProvider['send'] = vi.fn()) {
+  return {
+    name: 'test_sink',
+    environment: 'test' as const,
+    isDeliveryAllowed: () => true,
+    send,
+  };
+}
+
+afterEach(() => {
+  clearProductLoginAttempt();
+  vi.unstubAllGlobals();
+  delete window.Telegram;
+});
+
 describe('product event contract', () => {
-  it('emits a versioned provider-neutral envelope', () => {
+  it('emits a versioned provider-neutral envelope with a privacy-safe surface', () => {
     const { target, analytics } = testAnalytics();
     const events: ProductEventEnvelope[] = [];
     target.addEventListener(PRODUCT_EVENT_NAME, (event) => {
       events.push((event as CustomEvent<ProductEventEnvelope>).detail);
     });
 
-    expect(analytics.track({ name: 'workout_completed', surface: 'telegram' })).toBe(true);
+    expect(analytics.track({ name: 'workout_completed', surface: 'tma' })).toBe(true);
     expect(events).toEqual([
       {
         name: 'workout_completed',
-        surface: 'telegram',
+        surface: 'tma',
         schema_version: PRODUCT_EVENT_SCHEMA_VERSION,
         environment: 'test',
-        occurred_at: '2026-08-19T10:00:00.000Z',
+        occurred_at: '2026-08-24T10:00:00.000Z',
       },
     ]);
     expect(isProductEventEnvelope(events[0])).toBe(true);
   });
 
-  it('deduplicates only when the caller selects session scope', () => {
+  it('classifies desktop web, mobile web and TMA without user-agent fingerprinting', () => {
+    const matchMedia = vi.fn().mockReturnValue({ matches: false });
+    vi.stubGlobal('matchMedia', matchMedia);
+    expect(productEventSurface()).toBe('desktop_web');
+    expect(matchMedia).toHaveBeenCalledWith('(max-width: 767px)');
+
+    matchMedia.mockReturnValue({ matches: true });
+    expect(productEventSurface()).toBe('mobile_web');
+
+    window.Telegram = { WebApp: { initData: 'signed-init-data' } };
+    expect(productEventSurface()).toBe('tma');
+  });
+
+  it('deduplicates StrictMode and foreground repeats while keeping distinct journey scopes', () => {
     const { target, analytics } = testAnalytics();
     const listener = vi.fn();
     target.addEventListener(PRODUCT_EVENT_NAME, listener);
-    const event = { name: 'onboarding_started', surface: 'web' } as const;
+    const event = { name: 'workout_completion_summary_viewed', surface: 'mobile_web' } as const;
 
-    expect(analytics.track(event, { dedupe: 'session' })).toBe(true);
-    expect(analytics.track(event, { dedupe: 'session' })).toBe(false);
-    expect(listener).toHaveBeenCalledOnce();
+    expect(analytics.track(event, { dedupe: 'session', dedupeKey: 'workout:101' })).toBe(true);
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(analytics.track(event, { dedupe: 'session', dedupeKey: 'workout:101' })).toBe(false);
+    expect(analytics.track(event, { dedupe: 'session', dedupeKey: 'workout:102' })).toBe(true);
+    expect(listener).toHaveBeenCalledTimes(2);
 
-    expect(analytics.track({ name: 'food_logged', surface: 'web' })).toBe(true);
-    expect(analytics.track({ name: 'food_logged', surface: 'web' })).toBe(true);
-    expect(listener).toHaveBeenCalledTimes(3);
+    expect(
+      analytics.track({
+        name: 'food_logged',
+        surface: 'mobile_web',
+        entry_method: 'recent',
+      }),
+    ).toBe(true);
+    expect(
+      analytics.track({
+        name: 'food_logged',
+        surface: 'mobile_web',
+        entry_method: 'recent',
+      }),
+    ).toBe(true);
+    expect(listener).toHaveBeenCalledTimes(4);
+  });
+
+  it('completes auth only for a pending attempt and consumes the cross-navigation marker', () => {
+    const events: ProductEventEnvelope[] = [];
+    const listener = (event: Event) => {
+      events.push((event as CustomEvent<ProductEventEnvelope>).detail);
+    };
+    window.addEventListener(PRODUCT_EVENT_NAME, listener);
+
+    expect(trackProductLoginCompletedIfStarted()).toBe(false);
+    markProductLoginStarted();
+    expect(window.sessionStorage.getItem('fit_product_analytics_login_attempt')).toBe('1');
+    expect(trackProductLoginCompletedIfStarted()).toBe(true);
+    expect(trackProductLoginCompletedIfStarted()).toBe(false);
+    expect(events.map((event) => event.name)).toEqual(['login_started', 'login_completed']);
+    expect(events.every((event) => Object.keys(event).length === 5)).toBe(true);
+
+    window.removeEventListener(PRODUCT_EVENT_NAME, listener);
   });
 
   it.each([
     ['food_contents', 'Борщ'],
+    ['food_name', 'Овсянка'],
     ['weight_kg', 81.4],
     ['waist_cm', 92],
     ['calories', 2400],
+    ['distance_km', 5],
+    ['heart_rate', 155],
     ['trainer_comment', 'private'],
+    ['support_message', 'private'],
     ['ai_conversation', 'private'],
     ['access_token', 'secret'],
+    ['init_data', 'secret'],
     ['user_id', 42],
+    ['url', '/app?token=secret'],
   ])('rejects forbidden or unversioned payload field %s', (field, value) => {
     const { target, analytics } = testAnalytics();
     const listener = vi.fn();
     target.addEventListener(PRODUCT_EVENT_NAME, listener);
     const unsafeEvent = {
       name: 'measurement_logged',
-      surface: 'web',
+      surface: 'mobile_web',
       [field]: value,
     } as unknown as ProductEvent;
 
@@ -83,50 +154,82 @@ describe('product event contract', () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
-  it('validates constrained event context values', () => {
+  it('validates constrained event context values and surface combinations', () => {
     expect(
       isProductEvent({
         name: 'onboarding_next_action_selected',
-        surface: 'web',
+        surface: 'mobile_web',
         next_action: 'programs',
       }),
     ).toBe(true);
     expect(
       isProductEvent({
+        name: 'food_logged',
+        surface: 'desktop_web',
+        entry_method: 'favorite',
+      }),
+    ).toBe(true);
+    expect(
+      isProductEvent({
+        name: 'today_primary_action_selected',
+        surface: 'tma',
+        destination: 'workout',
+      }),
+    ).toBe(true);
+    expect(
+      isProductEvent({
         name: 'onboarding_next_action_selected',
-        surface: 'web',
+        surface: 'mobile_web',
         next_action: '/private/path?token=secret',
+      }),
+    ).toBe(false);
+    expect(
+      isProductEvent({
+        name: 'tma_core_action_completed',
+        surface: 'mobile_web',
+        action: 'workout_completed',
       }),
     ).toBe(false);
   });
 
-  it('rejects unknown schema versions and malformed timestamps', () => {
+  it('rejects unknown schema versions, legacy surfaces and malformed timestamps', () => {
     const envelope = {
       name: 'workout_started',
-      surface: 'web',
+      surface: 'desktop_web',
       schema_version: PRODUCT_EVENT_SCHEMA_VERSION,
       environment: 'test',
-      occurred_at: '2026-08-19T10:00:00.000Z',
+      occurred_at: '2026-08-24T10:00:00.000Z',
     };
 
-    expect(isProductEventEnvelope({ ...envelope, schema_version: 2 })).toBe(false);
+    expect(isProductEventEnvelope({ ...envelope, schema_version: 1 })).toBe(false);
+    expect(isProductEventEnvelope({ ...envelope, surface: 'web' })).toBe(false);
     expect(isProductEventEnvelope({ ...envelope, occurred_at: '2026-99-99' })).toBe(false);
     expect(isProductEventEnvelope({ ...envelope, name: 'unknown_event' })).toBe(false);
   });
 
-  it('keeps development, test, staging and production providers isolated', () => {
+  it('keeps environments isolated and evaluates consent/config at delivery time', () => {
     const { analytics } = testAnalytics();
-    const testProvider = { name: 'test_sink', environment: 'test' as const, send: vi.fn() };
+    let deliveryAllowed = false;
+    const testProvider = {
+      name: 'test_sink',
+      environment: 'test' as const,
+      isDeliveryAllowed: () => deliveryAllowed,
+      send: vi.fn(),
+    };
     const productionProvider = {
       name: 'production_sink',
       environment: 'production' as const,
+      isDeliveryAllowed: () => true,
       send: vi.fn(),
     };
     analytics.subscribe(testProvider);
     analytics.subscribe(productionProvider);
 
-    analytics.track({ name: 'landing_viewed', surface: 'web' });
+    analytics.track({ name: 'landing_viewed', surface: 'desktop_web' });
+    expect(testProvider.send).not.toHaveBeenCalled();
 
+    deliveryAllowed = true;
+    analytics.track({ name: 'landing_app_selected', surface: 'desktop_web' });
     expect(testProvider.send).toHaveBeenCalledOnce();
     expect(productionProvider.send).not.toHaveBeenCalled();
     expect(productAnalyticsEnvironment('production')).toBe('production');
@@ -137,18 +240,19 @@ describe('product event contract', () => {
 
   it('ignores forged bus payloads before they reach a provider', () => {
     const { target, analytics } = testAnalytics();
-    const provider = { name: 'safe_sink', environment: 'test' as const, send: vi.fn() };
+    const provider = allowedProvider();
     analytics.subscribe(provider);
 
     target.dispatchEvent(
       new CustomEvent(PRODUCT_EVENT_NAME, {
         detail: {
           name: 'food_logged',
-          surface: 'web',
+          surface: 'mobile_web',
+          entry_method: 'recent',
           food_contents: 'private',
           schema_version: PRODUCT_EVENT_SCHEMA_VERSION,
           environment: 'test',
-          occurred_at: '2026-08-19T10:00:00.000Z',
+          occurred_at: '2026-08-24T10:00:00.000Z',
         },
       }),
     );
@@ -162,18 +266,16 @@ describe('product event contract', () => {
     target.addEventListener(PRODUCT_ANALYTICS_STATUS_NAME, (event) => {
       statuses.push((event as CustomEvent<ProductAnalyticsStatus>).detail);
     });
-    analytics.subscribe({
-      name: 'unavailable_sink',
-      environment: 'test',
-      send: () => Promise.reject(new Error('provider payload must not escape')),
-    });
+    analytics.subscribe(
+      allowedProvider(() => Promise.reject(new Error('provider payload must not escape'))),
+    );
 
-    expect(analytics.track({ name: 'login_completed', surface: 'web' })).toBe(true);
+    expect(analytics.track({ name: 'login_completed', surface: 'desktop_web' })).toBe(true);
     await Promise.resolve();
     await Promise.resolve();
 
     expect(statuses).toEqual([
-      { provider: 'unavailable_sink', environment: 'test', reason: 'provider_unavailable' },
+      { provider: 'test_sink', environment: 'test', reason: 'provider_unavailable' },
     ]);
     expect(JSON.stringify(statuses)).not.toContain('provider payload must not escape');
   });

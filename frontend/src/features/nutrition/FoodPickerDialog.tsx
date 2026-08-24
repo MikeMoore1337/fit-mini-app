@@ -13,7 +13,12 @@ import type {
 import { usePersistentState } from '../../shared/storage';
 import { foodDraftStorageKey } from '../../shared/userScopedStorage';
 import { invalidateNutritionSummaries } from '../../shared/queryKeys';
-import { trackProductEvent, productEventSurface } from '../../shared/analytics/productEvents';
+import {
+  trackCoreProductEvent,
+  trackProductEvent,
+  productEventSurface,
+  type FoodEntryMethod,
+} from '../../shared/analytics/productEvents';
 import {
   Badge,
   Button,
@@ -258,6 +263,9 @@ export function FoodPickerDialog({
   );
   const [view, setView] = useState<PickerView>(initialView);
   const [source, setSource] = useState<PickerSource>('recent');
+  const [entryMethod, setEntryMethod] = useState<FoodEntryMethod>(
+    initialView === 'quick-add' ? 'quick_add' : 'recent',
+  );
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [externalQuery, setExternalQuery] = useState('');
@@ -402,11 +410,15 @@ export function FoodPickerDialog({
         queryClient.invalidateQueries({ queryKey: ['nutrition', 'foods', 'recent'] }),
         invalidateNutritionSummaries(queryClient),
       ]);
-      trackProductEvent({ name: 'food_logged', surface: productEventSurface() });
+      trackCoreProductEvent(
+        { name: 'food_logged', surface: productEventSurface(), entry_method: entryMethod },
+        'food_logged',
+      );
       toast(`Добавлено в ${mealLabels[mealType]}`);
       if (variables.closeAfter) onClose();
       else {
         setSelectedRecipe(null);
+        setEntryMethod(initialView === 'quick-add' ? 'quick_add' : 'recent');
         setView(initialView);
       }
     },
@@ -419,6 +431,11 @@ export function FoodPickerDialog({
     updateDraft({ quick: { ...quick, ...changes } });
   };
   const selectFood = (food: Food) => {
+    trackProductEvent({
+      name: 'food_log_started',
+      surface: productEventSurface(),
+      entry_method: entryMethod,
+    });
     setSelectedRecipe(null);
     updateDraft({
       food: foodDraftSelection(food),
@@ -427,6 +444,11 @@ export function FoodPickerDialog({
     });
   };
   const selectRecipe = (recipe: Recipe) => {
+    trackProductEvent({
+      name: 'food_log_started',
+      surface: productEventSurface(),
+      entry_method: 'recipe',
+    });
     updateDraft({ food: null });
     setSelectedRecipe(recipe);
     setRecipeAmount('100');
@@ -740,13 +762,25 @@ export function FoodPickerDialog({
         ) : (
           <div className="nutrition-picker__browse">
             <div className="nutrition-picker__tools" aria-label="Способы добавления">
-              <Button type="button" onClick={() => setView('quick-add')}>
+              <Button
+                type="button"
+                onClick={() => {
+                  setEntryMethod('quick_add');
+                  trackProductEvent({
+                    name: 'food_log_started',
+                    surface: productEventSurface(),
+                    entry_method: 'quick_add',
+                  });
+                  setView('quick-add');
+                }}
+              >
                 ＋ Быстрый ввод
               </Button>
               <Button
                 type="button"
                 variant="secondary"
                 onClick={() => {
+                  setEntryMethod('custom');
                   setEditingFood(undefined);
                   setEditorBarcode('');
                   setView('food-editor');
@@ -754,10 +788,24 @@ export function FoodPickerDialog({
               >
                 ＋ Свой продукт
               </Button>
-              <Button type="button" variant="secondary" onClick={() => setView('recipes')}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setEntryMethod('recipe');
+                  setView('recipes');
+                }}
+              >
                 Рецепты
               </Button>
-              <Button type="button" variant="secondary" onClick={() => setView('barcode')}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setEntryMethod('barcode');
+                  setView('barcode');
+                }}
+              >
                 Штрихкод
               </Button>
             </div>
@@ -771,6 +819,7 @@ export function FoodPickerDialog({
                 type="search"
                 value={searchInput}
                 onChange={(event) => {
+                  if (event.target.value.trim()) setEntryMethod('search');
                   setSearchInput(event.target.value);
                   setExternalQuery('');
                 }}
@@ -783,7 +832,10 @@ export function FoodPickerDialog({
                   type="button"
                   className={source === 'recent' ? 'is-active' : ''}
                   aria-pressed={source === 'recent'}
-                  onClick={() => setSource('recent')}
+                  onClick={() => {
+                    setEntryMethod('recent');
+                    setSource('recent');
+                  }}
                 >
                   Недавние
                 </button>
@@ -791,7 +843,10 @@ export function FoodPickerDialog({
                   type="button"
                   className={source === 'favorites' ? 'is-active' : ''}
                   aria-pressed={source === 'favorites'}
-                  onClick={() => setSource('favorites')}
+                  onClick={() => {
+                    setEntryMethod('favorite');
+                    setSource('favorites');
+                  }}
                 >
                   Избранное
                 </button>

@@ -70,7 +70,7 @@ export default function OnboardingPage() {
       }),
     onSuccess: () => {
       setSaved(true);
-      trackProductEvent({ name: 'onboarding_minimum_saved', surface });
+      trackProductEvent({ name: 'onboarding_completed', surface });
       void reloadUser();
     },
   });

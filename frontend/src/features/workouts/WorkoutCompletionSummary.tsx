@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type { Workout } from '../../shared/api/types';
@@ -6,6 +6,7 @@ import { formatCalendarDate } from '../../shared/dateTime';
 import { AppLink } from '../../shared/navigation/router';
 import { Badge, Button, CheckIcon } from '../../shared/ui/common';
 import { WorkoutFeedbackDisclosure } from './WorkoutFeedback';
+import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
 
 export const workoutCompletionFeedbackLabels: Record<string, string> = {
   easier_than_expected: 'Легче ожидаемого',
@@ -75,6 +76,13 @@ export function WorkoutCompletionSummary({
     note: summary?.note ?? '',
   });
   const changed = feedback !== saved.feedback || note.trim() !== saved.note;
+
+  useEffect(() => {
+    trackProductEvent(
+      { name: 'workout_completion_summary_viewed', surface: productEventSurface() },
+      { dedupe: 'session', dedupeKey: `workout:${workout.id}` },
+    );
+  }, [workout.id]);
   const saveFeedback = useMutation({
     mutationFn: () =>
       api<Workout>(`/api/v1/workouts/${workout.id}/completion-feedback`, {

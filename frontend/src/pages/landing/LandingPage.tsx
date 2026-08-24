@@ -4,6 +4,7 @@ import { PublicShell } from '../../shared/ui/PublicShell';
 import { applyRouteMetadata } from '../../shared/seo/metadata';
 import { appUrlForHostname, loginUrlForHostname } from '../../shared/navigation/appUrl';
 import { AppLink } from '../../shared/navigation/router';
+import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
 import './landing.css';
 
 export { appUrlForHostname, loginUrlForHostname } from '../../shared/navigation/appUrl';
@@ -74,6 +75,10 @@ export default function LandingPage() {
 
   useEffect(() => {
     applyRouteMetadata('/');
+    trackProductEvent(
+      { name: 'landing_viewed', surface: productEventSurface() },
+      { dedupe: 'session' },
+    );
   }, []);
 
   useEffect(() => {
@@ -109,7 +114,13 @@ export default function LandingPage() {
       }
       headerAction={
         <>
-          <a className="landing-button landing-button--compact" href={loginUrl}>
+          <a
+            className="landing-button landing-button--compact"
+            href={loginUrl}
+            onClick={() =>
+              trackProductEvent({ name: 'landing_login_selected', surface: productEventSurface() })
+            }
+          >
             Войти
           </a>
           <button
@@ -141,7 +152,16 @@ export default function LandingPage() {
               одном веб-приложении. Тренируйтесь самостоятельно или работайте вместе с тренером.
             </p>
             <div className="landing-hero__actions">
-              <a className="landing-button landing-action" href={appUrl}>
+              <a
+                className="landing-button landing-action"
+                href={appUrl}
+                onClick={() =>
+                  trackProductEvent({
+                    name: 'landing_app_selected',
+                    surface: productEventSurface(),
+                  })
+                }
+              >
                 Открыть приложение
                 <span className="landing-action__arrow" aria-hidden="true">
                   ↗
@@ -417,7 +437,13 @@ export default function LandingPage() {
             </p>
           </div>
           <div className="landing-contact__actions">
-            <a className="landing-button landing-contact__primary landing-action" href={appUrl}>
+            <a
+              className="landing-button landing-contact__primary landing-action"
+              href={appUrl}
+              onClick={() =>
+                trackProductEvent({ name: 'landing_app_selected', surface: productEventSurface() })
+              }
+            >
               Перейти в веб-приложение
               <span className="landing-action__arrow" aria-hidden="true">
                 ↗

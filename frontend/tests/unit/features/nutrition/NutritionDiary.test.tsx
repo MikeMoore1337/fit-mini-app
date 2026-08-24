@@ -3,6 +3,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NutritionDiary } from '../../../../src/features/nutrition/NutritionDiary';
 import type { Food, FoodDiaryDay, FoodDiaryEntry } from '../../../../src/shared/api/types';
+import {
+  PRODUCT_EVENT_NAME,
+  type ProductEventEnvelope,
+} from '../../../../src/shared/analytics/productEvents';
 import { dateInputValue } from '../../../../src/shared/dateTime';
 import { FeedbackProvider } from '../../../../src/shared/ui/FeedbackProvider';
 
@@ -279,6 +283,34 @@ describe('NutritionDiary', () => {
       }),
     );
     expect(await screen.findByText('Подтверждено')).toBeVisible();
+  });
+
+  it('tracks an explicit incomplete-day confirmation without diary details', async () => {
+    const analyticsEvents: ProductEventEnvelope[] = [];
+    const listener = (event: Event) => {
+      analyticsEvents.push((event as CustomEvent<ProductEventEnvelope>).detail);
+    };
+    window.addEventListener(PRODUCT_EVENT_NAME, listener);
+    apiMock.mockImplementation((path: string, options?: { method?: string; body?: unknown }) => {
+      if (path.startsWith('/api/v1/nutrition/diary?')) return Promise.resolve(makeDay());
+      if (path === '/api/v1/nutrition/diary/status' && options?.method === 'PUT') {
+        return Promise.resolve({ ...makeDay(), status_is_explicit: true });
+      }
+      throw new Error(`Unexpected API call: ${path}`);
+    });
+
+    renderDiary();
+    expect(await screen.findByRole('heading', { name: 'Заполнен частично' })).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Заполнен частично' }));
+
+    await waitFor(() =>
+      expect(
+        analyticsEvents.filter((event) => event.name === 'nutrition_incomplete_day_confirmed'),
+      ).toHaveLength(1),
+    );
+    expect(analyticsEvents.at(-1)).not.toHaveProperty('diary_date');
+    expect(analyticsEvents.at(-1)).not.toHaveProperty('energy_kcal');
+    window.removeEventListener(PRODUCT_EVENT_NAME, listener);
   });
 
   it('keeps the quantity draft through a recoverable failure and remount', async () => {

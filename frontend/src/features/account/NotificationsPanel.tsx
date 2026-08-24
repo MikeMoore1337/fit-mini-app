@@ -12,6 +12,7 @@ import {
   LoadingState,
 } from '../../shared/ui/common';
 import { useAuth } from '../../app/AuthProvider';
+import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
 import { addCalendarDays, dateInputValue, detectedTimeZone } from '../../shared/dateTime';
 import { usePersistentState } from '../../shared/storage';
 import { notificationDraftStorageKey } from '../../shared/userScopedStorage';
@@ -81,6 +82,10 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (path: string)
         body: payload,
       }),
     onSuccess: (saved) => {
+      trackProductEvent({
+        name: 'notification_preferences_changed',
+        surface: productEventSurface(),
+      });
       queryClient.setQueryData(['notifications', 'settings'], saved);
       setSettingsDraft(null);
       toast('Настройки напоминаний сохранены');

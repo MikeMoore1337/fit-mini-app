@@ -78,6 +78,8 @@ async function mockOnboardingApi(page: Page, initialStatus: OnboardingStatus = '
           },
           targets: null,
           remaining: null,
+          status: 'unlogged',
+          status_is_explicit: false,
         },
       });
     }
@@ -145,6 +147,9 @@ test('новый Web-пользователь проходит короткий 
   await page.getByRole('button', { name: 'Продолжить' }).click();
   await expect(page.getByRole('heading', { name: 'С чего хотите начать?' })).toBeFocused();
   expect(api.savedProfileBody()).toEqual({ goal: 'maintenance' });
+  const beforeReloadEvents = await page.evaluate(
+    () => (window as typeof window & { __onboardingEvents: unknown[] }).__onboardingEvents ?? [],
+  );
 
   await page.reload();
   await expect(page.getByRole('heading', { name: 'С чего хотите начать?' })).toBeVisible();
@@ -152,17 +157,29 @@ test('новый Web-пользователь проходит короткий 
   await expect(page).toHaveURL('/app?section=nutrition');
   await expect(page.getByRole('heading', { name: 'КБЖУ' })).toBeVisible();
 
-  const events = await page.evaluate(
+  const afterReloadEvents = await page.evaluate(
     () => (window as typeof window & { __onboardingEvents: unknown[] }).__onboardingEvents ?? [],
   );
+  const events = [...beforeReloadEvents, ...afterReloadEvents];
   expect(JSON.stringify(events)).not.toContain('maintenance');
   expect(events).toContainEqual(
     expect.objectContaining({
       name: 'onboarding_next_action_selected',
-      surface: 'web',
+      surface: 'mobile_web',
       next_action: 'nutrition',
     }),
   );
+  const eventNames = events.map((event) => (event as { name?: string }).name);
+  expect(eventNames).toEqual(
+    expect.arrayContaining([
+      'login_started',
+      'login_completed',
+      'onboarding_started',
+      'onboarding_completed',
+      'onboarding_next_action_selected',
+    ]),
+  );
+  expect(eventNames.filter((name) => name === 'onboarding_started')).toHaveLength(1);
 });
 
 test('returning user skips onboarding, while the first-run layout stays responsive', async ({

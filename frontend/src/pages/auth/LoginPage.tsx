@@ -8,6 +8,10 @@ import { ErrorState, LoadingState } from '../../shared/ui/common';
 import { BrandLockup } from '../../shared/ui/BrandLogo';
 import { PublicShell } from '../../shared/ui/PublicShell';
 import { telegramMiniAppUrl } from '../../app/AuthGate';
+import {
+  clearProductLoginAttempt,
+  markProductLoginStarted,
+} from '../../shared/analytics/productEvents';
 import './auth.css';
 
 const AUTH_ERROR_MESSAGES: Record<string, { title: string; message: string }> = {
@@ -93,11 +97,13 @@ function DevLoginControls({ nextPath }: { nextPath: string }) {
             onClick={() => {
               setBusyRole(label);
               setError(null);
+              markProductLoginStarted();
               void devLogin({ ...input, full_name: `Демо ${label.toLowerCase()}` })
                 .then(() => navigate(nextPath, true))
-                .catch((reason: unknown) =>
-                  setError(reason instanceof Error ? reason.message : 'Не удалось войти'),
-                )
+                .catch((reason: unknown) => {
+                  clearProductLoginAttempt();
+                  setError(reason instanceof Error ? reason.message : 'Не удалось войти');
+                })
                 .finally(() => setBusyRole(null));
             }}
           >
@@ -123,6 +129,10 @@ export default function LoginPage() {
   useEffect(() => {
     if (!loading && user) navigate(nextPath, true);
   }, [loading, navigate, nextPath, user]);
+
+  useEffect(() => {
+    if (authErrorCode) clearProductLoginAttempt();
+  }, [authErrorCode]);
 
   return (
     <PublicShell

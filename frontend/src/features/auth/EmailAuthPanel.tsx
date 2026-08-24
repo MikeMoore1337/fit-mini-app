@@ -1,6 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { useAuth } from '../../app/AuthProvider';
 import { ErrorState } from '../../shared/ui/common';
+import {
+  clearProductLoginAttempt,
+  markProductLoginStarted,
+} from '../../shared/analytics/productEvents';
 
 type AuthMode = 'login' | 'register' | 'recover';
 
@@ -28,6 +32,7 @@ export function EmailAuthPanel({ nextPath }: { nextPath?: string | null }) {
     setMessage(null);
     try {
       if (mode === 'login') {
+        markProductLoginStarted();
         await emailLogin(email, password);
       } else if (mode === 'register') {
         await emailRegister(username, email, password, nextPath);
@@ -38,6 +43,7 @@ export function EmailAuthPanel({ nextPath }: { nextPath?: string | null }) {
         setMessage('Если аккаунт существует, письмо для восстановления уже отправлено.');
       }
     } catch (reason) {
+      if (mode === 'login') clearProductLoginAttempt();
       setError(reason instanceof Error ? reason.message : 'Не удалось выполнить запрос');
     } finally {
       setBusy(false);

@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AppShell } from '../../app/AppShell';
 import { useAuth } from '../../app/AuthProvider';
@@ -33,6 +33,7 @@ import { LIVE_DATA_REFETCH_INTERVAL_MS } from '../../shared/sync';
 import { coachClientProfileDraftStorageKey } from '../../shared/userScopedStorage';
 import { handleTabKeyDown } from '../../shared/ui/tabs';
 import { DateInput } from '../../shared/ui/PickerInput';
+import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
 import {
   BodyPriorityPicker,
   isBodyPriorityComplete,
@@ -764,6 +765,15 @@ export default function CoachPage() {
   const [tab, setTab] = useState<CoachTab>('clients');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [clientDetailOpen, setClientDetailOpen] = useState(false);
+
+  useEffect(() => {
+    if (user?.is_coach) {
+      trackProductEvent(
+        { name: 'trainer_workspace_viewed', surface: productEventSurface() },
+        { dedupe: 'session' },
+      );
+    }
+  }, [user?.is_coach]);
   const [clientSearch, setClientSearch] = useState('');
   const [clientFilter, setClientFilter] = useState<CoachClientFilter>('all');
   const [programSearch, setProgramSearch] = useState('');
@@ -1090,6 +1100,10 @@ export default function CoachPage() {
                               disabled={!client.id}
                               onClick={() => {
                                 if (!client.id) return;
+                                trackProductEvent({
+                                  name: 'trainer_client_opened',
+                                  surface: productEventSurface(),
+                                });
                                 setSelectedId(client.id);
                                 setFocusedProgramId(null);
                                 setClientDetailOpen(true);
@@ -1223,6 +1237,10 @@ export default function CoachPage() {
                         <button
                           type="button"
                           onClick={() => {
+                            trackProductEvent({
+                              name: 'trainer_client_opened',
+                              surface: productEventSurface(),
+                            });
                             setSelectedId(item.client_id);
                             setFocusedProgramId(item.id);
                             setClientDetailOpen(true);

@@ -231,6 +231,13 @@ test('active workout keeps one obvious next action through logging, timer and fi
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => {
+    const events: unknown[] = [];
+    Object.defineProperty(window, '__productAnalyticsEvents', { value: events, writable: false });
+    window.addEventListener('yfc:product-event', (event) => {
+      events.push((event as CustomEvent).detail);
+    });
+  });
   await mockActiveWorkout(page);
 
   await page.goto('/app');
@@ -266,7 +273,25 @@ test('active workout keeps one obvious next action through logging, timer and fi
   await expect(page.getByText('Все подходы выполнены')).toBeVisible();
   await expect(page.getByText('Синхронизировано')).toBeVisible();
   await page.getByRole('button', { name: 'Завершить тренировку' }).click();
-  await expect(page.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible();
+  const completedHeading = page.getByRole('heading', { name: 'Тренировка завершена' });
+  await expect(completedHeading).toBeVisible();
+  await completedHeading.scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: '../.artifacts/screenshots/task-62/mobile-web-390x844-light-workout-completed.png',
+  });
+  const analyticsEvents = await page.evaluate(
+    () =>
+      (
+        window as typeof window & {
+          __productAnalyticsEvents: Array<Record<string, unknown>>;
+        }
+      ).__productAnalyticsEvents,
+  );
+  expect(analyticsEvents).toContainEqual(
+    expect.objectContaining({ name: 'workout_completed', surface: 'mobile_web' }),
+  );
+  expect(JSON.stringify(analyticsEvents)).not.toContain('actual_weight');
+  expect(JSON.stringify(analyticsEvents)).not.toContain('actual_reps');
 });
 
 test('active workout has touch-size controls and no horizontal overflow', async ({ page }) => {

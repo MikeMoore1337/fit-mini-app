@@ -1,28 +1,61 @@
 export const PRODUCT_EVENT_NAME = 'yfc:product-event';
 export const PRODUCT_ANALYTICS_STATUS_NAME = 'yfc:product-analytics-status';
-export const PRODUCT_EVENT_SCHEMA_VERSION = 1 as const;
+export const PRODUCT_EVENT_SCHEMA_VERSION = 2 as const;
 
 export type ProductAnalyticsEnvironment = 'production' | 'staging' | 'development' | 'test';
-export type ProductSurface = 'web' | 'telegram';
-
-type ContextFreeProductEventName =
-  | 'landing_viewed'
-  | 'landing_demo_selected'
-  | 'landing_login_selected'
-  | 'demo_started'
-  | 'demo_login_selected'
-  | 'login_started'
-  | 'login_completed'
-  | 'onboarding_started'
-  | 'onboarding_minimum_saved'
-  | 'program_recommendation_started'
-  | 'program_recommendation_completed'
+export type ProductSurface = 'desktop_web' | 'mobile_web' | 'tma';
+export type FoodEntryMethod =
+  'quick_add' | 'recent' | 'favorite' | 'search' | 'recipe' | 'barcode' | 'custom';
+export type ProductCoreAction =
   | 'program_activated'
   | 'workout_started'
   | 'workout_completed'
   | 'food_logged'
   | 'measurement_logged'
-  | 'check_in_logged';
+  | 'weekly_review_completed';
+
+type ContextFreeProductEventName =
+  | 'landing_viewed'
+  | 'landing_app_selected'
+  | 'landing_demo_selected'
+  | 'landing_login_selected'
+  | 'demo_started'
+  | 'demo_meaningful_action_completed'
+  | 'demo_login_selected'
+  | 'login_started'
+  | 'login_completed'
+  | 'onboarding_started'
+  | 'onboarding_completed'
+  | 'program_recommendation_started'
+  | 'program_recommendation_completed'
+  | 'program_activated'
+  | 'today_viewed'
+  | 'workout_started'
+  | 'workout_completed'
+  | 'workout_completion_summary_viewed'
+  | 'measurement_logged'
+  | 'check_in_logged'
+  | 'weekly_review_started'
+  | 'weekly_review_completed'
+  | 'weekly_review_skipped'
+  | 'weekly_review_proposal_accepted'
+  | 'weekly_review_proposal_rejected'
+  | 'nutrition_incomplete_day_confirmed'
+  | 'workout_adaptation_started'
+  | 'workout_adaptation_completed'
+  | 'progression_suggestion_shown'
+  | 'progression_suggestion_dismissed'
+  | 'notification_preferences_changed'
+  | 'data_export_requested'
+  | 'account_delete_started'
+  | 'account_delete_completed'
+  | 'cardio_logged'
+  | 'trainer_workspace_viewed'
+  | 'trainer_client_opened'
+  | 'trainer_program_assigned'
+  | 'trainer_comment_added'
+  | 'trainer_mode_activated'
+  | 'tma_launched';
 
 type ContextFreeProductEvent = {
   [Name in ContextFreeProductEventName]: {
@@ -37,6 +70,26 @@ export type ProductEvent =
       name: 'onboarding_next_action_selected';
       surface: ProductSurface;
       next_action: 'today' | 'nutrition' | 'programs' | 'continuation';
+    }
+  | {
+      name: 'today_primary_action_selected';
+      surface: ProductSurface;
+      destination: 'workout' | 'nutrition' | 'weekly_review' | 'programs' | 'progress';
+    }
+  | {
+      name: 'today_week_navigated';
+      surface: ProductSurface;
+      direction: 'workout_day';
+    }
+  | {
+      name: 'food_log_started' | 'food_logged';
+      surface: ProductSurface;
+      entry_method: FoodEntryMethod;
+    }
+  | {
+      name: 'tma_core_action_completed';
+      surface: 'tma';
+      action: ProductCoreAction;
     };
 
 export type ProductEventName = ProductEvent['name'];
@@ -56,11 +109,15 @@ export type ProductAnalyticsStatus = {
 export interface ProductAnalyticsProvider {
   name: string;
   environment: ProductAnalyticsEnvironment;
+  /** Delivery stays disabled until the provider-specific config and consent gate passes. */
+  isDeliveryAllowed(): boolean;
   send(event: ProductEventEnvelope): void | Promise<void>;
 }
 
 export type ProductEventTrackOptions = {
   dedupe?: 'none' | 'session';
+  /** Ephemeral in-memory scope only; it is never added to the event envelope. */
+  dedupeKey?: string;
 };
 
 type ProductAnalyticsRuntimeOptions = {
@@ -71,24 +128,48 @@ type ProductAnalyticsRuntimeOptions = {
 
 const CONTEXT_FREE_EVENT_NAMES = new Set<ProductEventName>([
   'landing_viewed',
+  'landing_app_selected',
   'landing_demo_selected',
   'landing_login_selected',
   'demo_started',
+  'demo_meaningful_action_completed',
   'demo_login_selected',
   'login_started',
   'login_completed',
   'onboarding_started',
-  'onboarding_minimum_saved',
+  'onboarding_completed',
   'program_recommendation_started',
   'program_recommendation_completed',
   'program_activated',
+  'today_viewed',
   'workout_started',
   'workout_completed',
-  'food_logged',
+  'workout_completion_summary_viewed',
   'measurement_logged',
   'check_in_logged',
+  'weekly_review_started',
+  'weekly_review_completed',
+  'weekly_review_skipped',
+  'weekly_review_proposal_accepted',
+  'weekly_review_proposal_rejected',
+  'nutrition_incomplete_day_confirmed',
+  'workout_adaptation_started',
+  'workout_adaptation_completed',
+  'progression_suggestion_shown',
+  'progression_suggestion_dismissed',
+  'notification_preferences_changed',
+  'data_export_requested',
+  'account_delete_started',
+  'account_delete_completed',
+  'cardio_logged',
+  'trainer_workspace_viewed',
+  'trainer_client_opened',
+  'trainer_program_assigned',
+  'trainer_comment_added',
+  'trainer_mode_activated',
+  'tma_launched',
 ]);
-const PRODUCT_SURFACES = new Set<ProductSurface>(['web', 'telegram']);
+const PRODUCT_SURFACES = new Set<ProductSurface>(['desktop_web', 'mobile_web', 'tma']);
 const PRODUCT_ANALYTICS_ENVIRONMENTS = new Set<ProductAnalyticsEnvironment>([
   'production',
   'staging',
@@ -96,9 +177,36 @@ const PRODUCT_ANALYTICS_ENVIRONMENTS = new Set<ProductAnalyticsEnvironment>([
   'test',
 ]);
 const ONBOARDING_NEXT_ACTIONS = new Set(['today', 'nutrition', 'programs', 'continuation']);
+const TODAY_DESTINATIONS = new Set([
+  'workout',
+  'nutrition',
+  'weekly_review',
+  'programs',
+  'progress',
+]);
+const TODAY_WEEK_DIRECTIONS = new Set(['workout_day']);
+const FOOD_ENTRY_METHODS = new Set<FoodEntryMethod>([
+  'quick_add',
+  'recent',
+  'favorite',
+  'search',
+  'recipe',
+  'barcode',
+  'custom',
+]);
+const PRODUCT_CORE_ACTIONS = new Set<ProductCoreAction>([
+  'program_activated',
+  'workout_started',
+  'workout_completed',
+  'food_logged',
+  'measurement_logged',
+  'weekly_review_completed',
+]);
 const BASE_EVENT_KEYS = ['name', 'surface'] as const;
 const ENVELOPE_KEYS = ['schema_version', 'environment', 'occurred_at'] as const;
 const PROVIDER_NAME_PATTERN = /^[a-z][a-z0-9_-]{0,63}$/;
+const LOGIN_ATTEMPT_STORAGE_KEY = 'fit_product_analytics_login_attempt';
+let loginAttemptPending = false;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -109,22 +217,43 @@ function hasOnlyKeys(value: Record<string, unknown>, allowedKeys: readonly strin
   return keys.length === allowedKeys.length && keys.every((key) => allowedKeys.includes(key));
 }
 
+function eventPropertyKeys(name: string): readonly string[] {
+  if (name === 'onboarding_next_action_selected') return ['next_action'];
+  if (name === 'today_primary_action_selected') return ['destination'];
+  if (name === 'today_week_navigated') return ['direction'];
+  if (name === 'food_log_started' || name === 'food_logged') return ['entry_method'];
+  if (name === 'tma_core_action_completed') return ['action'];
+  return [];
+}
+
+function hasValidEventProperties(value: Record<string, unknown>): boolean {
+  if (CONTEXT_FREE_EVENT_NAMES.has(value.name as ProductEventName)) return true;
+  if (value.name === 'onboarding_next_action_selected') {
+    return ONBOARDING_NEXT_ACTIONS.has(value.next_action as string);
+  }
+  if (value.name === 'today_primary_action_selected') {
+    return TODAY_DESTINATIONS.has(value.destination as string);
+  }
+  if (value.name === 'today_week_navigated') {
+    return TODAY_WEEK_DIRECTIONS.has(value.direction as string);
+  }
+  if (value.name === 'food_log_started' || value.name === 'food_logged') {
+    return FOOD_ENTRY_METHODS.has(value.entry_method as FoodEntryMethod);
+  }
+  if (value.name === 'tma_core_action_completed') {
+    return value.surface === 'tma' && PRODUCT_CORE_ACTIONS.has(value.action as ProductCoreAction);
+  }
+  return false;
+}
+
 function isProductEventRecord(value: unknown, envelope: boolean): boolean {
   if (!isRecord(value) || typeof value.name !== 'string') return false;
 
-  const eventKeys =
-    value.name === 'onboarding_next_action_selected'
-      ? [...BASE_EVENT_KEYS, 'next_action']
-      : BASE_EVENT_KEYS;
+  const eventKeys = [...BASE_EVENT_KEYS, ...eventPropertyKeys(value.name)];
   const allowedKeys = envelope ? [...eventKeys, ...ENVELOPE_KEYS] : eventKeys;
   if (!hasOnlyKeys(value, allowedKeys)) return false;
   if (!PRODUCT_SURFACES.has(value.surface as ProductSurface)) return false;
-
-  const validEvent =
-    CONTEXT_FREE_EVENT_NAMES.has(value.name as ProductEventName) ||
-    (value.name === 'onboarding_next_action_selected' &&
-      ONBOARDING_NEXT_ACTIONS.has(value.next_action as string));
-  if (!validEvent) return false;
+  if (!hasValidEventProperties(value)) return false;
   if (!envelope) return true;
 
   if (
@@ -157,7 +286,8 @@ export function productAnalyticsEnvironment(mode: string): ProductAnalyticsEnvir
 }
 
 export function productEventSurface(): ProductSurface {
-  return window.Telegram?.WebApp?.initData?.trim() ? 'telegram' : 'web';
+  if (window.Telegram?.WebApp?.initData?.trim()) return 'tma';
+  return window.matchMedia?.('(max-width: 767px)').matches ? 'mobile_web' : 'desktop_web';
 }
 
 export function createProductAnalytics({
@@ -183,7 +313,7 @@ export function createProductAnalytics({
     track(event: ProductEvent, options: ProductEventTrackOptions = {}): boolean {
       if (!isProductEvent(event)) return false;
 
-      const dedupeKey = `${PRODUCT_EVENT_SCHEMA_VERSION}:${environment}:${event.surface}:${event.name}`;
+      const dedupeKey = `${PRODUCT_EVENT_SCHEMA_VERSION}:${environment}:${event.surface}:${event.name}:${options.dedupeKey ?? 'event'}`;
       if (options.dedupe === 'session') {
         if (sessionDedupe.has(dedupeKey)) return false;
         sessionDedupe.add(dedupeKey);
@@ -212,6 +342,7 @@ export function createProductAnalytics({
         if (rawEvent.detail.environment !== provider.environment) return;
 
         try {
+          if (!provider.isDeliveryAllowed()) return;
           void Promise.resolve(provider.send(rawEvent.detail)).catch(() => {
             reportProviderUnavailable(provider);
           });
@@ -235,6 +366,54 @@ export function trackProductEvent(
   options?: ProductEventTrackOptions,
 ): boolean {
   return browserProductAnalytics.track(event, options);
+}
+
+export function markProductLoginStarted(): void {
+  loginAttemptPending = true;
+  try {
+    window.sessionStorage.setItem(LOGIN_ATTEMPT_STORAGE_KEY, '1');
+  } catch {
+    // Analytics must stay non-blocking when browser storage is unavailable.
+  }
+  trackProductEvent({ name: 'login_started', surface: productEventSurface() });
+}
+
+export function clearProductLoginAttempt(): void {
+  loginAttemptPending = false;
+  try {
+    window.sessionStorage.removeItem(LOGIN_ATTEMPT_STORAGE_KEY);
+  } catch {
+    // Analytics must stay non-blocking when browser storage is unavailable.
+  }
+}
+
+export function trackProductLoginCompletedIfStarted(): boolean {
+  let storedAttempt = false;
+  try {
+    storedAttempt = window.sessionStorage.getItem(LOGIN_ATTEMPT_STORAGE_KEY) === '1';
+  } catch {
+    // The in-memory marker still covers SPA login when browser storage is unavailable.
+  }
+  if (!loginAttemptPending && !storedAttempt) return false;
+
+  clearProductLoginAttempt();
+  return trackProductEvent({ name: 'login_completed', surface: productEventSurface() });
+}
+
+export function trackCoreProductEvent(
+  event: ProductEvent,
+  coreAction: ProductCoreAction,
+  options?: ProductEventTrackOptions,
+): boolean {
+  const tracked = browserProductAnalytics.track(event, options);
+  if (tracked && event.surface === 'tma') {
+    browserProductAnalytics.track({
+      name: 'tma_core_action_completed',
+      surface: 'tma',
+      action: coreAction,
+    });
+  }
+  return tracked;
 }
 
 export function subscribeProductAnalyticsProvider(provider: ProductAnalyticsProvider): () => void {

@@ -20,6 +20,7 @@ import { ProgramBuilder } from './ProgramBuilder';
 import { shouldSaveTemplateAsCopy } from './templateEditing';
 import { DateInput } from '../../shared/ui/PickerInput';
 import { ProgramRecommendation } from './ProgramRecommendation';
+import { productEventSurface, trackCoreProductEvent } from '../../shared/analytics/productEvents';
 import { AssignedProgramDetails } from './AssignedProgramDetails';
 
 const goalLabels: Record<string, string> = {
@@ -133,6 +134,10 @@ export function TemplatesList() {
         },
       }),
     onSuccess: async () => {
+      trackCoreProductEvent(
+        { name: 'program_activated', surface: productEventSurface() },
+        'program_activated',
+      );
       setAssignmentTemplate(null);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['templates'] }),

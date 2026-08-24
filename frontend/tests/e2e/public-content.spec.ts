@@ -43,6 +43,48 @@ const representativePages = [
   },
 ];
 
+test('landing emits a privacy-safe acquisition event without changing the desktop result', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.addInitScript(() => {
+    const events: unknown[] = [];
+    Object.defineProperty(window, '__productAnalyticsEvents', { value: events, writable: false });
+    window.addEventListener('yfc:product-event', (event) => {
+      events.push((event as CustomEvent).detail);
+    });
+  });
+
+  await page.goto('/');
+  await expect(
+    page.getByRole('heading', { level: 1, name: /Знайте, что делать сегодня/i }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: '../.artifacts/screenshots/task-62/desktop-1440x900-light-landing.png',
+  });
+  await page.getByRole('link', { name: 'Открыть приложение' }).evaluate((element) => {
+    element.addEventListener('click', (event) => event.preventDefault(), { once: true });
+  });
+  await page.getByRole('link', { name: 'Открыть приложение' }).click();
+
+  const analyticsEvents = await page.evaluate(
+    () =>
+      (
+        window as typeof window & {
+          __productAnalyticsEvents: Array<Record<string, unknown>>;
+        }
+      ).__productAnalyticsEvents,
+  );
+  expect(analyticsEvents).toContainEqual(
+    expect.objectContaining({ name: 'landing_viewed', surface: 'desktop_web' }),
+  );
+  expect(analyticsEvents).toContainEqual(
+    expect.objectContaining({ name: 'landing_app_selected', surface: 'desktop_web' }),
+  );
+  expect(analyticsEvents.every((event) => !('url' in event))).toBe(true);
+});
+
 test('публичные страницы сохраняют hierarchy и не создают overflow', async ({ page }) => {
   for (const viewport of [
     { width: 1440, height: 900 },

@@ -11,6 +11,7 @@ import { usePersistentState } from '../../shared/storage';
 import { measurementDraftStorageKey } from '../../shared/userScopedStorage';
 import { DateInput } from '../../shared/ui/PickerInput';
 import { invalidateMeasurementMutation, queryKeys } from '../../shared/queryKeys';
+import { productEventSurface, trackCoreProductEvent } from '../../shared/analytics/productEvents';
 
 export function Diary({
   clientId,
@@ -50,7 +51,13 @@ export function Diary({
     mutationFn: ({ path, method, body }: { path: string; method: string; body?: unknown }) =>
       api(path, { method, body }),
     onMutate: () => setSubmitError(null),
-    onSuccess: async () => {
+    onSuccess: async (_result, variables) => {
+      if (variables.method === 'POST') {
+        trackCoreProductEvent(
+          { name: 'measurement_logged', surface: productEventSurface() },
+          'measurement_logged',
+        );
+      }
       const activeElement = document.activeElement;
       if (activeElement instanceof HTMLElement && formRef.current?.contains(activeElement)) {
         activeElement.blur();

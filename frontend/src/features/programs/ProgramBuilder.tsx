@@ -14,6 +14,11 @@ import { applyRestSeconds } from './programRest';
 import { ExerciseGuideDialog } from '../exercises/ExerciseGuideDialog';
 import { scheduleWeekdaysForSave, templateDraftTitle } from './templateEditing';
 import { DateInput } from '../../shared/ui/PickerInput';
+import {
+  productEventSurface,
+  trackCoreProductEvent,
+  trackProductEvent,
+} from '../../shared/analytics/productEvents';
 import { isPairedWithPrevious, moveItem, removeExercise, toggleSuperset } from './programDraft';
 
 type Day = ProgramTemplateCreate['days'][number];
@@ -281,6 +286,19 @@ export function ProgramBuilder({
         } satisfies ProgramTemplateAssignmentCreate,
       }),
     onSuccess: async () => {
+      if (!editingTemplate) {
+        if (targetTelegramId) {
+          trackProductEvent({
+            name: 'trainer_program_assigned',
+            surface: productEventSurface(),
+          });
+        } else {
+          trackCoreProductEvent(
+            { name: 'program_activated', surface: productEventSurface() },
+            'program_activated',
+          );
+        }
+      }
       toast(
         saveAsCopy
           ? 'Личная копия программы создана'

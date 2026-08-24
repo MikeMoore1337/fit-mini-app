@@ -15,6 +15,7 @@ export interface WeekStripStatus {
 export interface WeekStripDayMeta {
   link?: {
     label: string;
+    onClick?: () => void;
     to: string;
   };
   status?: WeekStripStatus | null;
@@ -180,6 +181,7 @@ export function WeekStrip(props: WeekStripProps) {
                   aria-current={isToday ? 'date' : undefined}
                   aria-label={label}
                   className={dayClassName}
+                  onClick={dayMeta.link.onClick}
                   to={dayMeta.link.to}
                 >
                   {content}

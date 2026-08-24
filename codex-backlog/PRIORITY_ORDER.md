@@ -1,19 +1,19 @@
-# Порядок выполнения release backlog v13
+# Порядок выполнения release backlog v14
 
 ## Completed
 
-`00-61`, включая буквенные подзадачи. Task-файлы находятся в `tasks/done/`.
+`00-62`, включая буквенные подзадачи. Task-файлы находятся в `tasks/done/`.
 
 ## Current
 
 ```text
-62 Product analytics core instrumentation
+63 Deterministic progression guidance
 ```
 
-После завершения `62`:
+После завершения `63`:
 
 ```text
-63 -> 64 -> 65 -> 66 -> 67
+64 -> 65 -> 66 -> 67
  -> 68 -> 69 -> 70 -> 71 -> 72 -> 73 -> 74 -> 75
  -> 76 skill-aware retrospective audit -> 76A adversarial gate
  -> 77 real-user results checkpoint

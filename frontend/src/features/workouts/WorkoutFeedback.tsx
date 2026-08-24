@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, api } from '../../shared/api/client';
 import type { WorkoutComment } from '../../shared/api/types';
 import { queryKeys } from '../../shared/queryKeys';
+import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
 import {
   Badge,
   DisclosureIcon,
@@ -133,6 +134,9 @@ export function WorkoutFeedback({
         body: draft,
       }),
     onSuccess: (created) => {
+      if (viewer === 'trainer') {
+        trackProductEvent({ name: 'trainer_comment_added', surface: productEventSurface() });
+      }
       queryClient.setQueryData<WorkoutComment[]>(queryKey, (current = []) =>
         sortedComments(
           current.some((comment) => comment.id === created.id)

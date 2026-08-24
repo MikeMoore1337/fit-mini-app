@@ -70,13 +70,13 @@ describe('OnboardingPage', () => {
       expect.arrayContaining([
         expect.objectContaining({
           name: 'onboarding_started',
-          surface: 'web',
+          surface: 'desktop_web',
           schema_version: PRODUCT_EVENT_SCHEMA_VERSION,
           environment: 'test',
         }),
         expect.objectContaining({
-          name: 'onboarding_minimum_saved',
-          surface: 'web',
+          name: 'onboarding_completed',
+          surface: 'desktop_web',
           schema_version: PRODUCT_EVENT_SCHEMA_VERSION,
           environment: 'test',
         }),

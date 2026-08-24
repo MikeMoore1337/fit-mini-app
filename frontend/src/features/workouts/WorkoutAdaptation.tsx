@@ -13,6 +13,7 @@ import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { useTelegramOverlayBackButton } from '../../shared/telegram/useTelegramOverlayBackButton';
 import { Button, CloseIcon, Field, IconButton, Input, Select } from '../../shared/ui/common';
 import { useModalA11y } from '../../shared/ui/useModalA11y';
+import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
 
 type AdaptationReason = WorkoutAdaptationRequest['reason'];
 type EquipmentId = NonNullable<WorkoutAdaptationRequest['available_equipment_ids']>[number];
@@ -200,6 +201,10 @@ export function WorkoutAdaptation({
         body: { ...request, preview_token: token },
       }),
     onSuccess: async () => {
+      trackProductEvent({
+        name: 'workout_adaptation_completed',
+        surface: productEventSurface(),
+      });
       await queryClient.invalidateQueries({ queryKey: ['workout'] });
       toast('Изменения применены только к сегодняшней тренировке');
       setOpen(false);
@@ -235,7 +240,13 @@ export function WorkoutAdaptation({
         fullWidth={entryContext === 'today'}
         type="button"
         variant={entryContext === 'today' ? 'ghost' : 'secondary'}
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          trackProductEvent({
+            name: 'workout_adaptation_started',
+            surface: productEventSurface(),
+          });
+          setOpen(true);
+        }}
       >
         {entryLabel}
       </Button>

@@ -28,6 +28,7 @@ import { WorkoutAdaptation } from './WorkoutAdaptation';
 import { WorkoutCompletionSummary } from './WorkoutCompletionSummary';
 import { reconcileFinishedWorkout } from './finishWorkoutRecovery';
 import { useActiveWorkoutQueue } from './useActiveWorkoutQueue';
+import { productEventSurface, trackCoreProductEvent } from '../../shared/analytics/productEvents';
 
 type WorkoutSet = Workout['exercises'][number]['sets'][number];
 type RirValue = NonNullable<WorkoutSet['rir']>;
@@ -490,6 +491,10 @@ export function TodayWorkout({
       api<Workout | void>(path, { method, body }),
     onSuccess: async (result, variables) => {
       if (variables.path.endsWith('/finish')) {
+        trackCoreProductEvent(
+          { name: 'workout_completed', surface: productEventSurface() },
+          'workout_completed',
+        );
         if (result) await reconcileFinishedWorkout(queryClient, result, activeSync.clear);
         else {
           await activeSync.clear();
@@ -497,6 +502,12 @@ export function TodayWorkout({
         }
         haptic('success');
       } else {
+        if (variables.path.endsWith('/start')) {
+          trackCoreProductEvent(
+            { name: 'workout_started', surface: productEventSurface() },
+            'workout_started',
+          );
+        }
         await queryClient.invalidateQueries({ queryKey: ['workout'] });
       }
     },

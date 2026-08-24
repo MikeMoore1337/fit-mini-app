@@ -1356,6 +1356,13 @@ test('nutrition quick paths recover in TMA and match Mobile Web before core navi
   tma,
   tmaPage,
 }) => {
+  await tmaPage.addInitScript(() => {
+    const events: unknown[] = [];
+    Object.defineProperty(window, '__productAnalyticsEvents', { value: events, writable: false });
+    window.addEventListener('yfc:product-event', (event) => {
+      events.push((event as CustomEvent).detail);
+    });
+  });
   const api = await installPlatformApi(tmaPage, { workoutStatus: 'in_progress' });
   await installPlatformApi(mobilePage, { workoutStatus: 'in_progress', browserSession: true });
   await Promise.all([
@@ -1423,6 +1430,34 @@ test('nutrition quick paths recover in TMA and match Mobile Web before core navi
   await tmaPage.getByRole('button', { name: 'Повторить', exact: true }).click();
   await expect(tmaPage.getByRole('dialog')).not.toBeAttached();
   await expect(tmaPage.getByText('TMA перекус')).toBeVisible();
+  await tmaPage.screenshot({
+    path: '../.artifacts/screenshots/task-62/tma-390x844-dark-food-logged.png',
+  });
+  const analyticsEvents = await tmaPage.evaluate(
+    () =>
+      (
+        window as typeof window & {
+          __productAnalyticsEvents: Array<Record<string, unknown>>;
+        }
+      ).__productAnalyticsEvents,
+  );
+  expect(analyticsEvents.filter((event) => event.name === 'tma_launched')).toHaveLength(1);
+  expect(analyticsEvents).toContainEqual(
+    expect.objectContaining({
+      name: 'food_logged',
+      surface: 'tma',
+      entry_method: 'quick_add',
+    }),
+  );
+  expect(analyticsEvents).toContainEqual(
+    expect.objectContaining({
+      name: 'tma_core_action_completed',
+      surface: 'tma',
+      action: 'food_logged',
+    }),
+  );
+  expect(JSON.stringify(analyticsEvents)).not.toContain('TMA перекус');
+  expect(JSON.stringify(analyticsEvents)).not.toContain('energy_kcal');
 
   const entry = tmaPage.locator('.nutrition-entry').filter({ hasText: 'TMA перекус' });
   await entry.getByRole('button', { name: 'Повторить' }).click();

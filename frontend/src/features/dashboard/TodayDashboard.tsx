@@ -22,6 +22,11 @@ import { TodayWorkout } from '../workouts/TodayWorkout';
 import { Badge, Button, Skeleton } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { WeekStrip, type WeekStripDayMeta, type WeekStripStatus } from '../../shared/ui/WeekStrip';
+import {
+  productEventSurface,
+  trackCoreProductEvent,
+  trackProductEvent,
+} from '../../shared/analytics/productEvents';
 
 export function formatTodayHeading(value: string): { title: string } {
   const weekday = formatCalendarDate(value, { weekday: 'long' });
@@ -92,6 +97,12 @@ function WeekContext({
           link: canOpenWorkout
             ? {
                 label: `Открыть тренировку ${item.title}`,
+                onClick: () =>
+                  trackProductEvent({
+                    name: 'today_week_navigated',
+                    surface: productEventSurface(),
+                    direction: 'workout_day',
+                  }),
                 to: `/app?section=progress&workout_id=${item.id}`,
               }
             : undefined,
@@ -356,6 +367,14 @@ function WorkoutOverview({
   onStart(): void;
 }) {
   const { user } = useAuth();
+  const trackPrimaryAction = (
+    destination: 'workout' | 'nutrition' | 'weekly_review' | 'programs' | 'progress',
+  ) =>
+    trackProductEvent({
+      name: 'today_primary_action_selected',
+      surface: productEventSurface(),
+      destination,
+    });
   const totalSets =
     workout?.exercises.reduce((sum, exercise) => sum + exercise.sets.length, 0) ?? 0;
   const completedSets =
@@ -375,14 +394,22 @@ function WorkoutOverview({
   const completedAction = () => {
     if (trainerCommentLink) {
       return (
-        <AppLink className="button-link" to={trainerCommentLink}>
+        <AppLink
+          className="button-link"
+          onClick={() => trackPrimaryAction('progress')}
+          to={trainerCommentLink}
+        >
           Открыть комментарий
         </AppLink>
       );
     }
     if (weeklyReviewAvailable) {
       return (
-        <AppLink className="button-link" to="/app?section=progress&weekly_review=1">
+        <AppLink
+          className="button-link"
+          onClick={() => trackPrimaryAction('weekly_review')}
+          to="/app?section=progress&weekly_review=1"
+        >
           Пройти короткую проверку
         </AppLink>
       );
@@ -390,6 +417,7 @@ function WorkoutOverview({
     return (
       <AppLink
         className="button-link"
+        onClick={() => trackPrimaryAction('progress')}
         to={
           feedbackWorkoutId
             ? `/app?section=progress&workout_id=${feedbackWorkoutId}`
@@ -439,7 +467,11 @@ function WorkoutOverview({
             fullWidth
             disabled={startPending}
             type="button"
-            onClick={started ? onOpenDetails : onStart}
+            onClick={() => {
+              trackPrimaryAction('workout');
+              if (started) onOpenDetails();
+              else onStart();
+            }}
           >
             {startPending ? 'Начинаем…' : started ? 'Продолжить тренировку' : 'Начать тренировку'}
           </Button>
@@ -485,7 +517,11 @@ function WorkoutOverview({
           <h2 id="today-workout-title">Выберите тренировочный план</h2>
           <p>План создаст понятное расписание и покажет, с чего начать сегодня.</p>
         </div>
-        <AppLink className="button-link" to="/app?section=programs">
+        <AppLink
+          className="button-link"
+          onClick={() => trackPrimaryAction('programs')}
+          to="/app?section=programs"
+        >
           Подобрать программу
         </AppLink>
       </>
@@ -500,7 +536,11 @@ function WorkoutOverview({
           <h2 id="today-workout-title">Тренер оставил комментарий</h2>
           <p>{trainerComment ? compactSignal(trainerComment.body) : ''}</p>
         </div>
-        <AppLink className="button-link" to={trainerCommentLink}>
+        <AppLink
+          className="button-link"
+          onClick={() => trackPrimaryAction('progress')}
+          to={trainerCommentLink}
+        >
           Открыть комментарий
         </AppLink>
       </>
@@ -515,7 +555,11 @@ function WorkoutOverview({
           <h2 id="today-workout-title">Неделя готова к проверке</h2>
           <p>Коротко отметьте нагрузку, восстановление и то, насколько легко было держать план.</p>
         </div>
-        <AppLink className="button-link" to="/app?section=progress&weekly_review=1">
+        <AppLink
+          className="button-link"
+          onClick={() => trackPrimaryAction('weekly_review')}
+          to="/app?section=progress&weekly_review=1"
+        >
           Пройти короткую проверку
         </AppLink>
       </>
@@ -534,7 +578,11 @@ function WorkoutOverview({
         </p>
       </div>
       <div className="today-workout-actions">
-        <AppLink className="button-link" to="/app?section=nutrition">
+        <AppLink
+          className="button-link"
+          onClick={() => trackPrimaryAction('nutrition')}
+          to="/app?section=nutrition"
+        >
           Добавить питание
         </AppLink>
         <AppLink className="button-link secondary-link" to="/app?section=progress">
@@ -676,6 +724,10 @@ export function TodayDashboard() {
     mutationFn: (workoutId: number) =>
       api<Workout>(`/api/v1/workouts/${workoutId}/start`, { method: 'POST' }),
     onSuccess: async (startedWorkout) => {
+      trackCoreProductEvent(
+        { name: 'workout_started', surface: productEventSurface() },
+        'workout_started',
+      );
       queryClient.setQueryData(['workout', 'today'], startedWorkout);
       queryClient.setQueryData<WorkoutScheduleItem[]>(['workout', 'week'], (items) =>
         items?.map((item) =>

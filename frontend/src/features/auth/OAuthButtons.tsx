@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { safeAuthNextPath } from '../../shared/auth/redirects';
+import { markProductLoginStarted } from '../../shared/analytics/productEvents';
 
 const PROVIDER_LABELS: Record<string, string> = {
   telegram: 'Войти через Telegram',
@@ -73,6 +74,7 @@ export function OAuthButtons({
                 return;
               }
               setRedirectingProvider(provider);
+              markProductLoginStarted();
             }}
           >
             <span className="oauth-button__icon" aria-hidden="true">

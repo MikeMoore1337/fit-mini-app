@@ -25,6 +25,7 @@ import {
   AUTHENTICATED_USER_ID_STORAGE_KEY,
   clearSensitiveUserScopedStorage,
 } from '../shared/userScopedStorage';
+import { trackProductLoginCompletedIfStarted } from '../shared/analytics/productEvents';
 
 function offlineWorkoutUser(): User | null {
   if (!getAccessToken()) return null;
@@ -143,6 +144,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [acceptAuthenticatedUser, clearCurrentUserData]);
 
   const userId = user?.id;
+  useEffect(() => {
+    if (userId) trackProductLoginCompletedIfStarted();
+  }, [userId]);
+
   useEffect(() => {
     if (!userId) return;
 

@@ -37,7 +37,7 @@ Frontend публикует события через единый privacy-safe 
 Поддерживаемые события:
 
 - `onboarding_started`;
-- `onboarding_minimum_saved`;
+- `onboarding_completed`;
 - `onboarding_next_action_selected` с `next_action`: `today`, `nutrition`, `programs` или
   `continuation`.
 

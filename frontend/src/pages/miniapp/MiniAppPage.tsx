@@ -8,6 +8,7 @@ import { AppLink, focusedContextReturn, useNavigation } from '../../shared/navig
 import { Badge } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { programProfileReadiness } from '../../features/profile/programReadiness';
+import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
 
 const NotificationsPanel = lazy(() =>
   import('../../features/account/NotificationsPanel').then((module) => ({
@@ -165,6 +166,7 @@ export default function MiniAppPage() {
       : 'today';
   });
   const section = requestedSection(search) ?? fallbackSection;
+  const analyticsSurface = productEventSurface();
   const requestedFeedback = requestedWorkoutFeedback(search);
   const historicalProgramWorkout = requestedHistoricalProgramWorkout(search);
   const workoutReturnPath = requestedFeedback ? focusedContextReturn(search) : null;
@@ -180,6 +182,18 @@ export default function MiniAppPage() {
   const historyFocusId =
     requestedFeedback?.workoutId ??
     (focusedWorkout?.target === 'history' ? focusedWorkout.id : null);
+
+  useEffect(() => {
+    if (analyticsSurface === 'tma') {
+      trackProductEvent({ name: 'tma_launched', surface: 'tma' }, { dedupe: 'session' });
+    }
+  }, [analyticsSurface]);
+
+  useEffect(() => {
+    if (section === 'today') {
+      trackProductEvent({ name: 'today_viewed', surface: analyticsSurface }, { dedupe: 'session' });
+    }
+  }, [analyticsSurface, section]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
