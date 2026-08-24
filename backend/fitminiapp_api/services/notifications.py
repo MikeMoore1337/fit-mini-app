@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, date, datetime, time, timedelta
+from typing import Literal
 from urllib.parse import parse_qs, urlsplit
 
 import httpx
@@ -42,6 +43,22 @@ ALLOWED_NOTIFICATION_QUERY_KEYS = frozenset(
 ALLOWED_NOTIFICATION_SECTIONS = frozenset({"today", "progress", "programs", "nutrition", "profile"})
 
 
+class NotificationDeliveryError(RuntimeError):
+    """A safe delivery outcome that can control canonical retry state."""
+
+    def __init__(
+        self,
+        code: str,
+        *,
+        retry_after: timedelta | None = None,
+        terminal_status: Literal["cancelled", "failed"] | None = None,
+    ) -> None:
+        super().__init__(code)
+        self.code = code
+        self.retry_after = retry_after
+        self.terminal_status = terminal_status
+
+
 def normalize_notification_action_url(action_url: str | None) -> str | None:
     if action_url is None:
         return None
@@ -67,6 +84,16 @@ def normalize_notification_action_url(action_url: str | None) -> str | None:
     if return_to is not None and return_to != "/app?section=profile#profile-notifications":
         raise ValueError("invalid notification return destination")
     return action_url
+
+
+def validate_notification_destination(destination: str) -> str:
+    """Validate a destination already resolved by the canonical notification router."""
+    if destination == NOTIFICATION_FALLBACK:
+        return destination
+    normalized = normalize_notification_action_url(destination)
+    if normalized is None:
+        raise ValueError("missing notification destination")
+    return normalized
 
 
 def neutral_telegram_text(notification: Notification) -> str:
@@ -183,6 +210,8 @@ def utcnow() -> datetime:
 
 def safe_delivery_error(error: Exception) -> str:
     """Return a bounded diagnostic code without serializing request URLs or secrets."""
+    if isinstance(error, NotificationDeliveryError):
+        return error.code
     if isinstance(error, httpx.HTTPStatusError):
         return f"http_status:{error.response.status_code}"
     if isinstance(error, httpx.TimeoutException):
@@ -409,6 +438,26 @@ def sync_workout_reminders(db: Session) -> int:
         db.rollback()
         return 0
     return created
+
+
+def cancel_workout_reminder(db: Session, workout_id: int) -> int:
+    """Invalidate an unsent reminder in the same transaction as a workout mutation."""
+    return (
+        db.query(Notification)
+        .filter(
+            Notification.dedupe_key == f"workout:{workout_id}:reminder",
+            Notification.status.in_(("queued", "processing", "failed")),
+        )
+        .update(
+            {
+                Notification.status: "cancelled",
+                Notification.last_error: "workout_reminder_invalidated",
+                Notification.processing_started_at: None,
+                Notification.next_attempt_at: None,
+            },
+            synchronize_session=False,
+        )
+    )
 
 
 def sync_weekly_check_in_reminders(db: Session) -> int:
@@ -670,13 +719,19 @@ def mark_delivery_failed(
     notification.attempt_count += 1
     notification.last_error = safe_delivery_error(error)
     notification.processing_started_at = None
-    if notification.attempt_count >= MAX_DELIVERY_ATTEMPTS:
+    if isinstance(error, NotificationDeliveryError) and error.terminal_status is not None:
+        notification.status = error.terminal_status
+        notification.next_attempt_at = None
+    elif notification.attempt_count >= MAX_DELIVERY_ATTEMPTS:
         notification.status = "failed"
         notification.next_attempt_at = None
     else:
         notification.status = "queued"
-        delay_minutes = min(60, 2 ** (notification.attempt_count - 1))
-        notification.next_attempt_at = utcnow() + timedelta(minutes=delay_minutes)
+        retry_after = error.retry_after if isinstance(error, NotificationDeliveryError) else None
+        if retry_after is None:
+            delay_minutes = min(60, 2 ** (notification.attempt_count - 1))
+            retry_after = timedelta(minutes=delay_minutes)
+        notification.next_attempt_at = utcnow() + retry_after
     if commit:
         db.commit()
 

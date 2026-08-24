@@ -40,6 +40,7 @@ from .public_profile import (
     main_menu_keyboard,
     menu_button,
     menu_button_matches,
+    notification_settings_keyboard,
 )
 
 try:
@@ -470,8 +471,8 @@ async def app_command(message: Message) -> None:
 
 async def answer_settings(message: Message) -> None:
     await message.answer(
-        "Здесь можно настроить часовой пояс: /timezone",
-        reply_markup=main_menu_keyboard(settings.frontend_base_url),
+        "Настройки уведомлений доступны в приложении. Часовой пояс можно изменить здесь: /timezone",
+        reply_markup=notification_settings_keyboard(settings.frontend_base_url),
     )
 
 

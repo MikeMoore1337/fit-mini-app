@@ -56,7 +56,7 @@ from fitminiapp_api.services.measurements import (
     save_measurement,
     serialize_measurement,
 )
-from fitminiapp_api.services.notifications import queue_notification
+from fitminiapp_api.services.notifications import cancel_workout_reminder, queue_notification
 from fitminiapp_api.services.nutrition_reports import (
     NutritionReportError,
     build_nutrition_report,
@@ -581,6 +581,7 @@ def delete_today_workout(
     if workout.status != "planned":
         raise HTTPException(status_code=409, detail="Недопустимое состояние тренировки")
     workout.status = "skipped"
+    cancel_workout_reminder(db, workout.id)
     _reconcile_program_completion(db, program, current_user)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -607,6 +608,7 @@ def start_workout(
     if not workout.started_at:
         workout.started_at = now_for_user_naive(current_user)
     workout.status = "in_progress"
+    cancel_workout_reminder(db, workout.id)
     if program.status == "scheduled":
         program.status = "active"
     db.commit()
@@ -660,6 +662,7 @@ def finish_workout(
 
     workout.completed_at = now_for_user_naive(current_user)
     workout.status = "completed"
+    cancel_workout_reminder(db, workout.id)
 
     _reconcile_program_completion(db, program, current_user)
 
@@ -791,6 +794,7 @@ def reschedule_workout(
 
     workout.scheduled_date = payload.scheduled_date
     workout.scheduled_time = payload.scheduled_time
+    cancel_workout_reminder(db, workout.id)
     if program.assigned_by_user_id and program.assigned_by_user_id != current_user.id:
         trainer = db.query(User).filter(User.id == program.assigned_by_user_id).first()
         if trainer is not None and trainer.is_active:
@@ -836,6 +840,7 @@ def skip_workout(
             detail="Пропустить можно только запланированную тренировку",
         )
     workout.status = "skipped"
+    cancel_workout_reminder(db, workout.id)
 
     _reconcile_program_completion(db, program, current_user)
 

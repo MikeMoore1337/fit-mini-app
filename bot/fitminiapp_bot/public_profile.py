@@ -39,7 +39,7 @@ PUBLIC_COMMANDS = (
     PublicCommand("start", "Главное меню"),
     PublicCommand("app", "Открыть приложение"),
     PublicCommand("support", "Помощь и обратная связь"),
-    PublicCommand("settings", "Настройки и часовой пояс"),
+    PublicCommand("settings", "Настройки и уведомления"),
     PublicCommand("help", "Возможности и команды"),
     PublicCommand("privacy", "Политика конфиденциальности"),
 )
@@ -80,6 +80,10 @@ def is_valid_public_https_url(url: str) -> bool:
 
 def canonical_mini_app_url(frontend_base_url: str) -> str:
     return f"{frontend_base_url.rstrip('/')}/app"
+
+
+def notification_settings_url(frontend_base_url: str) -> str:
+    return f"{canonical_mini_app_url(frontend_base_url)}?section=profile#profile-notifications"
 
 
 def bot_commands() -> list[BotCommand]:
@@ -123,6 +127,19 @@ def main_menu_keyboard(frontend_base_url: str) -> InlineKeyboardMarkup:
             ],
             [InlineKeyboardButton(text="Настройки", callback_data="public:settings")],
             [InlineKeyboardButton(text="Что умеет бот", callback_data="public:help")],
+        ]
+    )
+
+
+def notification_settings_keyboard(frontend_base_url: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Открыть настройки уведомлений",
+                    web_app=WebAppInfo(url=notification_settings_url(frontend_base_url)),
+                )
+            ]
         ]
     )
 

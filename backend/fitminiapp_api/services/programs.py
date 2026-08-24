@@ -35,7 +35,7 @@ from fitminiapp_api.services.exercise_catalog import (
     get_visible_exercise_display_map,
 )
 from fitminiapp_api.services.exercise_guides import get_exercise_guide
-from fitminiapp_api.services.notifications import queue_notification
+from fitminiapp_api.services.notifications import cancel_workout_reminder, queue_notification
 from fitminiapp_api.services.nutrition import build_nutrition_target_response_from_users
 from fitminiapp_api.services.program_common import ProgramError
 from fitminiapp_api.services.program_versioning import record_program_revision
@@ -351,6 +351,7 @@ def assign_template_to_user(
         for workout in active_program.workouts:
             if workout.status == "planned":
                 workout.status = "cancelled"
+                cancel_workout_reminder(db, workout.id)
         active_program.is_active = False
         active_program.status = "archived"
         active_program.archived_at = now_msk_naive()

@@ -255,6 +255,29 @@ def test_public_command_source_excludes_hidden_commands() -> None:
     assert visible == ["start", "app", "support", "settings", "help", "privacy"]
     assert set(HIDDEN_COMMANDS) == {"feedback", "cancel", "timezone"}
     assert "news" not in visible
+    settings_command = next(item for item in PUBLIC_COMMANDS if item.command == "settings")
+    assert settings_command.description == "Настройки и уведомления"
+
+
+def test_settings_command_opens_canonical_preferences_and_preserves_timezone_access(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        bot_module.settings,
+        "frontend_base_url",
+        "https://app.your-fitness-coach.ru",
+    )
+    message = SimpleNamespace(answer=AsyncMock())
+
+    asyncio.run(bot_module.settings_command(message))
+
+    assert "/timezone" in message.answer.await_args.args[0]
+    keyboard = message.answer.await_args.kwargs["reply_markup"]
+    button = keyboard.inline_keyboard[0][0]
+    assert button.text == "Открыть настройки уведомлений"
+    assert button.web_app.url == (
+        "https://app.your-fitness-coach.ru/app?section=profile#profile-notifications"
+    )
 
 
 def test_unknown_start_payload_returns_main_menu_without_raw_error(monkeypatch):

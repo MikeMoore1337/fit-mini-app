@@ -206,8 +206,15 @@ def _trainer_entry_from_user(user: User) -> dict:
 def cancel_client_request_notification(db: Session, invite_id: int) -> None:
     db.query(Notification).filter(
         Notification.dedupe_key == f"trainer_request:{invite_id}",
-        Notification.status.in_(("queued", "failed")),
-    ).update({Notification.status: "cancelled"}, synchronize_session=False)
+        Notification.status.in_(("queued", "processing", "failed")),
+    ).update(
+        {
+            Notification.status: "cancelled",
+            Notification.processing_started_at: None,
+            Notification.next_attempt_at: None,
+        },
+        synchronize_session=False,
+    )
 
 
 def remove_client_for_coach(db: Session, coach: User, client_id: int) -> None:

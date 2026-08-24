@@ -65,7 +65,7 @@ from fitminiapp_api.services.measurements import (
     save_measurement,
     serialize_measurement,
 )
-from fitminiapp_api.services.notifications import queue_notification
+from fitminiapp_api.services.notifications import cancel_workout_reminder, queue_notification
 from fitminiapp_api.services.nutrition import NutritionError
 from fitminiapp_api.services.nutrition_reports import (
     NutritionReportError,
@@ -419,6 +419,7 @@ def coach_reschedule_client_workout(
 
     workout.scheduled_date = payload.scheduled_date
     workout.scheduled_time = payload.scheduled_time
+    cancel_workout_reminder(db, workout.id)
     time_text = f" в {payload.scheduled_time.strftime('%H:%M')}" if payload.scheduled_time else ""
     queue_notification(
         db,

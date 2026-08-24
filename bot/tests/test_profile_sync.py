@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 from types import SimpleNamespace
 
-from aiogram.types import BotCommandScopeAllPrivateChats, MenuButtonCommands
+from aiogram.types import BotCommand, BotCommandScopeAllPrivateChats, MenuButtonCommands
 from bot.fitminiapp_bot.profile_sync import sync_public_profile
 from bot.fitminiapp_bot.public_profile import (
     AVATAR_PATH,
@@ -122,6 +122,8 @@ def test_public_profile_values_fit_telegram_limits() -> None:
     for command in bot_commands():
         assert 1 <= len(command.command) <= 32
         assert 1 <= len(command.description) <= 256
+    settings_command = next(command for command in bot_commands() if command.command == "settings")
+    assert settings_command.description == "Настройки и уведомления"
 
 
 def test_wrong_username_guard_stops_before_reads_and_writes(tmp_path: Path) -> None:
@@ -218,6 +220,33 @@ def test_partial_diff_changes_only_name_and_verifies_readback(tmp_path: Path) ->
 
     assert report.fields["name"]["status"] == "VERIFIED"
     assert setter_calls(bot) == ["set_my_name"]
+
+
+def test_notification_settings_copy_updates_only_commands(tmp_path: Path) -> None:
+    state_path = tmp_path / "state.json"
+    write_avatar_state(state_path)
+    bot = FakeBot()
+    bot.commands = [
+        BotCommand(
+            command=command.command,
+            description=(
+                "Настройки и часовой пояс" if command.command == "settings" else command.description
+            ),
+        )
+        for command in bot.commands
+    ]
+
+    report = asyncio.run(
+        sync_public_profile(
+            bot,
+            mode="apply",
+            frontend_base_url="https://app.your-fitness-coach.ru",
+            avatar_state_path=state_path,
+        )
+    )
+
+    assert report.fields["commands"]["status"] == "VERIFIED"
+    assert setter_calls(bot) == ["set_my_commands"]
 
 
 def test_avatar_apply_records_readback_identity_and_second_apply_is_noop(tmp_path: Path) -> None:

@@ -2,6 +2,8 @@ import asyncio
 from datetime import date, datetime, time
 from unittest.mock import AsyncMock
 
+import pytest
+
 from fitminiapp_api.db.session import get_session_context
 from fitminiapp_api.models.notification import Notification, NotificationSetting
 from fitminiapp_api.models.program import ProgramTemplate, UserProgram, UserWorkout
@@ -9,8 +11,10 @@ from fitminiapp_api.models.user import BodyMeasurement, User, UserProfile
 from fitminiapp_api.services import notifications as notification_service
 from fitminiapp_api.services import worker
 from fitminiapp_api.services.notifications import (
+    cancel_workout_reminder,
     neutral_telegram_text,
     quiet_hours_retry_at,
+    reminder_category_enabled,
     sync_measurement_reminders,
     sync_workout_reminders,
 )
@@ -62,6 +66,41 @@ def test_preferences_support_channels_categories_and_quiet_hours(client) -> None
     assert invalid.status_code == 422
 
 
+@pytest.mark.parametrize(
+    ("category", "setting_name"),
+    [
+        ("workout_reminder", "workout_reminders_enabled"),
+        ("weekly_check_in_reminder", "weekly_check_in_reminders_enabled"),
+        ("measurement_reminder", "measurement_reminders_enabled"),
+    ],
+)
+def test_each_optional_reminder_category_is_rechecked_before_delivery(
+    category: str,
+    setting_name: str,
+) -> None:
+    setting = NotificationSetting(
+        workout_reminders_enabled=True,
+        weekly_check_in_reminders_enabled=True,
+        measurement_reminders_enabled=True,
+    )
+    event = Notification(
+        user_id=1,
+        category=category,
+        event_kind="reminder",
+        title="Reminder",
+        body="Body",
+        scheduled_for=datetime(2026, 8, 24, 9),
+        scheduled_for_utc=datetime(2026, 8, 24, 6),
+    )
+
+    assert reminder_category_enabled(event, setting) is True
+    setattr(setting, setting_name, False)
+    assert reminder_category_enabled(event, setting) is False
+
+    event.event_kind = "transactional"
+    assert reminder_category_enabled(event, setting) is True
+
+
 def test_workout_reminder_uses_exact_time_reschedules_and_cancels(monkeypatch) -> None:
     fixed_now = datetime(2026, 3, 9, 10)
     monkeypatch.setattr(notification_service, "now_for_user_naive", lambda _user: fixed_now)
@@ -102,7 +141,10 @@ def test_workout_reminder_uses_exact_time_reschedules_and_cancels(monkeypatch) -
         workout = session.get(UserWorkout, workout_id)
         workout.scheduled_date = date(2026, 3, 10)
         workout.scheduled_time = time(19, 0)
+        assert cancel_workout_reminder(session, workout.id) == 1
         session.commit()
+        session.refresh(reminder)
+        assert reminder.status == "cancelled"
         assert sync_workout_reminders(session) == 0
         session.refresh(reminder)
         assert reminder.scheduled_for == datetime(2026, 3, 10, 17)
