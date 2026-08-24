@@ -73,6 +73,12 @@ def to_timezone_naive(value: datetime, timezone_name: str | None) -> datetime:
     return value.astimezone(get_timezone(timezone_name)).replace(tzinfo=None)
 
 
+def utc_naive_to_timezone_naive(value: datetime, timezone_name: str | None) -> datetime:
+    """Convert a naive UTC database timestamp to local naive wall time."""
+    utc_value = value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
+    return utc_value.astimezone(get_timezone(timezone_name)).replace(tzinfo=None)
+
+
 def to_user_timezone_naive(value: datetime, user) -> datetime:
     return to_timezone_naive(value, get_user_timezone_name(user))
 

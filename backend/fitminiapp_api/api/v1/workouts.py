@@ -17,6 +17,12 @@ from fitminiapp_api.models.program import (
     WorkoutAdaptation,
 )
 from fitminiapp_api.models.user import User
+from fitminiapp_api.schemas.cardio import (
+    CardioSessionCreate,
+    CardioSessionResponse,
+    CardioSessionUpdate,
+    CardioStatus,
+)
 from fitminiapp_api.schemas.feedback import WorkoutCommentResponse
 from fitminiapp_api.schemas.program import EquipmentIdentifier
 from fitminiapp_api.schemas.progress import (
@@ -46,6 +52,15 @@ from fitminiapp_api.schemas.workout import (
     WorkoutTodayResponse,
 )
 from fitminiapp_api.services.analytics import build_training_analytics, build_user_progress
+from fitminiapp_api.services.cardio import (
+    CardioSessionError,
+    complete_cardio_session,
+    create_cardio_session,
+    delete_cardio_session,
+    list_cardio_sessions,
+    serialize_cardio_session,
+    update_cardio_session,
+)
 from fitminiapp_api.services.exercise_catalog import get_visible_exercise_display_map
 from fitminiapp_api.services.exercise_guides import get_exercise_guide
 from fitminiapp_api.services.measurements import (
@@ -88,6 +103,83 @@ from fitminiapp_api.services.workouts import (
 )
 
 router = APIRouter()
+
+
+@router.get("/cardio", response_model=list[CardioSessionResponse])
+def get_cardio_sessions(
+    date_from: date | None = None,
+    date_to: date | None = None,
+    cardio_status: CardioStatus | None = Query(default=None, alias="status"),
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0, le=10_000),
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    if date_from is not None and date_to is not None and date_to < date_from:
+        raise HTTPException(status_code=422, detail="Конец периода не может быть раньше начала")
+    rows = list_cardio_sessions(
+        db,
+        current_user,
+        date_from=date_from,
+        date_to=date_to,
+        status=cardio_status,
+        limit=limit,
+        offset=offset,
+    )
+    return [serialize_cardio_session(row, current_user) for row in rows]
+
+
+@router.post("/cardio", response_model=CardioSessionResponse, status_code=status.HTTP_201_CREATED)
+def post_cardio_session(
+    payload: CardioSessionCreate,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        row = create_cardio_session(db, current_user, payload)
+    except CardioSessionError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    return serialize_cardio_session(row, current_user)
+
+
+@router.patch("/cardio/{session_id}", response_model=CardioSessionResponse)
+def patch_cardio_session(
+    session_id: int,
+    payload: CardioSessionUpdate,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        row = update_cardio_session(db, current_user, session_id, payload)
+    except CardioSessionError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    return serialize_cardio_session(row, current_user)
+
+
+@router.post("/cardio/{session_id}/complete", response_model=CardioSessionResponse)
+def post_complete_cardio_session(
+    session_id: int,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        row = complete_cardio_session(db, current_user, session_id)
+    except CardioSessionError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    return serialize_cardio_session(row, current_user)
+
+
+@router.delete("/cardio/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_cardio_session(
+    session_id: int,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        delete_cardio_session(db, current_user, session_id)
+    except CardioSessionError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/{workout_id}/comments", response_model=list[WorkoutCommentResponse])

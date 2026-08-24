@@ -1208,6 +1208,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workouts/cardio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Cardio Sessions */
+        get: operations["get_cardio_sessions_api_v1_workouts_cardio_get"];
+        put?: never;
+        /** Post Cardio Session */
+        post: operations["post_cardio_session_api_v1_workouts_cardio_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/cardio/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Cardio Session */
+        delete: operations["remove_cardio_session_api_v1_workouts_cardio__session_id__delete"];
+        options?: never;
+        head?: never;
+        /** Patch Cardio Session */
+        patch: operations["patch_cardio_session_api_v1_workouts_cardio__session_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/workouts/cardio/{session_id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Complete Cardio Session */
+        post: operations["post_complete_cardio_session_api_v1_workouts_cardio__session_id__complete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workouts/{workout_id}/comments": {
         parameters: {
             query?: never;
@@ -3070,6 +3123,122 @@ export interface components {
             /** Timezone */
             timezone: string;
         };
+        /** CardioPeriodSummary */
+        CardioPeriodSummary: {
+            /** Completed Sessions */
+            completed_sessions: number;
+            /** Planned Sessions */
+            planned_sessions: number;
+            /** Frequency Per Week */
+            frequency_per_week: number;
+            /** Duration Minutes */
+            duration_minutes: number;
+            /** Distance Km */
+            distance_km?: number | null;
+            /** Zone Duration */
+            zone_duration: components["schemas"]["CardioZoneDuration"][];
+        };
+        /** CardioSessionCreate */
+        CardioSessionCreate: {
+            /**
+             * Activity Type
+             * @enum {string}
+             */
+            activity_type: "walking" | "running" | "elliptical" | "stationary_bike" | "cycling" | "rowing" | "stepper" | "swimming" | "other";
+            /** Duration Minutes */
+            duration_minutes: number;
+            /** Distance Km */
+            distance_km?: number | null;
+            /** Average Heart Rate Bpm */
+            average_heart_rate_bpm?: number | null;
+            /** Heart Rate Zone */
+            heart_rate_zone?: number | null;
+            /** Note */
+            note?: string | null;
+            /**
+             * Scheduled At
+             * Format: date-time
+             */
+            scheduled_at: string;
+            /**
+             * Status
+             * @default completed
+             * @enum {string}
+             */
+            status: "planned" | "completed";
+            /**
+             * Client Request Id
+             * Format: uuid
+             */
+            client_request_id: string;
+        };
+        /** CardioSessionResponse */
+        CardioSessionResponse: {
+            /**
+             * Activity Type
+             * @enum {string}
+             */
+            activity_type: "walking" | "running" | "elliptical" | "stationary_bike" | "cycling" | "rowing" | "stepper" | "swimming" | "other";
+            /** Duration Minutes */
+            duration_minutes: number;
+            /** Distance Km */
+            distance_km?: number | null;
+            /** Average Heart Rate Bpm */
+            average_heart_rate_bpm?: number | null;
+            /** Heart Rate Zone */
+            heart_rate_zone?: number | null;
+            /** Note */
+            note?: string | null;
+            /**
+             * Scheduled At
+             * Format: date-time
+             */
+            scheduled_at: string;
+            /**
+             * Status
+             * @default completed
+             * @enum {string}
+             */
+            status: "planned" | "completed";
+            /** Id */
+            id: number;
+            /**
+             * Source
+             * @constant
+             */
+            source: "manual";
+            /** Completed At */
+            completed_at?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** CardioSessionUpdate */
+        CardioSessionUpdate: {
+            /** Activity Type */
+            activity_type?: ("walking" | "running" | "elliptical" | "stationary_bike" | "cycling" | "rowing" | "stepper" | "swimming" | "other") | null;
+            /** Duration Minutes */
+            duration_minutes?: number | null;
+            /** Distance Km */
+            distance_km?: number | null;
+            /** Average Heart Rate Bpm */
+            average_heart_rate_bpm?: number | null;
+            /** Heart Rate Zone */
+            heart_rate_zone?: number | null;
+            /** Note */
+            note?: string | null;
+            /** Scheduled At */
+            scheduled_at?: string | null;
+            /** Status */
+            status?: ("planned" | "completed") | null;
+        };
         /** CardioTraining */
         CardioTraining: {
             /**
@@ -3086,6 +3255,13 @@ export interface components {
              * @enum {string}
              */
             intensity: "very_light" | "light" | "moderate" | "hard" | "very_hard";
+        };
+        /** CardioZoneDuration */
+        CardioZoneDuration: {
+            /** Zone */
+            zone: number;
+            /** Duration Minutes */
+            duration_minutes: number;
         };
         /** ClientResponse */
         ClientResponse: {
@@ -5067,6 +5243,7 @@ export interface components {
              */
             period_end: string;
             training: components["schemas"]["TrainingPeriodSummary"];
+            cardio: components["schemas"]["CardioPeriodSummary"];
             nutrition: components["schemas"]["NutritionPeriodSummary"];
             body: components["schemas"]["BodyPeriodSummary"];
             adherence: components["schemas"]["AdherenceSummary"];
@@ -5421,6 +5598,7 @@ export interface components {
              */
             period_end: string;
             training: components["schemas"]["TrainingPeriodSummary"];
+            cardio: components["schemas"]["CardioPeriodSummary"];
             nutrition: components["schemas"]["NutritionPeriodSummary"];
             body: components["schemas"]["BodyPeriodSummary"];
             adherence: components["schemas"]["AdherenceSummary"];
@@ -9099,6 +9277,169 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_cardio_sessions_api_v1_workouts_cardio_get: {
+        parameters: {
+            query?: {
+                date_from?: string | null;
+                date_to?: string | null;
+                status?: ("planned" | "completed") | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CardioSessionResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_cardio_session_api_v1_workouts_cardio_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CardioSessionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CardioSessionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_cardio_session_api_v1_workouts_cardio__session_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_cardio_session_api_v1_workouts_cardio__session_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CardioSessionUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CardioSessionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_complete_cardio_session_api_v1_workouts_cardio__session_id__complete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CardioSessionResponse"];
+                };
             };
             /** @description Validation Error */
             422: {

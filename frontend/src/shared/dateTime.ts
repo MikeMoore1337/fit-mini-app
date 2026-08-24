@@ -33,6 +33,30 @@ export function dateInputValue(date: Date, timeZone = detectedTimeZone()): strin
   return `${year}-${month}-${day}`;
 }
 
+export function dateTimeInputValue(date: Date, timeZone = detectedTimeZone()): string {
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(date);
+    const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    if (value.year && value.month && value.day && value.hour && value.minute) {
+      return `${value.year}-${value.month}-${value.day}T${value.hour}:${value.minute}`;
+    }
+  } catch {
+    // Fall back to the device-local wall time below for an invalid or unsupported timezone.
+  }
+  const datePart = dateInputValue(date);
+  const hour = String(date.getHours()).padStart(2, '0');
+  const minute = String(date.getMinutes()).padStart(2, '0');
+  return `${datePart}T${hour}:${minute}`;
+}
+
 export function addCalendarDays(value: string, days: number): string {
   const [year, month, day] = value.split('-').map(Number);
   if (!year || !month || !day) return value;

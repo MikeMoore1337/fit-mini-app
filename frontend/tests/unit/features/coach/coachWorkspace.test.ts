@@ -36,6 +36,14 @@ function summary(
       last_completed_workout_on: lastWorkout,
       next_workout: null,
     },
+    cardio: {
+      completed_sessions: 0,
+      planned_sessions: 0,
+      frequency_per_week: 0,
+      duration_minutes: 0,
+      distance_km: null,
+      zone_duration: [],
+    },
     nutrition: {
       visible: true,
       logged_days: 14,

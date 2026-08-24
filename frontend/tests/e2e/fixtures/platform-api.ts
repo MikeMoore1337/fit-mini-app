@@ -22,6 +22,8 @@ export interface PlatformApiController {
   setOffline(offline: boolean): void;
   failNextMeasurementSave(): void;
   measurementSaveCalls(): number;
+  failNextCardioSave(): void;
+  cardioSaveCalls(): number;
   authInitCalls(): number;
   setPatchCalls(): number;
   finishCalls(): number;
@@ -116,6 +118,9 @@ export async function installPlatformApi(
   }> = [];
   let failNextMeasurementSave = false;
   let measurementSaveCalls = 0;
+  let failNextCardioSave = false;
+  let cardioSaveCalls = 0;
+  let cardioSessions: Array<Record<string, unknown>> = [];
   let completionFeedback: string | null = null;
   let completionNote: string | null = null;
   let adaptationApplyCalls = 0;
@@ -719,6 +724,35 @@ export async function installPlatformApi(
         circumference_limitations: ['Окружность участка тела не показывает рост отдельной мышцы.'],
       },
     },
+    cardio: {
+      completed_sessions: cardioSessions.filter((session) => session.status === 'completed').length,
+      planned_sessions: cardioSessions.filter((session) => session.status === 'planned').length,
+      frequency_per_week: Number(
+        (
+          (cardioSessions.filter((session) => session.status === 'completed').length * 7) /
+          30
+        ).toFixed(1),
+      ),
+      duration_minutes: cardioSessions
+        .filter((session) => session.status === 'completed')
+        .reduce((total, session) => total + Number(session.duration_minutes), 0),
+      distance_km: cardioSessions.some(
+        (session) => session.status === 'completed' && session.distance_km != null,
+      )
+        ? cardioSessions
+            .filter((session) => session.status === 'completed')
+            .reduce((total, session) => total + Number(session.distance_km ?? 0), 0)
+        : null,
+      zone_duration: Object.entries(
+        cardioSessions
+          .filter((session) => session.status === 'completed' && session.heart_rate_zone != null)
+          .reduce<Record<string, number>>((totals, session) => {
+            const zone = String(session.heart_rate_zone);
+            totals[zone] = (totals[zone] ?? 0) + Number(session.duration_minutes);
+            return totals;
+          }, {}),
+      ).map(([zone, duration]) => ({ zone: Number(zone), duration_minutes: duration })),
+    },
     adherence: {
       formula_version: 'adherence-v1',
       overall_percent: null,
@@ -1246,6 +1280,67 @@ export async function installPlatformApi(
         },
       });
     }
+    if (path.endsWith('/workouts/cardio') && request.method() === 'GET') {
+      const dateFrom = url.searchParams.get('date_from');
+      const dateTo = url.searchParams.get('date_to');
+      const items = cardioSessions.filter((session) => {
+        const date = String(session.scheduled_at).slice(0, 10);
+        return (!dateFrom || date >= dateFrom) && (!dateTo || date <= dateTo);
+      });
+      return route.fulfill({ json: items });
+    }
+    if (path.endsWith('/workouts/cardio') && request.method() === 'POST') {
+      cardioSaveCalls += 1;
+      if (failNextCardioSave) {
+        failNextCardioSave = false;
+        return route.fulfill({ status: 503, json: { detail: 'Временная ошибка сохранения' } });
+      }
+      const body = request.postDataJSON() as Record<string, unknown>;
+      const replay = cardioSessions.find(
+        (session) => session.client_request_id === body.client_request_id,
+      );
+      if (replay) return route.fulfill({ status: 201, json: replay });
+      const created = {
+        ...body,
+        id: 660 + cardioSessions.length,
+        source: 'manual',
+        completed_at: body.status === 'completed' ? body.scheduled_at : null,
+        created_at: `${today}T12:00:00`,
+        updated_at: `${today}T12:00:00`,
+      };
+      cardioSessions = [created, ...cardioSessions];
+      return route.fulfill({ status: 201, json: created });
+    }
+    const cardioMatch = path.match(/\/workouts\/cardio\/(\d+)$/);
+    if (cardioMatch && request.method() === 'PATCH') {
+      cardioSaveCalls += 1;
+      const id = Number(cardioMatch[1]);
+      const body = request.postDataJSON() as Record<string, unknown>;
+      const existing = cardioSessions.find((session) => session.id === id);
+      if (!existing) return route.fulfill({ status: 404, json: { detail: 'Cardio not found' } });
+      const updated = { ...existing, ...body, updated_at: `${today}T12:05:00` };
+      cardioSessions = cardioSessions.map((session) => (session.id === id ? updated : session));
+      return route.fulfill({ json: updated });
+    }
+    const completeCardioMatch = path.match(/\/workouts\/cardio\/(\d+)\/complete$/);
+    if (completeCardioMatch && request.method() === 'POST') {
+      const id = Number(completeCardioMatch[1]);
+      const existing = cardioSessions.find((session) => session.id === id);
+      if (!existing) return route.fulfill({ status: 404, json: { detail: 'Cardio not found' } });
+      const updated = {
+        ...existing,
+        status: 'completed',
+        completed_at: existing.completed_at ?? `${today}T12:05:00`,
+        updated_at: `${today}T12:05:00`,
+      };
+      cardioSessions = cardioSessions.map((session) => (session.id === id ? updated : session));
+      return route.fulfill({ json: updated });
+    }
+    if (cardioMatch && request.method() === 'DELETE') {
+      const id = Number(cardioMatch[1]);
+      cardioSessions = cardioSessions.filter((session) => session.id !== id);
+      return route.fulfill({ status: 204, body: '' });
+    }
     if (path.endsWith('/workouts/progress/summary')) {
       return route.fulfill({ json: progressSummary() });
     }
@@ -1691,6 +1786,12 @@ export async function installPlatformApi(
     },
     measurementSaveCalls() {
       return measurementSaveCalls;
+    },
+    failNextCardioSave() {
+      failNextCardioSave = true;
+    },
+    cardioSaveCalls() {
+      return cardioSaveCalls;
     },
     authInitCalls() {
       return authInitCalls;

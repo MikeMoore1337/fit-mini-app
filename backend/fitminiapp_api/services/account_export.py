@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 
 from fitminiapp_api.models.audit import AuditEvent
 from fitminiapp_api.models.auth_identity import AuthIdentity, LocalCredential
+from fitminiapp_api.models.cardio import CardioSession
 from fitminiapp_api.models.check_in import WeeklyCheckIn
 from fitminiapp_api.models.exercise import (
     Exercise,
@@ -48,7 +49,7 @@ if TYPE_CHECKING:
     from fitminiapp_api.models.recipe import RecipeIngredient
 
 
-ACCOUNT_EXPORT_SCHEMA_VERSION = 2
+ACCOUNT_EXPORT_SCHEMA_VERSION = 3
 
 # Every ORM table whose rows can be reached from users through ownership or actor FKs must be
 # classified here. Tests compare this inventory with SQLAlchemy metadata so a new persistent user
@@ -60,6 +61,7 @@ ACCOUNT_EXPORT_DATA_INVENTORY: dict[str, str] = {
     "user_profiles": "profile",
     "user_profile_priority_muscles": "profile",
     "body_measurements": "measurements",
+    "cardio_sessions": "cardio_sessions",
     "nutrition_targets": "nutrition",
     "energy_calibrations": "energy_calibrations",
     "weekly_check_ins": "weekly_check_ins",
@@ -457,6 +459,12 @@ def build_account_export(db: Session, user: User) -> dict[str, object]:
         .order_by(BodyMeasurement.measured_on.asc(), BodyMeasurement.id.asc())
         .all()
     )
+    cardio_sessions = (
+        db.query(CardioSession)
+        .filter(CardioSession.user_id == user.id)
+        .order_by(CardioSession.scheduled_at.asc(), CardioSession.id.asc())
+        .all()
+    )
     nutrition_history = (
         db.query(NutritionTarget)
         .filter(NutritionTarget.user_id == user.id)
@@ -693,6 +701,27 @@ def build_account_export(db: Session, user: User) -> dict[str, object]:
         ],
         "weekly_check_ins": [_fields(row, WEEKLY_CHECK_IN_FIELDS) for row in weekly_check_ins],
         "measurements": [_fields(row, MEASUREMENT_FIELDS) for row in measurements],
+        "cardio_sessions": [
+            _fields(
+                row,
+                (
+                    "id",
+                    "activity_type",
+                    "duration_minutes",
+                    "distance_km",
+                    "average_heart_rate_bpm",
+                    "heart_rate_zone",
+                    "note",
+                    "scheduled_at",
+                    "status",
+                    "source",
+                    "completed_at",
+                    "created_at",
+                    "updated_at",
+                ),
+            )
+            for row in cardio_sessions
+        ],
         "private_foods": [_serialize_food(row) for row in private_foods],
         "food_favorites": [
             {"created_at": favorite.created_at, "food": _serialize_food(food)}

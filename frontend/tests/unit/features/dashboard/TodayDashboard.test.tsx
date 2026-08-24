@@ -132,6 +132,14 @@ const progressSummary = {
       status: 'planned',
     },
   },
+  cardio: {
+    completed_sessions: 1,
+    planned_sessions: 0,
+    frequency_per_week: 0.23,
+    duration_minutes: 35,
+    distance_km: 5.2,
+    zone_duration: [{ zone: 3, duration_minutes: 35 }],
+  },
   nutrition: {
     visible: true,
     logged_days: 20,
@@ -387,7 +395,7 @@ describe('TodayDashboard', () => {
     expect(
       await screen.findByRole('heading', { name: 'Тренировка завершена' }),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/длительность/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/длительность тренировки/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/объём/i)).not.toBeInTheDocument();
   });
 

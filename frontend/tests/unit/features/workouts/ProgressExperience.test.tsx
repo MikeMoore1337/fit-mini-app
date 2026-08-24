@@ -32,6 +32,14 @@ function makeSummary(): ProgressSummary {
       last_completed_workout_on: '2030-01-28',
       next_workout: null,
     },
+    cardio: {
+      completed_sessions: 2,
+      planned_sessions: 1,
+      frequency_per_week: 0.47,
+      duration_minutes: 80,
+      distance_km: 7.5,
+      zone_duration: [{ zone: 2, duration_minutes: 45 }],
+    },
     nutrition: {
       visible: true,
       logged_days: 20,

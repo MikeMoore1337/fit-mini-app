@@ -1,6 +1,10 @@
 import type { QueryClient } from '@tanstack/react-query';
 
 export const queryKeys = {
+  cardio: {
+    all: ['cardio'] as const,
+    range: (dateFrom: string, dateTo: string) => ['cardio', dateFrom, dateTo] as const,
+  },
   measurements: {
     all: ['measurements'] as const,
     subject: (clientId?: number) => ['measurements', clientId ?? 'me'] as const,

@@ -5216,6 +5216,222 @@ body.public-shell-mode:has(.public-shell.public-shell--design-v2) {
   box-shadow: none;
 }
 
+/* Cardio logging reuses the shared form/list language and stays separate from strength volume. */
+.cardio-log,
+.cardio-history {
+  display: grid;
+  min-width: 0;
+  gap: var(--v2-space-4);
+}
+
+.cardio-log {
+  padding: var(--v2-space-5);
+  border: 1px solid var(--v2-border);
+  border-top: 3px solid var(--v2-lime);
+  border-radius: var(--v2-region-radius);
+  background: var(--v2-surface);
+}
+
+.cardio-log__header,
+.cardio-session-row__main,
+.cardio-form__actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--v2-space-3);
+}
+
+.cardio-log__header > div,
+.cardio-session-row__main > div {
+  display: grid;
+  min-width: 0;
+  gap: var(--v2-space-1);
+}
+
+.cardio-log__header h2,
+.cardio-log__header p,
+.cardio-log__today h3,
+.cardio-session-row p,
+.cardio-session-row dl {
+  margin: 0;
+}
+
+.cardio-log__header h2 {
+  font-size: clamp(1.35rem, 3vw, 1.75rem);
+}
+
+.cardio-log__header p,
+.cardio-session-row__main span,
+.cardio-session-row__note {
+  color: var(--v2-text-secondary);
+  line-height: 1.45;
+}
+
+.cardio-form {
+  display: grid;
+  min-width: 0;
+  gap: var(--v2-space-4);
+  scroll-margin-bottom: calc(var(--app-bottom-nav-height, 0px) + var(--v2-space-5));
+}
+
+.cardio-form__core,
+.cardio-form__optional-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--v2-space-3);
+}
+
+.cardio-form :where(.ui-field, .ui-input, .ui-select, textarea) {
+  min-width: 0;
+  width: 100%;
+}
+
+.cardio-form textarea {
+  resize: vertical;
+}
+
+.cardio-form__optional {
+  border-block: 1px solid var(--v2-border);
+}
+
+.cardio-form__optional > summary {
+  min-height: 44px;
+  padding-block: var(--v2-space-3);
+  color: var(--v2-text-primary);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cardio-form__optional-fields {
+  padding-bottom: var(--v2-space-4);
+}
+
+.cardio-form__optional-fields > .ui-field:last-child {
+  grid-column: 1 / -1;
+}
+
+.cardio-form__error {
+  display: grid;
+  gap: var(--v2-space-1);
+  padding: var(--v2-space-3);
+  border-left: 3px solid var(--v2-danger);
+  background: var(--v2-danger-surface);
+  color: var(--v2-text-primary);
+}
+
+.cardio-form__actions {
+  justify-content: flex-end;
+}
+
+.cardio-form__actions .ui-button {
+  min-height: 48px;
+}
+
+.cardio-log__today {
+  display: grid;
+  gap: var(--v2-space-3);
+  padding-top: var(--v2-space-4);
+  border-top: 1px solid var(--v2-border);
+}
+
+.cardio-log__today h3 {
+  font-size: 1rem;
+}
+
+.cardio-session-list {
+  display: grid;
+  border-top: 1px solid var(--v2-border);
+}
+
+.cardio-session-row {
+  display: grid;
+  min-width: 0;
+  gap: var(--v2-space-3);
+  padding-block: var(--v2-space-4);
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.cardio-session-row--editing {
+  padding-inline: var(--v2-space-3);
+  background: var(--v2-surface-secondary);
+}
+
+.cardio-session-row__main strong,
+.cardio-session-row__main span {
+  overflow-wrap: anywhere;
+}
+
+.cardio-session-row__main > .ui-badge {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.cardio-session-row__facts,
+.cardio-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+}
+
+.cardio-session-row__facts > div,
+.cardio-summary-strip > div {
+  display: grid;
+  align-content: start;
+  gap: var(--v2-space-1);
+  min-width: 0;
+  padding: var(--v2-space-3);
+  border-right: 1px solid var(--v2-border);
+}
+
+.cardio-session-row__facts > div:first-child,
+.cardio-summary-strip > div:first-child {
+  padding-left: 0;
+}
+
+.cardio-session-row__facts > div:last-child,
+.cardio-summary-strip > div:last-child {
+  border-right: 0;
+}
+
+.cardio-session-row__facts dt,
+.cardio-summary-strip dt {
+  color: var(--v2-text-secondary);
+  font-size: 0.75rem;
+}
+
+.cardio-session-row__facts dd,
+.cardio-summary-strip dd {
+  margin: 0;
+  color: var(--v2-text-primary);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.cardio-session-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--v2-space-2);
+}
+
+.cardio-session-row__actions .ui-button {
+  min-height: 44px;
+}
+
+.cardio-session-row__actions .ui-button--danger {
+  background: var(--danger-button);
+  color: #fff;
+}
+
+.cardio-session-row__actions .ui-button--danger:hover:not(:disabled) {
+  background: var(--danger-hover);
+}
+
+.cardio-summary-strip {
+  border-block: 1px solid var(--v2-border);
+}
+
 @media (min-width: 900px) {
   .app-section--progress .progress-schedule > .card,
   .app-section--progress > .page-stack > .stack > .card,
@@ -5292,6 +5508,51 @@ body.public-shell-mode:has(.public-shell.public-shell--design-v2) {
 
   .app-section--design-v2 .metric:last-child {
     border-bottom: 0;
+  }
+
+  .cardio-log {
+    gap: var(--v2-space-3);
+    padding: var(--v2-space-4);
+  }
+
+  .cardio-log__header {
+    align-items: start;
+  }
+
+  .cardio-form__core,
+  .cardio-form__optional-fields,
+  .cardio-session-row__facts,
+  .cardio-summary-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .cardio-form__optional-fields > .ui-field:last-child {
+    grid-column: auto;
+  }
+
+  .cardio-session-row__facts > div,
+  .cardio-summary-strip > div,
+  .cardio-session-row__facts > div:first-child,
+  .cardio-summary-strip > div:first-child {
+    padding: var(--v2-space-2) 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--v2-border);
+  }
+
+  .cardio-session-row__facts > div:last-child,
+  .cardio-summary-strip > div:last-child {
+    border-bottom: 0;
+  }
+
+  .cardio-form__actions,
+  .cardio-session-row__actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .cardio-form__actions .ui-button,
+  .cardio-session-row__actions .ui-button {
+    width: 100%;
   }
 
   .app-section--progress .progress-summary {

@@ -243,7 +243,7 @@ export function ProgressSchedule({
 }) {
   return (
     <div className="stack progress-schedule">
-      <ProgressExperience measurementDiary={measurementDiary} />
+      <ProgressExperience measurementDiary={measurementDiary} timeZone={timeZone} />
       <WeeklyCheckInCard autoFocus={focusWeeklyReview} userId={userId} />
       <SchedulePanel
         timeZone={timeZone}

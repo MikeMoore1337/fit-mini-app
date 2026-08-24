@@ -21,6 +21,7 @@ import { WorkoutAdaptation } from '../workouts/WorkoutAdaptation';
 import { TodayWorkout } from '../workouts/TodayWorkout';
 import { Badge, Button, Skeleton } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
+import { CardioQuickLog } from '../cardio/CardioLogging';
 import { WeekStrip, type WeekStripDayMeta, type WeekStripStatus } from '../../shared/ui/WeekStrip';
 import {
   productEventSurface,
@@ -857,6 +858,8 @@ export function TodayDashboard() {
           <ProgressSummaryPanel summary={progress} />
         </div>
       </div>
+
+      <CardioQuickLog today={today} />
 
       {profileMissing && (
         <aside className="today-profile-nudge">

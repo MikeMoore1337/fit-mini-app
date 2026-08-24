@@ -64,6 +64,20 @@ class TrainingPeriodSummary(BaseModel):
     next_workout: NextWorkoutSummary | None = None
 
 
+class CardioZoneDuration(BaseModel):
+    zone: int = Field(ge=1, le=5)
+    duration_minutes: int = Field(ge=1)
+
+
+class CardioPeriodSummary(BaseModel):
+    completed_sessions: int = Field(ge=0)
+    planned_sessions: int = Field(ge=0)
+    frequency_per_week: float = Field(ge=0)
+    duration_minutes: int = Field(ge=0)
+    distance_km: float | None = Field(default=None, ge=0)
+    zone_duration: list[CardioZoneDuration]
+
+
 class NutritionPeriodSummary(BaseModel):
     visible: bool
     logged_days: int = 0
@@ -207,6 +221,7 @@ class ProgressSummaryResponse(BaseModel):
     period_start: date
     period_end: date
     training: TrainingPeriodSummary
+    cardio: CardioPeriodSummary
     nutrition: NutritionPeriodSummary
     body: BodyPeriodSummary
     adherence: AdherenceSummary

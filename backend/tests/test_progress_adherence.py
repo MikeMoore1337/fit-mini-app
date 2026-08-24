@@ -304,10 +304,17 @@ def test_user_progress_summary_handles_periods_current_day_and_isolation(client)
         "target_effective_on": (today - timedelta(days=30)).isoformat(),
     }
     assert payload["adherence"]["workouts"]["percent"] == 50.0
-    assert payload["adherence"]["cardio"]["status"] == "unsupported"
+    assert payload["adherence"]["cardio"] == {
+        "status": "available",
+        "percent": 0.0,
+        "achieved": 0,
+        "evaluated": 1,
+        "weight": 0.2,
+        "reason": None,
+    }
     assert payload["adherence"]["calories"]["percent"] == 100.0
     assert payload["adherence"]["protein"]["percent"] == 100.0
-    assert payload["adherence"]["overall_percent"] == 75.0
+    assert payload["adherence"]["overall_percent"] == 60.0
     assert payload["body"]["latest_measurement"]["weight_kg"] == 79.0
     weight_trend = next(
         trend for trend in payload["body"]["trends"] if trend["metric"] == "weight_kg"
@@ -506,7 +513,7 @@ def test_bulk_trainer_summaries_use_constant_query_count() -> None:
     assert summaries_by_name["Private 19"]["body"]["latest_measurement"]["weight_kg"] == 89
     assert summaries_by_name["Private 10"]["body"]["latest_measurement"]["weight_kg"] == 80
     assert all(summary["nutrition"]["target_calories"] is None for summary in summaries)
-    assert metrics.query_count == 13
+    assert metrics.query_count == 14
 
 
 def test_nutrition_target_effective_date_keeps_client_local_wall_date(client) -> None:

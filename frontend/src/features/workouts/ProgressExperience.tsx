@@ -15,6 +15,7 @@ import {
   SegmentedControl,
 } from '../../shared/ui/common';
 import { NutritionPeriodReport } from './NutritionReport';
+import { CardioHistory } from '../cardio/CardioLogging';
 
 type PeriodDays = 7 | 30 | 90;
 type BodyTrend = ProgressSummary['body']['trends'][number];
@@ -815,8 +816,8 @@ function AdherenceSection({ summary }: { summary: ProgressSummary }) {
         ))}
       </div>
       <p className="progress-note">
-        Текущий день питания не учитывается: его ещё можно дополнить. Кардио появится в оценке
-        только после появления журнала фактической активности.
+        Текущий день питания не учитывается: его ещё можно дополнить. Кардио сравнивается с
+        действовавшей недельной целью только по завершённым ручным записям.
       </p>
     </section>
   );
@@ -831,7 +832,10 @@ function useTrainingAnalytics(period: PeriodDays) {
   });
 }
 
-export function ProgressExperience({ measurementDiary }: { measurementDiary?: ReactNode } = {}) {
+export function ProgressExperience({
+  measurementDiary,
+  timeZone,
+}: { measurementDiary?: ReactNode; timeZone?: string | null } = {}) {
   const [period, setPeriod] = useState<PeriodDays>(30);
   const summary = useQuery({
     queryKey: queryKeys.progress.summary(period),
@@ -873,6 +877,11 @@ export function ProgressExperience({ measurementDiary }: { measurementDiary?: Re
         <>
           <SummaryOverview summary={summary.data} />
           <TrainingSection analytics={analytics} summary={summary.data} />
+          <CardioHistory
+            periodDays={period}
+            summary={summary.data.cardio}
+            timeZone={timeZone ?? undefined}
+          />
           <BodySection
             isStale={summary.isPlaceholderData}
             measurementDiary={measurementDiary}

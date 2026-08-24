@@ -7,6 +7,7 @@ from fitminiapp_api.models.account import AccountDataExport
 from fitminiapp_api.models.audit import AuditEvent
 from fitminiapp_api.models.auth_identity import AuthActionToken, AuthIdentity, LocalCredential
 from fitminiapp_api.models.billing import Payment, Subscription
+from fitminiapp_api.models.cardio import CardioSession
 from fitminiapp_api.models.check_in import WeeklyCheckIn
 from fitminiapp_api.models.exercise import Exercise
 from fitminiapp_api.models.feedback import WorkoutComment, WorkoutCommentRevision
@@ -218,6 +219,9 @@ def delete_user_cascade(db: Session, user: User) -> None:
     db.query(Payment).filter(Payment.user_id == user.id).delete(synchronize_session=False)
     db.query(Subscription).filter(Subscription.user_id == user.id).delete(synchronize_session=False)
     db.query(BodyMeasurement).filter(BodyMeasurement.user_id == user.id).delete(
+        synchronize_session=False
+    )
+    db.query(CardioSession).filter(CardioSession.user_id == user.id).delete(
         synchronize_session=False
     )
     db.query(AccountDataExport).filter(AccountDataExport.user_id == user.id).delete(

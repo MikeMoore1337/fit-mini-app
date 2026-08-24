@@ -118,6 +118,108 @@ test('TMA auth, shared UI, theme, viewport, safe areas and BackButton stay on on
   await expect.poll(async () => (await tma.state()).backButton.visible).toBe(false);
 });
 
+test('cardio quick log keeps retry, editing and shared Mobile Web/TMA behavior', async ({
+  mobilePage,
+  tma,
+  tmaPage,
+}) => {
+  test.setTimeout(90_000);
+  const tmaApi = await installPlatformApi(tmaPage);
+  const mobileApi = await installPlatformApi(mobilePage, { browserSession: true });
+  await Promise.all([tmaPage.goto('/app'), mobilePage.goto('/app')]);
+
+  for (const page of [tmaPage, mobilePage]) {
+    const cardio = page.locator('.cardio-log--quick');
+    await cardio.scrollIntoViewIfNeeded();
+    await expect(cardio.getByRole('heading', { name: 'Кардио' })).toBeVisible();
+    await expect(cardio.getByRole('button', { name: 'Сохранить кардио' })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+  }
+  expect(await sharedSurfaceSignature(tmaPage)).toEqual(await sharedSurfaceSignature(mobilePage));
+
+  const tmaCardio = tmaPage.locator('.cardio-log--quick');
+  const duration = tmaCardio.getByLabel('Длительность, мин');
+  await tmaCardio.getByLabel('Вид активности').selectOption('stationary_bike');
+  await duration.focus();
+  await expect(tmaPage.locator('html')).toHaveAttribute('data-yfc-keyboard', 'visible');
+  await expect(tmaPage.locator('#appBottomNav')).toBeHidden();
+  await duration.fill('35');
+  await tmaCardio.getByText('Дистанция, пульс и заметка').click();
+  await tmaCardio.getByLabel('Дистанция, км').fill('5.2');
+  await tmaCardio.getByLabel('Средний пульс, уд/мин').fill('142');
+  await tmaCardio.getByLabel('Зона пульса').selectOption('3');
+  await tmaCardio.getByLabel('Заметка').fill('Ровный темп, без часов');
+  await tma.setActive(false);
+  await tma.setActive(true);
+  await expect(duration).toHaveValue('35');
+  const saveCardio = tmaCardio.getByRole('button', { name: 'Сохранить кардио' });
+  await saveCardio.scrollIntoViewIfNeeded();
+  await expectNoOverlap(saveCardio, tmaPage.locator('#appBottomNav'));
+  tmaApi.failNextCardioSave();
+  await saveCardio.click();
+  await expect.poll(() => tmaApi.cardioSaveCalls()).toBe(1);
+  await expect(tmaCardio.getByRole('alert')).toContainText('Временная ошибка сохранения');
+  await expect(duration).toHaveValue('35');
+  await expect(tmaCardio.getByLabel('Заметка')).toHaveValue('Ровный темп, без часов');
+
+  await saveCardio.click();
+  await expect.poll(() => tmaApi.cardioSaveCalls()).toBe(2);
+  const savedTmaRow = tmaCardio.locator('.cardio-session-row').filter({ hasText: '35 мин' });
+  await expect(savedTmaRow).toContainText('5,2 км');
+  await expect(savedTmaRow).toContainText('Велотренажёр / велоэргометр');
+  await expect(tmaCardio.getByText('1 сегодня')).toBeVisible();
+  await savedTmaRow.getByRole('button', { name: 'Изменить' }).click();
+  const editForm = tmaCardio.locator('.cardio-session-row--editing');
+  await editForm.getByLabel('Длительность, мин').fill('40');
+  await editForm.getByRole('button', { name: 'Сохранить изменения' }).click();
+  await expect.poll(() => tmaApi.cardioSaveCalls()).toBe(3);
+  const finalTmaRow = tmaCardio.locator('.cardio-session-row').filter({ hasText: '40 мин' });
+  await expect(finalTmaRow).toBeVisible();
+  await expect(finalTmaRow.getByText('Завершено')).toHaveCSS('white-space', 'nowrap');
+
+  const mobileCardio = mobilePage.locator('.cardio-log--quick');
+  await mobileCardio.getByLabel('Длительность, мин').fill('25');
+  await mobileCardio.getByRole('button', { name: 'Сохранить кардио' }).click();
+  await expect.poll(() => mobileApi.cardioSaveCalls()).toBe(1);
+  const savedMobileRow = mobileCardio.locator('.cardio-session-row').filter({ hasText: '25 мин' });
+  await expect(savedMobileRow).toBeVisible();
+
+  for (const viewport of Object.values(MOBILE_CONTEXTS)) {
+    await tmaPage.setViewportSize(viewport);
+    await tma.setViewport(viewport.height, viewport.height);
+    await expectNoHorizontalOverflow(tmaPage);
+    await expectTouchTargets(tmaCardio.locator('.cardio-session-row__actions .ui-button'));
+  }
+  await tmaPage.setViewportSize(MOBILE_CONTEXTS.baseline);
+  await tma.setViewport(MOBILE_CONTEXTS.baseline.height, MOBILE_CONTEXTS.baseline.height);
+  await tma.setTheme('dark');
+  const tmaToastClose = tmaPage.getByRole('button', { name: 'Закрыть сообщение' }).last();
+  if (await tmaToastClose.isVisible()) await tmaToastClose.click();
+  await finalTmaRow.scrollIntoViewIfNeeded();
+  await expectNoOverlap(finalTmaRow, tmaPage.locator('#appBottomNav'));
+  await tmaPage.screenshot({
+    path: '../.artifacts/screenshots/task-66/tma-390x844-dark-cardio-saved.png',
+  });
+
+  await mobilePage.setViewportSize(MOBILE_CONTEXTS.compact);
+  const mobileToastClose = mobilePage.getByRole('button', { name: 'Закрыть сообщение' }).last();
+  if (await mobileToastClose.isVisible()) await mobileToastClose.click();
+  await savedMobileRow.scrollIntoViewIfNeeded();
+  await mobilePage.screenshot({
+    path: '../.artifacts/screenshots/task-66/mobile-web-360x800-light-cardio-saved.png',
+  });
+
+  await mobilePage.setViewportSize({ width: 1440, height: 900 });
+  await mobilePage.goto('/app?section=progress');
+  const history = mobilePage.locator('#progress-cardio');
+  await history.scrollIntoViewIfNeeded();
+  await expect(history.getByText('1 завершено')).toBeVisible();
+  await expect(history).toContainText('25 мин');
+  await mobilePage.screenshot({
+    path: '../.artifacts/screenshots/task-66/desktop-1440x900-light-cardio-history.png',
+  });
+});
+
 test('notification center keeps Mobile Web/TMA parity, unread geometry and an explicit return path', async ({
   mobilePage,
   tma,

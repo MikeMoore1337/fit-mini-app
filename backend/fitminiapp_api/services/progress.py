@@ -3,14 +3,21 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
+from math import floor
 from typing import Literal, cast
 
 from sqlalchemy import and_, case, func, or_
 from sqlalchemy.orm import Session, joinedload
 
-from fitminiapp_api.core.timezone import today_for_user
+from fitminiapp_api.core.timezone import (
+    get_user_timezone_name,
+    local_naive_to_utc_naive,
+    today_for_user,
+    utc_naive_to_timezone_naive,
+)
+from fitminiapp_api.models.cardio import CardioSession
 from fitminiapp_api.models.food_diary import FoodDiaryDayStatus, FoodDiaryEntry
 from fitminiapp_api.models.nutrition import NutritionTarget
 from fitminiapp_api.models.program import (
@@ -349,6 +356,35 @@ def build_progress_summaries(
     workouts_by_user: dict[int, list] = defaultdict(list)
     for workout_row in workout_rows:
         workouts_by_user[workout_row.user_id].append(workout_row)
+
+    cardio_rows = (
+        db.query(CardioSession)
+        .filter(
+            or_(
+                *(
+                    and_(
+                        CardioSession.user_id == user.id,
+                        CardioSession.scheduled_at
+                        >= local_naive_to_utc_naive(
+                            datetime.combine(start_by_user[user.id], time.min),
+                            get_user_timezone_name(user),
+                        ),
+                        CardioSession.scheduled_at
+                        < local_naive_to_utc_naive(
+                            datetime.combine(today_by_user[user.id] + timedelta(days=1), time.min),
+                            get_user_timezone_name(user),
+                        ),
+                    )
+                    for user in users
+                )
+            )
+        )
+        .order_by(CardioSession.user_id, CardioSession.scheduled_at, CardioSession.id)
+        .all()
+    )
+    cardio_by_user: dict[int, list[CardioSession]] = defaultdict(list)
+    for cardio_row in cardio_rows:
+        cardio_by_user[cardio_row.user_id].append(cardio_row)
 
     next_candidates = (
         db.query(
@@ -746,14 +782,33 @@ def build_progress_summaries(
                 unavailable_reason="nutrition_access_not_granted",
             )
 
-        cardio_planned = bool(target and (target.cardio_trainings_per_week or 0) > 0)
+        completed_cardio = [row for row in cardio_by_user[user.id] if row.status == "completed"]
+        planned_cardio = [row for row in cardio_by_user[user.id] if row.status == "planned"]
+        target_dates: dict[date, NutritionTarget] = {}
+        for day_offset in range((current_day - start_by_user[user.id]).days + 1):
+            cardio_day = start_by_user[user.id] + timedelta(days=day_offset)
+            effective_target = _effective_nutrition_target(
+                target_history_by_user[user.id],
+                cardio_day,
+            )
+            if effective_target and (effective_target.cardio_trainings_per_week or 0) > 0:
+                target_dates[cardio_day] = effective_target
+        expected_cardio = floor(
+            sum((row.cardio_trainings_per_week or 0) / 7 for row in target_dates.values()) + 0.5
+        )
+        completed_for_target = sum(
+            1
+            for row in completed_cardio
+            if utc_naive_to_timezone_naive(row.scheduled_at, get_user_timezone_name(user)).date()
+            in target_dates
+        )
         cardio_adherence = calculate_adherence_component(
-            achieved=0,
-            evaluated=0,
+            achieved=min(completed_for_target, expected_cardio),
+            evaluated=expected_cardio,
             weight=ADHERENCE_WEIGHTS["cardio"],
-            unavailable_status="unsupported" if cardio_planned else "not_applicable",
+            unavailable_status="insufficient_data" if target_dates else "not_applicable",
             unavailable_reason=(
-                "cardio_log_unavailable" if cardio_planned else "cardio_not_planned"
+                "cardio_target_period_too_short" if target_dates else "cardio_not_planned"
             ),
         )
         components = {
@@ -805,6 +860,15 @@ def build_progress_summaries(
             None,
         )
         training_sufficiency = build_training_data_sufficiency(training_counts_by_user[user.id])
+        cardio_duration = sum(row.duration_minutes for row in completed_cardio)
+        cardio_distance = sum(
+            (row.distance_km for row in completed_cardio if row.distance_km is not None),
+            Decimal("0"),
+        )
+        zone_duration: dict[int, int] = defaultdict(int)
+        for row in completed_cardio:
+            if row.heart_rate_zone is not None:
+                zone_duration[row.heart_rate_zone] += row.duration_minutes
         summary = {
             "user_id": user.id,
             "period_days": period_days,
@@ -818,6 +882,17 @@ def build_progress_summaries(
                 "new_personal_records": new_records_by_user[user.id],
                 "last_completed_workout_on": last_completed_by_user.get(user.id),
                 "next_workout": next_workout,
+            },
+            "cardio": {
+                "completed_sessions": len(completed_cardio),
+                "planned_sessions": len(planned_cardio),
+                "frequency_per_week": round(len(completed_cardio) * 7 / period_days, 2),
+                "duration_minutes": cardio_duration,
+                "distance_km": round(float(cardio_distance), 2) if cardio_distance else None,
+                "zone_duration": [
+                    {"zone": zone, "duration_minutes": duration}
+                    for zone, duration in sorted(zone_duration.items())
+                ],
             },
             "nutrition": {
                 "visible": nutrition_visible,
