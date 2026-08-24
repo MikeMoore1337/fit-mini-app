@@ -858,12 +858,17 @@ export function ProgressExperience({
             </p>
           </ContextualHelp>
         </div>
-        <SegmentedControl
-          ariaLabel="Период прогресса"
-          value={String(period)}
-          options={periodOptions}
-          onChange={(value) => setPeriod(Number(value) as PeriodDays)}
-        />
+        <div className="progress-hero__actions">
+          <SegmentedControl
+            ariaLabel="Период прогресса"
+            value={String(period)}
+            options={periodOptions}
+            onChange={(value) => setPeriod(Number(value) as PeriodDays)}
+          />
+          <AppLink className="button-link secondary-link" to={`/app/report?period=days_${period}`}>
+            Скачать отчёт
+          </AppLink>
+        </div>
       </header>
 
       {summary.isLoading ? (

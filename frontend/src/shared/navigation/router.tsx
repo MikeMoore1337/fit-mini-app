@@ -52,6 +52,15 @@ function notificationCenterReturn(value: string | null): string | null {
   }
 }
 
+function progressReportReturn(search: string): string {
+  const params = new URLSearchParams(search);
+  const clientId = params.get('client_id');
+  if (clientId && /^\d+$/.test(clientId) && Number(clientId) > 0) {
+    return `/coach?client_id=${clientId}`;
+  }
+  return '/app?section=progress';
+}
+
 export function focusedContextReturn(search: string): string | null {
   const params = new URLSearchParams(search);
   const workoutId = params.get('workout_id');
@@ -89,7 +98,12 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     const backButton = window.Telegram?.WebApp?.BackButton;
     if (!backButton) return;
-    const focusedReturn = location.path === '/app' ? focusedContextReturn(location.search) : null;
+    const focusedReturn =
+      location.path === '/app'
+        ? focusedContextReturn(location.search)
+        : location.path === '/app/report'
+          ? progressReportReturn(location.search)
+          : null;
     if (
       (location.path === '/app' && !focusedReturn) ||
       location.path === '/onboarding' ||

@@ -11,6 +11,7 @@ import {
   test,
 } from './fixtures/mobile-tma';
 import { installPlatformApi } from './fixtures/platform-api';
+import { makeProgressReportFixture } from '../fixtures/progress-report';
 
 const todayStates = [
   { name: 'planned', options: { workoutStatus: 'planned' as const }, action: 'Начать тренировку' },
@@ -116,6 +117,27 @@ test('TMA auth, shared UI, theme, viewport, safe areas and BackButton stay on on
   await tma.clickBack();
   await expect(tmaPage).toHaveURL('/app?section=progress');
   await expect.poll(async () => (await tma.state()).backButton.visible).toBe(false);
+});
+
+test('progress report preview, print fallback and BackButton stay inside the TMA contract', async ({
+  tma,
+  tmaPage,
+}) => {
+  await installPlatformApi(tmaPage);
+  await tmaPage.route('**/api/v1/workouts/progress/report*', async (route) => {
+    await route.fulfill({ json: makeProgressReportFixture('partial') });
+  });
+  await tmaPage.goto('/app/report?period=days_90');
+
+  await expect(tmaPage.getByRole('heading', { name: 'Александр Петров' })).toBeVisible();
+  await expectNoHorizontalOverflow(tmaPage);
+  await tmaPage.getByRole('button', { name: 'Печать / Сохранить как PDF' }).click();
+  await expect(
+    tmaPage.getByText(/В Telegram системная печать может быть недоступна/),
+  ).toBeVisible();
+  await expect.poll(async () => (await tma.state()).backButton.visible).toBe(true);
+  await tma.clickBack();
+  await expect(tmaPage).toHaveURL('/app?section=progress');
 });
 
 test('cardio quick log keeps retry, editing and shared Mobile Web/TMA behavior', async ({

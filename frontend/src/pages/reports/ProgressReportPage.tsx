@@ -1,0 +1,818 @@
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import type { NutritionReportPeriod, ProgressReport } from '../../shared/api/types';
+import { api } from '../../shared/api/client';
+import { AppLink, useNavigation } from '../../shared/navigation/router';
+import { BrandLockup } from '../../shared/ui/BrandLogo';
+import { DataConfidence } from '../../shared/ui/DataConfidence';
+import {
+  Button,
+  EmptyState,
+  ErrorState,
+  Field,
+  Input,
+  LoadingState,
+  SegmentedControl,
+} from '../../shared/ui/common';
+
+const periodOptions = [
+  { value: 'days_7', label: '7 дней' },
+  { value: 'days_30', label: '30 дней' },
+  { value: 'days_90', label: '90 дней' },
+  { value: 'current_month', label: 'Этот месяц' },
+  { value: 'previous_month', label: 'Прошлый месяц' },
+  { value: 'custom', label: 'Свой период' },
+] as const;
+
+const validPeriods = new Set<NutritionReportPeriod>(periodOptions.map((option) => option.value));
+const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+
+type ReportSelection = {
+  period: NutritionReportPeriod;
+  dateFrom: string;
+  dateTo: string;
+};
+
+function positiveClientId(search: string): number | null {
+  const value = new URLSearchParams(search).get('client_id');
+  if (!value || !/^\d+$/.test(value)) return null;
+  const result = Number(value);
+  return Number.isSafeInteger(result) && result > 0 ? result : null;
+}
+
+function initialSelection(search: string): ReportSelection {
+  const params = new URLSearchParams(search);
+  const candidate = params.get('period') as NutritionReportPeriod | null;
+  const period = candidate && validPeriods.has(candidate) ? candidate : 'days_30';
+  const dateFrom = params.get('date_from') ?? '';
+  const dateTo = params.get('date_to') ?? '';
+  return {
+    period,
+    dateFrom: datePattern.test(dateFrom) ? dateFrom : '',
+    dateTo: datePattern.test(dateTo) ? dateTo : '',
+  };
+}
+
+function reportPath(selection: ReportSelection, clientId: number | null): string {
+  const params = new URLSearchParams({ period: selection.period });
+  if (selection.period === 'custom') {
+    params.set('date_from', selection.dateFrom);
+    params.set('date_to', selection.dateTo);
+  }
+  const base = clientId
+    ? `/api/v1/coach/clients/${clientId}/progress-report`
+    : '/api/v1/workouts/progress/report';
+  return `${base}?${params}`;
+}
+
+function pagePath(selection: ReportSelection, clientId: number | null): string {
+  const params = new URLSearchParams({ period: selection.period });
+  if (selection.period === 'custom') {
+    params.set('date_from', selection.dateFrom);
+    params.set('date_to', selection.dateTo);
+  }
+  if (clientId) params.set('client_id', String(clientId));
+  return `/app/report?${params}`;
+}
+
+function formatDate(value: string): string {
+  return new Intl.DateTimeFormat('ru-RU', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(`${value}T12:00:00`));
+}
+
+function formatDateTime(value: string, timezone: string): string {
+  return new Intl.DateTimeFormat('ru-RU', {
+    dateStyle: 'long',
+    timeStyle: 'short',
+    timeZone: timezone,
+  }).format(new Date(value));
+}
+
+function formatNumber(value: number | null | undefined, digits = 1): string {
+  if (value == null) return 'Нет данных';
+  return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: digits }).format(value);
+}
+
+function percent(value: number | null | undefined): string {
+  return value == null ? 'Пока не оценить' : `${formatNumber(value)}%`;
+}
+
+function goalLabel(value: string | null | undefined): string {
+  return (
+    {
+      muscle_gain: 'Набор мышечной массы',
+      weight_loss: 'Снижение массы',
+      maintenance: 'Поддержание формы',
+      strength: 'Развитие силы',
+      endurance: 'Развитие выносливости',
+    }[value ?? ''] ?? 'Не указана'
+  );
+}
+
+function changeKindLabel(value: string): string {
+  return (
+    {
+      assigned: 'Программа назначена',
+      program_archived: 'Программа архивирована',
+      plan_updated: 'План обновлён',
+      block_created: 'Создан тренировочный блок',
+      block_updated: 'Тренировочный блок обновлён',
+      block_status_changed: 'Изменён статус тренировочного блока',
+    }[value] ?? 'План изменён'
+  );
+}
+
+function programStatusLabel(value: string): string {
+  return (
+    {
+      active: 'активна',
+      planned: 'запланирована',
+      completed: 'завершена',
+      archived: 'архивирована',
+    }[value] ?? 'не определён'
+  );
+}
+
+function nutritionTargetSourceLabel(value: string): string {
+  return (
+    {
+      trainer: 'Тренер',
+      manual: 'Пользователь',
+      calculated: 'Расчёт приложения',
+    }[value] ?? 'Не указан'
+  );
+}
+
+function checkInValue(value: number | null | undefined): string {
+  return value == null ? 'Не отвечено' : `${value} из 5`;
+}
+
+const bodyMetricLabels: Record<string, string> = {
+  biceps_cm: 'Плечо',
+  chest_cm: 'Грудь',
+  hips_cm: 'Бёдра',
+  thigh_cm: 'Бедро',
+  waist_cm: 'Талия',
+};
+
+function WeightChart({ report }: { report: ProgressReport }) {
+  const trend = report.body.trends.find((item) => item.metric === 'weight_kg');
+  if (!trend) {
+    return (
+      <EmptyState
+        title="Нет замеров массы за период"
+        text="Отсутствующие дни не интерполируются."
+      />
+    );
+  }
+  const values = trend.points.map((point) => point.value);
+  const rawMin = Math.min(...values);
+  const rawMax = Math.max(...values);
+  const padding = rawMax === rawMin ? 1 : Math.max((rawMax - rawMin) * 0.12, 0.2);
+  const min = rawMin - padding;
+  const max = rawMax + padding;
+  const width = 560;
+  const height = 170;
+  const inset = 22;
+  const x = (index: number) =>
+    trend.points.length === 1
+      ? width / 2
+      : inset + (index * (width - inset * 2)) / (trend.points.length - 1);
+  const y = (value: number) => inset + ((max - value) * (height - inset * 2)) / (max - min);
+  const points = trend.points.map((point, index) => `${x(index)},${y(point.value)}`).join(' ');
+
+  return (
+    <figure className="progress-report-chart">
+      <div className="progress-report-chart__scale" aria-hidden="true">
+        <span>{formatNumber(rawMax)} кг</span>
+        <span>{formatNumber(rawMin)} кг</span>
+      </div>
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-labelledby="report-weight-chart-title"
+      >
+        <title id="report-weight-chart-title">
+          Масса от {formatDate(trend.first_measured_on)} до {formatDate(trend.latest_measured_on)}
+        </title>
+        <line x1={inset} x2={width - inset} y1={height - inset} y2={height - inset} />
+        <polyline points={points} />
+        {trend.points.map((point, index) => (
+          <circle cx={x(index)} cy={y(point.value)} key={`${point.measured_on}-${index}`} r="4" />
+        ))}
+      </svg>
+      <figcaption>
+        Фактические замеры: {formatNumber(trend.first_value)} → {formatNumber(trend.latest_value)}{' '}
+        кг, изменение{' '}
+        {trend.change == null ? 'не рассчитывается' : `${formatNumber(trend.change)} кг`}.
+      </figcaption>
+      <table>
+        <caption>Таблица замеров массы</caption>
+        <thead>
+          <tr>
+            <th scope="col">Дата</th>
+            <th scope="col">Масса</th>
+          </tr>
+        </thead>
+        <tbody>
+          {trend.points.map((point) => (
+            <tr key={point.measured_on}>
+              <td>{formatDate(point.measured_on)}</td>
+              <td>{formatNumber(point.value)} кг</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </figure>
+  );
+}
+
+function PrintPageHeader({
+  report,
+  continuation = false,
+}: {
+  report: ProgressReport;
+  continuation?: boolean;
+}) {
+  return (
+    <header
+      className={`progress-report-print-header${continuation ? ' progress-report-print-header--continuation' : ''}`}
+      aria-hidden="true"
+    >
+      <BrandLockup surface="light" />
+      <span>
+        Период: {formatDate(report.period_start)} — {formatDate(report.period_end)}
+      </span>
+    </header>
+  );
+}
+
+function ReportContent({
+  report,
+  selectedExercises,
+  controls,
+}: {
+  report: ProgressReport;
+  selectedExercises: readonly string[];
+  controls: ReactNode;
+}) {
+  const selected = report.training.exercises.filter((exercise) =>
+    selectedExercises.includes(exercise.exercise_title),
+  );
+  const circumference = report.body.trends.filter((trend) => trend.metric !== 'weight_kg');
+  const nutrition = report.nutrition.summary;
+  const notCompleted = Math.max(
+    0,
+    report.training.planned_workouts -
+      report.training.completed_workouts -
+      report.training.skipped_workouts,
+  );
+
+  return (
+    <div className="progress-report-document">
+      <PrintPageHeader report={report} />
+      <footer className="progress-report-print-footer" aria-hidden="true">
+        <span>Сформировано {formatDateTime(report.generated_at, report.timezone)}</span>
+        <span>Your Fitness Coach</span>
+      </footer>
+
+      <section className="progress-report-overview" aria-labelledby="report-overview-title">
+        <div className="progress-report-overview__identity">
+          <span className="eyebrow">Отчёт о прогрессе</span>
+          <h1 id="report-overview-title">{report.subject.name}</h1>
+          <p>
+            {formatDate(report.period_start)} — {formatDate(report.period_end)} · {report.timezone}
+          </p>
+          <p>
+            {report.subject.role === 'client' ? 'Клиент тренера' : 'Личный отчёт'} · Цель:{' '}
+            {goalLabel(report.subject.goal)}
+          </p>
+        </div>
+        <div className="progress-report-overview__adherence">
+          <span>Соблюдение плана</span>
+          <strong>{percent(report.adherence.overall_percent)}</strong>
+          <small>Только по доступным компонентам расчёта</small>
+        </div>
+      </section>
+
+      <section className="progress-report-confidence" aria-label="Полнота данных отчёта">
+        <DataConfidence kind="training" signal={report.data_sufficiency.working_sets} />
+        <DataConfidence kind="nutrition" signal={report.data_sufficiency.nutrition_coverage} />
+        <DataConfidence kind="weight" signal={report.data_sufficiency.weight_trend} />
+      </section>
+
+      {controls}
+
+      <section className="progress-report-section" aria-labelledby="report-training-title">
+        <header>
+          <span className="eyebrow">Тренировки</span>
+          <h2 id="report-training-title">Факты за период</h2>
+        </header>
+        <dl className="progress-report-facts">
+          <div>
+            <dt>По плану</dt>
+            <dd>{report.training.planned_workouts}</dd>
+          </div>
+          <div>
+            <dt>Завершено</dt>
+            <dd>{report.training.completed_workouts}</dd>
+          </div>
+          <div>
+            <dt>Пропущено</dt>
+            <dd>{report.training.skipped_workouts}</dd>
+          </div>
+          <div>
+            <dt>Ещё не завершено</dt>
+            <dd>{notCompleted}</dd>
+          </div>
+          <div>
+            <dt>Частота</dt>
+            <dd>{formatNumber(report.training.frequency_per_week, 2)} / нед.</dd>
+          </div>
+          <div>
+            <dt>Рабочие подходы</dt>
+            <dd>{report.training.completed_working_sets}</dd>
+          </div>
+          <div>
+            <dt>Внешняя нагрузка</dt>
+            <dd>{formatNumber(report.training.external_load_volume_kg, 0)} кг</dd>
+          </div>
+          <div>
+            <dt>Новые личные рекорды</dt>
+            <dd>{report.training.new_personal_records}</dd>
+          </div>
+        </dl>
+        <p className="progress-report-limit">
+          Объём внешней нагрузки — сумма веса × повторения только для завершённых рабочих подходов.
+          Он не сравнивает технику, амплитуду, тренажёры и разные упражнения.
+        </p>
+        <div className="progress-report-print-page-section">
+          <PrintPageHeader continuation report={report} />
+          {report.program ? (
+            <div className="progress-report-program">
+              <h3>{report.program.title}</h3>
+              <p>
+                Старт {formatDate(report.program.start_date)} · {report.program.duration_weeks} нед.
+                · статус: {programStatusLabel(report.program.status)}
+              </p>
+              {report.program.active_block && (
+                <>
+                  <p>
+                    Текущий блок: <strong>{report.program.active_block.title}</strong>,{' '}
+                    {formatDate(report.program.active_block.start_date)} —{' '}
+                    {formatDate(report.program.active_block.end_date)}
+                  </p>
+                  <p className="progress-report-program__recommendation">
+                    <strong>Рекомендация:</strong>
+                    <span>{report.program.active_block.purpose}</span>
+                  </p>
+                </>
+              )}
+              {report.program.changes.length > 0 && (
+                <ul>
+                  {report.program.changes.map((change) => (
+                    <li key={`${change.changed_on}-${change.change_kind}`}>
+                      {formatDate(change.changed_on)} — {changeKindLabel(change.change_kind)}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : (
+            <p className="progress-report-empty">Активной программы на дату формирования нет.</p>
+          )}
+
+          <div className="progress-report-exercises">
+            <h3>Выбранная динамика упражнений</h3>
+            {selected.length ? (
+              selected.map((exercise) => {
+                const chronological = [...exercise.sessions].sort((a, b) =>
+                  a.performed_on.localeCompare(b.performed_on),
+                );
+                const first = chronological[0];
+                const latest = chronological.at(-1);
+                return (
+                  <article key={exercise.exercise_title}>
+                    <h4>{exercise.exercise_title}</h4>
+                    <p>
+                      {exercise.performed_session_count} сессий · {exercise.completed_set_count}{' '}
+                      рабочих подходов · {formatDate(exercise.first_performed_on)} —{' '}
+                      {formatDate(exercise.last_performed_on)}
+                    </p>
+                    <dl>
+                      <div>
+                        <dt>Макс. внешний вес</dt>
+                        <dd>{formatNumber(exercise.max_external_load_kg)} кг</dd>
+                      </div>
+                      <div>
+                        <dt>Объём за период</dt>
+                        <dd>{formatNumber(exercise.external_load_volume_kg, 0)} кг</dd>
+                      </div>
+                      <div>
+                        <dt>Первая сессия</dt>
+                        <dd>{formatNumber(first?.external_load_volume_kg, 0)} кг</dd>
+                      </div>
+                      <div>
+                        <dt>Последняя сессия</dt>
+                        <dd>{formatNumber(latest?.external_load_volume_kg, 0)} кг</dd>
+                      </div>
+                    </dl>
+                  </article>
+                );
+              })
+            ) : (
+              <p className="progress-report-empty">Упражнения для печати не выбраны.</p>
+            )}
+          </div>
+          <div className="progress-report-cardio">
+            <h3>Ручное кардио</h3>
+            <p>
+              {report.cardio.completed_sessions} завершено · {report.cardio.duration_minutes} мин ·{' '}
+              {formatNumber(report.cardio.frequency_per_week, 2)} / нед.
+              {report.cardio.distance_km == null
+                ? ''
+                : ` · ${formatNumber(report.cardio.distance_km)} км`}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <div className="progress-report-print-page-section">
+        <PrintPageHeader continuation report={report} />
+        <section
+          className="progress-report-section progress-report-section--body"
+          aria-labelledby="report-body-title"
+        >
+          <header>
+            <span className="eyebrow">Тело</span>
+            <h2 id="report-body-title">Изменения только относительно себя</h2>
+          </header>
+          <WeightChart report={report} />
+          <table>
+            <caption>Окружности с точными датами крайних замеров</caption>
+            <thead>
+              <tr>
+                <th scope="col">Замер</th>
+                <th scope="col">Первый</th>
+                <th scope="col">Последний</th>
+                <th scope="col">Изменение</th>
+              </tr>
+            </thead>
+            <tbody>
+              {circumference.length ? (
+                circumference.map((trend) => (
+                  <tr key={trend.metric}>
+                    <th scope="row">{bodyMetricLabels[trend.metric]}</th>
+                    <td>
+                      {formatNumber(trend.first_value)} см · {formatDate(trend.first_measured_on)}
+                    </td>
+                    <td>
+                      {formatNumber(trend.latest_value)} см · {formatDate(trend.latest_measured_on)}
+                    </td>
+                    <td>
+                      {trend.change == null
+                        ? 'Недостаточно точек'
+                        : `${formatNumber(trend.change)} см`}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={4}>Нет замеров окружностей за период.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+          <p className="progress-report-limit">
+            Окружности не показывают изменение отдельной мышцы и не используются для «идеальных»
+            оценок тела.
+          </p>
+        </section>
+      </div>
+
+      <div className="progress-report-print-page-section">
+        <PrintPageHeader continuation report={report} />
+        <section
+          className="progress-report-section progress-report-section--nutrition"
+          aria-labelledby="report-nutrition-title"
+        >
+          <header>
+            <span className="eyebrow">Питание</span>
+            <h2 id="report-nutrition-title">Подтверждённые дни и действовавшие цели</h2>
+          </header>
+          <dl className="progress-report-facts">
+            <div>
+              <dt>Покрытие дневника</dt>
+              <dd>
+                {nutrition.logged_days} из {nutrition.eligible_days}
+              </dd>
+            </div>
+            <div>
+              <dt>Средние калории</dt>
+              <dd>{formatNumber(nutrition.calories.average, 0)} ккал</dd>
+            </div>
+            <div>
+              <dt>Белок</dt>
+              <dd>{formatNumber(nutrition.protein_g.average)} г</dd>
+            </div>
+            <div>
+              <dt>Жиры</dt>
+              <dd>{formatNumber(nutrition.fat_g.average)} г</dd>
+            </div>
+            <div>
+              <dt>Углеводы</dt>
+              <dd>{formatNumber(nutrition.carbs_g.average)} г</dd>
+            </div>
+            <div>
+              <dt>Калории по плану</dt>
+              <dd>
+                {nutrition.days_within_calorie_tolerance} из{' '}
+                {nutrition.calorie_tolerance_evaluated_days}
+              </dd>
+            </div>
+            <div>
+              <dt>Белок по плану</dt>
+              <dd>
+                {nutrition.days_meeting_protein_target} из {nutrition.protein_target_evaluated_days}
+              </dd>
+            </div>
+          </dl>
+          {report.nutrition.target_changes.length > 0 ? (
+            <table>
+              <caption>Изменения цели за период</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Действует с</th>
+                  <th scope="col">Источник</th>
+                  <th scope="col">Ккал</th>
+                  <th className="progress-report-macros-heading" scope="col">
+                    Б / Ж / У
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.nutrition.target_changes.map((target) => (
+                  <tr key={`${target.effective_from}-${target.source}`}>
+                    <td>{formatDate(target.effective_from)}</td>
+                    <td>{nutritionTargetSourceLabel(target.source)}</td>
+                    <td>{target.calories}</td>
+                    <td>
+                      {target.protein_g} / {target.fat_g} / {target.carbs_g} г
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="progress-report-empty">Изменений цели внутри периода нет.</p>
+          )}
+          <p className="progress-report-limit">
+            Пропущенный или неполный день не считается нулевым рационом и не входит в средние и
+            соблюдение плана.
+          </p>
+        </section>
+
+        <section className="progress-report-section" aria-labelledby="report-checkins-title">
+          <header>
+            <span className="eyebrow">Самооценка</span>
+            <h2 id="report-checkins-title">Еженедельные check-ins</h2>
+          </header>
+          {report.check_ins.length ? (
+            report.check_ins.map((checkIn) => (
+              <article
+                className="progress-report-checkin"
+                key={`${checkIn.week_start}-${checkIn.submitted_on}`}
+              >
+                <h3>
+                  {formatDate(checkIn.week_start)} — {formatDate(checkIn.week_end)}
+                </h3>
+                <dl>
+                  <div>
+                    <dt>Нагрузка</dt>
+                    <dd>{checkInValue(checkIn.training_load)}</dd>
+                  </div>
+                  <div>
+                    <dt>Восстановление</dt>
+                    <dd>{checkInValue(checkIn.recovery)}</dd>
+                  </div>
+                  <div>
+                    <dt>Голод</dt>
+                    <dd>{checkInValue(checkIn.hunger)}</dd>
+                  </div>
+                  <div>
+                    <dt>Сложность соблюдения</dt>
+                    <dd>{checkInValue(checkIn.adherence_difficulty)}</dd>
+                  </div>
+                </dl>
+                {checkIn.note && <p>{checkIn.note}</p>}
+              </article>
+            ))
+          ) : (
+            <p className="progress-report-empty">За выбранный период check-ins не сохранены.</p>
+          )}
+          <p className="progress-report-limit">
+            Это фактические ответы пользователя, а не медицинская оценка готовности или диагноз.
+          </p>
+        </section>
+
+        <section className="progress-report-methodology" aria-labelledby="report-methodology-title">
+          <h2 id="report-methodology-title">Как читать отчёт</h2>
+          <p>
+            Отчёт сформирован {formatDateTime(report.generated_at, report.timezone)}. Он не
+            заполняет пропуски предположениями, не устанавливает причины изменений и не заменяет
+            консультацию специалиста.
+          </p>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+export default function ProgressReportPage() {
+  const { navigate, search } = useNavigation();
+  const clientId = positiveClientId(search);
+  const [draft, setDraft] = useState<ReportSelection>(() => initialSelection(search));
+  const [applied, setApplied] = useState<ReportSelection>(() => initialSelection(search));
+  const [exerciseSelections, setExerciseSelections] = useState<Record<string, string[]>>({});
+  const [tmaFallback, setTmaFallback] = useState(false);
+  const isTma = Boolean(window.Telegram?.WebApp?.initData);
+  const customError = useMemo(() => {
+    if (draft.period !== 'custom') return '';
+    if (!datePattern.test(draft.dateFrom) || !datePattern.test(draft.dateTo)) {
+      return 'Укажите обе даты.';
+    }
+    const start = new Date(`${draft.dateFrom}T12:00:00`);
+    const end = new Date(`${draft.dateTo}T12:00:00`);
+    if (end < start) return 'Дата окончания не может быть раньше начала.';
+    const days = Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
+    return days > 366 ? 'Период не может превышать 366 дней.' : '';
+  }, [draft]);
+  const report = useQuery({
+    queryKey: ['progress-report', clientId, applied],
+    queryFn: () => api<ProgressReport>(reportPath(applied, clientId)),
+    enabled:
+      applied.period !== 'custom' || (!customError && Boolean(applied.dateFrom && applied.dateTo)),
+    placeholderData: keepPreviousData,
+  });
+
+  useEffect(() => {
+    if (!report.data) return;
+    document.title = `progress-report-${report.data.period_start}_${report.data.period_end}`;
+    return () => {
+      document.title = 'Your Fitness Coach';
+    };
+  }, [report.data]);
+
+  const applySelection = (event?: FormEvent) => {
+    event?.preventDefault();
+    if (customError) return;
+    setApplied(draft);
+    navigate(pagePath(draft, clientId), true);
+  };
+  const selectPeriod = (value: string) => {
+    const period = value as NutritionReportPeriod;
+    const next = { ...draft, period };
+    setDraft(next);
+    if (period !== 'custom') {
+      setApplied(next);
+      navigate(pagePath(next, clientId), true);
+    }
+  };
+  const printReport = () => {
+    if (isTma) {
+      setTmaFallback(true);
+      return;
+    }
+    window.print();
+  };
+  const returnPath = clientId ? `/coach?client_id=${clientId}` : '/app?section=progress';
+  const reportKey = report.data
+    ? `${report.data.subject.name}:${report.data.period_start}:${report.data.period_end}`
+    : '';
+  const selectedExercises = report.data
+    ? (exerciseSelections[reportKey] ??
+      report.data.training.exercises.slice(0, 3).map((item) => item.exercise_title))
+    : [];
+  const controls = report.data ? (
+    <>
+      <section
+        className="progress-report-controls report-screen-only"
+        aria-labelledby="report-period-title"
+      >
+        <div>
+          <span className="eyebrow">Период отчёта</span>
+          <h2 id="report-period-title">Выберите фактическое окно</h2>
+          <p>Период и субъект сохраняются в адресе отчёта при возврате из печати.</p>
+        </div>
+        <SegmentedControl
+          ariaLabel="Период отчёта"
+          onChange={selectPeriod}
+          options={periodOptions}
+          value={draft.period}
+        />
+        {draft.period === 'custom' && (
+          <form className="progress-report-custom" onSubmit={applySelection}>
+            <Field label="Начало" labelFor="report-date-from">
+              <Input
+                id="report-date-from"
+                type="date"
+                value={draft.dateFrom}
+                onChange={(event) =>
+                  setDraft((current) => ({ ...current, dateFrom: event.target.value }))
+                }
+              />
+            </Field>
+            <Field error={customError || undefined} label="Окончание" labelFor="report-date-to">
+              <Input
+                id="report-date-to"
+                type="date"
+                value={draft.dateTo}
+                onChange={(event) =>
+                  setDraft((current) => ({ ...current, dateTo: event.target.value }))
+                }
+              />
+            </Field>
+            <Button disabled={Boolean(customError)} type="submit" variant="secondary">
+              Показать период
+            </Button>
+          </form>
+        )}
+      </section>
+
+      {tmaFallback && (
+        <section className="progress-report-tma-fallback report-screen-only" role="status">
+          <strong>В Telegram системная печать может быть недоступна.</strong>
+          <p>
+            Откройте эту страницу через меню Telegram «Открыть в браузере», затем выберите «Печать»
+            → «Сохранить как PDF». Адрес уже содержит выбранный период и клиента.
+          </p>
+        </section>
+      )}
+
+      {report.data.training.exercises.length > 0 && (
+        <fieldset className="progress-report-exercise-picker report-screen-only">
+          <legend>Упражнения в печатном отчёте</legend>
+          <p>Выберите до четырёх. Значения показывают только записанные рабочие подходы.</p>
+          {report.data.training.exercises.slice(0, 8).map((exercise) => {
+            const selected = selectedExercises.includes(exercise.exercise_title);
+            return (
+              <label key={exercise.exercise_title}>
+                <input
+                  checked={selected}
+                  disabled={!selected && selectedExercises.length >= 4}
+                  onChange={() =>
+                    setExerciseSelections((current) => ({
+                      ...current,
+                      [reportKey]: selected
+                        ? selectedExercises.filter((item) => item !== exercise.exercise_title)
+                        : [...selectedExercises, exercise.exercise_title],
+                    }))
+                  }
+                  type="checkbox"
+                />
+                <span>{exercise.exercise_title}</span>
+              </label>
+            );
+          })}
+        </fieldset>
+      )}
+    </>
+  ) : null;
+
+  return (
+    <main className="progress-report-page">
+      <div className="progress-report-toolbar report-screen-only">
+        <AppLink className="progress-report-back" to={returnPath}>
+          ← Назад
+        </AppLink>
+        <BrandLockup />
+        <Button disabled={!report.data || report.isFetching} onClick={printReport} type="button">
+          Печать / Сохранить как PDF
+        </Button>
+      </div>
+
+      {report.isLoading ? (
+        <LoadingState label="Собираем фактический отчёт…" />
+      ) : report.error ? (
+        <ErrorState message={(report.error as Error).message} retry={() => void report.refetch()} />
+      ) : report.data ? (
+        <>
+          <ReportContent
+            controls={controls}
+            report={report.data}
+            selectedExercises={selectedExercises}
+          />
+          <p className="progress-report-filename report-screen-only">
+            Предлагаемое безопасное имя файла:{' '}
+            <code>
+              progress-report-{report.data.period_start}_{report.data.period_end}.pdf
+            </code>
+          </p>
+        </>
+      ) : null}
+    </main>
+  );
+}

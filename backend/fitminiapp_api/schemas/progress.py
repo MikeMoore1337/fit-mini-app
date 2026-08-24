@@ -1,4 +1,4 @@
-from datetime import date, time
+from datetime import date, datetime, time
 from enum import IntEnum, StrEnum
 from typing import Literal
 
@@ -57,6 +57,7 @@ class NextWorkoutSummary(BaseModel):
 class TrainingPeriodSummary(BaseModel):
     planned_workouts: int
     completed_workouts: int
+    skipped_workouts: int
     frequency_per_week: float
     volume_kg: float
     new_personal_records: int
@@ -237,3 +238,100 @@ class TrainerClientProgressListResponse(BaseModel):
     total: int = Field(ge=0)
     limit: int = Field(ge=1)
     offset: int = Field(ge=0)
+
+
+class ProgressReportSubject(BaseModel):
+    name: str
+    role: Literal["self", "client"]
+    goal: str | None = None
+
+
+class ProgressReportExerciseSession(BaseModel):
+    performed_on: date
+    completed_set_count: int = Field(ge=0)
+    max_external_load_kg: float | None = None
+    external_load_volume_kg: float | None = None
+
+
+class ProgressReportExerciseTrend(BaseModel):
+    exercise_title: str
+    performed_session_count: int = Field(ge=0)
+    completed_set_count: int = Field(ge=0)
+    first_performed_on: date
+    last_performed_on: date
+    reps_total: int | None = Field(default=None, ge=0)
+    max_external_load_kg: float | None = None
+    external_load_volume_kg: float | None = None
+    volume_recorded_sets: int = Field(ge=0)
+    sessions: list[ProgressReportExerciseSession]
+
+
+class ProgressReportTraining(BaseModel):
+    planned_workouts: int = Field(ge=0)
+    completed_workouts: int = Field(ge=0)
+    skipped_workouts: int = Field(ge=0)
+    frequency_per_week: float = Field(ge=0)
+    completed_working_sets: int = Field(ge=0)
+    external_load_volume_kg: float | None = None
+    volume_recorded_sets: int = Field(ge=0)
+    new_personal_records: int = Field(ge=0)
+    exercises: list[ProgressReportExerciseTrend]
+
+
+class ProgressReportProgramChange(BaseModel):
+    changed_on: date
+    change_kind: Literal[
+        "assigned",
+        "program_archived",
+        "plan_updated",
+        "block_created",
+        "block_updated",
+        "block_status_changed",
+    ]
+
+
+class ProgressReportTrainingBlock(BaseModel):
+    title: str
+    start_date: date
+    end_date: date
+    purpose: str
+    is_deload: bool
+    status: Literal["planned", "active", "completed", "archived"]
+
+
+class ProgressReportProgram(BaseModel):
+    title: str
+    status: Literal["scheduled", "active", "completed", "archived"]
+    start_date: date
+    duration_weeks: int = Field(ge=1)
+    active_block: ProgressReportTrainingBlock | None = None
+    changes: list[ProgressReportProgramChange]
+
+
+class ProgressReportCheckIn(BaseModel):
+    week_start: date
+    week_end: date
+    submitted_on: date
+    status: Literal["completed", "skipped"]
+    training_load: int | None = Field(default=None, ge=1, le=5)
+    recovery: int | None = Field(default=None, ge=1, le=5)
+    hunger: int | None = Field(default=None, ge=1, le=5)
+    adherence_difficulty: int | None = Field(default=None, ge=1, le=5)
+    note: str | None = None
+
+
+class ProgressReportResponse(BaseModel):
+    generated_at: datetime
+    period: NutritionReportPeriod
+    period_start: date
+    period_end: date
+    timezone: str
+    subject: ProgressReportSubject
+    training: ProgressReportTraining
+    cardio: CardioPeriodSummary
+    body: BodyPeriodSummary
+    nutrition: NutritionReportResponse
+    adherence: AdherenceSummary
+    data_sufficiency: ProgressDataSufficiency
+    program: ProgressReportProgram | None = None
+    check_ins: list[ProgressReportCheckIn]

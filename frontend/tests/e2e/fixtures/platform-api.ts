@@ -692,6 +692,7 @@ export async function installPlatformApi(
     training: {
       planned_workouts: 1,
       completed_workouts: workoutStatus === 'completed' ? 1 : 0,
+      skipped_workouts: 0,
       frequency_per_week: 0,
       volume_kg: 0,
       new_personal_records: 0,

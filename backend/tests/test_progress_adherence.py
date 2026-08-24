@@ -277,6 +277,7 @@ def test_user_progress_summary_handles_periods_current_day_and_isolation(client)
     assert payload["training"] == {
         "planned_workouts": 2,
         "completed_workouts": 1,
+        "skipped_workouts": 1,
         "frequency_per_week": 1.0,
         "volume_kg": 160.0,
         "new_personal_records": 1,

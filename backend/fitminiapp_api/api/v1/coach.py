@@ -31,6 +31,7 @@ from fitminiapp_api.schemas.progress import (
     NutritionReportPeriod,
     NutritionReportResponse,
     ProgressPeriodDays,
+    ProgressReportResponse,
     ProgressSummaryResponse,
     TrainerClientProgressListResponse,
 )
@@ -85,6 +86,7 @@ from fitminiapp_api.services.progress import (
     build_progress_summary,
     build_trainer_client_summaries,
 )
+from fitminiapp_api.services.progress_reports import build_progress_report
 from fitminiapp_api.services.weekly_check_ins import list_weekly_check_ins
 from fitminiapp_api.services.workout_comments import (
     WorkoutCommentError,
@@ -273,6 +275,32 @@ def coach_client_nutrition_report(
 ):
     client = _managed_client(db, current_user, client_id)
     return _client_nutrition_report_or_422(db, client, period, date_from, date_to)
+
+
+@router.get(
+    "/clients/{client_id}/progress-report",
+    response_model=ProgressReportResponse,
+)
+def coach_client_progress_report(
+    client_id: int,
+    period: NutritionReportPeriod = NutritionReportPeriod.DAYS_30,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    current_user: User = Depends(require_coach),
+    db: Session = Depends(get_db),
+):
+    client = _managed_client(db, current_user, client_id)
+    try:
+        return build_progress_report(
+            db,
+            client,
+            period,
+            date_from=date_from,
+            date_to=date_to,
+            subject_role="client",
+        )
+    except NutritionReportError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc))
 
 
 @router.get("/clients/{client_id}/nutrition-report.csv")

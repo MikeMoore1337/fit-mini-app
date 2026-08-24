@@ -30,6 +30,7 @@ function summary(
     training: {
       planned_workouts: 8,
       completed_workouts: 6,
+      skipped_workouts: 1,
       frequency_per_week: 1.5,
       volume_kg: 12000,
       new_personal_records: personalRecords,

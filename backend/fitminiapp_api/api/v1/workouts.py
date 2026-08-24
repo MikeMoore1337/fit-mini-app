@@ -29,6 +29,7 @@ from fitminiapp_api.schemas.progress import (
     NutritionReportPeriod,
     NutritionReportResponse,
     ProgressPeriodDays,
+    ProgressReportResponse,
     ProgressSummaryResponse,
 )
 from fitminiapp_api.schemas.workout import (
@@ -78,6 +79,7 @@ from fitminiapp_api.services.nutrition_reports import (
     nutrition_report_csv,
 )
 from fitminiapp_api.services.progress import build_progress_summary
+from fitminiapp_api.services.progress_reports import build_progress_report
 from fitminiapp_api.services.progression_guidance import build_progression_guidance
 from fitminiapp_api.services.workout_adaptation import (
     WorkoutAdaptationError,
@@ -605,6 +607,26 @@ def workout_nutrition_report(
     db: Session = Depends(get_db),
 ):
     return _nutrition_report_or_422(db, current_user, period, date_from, date_to)
+
+
+@router.get("/progress/report", response_model=ProgressReportResponse)
+def workout_progress_report(
+    period: NutritionReportPeriod = NutritionReportPeriod.DAYS_30,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        return build_progress_report(
+            db,
+            current_user,
+            period,
+            date_from=date_from,
+            date_to=date_to,
+        )
+    except NutritionReportError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc))
 
 
 @router.get("/progress/nutrition-report.csv")

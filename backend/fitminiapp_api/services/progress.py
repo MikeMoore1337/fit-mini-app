@@ -330,6 +330,7 @@ def build_progress_summaries(
         today_by_user = {user_id: bounds[1] for user_id, bounds in period_bounds.items()}
         if any(today_by_user[user_id] < start_by_user[user_id] for user_id in user_ids):
             raise ValueError("period end must not be before period start")
+    actual_today_by_user = {user.id: today_for_user(user) for user in users}
 
     workout_rows = (
         db.query(
@@ -510,7 +511,8 @@ def build_progress_summaries(
         for user_id, rows in target_history_by_user.items()
     }
     nutrition_end_by_user = {
-        user_id: current_day - timedelta(days=1) for user_id, current_day in today_by_user.items()
+        user_id: min(current_day, actual_today_by_user[user_id] - timedelta(days=1))
+        for user_id, current_day in today_by_user.items()
     }
     diary_rows = []
     diary_status_rows = []
@@ -694,13 +696,19 @@ def build_progress_summaries(
     summaries: list[dict] = []
     for user in users:
         current_day = today_by_user[user.id]
+        eligible_nutrition_days = max(
+            0,
+            (nutrition_end_by_user[user.id] - start_by_user[user.id]).days + 1,
+        )
         workouts = [row for row in workouts_by_user[user.id] if row.status != "cancelled"]
         evaluated_workouts = [
             row
             for row in workouts
-            if row.scheduled_date < current_day or row.status in {"completed", "skipped"}
+            if row.scheduled_date < actual_today_by_user[user.id]
+            or row.status in {"completed", "skipped"}
         ]
         completed_workouts = [row for row in evaluated_workouts if row.status == "completed"]
+        skipped_workouts = [row for row in evaluated_workouts if row.status == "skipped"]
         workout_adherence = calculate_adherence_component(
             achieved=len(completed_workouts),
             evaluated=len(evaluated_workouts),
@@ -853,7 +861,7 @@ def build_progress_summaries(
         incomplete_day_count = sum(row.status == "incomplete" for row in diary_days)
         fasted_day_count = sum(row.status == "fasted" for row in diary_days)
         observed_day_count = len({row.diary_date for row in diary_days})
-        unlogged_day_count = max(0, period_days - 1 - observed_day_count)
+        unlogged_day_count = max(0, eligible_nutrition_days - observed_day_count)
         body_trends = _body_trends(measurements_by_user[user.id])
         weight_trend = next(
             (trend for trend in body_trends if trend["metric"] == "weight_kg"),
@@ -877,6 +885,7 @@ def build_progress_summaries(
             "training": {
                 "planned_workouts": len(evaluated_workouts),
                 "completed_workouts": len(completed_workouts),
+                "skipped_workouts": len(skipped_workouts),
                 "frequency_per_week": round(len(completed_workouts) * 7 / period_days, 2),
                 "volume_kg": round(volume_by_user[user.id], 2),
                 "new_personal_records": new_records_by_user[user.id],
@@ -928,7 +937,7 @@ def build_progress_summaries(
                 **training_sufficiency,
                 "nutrition_coverage": build_nutrition_coverage_signal(
                     logged_day_count=len(complete_diary_days) if nutrition_visible else 0,
-                    eligible_day_count=period_days - 1,
+                    eligible_day_count=eligible_nutrition_days,
                     visible=nutrition_visible,
                 ),
                 "weight_trend": build_body_metric_signal(

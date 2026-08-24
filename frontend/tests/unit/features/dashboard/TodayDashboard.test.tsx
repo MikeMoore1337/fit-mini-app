@@ -120,6 +120,7 @@ const progressSummary = {
   training: {
     planned_workouts: 8,
     completed_workouts: 7,
+    skipped_workouts: 1,
     frequency_per_week: 1.63,
     volume_kg: 12400,
     new_personal_records: 1,

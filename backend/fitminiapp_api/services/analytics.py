@@ -415,11 +415,48 @@ def build_training_analytics(
 ) -> dict:
     if period_days not in {7, 30, 90}:
         raise ValueError("period_days must be 7, 30, or 90")
+    period_end = today_for_user(user)
+    period_start = period_end - timedelta(days=period_days - 1)
+    return _build_training_analytics(
+        db,
+        user,
+        period_start,
+        period_end,
+        exercise_history_limit=exercise_history_limit,
+    )
+
+
+def build_training_analytics_for_range(
+    db: Session,
+    user: User,
+    period_start,
+    period_end,
+    *,
+    exercise_history_limit: int,
+) -> dict:
+    if period_end < period_start:
+        raise ValueError("period_end must not be before period_start")
+    return _build_training_analytics(
+        db,
+        user,
+        period_start,
+        period_end,
+        exercise_history_limit=exercise_history_limit,
+    )
+
+
+def _build_training_analytics(
+    db: Session,
+    user: User,
+    period_start,
+    period_end,
+    *,
+    exercise_history_limit: int,
+) -> dict:
     if not 1 <= exercise_history_limit <= 100:
         raise ValueError("exercise_history_limit must be between 1 and 100")
 
-    period_end = today_for_user(user)
-    period_start = period_end - timedelta(days=period_days - 1)
+    period_days = (period_end - period_start).days + 1
     training_counts = collect_training_data_counts(
         db,
         user_ids=[user.id],

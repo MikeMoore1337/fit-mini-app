@@ -637,6 +637,7 @@ function CoachClientDetail({
           <a href="#coach-client-progress">Тренировки и прогресс</a>
           <a href="#coach-client-nutrition">Питание</a>
           <a href="#coach-client-profile">Профиль</a>
+          <AppLink to={`/app/report?period=days_30&client_id=${client.id}`}>Отчёт</AppLink>
         </nav>
       </header>
 
@@ -763,8 +764,14 @@ export default function CoachPage() {
   const { toast, confirm } = useFeedback();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<CoachTab>('clients');
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [clientDetailOpen, setClientDetailOpen] = useState(false);
+  const initialClientId = (() => {
+    const value = new URLSearchParams(window.location.search).get('client_id');
+    if (!value || !/^\d+$/.test(value)) return null;
+    const clientId = Number(value);
+    return Number.isSafeInteger(clientId) && clientId > 0 ? clientId : null;
+  })();
+  const [selectedId, setSelectedId] = useState<number | null>(initialClientId);
+  const [clientDetailOpen, setClientDetailOpen] = useState(Boolean(initialClientId));
 
   useEffect(() => {
     if (user?.is_coach) {

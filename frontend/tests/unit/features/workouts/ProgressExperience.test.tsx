@@ -26,6 +26,7 @@ function makeSummary(): ProgressSummary {
     training: {
       planned_workouts: 8,
       completed_workouts: 7,
+      skipped_workouts: 1,
       frequency_per_week: 1.63,
       volume_kg: 12400,
       new_personal_records: 3,
@@ -318,6 +319,10 @@ describe('ProgressExperience', () => {
     expect(screen.getByRole('heading', { name: 'Замеры и приоритеты' })).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Питание' })).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Соблюдение плана' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Скачать отчёт' })).toHaveAttribute(
+      'href',
+      '/app/report?period=days_30',
+    );
     expect(screen.getByRole('img', { name: /Вес: 2 янв. — 69,4 кг/ })).toBeVisible();
 
     fireEvent.click(screen.getByText('Жим штанги лёжа'));
@@ -373,6 +378,10 @@ describe('ProgressExperience', () => {
         expect.anything(),
       );
     });
+    expect(screen.getByRole('link', { name: 'Скачать отчёт' })).toHaveAttribute(
+      'href',
+      '/app/report?period=days_7',
+    );
   });
 
   it('keeps empty, one-point and partial adherence states factual', async () => {

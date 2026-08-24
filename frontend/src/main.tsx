@@ -19,6 +19,7 @@ import './styles/design-system.css';
 import './styles/design-v2.css';
 
 const MiniAppPage = lazy(() => import('./pages/miniapp/MiniAppPage'));
+const ProgressReportPage = lazy(() => import('./pages/reports/ProgressReportPage'));
 const CoachPage = lazy(() => import('./pages/coach/CoachPage'));
 const AdminPage = lazy(() => import('./pages/admin/AdminPage'));
 const LandingPage = lazy(() => import('./pages/landing/LandingPage'));
@@ -99,6 +100,14 @@ function AppRoutes() {
       <AuthenticatedRoute>
         <OnboardingGate>
           <MiniAppPage />
+        </OnboardingGate>
+      </AuthenticatedRoute>
+    );
+  if (path === '/app/report')
+    return (
+      <AuthenticatedRoute>
+        <OnboardingGate>
+          <ProgressReportPage />
         </OnboardingGate>
       </AuthenticatedRoute>
     );

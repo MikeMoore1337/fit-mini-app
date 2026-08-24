@@ -966,6 +966,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/coach/clients/{client_id}/progress-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Coach Client Progress Report */
+        get: operations["coach_client_progress_report_api_v1_coach_clients__client_id__progress_report_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/coach/clients/{client_id}/nutrition-report.csv": {
         parameters: {
             query?: never;
@@ -1424,6 +1441,23 @@ export interface paths {
         };
         /** Workout Nutrition Report */
         get: operations["workout_nutrition_report_api_v1_workouts_progress_nutrition_report_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/progress/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Workout Progress Report */
+        get: operations["workout_progress_report_api_v1_workouts_progress_report_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5227,6 +5261,203 @@ export interface components {
          * @enum {integer}
          */
         ProgressPeriodDays: 7 | 30 | 90;
+        /** ProgressReportCheckIn */
+        ProgressReportCheckIn: {
+            /**
+             * Week Start
+             * Format: date
+             */
+            week_start: string;
+            /**
+             * Week End
+             * Format: date
+             */
+            week_end: string;
+            /**
+             * Submitted On
+             * Format: date
+             */
+            submitted_on: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "completed" | "skipped";
+            /** Training Load */
+            training_load?: number | null;
+            /** Recovery */
+            recovery?: number | null;
+            /** Hunger */
+            hunger?: number | null;
+            /** Adherence Difficulty */
+            adherence_difficulty?: number | null;
+            /** Note */
+            note?: string | null;
+        };
+        /** ProgressReportExerciseSession */
+        ProgressReportExerciseSession: {
+            /**
+             * Performed On
+             * Format: date
+             */
+            performed_on: string;
+            /** Completed Set Count */
+            completed_set_count: number;
+            /** Max External Load Kg */
+            max_external_load_kg?: number | null;
+            /** External Load Volume Kg */
+            external_load_volume_kg?: number | null;
+        };
+        /** ProgressReportExerciseTrend */
+        ProgressReportExerciseTrend: {
+            /** Exercise Title */
+            exercise_title: string;
+            /** Performed Session Count */
+            performed_session_count: number;
+            /** Completed Set Count */
+            completed_set_count: number;
+            /**
+             * First Performed On
+             * Format: date
+             */
+            first_performed_on: string;
+            /**
+             * Last Performed On
+             * Format: date
+             */
+            last_performed_on: string;
+            /** Reps Total */
+            reps_total?: number | null;
+            /** Max External Load Kg */
+            max_external_load_kg?: number | null;
+            /** External Load Volume Kg */
+            external_load_volume_kg?: number | null;
+            /** Volume Recorded Sets */
+            volume_recorded_sets: number;
+            /** Sessions */
+            sessions: components["schemas"]["ProgressReportExerciseSession"][];
+        };
+        /** ProgressReportProgram */
+        ProgressReportProgram: {
+            /** Title */
+            title: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "scheduled" | "active" | "completed" | "archived";
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /** Duration Weeks */
+            duration_weeks: number;
+            active_block?: components["schemas"]["ProgressReportTrainingBlock"] | null;
+            /** Changes */
+            changes: components["schemas"]["ProgressReportProgramChange"][];
+        };
+        /** ProgressReportProgramChange */
+        ProgressReportProgramChange: {
+            /**
+             * Changed On
+             * Format: date
+             */
+            changed_on: string;
+            /**
+             * Change Kind
+             * @enum {string}
+             */
+            change_kind: "assigned" | "program_archived" | "plan_updated" | "block_created" | "block_updated" | "block_status_changed";
+        };
+        /** ProgressReportResponse */
+        ProgressReportResponse: {
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            period: components["schemas"]["NutritionReportPeriod"];
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /** Timezone */
+            timezone: string;
+            subject: components["schemas"]["ProgressReportSubject"];
+            training: components["schemas"]["ProgressReportTraining"];
+            cardio: components["schemas"]["CardioPeriodSummary"];
+            body: components["schemas"]["BodyPeriodSummary"];
+            nutrition: components["schemas"]["NutritionReportResponse"];
+            adherence: components["schemas"]["AdherenceSummary"];
+            data_sufficiency: components["schemas"]["ProgressDataSufficiency"];
+            program?: components["schemas"]["ProgressReportProgram"] | null;
+            /** Check Ins */
+            check_ins: components["schemas"]["ProgressReportCheckIn"][];
+        };
+        /** ProgressReportSubject */
+        ProgressReportSubject: {
+            /** Name */
+            name: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "self" | "client";
+            /** Goal */
+            goal?: string | null;
+        };
+        /** ProgressReportTraining */
+        ProgressReportTraining: {
+            /** Planned Workouts */
+            planned_workouts: number;
+            /** Completed Workouts */
+            completed_workouts: number;
+            /** Skipped Workouts */
+            skipped_workouts: number;
+            /** Frequency Per Week */
+            frequency_per_week: number;
+            /** Completed Working Sets */
+            completed_working_sets: number;
+            /** External Load Volume Kg */
+            external_load_volume_kg?: number | null;
+            /** Volume Recorded Sets */
+            volume_recorded_sets: number;
+            /** New Personal Records */
+            new_personal_records: number;
+            /** Exercises */
+            exercises: components["schemas"]["ProgressReportExerciseTrend"][];
+        };
+        /** ProgressReportTrainingBlock */
+        ProgressReportTrainingBlock: {
+            /** Title */
+            title: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /** Purpose */
+            purpose: string;
+            /** Is Deload */
+            is_deload: boolean;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "planned" | "active" | "completed" | "archived";
+        };
         /** ProgressSummaryResponse */
         ProgressSummaryResponse: {
             /** User Id */
@@ -5812,6 +6043,8 @@ export interface components {
             planned_workouts: number;
             /** Completed Workouts */
             completed_workouts: number;
+            /** Skipped Workouts */
+            skipped_workouts: number;
             /** Frequency Per Week */
             frequency_per_week: number;
             /** Volume Kg */
@@ -8801,6 +9034,41 @@ export interface operations {
             };
         };
     };
+    coach_client_progress_report_api_v1_coach_clients__client_id__progress_report_get: {
+        parameters: {
+            query?: {
+                period?: components["schemas"]["NutritionReportPeriod"];
+                date_from?: string | null;
+                date_to?: string | null;
+            };
+            header?: never;
+            path: {
+                client_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressReportResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     coach_client_nutrition_report_export_api_v1_coach_clients__client_id__nutrition_report_csv_get: {
         parameters: {
             query?: {
@@ -9748,6 +10016,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NutritionReportResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    workout_progress_report_api_v1_workouts_progress_report_get: {
+        parameters: {
+            query?: {
+                period?: components["schemas"]["NutritionReportPeriod"];
+                date_from?: string | null;
+                date_to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressReportResponse"];
                 };
             };
             /** @description Validation Error */
