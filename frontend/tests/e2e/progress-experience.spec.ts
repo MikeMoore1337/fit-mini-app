@@ -5,10 +5,14 @@ const captureFeedbackAudit = Boolean(
     ?.CAPTURE_FEEDBACK_AUDIT,
 );
 
-const signal = (status: 'sufficient' | 'limited' | 'insufficient') => ({
+const signal = (
+  status: 'sufficient' | 'limited' | 'insufficient',
+  counters: Record<string, number> = {},
+  reasonKeys: string[] = status === 'sufficient' ? ['thresholds_met'] : ['too_few_points'],
+) => ({
   status,
-  counters: {},
-  reason_keys: status === 'sufficient' ? ['thresholds_met'] : ['too_few_points'],
+  counters,
+  reason_keys: reasonKeys,
 });
 
 type NutritionReportState = 'partial' | 'no-data' | 'long';
@@ -393,13 +397,53 @@ async function mockProgress(page: Page, reportState: NutritionReportState = 'par
           },
           data_sufficiency: {
             ruleset_version: 'data-sufficiency-v1',
-            workout_logging: signal('sufficient'),
-            working_sets: signal('sufficient'),
-            rir_coverage: signal('limited'),
-            nutrition_coverage: signal('sufficient'),
-            weight_trend: signal('sufficient'),
-            anthropometry: signal('limited'),
-            schedule_adherence: signal('sufficient'),
+            workout_logging: signal('sufficient', {
+              completed_workout_count: 7,
+              prescribed_set_count: 28,
+              logged_set_count: 28,
+              coverage_percent: 100,
+            }),
+            working_sets: signal('sufficient', {
+              workout_session_count: 7,
+              working_set_count: 28,
+              required_workout_session_count: 2,
+              required_working_set_count: 6,
+            }),
+            rir_coverage: signal('limited', {
+              working_set_count: 28,
+              recorded_set_count: 16,
+              required_recorded_set_count: 3,
+              coverage_percent: 57.1,
+              required_coverage_percent: 50,
+            }),
+            nutrition_coverage: signal('sufficient', {
+              logged_day_count: 20,
+              eligible_day_count: 29,
+              required_logged_day_count: 7,
+              coverage_percent: 69,
+            }),
+            weight_trend: signal('sufficient', {
+              point_count: 4,
+              span_days: 27,
+              required_point_count: 3,
+              required_span_days: 14,
+            }),
+            anthropometry: signal(
+              'limited',
+              {
+                measured_metric_count: 1,
+                sufficient_metric_count: 0,
+                maximum_point_count: 2,
+                maximum_span_days: 27,
+                required_point_count_per_metric: 3,
+                required_span_days_per_metric: 14,
+              },
+              ['too_few_points'],
+            ),
+            schedule_adherence: signal('sufficient', {
+              evaluable_workout_count: 8,
+              required_evaluable_workout_count: 3,
+            }),
           },
         },
       });
@@ -492,9 +536,25 @@ async function mockProgress(page: Page, reportState: NutritionReportState = 'par
           completed_sets_without_muscle_metadata: 0,
           data_sufficiency: {
             ruleset_version: 'data-sufficiency-v1',
-            workout_logging: signal('sufficient'),
-            working_sets: signal('sufficient'),
-            rir_coverage: signal('limited'),
+            workout_logging: signal('sufficient', {
+              completed_workout_count: 7,
+              prescribed_set_count: 28,
+              logged_set_count: 28,
+              coverage_percent: 100,
+            }),
+            working_sets: signal('sufficient', {
+              workout_session_count: 7,
+              working_set_count: 28,
+              required_workout_session_count: 2,
+              required_working_set_count: 6,
+            }),
+            rir_coverage: signal('limited', {
+              working_set_count: 28,
+              recorded_set_count: 16,
+              required_recorded_set_count: 3,
+              coverage_percent: 57.1,
+              required_coverage_percent: 50,
+            }),
           },
         },
       });
@@ -744,6 +804,123 @@ test('progress remains clear and free of horizontal overflow at supported widths
 
   expect(consoleErrors).toEqual([]);
   expect(runtimeErrors).toEqual([]);
+});
+
+test('shared data confidence keeps analytics factual, responsive and explicit while refreshing', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'light' });
+  await mockProgress(page);
+
+  let releaseRefresh!: () => void;
+  let markRefreshStarted!: () => void;
+  const refreshGate = new Promise<void>((resolve) => {
+    releaseRefresh = resolve;
+  });
+  const refreshStarted = new Promise<void>((resolve) => {
+    markRefreshStarted = resolve;
+  });
+  await page.route('**/workouts/progress/summary?period_days=7', async (route) => {
+    markRefreshStarted();
+    await refreshGate;
+    await route.fallback();
+  });
+
+  await page.goto('/app?section=progress');
+  await page.getByRole('button', { name: 'Клиент' }).click();
+  await page
+    .getByRole('navigation', { name: 'Основная навигация' })
+    .getByRole('link', { name: 'Прогресс' })
+    .click();
+
+  const trainingConfidence = page
+    .getByLabel('Достаточно ли данных: Данных достаточно для оценки')
+    .first();
+  const limitedConfidence = page.getByLabel('Достаточно ли данных: Вывод пока предварительный');
+  await expect(trainingConfidence).toContainText('28 рабочих подходов в 7 тренировках');
+  await expect(limitedConfidence).toContainText(
+    'В самой заполненной окружности — 2 замера; для оценки одной окружности нужно минимум 3 замера',
+  );
+  await expect(limitedConfidence.locator('.badge')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Добавить замер' })).toBeVisible();
+
+  const visualContract = await page.evaluate(() => {
+    const tokenColor = (token: string) => {
+      const sample = document.createElement('span');
+      sample.style.color = `var(${token})`;
+      document.body.append(sample);
+      const value = getComputedStyle(sample).color;
+      sample.remove();
+      return value;
+    };
+    const sufficient = document.querySelector<HTMLElement>('.data-confidence--sufficient');
+    const limited = document.querySelector<HTMLElement>('.data-confidence--limited');
+    const disclosure = limited?.querySelector<HTMLElement>('.disclosure-icon');
+    const disclosureBox = disclosure?.getBoundingClientRect();
+    return {
+      lime: tokenColor('--v2-lime'),
+      sufficientBoundary: sufficient ? getComputedStyle(sufficient).borderLeftColor : null,
+      limitedBoundary: limited ? getComputedStyle(limited).borderLeftColor : null,
+      disclosure: disclosureBox
+        ? {
+            width: disclosureBox.width,
+            height: disclosureBox.height,
+            radius: getComputedStyle(disclosure!).borderRadius,
+          }
+        : null,
+    };
+  });
+  expect(visualContract.sufficientBoundary).toBe(visualContract.lime);
+  expect(visualContract.limitedBoundary).toBe(visualContract.lime);
+  expect(visualContract.disclosure).toEqual({ width: 28, height: 28, radius: '50%' });
+
+  const trainingRegion = page.locator('#progress-training');
+  const confidenceBox = await trainingRegion.locator('.data-confidence').boundingBox();
+  const nextBox = await trainingRegion.locator('.progress-subsection').boundingBox();
+  expect(confidenceBox).not.toBeNull();
+  expect(nextBox).not.toBeNull();
+  expect(confidenceBox!.y + confidenceBox!.height).toBeLessThanOrEqual(nextBox!.y);
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.locator('#progress-body').screenshot({
+    path: '../.artifacts/screenshots/task-61/desktop-1440x900-light-analytics.png',
+  });
+
+  for (const viewport of [
+    { width: 768, height: 900 },
+    { width: 430, height: 932 },
+    { width: 390, height: 844 },
+    { width: 360, height: 800 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        ),
+      )
+      .toBe(true);
+    const disclosure = page.locator('.data-confidence__details > summary').first();
+    expect((await disclosure.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+  }
+
+  await trainingConfidence.scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: '../.artifacts/screenshots/task-61/mobile-web-360x800-light-analytics.png',
+  });
+
+  await page.locator('.progress-hero').getByRole('tab', { name: '7 дней' }).click();
+  await refreshStarted;
+  const staleConfidence = page.getByLabel('Достаточно ли данных: Показана сохранённая оценка');
+  await expect(staleConfidence.first()).toBeVisible();
+  await expect(staleConfidence.first()).toContainText('Новые данные загружаются');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await staleConfidence.first().scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: '../.artifacts/screenshots/task-61/mobile-web-390x844-light-stale.png',
+  });
+  releaseRefresh();
+  await expect(staleConfidence).toHaveCount(0);
 });
 
 test('measurements keep priority context, units, mobile order and add/edit history', async ({

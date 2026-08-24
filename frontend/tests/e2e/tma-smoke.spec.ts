@@ -1,3 +1,4 @@
+import type { Locator } from '@playwright/test';
 import {
   expect,
   expectNoHorizontalOverflow,
@@ -30,6 +31,21 @@ const todayStates = [
     action: 'Подобрать программу',
   },
 ] as const;
+
+async function expectLimeStartBoundary(locator: Locator) {
+  const colors = await locator.evaluate((element) => {
+    const sample = document.createElement('span');
+    sample.style.color = 'var(--v2-lime)';
+    document.body.append(sample);
+    const lime = getComputedStyle(sample).color;
+    sample.remove();
+    return {
+      boundary: getComputedStyle(element).borderInlineStartColor,
+      lime,
+    };
+  });
+  expect(colors.boundary).toBe(colors.lime);
+}
 
 test('TMA auth, shared UI, theme, viewport, safe areas and BackButton stay on one platform contract', async ({
   mobilePage,
@@ -586,6 +602,127 @@ test('measurement add, edit, history and insufficient trend keep Mobile Web and 
   await tmaPage.screenshot({
     path: '../.artifacts/screenshots/task-60/tma-390x844-dark.png',
   });
+});
+
+test('data confidence keeps insufficient analytics explicit in Mobile Web and dark TMA', async ({
+  mobilePage,
+  tma,
+  tmaPage,
+}) => {
+  await installPlatformApi(tmaPage, {
+    workoutStatus: 'none',
+    weeklyReviewAvailable: true,
+    weeklyCalibration: 'pending',
+  });
+  await installPlatformApi(mobilePage, {
+    browserSession: true,
+    workoutStatus: 'none',
+    weeklyReviewAvailable: true,
+    weeklyCalibration: 'pending',
+  });
+  await Promise.all([
+    tmaPage.goto('/app?section=progress'),
+    mobilePage.goto('/app?section=progress'),
+  ]);
+
+  for (const page of [tmaPage, mobilePage]) {
+    const insufficient = page.getByLabel('Достаточно ли данных: Пока мало данных');
+    await expect(insufficient.first()).toBeVisible();
+    await expect(insufficient.first()).toContainText('0 рабочих подходов');
+    await expect(page.getByRole('link', { name: 'Открыть тренировку' })).toBeVisible();
+    await expectLimeStartBoundary(insufficient.first());
+    await expectNoHorizontalOverflow(page);
+    await expectTouchTargets(page.locator('.data-confidence__details > summary'));
+  }
+  expect(await sharedSurfaceSignature(tmaPage)).toEqual(await sharedSurfaceSignature(mobilePage));
+
+  await tma.setTheme('dark');
+  for (const viewport of Object.values(MOBILE_CONTEXTS)) {
+    await tmaPage.setViewportSize(viewport);
+    await tma.setViewport(viewport.height, viewport.height);
+    await expectNoHorizontalOverflow(tmaPage);
+  }
+  await tmaPage.setViewportSize(MOBILE_CONTEXTS.baseline);
+  await tma.setViewport(MOBILE_CONTEXTS.baseline.height, MOBILE_CONTEXTS.baseline.height);
+  const bodyConfidence = tmaPage.locator('#progress-body .data-confidence').first();
+  await bodyConfidence.scrollIntoViewIfNeeded();
+  await expectNoOverlap(bodyConfidence, tmaPage.locator('#appBottomNav'));
+  await tmaPage.screenshot({
+    path: '../.artifacts/screenshots/task-61/tma-390x844-dark-insufficient.png',
+  });
+
+  await tmaPage.goto('/app?section=progress&weekly_review=1');
+  await tmaPage.getByRole('button', { name: 'Всё верно, продолжить' }).click();
+  await tmaPage.getByRole('button', { name: 'Пропустить вопросы' }).click();
+  await tma.setTheme('dark');
+  await expect(tmaPage.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
+  const decisionConfidence = tmaPage.locator('.weekly-review__calibration .data-confidence');
+  await expect(decisionConfidence).toContainText('Данных достаточно для оценки');
+  await expect(decisionConfidence).toContainText('24 из 28 завершённых дней');
+  const primaryDecision = tmaPage.getByRole('button', { name: 'Принять новую цель' });
+  await primaryDecision.scrollIntoViewIfNeeded();
+  await expectNoOverlap(primaryDecision, tmaPage.locator('#appBottomNav'));
+  await tmaPage.locator('.weekly-review__calibration').screenshot({
+    path: '../.artifacts/screenshots/task-61/tma-390x844-dark-decision.png',
+  });
+});
+
+test('data confidence keeps limited and stale transitions explicit in TMA', async ({
+  tma,
+  tmaPage,
+}) => {
+  await installPlatformApi(tmaPage, {
+    workoutStatus: 'completed',
+    weeklyReviewAvailable: true,
+    weeklyCalibration: 'pending',
+  });
+
+  let releaseRefresh!: () => void;
+  let markRefreshStarted!: () => void;
+  const refreshGate = new Promise<void>((resolve) => {
+    releaseRefresh = resolve;
+  });
+  const refreshStarted = new Promise<void>((resolve) => {
+    markRefreshStarted = resolve;
+  });
+  await tmaPage.route('**/workouts/progress/training-analytics?period_days=7', async (route) => {
+    markRefreshStarted();
+    await refreshGate;
+    await route.fallback();
+  });
+
+  await tmaPage.goto('/app?section=progress');
+  await tma.setTheme('dark');
+  await expect(tmaPage.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
+  const training = tmaPage.locator('#progress-training');
+  const limited = training.getByLabel('Достаточно ли данных: Вывод пока предварительный');
+  await expect(limited).toBeVisible();
+  await expect(limited).toContainText('1 рабочий подход в 1 тренировке');
+  await expect(training.getByRole('link', { name: 'Открыть тренировку' })).toBeVisible();
+  await expectLimeStartBoundary(limited);
+  await expectNoHorizontalOverflow(tmaPage);
+  await expectTouchTargets(limited.locator('.data-confidence__details > summary'));
+  await limited.screenshot({
+    path: '../.artifacts/screenshots/task-61/tma-390x844-dark-limited.png',
+  });
+
+  await tmaPage.locator('.progress-hero').getByRole('tab', { name: '7 дней' }).click();
+  await refreshStarted;
+  const stale = training.getByLabel('Достаточно ли данных: Показана сохранённая оценка');
+  await expect(stale).toBeVisible();
+  await expect(stale).toContainText('Новые данные загружаются');
+  await expect(training.getByRole('link', { name: 'Открыть тренировку' })).toHaveCount(0);
+  await expectLimeStartBoundary(stale);
+  await expectNoHorizontalOverflow(tmaPage);
+  await expectNoOverlap(stale, tmaPage.locator('#appBottomNav'));
+  await stale.screenshot({
+    path: '../.artifacts/screenshots/task-61/tma-390x844-dark-stale.png',
+  });
+
+  releaseRefresh();
+  await expect(stale).toHaveCount(0);
+  await expect(limited).toBeVisible();
+  await expect(training.getByRole('link', { name: 'Открыть тренировку' })).toBeVisible();
 });
 
 test('weekly review focus exposes a predictable TMA BackButton return path', async ({

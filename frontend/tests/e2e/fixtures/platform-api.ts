@@ -162,6 +162,10 @@ export async function installPlatformApi(
         logged_day_count: calibrationStatus === 'insufficient' ? 3 : 24,
         eligible_day_count: 28,
         weight_point_count: calibrationStatus === 'insufficient' ? 0 : 6,
+        first_window_weight_point_count: calibrationStatus === 'insufficient' ? 0 : 3,
+        last_window_weight_point_count: calibrationStatus === 'insufficient' ? 0 : 3,
+        required_logged_day_count: 21,
+        required_window_weight_point_count: 3,
       },
       reason_keys:
         calibrationStatus === 'insufficient' ? ['too_few_logged_days'] : ['thresholds_met'],
@@ -632,7 +636,88 @@ export async function installPlatformApi(
       calories: {},
       protein: {},
     },
-    data_sufficiency: {},
+    data_sufficiency: {
+      ruleset_version: 'data-sufficiency-v1',
+      workout_logging: {
+        status: workoutStatus === 'completed' ? 'sufficient' : 'insufficient',
+        counters: {
+          completed_workout_count: workoutStatus === 'completed' ? 1 : 0,
+          prescribed_set_count: 1,
+          logged_set_count: workoutStatus === 'completed' ? 1 : 0,
+          coverage_percent: workoutStatus === 'completed' ? 100 : 0,
+        },
+        reason_keys: [workoutStatus === 'completed' ? 'thresholds_met' : 'no_completed_workouts'],
+      },
+      working_sets: {
+        status: workoutStatus === 'completed' ? 'limited' : 'insufficient',
+        counters: {
+          workout_session_count: workoutStatus === 'completed' ? 1 : 0,
+          working_set_count: workoutStatus === 'completed' ? 1 : 0,
+          required_workout_session_count: 2,
+          required_working_set_count: 6,
+        },
+        reason_keys: [workoutStatus === 'completed' ? 'too_few_working_sets' : 'no_working_sets'],
+      },
+      rir_coverage: {
+        status: 'insufficient',
+        counters: {
+          working_set_count: workoutStatus === 'completed' ? 1 : 0,
+          recorded_set_count: 0,
+          required_recorded_set_count: 3,
+          coverage_percent: 0,
+          required_coverage_percent: 50,
+        },
+        reason_keys: ['no_rir_observations'],
+      },
+      nutrition_coverage: {
+        status: nutritionEntries.length ? 'limited' : 'insufficient',
+        counters: {
+          logged_day_count: nutritionEntries.length ? 1 : 0,
+          eligible_day_count: 29,
+          required_logged_day_count: 7,
+          coverage_percent: nutritionEntries.length ? 3.4 : 0,
+        },
+        reason_keys: [nutritionEntries.length ? 'below_required_coverage' : 'no_logged_days'],
+      },
+      weight_trend: {
+        status:
+          measurements.length >= 3
+            ? 'sufficient'
+            : measurements.length
+              ? 'limited'
+              : 'insufficient',
+        counters: {
+          point_count: measurements.length,
+          span_days: measurementTrends()[0]?.span_days ?? 0,
+          required_point_count: 3,
+          required_span_days: 14,
+        },
+        reason_keys: [
+          measurements.length >= 3
+            ? 'thresholds_met'
+            : measurements.length
+              ? 'too_few_points'
+              : 'no_measurements',
+        ],
+      },
+      anthropometry: {
+        status: 'insufficient',
+        counters: {
+          measured_metric_count: 0,
+          sufficient_metric_count: 0,
+          maximum_point_count: 0,
+          maximum_span_days: 0,
+          required_point_count_per_metric: 3,
+          required_span_days_per_metric: 14,
+        },
+        reason_keys: ['no_anthropometry_measurements'],
+      },
+      schedule_adherence: {
+        status: 'insufficient',
+        counters: { evaluable_workout_count: 0, required_evaluable_workout_count: 3 },
+        reason_keys: ['no_evaluable_planned_workouts'],
+      },
+    },
   });
 
   const nutritionReport = (period = 'days_7') => {
@@ -1017,6 +1102,38 @@ export async function installPlatformApi(
     }
     if (path.endsWith('/workouts/progress/summary')) {
       return route.fulfill({ json: progressSummary() });
+    }
+    if (path.endsWith('/workouts/progress/training-analytics')) {
+      const workingSets = progressSummary().data_sufficiency.working_sets;
+      return route.fulfill({
+        json: {
+          period_days: Number(url.searchParams.get('period_days')) || 30,
+          period_start: today,
+          period_end: today,
+          exercise_history_limit: 20,
+          completed_set_count: workoutStatus === 'completed' ? 1 : 0,
+          reps_total: workoutStatus === 'completed' ? 8 : 0,
+          reps_recorded_sets: workoutStatus === 'completed' ? 1 : 0,
+          external_load_volume_kg: workoutStatus === 'completed' ? 320 : 0,
+          volume_recorded_sets: workoutStatus === 'completed' ? 1 : 0,
+          exercises: [],
+          rir: {
+            completed_set_count: workoutStatus === 'completed' ? 1 : 0,
+            recorded_set_count: 0,
+            missing_set_count: workoutStatus === 'completed' ? 1 : 0,
+            distribution: [],
+          },
+          primary_muscle_exposure: [],
+          secondary_muscle_exposure: [],
+          completed_sets_without_muscle_metadata: workoutStatus === 'completed' ? 1 : 0,
+          data_sufficiency: {
+            ruleset_version: 'data-sufficiency-v1',
+            workout_logging: progressSummary().data_sufficiency.workout_logging,
+            working_sets: workingSets,
+            rir_coverage: progressSummary().data_sufficiency.rir_coverage,
+          },
+        },
+      });
     }
     if (path.endsWith('/me/profile/body-priority-options')) {
       return route.fulfill({

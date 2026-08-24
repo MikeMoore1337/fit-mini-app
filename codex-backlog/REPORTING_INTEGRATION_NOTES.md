@@ -14,7 +14,8 @@
 - task `57` owns nutrition period analytics;
 - task `67` owns readable cross-domain report and print/PDF;
 - task `65` owns account portability export and is not the same as a readable report;
-- task `61` owns confidence wording;
+- task `61` owns confidence wording and shared `DataConfidence` geometry, including its uniform
+  left lime boundary;
 - historical nutrition days compare against the effective target from task `55`.
 
 ## First-release PDF decision

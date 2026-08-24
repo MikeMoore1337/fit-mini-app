@@ -5391,6 +5391,12 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   gap: 12px;
 }
 
+.progress-confidence-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .progress-subsection__head {
   display: flex;
   align-items: end;
@@ -6124,6 +6130,10 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   .progress-schedule,
   .progress-experience {
     gap: 14px;
+  }
+
+  .progress-confidence-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .progress-hero {

@@ -5,6 +5,7 @@ import type { ApiSchemas, ProgressSummary, TrainingAnalytics } from '../../share
 import { queryKeys } from '../../shared/queryKeys';
 import { AppLink } from '../../shared/navigation/router';
 import { ContextualHelp } from '../../shared/ui/ContextualHelp';
+import { DataConfidence } from '../../shared/ui/DataConfidence';
 import { formatCalendarDate } from '../../shared/dateTime';
 import {
   Badge,
@@ -18,7 +19,6 @@ import { NutritionPeriodReport } from './NutritionReport';
 type PeriodDays = 7 | 30 | 90;
 type BodyTrend = ProgressSummary['body']['trends'][number];
 type AdherenceComponent = ProgressSummary['adherence']['workouts'];
-type DataSignal = ProgressSummary['data_sufficiency']['weight_trend'];
 
 const periodOptions = [
   { value: '7', label: '7 дней' },
@@ -83,13 +83,6 @@ function plural(value: number, one: string, few: string, many: string): string {
   if (last === 1) return one;
   if (last >= 2 && last <= 4) return few;
   return many;
-}
-
-function sufficiencyText(signal: DataSignal, subject: string): string {
-  if (signal.status === 'sufficient')
-    return `Данных достаточно для осторожного вывода: ${subject}.`;
-  if (signal.status === 'limited') return `Данных пока мало для уверенного вывода: ${subject}.`;
-  return `Пока недостаточно данных для вывода: ${subject}.`;
 }
 
 function SectionHeading({
@@ -376,9 +369,12 @@ function TrainingSection({
       ) : analytics.data ? (
         <>
           <TrainingFacts analytics={analytics.data} summary={summary} />
-          <p className="progress-coverage">
-            {sufficiencyText(analytics.data.data_sufficiency.working_sets, 'динамика тренировок')}
-          </p>
+          <DataConfidence
+            isStale={analytics.isPlaceholderData}
+            kind="training"
+            signal={analytics.data.data_sufficiency.working_sets}
+            action={<AppLink to="/app?section=today">Открыть тренировку</AppLink>}
+          />
           <div className="progress-subsection">
             <div className="progress-subsection__head">
               <div>
@@ -494,9 +490,11 @@ function BodyChart({ trend }: { trend: BodyTrend }) {
 }
 
 function BodySection({
+  isStale,
   measurementDiary,
   summary,
 }: {
+  isStale?: boolean;
   measurementDiary?: ReactNode;
   summary: ProgressSummary;
 }) {
@@ -570,6 +568,27 @@ function BodySection({
       <div className="progress-body-flow">
         {measurementDiary && <div className="progress-body-diary">{measurementDiary}</div>}
         <div className="progress-body-trends" aria-label="Динамика замеров">
+          <div className="progress-confidence-grid">
+            <DataConfidence
+              isStale={isStale}
+              kind="weight"
+              signal={summary.data_sufficiency.weight_trend}
+              action={
+                measurementDiary ? <a href="#measurement-diary">Добавить замер</a> : undefined
+              }
+            />
+            <DataConfidence
+              isStale={isStale}
+              kind="anthropometry"
+              signal={summary.data_sufficiency.anthropometry}
+              action={
+                measurementDiary &&
+                summary.data_sufficiency.weight_trend.status === 'sufficient' ? (
+                  <a href="#measurement-diary">Добавить замер</a>
+                ) : undefined
+              }
+            />
+          </div>
           {!body.trends.length ? (
             <EmptyState
               title="Замеров за этот период нет"
@@ -608,10 +627,6 @@ function BodySection({
                   );
                 })}
               </div>
-              <p className="progress-coverage">
-                Точки показывают только даты фактических замеров; промежутки не заполнены
-                предположениями.
-              </p>
             </>
           )}
           {hasGuidance && (
@@ -643,7 +658,7 @@ function BodySection({
   );
 }
 
-function NutritionSection({ summary }: { summary: ProgressSummary }) {
+function NutritionSection({ isStale, summary }: { isStale?: boolean; summary: ProgressSummary }) {
   const { nutrition, adherence } = summary;
   return (
     <section
@@ -658,12 +673,27 @@ function NutritionSection({ summary }: { summary: ProgressSummary }) {
         description="Средние значения по заполненным прошлым дням и сравнение с действующей целью."
       />
       {!nutrition.visible ? (
-        <EmptyState title="Данные питания недоступны" />
+        <>
+          <DataConfidence
+            isStale={isStale}
+            kind="nutrition"
+            signal={summary.data_sufficiency.nutrition_coverage}
+          />
+          <EmptyState title="Данные питания недоступны" />
+        </>
       ) : nutrition.complete_days + nutrition.fasted_days === 0 ? (
-        <EmptyState
-          title="Нет подтверждённых дней питания"
-          text={`${nutrition.incomplete_days} частичных и ${nutrition.unlogged_days} отсутствующих дней не входят в средние значения.`}
-        />
+        <>
+          <DataConfidence
+            isStale={isStale}
+            kind="nutrition"
+            signal={summary.data_sufficiency.nutrition_coverage}
+            action={<AppLink to="/app?section=nutrition">Заполнить дневник</AppLink>}
+          />
+          <EmptyState
+            title="Нет подтверждённых дней питания"
+            text={`${nutrition.incomplete_days} частичных и ${nutrition.unlogged_days} отсутствующих дней не входят в средние значения.`}
+          />
+        </>
       ) : (
         <>
           <div className="progress-nutrition-summary">
@@ -705,12 +735,12 @@ function NutritionSection({ summary }: { summary: ProgressSummary }) {
             <ComplianceRow label="Калории в диапазоне цели" component={adherence.calories} />
             <ComplianceRow label="Цель по белку достигнута" component={adherence.protein} />
           </div>
-          <p className="progress-coverage">
-            {sufficiencyText(
-              summary.data_sufficiency.nutrition_coverage,
-              'средние значения питания',
-            )}
-          </p>
+          <DataConfidence
+            isStale={isStale}
+            kind="nutrition"
+            signal={summary.data_sufficiency.nutrition_coverage}
+            action={<AppLink to="/app?section=nutrition">Дополнить дневник</AppLink>}
+          />
         </>
       )}
     </section>
@@ -843,8 +873,12 @@ export function ProgressExperience({ measurementDiary }: { measurementDiary?: Re
         <>
           <SummaryOverview summary={summary.data} />
           <TrainingSection analytics={analytics} summary={summary.data} />
-          <BodySection measurementDiary={measurementDiary} summary={summary.data} />
-          <NutritionSection summary={summary.data} />
+          <BodySection
+            isStale={summary.isPlaceholderData}
+            measurementDiary={measurementDiary}
+            summary={summary.data}
+          />
+          <NutritionSection isStale={summary.isPlaceholderData} summary={summary.data} />
           <NutritionPeriodReport />
           <AdherenceSection summary={summary.data} />
         </>

@@ -126,6 +126,9 @@ checkpoint до массовой реализации.
   единственное доказательство brand-primary.
 - Selected/current state использует neutral active surface, усиленный label и lime boundary; lime
   fill не размножается на соседние controls.
+- Shared `DataConfidence` использует neutral surface и одинаковую левую lime boundary во всех
+  `sufficient`/`limited`/`insufficient`/stale states. Эта полоса является фирменной геометрией
+  компонента, а не оценкой качества данных; смысл состояния передают текст и иконка.
 - Все action buttons используют `--radius-action`; icon-only controls сохраняют не меньше `44px`
   touch target. Shared `DisclosureIcon` всегда имеет `28 x 28px`, `flex: 0 0 28px` и круг
   `border-radius: 50%`.

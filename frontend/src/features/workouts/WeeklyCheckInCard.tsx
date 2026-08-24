@@ -12,6 +12,7 @@ import { invalidateNutritionSummaries } from '../../shared/queryKeys';
 import { usePersistentState } from '../../shared/storage';
 import { weeklyReviewDraftStorageKey } from '../../shared/userScopedStorage';
 import { Badge, Card, DisclosureIcon, ErrorState, LoadingState } from '../../shared/ui/common';
+import { DataConfidence } from '../../shared/ui/DataConfidence';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 
 const scoreOptions = [1, 2, 3, 4, 5] as const;
@@ -77,10 +78,18 @@ function optionalScore(value: string): number | null {
   return value ? Number(value) : null;
 }
 
-function sufficiencyLabel(status: 'sufficient' | 'limited' | 'insufficient'): string {
-  if (status === 'sufficient') return 'Достаточно данных';
-  if (status === 'limited') return 'Данные ограничены';
-  return 'Мало данных';
+function measurementCount(value: number): string {
+  const lastTwo = Math.abs(value) % 100;
+  const last = lastTwo % 10;
+  const word =
+    lastTwo > 10 && lastTwo < 20
+      ? 'замеров'
+      : last === 1
+        ? 'замер'
+        : last >= 2 && last <= 4
+          ? 'замера'
+          : 'замеров';
+  return `${value} ${word}`;
 }
 
 function questionFields(current: WeeklyCheckInCurrent): Array<{
@@ -335,10 +344,11 @@ export function WeeklyCheckInCard({
                   </div>
                   <div>
                     <span>Динамика массы</span>
-                    <strong>{sufficiencyLabel(weightSignal.status)}</strong>
-                    <small>{weightPoints} замеров за окно тренда</small>
+                    <strong>{measurementCount(weightPoints)}</strong>
+                    <small>за окно тренда</small>
                   </div>
                 </div>
+                <DataConfidence kind="weight" signal={weightSignal} />
                 <dl className="weekly-review__coverage" aria-label="Полнота дневника питания">
                   <div>
                     <dt>Полных</dt>
@@ -538,11 +548,11 @@ export function WeeklyCheckInCard({
                   <div className="weekly-review__calibration" aria-live="polite">
                     <div className="weekly-review__calibration-heading">
                       <div>
-                        <Badge>{sufficiencyLabel(calibration.sufficiency.status)}</Badge>
                         <strong>{calibrationStatusLabels[calibration.status]}</strong>
                       </div>
                       <span>{formatPeriod(calibration.period_start, calibration.period_end)}</span>
                     </div>
+                    <DataConfidence kind="calibration" signal={calibration.sufficiency} />
                     {calibration.estimated_expenditure_kcal != null && (
                       <p className="weekly-review__estimate">
                         Оценочный диапазон расхода:{' '}

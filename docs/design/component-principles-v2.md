@@ -69,6 +69,22 @@ inside card и универсальная `surface` вокруг каждого 
 - Chart labels, axes, units, empty/insufficient states и methodology доступны без hover-only UI.
 - Skeleton не изображает вымышленные data points. Reduced motion не скрывает финальное значение.
 
+## Достаточность данных
+
+- Канонический UI-паттерн — shared `DataConfidence` из
+  `frontend/src/shared/ui/DataConfidence.tsx`. Локальные badges, status colors и расшифровка
+  machine-readable `reason_keys` на страницах запрещены.
+- Порядок всегда один: plain-language status → конкретные счётчики/период → короткое contextual
+  disclosure → optional neutral next step. Фактическая метрика и primary action остаются выше по
+  иерархии.
+- Neutral surface и левая `3px` lime boundary одинаковы у `sufficient`, `limited`, `insufficient`
+  и query-derived stale. Полоса — фирменная геометрия этого типа карточек, а не оценка качества
+  данных. Состояния различаются текстом и иконкой, поэтому lime не превращает confidence в score.
+- `limited` и `insufficient` не блокируют просмотр фактов. Missing не становится zero, а CTA ведёт
+  к безопасному способу дополнить дневник, тренировку или замер.
+- Disclosure остаётся inline в том же analytics/decision state, работает без hover и сохраняет
+  `44px` touch target. Mobile Web и TMA используют один component tree.
+
 ## Workout patterns
 
 - Current exercise/set и flow `Вес → Повторы → Готово` имеют первый приоритет.
