@@ -42,9 +42,9 @@ purpose: Own and implement exactly one task or one explicitly delegated implemen
 - `MEDIUM` исправляй только если fix локальный, не требует нового contract/schema/dependency/role/skill и не расширяет subsystem.
 - `LOW/NIT/OUT_OF_SCOPE` после review не исправляй автоматически.
 - Если review предлагает migration/API/permission/platform architecture ради non-blocking finding - это follow-up, а не текущая реализация.
-- До commit добавь или обнови каждый `MEDIUM/LOW` из implementation/review/QA в корневом
-  `NON_BLOCKING_FINDINGS.md`, включая findings, исправленные в этой task. Не удаляй закрытые записи;
-  обновляй status/verification.
+- До commit добавь или обнови каждый `MEDIUM/LOW` из implementation/review/QA в
+  `codex-backlog/bugs/FINDINGS.md`, включая findings, исправленные в этой task. Не удаляй закрытые
+  записи; обновляй status/verification.
 
 ## Самопроверка
 

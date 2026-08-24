@@ -127,6 +127,7 @@ Reusable role contracts live under `.agents/roles/`.
 Current backlog families include:
 
 - `codex-backlog/tasks/`;
+- `codex-backlog/bugs/pending/` for owner-selected standalone bug-fix tasks;
 - `codex-backlog/telegram-core-release-backlog/tasks/`;
 - `post-release-priority-backlog/tasks/`.
 
@@ -167,8 +168,11 @@ For backlog tasks, severity determines whether work continues:
 - `MEDIUM`, `LOW`, `NIT` and `OUT_OF_SCOPE` are non-blocking. They must not trigger a new
   architecture/data/API/platform workstream.
 - Every `MEDIUM` or `LOW` finding from any task, review, QA or audit must be added or updated in
-  the root `NON_BLOCKING_FINDINGS.md` before commit and finalization, even when fixed in the same
+  `codex-backlog/bugs/FINDINGS.md` before commit and finalization, even when fixed in the same
   task. A chat final report or an ignored `.artifacts/` report is not durable tracking.
+- If a finding is fixed and verified in the current task, do not create a separate bug task. An
+  unresolved finding becomes a file under `codex-backlog/bugs/pending/` only after triage and an
+  explicit owner decision; bug tasks do not enter or advance the main product-task sequence.
 - Keep resolved entries in that registry and update their status/verification instead of deleting
   them. The primary agent owns registry synchronization; read-only reviewer/QA roles return the
   required registry-ready details.
@@ -193,8 +197,9 @@ Before changing files for a backlog task, verify the branch with:
 
 The current backlog's `GLOBAL_RULES.md` defines the expected branch.
 
-For `codex-backlog/tasks/` and `codex-backlog/telegram-core-release-backlog/tasks/`, the expected long-lived
-implementation branch is:
+For `codex-backlog/tasks/`, `codex-backlog/bugs/pending/` and
+`codex-backlog/telegram-core-release-backlog/tasks/`, the expected long-lived implementation
+branch is:
 
 `feature/yfc-platform-v2`
 
@@ -329,8 +334,8 @@ Before declaring tracked backlog implementation complete:
 - confirm migrations, generated files, dependencies and configuration changes are intentional;
 - confirm all blocking `BLOCKER/HIGH` review/QA findings are resolved or explicitly blocked;
 - keep `MEDIUM/LOW/NIT/OUT_OF_SCOPE` as concise non-blocking follow-ups rather than reopening scope;
-- confirm every new or changed `MEDIUM/LOW` is synchronized in `NON_BLOCKING_FINDINGS.md` and cite
-  its ID/status in the final report;
+- confirm every new or changed `MEDIUM/LOW` is synchronized in
+  `codex-backlog/bugs/FINDINGS.md` and cite its ID/status in the final report;
 - create the task's one logical commit only after successful applicable verification;
 - do not start the next task.
 

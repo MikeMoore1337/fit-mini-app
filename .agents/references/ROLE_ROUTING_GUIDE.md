@@ -30,8 +30,9 @@ Reviewer проверяет текущую task и diff, а не весь про
 
 - `BLOCKER/HIGH` - блокируют и возвращаются primary writer на fix.
 - `MEDIUM/LOW/NIT/OUT_OF_SCOPE` - не блокируют и не создают новый workstream.
-- Каждый `MEDIUM/LOW` перед финализацией синхронизируется primary agent в корневом
-  `NON_BLOCKING_FINDINGS.md`; reviewer/QA передают registry-ready данные, не меняя production code.
+- Каждый `MEDIUM/LOW` перед финализацией синхронизируется primary agent в
+  `codex-backlog/bugs/FINDINGS.md`; reviewer/QA передают registry-ready данные, не меняя production
+  code.
 - после blocking fix reviewer выполняет только targeted recheck этих findings и регрессий от fix.
 
 Обычная task имеет максимум 2 review passes: full + targeted. Не запускать новый full review после каждого исправления.

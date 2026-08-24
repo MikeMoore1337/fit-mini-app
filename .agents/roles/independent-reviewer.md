@@ -72,8 +72,8 @@ purpose: Independently review a completed diff against the task and only the pro
 
 Для каждого `MEDIUM/LOW` дополнительно верни primary agent registry-ready данные: стабильный ID,
 source task/review, краткие scenario/impact, status, proposed route и verification. Сам reviewer
-остаётся read-only; primary agent обязан добавить или обновить запись в корневом
-`NON_BLOCKING_FINDINGS.md` до commit, даже если finding исправлен в текущей task.
+остаётся read-only; primary agent обязан добавить или обновить запись в
+`codex-backlog/bugs/FINDINGS.md` до commit, даже если finding исправлен в текущей task.
 
 После full pass набор findings считается закрытым для текущего review cycle.
 

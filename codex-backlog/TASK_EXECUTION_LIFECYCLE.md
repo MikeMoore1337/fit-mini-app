@@ -163,9 +163,15 @@ Reviewer не должен:
 `LOW/NIT/OUT_OF_SCOPE` после review автоматически не исправлять.
 
 Каждый `MEDIUM/LOW`, включая локально исправленный в текущей task, primary agent добавляет или
-обновляет в корневом `NON_BLOCKING_FINDINGS.md` до commit. Reviewer передаёт ID, severity,
+обновляет в `codex-backlog/bugs/FINDINGS.md` до commit. Reviewer передаёт ID, severity,
 scenario/impact, source, minimal fix и verification; финальный ответ и `.artifacts/` не являются
 заменой реестра.
+
+Для finding, исправленного и проверенного в текущей task, отдельный bug-task не создавать.
+Неисправленный finding не становится task автоматически: после triage и явного решения владельца
+его можно маршрутизировать в `codex-backlog/bugs/pending/` по
+`codex-backlog/bugs/README.md`. Такой bug-task не входит в основную последовательность product
+tasks и не запускается без отдельного выбора владельца.
 
 После исправления `BLOCKER/HIGH` выполнить **targeted recheck**, а не новый full review:
 
@@ -230,8 +236,8 @@ Review/QA не могут сами по себе быть основанием �
 4. Проверить migrations/config/dependencies только если они реально изменились.
 5. Убедиться, что все `BLOCKER/HIGH` закрыты либо task остановлена с точным blocker.
 6. `MEDIUM/LOW/OUT_OF_SCOPE` перечислить кратко как non-blocking follow-ups; они не мешают commit.
-7. Синхронизировать все новые/изменённые `MEDIUM/LOW` в корневом
-   `NON_BLOCKING_FINDINGS.md`; закрытые записи не удалять, а обновлять status/verification.
+7. Синхронизировать все новые/изменённые `MEDIUM/LOW` в
+   `codex-backlog/bugs/FINDINGS.md`; закрытые записи не удалять, а обновлять status/verification.
 8. Создать один логический commit при tracked changes, если task не задаёт другой stage strategy.
    Новый registry entry считается tracked change даже для read-only audit/review task.
 9. Не merge/deploy/push/production action без разрешения.
@@ -250,7 +256,7 @@ Review/QA не могут сами по себе быть основанием �
 - review verdict и blocking findings status;
 - QA status, если QA была предусмотрена;
 - non-blocking findings/follow-ups без длинного повторного аудита;
-- затронутые `NON_BLOCKING_FINDINGS.md` IDs и их итоговые statuses;
+- затронутые `codex-backlog/bugs/FINDINGS.md` IDs и их итоговые statuses;
 - что не проверено;
 - owner/manual actions;
 - commit hash или `no commit`.

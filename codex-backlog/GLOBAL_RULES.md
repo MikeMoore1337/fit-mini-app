@@ -66,8 +66,11 @@ Lifecycle не расширяет scope task и не отменяет owner chec
 - Только `BLOCKER/HIGH` блокируют завершение.
 - `MEDIUM/LOW/NIT/OUT_OF_SCOPE` не блокируют commit и не открывают новый workstream.
 - Каждый `MEDIUM/LOW` из review, QA или audit до commit и финализации обязательно добавляется или
-  обновляется в корневом `NON_BLOCKING_FINDINGS.md`, даже если исправлен в той же task. Финальный
+  обновляется в `codex-backlog/bugs/FINDINGS.md`, даже если исправлен в той же task. Финальный
   ответ или ignored `.artifacts/` не заменяют tracked-реестр.
+- Если finding исправлен и проверен в текущей task, отдельный bug-task не создаётся. Неисправленный
+  finding становится task в `codex-backlog/bugs/pending/` только после triage и явного решения
+  владельца по правилам `codex-backlog/bugs/README.md`; он не меняет очередь product tasks.
 - Результат `MEDIUM, но коммитить нельзя` запрещён: если task действительно неприемлема, finding должен быть `HIGH/BLOCKER` с воспроизводимым обоснованием.
 - Первый independent review - единственный полный review pass. После blocking fix выполняется только targeted recheck закрытого набора finding IDs.
 - Обычная task: максимум full review + один targeted recheck; QA - один pass + один targeted recheck при blocking defect. Дополнительные циклы только в исключениях lifecycle.
@@ -408,7 +411,7 @@ Primary labels:
 4. Исправить все `BLOCKER/HIGH` текущего scope; `MEDIUM/LOW/NIT/OUT_OF_SCOPE` не использовать как основание расширить task.
 5. После blocking fix повторить только affected checks/recheck, а не полный audit.
 6. Не запускать полный suite автоматически, если его не требует task/доказанный риск.
-7. Синхронизировать все новые/изменённые `MEDIUM/LOW` в корневом `NON_BLOCKING_FINDINGS.md` и
+7. Синхронизировать все новые/изменённые `MEDIUM/LOW` в `codex-backlog/bugs/FINDINGS.md` и
    проверить актуальность их route/status.
 8. Создать один логический commit при tracked changes, даже если остались документированные non-blocking findings.
 9. Для read-only audit без production changes всё равно commit-ить изменение реестра, если task

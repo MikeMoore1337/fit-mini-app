@@ -76,5 +76,5 @@ Production-код QA не меняет. Blocking defect исправляет `im
 5. blocking status;
 6. non-blocking follow-ups;
 7. registry-ready данные для каждого `MEDIUM/LOW`: ID, source, scenario/impact, status, route и
-   verification; primary agent синхронизирует их в корневом `NON_BLOCKING_FINDINGS.md`;
+   verification; primary agent синхронизирует их в `codex-backlog/bugs/FINDINGS.md`;
 8. release confidence по текущей task, а не по всему продукту.
