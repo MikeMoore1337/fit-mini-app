@@ -20,6 +20,11 @@ def test_demo_scenarios_are_deterministic_and_do_not_write_user_tables(client) -
     with get_session_context() as db:
         users_before = db.query(User).count()
 
+    conversion_titles = {
+        "self_training": "Ведите настоящую историю тренировок",
+        "nutrition": "Настройте дневник питания под себя",
+        "trainer": "Начните работать с реальными клиентами",
+    }
     for scenario in ("self_training", "nutrition", "trainer"):
         first_token, first = _create_session(client, scenario)
         second_token, second = _create_session(client, scenario)
@@ -29,6 +34,9 @@ def test_demo_scenarios_are_deterministic_and_do_not_write_user_tables(client) -
         assert first["fixture_version"] == "demo-curated-v1"
         assert first["scenario"] == scenario
         assert first["state"] == second["state"]
+        assert first["cabinet"] == second["cabinet"]
+        assert first["cabinet"]["meaningful_action_completed"] is False
+        assert first["cabinet"]["conversion_title"] == conversion_titles[scenario]
 
     with get_session_context() as db:
         assert db.query(User).count() == users_before
@@ -73,6 +81,9 @@ def test_training_demo_supports_full_flow_idempotency_and_reset(client) -> None:
     )
     assert progress.json()["state"]["screen"] == "progress"
     assert progress.json()["state"]["progress_change_percent"] == 6.5
+    assert progress.json()["cabinet"]["meaningful_action_completed"] is True
+    assert progress.json()["cabinet"]["progress"]["latest_volume_kg"] == 6840
+    assert progress.json()["cabinet"]["progress"]["workouts_completed"] == 12
 
     reset = client.post("/api/v1/demo/sessions/current/reset", headers=headers)
     assert reset.status_code == 200
@@ -92,6 +103,9 @@ def test_nutrition_and_trainer_sessions_are_isolated(client) -> None:
     assert nutrition.status_code == 200
     assert nutrition.json()["state"]["calories"] == 1588
     assert nutrition.json()["state"]["protein_g"] == 106.0
+    assert nutrition.json()["cabinet"]["nutrition"]["calories"] == 1588
+    assert nutrition.json()["cabinet"]["progress"]["nutrition_completion_percent"] == 74
+    assert nutrition.json()["cabinet"]["meaningful_action_completed"] is True
 
     trainer = client.post(
         "/api/v1/demo/sessions/current/actions",
@@ -100,6 +114,8 @@ def test_nutrition_and_trainer_sessions_are_isolated(client) -> None:
     )
     assert trainer.status_code == 200
     assert trainer.json()["state"]["comment"] == "Техника стабильна, сохраняем темп."
+    assert trainer.json()["cabinet"]["trainer"]["comment"] == "Техника стабильна, сохраняем темп."
+    assert trainer.json()["cabinet"]["meaningful_action_completed"] is True
 
     nutrition_after = client.get(
         "/api/v1/demo/sessions/current",

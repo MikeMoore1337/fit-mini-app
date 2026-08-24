@@ -1,6 +1,10 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { formatWeekRange, WeekStrip } from '../../../../src/shared/ui/WeekStrip';
+import {
+  formatWeekRange,
+  TRAINING_WEEK_LEGEND,
+  WeekStrip,
+} from '../../../../src/shared/ui/WeekStrip';
 
 vi.mock('../../../../src/shared/navigation/router', () => ({
   AppLink: ({ to, children, ...props }: React.ComponentProps<'a'> & { to: string }) => (
@@ -65,7 +69,7 @@ describe('WeekStrip', () => {
   });
 
   it('renders overview statuses and only exposes configured days as links', () => {
-    render(
+    const { container } = render(
       <WeekStrip
         anchorDate="2026-08-20"
         ariaLabel="Эта неделя"
@@ -76,17 +80,33 @@ describe('WeekStrip', () => {
                   label: 'Открыть тренировку Силовая база',
                   to: '/app?section=progress&workout_id=42',
                 },
-                status: { key: 'completed', label: 'Выполнено', marker: '✓' },
+                activities: [{ key: 'strength', label: 'Силовая' }],
+                status: { key: 'completed', label: 'Выполнено' },
               }
             : {}
         }
         mode="overview"
+        legend={TRAINING_WEEK_LEGEND}
         title="Эта неделя"
         today="2026-08-20"
       />,
     );
 
     expect(screen.getByRole('region', { name: 'Эта неделя' })).toBeInTheDocument();
+    const legend = screen.getByRole('list', { name: 'Обозначения недели' });
+    expect(within(legend).getByText('Силовая')).toBeVisible();
+    expect(within(legend).getByText('Кардио')).toBeVisible();
+    expect(within(legend).getByText('Отдых')).toBeVisible();
+    expect(within(legend).getByText('Выполнено')).toBeVisible();
+    expect(container.querySelectorAll('.week-strip__pictogram')).not.toHaveLength(0);
+    expect(container.querySelector('[data-pictogram="planned"] circle')).toHaveAttribute(
+      'r',
+      '3.5',
+    );
+    expect(container.querySelector('[data-pictogram="in-progress"] path')).toHaveAttribute(
+      'd',
+      'm5.5 3.5 4.5 4.5-4.5 4.5',
+    );
     expect(screen.getByRole('link', { name: /Выполнено.*Открыть тренировку/i })).toHaveAttribute(
       'href',
       '/app?section=progress&workout_id=42',

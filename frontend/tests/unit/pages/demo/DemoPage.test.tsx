@@ -37,12 +37,50 @@ vi.mock('../../../../src/shared/analytics/productEvents', () => ({
   trackProductEvent: mocks.track,
 }));
 
+Object.defineProperty(Element.prototype, 'scrollIntoView', {
+  configurable: true,
+  value: vi.fn(),
+});
+Object.defineProperty(window, 'scrollTo', {
+  configurable: true,
+  value: vi.fn(),
+});
+
 const trainingSnapshot: DemoSessionSnapshot = {
   capability: 'demo',
   scenario: 'self_training',
   fixture_version: 'demo-curated-v1',
   revision: 1,
   expires_at: '2026-08-24T12:30:00Z',
+  cabinet: {
+    today: {
+      title: 'Верх тела · уверенный старт',
+      summary: 'Подготовленная тренировка на сегодня',
+      status_label: 'Остался один подход',
+      completed_days: 2,
+      planned_days: 4,
+    },
+    nutrition: {
+      calories: 1580,
+      calorie_target: 2150,
+      protein_g: 104,
+      protein_target_g: 145,
+      meals_logged: 3,
+      item_added: true,
+      recent_item: { name: 'Творог с ягодами', serving: '220 г', calories: 286, protein_g: 31 },
+    },
+    progress: {
+      workouts_completed: 11,
+      latest_volume_kg: 6220,
+      volume_change_percent: 4.2,
+      nutrition_days_logged: 5,
+      nutrition_completion_percent: 73,
+      summary: 'Динамика обновится после завершения тренировки.',
+    },
+    trainer: null,
+    meaningful_action_completed: false,
+    conversion_title: 'Сохраните историю тренировок',
+  },
   state: {
     kind: 'self_training',
     screen: 'today',
@@ -133,6 +171,18 @@ describe('DemoPage', () => {
       fixture_version: 'demo-curated-v1',
       revision: 1,
       expires_at: '2026-08-24T12:30:00Z',
+      cabinet: {
+        ...trainingSnapshot.cabinet,
+        trainer: {
+          kind: 'trainer',
+          screen: 'client',
+          client_name: 'Алексей Воронов — подготовленный демо-клиент',
+          context_label: 'Последняя тренировка',
+          workout_title: 'Ноги и корпус',
+          facts: [{ label: 'Выполнено', value: '6 из 6 упражнений' }],
+          comment: null,
+        },
+      },
       state: {
         kind: 'trainer',
         screen: 'client',

@@ -7,7 +7,6 @@ import {
   expectTouchTargets,
   installTelegramHarness,
   MOBILE_CONTEXTS,
-  TelegramHarness,
   setNetworkOffline,
   test,
 } from './fixtures/mobile-tma';
@@ -19,6 +18,52 @@ const LIVE_DEMO =
   (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
     ?.YFC_DEMO_LIVE === '1';
 const SCREENSHOT_DIR = '../.artifacts/screenshots/task-69';
+const CABINET_CAPTURE =
+  (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
+    ?.YFC_CAPTURE_TASK_69A === '1';
+const CABINET_SCREENSHOT_DIR = '../.artifacts/screenshots/task-69a';
+
+function cabinetFixture(scenario: DemoScenario): DemoSessionSnapshot['cabinet'] {
+  return {
+    today: {
+      title: scenario === 'trainer' ? 'Результат клиента готов к разбору' : 'План на сегодня',
+      summary: 'Подготовленный связный контекст',
+      status_label: 'Нужно действие',
+      completed_days: 3,
+      planned_days: 5,
+    },
+    nutrition: {
+      calories: 1160,
+      calorie_target: 2150,
+      protein_g: 82,
+      protein_target_g: 145,
+      meals_logged: 2,
+      item_added: false,
+      recent_item: {
+        name: 'Овсяная каша с бананом и греческим йогуртом',
+        serving: '320 г · недавний продукт',
+        calories: 428,
+        protein_g: 24,
+      },
+    },
+    progress: {
+      workouts_completed: 11,
+      latest_volume_kg: 6220,
+      volume_change_percent: 4.2,
+      nutrition_days_logged: 5,
+      nutrition_completion_percent: 54,
+      summary: 'Итог использует только подтверждённые записи.',
+    },
+    trainer: null,
+    meaningful_action_completed: false,
+    conversion_title:
+      scenario === 'nutrition'
+        ? 'Настройте дневник питания под себя'
+        : scenario === 'trainer'
+          ? 'Начните работать с реальными клиентами'
+          : 'Ведите настоящую историю тренировок',
+  };
+}
 
 function demoFixture(scenario: DemoScenario): DemoSessionSnapshot {
   const base = {
@@ -27,6 +72,7 @@ function demoFixture(scenario: DemoScenario): DemoSessionSnapshot {
     fixture_version: 'demo-curated-v1' as const,
     revision: 1,
     expires_at: '2026-08-24T12:30:00Z',
+    cabinet: cabinetFixture(scenario),
   };
   if (scenario === 'nutrition') {
     return {
@@ -51,22 +97,24 @@ function demoFixture(scenario: DemoScenario): DemoSessionSnapshot {
     };
   }
   if (scenario === 'trainer') {
+    const trainerState = {
+      kind: 'trainer' as const,
+      screen: 'client' as const,
+      client_name: 'Алексей Воронов — подготовленный демо-клиент',
+      context_label: 'Последняя тренировка · сегодня, 18:40',
+      workout_title: 'Ноги и корпус · неделя 4',
+      facts: [
+        { label: 'Выполнено', value: '6 из 6 упражнений' },
+        { label: 'Объём', value: '6 840 кг' },
+        { label: 'Самочувствие', value: '8 из 10' },
+        { label: 'Следующий ориентир', value: '+2,5 кг в приседе' },
+      ],
+      comment: null,
+    };
     return {
       ...base,
-      state: {
-        kind: 'trainer',
-        screen: 'client',
-        client_name: 'Алексей Воронов — подготовленный демо-клиент',
-        context_label: 'Последняя тренировка · сегодня, 18:40',
-        workout_title: 'Ноги и корпус · неделя 4',
-        facts: [
-          { label: 'Выполнено', value: '6 из 6 упражнений' },
-          { label: 'Объём', value: '6 840 кг' },
-          { label: 'Самочувствие', value: '8 из 10' },
-          { label: 'Следующий ориентир', value: '+2,5 кг в приседе' },
-        ],
-        comment: null,
-      },
+      state: trainerState,
+      cabinet: { ...base.cabinet, trainer: trainerState },
     };
   }
   return {
@@ -107,6 +155,12 @@ function applyMockAction(snapshot: DemoSessionSnapshot, action: string, comment?
       next.state.screen = 'summary';
       next.state.duration_minutes = 46;
       next.state.total_volume_kg = 6840;
+      next.cabinet.today.status_label = 'Тренировка завершена';
+      next.cabinet.progress.workouts_completed = 12;
+      next.cabinet.progress.latest_volume_kg = 6840;
+      next.cabinet.progress.volume_change_percent = 6.5;
+      next.cabinet.progress.summary = 'Сегодняшняя тренировка уже учтена в динамике.';
+      next.cabinet.meaningful_action_completed = true;
     }
     if (action === 'open_progress') {
       next.state.screen = 'progress';
@@ -118,10 +172,20 @@ function applyMockAction(snapshot: DemoSessionSnapshot, action: string, comment?
       next.state.calories += next.state.recent_item.calories;
       next.state.protein_g += next.state.recent_item.protein_g;
       next.state.meals_logged += 1;
+      next.cabinet.nutrition.calories = next.state.calories;
+      next.cabinet.nutrition.protein_g = next.state.protein_g;
+      next.cabinet.nutrition.meals_logged = next.state.meals_logged;
+      next.cabinet.nutrition.item_added = true;
+      next.cabinet.progress.nutrition_days_logged = 6;
+      next.cabinet.progress.nutrition_completion_percent = 74;
+      next.cabinet.progress.summary = 'Новая запись уже отражена в дневном итоге.';
+      next.cabinet.meaningful_action_completed = true;
     }
     if (action === 'open_nutrition_report') next.state.screen = 'report';
   } else if (action === 'save_comment') {
     next.state.comment = comment ?? 'Техника стабильна.';
+    if (next.cabinet.trainer) next.cabinet.trainer.comment = next.state.comment;
+    next.cabinet.meaningful_action_completed = true;
   }
   return next;
 }
@@ -402,51 +466,527 @@ test('three curated scenarios work at compact Mobile Web widths without visual f
   await context.close();
 });
 
-test('mocked Dark TMA keeps the same demo composition and never calls auth or linking', async ({
+test('signed TMA launch does not open the Web-only demo', async ({ browser }) => {
+  const context = await browser.newContext({
+    viewport: MOBILE_CONTEXTS.baseline,
+    hasTouch: true,
+    isMobile: true,
+    reducedMotion: 'reduce',
+  });
+  const page = await context.newPage();
+  const requestedPaths: string[] = [];
+  page.on('request', (request) => requestedPaths.push(new URL(request.url()).pathname));
+  await installTelegramHarness(page, { colorScheme: 'dark' });
+  await installAuthApi(page);
+
+  await page.goto('/demo?scenario=trainer&tgWebAppPlatform=android');
+
+  await expect(page).toHaveURL(/\/onboarding\?next=%2Fapp$/);
+  await expect(page.getByRole('heading', { name: 'Какая у вас главная цель?' })).toBeVisible();
+  await expect(page.getByText('Демо', { exact: true })).toHaveCount(0);
+  expect(requestedPaths.some((path) => path.includes('/api/v1/demo/'))).toBe(false);
+  expect(requestedPaths.some((path) => path.includes('/auth/telegram/init'))).toBe(true);
+  await context.close();
+
+  const failedSdkContext = await browser.newContext({ viewport: MOBILE_CONTEXTS.baseline });
+  const failedSdkPage = await failedSdkContext.newPage();
+  const failedSdkRequests: string[] = [];
+  failedSdkPage.on('request', (request) => failedSdkRequests.push(new URL(request.url()).pathname));
+  await failedSdkPage.route('https://telegram.org/js/telegram-web-app.js', (route) =>
+    route.abort(),
+  );
+  await installAuthApi(failedSdkPage);
+  await failedSdkPage.goto('/demo?scenario=trainer&tgWebAppPlatform=android');
+
+  await expect(failedSdkPage).not.toHaveURL(/\/demo/);
+  await expect(failedSdkPage.getByText('Демо', { exact: true })).toHaveCount(0);
+  expect(failedSdkRequests.some((path) => path.includes('/api/v1/demo/'))).toBe(false);
+  await failedSdkContext.close();
+});
+
+test('Web cabinet preview uses production shell across the required viewport matrix', async ({
   browser,
 }) => {
-  for (const scenario of ['self_training', 'nutrition', 'trainer'] as const) {
+  const viewports = [
+    { name: 'mobile-360-light', width: 360, height: 800, touch: true, dark: false },
+    { name: 'mobile-390-dark', width: 390, height: 844, touch: true, dark: true },
+    { name: 'mobile-430-light', width: 430, height: 932, touch: true, dark: false },
+    { name: 'tablet-768-light', width: 768, height: 900, touch: true, dark: false },
+    { name: 'desktop-1280-light', width: 1280, height: 900, touch: false, dark: false },
+    { name: 'desktop-1440-dark', width: 1440, height: 900, touch: false, dark: true },
+  ] as const;
+
+  for (const viewport of viewports) {
     const context = await browser.newContext({
-      viewport: MOBILE_CONTEXTS.baseline,
-      hasTouch: true,
-      isMobile: true,
+      viewport: { width: viewport.width, height: viewport.height },
+      hasTouch: viewport.touch,
+      isMobile: viewport.width < 768,
+      colorScheme: viewport.dark ? 'dark' : 'light',
       reducedMotion: 'reduce',
     });
     const page = await context.newPage();
-    const requestedPaths: string[] = [];
-    page.on('request', (request) => requestedPaths.push(new URL(request.url()).pathname));
-    await installTelegramHarness(page, { colorScheme: 'dark' });
-    if (!LIVE_DEMO) await installDemoApi(page);
-    await page.goto(`/demo?scenario=${scenario}&tgWebAppPlatform=android`);
-    const tma = new TelegramHarness(page);
+    const consoleErrors: string[] = [];
+    const pageErrors: string[] = [];
+    page.on('console', (message) => {
+      if (message.type() === 'error') consoleErrors.push(message.text());
+    });
+    page.on('pageerror', (error) => pageErrors.push(error.message));
+    await installDemoApi(page);
+    await page.goto('/demo?cabinet=1&scenario=self_training&section=today');
 
-    await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
-    await expect(page.getByText('Демо', { exact: true })).toBeVisible();
-    await tma.setActive(false);
-    await tma.setActive(true);
-    await expect(page.getByText('Демо', { exact: true })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'План на сегодня' })).toBeVisible();
+    await expect(page.getByText('Подготовленные данные без сохранения')).toBeVisible();
+    const weekLegend = page.getByRole('list', { name: 'Обозначения недели' });
+    await expect(weekLegend).toContainText('Силовая');
+    await expect(weekLegend).toContainText('Кардио');
+    await expect(weekLegend).toContainText('Отдых');
+    await expect(weekLegend).toContainText('Выполнено');
+    const legendCenterOffset = await weekLegend.evaluate((legend) => {
+      const legendItems = Array.from(legend.querySelectorAll<HTMLElement>(':scope > li'));
+      const firstItem = legendItems[0];
+      if (!firstItem) return Number.POSITIVE_INFINITY;
+      const availableBox = legend.getBoundingClientRect();
+      const rowTop = firstItem.getBoundingClientRect().top;
+      const firstRowItems = legendItems.filter(
+        (item) => Math.abs(item.getBoundingClientRect().top - rowTop) <= 1,
+      );
+      const firstBox = firstRowItems[0]?.getBoundingClientRect();
+      const lastBox = firstRowItems.at(-1)?.getBoundingClientRect();
+      if (!firstBox || !lastBox) return Number.POSITIVE_INFINITY;
+      const rowCenter = (firstBox.left + lastBox.right) / 2;
+      return Math.abs(rowCenter - (availableBox.left + availableBox.width / 2));
+    });
+    expect(legendCenterOffset).toBeLessThanOrEqual(2);
     await expectNoHorizontalOverflow(page);
-    await expectSelectionContract(page);
-    await completeScenario(page, scenario);
-    expect(requestedPaths.some((path) => path.includes('/auth/'))).toBe(false);
-    expect(requestedPaths.some((path) => path.includes('/notifications'))).toBe(false);
-    expect(requestedPaths.some((path) => path.includes('/coach/invit'))).toBe(false);
-    if (CAPTURE && scenario === 'trainer') {
+    await expectNoOverlap(
+      page.locator('.demo-cabinet-boundary'),
+      page.locator('.demo-cabinet-title'),
+    );
+    await expectNoOverlap(page.locator('.week-strip'), page.locator('.demo-cabinet-focus-grid'));
+
+    const scenarioSelector = page.getByLabel('Демо-сценарий');
+    const moreButton = page.getByRole('button', { name: 'Сценарии' });
+    if (viewport.width >= 900) {
+      await expect(scenarioSelector).toBeVisible();
+      await expect(moreButton).toBeHidden();
+      await expect(page.getByText('Отдельная сессия', { exact: true })).toBeVisible();
+      await expect(page.getByText('Изолированная сессия', { exact: true })).toHaveCount(0);
+    } else {
+      await expect(scenarioSelector).toBeHidden();
+      await expect(moreButton).toBeVisible();
+    }
+
+    const primary = page.getByRole('button', { name: 'Продолжить тренировку' });
+    await expect(primary).toBeInViewport();
+    await expect(primary).toHaveCSS('border-radius', '12px');
+    await expect(primary).toHaveCSS(
+      'background-color',
+      viewport.dark ? 'rgb(168, 232, 58)' : 'rgb(158, 224, 43)',
+    );
+    if (viewport.touch) {
+      await expectTouchTargets(page.locator('#appBottomNav .app-bottom-nav__primary > *'));
+      await expectTouchTargets(primary);
+    }
+    if (
+      CABINET_CAPTURE &&
+      ['mobile-360-light', 'mobile-390-dark', 'desktop-1280-light', 'desktop-1440-dark'].includes(
+        viewport.name,
+      )
+    ) {
       await page.screenshot({
-        path: `${SCREENSHOT_DIR}/tma-390-trainer-conversion-dark.png`,
+        path: `${CABINET_SCREENSHOT_DIR}/${viewport.name}-today.png`,
+      });
+    }
+    if (viewport.width >= 900) {
+      await page.getByRole('link', { name: 'Питание', exact: true }).click();
+      const metricSpacing = await page
+        .locator('.demo-cabinet-metrics')
+        .first()
+        .evaluate((node) => {
+          const groupStyle = window.getComputedStyle(node);
+          const firstMetric = node.querySelector<HTMLElement>('.ui-metric');
+          const metricStyle = firstMetric ? window.getComputedStyle(firstMetric) : null;
+          return {
+            gap: Number.parseFloat(groupStyle.columnGap),
+            paddingLeft: Number.parseFloat(metricStyle?.paddingLeft ?? '0'),
+          };
+        });
+      expect(metricSpacing.gap).toBeGreaterThan(0);
+      expect(metricSpacing.paddingLeft).toBeGreaterThan(0);
+    }
+    expect(consoleErrors).toEqual([]);
+    expect(pageErrors).toEqual([]);
+    await context.close();
+  }
+});
+
+test('three Web presets keep linked state, conversion and browser history inside the allowlist', async ({
+  browser,
+}) => {
+  const training = await openMobilePage(browser, 'self_training', 390);
+  await training.page.goto('/demo?cabinet=1&scenario=self_training&section=today');
+  await training.page.getByRole('button', { name: 'Продолжить тренировку' }).click();
+  await training.page.getByRole('button', { name: 'Завершить текущий подход' }).click();
+  await training.page.getByRole('button', { name: 'Завершить тренировку' }).click();
+  await expect(training.page).toHaveURL(/section=progress/);
+  await expect(training.page.getByText('6 840 кг')).toBeVisible();
+  await expect(
+    training.page.getByRole('heading', { name: 'Ведите настоящую историю тренировок' }),
+  ).toBeVisible();
+  if (CABINET_CAPTURE) {
+    await training.page
+      .getByRole('heading', { name: 'Ведите настоящую историю тренировок' })
+      .scrollIntoViewIfNeeded();
+    await training.page.screenshot({
+      path: `${CABINET_SCREENSHOT_DIR}/mobile-390-training-result-light.png`,
+    });
+  }
+  await training.context.close();
+
+  const nutrition = await openMobilePage(browser, 'nutrition', 430);
+  await nutrition.page.goto('/demo?cabinet=1&scenario=nutrition&section=nutrition');
+  await nutrition.page.getByRole('button', { name: 'Добавить недавний продукт' }).click();
+  await expect(nutrition.page.getByText('1588 / 2150')).toBeVisible();
+  await nutrition.page.getByRole('link', { name: /Прогресс/ }).click();
+  await expect(nutrition.page.getByText('74% от ориентира')).toBeVisible();
+  await nutrition.page.goBack();
+  await expect(nutrition.page).toHaveURL(/section=nutrition/);
+  await nutrition.page.goForward();
+  await expect(nutrition.page).toHaveURL(/section=progress/);
+  await nutrition.page.reload();
+  await expect(nutrition.page.getByText('74% от ориентира')).toBeVisible();
+  if (CABINET_CAPTURE) {
+    await nutrition.page.screenshot({
+      path: `${CABINET_SCREENSHOT_DIR}/mobile-430-nutrition-linked-light.png`,
+    });
+  }
+  await nutrition.context.close();
+
+  const trainer = await openMobilePage(browser, 'trainer', 390);
+  await trainer.page.goto('/demo?cabinet=1&scenario=trainer&section=trainer');
+  await expect(
+    trainer.page.getByRole('heading', {
+      name: 'Алексей Воронов — подготовленный демо-клиент',
+    }),
+  ).toBeVisible();
+  await expect(trainer.page.getByLabel('Комментарий к этой тренировке')).toBeVisible();
+  if (CABINET_CAPTURE) {
+    await trainer.page.screenshot({
+      path: `${CABINET_SCREENSHOT_DIR}/mobile-390-trainer-entry-light.png`,
+    });
+  }
+  const trainerComment = trainer.page.getByLabel('Комментарий к этой тренировке');
+  const saveComment = trainer.page.getByRole('button', { name: 'Сохранить комментарий' });
+  await trainerComment.focus();
+  await expect(trainer.page.locator('html')).toHaveAttribute('data-yfc-keyboard', 'visible');
+  await expect(trainer.page.locator('#appBottomNav')).toBeHidden();
+  await trainerComment.fill('Сохраняем темп и добавляем 2,5 кг.');
+  await saveComment.scrollIntoViewIfNeeded();
+  await expect(saveComment).toBeInViewport();
+  await saveComment.click();
+  await expect(trainer.page.getByText('Комментарий сохранён до конца демо-сессии')).toBeVisible();
+  await expect(
+    trainer.page.getByRole('button', { name: 'Пригласить нового клиента' }),
+  ).toBeDisabled();
+  await expect(
+    trainer.page.getByRole('heading', { name: 'Начните работать с реальными клиентами' }),
+  ).toBeVisible();
+  if (CABINET_CAPTURE) {
+    await trainer.page
+      .getByRole('heading', { name: 'Начните работать с реальными клиентами' })
+      .scrollIntoViewIfNeeded();
+    await trainer.page.screenshot({
+      path: `${CABINET_SCREENSHOT_DIR}/mobile-390-trainer-result-light.png`,
+    });
+  }
+  await trainer.context.close();
+});
+
+test('desktop demo keeps metric groups separated and conversion copy honest', async ({
+  browser,
+}) => {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
+  const page = await context.newPage();
+  if (!LIVE_DEMO) await installDemoApi(page);
+  await page.goto('/demo?cabinet=1&scenario=nutrition&section=nutrition');
+  await page.getByRole('button', { name: 'Добавить недавний продукт' }).click();
+
+  await expect(page.getByRole('button', { name: 'Сценарии' })).toBeHidden();
+  const scenarioSelector = page.getByLabel('Демо-сценарий');
+  await expect(scenarioSelector).toHaveValue('nutrition');
+  await expect(scenarioSelector.locator('option')).toHaveText(['Для себя', 'Питание', 'Тренер']);
+  const scenarioAffordance = await scenarioSelector.evaluate((select) => {
+    const control = select as HTMLSelectElement;
+    const label = select.closest('label');
+    const indicator = label ? window.getComputedStyle(label, '::after') : null;
+    const style = window.getComputedStyle(select);
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    if (context) context.font = style.font;
+    const selectedLabel = control.options[control.selectedIndex]?.text ?? '';
+    return {
+      backgroundImage: style.backgroundImage,
+      duplicateIndicator: indicator?.content ?? 'none',
+      labelWidth: context?.measureText(selectedLabel).width ?? 0,
+      paddingLeft: Number.parseFloat(style.paddingLeft),
+      paddingRight: Number.parseFloat(style.paddingRight),
+      width: select.getBoundingClientRect().width,
+    };
+  });
+  expect(scenarioAffordance.width).toBeGreaterThanOrEqual(118);
+  expect(scenarioAffordance.width).toBeLessThanOrEqual(122);
+  expect(scenarioAffordance.backgroundImage).not.toBe('none');
+  expect(scenarioAffordance.duplicateIndicator).toBe('none');
+  expect(
+    scenarioAffordance.labelWidth +
+      scenarioAffordance.paddingLeft +
+      scenarioAffordance.paddingRight,
+  ).toBeLessThan(scenarioAffordance.width);
+  const logoOffset = await page.locator('#appBottomNav').evaluate((navigation) => {
+    const lockup = navigation.querySelector<HTMLElement>('.yfc-lockup');
+    if (!lockup) return Number.POSITIVE_INFINITY;
+    const navigationBox = navigation.getBoundingClientRect();
+    const lockupBox = lockup.getBoundingClientRect();
+    return Math.abs(
+      navigationBox.left + navigationBox.width / 2 - (lockupBox.left + lockupBox.width / 2),
+    );
+  });
+  expect(logoOffset).toBeLessThanOrEqual(1);
+  await expect(
+    page.getByRole('heading', { name: 'Настройте дневник питания под себя' }),
+  ).toBeVisible();
+  await expect(
+    page.getByText('Подготовленный пример останется в демо.', { exact: false }),
+  ).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Войти и начать настройку' })).toBeVisible();
+
+  await page.getByRole('link', { name: 'Сегодня', exact: true }).click();
+  const pictogramSizes = await page.locator('.week-strip__pictogram').evaluateAll((pictograms) =>
+    pictograms.map((pictogram) => {
+      const box = pictogram.getBoundingClientRect();
+      return { height: box.height, width: box.width };
+    }),
+  );
+  expect(pictogramSizes.length).toBeGreaterThan(0);
+  expect(
+    pictogramSizes.every(
+      (size) => Math.abs(size.width - 16) <= 0.1 && Math.abs(size.height - 16) <= 0.1,
+    ),
+  ).toBe(true);
+  const statusGeometry = await page.evaluate(() => {
+    const geometry = (kind: string) => {
+      const pictogram = document.querySelector<HTMLElement>(
+        `.week-strip__pictogram[data-pictogram="${kind}"]`,
+      );
+      const shape = pictogram?.querySelector<SVGGraphicsElement>('path, circle');
+      if (!pictogram || !shape) return null;
+      const box = shape.getBBox();
+      return {
+        canvasHeight: pictogram.getBoundingClientRect().height,
+        canvasWidth: pictogram.getBoundingClientRect().width,
+        shapeHeight: box.height,
+        shapeWidth: box.width,
+        strokeWidth: Number.parseFloat(window.getComputedStyle(shape).strokeWidth),
+      };
+    };
+    return { inProgress: geometry('in-progress'), planned: geometry('planned') };
+  });
+  expect(statusGeometry.planned).toMatchObject({ canvasHeight: 16, canvasWidth: 16 });
+  expect(statusGeometry.planned?.shapeHeight).toBeGreaterThanOrEqual(7);
+  expect(statusGeometry.planned?.shapeWidth).toBeGreaterThanOrEqual(7);
+  expect(statusGeometry.inProgress).toMatchObject({ canvasHeight: 16, canvasWidth: 16 });
+  expect(statusGeometry.inProgress?.shapeHeight).toBeGreaterThanOrEqual(9);
+  expect(statusGeometry.inProgress?.shapeWidth).toBeGreaterThanOrEqual(4);
+  expect(statusGeometry.inProgress?.strokeWidth).toBeGreaterThanOrEqual(2);
+  const legendCenterOffset = await page.locator('.week-strip__topline').evaluate((topline) => {
+    const legend = topline.querySelector<HTMLElement>('.week-strip__legend');
+    const legendItems = Array.from(legend?.querySelectorAll<HTMLElement>(':scope > li') ?? []);
+    const firstItem = legendItems[0];
+    if (!legend || !firstItem) return Number.POSITIVE_INFINITY;
+    const availableBox = legend.getBoundingClientRect();
+    const firstBox = firstItem.getBoundingClientRect();
+    const lastBox = legendItems.at(-1)?.getBoundingClientRect() ?? firstBox;
+    const legendCenter = (firstBox.left + lastBox.right) / 2;
+    return Math.abs(legendCenter - (availableBox.left + availableBox.width / 2));
+  });
+  expect(legendCenterOffset).toBeLessThanOrEqual(2);
+  await page.getByRole('link', { name: 'Питание', exact: true }).click();
+
+  const nutritionMetrics = page.locator('.demo-cabinet-metrics').first();
+  const nutritionGeometry = await nutritionMetrics.evaluate((node) => {
+    const metrics = Array.from(node.querySelectorAll<HTMLElement>('.ui-metric'));
+    const first = metrics[0];
+    const second = metrics[1];
+    return {
+      gap: Number.parseFloat(window.getComputedStyle(node).columnGap),
+      firstPaddingLeft: first ? Number.parseFloat(window.getComputedStyle(first).paddingLeft) : 0,
+      renderedGap:
+        first && second
+          ? second.getBoundingClientRect().left - first.getBoundingClientRect().right
+          : 0,
+    };
+  });
+  expect(nutritionGeometry.gap).toBeGreaterThan(0);
+  expect(nutritionGeometry.firstPaddingLeft).toBeGreaterThan(0);
+  expect(nutritionGeometry.renderedGap).toBeGreaterThan(0);
+  if (CABINET_CAPTURE) {
+    await page.screenshot({
+      path: `${CABINET_SCREENSHOT_DIR}/desktop-1280-nutrition-conversion-light.png`,
+    });
+  }
+
+  await page.getByRole('link', { name: 'Прогресс', exact: true }).click();
+  const progressMetrics = page.locator('.demo-cabinet-metrics').first();
+  await expect(progressMetrics).toBeVisible();
+  expect(
+    await progressMetrics.evaluate((node) => window.getComputedStyle(node).columnGap),
+  ).not.toBe('0px');
+  if (CABINET_CAPTURE) {
+    await page.screenshot({
+      path: `${CABINET_SCREENSHOT_DIR}/desktop-1280-progress-conversion-light.png`,
+    });
+  }
+  await context.close();
+});
+
+test('desktop demo selector stays compact, readable and deterministic at layout boundaries', async ({
+  browser,
+}) => {
+  const viewports = [
+    { width: 1280, height: 900 },
+    { width: 1024, height: 900 },
+    { width: 900, height: 900 },
+  ];
+
+  for (const viewport of viewports) {
+    const context = await browser.newContext({ viewport });
+    const page = await context.newPage();
+    if (!LIVE_DEMO) await installDemoApi(page);
+    await page.goto('/demo?cabinet=1&scenario=self_training&section=today');
+
+    const selector = page.getByLabel('Демо-сценарий');
+    await expect(selector).toBeVisible();
+    for (const option of [
+      { label: 'Для себя', value: 'self_training' },
+      { label: 'Питание', value: 'nutrition' },
+      { label: 'Тренер', value: 'trainer' },
+    ]) {
+      await selector.selectOption(option.value);
+      await expect(selector).toHaveValue(option.value);
+      await expect(selector.locator('option:checked')).toHaveText(option.label);
+      const fit = await selector.evaluate((select) => {
+        const control = select as HTMLSelectElement;
+        const style = window.getComputedStyle(select);
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        if (context) context.font = style.font;
+        const selectedLabel = control.options[control.selectedIndex]?.text ?? '';
+        return {
+          available:
+            select.clientWidth -
+            Number.parseFloat(style.paddingLeft) -
+            Number.parseFloat(style.paddingRight),
+          label: context?.measureText(selectedLabel).width ?? 0,
+          width: select.getBoundingClientRect().width,
+        };
+      });
+      expect(fit.width).toBeGreaterThanOrEqual(118);
+      expect(fit.width).toBeLessThanOrEqual(122);
+      expect(fit.label).toBeLessThan(fit.available);
+    }
+
+    const layout = await page.locator('.demo-cabinet-boundary').evaluate((boundary) => {
+      const intro = boundary.querySelector<HTMLElement>(':scope > div:first-child');
+      const scenario = boundary.querySelector<HTMLElement>('.demo-cabinet-boundary__scenario');
+      const actions = boundary.querySelector<HTMLElement>('.demo-cabinet-boundary__actions');
+      if (!intro || !scenario || !actions) return null;
+      const introBox = intro.getBoundingClientRect();
+      const scenarioBox = scenario.getBoundingClientRect();
+      const actionsBox = actions.getBoundingClientRect();
+      return {
+        actionsCenter: actionsBox.top + actionsBox.height / 2,
+        introBottom: introBox.bottom,
+        introCenter: introBox.top + introBox.height / 2,
+        scenarioCenter: scenarioBox.top + scenarioBox.height / 2,
+        scenarioTop: scenarioBox.top,
+      };
+    });
+    expect(layout).not.toBeNull();
+    if (viewport.width >= 1100) {
+      expect(
+        Math.abs((layout?.introCenter ?? 0) - (layout?.scenarioCenter ?? 0)),
+      ).toBeLessThanOrEqual(2);
+    } else {
+      expect((layout?.scenarioTop ?? 0) - (layout?.introBottom ?? 0)).toBeGreaterThan(0);
+    }
+    expect(
+      Math.abs((layout?.scenarioCenter ?? 0) - (layout?.actionsCenter ?? 0)),
+    ).toBeLessThanOrEqual(2);
+
+    if (CABINET_CAPTURE) {
+      await page.screenshot({
+        path: `${CABINET_SCREENSHOT_DIR}/desktop-${viewport.width}-selector-trainer-light.png`,
         fullPage: true,
       });
     }
     await context.close();
   }
+
+  const forcedColorsContext = await browser.newContext({
+    forcedColors: 'active',
+    viewport: { width: 1280, height: 900 },
+  });
+  const forcedColorsPage = await forcedColorsContext.newPage();
+  if (!LIVE_DEMO) await installDemoApi(forcedColorsPage);
+  await forcedColorsPage.goto('/demo?cabinet=1&scenario=self_training&section=today');
+  const forcedColorsSelect = forcedColorsPage.getByLabel('Демо-сценарий');
+  const forcedColorsStyle = await forcedColorsSelect.evaluate((select) => {
+    const style = window.getComputedStyle(select);
+    return { appearance: style.appearance, backgroundImage: style.backgroundImage };
+  });
+  expect(forcedColorsStyle.appearance).toBe('auto');
+  expect(forcedColorsStyle.backgroundImage).toBe('none');
+  await forcedColorsContext.close();
 });
 
-test('reset, reload, expired and forbidden states are predictable', async ({ browser }) => {
+test('Web cabinet auth return stays clean and damaged routes recover safely', async ({
+  browser,
+}) => {
+  const context = await browser.newContext({ viewport: MOBILE_CONTEXTS.baseline, hasTouch: true });
+  const page = await context.newPage();
+  await installDemoApi(page);
+  await installAuthApi(page);
+
+  await page.goto('/demo?cabinet=1&scenario=nutrition&section=admin');
+  await expect(page).toHaveURL('/demo?cabinet=1&scenario=nutrition&section=today');
+  await page.getByRole('button', { name: 'Добавить недавний продукт' }).click();
+  await page.getByRole('link', { name: 'Войти и начать настройку' }).click();
+  await expect(page).toHaveURL(
+    '/login?next=%2Fapp&from=demo&scenario=nutrition&cabinet=1&section=today',
+  );
+  await expect(page.getByText('После демо — чистый профиль')).toBeVisible();
+  if (CABINET_CAPTURE) {
+    await page.screenshot({
+      path: `${CABINET_SCREENSHOT_DIR}/mobile-390-auth-return-light.png`,
+    });
+  }
+  await page.getByRole('link', { name: 'Вернуться в демо' }).click();
+  await expect(page).toHaveURL('/demo?cabinet=1&scenario=nutrition&section=today');
+  await expect(page.getByRole('button', { name: 'Добавить недавний продукт' })).toBeVisible();
+  await context.close();
+});
+
+test('Web cabinet reset, reload, expired and forbidden states are predictable', async ({
+  browser,
+}) => {
   const { api, context, page } = await openMobilePage(browser, 'nutrition', 390);
+  await page.goto('/demo?cabinet=1&scenario=nutrition&section=nutrition');
   await page.getByRole('button', { name: 'Добавить недавний продукт' }).click();
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Открыть отчёт по питанию' })).toBeVisible();
+  await expect(page.getByText('1588 / 2150')).toBeVisible();
   await page.getByRole('button', { name: 'Сбросить' }).click();
+  await expect(page.getByText('1160 / 2150')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Добавить недавний продукт' })).toBeVisible();
   if (api) api.setUnavailable(true);
   else await setNetworkOffline(page, true);
@@ -470,13 +1010,13 @@ test('reset, reload, expired and forbidden states are predictable', async ({ bro
       );
     });
     await installDemoApi(statePage, status);
-    await statePage.goto('/demo');
+    await statePage.goto('/demo?cabinet=1&scenario=self_training&section=today');
     await expect(
       statePage.getByText(status === 410 ? /Демо-сессия истекла/ : /действие недоступно/),
     ).toBeVisible();
-    if (CAPTURE) {
+    if (CABINET_CAPTURE) {
       await statePage.screenshot({
-        path: `${SCREENSHOT_DIR}/${status === 410 ? 'expired' : 'forbidden'}-390.png`,
+        path: `${CABINET_SCREENSHOT_DIR}/${status === 410 ? 'expired' : 'forbidden'}-390.png`,
         fullPage: true,
       });
     }
@@ -589,7 +1129,7 @@ test('Landing entry, deep-link scenario history and browser auth return stay exp
   await context.close();
 });
 
-test('mocked TMA auth handoff clears demo state and starts clean onboarding', async ({
+test('signed TMA launch clears a stale Web demo session before clean onboarding', async ({
   browser,
 }) => {
   const context = await browser.newContext({
@@ -599,13 +1139,16 @@ test('mocked TMA auth handoff clears demo state and starts clean onboarding', as
     reducedMotion: 'reduce',
   });
   const page = await context.newPage();
+  await page.addInitScript(() => {
+    sessionStorage.setItem(
+      'fit_demo_sessions_v1',
+      JSON.stringify({ nutrition: 'stale-web-demo-token-000000000000000000000000' }),
+    );
+  });
   await installTelegramHarness(page, { colorScheme: 'dark' });
   await installAuthApi(page);
-  await installDemoApi(page);
   await page.goto('/demo?scenario=nutrition&tgWebAppPlatform=android');
-  await completeScenario(page, 'nutrition');
 
-  await page.getByRole('link', { name: 'Войти и начать настройку' }).click();
   await expect(page).toHaveURL(/\/onboarding\?next=%2Fapp$/);
   await expect(page.getByRole('heading', { name: 'Какая у вас главная цель?' })).toBeVisible();
   expect(await page.evaluate(() => sessionStorage.getItem('fit_demo_sessions_v1'))).toBeNull();

@@ -10,7 +10,7 @@ Breakpoints trigger composition changes, not device labels.
 | `390x844` | baseline Mobile Web/TMA board; one-column; `16px` gutters |
 | `430x932` | large phone; `20px` gutters; still mobile navigation |
 | `768x900` | tablet/small desktop; Landing tablet composition; app retains mobile nav until `900px` |
-| `900–1023` | desktop rail starts at `164px`; app content one/two regions by data need |
+| `900–1023` | desktop rail starts at `220px`; app content one/two regions by data need |
 | `1024` | compact desktop Landing and Login split; `24px` outer gutters |
 | `1280` | full desktop composition; `32px` gutters; max containers apply |
 | `1440` | reference desktop composition; no uncontrolled whitespace expansion |
@@ -65,13 +65,29 @@ Desktop and mobile are one system but different compositions. Mobile never uses 
 
 ### Desktop `>=900`
 
-- Rail: fixed `164px`, full stable viewport height, `12px` inline padding, `28px` top padding.
-- Content body reserve: left `194px`, top `28px`, right `30px`, bottom `44px`.
+- Rail: fixed `220px`, full stable viewport height, `12px` inline padding, `28px` top padding.
+- Content body reserve: left `250px`, top `28px`, right `30px`, bottom `44px`. The `30px`
+  content gutter after the rail equals the right viewport gutter, keeping the main canvas centered.
 - Rail uses V2 logo, pictograms and type. Selected destination uses quiet secondary surface plus
   `3px` lime inline marker; no full-lime nav tile.
+- Full lockup использует vertical stack на центральной оси rail: mark → `YOUR FITNESS` → `COACH`.
+  Primary/secondary button surfaces также центрируются относительно rail, сохраняя общую колонку
+  pictograms и labels; scrollbar gutter резервируется симметрично и не сдвигает navigation влево.
+  Основной client group label `МОИ ДАННЫЕ` сохраняется на одной строке; более длинные capability
+  headings могут переноситься без overflow.
+- Нижний utility block центрируется в rail общей областью: theme pictogram + label остаются
+  центрированы внутри полной ширины theme button, а account name и role выравниваются по общему
+  левому краю внутри центрированной account-колонки `144px`, с logout в отдельной правой колонке
+  второй строки. Независимое центрирование трёх строк запрещено, потому что создаёт расширяющийся
+  вниз силуэт.
+- Desktop typography scale для rail: primary destination `13px`, secondary/theme `12.8px`, account
+  name `12.8px`, account meta около `11.5px`. Демо использует короткое plain-language meta
+  `Отдельная сессия`, а не техническую формулировку, нарушающую ритм utility block.
 - Main content `980px`; wide Progress/Coach may use `1180px`.
 - Today: current workout region and progress/evidence region can sit side by side; current action
   receives greater width. Nutrition/Progress use aligned rules and shared metrics, not KPI tiles.
+- Shared `WeekStrip`: контекст недели занимает первую grid-колонку; каждая строка легенды
+  центрируется в оставшейся колонке справа, а не относительно внешних границ карточки.
 - Coach: roster/context rail plus client detail at `>=1024`; client identity remains persistent.
   Destructive actions name the client. Dense tables retain text alternatives and explicit units.
 
@@ -86,8 +102,9 @@ Desktop and mobile are one system but different compositions. Mobile never uses 
 
 ## Feature-specific mobile rules
 
-- Today: one primary workout action before nutrition/progress facts; week context is compact and
-  not a notification feed.
+- Today: одно primary workout action показывается до nutrition/progress facts; контекст недели
+  остаётся компактным и не превращается в notification feed. После переноса legend сохраняет
+  центрирование в правой колонке.
 - Active workout: sticky top context contains back + short title only; full plan/day/status stays
   in hero. Current set has two numeric fields and a full-width completion action. Rest timer,
   bottom nav, toast and keyboard never overlap.

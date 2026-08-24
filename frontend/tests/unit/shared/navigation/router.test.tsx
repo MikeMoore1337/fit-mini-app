@@ -113,6 +113,12 @@ describe('NavigationProvider Telegram BackButton', () => {
     act(() => callbacks.values().next().value?.());
 
     await waitFor(() => expect(window.location.href).toMatch(/\/demo\?scenario=nutrition$/));
+    expect(demoReturnPathFromLogin('?from=demo&scenario=trainer&cabinet=1&section=trainer')).toBe(
+      '/demo?cabinet=1&scenario=trainer&section=trainer',
+    );
+    expect(demoReturnPathFromLogin('?from=demo&scenario=nutrition&cabinet=1&section=trainer')).toBe(
+      '/demo?cabinet=1&scenario=nutrition&section=today',
+    );
     expect(demoReturnPathFromLogin('?from=demo&scenario=https://evil.example')).toBeNull();
   });
 });

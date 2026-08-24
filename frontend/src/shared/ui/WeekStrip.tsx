@@ -6,13 +6,99 @@ import { ChevronIcon } from './common';
 export type WeekStripStatusKey =
   'completed' | 'in-progress' | 'planned' | 'upcoming' | 'skipped' | 'neutral';
 
+export type WeekStripActivityKey = 'strength' | 'cardio' | 'rest';
+
+export type WeekStripPictogramKey =
+  | WeekStripActivityKey
+  | 'completed'
+  | 'planned'
+  | 'in-progress'
+  | 'skipped'
+  | 'nutrition-incomplete'
+  | 'fasted'
+  | 'missing';
+
 export interface WeekStripStatus {
   key: WeekStripStatusKey;
   label: string;
-  marker?: string;
+  pictogram?: WeekStripPictogramKey;
+}
+
+export interface WeekStripActivity {
+  key: WeekStripActivityKey;
+  label: string;
+}
+
+export interface WeekStripLegendItem {
+  key: string;
+  label: string;
+  pictogram: WeekStripPictogramKey;
+  tone: WeekStripActivityKey | WeekStripStatusKey;
+}
+
+export const TRAINING_WEEK_LEGEND: ReadonlyArray<WeekStripLegendItem> = [
+  { key: 'strength', label: 'Силовая', pictogram: 'strength', tone: 'strength' },
+  { key: 'cardio', label: 'Кардио', pictogram: 'cardio', tone: 'cardio' },
+  { key: 'rest', label: 'Отдых', pictogram: 'rest', tone: 'rest' },
+  { key: 'completed', label: 'Выполнено', pictogram: 'completed', tone: 'completed' },
+  { key: 'planned', label: 'Запланировано', pictogram: 'planned', tone: 'planned' },
+  { key: 'in-progress', label: 'В процессе', pictogram: 'in-progress', tone: 'in-progress' },
+  { key: 'skipped', label: 'Пропущено', pictogram: 'skipped', tone: 'skipped' },
+];
+
+export const NUTRITION_WEEK_LEGEND: ReadonlyArray<WeekStripLegendItem> = [
+  { key: 'completed', label: 'День заполнен', pictogram: 'completed', tone: 'completed' },
+  {
+    key: 'incomplete',
+    label: 'Не завершён',
+    pictogram: 'nutrition-incomplete',
+    tone: 'in-progress',
+  },
+  { key: 'fasted', label: 'Без приёмов пищи', pictogram: 'fasted', tone: 'neutral' },
+  { key: 'missing', label: 'Нет данных', pictogram: 'missing', tone: 'neutral' },
+];
+
+function WeekStripPictogram({
+  kind,
+  tone,
+}: {
+  kind: WeekStripPictogramKey;
+  tone: WeekStripActivityKey | WeekStripStatusKey;
+}) {
+  const activityLabel =
+    kind === 'strength' ? 'С' : kind === 'cardio' ? 'К' : kind === 'rest' ? 'О' : null;
+
+  return (
+    <span
+      aria-hidden="true"
+      className={`week-strip__pictogram week-strip__pictogram--${tone}`}
+      data-pictogram={kind}
+    >
+      {activityLabel ?? (
+        <svg className="week-strip__pictogram-svg" viewBox="0 0 16 16">
+          {kind === 'completed' && <path d="M3 8.5 6.4 12 13 4.5" />}
+          {(kind === 'planned' || kind === 'nutrition-incomplete') && (
+            <circle cx="8" cy="8" r="3.5" />
+          )}
+          {kind === 'in-progress' && <path d="m5.5 3.5 4.5 4.5-4.5 4.5" />}
+          {(kind === 'skipped' || kind === 'missing') && <path d="M3 8h10" />}
+          {kind === 'fasted' && <circle cx="8" cy="8" r="4.5" />}
+        </svg>
+      )}
+    </span>
+  );
+}
+
+function statusPictogram(status: WeekStripStatus | null | undefined): WeekStripPictogramKey | null {
+  if (!status) return null;
+  if (status.pictogram) return status.pictogram;
+  if (status.key === 'upcoming') return 'planned';
+  if (status.key === 'neutral') return null;
+  return status.key;
 }
 
 export interface WeekStripDayMeta {
+  activities?: ReadonlyArray<WeekStripActivity>;
   link?: {
     label: string;
     onClick?: () => void;
@@ -33,6 +119,7 @@ interface WeekStripCommonProps {
   headerAction?: ReactNode;
   loading?: boolean;
   loadingLabel?: string;
+  legend?: ReadonlyArray<WeekStripLegendItem>;
   navigation?: WeekStripNavigation;
   title: string;
   today: string;
@@ -94,40 +181,55 @@ export function WeekStrip(props: WeekStripProps) {
       className={`week-strip week-strip--${props.mode}`}
     >
       <div
-        className={`week-strip__head week-strip__head--${props.navigation ? 'navigation' : 'static'}`}
+        className={`week-strip__topline${props.legend?.length ? ' week-strip__topline--with-legend' : ''}`}
       >
-        {props.navigation && (
-          <button
-            aria-label="Предыдущая неделя"
-            className="week-strip__nav week-strip__nav--previous"
-            onClick={props.navigation.onPrevious}
-            type="button"
-          >
-            <ChevronIcon direction="left" />
-            <span>Неделя</span>
-          </button>
-        )}
+        <div
+          className={`week-strip__head week-strip__head--${props.navigation ? 'navigation' : 'static'}`}
+        >
+          {props.navigation && (
+            <button
+              aria-label="Предыдущая неделя"
+              className="week-strip__nav week-strip__nav--previous"
+              onClick={props.navigation.onPrevious}
+              type="button"
+            >
+              <ChevronIcon direction="left" />
+              <span>Неделя</span>
+            </button>
+          )}
 
-        <div className="week-strip__context">
-          <h2 id={headingId}>{props.title}</h2>
-          <span>{formatWeekRange(days)}</span>
+          <div className="week-strip__context">
+            <h2 id={headingId}>{props.title}</h2>
+            <span>{formatWeekRange(days)}</span>
+          </div>
+
+          {props.navigation ? (
+            <button
+              aria-label="Следующая неделя"
+              className="week-strip__nav week-strip__nav--next"
+              disabled={props.navigation.nextDisabled}
+              onClick={props.navigation.onNext}
+              type="button"
+            >
+              <span>Неделя</span>
+              <ChevronIcon direction="right" />
+            </button>
+          ) : (
+            props.headerAction && (
+              <div className="week-strip__header-action">{props.headerAction}</div>
+            )
+          )}
         </div>
 
-        {props.navigation ? (
-          <button
-            aria-label="Следующая неделя"
-            className="week-strip__nav week-strip__nav--next"
-            disabled={props.navigation.nextDisabled}
-            onClick={props.navigation.onNext}
-            type="button"
-          >
-            <span>Неделя</span>
-            <ChevronIcon direction="right" />
-          </button>
-        ) : (
-          props.headerAction && (
-            <div className="week-strip__header-action">{props.headerAction}</div>
-          )
+        {props.legend && props.legend.length > 0 && (
+          <ul aria-label="Обозначения недели" className="week-strip__legend">
+            {props.legend.map((item) => (
+              <li key={item.key}>
+                <WeekStripPictogram kind={item.pictogram} tone={item.tone} />
+                <span>{item.label}</span>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
 
@@ -137,10 +239,13 @@ export function WeekStrip(props: WeekStripProps) {
           const isSelected = isPicker && date === props.selectedDate;
           const dayMeta = props.mode === 'overview' ? props.getDayMeta?.(date) : undefined;
           const status = dayMeta?.status;
+          const statusIcon = statusPictogram(status);
+          const activityLabel = dayMeta?.activities?.map((activity) => activity.label).join(' и ');
           const label = [
             formatCalendarDate(date, { weekday: 'long', day: 'numeric', month: 'long' }),
             isToday ? 'сегодня' : null,
             isSelected ? 'выбрано' : null,
+            activityLabel,
             status?.label,
             dayMeta?.link?.label,
           ]
@@ -152,11 +257,13 @@ export function WeekStrip(props: WeekStripProps) {
                 {formatCalendarDate(date, { weekday: 'short' }).replace('.', '')}
               </span>
               <strong>{formatCalendarDate(date, { day: 'numeric' })}</strong>
-              <span
-                aria-hidden="true"
-                className={`week-strip__marker${status ? ` week-strip__marker--${status.key}` : ''}`}
-              >
-                {status?.marker ?? ''}
+              <span aria-hidden="true" className="week-strip__markers">
+                {dayMeta?.activities?.map((activity) => (
+                  <WeekStripPictogram kind={activity.key} key={activity.key} tone={activity.key} />
+                ))}
+                {statusIcon && (
+                  <WeekStripPictogram kind={statusIcon} tone={status?.key ?? 'neutral'} />
+                )}
               </span>
             </>
           );

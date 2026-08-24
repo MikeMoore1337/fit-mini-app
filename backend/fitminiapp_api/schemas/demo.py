@@ -60,6 +60,42 @@ class DemoTrainerState(BaseModel):
     comment: str | None = None
 
 
+class DemoCabinetToday(BaseModel):
+    title: str
+    summary: str
+    status_label: str
+    completed_days: int = Field(ge=0, le=7)
+    planned_days: int = Field(ge=0, le=7)
+
+
+class DemoCabinetNutrition(BaseModel):
+    calories: int = Field(ge=0)
+    calorie_target: int = Field(gt=0)
+    protein_g: float = Field(ge=0)
+    protein_target_g: float = Field(gt=0)
+    meals_logged: int = Field(ge=0)
+    item_added: bool
+    recent_item: DemoNutritionItem
+
+
+class DemoCabinetProgress(BaseModel):
+    workouts_completed: int = Field(ge=0)
+    latest_volume_kg: int = Field(ge=0)
+    volume_change_percent: float
+    nutrition_days_logged: int = Field(ge=0, le=7)
+    nutrition_completion_percent: int = Field(ge=0)
+    summary: str
+
+
+class DemoCabinetState(BaseModel):
+    today: DemoCabinetToday
+    nutrition: DemoCabinetNutrition
+    progress: DemoCabinetProgress
+    trainer: DemoTrainerState | None = None
+    meaningful_action_completed: bool
+    conversion_title: str
+
+
 DemoScenarioState = Annotated[
     DemoSelfTrainingState | DemoNutritionState | DemoTrainerState,
     Field(discriminator="kind"),
@@ -92,6 +128,7 @@ class DemoSessionSnapshot(BaseModel):
     revision: int = Field(ge=1)
     expires_at: datetime
     state: DemoScenarioState
+    cabinet: DemoCabinetState
 
 
 class DemoSessionCreated(DemoSessionSnapshot):

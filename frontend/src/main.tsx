@@ -13,6 +13,7 @@ import { applyPlatformTheme, useTelegram } from './shared/telegram/useTelegram';
 import { NavigationProvider, Redirect, useNavigation } from './shared/navigation/router';
 import { applyRouteMetadata } from './shared/seo/metadata';
 import { isPublicContentPath } from './content/publicContent';
+import { clearAllDemoSessions } from './features/demo/demoApi';
 import './styles/legacy.css';
 import './styles/react.css';
 import './styles/design-system.css';
@@ -64,7 +65,10 @@ function AppRoutes() {
   const { path } = useNavigation();
   useEffect(() => applyRouteMetadata(path), [path]);
   if (path === '/') return <LandingPage />;
-  if (path === '/demo') return <DemoPage />;
+  if (path === '/demo') {
+    if (isTelegramLaunch(window.location)) return <Redirect to="/app" />;
+    return <DemoPage />;
+  }
   if (isPublicContentPath(path)) {
     if (window.Telegram?.WebApp?.initData) return <Redirect to="/app" />;
     return <PublicContentPage />;
@@ -170,6 +174,9 @@ function renderApp(): void {
 async function bootstrap(): Promise<void> {
   if (isTelegramLaunch(window.location)) {
     await loadTelegramSdk();
+  }
+  if (window.location.pathname === '/demo' && isTelegramLaunch(window.location)) {
+    clearAllDemoSessions();
   }
   renderApp();
 }

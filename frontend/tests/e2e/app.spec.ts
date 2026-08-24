@@ -1526,6 +1526,156 @@ test('deep link показывает тренера до явного подтв
   await expect(page.getByText('Тренер подключён')).toBeVisible();
 });
 
+test('desktop app shell centers the brand lockup and navigation surfaces', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await mockApi(page);
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Клиент' }).click();
+
+  const navigation = page.getByRole('navigation', { name: 'Основная навигация' });
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 1280, height: 800 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await expect(navigation).toBeVisible();
+    const desktopAlignment = await navigation.evaluate((element) => {
+      const navigationBox = element.getBoundingClientRect();
+      const centerOffset = (target: Element | null) => {
+        if (!target) return Number.POSITIVE_INFINITY;
+        const box = target.getBoundingClientRect();
+        return Math.abs(navigationBox.left + navigationBox.width / 2 - (box.left + box.width / 2));
+      };
+      const groupCenterOffset = (
+        targets: Element[],
+        referenceBox: Pick<DOMRect, 'left' | 'width'> = navigationBox,
+      ) => {
+        if (targets.length === 0) return Number.POSITIVE_INFINITY;
+        const boxes = targets.map((target) => target.getBoundingClientRect());
+        const left = Math.min(...boxes.map((box) => box.left));
+        const right = Math.max(...boxes.map((box) => box.right));
+        return Math.abs(referenceBox.left + referenceBox.width / 2 - (left + right) / 2);
+      };
+      const lockup = element.querySelector('.yfc-lockup');
+      const account = element.querySelector<HTMLElement>('.app-bottom-nav__account');
+      const accountName = element.querySelector<HTMLElement>('.app-bottom-nav__account-name');
+      const accountRole = element.querySelector<HTMLElement>('.app-bottom-nav__account-role');
+      const groupLabel = element.querySelector<HTMLElement>('.app-bottom-nav__group-label');
+      const themeButton = element.querySelector('.app-theme-toggle--nav');
+      return {
+        accountOffset: centerOffset(account),
+        accountWidth: account?.getBoundingClientRect().width ?? 0,
+        accountNameFits: accountName ? accountName.scrollWidth <= accountName.clientWidth : false,
+        accountTextEdgeOffset:
+          accountName && accountRole
+            ? Math.abs(
+                accountName.getBoundingClientRect().left - accountRole.getBoundingClientRect().left,
+              )
+            : Number.POSITIVE_INFINITY,
+        accountTextAlignment: accountName ? window.getComputedStyle(accountName).textAlign : null,
+        accountNameSize: accountName ? window.getComputedStyle(accountName).fontSize : null,
+        buttonOffsets: Array.from(
+          element.querySelectorAll<HTMLElement>(
+            '.app-bottom-nav__primary .app-bottom-nav__btn, .app-bottom-nav__secondary .app-bottom-nav__btn',
+          ),
+        )
+          .filter((button) => button.offsetParent !== null)
+          .map(centerOffset),
+        coachOffset: centerOffset(element.querySelector('.yfc-lockup__wordmark > span')),
+        fitnessOffset: centerOffset(element.querySelector('.yfc-lockup__wordmark > strong')),
+        groupLabelFits: groupLabel
+          ? groupLabel.scrollWidth <= groupLabel.clientWidth &&
+            window.getComputedStyle(groupLabel).whiteSpace === 'nowrap'
+          : false,
+        labelsFit: Array.from(element.querySelectorAll<HTMLElement>('.app-bottom-nav__label'))
+          .filter((label) => label.offsetParent !== null)
+          .every((label) => label.scrollWidth <= label.clientWidth),
+        lockupDirection: lockup ? window.getComputedStyle(lockup).flexDirection : null,
+        markOffset: centerOffset(element.querySelector('.yfc-lockup__mark')),
+        navigationWidth: navigationBox.width,
+        primaryLabelSize: window.getComputedStyle(
+          element.querySelector('.app-bottom-nav__primary .app-bottom-nav__label')!,
+        ).fontSize,
+        secondaryLabelSize: window.getComputedStyle(
+          element.querySelector('.app-bottom-nav__secondary .app-bottom-nav__label')!,
+        ).fontSize,
+        accountRoleSize: window.getComputedStyle(
+          element.querySelector('.app-bottom-nav__account-role')!,
+        ).fontSize,
+        themeContentOffset: themeButton
+          ? groupCenterOffset(Array.from(themeButton.children), themeButton.getBoundingClientRect())
+          : Number.POSITIVE_INFINITY,
+        themeButtonOffset: centerOffset(themeButton),
+        themeLabelSize: window.getComputedStyle(
+          element.querySelector('.app-theme-toggle--nav .app-bottom-nav__label')!,
+        ).fontSize,
+      };
+    });
+    const contentAlignment = await page.locator('#appContent').evaluate((content) => {
+      const navigation = document.querySelector('#appBottomNav');
+      if (!navigation) return null;
+      const contentBox = content.getBoundingClientRect();
+      const navigationBox = navigation.getBoundingClientRect();
+      return {
+        leftGap: contentBox.left - navigationBox.right,
+        rightGap: window.innerWidth - contentBox.right,
+      };
+    });
+
+    expect(desktopAlignment.lockupDirection).toBe('column');
+    expect(desktopAlignment.navigationWidth).toBe(220);
+    expect(desktopAlignment.markOffset).toBeLessThanOrEqual(1);
+    expect(desktopAlignment.fitnessOffset).toBeLessThanOrEqual(1);
+    expect(desktopAlignment.coachOffset).toBeLessThanOrEqual(1);
+    expect(desktopAlignment.accountOffset).toBeLessThanOrEqual(1);
+    expect(desktopAlignment.accountWidth).toBe(144);
+    expect(desktopAlignment.accountNameFits).toBe(true);
+    expect(desktopAlignment.accountTextEdgeOffset).toBeLessThanOrEqual(1);
+    expect(desktopAlignment.accountTextAlignment).toBe('left');
+    expect(desktopAlignment.accountNameSize).toBe('12.8px');
+    expect(desktopAlignment.accountRoleSize).toBe('11.52px');
+    expect(desktopAlignment.groupLabelFits).toBe(true);
+    expect(desktopAlignment.labelsFit).toBe(true);
+    expect(desktopAlignment.primaryLabelSize).toBe('13px');
+    expect(desktopAlignment.secondaryLabelSize).toBe('12.8px');
+    expect(desktopAlignment.buttonOffsets.length).toBeGreaterThan(0);
+    expect(desktopAlignment.buttonOffsets.every((offset) => offset <= 1)).toBe(true);
+    expect(desktopAlignment.themeContentOffset).toBeLessThanOrEqual(1);
+    expect(desktopAlignment.themeButtonOffset).toBeLessThanOrEqual(1);
+    expect(desktopAlignment.themeLabelSize).toBe('12.8px');
+    expect(contentAlignment).not.toBeNull();
+    expect(Math.abs(contentAlignment!.leftGap - contentAlignment!.rightGap)).toBeLessThanOrEqual(1);
+
+    if (viewport.width === 1440) {
+      await navigation.screenshot({
+        path: '../.artifacts/screenshots/desktop-navigation/rail-1440-dark.png',
+      });
+      await navigation.locator('.app-bottom-nav__utility').screenshot({
+        path: '../.artifacts/screenshots/desktop-navigation/utility-1440-dark.png',
+      });
+      await page.screenshot({
+        path: '../.artifacts/screenshots/desktop-navigation/app-1440-dark.png',
+        fullPage: true,
+      });
+    }
+  }
+
+  await page.getByRole('button', { name: 'Включить светлую тему' }).click();
+  await navigation.screenshot({
+    path: '../.artifacts/screenshots/desktop-navigation/rail-1280-light.png',
+  });
+  await navigation.locator('.app-bottom-nav__utility').screenshot({
+    path: '../.artifacts/screenshots/desktop-navigation/utility-1280-light.png',
+  });
+
+  await page.setViewportSize({ width: 390, height: 780 });
+  await expect(page.locator('.app-bottom-nav__brand')).not.toBeVisible();
+  await expect(
+    page.locator('.app-bottom-nav__primary a:visible, .app-bottom-nav__primary button:visible'),
+  ).toHaveCount(5);
+});
+
 test('app shell сохраняет композицию и доступность на целевых viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 780 });
   await mockApi(page);
@@ -1630,6 +1780,25 @@ test('desktop sidebar keeps long client names contained and logout reachable', a
   );
 });
 
+test('desktop sidebar keeps the longest capability label visible at the larger type scale', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await mockApi(page);
+  await page.goto('/admin');
+  await page.getByRole('button', { name: 'Админ' }).click();
+
+  const adminLink = page.getByRole('link', { name: 'Админ-панель' });
+  const adminLabel = adminLink.locator('.app-bottom-nav__label');
+  await expect(adminLink).toBeVisible();
+  await expect(adminLabel).toHaveCSS('font-size', '12.8px');
+  const adminLabelWidth = await adminLabel.evaluate((label) => ({
+    clientWidth: label.clientWidth,
+    scrollWidth: label.scrollWidth,
+  }));
+  expect(adminLabelWidth.scrollWidth).toBeLessThanOrEqual(adminLabelWidth.clientWidth);
+});
+
 test('desktop sidebar keeps trainer workspaces reachable at a short viewport', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 560 });
   await mockApi(page);
@@ -1648,6 +1817,11 @@ test('desktop sidebar keeps trainer workspaces reachable at a short viewport', a
   await utility.scrollIntoViewIfNeeded();
   await expect(utility).toBeInViewport();
   await expect(navigation.getByRole('button', { name: /Включить .* тему/ })).toBeVisible();
+  expect(
+    await navigation
+      .locator('.app-bottom-nav__group-label')
+      .evaluateAll((labels) => labels.every((label) => label.scrollWidth <= label.clientWidth)),
+  ).toBe(true);
 });
 
 test('профиль содержит уведомления, а карточка упражнения открывает полное описание', async ({
@@ -2535,7 +2709,7 @@ test('администратор открывает React-панель', async (
   await page.goto('/admin');
   await page.getByRole('button', { name: 'Админ' }).click();
   await expect(page.getByRole('heading', { name: 'Панель администратора' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Администрирование' })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: 'Админ-панель' })).toHaveAttribute(
     'aria-current',
     'page',
   );
@@ -2598,7 +2772,7 @@ test('тренер открывает кабинет', async ({ page }) => {
     'aria-current',
     'page',
   );
-  await expect(page.getByRole('link', { name: 'Администрирование' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Админ-панель' })).toHaveCount(0);
   await expect(page.getByText('Клиентов пока нет')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Добавьте первого клиента' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Пригласить первого клиента' })).toBeVisible();

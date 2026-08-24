@@ -251,12 +251,14 @@ function renderDashboard() {
 function auxiliaryResponse(
   path: string,
   options: {
+    cardio?: Array<Record<string, unknown>>;
     week?: Array<Record<string, unknown>>;
     weeklyReviewAvailable?: boolean;
     comments?: Array<Record<string, unknown>>;
   } = {},
 ) {
   if (path === '/api/v1/workouts/week') return Promise.resolve(options.week ?? []);
+  if (path.startsWith('/api/v1/workouts/cardio?')) return Promise.resolve(options.cardio ?? []);
   if (path === '/api/v1/check-ins/weekly/current') {
     return Promise.resolve({
       week_start: '2030-01-07',
@@ -492,6 +494,9 @@ describe('TodayDashboard', () => {
       .reverse()
       .find((day) => day < today);
     const futureDay = days.find((day) => day > today);
+    const cardioDay = days.find(
+      (day) => day !== today && day !== pastDay && day !== futureDay && day !== friday,
+    );
     apiMock.mockImplementation((path: string) => {
       if (path === '/api/v1/workouts/today') return Promise.resolve(plannedWorkout);
       if (path.startsWith('/api/v1/workouts/progress/summary')) {
@@ -499,6 +504,20 @@ describe('TodayDashboard', () => {
       }
       if (path.startsWith('/api/v1/nutrition/diary')) return Promise.resolve(diary);
       const auxiliary = auxiliaryResponse(path, {
+        cardio: cardioDay
+          ? [
+              {
+                id: 91,
+                activity_type: 'running',
+                duration_minutes: 30,
+                scheduled_at: `${cardioDay}T12:00:00Z`,
+                status: 'planned',
+                source: 'manual',
+                created_at: `${cardioDay}T09:00:00Z`,
+                updated_at: `${cardioDay}T09:00:00Z`,
+              },
+            ]
+          : [],
         week: [
           {
             ...plannedWorkout,
@@ -518,6 +537,10 @@ describe('TodayDashboard', () => {
     renderDashboard();
 
     const weekRegion = await screen.findByRole('region', { name: 'Эта неделя' });
+    const legend = screen.getByRole('list', { name: 'Обозначения недели' });
+    expect(legend).toHaveTextContent('Силовая');
+    expect(legend).toHaveTextContent('Кардио');
+    expect(legend).toHaveTextContent('Отдых');
     await screen.findByLabelText(/Выполнено/i);
     const currentDay = weekRegion.querySelector('[aria-current="date"]');
     expect(currentDay).toHaveAttribute('aria-current', 'date');
@@ -533,6 +556,13 @@ describe('TodayDashboard', () => {
       expect(
         screen.getByRole('link', { name: /Предстоит тренировка.*Открыть тренировку/i }),
       ).toHaveAttribute('href', '/app?section=progress&workout_id=32');
+    }
+    if (cardioDay) {
+      expect(
+        screen.getByRole('group', {
+          name: new RegExp(`${Number(cardioDay.slice(-2))}.*Кардио`),
+        }),
+      ).toBeVisible();
     }
   });
 
@@ -629,7 +659,7 @@ describe('TodayDashboard', () => {
       screen.getByRole('heading', { name: 'Сегодня · понедельник, 7 января' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('group', { name: /7 января, сегодня, Запланировано/i }),
+      screen.getByRole('group', { name: /7 января, сегодня, Силовая, Запланировано/i }),
     ).toHaveAttribute('aria-current', 'date');
     expect(apiMock.mock.calls.filter(([path]) => path === '/api/v1/workouts/week')).toHaveLength(2);
   });

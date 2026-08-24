@@ -6,7 +6,7 @@ import { dateInputValue, formatCalendarDate } from '../../shared/dateTime';
 import { AppLink } from '../../shared/navigation/router';
 import { queryKeys } from '../../shared/queryKeys';
 import { DateInput } from '../../shared/ui/PickerInput';
-import { WeekStrip, type WeekStripDayMeta } from '../../shared/ui/WeekStrip';
+import { NUTRITION_WEEK_LEGEND, WeekStrip, type WeekStripDayMeta } from '../../shared/ui/WeekStrip';
 import {
   Badge,
   Button,
@@ -133,14 +133,22 @@ function weekMeta(
   }
   const targetChange = point.target_changed ? ', цель изменилась' : '';
   const status = {
-    complete: { key: 'completed' as const, marker: '✓', label: `Заполнен${targetChange}` },
-    incomplete: { key: 'in-progress' as const, marker: '·', label: `Не завершён${targetChange}` },
+    complete: { key: 'completed' as const, label: `Заполнен${targetChange}` },
+    incomplete: {
+      key: 'in-progress' as const,
+      pictogram: 'nutrition-incomplete' as const,
+      label: `Не завершён${targetChange}`,
+    },
     fasted: {
       key: 'completed' as const,
-      marker: '○',
+      pictogram: 'fasted' as const,
       label: `Отмечен день без приёмов пищи${targetChange}`,
     },
-    missing: { key: 'neutral' as const, marker: '', label: `Нет данных${targetChange}` },
+    missing: {
+      key: 'neutral' as const,
+      pictogram: 'missing' as const,
+      label: `Нет данных${targetChange}`,
+    },
   }[point.status];
   return {
     status,
@@ -711,6 +719,7 @@ export function NutritionPeriodReport({ clientId }: { clientId?: number }) {
               anchorDate={report.data.period_start}
               ariaLabel="Дни отчёта по питанию"
               getDayMeta={(date) => weekMeta(pointsByDate.get(date), dayLink)}
+              legend={NUTRITION_WEEK_LEGEND}
               mode="overview"
               rangeStart={report.data.period_start}
               title="Дни отчёта"

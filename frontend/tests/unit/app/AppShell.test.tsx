@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppShell } from '../../../src/app/AppShell';
 
 const logout = vi.fn();
-const { navigation, user } = vi.hoisted(() => ({
+const { authState, navigation, user } = vi.hoisted(() => ({
+  authState: { missing: false },
   navigation: { path: '/coach', search: '' },
   user: {
     id: 1,
@@ -16,10 +17,7 @@ const { navigation, user } = vi.hoisted(() => ({
 }));
 
 vi.mock('../../../src/app/AuthProvider', () => ({
-  useAuth: () => ({
-    user,
-    logout,
-  }),
+  useOptionalAuth: () => (authState.missing ? null : { user, logout }),
 }));
 
 vi.mock('../../../src/shared/navigation/router', () => ({
@@ -34,6 +32,7 @@ vi.mock('../../../src/shared/navigation/router', () => ({
 describe('AppShell', () => {
   beforeEach(() => {
     cleanup();
+    authState.missing = false;
     user.photo_url = null;
     user.is_admin = false;
     navigation.path = '/coach';
@@ -55,7 +54,7 @@ describe('AppShell', () => {
       '/app?section=programs',
     );
     expect(screen.getByRole('link', { name: 'Тренер' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.queryByRole('link', { name: 'Администрирование' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Админ-панель' })).not.toBeInTheDocument();
     expect(screen.getByText('Михаил')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Выйти из аккаунта' }));
@@ -91,10 +90,44 @@ describe('AppShell', () => {
     navigation.path = '/admin';
     render(<AppShell>Содержимое</AppShell>);
 
-    expect(screen.getByRole('link', { name: 'Администрирование' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Админ-панель' })).toHaveAttribute(
       'aria-current',
       'page',
     );
+  });
+
+  it('сохраняет обязательный AuthProvider для обычного production shell', () => {
+    authState.missing = true;
+
+    expect(() => render(<AppShell>Содержимое</AppShell>)).toThrow(
+      'AppShell must be used inside AuthProvider unless demo config is provided',
+    );
+  });
+
+  it('использует короткое описание отдельной demo-сессии в rail и mobile menu', () => {
+    authState.missing = true;
+    render(
+      <AppShell
+        demo={{
+          activeSection: 'today',
+          brandTo: '/demo?cabinet=1',
+          destinations: [{ key: 'today', label: 'Сегодня', icon: 'today', to: '/demo?cabinet=1' }],
+          displayName: 'Демо-кабинет',
+          exitTo: '/demo',
+          moreLinks: [],
+          onReset: vi.fn(),
+        }}
+      >
+        Демо-содержимое
+      </AppShell>,
+    );
+
+    expect(screen.getByText('Отдельная сессия')).toBeInTheDocument();
+    expect(screen.queryByText('Изолированная сессия')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Сценарии' }));
+    const dialog = screen.getByRole('dialog', { name: 'Демо-кабинет' });
+    expect(within(dialog).getByText('Отдельная сессия')).toBeInTheDocument();
   });
 
   it('не показывает библиотеку знаний в Telegram Mini App navigation', () => {

@@ -16,11 +16,25 @@ interface NavigationContextValue {
 
 const NavigationContext = createContext<NavigationContextValue | null>(null);
 const DEMO_SCENARIOS = new Set(['self_training', 'nutrition', 'trainer']);
+const DEMO_CABINET_SECTIONS = new Set(['today', 'nutrition', 'progress', 'trainer']);
 
 export function demoReturnPathFromLogin(search: string): string | null {
   const params = new URLSearchParams(search);
   const scenario = params.get('scenario');
   if (params.get('from') !== 'demo' || !scenario || !DEMO_SCENARIOS.has(scenario)) return null;
+  const cabinet = params.get('cabinet') === '1';
+  const section = params.get('section');
+  if (cabinet) {
+    const safeSection =
+      section &&
+      DEMO_CABINET_SECTIONS.has(section) &&
+      (section !== 'trainer' || scenario === 'trainer')
+        ? section
+        : scenario === 'trainer'
+          ? 'trainer'
+          : 'today';
+    return `/demo?cabinet=1&scenario=${scenario}&section=${safeSection}`;
+  }
   return `/demo?scenario=${scenario}`;
 }
 

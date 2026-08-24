@@ -26,6 +26,7 @@ import {
   type DemoSessionSnapshot,
   type DemoTrainerState,
 } from '../../features/demo/demoApi';
+import DemoCabinet from './DemoCabinet';
 import './demo.css';
 
 const SCENARIOS: ReadonlyArray<{ value: DemoScenario; label: string; context: string }> = [
@@ -305,7 +306,7 @@ function TrainerScenario({
   );
 }
 
-export default function DemoPage() {
+function LegacyDemoPage() {
   const { navigate, search } = useNavigation();
   const scenario = useMemo(() => scenarioFromSearch(search), [search]);
   const [snapshot, setSnapshot] = useState<DemoSessionSnapshot | null>(null);
@@ -541,4 +542,9 @@ export default function DemoPage() {
       </main>
     </div>
   );
+}
+
+export default function DemoPage() {
+  const { search } = useNavigation();
+  return new URLSearchParams(search).get('cabinet') === '1' ? <DemoCabinet /> : <LegacyDemoPage />;
 }

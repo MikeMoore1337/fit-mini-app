@@ -7,7 +7,7 @@ from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, TypedDict
 
 from fitminiapp_api.schemas.demo import DemoScenario
 
@@ -29,6 +29,16 @@ class DemoActionForbiddenError(Exception):
 
 class DemoTransitionError(Exception):
     pass
+
+
+class _DemoCabinetNutritionPayload(TypedDict):
+    calories: int
+    calorie_target: int
+    protein_g: float
+    protein_target_g: float
+    meals_logged: int
+    item_added: bool
+    recent_item: dict[str, Any]
 
 
 @dataclass
@@ -112,6 +122,120 @@ def _fixture_for(scenario: DemoScenario) -> dict[str, Any]:
     return fixtures[scenario]()
 
 
+def _cabinet_for(scenario: DemoScenario, state: dict[str, Any]) -> dict[str, Any]:
+    training_completed = scenario == "self_training" and state["screen"] in {"summary", "progress"}
+    nutrition_added = scenario == "nutrition" and state["item_added"]
+    trainer_commented = scenario == "trainer" and state["comment"] is not None
+
+    nutrition: _DemoCabinetNutritionPayload = (
+        {
+            "calories": state["calories"],
+            "calorie_target": state["calorie_target"],
+            "protein_g": state["protein_g"],
+            "protein_target_g": state["protein_target_g"],
+            "meals_logged": state["meals_logged"],
+            "item_added": state["item_added"],
+            "recent_item": deepcopy(state["recent_item"]),
+        }
+        if scenario == "nutrition"
+        else {
+            "calories": 1580 if scenario == "self_training" else 1760,
+            "calorie_target": 2150 if scenario == "self_training" else 2350,
+            "protein_g": 104.0 if scenario == "self_training" else 126.0,
+            "protein_target_g": 145.0 if scenario == "self_training" else 160.0,
+            "meals_logged": 3,
+            "item_added": True,
+            "recent_item": {
+                "name": "Творог с ягодами",
+                "serving": "220 г · подготовленная запись",
+                "calories": 286,
+                "protein_g": 31.0,
+            },
+        }
+    )
+
+    if scenario == "self_training":
+        today = {
+            "title": state["workout_title"],
+            "summary": state["workout_subtitle"],
+            "status_label": "Тренировка завершена" if training_completed else "Остался один подход",
+            "completed_days": 3 if training_completed else 2,
+            "planned_days": 4,
+        }
+        progress = {
+            "workouts_completed": 12 if training_completed else 11,
+            "latest_volume_kg": state["total_volume_kg"] if training_completed else 6220,
+            "volume_change_percent": state["progress_change_percent"]
+            if training_completed
+            else 4.2,
+            "nutrition_days_logged": 5,
+            "nutrition_completion_percent": round(
+                nutrition["calories"] / nutrition["calorie_target"] * 100
+            ),
+            "summary": (
+                "Сегодняшняя тренировка уже учтена в динамике."
+                if training_completed
+                else "Динамика обновится после завершения тренировки."
+            ),
+        }
+        conversion_title = "Ведите настоящую историю тренировок"
+    elif scenario == "nutrition":
+        today = {
+            "title": "Дневник питания на сегодня",
+            "summary": "Быстро добавьте подготовленный недавний продукт и проверьте новый итог.",
+            "status_label": "Дневной итог обновлён" if nutrition_added else "Дневник не завершён",
+            "completed_days": 5 if nutrition_added else 4,
+            "planned_days": 7,
+        }
+        progress = {
+            "workouts_completed": 10,
+            "latest_volume_kg": 6480,
+            "volume_change_percent": 3.8,
+            "nutrition_days_logged": 6 if nutrition_added else 5,
+            "nutrition_completion_percent": round(
+                nutrition["calories"] / nutrition["calorie_target"] * 100
+            ),
+            "summary": (
+                "Новая запись уже отражена в дневном итоге."
+                if nutrition_added
+                else "Итог использует только подтверждённые записи."
+            ),
+        }
+        conversion_title = "Настройте дневник питания под себя"
+    else:
+        today = {
+            "title": "Результат клиента готов к разбору",
+            "summary": state["context_label"],
+            "status_label": "Комментарий сохранён" if trainer_commented else "Нужна обратная связь",
+            "completed_days": 4,
+            "planned_days": 5,
+        }
+        progress = {
+            "workouts_completed": 16,
+            "latest_volume_kg": 6840,
+            "volume_change_percent": 5.1,
+            "nutrition_days_logged": 5,
+            "nutrition_completion_percent": round(
+                nutrition["calories"] / nutrition["calorie_target"] * 100
+            ),
+            "summary": (
+                "Комментарий связан с подготовленным результатом клиента."
+                if trainer_commented
+                else "Факты тренировки готовы для контекстной обратной связи."
+            ),
+        }
+        conversion_title = "Начните работать с реальными клиентами"
+
+    return {
+        "today": today,
+        "nutrition": nutrition,
+        "progress": progress,
+        "trainer": deepcopy(state) if scenario == "trainer" else None,
+        "meaningful_action_completed": training_completed or nutrition_added or trainer_commented,
+        "conversion_title": conversion_title,
+    }
+
+
 def _token_digest(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
@@ -152,6 +276,7 @@ class DemoSessionStore:
             "revision": session.revision,
             "expires_at": session.expires_at,
             "state": deepcopy(session.state),
+            "cabinet": _cabinet_for(session.scenario, session.state),
         }
 
     def create(self, scenario: DemoScenario) -> tuple[str, dict[str, Any]]:

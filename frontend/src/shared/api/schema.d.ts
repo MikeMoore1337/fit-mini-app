@@ -3600,6 +3600,61 @@ export interface components {
             /** Comment */
             comment?: string | null;
         };
+        /** DemoCabinetNutrition */
+        DemoCabinetNutrition: {
+            /** Calories */
+            calories: number;
+            /** Calorie Target */
+            calorie_target: number;
+            /** Protein G */
+            protein_g: number;
+            /** Protein Target G */
+            protein_target_g: number;
+            /** Meals Logged */
+            meals_logged: number;
+            /** Item Added */
+            item_added: boolean;
+            recent_item: components["schemas"]["DemoNutritionItem"];
+        };
+        /** DemoCabinetProgress */
+        DemoCabinetProgress: {
+            /** Workouts Completed */
+            workouts_completed: number;
+            /** Latest Volume Kg */
+            latest_volume_kg: number;
+            /** Volume Change Percent */
+            volume_change_percent: number;
+            /** Nutrition Days Logged */
+            nutrition_days_logged: number;
+            /** Nutrition Completion Percent */
+            nutrition_completion_percent: number;
+            /** Summary */
+            summary: string;
+        };
+        /** DemoCabinetState */
+        DemoCabinetState: {
+            today: components["schemas"]["DemoCabinetToday"];
+            nutrition: components["schemas"]["DemoCabinetNutrition"];
+            progress: components["schemas"]["DemoCabinetProgress"];
+            trainer?: components["schemas"]["DemoTrainerState"] | null;
+            /** Meaningful Action Completed */
+            meaningful_action_completed: boolean;
+            /** Conversion Title */
+            conversion_title: string;
+        };
+        /** DemoCabinetToday */
+        DemoCabinetToday: {
+            /** Title */
+            title: string;
+            /** Summary */
+            summary: string;
+            /** Status Label */
+            status_label: string;
+            /** Completed Days */
+            completed_days: number;
+            /** Planned Days */
+            planned_days: number;
+        };
         /** DemoExercise */
         DemoExercise: {
             /** Name */
@@ -3716,6 +3771,7 @@ export interface components {
             expires_at: string;
             /** State */
             state: components["schemas"]["DemoSelfTrainingState"] | components["schemas"]["DemoNutritionState"] | components["schemas"]["DemoTrainerState"];
+            cabinet: components["schemas"]["DemoCabinetState"];
             /** Session Token */
             session_token: string;
         };
@@ -3747,6 +3803,7 @@ export interface components {
             expires_at: string;
             /** State */
             state: components["schemas"]["DemoSelfTrainingState"] | components["schemas"]["DemoNutritionState"] | components["schemas"]["DemoTrainerState"];
+            cabinet: components["schemas"]["DemoCabinetState"];
         };
         /** DemoTrainerFact */
         DemoTrainerFact: {

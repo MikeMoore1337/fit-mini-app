@@ -1,7 +1,9 @@
 # Demo Mode
 
-Demo Mode показывает три подготовленных сценария без регистрации и без записи в пользовательские
-таблицы: самостоятельная тренировка, питание и рабочий контекст тренера.
+Demo Mode показывает в Web и Mobile Web три подготовленных сценария без регистрации и без записи в
+пользовательские таблицы: самостоятельную тренировку, питание и рабочий контекст тренера. Сценарии
+работают внутри ограниченного production `AppShell`, поэтому посетитель видит те же навигацию,
+семантические токены и базовые разделы, что и в обычном кабинете.
 
 ## Архитектурная граница
 
@@ -15,6 +17,34 @@ Demo Mode показывает три подготовленных сценар�
   query string, analytics или account state;
 - fixtures детерминированы, не содержат реальных снимков пользователей и имеют версию
   `demo-curated-v1`.
+
+Демо доступно только как браузерный продуктовый маршрут. Если `/demo` открыт как подписанный Telegram
+Mini App launch, frontend до авторизации удаляет оставшиеся demo credentials и переводит запуск в
+обычный `/app`. Demo UI, demo navigation и demo mutations в TMA не открываются.
+
+## Ограниченный кабинет
+
+Allowlist кабинета включает `Сегодня`, `Питание`, `Прогресс` и подготовленный контекст клиента для
+trainer preset. Разделы читают один связный snapshot: подтверждённая тренировка меняет факты
+прогресса, добавленный продукт меняет дневной итог и его отражение в прогрессе, а комментарий тренера
+существует только до конца текущей demo session. Остальные разделы production-кабинета в demo
+navigation отсутствуют.
+
+Постоянная граница `Демо` объясняет изоляцию, даёт reset и выход. Conversion CTA появляется только
+после meaningful action. Его текст не обещает продолжение или перенос подготовленного результата:
+он отделяет увиденную механику продукта от будущей настройки собственного профиля. Перед переходом
+к login удаляются все demo credentials; регистрация и вход всегда продолжаются с чистого onboarding
+без переноса fixture state.
+
+На desktop подготовленные сценарии не сжимаются в узкой боковой навигации. Однострочный
+компактный переключатель находится в верхней границе кабинета: постоянная подпись
+`Демо-сценарий:` отделена от select шириной `120px`, а его значения сокращены до
+`Для себя|Питание|Тренер`. Select использует единственную системную стрелку раскрытия, оставляет
+под неё отдельную область и не меняет ширину при выборе сценария. На ширинах `900–1099px`
+сообщение занимает первую строку, а переключатель и действия — выровненную вторую. На Mobile
+Web пункт нижней навигации называется `Сценарии`, а не абстрактное `Ещё`, а panel сохраняет полные
+названия путей. Технические слова `fixture`, `snapshot` и названия внутренних контрактов не выводятся
+посетителю: подготовленные данные называются демонстрационным примером.
 
 Текущий production deployment запускает один backend worker, поэтому process-local store даёт
 предсказуемую ephemeral isolation без schema и migration. Если topology станет multi-worker,
@@ -42,16 +72,19 @@ session действительна. `410 Gone` означает, что TTL ис
 предлагает начать новую изолированную session. Reset возвращает исходный fixture и продлевает TTL.
 Одновременные вкладки получают независимые tokens и не видят изменения друг друга.
 
-В Mobile Web и TMA используется один component tree. `/demo` разрешён Telegram SDK loader, но не
-оборачивается в `AuthProvider`/`AuthGate`: raw `initData` не отправляется в demo API и не запускает
-linking. Native BackButton возвращает на landing, а не в защищённый `/app`.
+В Web и Mobile Web используется один component tree. `/demo` не оборачивается в
+`AuthProvider`/`AuthGate`, а raw Telegram `initData` никогда не отправляется в demo API. Подписанный
+TMA launch является только безопасной границей перехода в обычный авторизованный продукт.
 
 ## Проверка
 
-Backend tests покрывают determinism, isolation, concurrent sessions, reset, expiry, forbidden
-actions, direct production API attempts и отсутствие записей в `User`. Frontend unit tests
-покрывают credential-free requests, expiry recovery и disabled/explanation state. Continuous
-Playwright smoke `frontend/tests/e2e/demo-mode.spec.ts` проверяет три сценария в Mobile Web и TMA
-mock, responsive geometry, reload/reset, Light/Dark и error states.
+Backend tests покрывают determinism, isolation, concurrent sessions, связность cabinet snapshot,
+reset, expiry, forbidden actions, direct production API attempts и отсутствие записей в `User`.
+Frontend unit tests покрывают credential-free requests, route allowlist, expiry recovery и
+disabled/explanation state. Continuous Playwright smoke `frontend/tests/e2e/demo-mode.spec.ts`
+проверяет три сценария в Mobile Web, responsive geometry, keyboard, reload/reset, Light/Dark и error
+states. Отдельная negative-проверка подтверждает, что подписанный TMA launch не открывает demo UI и
+не вызывает demo API.
 
-Mocked TMA и browser viewport не являются проверкой реального Telegram Android/iOS.
+Browser viewport не является проверкой реального устройства; само демо в Telegram Android/iOS не
+поддерживается по продуктовому решению.

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
 import { ApiError, api } from '../../shared/api/client';
 import type {
+  CardioSession,
   FoodDiaryDay,
   ProgressSummary,
   WeeklyCheckInCurrent,
@@ -10,7 +11,12 @@ import type {
   WorkoutComment,
   WorkoutScheduleItem,
 } from '../../shared/api/types';
-import { dateInputValue, detectedTimeZone, formatCalendarDate } from '../../shared/dateTime';
+import {
+  calendarWeek,
+  dateInputValue,
+  detectedTimeZone,
+  formatCalendarDate,
+} from '../../shared/dateTime';
 import { AppLink } from '../../shared/navigation/router';
 import { queryKeys } from '../../shared/queryKeys';
 import {
@@ -22,7 +28,13 @@ import { TodayWorkout } from '../workouts/TodayWorkout';
 import { Badge, Button, Skeleton } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { CardioQuickLog } from '../cardio/CardioLogging';
-import { WeekStrip, type WeekStripDayMeta, type WeekStripStatus } from '../../shared/ui/WeekStrip';
+import {
+  TRAINING_WEEK_LEGEND,
+  WeekStrip,
+  type WeekStripActivity,
+  type WeekStripDayMeta,
+  type WeekStripStatus,
+} from '../../shared/ui/WeekStrip';
 import {
   productEventSurface,
   trackCoreProductEvent,
@@ -55,26 +67,76 @@ function weekStatus(
   item: WorkoutScheduleItem | undefined,
   date: string,
   today: string,
-): (WeekStripStatus & { icon: string }) | null {
+): WeekStripStatus | null {
   if (!item) return null;
-  if (item.status === 'completed') return { key: 'completed', label: 'Выполнено', icon: '✓' };
-  if (item.status === 'in_progress') return { key: 'in-progress', label: 'В процессе', icon: '›' };
-  if (item.status === 'skipped') return { key: 'skipped', label: 'Пропущено', icon: '—' };
-  if (item.status === 'planned' && date > today) {
-    return { key: 'upcoming', label: 'Предстоит тренировка', icon: '•' };
+  if (item.status === 'completed') return { key: 'completed', label: 'Выполнено' };
+  if (item.status === 'in_progress') {
+    return { key: 'in-progress', label: 'В процессе' };
   }
-  if (item.status === 'planned') return { key: 'planned', label: 'Запланировано', icon: '•' };
+  if (item.status === 'skipped') return { key: 'skipped', label: 'Пропущено' };
+  if (item.status === 'planned' && date > today) {
+    return { key: 'upcoming', label: 'Предстоит тренировка' };
+  }
+  if (item.status === 'planned') {
+    return { key: 'planned', label: 'Запланировано' };
+  }
   return null;
 }
 
+function weekCardioForDate(
+  sessions: CardioSession[] | undefined,
+  value: string,
+  timeZone: string,
+): CardioSession[] {
+  return (sessions ?? []).filter(
+    (session) => dateInputValue(new Date(session.scheduled_at), timeZone) === value,
+  );
+}
+
+function combinedWeekStatus(
+  workout: WorkoutScheduleItem | undefined,
+  cardio: CardioSession[],
+  date: string,
+  today: string,
+): WeekStripStatus | null {
+  if (workout && cardio.length === 0) return weekStatus(workout, date, today);
+  const statuses = [workout?.status, ...cardio.map((session) => session.status)].filter(
+    (status): status is string => Boolean(status),
+  );
+  if (statuses.length === 0) return null;
+  if (statuses.includes('in_progress')) {
+    return { key: 'in-progress', label: 'В процессе' };
+  }
+  if (statuses.every((status) => status === 'completed')) {
+    return { key: 'completed', label: 'Выполнено' };
+  }
+  if (statuses.includes('completed')) {
+    return { key: 'in-progress', label: 'Часть плана выполнена' };
+  }
+  if (statuses.every((status) => status === 'skipped')) {
+    return { key: 'skipped', label: 'Пропущено' };
+  }
+  if (statuses.includes('planned')) {
+    return {
+      key: date > today ? 'upcoming' : 'planned',
+      label: date > today ? 'Запланировано' : 'План на сегодня',
+    };
+  }
+  return weekStatus(workout, date, today);
+}
+
 function WeekContext({
+  cardio,
   today,
+  timeZone,
   workouts,
   loading,
   error,
   onRetry,
 }: {
+  cardio?: CardioSession[];
   today: string;
+  timeZone: string;
   workouts?: WorkoutScheduleItem[];
   loading: boolean;
   error: boolean;
@@ -86,7 +148,16 @@ function WeekContext({
       ariaLabel="Эта неделя"
       getDayMeta={(date): WeekStripDayMeta => {
         const item = weekWorkoutForDate(workouts, date);
-        const status = weekStatus(item, date, today);
+        const cardioSessions = weekCardioForDate(cardio, date, timeZone);
+        const status = combinedWeekStatus(item, cardioSessions, date, today);
+        const activities: WeekStripActivity[] = [];
+        if (item) activities.push({ key: 'strength', label: 'Силовая' });
+        if (cardioSessions.length > 0) {
+          activities.push({ key: 'cardio', label: 'Кардио' });
+        }
+        if (activities.length === 0 && !loading && !error) {
+          activities.push({ key: 'rest', label: 'Отдых' });
+        }
         const isToday = date === today;
         const canOpenWorkout =
           item &&
@@ -94,7 +165,8 @@ function WeekContext({
           (item.status === 'completed' ||
             (date >= today && ['planned', 'in_progress', 'skipped'].includes(item.status)));
         return {
-          status: status ? { ...status, marker: status.icon } : null,
+          activities,
+          status,
           link: canOpenWorkout
             ? {
                 label: `Открыть тренировку ${item.title}`,
@@ -118,6 +190,7 @@ function WeekContext({
       }
       loading={loading}
       loadingLabel="Загружаем план недели"
+      legend={TRAINING_WEEK_LEGEND}
       mode="overview"
       title="Эта неделя"
       today={today}
@@ -656,9 +729,19 @@ export function TodayDashboard() {
   const calendarContextRef = useRef(`${timeZone}:${today}`);
   const heading = formatTodayHeading(today);
   const progress = useProgressSummary();
+  const weekDates = calendarWeek(today);
+  const weekStart = weekDates[0] ?? today;
+  const weekEnd = weekDates.at(-1) ?? today;
   const week = useQuery({
     queryKey: ['workout', 'week'],
     queryFn: () => api<WorkoutScheduleItem[]>('/api/v1/workouts/week'),
+  });
+  const cardioWeek = useQuery({
+    queryKey: queryKeys.cardio.range(weekStart, weekEnd),
+    queryFn: () =>
+      api<CardioSession[]>(
+        `/api/v1/workouts/cardio?date_from=${weekStart}&date_to=${weekEnd}&limit=100`,
+      ),
   });
   const weeklyReview = useQuery({
     queryKey: ['weekly-check-ins', 'current'],
@@ -803,11 +886,13 @@ export function TodayDashboard() {
       </header>
 
       <WeekContext
+        cardio={cardioWeek.data}
         today={today}
+        timeZone={timeZone}
         workouts={week.data}
-        loading={week.isLoading}
-        error={Boolean(week.error)}
-        onRetry={() => void week.refetch()}
+        loading={week.isLoading || cardioWeek.isLoading}
+        error={Boolean(week.error || cardioWeek.error)}
+        onRetry={() => void Promise.all([week.refetch(), cardioWeek.refetch()])}
       />
 
       <div className="today-dashboard__overview">

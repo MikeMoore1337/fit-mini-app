@@ -47,6 +47,36 @@ export interface DemoTrainerState {
   comment: string | null;
 }
 
+export interface DemoCabinetState {
+  today: {
+    title: string;
+    summary: string;
+    status_label: string;
+    completed_days: number;
+    planned_days: number;
+  };
+  nutrition: {
+    calories: number;
+    calorie_target: number;
+    protein_g: number;
+    protein_target_g: number;
+    meals_logged: number;
+    item_added: boolean;
+    recent_item: DemoNutritionState['recent_item'];
+  };
+  progress: {
+    workouts_completed: number;
+    latest_volume_kg: number;
+    volume_change_percent: number;
+    nutrition_days_logged: number;
+    nutrition_completion_percent: number;
+    summary: string;
+  };
+  trainer: DemoTrainerState | null;
+  meaningful_action_completed: boolean;
+  conversion_title: string;
+}
+
 export type DemoScenarioState = DemoSelfTrainingState | DemoNutritionState | DemoTrainerState;
 
 export interface DemoSessionSnapshot {
@@ -56,6 +86,7 @@ export interface DemoSessionSnapshot {
   revision: number;
   expires_at: string;
   state: DemoScenarioState;
+  cabinet: DemoCabinetState;
 }
 
 type DemoSessionCreated = DemoSessionSnapshot & { session_token: string };
@@ -151,6 +182,7 @@ export async function startDemoSession(
     revision: created.revision,
     expires_at: created.expires_at,
     state: created.state,
+    cabinet: created.cabinet,
   };
 }
 
