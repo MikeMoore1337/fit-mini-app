@@ -1,6 +1,7 @@
 # GLOBAL_RULES - правила выполнения release backlog v11 resource-aware
 
-Этот файл действует для current task `73A`, remaining release tasks `74-79` и trigger-gated
+Этот файл действует для current task `73A`, remaining release tasks `74-79`, включая `74A` и
+`76A`, и trigger-gated
 post-release pool `80-96` с буквенными подзадачами. Completed tasks `00-73`, включая буквенные подзадачи, не переигрываются
 и хранятся в `tasks/done/`.
 
@@ -54,6 +55,10 @@ Lifecycle не расширяет scope task и не отменяет owner chec
 - Current task — `73A`: premium marketing art-direction, alternatives и production rollout Landing, назначена, но не начата.
 - Task `73A` имеет два обязательных owner checkpoint: выбор одного из трёх visual directions до production implementation и аппрув production screenshot packet до commit.
 - После commit task `73A` следующая release task — `74`; она выполняется только в отдельной сессии.
+- После commit task `74` следующая release task — `74A`: product-wide motion system, включая
+  canonical chart entrance и Demo cabinet; она выполняется только в отдельной сессии.
+- После commit task `74A` следующая release task — `75`: performance/motion hardening; она не
+  заменяет design/rollout scope `74A` и выполняется отдельно.
 - Task `50A` уже создала общий continuous Mobile Web/TMA gate, который переиспользуют последующие client-facing tasks.
 - Перед client-facing task прочитать `MOBILE_TMA_FIRST_CONTRACT.md` и применимые пункты `.agents/references/MOBILE_TMA_ACCEPTANCE_MATRIX.md`.
 - Не повторять полный аудит репозитория без прямого требования task.

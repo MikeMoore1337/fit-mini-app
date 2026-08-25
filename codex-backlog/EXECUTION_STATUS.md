@@ -1,4 +1,4 @@
-# Execution status v29
+# Execution status v30
 
 Подтверждённое владельцем состояние на 25.08.2026:
 
@@ -14,9 +14,11 @@
 - [x] task `73` финализировала production Landing, public product hero и demo/privacy continuation и архивирована после owner approval;
 - [ ] **current:** `73a-landing-premium-marketing-art-direction.md` — новый owner-requested premium marketing pass; три направления, два owner checkpoint, назначена и не начата;
 - [ ] task `74` переназначена следующей и не начата;
-- [ ] task `75` продолжает cross-product performance/motion hardening scope;
+- [ ] task `74A` после `74` создаёт product-wide motion system, canonical chart entrance и Demo cabinet motion; не начата;
+- [ ] task `75` после `74A` продолжает cross-product performance/motion hardening scope;
 - [ ] tasks `76-79` закрывают retrospective usability/production/release risks.
 
 Не выполнять повторно tasks `00-73`, включая `69B`. Сначала выполнить только task `73A`; без
 owner selection не начинать production implementation, без финального screenshot approval не
-архивировать и не коммитить. Task `74` выполняется только после завершения `73A` в отдельной сессии.
+архивировать и не коммитить. Task `74` выполняется только после завершения `73A` в отдельной
+сессии; затем отдельно `74A`, затем `75`. Следующие tasks автоматически не реализуются.
