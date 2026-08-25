@@ -54,11 +54,12 @@ Lifecycle не расширяет scope task и не отменяет owner chec
 - Tasks `00-73`, включая буквенные подзадачи, подтверждены владельцем как завершённые, перенесены в `tasks/done/` и не выполняются повторно.
 - Owner-selected task `88` завершена после owner approval и архивирована.
 - Current task — `89`: Telegram-новости, изображения, revision-bound модерация и публикация;
-  назначена в `PENDING`, но не начата.
-- После task `89` следующая task этого owner-selected потока — `90`; она выполняется только в
+  выполняется в отдельной активной сессии.
+- После task `89` следующая task этого owner-selected потока — `89A`: финальная композиция
+  канального поста и exact preview parity. После неё следует `90`; каждая выполняется только в
   отдельной сессии.
 - Remaining release tasks `73A-79` и остальные trigger-gated tasks сохраняют собственные Trigger,
-  dependency и owner decision. Назначение `89` не помечает их выполненными и не разрешает запуск.
+  dependency и owner decision. Назначение `89`/`89A` не помечает их выполненными и не разрешает запуск.
 - Task `50A` уже создала общий continuous Mobile Web/TMA gate, который переиспользуют последующие client-facing tasks.
 - Перед client-facing task прочитать `MOBILE_TMA_FIRST_CONTRACT.md` и применимые пункты `.agents/references/MOBILE_TMA_ACCEPTANCE_MATRIX.md`.
 - Не повторять полный аудит репозитория без прямого требования task.
