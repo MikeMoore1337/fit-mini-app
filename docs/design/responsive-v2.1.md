@@ -94,8 +94,9 @@ Desktop and mobile are one system but different compositions. Mobile never uses 
 - Main content `980px`; wide Progress/Coach may use `1180px`.
 - Today: current workout region and progress/evidence region can sit side by side; current action
   receives greater width. Nutrition/Progress use aligned rules and shared metrics, not KPI tiles.
-- Shared `WeekStrip`: контекст недели занимает первую grid-колонку; каждая строка легенды
-  центрируется в оставшейся колонке справа, а не относительно внешних границ карточки.
+- Shared `WeekStrip`: контекст и семь дней остаются основным содержимым, а легенда находится ниже
+  дней в свёрнутом disclosure `Обозначения`. Заголовок disclosure выровнен слева, шеврон справа;
+  раскрытие удлиняет страницу в обычном layout flow и не накладывается на следующий блок.
 - Coach: roster/context rail plus client detail at `>=1024`; client identity remains persistent.
   Destructive actions name the client. Dense tables retain text alternatives and explicit units.
 

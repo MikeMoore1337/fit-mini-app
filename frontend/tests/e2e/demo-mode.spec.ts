@@ -509,6 +509,7 @@ test('Web cabinet preview uses production shell across the required viewport mat
 }) => {
   const viewports = [
     { name: 'mobile-360-light', width: 360, height: 800, touch: true, dark: false },
+    { name: 'mobile-390-light', width: 390, height: 844, touch: true, dark: false },
     { name: 'mobile-390-dark', width: 390, height: 844, touch: true, dark: true },
     { name: 'mobile-430-light', width: 430, height: 932, touch: true, dark: false },
     { name: 'tablet-768-light', width: 768, height: 900, touch: true, dark: false },
@@ -537,7 +538,37 @@ test('Web cabinet preview uses production shell across the required viewport mat
     await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'План на сегодня' })).toBeVisible();
     await expect(page.getByText('Подготовленные данные без сохранения')).toBeVisible();
+    const weekLegendSummary = page.locator('.week-strip__legend-summary');
     const weekLegend = page.getByRole('list', { name: 'Обозначения недели' });
+    const weekStrip = page.locator('.week-strip');
+    const legendDisclosure = page.locator('.week-strip__legend-disclosure');
+    const focusGrid = page.locator('.demo-cabinet-focus-grid');
+    await expect(weekLegendSummary).toBeVisible();
+    await expect(weekLegendSummary).toHaveText('Обозначения');
+    await expect(weekLegend).toBeHidden();
+    expect((await weekLegendSummary.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    const collapsedWeekBox = await weekStrip.boundingBox();
+    const legendDisclosureBox = await legendDisclosure.boundingBox();
+    const collapsedFocusBox = await focusGrid.boundingBox();
+    const summaryLabelBox = await page.locator('.week-strip__legend-summary-label').boundingBox();
+    expect(collapsedWeekBox).not.toBeNull();
+    expect(legendDisclosureBox).not.toBeNull();
+    expect(collapsedFocusBox).not.toBeNull();
+    expect(summaryLabelBox).not.toBeNull();
+    expect(
+      Math.abs((summaryLabelBox?.x ?? 0) - ((legendDisclosureBox?.x ?? 0) + 2)),
+    ).toBeLessThanOrEqual(1);
+    if (viewport.touch) {
+      await weekLegendSummary.click();
+    } else {
+      await weekLegendSummary.focus();
+      await page.keyboard.press('Enter');
+    }
+    await expect(weekLegend).toBeVisible();
+    const expandedWeekBox = await weekStrip.boundingBox();
+    const expandedFocusBox = await focusGrid.boundingBox();
+    expect((expandedWeekBox?.height ?? 0) - (collapsedWeekBox?.height ?? 0)).toBeGreaterThan(0);
+    expect((expandedFocusBox?.y ?? 0) - (collapsedFocusBox?.y ?? 0)).toBeGreaterThan(0);
     await expect(weekLegend).toContainText('Силовая');
     await expect(weekLegend).toContainText('Кардио');
     await expect(weekLegend).toContainText('Отдых');
@@ -590,9 +621,13 @@ test('Web cabinet preview uses production shell across the required viewport mat
     }
     if (
       CABINET_CAPTURE &&
-      ['mobile-360-light', 'mobile-390-dark', 'desktop-1280-light', 'desktop-1440-dark'].includes(
-        viewport.name,
-      )
+      [
+        'mobile-360-light',
+        'mobile-390-light',
+        'mobile-390-dark',
+        'desktop-1280-light',
+        'desktop-1440-dark',
+      ].includes(viewport.name)
     ) {
       await page.screenshot({
         path: `${CABINET_SCREENSHOT_DIR}/${viewport.name}-today.png`,
@@ -803,17 +838,44 @@ test('desktop demo keeps metric groups separated and conversion copy honest', as
   expect(statusGeometry.inProgress?.shapeHeight).toBeGreaterThanOrEqual(9);
   expect(statusGeometry.inProgress?.shapeWidth).toBeGreaterThanOrEqual(4);
   expect(statusGeometry.inProgress?.strokeWidth).toBeGreaterThanOrEqual(1.8);
-  const legendCenterOffset = await page.locator('.week-strip__topline').evaluate((topline) => {
-    const legend = topline.querySelector<HTMLElement>('.week-strip__legend');
-    const legendItems = Array.from(legend?.querySelectorAll<HTMLElement>(':scope > li') ?? []);
-    const firstItem = legendItems[0];
-    if (!legend || !firstItem) return Number.POSITIVE_INFINITY;
-    const availableBox = legend.getBoundingClientRect();
-    const firstBox = firstItem.getBoundingClientRect();
-    const lastBox = legendItems.at(-1)?.getBoundingClientRect() ?? firstBox;
-    const legendCenter = (firstBox.left + lastBox.right) / 2;
-    return Math.abs(legendCenter - (availableBox.left + availableBox.width / 2));
+  const statusColors = await page.evaluate(() => {
+    const color = (kind: string) => {
+      const pictogram = document.querySelector<HTMLElement>(
+        `.week-strip__pictogram[data-pictogram="${kind}"]`,
+      );
+      return pictogram ? window.getComputedStyle(pictogram).color : null;
+    };
+    return {
+      inProgress: color('in-progress'),
+      planned: color('planned'),
+      strength: color('strength'),
+    };
   });
+  expect(statusColors.planned).toBe(statusColors.strength);
+  expect(statusColors.planned).toBe(statusColors.inProgress);
+  const legendDisclosure = page.locator('.week-strip__legend-disclosure');
+  if ((await legendDisclosure.getAttribute('open')) === null) {
+    await page.locator('.week-strip__legend-summary').click();
+  }
+  await expect(page.getByRole('list', { name: 'Обозначения недели' })).toBeVisible();
+  const legendCenterOffset = await page
+    .locator('.week-strip__legend-disclosure')
+    .evaluate((disclosure) => {
+      const legend = disclosure.querySelector<HTMLElement>('.week-strip__legend');
+      const legendItems = Array.from(legend?.querySelectorAll<HTMLElement>(':scope > li') ?? []);
+      const firstItem = legendItems[0];
+      if (!legend || !firstItem) return Number.POSITIVE_INFINITY;
+      const availableBox = legend.getBoundingClientRect();
+      const rowTop = firstItem.getBoundingClientRect().top;
+      const firstRowItems = legendItems.filter(
+        (item) => Math.abs(item.getBoundingClientRect().top - rowTop) <= 1,
+      );
+      const firstBox = firstRowItems[0]?.getBoundingClientRect();
+      const lastBox = firstRowItems.at(-1)?.getBoundingClientRect();
+      if (!firstBox || !lastBox) return Number.POSITIVE_INFINITY;
+      const legendCenter = (firstBox.left + lastBox.right) / 2;
+      return Math.abs(legendCenter - (availableBox.left + availableBox.width / 2));
+    });
   expect(legendCenterOffset).toBeLessThanOrEqual(2);
   await page.getByRole('link', { name: 'Питание', exact: true }).click();
 

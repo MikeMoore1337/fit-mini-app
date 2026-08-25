@@ -32,6 +32,10 @@
 `nutrition-fasted` и `nutrition-missing` имеют разные формы на одном optical canvas. Легенда и
 полный accessible name сохраняются, поэтому состояние не зависит от цвета.
 
+Для тренировочных статусов используются закреплённые формы: `planned` — календарь с часами в
+правом нижнем углу, `in-progress` — круговая стрелка с двумя pause-полосами, `skipped` — переход к
+следующему без диагонального перечёркивания. Все три наследуют semantic tone через `currentColor`.
+
 ## Shared data-viz primitives
 
 Канонический слой: `frontend/src/shared/ui/DataViz.tsx`.

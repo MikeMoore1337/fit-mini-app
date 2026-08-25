@@ -100,7 +100,8 @@ const iconMarkup = {
   'week-cardio':
     '<path d="M12 20s-7-4.4-7-9.2C5 7.5 7 5.5 9.6 5.5c1.2 0 2 .5 2.4 1.4.4-.9 1.2-1.4 2.4-1.4 2.6 0 4.6 2 4.6 5.3C19 15.6 12 20 12 20Z" /><polyline points="7,12 10,12 11.2,9.5 13.3,14.5 14.5,12 17,12" />',
   'week-completed': '<rect x="3" y="3" width="18" height="18" rx="4"/><path d="m7 12 3 3 7-7"/>',
-  'week-in-progress': '<circle cx="12" cy="12" r="9"/><path d="m10 8 6 4-6 4Z"/>',
+  'week-in-progress':
+    '<path d="M18.5 8A7.5 7.5 0 1 0 19 15.3"/><path d="M18.5 4.8V8h-3.2"/><line x1="10" y1="9" x2="10" y2="15"/><line x1="14" y1="9" x2="14" y2="15"/>',
   'week-nutrition-complete':
     '<path d="M4 12h16c-.6 4.8-3.2 7.5-8 7.5S4.6 16.8 4 12Z" /><line x1="6" y1="12" x2="18" y2="12" /><path d="M8.2 8.6l2 2 4-4.1" />',
   'week-nutrition-fasted':
@@ -110,10 +111,10 @@ const iconMarkup = {
   'week-nutrition-missing':
     '<path d="M4 12h6M14 12h6c-.6 4.8-3.2 7.5-8 7.5S4.6 16.8 4 12" /><circle cx="9" cy="8" r="0.8" fill="currentColor" stroke="none"/><circle cx="12" cy="8" r="0.8" fill="currentColor" stroke="none"/><circle cx="15" cy="8" r="0.8" fill="currentColor" stroke="none"/>',
   'week-planned':
-    '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M8 12h8"/>',
+    '<path d="M9.5 20H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5"/><path d="M8 3v4M16 3v4M4 9h16"/><circle cx="17" cy="17" r="5"/><path d="M17 14.5V17l2 1.4"/>',
   'week-rest': '<path d="M19.5 15.5A8 8 0 0 1 8.5 4.5a8.2 8.2 0 1 0 11 11Z"/>',
   'week-skipped':
-    '<rect x="3.2" y="4.6" width="14.5" height="14.2" rx="2.2"/><path d="M7 2.8v3.5M14 2.8v3.5M3.2 8.5h14.5"/><circle cx="18.2" cy="17.5" r="3.7" fill="var(--icon-surface, Canvas)"/><path d="m16.8 16.1 2.8 2.8m0-2.8-2.8 2.8"/>',
+    '<line x1="5" y1="6" x2="5" y2="18"/><path d="M8 7l6 5-6 5Z"/><line x1="17" y1="7" x2="17" y2="17"/>',
   'week-strength':
     '<line x1="4" y1="9" x2="4" y2="15" /><line x1="7" y1="7" x2="7" y2="17" /><line x1="17" y1="7" x2="17" y2="17" /><line x1="20" y1="9" x2="20" y2="15" /><line x1="7" y1="12" x2="17" y2="12" />',
 } as const;

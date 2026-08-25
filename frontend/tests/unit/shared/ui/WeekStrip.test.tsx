@@ -93,11 +93,18 @@ describe('WeekStrip', () => {
     );
 
     expect(screen.getByRole('region', { name: 'Эта неделя' })).toBeInTheDocument();
-    const legend = screen.getByRole('list', { name: 'Обозначения недели' });
-    expect(within(legend).getByText('Силовая')).toBeVisible();
-    expect(within(legend).getByText('Кардио')).toBeVisible();
-    expect(within(legend).getByText('Отдых')).toBeVisible();
-    expect(within(legend).getByText('Выполнено')).toBeVisible();
+    const legendSummary = screen.getByText('Обозначения').closest('summary');
+    const legend = container.querySelector<HTMLElement>('.week-strip__legend');
+    expect(legend).not.toBeNull();
+    expect(legendSummary?.closest('details')).not.toHaveAttribute('open');
+    expect(legend!).not.toBeVisible();
+    fireEvent.click(legendSummary!);
+    expect(legendSummary?.closest('details')).toHaveAttribute('open');
+    expect(screen.getByRole('list', { name: 'Обозначения недели' })).toBeVisible();
+    expect(within(legend!).getByText('Силовая')).toBeVisible();
+    expect(within(legend!).getByText('Кардио')).toBeVisible();
+    expect(within(legend!).getByText('Отдых')).toBeVisible();
+    expect(within(legend!).getByText('Выполнено')).toBeVisible();
     expect(container.querySelectorAll('.week-strip__pictogram')).not.toHaveLength(0);
     expect(
       container.querySelector('[data-pictogram="strength"] [data-icon="week-strength"]'),
@@ -107,6 +114,15 @@ describe('WeekStrip', () => {
     ).toBeInTheDocument();
     expect(
       container.querySelector('[data-pictogram="in-progress"] [data-icon="week-in-progress"]'),
+    ).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-icon="week-planned"] circle[cx="17"][cy="17"]'),
+    ).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-icon="week-in-progress"] line[x1="10"][y1="9"]'),
+    ).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-icon="week-skipped"] path[d="M8 7l6 5-6 5Z"]'),
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Выполнено.*Открыть тренировку/i })).toHaveAttribute(
       'href',

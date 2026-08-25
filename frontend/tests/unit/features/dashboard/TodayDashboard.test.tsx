@@ -537,6 +537,7 @@ describe('TodayDashboard', () => {
     renderDashboard();
 
     const weekRegion = await screen.findByRole('region', { name: 'Эта неделя' });
+    fireEvent.click(screen.getByText('Обозначения').closest('summary')!);
     const legend = screen.getByRole('list', { name: 'Обозначения недели' });
     expect(legend).toHaveTextContent('Силовая');
     expect(legend).toHaveTextContent('Кардио');

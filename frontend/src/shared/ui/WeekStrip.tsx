@@ -181,9 +181,7 @@ export function WeekStrip(props: WeekStripProps) {
       aria-labelledby={isPicker ? undefined : headingId}
       className={`week-strip week-strip--${props.mode}`}
     >
-      <div
-        className={`week-strip__topline${props.legend?.length ? ' week-strip__topline--with-legend' : ''}`}
-      >
+      <div className="week-strip__topline">
         <div
           className={`week-strip__head week-strip__head--${props.navigation ? 'navigation' : 'static'}`}
         >
@@ -221,17 +219,6 @@ export function WeekStrip(props: WeekStripProps) {
             )
           )}
         </div>
-
-        {props.legend && props.legend.length > 0 && (
-          <ul aria-label="Обозначения недели" className="week-strip__legend">
-            {props.legend.map((item) => (
-              <li key={item.key}>
-                <WeekStripPictogram kind={item.pictogram} tone={item.tone} />
-                <span>{item.label}</span>
-              </li>
-            ))}
-          </ul>
-        )}
       </div>
 
       <ol className="week-strip__days">
@@ -308,6 +295,31 @@ export function WeekStrip(props: WeekStripProps) {
           );
         })}
       </ol>
+
+      {props.legend && props.legend.length > 0 && (
+        <details className="week-strip__legend-disclosure">
+          <summary className="week-strip__legend-summary">
+            <span className="week-strip__legend-summary-label">
+              <Icon aria-hidden="true" className="week-strip__legend-info" name="info" size={20} />
+              <span>Обозначения</span>
+            </span>
+            <Icon
+              aria-hidden="true"
+              className="week-strip__legend-chevron"
+              name="chevron-down"
+              size={16}
+            />
+          </summary>
+          <ul aria-label="Обозначения недели" className="week-strip__legend">
+            {props.legend.map((item) => (
+              <li key={item.key}>
+                <WeekStripPictogram kind={item.pictogram} tone={item.tone} />
+                <span>{item.label}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
 
       {props.loading && (
         <span className="sr-only" role="status">
