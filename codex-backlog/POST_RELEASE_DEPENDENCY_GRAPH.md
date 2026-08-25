@@ -21,7 +21,8 @@ release 79
   -> 96 Native feasibility
 
 Telegram Core release task 04
-  -> 88 News ingestion -> 89 Moderated publishing -> 90 Weekly opt-in digest
+  -> 88 News ingestion -> 89 Moderated publishing -> 89A Exact publication composition
+  -> 90 Weekly opt-in digest
 ```
 
 Все стрелки дополнительно требуют evidence Trigger и owner decision. Umbrella-файлы не являются

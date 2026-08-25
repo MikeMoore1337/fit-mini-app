@@ -5,8 +5,9 @@ import hashlib
 import hmac
 import logging
 from collections.abc import Awaitable, Callable
-from datetime import timedelta
+from datetime import datetime, timedelta
 from time import monotonic
+from typing import Protocol
 
 import httpx
 
@@ -25,11 +26,18 @@ from fitminiapp_api.services.news_editorial import (
     prune_news_editorial,
     review_message,
 )
+from fitminiapp_api.services.news_images import create_image_revision, current_image
 from fitminiapp_api.services.news_ingestion import (
     SafeNewsFetcher,
     SourceFetchError,
     ingest_items,
     utcnow,
+)
+from fitminiapp_api.services.news_publication import (
+    claim_due_publications,
+    mark_publication_failed,
+    mark_publication_succeeded,
+    publication_payload,
 )
 from fitminiapp_api.services.notifications import safe_delivery_error
 
@@ -43,6 +51,14 @@ SendMessage = Callable[
     [httpx.AsyncClient, int, str],
     Awaitable[int | None],
 ]
+
+
+class PublicationResult(Protocol):
+    @property
+    def message_id(self) -> int: ...
+
+    @property
+    def message_date(self) -> datetime: ...
 
 
 def _source_ref(source_id: str) -> str:
@@ -176,6 +192,7 @@ async def generate_candidate_drafts(client: httpx.AsyncClient) -> int:
                 continue
             try:
                 draft = await create_draft_revision(db, cluster, client=client)
+                await create_image_revision(db, cluster, draft, client=client)
             except Exception as exc:
                 logger.error(
                     "news_draft_generation_failed",
@@ -196,6 +213,42 @@ async def generate_candidate_drafts(client: httpx.AsyncClient) -> int:
                     "latency_ms": draft.generation_latency_ms,
                 },
             )
+    return generated
+
+
+async def generate_pending_images(client: httpx.AsyncClient) -> int:
+    with get_session_context() as db:
+        cluster_ids = [
+            row.id
+            for row in db.query(NewsCluster.id)
+            .filter(NewsCluster.status == "image_pending")
+            .order_by(NewsCluster.updated_at.asc())
+            .limit(MAX_GENERATIONS_PER_CYCLE)
+            .all()
+        ]
+    generated = 0
+    for cluster_id in cluster_ids:
+        with get_session_context() as db:
+            cluster = (
+                db.query(NewsCluster)
+                .filter(NewsCluster.id == cluster_id, NewsCluster.status == "image_pending")
+                .with_for_update()
+                .first()
+            )
+            if cluster is None:
+                continue
+            draft = (
+                db.query(NewsDraftRevision)
+                .filter(
+                    NewsDraftRevision.cluster_id == cluster.id,
+                    NewsDraftRevision.revision == cluster.latest_draft_revision,
+                )
+                .first()
+            )
+            if draft is None:
+                continue
+            await create_image_revision(db, cluster, draft, client=client)
+            generated += 1
     return generated
 
 
@@ -237,6 +290,7 @@ def _claim_deliveries() -> list[int]:
 async def deliver_review_queue(
     client: httpx.AsyncClient,
     send_message: Callable[..., Awaitable[int | None]],
+    send_photo: Callable[..., Awaitable[int | None]],
 ) -> int:
     recipient_ids = {
         editorial_actor_ref(telegram_id): telegram_id
@@ -262,9 +316,13 @@ async def deliver_review_queue(
                 delivery.processing_started_at = None
                 continue
             message, _, markup = review_message(db, draft)
+            image = current_image(db, cluster)
+            image_data = image.image_data if image is not None else None
             attempt_count = delivery.attempt_count
             queue_age = max(0, round((utcnow() - delivery.created_at).total_seconds()))
         try:
+            if image_data is not None:
+                await send_photo(client, chat_id, image_data)
             message_id = await send_message(
                 client,
                 chat_id,
@@ -319,9 +377,122 @@ async def deliver_review_queue(
     return delivered
 
 
+async def publish_due_snapshots(
+    client: httpx.AsyncClient,
+    send_publication: Callable[..., Awaitable[PublicationResult]],
+    send_message: Callable[..., Awaitable[int | None]],
+) -> int:
+    from fitminiapp_api.services.worker import TelegramPublicationError
+
+    with get_session_context() as db:
+        snapshot_ids = claim_due_publications(db)
+    published = 0
+    for snapshot_id in snapshot_ids:
+        with get_session_context() as db:
+            payload = publication_payload(db, snapshot_id)
+        if payload is None:
+            continue
+        try:
+            result = await send_publication(
+                client,
+                payload.channel_id,
+                payload.text,
+                payload.image_data,
+                parse_mode=payload.parse_mode,
+                link_preview_disabled=payload.link_preview_disabled,
+            )
+        except TelegramPublicationError as exc:
+            with get_session_context() as db:
+                mark_publication_failed(
+                    db,
+                    snapshot_id,
+                    error_code=exc.code,
+                    retry_after=exc.retry_after,
+                    uncertain=exc.uncertain,
+                    terminal=exc.terminal,
+                )
+            logger.error(
+                "news_publication_failed",
+                extra={"pipeline_stage": "publication", "reason": exc.code},
+            )
+            if exc.uncertain:
+                markup = {
+                    "inline_keyboard": [
+                        [
+                            {
+                                "text": "Указать найденный message ID",
+                                "callback_data": f"newsrec:r:{snapshot_id}",
+                            }
+                        ],
+                        [
+                            {
+                                "text": "Публикации нет — повторить",
+                                "callback_data": f"newsrec:t:{snapshot_id}",
+                            }
+                        ],
+                    ]
+                }
+                for admin_id in sorted(settings.admin_telegram_id_set):
+                    try:
+                        await send_message(
+                            client,
+                            admin_id,
+                            "Отправка новости имеет неопределённый результат. "
+                            "Проверьте канал; автоматический повтор остановлен.",
+                            reply_markup=markup,
+                        )
+                    except Exception as notify_exc:
+                        logger.error(
+                            "news_uncertain_owner_notice_failed",
+                            extra={"reason": safe_delivery_error(notify_exc)},
+                        )
+            continue
+        with get_session_context() as db:
+            mark_publication_succeeded(
+                db,
+                snapshot_id,
+                message_id=result.message_id,
+                message_date=result.message_date,
+            )
+        markup = {
+            "inline_keyboard": [
+                [
+                    {
+                        "text": "Изменить опубликованный текст",
+                        "callback_data": f"newspost:e:{snapshot_id}",
+                    }
+                ],
+                [
+                    {
+                        "text": "Удалить публикацию",
+                        "callback_data": f"newspost:d:{snapshot_id}",
+                    }
+                ],
+            ]
+        }
+        for admin_id in sorted(settings.admin_telegram_id_set):
+            try:
+                await send_message(
+                    client,
+                    admin_id,
+                    f"Новость опубликована · snapshot {snapshot_id}",
+                    reply_markup=markup,
+                )
+            except Exception as exc:
+                logger.error(
+                    "news_owner_publication_receipt_failed",
+                    extra={"reason": safe_delivery_error(exc)},
+                )
+        published += 1
+    return published
+
+
 async def run_news_pipeline_once(
     *,
     send_message: Callable[..., Awaitable[int | None]],
+    send_photo: Callable[..., Awaitable[int | None]],
+    send_publication: Callable[..., Awaitable[PublicationResult]],
+    publication_ready: bool,
     fetch_sources: bool,
 ) -> None:
     started = monotonic()
@@ -329,15 +500,21 @@ async def run_news_pipeline_once(
         prune_news_editorial(db, retention_days=settings.news_retention_days)
     timeout = httpx.Timeout(settings.news_source_timeout_seconds)
     async with httpx.AsyncClient(timeout=timeout, follow_redirects=False) as client:
+        published = (
+            await publish_due_snapshots(client, send_publication, send_message)
+            if publication_ready
+            else 0
+        )
         counts = (
             await fetch_due_sources(client)
             if fetch_sources
             else {"new": 0, "duplicate": 0, "candidate": 0}
         )
         await generate_candidate_drafts(client)
+        await generate_pending_images(client)
         with get_session_context() as db:
             enqueue_review_deliveries(db, settings.admin_telegram_id_set)
-        delivered = await deliver_review_queue(client, send_message)
+        delivered = await deliver_review_queue(client, send_message, send_photo)
     logger.info(
         "news_pipeline_cycle_completed",
         extra={
@@ -347,6 +524,7 @@ async def run_news_pipeline_once(
             "duplicate_count": counts["duplicate"],
             "candidate_count": counts["candidate"],
             "attempt_count": delivered,
+            "published_count": published,
             "latency_ms": round((monotonic() - started) * 1000, 2),
         },
     )

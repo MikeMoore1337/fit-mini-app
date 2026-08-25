@@ -1,9 +1,9 @@
 # GLOBAL_RULES - правила выполнения release backlog v11 resource-aware
 
-Этот файл действует для owner-selected current task `89`, remaining release tasks `73A-79`, включая
+Этот файл действует для owner-selected current task `89A`, remaining release tasks `73A-79`, включая
 `74A` и `76A`, и trigger-gated post-release pool `80-96` с буквенными подзадачами. Completed tasks
-`00-73`, включая буквенные подзадачи, и отдельно завершённая task `88` не переигрываются и хранятся
-в `tasks/done/`.
+`00-73`, включая буквенные подзадачи, и отдельно завершённые tasks `88-89` не переигрываются и
+хранятся в `tasks/done/`.
 
 
 ## Полный task lifecycle
@@ -53,11 +53,10 @@ Lifecycle не расширяет scope task и не отменяет owner chec
 - Перед началом прочитать корневой `AGENTS.md`, этот файл, lifecycle и только текущую task.
 - Tasks `00-73`, включая буквенные подзадачи, подтверждены владельцем как завершённые, перенесены в `tasks/done/` и не выполняются повторно.
 - Owner-selected task `88` завершена после owner approval и архивирована.
-- Current task — `89`: Telegram-новости, изображения, revision-bound модерация и публикация;
-  выполняется в отдельной активной сессии.
-- После task `89` следующая task этого owner-selected потока — `89A`: финальная композиция
-  канального поста и exact preview parity. После неё следует `90`; каждая выполняется только в
-  отдельной сессии.
+- Owner-selected task `89` завершена после owner approval и архивирована.
+- Current task — `89A`: финальная композиция канального поста и exact preview parity; она только
+  назначена и не реализуется в completion run task `89`.
+- После task `89A` следует `90`; каждая выполняется только в отдельной сессии.
 - Remaining release tasks `73A-79` и остальные trigger-gated tasks сохраняют собственные Trigger,
   dependency и owner decision. Назначение `89`/`89A` не помечает их выполненными и не разрешает запуск.
 - Task `50A` уже создала общий continuous Mobile Web/TMA gate, который переиспользуют последующие client-facing tasks.

@@ -1,7 +1,8 @@
 import hmac
 from typing import Annotated, cast
 
-from fastapi import APIRouter, Header, HTTPException, Path
+import httpx
+from fastapi import APIRouter, Header, HTTPException, Path, Request
 from sqlalchemy.orm import Session
 
 from fitminiapp_api.core.config import settings
@@ -12,6 +13,12 @@ from fitminiapp_api.models.user import User, UserProfile
 from fitminiapp_api.schemas.bot import (
     BotNewsModerationRequest,
     BotNewsModerationResponse,
+    BotNewsPostActionRequest,
+    BotNewsReconcileRequest,
+    BotNewsRetryRequest,
+    BotNewsRevisionActionRequest,
+    BotNewsRevisionActionResponse,
+    BotNewsTextEditRequest,
     BotSupportCaseCreateRequest,
     BotSupportCaseCreateResponse,
     BotSupportCaseStatus,
@@ -37,7 +44,20 @@ from fitminiapp_api.services.bot_support import (
     create_support_case,
     record_support_relay_result,
 )
-from fitminiapp_api.services.news_editorial import moderate_draft
+from fitminiapp_api.services.news_editorial import (
+    edit_text_revision,
+    moderate_draft,
+    queue_image_regeneration,
+    remove_current_image,
+    replace_current_image,
+)
+from fitminiapp_api.services.news_images import NewsImageError
+from fitminiapp_api.services.news_post_management import manage_published_post
+from fitminiapp_api.services.news_publication import (
+    approve_publication,
+    reconcile_uncertain_publication,
+    retry_uncertain_publication,
+)
 from fitminiapp_api.services.password_auth import PasswordAuthError
 from fitminiapp_api.services.telegram_auth import (
     get_or_insert_telegram_user,
@@ -263,3 +283,178 @@ def moderate_news_draft_from_bot(
             status=result.status,
             cluster_status=result.cluster_status,
         )
+
+
+@router.post(
+    "/news/drafts/{draft_id}/actions",
+    response_model=BotNewsRevisionActionResponse,
+)
+def act_on_news_revision_from_bot(
+    draft_id: NewsDraftId,
+    payload: BotNewsRevisionActionRequest,
+    x_bot_token: str | None = Header(default=None),
+) -> BotNewsRevisionActionResponse:
+    _check_bot_token(x_bot_token)
+    _check_support_admin(payload.admin_telegram_user_id)
+    with get_session_context() as db:
+        if payload.action == "regenerate_image":
+            result = queue_image_regeneration(
+                db,
+                draft_id=draft_id,
+                expected_image_revision=payload.expected_image_revision,
+                admin_telegram_user_id=payload.admin_telegram_user_id,
+            )
+            return BotNewsRevisionActionResponse(
+                status=result.status, cluster_status=result.cluster_status
+            )
+        if payload.action == "remove_image":
+            result = remove_current_image(
+                db,
+                draft_id=draft_id,
+                expected_image_revision=payload.expected_image_revision,
+                admin_telegram_user_id=payload.admin_telegram_user_id,
+            )
+            return BotNewsRevisionActionResponse(
+                status=result.status, cluster_status=result.cluster_status
+            )
+        approval = approve_publication(
+            db,
+            draft_id=draft_id,
+            expected_image_revision=payload.expected_image_revision,
+            admin_telegram_user_id=payload.admin_telegram_user_id,
+            mode="immediate" if payload.action == "publish" else "scheduled",
+            scheduled_local=payload.scheduled_local,
+            timezone_name=payload.timezone,
+            urgent_override=payload.urgent_override,
+        )
+        return BotNewsRevisionActionResponse(
+            status=approval.status,
+            snapshot_id=approval.snapshot_id,
+            blockers=list(approval.blockers),
+        )
+
+
+@router.post(
+    "/news/drafts/{draft_id}/text",
+    response_model=BotNewsRevisionActionResponse,
+)
+def edit_news_text_from_bot(
+    draft_id: NewsDraftId,
+    payload: BotNewsTextEditRequest,
+    x_bot_token: str | None = Header(default=None),
+) -> BotNewsRevisionActionResponse:
+    _check_bot_token(x_bot_token)
+    _check_support_admin(payload.admin_telegram_user_id)
+    with get_session_context() as db:
+        result = edit_text_revision(
+            db,
+            draft_id=draft_id,
+            expected_image_revision=payload.expected_image_revision,
+            admin_telegram_user_id=payload.admin_telegram_user_id,
+            draft_text=payload.draft_text,
+        )
+        return BotNewsRevisionActionResponse(
+            status=result.status, cluster_status=result.cluster_status
+        )
+
+
+@router.post(
+    "/news/drafts/{draft_id}/image",
+    response_model=BotNewsRevisionActionResponse,
+)
+async def replace_news_image_from_bot(
+    draft_id: NewsDraftId,
+    request: Request,
+    x_bot_token: str | None = Header(default=None),
+    x_admin_telegram_user_id: int = Header(..., ge=1),
+    x_expected_image_revision: int = Header(..., ge=0),
+) -> BotNewsRevisionActionResponse:
+    _check_bot_token(x_bot_token)
+    _check_support_admin(x_admin_telegram_user_id)
+    chunks: list[bytes] = []
+    received = 0
+    async for chunk in request.stream():
+        received += len(chunk)
+        if received > settings.news_image_upload_max_bytes:
+            raise HTTPException(status_code=413, detail="image_size_invalid")
+        chunks.append(chunk)
+    image_data = b"".join(chunks)
+    try:
+        with get_session_context() as db:
+            result = replace_current_image(
+                db,
+                draft_id=draft_id,
+                expected_image_revision=x_expected_image_revision,
+                admin_telegram_user_id=x_admin_telegram_user_id,
+                image_data=image_data,
+            )
+            return BotNewsRevisionActionResponse(
+                status=result.status, cluster_status=result.cluster_status
+            )
+    except NewsImageError as exc:
+        raise HTTPException(status_code=422, detail=exc.code) from exc
+
+
+@router.post(
+    "/news/publications/{snapshot_id}/post-action",
+    response_model=BotNewsRevisionActionResponse,
+)
+async def manage_published_news_from_bot(
+    snapshot_id: NewsDraftId,
+    payload: BotNewsPostActionRequest,
+    x_bot_token: str | None = Header(default=None),
+) -> BotNewsRevisionActionResponse:
+    _check_bot_token(x_bot_token)
+    _check_support_admin(payload.admin_telegram_user_id)
+    async with httpx.AsyncClient(timeout=15) as client:
+        with get_session_context() as db:
+            result = await manage_published_post(
+                db,
+                snapshot_id=snapshot_id,
+                admin_telegram_user_id=payload.admin_telegram_user_id,
+                action=payload.action,
+                text=payload.text,
+                client=client,
+            )
+            return BotNewsRevisionActionResponse(status=result.status)
+
+
+@router.post(
+    "/news/publications/{snapshot_id}/reconcile",
+    response_model=BotNewsRevisionActionResponse,
+)
+def reconcile_news_publication_from_bot(
+    snapshot_id: NewsDraftId,
+    payload: BotNewsReconcileRequest,
+    x_bot_token: str | None = Header(default=None),
+) -> BotNewsRevisionActionResponse:
+    _check_bot_token(x_bot_token)
+    _check_support_admin(payload.admin_telegram_user_id)
+    with get_session_context() as db:
+        reconciled = reconcile_uncertain_publication(
+            db,
+            snapshot_id=snapshot_id,
+            admin_telegram_user_id=payload.admin_telegram_user_id,
+            channel_message_id=payload.channel_message_id,
+        )
+        return BotNewsRevisionActionResponse(status="updated" if reconciled else "stale")
+
+
+@router.post(
+    "/news/publications/{snapshot_id}/retry",
+    response_model=BotNewsRevisionActionResponse,
+)
+def retry_news_publication_from_bot(
+    snapshot_id: NewsDraftId,
+    payload: BotNewsRetryRequest,
+    x_bot_token: str | None = Header(default=None),
+) -> BotNewsRevisionActionResponse:
+    _check_bot_token(x_bot_token)
+    _check_support_admin(payload.admin_telegram_user_id)
+    with get_session_context() as db:
+        queued = retry_uncertain_publication(
+            db,
+            snapshot_id=snapshot_id,
+            admin_telegram_user_id=payload.admin_telegram_user_id,
+        )
+        return BotNewsRevisionActionResponse(status="queued" if queued else "stale")

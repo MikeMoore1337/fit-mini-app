@@ -1,6 +1,7 @@
 import re
 from typing import Literal
 from urllib.parse import urlparse
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -98,7 +99,28 @@ class Settings(BaseSettings):
     news_llm_api_key: str = ""
     news_llm_model: str = ""
     news_llm_timeout_seconds: float = Field(default=20, ge=5, le=60)
-    news_llm_prompt_version: str = "news-draft-v1"
+    news_llm_prompt_version: str = "news-draft-v2"
+    news_image_provider: Literal["disabled", "cloudflare_workers_ai"] = "disabled"
+    news_image_cloudflare_account_id: str = ""
+    news_image_cloudflare_api_token: str = ""
+    news_image_cloudflare_free_plan_confirmed: bool = False
+    news_image_model: Literal["@cf/black-forest-labs/flux-1-schnell"] = (
+        "@cf/black-forest-labs/flux-1-schnell"
+    )
+    news_image_steps: Literal[4] = 4
+    news_image_daily_request_limit: int = Field(default=20, ge=1, le=40)
+    news_image_timeout_seconds: float = Field(default=60, ge=10, le=180)
+    news_image_prompt_version: str = "news-image-v1"
+    news_image_max_bytes: int = Field(default=8_388_608, ge=262_144, le=9_500_000)
+    news_image_upload_max_bytes: int = Field(default=8_388_608, ge=262_144, le=9_500_000)
+    news_publication_enabled: bool = False
+    news_publication_renderer: Literal["news-publication-plain-v0"] = "news-publication-plain-v0"
+    news_channel_environment: Literal["staging", "production"] = "staging"
+    news_publication_timezone: str = "Europe/Moscow"
+    news_schedule_min_minutes: int = Field(default=5, ge=1, le=1440)
+    news_schedule_max_days: int = Field(default=30, ge=1, le=90)
+    news_schedule_missed_minutes: int = Field(default=120, ge=5, le=1440)
+    news_daily_publication_limit: int = Field(default=1, ge=1, le=10)
 
     @model_validator(mode="after")
     def validate_production_safety(self) -> Settings:
@@ -159,27 +181,67 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_news_pipeline(self) -> Settings:
-        if self.news_ingestion_enabled and not self.admin_telegram_id_set:
+        news_active = self.news_ingestion_enabled or self.news_publication_enabled
+        if news_active and not self.admin_telegram_id_set:
             raise ValueError(
-                "ADMIN_TELEGRAM_USER_IDS must be configured when NEWS_INGESTION_ENABLED=true"
+                "ADMIN_TELEGRAM_USER_IDS must be configured when the news workflow is enabled"
             )
-        if self.news_ingestion_enabled and self.news_channel_id is None:
-            raise ValueError("NEWS_CHANNEL_ID must be confirmed before news ingestion is enabled")
+        if news_active and self.news_channel_id is None:
+            raise ValueError(
+                "NEWS_CHANNEL_ID must be confirmed before the news workflow is enabled"
+            )
         if self.news_channel_id is not None and self.news_channel_id >= 0:
             raise ValueError("NEWS_CHANNEL_ID must be a negative Telegram channel id")
         username = self.news_channel_username.strip().removeprefix("@").lower()
         if username and not re.fullmatch(r"[a-z][a-z0-9_]{4,31}", username):
             raise ValueError("NEWS_CHANNEL_USERNAME is invalid")
         self.news_channel_username = username
-        if self.news_llm_provider == "disabled":
-            return self
-        parsed = urlparse(self.news_llm_endpoint)
-        if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
-            raise ValueError("NEWS_LLM_ENDPOINT must be an absolute credential-free HTTPS URL")
-        if not self.news_llm_api_key.strip() or not self.news_llm_model.strip():
+        if self.news_llm_provider != "disabled":
+            parsed = urlparse(self.news_llm_endpoint)
+            if (
+                parsed.scheme != "https"
+                or not parsed.hostname
+                or parsed.username
+                or parsed.password
+            ):
+                raise ValueError("NEWS_LLM_ENDPOINT must be an absolute credential-free HTTPS URL")
+            if not self.news_llm_api_key.strip() or not self.news_llm_model.strip():
+                raise ValueError(
+                    "NEWS_LLM_API_KEY and NEWS_LLM_MODEL are required for openai_compatible drafts"
+                )
+        if self.news_image_provider == "cloudflare_workers_ai":
+            if not self.news_image_cloudflare_account_id.strip() or not (
+                self.news_image_cloudflare_api_token.strip()
+            ):
+                raise ValueError(
+                    "NEWS_IMAGE_CLOUDFLARE_ACCOUNT_ID and "
+                    "NEWS_IMAGE_CLOUDFLARE_API_TOKEN are required"
+                )
+            if not self.news_image_cloudflare_free_plan_confirmed:
+                raise ValueError(
+                    "NEWS_IMAGE_CLOUDFLARE_FREE_PLAN_CONFIRMED must be true; "
+                    "paid image generation is prohibited"
+                )
+        if self.news_publication_enabled and not self.news_ingestion_enabled:
             raise ValueError(
-                "NEWS_LLM_API_KEY and NEWS_LLM_MODEL are required for openai_compatible drafts"
+                "NEWS_INGESTION_ENABLED must be true when NEWS_PUBLICATION_ENABLED=true"
             )
+        if (
+            self.app_env == "prod"
+            and self.news_publication_enabled
+            and self.news_channel_environment != "production"
+        ):
+            raise ValueError(
+                "NEWS_CHANNEL_ENVIRONMENT must be production for enabled production publishing"
+            )
+        if self.news_publication_enabled and self.news_channel_environment == "production":
+            raise ValueError(
+                "Production news publishing requires the owner-approved task 89A renderer"
+            )
+        try:
+            ZoneInfo(self.news_publication_timezone)
+        except ZoneInfoNotFoundError as exc:
+            raise ValueError("NEWS_PUBLICATION_TIMEZONE must be a valid IANA timezone") from exc
         return self
 
     @field_validator("open_food_facts_user_agent")

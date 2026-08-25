@@ -20,7 +20,13 @@ from fitminiapp_api.models.news import (
     NewsSource,
     NewsStateTransition,
 )
-from fitminiapp_api.services.news_drafts import create_draft_revision
+from fitminiapp_api.services.news_drafts import (
+    DraftGenerationError,
+    NewsEvidencePacket,
+    _validated_fields,
+    create_draft_revision,
+    render_draft,
+)
 from fitminiapp_api.services.news_editorial import (
     callback_data,
     editorial_actor_ref,
@@ -97,6 +103,30 @@ def _parsed(
         publisher="Example Journal",
         published_at=utcnow() - timedelta(days=1),
         doi=doi,
+    )
+
+
+def _evidence_packet() -> NewsEvidencePacket:
+    return NewsEvidencePacket(
+        cluster_id="cluster-1",
+        primary_item_id=1,
+        evidence_item_ids=(1,),
+        topic="research",
+        score=70,
+        score_reasons=("primary_source",),
+        risk_flags=(),
+        source_id="journal-one",
+        source_type="primary_research",
+        source_name="Example Journal",
+        canonical_url="https://journal-one.example/article",
+        primary_url="https://doi.org/10.1000/test.1",
+        title="Resistance training study",
+        summary="A controlled study in trained adults.",
+        author=None,
+        publisher="Example Journal",
+        published_at=utcnow() - timedelta(days=1),
+        doi="10.1000/test.1",
+        supporting_sources=(),
     )
 
 
@@ -508,6 +538,62 @@ def test_scoring_deprioritizes_weak_secondary_and_rejects_aas() -> None:
         assert "source_prompt_injection" in injection_cluster.risk_flags
 
 
+def test_draft_contract_renders_clear_russian_sections_and_optional_importance() -> None:
+    fields = _validated_fields(
+        {
+            "headline": "Силовые тренировки связали с улучшением практических результатов",
+            "summary": (
+                "Авторы изучили влияние силовых тренировок на подготовленных взрослых.\n\n"
+                "Работа описывает результаты только для исследованной группы."
+            ),
+            "why_it_matters": "Выводы помогают точнее оценивать применимость таких программ.",
+        }
+    )
+
+    rendered = render_draft(fields, _evidence_packet())
+
+    assert rendered.startswith("ЗАГОЛОВОК\n")
+    assert "\n\n──────────\n\nКРАТКО\n" in rendered
+    assert "\n\n──────────\n\nПОЧЕМУ ЭТО ВАЖНО\n" in rendered
+    assert rendered.endswith("ИСТОЧНИК\nhttps://doi.org/10.1000/test.1")
+    assert "\n\nРабота описывает" in rendered
+    assert "Рубрика:" not in rendered
+    assert "Ограничения" not in rendered
+
+    fields["why_it_matters"] = ""
+    without_importance = render_draft(fields, _evidence_packet())
+    assert "ПОЧЕМУ ЭТО ВАЖНО" not in without_importance
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    (("headline", "English headline only"),),
+)
+def test_draft_contract_rejects_non_russian_or_invalid_structure(field: str, value: str) -> None:
+    payload = {
+        "headline": "Русский заголовок",
+        "summary": "Краткое изложение новости.",
+        "why_it_matters": "Это помогает понять значение результата.",
+    }
+    payload[field] = value
+
+    with pytest.raises(DraftGenerationError, match="invalid_draft_schema"):
+        _validated_fields(payload)
+
+
+def test_draft_contract_normalizes_extra_paragraphs_and_importance_sentences() -> None:
+    fields = _validated_fields(
+        {
+            "headline": "Русский заголовок",
+            "summary": "Первый абзац.\n\nВторой абзац.\n\nТретий абзац.",
+            "why_it_matters": "Первое предложение. Второе предложение.",
+        }
+    )
+
+    assert fields["summary"] == "Первый абзац.\n\nВторой абзац. Третий абзац."
+    assert fields["why_it_matters"] == "Первое предложение."
+
+
 def test_generation_is_immutable_grounded_and_falls_back_on_invented_number(monkeypatch) -> None:
     _create_source()
     cluster_id = _candidate_cluster()
@@ -516,17 +602,17 @@ def test_generation_is_immutable_grounded_and_falls_back_on_invented_number(monk
     monkeypatch.setattr(settings, "news_llm_api_key", "test-key")
     monkeypatch.setattr(settings, "news_llm_model", "test-model")
     payload = {
-        "rubric": "Исследования",
         "headline": "Что показала новая работа",
-        "what_happened": "Авторы описали результат для изученной группы.",
+        "summary": (
+            "Авторы описали результат для изученной группы. Нагрузка вырастет на 99% за неделю."
+        ),
         "why_it_matters": "Материал помогает уточнить контекст силовых тренировок.",
-        "application": "Нагрузка вырастет на 99% за неделю.",
-        "limitations": "Результат нельзя переносить на всех.",
     }
 
     def respond(request: httpx.Request) -> httpx.Response:
         request_payload = json.loads(request.content)
         assert request_payload["messages"][0]["role"] == "system"
+        assert "одном или двух коротких абзацах" in request_payload["messages"][0]["content"]
         assert request_payload["messages"][1]["content"].startswith("SOURCE_DATA_JSON")
         return httpx.Response(
             200,
@@ -555,8 +641,10 @@ def test_generation_is_immutable_grounded_and_falls_back_on_invented_number(monk
         assert "99%" not in stored.draft_text
         assert stored.revision == 1
         assert stored.source_digest
-        assert "population/context" in stored.draft_text
-        assert "Ограничения" in stored.draft_text
+        assert "КРАТКО" in stored.draft_text
+        assert "ПОЧЕМУ ЭТО ВАЖНО" in stored.draft_text
+        assert "ИСТОЧНИК" in stored.draft_text
+        assert "Ограничения" not in stored.draft_text
 
 
 def test_fetch_and_worker_generation_are_idempotent(monkeypatch) -> None:
@@ -721,7 +809,8 @@ def test_owner_only_moderation_is_revision_bound_idempotent_and_never_publishes(
         assert [(row.from_status, row.to_status) for row in transitions] == [
             ("fetched", "clustered"),
             ("clustered", "candidate"),
-            ("candidate", "draft_ready"),
+            ("candidate", "image_pending"),
+            ("image_pending", "draft_ready"),
             ("draft_ready", "awaiting_review"),
             ("awaiting_review", "accepted_for_design"),
         ]

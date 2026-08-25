@@ -12,6 +12,9 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/*
 COPY backend/requirements-runtime.txt .
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -r requirements-runtime.txt && pip check

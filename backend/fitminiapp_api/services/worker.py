@@ -5,7 +5,8 @@ import hashlib
 import hmac
 import logging
 from collections.abc import Awaitable, Callable
-from datetime import timedelta
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from time import monotonic
 
 import httpx
@@ -37,6 +38,28 @@ from fitminiapp_api.services.notifications import (
 
 logger = logging.getLogger(__name__)
 TELEGRAM_DELIVERY_RATE_PER_SECOND = 20
+
+
+@dataclass(frozen=True)
+class TelegramPublicationResult:
+    message_id: int
+    message_date: datetime
+
+
+class TelegramPublicationError(RuntimeError):
+    def __init__(
+        self,
+        code: str,
+        *,
+        retry_after: timedelta | None = None,
+        terminal: bool = False,
+        uncertain: bool = False,
+    ) -> None:
+        super().__init__(code)
+        self.code = code
+        self.retry_after = retry_after
+        self.terminal = terminal
+        self.uncertain = uncertain
 
 
 class TelegramRateLimiter:
@@ -183,6 +206,113 @@ async def send_telegram_message(
         message_id = result.get("message_id") if isinstance(result, dict) else None
         return message_id if isinstance(message_id, int) else None
     raise _telegram_delivery_error(response)
+
+
+async def send_telegram_photo(
+    client: httpx.AsyncClient,
+    chat_id: int,
+    image_data: bytes,
+) -> int | None:
+    response = await client.post(
+        f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendPhoto",
+        data={"chat_id": str(chat_id)},
+        files={"photo": ("news-preview.jpg", image_data, "image/jpeg")},
+    )
+    if response.is_success:
+        payload = response.json()
+        result = payload.get("result") if isinstance(payload, dict) else None
+        message_id = result.get("message_id") if isinstance(result, dict) else None
+        return message_id if isinstance(message_id, int) else None
+    raise _telegram_delivery_error(response)
+
+
+async def check_news_channel_rights(client: httpx.AsyncClient) -> bool:
+    if not settings.news_publication_enabled or settings.news_channel_id is None:
+        return False
+    try:
+        me_response = await client.get(
+            f"https://api.telegram.org/bot{settings.telegram_bot_token}/getMe"
+        )
+        me_payload = me_response.json()
+        bot_id = me_payload["result"]["id"]
+        member_response = await client.post(
+            f"https://api.telegram.org/bot{settings.telegram_bot_token}/getChatMember",
+            json={"chat_id": settings.news_channel_id, "user_id": bot_id},
+        )
+        member_payload = member_response.json()
+        member = member_payload["result"]
+        ready = member.get("status") == "creator" or (
+            member.get("status") == "administrator" and member.get("can_post_messages") is True
+        )
+    except httpx.HTTPError, KeyError, TypeError, ValueError:
+        ready = False
+    logger.log(
+        logging.INFO if ready else logging.ERROR,
+        "news_channel_rights_checked",
+        extra={
+            "pipeline_stage": "channel_preflight",
+            "outcome": "ready" if ready else "missing_can_post_messages",
+            "channel_environment": settings.news_channel_environment,
+        },
+    )
+    return ready
+
+
+async def send_telegram_publication(
+    client: httpx.AsyncClient,
+    channel_id: int,
+    text: str,
+    image_data: bytes | None,
+    *,
+    parse_mode: str | None = None,
+    link_preview_disabled: bool = False,
+) -> TelegramPublicationResult:
+    if channel_id != settings.news_channel_id:
+        raise TelegramPublicationError("channel_mismatch", terminal=True)
+    endpoint = "sendPhoto" if image_data is not None else "sendMessage"
+    url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/{endpoint}"
+    try:
+        if image_data is None:
+            request_payload: dict[str, object] = {"chat_id": channel_id, "text": text}
+            if parse_mode is not None:
+                request_payload["parse_mode"] = parse_mode
+            if link_preview_disabled:
+                request_payload["link_preview_options"] = {"is_disabled": True}
+            response = await client.post(url, json=request_payload)
+        else:
+            form_data: dict[str, str] = {"chat_id": str(channel_id), "caption": text}
+            if parse_mode is not None:
+                form_data["parse_mode"] = parse_mode
+            response = await client.post(
+                url,
+                data=form_data,
+                files={"photo": ("approved-news.jpg", image_data, "image/jpeg")},
+            )
+    except httpx.TimeoutException as exc:
+        raise TelegramPublicationError("telegram_send_timeout", uncertain=True) from exc
+    except httpx.RequestError as exc:
+        raise TelegramPublicationError("telegram_network_error") from exc
+    if not response.is_success:
+        error = _telegram_delivery_error(response)
+        raise TelegramPublicationError(
+            safe_delivery_error(error),
+            retry_after=error.retry_after,
+            terminal=error.terminal_status is not None,
+        )
+    try:
+        payload = response.json()
+        if payload.get("ok") is not True:
+            raise TypeError
+        result = payload["result"]
+        if not isinstance(result, dict):
+            raise TypeError
+        message_id = result["message_id"]
+        message_date = datetime.fromtimestamp(result["date"], tz=UTC).replace(tzinfo=None)
+    except (KeyError, TypeError, ValueError, OSError) as exc:
+        raise TelegramPublicationError("telegram_malformed_success", uncertain=True) from exc
+    if not isinstance(message_id, int):
+        raise TelegramPublicationError("telegram_malformed_success", uncertain=True)
+    return TelegramPublicationResult(message_id=message_id, message_date=message_date)
 
 
 def _prepare_delivery(
@@ -359,9 +489,12 @@ async def main() -> None:
             settings.apple_oauth_client_secret,
             settings.database_url,
             settings.news_llm_api_key,
+            settings.news_image_cloudflare_api_token,
         ),
     )
     logger.info("worker_started")
+    async with httpx.AsyncClient(timeout=15) as preflight_client:
+        news_publication_ready = await check_news_channel_rights(preflight_client)
     next_reminder_sync = 0.0
     next_news_sync = 0.0
     while True:
@@ -375,6 +508,9 @@ async def main() -> None:
             try:
                 await run_news_pipeline_once(
                     send_message=send_telegram_message,
+                    send_photo=send_telegram_photo,
+                    send_publication=send_telegram_publication,
+                    publication_ready=news_publication_ready,
                     fetch_sources=should_fetch_news,
                 )
             except Exception as exc:

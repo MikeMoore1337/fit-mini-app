@@ -592,8 +592,8 @@ async def unknown_command(message: Message) -> None:
     )
 
 
-dp.include_router(feedback_router)
 dp.include_router(news_editorial_router)
+dp.include_router(feedback_router)
 dp.include_router(public_router)
 
 

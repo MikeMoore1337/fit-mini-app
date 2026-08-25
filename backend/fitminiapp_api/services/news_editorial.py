@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import secrets
 from dataclasses import dataclass
 from datetime import timedelta
 from typing import Literal
@@ -13,12 +14,21 @@ from fitminiapp_api.models.news import (
     NewsCluster,
     NewsDraftRevision,
     NewsEditorialAction,
+    NewsImageRevision,
     NewsItem,
+    NewsPublicationSnapshot,
+    NewsReviewDecision,
     NewsReviewDelivery,
     NewsStateTransition,
 )
 from fitminiapp_api.services.audit import record_audit_event
+from fitminiapp_api.services.news_content import parse_editorial_content
+from fitminiapp_api.services.news_images import create_uploaded_image_revision
 from fitminiapp_api.services.news_ingestion import utcnow
+from fitminiapp_api.services.news_publication import (
+    publication_preview_text,
+    revoke_active_decisions,
+)
 from fitminiapp_api.services.news_state import transition_news_cluster
 
 EditorialAction = Literal["skip", "defer", "regenerate", "accept_for_design"]
@@ -31,8 +41,20 @@ type ModerationStatus = Literal[
     "limit_reached",
     "unavailable",
 ]
-TERMINAL_CLUSTER_STATUSES = {"rejected", "accepted_for_design", "rejected_by_rules"}
+TERMINAL_CLUSTER_STATUSES = {
+    "rejected",
+    "accepted_for_design",
+    "rejected_by_rules",
+    "published",
+}
 MAX_REVIEW_MESSAGE_CHARS = 4000
+MAX_IMAGE_REVISIONS = 10
+REVISION_EDITABLE_STATUSES = {
+    "awaiting_review",
+    "publication_approved",
+    "publication_scheduled",
+    "publication_failed",
+}
 
 
 @dataclass(frozen=True)
@@ -62,6 +84,13 @@ def callback_data(action: EditorialAction, draft_id: str) -> str:
     return value
 
 
+def publishing_callback_data(action: str, draft_id: str, image_revision: int) -> str:
+    value = f"newsp:{action}:{draft_id}:{image_revision}"
+    if len(value.encode("utf-8")) > 64:
+        raise ValueError("callback_data_too_long")
+    return value
+
+
 def latest_draft(db: Session, cluster: NewsCluster) -> NewsDraftRevision | None:
     if cluster.latest_draft_revision < 1:
         return None
@@ -73,6 +102,202 @@ def latest_draft(db: Session, cluster: NewsCluster) -> NewsDraftRevision | None:
         )
         .first()
     )
+
+
+def edit_text_revision(
+    db: Session,
+    *,
+    draft_id: str,
+    expected_image_revision: int,
+    admin_telegram_user_id: int,
+    draft_text: str,
+) -> ModerationResult:
+    clean_text = draft_text.strip()
+    if not 100 <= len(clean_text) <= settings.news_draft_max_chars:
+        return ModerationResult(status="unavailable")
+    editorial_content = parse_editorial_content(clean_text)
+    if editorial_content is None:
+        return ModerationResult(status="unavailable")
+    draft = db.get(NewsDraftRevision, draft_id)
+    if draft is None:
+        return ModerationResult(status="unavailable")
+    cluster = db.query(NewsCluster).filter_by(id=draft.cluster_id).with_for_update().first()
+    if (
+        cluster is None
+        or cluster.status not in REVISION_EDITABLE_STATUSES
+        or draft.revision != cluster.latest_draft_revision
+        or expected_image_revision != cluster.current_image_revision
+    ):
+        return ModerationResult(status="stale")
+    actor_ref = editorial_actor_ref(admin_telegram_user_id)
+    primary = db.get(NewsItem, draft.primary_item_id)
+    trusted_source_url = str(
+        draft.evidence_metadata.get(
+            "trusted_source_url",
+            (primary.primary_url or primary.canonical_url) if primary is not None else "",
+        )
+    )
+    if editorial_content.source_url != trusted_source_url:
+        return ModerationResult(status="unavailable")
+    revoke_active_decisions(db, cluster.id, reason="text_revision_changed")
+    revision = cluster.latest_draft_revision + 1
+    row = NewsDraftRevision(
+        id=secrets.token_hex(16),
+        cluster_id=cluster.id,
+        primary_item_id=draft.primary_item_id,
+        revision=revision,
+        provider="owner_edit",
+        model="none",
+        prompt_version="owner-edit-v1",
+        source_digest=draft.source_digest,
+        evidence_item_ids=list(draft.evidence_item_ids),
+        evidence_metadata={
+            **dict(draft.evidence_metadata),
+            "editorial_contract_version": "news-editorial-v2",
+            "editorial_fields": editorial_content.fields(),
+            "trusted_source_url": trusted_source_url,
+        },
+        draft_text=clean_text,
+        warnings=[
+            warning
+            for warning in draft.warnings
+            if warning != "deterministic_fallback_requires_editor"
+        ],
+        generation_latency_ms=0,
+    )
+    db.add(row)
+    cluster.latest_draft_revision = revision
+    cluster.current_image_revision = 0
+    cluster.delivery_round += 1
+    _cancel_pending_deliveries(db, draft.id)
+    next_status = (
+        "image_pending" if cluster.latest_image_revision < MAX_IMAGE_REVISIONS else "draft_ready"
+    )
+    transition_news_cluster(
+        db,
+        cluster,
+        next_status,
+        reason_code=(
+            "owner_text_revision_created"
+            if next_status == "image_pending"
+            else "owner_text_revision_created_without_image_at_limit"
+        ),
+        actor_ref=actor_ref,
+    )
+    record_audit_event(
+        db,
+        action="news.text_edited",
+        resource_type="news_cluster",
+        resource_id=cluster.id,
+        details={"revision": revision},
+    )
+    db.flush()
+    return ModerationResult(status="queued", cluster_status=cluster.status)
+
+
+def queue_image_regeneration(
+    db: Session,
+    *,
+    draft_id: str,
+    expected_image_revision: int,
+    admin_telegram_user_id: int,
+) -> ModerationResult:
+    draft = db.get(NewsDraftRevision, draft_id)
+    if draft is None:
+        return ModerationResult(status="unavailable")
+    cluster = db.query(NewsCluster).filter_by(id=draft.cluster_id).with_for_update().first()
+    if (
+        cluster is None
+        or cluster.status not in REVISION_EDITABLE_STATUSES
+        or draft.revision != cluster.latest_draft_revision
+        or expected_image_revision != cluster.current_image_revision
+    ):
+        return ModerationResult(status="stale")
+    if cluster.latest_image_revision >= MAX_IMAGE_REVISIONS:
+        return ModerationResult(status="limit_reached", cluster_status=cluster.status)
+    actor_ref = editorial_actor_ref(admin_telegram_user_id)
+    revoke_active_decisions(db, cluster.id, reason="image_regeneration_requested")
+    cluster.delivery_round += 1
+    _cancel_pending_deliveries(db, draft.id)
+    transition_news_cluster(
+        db,
+        cluster,
+        "image_pending",
+        reason_code="owner_image_regeneration_requested",
+        actor_ref=actor_ref,
+    )
+    return ModerationResult(status="queued", cluster_status=cluster.status)
+
+
+def remove_current_image(
+    db: Session,
+    *,
+    draft_id: str,
+    expected_image_revision: int,
+    admin_telegram_user_id: int,
+) -> ModerationResult:
+    draft = db.get(NewsDraftRevision, draft_id)
+    if draft is None:
+        return ModerationResult(status="unavailable")
+    cluster = db.query(NewsCluster).filter_by(id=draft.cluster_id).with_for_update().first()
+    if (
+        cluster is None
+        or cluster.status not in REVISION_EDITABLE_STATUSES
+        or draft.revision != cluster.latest_draft_revision
+        or expected_image_revision != cluster.current_image_revision
+    ):
+        return ModerationResult(status="stale")
+    actor_ref = editorial_actor_ref(admin_telegram_user_id)
+    revoke_active_decisions(db, cluster.id, reason="image_removed")
+    cluster.current_image_revision = 0
+    cluster.delivery_round += 1
+    _cancel_pending_deliveries(db, draft.id)
+    transition_news_cluster(
+        db, cluster, "draft_ready", reason_code="owner_image_removed", actor_ref=actor_ref
+    )
+    record_audit_event(
+        db,
+        action="news.image_removed",
+        resource_type="news_cluster",
+        resource_id=cluster.id,
+        details={"text_revision": draft.revision},
+    )
+    return ModerationResult(status="queued", cluster_status=cluster.status)
+
+
+def replace_current_image(
+    db: Session,
+    *,
+    draft_id: str,
+    expected_image_revision: int,
+    admin_telegram_user_id: int,
+    image_data: bytes,
+) -> ModerationResult:
+    draft = db.get(NewsDraftRevision, draft_id)
+    if draft is None:
+        return ModerationResult(status="unavailable")
+    cluster = db.query(NewsCluster).filter_by(id=draft.cluster_id).with_for_update().first()
+    if (
+        cluster is None
+        or cluster.status not in REVISION_EDITABLE_STATUSES
+        or draft.revision != cluster.latest_draft_revision
+        or expected_image_revision != cluster.current_image_revision
+    ):
+        return ModerationResult(status="stale")
+    if cluster.latest_image_revision >= MAX_IMAGE_REVISIONS:
+        return ModerationResult(status="limit_reached", cluster_status=cluster.status)
+    revoke_active_decisions(db, cluster.id, reason="image_replaced")
+    create_uploaded_image_revision(db, cluster, draft, image_data)
+    cluster.delivery_round += 1
+    _cancel_pending_deliveries(db, draft.id)
+    record_audit_event(
+        db,
+        action="news.image_replaced",
+        resource_type="news_cluster",
+        resource_id=cluster.id,
+        details={"image_revision": cluster.current_image_revision},
+    )
+    return ModerationResult(status="queued", cluster_status=cluster.status)
 
 
 def _cancel_pending_deliveries(db: Session, draft_id: str) -> None:
@@ -126,11 +351,13 @@ def moderate_draft(
     result_status: ModerationStatus
     outcome = "applied"
     if action == "skip":
+        revoke_active_decisions(db, cluster.id, reason="editorial_skip")
         transition_news_cluster(
             db, cluster, "rejected", reason_code="owner_skip", actor_ref=actor_ref
         )
         result_status = "accepted"
     elif action == "accept_for_design":
+        revoke_active_decisions(db, cluster.id, reason="editorial_accept_for_design")
         transition_news_cluster(
             db,
             cluster,
@@ -140,6 +367,7 @@ def moderate_draft(
         )
         result_status = "accepted"
     elif action == "defer":
+        revoke_active_decisions(db, cluster.id, reason="editorial_defer")
         transition_news_cluster(
             db, cluster, "deferred", reason_code="owner_defer", actor_ref=actor_ref
         )
@@ -151,6 +379,7 @@ def moderate_draft(
             result_status = "limit_reached"
             outcome = "limit_reached"
         else:
+            revoke_active_decisions(db, cluster.id, reason="editorial_regenerate")
             transition_news_cluster(
                 db,
                 cluster,
@@ -183,6 +412,14 @@ def moderate_draft(
 
 def enqueue_review_deliveries(db: Session, admin_telegram_user_ids: set[int]) -> int:
     now = utcnow()
+    image_pending = db.query(NewsCluster).filter(NewsCluster.status == "image_pending").all()
+    for cluster in image_pending:
+        transition_news_cluster(
+            db,
+            cluster,
+            "draft_ready",
+            reason_code="image_generation_degraded_to_no_image",
+        )
     deferred = (
         db.query(NewsCluster)
         .filter(
@@ -201,7 +438,11 @@ def enqueue_review_deliveries(db: Session, admin_telegram_user_ids: set[int]) ->
         )
         cluster.deferred_until = None
     db.flush()
-    clusters = db.query(NewsCluster).filter(NewsCluster.status == "draft_ready").all()
+    clusters = (
+        db.query(NewsCluster)
+        .filter(NewsCluster.status.in_({"draft_ready", "publication_failed"}))
+        .all()
+    )
     created = 0
     for cluster in clusters:
         draft = latest_draft(db, cluster)
@@ -254,14 +495,33 @@ def review_message(db: Session, draft: NewsDraftRevision) -> tuple[str, str, dic
     if not isinstance(supporting_count, int):
         supporting_count = 0
     prefix = (
-        f"Редакционный черновик · revision {draft.revision}\n"
+        "Черновик — в канал ещё не отправлен\n"
+        f"Редакционный черновик · text r{draft.revision} · image r{cluster.current_image_revision}\n"
+        f"Состояние: {cluster.status}\n"
+        f"Канал: @{settings.news_channel_username or 'private'} "
+        f"({settings.news_channel_environment})\n"
         f"Topic: {metadata.get('topic', 'other')} · score {metadata.get('score', 0)}/100 "
         f"({metadata.get('score_version', 'unknown')})\n"
         f"Причины: {score_reasons}\n"
         f"Supporting sources: {max(0, supporting_count)}\n"
         f"Warnings: {warnings}\n\n"
     )
-    message = prefix + draft.draft_text
+    failure = (
+        db.query(NewsPublicationSnapshot)
+        .filter(
+            NewsPublicationSnapshot.cluster_id == cluster.id,
+            NewsPublicationSnapshot.status == "failed",
+        )
+        .order_by(NewsPublicationSnapshot.created_at.desc())
+        .first()
+    )
+    if failure is not None:
+        prefix += f"Предыдущая публикация не выполнена: {failure.last_error_code}\n\n"
+    message = (
+        prefix
+        + "Служебное представление text revision (не финальный preview канала):\n\n"
+        + publication_preview_text(draft)
+    )
     if len(message) > MAX_REVIEW_MESSAGE_CHARS:
         message = (
             message[: MAX_REVIEW_MESSAGE_CHARS - 40].rstrip()
@@ -271,20 +531,61 @@ def review_message(db: Session, draft: NewsDraftRevision) -> tuple[str, str, dic
         "inline_keyboard": [
             [{"text": "Открыть источник", "url": primary.primary_url or primary.canonical_url}],
             [
-                {"text": "Пропустить", "callback_data": callback_data("skip", draft.id)},
-                {"text": "Отложить", "callback_data": callback_data("defer", draft.id)},
+                {
+                    "text": "Опубликовать",
+                    "callback_data": publishing_callback_data(
+                        "p", draft.id, cluster.current_image_revision
+                    ),
+                },
+                {
+                    "text": "Запланировать",
+                    "callback_data": publishing_callback_data(
+                        "s", draft.id, cluster.current_image_revision
+                    ),
+                },
             ],
             [
+                {
+                    "text": "Изменить текст",
+                    "callback_data": publishing_callback_data(
+                        "e", draft.id, cluster.current_image_revision
+                    ),
+                },
                 {
                     "text": "Перегенерировать текст",
                     "callback_data": callback_data("regenerate", draft.id),
-                }
+                },
             ],
             [
                 {
-                    "text": "Передать к оформлению",
-                    "callback_data": callback_data("accept_for_design", draft.id),
-                }
+                    "text": "Перегенерировать изображение",
+                    "callback_data": publishing_callback_data(
+                        "i", draft.id, cluster.current_image_revision
+                    ),
+                },
+            ],
+            [
+                {
+                    "text": "Заменить изображение",
+                    "callback_data": publishing_callback_data(
+                        "u", draft.id, cluster.current_image_revision
+                    ),
+                },
+                {
+                    "text": "Убрать изображение",
+                    "callback_data": publishing_callback_data(
+                        "n", draft.id, cluster.current_image_revision
+                    ),
+                },
+            ],
+            [
+                {
+                    "text": "Отклонить",
+                    "callback_data": publishing_callback_data(
+                        "x", draft.id, cluster.current_image_revision
+                    ),
+                },
+                {"text": "Отложить", "callback_data": callback_data("defer", draft.id)},
             ],
         ]
     }
@@ -312,6 +613,22 @@ def prune_news_editorial(db: Session, *, retention_days: int, batch_size: int = 
             .all()
         ]
         if draft_ids:
+            decision_ids = [
+                row.id
+                for row in db.query(NewsReviewDecision.id)
+                .filter(NewsReviewDecision.cluster_id.in_(cluster_ids))
+                .all()
+            ]
+            if decision_ids:
+                db.query(NewsPublicationSnapshot).filter(
+                    NewsPublicationSnapshot.decision_id.in_(decision_ids)
+                ).delete(synchronize_session=False)
+            db.query(NewsReviewDecision).filter(
+                NewsReviewDecision.cluster_id.in_(cluster_ids)
+            ).delete(synchronize_session=False)
+            db.query(NewsImageRevision).filter(
+                NewsImageRevision.cluster_id.in_(cluster_ids)
+            ).delete(synchronize_session=False)
             db.query(NewsReviewDelivery).filter(NewsReviewDelivery.draft_id.in_(draft_ids)).delete(
                 synchronize_session=False
             )

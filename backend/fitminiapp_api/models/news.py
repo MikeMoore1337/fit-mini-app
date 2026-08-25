@@ -1,16 +1,18 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
     JSON,
     BigInteger,
     Boolean,
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
     UniqueConstraint,
@@ -72,7 +74,9 @@ class NewsCluster(Base):
     __table_args__ = (
         CheckConstraint(
             "status IN ('clustered', 'rejected_by_rules', 'candidate', 'draft_ready', "
-            "'awaiting_review', 'deferred', 'rejected', 'accepted_for_design')",
+            "'image_pending', 'awaiting_review', 'deferred', 'rejected', "
+            "'accepted_for_design', 'publication_approved', 'publication_scheduled', "
+            "'publication_failed', 'published')",
             name="ck_news_clusters_status",
         ),
         CheckConstraint("score BETWEEN 0 AND 100", name="ck_news_clusters_score"),
@@ -95,6 +99,8 @@ class NewsCluster(Base):
     conflict_notes: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     merge_reason: Mapped[str] = mapped_column(String(160), nullable=False, default="new_event")
     latest_draft_revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    latest_image_revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    current_image_revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     generation_attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     delivery_round: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     deferred_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
@@ -262,6 +268,179 @@ class NewsStateTransition(Base):
     to_status: Mapped[str] = mapped_column(String(32), nullable=False)
     reason_code: Mapped[str] = mapped_column(String(64), nullable=False)
     actor_ref: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=func.now()
+    )
+
+
+class NewsImageRevision(Base):
+    __tablename__ = "news_image_revisions"
+    __table_args__ = (
+        UniqueConstraint("cluster_id", "revision", name="uq_news_image_cluster_revision"),
+        CheckConstraint("revision >= 1", name="ck_news_image_revision_positive"),
+        CheckConstraint(
+            "kind IN ('generated', 'template', 'uploaded')",
+            name="ck_news_image_kind",
+        ),
+        CheckConstraint(
+            "safety_status IN ('generated_pending_review', 'owner_uploaded', 'template')",
+            name="ck_news_image_safety_status",
+        ),
+        CheckConstraint("byte_size > 0", name="ck_news_image_byte_size"),
+        CheckConstraint("width > 0 AND height > 0", name="ck_news_image_dimensions"),
+        Index("ix_news_images_cluster_created", "cluster_id", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    cluster_id: Mapped[str] = mapped_column(
+        ForeignKey("news_clusters.id", ondelete="CASCADE"), nullable=False
+    )
+    text_revision_id: Mapped[str] = mapped_column(
+        ForeignKey("news_draft_revisions.id", ondelete="CASCADE"), nullable=False
+    )
+    revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    provider: Mapped[str] = mapped_column(String(64), nullable=False)
+    model: Mapped[str] = mapped_column(String(128), nullable=False)
+    prompt_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    prompt_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    provenance: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    content_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    byte_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    width: Mapped[int] = mapped_column(Integer, nullable=False)
+    height: Mapped[int] = mapped_column(Integer, nullable=False)
+    sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    image_data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    safety_status: Mapped[str] = mapped_column(String(32), nullable=False)
+    warnings: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    generation_latency_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    generation_input_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    generation_output_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    generation_cost_microunits: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=func.now()
+    )
+
+
+class NewsReviewDecision(Base):
+    __tablename__ = "news_review_decisions"
+    __table_args__ = (
+        CheckConstraint(
+            "publication_mode IN ('immediate', 'scheduled')",
+            name="ck_news_review_publication_mode",
+        ),
+        CheckConstraint(
+            "status IN ('active', 'revoked', 'consumed', 'cancelled')",
+            name="ck_news_review_decision_status",
+        ),
+        CheckConstraint(
+            "(image_revision_id IS NULL AND explicit_no_image) OR "
+            "(image_revision_id IS NOT NULL AND NOT explicit_no_image)",
+            name="ck_news_review_exact_image",
+        ),
+        Index("ix_news_review_decisions_cluster", "cluster_id", "approved_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    cluster_id: Mapped[str] = mapped_column(
+        ForeignKey("news_clusters.id", ondelete="CASCADE"), nullable=False
+    )
+    text_revision_id: Mapped[str] = mapped_column(
+        ForeignKey("news_draft_revisions.id", ondelete="RESTRICT"), nullable=False
+    )
+    image_revision_id: Mapped[str | None] = mapped_column(
+        ForeignKey("news_image_revisions.id", ondelete="RESTRICT"), nullable=True
+    )
+    explicit_no_image: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    target_channel_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    publication_mode: Mapped[str] = mapped_column(String(16), nullable=False)
+    scheduled_for_utc: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    timezone: Mapped[str] = mapped_column(String(64), nullable=False)
+    reviewer_ref: Mapped[str] = mapped_column(String(24), nullable=False)
+    approved_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="active")
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    revocation_reason: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+
+class NewsPublicationSnapshot(Base):
+    __tablename__ = "news_publication_snapshots"
+    __table_args__ = (
+        CheckConstraint(
+            "publication_mode IN ('immediate', 'scheduled')",
+            name="ck_news_publication_mode",
+        ),
+        CheckConstraint(
+            "status IN ('queued', 'scheduled', 'processing', 'published', 'failed', "
+            "'uncertain', 'cancelled')",
+            name="ck_news_publication_status",
+        ),
+        CheckConstraint(
+            "transport IN ('message', 'photo')",
+            name="ck_news_publication_transport",
+        ),
+        CheckConstraint(
+            "parse_mode IS NULL OR parse_mode IN ('HTML')",
+            name="ck_news_publication_parse_mode",
+        ),
+        UniqueConstraint("decision_id", name="uq_news_publication_decision"),
+        UniqueConstraint("idempotency_key", name="uq_news_publication_idempotency"),
+        Index(
+            "ix_news_publication_queue",
+            "next_attempt_at",
+            postgresql_where=text("status IN ('queued', 'scheduled')"),
+            sqlite_where=text("status IN ('queued', 'scheduled')"),
+        ),
+        Index(
+            "ix_news_publication_channel_day",
+            "target_channel_id",
+            "publication_local_date",
+            "status",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    decision_id: Mapped[str] = mapped_column(
+        ForeignKey("news_review_decisions.id", ondelete="RESTRICT"), nullable=False
+    )
+    cluster_id: Mapped[str] = mapped_column(
+        ForeignKey("news_clusters.id", ondelete="CASCADE"), nullable=False
+    )
+    text_revision_id: Mapped[str] = mapped_column(
+        ForeignKey("news_draft_revisions.id", ondelete="RESTRICT"), nullable=False
+    )
+    image_revision_id: Mapped[str | None] = mapped_column(
+        ForeignKey("news_image_revisions.id", ondelete="RESTRICT"), nullable=True
+    )
+    target_channel_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    target_channel_username: Mapped[str] = mapped_column(String(32), nullable=False, default="")
+    publication_mode: Mapped[str] = mapped_column(String(16), nullable=False)
+    scheduled_for_utc: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    publication_local_date: Mapped[date] = mapped_column(Date, nullable=False)
+    timezone: Mapped[str] = mapped_column(String(64), nullable=False)
+    reviewer_ref: Mapped[str] = mapped_column(String(24), nullable=False)
+    approved_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    urgent_override: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    publication_text: Mapped[str] = mapped_column(Text, nullable=False)
+    renderer_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    transport: Mapped[str] = mapped_column(String(16), nullable=False)
+    parse_mode: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    link_preview_disabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    image_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    processing_started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    telegram_message_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    telegram_message_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    telegram_permalink: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    telegram_edited_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    telegram_deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    post_edit_content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, server_default=func.now()
     )
