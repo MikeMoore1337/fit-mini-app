@@ -22,6 +22,14 @@ SAFE_EVENT_NAMES = frozenset(
         "http_request_completed",
         "http_request_rejected",
         "notification_delivery_failed",
+        "news_draft_generation_failed",
+        "news_draft_generation_succeeded",
+        "news_pipeline_cycle_completed",
+        "news_pipeline_cycle_failed",
+        "news_review_delivery_failed",
+        "news_review_delivery_succeeded",
+        "news_source_fetch_failed",
+        "news_source_fetch_succeeded",
         "oauth_link_conflict",
         "oauth_link_failed",
         "oauth_link_start_failed",
@@ -34,7 +42,18 @@ SAFE_EVENT_NAMES = frozenset(
         "worker_started",
     }
 )
-SAFE_PROVIDER_NAMES = frozenset({"apple", "google", "open_food_facts", "telegram", "vk", "yandex"})
+SAFE_PROVIDER_NAMES = frozenset(
+    {
+        "apple",
+        "deterministic",
+        "google",
+        "open_food_facts",
+        "openai_compatible",
+        "telegram",
+        "vk",
+        "yandex",
+    }
+)
 STRUCTURED_FIELDS = (
     "request_id",
     "method",
@@ -51,6 +70,15 @@ STRUCTURED_FIELDS = (
     "delivery_error",
     "provider",
     "reason",
+    "pipeline_stage",
+    "outcome",
+    "source_ref",
+    "items_count",
+    "duplicate_count",
+    "candidate_count",
+    "queue_age_seconds",
+    "attempt_count",
+    "latency_ms",
 )
 INTEGER_FIELDS = {
     "status_code",
@@ -59,9 +87,21 @@ INTEGER_FIELDS = {
     "db_pool_checked_out",
     "db_pool_overflow",
     "body_limit_bytes",
+    "items_count",
+    "duplicate_count",
+    "candidate_count",
+    "queue_age_seconds",
+    "attempt_count",
 }
-FLOAT_FIELDS = {"duration_ms", "sql_duration_ms"}
-CODE_FIELDS = {"notification_ref", "delivery_error", "reason"}
+FLOAT_FIELDS = {"duration_ms", "sql_duration_ms", "latency_ms"}
+CODE_FIELDS = {
+    "notification_ref",
+    "delivery_error",
+    "reason",
+    "pipeline_stage",
+    "outcome",
+    "source_ref",
+}
 
 
 class JsonFormatter(logging.Formatter):

@@ -52,6 +52,7 @@ def _application_sensitive_values() -> tuple[str, ...]:
         settings.database_url,
         settings.google_site_verification,
         settings.yandex_verification,
+        settings.news_llm_api_key,
     )
 
 

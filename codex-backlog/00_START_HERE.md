@@ -4,18 +4,19 @@ Backlog использует resource-aware lifecycle. Завершённые з
 
 ## Текущее состояние
 
-- tasks `00-57`, включая буквенные подзадачи, подтверждены как завершённые;
+- tasks `00-73`, включая буквенные подзадачи, и owner-selected task `88` подтверждены как завершённые;
 - завершённые task-файлы перенесены в `tasks/done/` без переименования;
 - `DESIGN_V2_1` остаётся единственным active production source of truth;
-- следующая task — `58`.
+- current task — `89`, назначена в `PENDING` и не начата.
 
 ## Текущая задача
 
 ```text
-58-workout-adaptation-experience.md
+89-telegram-news-images-moderation-publishing.md
 ```
 
-Не запускать заново `00-57`. После успешной task `58` следующая task — `59`.
+Не запускать заново `00-73` и `88`. После успешной task `89` следующая task owner-selected
+Telegram news потока — `90`; автоматически её не начинать.
 
 ## Design alternatives flow
 
@@ -38,8 +39,9 @@ V2.1 / A / B / C / explicit hybrid
   -> 49G conditional rollout + backlog alignment
 
 49G -> 50A mobile/TMA quality foundation [done]
-50-57 feature tasks [done]
-58 workout adaptation experience [CURRENT]
+50-73 feature/release tasks [done]
+88 Telegram news ingestion/editorial drafts [done]
+89 Telegram news images/moderation/publishing [CURRENT, PENDING]
 ```
 
 ## Что изменено в v11

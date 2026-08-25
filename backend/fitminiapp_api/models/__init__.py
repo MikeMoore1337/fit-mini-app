@@ -20,6 +20,15 @@ from fitminiapp_api.models.food_diary import (
     FoodDiaryDayStatus,
     FoodDiaryEntry,
 )
+from fitminiapp_api.models.news import (
+    NewsCluster,
+    NewsDraftRevision,
+    NewsEditorialAction,
+    NewsItem,
+    NewsReviewDelivery,
+    NewsSource,
+    NewsStateTransition,
+)
 from fitminiapp_api.models.notification import Notification, NotificationSetting
 from fitminiapp_api.models.nutrition import EnergyCalibration, NutritionTarget
 from fitminiapp_api.models.program import (
@@ -76,6 +85,13 @@ __all__ = [
     "HiddenProgramTemplate",
     "LocalCredential",
     "Muscle",
+    "NewsCluster",
+    "NewsDraftRevision",
+    "NewsEditorialAction",
+    "NewsItem",
+    "NewsReviewDelivery",
+    "NewsSource",
+    "NewsStateTransition",
     "Notification",
     "NotificationSetting",
     "NutritionTarget",

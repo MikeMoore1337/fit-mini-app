@@ -10,6 +10,8 @@ from fitminiapp_api.db.session import get_session_context
 from fitminiapp_api.models.notification import NotificationSetting
 from fitminiapp_api.models.user import User, UserProfile
 from fitminiapp_api.schemas.bot import (
+    BotNewsModerationRequest,
+    BotNewsModerationResponse,
     BotSupportCaseCreateRequest,
     BotSupportCaseCreateResponse,
     BotSupportCaseStatus,
@@ -35,6 +37,7 @@ from fitminiapp_api.services.bot_support import (
     create_support_case,
     record_support_relay_result,
 )
+from fitminiapp_api.services.news_editorial import moderate_draft
 from fitminiapp_api.services.password_auth import PasswordAuthError
 from fitminiapp_api.services.telegram_auth import (
     get_or_insert_telegram_user,
@@ -43,6 +46,7 @@ from fitminiapp_api.services.telegram_auth import (
 
 router = APIRouter()
 SupportCaseId = Annotated[str, Path(pattern=r"^[0-9a-f]{32}$")]
+NewsDraftId = Annotated[str, Path(pattern=r"^[0-9a-f]{32}$")]
 
 
 def _check_bot_token(x_bot_token: str | None) -> None:
@@ -235,3 +239,27 @@ def complete_support_reply_from_bot(
         if not recorded:
             raise HTTPException(status_code=409, detail="Support reply is not claimable")
         return BotSupportReplyResultResponse(status="recorded")
+
+
+@router.post(
+    "/news/drafts/{draft_id}/moderate",
+    response_model=BotNewsModerationResponse,
+)
+def moderate_news_draft_from_bot(
+    draft_id: NewsDraftId,
+    payload: BotNewsModerationRequest,
+    x_bot_token: str | None = Header(default=None),
+) -> BotNewsModerationResponse:
+    _check_bot_token(x_bot_token)
+    _check_support_admin(payload.admin_telegram_user_id)
+    with get_session_context() as db:
+        result = moderate_draft(
+            db,
+            draft_id=draft_id,
+            admin_telegram_user_id=payload.admin_telegram_user_id,
+            action=payload.action,
+        )
+        return BotNewsModerationResponse(
+            status=result.status,
+            cluster_status=result.cluster_status,
+        )

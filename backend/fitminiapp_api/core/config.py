@@ -1,3 +1,4 @@
+import re
 from typing import Literal
 from urllib.parse import urlparse
 
@@ -79,6 +80,25 @@ class Settings(BaseSettings):
     worker_poll_seconds: int = Field(default=10, ge=1, le=3600)
     reminder_sync_seconds: int = Field(default=60, ge=10, le=3600)
     notification_delivery_concurrency: int = Field(default=8, ge=1, le=30)
+    news_ingestion_enabled: bool = False
+    news_channel_id: int | None = None
+    news_channel_username: str = ""
+    news_ingestion_cycle_seconds: int = Field(default=900, ge=60, le=86400)
+    news_source_timeout_seconds: float = Field(default=10, ge=2, le=30)
+    news_source_max_bytes: int = Field(default=1_048_576, ge=16_384, le=2_097_152)
+    news_fetch_concurrency: int = Field(default=4, ge=1, le=8)
+    news_candidate_score_threshold: int = Field(default=55, ge=1, le=100)
+    news_retention_days: int = Field(default=90, ge=7, le=365)
+    news_defer_hours: int = Field(default=24, ge=1, le=168)
+    news_max_regenerations: int = Field(default=3, ge=0, le=10)
+    news_draft_max_chars: int = Field(default=2600, ge=800, le=3200)
+    news_daily_draft_limit: int = Field(default=3, ge=1, le=20)
+    news_llm_provider: Literal["disabled", "openai_compatible"] = "disabled"
+    news_llm_endpoint: str = ""
+    news_llm_api_key: str = ""
+    news_llm_model: str = ""
+    news_llm_timeout_seconds: float = Field(default=20, ge=5, le=60)
+    news_llm_prompt_version: str = "news-draft-v1"
 
     @model_validator(mode="after")
     def validate_production_safety(self) -> Settings:
@@ -137,6 +157,31 @@ class Settings(BaseSettings):
             )
         return self
 
+    @model_validator(mode="after")
+    def validate_news_pipeline(self) -> Settings:
+        if self.news_ingestion_enabled and not self.admin_telegram_id_set:
+            raise ValueError(
+                "ADMIN_TELEGRAM_USER_IDS must be configured when NEWS_INGESTION_ENABLED=true"
+            )
+        if self.news_ingestion_enabled and self.news_channel_id is None:
+            raise ValueError("NEWS_CHANNEL_ID must be confirmed before news ingestion is enabled")
+        if self.news_channel_id is not None and self.news_channel_id >= 0:
+            raise ValueError("NEWS_CHANNEL_ID must be a negative Telegram channel id")
+        username = self.news_channel_username.strip().removeprefix("@").lower()
+        if username and not re.fullmatch(r"[a-z][a-z0-9_]{4,31}", username):
+            raise ValueError("NEWS_CHANNEL_USERNAME is invalid")
+        self.news_channel_username = username
+        if self.news_llm_provider == "disabled":
+            return self
+        parsed = urlparse(self.news_llm_endpoint)
+        if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
+            raise ValueError("NEWS_LLM_ENDPOINT must be an absolute credential-free HTTPS URL")
+        if not self.news_llm_api_key.strip() or not self.news_llm_model.strip():
+            raise ValueError(
+                "NEWS_LLM_API_KEY and NEWS_LLM_MODEL are required for openai_compatible drafts"
+            )
+        return self
+
     @field_validator("open_food_facts_user_agent")
     @classmethod
     def normalize_open_food_facts_user_agent(cls, value: str) -> str:
@@ -146,6 +191,13 @@ class Settings(BaseSettings):
                 "OPEN_FOOD_FACTS_USER_AGENT must be a single line up to 256 characters"
             )
         return normalized
+
+    @field_validator("news_channel_id", mode="before")
+    @classmethod
+    def normalize_optional_news_channel_id(cls, value: object) -> object:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
 
     @field_validator("oauth_proxy_url", "telegram_oauth_proxy_url")
     @classmethod

@@ -32,6 +32,7 @@ from .error_codes import safe_error_code
 from .feedback import handle_feedback_start_payload, open_feedback_flow
 from .feedback import router as feedback_router
 from .logging_config import configure_logging
+from .news_editorial import router as news_editorial_router
 from .public_profile import (
     MENU_BUTTON_LABEL,
     canonical_mini_app_url,
@@ -592,6 +593,7 @@ async def unknown_command(message: Message) -> None:
 
 
 dp.include_router(feedback_router)
+dp.include_router(news_editorial_router)
 dp.include_router(public_router)
 
 

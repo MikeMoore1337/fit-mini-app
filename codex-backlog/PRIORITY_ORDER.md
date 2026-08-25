@@ -1,32 +1,23 @@
-# Порядок выполнения release backlog v29
+# Порядок выполнения release backlog v30
 
 ## Completed
 
-`00-73`, включая `69B` и предшествующие буквенные подзадачи. Task-файлы находятся в `tasks/done/`.
+`00-73`, включая `69B` и предшествующие буквенные подзадачи, а также owner-selected task `88`.
+Task-файлы находятся в `tasks/done/`.
 
 ## Current
 
 ```text
-73A Landing premium marketing art-direction, alternatives и production rollout
+89 Telegram-новости: изображения, revision-bound модерация и публикация [PENDING]
 ```
 
-После завершения `73A`:
+После завершения `89` в owner-selected Telegram news потоке:
 
 ```text
-74 Cross-product responsive/accessibility/states hardening
- -> 74A product-wide motion system и data visualization
- -> 75 performance/motion hardening
- -> 76 skill-aware retrospective audit -> 76A adversarial gate
- -> 77 real-user results checkpoint
- -> 78 production readiness
- -> 79 final go/no-go
+90 Еженедельный Telegram-дайджест с отдельным opt-in
 ```
 
-`69B` завершена как owner-approved системное расширение иконографики и data visualization внутри
-`DESIGN_V2_1`. Tasks `70-71` были завершены вне очереди отдельными task-only commits. Tasks `72-73`
-завершены и архивированы после owner approval. По прямому решению владельца перед `74` добавлена
-task `73A`: она сначала показывает три high-fidelity направления и ждёт owner selection, затем
-реализует только выбранное и снова ждёт screenshot approval до commit. Task `74` остаётся
-следующей и не реализуется в рамках `73A`. После `74` отдельная task `74A` проектирует и
-распространяет уместный motion по приложению, canonical charts и Demo; `75` измеряет и устраняет
-performance risks уже после rollout. Никакая task не запускает следующую автоматически.
+Task `88` завершена по прямому owner decision вне remaining release sequence. Task `89` назначена
+текущей, но не реализуется в completion run task `88`; `90` также не запускается. Remaining release
+sequence `73A -> 74 -> 74A -> 75 -> 76 -> 76A -> 77 -> 78 -> 79` и остальные trigger-gated
+post-release tasks сохраняют собственные gates. Никакая task не запускает следующую автоматически.

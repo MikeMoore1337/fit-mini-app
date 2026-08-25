@@ -18,6 +18,7 @@ from fitminiapp_api.models.notification import Notification, NotificationSetting
 from fitminiapp_api.models.user import User
 from fitminiapp_api.services.account_exports import prune_account_exports
 from fitminiapp_api.services.bot_support import prune_support_cases
+from fitminiapp_api.services.news_worker import run_news_pipeline_once
 from fitminiapp_api.services.notifications import (
     NotificationDeliveryError,
     claim_due_notifications,
@@ -136,7 +137,8 @@ async def send_telegram_message(
     text: str,
     *,
     open_app_path: str | None = None,
-) -> None:
+    reply_markup: dict | None = None,
+) -> int | None:
     if not settings.telegram_bot_token or settings.telegram_bot_token in {
         "change-me",
         "replace-me",
@@ -146,6 +148,8 @@ async def send_telegram_message(
             terminal_status="failed",
         )
     payload: dict = {"chat_id": chat_id, "text": text}
+    if open_app_path and reply_markup is not None:
+        raise ValueError("Only one Telegram reply markup contract may be used")
     if open_app_path:
         destination = validate_notification_destination(open_app_path)
         payload["reply_markup"] = {
@@ -160,6 +164,8 @@ async def send_telegram_message(
                 ]
             ]
         }
+    elif reply_markup is not None:
+        payload["reply_markup"] = reply_markup
     response = await client.post(
         f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage",
         json=payload,
@@ -173,7 +179,9 @@ async def send_telegram_message(
         and isinstance(response_payload, dict)
         and response_payload.get("ok") is True
     ):
-        return
+        result = response_payload.get("result")
+        message_id = result.get("message_id") if isinstance(result, dict) else None
+        return message_id if isinstance(message_id, int) else None
     raise _telegram_delivery_error(response)
 
 
@@ -350,16 +358,35 @@ async def main() -> None:
             settings.yandex_oauth_client_secret,
             settings.apple_oauth_client_secret,
             settings.database_url,
+            settings.news_llm_api_key,
         ),
     )
     logger.info("worker_started")
     next_reminder_sync = 0.0
+    next_news_sync = 0.0
     while True:
         current = monotonic()
         should_sync = current >= next_reminder_sync
         await run_once(sync_reminders=should_sync)
         if should_sync:
             next_reminder_sync = current + settings.reminder_sync_seconds
+        if settings.news_ingestion_enabled:
+            should_fetch_news = current >= next_news_sync
+            try:
+                await run_news_pipeline_once(
+                    send_message=send_telegram_message,
+                    fetch_sources=should_fetch_news,
+                )
+            except Exception as exc:
+                logger.error(
+                    "news_pipeline_cycle_failed",
+                    extra={
+                        "pipeline_stage": "cycle",
+                        "reason": type(exc).__name__,
+                    },
+                )
+            if should_fetch_news:
+                next_news_sync = current + settings.news_ingestion_cycle_seconds
         await asyncio.sleep(settings.worker_poll_seconds)
 
 

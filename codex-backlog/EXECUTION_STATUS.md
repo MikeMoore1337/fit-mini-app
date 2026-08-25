@@ -1,4 +1,4 @@
-# Execution status v30
+# Execution status v31
 
 Подтверждённое владельцем состояние на 25.08.2026:
 
@@ -12,13 +12,11 @@
 - [x] task `71` завершена вне очереди и архивирована без включения изменений task `69B`;
 - [x] task `72` завершила TMA platform hardening и архивирована после owner approval;
 - [x] task `73` финализировала production Landing, public product hero и demo/privacy continuation и архивирована после owner approval;
-- [ ] **current:** `73a-landing-premium-marketing-art-direction.md` — новый owner-requested premium marketing pass; три направления, два owner checkpoint, назначена и не начата;
-- [ ] task `74` переназначена следующей и не начата;
-- [ ] task `74A` после `74` создаёт product-wide motion system, canonical chart entrance и Demo cabinet motion; не начата;
-- [ ] task `75` после `74A` продолжает cross-product performance/motion hardening scope;
-- [ ] tasks `76-79` закрывают retrospective usability/production/release risks.
+- [x] owner-selected task `88` реализовала безопасный news ingestion и owner-only editorial draft queue, прошла review/QA и архивирована после owner approval;
+- [ ] **current:** `89-telegram-news-images-moderation-publishing.md` — назначена в `PENDING`, реализация не начата;
+- [ ] task `90` — следующая после `89` в owner-selected Telegram news потоке и не начата;
+- [ ] remaining release tasks `73A-79` и остальные post-release tasks сохраняют собственные Trigger, dependency и owner decision.
 
-Не выполнять повторно tasks `00-73`, включая `69B`. Сначала выполнить только task `73A`; без
-owner selection не начинать production implementation, без финального screenshot approval не
-архивировать и не коммитить. Task `74` выполняется только после завершения `73A` в отдельной
-сессии; затем отдельно `74A`, затем `75`. Следующие tasks автоматически не реализуются.
+Не выполнять повторно tasks `00-73`, включая `69B`, и task `88`. Task `89` только назначена:
+её Trigger, owner checkpoints и lifecycle проверяются в отдельной сессии. Task `90` и другие
+pending tasks автоматически не реализуются.

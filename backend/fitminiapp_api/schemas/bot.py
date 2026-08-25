@@ -72,3 +72,21 @@ class BotSupportReplyResultRequest(BotSupportReplyClaimRequest):
 
 class BotSupportReplyResultResponse(BaseModel):
     status: Literal["recorded"]
+
+
+class BotNewsModerationRequest(BaseModel):
+    admin_telegram_user_id: int = Field(..., ge=1, le=9_223_372_036_854_775_807)
+    action: Literal["skip", "defer", "regenerate", "accept_for_design"]
+
+
+class BotNewsModerationResponse(BaseModel):
+    status: Literal[
+        "accepted",
+        "queued",
+        "deferred",
+        "already_processed",
+        "stale",
+        "limit_reached",
+        "unavailable",
+    ]
+    cluster_status: str | None = None
