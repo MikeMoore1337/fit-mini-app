@@ -63,10 +63,13 @@ test('landing emits a privacy-safe acquisition event without changing the deskto
   await page.screenshot({
     path: '../.artifacts/screenshots/task-62/desktop-1440x900-light-landing.png',
   });
-  await page.getByRole('link', { name: 'Открыть приложение' }).evaluate((element) => {
-    element.addEventListener('click', (event) => event.preventDefault(), { once: true });
-  });
-  await page.getByRole('link', { name: 'Открыть приложение' }).click();
+  await page
+    .getByRole('link', { name: 'Открыть приложение' })
+    .first()
+    .evaluate((element) => {
+      element.addEventListener('click', (event) => event.preventDefault(), { once: true });
+    });
+  await page.getByRole('link', { name: 'Открыть приложение' }).first().click();
 
   const analyticsEvents = await page.evaluate(
     () =>
@@ -99,7 +102,11 @@ test('публичные страницы сохраняют hierarchy и не �
 
       await expect(page.getByRole('heading', { level: 1, name: publicPage.heading })).toBeVisible();
       await expect(page.getByRole('navigation', { name: 'Хлебные крошки' })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Войти' })).toBeVisible();
+      if (viewport.width >= 768) {
+        await expect(page.getByRole('link', { name: 'Войти' })).toBeVisible();
+      } else {
+        await expect(page.getByRole('button', { name: 'Открыть меню' })).toBeVisible();
+      }
       await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'index, follow');
       await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
         'href',
@@ -133,6 +140,43 @@ test('публичные страницы сохраняют hierarchy и не �
         expect(heroGutters.left).toBeGreaterThanOrEqual(40);
         expect(heroGutters.right).toBeGreaterThanOrEqual(40);
       }
+    }
+  }
+});
+
+test('product and knowledge index heroes stay compact on desktop and mobile', async ({ page }) => {
+  for (const viewport of [
+    { width: 1440, height: 900, maxHeading: 78, maxHero: 560 },
+    { width: 390, height: 844, maxHeading: 44, maxHero: 700 },
+  ]) {
+    await page.setViewportSize(viewport);
+    for (const path of ['/training', '/nutrition', '/knowledge']) {
+      await page.goto(path);
+      await expect(page.locator('.public-hero h1')).toBeVisible();
+      const metrics = await page.evaluate(() => {
+        const header = document.querySelector<HTMLElement>('.public-header')!;
+        const breadcrumbs = document.querySelector<HTMLElement>('.public-breadcrumbs')!;
+        const breadcrumbList = breadcrumbs.querySelector<HTMLElement>('ol')!;
+        const hero = document.querySelector<HTMLElement>('.public-hero')!;
+        const heading = hero.querySelector<HTMLElement>('h1')!;
+        const heroStyle = getComputedStyle(hero);
+        const headerBounds = header.getBoundingClientRect();
+        const breadcrumbBounds = breadcrumbList.getBoundingClientRect();
+        const heroBounds = hero.getBoundingClientRect();
+        return {
+          headingSize: Number.parseFloat(getComputedStyle(heading).fontSize),
+          heroHeight: heroBounds.height,
+          paddingTop: Number.parseFloat(heroStyle.paddingTop),
+          breadcrumbTopGap: breadcrumbBounds.top - headerBounds.bottom,
+          breadcrumbBottomGap: heroBounds.top - breadcrumbBounds.bottom,
+        };
+      });
+      expect(metrics.headingSize).toBeLessThanOrEqual(viewport.maxHeading);
+      expect(metrics.heroHeight).toBeLessThanOrEqual(viewport.maxHero);
+      expect(metrics.paddingTop).toBeLessThanOrEqual(viewport.width === 1440 ? 80 : 44);
+      expect(Math.abs(metrics.breadcrumbTopGap - metrics.breadcrumbBottomGap)).toBeLessThanOrEqual(
+        2,
+      );
     }
   }
 });

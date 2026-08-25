@@ -30,6 +30,12 @@ the primary flow; long labels wrap or truncate only when full accessible name re
 | `390` | Same mobile order; `16px` gutters, `42px` display; proof values retain three aligned columns only if each value remains readable; otherwise two-row factual layout. |
 | `360` | `40px` display; `16px` gutters; hero proof is flat/full-width, no negative margins or transform scaling; navigation/action targets `>=44px`; supporting copy capped to product truth, not hidden. |
 
+Публичные product/index routes (`/training`, `/nutrition`, `/progress`, `/for-trainers`,
+`/knowledge`) используют компактный первый блок: display не превышает `4.8rem` на desktop и
+`2.7rem` на mobile, вертикальный padding меньше Landing hero. Editorial guide pages сохраняют
+собственный более выразительный масштаб. Breadcrumb занимает отдельную центрированную по вертикали
+полосу между нижней линией header и первым блоком: `56px` на desktop и `48px` на mobile.
+
 Desktop and mobile are one system but different compositions. Mobile never uses whole-layout
 `scale()`/`zoom`, overlapping fake device screens or desktop card grid squeezed into one column.
 

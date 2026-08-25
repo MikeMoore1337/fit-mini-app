@@ -19,7 +19,9 @@
 }
 
 .public-breadcrumbs {
-  padding-top: 28px;
+  display: flex;
+  min-height: 56px;
+  align-items: center;
 }
 
 .public-breadcrumbs ol {
@@ -142,6 +144,31 @@
   margin: 18px 0 0;
   color: var(--landing-muted);
   line-height: 1.55;
+}
+
+.public-article--product .public-hero,
+.public-article--knowledge-index .public-hero {
+  gap: clamp(36px, 5vw, 72px);
+  padding-block: clamp(48px, 6vw, 76px);
+}
+
+.public-article--product .public-hero h1,
+.public-article--knowledge-index .public-hero h1 {
+  font-size: clamp(2.8rem, 4.8vw, 4.8rem);
+  line-height: 1.03;
+}
+
+.public-article--product .public-hero__lead,
+.public-article--knowledge-index .public-hero__lead {
+  margin-top: 24px;
+  font-size: clamp(1rem, 1.35vw, 1.18rem);
+  line-height: 1.55;
+}
+
+.public-article--product .public-hero__summary,
+.public-article--knowledge-index .public-hero__summary {
+  min-height: 0;
+  padding: 24px;
 }
 
 .public-guide-meta {
@@ -547,7 +574,7 @@
   }
 
   .public-breadcrumbs {
-    padding-top: 20px;
+    min-height: 48px;
   }
 
   .public-hero {
@@ -573,6 +600,38 @@
 
   .public-hero__summary > strong {
     margin-top: 30px;
+  }
+
+  .public-article--product .public-hero,
+  .public-article--knowledge-index .public-hero {
+    gap: 18px;
+    padding-block: 26px 32px;
+  }
+
+  .public-article--product .public-hero h1,
+  .public-article--knowledge-index .public-hero h1 {
+    font-size: clamp(2.2rem, 8.8vw, 2.7rem);
+    line-height: 1.04;
+  }
+
+  .public-article--product .public-hero__lead,
+  .public-article--knowledge-index .public-hero__lead {
+    margin-top: 18px;
+    font-size: 0.96rem;
+    line-height: 1.48;
+  }
+
+  .public-article--product .public-hero__summary,
+  .public-article--knowledge-index .public-hero__summary {
+    padding: 12px 16px;
+  }
+
+  .public-article--product .public-hero__summary li,
+  .public-article--knowledge-index .public-hero__summary li {
+    grid-template-columns: 22px 1fr;
+    gap: 10px;
+    padding-block: 10px;
+    font-size: 0.88rem;
   }
 
   .public-guide-meta {

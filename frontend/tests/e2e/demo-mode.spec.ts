@@ -1079,7 +1079,7 @@ test('desktop keeps the canonical content width and separated adjacent regions',
   await expectNoOverlap(page.locator('.demo-stage'), page.locator('.demo-boundary'));
 });
 
-test('Landing entry, deep-link scenario history and browser auth return stay explicit', async ({
+test('Landing entry opens the cabinet and keeps scenario history plus browser auth return explicit', async ({
   browser,
 }) => {
   const context = await browser.newContext({
@@ -1094,18 +1094,23 @@ test('Landing entry, deep-link scenario history and browser auth return stay exp
 
   await page.goto('/');
   await page.getByRole('link', { name: /Попробовать демо/ }).click();
-  await expect(page).toHaveURL(/\/demo$/);
-  await page.getByRole('button', { name: 'Начать тренировку' }).click();
+  await expect(page).toHaveURL('/demo?cabinet=1&scenario=self_training&section=today');
+  await page.getByRole('button', { name: 'Продолжить тренировку' }).click();
   await page.getByRole('button', { name: 'Завершить текущий подход' }).click();
   await page.getByRole('button', { name: 'Завершить тренировку' }).click();
-  await page.getByRole('button', { name: 'Перейти к прогрессу' }).click();
+  await expect(page).toHaveURL('/demo?cabinet=1&scenario=self_training&section=progress');
+  await expect(
+    page.getByRole('heading', { name: 'Подтверждённые действия становятся историей' }),
+  ).toBeVisible();
   const demoTokenBeforeHandoff = await page.evaluate(() =>
     sessionStorage.getItem('fit_demo_sessions_v1'),
   );
   expect(demoTokenBeforeHandoff).not.toBeNull();
 
   await page.getByRole('link', { name: 'Войти и начать настройку' }).click();
-  await expect(page).toHaveURL(/\/login\?next=%2Fapp&from=demo&scenario=self_training$/);
+  await expect(page).toHaveURL(
+    '/login?next=%2Fapp&from=demo&scenario=self_training&cabinet=1&section=progress',
+  );
   await expect(page.getByText('После демо — чистый профиль')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Продолжить с Google' })).toBeVisible();
   expect(await page.evaluate(() => sessionStorage.getItem('fit_demo_sessions_v1'))).toBeNull();
@@ -1117,19 +1122,23 @@ test('Landing entry, deep-link scenario history and browser auth return stay exp
   }
 
   await page.getByRole('link', { name: 'Вернуться в демо' }).click();
-  await expect(page).toHaveURL(/\/demo\?scenario=self_training$/);
-  await expect(page.getByRole('button', { name: 'Начать тренировку' })).toBeVisible();
+  await expect(page).toHaveURL('/demo?cabinet=1&scenario=self_training&section=progress');
+  await expect(
+    page.getByRole('heading', { name: 'Подтверждённые действия становятся историей' }),
+  ).toBeVisible();
   const demoTokenAfterReturn = await page.evaluate(() =>
     sessionStorage.getItem('fit_demo_sessions_v1'),
   );
   expect(demoTokenAfterReturn).not.toBe(demoTokenBeforeHandoff);
 
-  await page.getByRole('button', { name: /Питание/ }).click();
-  await expect(page).toHaveURL(/scenario=nutrition$/);
-  await page.getByRole('button', { name: /Тренеру/ }).click();
-  await expect(page).toHaveURL(/scenario=trainer$/);
+  await page.getByRole('button', { name: 'Сценарии' }).click();
+  await page.getByRole('link', { name: 'Питание: дневник и итог' }).click();
+  await expect(page).toHaveURL('/demo?cabinet=1&scenario=nutrition&section=today');
+  await page.getByRole('button', { name: 'Сценарии' }).click();
+  await page.getByRole('link', { name: 'Тренер: разбор результата клиента' }).click();
+  await expect(page).toHaveURL('/demo?cabinet=1&scenario=trainer&section=trainer');
   await page.goBack();
-  await expect(page).toHaveURL(/scenario=nutrition$/);
+  await expect(page).toHaveURL('/demo?cabinet=1&scenario=nutrition&section=today');
   await context.close();
 });
 

@@ -1,7 +1,7 @@
 # GLOBAL_RULES - правила выполнения release backlog v11 resource-aware
 
-Этот файл действует для current task `73`, remaining release tasks `74-79` и trigger-gated
-post-release pool `80-96` с буквенными подзадачами. Completed tasks `00-72`, включая буквенные подзадачи, не переигрываются
+Этот файл действует для current task `74`, remaining release tasks `75-79` и trigger-gated
+post-release pool `80-96` с буквенными подзадачами. Completed tasks `00-73`, включая буквенные подзадачи, не переигрываются
 и хранятся в `tasks/done/`.
 
 
@@ -50,9 +50,9 @@ Lifecycle не расширяет scope task и не отменяет owner chec
 - Работать только в `feature/yfc-platform-v2`.
 - Не переходить к следующему task автоматически.
 - Перед началом прочитать корневой `AGENTS.md`, этот файл, lifecycle и только текущую task.
-- Tasks `00-72`, включая буквенные подзадачи, подтверждены владельцем как завершённые, перенесены в `tasks/done/` и не выполняются повторно.
-- Current task — `73`: Landing production refresh, назначена, но не начата.
-- После commit task `73` следующая release task — `74`; она выполняется только в отдельной сессии.
+- Tasks `00-73`, включая буквенные подзадачи, подтверждены владельцем как завершённые, перенесены в `tasks/done/` и не выполняются повторно.
+- Current task — `74`: Cross-product responsive, accessibility и states hardening, назначена, но не начата.
+- После commit task `74` следующая release task — `75`; она выполняется только в отдельной сессии.
 - Task `50A` уже создала общий continuous Mobile Web/TMA gate, который переиспользуют последующие client-facing tasks.
 - Перед client-facing task прочитать `MOBILE_TMA_FIRST_CONTRACT.md` и применимые пункты `.agents/references/MOBILE_TMA_ACCEPTANCE_MATRIX.md`.
 - Не повторять полный аудит репозитория без прямого требования task.

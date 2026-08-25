@@ -59,6 +59,15 @@ error states берут theme tokens из `frontend/src/styles/design-system.css
 - Raster evidence ниже fold получает responsive derivative и lazy loading без новой dependency.
 - Header action `Войти` является primary conversion action Landing и использует lime fill с
   `on-lime` текстом в Light и Dark; theme/menu controls остаются нейтральными.
+- Platform context `Web и Telegram Mini App` находится рядом с primary CTA, а neutral demo CTA
+  открывает production demo-cabinet с явными `cabinet`, `scenario` и `section`, не legacy demo.
+- Строки demo-сценариев используют одинаковый горизонтальный inset; privacy section не продолжает
+  нижнюю линию поверх собственной скруглённой границы финального CTA-блока.
+- Workflow использует одну section boundary, одинаковый внутренний padding шагов, открытые внешние
+  края и только внутренние разделители. Парные audience CTA используют lime-primary в Light и Dark.
+- Platform boundary замкнута со всех сторон; lime остаётся direction marker слева. Footer privacy
+  ведёт в публичный содержательный раздел до авторизации, а операции с конкретным аккаунтом
+  объясняются как доступные после входа.
 - Описания в парных audience surfaces `Занимаетесь самостоятельно?` и `Вы тренер?` используют
   одинаковый `text-primary`: различие сценариев задаётся композицией и lime-маркером, а не снижением
   контраста одного из текстов.

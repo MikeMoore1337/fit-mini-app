@@ -38,50 +38,42 @@ test('логотип и кнопки в шапке имеют одинакову
 
     const logo = await page.locator('.landing-header .landing-brand__mark').boundingBox();
     const themeButton = await page.locator('.landing-theme-toggle').boundingBox();
-    const loginButton = await page.locator('.landing-button--compact').boundingBox();
+    const loginButton = page.locator('.landing-button--compact');
 
     expect(logo).not.toBeNull();
     expect(themeButton).not.toBeNull();
-    expect(loginButton).not.toBeNull();
     expect(logo?.height).toBe(44);
     expect(themeButton?.height).toBe(logo?.height);
-    expect(loginButton?.height).toBe(logo?.height);
+    if (viewport.width >= 980) {
+      expect((await loginButton.boundingBox())?.height).toBe(logo?.height);
+    } else {
+      await expect(loginButton).toBeHidden();
+    }
 
     const themeControl = page.getByRole('button', { name: /Включить .* тему/ });
     await themeControl.hover();
     const themeHoverStyles = await themeControl.evaluate((element) => {
       const styles = getComputedStyle(element);
       return {
-        backgroundColor: styles.backgroundColor,
-        borderColor: styles.borderColor,
         boxShadow: styles.boxShadow,
         transform: styles.transform,
       };
     });
+    expect(themeHoverStyles).toEqual({ boxShadow: 'none', transform: 'none' });
 
     const menuButton = page.getByRole('button', { name: 'Открыть меню' });
     if (viewport.width < 980) {
       await expect(menuButton).toBeVisible();
+      expect((await menuButton.boundingBox())?.height).toBe(logo?.height);
       await menuButton.hover();
-      await expect
-        .poll(() =>
-          menuButton.evaluate((element) => {
-            const styles = getComputedStyle(element);
-            return {
-              backgroundColor: styles.backgroundColor,
-              borderColor: styles.borderColor,
-              boxShadow: styles.boxShadow,
-              transform: styles.transform,
-            };
-          }),
-        )
-        .toEqual(themeHoverStyles);
+      await expect(menuButton).toHaveCSS('box-shadow', 'none');
+      await expect(menuButton).toHaveCSS('transform', 'none');
       await menuButton.click();
       await expect(page.getByRole('navigation', { name: 'Навигация по странице' })).toHaveClass(
         /is-open/,
       );
-      await expect(page.getByRole('link', { name: 'Возможности', exact: true })).toBeVisible();
-      await page.getByRole('link', { name: 'Возможности', exact: true }).click();
+      await expect(page.getByRole('link', { name: 'Продукт', exact: true })).toBeVisible();
+      await page.getByRole('link', { name: 'Продукт', exact: true }).click();
       await expect(menuButton).toHaveAttribute('aria-expanded', 'false');
     } else {
       await expect(menuButton).toBeHidden();
@@ -170,18 +162,18 @@ test('первый экран лендинга объясняет продукт
     await page.goto('/');
 
     await expect(page.getByRole('heading', { name: /знайте, что делать сегодня/i })).toBeVisible();
-    await expect(page.getByRole('link', { name: /открыть приложение/i })).toBeVisible();
-    await expect(page.getByLabel('Пример интерфейса тренировки на сегодня')).toBeVisible();
-    await expect(page.getByText('Жим гантелей лёжа')).toBeVisible();
-    await expect(page.getByText('+18%')).toHaveCount(0);
+    await expect(page.getByRole('link', { name: /открыть приложение/i }).first()).toBeVisible();
+    const heroProof = page.locator('.landing-hero-proof');
+    await expect(
+      heroProof.getByRole('img', { name: /экран сегодня: недельный контекст/i }),
+    ).toBeVisible();
+    await expect(heroProof.getByText(/подготовленные данные без информации/i)).toBeVisible();
     if (viewport.width === 390) {
-      const mobileProof = await page.locator('.landing-hero__visual').evaluate((element) => {
+      const mobileProof = await heroProof.evaluate((element) => {
         const styles = getComputedStyle(element);
         return { marginInline: styles.marginInline, transform: styles.transform };
       });
       expect(mobileProof).toEqual({ marginInline: '0px', transform: 'none' });
-      await expect(page.locator('.landing-rest-demo')).toBeHidden();
-      await expect(page.locator('.landing-nutrition-demo')).toBeHidden();
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
   }
@@ -200,12 +192,12 @@ test('вторичные CTA сохраняют контрастный текс�
     const expectedText = scheme === 'light' ? 'rgb(22, 26, 23)' : 'rgb(238, 240, 234)';
     for (const link of [
       page.getByRole('link', { name: /Попробовать демо/ }),
-      page.getByRole('link', { name: /Задать вопрос в Telegram/ }),
+      page.getByRole('link', { name: /Поддержка в Telegram/ }),
     ]) {
       await link.hover();
       await expect(link).toHaveCSS('background-color', expectedBackground);
       await expect(link).toHaveCSS('color', expectedText);
-      await expect(link.locator('.landing-action__arrow')).toHaveCSS('color', expectedText);
+      await expect(link.locator('.yfc-icon')).toHaveCSS('color', expectedText);
     }
   }
 });
@@ -222,9 +214,9 @@ test('лендинг остаётся адаптивным на контроль
     }));
     expect(pageMetrics.documentWidth).toBeLessThanOrEqual(pageMetrics.viewport);
     expect(pageMetrics.bodyWidth).toBeLessThanOrEqual(pageMetrics.viewport);
-    await expect(page.getByRole('link', { name: /открыть приложение/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /открыть приложение/i }).first()).toBeVisible();
     await expect(page.getByRole('button', { name: /Включить .* тему/ })).toBeInViewport();
-    await expect(page.locator('.landing-platform-card')).toHaveCount(2);
+    await expect(page.locator('.landing-platforms__facts article')).toHaveCount(2);
   }
 });
 
@@ -259,64 +251,20 @@ test('блок возможностей показывает пользу спо
     await page.goto('/');
 
     await expect(
-      page.getByRole('heading', { name: /тренировки не должны жить в пяти разных местах/i }),
+      page.getByRole('heading', { name: /не каталог функций, а связный день/i }),
     ).toBeVisible();
     await expect(
-      page.getByRole('heading', { name: /ведите своих клиентов в одном кабинете/i }),
+      page.getByRole('heading', { name: /сначала — одно понятное действие/i }),
     ).toBeVisible();
-    await expect(page.getByText(/приглашайте клиентов, назначайте и корректируйте/i)).toBeVisible();
-    if (viewport.width >= 768) {
-      const sources = await page.locator('.landing-problem__sources').boundingBox();
-      const result = await page.locator('.landing-problem__result').boundingBox();
-      expect(sources).not.toBeNull();
-      expect(result).not.toBeNull();
-      expect(sources!.x + sources!.width).toBeLessThan(result!.x);
-    } else {
-      const sources = await page.locator('.landing-problem__sources').boundingBox();
-      const result = await page.locator('.landing-problem__result').boundingBox();
-      expect(sources).not.toBeNull();
-      expect(result).not.toBeNull();
-      expect(sources!.y + sources!.height).toBeLessThan(result!.y);
-    }
-
-    const featureCards = page.locator('.landing-feature');
-    for (const card of await featureCards.all()) {
-      await expect(card).toHaveCSS('justify-content', 'flex-start');
-    }
+    await expect(
+      page.getByRole('heading', { name: /у каждого клиента — видимый контекст/i }),
+    ).toBeVisible();
+    await expect(page.locator('.landing-showcase article')).toHaveCount(4);
     if (viewport.width <= 430) {
-      const compactTextLinks = page.locator(
-        '.landing-brand, .landing-feature__link, .landing-footer a',
-      );
+      const compactTextLinks = page.locator('.landing-brand, .landing-footer a');
       for (const link of await compactTextLinks.all()) {
         expect((await link.boundingBox())?.height).toBeGreaterThanOrEqual(44);
       }
-    }
-    if (viewport.width === 1440) {
-      const metaBoxes = await featureCards.locator('.landing-feature__meta').evaluateAll((items) =>
-        items.map((item) => {
-          const box = item.getBoundingClientRect();
-          return { x: box.x, y: box.y };
-        }),
-      );
-      expect(metaBoxes).toHaveLength(6);
-      const firstRow = metaBoxes.slice(0, 2).map(({ y }) => y);
-      expect(Math.max(...firstRow)).toBeLessThanOrEqual(Math.min(...firstRow) + 1);
-      expect(Math.max(...metaBoxes.slice(2, 5).map(({ y }) => y))).toBeLessThanOrEqual(
-        Math.min(...metaBoxes.slice(2, 5).map(({ y }) => y)) + 1,
-      );
-    }
-    if (viewport.width === 390) {
-      const problemVisual = await page.locator('.landing-problem__visual').boundingBox();
-      const problemIcon = await page
-        .locator('.landing-problem__result .landing-flow-icon')
-        .boundingBox();
-      expect(problemVisual).not.toBeNull();
-      expect(problemIcon).not.toBeNull();
-      expect(
-        Math.abs(
-          problemIcon!.x + problemIcon!.width / 2 - (problemVisual!.x + problemVisual!.width / 2),
-        ),
-      ).toBeLessThanOrEqual(1);
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
   }
@@ -331,64 +279,31 @@ test('сценарий и платформы остаются понятными
     await page.setViewportSize(viewport);
     await page.goto('/');
 
-    await expect(page.locator('.landing-workflow li')).toHaveCount(5);
-    await expect(page.getByRole('heading', { name: 'Откройте веб-приложение' })).toBeVisible();
+    await expect(page.locator('.landing-workflow li')).toHaveCount(3);
     await expect(
-      page.getByRole('heading', { name: 'Выберите свой путь', exact: true }),
+      page.getByRole('heading', { name: /от настройки — к повторяемому ритму/i }),
     ).toBeVisible();
+    await expect(page.getByRole('heading', { name: /web для полного контекста/i })).toBeVisible();
     await expect(
-      page.getByRole('heading', {
-        name: /открывайте на компьютере или смартфоне.*telegram.*когда удобнее/i,
-      }),
+      page.getByText(/telegram mini app не является отдельным приложением/i),
     ).toBeVisible();
-    await expect(
-      page.getByRole('heading', { name: 'Открывайте на компьютере или смартфоне', exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole('heading', { name: /продолжайте в telegram mini app/i }),
-    ).toBeVisible();
-    await expect(page.getByText(/для самостоятельных тренировок telegram не нужен/i)).toBeVisible();
-    await expect(page.getByText(/общение с тренером происходит в telegram/i)).toBeVisible();
 
-    const flowIcons = page.locator('.landing-flow-icon');
-    await expect(flowIcons).toHaveCount(2);
-    const problemIcon = page.locator('.landing-problem__result .landing-flow-icon');
-    const syncIcon = page.locator('.landing-platforms__sync .landing-flow-icon');
-    await expect(syncIcon.locator('svg')).toBeVisible();
-    await expect(problemIcon.locator('svg')).toBeVisible();
-    await expect(problemIcon).toHaveCSS('width', '44px');
-    await expect(problemIcon).toHaveCSS('height', '44px');
-    await expect(syncIcon).toHaveCSS('width', '44px');
-    await expect(syncIcon).toHaveCSS('height', '44px');
-    await expect(problemIcon.locator('svg')).toHaveCSS('stroke', 'rgb(0, 0, 0)');
-    await expect(syncIcon.locator('svg')).toHaveCSS('stroke', 'rgb(0, 0, 0)');
-    const syncIconBox = await syncIcon.boundingBox();
-    const syncSvgBox = await syncIcon.locator('svg').boundingBox();
-    expect(syncIconBox).not.toBeNull();
-    expect(syncSvgBox).not.toBeNull();
-    expect(
-      Math.abs(syncSvgBox!.x + syncSvgBox!.width / 2 - (syncIconBox!.x + syncIconBox!.width / 2)),
-    ).toBeLessThanOrEqual(1);
-    expect(
-      Math.abs(syncSvgBox!.y + syncSvgBox!.height / 2 - (syncIconBox!.y + syncIconBox!.height / 2)),
-    ).toBeLessThanOrEqual(1);
-
-    const platformCards = page.locator('.landing-platform-card');
+    const platformCards = page.locator('.landing-platforms__facts article');
     await expect(platformCards).toHaveCount(2);
-    const platformIcons = page.locator('.landing-platform-card__icon');
+    const platformIcons = platformCards.locator(':scope > span');
     await expect(platformIcons).toHaveCount(2);
     for (const icon of await platformIcons.all()) {
       await expect(icon).toHaveCSS('width', '44px');
       await expect(icon).toHaveCSS('height', '44px');
-      await expect(icon.locator('svg')).toHaveCSS('width', '22px');
-      await expect(icon.locator('svg')).toHaveCSS('height', '22px');
+      await expect(icon.locator('svg')).toHaveCSS('width', '24px');
+      await expect(icon.locator('svg')).toHaveCSS('height', '24px');
     }
     const browserCard = await platformCards.first().boundingBox();
     const telegramCard = await platformCards.last().boundingBox();
     expect(browserCard).not.toBeNull();
     expect(telegramCard).not.toBeNull();
     if (viewport.width >= 768) {
-      expect(browserCard!.x + browserCard!.width).toBeLessThan(telegramCard!.x);
+      expect(browserCard!.x + browserCard!.width).toBeLessThanOrEqual(telegramCard!.x);
       const platformHeadings = await platformCards
         .locator('h3')
         .evaluateAll((items) => items.map((item) => item.getBoundingClientRect().y));
@@ -400,7 +315,7 @@ test('сценарий и платформы остаются понятными
         Math.max(...platformDescriptions) - Math.min(...platformDescriptions),
       ).toBeLessThanOrEqual(1);
     } else {
-      expect(browserCard!.y + browserCard!.height).toBeLessThan(telegramCard!.y);
+      expect(browserCard!.y + browserCard!.height).toBeLessThanOrEqual(telegramCard!.y);
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
   }
@@ -419,33 +334,29 @@ test('сценарии спортсмена и тренера ведут в ве
     await expect(audienceCards).toHaveCount(2);
     await expect(page.getByText(/занимаетесь самостоятельно/i)).toBeVisible();
     await expect(page.getByText(/вы тренер/i)).toBeVisible();
-    await expect(page.getByRole('link', { name: /узнать о тренировках/i })).toHaveAttribute(
+    await expect(page.getByRole('link', { name: /начать с тренировок/i })).toHaveAttribute(
       'href',
       '/training',
     );
-    await expect(page.getByRole('link', { name: /возможности для тренеров/i })).toHaveAttribute(
+    await expect(page.getByRole('link', { name: /посмотреть кабинет тренера/i })).toHaveAttribute(
       'href',
       '/for-trainers',
     );
-    await expect(page.getByText(/нажмите «стать тренером» в профиле/i)).toBeVisible();
-    await expect(page.getByRole('link', { name: /перейти в веб-приложение/i })).toHaveAttribute(
+    await expect(page.getByText(/режим тренера сразу после входа/i)).toBeVisible();
+    await expect(page.getByRole('link', { name: /открыть приложение/i }).last()).toHaveAttribute(
       'href',
       '/app',
     );
-    await expect(page.getByRole('link', { name: /задать вопрос в telegram/i })).toHaveAttribute(
+    await expect(page.getByRole('link', { name: /поддержка в telegram/i })).toHaveAttribute(
       'href',
       'https://t.me/your_fitness_coach_bot?start=support',
     );
-    const actionArrows = page.locator('.landing-action__arrow');
-    await expect(actionArrows).toHaveCount(6);
-    for (const arrow of await actionArrows.all()) {
-      await expect(arrow).toHaveCSS('font-size', '13.6px');
-      await expect(arrow).toHaveCSS('font-weight', '800');
-    }
-    const heroButtons = page.locator('.landing-hero__actions .landing-button');
+    const heroButtons = page.locator(
+      '.landing-hero__primary .landing-button, .landing-hero__continuation .landing-button',
+    );
     const contactButtons = page.locator('.landing-contact__actions .landing-button');
     const audienceButtons = page.locator('.landing-audience .landing-button');
-    for (const buttons of [heroButtons, contactButtons, audienceButtons]) {
+    for (const buttons of [heroButtons, contactButtons]) {
       await expect(buttons).toHaveCount(2);
       const first = await buttons.first().boundingBox();
       const second = await buttons.last().boundingBox();
@@ -454,6 +365,10 @@ test('сценарии спортсмена и тренера ведут в ве
       expect(first!.width).toBeCloseTo(second!.width, 0);
       expect(first!.height).toBe(second!.height);
     }
+    await expect(audienceButtons).toHaveCount(2);
+    expect((await audienceButtons.first().boundingBox())?.height).toBe(
+      (await audienceButtons.last().boundingBox())?.height,
+    );
     if (viewport.width === 390) {
       const brand = page.locator('.landing-header .landing-brand');
       const brandWordmark = brand.locator('.yfc-lockup__wordmark');
@@ -484,7 +399,7 @@ test('сценарии спортсмена и тренера ведут в ве
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
     if (viewport.width === 390) {
-      await expect(page.locator('.landing-footer p')).toBeVisible();
+      await expect(page.locator('.landing-footer p').first()).toBeVisible();
     }
   }
 });
