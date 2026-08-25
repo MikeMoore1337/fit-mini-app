@@ -1,6 +1,8 @@
 # GLOBAL_RULES - правила выполнения release backlog v11 resource-aware
 
-Этот файл действует для current task `58` и remaining tasks `59-79`. Completed tasks `00-57` не переигрываются и хранятся в `tasks/done/`.
+Этот файл действует для current task `73`, remaining release tasks `74-79` и trigger-gated
+post-release pool `80-96` с буквенными подзадачами. Completed tasks `00-72`, включая буквенные подзадачи, не переигрываются
+и хранятся в `tasks/done/`.
 
 
 ## Полный task lifecycle
@@ -43,13 +45,14 @@ Lifecycle не расширяет scope task и не отменяет owner chec
 
 ## Главный процесс
 
-- Один task-файл = одна отдельная Codex-сессия = один законченный логический результат.
+- Один executable task-файл = одна отдельная Codex-сессия = один законченный логический результат.
+  Umbrella `83`, `87`, `87C`, `91`, `92` являются coordination contracts и отдельно не выполняются.
 - Работать только в `feature/yfc-platform-v2`.
 - Не переходить к следующему task автоматически.
 - Перед началом прочитать корневой `AGENTS.md`, этот файл, lifecycle и только текущую task.
-- Tasks `00-57`, включая буквенные подзадачи, подтверждены владельцем как завершённые, перенесены в `tasks/done/` и не выполняются повторно.
-- Current task — `58`: адаптация сегодняшней тренировки — UX.
-- После commit task `58` следующая task — `59`; она выполняется только в отдельной сессии.
+- Tasks `00-72`, включая буквенные подзадачи, подтверждены владельцем как завершённые, перенесены в `tasks/done/` и не выполняются повторно.
+- Current task — `73`: Landing production refresh, назначена, но не начата.
+- После commit task `73` следующая release task — `74`; она выполняется только в отдельной сессии.
 - Task `50A` уже создала общий continuous Mobile Web/TMA gate, который переиспользуют последующие client-facing tasks.
 - Перед client-facing task прочитать `MOBILE_TMA_FIRST_CONTRACT.md` и применимые пункты `.agents/references/MOBILE_TMA_ACCEPTANCE_MATRIX.md`.
 - Не повторять полный аудит репозитория без прямого требования task.
@@ -206,7 +209,35 @@ blocking finding.
 - delegated admin hierarchy;
 - native mobile application.
 
-Эти направления находятся только в отдельном post-release backlog. В release UI нельзя показывать фиктивные, locked или `coming soon` entry points для них.
+Эти направления находятся только в trigger-gated tasks `80-96` и их буквенных подзадачах после release gate `79`. В release
+UI нельзя показывать фиктивные, locked или `coming soon` entry points для них.
+
+## Trigger-gated post-release pool `80-96`
+
+Tasks `80-96` и их буквенные подзадачи находятся в общей папке `codex-backlog/tasks/`, но не становятся линейным
+продолжением release sequence. Перед запуском читать:
+
+1. `POST_RELEASE_PRIORITY_ORDER.md`;
+2. `POST_RELEASE_DEPENDENCY_GRAPH.md`;
+3. `POST_RELEASE_TRIGGER_DECISION_MATRIX.md`;
+4. `POST_RELEASE_PRODUCT_REVIEW.md` для rationale и scope boundaries;
+5. текущую конкретную executable task и, если указано, её umbrella.
+
+Правила:
+
+- product rank/номер не заменяет evidence, dependency или owner decision;
+- допустимо выполнить более высокий номер раньше низкого, если его Trigger подтверждён;
+- `83`, `87`, `87C`, `91`, `92` отдельно не реализовывать — запускать только дочернюю task;
+- umbrella не получает отдельную сессию или commit и считается закрытой после завершения всех
+  owner-approved дочерних tasks либо фиксации `Defer/No-Go` для остальных;
+- downstream task не запускается автоматически после upstream commit;
+- `Defer/No-Go` является допустимым завершением discovery gate и не создаёт implementation diff;
+- новые внешние provider terms, pricing, platform policies и official constraints проверять заново
+  на момент выполнения;
+- UI implementation tasks `80+` используют текущие `ACTIVE_DESIGN_SOURCE.md`,
+  `docs/design/design-direction-v2.1.md`, `docs/design/component-principles-v2.md`, общий
+  Mobile Web/TMA contract и owner visual checkpoint на тех же основаниях, что release tasks;
+- umbrella не разрешает смешивать дочерние tasks в одном commit.
 
 ## Product core
 

@@ -128,8 +128,12 @@ Current backlog families include:
 
 - `codex-backlog/tasks/`;
 - `codex-backlog/bugs/pending/` for owner-selected standalone bug-fix tasks;
-- `codex-backlog/telegram-core-release-backlog/tasks/`;
-- `post-release-priority-backlog/tasks/`.
+- `codex-backlog/telegram-core-release-backlog/tasks/`.
+
+Trigger-gated post-release tasks `80-96` и их буквенные подзадачи входят в `codex-backlog/tasks/` и используют те же
+`codex-backlog/GLOBAL_RULES.md` и `codex-backlog/TASK_EXECUTION_LIFECYCLE.md`. Их номер/product
+rank не заменяет Trigger, dependency и owner decision; umbrella `83`, `87`, `87C`, `91`, `92`
+отдельно не выполняются.
 
 When a task file is explicitly provided:
 
