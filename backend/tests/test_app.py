@@ -1539,7 +1539,8 @@ def test_client_custom_exercise_is_private(client):
     assert coach_edit.status_code == 403
 
 
-def test_admin_custom_exercise_is_global(client):
+def test_only_configured_root_custom_exercise_is_global(client, monkeypatch):
+    monkeypatch.setattr(settings, "admin_telegram_user_ids", "1102")
     admin_headers = auth(client, telegram_user_id=1102, is_coach=True, is_admin=True)
     client_headers = auth(client, telegram_user_id=3103, is_coach=False)
     coach_headers = auth(client, telegram_user_id=1103, is_coach=True)
@@ -1989,7 +1990,8 @@ def test_client_template_is_private(client):
     assert title not in other_titles
 
 
-def test_admin_template_is_public(client):
+def test_only_configured_root_template_is_public(client, monkeypatch):
+    monkeypatch.setattr(settings, "admin_telegram_user_ids", "1104")
     admin_headers = auth(client, telegram_user_id=1104, is_coach=True, is_admin=True)
     client_headers = auth(client, telegram_user_id=3106, is_coach=False)
     coach_headers = auth(client, telegram_user_id=1105, is_coach=True)
@@ -2155,7 +2157,7 @@ def test_coach_cannot_create_program_for_non_client(client):
     assert created.status_code == 403
 
 
-def test_deleted_user_custom_exercises_do_not_become_global(client):
+def test_removed_user_delete_route_preserves_private_exercises(client):
     admin_headers = auth(client, telegram_user_id=1106, is_coach=True, is_admin=True)
     user_headers = auth(client, telegram_user_id=3107, is_coach=False)
     other_headers = auth(client, telegram_user_id=3108, is_coach=False)
@@ -2171,7 +2173,7 @@ def test_deleted_user_custom_exercises_do_not_become_global(client):
 
     deleted = client.delete(f"/api/v1/admin/users/{user['id']}", headers=admin_headers)
 
-    assert deleted.status_code == 204
+    assert deleted.status_code == 405
     other_titles = {
         item["title"]
         for item in client.get("/api/v1/programs/exercises", headers=other_headers).json()
@@ -2557,31 +2559,35 @@ def test_admin_users_forbidden_for_coach(client):
     assert response.status_code == 403
 
 
-def test_admin_users_ok_for_admin(client):
+def test_admin_users_ok_for_verified_root(client, monkeypatch):
+    monkeypatch.setattr(settings, "admin_telegram_user_ids", "1001")
     headers = auth(client, telegram_user_id=1001, is_coach=True, is_admin=True)
-    response = client.get("/api/v1/admin/users", headers=headers)
+    response = client.get("/api/v1/admin/users?q=1001", headers=headers)
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
     assert len(data) >= 1
 
 
-def test_admin_users_supports_server_side_filters_and_pagination(client):
+def test_admin_users_supports_bounded_safe_identifier_search(client, monkeypatch):
+    monkeypatch.setattr(settings, "admin_telegram_user_ids", "1001")
     headers = auth(client, telegram_user_id=1001, is_coach=True, is_admin=True)
-    auth(client, telegram_user_id=6011, is_coach=False, full_name="Искомый клиент")
+    first = auth(client, telegram_user_id=6011, is_coach=False, full_name="Искомый клиент")
     auth(client, telegram_user_id=6012, is_coach=True, full_name="Другой тренер")
+    first_user = client.get("/api/v1/me", headers=first).json()
 
-    page = client.get("/api/v1/admin/users?limit=1&offset=0", headers=headers)
+    page = client.get(
+        f"/api/v1/admin/users?q={first_user['username']}",
+        headers=headers,
+    )
     assert page.status_code == 200
     assert len(page.json()) == 1
-    assert int(page.headers["X-Total-Count"]) >= 3
 
     filtered = client.get(
-        "/api/v1/admin/users?search=6011&role=client&active=true",
+        "/api/v1/admin/users?q=6011",
         headers=headers,
     )
     assert filtered.status_code == 200
-    assert filtered.headers["X-Total-Count"] == "1"
     assert filtered.json()[0]["telegram_user_id"] == 6011
 
 
@@ -2763,14 +2769,15 @@ def test_coach_application_and_admin_role_routes_are_removed(client):
     )
 
 
-def test_admin_can_block_and_unblock_user(client):
+def test_verified_root_can_block_and_unblock_user(client, monkeypatch):
+    monkeypatch.setattr(settings, "admin_telegram_user_ids", "1001")
     admin_headers = auth(client, telegram_user_id=1001, is_coach=True, is_admin=True)
     user_headers = auth(client, telegram_user_id=5010, is_coach=False)
     user = client.get("/api/v1/me", headers=user_headers).json()
 
     blocked = client.patch(
         f"/api/v1/admin/users/{user['id']}/status",
-        json={"is_active": False},
+        json={"is_active": False, "reason": "security_incident"},
         headers=admin_headers,
     )
     assert blocked.status_code == 200
@@ -2785,7 +2792,7 @@ def test_admin_can_block_and_unblock_user(client):
 
     unblocked = client.patch(
         f"/api/v1/admin/users/{user['id']}/status",
-        json={"is_active": True},
+        json={"is_active": True, "reason": "account_recovery"},
         headers=admin_headers,
     )
     assert unblocked.status_code == 200
@@ -2793,22 +2800,24 @@ def test_admin_can_block_and_unblock_user(client):
     assert auth(client, telegram_user_id=5010, is_coach=False)
 
 
-def test_admin_cannot_block_or_delete_self(client):
+def test_root_cannot_block_or_delete_self(client, monkeypatch):
+    monkeypatch.setattr(settings, "admin_telegram_user_ids", "1001")
     admin_headers = auth(client, telegram_user_id=1001, is_coach=True, is_admin=True)
     admin_user = client.get("/api/v1/me", headers=admin_headers).json()
 
     block = client.patch(
         f"/api/v1/admin/users/{admin_user['id']}/status",
-        json={"is_active": False},
+        json={"is_active": False, "reason": "security_incident"},
         headers=admin_headers,
     )
-    assert block.status_code == 400
+    assert block.status_code == 403
 
     delete = client.delete(f"/api/v1/admin/users/{admin_user['id']}", headers=admin_headers)
-    assert delete.status_code == 400
+    assert delete.status_code == 405
 
 
-def test_admin_can_delete_user(client):
+def test_root_user_deletion_operation_is_not_exposed(client, monkeypatch):
+    monkeypatch.setattr(settings, "admin_telegram_user_ids", "1001")
     admin_headers = auth(client, telegram_user_id=1001, is_coach=True, is_admin=True)
     user_headers = auth(client, telegram_user_id=5011, is_coach=False)
     user = client.get("/api/v1/me", headers=user_headers).json()
@@ -2837,14 +2846,15 @@ def test_admin_can_delete_user(client):
     assert created.status_code == 200
 
     deleted = client.delete(f"/api/v1/admin/users/{user['id']}", headers=admin_headers)
-    assert deleted.status_code == 204
-    assert client.get("/api/v1/me", headers=user_headers).status_code == 401
+    assert deleted.status_code == 405
+    assert client.get("/api/v1/me", headers=user_headers).status_code == 200
 
-    rows = client.get("/api/v1/admin/users", headers=admin_headers).json()
-    assert not any(row["telegram_user_id"] == 5011 for row in rows)
+    rows = client.get("/api/v1/admin/users?q=5011", headers=admin_headers).json()
+    assert any(row["telegram_user_id"] == 5011 for row in rows)
 
 
-def test_admin_can_delete_template_from_admin_panel(client):
+def test_root_template_deletion_operation_is_not_exposed(client, monkeypatch):
+    monkeypatch.setattr(settings, "admin_telegram_user_ids", "1001")
     admin_headers = auth(client, telegram_user_id=1001, is_coach=True, is_admin=True)
     exercises = client.get("/api/v1/programs/exercises", headers=admin_headers).json()
     payload = {
@@ -2872,16 +2882,16 @@ def test_admin_can_delete_template_from_admin_panel(client):
     template_id = created.json()["template"]["id"]
 
     deleted = client.delete(f"/api/v1/admin/templates/{template_id}", headers=admin_headers)
-    assert deleted.status_code == 204
+    assert deleted.status_code == 404
 
     missing = client.get(f"/api/v1/programs/templates/{template_id}", headers=admin_headers)
-    assert missing.status_code == 404
+    assert missing.status_code == 200
 
 
-def test_coach_cannot_use_admin_delete_template(client):
+def test_removed_admin_template_route_is_absent_for_coach(client):
     coach_headers = auth(client, telegram_user_id=1002, is_coach=True)
     response = client.delete("/api/v1/admin/templates/1", headers=coach_headers)
-    assert response.status_code == 403
+    assert response.status_code == 404
 
 
 def test_billing_and_admin_payment_routes_are_not_exposed(client):
@@ -3223,7 +3233,7 @@ def test_invites_do_not_mutate_profile_or_delete_other_coach_invites(client):
         assert second.status == "pending"
 
 
-def test_deleting_template_preserves_assigned_program_and_workouts(client):
+def test_removed_template_delete_route_preserves_template_and_assigned_program(client):
     headers = auth(client, telegram_user_id=4051, is_coach=True, is_admin=True)
     user = client.get("/api/v1/me", headers=headers).json()
     exercises = client.get("/api/v1/programs/exercises", headers=headers).json()
@@ -3253,17 +3263,18 @@ def test_deleting_template_preserves_assigned_program_and_workouts(client):
     program_id = created.json()["assigned_program_id"]
 
     assert (
-        client.delete(f"/api/v1/admin/templates/{template_id}", headers=headers).status_code == 204
+        client.delete(f"/api/v1/admin/templates/{template_id}", headers=headers).status_code == 404
     )
 
     with get_session_context() as db:
         program = db.query(UserProgram).filter(UserProgram.id == program_id).one()
         assert program.user_id == user["id"]
-        assert program.template_id is None
+        assert program.template_id == template_id
+        assert db.query(ProgramTemplate).filter(ProgramTemplate.id == template_id).count() == 1
         assert db.query(UserWorkout).filter(UserWorkout.user_program_id == program.id).count() == 1
 
 
-def test_deleting_coach_preserves_client_program_and_workouts(client):
+def test_removed_user_delete_route_preserves_coach_program_and_workouts(client):
     admin_headers = auth(client, telegram_user_id=4052, is_coach=True, is_admin=True)
     coach_headers = auth(client, telegram_user_id=1352, is_coach=True)
     client_headers = auth(client, telegram_user_id=5352, is_coach=False)
@@ -3304,13 +3315,13 @@ def test_deleting_coach_preserves_client_program_and_workouts(client):
         f"/api/v1/admin/users/{coach_user['id']}",
         headers=admin_headers,
     )
-    assert deleted.status_code == 204
+    assert deleted.status_code == 405
     assert client.get("/api/v1/workouts/today", headers=client_headers).status_code == 200
 
     with get_session_context() as db:
         program = db.query(UserProgram).filter(UserProgram.id == program_id).one()
-        assert program.template_id is None
-        assert program.assigned_by_user_id is None
+        assert program.template_id is not None
+        assert program.assigned_by_user_id == coach_user["id"]
         assert db.query(UserWorkout).filter(UserWorkout.user_program_id == program.id).count() == 1
 
 
@@ -4261,15 +4272,15 @@ def test_alembic_revision_ids_fit_version_table_column():
         assert len(match.group(1)) <= 32, f"Revision id is too long in {migration.name}"
 
 
-def test_miniapp_has_independent_coach_and_admin_navigation():
+def test_tma_navigation_excludes_root_admin_entry():
     source = (
         Path(__file__).resolve().parents[2] / "frontend" / "src" / "app" / "AppShell.tsx"
     ).read_text(encoding="utf-8")
     assert 'to="/coach"' in source
     assert 'to="/admin"' in source
     assert "user.is_coach || user.is_admin" not in source
-    assert "{user.is_coach && (" in source
-    assert "user.is_admin" in source
+    assert "{user?.is_coach && (" in source
+    assert "{user?.is_root && !isMiniApp && (" in source
 
 
 def test_client_management_is_consolidated_in_coach_section():

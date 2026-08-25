@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from threading import Barrier
 
+from fitminiapp_api.core.config import settings
 from fitminiapp_api.core.timezone import now_msk_naive
 from fitminiapp_api.db.session import SessionLocal, get_session_context
 from fitminiapp_api.models.audit import AuditEvent
@@ -82,7 +83,8 @@ def test_concurrent_telegram_first_login_is_an_idempotent_upsert():
         )
 
 
-def test_admin_deactivation_ends_both_relationship_roles_and_revokes_invites(client):
+def test_root_deactivation_ends_both_relationship_roles_and_revokes_invites(client, monkeypatch):
+    monkeypatch.setattr(settings, "admin_telegram_user_ids", "881000")
     admin_headers = _auth(client, 881_000, is_coach=True, is_admin=True)
     target_headers = _auth(client, 881_001, is_coach=True)
     other_coach_headers = _auth(client, 881_002, is_coach=True)
@@ -124,7 +126,7 @@ def test_admin_deactivation_ends_both_relationship_roles_and_revokes_invites(cli
 
     blocked = client.patch(
         f"/api/v1/admin/users/{target_id}/status",
-        json={"is_active": False},
+        json={"is_active": False, "reason": "support_request"},
         headers=admin_headers,
     )
     assert blocked.status_code == 200
@@ -140,7 +142,7 @@ def test_admin_deactivation_ends_both_relationship_roles_and_revokes_invites(cli
         )
         assert len(relations) == 2
         assert {row.status for row in relations} == {"ended"}
-        assert {row.ended_reason for row in relations} == {"user_deactivated"}
+        assert {row.ended_reason for row in relations} == {"root_block:support_request"}
 
         invites = (
             db.query(CoachClientInvite)
@@ -160,7 +162,7 @@ def test_admin_deactivation_ends_both_relationship_roles_and_revokes_invites(cli
             for row in db.query(AuditEvent).filter(AuditEvent.target_user_id == target_id).all()
         }
         assert {
-            "admin.user_status_updated",
+            "root.account_blocked",
             "coach.relation_ended",
             "coach.invite_revoked",
         }.issubset(audit_actions)

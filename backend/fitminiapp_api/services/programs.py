@@ -39,6 +39,7 @@ from fitminiapp_api.services.notifications import cancel_workout_reminder, queue
 from fitminiapp_api.services.nutrition import build_nutrition_target_response_from_users
 from fitminiapp_api.services.program_common import ProgramError
 from fitminiapp_api.services.program_versioning import record_program_revision
+from fitminiapp_api.services.root_admin import has_verified_root_identity
 
 GOALS = {"muscle_gain", "fat_loss", "maintenance", "recomposition"}
 LEVELS = {"beginner", "intermediate", "advanced"}
@@ -265,7 +266,7 @@ def create_template(
 ) -> ProgramTemplate:
     validate_program_payload(payload)
 
-    is_public = current_user.is_admin
+    is_public = has_verified_root_identity(db, current_user)
     owner_user = target_user if payload.mode == "coach" else current_user
     if owner_user is None:
         raise ProgramError("Target user is required in coach mode")

@@ -1,253 +1,130 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import String, cast, func, or_
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from fitminiapp_api.api.dependencies.auth import require_admin, require_root_admin
+from fitminiapp_api.api.dependencies.auth import require_root_admin
 from fitminiapp_api.db.session import get_db
-from fitminiapp_api.models.notification import Notification
-from fitminiapp_api.models.program import ProgramTemplate
-from fitminiapp_api.models.user import User, UserProfile
+from fitminiapp_api.models.user import User
 from fitminiapp_api.schemas.admin import (
-    AdminNotificationRow,
-    AdminTemplateRow,
-    AdminUserAdminCapabilityUpdate,
-    AdminUserRow,
+    AdminAuditRow,
+    AdminFunnelResponse,
+    AdminJobRow,
+    AdminOperationRequest,
+    AdminTrainerCapabilityUpdate,
+    AdminUserDetail,
+    AdminUserSearchRow,
     AdminUserStatusUpdate,
 )
-from fitminiapp_api.services.accounts import delete_user_cascade
-from fitminiapp_api.services.audit import record_audit_event
-from fitminiapp_api.services.coach_clients import close_user_coaching_relationships
-from fitminiapp_api.services.programs import delete_template_cascade
-from fitminiapp_api.services.root_admin import is_root_user
-from fitminiapp_api.services.token_service import revoke_all_user_refresh_tokens
+from fitminiapp_api.services.admin_operations import (
+    end_relationship,
+    funnel_aggregates,
+    list_audit_events,
+    list_jobs,
+    retry_account_export,
+    search_users,
+    update_trainer_capability,
+    update_user_status,
+    user_detail,
+)
 
 router = APIRouter()
 
 
-def _role_from_user(user: User) -> str:
-    if user.is_admin:
-        return "admin"
-    if user.is_coach:
-        return "coach"
-    return "client"
-
-
-def _serialize_user_row(user: User, profile: UserProfile | None) -> dict:
-    return {
-        "id": user.id,
-        "telegram_user_id": user.telegram_user_id,
-        "username": user.username,
-        "role": _role_from_user(user),
-        "is_coach": user.is_coach,
-        "is_admin": user.is_admin,
-        "is_active": user.is_active,
-        "full_name": profile.full_name if profile else None,
-        "goal": profile.goal if profile else None,
-        "level": profile.level if profile else None,
-    }
-
-
-def _require_mutable_target(user: User) -> None:
-    if is_root_user(user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Операции с Root-аккаунтом запрещены",
-        )
-
-
-@router.get("/users", response_model=list[AdminUserRow])
+@router.get("/users", response_model=list[AdminUserSearchRow])
 def admin_users(
-    response: Response,
-    search: str | None = Query(default=None, max_length=128),
-    role: str | None = Query(default=None, pattern="^(client|coach|admin)$"),
-    active: bool | None = None,
-    limit: int = Query(default=100, ge=1, le=200),
-    offset: int = Query(default=0, ge=0),
+    q: str = Query(min_length=1, max_length=128),
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
+    _: User = Depends(require_root_admin),
 ) -> list[dict]:
-    query = db.query(User, UserProfile).outerjoin(UserProfile, UserProfile.user_id == User.id)
-    if search:
-        pattern = f"%{search.strip().lower()}%"
-        query = query.filter(
-            or_(
-                func.lower(func.coalesce(UserProfile.full_name, "")).like(pattern),
-                func.lower(func.coalesce(User.username, "")).like(pattern),
-                cast(User.telegram_user_id, String).like(pattern),
-            )
-        )
-    if role == "admin":
-        query = query.filter(User.is_admin.is_(True))
-    elif role == "coach":
-        query = query.filter(User.is_coach.is_(True), User.is_admin.is_(False))
-    elif role == "client":
-        query = query.filter(User.is_coach.is_(False), User.is_admin.is_(False))
-    if active is not None:
-        query = query.filter(User.is_active.is_(active))
-    total = query.count()
-    response.headers["X-Total-Count"] = str(total)
-    rows = query.order_by(User.id.desc()).offset(offset).limit(limit).all()
-
-    return [_serialize_user_row(user, profile) for user, profile in rows]
+    return search_users(db, q)
 
 
-@router.patch("/users/{user_id}/admin-capability", response_model=AdminUserRow)
-def update_user_admin_capability(
+@router.get("/users/{user_id}", response_model=AdminUserDetail)
+def admin_user_detail(
     user_id: int,
-    payload: AdminUserAdminCapabilityUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_root_admin),
+    _: User = Depends(require_root_admin),
 ) -> dict:
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден")
-    _require_mutable_target(user)
-
-    user.is_admin = payload.is_admin
-    record_audit_event(
-        db,
-        action="root.user_admin_capability_updated",
-        resource_type="user",
-        actor_user_id=current_user.id,
-        target_user_id=user.id,
-        resource_id=user.id,
-        details={"is_admin": user.is_admin},
-    )
-    db.commit()
-    profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
-    return _serialize_user_row(user, profile)
+    return user_detail(db, user_id)
 
 
-@router.patch("/users/{user_id}/status", response_model=AdminUserRow)
-def update_user_status(
+@router.patch("/users/{user_id}/status", response_model=AdminUserDetail)
+def admin_update_user_status(
     user_id: int,
     payload: AdminUserStatusUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_root_admin),
 ) -> dict:
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден")
-    _require_mutable_target(user)
-    if user.id == current_user.id and not payload.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Нельзя заблокировать текущего администратора",
-        )
-
-    user.is_active = payload.is_active
-    if not user.is_active:
-        revoke_all_user_refresh_tokens(db, user.id, commit=False)
-        close_user_coaching_relationships(
-            db,
-            user,
-            include_as_client=True,
-            reason="user_deactivated",
-            actor_user_id=current_user.id,
-        )
-
-    record_audit_event(
+    return update_user_status(
         db,
-        action="admin.user_status_updated",
-        resource_type="user",
-        actor_user_id=current_user.id,
-        target_user_id=user.id,
-        resource_id=user.id,
-        details={
-            "status": "active" if user.is_active else "inactive",
-            "reason": "admin_update",
-        },
+        actor=current_user,
+        target_user_id=user_id,
+        is_active=payload.is_active,
+        reason=payload.reason,
     )
 
-    db.commit()
-    profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
-    return _serialize_user_row(user, profile)
 
-
-@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_user(
+@router.patch("/users/{user_id}/trainer-capability", response_model=AdminUserDetail)
+def admin_update_trainer_capability(
     user_id: int,
+    payload: AdminTrainerCapabilityUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
-) -> None:
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден")
-    _require_mutable_target(user)
-    if user.id == current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Нельзя удалить текущего администратора",
-        )
-
-    delete_user_cascade(db, user)
-    db.commit()
-
-
-@router.get("/notifications", response_model=list[AdminNotificationRow])
-def admin_notifications(
-    response: Response,
-    limit: int = Query(default=100, ge=1, le=200),
-    offset: int = Query(default=0, ge=0),
-    db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
-) -> list[dict]:
-    query = db.query(Notification, UserProfile.timezone).outerjoin(
-        UserProfile, UserProfile.user_id == Notification.user_id
+    current_user: User = Depends(require_root_admin),
+) -> dict:
+    return update_trainer_capability(
+        db,
+        actor=current_user,
+        target_user_id=user_id,
+        is_active=payload.is_active,
+        reason=payload.reason,
     )
-    response.headers["X-Total-Count"] = str(query.count())
-    rows = query.order_by(Notification.id.desc()).offset(offset).limit(limit).all()
-
-    return [
-        {
-            "id": row.id,
-            "user_id": row.user_id,
-            "timezone": timezone or "Europe/Moscow",
-            "status": row.status,
-            "scheduled_for": row.scheduled_for.isoformat() if row.scheduled_for else None,
-            "sent_at": row.sent_at.isoformat() if row.sent_at else None,
-        }
-        for row, timezone in rows
-    ]
 
 
-@router.get("/templates", response_model=list[AdminTemplateRow])
-def admin_templates(
-    response: Response,
-    limit: int = Query(default=100, ge=1, le=200),
-    offset: int = Query(default=0, ge=0),
+@router.post("/relationships/{relationship_id}/end", response_model=AdminUserDetail)
+def admin_end_relationship(
+    relationship_id: int,
+    payload: AdminOperationRequest,
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
+    current_user: User = Depends(require_root_admin),
+) -> dict:
+    return end_relationship(
+        db,
+        actor=current_user,
+        relationship_id=relationship_id,
+        reason=payload.reason,
+    )
+
+
+@router.get("/jobs", response_model=list[AdminJobRow])
+def admin_jobs(
+    limit: int = Query(default=50, ge=1, le=100),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_root_admin),
 ) -> list[dict]:
-    query = db.query(ProgramTemplate).filter(ProgramTemplate.is_public.is_(True))
-    response.headers["X-Total-Count"] = str(query.count())
-    rows = query.order_by(ProgramTemplate.id.desc()).offset(offset).limit(limit).all()
-
-    return [
-        {
-            "id": row.id,
-            "title": row.title,
-            "goal": row.goal,
-            "level": row.level,
-            "owner_user_id": row.owner_user_id,
-            "created_by_user_id": row.created_by_user_id,
-            "is_public": row.is_public,
-        }
-        for row in rows
-    ]
+    return list_jobs(db, limit=limit)
 
 
-@router.delete("/templates/{template_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_admin_template(
-    template_id: int,
+@router.post("/exports/{export_id}/retry", response_model=AdminJobRow)
+def admin_retry_export(
+    export_id: str,
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
-) -> None:
-    template = db.query(ProgramTemplate).filter(ProgramTemplate.id == template_id).first()
-    if not template:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Шаблон не найден")
-    if not template.is_public:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Недостаточно прав")
+    current_user: User = Depends(require_root_admin),
+) -> dict:
+    return retry_account_export(db, actor=current_user, export_id=export_id)
 
-    delete_template_cascade(db, template)
-    db.commit()
+
+@router.get("/funnel", response_model=AdminFunnelResponse)
+def admin_funnel(
+    period_days: int = Query(default=30, ge=7, le=365),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_root_admin),
+) -> dict:
+    return funnel_aggregates(db, period_days=period_days)
+
+
+@router.get("/audit", response_model=list[AdminAuditRow])
+def admin_audit(
+    limit: int = Query(default=50, ge=1, le=100),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_root_admin),
+) -> list[dict]:
+    return list_audit_events(db, limit=limit)

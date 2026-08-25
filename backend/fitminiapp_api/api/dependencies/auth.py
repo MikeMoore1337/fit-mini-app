@@ -20,15 +20,6 @@ def require_coach(user: User = Depends(require_user)) -> User:
     return user
 
 
-def require_admin(user: User = Depends(require_user)) -> User:
-    if not user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Недостаточно прав администратора",
-        )
-    return user
-
-
 def require_root_admin(
     user: User = Depends(require_user),
     db: Session = Depends(get_db),

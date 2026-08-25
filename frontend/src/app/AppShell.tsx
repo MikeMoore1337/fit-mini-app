@@ -66,8 +66,8 @@ function Avatar({ name, photoUrl }: { name: string; photoUrl?: string | null }) 
   );
 }
 
-function accountRole(isAdmin: boolean, isCoach: boolean): string {
-  if (isAdmin) return 'Администратор';
+function accountRole(isRoot: boolean, isCoach: boolean): string {
+  if (isRoot) return isCoach ? 'Root · Тренер' : 'Root · Личный режим';
   if (isCoach) return 'Тренер';
   return 'Клиент';
 }
@@ -240,7 +240,7 @@ export function AppShell({
                     </AppLink>
                   </>
                 )}
-                {user?.is_admin && (
+                {user?.is_root && !isMiniApp && (
                   <AppLink
                     to="/admin"
                     className={`app-bottom-nav__btn${path === '/admin' ? ' is-active' : ''}`}
@@ -262,7 +262,7 @@ export function AppShell({
                 <small className="app-bottom-nav__account-role">
                   {demo
                     ? 'Отдельная сессия'
-                    : accountRole(Boolean(user?.is_admin), Boolean(user?.is_coach))}
+                    : accountRole(Boolean(user?.is_root), Boolean(user?.is_coach))}
                 </small>
                 {demo ? (
                   <AppLink
@@ -312,7 +312,7 @@ export function AppShell({
                       <small>
                         {demo
                           ? 'Отдельная сессия'
-                          : accountRole(Boolean(user?.is_admin), Boolean(user?.is_coach))}
+                          : accountRole(Boolean(user?.is_root), Boolean(user?.is_coach))}
                       </small>
                     </span>
                   </div>
@@ -380,7 +380,7 @@ export function AppShell({
                           <span>Кабинет тренера</span>
                         </AppLink>
                       )}
-                      {user?.is_admin && (
+                      {user?.is_root && !isMiniApp && (
                         <AppLink
                           to="/admin"
                           className="app-more-panel__item"

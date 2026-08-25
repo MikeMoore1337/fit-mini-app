@@ -624,6 +624,7 @@ async function mockApi(
           first_name: 'Демо',
           is_coach: role === 'coach',
           is_admin: role === 'admin',
+          is_root: role === 'admin',
           has_active_program: false,
           has_workout_history: false,
           onboarding: { status: 'complete', required_fields: ['goal'], missing_fields: [] },
@@ -2857,19 +2858,21 @@ test('сенсорное поле даты сохраняет нативный �
   }
 });
 
-test('администратор открывает React-панель', async ({ page }) => {
+test('Root открывает минимальный operational workspace', async ({ page }) => {
   await mockApi(page);
   await page.goto('/admin');
   await page.getByRole('button', { name: 'Админ' }).click();
-  await expect(page.getByRole('heading', { name: 'Панель администратора' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Операции поддержки и безопасности' }),
+  ).toBeVisible();
   await expect(page.getByRole('link', { name: 'Админ-панель' })).toHaveAttribute(
     'aria-current',
     'page',
   );
   await expect(page.getByRole('link', { name: 'Тренер', exact: true })).toHaveCount(0);
-  await openCard(page, 'Пользователи');
-  await expect(page.getByText('Пользователи не найдены')).toBeVisible();
-  await expect(page.getByRole('tab', { name: 'Заявки тренеров' })).toHaveCount(0);
+  await expect(page.getByText('Введите идентификатор')).toBeVisible();
+  await expect(page.getByText('Заявки тренеров')).toHaveCount(0);
+  await expect(page.getByText('Шаблоны программ')).toHaveCount(0);
 });
 
 test('поля даты остаются внутри анкеты клиента в кабинете тренера', async ({ page }) => {

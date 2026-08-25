@@ -16,6 +16,7 @@ from fitminiapp_api.services.exercise_domain import (
     sync_exercise_domain_metadata,
 )
 from fitminiapp_api.services.program_common import ProgramError
+from fitminiapp_api.services.root_admin import has_verified_root_identity
 
 
 def _slugify(value: str) -> str:
@@ -126,7 +127,9 @@ def create_exercise(
         raise ProgramError("Exercise title is required")
 
     owner_user = _resolve_manageable_user(db, current_user, target_telegram_user_id)
-    is_global_admin_exercise = current_user.is_admin and owner_user.id == current_user.id
+    is_global_admin_exercise = (
+        has_verified_root_identity(db, current_user) and owner_user.id == current_user.id
+    )
     visible_rows = _load_visible_exercise_rows(
         db,
         current_user if is_global_admin_exercise else owner_user,
@@ -209,7 +212,7 @@ def update_exercise_for_user(
 
     edits_global_exercise = (
         exercise.created_by_user_id is None
-        and current_user.is_admin
+        and has_verified_root_identity(db, current_user)
         and owner_user.id == current_user.id
     )
 
@@ -285,7 +288,7 @@ def delete_exercise_for_user(
 
     if exercise.created_by_user_id is None:
         owner_user = _resolve_manageable_user(db, current_user, target_telegram_user_id)
-        if current_user.is_admin and owner_user.id == current_user.id:
+        if has_verified_root_identity(db, current_user) and owner_user.id == current_user.id:
             exercise.is_deleted = True
             db.commit()
             return

@@ -2294,21 +2294,21 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/users/{user_id}/admin-capability": {
+    "/api/v1/admin/users/{user_id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Admin User Detail */
+        get: operations["admin_user_detail_api_v1_admin_users__user_id__get"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /** Update User Admin Capability */
-        patch: operations["update_user_admin_capability_api_v1_admin_users__user_id__admin_capability_patch"];
+        patch?: never;
         trace?: never;
     };
     "/api/v1/admin/users/{user_id}/status": {
@@ -2324,11 +2324,11 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Update User Status */
-        patch: operations["update_user_status_api_v1_admin_users__user_id__status_patch"];
+        /** Admin Update User Status */
+        patch: operations["admin_update_user_status_api_v1_admin_users__user_id__status_patch"];
         trace?: never;
     };
-    "/api/v1/admin/users/{user_id}": {
+    "/api/v1/admin/users/{user_id}/trainer-capability": {
         parameters: {
             query?: never;
             header?: never;
@@ -2338,48 +2338,14 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Delete User */
-        delete: operations["delete_user_api_v1_admin_users__user_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/notifications": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Admin Notifications */
-        get: operations["admin_notifications_api_v1_admin_notifications_get"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** Admin Update Trainer Capability */
+        patch: operations["admin_update_trainer_capability_api_v1_admin_users__user_id__trainer_capability_patch"];
         trace?: never;
     };
-    "/api/v1/admin/templates": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Admin Templates */
-        get: operations["admin_templates_api_v1_admin_templates_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/templates/{template_id}": {
+    "/api/v1/admin/relationships/{relationship_id}/end": {
         parameters: {
             query?: never;
             header?: never;
@@ -2388,9 +2354,77 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Admin End Relationship */
+        post: operations["admin_end_relationship_api_v1_admin_relationships__relationship_id__end_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Jobs */
+        get: operations["admin_jobs_api_v1_admin_jobs_get"];
+        put?: never;
         post?: never;
-        /** Delete Admin Template */
-        delete: operations["delete_admin_template_api_v1_admin_templates__template_id__delete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/exports/{export_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Admin Retry Export */
+        post: operations["admin_retry_export_api_v1_admin_exports__export_id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/funnel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Funnel */
+        get: operations["admin_funnel_api_v1_admin_funnel_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Audit */
+        get: operations["admin_audit_api_v1_admin_audit_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2786,71 +2820,212 @@ export interface components {
             calories: components["schemas"]["AdherenceComponent"];
             protein: components["schemas"]["AdherenceComponent"];
         };
-        /** AdminNotificationRow */
-        AdminNotificationRow: {
+        /** AdminAuditRow */
+        AdminAuditRow: {
             /** Id */
             id: number;
+            /** Action */
+            action: string;
+            /** Actor User Id */
+            actor_user_id?: number | null;
+            /** Target User Id */
+            target_user_id?: number | null;
+            /** Resource Type */
+            resource_type: string;
+            /** Resource Id */
+            resource_id?: string | null;
+            /** Reason */
+            reason?: ("security_incident" | "abuse" | "account_recovery" | "support_request" | "relationship_safety") | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** AdminFunnelResponse */
+        AdminFunnelResponse: {
+            /** Period Days */
+            period_days: number;
+            /**
+             * Cohort Since
+             * Format: date-time
+             */
+            cohort_since: string;
+            /**
+             * Analytics Provider Status
+             * @constant
+             */
+            analytics_provider_status: "not_connected";
+            /** Coverage Note */
+            coverage_note: string;
+            /** Stages */
+            stages: components["schemas"]["AdminFunnelStage"][];
+        };
+        /** AdminFunnelStage */
+        AdminFunnelStage: {
+            /**
+             * Key
+             * @enum {string}
+             */
+            key: "registered" | "profile_ready" | "program_activated" | "core_value_reached";
+            /** Account Count */
+            account_count: number;
+            /** Cohort Rate Percent */
+            cohort_rate_percent: number;
+        };
+        /** AdminIdentityRow */
+        AdminIdentityRow: {
+            /** Provider */
+            provider: string;
+            /** Identifier */
+            identifier: string;
+            /** Verified */
+            verified: boolean;
+            /**
+             * Last Login At
+             * Format: date-time
+             */
+            last_login_at: string;
+        };
+        /** AdminJobRow */
+        AdminJobRow: {
+            /** Job Id */
+            job_id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "notification" | "account_export";
             /** User Id */
             user_id: number;
-            /** Timezone */
-            timezone: string;
             /** Status */
             status: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
             /** Scheduled For */
             scheduled_for?: string | null;
-            /** Sent At */
-            sent_at?: string | null;
+            /** Completed At */
+            completed_at?: string | null;
+            /** Attempt Count */
+            attempt_count?: number | null;
+            /** Error Code */
+            error_code?: string | null;
+            /** Retry Allowed */
+            retry_allowed: boolean;
         };
-        /** AdminTemplateRow */
-        AdminTemplateRow: {
+        /** AdminOperationRequest */
+        AdminOperationRequest: {
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "security_incident" | "abuse" | "account_recovery" | "support_request" | "relationship_safety";
+        };
+        /** AdminRelationshipRow */
+        AdminRelationshipRow: {
             /** Id */
             id: number;
-            /** Title */
-            title: string;
-            /** Goal */
-            goal: string;
-            /** Level */
-            level: string;
-            /** Owner User Id */
-            owner_user_id?: number | null;
-            /** Created By User Id */
-            created_by_user_id?: number | null;
-            /** Is Public */
-            is_public: boolean;
+            /**
+             * Account Role
+             * @enum {string}
+             */
+            account_role: "trainer" | "client";
+            /** Counterparty User Id */
+            counterparty_user_id: number;
+            /** Counterparty Name */
+            counterparty_name: string;
+            /** Status */
+            status: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Accepted At */
+            accepted_at?: string | null;
+            /** Ended At */
+            ended_at?: string | null;
+            /** Ended Reason */
+            ended_reason?: string | null;
+            /** Can End */
+            can_end: boolean;
         };
-        /** AdminUserAdminCapabilityUpdate */
-        AdminUserAdminCapabilityUpdate: {
-            /** Is Admin */
-            is_admin: boolean;
+        /** AdminTrainerCapabilityUpdate */
+        AdminTrainerCapabilityUpdate: {
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "security_incident" | "abuse" | "account_recovery" | "support_request" | "relationship_safety";
+            /** Is Active */
+            is_active: boolean;
         };
-        /** AdminUserRow */
-        AdminUserRow: {
+        /** AdminUserDetail */
+        AdminUserDetail: {
             /** Id */
             id: number;
             /** Telegram User Id */
             telegram_user_id?: number | null;
             /** Username */
             username?: string | null;
-            /**
-             * Role
-             * @enum {string}
-             */
-            role: "client" | "coach" | "admin";
-            /** Is Coach */
-            is_coach: boolean;
-            /** Is Admin */
-            is_admin: boolean;
+            /** Display Name */
+            display_name: string;
             /** Is Active */
             is_active: boolean;
-            /** Full Name */
-            full_name?: string | null;
-            /** Goal */
-            goal?: string | null;
-            /** Level */
-            level?: string | null;
+            /** Is Trainer */
+            is_trainer: boolean;
+            /** Is Root */
+            is_root: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Linked Providers */
+            linked_providers?: string[];
+            /** Identities */
+            identities?: components["schemas"]["AdminIdentityRow"][];
+            /** Relationships */
+            relationships?: components["schemas"]["AdminRelationshipRow"][];
+            /** Jobs */
+            jobs?: components["schemas"]["AdminJobRow"][];
+            /** Audit History */
+            audit_history?: components["schemas"]["AdminAuditRow"][];
+        };
+        /** AdminUserSearchRow */
+        AdminUserSearchRow: {
+            /** Id */
+            id: number;
+            /** Telegram User Id */
+            telegram_user_id?: number | null;
+            /** Username */
+            username?: string | null;
+            /** Display Name */
+            display_name: string;
+            /** Is Active */
+            is_active: boolean;
+            /** Is Trainer */
+            is_trainer: boolean;
+            /** Is Root */
+            is_root: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Linked Providers */
+            linked_providers?: string[];
         };
         /** AdminUserStatusUpdate */
         AdminUserStatusUpdate: {
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "security_incident" | "abuse" | "account_recovery" | "support_request" | "relationship_safety";
             /** Is Active */
             is_active: boolean;
         };
@@ -12115,12 +12290,8 @@ export interface operations {
     };
     admin_users_api_v1_admin_users_get: {
         parameters: {
-            query?: {
-                search?: string | null;
-                role?: string | null;
-                active?: boolean | null;
-                limit?: number;
-                offset?: number;
+            query: {
+                q: string;
             };
             header?: never;
             path?: never;
@@ -12134,7 +12305,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AdminUserRow"][];
+                    "application/json": components["schemas"]["AdminUserSearchRow"][];
                 };
             };
             /** @description Validation Error */
@@ -12148,7 +12319,7 @@ export interface operations {
             };
         };
     };
-    update_user_admin_capability_api_v1_admin_users__user_id__admin_capability_patch: {
+    admin_user_detail_api_v1_admin_users__user_id__get: {
         parameters: {
             query?: never;
             header?: never;
@@ -12157,11 +12328,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AdminUserAdminCapabilityUpdate"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -12169,7 +12336,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AdminUserRow"];
+                    "application/json": components["schemas"]["AdminUserDetail"];
                 };
             };
             /** @description Validation Error */
@@ -12183,7 +12350,7 @@ export interface operations {
             };
         };
     };
-    update_user_status_api_v1_admin_users__user_id__status_patch: {
+    admin_update_user_status_api_v1_admin_users__user_id__status_patch: {
         parameters: {
             query?: never;
             header?: never;
@@ -12204,7 +12371,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AdminUserRow"];
+                    "application/json": components["schemas"]["AdminUserDetail"];
                 };
             };
             /** @description Validation Error */
@@ -12218,7 +12385,7 @@ export interface operations {
             };
         };
     };
-    delete_user_api_v1_admin_users__user_id__delete: {
+    admin_update_trainer_capability_api_v1_admin_users__user_id__trainer_capability_patch: {
         parameters: {
             query?: never;
             header?: never;
@@ -12227,37 +12394,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminTrainerCapabilityUpdate"];
             };
         };
-    };
-    admin_notifications_api_v1_admin_notifications_get: {
-        parameters: {
-            query?: {
-                limit?: number;
-                offset?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -12265,7 +12406,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AdminNotificationRow"][];
+                    "application/json": components["schemas"]["AdminUserDetail"];
                 };
             };
             /** @description Validation Error */
@@ -12279,55 +12420,153 @@ export interface operations {
             };
         };
     };
-    admin_templates_api_v1_admin_templates_get: {
-        parameters: {
-            query?: {
-                limit?: number;
-                offset?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AdminTemplateRow"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_admin_template_api_v1_admin_templates__template_id__delete: {
+    admin_end_relationship_api_v1_admin_relationships__relationship_id__end_post: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                template_id: number;
+                relationship_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminOperationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_jobs_api_v1_admin_jobs_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminJobRow"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_retry_export_api_v1_admin_exports__export_id__retry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                export_id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
             /** @description Successful Response */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["AdminJobRow"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_funnel_api_v1_admin_funnel_get: {
+        parameters: {
+            query?: {
+                period_days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminFunnelResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_audit_api_v1_admin_audit_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminAuditRow"][];
+                };
             };
             /** @description Validation Error */
             422: {
