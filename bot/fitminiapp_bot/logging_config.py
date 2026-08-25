@@ -19,8 +19,6 @@ SAFE_EVENT_NAMES = frozenset(
         "polling_file_lock_acquired",
         "polling_file_lock_unavailable",
         "polling_file_lock_waiting",
-        "legacy_support_redirect_disabled",
-        "legacy_support_redirect_polling_started",
         "support_case_creation_failed",
         "support_relay_result_failed",
         "support_reply_claim_failed",

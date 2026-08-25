@@ -58,9 +58,10 @@ fi
 docker compose up \
   -d \
   --no-build \
+  --remove-orphans \
   --wait \
   --wait-timeout 180 \
-  backend worker bot support-bot "${gateway_services[@]}"
+  backend worker bot "${gateway_services[@]}"
 echo "Application services became ready in $((SECONDS - stage_started))s"
 
 docker compose ps

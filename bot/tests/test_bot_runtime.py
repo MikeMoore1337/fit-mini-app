@@ -390,10 +390,16 @@ def test_support_start_payload_runs_before_generic_product_entry(monkeypatch):
     menu_button.assert_not_awaited()
 
 
-def test_compose_has_one_main_token_owner_and_no_legacy_admin_contract() -> None:
+def test_runtime_has_one_main_token_owner_and_no_legacy_support_contract() -> None:
     root = Path(__file__).resolve().parents[2]
     compose = (root / "docker-compose.yml").read_text(encoding="utf-8")
+    deploy_script = (root / "scripts" / "deploy_production.sh").read_text(encoding="utf-8")
+    env_example = (root / ".env.example").read_text(encoding="utf-8")
     assert compose.count("TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}") == 1
+    assert "support-bot" not in compose
+    assert "support-bot" not in deploy_script
+    assert "--remove-orphans" in deploy_script
+    assert "SUPPORT_BOT_" not in env_example
     assert "SUPPORT_ADMIN_TELEGRAM_USER_IDS" not in compose
     assert (
         type(bot_module.settings).model_fields["bot_token"].validation_alias == "TELEGRAM_BOT_TOKEN"
