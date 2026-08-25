@@ -31,4 +31,12 @@ describe('Icon', () => {
     expect(icon?.querySelectorAll('rect')).toHaveLength(2);
     expect(icon?.querySelectorAll('line')).toHaveLength(1);
   });
+
+  it('renders the theme moon without a detached decorative dot', () => {
+    const { container } = render(<Icon name="theme-moon" />);
+    const icon = container.querySelector('[data-icon="theme-moon"]');
+
+    expect(icon?.querySelectorAll('path')).toHaveLength(1);
+    expect(icon?.querySelector('circle')).not.toBeInTheDocument();
+  });
 });
