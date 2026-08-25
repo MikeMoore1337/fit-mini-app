@@ -122,7 +122,6 @@ async function mockAuthApi(
     if (path.endsWith('/workouts/history/summary')) {
       return route.fulfill({ json: { workouts_completed: 0, completed_sets: 0, volume_kg: 0 } });
     }
-    if (path.endsWith('/me/coach-application')) return route.fulfill({ json: null });
     return route.fulfill({ json: [] });
   });
 }

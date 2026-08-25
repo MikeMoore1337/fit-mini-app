@@ -114,7 +114,6 @@ async function mockOnboardingApi(page: Page, initialStatus: OnboardingStatus = '
         },
       });
     }
-    if (path.endsWith('/me/coach-application')) return route.fulfill({ json: null });
     return route.fulfill({ json: [] });
   });
 
