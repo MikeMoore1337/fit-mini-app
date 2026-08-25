@@ -38,9 +38,9 @@ const CoachInvites = lazy(() =>
     default: module.CoachInvites,
   })),
 );
-const CoachRoleApplicationCard = lazy(() =>
-  import('../../features/profile/CoachRoleApplication').then((module) => ({
-    default: module.CoachRoleApplicationCard,
+const TrainerCapabilityCard = lazy(() =>
+  import('../../features/profile/TrainerCapabilityCard').then((module) => ({
+    default: module.TrainerCapabilityCard,
   })),
 );
 const ProfileForm = lazy(() =>
@@ -232,7 +232,7 @@ export default function MiniAppPage() {
       `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`,
     );
   }, [toast]);
-  const role = user?.is_admin ? 'Администратор' : user?.is_coach ? 'Тренер' : 'Клиент';
+  const role = user?.is_coach ? 'Тренер' : 'Клиент';
   const profileReadiness = programProfileReadiness(user?.profile);
   const profileFormKey = JSON.stringify([
     user?.profile?.full_name,
@@ -318,7 +318,7 @@ export default function MiniAppPage() {
               </>
             )}
             {section === 'catalog' && (
-              <ExerciseCatalog canCreate={Boolean(user?.is_coach || user?.is_admin)} />
+              <ExerciseCatalog canCreate={Boolean(user?.is_coach)} />
             )}
             {section === 'nutrition' && (
               <NutritionPage
@@ -373,13 +373,13 @@ export default function MiniAppPage() {
                   <header className="profile-settings-group__head">
                     <span className="eyebrow">Связи</span>
                     <h2 id="profile-trainer-title">Тренер и приглашения</h2>
-                    <p>Управляйте текущим тренером или проверьте статус доступа для тренеров.</p>
+                    <p>Управляйте текущим тренером или включите собственный режим тренера.</p>
                   </header>
                   <CoachInvites
                     initialToken={inviteToken}
                     onInitialTokenHandled={() => setInviteToken(null)}
                   />
-                  <CoachRoleApplicationCard />
+                  <TrainerCapabilityCard />
                 </section>
                 <section
                   className="profile-settings-group"

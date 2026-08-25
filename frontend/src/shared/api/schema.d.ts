@@ -362,20 +362,20 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/me/coach-application": {
+    "/api/v1/me/trainer-capability": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Read Coach Application */
-        get: operations["read_coach_application_api_v1_me_coach_application_get"];
+        /** Read Trainer Capability */
+        get: operations["read_trainer_capability_api_v1_me_trainer_capability_get"];
         put?: never;
-        /** Create Coach Application */
-        post: operations["create_coach_application_api_v1_me_coach_application_post"];
-        /** Delete Coach Application */
-        delete: operations["delete_coach_application_api_v1_me_coach_application_delete"];
+        /** Enable Trainer Capability */
+        post: operations["enable_trainer_capability_api_v1_me_trainer_capability_post"];
+        /** Disable Trainer Capability */
+        delete: operations["disable_trainer_capability_api_v1_me_trainer_capability_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2294,23 +2294,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/users/{user_id}/role": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Update User Role */
-        patch: operations["update_user_role_api_v1_admin_users__user_id__role_patch"];
-        trace?: never;
-    };
     "/api/v1/admin/users/{user_id}/admin-capability": {
         parameters: {
             query?: never;
@@ -2326,40 +2309,6 @@ export interface paths {
         head?: never;
         /** Update User Admin Capability */
         patch: operations["update_user_admin_capability_api_v1_admin_users__user_id__admin_capability_patch"];
-        trace?: never;
-    };
-    "/api/v1/admin/coach-applications": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Admin Coach Applications */
-        get: operations["admin_coach_applications_api_v1_admin_coach_applications_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/coach-applications/{application_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Update Coach Application */
-        patch: operations["update_coach_application_api_v1_admin_coach_applications__application_id__patch"];
         trace?: never;
     };
     "/api/v1/admin/users/{user_id}/status": {
@@ -2837,42 +2786,6 @@ export interface components {
             calories: components["schemas"]["AdherenceComponent"];
             protein: components["schemas"]["AdherenceComponent"];
         };
-        /** AdminCoachRoleApplicationReview */
-        AdminCoachRoleApplicationReview: {
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "approved" | "rejected";
-        };
-        /** AdminCoachRoleApplicationRow */
-        AdminCoachRoleApplicationRow: {
-            /** Id */
-            id: number;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "pending" | "approved" | "rejected" | "cancelled";
-            /**
-             * Source
-             * @enum {string}
-             */
-            source: "web" | "telegram";
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /** Reviewed At */
-            reviewed_at?: string | null;
-            /** User Id */
-            user_id: number;
-            /** Username */
-            username?: string | null;
-            /** Full Name */
-            full_name?: string | null;
-        };
         /** AdminNotificationRow */
         AdminNotificationRow: {
             /** Id */
@@ -2909,14 +2822,6 @@ export interface components {
         AdminUserAdminCapabilityUpdate: {
             /** Is Admin */
             is_admin: boolean;
-        };
-        /** AdminUserRoleUpdate */
-        AdminUserRoleUpdate: {
-            /**
-             * Role
-             * @enum {string}
-             */
-            role: "client" | "coach";
         };
         /** AdminUserRow */
         AdminUserRow: {
@@ -3556,28 +3461,6 @@ export interface components {
             superset_order?: number | null;
             /** Reason */
             reason?: string | null;
-        };
-        /** CoachRoleApplicationResponse */
-        CoachRoleApplicationResponse: {
-            /** Id */
-            id: number;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "pending" | "approved" | "rejected" | "cancelled";
-            /**
-             * Source
-             * @enum {string}
-             */
-            source: "web" | "telegram";
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /** Reviewed At */
-            reviewed_at?: string | null;
         };
         /** DataSufficiencySignal */
         DataSufficiencySignal: {
@@ -6130,6 +6013,32 @@ export interface components {
              */
             token_type: string;
         };
+        /** TrainerCapabilityActivateRequest */
+        TrainerCapabilityActivateRequest: {
+            /**
+             * Accepted Terms
+             * @constant
+             */
+            accepted_terms: true;
+        };
+        /** TrainerCapabilityResponse */
+        TrainerCapabilityResponse: {
+            /** Is Active */
+            is_active: boolean;
+            /**
+             * Activated Now
+             * @default false
+             */
+            activated_now: boolean;
+            /** Active Client Count */
+            active_client_count: number;
+            /** Pending Invite Count */
+            pending_invite_count: number;
+            /** Can Disable */
+            can_disable: boolean;
+            /** Terms Version */
+            terms_version: string;
+        };
         /** TrainerClientProgressListResponse */
         TrainerClientProgressListResponse: {
             /** Items */
@@ -8120,7 +8029,7 @@ export interface operations {
             };
         };
     };
-    read_coach_application_api_v1_me_coach_application_get: {
+    read_trainer_capability_api_v1_me_trainer_capability_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -8135,32 +8044,45 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CoachRoleApplicationResponse"] | null;
+                    "application/json": components["schemas"]["TrainerCapabilityResponse"];
                 };
             };
         };
     };
-    create_coach_application_api_v1_me_coach_application_post: {
+    enable_trainer_capability_api_v1_me_trainer_capability_post: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TrainerCapabilityActivateRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
-            201: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CoachRoleApplicationResponse"];
+                    "application/json": components["schemas"]["TrainerCapabilityResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    delete_coach_application_api_v1_me_coach_application_delete: {
+    disable_trainer_capability_api_v1_me_trainer_capability_delete: {
         parameters: {
             query?: never;
             header?: never;
@@ -8170,11 +8092,13 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Successful Response */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["TrainerCapabilityResponse"];
+                };
             };
         };
     };
@@ -12224,41 +12148,6 @@ export interface operations {
             };
         };
     };
-    update_user_role_api_v1_admin_users__user_id__role_patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                user_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AdminUserRoleUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AdminUserRow"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     update_user_admin_capability_api_v1_admin_users__user_id__admin_capability_patch: {
         parameters: {
             query?: never;
@@ -12281,74 +12170,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminUserRow"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    admin_coach_applications_api_v1_admin_coach_applications_get: {
-        parameters: {
-            query?: {
-                status?: string | null;
-                limit?: number;
-                offset?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AdminCoachRoleApplicationRow"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_coach_application_api_v1_admin_coach_applications__application_id__patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                application_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AdminCoachRoleApplicationReview"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AdminCoachRoleApplicationRow"];
                 };
             };
             /** @description Validation Error */

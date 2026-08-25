@@ -76,7 +76,7 @@ def test_root_is_protected_from_admin_mutations_and_self_delete(client, monkeypa
     root = client.get("/api/v1/me", headers=root_headers).json()
 
     for path, payload in (
-        (f"/api/v1/admin/users/{root['id']}/role", {"role": "client"}),
+        (f"/api/v1/admin/users/{root['id']}/admin-capability", {"is_admin": False}),
         (f"/api/v1/admin/users/{root['id']}/status", {"is_active": False}),
     ):
         assert client.patch(path, json=payload, headers=delegated_admin_headers).status_code == 403

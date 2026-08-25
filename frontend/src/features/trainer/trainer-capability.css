@@ -1,0 +1,194 @@
+.trainer-capability {
+  display: grid;
+  gap: var(--v2-space-4, 18px);
+}
+
+.trainer-capability__facts,
+.trainer-capability__limits {
+  display: grid;
+  gap: var(--v2-space-2, 8px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trainer-capability__facts li,
+.trainer-capability__limits li {
+  position: relative;
+  padding-left: var(--v2-space-4, 18px);
+}
+
+.trainer-capability__facts li::before,
+.trainer-capability__limits li::before {
+  position: absolute;
+  top: 0.62em;
+  left: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--v2-text-secondary);
+  content: '';
+}
+
+.trainer-capability__facts li::before {
+  background: var(--v2-lime);
+  box-shadow: 0 0 0 1px var(--v2-accent-text);
+}
+
+.trainer-capability__terms {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: var(--v2-space-2, 8px);
+  align-items: start;
+  padding: var(--v2-space-3, 12px) 0;
+  border-block: 1px solid var(--v2-border);
+  cursor: pointer;
+}
+
+.trainer-capability__terms input {
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  accent-color: var(--v2-lime);
+}
+
+.trainer-capability__terms span {
+  display: grid;
+  gap: var(--v2-space-1, 4px);
+}
+
+.trainer-capability__terms small,
+.trainer-capability__status p,
+.trainer-capability__disable p {
+  color: var(--v2-text-secondary);
+}
+
+.trainer-capability__activate {
+  min-height: 48px;
+  border-color: transparent;
+  border-radius: var(--radius-action);
+  background: var(--v2-lime);
+  color: var(--v2-on-lime);
+}
+
+.trainer-capability__activate:hover:not(:disabled) {
+  background: var(--v2-lime-hover);
+}
+
+.trainer-capability__status,
+.trainer-capability__disable {
+  display: grid;
+  gap: var(--v2-space-2, 8px);
+}
+
+.trainer-capability__status p,
+.trainer-capability__disable p {
+  margin: 0;
+}
+
+.trainer-capability__disable {
+  padding-top: var(--v2-space-3, 12px);
+  border-top: 1px solid var(--v2-border);
+}
+
+.trainer-capability__disable .btn-danger {
+  justify-self: start;
+  min-height: 44px;
+  border: 1px solid var(--v2-danger);
+  border-radius: var(--radius-action);
+  background: transparent;
+  color: var(--v2-danger);
+}
+
+.trainer-capability__guard {
+  padding: var(--v2-space-3, 12px);
+  border-left: 3px solid var(--v2-warning);
+  background: var(--v2-warning-surface);
+  color: var(--v2-text-primary) !important;
+}
+
+.trainer-mode-context {
+  display: flex;
+  gap: var(--v2-space-3, 12px);
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  padding-block: var(--v2-space-2, 8px);
+  border-bottom: 1px solid var(--v2-border);
+  background: var(--v2-canvas);
+}
+
+.trainer-mode-context--sticky {
+  position: sticky;
+  z-index: 12;
+  top: max(var(--v2-space-1, 4px), var(--yfc-layout-safe-top));
+}
+
+.trainer-mode-context__copy {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+  padding-inline: var(--v2-space-2, 8px);
+}
+
+.trainer-mode-context__copy > span {
+  color: var(--v2-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.trainer-mode-context__copy small {
+  overflow: hidden;
+  color: var(--v2-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trainer-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  flex: 0 0 auto;
+  min-width: min(100%, 250px);
+  padding: 3px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface-secondary);
+}
+
+.trainer-mode-switch a {
+  display: inline-flex;
+  min-height: 44px;
+  padding: var(--v2-space-2, 8px) var(--v2-space-3, 12px);
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--v2-compact-radius);
+  color: var(--v2-text-secondary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.trainer-mode-switch a.is-active {
+  background: var(--v2-surface);
+  box-shadow: inset 0 -3px 0 var(--v2-lime);
+  color: var(--v2-text-primary);
+}
+
+@media (max-width: 680px) {
+  .trainer-capability__activate,
+  .trainer-capability__disable .btn-danger {
+    width: 100%;
+  }
+
+  .trainer-mode-context {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .trainer-mode-switch {
+    width: 100%;
+    min-width: 0;
+  }
+}

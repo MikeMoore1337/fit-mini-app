@@ -36,10 +36,6 @@ class AdminTemplateRow(BaseModel):
     is_public: bool
 
 
-class AdminUserRoleUpdate(BaseModel):
-    role: Literal["client", "coach"]
-
-
 class AdminUserAdminCapabilityUpdate(BaseModel):
     is_admin: bool
 

@@ -340,6 +340,10 @@ def remove_current_trainer(db: Session, client: User) -> None:
 
 
 def create_coach_invite_link(db: Session, coach: User) -> dict:
+    # require_coach loaded this row before the lock; do not reuse stale capability state.
+    coach = db.query(User).filter(User.id == coach.id).populate_existing().with_for_update().one()
+    if not coach.is_active or not coach.is_coach:
+        raise ProgramError("Режим тренера недоступен")
     raw_token = secrets.token_urlsafe(24)
     invite = CoachClientInvite(
         coach_user_id=coach.id,
@@ -386,13 +390,18 @@ def _get_available_invite_by_token(
     return invite
 
 
-def _available_invite_coach(db: Session, invite: CoachClientInvite) -> User:
-    coach = (
-        db.query(User)
-        .options(joinedload(User.profile))
-        .filter(User.id == invite.coach_user_id)
-        .first()
-    )
+def _available_invite_coach(
+    db: Session,
+    invite: CoachClientInvite,
+    *,
+    lock: bool = False,
+) -> User:
+    query = db.query(User).filter(User.id == invite.coach_user_id)
+    if lock:
+        query = query.populate_existing().with_for_update()
+    else:
+        query = query.options(joinedload(User.profile))
+    coach = query.first()
     if not coach or not coach.is_active or not coach.is_coach:
         raise ProgramError("Тренер недоступен")
     return coach
@@ -418,11 +427,12 @@ def preview_coach_invite_link(db: Session, client: User, raw_token: str) -> dict
 
 def confirm_coach_invite_link(db: Session, client: User, raw_token: str) -> None:
     """Consume a one-time invite for exactly the authenticated client."""
+    invite = _get_available_invite_by_token(db, raw_token, lock=False)
+    coach = _available_invite_coach(db, invite, lock=True)
     db.query(User).filter(User.id == client.id).with_for_update().one()
     invite = _get_available_invite_by_token(db, raw_token, lock=True)
     if invite.coach_user_id == client.id:
         raise ProgramError("Нельзя принять собственное приглашение")
-    coach = _available_invite_coach(db, invite)
 
     active_relation = (
         db.query(CoachClient)

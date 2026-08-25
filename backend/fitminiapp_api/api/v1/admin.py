@@ -6,25 +6,16 @@ from fitminiapp_api.api.dependencies.auth import require_admin, require_root_adm
 from fitminiapp_api.db.session import get_db
 from fitminiapp_api.models.notification import Notification
 from fitminiapp_api.models.program import ProgramTemplate
-from fitminiapp_api.models.user import CoachRoleApplication, User, UserProfile
+from fitminiapp_api.models.user import User, UserProfile
 from fitminiapp_api.schemas.admin import (
     AdminNotificationRow,
     AdminTemplateRow,
     AdminUserAdminCapabilityUpdate,
-    AdminUserRoleUpdate,
     AdminUserRow,
     AdminUserStatusUpdate,
 )
-from fitminiapp_api.schemas.coach_application import (
-    AdminCoachRoleApplicationReview,
-    AdminCoachRoleApplicationRow,
-)
 from fitminiapp_api.services.accounts import delete_user_cascade
 from fitminiapp_api.services.audit import record_audit_event
-from fitminiapp_api.services.coach_applications import (
-    approve_pending_coach_applications,
-    review_coach_application,
-)
 from fitminiapp_api.services.coach_clients import close_user_coaching_relationships
 from fitminiapp_api.services.programs import delete_template_cascade
 from fitminiapp_api.services.root_admin import is_root_user
@@ -100,46 +91,6 @@ def admin_users(
     return [_serialize_user_row(user, profile) for user, profile in rows]
 
 
-@router.patch("/users/{user_id}/role", response_model=AdminUserRow)
-def update_user_role(
-    user_id: int,
-    payload: AdminUserRoleUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
-) -> dict:
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден")
-    _require_mutable_target(user)
-
-    if payload.role == "client":
-        close_user_coaching_relationships(
-            db,
-            user,
-            include_as_client=False,
-            reason="coach_role_removed",
-            actor_user_id=current_user.id,
-        )
-        user.is_coach = False
-    else:
-        user.is_coach = True
-        approve_pending_coach_applications(db, user, current_user)
-
-    record_audit_event(
-        db,
-        action="admin.user_trainer_capability_updated",
-        resource_type="user",
-        actor_user_id=current_user.id,
-        target_user_id=user.id,
-        resource_id=user.id,
-        details={"is_coach": user.is_coach},
-    )
-
-    db.commit()
-    profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
-    return _serialize_user_row(user, profile)
-
-
 @router.patch("/users/{user_id}/admin-capability", response_model=AdminUserRow)
 def update_user_admin_capability(
     user_id: int,
@@ -165,78 +116,6 @@ def update_user_admin_capability(
     db.commit()
     profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
     return _serialize_user_row(user, profile)
-
-
-@router.get("/coach-applications", response_model=list[AdminCoachRoleApplicationRow])
-def admin_coach_applications(
-    response: Response,
-    application_status: str | None = Query(
-        default="pending",
-        alias="status",
-        pattern="^(pending|approved|rejected|cancelled)$",
-    ),
-    limit: int = Query(default=100, ge=1, le=200),
-    offset: int = Query(default=0, ge=0),
-    db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
-) -> list[dict]:
-    query = (
-        db.query(CoachRoleApplication, User, UserProfile)
-        .join(User, User.id == CoachRoleApplication.user_id)
-        .outerjoin(UserProfile, UserProfile.user_id == User.id)
-    )
-    if application_status:
-        query = query.filter(CoachRoleApplication.status == application_status)
-    response.headers["X-Total-Count"] = str(query.count())
-    rows = (
-        query.order_by(CoachRoleApplication.created_at.desc(), CoachRoleApplication.id.desc())
-        .offset(offset)
-        .limit(limit)
-        .all()
-    )
-    return [
-        {
-            "id": application.id,
-            "user_id": user.id,
-            "username": user.username,
-            "full_name": profile.full_name if profile else None,
-            "status": application.status,
-            "source": application.source,
-            "created_at": application.created_at,
-            "reviewed_at": application.reviewed_at,
-        }
-        for application, user, profile in rows
-    ]
-
-
-@router.patch(
-    "/coach-applications/{application_id}",
-    response_model=AdminCoachRoleApplicationRow,
-)
-def update_coach_application(
-    application_id: int,
-    payload: AdminCoachRoleApplicationReview,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
-) -> dict:
-    application = (
-        db.query(CoachRoleApplication).filter(CoachRoleApplication.id == application_id).first()
-    )
-    if not application:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заявка не найдена")
-    application = review_coach_application(db, application, current_user, payload.status)
-    applicant = db.query(User).filter(User.id == application.user_id).one()
-    profile = db.query(UserProfile).filter(UserProfile.user_id == applicant.id).first()
-    return {
-        "id": application.id,
-        "user_id": applicant.id,
-        "username": applicant.username,
-        "full_name": profile.full_name if profile else None,
-        "status": application.status,
-        "source": application.source,
-        "created_at": application.created_at,
-        "reviewed_at": application.reviewed_at,
-    }
 
 
 @router.patch("/users/{user_id}/status", response_model=AdminUserRow)

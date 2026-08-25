@@ -3636,7 +3636,7 @@ body:has(.standalone-page--design-v2) {
 
 .profile-form__save > button,
 .app-section--profile
-  :where(.coach-application, .profile-settings-group form)
+  .profile-settings-group form
   button:not(.secondary, .btn-danger, .text-button) {
   border-color: transparent;
   background: var(--v2-lime);
@@ -3645,7 +3645,7 @@ body:has(.standalone-page--design-v2) {
 
 .profile-form__save > button:hover:not(:disabled),
 .app-section--profile
-  :where(.coach-application, .profile-settings-group form)
+  .profile-settings-group form
   button:not(.secondary, .btn-danger, .text-button):hover:not(:disabled) {
   background: var(--v2-lime-hover);
 }
@@ -6827,6 +6827,10 @@ body.public-shell-mode:has(.public-shell.public-shell--design-v2) {
 .coach-client-tools .field {
   gap: 4px;
   margin: 0;
+}
+
+.coach-client-roster > .empty-state {
+  margin-top: var(--v2-space-3);
 }
 
 .coach-client-list {

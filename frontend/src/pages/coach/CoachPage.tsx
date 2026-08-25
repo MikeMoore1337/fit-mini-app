@@ -4,6 +4,7 @@ import { AppShell } from '../../app/AppShell';
 import { useAuth } from '../../app/AuthProvider';
 import { Diary } from '../../features/diary/Diary';
 import { ClientAnalytics } from '../../features/coach/ClientAnalytics';
+import { TrainerModeSwitch } from '../../features/trainer/TrainerModeSwitch';
 import { ExerciseCatalog } from '../../features/exercises/ExerciseCatalog';
 import { NutritionForm } from '../../features/nutrition/NutritionForm';
 import { NutritionPeriodReport } from '../../features/workouts/NutritionReport';
@@ -889,6 +890,11 @@ export default function CoachPage() {
       <div
         className={`page-stack app-section app-section--programs app-section--design-v2 coach-workspace--design-v2${clientDetailOpen ? ' is-client-detail-open' : ''}`}
       >
+        <TrainerModeSwitch
+          mode="clients"
+          sticky
+          clientName={clientDetailOpen && selected ? clientDisplayName(selected) : undefined}
+        />
         <header className="coach-workspace-header">
           <div>
             <span className="eyebrow">Клиенты · рабочее пространство</span>
@@ -896,9 +902,6 @@ export default function CoachPage() {
             <p>Факты о тренировках, планах и прогрессе — без потери контекста клиента.</p>
           </div>
           <div className="coach-workspace-header__actions">
-            <AppLink className="button-link secondary-link" to="/app">
-              Для себя
-            </AppLink>
             <button disabled={inviteCreating} onClick={() => void createInvite()} type="button">
               {inviteCreating ? 'Создаём…' : 'Пригласить клиента'}
             </button>

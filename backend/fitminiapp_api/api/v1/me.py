@@ -11,9 +11,12 @@ from fitminiapp_api.core.rate_limit import limiter
 from fitminiapp_api.db.session import get_db
 from fitminiapp_api.models.account import AccountDataExport
 from fitminiapp_api.models.program import UserProgram, UserWorkout
-from fitminiapp_api.models.user import CoachRoleApplication, User, UserProfile
-from fitminiapp_api.schemas.coach_application import CoachRoleApplicationResponse
+from fitminiapp_api.models.user import User, UserProfile
 from fitminiapp_api.schemas.invite import CoachInvitePreviewResponse, CoachInviteTokenRequest
+from fitminiapp_api.schemas.trainer_capability import (
+    TrainerCapabilityActivateRequest,
+    TrainerCapabilityResponse,
+)
 from fitminiapp_api.schemas.user import (
     AccountDeleteRequest,
     AccountExportDownloadLinkResponse,
@@ -59,10 +62,6 @@ from fitminiapp_api.services.account_linking import (
 )
 from fitminiapp_api.services.accounts import build_account_export, delete_user_cascade
 from fitminiapp_api.services.audit import record_audit_event
-from fitminiapp_api.services.coach_applications import (
-    cancel_coach_application,
-    submit_coach_application,
-)
 from fitminiapp_api.services.coach_clients import (
     confirm_coach_invite_link,
     get_current_trainer,
@@ -85,6 +84,11 @@ from fitminiapp_api.services.profile import (
 from fitminiapp_api.services.program_common import ProgramError
 from fitminiapp_api.services.root_admin import has_verified_root_identity, is_root_user
 from fitminiapp_api.services.security import get_current_user
+from fitminiapp_api.services.trainer_capability import (
+    activate_trainer_capability,
+    deactivate_trainer_capability,
+    trainer_capability_state,
+)
 from fitminiapp_api.services.training_preferences import serialize_training_preferences
 
 router = APIRouter()
@@ -235,35 +239,25 @@ def read_me(user=Depends(get_current_user), db: Session = Depends(get_db)):
     return _build_user_response(db, user)
 
 
-@router.get("/coach-application", response_model=CoachRoleApplicationResponse | None)
-def read_coach_application(
+@router.get("/trainer-capability", response_model=TrainerCapabilityResponse)
+def read_trainer_capability(user=Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
+    return trainer_capability_state(db, user)
+
+
+@router.post("/trainer-capability", response_model=TrainerCapabilityResponse)
+def enable_trainer_capability(
+    _: TrainerCapabilityActivateRequest,
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    return activate_trainer_capability(db, user)
+
+
+@router.delete("/trainer-capability", response_model=TrainerCapabilityResponse)
+def disable_trainer_capability(
     user=Depends(get_current_user), db: Session = Depends(get_db)
-) -> CoachRoleApplication | None:
-    return (
-        db.query(CoachRoleApplication)
-        .filter(CoachRoleApplication.user_id == user.id)
-        .order_by(CoachRoleApplication.id.desc())
-        .first()
-    )
-
-
-@router.post(
-    "/coach-application",
-    response_model=CoachRoleApplicationResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-def create_coach_application(
-    user=Depends(get_current_user), db: Session = Depends(get_db)
-) -> CoachRoleApplication:
-    return submit_coach_application(db, user)
-
-
-@router.delete("/coach-application", status_code=status.HTTP_204_NO_CONTENT)
-def delete_coach_application(
-    user=Depends(get_current_user), db: Session = Depends(get_db)
-) -> Response:
-    cancel_coach_application(db, user)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+) -> dict:
+    return deactivate_trainer_capability(db, user)
 
 
 @router.post("/auth/telegram-link", response_model=TelegramLinkCreateResponse)

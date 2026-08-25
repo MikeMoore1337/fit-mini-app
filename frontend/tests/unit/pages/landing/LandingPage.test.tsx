@@ -109,10 +109,11 @@ describe('LandingPage', () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/вы тренер/i)).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { name: /подайте заявку и откройте кабинет тренера/i }),
+      screen.getByRole('heading', { name: /включите режим тренера и откройте кабинет/i }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/нажмите «стать тренером» в профиле/i)).toBeInTheDocument();
-    expect(screen.getByText(/писать администратору отдельно не нужно/i)).toBeInTheDocument();
+    expect(screen.getByText(/включите режим тренера в профиле/i)).toBeInTheDocument();
+    expect(screen.getByText(/заявка и ожидание одобрения не нужны/i)).toBeInTheDocument();
+    expect(screen.queryByText(/после одобрения заявки/i)).not.toBeInTheDocument();
     expect(
       screen.getByText(/доступно в браузере на компьютере или смартфоне/i),
     ).toBeInTheDocument();

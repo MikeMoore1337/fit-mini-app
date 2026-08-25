@@ -494,8 +494,8 @@ async function mockApi(
   {
     completeProfile = false,
     fullName = 'Демо пользователь',
+    coachClientName = 'Тестовый клиент',
     withCoachClient = false,
-    withCoachApplication = false,
     withCoachProgram = false,
     withTrainingPreferences = false,
     notificationItems = [] as Array<Record<string, unknown>>,
@@ -541,18 +541,6 @@ async function mockApi(
         }
       : { status: 'none' as const, active_program_id: null, reasons: [] },
   };
-  let coachApplication = withCoachApplication
-    ? {
-        id: 42,
-        user_id: 7,
-        username: 'future_coach',
-        full_name: 'Будущий тренер',
-        status: 'pending',
-        source: 'web',
-        created_at: '2030-01-09T09:00:00',
-        reviewed_at: null,
-      }
-    : null;
   const heartRateZones = [
     { zone: 1, title: 'Восстановление', min_bpm: 130, max_bpm: 140 },
     { zone: 2, title: 'Лёгкая', min_bpm: 140, max_bpm: 151 },
@@ -634,7 +622,7 @@ async function mockApi(
           telegram_user_id: 2001,
           username: 'demo',
           first_name: 'Демо',
-          is_coach: role !== 'client',
+          is_coach: role === 'coach',
           is_admin: role === 'admin',
           has_active_program: false,
           has_workout_history: false,
@@ -651,25 +639,31 @@ async function mockApi(
           trainer: null,
         },
       });
-    if (path.endsWith('/me/coach-application')) {
+    if (path.endsWith('/me/trainer-capability')) {
+      let activatedNow = false;
       if (request.method() === 'POST') {
-        coachApplication = {
-          id: 42,
-          user_id: 1,
-          username: 'demo',
-          full_name: 'Демо пользователь',
-          status: 'pending',
-          source: 'web',
-          created_at: '2030-01-09T09:00:00',
-          reviewed_at: null,
-        };
-        return route.fulfill({ status: 201, json: coachApplication });
+        activatedNow = role !== 'coach';
+        role = 'coach';
       }
       if (request.method() === 'DELETE') {
-        coachApplication = coachApplication ? { ...coachApplication, status: 'cancelled' } : null;
-        return route.fulfill({ status: 204, body: '' });
+        if (withCoachClient) {
+          return route.fulfill({
+            status: 409,
+            json: { detail: 'Сначала завершите активные отношения с клиентами.' },
+          });
+        }
+        role = 'client';
       }
-      return route.fulfill({ json: coachApplication });
+      return route.fulfill({
+        json: {
+          is_active: role === 'coach',
+          activated_now: activatedNow,
+          active_client_count: role === 'coach' && withCoachClient ? 1 : 0,
+          pending_invite_count: 0,
+          can_disable: role === 'coach' && !withCoachClient,
+          terms_version: 'trainer-capability-v1',
+        },
+      });
     }
     if (path.endsWith('/workouts/today'))
       return route.fulfill({ status: 404, json: { detail: 'На сегодня тренировка не назначена' } });
@@ -1179,16 +1173,6 @@ async function mockApi(
       });
     if (path.endsWith('/programs/assigned/501/blocks')) return route.fulfill({ json: [] });
     if (path.endsWith('/programs/templates/hidden')) return route.fulfill({ json: [] });
-    if (path.endsWith('/admin/coach-applications')) {
-      return route.fulfill({
-        json: coachApplication?.status === 'pending' ? [coachApplication] : [],
-      });
-    }
-    if (/\/admin\/coach-applications\/\d+$/.test(path) && request.method() === 'PATCH') {
-      const body = request.postDataJSON() as { status: 'approved' | 'rejected' };
-      coachApplication = coachApplication ? { ...coachApplication, status: body.status } : null;
-      return route.fulfill({ json: coachApplication });
-    }
     if (path.endsWith('/admin/users')) return route.fulfill({ json: [] });
     if (/\/coach\/clients\/\d+\/analytics$/.test(path))
       return route.fulfill({ json: emptyProgress });
@@ -1232,7 +1216,7 @@ async function mockApi(
             ? [
                 {
                   user_id: 2,
-                  client_name: 'Тестовый клиент',
+                  client_name: coachClientName,
                   period_days: 30,
                   period_start: '2026-07-22',
                   period_end: '2026-08-20',
@@ -1294,7 +1278,7 @@ async function mockApi(
                 invite_id: null,
                 telegram_user_id: 3002,
                 username: 'client',
-                full_name: 'Тестовый клиент',
+                full_name: coachClientName,
                 goal: 'maintenance',
                 level: 'beginner',
                 height_cm: 175,
@@ -2306,18 +2290,178 @@ test('training preferences сохраняют Mobile Web/TMA композици�
   }
 });
 
-test('клиент подаёт заявку на роль тренера из профиля', async ({ page }) => {
+test('пользователь напрямую включает режим тренера из профиля', async ({ browser }) => {
+  const page = await browser.newPage({
+    colorScheme: 'light',
+    hasTouch: true,
+    reducedMotion: 'reduce',
+    viewport: { width: 360, height: 1050 },
+  });
+  expect(await page.evaluate(() => matchMedia('(hover: none)').matches)).toBe(true);
   await mockApi(page);
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
   await openAppDestination(page, 'Профиль');
-  await openCard(page, 'Для тренеров');
+  await openCard(page, 'Режим тренера');
 
-  await page.getByRole('button', { name: 'Стать тренером' }).click();
-  await page.getByRole('button', { name: 'Отправить заявку' }).click();
+  const activate = page.getByRole('button', { name: 'Включить режим тренера' });
+  const trainerCard = page
+    .getByRole('heading', { name: 'Режим тренера', exact: true })
+    .locator('xpath=ancestor::details[1]');
+  await expect(activate).toBeDisabled();
+  await trainerCard.screenshot({
+    path: '../.artifacts/screenshots/task-70/01-pre-activation-mobile-light.png',
+  });
+  const terms = page.getByRole('checkbox', { name: /принимаю условия/i });
+  await terms.focus();
+  await expect(terms).toBeFocused();
+  await page.keyboard.press('Space');
+  await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  await expect(terms).toBeChecked();
+  await activate.evaluate((element) => element.scrollIntoView({ block: 'center' }));
+  await page.screenshot({
+    path: '../.artifacts/screenshots/task-70/01b-terms-and-activation-cta-mobile-light.png',
+  });
+  await activate.click();
 
-  await expect(page.getByText('Заявка отправлена')).toBeVisible();
-  await expect(page.getByText('На рассмотрении')).toBeVisible();
+  await expect(
+    page.getByLabel('Тренер и приглашения').getByText('Режим тренера включён'),
+  ).toBeVisible();
+  const repeatedActivation = await page.evaluate(async () => {
+    const response = await fetch('/api/v1/me/trainer-capability', {
+      body: JSON.stringify({ accepted_terms: true }),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+    });
+    return response.json() as Promise<{ activated_now: boolean; is_active: boolean }>;
+  });
+  expect(repeatedActivation).toMatchObject({ activated_now: false, is_active: true });
+  const modeSwitch = page.getByRole('navigation', { name: 'Режим работы' });
+  await expect(modeSwitch.getByRole('link', { name: 'Для себя' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await trainerCard.screenshot({
+    path: '../.artifacts/screenshots/task-70/02-post-activation-desktop-light.png',
+  });
+  await page.addInitScript(() => {
+    const themeHandlers = new Set<() => void>();
+    const telegram = {
+      initData: 'mocked-task-70-init-data',
+      colorScheme: 'dark' as const,
+      themeParams: { bg_color: '#101310', text_color: '#f4f7ee' },
+      ready() {},
+      expand() {},
+      onEvent(event: string, callback: () => void) {
+        if (event === 'themeChanged') themeHandlers.add(callback);
+      },
+      offEvent(event: string, callback: () => void) {
+        if (event === 'themeChanged') themeHandlers.delete(callback);
+      },
+    };
+    Object.defineProperty(window, 'Telegram', {
+      configurable: true,
+      value: { WebApp: telegram },
+    });
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
+  await openCard(page, 'Режим тренера');
+  await modeSwitch.getByRole('link', { name: 'Клиенты' }).click();
+  await expect(page.getByRole('heading', { name: 'Кабинет тренера' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Клиенты', exact: true }).first()).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  await expect(page.getByRole('heading', { name: 'Добавьте первого клиента' })).toBeVisible();
+  const modeCopyPadding = await page
+    .locator('.trainer-mode-context__copy')
+    .evaluate((element) => Number.parseFloat(getComputedStyle(element).paddingLeft));
+  expect(modeCopyPadding).toBeGreaterThanOrEqual(8);
+  const emptyClients = page.locator('.coach-client-roster > .empty-state');
+  await expect(emptyClients.getByText('Клиентов пока нет')).toBeVisible();
+  const emptyStateGap = await emptyClients.evaluate((element) => {
+    const tools = element.parentElement?.querySelector<HTMLElement>('.coach-client-tools');
+    return tools ? element.getBoundingClientRect().top - tools.getBoundingClientRect().bottom : 0;
+  });
+  expect(emptyStateGap).toBeGreaterThanOrEqual(12);
+  await page.setViewportSize({ width: 390, height: 1050 });
+  await page.locator('.coach-zero-state').screenshot({
+    path: '../.artifacts/screenshots/task-70/03-first-client-onboarding-dark-tma-390.png',
+  });
+  await page.locator('.coach-client-roster').screenshot({
+    path: '../.artifacts/screenshots/task-70/06-empty-clients-spacing-dark-tma-390.png',
+  });
+
+  for (const viewport of [
+    { width: 360, height: 800 },
+    { width: 390, height: 844 },
+    { width: 430, height: 932 },
+    { width: 768, height: 900 },
+    { width: 1280, height: 900 },
+  ]) {
+    await page.setViewportSize(viewport);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      viewport.width,
+    );
+    const switchTargets = await page
+      .getByRole('navigation', { name: 'Режим работы' })
+      .getByRole('link')
+      .evaluateAll((links) => links.map((link) => link.getBoundingClientRect().height));
+    expect(switchTargets.every((height) => height >= 44)).toBe(true);
+  }
+  await page.close();
+});
+
+test('активные клиенты блокируют отключение режима тренера', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
+  const longClientName = 'Александра Константинопольская-Северная с длинным именем';
+  await mockApi(page, { coachClientName: longClientName, withCoachClient: true });
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Тренер' }).click();
+  await page.getByRole('button', { name: 'Ещё', exact: true }).click();
+  await page
+    .locator('#appMorePanel')
+    .getByRole('link', { name: 'Кабинет тренера', exact: true })
+    .click();
+  await page.getByText(longClientName, { exact: true }).first().click();
+  const clientContext = page.locator('.trainer-mode-context__copy small');
+  await expect(clientContext).toContainText(longClientName);
+  await expect(clientContext).toHaveCSS('text-overflow', 'ellipsis');
+  expect(await clientContext.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(
+    true,
+  );
+  await clientContext.scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: '../.artifacts/screenshots/task-70/04-long-client-context-dark-360.png',
+  });
+  await page
+    .getByRole('navigation', { name: 'Режим работы' })
+    .getByRole('link', { name: 'Для себя' })
+    .click();
+  await expect(page.getByRole('heading', { name: /^Сегодня ·/ })).toBeVisible();
+  await openAppDestination(page, 'Профиль');
+  await openCard(page, 'Режим тренера');
+  await page.setViewportSize({ width: 360, height: 1050 });
+
+  await expect(page.getByText(/всеми активными клиентами \(1\)/i)).toBeVisible();
+  const disableButton = page.getByRole('button', { name: 'Выключить режим тренера' });
+  await expect(disableButton).toBeDisabled();
+  await page
+    .getByRole('heading', { name: 'Режим тренера', exact: true })
+    .locator('xpath=ancestor::details[1]')
+    .screenshot({
+      path: '../.artifacts/screenshots/task-70/05-active-client-disable-guard-dark-360.png',
+    });
+  await disableButton.evaluate((element) => element.scrollIntoView({ block: 'center' }));
+  await page.screenshot({
+    path: '../.artifacts/screenshots/task-70/05b-active-client-disabled-action-dark-360.png',
+  });
+  await page.setViewportSize({ width: 360, height: 800 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(360);
 });
 
 test('рекомендация кардио меняется с целью, а физиологические зоны остаются прежними', async ({
@@ -2714,7 +2858,7 @@ test('сенсорное поле даты сохраняет нативный �
 });
 
 test('администратор открывает React-панель', async ({ page }) => {
-  await mockApi(page, { withCoachApplication: true });
+  await mockApi(page);
   await page.goto('/admin');
   await page.getByRole('button', { name: 'Админ' }).click();
   await expect(page.getByRole('heading', { name: 'Панель администратора' })).toBeVisible();
@@ -2722,15 +2866,10 @@ test('администратор открывает React-панель', async (
     'aria-current',
     'page',
   );
-  await expect(page.getByRole('link', { name: 'Тренер', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Тренер', exact: true })).toHaveCount(0);
   await openCard(page, 'Пользователи');
   await expect(page.getByText('Пользователи не найдены')).toBeVisible();
-  await page.getByRole('tab', { name: 'Заявки тренеров' }).click();
-  await openCard(page, 'Заявки на роль тренера');
-  await expect(page.getByText('Будущий тренер')).toBeVisible();
-  await page.getByRole('button', { name: 'Одобрить' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Одобрить' }).click();
-  await expect(page.getByText('Новых заявок нет')).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Заявки тренеров' })).toHaveCount(0);
 });
 
 test('поля даты остаются внутри анкеты клиента в кабинете тренера', async ({ page }) => {

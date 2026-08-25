@@ -12,11 +12,13 @@ from xml.etree import ElementTree
 import pytest
 from fastapi import Response
 from pydantic import ValidationError
+from sqlalchemy import text
 
 from fitminiapp_api.api.v1.auth import issue_token_pair
 from fitminiapp_api.core.config import Settings, settings
 from fitminiapp_api.core.timezone import to_msk_naive, today_msk
 from fitminiapp_api.db.session import get_session_context
+from fitminiapp_api.models.audit import AuditEvent
 from fitminiapp_api.models.exercise import Exercise
 from fitminiapp_api.models.notification import Notification, NotificationSetting
 from fitminiapp_api.models.program import (
@@ -29,19 +31,21 @@ from fitminiapp_api.models.program import (
 from fitminiapp_api.models.user import (
     CoachClient,
     CoachClientInvite,
-    CoachRoleApplication,
     User,
     UserProfile,
 )
 from fitminiapp_api.services import notifications as notifications_service
+from fitminiapp_api.services.coach_clients import create_coach_invite_link
 from fitminiapp_api.services.exercise_guides import get_exercise_guide
 from fitminiapp_api.services.notifications import (
     claim_due_notifications,
     mark_delivery_failed,
     sync_workout_reminders,
 )
+from fitminiapp_api.services.program_common import ProgramError
 from fitminiapp_api.services.seed import seed_demo_data
 from fitminiapp_api.services.telegram_auth import validate_telegram_init_data
+from fitminiapp_api.services.trainer_capability import activate_trainer_capability
 
 
 def signed_init_data(
@@ -2581,123 +2585,182 @@ def test_admin_users_supports_server_side_filters_and_pagination(client):
     assert filtered.json()[0]["telegram_user_id"] == 6011
 
 
-def test_admin_can_change_user_role(client):
-    admin_headers = auth(client, telegram_user_id=1001, is_coach=True, is_admin=True)
-    client_headers = auth(client, telegram_user_id=2001, is_coach=False)
-    user = client.get("/api/v1/me", headers=client_headers).json()
-
-    response = client.patch(
-        f"/api/v1/admin/users/{user['id']}/role",
-        json={"role": "coach"},
-        headers=admin_headers,
-    )
-
-    assert response.status_code == 200
-    assert response.json()["role"] == "coach"
-    promoted = client.get("/api/v1/me", headers=client_headers)
-    assert promoted.status_code == 200
-    assert promoted.json()["is_coach"] is True
-
-
-def test_client_can_submit_and_cancel_coach_role_application(client):
+def test_user_activates_trainer_capability_directly_and_idempotently(client):
     headers = auth(client, telegram_user_id=6021, is_coach=False)
 
-    empty = client.get("/api/v1/me/coach-application", headers=headers)
-    assert empty.status_code == 200
-    assert empty.json() is None
-
-    created = client.post("/api/v1/me/coach-application", headers=headers)
-    assert created.status_code == 201
-    assert created.json()["status"] == "pending"
-    assert created.json()["source"] == "web"
-
-    duplicate = client.post("/api/v1/me/coach-application", headers=headers)
-    assert duplicate.status_code == 409
-    assert duplicate.json()["detail"] == "Заявка тренера уже находится на рассмотрении"
-
-    cancelled = client.delete("/api/v1/me/coach-application", headers=headers)
-    assert cancelled.status_code == 204
-    latest = client.get("/api/v1/me/coach-application", headers=headers)
-    assert latest.json()["status"] == "cancelled"
-
-
-def test_admin_can_approve_coach_role_application(client):
-    applicant_headers = auth(
-        client,
-        telegram_user_id=6022,
-        is_coach=False,
-        username="future_coach",
-        full_name="Будущий тренер",
+    initial = client.get("/api/v1/me/trainer-capability", headers=headers)
+    assert initial.status_code == 200
+    assert initial.json() == {
+        "is_active": False,
+        "activated_now": False,
+        "active_client_count": 0,
+        "pending_invite_count": 0,
+        "can_disable": False,
+        "terms_version": "trainer-capability-v1",
+    }
+    rejected_terms = client.post(
+        "/api/v1/me/trainer-capability",
+        json={"accepted_terms": False},
+        headers=headers,
     )
-    admin_headers = auth(client, telegram_user_id=6023, is_coach=True, is_admin=True)
-    created = client.post("/api/v1/me/coach-application", headers=applicant_headers)
-    application_id = created.json()["id"]
+    assert rejected_terms.status_code == 422
 
-    listed = client.get("/api/v1/admin/coach-applications", headers=admin_headers)
-    assert listed.status_code == 200
-    assert listed.headers["x-total-count"] == "1"
-    assert listed.json() == [
-        {
-            "id": application_id,
-            "user_id": listed.json()[0]["user_id"],
-            "username": "future_coach",
-            "full_name": "Будущий тренер",
-            "status": "pending",
-            "source": "web",
-            "created_at": listed.json()[0]["created_at"],
-            "reviewed_at": None,
-        }
-    ]
-
-    approved = client.patch(
-        f"/api/v1/admin/coach-applications/{application_id}",
-        json={"status": "approved"},
-        headers=admin_headers,
+    activated = client.post(
+        "/api/v1/me/trainer-capability",
+        json={"accepted_terms": True},
+        headers=headers,
     )
-    assert approved.status_code == 200
-    assert approved.json()["status"] == "approved"
-    assert approved.json()["reviewed_at"] is not None
-    assert client.get("/api/v1/me", headers=applicant_headers).json()["is_coach"] is True
+    assert activated.status_code == 200
+    assert activated.json()["is_active"] is True
+    assert activated.json()["activated_now"] is True
+    assert client.get("/api/v1/me", headers=headers).json()["is_coach"] is True
 
-    repeated = client.patch(
-        f"/api/v1/admin/coach-applications/{application_id}",
-        json={"status": "rejected"},
-        headers=admin_headers,
+    repeated = client.post(
+        "/api/v1/me/trainer-capability",
+        json={"accepted_terms": True},
+        headers=headers,
     )
-    assert repeated.status_code == 409
+    assert repeated.status_code == 200
+    assert repeated.json()["is_active"] is True
+    assert repeated.json()["activated_now"] is False
 
-
-def test_coach_role_application_rejects_coaches_and_non_admin_review(client):
-    coach_headers = auth(client, telegram_user_id=6024, is_coach=True)
-    assert client.post("/api/v1/me/coach-application", headers=coach_headers).status_code == 409
-
-    applicant_headers = auth(client, telegram_user_id=6025, is_coach=False)
-    created = client.post("/api/v1/me/coach-application", headers=applicant_headers)
-    application_id = created.json()["id"]
-    forbidden = client.patch(
-        f"/api/v1/admin/coach-applications/{application_id}",
-        json={"status": "approved"},
-        headers=coach_headers,
-    )
-    assert forbidden.status_code == 403
-
-
-def test_direct_admin_role_change_resolves_pending_coach_application(client):
-    applicant_headers = auth(client, telegram_user_id=6026, is_coach=False)
-    admin_headers = auth(client, telegram_user_id=6027, is_coach=True, is_admin=True)
-    application = client.post("/api/v1/me/coach-application", headers=applicant_headers).json()
-    applicant_id = client.get("/api/v1/me", headers=applicant_headers).json()["id"]
-
-    changed = client.patch(
-        f"/api/v1/admin/users/{applicant_id}/role",
-        json={"role": "coach"},
-        headers=admin_headers,
-    )
-    assert changed.status_code == 200
+    user_id = client.get("/api/v1/me", headers=headers).json()["id"]
     with get_session_context() as db:
-        saved = db.query(CoachRoleApplication).filter_by(id=application["id"]).one()
-        assert saved.status == "approved"
-        assert saved.reviewed_by_user_id is not None
+        events = (
+            db.query(AuditEvent)
+            .filter(
+                AuditEvent.target_user_id == user_id,
+                AuditEvent.action == "trainer_capability.activated",
+            )
+            .all()
+        )
+        assert len(events) == 1
+        assert events[0].details == {
+            "source": "profile",
+            "terms_version": "trainer-capability-v1",
+        }
+
+
+def test_trainer_capability_lock_refreshes_auth_identity_state(client):
+    headers = auth(client, telegram_user_id=6028, is_coach=False)
+    user_id = client.get("/api/v1/me", headers=headers).json()["id"]
+
+    with get_session_context() as db:
+        stale_user = db.query(User).filter(User.id == user_id).one()
+        assert stale_user.is_coach is False
+        db.execute(text("UPDATE users SET is_coach = 1 WHERE id = :user_id"), {"user_id": user_id})
+
+        state = activate_trainer_capability(db, stale_user)
+
+        assert state["is_active"] is True
+        assert state["activated_now"] is False
+        assert (
+            db.query(AuditEvent)
+            .filter(
+                AuditEvent.target_user_id == user_id,
+                AuditEvent.action == "trainer_capability.activated",
+            )
+            .count()
+            == 0
+        )
+
+
+def test_invite_creation_lock_rejects_stale_trainer_capability(client):
+    headers = auth(client, telegram_user_id=6029, is_coach=True)
+    user_id = client.get("/api/v1/me", headers=headers).json()["id"]
+
+    with get_session_context() as db:
+        stale_user = db.query(User).filter(User.id == user_id).one()
+        assert stale_user.is_coach is True
+        db.execute(text("UPDATE users SET is_coach = 0 WHERE id = :user_id"), {"user_id": user_id})
+
+        with pytest.raises(ProgramError, match="Режим тренера недоступен"):
+            create_coach_invite_link(db, stale_user)
+
+
+def test_admin_remains_without_trainer_capability_until_self_activation(client):
+    headers = auth(client, telegram_user_id=6022, is_coach=False, is_admin=True)
+    assert client.get("/api/v1/me", headers=headers).json()["is_coach"] is False
+
+    activated = client.post(
+        "/api/v1/me/trainer-capability",
+        json={"accepted_terms": True},
+        headers=headers,
+    )
+    assert activated.status_code == 200
+    current = client.get("/api/v1/me", headers=headers).json()
+    assert current["is_admin"] is True
+    assert current["is_coach"] is True
+
+
+def test_trainer_disables_capability_without_erasing_history(client):
+    headers = auth(client, telegram_user_id=6023, is_coach=True)
+    invite = client.post("/api/v1/coach/invite-links", headers=headers)
+    assert invite.status_code == 201
+
+    disabled = client.delete("/api/v1/me/trainer-capability", headers=headers)
+    assert disabled.status_code == 200
+    assert disabled.json()["is_active"] is False
+    assert disabled.json()["pending_invite_count"] == 0
+    assert client.get("/api/v1/me", headers=headers).json()["is_coach"] is False
+
+    repeated = client.delete("/api/v1/me/trainer-capability", headers=headers)
+    assert repeated.status_code == 200
+    assert repeated.json()["is_active"] is False
+
+    with get_session_context() as db:
+        saved_invite = db.query(CoachClientInvite).filter_by(id=invite.json()["invite_id"]).one()
+        assert saved_invite.status == "revoked"
+        assert (
+            db.query(AuditEvent)
+            .filter(AuditEvent.action == "trainer_capability.deactivated")
+            .count()
+            == 1
+        )
+
+
+def test_trainer_cannot_disable_capability_with_active_clients(client):
+    headers = auth(client, telegram_user_id=6024, is_coach=True)
+    client_headers = auth(client, telegram_user_id=6025, is_coach=False)
+    trainer_id = client.get("/api/v1/me", headers=headers).json()["id"]
+    client_id = client.get("/api/v1/me", headers=client_headers).json()["id"]
+    with get_session_context() as db:
+        db.add(CoachClient(coach_user_id=trainer_id, client_user_id=client_id, status="active"))
+        db.commit()
+
+    state = client.get("/api/v1/me/trainer-capability", headers=headers)
+    assert state.json()["active_client_count"] == 1
+    assert state.json()["can_disable"] is False
+
+    blocked = client.delete("/api/v1/me/trainer-capability", headers=headers)
+    assert blocked.status_code == 409
+    assert "Сначала завершите активные отношения" in blocked.json()["detail"]
+    assert client.get("/api/v1/me", headers=headers).json()["is_coach"] is True
+    with get_session_context() as db:
+        relation = (
+            db.query(CoachClient)
+            .filter_by(coach_user_id=trainer_id, client_user_id=client_id)
+            .one()
+        )
+        assert relation.status == "active"
+
+
+def test_coach_application_and_admin_role_routes_are_removed(client):
+    user_headers = auth(client, telegram_user_id=6026, is_coach=False)
+    admin_headers = auth(client, telegram_user_id=6027, is_coach=False, is_admin=True)
+    user_id = client.get("/api/v1/me", headers=user_headers).json()["id"]
+
+    assert client.get("/api/v1/me/coach-application", headers=user_headers).status_code == 404
+    assert client.post("/api/v1/me/coach-application", headers=user_headers).status_code == 404
+    assert client.get("/api/v1/admin/coach-applications", headers=admin_headers).status_code == 404
+    assert (
+        client.patch(
+            f"/api/v1/admin/users/{user_id}/role",
+            json={"role": "coach"},
+            headers=admin_headers,
+        ).status_code
+        == 404
+    )
 
 
 def test_admin_can_block_and_unblock_user(client):
