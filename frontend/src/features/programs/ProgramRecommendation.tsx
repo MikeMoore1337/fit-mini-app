@@ -9,6 +9,7 @@ import type {
 } from '../../shared/api/types';
 import { Badge, Card, CloseIcon, ErrorState } from '../../shared/ui/common';
 import { useModalA11y } from '../../shared/ui/useModalA11y';
+import { StepProgress } from '../../shared/ui/DataViz';
 import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
 
 type RecommendationGoal = NonNullable<ProgramRecommendationRequest['goal']>;
@@ -319,21 +320,9 @@ export function ProgramRecommendation({
 
             {!showResult && (
               <>
-                <div
-                  className="program-wizard__progress"
-                  aria-label={`Шаг ${step + 1} из ${stepTitles.length}`}
-                >
-                  <div>
-                    <span>
-                      Шаг {step + 1} из {stepTitles.length}
-                    </span>
-                    <strong>{stepTitles[step]}</strong>
-                  </div>
-                  <ol aria-hidden="true">
-                    {stepTitles.map((title, index) => (
-                      <li className={index <= step ? 'is-complete' : ''} key={title} />
-                    ))}
-                  </ol>
+                <div className="program-wizard__progress">
+                  <strong>{stepTitles[step]}</strong>
+                  <StepProgress current={step + 1} labels={stepTitles} />
                 </div>
                 {hasProfilePrefill && step === 0 && (
                   <p className="program-wizard__prefill">

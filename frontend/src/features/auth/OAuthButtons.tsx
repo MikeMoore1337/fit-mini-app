@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { safeAuthNextPath } from '../../shared/auth/redirects';
 import { markProductLoginStarted } from '../../shared/analytics/productEvents';
+import { Icon } from '../../shared/ui/Icon';
 
 const PROVIDER_LABELS: Record<string, string> = {
   telegram: 'Войти через Telegram',
@@ -81,6 +82,7 @@ export function OAuthButtons({
               <ProviderIcon provider={provider} />
             </span>
             {redirectingProvider === provider ? 'Переходим…' : PROVIDER_LABELS[provider]}
+            <Icon className="oauth-button__arrow" name="arrow-right" size={16} />
           </a>
         ))}
       </div>

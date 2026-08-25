@@ -35,15 +35,15 @@ production source. Исторические Design V2 документы сох�
 
 ## Неизменяемые seams hybrid
 
-| Слой | Source | Разрешённое исключение |
-| --- | --- | --- |
-| Typography, numbers | Design V2 | `/login` использует ту же V2 type system; headline desktop ровно `35px`. |
-| Global spacing/radii | Design V2 | Только layout geometry `/login` и desktop rail; локальная A token migration запрещена. |
-| Color semantics | Design V2 | `/login` получает A-style two-plane allocation, но обе plane используют V2 semantic colors. |
-| Landing | normalized Quiet Pace | Никаких мотивов A/B/C и никакого нового copy/product promise. |
-| Authenticated content | Design V2 | На desktop меняется только anatomy rail; content/data language остаются V2. |
-| Mobile/TMA | Design V2 | Уплотнение proximity и привязка bottom navigation к viewport; layout A/B/C запрещён. |
-| Motion | Design V2 | Telegram haptics остаются optional platform feedback, не shared visual behavior. |
+| Слой                  | Source                | Разрешённое исключение                                                                      |
+| --------------------- | --------------------- | ------------------------------------------------------------------------------------------- |
+| Typography, numbers   | Design V2             | `/login` использует ту же V2 type system; headline desktop ровно `35px`.                    |
+| Global spacing/radii  | Design V2             | Только layout geometry `/login` и desktop rail; локальная A token migration запрещена.      |
+| Color semantics       | Design V2             | `/login` получает A-style two-plane allocation, но обе plane используют V2 semantic colors. |
+| Landing               | normalized Quiet Pace | Никаких мотивов A/B/C и никакого нового copy/product promise.                               |
+| Authenticated content | Design V2             | На desktop меняется только anatomy rail; content/data language остаются V2.                 |
+| Mobile/TMA            | Design V2             | Уплотнение proximity и привязка bottom navigation к viewport; layout A/B/C запрещён.        |
+| Motion                | Design V2             | Telegram haptics остаются optional platform feedback, не shared visual behavior.            |
 
 ## Design tokens
 
@@ -51,25 +51,25 @@ production source. Исторические Design V2 документы сох�
 
 Использовать semantic variables, а не literal colors внутри feature CSS.
 
-| Token intent | Light | Dark | Использование |
-| --- | --- | --- | --- |
-| canvas | `#F4F5F2` | `#101310` | page/root background |
-| surface | `#FFFFFF` | `#161916` | task/entity region, dialog/sheet |
-| surface-secondary | `#ECEDE9` | `#1E221E` | grouped facts, selected/hover background |
-| surface-strong | `#DADCD7` | `#292E29` | pressed/disabled support, never primary text |
-| text-primary | `#161A17` | `#EEF0EA` | headings/body/actions |
-| text-secondary | `#59605B` | `#AFB5AD` | descriptions/meta |
-| border | `#C9CDC8` | `#3A413A` | rules, controls, region boundaries |
-| lime | `#9EE02B` | `#A8E83A` | one primary action/current marker/focus |
-| lime-hover | `#8DCE20` | `#98D62F` | hover capable pointers only |
-| accent-text | `#486414` | `#B9EA72` | non-filled accent copy on matching surface |
-| on-lime | `#102015` | `#102015` | text/icon on lime |
-| danger | `#B93838` | `#EF7474` | error/destructive meaning with text/icon |
-| danger-surface | `#F9E7E7` | `#2C1717` | recoverable error region |
-| warning | `#98600F` | `#E5B963` | warning/partial data with copy |
-| warning-surface | `#F5EAD5` | `#2B2314` | warning region |
-| success | `#486414` | `#A8E83A` | confirmation with text/icon |
-| success-surface | `#ECEDE9` | `#1E221E` | success region |
+| Token intent      | Light     | Dark      | Использование                                |
+| ----------------- | --------- | --------- | -------------------------------------------- |
+| canvas            | `#F4F5F2` | `#101310` | page/root background                         |
+| surface           | `#FFFFFF` | `#161916` | task/entity region, dialog/sheet             |
+| surface-secondary | `#ECEDE9` | `#1E221E` | grouped facts, selected/hover background     |
+| surface-strong    | `#DADCD7` | `#292E29` | pressed/disabled support, never primary text |
+| text-primary      | `#161A17` | `#EEF0EA` | headings/body/actions                        |
+| text-secondary    | `#59605B` | `#AFB5AD` | descriptions/meta                            |
+| border            | `#C9CDC8` | `#3A413A` | rules, controls, region boundaries           |
+| lime              | `#9EE02B` | `#A8E83A` | one primary action/current marker/focus      |
+| lime-hover        | `#8DCE20` | `#98D62F` | hover capable pointers only                  |
+| accent-text       | `#486414` | `#B9EA72` | non-filled accent copy on matching surface   |
+| on-lime           | `#102015` | `#102015` | text/icon on lime                            |
+| danger            | `#B93838` | `#EF7474` | error/destructive meaning with text/icon     |
+| danger-surface    | `#F9E7E7` | `#2C1717` | recoverable error region                     |
+| warning           | `#98600F` | `#E5B963` | warning/partial data with copy               |
+| warning-surface   | `#F5EAD5` | `#2B2314` | warning region                               |
+| success           | `#486414` | `#A8E83A` | confirmation with text/icon                  |
+| success-surface   | `#ECEDE9` | `#1E221E` | success region                               |
 
 Lime не обозначает danger, passive decoration или несколько конкурирующих actions. Charts retain
 units, period and text/table alternative; цвет не является единственным носителем смысла.
@@ -118,8 +118,10 @@ units, period and text/table alternative; цвет не является еди�
 
 ### Icons, illustration and product imagery
 
-- Canonical YFC logo/mark only; production `AppNavigationIcon` pictograms for navigation.
-- Functional icons use `currentColor`, `1.8–2px` stroke, `18–20px` glyph in at least `44px` target.
+- Canonical YFC logo/mark only; functional glyphs use shared `Icon` and the contract in
+  `iconography-and-data-viz-v2.1.md`.
+- Functional icons use `currentColor`, `1.8px` stroke, `16/20/24px` optical sizes in at least
+  `44px` interactive target.
 - No emoji or colored icon circles as generic decoration.
 - Product proof uses controlled renders/current components with fixture label; never real personal data.
 - Landing raster derivatives reserve exact `width`/`height` or `aspect-ratio`, match active theme,
@@ -139,6 +141,8 @@ units, period and text/table alternative; цвет не является еди�
   and restoration; content scrolls independently; primary action remains reachable above keyboard.
 - Loading/empty/error/success/disabled/permission/offline states follow
   `component-states-v2.1.md`; no blank page and no indefinite primary-action spinner.
+- Charts and progress use only the shared primitives and truthful semantics defined in
+  `iconography-and-data-viz-v2.1.md`.
 
 ## Motion
 

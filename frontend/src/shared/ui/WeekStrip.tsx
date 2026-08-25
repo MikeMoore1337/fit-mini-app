@@ -2,6 +2,7 @@ import { useId, type ReactNode } from 'react';
 import { addCalendarDays, calendarWeek, formatCalendarDate } from '../dateTime';
 import { AppLink } from '../navigation/router';
 import { ChevronIcon } from './common';
+import { Icon, type IconName } from './Icon';
 
 export type WeekStripStatusKey =
   'completed' | 'in-progress' | 'planned' | 'upcoming' | 'skipped' | 'neutral';
@@ -65,8 +66,18 @@ function WeekStripPictogram({
   kind: WeekStripPictogramKey;
   tone: WeekStripActivityKey | WeekStripStatusKey;
 }) {
-  const activityLabel =
-    kind === 'strength' ? 'С' : kind === 'cardio' ? 'К' : kind === 'rest' ? 'О' : null;
+  const iconName: Record<WeekStripPictogramKey, IconName> = {
+    strength: 'week-strength',
+    cardio: 'week-cardio',
+    rest: 'week-rest',
+    completed: 'week-completed',
+    planned: 'week-planned',
+    'in-progress': 'week-in-progress',
+    skipped: 'week-skipped',
+    'nutrition-incomplete': 'week-nutrition-incomplete',
+    fasted: 'week-nutrition-fasted',
+    missing: 'week-nutrition-missing',
+  };
 
   return (
     <span
@@ -74,17 +85,7 @@ function WeekStripPictogram({
       className={`week-strip__pictogram week-strip__pictogram--${tone}`}
       data-pictogram={kind}
     >
-      {activityLabel ?? (
-        <svg className="week-strip__pictogram-svg" viewBox="0 0 16 16">
-          {kind === 'completed' && <path d="M3 8.5 6.4 12 13 4.5" />}
-          {(kind === 'planned' || kind === 'nutrition-incomplete') && (
-            <circle cx="8" cy="8" r="3.5" />
-          )}
-          {kind === 'in-progress' && <path d="m5.5 3.5 4.5 4.5-4.5 4.5" />}
-          {(kind === 'skipped' || kind === 'missing') && <path d="M3 8h10" />}
-          {kind === 'fasted' && <circle cx="8" cy="8" r="4.5" />}
-        </svg>
-      )}
+      <Icon className="week-strip__pictogram-svg" name={iconName[kind]} size={16} />
     </span>
   );
 }

@@ -6,15 +6,18 @@ import { queryKeys } from '../../shared/queryKeys';
 import { AppLink } from '../../shared/navigation/router';
 import { ContextualHelp } from '../../shared/ui/ContextualHelp';
 import { DataConfidence } from '../../shared/ui/DataConfidence';
+import { QuantitativeProgress, RankedBars, TimeSeriesChart } from '../../shared/ui/DataViz';
 import { formatCalendarDate } from '../../shared/dateTime';
 import {
   Badge,
+  DisclosureIcon,
   EmptyState,
   ErrorState,
   LoadingState,
   SegmentedControl,
 } from '../../shared/ui/common';
 import { NutritionPeriodReport } from './NutritionReport';
+import { Icon } from '../../shared/ui/Icon';
 import { CardioHistory } from '../cardio/CardioLogging';
 
 type PeriodDays = 7 | 30 | 90;
@@ -241,6 +244,7 @@ function ExerciseHistory({ analytics }: { analytics: TrainingAnalytics }) {
                   : 'Вес не записан'
                 : `до ${formatNumber(exercise.max_external_load_kg)} кг`}
             </span>
+            <DisclosureIcon />
           </summary>
           <div className="progress-exercise__sessions">
             {exercise.sessions.map((session) => (
@@ -305,24 +309,20 @@ function ExposureList({
   title: string;
 }) {
   const visible = items.slice(0, 8);
-  const maximum = Math.max(...visible.map((item) => item.completed_set_count), 1);
   return (
     <div className="progress-exposure">
       <h3>{title}</h3>
       {!visible.length ? (
         <p className="progress-note">Нет структурированных данных по мышечным группам.</p>
       ) : (
-        <ul>
-          {visible.map((item) => (
-            <li key={item.muscle_id}>
-              <span>{item.muscle_name}</span>
-              <span className="progress-exposure__track" aria-hidden="true">
-                <i style={{ width: `${(item.completed_set_count / maximum) * 100}%` }} />
-              </span>
-              <strong>{item.completed_set_count}</strong>
-            </li>
-          ))}
-        </ul>
+        <RankedBars
+          items={visible.map((item) => ({
+            label: item.muscle_name,
+            unit: 'подх.',
+            value: item.completed_set_count,
+          }))}
+          label={title}
+        />
       )}
     </div>
   );
@@ -420,73 +420,22 @@ function TrainingSection({
 }
 
 function BodyChart({ trend }: { trend: BodyTrend }) {
-  const width = 360;
-  const height = 132;
-  const inset = 14;
-  const times = trend.points.map((point) => new Date(`${point.measured_on}T12:00:00`).getTime());
-  const values = trend.points.map((point) => point.value);
-  const minTime = Math.min(...times);
-  const maxTime = Math.max(...times);
-  const minValue = Math.min(...values);
-  const maxValue = Math.max(...values);
-  const x = (time: number) =>
-    times.length === 1 || minTime === maxTime
-      ? width / 2
-      : inset + ((time - minTime) / (maxTime - minTime)) * (width - inset * 2);
-  const y = (value: number) =>
-    minValue === maxValue
-      ? height / 2
-      : inset + ((maxValue - value) / (maxValue - minValue)) * (height - inset * 2);
-  const coordinates = trend.points.map((point, index) => ({
-    x: x(times[index] ?? minTime),
-    y: y(point.value),
-    point,
-  }));
   const unit = bodyMetricUnits[trend.metric];
-  const label = `${bodyMetricLabels[trend.metric]}: ${trend.points.map((point) => `${formatDate(point.measured_on)} — ${formatNumber(point.value)} ${unit}`).join(', ')}`;
   return (
-    <div className="progress-body-chart">
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        role="img"
-        aria-label={label}
-        preserveAspectRatio="none"
-      >
-        <line x1={inset} x2={width - inset} y1={height - inset} y2={height - inset} />
-        {coordinates.length > 1 && (
-          <polyline points={coordinates.map((point) => `${point.x},${point.y}`).join(' ')} />
-        )}
-        {coordinates.map(({ point, x: pointX, y: pointY }) => (
-          <circle key={`${point.measured_on}-${point.value}`} cx={pointX} cy={pointY} r="4" />
-        ))}
-      </svg>
-      <div className="progress-body-chart__range" aria-hidden="true">
-        <span>
-          {formatNumber(minValue)} {unit}
-        </span>
-        <span>диапазон серии</span>
-        <span>
-          {formatNumber(maxValue)} {unit}
-        </span>
-      </div>
-      <div className="progress-body-chart__scale" aria-hidden="true">
-        <span>{formatDate(trend.first_measured_on)}</span>
-        <span>{formatDate(trend.latest_measured_on)}</span>
-      </div>
-      <details>
-        <summary>Все точки: {trend.point_count}</summary>
-        <ul>
-          {trend.points.map((point) => (
-            <li key={`${point.measured_on}-${point.value}`}>
-              <time dateTime={point.measured_on}>{formatDate(point.measured_on, true)}</time>
-              <strong>
-                {formatNumber(point.value)} {unit}
-              </strong>
-            </li>
-          ))}
-        </ul>
-      </details>
-    </div>
+    <TimeSeriesChart
+      ariaLabel={`${bodyMetricLabels[trend.metric]}: ${trend.points
+        .map((point) => `${formatDate(point.measured_on)} — ${formatNumber(point.value)} ${unit}`)
+        .join(', ')}`}
+      metric={bodyMetricLabels[trend.metric]}
+      period={`${formatDate(trend.first_measured_on)} — ${formatDate(trend.latest_measured_on)}`}
+      points={trend.points.map((point) => ({
+        key: point.measured_on,
+        label: formatDate(point.measured_on),
+        value: point.value,
+      }))}
+      unit={unit}
+      valueLabel="Замер"
+    />
   );
 }
 
@@ -759,20 +708,13 @@ function ComplianceRow({ label, component }: { label: string; component: Adheren
   const percent = component.percent;
   return (
     <div className="progress-compliance">
-      <div>
-        <span>{label}</span>
-        <strong>{componentStatus(component)}</strong>
-      </div>
       {percent != null && (
-        <div
-          className="progress-compliance__track"
-          role="progressbar"
-          aria-label={`${label}: ${formatNumber(percent)}%`}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={percent}
-        >
-          <span style={{ width: `${Math.max(0, Math.min(percent, 100))}%` }} />
+        <QuantitativeProgress label={label} maximum={100} unit="%" value={percent} />
+      )}
+      {percent == null && (
+        <div>
+          <span>{label}</span>
+          <strong>{componentStatus(component)}</strong>
         </div>
       )}
       {component.status === 'available' && (
@@ -866,7 +808,7 @@ export function ProgressExperience({
             onChange={(value) => setPeriod(Number(value) as PeriodDays)}
           />
           <AppLink className="button-link secondary-link" to={`/app/report?period=days_${period}`}>
-            Скачать отчёт
+            <Icon name="print" size={16} /> Скачать отчёт
           </AppLink>
         </div>
       </header>

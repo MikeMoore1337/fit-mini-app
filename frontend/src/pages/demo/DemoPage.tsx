@@ -12,6 +12,7 @@ import {
 } from '../../shared/ui/common';
 import { AppLink, useNavigation } from '../../shared/navigation/router';
 import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
+import { TaskProgress } from '../../shared/ui/DataViz';
 import {
   applyDemoAction,
   clearAllDemoSessions,
@@ -132,12 +133,11 @@ function TrainingScenario({
         <h2>{state.workout_title}</h2>
         <p>{state.workout_subtitle}</p>
       </div>
-      <div className="demo-workout-progress" aria-label="Прогресс подходов">
-        <span>Выполнено подходов</span>
-        <strong>
-          {state.completed_sets} из {state.total_sets}
-        </strong>
-      </div>
+      <TaskProgress
+        completed={state.completed_sets}
+        label="Выполнено подходов"
+        total={state.total_sets}
+      />
       <div className="demo-fact-list" aria-label="Упражнения тренировки">
         {state.exercises.map((exercise) => (
           <article className={`demo-fact-row is-${exercise.status}`} key={exercise.name}>

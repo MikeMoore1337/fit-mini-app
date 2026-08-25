@@ -14,6 +14,7 @@ import { appUrlForHostname } from '../../shared/navigation/appUrl';
 import { AppLink, useNavigation } from '../../shared/navigation/router';
 import { BrandLogo } from '../../shared/ui/BrandLogo';
 import { AppThemeToggle } from '../../shared/ui/AppThemeToggle';
+import { Icon } from '../../shared/ui/Icon';
 import { useWebTheme } from '../../shared/useWebTheme';
 import { applyRouteMetadata } from '../../shared/seo/metadata';
 import '../../shared/ui/public-shell.css';
@@ -86,9 +87,7 @@ function PublicHeader({ theme }: { theme: 'light' | 'dark' }) {
           aria-controls="public-navigation"
           onClick={() => setMenuOpen((open) => !open)}
         >
-          <span />
-          <span />
-          <span />
+          <Icon name={menuOpen ? 'close' : 'menu'} />
         </button>
       </div>
     </header>
@@ -205,7 +204,7 @@ function KnowledgeDirectory() {
               </h3>
               <p>{guide.description}</p>
               <AppLink className="public-inline-link" to={guide.path}>
-                Читать руководство <span aria-hidden="true">→</span>
+                Читать руководство <Icon name="arrow-right" size={16} />
               </AppLink>
             </article>
           );
@@ -278,7 +277,7 @@ function PublicExerciseDirectory() {
                   {difficultyLabels[exercise.difficulty_level]}. Пошаговая техника и частые ошибки.
                 </p>
                 <AppLink className="public-inline-link" to={page.path}>
-                  Открыть карточку <span aria-hidden="true">→</span>
+                  Открыть карточку <Icon name="arrow-right" size={16} />
                 </AppLink>
               </article>
             );
@@ -391,7 +390,9 @@ function RelatedContent({ page }: { page: PublicContentPageData }) {
           <AppLink className="public-related-card" to={item.path} key={item.path}>
             <strong>{item.label}</strong>
             {item.description && <span>{item.description}</span>}
-            <small aria-hidden="true">Открыть →</small>
+            <small>
+              Открыть <Icon name="arrow-right" size={16} />
+            </small>
           </AppLink>
         ))}
       </div>
@@ -542,7 +543,7 @@ export default function PublicContentPage() {
               <a className="landing-button landing-action" href={appUrl}>
                 {page.cta.label}
                 <span className="landing-action__arrow" aria-hidden="true">
-                  ↗
+                  <Icon name="external-link" size={16} />
                 </span>
               </a>
             </section>

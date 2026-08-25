@@ -94,6 +94,9 @@ test('full report keeps a mobile-first preview and creates a valid light print d
     'solid',
   );
   await expect(page.locator('html')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  await page.locator('.data-viz-chart').first().screenshot({
+    path: '../.artifacts/screenshots/task-69b/print-grayscale-chart-and-table.png',
+  });
   const pdf = await page.pdf({
     path: '../.artifacts/pdf/task-67/progress-report-2026-07-26_2026-08-24.pdf',
     format: 'A4',
@@ -141,6 +144,10 @@ test('dark TMA explains the print handoff and preserves report context', async (
   await expect(page).toHaveURL(/date_from=2026-08-01/);
   await expect(page).toHaveURL(/client_id=73/);
   await expectNoHorizontalOverflow(page);
+  await page.locator('.data-viz-chart').first().scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: '../.artifacts/screenshots/task-69b/tma-390x844-dark-chart.png',
+  });
   await page
     .getByText(/В Telegram системная печать может быть недоступна/)
     .scrollIntoViewIfNeeded();

@@ -5,6 +5,8 @@ import { api } from '../../shared/api/client';
 import { AppLink, useNavigation } from '../../shared/navigation/router';
 import { BrandLockup } from '../../shared/ui/BrandLogo';
 import { DataConfidence } from '../../shared/ui/DataConfidence';
+import { TimeSeriesChart } from '../../shared/ui/DataViz';
+import { Icon } from '../../shared/ui/Icon';
 import {
   Button,
   EmptyState,
@@ -168,65 +170,20 @@ function WeightChart({ report }: { report: ProgressReport }) {
       />
     );
   }
-  const values = trend.points.map((point) => point.value);
-  const rawMin = Math.min(...values);
-  const rawMax = Math.max(...values);
-  const padding = rawMax === rawMin ? 1 : Math.max((rawMax - rawMin) * 0.12, 0.2);
-  const min = rawMin - padding;
-  const max = rawMax + padding;
-  const width = 560;
-  const height = 170;
-  const inset = 22;
-  const x = (index: number) =>
-    trend.points.length === 1
-      ? width / 2
-      : inset + (index * (width - inset * 2)) / (trend.points.length - 1);
-  const y = (value: number) => inset + ((max - value) * (height - inset * 2)) / (max - min);
-  const points = trend.points.map((point, index) => `${x(index)},${y(point.value)}`).join(' ');
-
   return (
-    <figure className="progress-report-chart">
-      <div className="progress-report-chart__scale" aria-hidden="true">
-        <span>{formatNumber(rawMax)} кг</span>
-        <span>{formatNumber(rawMin)} кг</span>
-      </div>
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        role="img"
-        aria-labelledby="report-weight-chart-title"
-      >
-        <title id="report-weight-chart-title">
-          Масса от {formatDate(trend.first_measured_on)} до {formatDate(trend.latest_measured_on)}
-        </title>
-        <line x1={inset} x2={width - inset} y1={height - inset} y2={height - inset} />
-        <polyline points={points} />
-        {trend.points.map((point, index) => (
-          <circle cx={x(index)} cy={y(point.value)} key={`${point.measured_on}-${index}`} r="4" />
-        ))}
-      </svg>
-      <figcaption>
-        Фактические замеры: {formatNumber(trend.first_value)} → {formatNumber(trend.latest_value)}{' '}
-        кг, изменение{' '}
-        {trend.change == null ? 'не рассчитывается' : `${formatNumber(trend.change)} кг`}.
-      </figcaption>
-      <table>
-        <caption>Таблица замеров массы</caption>
-        <thead>
-          <tr>
-            <th scope="col">Дата</th>
-            <th scope="col">Масса</th>
-          </tr>
-        </thead>
-        <tbody>
-          {trend.points.map((point) => (
-            <tr key={point.measured_on}>
-              <td>{formatDate(point.measured_on)}</td>
-              <td>{formatNumber(point.value)} кг</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </figure>
+    <TimeSeriesChart
+      metric="Масса тела"
+      period={`${formatDate(trend.first_measured_on)} — ${formatDate(trend.latest_measured_on)}`}
+      points={trend.points.map((point) => ({
+        key: point.measured_on,
+        label: formatDate(point.measured_on),
+        value: point.value,
+      }))}
+      print
+      tableCaption="Таблица замеров массы"
+      unit="кг"
+      valueLabel="Замер"
+    />
   );
 }
 
@@ -786,11 +743,11 @@ export default function ProgressReportPage() {
     <main className="progress-report-page">
       <div className="progress-report-toolbar report-screen-only">
         <AppLink className="progress-report-back" to={returnPath}>
-          ← Назад
+          <Icon name="arrow-left" size={16} /> Назад
         </AppLink>
         <BrandLockup />
         <Button disabled={!report.data || report.isFetching} onClick={printReport} type="button">
-          Печать / Сохранить как PDF
+          <Icon name="print" size={16} /> Печать / Сохранить как PDF
         </Button>
       </div>
 

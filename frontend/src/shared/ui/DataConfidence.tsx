@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { DisclosureIcon } from './common';
+import { Icon, type IconName } from './Icon';
 
 export type DataConfidenceStatus = 'sufficient' | 'limited' | 'insufficient';
 export type DataConfidenceKind =
@@ -136,18 +137,15 @@ export function dataConfidenceBasis(
 }
 
 function ConfidenceIcon({ state }: { state: DataConfidenceStatus | 'stale' }) {
-  const path = {
-    sufficient: <path d="m5 12 4 4 10-10" />,
-    limited: <path d="M12 7v6m0 4h.01" />,
-    insufficient: <path d="M8 12h.01M12 12h.01M16 12h.01" />,
-    stale: <path d="M12 7v5l3 2m6-2a9 9 0 1 1-2.64-6.36" />,
-  }[state];
+  const iconName: Record<DataConfidenceStatus | 'stale', IconName> = {
+    sufficient: 'confidence-sufficient',
+    limited: 'confidence-limited',
+    insufficient: 'confidence-insufficient',
+    stale: 'confidence-stale',
+  };
   return (
     <span className="data-confidence__icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" focusable="false">
-        {state === 'sufficient' ? null : <circle cx="12" cy="12" r="9" />}
-        {path}
-      </svg>
+      <Icon name={iconName[state]} />
     </span>
   );
 }

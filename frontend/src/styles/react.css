@@ -637,19 +637,6 @@ select:not([multiple]) {
   color: var(--text);
   line-height: 1.5;
 }
-.spinner {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 3px solid var(--border);
-  border-top-color: var(--accent);
-  animation: spin 0.8s linear infinite;
-}
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
 .error-state {
   border-color: var(--danger-line);
 }
@@ -849,12 +836,12 @@ select:not([multiple]) {
   fill: none;
   stroke: currentColor;
   stroke-linecap: round;
-  stroke-width: 1.5;
+  stroke-width: 1.8;
+  transition: transform 140ms ease;
 }
-.profile-disclosure[open] > summary .disclosure-icon__vertical,
-.coach-data-disclosure[open] > summary .disclosure-icon__vertical,
-.card-disclosure[open] > summary .disclosure-icon__vertical {
-  opacity: 0;
+
+details[open] > summary .disclosure-icon svg {
+  transform: rotate(90deg);
 }
 .profile-disclosure__body,
 .coach-data-disclosure__body,
@@ -3842,33 +3829,6 @@ button.today-text-link {
   display: grid;
   gap: 10px;
 }
-.active-workout-progress__label {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-}
-.active-workout-progress__label strong {
-  font-size: 1rem;
-}
-.active-workout-progress__label span {
-  color: var(--muted);
-  font-size: 0.8rem;
-  font-weight: 800;
-}
-.active-workout-progress__track {
-  overflow: hidden;
-  height: 9px;
-  border-radius: 999px;
-  background: var(--surface-active);
-}
-.active-workout-progress__track > span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--accent);
-  transition: width 220ms ease;
-}
 .active-workout-progress__next {
   display: flex;
   flex-wrap: wrap;
@@ -5440,22 +5400,6 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   display: none;
 }
 
-.progress-exercise > summary::after {
-  width: 9px;
-  height: 9px;
-  flex: 0 0 9px;
-  margin-left: 2px;
-  border-right: 2px solid var(--muted);
-  border-bottom: 2px solid var(--muted);
-  transform: rotate(45deg) translateY(-2px);
-  transition: transform var(--motion-standard) var(--motion-ease);
-  content: '';
-}
-
-.progress-exercise[open] > summary::after {
-  transform: rotate(225deg) translate(-2px, -2px);
-}
-
 .progress-exercise > summary > span:first-child {
   display: grid;
   flex: 1;
@@ -5596,20 +5540,6 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.progress-exposure__track {
-  overflow: hidden;
-  height: 6px;
-  border-radius: 999px;
-  background: var(--surface-active);
-}
-
-.progress-exposure__track i {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--accent);
 }
 
 .progress-exposure li strong {
@@ -5873,89 +5803,6 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   font-variant-numeric: tabular-nums;
 }
 
-.progress-body-chart {
-  display: grid;
-  min-width: 0;
-}
-
-.progress-body-chart svg {
-  width: 100%;
-  min-height: 132px;
-  overflow: visible;
-}
-
-.progress-body-chart svg line {
-  stroke: var(--border);
-  stroke-width: 1;
-}
-
-.progress-body-chart svg polyline {
-  fill: none;
-  stroke: var(--accent);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 3;
-  vector-effect: non-scaling-stroke;
-}
-
-.progress-body-chart svg circle {
-  fill: var(--surface);
-  stroke: var(--accent);
-  stroke-width: 3;
-  vector-effect: non-scaling-stroke;
-}
-
-.progress-body-chart__scale {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: -2px;
-  color: var(--muted);
-  font-size: 0.65rem;
-}
-
-.progress-body-chart__range {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  gap: 8px;
-  color: var(--muted);
-  font-size: 0.64rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.progress-body-chart__range span:nth-child(2) {
-  text-align: center;
-}
-
-.progress-body-chart__range span:last-child {
-  text-align: right;
-}
-
-.progress-body-chart > details {
-  margin-top: 8px;
-  font-size: 0.72rem;
-}
-
-.progress-body-chart > details > summary {
-  color: var(--muted);
-  cursor: pointer;
-}
-
-.progress-body-chart ul {
-  display: grid;
-  gap: 5px;
-  margin: 8px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.progress-body-chart li {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-variant-numeric: tabular-nums;
-}
-
 .progress-body-guidance {
   padding-block: 14px;
   border-block: 1px solid var(--border);
@@ -6024,30 +5871,20 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   gap: 5px 18px;
 }
 
-.progress-compliance > div:first-child {
+.progress-compliance > div:first-child:not(.data-viz-progress) {
   display: flex;
   justify-content: space-between;
   gap: 12px;
   font-size: 0.8rem;
 }
 
-.progress-compliance > div:first-child strong {
+.progress-compliance > div:first-child:not(.data-viz-progress) strong {
   flex: 0 0 auto;
   font-variant-numeric: tabular-nums;
 }
 
-.progress-compliance__track {
-  overflow: hidden;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--surface-active);
-}
-
-.progress-compliance__track > span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--accent);
+.progress-compliance > .data-viz-progress {
+  grid-column: 1 / -1;
 }
 
 .progress-compliance > small {
@@ -6076,14 +5913,6 @@ body:has(#appBottomNav) .toast:not(.hidden) {
 .progress-adherence__rows .progress-compliance:last-child {
   padding-bottom: 0;
   border-bottom: 0;
-}
-
-.progress-exercise > summary:focus-visible,
-.progress-methodology > summary:focus-visible,
-.progress-body-chart > details > summary:focus-visible {
-  outline: 3px solid var(--focus-ring);
-  outline-offset: 3px;
-  border-radius: 4px;
 }
 
 @media (max-width: 820px) {
@@ -6291,7 +6120,7 @@ body:has(#appBottomNav) .toast:not(.hidden) {
     grid-column: 1;
   }
 
-  .progress-exercise > summary::after {
+  .progress-exercise > summary > .disclosure-icon {
     grid-column: 2;
     grid-row: 1 / span 2;
   }
@@ -6669,22 +6498,6 @@ body:has(#appBottomNav) .toast:not(.hidden) {
 .nutrition-target__heading small {
   color: var(--muted);
   font-weight: 500;
-}
-.nutrition-target__track {
-  height: 6px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: var(--surface-active);
-}
-.nutrition-target__track > span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--accent);
-  transition: width 180ms ease;
-}
-.nutrition-target.is-over .nutrition-target__track > span {
-  background: var(--warning);
 }
 .nutrition-target > small {
   color: var(--muted);

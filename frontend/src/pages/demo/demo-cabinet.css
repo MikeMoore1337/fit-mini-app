@@ -106,7 +106,6 @@
   gap: var(--space-4);
 }
 
-.demo-cabinet-progress-line,
 .demo-cabinet-recent,
 .demo-cabinet-progress__nutrition {
   align-items: baseline;
@@ -372,7 +371,6 @@
 }
 
 @media (max-width: 430px) {
-  .demo-cabinet-progress-line,
   .demo-cabinet-recent,
   .demo-cabinet-row {
     align-items: stretch;

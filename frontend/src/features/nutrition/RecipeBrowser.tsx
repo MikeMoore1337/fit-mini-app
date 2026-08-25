@@ -12,6 +12,7 @@ import {
   Select,
 } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
+import { Icon } from '../../shared/ui/Icon';
 
 interface IngredientDraft {
   foodId: number;
@@ -233,7 +234,7 @@ function RecipeEditor({
                     {food.brand || `${numberLabel(food.energy_kcal_per_100g)} ккал / 100 г`}
                   </span>
                 </span>
-                <span aria-hidden="true">＋</span>
+                <Icon name="plus" size={16} />
               </button>
             </li>
           ))}
@@ -276,7 +277,7 @@ function RecipeEditor({
                 )
               }
             >
-              ×
+              <Icon name="close" size={16} />
             </button>
           </div>
         ))}
@@ -343,7 +344,7 @@ export function RecipeBrowser({ onSelect }: { onSelect: (recipe: Recipe) => void
           <p>Выберите готовое блюдо или соберите новое.</p>
         </div>
         <Button type="button" variant="secondary" onClick={() => setEditing('new')}>
-          ＋ Новый рецепт
+          <Icon name="plus" size={16} /> Новый рецепт
         </Button>
       </div>
       {recipes.isLoading && <LoadingState label="Загружаем рецепты…" />}

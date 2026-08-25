@@ -20,6 +20,7 @@ import type {
   TrainerClientProgressSummary,
 } from '../../shared/api/types';
 import { queryKeys } from '../../shared/queryKeys';
+import { Icon } from '../../shared/ui/Icon';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import {
   Badge,
@@ -1142,7 +1143,7 @@ export default function CoachPage() {
                             </button>
                             <details className="coach-client-row__menu">
                               <summary aria-label={`Действия: ${clientDisplayName(client)}`}>
-                                •••
+                                <Icon name="more-horizontal" size={20} />
                               </summary>
                               <button
                                 className="btn-danger"

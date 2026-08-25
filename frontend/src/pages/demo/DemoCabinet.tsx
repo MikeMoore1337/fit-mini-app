@@ -16,6 +16,7 @@ import { productEventSurface, trackProductEvent } from '../../shared/analytics/p
 import { calendarWeek, dateInputValue } from '../../shared/dateTime';
 import { AppLink, useNavigation } from '../../shared/navigation/router';
 import { DataConfidence } from '../../shared/ui/DataConfidence';
+import { QuantitativeProgress, TaskProgress } from '../../shared/ui/DataViz';
 import {
   TRAINING_WEEK_LEGEND,
   WeekStrip,
@@ -203,12 +204,11 @@ function TodaySection({
           </Badge>
           {state.kind === 'self_training' ? (
             <>
-              <div className="demo-cabinet-progress-line">
-                <span>Выполнено подходов</span>
-                <strong>
-                  {state.completed_sets} из {state.total_sets}
-                </strong>
-              </div>
+              <TaskProgress
+                completed={state.completed_sets}
+                label="Выполнено подходов"
+                total={state.total_sets}
+              />
               {nextTrainingAction && (
                 <Button
                   disabled={busy}
@@ -390,8 +390,12 @@ function ProgressSection({
           />
         </div>
         <div className="demo-cabinet-progress__nutrition">
-          <span>Дневной итог питания</span>
-          <strong>{progress.nutrition_completion_percent}% от ориентира</strong>
+          <QuantitativeProgress
+            label="Дневной итог питания"
+            maximum={100}
+            unit="%"
+            value={progress.nutrition_completion_percent}
+          />
           <small>Заполнено дней: {progress.nutrition_days_logged} из 7</small>
           <AppLink to={demoCabinetPath(scenario, 'nutrition')}>
             Открыть подтверждённые записи

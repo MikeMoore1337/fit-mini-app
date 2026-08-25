@@ -326,72 +326,6 @@ body:has(.app-shell--design-v2) {
   font-weight: 600;
 }
 
-.progress-report-chart {
-  position: relative;
-  display: grid;
-  gap: 12px;
-  margin: 18px 0 28px;
-}
-
-.progress-report-chart svg {
-  width: 100%;
-  max-height: 260px;
-  overflow: visible;
-}
-
-.progress-report-chart line {
-  stroke: var(--v2-border);
-}
-
-.progress-report-chart polyline {
-  fill: none;
-  stroke: var(--v2-text-primary);
-  stroke-width: 3;
-  vector-effect: non-scaling-stroke;
-}
-
-.progress-report-chart circle {
-  fill: var(--v2-surface);
-  stroke: var(--v2-lime);
-  stroke-width: 3;
-  vector-effect: non-scaling-stroke;
-}
-
-.progress-report-chart__scale {
-  display: flex;
-  justify-content: space-between;
-  color: var(--v2-text-secondary);
-  font-size: 12px;
-}
-
-.progress-report-section table,
-.progress-report-chart table {
-  width: 100%;
-  border-collapse: collapse;
-  font-variant-numeric: tabular-nums;
-}
-
-.progress-report-section caption,
-.progress-report-chart caption {
-  padding-bottom: 8px;
-  text-align: left;
-  color: var(--v2-text-secondary);
-  font-weight: 600;
-}
-
-.progress-report-section :where(th, td),
-.progress-report-chart :where(th, td) {
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--v2-border);
-  text-align: left;
-  vertical-align: top;
-}
-
-.progress-report-section th,
-.progress-report-chart th {
-  font-size: 12px;
-}
-
 .progress-report-macros-heading {
   white-space: nowrap;
 }
@@ -475,14 +409,6 @@ body:has(.app-shell--design-v2) {
   .progress-report-exercises dl,
   .progress-report-checkin dl {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .progress-report-section table,
-  .progress-report-chart table {
-    display: block;
-    max-width: 100%;
-    overflow-x: auto;
-    overscroll-behavior-inline: contain;
   }
 
   .progress-hero__actions {
@@ -653,16 +579,6 @@ body:has(.app-shell--design-v2) {
   }
 
   .progress-report-section > header,
-  .progress-report-exercises article,
-  .progress-report-checkin,
-  .progress-report-program,
-  .progress-report-chart,
-  .progress-report-facts > div,
-  tr {
-    break-inside: avoid;
-  }
-
-  .progress-report-section > header,
   h2,
   h3 {
     break-after: avoid;
@@ -670,17 +586,6 @@ body:has(.app-shell--design-v2) {
 
   thead {
     display: table-header-group;
-  }
-
-  .progress-report-section table,
-  .progress-report-chart table {
-    display: table;
-    overflow: visible;
-    font-size: 9pt;
-  }
-
-  .progress-report-chart svg {
-    max-height: 48mm;
   }
 
   .progress-report-exercises dl,
@@ -1015,11 +920,10 @@ body:has(.app-shell--design-v2) {
   width: var(--week-strip-pictogram-size);
   height: var(--week-strip-pictogram-size);
   place-items: center;
-  border: 1px solid var(--v2-border-strong);
-  border-radius: 4px;
+  border: 0;
+  border-radius: 0;
+  --icon-surface: var(--v2-surface-primary);
   color: var(--v2-text-secondary);
-  font-size: 0.625rem;
-  font-weight: 850;
   line-height: 1;
 }
 
@@ -1028,50 +932,33 @@ body:has(.app-shell--design-v2) {
   width: 16px;
   height: 16px;
   overflow: visible;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 2.25;
-}
-
-.week-strip__pictogram[data-pictogram='planned'] .week-strip__pictogram-svg,
-.week-strip__pictogram[data-pictogram='nutrition-incomplete'] .week-strip__pictogram-svg {
-  fill: currentColor;
-  stroke: none;
 }
 
 .week-strip__pictogram--strength {
-  border-color: var(--v2-lime);
   color: var(--v2-accent-text);
 }
 
 .week-strip__pictogram--cardio {
-  border-color: var(--v2-border-strong);
-  background: var(--v2-surface-secondary);
   color: var(--v2-text-primary);
 }
 
 .week-strip__pictogram--rest {
-  border-color: transparent;
-  background: var(--v2-surface-strong);
+  color: var(--v2-text-secondary);
 }
 
 .week-strip__pictogram--completed {
-  border-color: transparent;
   color: var(--v2-success-text);
 }
 
 .week-strip__pictogram--in-progress,
 .week-strip__pictogram--planned,
 .week-strip__pictogram--upcoming {
-  border-color: transparent;
   color: var(--v2-accent-text);
 }
 
 .week-strip__pictogram--skipped,
 .week-strip__pictogram--neutral {
-  border-color: transparent;
+  color: var(--v2-text-secondary);
 }
 
 .week-strip__days {
@@ -1511,21 +1398,6 @@ body:has(.app-shell--design-v2) {
   color: var(--v2-text-secondary);
 }
 
-.nutrition-diary--design-v2 .nutrition-target__track {
-  height: 6px;
-  border-radius: 999px;
-  background: var(--v2-surface-strong);
-}
-
-.nutrition-diary--design-v2 .nutrition-target__track > span {
-  border-radius: inherit;
-  background: var(--v2-progress-fill);
-}
-
-.nutrition-diary--design-v2 .nutrition-target.is-over .nutrition-target__track > span {
-  background: var(--v2-warning);
-}
-
 .nutrition-diary--design-v2 .nutrition-day-summary__totals {
   display: none;
 }
@@ -1913,17 +1785,6 @@ body:has(.app-shell--design-v2) {
 .active-workout--design-v2 .active-workout-exercise__copy h3 {
   color: var(--v2-text-primary);
   font-weight: 750;
-}
-
-.active-workout--design-v2 .active-workout-progress__track {
-  height: 6px;
-  border-radius: 0;
-  background: var(--v2-surface-strong);
-}
-
-.active-workout--design-v2 .active-workout-progress__track > span {
-  border-radius: 0;
-  background: var(--v2-lime);
 }
 
 .active-workout--design-v2 .active-workout-sync {
@@ -4216,15 +4077,6 @@ button.notification-row__main:focus-visible {
   background: var(--v2-surface-secondary);
 }
 
-.app-section--progress .progress-exposure__track,
-.app-section--progress .progress-compliance__track {
-  background: var(--v2-surface-strong);
-}
-
-.app-section--progress :where(.progress-exposure__track i, .progress-compliance__track i) {
-  background: var(--v2-lime);
-}
-
 .app-section--progress .ui-tabs {
   border-radius: var(--v2-control-radius);
   background: var(--v2-surface-secondary);
@@ -4342,20 +4194,6 @@ button.notification-row__main:focus-visible {
   margin: 0;
 }
 
-.nutrition-report-coverage__meter {
-  overflow: hidden;
-  height: 12px;
-  border: 1px solid var(--v2-border);
-  border-radius: 999px;
-  background: var(--v2-surface-strong);
-}
-
-.nutrition-report-coverage__meter > span {
-  display: block;
-  height: 100%;
-  background: var(--v2-lime);
-}
-
 .nutrition-report-coverage__details {
   grid-column: 1 / -1;
   padding-top: var(--v2-space-2);
@@ -4438,165 +4276,6 @@ button.notification-row__main:focus-visible {
 .nutrition-report-adherence span {
   color: var(--v2-text-secondary);
   font-size: 0.76rem;
-}
-
-.nutrition-report-chart {
-  --nutrition-report-point: #fff;
-
-  display: grid;
-  gap: var(--v2-space-2);
-  margin: 0;
-  padding: var(--v2-space-3);
-  border: 1px solid var(--v2-border);
-  border-radius: var(--v2-control-radius);
-  background: var(--v2-surface-secondary);
-}
-
-.nutrition-report-chart__legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--v2-space-2) var(--v2-space-4);
-  color: var(--v2-text-secondary);
-  font-size: 0.72rem;
-}
-
-.nutrition-report-chart__legend span {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--v2-space-1);
-}
-
-.nutrition-report-chart__legend i {
-  position: relative;
-  display: block;
-  width: 24px;
-  height: 0;
-  border-top: 2px solid;
-}
-
-.nutrition-report-chart__legend i.nutrition-report-chart__actual::after {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 6px;
-  height: 6px;
-  border: 0;
-  border-radius: 50%;
-  background: var(--nutrition-report-point);
-  content: '';
-  transform: translate(-50%, -50%);
-}
-
-.nutrition-report-chart__legend i.nutrition-report-chart__target {
-  border-top-color: var(--v2-accent-text);
-  border-top-style: dashed;
-}
-
-.nutrition-report-chart__legend i.nutrition-report-chart__change {
-  border-top-color: var(--v2-warning);
-  border-top-style: dotted;
-}
-
-.nutrition-report-chart svg {
-  width: 100%;
-  height: 220px;
-  overflow: visible;
-}
-
-.nutrition-report-chart__axis {
-  stroke: var(--v2-border);
-  stroke-width: 1;
-}
-
-.nutrition-report-chart__actual {
-  stroke: var(--v2-text-primary);
-  stroke-width: 3;
-}
-
-.nutrition-report-chart__target {
-  stroke: var(--v2-accent-text);
-  stroke-width: 2;
-  stroke-dasharray: 8 5;
-}
-
-.nutrition-report-chart__change {
-  stroke: var(--v2-warning);
-  stroke-width: 2;
-  stroke-dasharray: 3 5;
-}
-
-.nutrition-report-chart__cursor {
-  stroke: var(--v2-lime);
-  stroke-width: 3;
-}
-
-.nutrition-report-chart__hit {
-  fill: transparent;
-  stroke: transparent;
-}
-
-.nutrition-report-chart__point {
-  fill: var(--nutrition-report-point);
-  stroke: var(--nutrition-report-point);
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
-}
-
-:root[data-color-scheme='light'] .nutrition-report-chart {
-  --nutrition-report-point: #101310;
-}
-
-.nutrition-report-chart a:focus-visible .nutrition-report-chart__hit {
-  stroke: var(--v2-lime);
-  stroke-width: 4;
-}
-
-.nutrition-report-chart__day-picker {
-  display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(180px, auto) auto;
-  align-items: center;
-  gap: var(--v2-space-3);
-  padding-top: var(--v2-space-2);
-  border-top: 1px solid var(--v2-border);
-}
-
-.nutrition-report-chart__day-picker label,
-.nutrition-report-chart__day-picker output {
-  display: grid;
-  gap: var(--v2-space-1);
-}
-
-.nutrition-report-chart__day-picker label > span,
-.nutrition-report-chart__day-picker output > span {
-  color: var(--v2-text-secondary);
-  font-size: 0.72rem;
-}
-
-.nutrition-report-chart__day-picker input[type='range'] {
-  width: 100%;
-  min-height: 44px;
-  margin: 0;
-  accent-color: var(--v2-lime);
-  cursor: pointer;
-}
-
-.nutrition-report-chart__day-picker output {
-  font-variant-numeric: tabular-nums;
-}
-
-.nutrition-report-chart__day-picker > a {
-  display: inline-flex;
-  min-height: 44px;
-  align-items: center;
-  justify-content: center;
-  color: var(--v2-text-primary);
-  font-weight: 700;
-}
-
-.nutrition-report-chart figcaption {
-  color: var(--v2-text-secondary);
-  font-size: 0.72rem;
-  line-height: 1.45;
 }
 
 .nutrition-report-targets {
@@ -4761,22 +4440,6 @@ button.notification-row__main:focus-visible {
   .nutrition-report-adherence p + p {
     border-top: 1px solid var(--v2-border);
     border-left: 0;
-  }
-
-  .nutrition-report-chart {
-    padding-inline: var(--v2-space-2);
-  }
-
-  .nutrition-report-chart svg {
-    height: 160px;
-  }
-
-  .nutrition-report-chart__day-picker {
-    grid-template-columns: 1fr;
-  }
-
-  .nutrition-report-chart__day-picker > a {
-    justify-content: flex-start;
   }
 
   .nutrition-report-targets li {

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { publicUrlForHostname } from '../navigation/appUrl';
+import { Icon } from './Icon';
 
 export function ContextualHelp({
   children,
@@ -21,7 +22,7 @@ export function ContextualHelp({
           target="_blank"
           rel="noreferrer"
         >
-          Подробнее на сайте <span aria-hidden="true">↗</span>
+          Подробнее на сайте <Icon name="external-link" size={16} />
         </a>
       </div>
     </details>

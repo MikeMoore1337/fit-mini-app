@@ -13,6 +13,7 @@ import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { useTelegramOverlayBackButton } from '../../shared/telegram/useTelegramOverlayBackButton';
 import { Button, CloseIcon, Field, IconButton, Input, Select } from '../../shared/ui/common';
 import { useModalA11y } from '../../shared/ui/useModalA11y';
+import { Icon } from '../../shared/ui/Icon';
 import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
 
 type AdaptationReason = WorkoutAdaptationRequest['reason'];
@@ -520,7 +521,7 @@ export function WorkoutAdaptation({
                           <span>Расчётное время</span>
                           <span className="adaptation-diff__values">
                             <span>{preview.original_estimated_minutes} мин</span>
-                            <span aria-hidden="true">→</span>
+                            <Icon name="arrow-right" size={16} />
                             <strong>{preview.adapted_estimated_minutes} мин</strong>
                           </span>
                         </div>
@@ -533,7 +534,7 @@ export function WorkoutAdaptation({
                             <span>Упражнение</span>
                             <span className="adaptation-diff__values">
                               <span>{change.from_title}</span>
-                              <span aria-hidden="true">→</span>
+                              <Icon name="arrow-right" size={16} />
                               <strong>
                                 {change.kind === 'removed' ? 'Убрать' : change.to_title}
                               </strong>

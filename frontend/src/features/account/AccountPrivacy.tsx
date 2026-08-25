@@ -8,16 +8,10 @@ import type {
   OAuthLinkCreate,
   TelegramLinkCreate,
 } from '../../shared/api/types';
-import {
-  Badge,
-  Button,
-  CloseIcon,
-  DisclosureIcon,
-  Field,
-  Input,
-} from '../../shared/ui/common';
+import { Badge, Button, CloseIcon, DisclosureIcon, Field, Input } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { useModalA11y } from '../../shared/ui/useModalA11y';
+import { Icon } from '../../shared/ui/Icon';
 import { downloadAccountExport } from './downloadAccountExport';
 
 const PROVIDER_LABELS: Record<string, string> = {
@@ -84,12 +78,10 @@ export function AccountPrivacy() {
     queryFn: () => api<AccountExportStatus>('/api/v1/me/exports/current'),
     enabled: Boolean(user),
     retry: false,
-    refetchInterval: (query) =>
-      query.state.data?.status === 'generating' ? 2_000 : false,
+    refetchInterval: (query) => (query.state.data?.status === 'generating' ? 2_000 : false),
   });
   const createExportMutation = useMutation({
-    mutationFn: () =>
-      api<AccountExportStatus>('/api/v1/me/exports', { method: 'POST', body: {} }),
+    mutationFn: () => api<AccountExportStatus>('/api/v1/me/exports', { method: 'POST', body: {} }),
     onSuccess: (status) => {
       queryClient.setQueryData(['account-export', user?.id], status);
       trackProductEvent({ name: 'data_export_requested', surface: productEventSurface() });
@@ -354,7 +346,13 @@ export function AccountPrivacy() {
                 disabled={downloadMutation.isPending}
                 onClick={() => downloadMutation.mutate()}
               >
-                {downloadMutation.isPending ? 'Начинаем загрузку…' : 'Скачать ZIP'}
+                {downloadMutation.isPending ? (
+                  'Начинаем загрузку…'
+                ) : (
+                  <>
+                    <Icon name="download" size={16} /> Скачать ZIP
+                  </>
+                )}
               </Button>
               <Button
                 type="button"
@@ -376,8 +374,8 @@ export function AccountPrivacy() {
         ) : (
           <div className="account-export-region__status">
             <p>
-              Архив хранится на сервере 15 минут. Секреты входа, токены и временные файлы отчётов
-              в него не входят.
+              Архив хранится на сервере 15 минут. Секреты входа, токены и временные файлы отчётов в
+              него не входят.
             </p>
             <Button type="button" variant="primary" onClick={() => createExportMutation.mutate()}>
               Подготовить архив
@@ -425,7 +423,11 @@ export function AccountPrivacy() {
               if (!deleteMutation.isPending) setDeleteDialogOpen(false);
             }}
           />
-          <div ref={deletePanelRef} className="modal__panel account-delete-modal__panel" tabIndex={-1}>
+          <div
+            ref={deletePanelRef}
+            className="modal__panel account-delete-modal__panel"
+            tabIndex={-1}
+          >
             <button
               type="button"
               className="account-delete-modal__close"

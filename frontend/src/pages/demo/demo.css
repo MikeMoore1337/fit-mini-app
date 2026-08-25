@@ -267,7 +267,6 @@
   border-left: 0;
 }
 
-.demo-workout-progress,
 .demo-trainer-workout {
   display: flex;
   align-items: baseline;
@@ -277,7 +276,6 @@
   border-block: 1px solid var(--v2-border);
 }
 
-.demo-workout-progress span,
 .demo-trainer-workout span {
   color: var(--v2-text-secondary);
 }
@@ -551,7 +549,7 @@
     order: 1;
   }
 
-  .demo-stage--training-action .demo-workout-progress {
+  .demo-stage--training-action > .data-viz-progress {
     order: 2;
   }
 

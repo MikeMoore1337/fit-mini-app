@@ -14,6 +14,7 @@ import { weeklyReviewDraftStorageKey } from '../../shared/userScopedStorage';
 import { Badge, Card, DisclosureIcon, ErrorState, LoadingState } from '../../shared/ui/common';
 import { DataConfidence } from '../../shared/ui/DataConfidence';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
+import { Icon } from '../../shared/ui/Icon';
 import {
   productEventSurface,
   trackCoreProductEvent,
@@ -608,7 +609,7 @@ export function WeeklyCheckInCard({
                             <small>{macroLine(calibration, false)}</small>
                           )}
                         </div>
-                        <span aria-hidden="true">→</span>
+                        <Icon name="arrow-right" size={16} />
                         <div>
                           <span>Предложение</span>
                           <strong>{calibration.proposed_target_calories} ккал</strong>

@@ -18,6 +18,7 @@ import './styles/legacy.css';
 import './styles/react.css';
 import './styles/design-system.css';
 import './styles/design-v2.css';
+import './styles/data-viz.css';
 
 const MiniAppPage = lazy(() => import('./pages/miniapp/MiniAppPage'));
 const ProgressReportPage = lazy(() => import('./pages/reports/ProgressReportPage'));

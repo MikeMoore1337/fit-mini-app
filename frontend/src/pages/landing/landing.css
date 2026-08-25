@@ -82,31 +82,10 @@
   }
 }
 
-.landing-menu-toggle span {
-  display: block;
-  width: 100%;
-  height: 2px;
-  border-radius: 99px;
-  background: currentColor;
-  transition:
-    transform 0.18s ease,
-    opacity 0.18s ease;
-}
-
-.landing-menu-toggle span + span {
-  margin-top: 5px;
-}
-
-.landing-menu-toggle.is-open span:first-child {
-  transform: translateY(7px) rotate(45deg);
-}
-
-.landing-menu-toggle.is-open span:nth-child(2) {
-  opacity: 0;
-}
-
-.landing-menu-toggle.is-open span:last-child {
-  transform: translateY(-7px) rotate(-45deg);
+.landing-menu-toggle .yfc-icon {
+  width: 20px;
+  height: 20px;
+  margin: auto;
 }
 .landing-brand {
   display: inline-flex;

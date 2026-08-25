@@ -14,6 +14,7 @@ import { applyRestSeconds } from './programRest';
 import { ExerciseGuideDialog } from '../exercises/ExerciseGuideDialog';
 import { scheduleWeekdaysForSave, templateDraftTitle } from './templateEditing';
 import { DateInput } from '../../shared/ui/PickerInput';
+import { Icon } from '../../shared/ui/Icon';
 import {
   productEventSurface,
   trackCoreProductEvent,
@@ -563,7 +564,7 @@ export function ProgramBuilder({
                 <strong>Быстрое заполнение</strong>
                 <small>Готовая схема и общий отдых — необязательно</small>
               </span>
-              <span aria-hidden="true">+</span>
+              <Icon name="plus" size={16} />
             </summary>
             <div className="program-builder-tools__body">
               <section
@@ -669,7 +670,7 @@ export function ProgramBuilder({
                     disabled={dayIndex === 0}
                     onClick={() => setDays(moveItem(days, dayIndex, dayIndex - 1))}
                   >
-                    ↑
+                    <Icon name="move-up" size={20} />
                   </button>
                   <button
                     type="button"
@@ -678,7 +679,7 @@ export function ProgramBuilder({
                     disabled={dayIndex === days.length - 1}
                     onClick={() => setDays(moveItem(days, dayIndex, dayIndex + 1))}
                   >
-                    ↓
+                    <Icon name="move-down" size={20} />
                   </button>
                   {days.length > 1 && (
                     <button
@@ -716,7 +717,7 @@ export function ProgramBuilder({
                             })
                           }
                         >
-                          ↑
+                          <Icon name="move-up" size={20} />
                         </button>
                         <button
                           type="button"
@@ -730,7 +731,7 @@ export function ProgramBuilder({
                             })
                           }
                         >
-                          ↓
+                          <Icon name="move-down" size={20} />
                         </button>
                         <button
                           type="button"
@@ -825,7 +826,7 @@ export function ProgramBuilder({
                         <strong>Заметка, суперсет и замены</strong>
                         <small>Необязательные настройки упражнения</small>
                       </span>
-                      <span aria-hidden="true">+</span>
+                      <Icon name="plus" size={16} />
                     </summary>
                     <div className="program-exercise-advanced__body">
                       <label className="field exercise-notes">
@@ -917,7 +918,7 @@ export function ProgramBuilder({
                     })
                   }
                 >
-                  <span aria-hidden="true">+</span>
+                  <Icon name="plus" size={16} />
                   Добавить упражнение
                 </button>
               ) : (
@@ -940,7 +941,7 @@ export function ProgramBuilder({
                   ])
                 }
               >
-                Добавить день
+                <Icon name="plus" size={16} /> Добавить день
               </button>
             ) : (
               <span className="muted">В одном цикле максимум 8 тренировочных дней.</span>

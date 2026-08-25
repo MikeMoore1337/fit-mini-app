@@ -15,6 +15,7 @@ import {
 } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { DateInput } from '../../shared/ui/PickerInput';
+import { Icon } from '../../shared/ui/Icon';
 import {
   blockStatusLabel,
   buildRevisionPresentation,
@@ -596,7 +597,7 @@ export function AssignedProgramDetails({
                                   <dt>{difference.label}</dt>
                                   <dd>
                                     <span>{difference.before}</span>
-                                    <span aria-hidden="true">→</span>
+                                    <Icon name="arrow-right" size={16} />
                                     <strong>{difference.after}</strong>
                                   </dd>
                                 </div>

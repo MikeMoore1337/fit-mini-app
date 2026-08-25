@@ -99,14 +99,15 @@ describe('WeekStrip', () => {
     expect(within(legend).getByText('Отдых')).toBeVisible();
     expect(within(legend).getByText('Выполнено')).toBeVisible();
     expect(container.querySelectorAll('.week-strip__pictogram')).not.toHaveLength(0);
-    expect(container.querySelector('[data-pictogram="planned"] circle')).toHaveAttribute(
-      'r',
-      '3.5',
-    );
-    expect(container.querySelector('[data-pictogram="in-progress"] path')).toHaveAttribute(
-      'd',
-      'm5.5 3.5 4.5 4.5-4.5 4.5',
-    );
+    expect(
+      container.querySelector('[data-pictogram="strength"] [data-icon="week-strength"]'),
+    ).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-pictogram="planned"] [data-icon="week-planned"]'),
+    ).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-pictogram="in-progress"] [data-icon="week-in-progress"]'),
+    ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Выполнено.*Открыть тренировку/i })).toHaveAttribute(
       'href',
       '/app?section=progress&workout_id=42',

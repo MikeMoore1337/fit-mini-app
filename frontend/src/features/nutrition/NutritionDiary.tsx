@@ -4,6 +4,8 @@ import { api } from '../../shared/api/client';
 import { addCalendarDays, calendarWeek, dateInputValue } from '../../shared/dateTime';
 import { invalidateNutritionSummaries, queryKeys } from '../../shared/queryKeys';
 import { WeekStrip } from '../../shared/ui/WeekStrip';
+import { QuantitativeProgress } from '../../shared/ui/DataViz';
+import { Icon } from '../../shared/ui/Icon';
 import type {
   FoodDiaryDay,
   FoodDiaryEntry,
@@ -109,25 +111,7 @@ function MacroProgress({
   const meaningfullyOver = ratio > 1.1;
   return (
     <div className={`nutrition-target${meaningfullyOver ? ' is-over' : ''}`}>
-      <div className="nutrition-target__heading">
-        <span>{label}</span>
-        <strong>
-          {formatNumber(totalNumber)}{' '}
-          <small>
-            / {formatNumber(targetNumber)} {unit}
-          </small>
-        </strong>
-      </div>
-      <div
-        className="nutrition-target__track"
-        role="progressbar"
-        aria-label={`${label}: ${formatNumber(totalNumber)} из ${formatNumber(targetNumber)} ${unit}`}
-        aria-valuemin={0}
-        aria-valuemax={Math.max(targetNumber, 1)}
-        aria-valuenow={Math.min(Math.max(totalNumber, 0), Math.max(targetNumber, 1))}
-      >
-        <span style={{ width: `${Math.min(Math.max(ratio * 100, 0), 100)}%` }} />
-      </div>
+      <QuantitativeProgress label={label} maximum={targetNumber} unit={unit} value={totalNumber} />
       <small>{targetStatus(remainingNumber, targetNumber, unit)}</small>
     </div>
   );
@@ -385,7 +369,7 @@ function MealSection({
             </button>
           )}
           <Button variant="secondary" type="button" onClick={onAdd}>
-            <span aria-hidden="true">＋</span> Добавить
+            <Icon name="plus" size={16} /> Добавить
           </Button>
         </div>
       </header>
@@ -601,7 +585,7 @@ export function NutritionDiary({
               setAddingTo({ mealType: defaultMealType(timeZone), initialView: 'quick-add' })
             }
           >
-            <span aria-hidden="true">＋</span> Быстрый ввод
+            <Icon name="plus" size={16} /> Быстрый ввод
           </Button>
           <Button
             variant="secondary"

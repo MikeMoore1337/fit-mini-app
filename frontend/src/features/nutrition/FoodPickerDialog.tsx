@@ -11,6 +11,7 @@ import type {
   Recipe,
 } from '../../shared/api/types';
 import { usePersistentState } from '../../shared/storage';
+import { Icon } from '../../shared/ui/Icon';
 import { foodDraftStorageKey } from '../../shared/userScopedStorage';
 import { invalidateNutritionSummaries } from '../../shared/queryKeys';
 import {
@@ -178,7 +179,7 @@ function FoodResults({
               disabled={pendingFavorite === food.id}
               onClick={() => onFavorite(food)}
             >
-              {food.is_favorite ? '★' : '☆'}
+              <Icon name={food.is_favorite ? 'star-filled' : 'star'} size={20} />
             </button>
             {food.food_type === 'user' && (
               <button
@@ -509,7 +510,7 @@ export function FoodPickerDialog({
                 updateDraft({ food: null });
               }}
             >
-              ← Выбрать другое
+              <Icon name="arrow-left" size={16} /> Выбрать другое
             </button>
             {draft.food ? (
               <>
@@ -627,7 +628,7 @@ export function FoodPickerDialog({
               type="button"
               onClick={() => setView('browse')}
             >
-              ← К продуктам
+              <Icon name="arrow-left" size={16} /> К продуктам
             </button>
             <p className="nutrition-quick-add__context">
               {mealLabels[mealType]} · {diaryDate}. Название и время можно не указывать.
@@ -737,7 +738,7 @@ export function FoodPickerDialog({
               type="button"
               onClick={() => setView('browse')}
             >
-              ← К продуктам
+              <Icon name="arrow-left" size={16} /> К продуктам
             </button>
             <RecipeBrowser onSelect={selectRecipe} />
           </div>
@@ -748,7 +749,7 @@ export function FoodPickerDialog({
               type="button"
               onClick={() => setView('browse')}
             >
-              ← К продуктам
+              <Icon name="arrow-left" size={16} /> К продуктам
             </button>
             <BarcodeLookup
               onSelect={selectFood}
@@ -774,7 +775,7 @@ export function FoodPickerDialog({
                   setView('quick-add');
                 }}
               >
-                ＋ Быстрый ввод
+                <Icon name="plus" size={16} /> Быстрый ввод
               </Button>
               <Button
                 type="button"
@@ -786,7 +787,7 @@ export function FoodPickerDialog({
                   setView('food-editor');
                 }}
               >
-                ＋ Свой продукт
+                <Icon name="plus" size={16} /> Свой продукт
               </Button>
               <Button
                 type="button"

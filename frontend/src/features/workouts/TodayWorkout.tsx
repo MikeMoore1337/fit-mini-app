@@ -6,6 +6,7 @@ import type { Workout } from '../../shared/api/types';
 import { haptic } from '../../shared/telegram/useTelegram';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { ContextualHelp } from '../../shared/ui/ContextualHelp';
+import { TaskProgress } from '../../shared/ui/DataViz';
 import {
   Badge,
   Button,
@@ -607,7 +608,6 @@ export function TodayWorkout({
 
   const data = workout.data;
   const started = data.status === 'in_progress';
-  const progressPercent = total > 0 ? Math.round((completed / total) * 100) : 0;
   const nextLabel = currentSet
     ? `${currentSet.exercise.exercise_title}, подход ${currentSet.set.set_number}`
     : 'завершить тренировку';
@@ -660,22 +660,7 @@ export function TodayWorkout({
           </div>
 
           <div className="active-workout-progress">
-            <div className="active-workout-progress__label">
-              <strong>
-                {currentSet ? `${completed} из ${total} подходов` : 'Все подходы выполнены'}
-              </strong>
-              <span>{progressPercent}%</span>
-            </div>
-            <div
-              className="active-workout-progress__track"
-              role="progressbar"
-              aria-label="Прогресс тренировки"
-              aria-valuemin={0}
-              aria-valuemax={total}
-              aria-valuenow={completed}
-            >
-              <span style={{ width: `${progressPercent}%` }} />
-            </div>
+            <TaskProgress completed={completed} label="Прогресс тренировки" total={total} />
             <div className="active-workout-progress__next" aria-live="polite">
               <span>{currentSet ? 'Сейчас' : 'Следующий шаг'}</span>
               <strong>{nextLabel}</strong>

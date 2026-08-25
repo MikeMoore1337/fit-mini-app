@@ -362,6 +362,14 @@ async function mockProgress(page: Page, reportState: NutritionReportState = 'par
               ],
             },
           },
+          cardio: {
+            completed_sessions: 3,
+            planned_sessions: 0,
+            frequency_per_week: 0.7,
+            duration_minutes: 120,
+            distance_km: 12,
+            zone_duration: [],
+          },
           adherence: {
             formula_version: 'adherence-v1',
             overall_percent: 84,
@@ -1038,7 +1046,11 @@ test('nutrition report preserves truthful period context, daily drill-down and r
   ).toBeVisible();
   await expect(report.getByRole('img', { name: /Калории по дням/ })).toBeVisible();
   await expect(report.getByText('Изменения цели в периоде')).toBeVisible();
-  await expect(report.getByRole('table')).toBeVisible();
+  await expect(
+    report.getByRole('table', {
+      name: 'Дневные КБЖУ, статус заполнения и действовавшая цель',
+    }),
+  ).toBeVisible();
   await expect(report.getByText('Нет данных').first()).toBeVisible();
   await expect(report.getByText('0 ккал', { exact: true }).first()).toBeVisible();
 
@@ -1048,11 +1060,16 @@ test('nutrition report preserves truthful period context, daily drill-down and r
       'aria-selected',
       'true',
     );
-    const densePicker = report.locator('.nutrition-report-chart__day-picker');
-    await expect(densePicker.getByLabel('Выбранный день графика')).toBeVisible();
-    await expect(report.locator('.nutrition-report-chart svg a')).toHaveCount(0);
+    const pointNavigation = report.getByRole('group', {
+      name: 'Навигация по точкам графика',
+    });
+    await expect(pointNavigation).toBeVisible();
     expect(
-      (await densePicker.getByLabel('Выбранный день графика').boundingBox())?.height,
+      (
+        await pointNavigation
+          .getByRole('button', { name: 'Предыдущая точка графика' })
+          .boundingBox()
+      )?.height,
     ).toBeGreaterThanOrEqual(44);
   }
   await expect(page).toHaveURL(/nutrition_period=days_90/);
@@ -1064,15 +1081,15 @@ test('nutrition report preserves truthful period context, daily drill-down and r
   await report.getByRole('button', { name: 'Показать период' }).click();
   await expect(page).toHaveURL(/nutrition_period=custom/);
   await expect(report.getByText(/Заполнено \d+ из 365 дней/)).toBeVisible();
-  const longRangePicker = report.getByLabel('Выбранный день графика');
-  await longRangePicker.focus();
+  const longRangeNavigation = report.getByRole('group', {
+    name: 'Навигация по точкам графика',
+  });
+  await longRangeNavigation.focus();
   await page.keyboard.press('Home');
-  await expect(longRangePicker).toHaveValue('0');
+  const selectedDayLink = report.getByRole('link', { name: 'Открыть день' });
+  await expect(selectedDayLink).toHaveAttribute('href', /date=2025-01-01/);
   await page.keyboard.press('ArrowRight');
-  await expect(longRangePicker).toHaveValue('1');
-  await expect(report.locator('.nutrition-report-chart svg a')).toHaveCount(0);
-  const selectedDayLink = report.getByRole('link', { name: /Открыть дневник за 2 янв/ });
-  await expect(selectedDayLink).toHaveAttribute('href', /date=2025-01-02/);
+  await expect(selectedDayLink).toHaveAttribute('href', /date=2025-01-07/);
   for (const viewport of [
     { width: 360, height: 800 },
     { width: 390, height: 844 },
@@ -1085,12 +1102,11 @@ test('nutrition report preserves truthful period context, daily drill-down and r
         ),
       )
       .toBe(true);
-    expect((await longRangePicker.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    expect((await longRangeNavigation.boundingBox())?.height).toBeGreaterThanOrEqual(44);
     expect((await selectedDayLink.boundingBox())?.height).toBeGreaterThanOrEqual(44);
-    await expect(report.locator('.nutrition-report-chart svg a')).toHaveCount(0);
   }
-  await report.locator('.nutrition-report-chart').screenshot({
-    path: '../.artifacts/screenshots/task-57/mobile-web-390x844-light-long-range-chart.png',
+  await report.locator('.data-viz-chart').screenshot({
+    path: '../.artifacts/screenshots/task-69b/data-dense-chart-mobile-web-light.png',
   });
   await page.setViewportSize({ width: 768, height: 900 });
   await report.screenshot({
@@ -1098,7 +1114,7 @@ test('nutrition report preserves truthful period context, daily drill-down and r
   });
 
   await selector.getByRole('tab', { name: '7 дней' }).click();
-  const dayLink = report.getByRole('link', { name: /ккал. Открыть дневник/ }).first();
+  const dayLink = report.getByRole('link', { name: 'Открыть день' });
   const reportUrl = page.url();
   await dayLink.click();
   await expect(page).toHaveURL(/section=nutrition&date=/);
@@ -1116,6 +1132,8 @@ test('nutrition report preserves truthful period context, daily drill-down and r
 
   for (const viewport of [
     { width: 1440, height: 900 },
+    { width: 1280, height: 900 },
+    { width: 1024, height: 900 },
     { width: 430, height: 932 },
     { width: 390, height: 844 },
     { width: 360, height: 800 },
@@ -1171,35 +1189,39 @@ test('nutrition report preserves truthful period context, daily drill-down and r
     expect(nextSectionBox).not.toBeNull();
     expect(reportBox!.y + reportBox!.height).toBeLessThanOrEqual(nextSectionBox!.y + 1);
     if (viewport.width === 1440) {
-      expect(reportBox!.x).toBeGreaterThanOrEqual(32);
-      expect(reportBox!.x + reportBox!.width).toBeLessThanOrEqual(viewport.width - 32);
+      expect(reportBox!.x).toBeGreaterThanOrEqual(24);
+      expect(reportBox!.x + reportBox!.width).toBeLessThanOrEqual(viewport.width - 24);
       await report.evaluate((element) => element.scrollIntoView({ block: 'start' }));
       await page.screenshot({
         path: '../.artifacts/screenshots/task-57/desktop-1440x900-light-report.png',
       });
+      await page.screenshot({
+        path: '../.artifacts/screenshots/task-69b/desktop-1440x900-light-overview.png',
+      });
       await report.screenshot({
         path: '../.artifacts/screenshots/task-57/desktop-1440x900-light-partial.png',
       });
-      await report.locator('.nutrition-report-chart').screenshot({
-        path: '../.artifacts/screenshots/task-57/desktop-1440x900-light-chart.png',
+      await report.locator('.data-viz-chart').screenshot({
+        path: '../.artifacts/screenshots/task-69b/data-dense-chart-desktop-light.png',
       });
     }
     if (viewport.width === 360) {
       const pointStyle = await report
-        .locator('.nutrition-report-chart__point')
+        .locator('.data-viz-chart__point-ring')
         .first()
         .evaluate((point) => {
           const style = getComputedStyle(point);
           return { fill: style.fill, stroke: style.stroke };
         });
-      expect(pointStyle).toEqual({ fill: 'rgb(16, 19, 16)', stroke: 'rgb(16, 19, 16)' });
-      await expect(report.locator('.nutrition-report-chart__point-line')).toHaveCount(0);
-      expect((await report.locator('.nutrition-report-chart svg').boundingBox())?.height).toBe(160);
+      expect(pointStyle.fill).not.toBe(pointStyle.stroke);
+      expect(
+        (await report.getByRole('img', { name: /Калории по дням/ }).boundingBox())?.height,
+      ).toBeGreaterThanOrEqual(180);
       const pointTargets = await report
-        .locator('.nutrition-report-chart svg a')
-        .evaluateAll((links) =>
-          links.map((link) => {
-            const box = link.getBoundingClientRect();
+        .locator('.data-viz-chart__point-navigation button')
+        .evaluateAll((buttons) =>
+          buttons.map((button) => {
+            const box = button.getBoundingClientRect();
             return { width: box.width, height: box.height };
           }),
         );
@@ -1209,10 +1231,10 @@ test('nutrition report preserves truthful period context, daily drill-down and r
       ).toBeGreaterThanOrEqual(44);
       await report.evaluate((element) => element.scrollIntoView({ block: 'start' }));
       await page.screenshot({
-        path: '../.artifacts/screenshots/task-57/mobile-web-360x800-light-compact.png',
+        path: '../.artifacts/screenshots/task-69b/mobile-web-360x800-light-compact.png',
       });
       await report.screenshot({
-        path: '../.artifacts/screenshots/task-57/mobile-web-360x800-light-partial.png',
+        path: '../.artifacts/screenshots/task-69b/mobile-web-360x800-light-report.png',
       });
     }
   }
@@ -1237,7 +1259,7 @@ test('nutrition report no-data state keeps missing days distinct from zero', asy
   await expect(report.getByText('0 ккал', { exact: true })).not.toBeAttached();
   await expect(report.locator('.nutrition-report-days')).not.toHaveAttribute('open', '');
   await report.screenshot({
-    path: '../.artifacts/screenshots/task-57/mobile-web-430x932-light-no-data.png',
+    path: '../.artifacts/screenshots/task-69b/sparse-insufficient-mobile-light.png',
   });
 });
 
@@ -1391,4 +1413,82 @@ test('light progress uses the restrained green accent for the adherence outcome'
   }));
   expect(colors.summary).toBe(colors.adherence);
   expect(colors.summary).toBe(colors.accent);
+});
+
+test('canonical charts and icons remain operable in forced colors and reduced motion', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ forcedColors: 'active', reducedMotion: 'reduce' });
+  await mockProgress(page);
+  await page.goto('/app?section=progress');
+  await page.getByRole('button', { name: 'Клиент' }).click();
+  await page
+    .getByRole('navigation', { name: 'Основная навигация' })
+    .getByRole('link', { name: 'Прогресс' })
+    .click();
+
+  const chart = page.locator('.data-viz-chart').first();
+  await expect(chart.getByRole('img')).toBeVisible();
+  await expect(chart.getByRole('group', { name: 'Навигация по точкам графика' })).toBeVisible();
+  await chart.getByRole('group', { name: 'Навигация по точкам графика' }).focus();
+  await page.keyboard.press('Home');
+  await expect(chart.locator('.data-viz-chart__selection')).toBeVisible();
+  await expect(
+    page
+      .getByRole('navigation', { name: 'Основная навигация' })
+      .getByRole('link', { name: 'Прогресс' })
+      .locator('svg[data-icon="nav-progress"]'),
+  ).toBeVisible();
+  expect(
+    await chart
+      .locator('.data-viz-chart__actual')
+      .first()
+      .evaluate((line) => getComputedStyle(line).stroke),
+  ).not.toBe('none');
+  expect(
+    await chart
+      .locator('.data-viz-chart__point-ring')
+      .first()
+      .evaluate((point) => getComputedStyle(point).transitionDuration),
+  ).toBe('0s');
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
+    )
+    .toBe(true);
+});
+
+test('exercise catalogue uses the selected folder and dumbbell glyph on desktop and mobile', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.addInitScript(() => localStorage.setItem('app-theme', 'light'));
+  await mockProgress(page);
+  await page.goto('/app?section=progress');
+  await page.getByRole('button', { name: 'Клиент' }).click();
+
+  const desktopCatalogue = page
+    .getByRole('navigation', { name: 'Основная навигация' })
+    .getByRole('link', { name: 'Упражнения' });
+  const desktopIcon = desktopCatalogue.locator('svg[data-icon="nav-exercise-catalog"]');
+  await expect(desktopIcon).toBeVisible();
+  expect((await desktopIcon.boundingBox())?.width).toBeGreaterThanOrEqual(16);
+  await desktopCatalogue.screenshot({
+    path: '../.artifacts/screenshots/task-69b/exercise-catalog-desktop-light.png',
+  });
+
+  await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('button', { name: 'Ещё', exact: true }).click();
+  const morePanel = page.getByRole('dialog');
+  const mobileCatalogue = morePanel.getByRole('link', { name: 'Упражнения' });
+  await expect(mobileCatalogue.locator('svg[data-icon="nav-exercise-catalog"]')).toBeVisible();
+  await morePanel.screenshot({
+    path: '../.artifacts/screenshots/task-69b/exercise-catalog-mobile-dark.png',
+  });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
 });

@@ -26,6 +26,7 @@ import {
 import { WorkoutAdaptation } from '../workouts/WorkoutAdaptation';
 import { TodayWorkout } from '../workouts/TodayWorkout';
 import { Badge, Button, Skeleton } from '../../shared/ui/common';
+import { Icon } from '../../shared/ui/Icon';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { CardioQuickLog } from '../cardio/CardioLogging';
 import {
@@ -857,7 +858,7 @@ export function TodayDashboard() {
       <div className="today-workout-focus" ref={detailsRef}>
         <header className="today-workout-focus__header">
           <button className="today-text-link" type="button" onClick={() => setDetailsOpen(false)}>
-            <span aria-hidden="true">←</span> К сводке
+            <Icon name="arrow-left" size={16} /> К сводке
           </button>
           <div>
             <span>{visibleWorkout.title}</span>

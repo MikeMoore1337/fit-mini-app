@@ -12,6 +12,7 @@ import {
 } from '../../shared/analytics/productEvents';
 import { useNavigation } from '../../shared/navigation/router';
 import { AppThemeToggle } from '../../shared/ui/AppThemeToggle';
+import { StepProgress } from '../../shared/ui/DataViz';
 import { BrandLogo } from '../../shared/ui/BrandLogo';
 import { Button, CheckIcon, ChevronIcon, ErrorState } from '../../shared/ui/common';
 
@@ -96,10 +97,7 @@ export default function OnboardingPage() {
       <section className="onboarding-panel" aria-labelledby="onboarding-title">
         {!complete ? (
           <>
-            <div className="onboarding-progress" aria-label="Шаг 1 из 1">
-              <span>Быстрый старт</span>
-              <strong>1 / 1</strong>
-            </div>
+            <StepProgress current={1} labels={['Быстрый старт']} />
             <div className="onboarding-intro">
               <span className="eyebrow">Только необходимое</span>
               <h1 id="onboarding-title">Какая у вас главная цель?</h1>

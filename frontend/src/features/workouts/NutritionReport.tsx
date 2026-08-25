@@ -6,6 +6,8 @@ import { dateInputValue, formatCalendarDate } from '../../shared/dateTime';
 import { AppLink } from '../../shared/navigation/router';
 import { queryKeys } from '../../shared/queryKeys';
 import { DateInput } from '../../shared/ui/PickerInput';
+import { QuantitativeProgress, TimeSeriesChart } from '../../shared/ui/DataViz';
+import { Icon } from '../../shared/ui/Icon';
 import { NUTRITION_WEEK_LEGEND, WeekStrip, type WeekStripDayMeta } from '../../shared/ui/WeekStrip';
 import {
   Badge,
@@ -169,16 +171,12 @@ function CoverageSummary({ report }: { report: NutritionReport }) {
         </strong>
         <p>Средние значения рассчитаны только по заполненным дням.</p>
       </div>
-      <div
-        aria-label={`Заполнено ${formatNumber(summary.coverage_percent)}% периода`}
-        aria-valuemax={100}
-        aria-valuemin={0}
-        aria-valuenow={summary.coverage_percent}
-        className="nutrition-report-coverage__meter"
-        role="progressbar"
-      >
-        <span style={{ width: `${summary.coverage_percent}%` }} />
-      </div>
+      <QuantitativeProgress
+        label="Покрытие периода"
+        maximum={100}
+        unit="%"
+        value={summary.coverage_percent}
+      />
       <p className="nutrition-report-coverage__details">
         {summary.incomplete_days} не завершено · {summary.missing_days} без данных ·{' '}
         {summary.fasted_days} отмечено без приёмов пищи
@@ -269,184 +267,31 @@ function NutritionChart({
   dayLink: ((date: string) => string) | null;
   report: NutritionReport;
 }) {
-  const [selectedIndex, setSelectedIndex] = useState(report.daily.length - 1);
-  const width = 720;
-  const height = 220;
-  const insetX = 24;
-  const insetY = 22;
-  const values = report.daily.flatMap((point) =>
-    [point.calories, point.target_calories].filter((value): value is number => value != null),
-  );
-  const maximum = Math.max(...values, 1) * 1.08;
-  const x = (index: number) =>
-    report.daily.length === 1
-      ? width / 2
-      : insetX + (index / (report.daily.length - 1)) * (width - insetX * 2);
-  const y = (value: number) => height - insetY - (value / maximum) * (height - insetY * 2);
-  const denseRange = report.daily.length > 7;
-  const activeIndex = Math.min(selectedIndex, report.daily.length - 1);
-  const activePoint = report.daily[activeIndex];
-  const pointHitRadius = report.daily.length <= 7 ? 52 : 18;
-  const hasActualValue = (
-    point: NutritionReport['daily'][number] | undefined,
-  ): point is NutritionReport['daily'][number] & { calories: number } =>
-    Boolean(point && ['complete', 'fasted'].includes(point.status) && point.calories != null);
-  const actualSegments = report.daily.slice(1).flatMap((point, index) => {
-    const previous = report.daily[index];
-    if (!hasActualValue(previous) || !hasActualValue(point)) {
-      return [];
-    }
-    return [
-      <line
-        className="nutrition-report-chart__actual"
-        key={`actual-${point.diary_date}`}
-        x1={x(index)}
-        x2={x(index + 1)}
-        y1={y(previous.calories)}
-        y2={y(point.calories)}
-      />,
-    ];
-  });
-  const targetSegments = report.daily.slice(1).flatMap((point, index) => {
-    const previous = report.daily[index];
-    if (!previous || previous.target_calories == null || point.target_calories == null) return [];
-    return [
-      <line
-        className="nutrition-report-chart__target"
-        key={`target-${point.diary_date}`}
-        x1={x(index)}
-        x2={x(index + 1)}
-        y1={y(previous.target_calories)}
-        y2={y(point.target_calories)}
-      />,
-    ];
-  });
-  const accessibleLabel = `Калории по дням за период ${periodLabel(report)}. Фактические значения: ${
-    report.daily
-      .filter((point) => point.calories != null)
-      .map((point) => `${formatDate(point.diary_date)} — ${formatNumber(point.calories, 0)} ккал`)
-      .join(', ') || 'нет заполненных дней'
-  }.`;
-
   return (
-    <figure className="nutrition-report-chart">
-      <div className="nutrition-report-chart__legend" aria-hidden="true">
-        <span>
-          <i className="nutrition-report-chart__actual" /> Фактические калории
-        </span>
-        <span>
-          <i className="nutrition-report-chart__target" /> Ориентир дня
-        </span>
-        <span>
-          <i className="nutrition-report-chart__change" /> Смена цели
-        </span>
-      </div>
-      <svg
-        aria-label={accessibleLabel}
-        preserveAspectRatio="none"
-        role="img"
-        viewBox={`0 0 ${width} ${height}`}
-      >
-        <line
-          className="nutrition-report-chart__axis"
-          x1={insetX}
-          x2={width - insetX}
-          y1={height - insetY}
-          y2={height - insetY}
-        />
-        {targetSegments}
-        {actualSegments}
-        {report.daily.map((point, index) =>
-          point.target_changed ? (
-            <line
-              className="nutrition-report-chart__change"
-              key={`change-${point.diary_date}`}
-              x1={x(index)}
-              x2={x(index)}
-              y1={insetY}
-              y2={height - insetY}
-            />
-          ) : null,
-        )}
-        {denseRange && activePoint && (
-          <line
-            className="nutrition-report-chart__cursor"
-            x1={x(activeIndex)}
-            x2={x(activeIndex)}
-            y1={insetY}
-            y2={height - insetY}
-          />
-        )}
-        {report.daily.map((point, index) =>
-          ['complete', 'fasted'].includes(point.status) && point.calories != null ? (
-            denseRange || !dayLink ? (
-              <circle
-                className="nutrition-report-chart__point"
-                cx={x(index)}
-                cy={y(point.calories)}
-                key={point.diary_date}
-                r="3.25"
-              />
-            ) : (
-              <a
-                aria-label={`${formatDate(point.diary_date, true)}: ${formatNumber(point.calories, 0)} ккал. Открыть дневник.`}
-                href={dayLink(point.diary_date)}
-                key={point.diary_date}
-              >
-                <circle
-                  className="nutrition-report-chart__hit"
-                  cx={x(index)}
-                  cy={y(point.calories)}
-                  r={pointHitRadius}
-                />
-                <circle
-                  className="nutrition-report-chart__point"
-                  cx={x(index)}
-                  cy={y(point.calories)}
-                  r="3.25"
-                />
-              </a>
-            )
-          ) : null,
-        )}
-      </svg>
-      {denseRange && activePoint && (
-        <div className="nutrition-report-chart__day-picker">
-          <label>
-            <span>День на графике</span>
-            <input
-              aria-label="Выбранный день графика"
-              max={report.daily.length - 1}
-              min={0}
-              onChange={(event) => setSelectedIndex(Number(event.target.value))}
-              type="range"
-              value={activeIndex}
-            />
-          </label>
-          <output>
-            <strong>{formatDate(activePoint.diary_date, true)}</strong>
-            <span>
-              {statusLabels[activePoint.status]} ·{' '}
-              {activePoint.calories == null
-                ? 'калории —'
-                : `${formatNumber(activePoint.calories, 0)} ккал`}
-            </span>
-          </output>
-          {dayLink && (
-            <AppLink
-              aria-label={`Открыть дневник за ${formatDate(activePoint.diary_date, true)}`}
-              to={dayLink(activePoint.diary_date)}
-            >
-              Открыть дневник
-            </AppLink>
-          )}
-        </div>
-      )}
-      <figcaption>
-        Калории, ккал · {periodLabel(report)}. Точки — фактические значения в подтверждённые дни;
-        точка у нижней оси — 0 ккал. Линия соединяет только соседние подтверждённые дни.
-      </figcaption>
-    </figure>
+    <TimeSeriesChart
+      ariaLabel={`Калории по дням за период ${periodLabel(report)}`}
+      includeZero
+      metric="Калории по дням"
+      note="Точки — фактические значения завершённых дней; пропуски не соединяются, пунктир показывает ориентир."
+      period={periodLabel(report)}
+      points={report.daily.map((point) => ({
+        href:
+          dayLink && ['complete', 'fasted'].includes(point.status)
+            ? dayLink(point.diary_date)
+            : undefined,
+        key: point.diary_date,
+        label: formatDate(point.diary_date),
+        status: statusLabels[point.status],
+        target: point.target_calories,
+        targetChanged: point.target_changed,
+        value:
+          ['complete', 'fasted'].includes(point.status) && point.calories != null
+            ? point.calories
+            : null,
+      }))}
+      targetLabel="Ориентир"
+      unit="ккал"
+    />
   );
 }
 
@@ -648,7 +493,13 @@ export function NutritionPeriodReport({ clientId }: { clientId?: number }) {
           type="button"
           variant="secondary"
         >
-          {exportState === 'loading' ? 'Готовим CSV…' : 'Скачать CSV'}
+          {exportState === 'loading' ? (
+            'Готовим CSV…'
+          ) : (
+            <>
+              <Icon name="download" size={16} /> Скачать CSV
+            </>
+          )}
         </Button>
       </header>
 

@@ -8,10 +8,15 @@ import {
   loginUrlForHostname,
 } from '../../shared/navigation/appUrl';
 import { AppLink } from '../../shared/navigation/router';
+import { Icon } from '../../shared/ui/Icon';
 import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
 import './landing.css';
 
-export { appUrlForHostname, demoUrlForHostname, loginUrlForHostname } from '../../shared/navigation/appUrl';
+export {
+  appUrlForHostname,
+  demoUrlForHostname,
+  loginUrlForHostname,
+} from '../../shared/navigation/appUrl';
 
 const features = [
   {
@@ -136,9 +141,7 @@ export default function LandingPage() {
             aria-controls="landing-navigation"
             onClick={() => setMobileMenuOpen((open) => !open)}
           >
-            <span />
-            <span />
-            <span />
+            <Icon name={mobileMenuOpen ? 'close' : 'menu'} />
           </button>
         </>
       }
@@ -169,7 +172,7 @@ export default function LandingPage() {
               >
                 Открыть приложение
                 <span className="landing-action__arrow" aria-hidden="true">
-                  ↗
+                  <Icon name="external-link" size={16} />
                 </span>
               </a>
               <a
@@ -184,7 +187,7 @@ export default function LandingPage() {
               >
                 Попробовать демо
                 <span className="landing-action__arrow" aria-hidden="true">
-                  ↗
+                  <Icon name="external-link" size={16} />
                 </span>
               </a>
             </div>
@@ -220,8 +223,12 @@ export default function LandingPage() {
                   <span>3 × 10 · отдых 90 сек.</span>
                 </div>
                 <div className="landing-workout-demo__sets" aria-label="Подходы жима гантелей">
-                  <span className="is-complete">1</span>
-                  <span className="is-complete">2</span>
+                  <span className="is-complete" aria-label="Подход 1 выполнен">
+                    <Icon name="check" size={16} />
+                  </span>
+                  <span className="is-complete" aria-label="Подход 2 выполнен">
+                    <Icon name="check" size={16} />
+                  </span>
                   <span>3</span>
                   <small>10 повторов · 18 кг</small>
                 </div>
@@ -236,7 +243,9 @@ export default function LandingPage() {
                   className="landing-workout-demo__sets"
                   aria-label="Подходы тяги верхнего блока"
                 >
-                  <span className="is-complete">1</span>
+                  <span className="is-complete" aria-label="Подход 1 выполнен">
+                    <Icon name="check" size={16} />
+                  </span>
                   <span>2</span>
                   <span>3</span>
                   <small>12 повторов · 35 кг</small>
@@ -244,12 +253,16 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="landing-rest-demo" aria-label="Пример таймера отдыха">
-              <span>Отдых</span>
+              <span>
+                <Icon name="timer" size={16} /> Отдых
+              </span>
               <strong>01:24</strong>
               <small>Следующий подход</small>
             </div>
             <div className="landing-nutrition-demo">
-              <span>Ориентир на день</span>
+              <span>
+                <Icon name="calories" size={16} /> Ориентир на день
+              </span>
               <strong>КБЖУ</strong>
               <small>Рассчитывается по вашей цели</small>
             </div>
@@ -281,9 +294,7 @@ export default function LandingPage() {
             </div>
             <div className="landing-problem__result">
               <span className="landing-flow-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M5 12h14m-5-5 5 5-5 5" />
-                </svg>
+                <Icon name="arrow-right" />
               </span>
               <span>В Your Fitness Coach</span>
               <strong>Один понятный план действий</strong>
@@ -313,7 +324,7 @@ export default function LandingPage() {
                 <h3>{feature.title}</h3>
                 <p>{feature.text}</p>
                 <AppLink className="landing-feature__link" to={feature.path}>
-                  Подробнее <span aria-hidden="true">→</span>
+                  Подробнее <Icon name="arrow-right" size={16} />
                 </AppLink>
               </article>
             ))}
@@ -359,10 +370,7 @@ export default function LandingPage() {
             <article className="landing-platform-card">
               <div className="landing-platform-card__top">
                 <span className="landing-platform-card__icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24">
-                    <rect x="3" y="4" width="18" height="14" rx="2" />
-                    <path d="M8 21h8M12 18v3" />
-                  </svg>
+                  <Icon name="web-app" />
                 </span>
                 <span>Веб-приложение</span>
               </div>
@@ -391,9 +399,7 @@ export default function LandingPage() {
 
           <div className="landing-platforms__sync" aria-label="Данные синхронизируются">
             <span className="landing-flow-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24">
-                <path d="M4 8h16m-3-3 3 3-3 3M20 16H4m3-3-3 3 3 3" />
-              </svg>
+              <Icon name="sync" />
             </span>
             <p>
               <strong>Один аккаунт и общие данные</strong>
@@ -417,7 +423,7 @@ export default function LandingPage() {
             <AppLink className="landing-button landing-audience__link" to="/training">
               Узнать о тренировках
               <span className="landing-action__arrow" aria-hidden="true">
-                ↗
+                <Icon name="external-link" size={16} />
               </span>
             </AppLink>
           </article>
@@ -432,7 +438,7 @@ export default function LandingPage() {
             <AppLink className="landing-button landing-audience__link" to="/for-trainers">
               Возможности для тренеров
               <span className="landing-action__arrow" aria-hidden="true">
-                ↗
+                <Icon name="external-link" size={16} />
               </span>
             </AppLink>
           </article>
@@ -457,7 +463,7 @@ export default function LandingPage() {
             >
               Перейти в веб-приложение
               <span className="landing-action__arrow" aria-hidden="true">
-                ↗
+                <Icon name="external-link" size={16} />
               </span>
             </a>
             <a
@@ -468,7 +474,7 @@ export default function LandingPage() {
             >
               <strong>Задать вопрос в Telegram</strong>
               <span className="landing-action__arrow" aria-hidden="true">
-                ↗
+                <Icon name="external-link" size={16} />
               </span>
             </a>
           </div>

@@ -1,25 +1,26 @@
-# Порядок выполнения release backlog v24
+# Порядок выполнения release backlog v25
 
 ## Completed
 
-`00-69A`, `70-71` и предшествующие буквенные подзадачи. Task-файлы находятся в `tasks/done/`.
+`00-71`, включая `69B` и предшествующие буквенные подзадачи. Task-файлы находятся в `tasks/done/`.
 
 ## Current
 
 ```text
-69B Единая иконографика и профессиональная визуализация данных
+72 Telegram Mini App — core platform integration и hardening
 ```
 
-После завершения `69B`:
+После завершения `72`:
 
 ```text
-72 -> 73 -> 74 -> 75
+73 -> 74 -> 75
  -> 76 skill-aware retrospective audit -> 76A adversarial gate
  -> 77 real-user results checkpoint
  -> 78 production readiness
  -> 79 final go/no-go
 ```
 
-`69B` является owner-approved системным расширением иконографики и data visualization внутри
-`DESIGN_V2_1`, а не новым полным visual direction. Tasks `70-71` завершены вне очереди отдельными
-task-only commits. Никакая task не запускает следующую автоматически.
+`69B` завершена как owner-approved системное расширение иконографики и data visualization внутри
+`DESIGN_V2_1`. Tasks `70-71` были завершены вне очереди отдельными task-only commits. Task `72`
+только назначена текущей и не реализуется в рамках финализации `69B`. Никакая task не запускает
+следующую автоматически.

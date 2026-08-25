@@ -1,5 +1,6 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 import { handleTabKeyDown } from './tabs';
+import { Icon } from './Icon';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type BadgeTone = 'neutral' | 'success' | 'warning' | 'danger';
@@ -215,7 +216,7 @@ export function Card({
 export function LoadingState({ label = 'Загрузка…' }: { label?: string }) {
   return (
     <div aria-busy="true" className="empty-state ui-state" role="status">
-      <span className="spinner" />
+      <Icon className="ui-state__icon ui-state__icon--loading" name="loading" size={24} />
       <p className="ui-state__text">{label}</p>
     </div>
   );
@@ -233,6 +234,7 @@ export function EmptyState({ title, text }: { title: string; text?: string }) {
 export function ErrorState({ message, retry }: { message: string; retry?: () => void }) {
   return (
     <div className="empty-state error-state ui-state ui-state--error" role="alert">
+      <Icon className="ui-state__icon" name="error" size={24} />
       <p className="empty-state__title ui-state__title">Не удалось загрузить данные</p>
       <p className="muted ui-state__text">{message}</p>
       {retry && (
@@ -262,29 +264,11 @@ export function Badge({
 }
 
 export function CloseIcon({ className = '' }: { className?: string }) {
-  return (
-    <svg
-      className={`ui-icon ${className}`.trim()}
-      viewBox="0 0 16 16"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d="m4 4 8 8M12 4l-8 8" />
-    </svg>
-  );
+  return <Icon className={`ui-icon ${className}`.trim()} name="close" size={16} />;
 }
 
 export function TrashIcon({ className = '' }: { className?: string }) {
-  return (
-    <svg
-      className={`ui-icon ${className}`.trim()}
-      viewBox="0 0 16 16"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d="M3 4.5h10M6 2.5h4l.75 2H5.25l.75-2ZM4.5 4.5l.5 9h6l.5-9M6.75 7v4M9.25 7v4" />
-    </svg>
-  );
+  return <Icon className={`ui-icon ${className}`.trim()} name="trash" size={16} />;
 }
 
 export function ChevronIcon({
@@ -294,43 +278,17 @@ export function ChevronIcon({
   direction?: 'left' | 'right' | 'down';
   className?: string;
 }) {
-  const path = {
-    left: 'm10 3.5-4.5 4.5 4.5 4.5',
-    right: 'm6 3.5 4.5 4.5L6 12.5',
-    down: 'm3.5 6 4.5 4.5L12.5 6',
-  }[direction];
-  return (
-    <svg
-      className={`ui-icon ${className}`.trim()}
-      viewBox="0 0 16 16"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d={path} />
-    </svg>
-  );
+  return <Icon className={`ui-icon ${className}`.trim()} name={`chevron-${direction}`} size={16} />;
 }
 
 export function CheckIcon({ className = '' }: { className?: string }) {
-  return (
-    <svg
-      className={`ui-icon ${className}`.trim()}
-      viewBox="0 0 16 16"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d="m3.5 8 3 3 6-6" />
-    </svg>
-  );
+  return <Icon className={`ui-icon ${className}`.trim()} name="check" size={16} />;
 }
 
 export function DisclosureIcon() {
   return (
     <span className="disclosure-icon" aria-hidden="true">
-      <svg viewBox="0 0 16 16" focusable="false">
-        <path d="M3.5 8h9" />
-        <path className="disclosure-icon__vertical" d="M8 3.5v9" />
-      </svg>
+      <Icon name="disclosure-closed" size={16} />
     </span>
   );
 }

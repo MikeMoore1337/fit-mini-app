@@ -91,6 +91,26 @@
   --elevation-overlay: 0 18px 42px rgba(0, 0, 0, 0.28);
 }
 
+/* Task 69B: one optical/currentColor contract for all YFC functional glyphs. */
+.yfc-icon {
+  display: block;
+  overflow: visible;
+  flex: 0 0 auto;
+  color: inherit;
+  shape-rendering: geometricPrecision;
+}
+
+.yfc-icon[data-icon='star-filled'] {
+  fill: currentColor;
+}
+
+@media (forced-colors: active) {
+  .yfc-icon {
+    color: ButtonText;
+    forced-color-adjust: auto;
+  }
+}
+
 :root[data-color-scheme='light'] {
   --v2-canvas: #f4f5f2;
   --v2-surface: #ffffff;
@@ -479,6 +499,26 @@ body {
 .ui-state__title,
 .ui-state__text {
   margin: 0;
+}
+
+.ui-state__icon {
+  flex: 0 0 auto;
+}
+
+.ui-state__icon--loading {
+  animation: ui-state-spin 1s linear infinite;
+}
+
+@keyframes ui-state-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-state__icon--loading {
+    animation: none;
+  }
 }
 
 .ui-state__title {
