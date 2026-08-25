@@ -15,6 +15,8 @@ interface BarcodeDetectorLike {
 
 type BarcodeDetectorConstructor = new (options?: { formats?: string[] }) => BarcodeDetectorLike;
 
+const TOUCH_CAMERA_QUERY = '(hover: none) and (pointer: coarse)';
+
 function providerMessage(status: FoodBarcodeLookup['provider_status']): string | null {
   if (status === 'disabled')
     return 'Внешний каталог не подключён. Локальный поиск и свои продукты доступны.';
@@ -72,6 +74,19 @@ export function BarcodeLookup({
     globalThis as typeof globalThis & { BarcodeDetector?: BarcodeDetectorConstructor }
   ).BarcodeDetector;
   const cameraSupported = Boolean(Detector && navigator.mediaDevices?.getUserMedia);
+  const [touchCameraSurface, setTouchCameraSurface] = useState(
+    () => window.matchMedia?.(TOUCH_CAMERA_QUERY).matches ?? false,
+  );
+  const cameraFirst = cameraSupported && touchCameraSurface;
+
+  useEffect(() => {
+    const media = window.matchMedia?.(TOUCH_CAMERA_QUERY);
+    if (!media) return;
+    const sync = () => setTouchCameraSurface(media.matches);
+    sync();
+    media.addEventListener('change', sync);
+    return () => media.removeEventListener('change', sync);
+  }, []);
 
   const stopCamera = () => {
     stoppedRef.current = true;
@@ -160,6 +175,31 @@ export function BarcodeLookup({
           <p>Сначала проверим личный и локальный каталоги, затем — бесплатный внешний источник.</p>
         </div>
       </div>
+      {cameraFirst && (
+        <div className="nutrition-camera">
+          <video
+            ref={videoRef}
+            muted
+            playsInline
+            className={scanning ? 'is-active' : ''}
+            aria-label="Изображение с камеры"
+          />
+          {scanning ? (
+            <Button type="button" variant="secondary" fullWidth onClick={stopCamera}>
+              Остановить камеру
+            </Button>
+          ) : (
+            <Button type="button" fullWidth onClick={() => void startCamera()}>
+              Сканировать камерой
+            </Button>
+          )}
+          {cameraError && (
+            <p className="nutrition-form-error" role="alert">
+              {cameraError}
+            </p>
+          )}
+        </div>
+      )}
       <form
         className="nutrition-barcode__manual"
         onSubmit={(event) => {
@@ -167,63 +207,43 @@ export function BarcodeLookup({
           submitBarcode(barcode);
         }}
       >
+        {cameraFirst && <p className="nutrition-barcode__manual-title">Или введите код вручную</p>}
         <Field
           label="Штрихкод"
           labelFor="nutrition-barcode-input"
           error={validationError}
           hint="8, 12, 13 или 14 цифр"
         >
-          <Input
-            id="nutrition-barcode-input"
-            inputMode="numeric"
-            autoComplete="off"
-            maxLength={14}
-            value={barcode}
-            onChange={(event) => {
-              lookup.reset();
-              setValidationError('');
-              setBarcode(event.target.value.replace(/\D/g, ''));
-            }}
-            placeholder="3017620422003"
-          />
+          <div className="nutrition-barcode__input-row">
+            <Input
+              id="nutrition-barcode-input"
+              inputMode="numeric"
+              autoComplete="off"
+              maxLength={14}
+              value={barcode}
+              onChange={(event) => {
+                lookup.reset();
+                setValidationError('');
+                setBarcode(event.target.value.replace(/\D/g, ''));
+              }}
+              placeholder="3017620422003"
+            />
+            <Button
+              className="nutrition-barcode__manual-submit"
+              type="submit"
+              variant={cameraFirst ? 'secondary' : 'primary'}
+              disabled={lookup.isPending}
+            >
+              {lookup.isPending ? 'Ищем…' : 'Найти'}
+            </Button>
+          </div>
         </Field>
-        <Button type="submit" disabled={lookup.isPending}>
-          {lookup.isPending ? 'Ищем…' : 'Найти'}
-        </Button>
       </form>
-      <div className="nutrition-camera">
-        <video
-          ref={videoRef}
-          muted
-          playsInline
-          className={scanning ? 'is-active' : ''}
-          aria-label="Изображение с камеры"
-        />
-        {scanning ? (
-          <Button type="button" variant="secondary" onClick={stopCamera}>
-            Остановить камеру
-          </Button>
-        ) : (
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => void startCamera()}
-            disabled={!cameraSupported}
-          >
-            Сканировать камерой
-          </Button>
-        )}
-        {!cameraSupported && (
-          <p>
-            Камера в этом браузере не поддерживается — ручной ввод работает на всех устройствах.
-          </p>
-        )}
-        {cameraError && (
-          <p className="nutrition-form-error" role="alert">
-            {cameraError}
-          </p>
-        )}
-      </div>
+      {touchCameraSurface && !cameraSupported && (
+        <p className="nutrition-camera-unavailable">
+          Сканирование камерой недоступно — введите цифры со штрихкода вручную.
+        </p>
+      )}
       {lookup.isPending && <LoadingState label="Проверяем каталоги…" />}
       {lookup.error && (
         <div className="nutrition-provider-fallback" role="alert">

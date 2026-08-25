@@ -8,6 +8,8 @@ export interface MobileViewportSnapshot {
   contentSafeArea: TelegramInsets;
 }
 
+export const YFC_PLATFORM_ACTIVATED_EVENT = 'yfc:platform-activated';
+
 const SIDES = ['top', 'right', 'bottom', 'left'] as const;
 const LAYOUT_EVENTS = [
   'viewportChanged',
@@ -19,6 +21,10 @@ const LAYOUT_EVENTS = [
 
 function boundedMetric(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : fallback;
+}
+
+function positiveMetric(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
 function normalizedInsets(value: Partial<TelegramInsets> | undefined): TelegramInsets {
@@ -33,18 +39,18 @@ function normalizedInsets(value: Partial<TelegramInsets> | undefined): TelegramI
 export function readMobileViewportSnapshot(
   telegram: TelegramWebApp | null,
 ): MobileViewportSnapshot {
-  const browserHeight = boundedMetric(window.visualViewport?.height, window.innerHeight);
-  const stableFallback = boundedMetric(window.innerHeight, browserHeight);
+  const browserHeight = positiveMetric(window.visualViewport?.height, window.innerHeight);
+  const stableFallback = positiveMetric(window.innerHeight, browserHeight);
   const isMiniApp = Boolean(telegram?.initData);
   const viewportHeight = isMiniApp
-    ? boundedMetric(telegram?.viewportHeight, browserHeight)
+    ? positiveMetric(telegram?.viewportHeight, browserHeight)
     : browserHeight;
 
   return {
     active: isMiniApp ? telegram?.isActive !== false : document.visibilityState !== 'hidden',
     viewportHeight,
     viewportStableHeight: isMiniApp
-      ? boundedMetric(telegram?.viewportStableHeight, stableFallback)
+      ? positiveMetric(telegram?.viewportStableHeight, stableFallback)
       : stableFallback,
     safeArea: isMiniApp ? normalizedInsets(telegram?.safeAreaInset) : normalizedInsets(undefined),
     contentSafeArea: isMiniApp
@@ -91,7 +97,15 @@ export function applyMobileViewportSnapshot(
 }
 
 export function installMobileLayoutAdapter(telegram: TelegramWebApp | null): () => void {
-  const update = () => applyMobileViewportSnapshot(readMobileViewportSnapshot(telegram), telegram);
+  let previousActive: boolean | null = null;
+  const update = () => {
+    const snapshot = readMobileViewportSnapshot(telegram);
+    applyMobileViewportSnapshot(snapshot, telegram);
+    if (previousActive === false && snapshot.active) {
+      window.dispatchEvent(new Event(YFC_PLATFORM_ACTIVATED_EVENT));
+    }
+    previousActive = snapshot.active;
+  };
   let focusFrame: number | null = null;
   const updateAfterFocus = () => {
     if (focusFrame !== null) window.cancelAnimationFrame(focusFrame);

@@ -26,6 +26,7 @@ import {
   clearSensitiveUserScopedStorage,
 } from '../shared/userScopedStorage';
 import { trackProductLoginCompletedIfStarted } from '../shared/analytics/productEvents';
+import { YFC_PLATFORM_ACTIVATED_EVENT } from '../shared/telegram/layout';
 
 function offlineWorkoutUser(): User | null {
   if (!getAccessToken()) return null;
@@ -154,13 +155,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const syncVisibleUser = () => {
       if (document.visibilityState === 'visible') void syncUser();
     };
+    const syncActivatedUser = () => void syncUser();
     const interval = window.setInterval(syncVisibleUser, LIVE_DATA_REFETCH_INTERVAL_MS);
     window.addEventListener('focus', syncVisibleUser);
+    window.addEventListener(YFC_PLATFORM_ACTIVATED_EVENT, syncActivatedUser);
     document.addEventListener('visibilitychange', syncVisibleUser);
 
     return () => {
       window.clearInterval(interval);
       window.removeEventListener('focus', syncVisibleUser);
+      window.removeEventListener(YFC_PLATFORM_ACTIVATED_EVENT, syncActivatedUser);
       document.removeEventListener('visibilitychange', syncVisibleUser);
     };
   }, [syncUser, userId]);

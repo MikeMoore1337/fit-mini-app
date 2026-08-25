@@ -10,7 +10,6 @@ import type {
   WorkoutAlternative,
 } from '../../shared/api/types';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
-import { useTelegramOverlayBackButton } from '../../shared/telegram/useTelegramOverlayBackButton';
 import { Button, CloseIcon, Field, IconButton, Input, Select } from '../../shared/ui/common';
 import { useModalA11y } from '../../shared/ui/useModalA11y';
 import { Icon } from '../../shared/ui/Icon';
@@ -110,7 +109,6 @@ export function WorkoutAdaptation({
     : reasons;
   const selectedReason = reasons.find((item) => item.value === activeReason)!;
   const close = () => setOpen(false);
-  useTelegramOverlayBackButton(open, close);
   const panelRef = useModalA11y<HTMLDivElement>(open, close, '.workout-adaptation-dialog__close');
 
   const needsEquipment = [

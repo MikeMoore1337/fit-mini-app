@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../shared/api/client';
 import { crossContextCoordinator } from '../../shared/browser/crossContextLock';
 import type { Workout, WorkoutStatus } from '../../shared/api/types';
+import { YFC_PLATFORM_ACTIVATED_EVENT } from '../../shared/telegram/layout';
 import {
   acknowledgeWorkoutMutation,
   activeWorkoutLockName,
@@ -324,11 +325,13 @@ export function useActiveWorkoutQueue(userId: number | undefined, workout: Worko
     };
     window.addEventListener('online', retry);
     window.addEventListener('focus', retry);
+    window.addEventListener(YFC_PLATFORM_ACTIVATED_EVENT, retry);
     window.addEventListener('storage', onStorage);
     document.addEventListener('visibilitychange', onVisible);
     return () => {
       window.removeEventListener('online', retry);
       window.removeEventListener('focus', retry);
+      window.removeEventListener(YFC_PLATFORM_ACTIVATED_EVENT, retry);
       window.removeEventListener('storage', onStorage);
       document.removeEventListener('visibilitychange', onVisible);
     };

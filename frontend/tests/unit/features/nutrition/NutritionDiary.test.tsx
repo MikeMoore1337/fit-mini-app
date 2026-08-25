@@ -687,11 +687,8 @@ describe('NutritionDiary', () => {
     await screen.findAllByText('Пока без записей');
     fireEvent.click(within(breakfastSection()).getByRole('button', { name: /Добавить/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Штрихкод' }));
-    expect(
-      await screen.findByText(
-        'Камера в этом браузере не поддерживается — ручной ввод работает на всех устройствах.',
-      ),
-    ).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Сканировать камерой' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Найти' })).toHaveClass('ui-button--primary');
     fireEvent.change(screen.getByRole('textbox', { name: 'Штрихкод' }), {
       target: { value: '3017620422003' },
     });
@@ -754,6 +751,8 @@ describe('NutritionDiary', () => {
     await screen.findAllByText('Пока без записей');
     fireEvent.click(within(breakfastSection()).getByRole('button', { name: /Добавить/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Штрихкод' }));
+    expect(screen.queryByRole('button', { name: 'Сканировать камерой' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Найти' })).toHaveClass('ui-button--primary');
     const barcode = screen.getByRole('textbox', { name: 'Штрихкод' });
     fireEvent.change(barcode, { target: { value: '4006381333931' } });
     fireEvent.click(screen.getByRole('button', { name: 'Найти' }));
@@ -791,6 +790,19 @@ describe('NutritionDiary', () => {
         getUserMedia: vi.fn().mockRejectedValue(new DOMException('Denied', 'NotAllowedError')),
       },
     });
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockImplementation((query: string) => ({
+        matches: query === '(hover: none) and (pointer: coarse)',
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    );
     apiMock.mockImplementation((path: string) => {
       if (path.startsWith('/api/v1/nutrition/diary?')) return Promise.resolve(makeDay([]));
       if (path.startsWith('/api/v1/nutrition/foods/recent'))
@@ -804,7 +816,10 @@ describe('NutritionDiary', () => {
       await screen.findAllByText('Пока без записей');
       fireEvent.click(within(breakfastSection()).getByRole('button', { name: /Добавить/ }));
       fireEvent.click(screen.getByRole('button', { name: 'Штрихкод' }));
-      fireEvent.click(screen.getByRole('button', { name: 'Сканировать камерой' }));
+      const scan = screen.getByRole('button', { name: 'Сканировать камерой' });
+      expect(scan).toHaveClass('ui-button--primary');
+      expect(screen.getByRole('button', { name: 'Найти' })).toHaveClass('ui-button--secondary');
+      fireEvent.click(scan);
       expect(
         await screen.findByText(
           'Доступ к камере запрещён. Разрешите его в настройках браузера или введите код вручную.',
@@ -820,6 +835,7 @@ describe('NutritionDiary', () => {
         configurable: true,
         value: originalDetector,
       });
+      vi.unstubAllGlobals();
     }
   });
 });

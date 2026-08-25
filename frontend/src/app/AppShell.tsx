@@ -5,6 +5,7 @@ import { AppThemeToggle } from '../shared/ui/AppThemeToggle';
 import { BrandLockup } from '../shared/ui/BrandLogo';
 import { AppNavigationIcon, type AppNavigationIconName } from './AppNavigationIcon';
 import { useOptionalAuth } from './AuthProvider';
+import { useTelegramOverlayBackButton } from '../shared/telegram/useTelegramOverlayBackButton';
 
 export type AppSection = 'today' | 'progress' | 'programs' | 'catalog' | 'nutrition' | 'profile';
 
@@ -106,6 +107,7 @@ export function AppShell({
     setMoreOpen(false);
     if (restoreFocus) document.getElementById('appMoreButton')?.focus();
   };
+  useTelegramOverlayBackButton(moreOpen, () => closeMore(true));
 
   useEffect(() => {
     if (!moreOpen) return;

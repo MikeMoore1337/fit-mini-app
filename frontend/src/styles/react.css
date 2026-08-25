@@ -6967,9 +6967,27 @@ body:has(#appBottomNav) .toast:not(.hidden) {
 }
 .nutrition-barcode__manual {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
   gap: 9px;
+}
+.nutrition-barcode__manual-title,
+.nutrition-camera-unavailable {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+.nutrition-barcode__manual-title {
+  font-weight: 700;
+}
+.nutrition-barcode__input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 9px;
+}
+.nutrition-barcode__manual-submit {
+  min-width: 82px;
+  white-space: nowrap;
 }
 .nutrition-camera {
   display: grid;
@@ -7207,8 +7225,7 @@ body:has(#appBottomNav) .toast:not(.hidden) {
     grid-template-columns: minmax(0, 1fr) 62px 82px 34px;
     gap: 4px;
   }
-  .nutrition-copy__source,
-  .nutrition-barcode__manual {
+  .nutrition-copy__source {
     grid-template-columns: 1fr;
   }
 }

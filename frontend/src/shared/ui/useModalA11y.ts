@@ -1,4 +1,5 @@
 import { useEffect, useRef, type RefObject } from 'react';
+import { useTelegramOverlayBackButton } from '../telegram/useTelegramOverlayBackButton';
 
 let openModalCount = 0;
 let originalBodyOverflow = '';
@@ -19,6 +20,7 @@ export function useModalA11y<T extends HTMLElement>(
 ): RefObject<T | null> {
   const panelRef = useRef<T | null>(null);
   const closeRef = useRef(onClose);
+  useTelegramOverlayBackButton(open, () => closeRef.current());
 
   useEffect(() => {
     closeRef.current = onClose;

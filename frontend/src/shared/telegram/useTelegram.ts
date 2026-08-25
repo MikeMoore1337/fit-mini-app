@@ -95,8 +95,10 @@ export function useTelegram(): TelegramWebApp | null {
       window.addEventListener('storage', onStorage);
       window.addEventListener(APP_THEME_CHANGE_EVENT, onTheme);
     }
-    telegram?.ready?.();
-    telegram?.expand?.();
+    if (isMiniApp) {
+      telegram?.ready?.();
+      telegram?.expand?.();
+    }
     return () => {
       cleanupLayout();
       if (isMiniApp) telegram?.offEvent?.('themeChanged', onTheme);

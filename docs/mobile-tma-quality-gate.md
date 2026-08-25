@@ -33,7 +33,8 @@ Playwright harness задаёт `360x800`, `390x844` и `430x932`, настоя�
 `colorScheme`, `isActive`, `viewportHeight`, `viewportStableHeight`, `safeAreaInset`,
 `contentSafeAreaInset` и lifecycle `BackButton`. Он управляемо отправляет `themeChanged`,
 `viewportChanged`, `safeAreaChanged`, `contentSafeAreaChanged`, `activated`, `deactivated` и
-`backButtonClicked`.
+`backButtonClicked`, а также фиксирует обращения к `MainButton`, `SecondaryButton` и
+`HapticFeedback` без реального Telegram client.
 
 Имена и семантика сверены с официальным Telegram Mini Apps API:
 `https://core.telegram.org/bots/webapps`. При изменении mock-контракта их нужно перепроверять заново,

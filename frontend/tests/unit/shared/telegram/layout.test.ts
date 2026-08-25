@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   installMobileLayoutAdapter,
   readMobileViewportSnapshot,
+  YFC_PLATFORM_ACTIVATED_EVENT,
 } from '../../../../src/shared/telegram/layout';
 import { createTelegramMock } from '../../../helpers/telegramMock';
 
@@ -85,5 +86,25 @@ describe('Mobile Web/TMA layout adapter', () => {
     );
 
     cleanup();
+  });
+
+  it('falls back from invalid zero heights and emits one recovery event on activation', () => {
+    const controller = telegramLayoutMock();
+    controller.webApp.viewportHeight = 0;
+    controller.webApp.viewportStableHeight = 0;
+    const onActivated = vi.fn();
+    window.addEventListener(YFC_PLATFORM_ACTIVATED_EVENT, onActivated);
+
+    const snapshot = readMobileViewportSnapshot(controller.webApp);
+    expect(snapshot.viewportHeight).toBeGreaterThan(0);
+    expect(snapshot.viewportStableHeight).toBeGreaterThan(0);
+
+    const dispose = installMobileLayoutAdapter(controller.webApp);
+    controller.setActive(false);
+    controller.setActive(true);
+    expect(onActivated).toHaveBeenCalledTimes(1);
+
+    dispose();
+    window.removeEventListener(YFC_PLATFORM_ACTIVATED_EVENT, onActivated);
   });
 });

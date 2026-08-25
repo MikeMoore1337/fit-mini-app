@@ -16,6 +16,7 @@ export interface PlatformApiOptions {
   notificationState?: 'empty' | 'populated' | 'unlinked' | 'stale';
   accountExportState?: 'none' | 'ready' | 'expired' | 'error';
   authProviders?: string[];
+  trainerActive?: boolean;
 }
 
 export interface PlatformApiController {
@@ -25,6 +26,8 @@ export interface PlatformApiController {
   failNextCardioSave(): void;
   cardioSaveCalls(): number;
   authInitCalls(): number;
+  meCalls(): number;
+  trainerActivationCalls(): number;
   setPatchCalls(): number;
   finishCalls(): number;
   manualTargetSaves(): number;
@@ -86,6 +89,9 @@ export async function installPlatformApi(
   let workoutStatus = options.workoutStatus ?? 'planned';
   const activeProgram = options.activeProgram ?? true;
   let authInitCalls = 0;
+  let meCalls = 0;
+  let trainerActivationCalls = 0;
+  let trainerActive = options.trainerActive ?? false;
   let patchCalls = 0;
   let finishCalls = 0;
   let manualTargetSaves = 0;
@@ -1017,6 +1023,24 @@ export async function installPlatformApi(
     if (path.endsWith('/auth/dev-login')) {
       return route.fulfill({ json: { access_token: 'dev-test-token', token_type: 'bearer' } });
     }
+    if (path.endsWith('/me/trainer-capability')) {
+      if (request.method() === 'POST') {
+        trainerActivationCalls += 1;
+        trainerActive = true;
+      } else if (request.method() === 'DELETE') {
+        trainerActive = false;
+      }
+      return route.fulfill({
+        json: {
+          is_active: trainerActive,
+          activated_now: request.method() === 'POST',
+          active_client_count: trainerActive ? 1 : 0,
+          pending_invite_count: 0,
+          can_disable: !trainerActive,
+          terms_version: 'trainer-capability-v1',
+        },
+      });
+    }
     if (path.endsWith('/me/exports/current') && request.method() === 'GET') {
       const ready = accountExportState === 'ready';
       return route.fulfill({
@@ -1069,13 +1093,14 @@ export async function installPlatformApi(
       return route.fulfill({ status: 204 });
     }
     if (path.endsWith('/me')) {
+      meCalls += 1;
       return route.fulfill({
         json: {
           id: 7,
           telegram_user_id: authProviders.includes('telegram') ? 7007 : null,
           username: 'mobile_user',
           first_name: 'Анна',
-          is_coach: false,
+          is_coach: trainerActive,
           is_admin: false,
           has_active_program: activeProgram,
           has_workout_history: false,
@@ -1096,6 +1121,46 @@ export async function installPlatformApi(
         },
       });
     }
+    if (path.endsWith('/coach/clients')) {
+      return route.fulfill({
+        json: [
+          {
+            id: 11,
+            invite_id: null,
+            telegram_user_id: 3011,
+            username: 'anna_runner',
+            full_name: 'Анна Петрова',
+            goal: 'maintenance',
+            level: 'intermediate',
+            height_cm: 168,
+            weight_kg: 62,
+            workouts_per_week: 3,
+            cardio_trainings_per_week: 1,
+            timezone: 'Europe/Moscow',
+            kbju: null,
+            status: 'active',
+          },
+        ],
+      });
+    }
+    if (path.endsWith('/coach/assigned-programs')) return route.fulfill({ json: [] });
+    if (path.endsWith('/coach/client-summaries')) {
+      return route.fulfill({ json: { items: [], total: 0, limit: 100, offset: 0 } });
+    }
+    if (path.endsWith('/coach/clients/11/analytics')) {
+      return route.fulfill({
+        json: {
+          adherence_percent: null,
+          workouts_completed: 0,
+          workouts_skipped: 0,
+          workouts_missed: 0,
+          current_streak: 0,
+          weight_change_kg: null,
+          personal_records: [],
+        },
+      });
+    }
+    if (path.endsWith('/coach/clients/11/workouts')) return route.fulfill({ json: [] });
     if (programHistory && path.endsWith('/programs/templates/mine')) {
       return route.fulfill({ json: [activeProgramTemplate] });
     }
@@ -1703,6 +1768,17 @@ export async function installPlatformApi(
     if (path.endsWith('/nutrition/foods/recent') || path.endsWith('/nutrition/foods/favorites')) {
       return route.fulfill({ json: { items: [oatmeal], total: 1, limit: 12, offset: 0 } });
     }
+    if (path.endsWith('/nutrition/foods/barcode/3017620422003')) {
+      return route.fulfill({
+        json: {
+          barcode: '3017620422003',
+          status: 'found',
+          provider_status: 'not_requested',
+          local_item: { ...oatmeal, barcode: '3017620422003' },
+          external_item: null,
+        },
+      });
+    }
     if (path.endsWith('/nutrition/diary/entries') && request.method() === 'POST') {
       const body = request.postDataJSON() as {
         diary_date: string;
@@ -1796,6 +1872,12 @@ export async function installPlatformApi(
     },
     authInitCalls() {
       return authInitCalls;
+    },
+    meCalls() {
+      return meCalls;
+    },
+    trainerActivationCalls() {
+      return trainerActivationCalls;
     },
     setPatchCalls() {
       return patchCalls;

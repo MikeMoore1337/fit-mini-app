@@ -50,6 +50,7 @@ export interface TelegramWebApp {
   safeAreaInset?: Partial<TelegramInsets>;
   contentSafeAreaInset?: Partial<TelegramInsets>;
   MainButton?: TelegramButton;
+  SecondaryButton?: TelegramButton;
   BackButton?: TelegramBackButton;
   HapticFeedback?: {
     impactOccurred(style: string): void;

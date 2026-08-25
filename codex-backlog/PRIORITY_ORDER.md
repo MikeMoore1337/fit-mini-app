@@ -1,19 +1,19 @@
-# Порядок выполнения release backlog v25
+# Порядок выполнения release backlog v26
 
 ## Completed
 
-`00-71`, включая `69B` и предшествующие буквенные подзадачи. Task-файлы находятся в `tasks/done/`.
+`00-72`, включая `69B` и предшествующие буквенные подзадачи. Task-файлы находятся в `tasks/done/`.
 
 ## Current
 
 ```text
-72 Telegram Mini App — core platform integration и hardening
+73 Landing — production refresh в Approved Design V2
 ```
 
-После завершения `72`:
+После завершения `73`:
 
 ```text
-73 -> 74 -> 75
+74 -> 75
  -> 76 skill-aware retrospective audit -> 76A adversarial gate
  -> 77 real-user results checkpoint
  -> 78 production readiness
@@ -22,5 +22,5 @@
 
 `69B` завершена как owner-approved системное расширение иконографики и data visualization внутри
 `DESIGN_V2_1`. Tasks `70-71` были завершены вне очереди отдельными task-only commits. Task `72`
-только назначена текущей и не реализуется в рамках финализации `69B`. Никакая task не запускает
-следующую автоматически.
+завершена и архивирована после owner approval. Task `73` только назначена текущей и не реализуется
+в рамках финализации `72`. Никакая task не запускает следующую автоматически.

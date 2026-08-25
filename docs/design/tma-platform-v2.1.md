@@ -56,18 +56,21 @@ interface MobileViewportSnapshot {
 
 ## BackButton
 
-| Контекст | Поведение |
-| --- | --- |
-| `/`, `/onboarding`, root `/app` | Скрыт. |
-| Nested app route/section | Видим; возвращает в `/app` или предыдущий allowlisted internal context. |
-| Workout feedback query | Видим; возвращает в `/app?section=progress` с replace временной entry. |
-| Sheet/dialog с dismiss semantics | Первое нажатие закрывает верхний overlay; route не меняется. |
-| Unsaved critical draft | Перед выходом работает тот же in-product confirmation; silent loss запрещён. |
+| Контекст                         | Поведение                                                                    |
+| -------------------------------- | ---------------------------------------------------------------------------- |
+| `/`, `/onboarding`, root `/app`  | Скрыт.                                                                       |
+| Nested app route/section         | Видим; возвращает в `/app` или предыдущий allowlisted internal context.      |
+| Workout feedback query           | Видим; возвращает в `/app?section=progress` с replace временной entry.       |
+| Sheet/dialog с dismiss semantics | Первое нажатие закрывает верхний overlay; route не меняется.                 |
+| Unsaved critical draft           | Перед выходом работает тот же in-product confirmation; silent loss запрещён. |
 
 В active workout на root `/app` сохраняется видимый in-page back `К сводке`, а native Telegram
 BackButton остаётся скрытым. Дублирующий native control запрещён.
 
-Кнопкой владеет только один active handler; cleanup удаляет handler и скрывает button.
+Кнопкой владеет только один active handler через общий priority coordinator. Верхний modal/sheet
+или последовательный mobile client detail временно получает приоритет над route handler; первое
+нажатие закрывает верхний контекст, следующее выполняет route return. Cleanup восстанавливает
+предыдущего владельца либо скрывает button, поэтому параллельные callbacks не срабатывают.
 Browser Back следует той же navigation semantics без дублирующего TMA control.
 
 ## Theme и shell colors
@@ -78,6 +81,14 @@ Browser Back следует той же navigation semantics без дублир
 - `setHeaderColor`, `setBackgroundColor` и `setBottomBarColor` получают YFC shell colors;
   неподдерживаемые methods/errors безопасно игнорируются.
 - `themeChanged` обновляет tokens и shell colors без смены visual language и user state.
+
+## Foreground recovery
+
+- Переход `deactivated -> activated` публикует один shared recovery event поверх layout snapshot.
+- Authenticated profile refresh и active-workout queue используют этот event вместе с обычными
+  browser `focus`/`visibilitychange`/`online`, потому что Telegram client не обязан синхронно менять
+  все browser lifecycle signals.
+- Temporary network error на restore не очищает session, route, modal или локальную workout queue.
 
 ## Haptics
 
@@ -105,10 +116,24 @@ Browser Back следует той же navigation semantics без дублир
 - `expand()` может запросить available height, но не заменяет responsive layout и не
   гарантирует full-screen/stable height.
 
+## Barcode camera hierarchy
+
+- На touch-first surface при фактической поддержке `BarcodeDetector` и `getUserMedia`
+  `Сканировать камерой` — единственный primary action и расположен раньше ручного ввода.
+- Ручной ввод остаётся доступным fallback. Его `Найти` выровнен с полем штрихкода, а hint/error
+  располагаются под общей строкой; когда камера доступна, ручной action имеет secondary hierarchy.
+- Если camera capability отсутствует, disabled primary action не показывается: `Найти` становится
+  primary, а интерфейс кратко объясняет ручной fallback.
+- На desktop/fine-pointer surface camera action скрыт даже при наличии webcam: ручной поиск остаётся
+  primary. Tablet/hybrid получает camera-first только когда основной input действительно coarse и
+  без hover.
+
 ## Evidence и ограничения
 
 1. Adapter покрыт unit tests для snapshot, event cleanup и unsupported/fallback values.
-2. Mocked TMA проверяет safe/content insets, stable/live viewport, keyboard и BackButton на production seam.
+2. Mocked TMA проверяет safe/content insets, stable/live viewport, keyboard, BackButton ownership,
+   неиспользование дублирующих `MainButton`/`SecondaryButton` и фактические haptic calls на
+   production seam.
 3. Mobile Web/TMA остаются одним component tree для Today и active workout.
 4. Raw `initData` не логируется на изменённых paths.
 5. Real Telegram Android/iOS smoke выполняется только в доступной авторизованной среде.

@@ -36,6 +36,7 @@ import { coachClientProfileDraftStorageKey } from '../../shared/userScopedStorag
 import { handleTabKeyDown } from '../../shared/ui/tabs';
 import { DateInput } from '../../shared/ui/PickerInput';
 import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
+import { useTelegramOverlayBackButton } from '../../shared/telegram/useTelegramOverlayBackButton';
 import {
   BodyPriorityPicker,
   isBodyPriorityComplete,
@@ -774,6 +775,7 @@ export default function CoachPage() {
   })();
   const [selectedId, setSelectedId] = useState<number | null>(initialClientId);
   const [clientDetailOpen, setClientDetailOpen] = useState(Boolean(initialClientId));
+  useTelegramOverlayBackButton(clientDetailOpen, () => setClientDetailOpen(false));
 
   useEffect(() => {
     if (user?.is_coach) {

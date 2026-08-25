@@ -43,6 +43,11 @@ export interface TelegramHarnessState {
   viewportHeight: number;
   viewportStableHeight: number;
   backButton: { visible: boolean; shown: number; hidden: number; clicks: number };
+  platformButtons: {
+    main: { visible: boolean; shown: number; hidden: number };
+    secondary: { visible: boolean; shown: number; hidden: number };
+  };
+  haptics: { impacts: string[]; notifications: string[] };
   shellColors: { header: string[]; background: string[]; bottomBar: string[] };
   downloads: Array<{ url: string; fileName: string }>;
   openedLinks: string[];
@@ -84,6 +89,9 @@ export async function installTelegramHarness(
       bottomBar: [] as string[],
     };
     const backState = { visible: false, shown: 0, hidden: 0, clicks: 0 };
+    const mainButtonState = { visible: false, shown: 0, hidden: 0 };
+    const secondaryButtonState = { visible: false, shown: 0, hidden: 0 };
+    const haptics = { impacts: [] as string[], notifications: [] as string[] };
     const downloads: Array<{ url: string; fileName: string }> = [];
     const openedLinks: string[] = [];
     let ready = 0;
@@ -91,6 +99,33 @@ export async function installTelegramHarness(
     const emit = (event: string, payload?: { isStateStable: boolean }) => {
       handlers.get(event)?.forEach((handler) => handler(payload));
     };
+    const platformButton = (
+      event: 'mainButtonClicked' | 'secondaryButtonClicked',
+      state: typeof mainButtonState,
+    ) => ({
+      get isVisible() {
+        return state.visible;
+      },
+      show() {
+        state.visible = true;
+        state.shown += 1;
+      },
+      hide() {
+        state.visible = false;
+        state.hidden += 1;
+      },
+      onClick(callback: EventHandler) {
+        const callbacks = handlers.get(event) ?? new Set<EventHandler>();
+        callbacks.add(callback);
+        handlers.set(event, callbacks);
+      },
+      offClick(callback: EventHandler) {
+        handlers.get(event)?.delete(callback);
+      },
+      setText() {},
+      enable() {},
+      disable() {},
+    });
     const telegram = {
       initData: initial.initData,
       initDataUnsafe: {},
@@ -122,6 +157,16 @@ export async function installTelegramHarness(
         },
         offClick(callback: EventHandler) {
           handlers.get('backButtonClicked')?.delete(callback);
+        },
+      },
+      MainButton: platformButton('mainButtonClicked', mainButtonState),
+      SecondaryButton: platformButton('secondaryButtonClicked', secondaryButtonState),
+      HapticFeedback: {
+        impactOccurred(style: string) {
+          haptics.impacts.push(style);
+        },
+        notificationOccurred(type: string) {
+          haptics.notifications.push(type);
         },
       },
       ready() {
@@ -199,6 +244,14 @@ export async function installTelegramHarness(
             viewportHeight: telegram.viewportHeight,
             viewportStableHeight: telegram.viewportStableHeight,
             backButton: { ...backState },
+            platformButtons: {
+              main: { ...mainButtonState },
+              secondary: { ...secondaryButtonState },
+            },
+            haptics: {
+              impacts: [...haptics.impacts],
+              notifications: [...haptics.notifications],
+            },
             shellColors: {
               header: [...shellColors.header],
               background: [...shellColors.background],

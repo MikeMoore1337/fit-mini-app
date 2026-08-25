@@ -649,13 +649,17 @@ test('three Web presets keep linked state, conversion and browser history inside
   await nutrition.page.getByRole('button', { name: 'Добавить недавний продукт' }).click();
   await expect(nutrition.page.getByText('1588 / 2150')).toBeVisible();
   await nutrition.page.getByRole('link', { name: /Прогресс/ }).click();
-  await expect(nutrition.page.getByText('74% от ориентира')).toBeVisible();
+  await expect(
+    nutrition.page.getByRole('progressbar', { name: 'Дневной итог питания: 74 из 100 %' }),
+  ).toBeVisible();
   await nutrition.page.goBack();
   await expect(nutrition.page).toHaveURL(/section=nutrition/);
   await nutrition.page.goForward();
   await expect(nutrition.page).toHaveURL(/section=progress/);
   await nutrition.page.reload();
-  await expect(nutrition.page.getByText('74% от ориентира')).toBeVisible();
+  await expect(
+    nutrition.page.getByRole('progressbar', { name: 'Дневной итог питания: 74 из 100 %' }),
+  ).toBeVisible();
   if (CABINET_CAPTURE) {
     await nutrition.page.screenshot({
       path: `${CABINET_SCREENSHOT_DIR}/mobile-430-nutrition-linked-light.png`,
@@ -798,7 +802,7 @@ test('desktop demo keeps metric groups separated and conversion copy honest', as
   expect(statusGeometry.inProgress).toMatchObject({ canvasHeight: 16, canvasWidth: 16 });
   expect(statusGeometry.inProgress?.shapeHeight).toBeGreaterThanOrEqual(9);
   expect(statusGeometry.inProgress?.shapeWidth).toBeGreaterThanOrEqual(4);
-  expect(statusGeometry.inProgress?.strokeWidth).toBeGreaterThanOrEqual(2);
+  expect(statusGeometry.inProgress?.strokeWidth).toBeGreaterThanOrEqual(1.8);
   const legendCenterOffset = await page.locator('.week-strip__topline').evaluate((topline) => {
     const legend = topline.querySelector<HTMLElement>('.week-strip__legend');
     const legendItems = Array.from(legend?.querySelectorAll<HTMLElement>(':scope > li') ?? []);

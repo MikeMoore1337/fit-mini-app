@@ -7,6 +7,7 @@ import {
   useState,
   type AnchorHTMLAttributes,
 } from 'react';
+import { hideTelegramBackButtonWhenIdle, registerTelegramBackButton } from '../telegram/backButton';
 
 interface NavigationContextValue {
   path: string;
@@ -118,8 +119,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   useEffect(() => {
-    const backButton = window.Telegram?.WebApp?.BackButton;
-    if (!backButton) return;
+    const telegram = window.Telegram?.WebApp;
     const focusedReturn =
       location.path === '/app'
         ? focusedContextReturn(location.search)
@@ -134,19 +134,14 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       location.path === '/onboarding' ||
       location.path === '/'
     ) {
-      backButton.hide();
+      hideTelegramBackButtonWhenIdle(telegram);
       return;
     }
     const goBack = () => {
       const returnPath = focusedReturn ?? publicReturn ?? demoHandoffReturn;
       navigate(returnPath ?? '/app', Boolean(returnPath));
     };
-    backButton.onClick(goBack);
-    backButton.show();
-    return () => {
-      backButton.offClick(goBack);
-      backButton.hide();
-    };
+    return registerTelegramBackButton(telegram, goBack, 'route');
   }, [navigate, location.path, location.search]);
 
   const value = useMemo(
