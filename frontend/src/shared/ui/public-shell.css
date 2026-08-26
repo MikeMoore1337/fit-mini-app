@@ -227,10 +227,6 @@ body.public-shell-mode #root {
     gap: 7px;
     font-size: 0.78rem;
   }
-
-  .public-shell__brand .yfc-lockup__wordmark {
-    display: none;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

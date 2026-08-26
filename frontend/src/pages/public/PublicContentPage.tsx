@@ -12,7 +12,7 @@ import { api } from '../../shared/api/client';
 import type { PublicExerciseDetail, PublicExerciseSummary } from '../../shared/api/types';
 import { appUrlForHostname } from '../../shared/navigation/appUrl';
 import { AppLink, useNavigation } from '../../shared/navigation/router';
-import { BrandLogo } from '../../shared/ui/BrandLogo';
+import { BrandLockup } from '../../shared/ui/BrandLogo';
 import { AppThemeToggle } from '../../shared/ui/AppThemeToggle';
 import { Icon } from '../../shared/ui/Icon';
 import { useWebTheme } from '../../shared/useWebTheme';
@@ -35,17 +35,17 @@ function PublicHeader({ theme }: { theme: 'light' | 'dark' }) {
   }, [menuOpen]);
 
   return (
-    <header className="landing-header public-header">
-      <AppLink className="landing-brand" to="/" aria-label="Your Fitness Coach — на главную">
-        <BrandLogo
-          className="landing-brand__mark"
-          decorative
+    <header className="public-shell__header landing-header public-header">
+      <AppLink
+        className="public-shell__brand landing-brand"
+        to="/"
+        aria-label="Your Fitness Coach — на главную"
+      >
+        <BrandLockup
+          className="public-shell__lockup public-header__lockup"
+          markClassName="public-shell__logo landing-brand__mark"
           surface={theme}
-          variant="mark"
-          width={36}
-          height={36}
         />
-        <span>Your Fitness Coach</span>
       </AppLink>
       <nav
         id="public-navigation"
@@ -71,7 +71,7 @@ function PublicHeader({ theme }: { theme: 'light' | 'dark' }) {
           Тренерам
         </AppLink>
       </nav>
-      <div className="landing-header__actions">
+      <div className="public-shell__header-actions landing-header__actions">
         <AppThemeToggle landing />
         <a
           className="landing-button landing-button--compact"
@@ -403,16 +403,12 @@ function RelatedContent({ page }: { page: PublicContentPageData }) {
 function PublicFooter({ theme }: { theme: 'light' | 'dark' }) {
   return (
     <footer className="landing-footer public-footer">
-      <AppLink className="landing-brand" to="/">
-        <BrandLogo
-          className="landing-brand__mark"
-          decorative
+      <AppLink className="landing-brand" to="/" aria-label="Your Fitness Coach — на главную">
+        <BrandLockup
+          className="public-footer__lockup"
+          markClassName="landing-brand__mark"
           surface={theme}
-          variant="mark"
-          width={36}
-          height={36}
         />
-        <span>Your Fitness Coach</span>
       </AppLink>
       <nav aria-label="Разделы в подвале">
         <AppLink to="/training">Тренировки</AppLink>

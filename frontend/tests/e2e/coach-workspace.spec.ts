@@ -4,6 +4,12 @@ const captureAudit = Boolean(
   (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
     ?.CAPTURE_COACH_AUDIT,
 );
+const captureLandingProductProofs =
+  (
+    globalThis as typeof globalThis & {
+      process?: { env?: Record<string, string | undefined> };
+    }
+  ).process?.env?.YFC_CAPTURE_LANDING_PRODUCT_PROOFS === '1';
 
 const clients = [
   {
@@ -409,7 +415,13 @@ async function openCoach(page: Page) {
 }
 
 test('dashboard даёт обзор и фильтрует клиентов без загрузки полной истории', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.setViewportSize(
+    captureLandingProductProofs ? { width: 1280, height: 972 } : { width: 1440, height: 1000 },
+  );
+  if (captureLandingProductProofs) {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.addInitScript(() => localStorage.setItem('app-theme', 'light'));
+  }
   const fullHistoryRequests: string[] = [];
   page.on('request', (request) => {
     const path = new URL(request.url()).pathname;
@@ -445,6 +457,9 @@ test('dashboard даёт обзор и фильтрует клиентов бе�
       fullPage: true,
     });
   }
+  if (captureLandingProductProofs) {
+    await page.screenshot({ path: 'public/assets/product/landing-trainer-desktop-light.png' });
+  }
 
   await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
   await expect(page.getByRole('tab', { name: 'Клиенты' })).toHaveCSS(
@@ -461,6 +476,10 @@ test('dashboard даёт обзор и фильтрует клиентов бе�
       path: '../.artifacts/ui-audit/task-48/coach-desktop-dark.png',
       fullPage: true,
     });
+  }
+  if (captureLandingProductProofs) {
+    await page.screenshot({ path: 'public/assets/product/landing-trainer-desktop-dark.png' });
+    return;
   }
   await page.getByRole('button', { name: 'Включить светлую тему' }).click();
 

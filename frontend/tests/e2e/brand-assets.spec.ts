@@ -33,13 +33,14 @@ test('canonical brand assets render on light and dark public surfaces', async ({
       window.localStorage.removeItem('landing-theme');
     });
     await page.reload();
-    await assertHeaderMark(page, 'light', 44);
+    await assertHeaderMark(page, 'light', viewport.name === 'mobile' ? 34 : 42);
     const wordmark = page.locator('.landing-header .yfc-lockup__wordmark');
-    if (viewport.name === 'mobile') {
-      await expect(wordmark).toBeHidden();
-    } else {
-      await expect(wordmark).toBeVisible();
-    }
+    await expect(wordmark).toBeVisible();
+    const brandBounds = await page.locator('.public-shell__brand').boundingBox();
+    const actionBounds = await page.locator('.public-shell__header-actions').boundingBox();
+    expect((brandBounds?.x ?? 0) + (brandBounds?.width ?? 0)).toBeLessThanOrEqual(
+      actionBounds?.x ?? 0,
+    );
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
 
     if (viewport.name === 'desktop') {
@@ -47,7 +48,7 @@ test('canonical brand assets render on light and dark public surfaces', async ({
     }
 
     await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
-    await assertHeaderMark(page, 'dark', 44);
+    await assertHeaderMark(page, 'dark', viewport.name === 'mobile' ? 34 : 42);
     await expect(page.locator('#landing-title')).toHaveCSS('color', 'rgb(238, 240, 234)');
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
 
@@ -56,12 +57,20 @@ test('canonical brand assets render on light and dark public surfaces', async ({
     }
 
     await page.goto('/login');
-    await assertHeaderMark(page, 'dark', 40);
     if (viewport.name === 'mobile') {
-      await expect(page.locator('.landing-header .yfc-lockup__wordmark')).toBeHidden();
-    } else {
+      await assertHeaderMark(page, 'dark', 40);
       await expect(page.locator('.landing-header .yfc-lockup__wordmark')).toBeVisible();
+    } else {
+      await expect(page.locator('.login-continuation-brand .yfc-lockup__mark')).toBeVisible();
+      await expect(page.locator('.login-continuation-brand .yfc-lockup__wordmark')).toBeVisible();
     }
+
+    await page.goto('/training');
+    await expect(page.locator('.public-header .yfc-lockup__wordmark')).toBeVisible();
+    await expect(page.locator('.public-footer .yfc-lockup__wordmark')).toBeVisible();
+
+    await page.goto('/demo');
+    await expect(page.locator('.demo-header__brand .yfc-lockup__wordmark')).toBeVisible();
   }
 });
 

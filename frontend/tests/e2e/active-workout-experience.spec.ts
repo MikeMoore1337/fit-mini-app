@@ -1,5 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 
+const captureLandingProductProofs =
+  (
+    globalThis as typeof globalThis & {
+      process?: { env?: Record<string, string | undefined> };
+    }
+  ).process?.env?.YFC_CAPTURE_LANDING_PRODUCT_PROOFS === '1';
+
 type SetState = {
   actual_reps: number | null;
   actual_weight: number | null;
@@ -231,6 +238,11 @@ test('active workout keeps one obvious next action through logging, timer and fi
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 390, height: 844 });
+  if (captureLandingProductProofs) {
+    await page.addInitScript(() => {
+      if (!localStorage.getItem('app-theme')) localStorage.setItem('app-theme', 'light');
+    });
+  }
   await page.addInitScript(() => {
     const events: unknown[] = [];
     Object.defineProperty(window, '__productAnalyticsEvents', { value: events, writable: false });
@@ -243,6 +255,22 @@ test('active workout keeps one obvious next action through logging, timer and fi
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
   await page.getByRole('button', { name: 'Продолжить тренировку' }).click();
+
+  if (captureLandingProductProofs) {
+    await expect(page.getByRole('heading', { name: 'Жим штанги лёжа' })).toBeVisible();
+    await page.screenshot({ path: 'public/assets/product/landing-workout-mobile-light.png' });
+    await page.evaluate(() => localStorage.setItem('app-theme', 'dark'));
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    const darkClientEntry = page.getByRole('button', { name: 'Клиент' });
+    if (await darkClientEntry.isVisible()) await darkClientEntry.click();
+    const darkWorkoutEntry = page.getByRole('button', { name: 'Продолжить тренировку' });
+    await expect(darkWorkoutEntry).toBeVisible();
+    await darkWorkoutEntry.click();
+    await expect(page.getByRole('heading', { name: 'Жим штанги лёжа' })).toBeVisible();
+    await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
+    await page.screenshot({ path: 'public/assets/product/landing-workout-mobile-dark.png' });
+    return;
+  }
 
   const firstSet = page.locator('[data-workout-set-id="201"]');
   await expect(firstSet).toHaveAttribute('aria-current', 'step');

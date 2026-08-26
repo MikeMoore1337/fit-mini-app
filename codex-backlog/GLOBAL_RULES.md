@@ -1,9 +1,9 @@
-# GLOBAL_RULES - правила выполнения release backlog v11 resource-aware
+# GLOBAL_RULES - правила выполнения release backlog v12 resource-aware
 
-Этот файл действует для owner-selected current task `89A`, remaining release tasks `73A-79`, включая
-`74A` и `76A`, и trigger-gated post-release pool `80-96` с буквенными подзадачами. Completed tasks
-`00-73`, включая буквенные подзадачи, и отдельно завершённые tasks `88-89` не переигрываются и
-хранятся в `tasks/done/`.
+Этот файл действует для current task `74`, remaining release tasks `74A-79`, включая `76A`, и
+trigger-gated post-release pool `80-96` с буквенными подзадачами. Completed tasks `00-73A`, включая
+буквенные подзадачи, и отдельно завершённые tasks `88-89` не переигрываются и хранятся в
+`tasks/done/`. Owner-selected task `89A` остаётся pending, но не является текущей.
 
 
 ## Полный task lifecycle
@@ -51,14 +51,16 @@ Lifecycle не расширяет scope task и не отменяет owner chec
 - Работать только в `feature/yfc-platform-v2`.
 - Не переходить к следующему task автоматически.
 - Перед началом прочитать корневой `AGENTS.md`, этот файл, lifecycle и только текущую task.
-- Tasks `00-73`, включая буквенные подзадачи, подтверждены владельцем как завершённые, перенесены в `tasks/done/` и не выполняются повторно.
+- Tasks `00-73A`, включая буквенные подзадачи, подтверждены владельцем как завершённые, перенесены в `tasks/done/` и не выполняются повторно.
 - Owner-selected task `88` завершена после owner approval и архивирована.
 - Owner-selected task `89` завершена после owner approval и архивирована.
-- Current task — `89A`: финальная композиция канального поста и exact preview parity; она только
-  назначена и не реализуется в completion run task `89`.
-- После task `89A` следует `90`; каждая выполняется только в отдельной сессии.
-- Remaining release tasks `73A-79` и остальные trigger-gated tasks сохраняют собственные Trigger,
-  dependency и owner decision. Назначение `89`/`89A` не помечает их выполненными и не разрешает запуск.
+- Current task — `74`: cross-product responsive, accessibility и states hardening; она только
+  назначена и не реализуется в completion run task `73A`.
+- После task `74` следует `74A`; каждая выполняется только в отдельной сессии.
+- Owner-selected task `89A` остаётся `PENDING`, но не является текущей; `90` следует после неё
+  только внутри Telegram news потока. Это назначение не разрешает их автоматический запуск.
+- Remaining release tasks `74-79` и остальные trigger-gated tasks сохраняют собственные Trigger,
+  dependency и owner decision.
 - Task `50A` уже создала общий continuous Mobile Web/TMA gate, который переиспользуют последующие client-facing tasks.
 - Перед client-facing task прочитать `MOBILE_TMA_FIRST_CONTRACT.md` и применимые пункты `.agents/references/MOBILE_TMA_ACCEPTANCE_MATRIX.md`.
 - Не повторять полный аудит репозитория без прямого требования task.
@@ -163,6 +165,12 @@ checkpoint до массовой реализации.
 
 Для visual implementation до завершения task обязательно:
 
+- marketing/product proof screenshots всегда снимать из **текущего authenticated-интерфейса**
+  приложения на обычных production routes/components с локальными детерминированными тестовыми
+  данными. Не использовать для них demo-кабинет, demo-labelled chrome, устаревшие mockups или
+  персональные production-данные. Demo screenshots допустимы только для явно обозначенного Demo
+  narrative. После изменений иконографики, navigation или layout такие proofs переснимать;
+  provenance фиксировать как минимум через route, theme, viewport, fixture, bytes и SHA-256;
 - проверить фактический render минимум на `360x800`, `390x844`, `430x932`, `768x900` и desktop
   `1280` или `1440`; применимые Mobile Web и mocked TMA states сравнить при одинаковом viewport;
 - покрыть Light/Dark, основной state и хотя бы один релевантный empty/error/partial/long-content

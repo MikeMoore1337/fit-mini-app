@@ -2760,10 +2760,6 @@ body.public-shell-mode.public-shell-mode:has(.auth-public-shell--design-v2) {
     width: min(100% - 28px, 680px);
   }
 
-  .auth-public-shell--design-v2 .public-shell__brand .yfc-lockup__wordmark {
-    display: none;
-  }
-
   .auth-public-shell--design-v2 .login-layout {
     min-height: calc(100dvh - 71px);
     padding: var(--v2-space-5) 0 max(var(--v2-space-6), env(safe-area-inset-bottom, 0px));
@@ -3534,7 +3530,8 @@ body:has(.standalone-page--design-v2) {
 
 .profile-form__save > button,
 .app-section--profile
-  .profile-settings-group form
+  .profile-settings-group
+  form
   button:not(.secondary, .btn-danger, .text-button) {
   border-color: transparent;
   background: var(--v2-lime);
@@ -3543,7 +3540,8 @@ body:has(.standalone-page--design-v2) {
 
 .profile-form__save > button:hover:not(:disabled),
 .app-section--profile
-  .profile-settings-group form
+  .profile-settings-group
+  form
   button:not(.secondary, .btn-danger, .text-button):hover:not(:disabled) {
   background: var(--v2-lime-hover);
 }
@@ -5481,7 +5479,7 @@ button.notification-row__main:focus-visible {
 .public-shell--design-v2 .public-shell__header,
 .public-page--design-v2 .public-header {
   border-color: var(--v2-border);
-  background: color-mix(in srgb, var(--v2-canvas) 94%, transparent);
+  background: transparent;
   box-shadow: none;
   backdrop-filter: none;
 }

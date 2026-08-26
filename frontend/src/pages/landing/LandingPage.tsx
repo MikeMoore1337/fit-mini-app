@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState, type ImgHTMLAttributes } from 'react';
-import { BrandLogo } from '../../shared/ui/BrandLogo';
-import { PublicShell } from '../../shared/ui/PublicShell';
-import { applyRouteMetadata } from '../../shared/seo/metadata';
+import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
 import {
   appUrlForHostname,
   demoUrlForHostname,
   loginUrlForHostname,
 } from '../../shared/navigation/appUrl';
 import { AppLink } from '../../shared/navigation/router';
-import { Icon } from '../../shared/ui/Icon';
-import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
+import { applyRouteMetadata } from '../../shared/seo/metadata';
+import { BrandLockup, BrandLogo } from '../../shared/ui/BrandLogo';
+import { Icon, type IconName } from '../../shared/ui/Icon';
+import { PublicShell } from '../../shared/ui/PublicShell';
 import { useWebTheme } from '../../shared/useWebTheme';
+import { EnergyFlow } from './EnergyFlow';
 import './landing.css';
 
 export {
@@ -21,26 +22,69 @@ export {
 
 type DemoScenario = 'self_training' | 'nutrition' | 'trainer';
 
-const capabilities = [
-  ['Тренировки', 'План на сегодня, подходы и отдых'],
-  ['Питание', 'Дневник и ориентиры КБЖУ'],
-  ['Прогресс', 'Факты, периоды и ограничения данных'],
-  ['Тренер', 'Программы и контекст по каждому клиенту'],
-] as const;
+const coreFeatures: ReadonlyArray<{
+  icon: IconName;
+  index: string;
+  label: string;
+  title: string;
+  text: string;
+  href: string;
+  linkLabel: string;
+}> = [
+  {
+    icon: 'week-strength',
+    index: '01',
+    label: 'Сегодня и тренировка',
+    title: 'Сначала — одно понятное действие.',
+    text: 'Экран «Сегодня» собирает недельный контекст и ближайшую тренировку. Во время занятия остаются вес, повторы, выполненные подходы и отдых — без ручного подсчёта.',
+    href: '/training',
+    linkLabel: 'Как устроены тренировки',
+  },
+  {
+    icon: 'nav-nutrition',
+    index: '02',
+    label: 'Питание',
+    title: 'Ориентир рядом с фактическими записями.',
+    text: 'Дневник различает заполненный, неполный и пропущенный день. Калории и КБЖУ остаются ориентирами, а отсутствие записи не превращается в ноль.',
+    href: '/nutrition',
+    linkLabel: 'Подробнее о питании',
+  },
+  {
+    icon: 'nav-progress',
+    index: '03',
+    label: 'Прогресс',
+    title: 'Выводы только там, где хватает данных.',
+    text: 'Тренировки, питание и измерения показаны по периодам. Если записей мало, интерфейс объяснит ограничение вместо сильного вывода из одной точки.',
+    href: '/progress',
+    linkLabel: 'Как читать прогресс',
+  },
+];
 
-const workflow = [
-  ['01', 'Настройте профиль', 'Цель, опыт и исходные параметры задают первый понятный ориентир.'],
-  [
-    '02',
-    'Действуйте сегодня',
-    'Откройте тренировку или дневник питания и фиксируйте факты по ходу дня.',
-  ],
-  [
-    '03',
-    'Сверяйтесь с динамикой',
-    'Смотрите подтверждённые результаты сами или разбирайте их вместе с тренером.',
-  ],
-] as const;
+const workflow: ReadonlyArray<{
+  icon: IconName;
+  number: string;
+  title: string;
+  text: string;
+}> = [
+  {
+    icon: 'nav-profile',
+    number: '01',
+    title: 'Настройте профиль',
+    text: 'Цель, опыт и исходные параметры задают первый понятный ориентир.',
+  },
+  {
+    icon: 'week-strength',
+    number: '02',
+    title: 'Действуйте сегодня',
+    text: 'Откройте тренировку или дневник питания и фиксируйте факты по ходу дня.',
+  },
+  {
+    icon: 'nav-progress',
+    number: '03',
+    title: 'Сверяйтесь с динамикой',
+    text: 'Смотрите подтверждённые результаты сами или разбирайте их вместе с тренером.',
+  },
+];
 
 const demoScenarios: ReadonlyArray<{
   value: DemoScenario;
@@ -108,60 +152,58 @@ type ProductScreenshotProps = Pick<
 > & { fallback: string };
 
 function ProductScreenshot({ fallback, className = '', ...imageProps }: ProductScreenshotProps) {
-  const [failed, setFailed] = useState(false);
-  const [loaded, setLoaded] = useState(false);
+  const [failedSrc, setFailedSrc] = useState<string>();
+  const [loadedSrc, setLoadedSrc] = useState<string>();
+  const failed = failedSrc === imageProps.src;
+  const loaded = loadedSrc === imageProps.src;
 
   return (
-    <span className={`landing-product-image ${className}`.trim()}>
+    <span className={`landing-product-image ${loaded ? 'is-loaded' : ''} ${className}`.trim()}>
       <span className="landing-product-image__fallback">{fallback}</span>
       {!failed && (
         <img
           {...imageProps}
           className={loaded ? 'is-loaded' : ''}
           decoding="async"
-          onLoad={() => setLoaded(true)}
-          onError={() => setFailed(true)}
+          onLoad={() => setLoadedSrc(imageProps.src)}
+          onError={() => setFailedSrc(imageProps.src)}
         />
       )}
     </span>
   );
 }
 
-function HeroScreenshot({ colorScheme }: { colorScheme: 'light' | 'dark' }) {
-  const [failed, setFailed] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const isDark = colorScheme === 'dark';
+function AthleteVisual() {
+  const [failedStem, setFailedStem] = useState<string>();
+  const [loadedStem, setLoadedStem] = useState<string>();
+  const assetStem = '/assets/marketing/landing-athlete-deadlift-cutout';
+  const failed = failedStem === assetStem;
+  const loaded = loadedStem === assetStem;
 
   return (
-    <span className="landing-product-image landing-hero-proof__image">
-      <span className="landing-product-image__fallback">
-        Экран Сегодня временно недоступен. Откройте демо, чтобы посмотреть продукт.
+    <span className={`landing-athlete-image ${loaded ? 'is-loaded' : ''}`}>
+      <span className="landing-athlete-image__fallback">
+        Силовая тренировка остаётся контекстом страницы. Продукт и основные действия доступны без
+        изображения.
       </span>
       {!failed && (
         <picture>
           <source
-            media="(max-width: 680px)"
-            srcSet={
-              isDark
-                ? '/assets/product/landing-workout-mobile-dark.png'
-                : '/assets/product/landing-workout-mobile-light.png'
-            }
+            type="image/webp"
+            srcSet={`${assetStem}-640.webp 640w, ${assetStem}-960.webp 960w, ${assetStem}-1280.webp 1280w`}
+            sizes="(max-width: 680px) calc(100vw - 28px), (max-width: 980px) calc(100vw - 48px), 760px"
           />
           <img
-            src={
-              isDark
-                ? '/assets/product/landing-today-desktop-dark.png'
-                : '/assets/product/landing-today-desktop-light.png'
-            }
-            alt="Экран Сегодня: недельный контекст и тренировка в приложении"
-            width={isDark ? 1440 : 1280}
-            height={972}
+            src={`${assetStem}-1280.webp`}
+            alt="Атлет выполняет контролируемую классическую становую тягу со штангой"
+            width={1280}
+            height={1171}
             loading="eager"
             fetchPriority="high"
             decoding="async"
             className={loaded ? 'is-loaded' : ''}
-            onLoad={() => setLoaded(true)}
-            onError={() => setFailed(true)}
+            onLoad={() => setLoadedStem(assetStem)}
+            onError={() => setFailedStem(assetStem)}
           />
         </picture>
       )}
@@ -188,7 +230,6 @@ export default function LandingPage() {
 
   useEffect(() => {
     if (!mobileMenuOpen) return;
-
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       setMobileMenuOpen(false);
@@ -201,7 +242,6 @@ export default function LandingPage() {
         return;
       setMobileMenuOpen(false);
     };
-
     window.addEventListener('keydown', closeOnEscape);
     window.addEventListener('pointerdown', closeOnOutsidePointer);
     return () => {
@@ -265,358 +305,306 @@ export default function LandingPage() {
     >
       <main id="landing-content" tabIndex={-1}>
         <section className="landing-hero" aria-labelledby="landing-title">
+          <EnergyFlow className="landing-energy-path" />
           <div className="landing-hero__copy">
             <p className="landing-kicker">План на сегодня. Результат — в динамике.</p>
-            <h1 id="landing-title">Знайте, что делать сегодня.</h1>
+            <h1 id="landing-title">
+              Знайте, что делать <span>сегодня.</span>
+            </h1>
             <p className="landing-hero__lead">
-              Тренировки, дневник питания и честная картина прогресса — в одном продукте для
-              самостоятельной работы или занятий с тренером.
+              Когда программа настроена, экран «Сегодня» показывает ближайшее запланированное
+              действие — не нужно каждый раз решать, что делать дальше. Тренировки, дневник питания
+              и честная картина прогресса — в одном продукте для самостоятельной работы или занятий
+              с тренером.
             </p>
-            <div className="landing-hero__primary">
-              <a
-                className="landing-button landing-action"
-                href={appUrl}
-                onClick={trackAppSelection}
-              >
-                Открыть приложение
-                <Icon name="arrow-right" size={20} />
+            <div className="landing-hero__actions">
+              <a className="landing-button" href={appUrl} onClick={trackAppSelection}>
+                Открыть приложение <Icon name="arrow-right" size={20} />
               </a>
-              <p>Web и Telegram Mini App · один аккаунт и общие данные</p>
+              <a
+                className="landing-button landing-button--secondary"
+                href={cabinetScenarioUrl(demoUrl, 'self_training')}
+                onClick={trackDemoSelection}
+              >
+                Попробовать демо <Icon name="arrow-right" size={20} />
+              </a>
             </div>
-          </div>
-
-          <figure className="landing-hero-proof" aria-labelledby="landing-proof-caption">
-            <div className="landing-hero-proof__viewport">
-              <HeroScreenshot colorScheme={colorScheme} />
-            </div>
-            <figcaption id="landing-proof-caption">
-              <span>Реальный интерфейс</span>
-              Подготовленные данные без информации реальных пользователей
-            </figcaption>
-          </figure>
-
-          <div className="landing-hero__continuation">
-            <a
-              className="landing-button landing-button--secondary landing-action"
-              href={cabinetScenarioUrl(demoUrl, 'self_training')}
-              onClick={trackDemoSelection}
-            >
-              Попробовать демо
-              <Icon name="arrow-right" size={20} />
-            </a>
-          </div>
-        </section>
-
-        <section className="landing-capabilities" aria-label="Основные возможности">
-          {capabilities.map(([title, text]) => (
-            <div key={title}>
-              <strong>{title}</strong>
-              <span>{text}</span>
-            </div>
-          ))}
-        </section>
-
-        <section id="product" className="landing-showcase" aria-labelledby="product-title">
-          <header className="landing-section-heading">
-            <p className="landing-kicker">Продукт в действии</p>
-            <h2 id="product-title">Не каталог функций, а связный день.</h2>
-            <p>
-              Начните с текущего действия, зафиксируйте питание и тренировку, затем смотрите
-              динамику сами или вместе с тренером.
+            <p className="landing-hero__platform-note">
+              <Icon name="web-app" size={16} /> Web и Telegram Mini App · один аккаунт и общие
+              данные
             </p>
-          </header>
+          </div>
 
-          <article className="landing-showcase-chapter landing-showcase-chapter--today">
-            <div className="landing-showcase-copy">
-              <span className="landing-index">01 · Сегодня и тренировка</span>
-              <h3>Сначала — одно понятное действие.</h3>
-              <p>
-                Экран «Сегодня» собирает недельный контекст и ближайшую тренировку. Во время занятия
-                остаются вес, повторы, выполненные подходы и отдых — без ручного подсчёта.
-              </p>
-              <AppLink to="/training">Как устроены тренировки</AppLink>
+          <div
+            className="landing-hero-scene"
+            role="group"
+            aria-label="Силовая тренировка и актуальный интерфейс YFC"
+          >
+            <figure className="landing-athlete-frame">
+              <AthleteVisual />
+            </figure>
+            <figure className="landing-hero-device">
+              <span className="landing-hero-device__label">
+                Актуальный интерфейс · подготовленные данные
+              </span>
+              <ProductScreenshot
+                src={`/assets/product/landing-workout-mobile-${colorScheme}.png`}
+                alt="Актуальный экран Сегодня и текущей силовой тренировки в Mobile Web"
+                width={390}
+                height={844}
+                loading="eager"
+                fetchPriority="high"
+                fallback="Экран Сегодня временно недоступен. Откройте демо, чтобы посмотреть продукт."
+              />
+              <figcaption>
+                <strong>Реальный интерфейс</strong>
+                Подготовленные данные без информации реальных пользователей
+              </figcaption>
+            </figure>
+            <div className="landing-hero-signals" aria-label="В одном профиле">
+              {coreFeatures.map((feature) => (
+                <span key={feature.label}>
+                  <Icon name={feature.icon} size={20} /> {feature.label}
+                </span>
+              ))}
             </div>
-            <div className="landing-proof-duet" aria-label="Web и mobile интерфейсы тренировки">
-              <figure className="landing-proof-frame landing-proof-frame--wide">
+          </div>
+        </section>
+
+        <section id="product" className="landing-core" aria-labelledby="product-title">
+          <div className="landing-core__intro">
+            <header>
+              <p className="landing-kicker">Продукт в действии</p>
+              <h2 id="product-title">Не каталог функций, а связный день.</h2>
+              <p>
+                Экран «Сегодня» связывает запланированное действие с фактом выполнения и последующей
+                динамикой.
+              </p>
+              <div className="landing-core__self">
+                <p className="landing-kicker">Занимаетесь самостоятельно?</p>
+                <h3>
+                  План на сегодня, тренировки, питание и отслеживание прогресса — в одном месте.
+                </h3>
+                <p>
+                  Выберите готовую программу или соберите свою. Выполняйте занятия и отслеживайте
+                  фактическую динамику в браузере — Telegram для этого не нужен.
+                </p>
+                <AppLink className="landing-core__self-link" to="/training">
+                  Начать с тренировок <Icon name="arrow-right" size={20} />
+                </AppLink>
+              </div>
+            </header>
+            <div className="landing-core__proof" aria-label="Актуальные Web и Mobile Web экраны">
+              <figure className="landing-core__desktop">
                 <ProductScreenshot
-                  src="/assets/product/landing-today-desktop-light.png"
-                  alt="Экран Сегодня в desktop Web"
-                  width={1280}
-                  height={972}
+                  src={`/assets/product/landing-today-desktop-${colorScheme}.png`}
+                  alt="Актуальный экран Сегодня в desktop Web"
+                  width={1440}
+                  height={900}
                   loading="lazy"
                   fallback="Desktop proof временно недоступен."
                 />
-                <figcaption>Desktop Web · Light</figcaption>
               </figure>
-              <figure className="landing-proof-frame landing-proof-frame--phone">
+              <figure className="landing-core__mobile">
                 <ProductScreenshot
-                  src="/assets/product/landing-workout-mobile-dark.png"
-                  alt="Экран тренировки в Mobile Web"
+                  src={`/assets/product/landing-today-mobile-${colorScheme}.png`}
+                  alt="Актуальный экран Сегодня в Mobile Web"
                   width={390}
                   height={844}
                   loading="lazy"
                   fallback="Mobile proof временно недоступен."
                 />
-                <figcaption>Mobile Web · Dark</figcaption>
               </figure>
+              <div className="landing-core__context">
+                <BrandLogo decorative surface={colorScheme} variant="mark" width={38} height={38} />
+                <span>Один профиль</span>
+                <strong>План → факт → динамика</strong>
+              </div>
             </div>
-          </article>
-
-          <div className="landing-showcase-pair">
-            <article className="landing-showcase-compact">
-              <div className="landing-showcase-copy">
-                <span className="landing-index">02 · Питание</span>
-                <h3>Ориентир рядом с фактическими записями.</h3>
-                <p>
-                  Дневник различает заполненный, неполный и пропущенный день. Калории и КБЖУ
-                  остаются ориентирами, а отсутствие записи не превращается в ноль.
-                </p>
-                <AppLink to="/nutrition">Подробнее о питании</AppLink>
-              </div>
-              <figure className="landing-proof-frame landing-proof-frame--landscape">
-                <ProductScreenshot
-                  src="/assets/product/landing-nutrition-desktop-light.png"
-                  alt="Дневник питания с подготовленными данными"
-                  width={1280}
-                  height={972}
-                  loading="lazy"
-                  fallback="Экран питания временно недоступен."
-                />
-                <figcaption>Демо-кабинет · подготовленные данные</figcaption>
-              </figure>
-            </article>
-
-            <article className="landing-showcase-compact landing-showcase-compact--progress">
-              <div className="landing-showcase-copy">
-                <span className="landing-index">03 · Прогресс</span>
-                <h3>Выводы только там, где хватает данных.</h3>
-                <p>
-                  Тренировки, питание и измерения показаны по периодам. Если записей мало, интерфейс
-                  объяснит ограничение вместо сильного вывода из одной точки.
-                </p>
-                <AppLink to="/progress">Как читать прогресс</AppLink>
-              </div>
-              <figure className="landing-proof-frame landing-proof-frame--phone landing-proof-frame--progress">
-                <ProductScreenshot
-                  src="/assets/product/landing-progress-mobile-light.png"
-                  alt="Прогресс в мобильном демо-кабинете"
-                  width={430}
-                  height={932}
-                  loading="lazy"
-                  fallback="Экран прогресса временно недоступен."
-                />
-                <figcaption>Mobile Web · достаточность данных</figcaption>
-              </figure>
-            </article>
           </div>
 
-          <article className="landing-showcase-chapter landing-showcase-chapter--trainer">
-            <div className="landing-showcase-copy">
-              <span className="landing-index">04 · Работа с тренером</span>
-              <h3>У каждого клиента — видимый контекст.</h3>
-              <p>
-                Тренер приглашает клиента, назначает программу, видит выполненную работу и оставляет
-                комментарий к конкретной тренировке. Режим включается сразу из профиля.
-              </p>
-              <AppLink to="/for-trainers">Возможности тренера</AppLink>
-            </div>
-            <figure className="landing-proof-frame landing-proof-frame--trainer">
-              <ProductScreenshot
-                src="/assets/product/landing-trainer-desktop-light.png"
-                alt="Кабинет тренера с результатом подготовленного демо-клиента"
-                width={1280}
-                height={972}
-                loading="lazy"
-                fallback="Экран кабинета тренера временно недоступен."
-              />
-              <figcaption>Демо тренера · данные не относятся к реальному человеку</figcaption>
-            </figure>
-          </article>
+          <div className="landing-core__features" aria-label="Тренировки, питание и прогресс">
+            {coreFeatures.map((feature) => (
+              <article key={feature.index}>
+                <div className="landing-core__feature-label">
+                  <span>{feature.index}</span>
+                  <Icon name={feature.icon} size={20} />
+                  <small>{feature.label}</small>
+                </div>
+                <h3>{feature.title}</h3>
+                <p>{feature.text}</p>
+                <AppLink to={feature.href}>{feature.linkLabel}</AppLink>
+              </article>
+            ))}
+          </div>
         </section>
 
-        <section id="how-it-works" className="landing-workflow" aria-labelledby="workflow-title">
-          <header className="landing-section-heading">
+        <section className="landing-trainer" aria-labelledby="trainer-title">
+          <div className="landing-trainer__copy">
+            <p className="landing-kicker">04 · Работа с тренером</p>
+            <h2 id="trainer-title">У каждого клиента — видимый контекст.</h2>
+            <p>
+              Тренер включает режим из профиля, приглашает клиента, назначает программу, видит
+              выполненную работу и оставляет комментарии к конкретным тренировкам. CRM, платежи и
+              расписание бизнеса остаются за пределами продукта.
+            </p>
+            <AppLink className="landing-button" to="/for-trainers">
+              Посмотреть кабинет тренера <Icon name="arrow-right" size={20} />
+            </AppLink>
+          </div>
+          <figure className="landing-trainer__proof">
+            <ProductScreenshot
+              src={`/assets/product/landing-trainer-desktop-${colorScheme}.png`}
+              alt="Актуальный кабинет тренера с подготовленными данными клиента"
+              width={1280}
+              height={972}
+              loading="lazy"
+              fallback="Экран кабинета тренера временно недоступен."
+            />
+          </figure>
+        </section>
+
+        <section id="demo" className="landing-start" aria-labelledby="start-title">
+          <header>
             <p className="landing-kicker">Как это работает</p>
-            <h2 id="workflow-title">От настройки — к повторяемому ритму.</h2>
+            <h2 id="start-title">От настройки — к повторяемому ритму.</h2>
           </header>
-          <ol>
-            {workflow.map(([number, title, text]) => (
-              <li key={number}>
-                <span>{number}</span>
-                <div>
-                  <h3>{title}</h3>
-                  <p>{text}</p>
-                </div>
+          <ol className="landing-start__steps">
+            {workflow.map((step) => (
+              <li key={step.number}>
+                <span aria-hidden="true">
+                  <Icon name={step.icon} />
+                </span>
+                <small>{step.number}</small>
+                <h3>{step.title}</h3>
+                <p>{step.text}</p>
               </li>
             ))}
           </ol>
-        </section>
-
-        <section
-          className="landing-audience"
-          aria-label="Сценарии самостоятельной работы и тренера"
-        >
-          <article>
-            <p className="landing-kicker">Занимаетесь самостоятельно?</p>
-            <h2>Держите план, питание и прогресс в одной системе.</h2>
-            <p>
-              Выберите готовую программу или соберите свою. Выполняйте занятия и отслеживайте
-              фактическую динамику в браузере — Telegram для этого не нужен.
-            </p>
-            <AppLink className="landing-button" to="/training">
-              Начать с тренировок
-            </AppLink>
-          </article>
-          <article>
-            <p className="landing-kicker">Вы тренер?</p>
-            <h2>Замените таблицы на контекст по каждому клиенту.</h2>
-            <p>
-              Включите режим тренера сразу после входа, приглашайте клиентов, назначайте программы и
-              разбирайте подтверждённые результаты. CRM, платежи и расписание бизнеса остаются за
-              пределами продукта.
-            </p>
-            <AppLink className="landing-button" to="/for-trainers">
-              Посмотреть кабинет тренера
-            </AppLink>
-          </article>
-        </section>
-
-        <section id="demo" className="landing-demo" aria-labelledby="demo-title">
-          <header className="landing-section-heading landing-section-heading--split">
+          <div className="landing-start__demo">
             <div>
               <p className="landing-kicker">Демо без регистрации</p>
-              <h2 id="demo-title">Три сценария. Никаких реальных данных.</h2>
+              <h3>Три сценария. Никаких реальных данных.</h3>
+              <p>
+                Изменения живут только в отдельной подготовленной сессии и не переносятся в аккаунт.
+                Приглашения, уведомления и действия с реальными пользователями заблокированы.
+              </p>
             </div>
-            <p>
-              Изменения живут только в отдельной подготовленной сессии и не переносятся в аккаунт.
-              Приглашения, уведомления и действия с реальными пользователями заблокированы.
-            </p>
-          </header>
-          <div className="landing-demo-list">
-            {demoScenarios.map((scenario, index) => (
-              <a
-                key={scenario.value}
-                href={cabinetScenarioUrl(demoUrl, scenario.value)}
-                onClick={trackDemoSelection}
-              >
-                <span>{String(index + 1).padStart(2, '0')}</span>
-                <div>
-                  <small>{scenario.eyebrow}</small>
-                  <h3>{scenario.title}</h3>
-                  <p>{scenario.text}</p>
-                </div>
-                <Icon name="arrow-right" size={20} />
-              </a>
-            ))}
+            <nav aria-label="Демо-сценарии">
+              {demoScenarios.map((scenario, index) => (
+                <a
+                  key={scenario.value}
+                  href={cabinetScenarioUrl(demoUrl, scenario.value)}
+                  onClick={trackDemoSelection}
+                >
+                  <span>{String(index + 1).padStart(2, '0')}</span>
+                  <div>
+                    <small>{scenario.eyebrow}</small>
+                    <strong>{scenario.title}</strong>
+                    <p>{scenario.text}</p>
+                  </div>
+                  <Icon name="arrow-right" size={20} />
+                </a>
+              ))}
+            </nav>
           </div>
         </section>
 
-        <section className="landing-platforms" aria-labelledby="platforms-title">
-          <div>
-            <p className="landing-kicker">Один продукт на двух поверхностях</p>
-            <h2 id="platforms-title">
-              Web для полного контекста. Telegram — для быстрых действий.
-            </h2>
-          </div>
-          <div className="landing-platforms__facts">
-            <article>
-              <span aria-hidden="true">
-                <Icon name="web-app" />
+        <section id="faq" className="landing-assurance" aria-labelledby="faq-title">
+          <div className="landing-assurance__platform">
+            <div className="landing-continuity__copy">
+              <p className="landing-kicker">Один продукт на двух поверхностях</p>
+              <h2 id="continuity-title">
+                Web для полного контекста. Telegram — для быстрых действий.
+              </h2>
+              <p>
+                Полный продукт на компьютере и смартфоне без отдельной установки. Telegram Mini App
+                не является отдельным приложением или библиотекой статей: интерфейс, тема и основные
+                данные общие с Mobile Web. Тренировка, питание, краткий прогресс и переход к общению
+                с тренером.
+              </p>
+            </div>
+            <div className="landing-continuity__rail" aria-label="Один аккаунт и общие данные">
+              <span>
+                <Icon name="web-app" /> Web
               </span>
-              <h3>Браузер</h3>
-              <p>Полный продукт на компьютере и смартфоне без отдельной установки.</p>
-            </article>
-            <article>
-              <span aria-hidden="true">
-                <Icon name="mini-app" />
+              <Icon name="sync" size={24} />
+              <strong>Один аккаунт · общие данные</strong>
+              <Icon name="sync" size={24} />
+              <span>
+                <Icon name="mini-app" /> Telegram Mini App
               </span>
-              <h3>Telegram Mini App</h3>
-              <p>Тренировка, питание, краткий прогресс и переход к общению с тренером.</p>
-            </article>
+            </div>
           </div>
-          <p className="landing-platforms__boundary">
-            Telegram Mini App не является отдельным приложением или библиотекой статей: интерфейс,
-            тема и основные данные общие с Mobile Web.
-          </p>
-        </section>
-
-        <section className="landing-knowledge" aria-labelledby="knowledge-title">
-          <header className="landing-section-heading">
-            <p className="landing-kicker">Разобраться до действия</p>
-            <h2 id="knowledge-title">Короткий путь к проверяемому объяснению.</h2>
-            <p>
-              Публичные материалы помогают понять тренировочный план, ориентиры питания и
-              ограничения прогресса. Они не заменяют индивидуальную медицинскую помощь.
-            </p>
-          </header>
-          <nav aria-label="Материалы о продукте и тренировках">
-            <AppLink to="/training">
-              Тренировки и программы <Icon name="arrow-right" size={20} />
-            </AppLink>
-            <AppLink to="/nutrition">
-              Питание и КБЖУ <Icon name="arrow-right" size={20} />
-            </AppLink>
-            <AppLink to="/progress">
-              Прогресс и измерения <Icon name="arrow-right" size={20} />
-            </AppLink>
-            <AppLink to="/knowledge">
-              База знаний <Icon name="arrow-right" size={20} />
-            </AppLink>
-          </nav>
-        </section>
-
-        <section id="faq" className="landing-faq" aria-labelledby="faq-title">
           <header>
             <p className="landing-kicker">Честные ограничения</p>
             <h2 id="faq-title">Перед тем как начать.</h2>
           </header>
-          <div>
-            {faqs.map((item) => (
-              <details key={item.question}>
+          <div className="landing-assurance__grid">
+            <div className="landing-faq-list">
+              {faqs.map((item) => (
+                <details key={item.question}>
+                  <summary>
+                    {item.question}
+                    <Icon name="plus" size={20} />
+                  </summary>
+                  <p>{item.answer}</p>
+                </details>
+              ))}
+            </div>
+            <div className="landing-assurance__details">
+              <details>
                 <summary>
-                  {item.question}
+                  <span>
+                    <small>Разобраться до действия</small>
+                    <strong>Короткий путь к проверяемому объяснению.</strong>
+                  </span>
                   <Icon name="plus" size={20} />
                 </summary>
-                <p>{item.answer}</p>
+                <div>
+                  <p>
+                    Публичные материалы помогают понять тренировочный план, ориентиры питания и
+                    ограничения прогресса. Они не заменяют индивидуальную медицинскую помощь.
+                  </p>
+                  <nav aria-label="Материалы о продукте и тренировках">
+                    <AppLink to="/training">Тренировки и программы</AppLink>
+                    <AppLink to="/nutrition">Питание и КБЖУ</AppLink>
+                    <AppLink to="/progress">Прогресс и измерения</AppLink>
+                    <AppLink to="/knowledge">База знаний</AppLink>
+                  </nav>
+                </div>
               </details>
-            ))}
-          </div>
-        </section>
-
-        <section id="privacy" className="landing-privacy" aria-labelledby="privacy-title">
-          <header className="landing-section-heading">
-            <p className="landing-kicker">Приватность без входа</p>
-            <h2 id="privacy-title">Ваши данные остаются под вашим управлением.</h2>
-            <p>
-              До регистрации можно понять, какие данные использует продукт и какие действия с ними
-              доступны. Вход нужен только для управления конкретным аккаунтом.
-            </p>
-          </header>
-          <div className="landing-privacy__facts">
-            <article>
-              <span>01</span>
-              <h3>Только данные продукта</h3>
-              <p>
-                Профиль, тренировки, питание и прогресс сохраняются после входа и используются для
-                работы функций Your Fitness Coach.
-              </p>
-            </article>
-            <article>
-              <span>02</span>
-              <h3>Демо изолировано</h3>
-              <p>
-                Подготовленные демо-данные не относятся к реальным пользователям и не становятся
-                данными вашего аккаунта.
-              </p>
-            </article>
-            <article>
-              <span>03</span>
-              <h3>Доступны контроль и удаление</h3>
-              <p>
-                После входа в профиле можно экспортировать данные, отвязать способы входа или
-                удалить аккаунт.
-              </p>
-            </article>
+              <details id="privacy">
+                <summary>
+                  <span>
+                    <small>Приватность без входа</small>
+                    <strong>Ваши данные остаются под вашим управлением.</strong>
+                  </span>
+                  <Icon name="plus" size={20} />
+                </summary>
+                <div>
+                  <p>
+                    До регистрации можно понять, какие данные использует продукт и какие действия с
+                    ними доступны. Вход нужен только для управления конкретным аккаунтом.
+                  </p>
+                  <ul>
+                    <li>
+                      <strong>Только данные продукта.</strong> Профиль, тренировки, питание и
+                      прогресс сохраняются после входа и используются для работы функций Your
+                      Fitness Coach.
+                    </li>
+                    <li>
+                      <strong>Демо изолировано.</strong> Подготовленные демо-данные не относятся к
+                      реальным пользователям и не становятся данными вашего аккаунта.
+                    </li>
+                    <li>
+                      <strong>Доступны контроль и удаление.</strong> После входа в профиле можно
+                      экспортировать данные, отвязать способы входа или удалить аккаунт.
+                    </li>
+                  </ul>
+                </div>
+              </details>
+            </div>
           </div>
         </section>
 
@@ -629,11 +617,11 @@ export default function LandingPage() {
             </p>
           </div>
           <div className="landing-contact__actions">
-            <a className="landing-button landing-action" href={appUrl} onClick={trackAppSelection}>
+            <a className="landing-button" href={appUrl} onClick={trackAppSelection}>
               Открыть приложение <Icon name="arrow-right" size={20} />
             </a>
             <a
-              className="landing-button landing-button--secondary landing-action"
+              className="landing-button landing-button--secondary"
               href="https://t.me/your_fitness_coach_bot?start=support"
               target="_blank"
               rel="noreferrer"
@@ -646,15 +634,8 @@ export default function LandingPage() {
 
       <footer className="landing-footer">
         <div className="landing-footer__brand">
-          <a className="landing-brand" href="#top">
-            <BrandLogo
-              className="landing-brand__mark"
-              decorative
-              variant="full"
-              width={36}
-              height={36}
-            />
-            <span>Your Fitness Coach</span>
+          <a className="landing-brand" href="#top" aria-label="Your Fitness Coach — на главную">
+            <BrandLockup className="landing-footer__lockup" markClassName="landing-brand__mark" />
           </a>
           <p>Тренировки, питание и прогресс — самостоятельно или вместе с тренером.</p>
         </div>
@@ -663,6 +644,7 @@ export default function LandingPage() {
           <AppLink to="/nutrition">Питание</AppLink>
           <AppLink to="/knowledge">База знаний</AppLink>
           <a href="#demo">Условия демо</a>
+          <a href="#faq">Вопросы</a>
           <a href="#privacy">Приватность и данные</a>
           <a
             href="https://t.me/your_fitness_coach_bot?start=support"

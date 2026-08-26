@@ -1,24 +1,24 @@
-# Порядок выполнения release backlog v31
+# Порядок выполнения release backlog v32
 
 ## Completed
 
-`00-73`, включая `69B` и предшествующие буквенные подзадачи, а также owner-selected tasks `88-89`.
+`00-73A`, включая `69B` и предшествующие буквенные подзадачи, а также owner-selected tasks `88-89`.
 Task-файлы находятся в `tasks/done/`.
 
 ## Current
 
 ```text
-89A Telegram-новости: финальная композиция поста и exact preview parity [PENDING]
+74 Cross-product responsive, accessibility и states hardening [PENDING]
 ```
 
-После завершения `89A` в owner-selected Telegram news потоке:
+После завершения `74` в основной release-последовательности:
 
 ```text
-90 Еженедельный Telegram-дайджест с отдельным opt-in
+74A Product-wide motion system и анимация data visualization
 ```
 
-Tasks `88-89` завершены по прямому owner decision вне remaining release sequence. Task `89A`
-назначена текущей, но не реализуется в completion run task `89`; `90` также не запускается.
-Remaining release sequence `73A -> 74 -> 74A -> 75 -> 76 -> 76A -> 77 -> 78 -> 79` и остальные
-trigger-gated post-release tasks сохраняют собственные gates. Никакая task не запускает следующую
-автоматически.
+Task `73A` завершена после owner approval; task `74` только назначена и не реализуется в её
+completion run. Remaining release sequence: `74 -> 74A -> 75 -> 76 -> 76A -> 77 -> 78 -> 79`.
+Owner-selected tasks `88-89` завершены вне этой последовательности; `89A` остаётся `PENDING`, но не
+является текущей, а `90` следует после неё только внутри Telegram news потока. Trigger-gated tasks
+сохраняют собственные gates. Никакая task не запускает следующую автоматически.

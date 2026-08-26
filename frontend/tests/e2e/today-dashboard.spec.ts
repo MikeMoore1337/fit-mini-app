@@ -1,5 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 
+const captureLandingProductProofs =
+  (
+    globalThis as typeof globalThis & {
+      process?: { env?: Record<string, string | undefined> };
+    }
+  ).process?.env?.YFC_CAPTURE_LANDING_PRODUCT_PROOFS === '1';
+
 type DashboardState = {
   workout?: 'planned' | 'in_progress' | 'completed' | 'none';
   activeProgram?: boolean;
@@ -274,10 +281,27 @@ async function openDashboard(page: Page) {
 }
 
 test('planned workout starts from the primary Today CTA', async ({ page }) => {
+  if (captureLandingProductProofs) {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.addInitScript(() => localStorage.setItem('app-theme', 'light'));
+  }
   await mockDashboard(page, { workout: 'planned' });
   await openDashboard(page);
 
   await expect(page.getByRole('heading', { name: 'Силовая база' })).toBeVisible();
+  if (captureLandingProductProofs) {
+    await page.screenshot({ path: 'public/assets/product/landing-today-desktop-light.png' });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: 'public/assets/product/landing-today-mobile-light.png' });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
+    await page.screenshot({ path: 'public/assets/product/landing-today-desktop-dark.png' });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: 'public/assets/product/landing-today-mobile-dark.png' });
+    return;
+  }
   await page.getByRole('button', { name: 'Начать тренировку' }).click();
 
   await expect(page.getByText('Текущая тренировка')).toBeVisible();

@@ -58,10 +58,13 @@ test('landing emits a privacy-safe acquisition event without changing the deskto
 
   await page.goto('/');
   await expect(
-    page.getByRole('heading', { level: 1, name: /Знайте, что делать сегодня/i }),
+    page.getByRole('heading', {
+      level: 1,
+      name: 'Знайте, что делать сегодня.',
+    }),
   ).toBeVisible();
   await page.screenshot({
-    path: '../.artifacts/screenshots/task-62/desktop-1440x900-light-landing.png',
+    path: '../.artifacts/screenshots/task-73a/analytics/desktop-1440x900-light-landing.png',
   });
   await page
     .getByRole('link', { name: 'Открыть приложение' })
@@ -160,11 +163,14 @@ test('product and knowledge index heroes stay compact on desktop and mobile', as
         const hero = document.querySelector<HTMLElement>('.public-hero')!;
         const heading = hero.querySelector<HTMLElement>('h1')!;
         const heroStyle = getComputedStyle(hero);
+        const headerStyle = getComputedStyle(header);
         const headerBounds = header.getBoundingClientRect();
         const breadcrumbBounds = breadcrumbList.getBoundingClientRect();
         const heroBounds = hero.getBoundingClientRect();
         return {
           headingSize: Number.parseFloat(getComputedStyle(heading).fontSize),
+          headerDisplay: headerStyle.display,
+          headerBackground: headerStyle.backgroundColor,
           heroHeight: heroBounds.height,
           paddingTop: Number.parseFloat(heroStyle.paddingTop),
           breadcrumbTopGap: breadcrumbBounds.top - headerBounds.bottom,
@@ -172,6 +178,8 @@ test('product and knowledge index heroes stay compact on desktop and mobile', as
         };
       });
       expect(metrics.headingSize).toBeLessThanOrEqual(viewport.maxHeading);
+      expect(metrics.headerDisplay).toBe('grid');
+      expect(metrics.headerBackground).toBe('rgba(0, 0, 0, 0)');
       expect(metrics.heroHeight).toBeLessThanOrEqual(viewport.maxHero);
       expect(metrics.paddingTop).toBeLessThanOrEqual(viewport.width === 1440 ? 80 : 44);
       expect(Math.abs(metrics.breadcrumbTopGap - metrics.breadcrumbBottomGap)).toBeLessThanOrEqual(
