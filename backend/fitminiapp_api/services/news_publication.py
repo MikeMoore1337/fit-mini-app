@@ -30,6 +30,7 @@ from fitminiapp_api.services.news_content import (
     EditorialContent,
     editorial_content_from_metadata,
 )
+from fitminiapp_api.services.news_freshness import source_metadata_is_current_month
 from fitminiapp_api.services.news_images import current_image
 from fitminiapp_api.services.news_ingestion import utcnow
 from fitminiapp_api.services.news_state import transition_news_cluster
@@ -59,10 +60,13 @@ PROHIBITED_EDITORIAL_PATTERNS = (
     "принимайте",
     "назначьте",
     "курс стероид",
-    "анабол",
-    "sarm",
-    "сармы",
+    "стероидный курс",
+    "курс анабол",
+    "курс sarm",
+    "курс сарм",
     "пептидный курс",
+    "схема приема",
+    "схема приёма",
 )
 CLICKBAIT_PATTERNS = ("100%", "гарант", "сенсац", "шокир", "результат без усилий")
 PROCESSING_TTL = timedelta(minutes=10)
@@ -367,6 +371,8 @@ def publication_quality_blockers(
     )
     if not isinstance(draft.evidence_metadata.get("source_published_at"), str):
         blockers.append("source_date_missing")
+    elif not source_metadata_is_current_month(draft.evidence_metadata, now=utcnow()):
+        blockers.append("source_not_current_month")
     if content is not None and draft.evidence_metadata.get("topic") == "research":
         research_context = f"{content.summary} {content.why_it_matters}".casefold()
         if not any(
@@ -525,6 +531,14 @@ def approve_publication(
     if schedule is None:
         return ApprovalResult(status="schedule_invalid")
     scheduled_for_utc, local_date = schedule
+    if not source_metadata_is_current_month(
+        draft.evidence_metadata,
+        now=scheduled_for_utc,
+    ):
+        return ApprovalResult(
+            status="quality_blocked",
+            blockers=("source_not_current_month_at_publication",),
+        )
     reviewer_ref = _reviewer_ref(admin_telegram_user_id)
     key = _idempotency_key(
         draft=draft,
@@ -666,6 +680,22 @@ def claim_due_publications(db: Session, *, limit: int = 5) -> list[str]:
     missed_before = now - timedelta(minutes=settings.news_schedule_missed_minutes)
     for row in candidates:
         cluster = db.get(NewsCluster, row.cluster_id)
+        draft = db.get(NewsDraftRevision, row.text_revision_id)
+        if draft is None or not source_metadata_is_current_month(
+            draft.evidence_metadata,
+            now=now,
+        ):
+            row.status = "failed"
+            row.last_error_code = "source_not_current_month"
+            if cluster is not None:
+                transition_news_cluster(
+                    db,
+                    cluster,
+                    "publication_failed",
+                    reason_code="source_not_current_month",
+                )
+                cluster.delivery_round += 1
+            continue
         if row.publication_mode == "immediate":
             try:
                 publication_timezone = ZoneInfo(row.timezone)

@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 from dataclasses import replace
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import httpx
 import pytest
@@ -35,6 +35,7 @@ from fitminiapp_api.services.news_editorial import (
     prune_news_editorial,
     review_message,
 )
+from fitminiapp_api.services.news_freshness import is_current_month_publication
 from fitminiapp_api.services.news_ingestion import (
     ParsedNewsItem,
     SafeNewsFetcher,
@@ -101,7 +102,7 @@ def _parsed(
         title=title,
         summary=summary,
         publisher="Example Journal",
-        published_at=utcnow() - timedelta(days=1),
+        published_at=utcnow(),
         doi=doi,
     )
 
@@ -111,7 +112,7 @@ def _evidence_packet() -> NewsEvidencePacket:
         cluster_id="cluster-1",
         primary_item_id=1,
         evidence_item_ids=(1,),
-        topic="research",
+        topic="fitness",
         score=70,
         score_reasons=("primary_source",),
         risk_flags=(),
@@ -124,7 +125,7 @@ def _evidence_packet() -> NewsEvidencePacket:
         summary="A controlled study in trained adults.",
         author=None,
         publisher="Example Journal",
-        published_at=utcnow() - timedelta(days=1),
+        published_at=utcnow(),
         doi="10.1000/test.1",
         supporting_sources=(),
     )
@@ -370,6 +371,121 @@ def test_json_feed_parser_accepts_documented_metadata() -> None:
     assert len(items) == 1
     assert items[0].publisher == "Journal API"
     assert items[0].published_at is not None
+
+
+def test_current_month_freshness_gate_rejects_old_missing_and_future_dates() -> None:
+    now = datetime(2026, 8, 26, 12, 0, 0)
+
+    assert is_current_month_publication(datetime(2026, 8, 1), now=now)
+    assert is_current_month_publication(now, now=now)
+    assert not is_current_month_publication(datetime(2026, 7, 31, 23, 59, 59), now=now)
+    assert not is_current_month_publication(None, now=now)
+    assert not is_current_month_publication(datetime(2026, 8, 26, 12, 0, 1), now=now)
+
+
+def test_ingestion_hard_gates_source_outside_current_month() -> None:
+    _create_source()
+    current = datetime(2026, 8, 26, 12, 0, 0)
+    stale = replace(_parsed(), published_at=datetime(2026, 7, 31, 23, 59, 59))
+
+    with get_session_context() as db:
+        source = db.get(NewsSource, "journal-one")
+        assert source is not None
+        counts = ingest_items(
+            db,
+            source,
+            [stale],
+            candidate_threshold=55,
+            fetched_at=current,
+        )
+        cluster = db.query(NewsCluster).one()
+        assert counts["candidate"] == 0
+        assert counts["clustered"] == 1
+        assert cluster.status == "clustered"
+        assert cluster.score == 0
+        assert "source_not_current_month" in cluster.risk_flags
+        assert "freshness_gate_failed" in cluster.score_reasons
+
+
+def test_ingestion_hard_gates_non_channel_topic_even_with_low_threshold() -> None:
+    _create_source()
+    with get_session_context() as db:
+        source = db.get(NewsSource, "journal-one")
+        assert source is not None
+        counts = ingest_items(
+            db,
+            source,
+            [
+                _parsed(
+                    title="Office document workflow update",
+                    summary="A practical recommendation for filing business documents.",
+                )
+            ],
+            candidate_threshold=1,
+        )
+        cluster = db.query(NewsCluster).one()
+        assert counts["candidate"] == 0
+        assert counts["clustered"] == 1
+        assert cluster.topic == "other"
+        assert cluster.score == 0
+        assert "topic_not_allowlisted" in cluster.risk_flags
+
+
+def test_ingestion_accepts_safe_research_in_expanded_channel_topics() -> None:
+    _create_source()
+    with get_session_context() as db:
+        source = db.get(NewsSource, "journal-one")
+        assert source is not None
+        counts = ingest_items(
+            db,
+            source,
+            [
+                _parsed(
+                    title="Systematic review of peptide pharmacology in bodybuilding",
+                    summary=(
+                        "Clinical research reviews anabolic steroid and peptide safety "
+                        "with practical guidance for a new fitness app, without prescribing "
+                        "a protocol."
+                    ),
+                )
+            ],
+            candidate_threshold=55,
+        )
+        cluster = db.query(NewsCluster).one()
+        assert counts["candidate"] == 1
+        assert cluster.topic in {"medicine_pharmacology", "peptides", "bodybuilding"}
+        assert "priority:new_research" in cluster.score_reasons
+        assert "priority:practical" in cluster.score_reasons
+        assert "priority:tools_products" in cluster.score_reasons
+        assert not any(flag.startswith("prohibited_") for flag in cluster.risk_flags)
+
+
+def test_stale_draft_is_not_enqueued_for_owner_review(monkeypatch) -> None:
+    _create_source()
+    cluster_id = _candidate_cluster()
+    monkeypatch.setattr(settings, "news_llm_provider", "disabled")
+    with get_session_context() as db:
+        cluster = db.get(NewsCluster, cluster_id)
+        assert cluster is not None
+        draft = asyncio.run(create_draft_revision(db, cluster))
+        previous_month = utcnow().replace(
+            day=1,
+            hour=0,
+            minute=0,
+            second=0,
+            microsecond=0,
+        ) - timedelta(seconds=1)
+        draft.evidence_metadata = {
+            **draft.evidence_metadata,
+            "source_published_at": previous_month.isoformat(),
+        }
+
+        assert enqueue_review_deliveries(db, {7001}) == 0
+        assert cluster.status == "clustered"
+        assert db.query(NewsReviewDelivery).count() == 0
+        transition = db.query(NewsStateTransition).order_by(NewsStateTransition.id.desc()).first()
+        assert transition is not None
+        assert transition.reason_code == "source_not_current_month"
 
 
 def test_ingestion_rejects_untrusted_item_host_unless_operator_allowlists_it() -> None:

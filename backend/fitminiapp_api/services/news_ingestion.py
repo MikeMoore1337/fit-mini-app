@@ -19,6 +19,7 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from fitminiapp_api.models.news import NewsCluster, NewsItem, NewsSource
+from fitminiapp_api.services.news_freshness import is_current_month_publication
 from fitminiapp_api.services.news_state import transition_news_cluster
 
 MAX_TITLE_CHARS = 500
@@ -41,66 +42,159 @@ PROMPT_INJECTION_PATTERN = re.compile(
     re.IGNORECASE,
 )
 PROHIBITED_PATTERNS = {
-    "aas": re.compile(
-        r"\b(?:anabolic steroid|steroid cycle|sarms?|testosterone cycle|trenbolone|"
-        r"анаболик\w*|стероидн\w* курс\w*|сармы?|тренболон)\b",
+    "prescriptive_aas": re.compile(
+        r"\b(?:(?:steroid|testosterone|trenbolone|sarm)\w*\s+"
+        r"(?:cycle|dosage|protocol)|(?:cycle|dosage|protocol)\s+"
+        r"(?:anabolic\s+)?(?:steroid|testosterone|trenbolone|sarm)\w*|"
+        r"(?:курс|дозировк|схем)\w*\s+(?:анаболик|стероид|тестостерон|тренболон|сарм)\w*|"
+        r"(?:анаболик|стероид|тестостерон|тренболон|сарм)\w*\s+"
+        r"(?:курс|дозировк|схем)\w*)\b",
         re.IGNORECASE,
     ),
-    "pharmacology": re.compile(
+    "prescriptive_pharmacology": re.compile(
         r"\b(?:peptide cycle|drug dosage|prescription protocol|"
-        r"курс пептид\w*|дозировк\w* лекарств\w*|схем\w* лечени\w*)\b",
+        r"курс пептид\w*|дозировк\w* (?:лекарств|пептид)\w*|"
+        r"схем\w* (?:лечени|при[её]м)\w*)\b",
         re.IGNORECASE,
     ),
 }
 TOPIC_KEYWORDS = {
-    "strength": (
+    "fitness": (
+        "fitness",
+        "exercise",
+        "training",
+        "workout",
         "strength",
         "resistance training",
         "hypertrophy",
         "muscle",
-        "силов",
-        "гипертроф",
-        "мышц",
-    ),
-    "nutrition": (
-        "nutrition",
-        "protein",
-        "creatine",
-        "caffeine",
-        "supplement",
-        "питани",
-        "протеин",
-        "креатин",
-        "кофеин",
-    ),
-    "cardio_recovery": (
         "cardio",
         "aerobic",
         "recovery",
         "sleep",
         "running",
+        "фитнес",
+        "трениров",
+        "упражнен",
+        "силов",
+        "гипертроф",
+        "мышц",
         "кардио",
         "восстанов",
         "сон",
         "бег",
     ),
-    "research": (
+    "nutrition": (
+        "nutrition",
+        "diet",
+        "food",
+        "protein",
+        "creatine",
+        "caffeine",
+        "supplement",
+        "питани",
+        "диет",
+        "рацион",
+        "протеин",
+        "креатин",
+        "кофеин",
+        "добавк",
+    ),
+    "medicine_pharmacology": (
+        "medicine",
+        "medical",
+        "clinical",
+        "pharmacology",
+        "medication",
+        "therapy",
+        "patient",
+        "disease",
+        "drug safety",
+        "regulatory",
+        "медицин",
+        "клиническ",
+        "фармаколог",
+        "лекарств",
+        "терапи",
+        "пациент",
+        "заболеван",
+        "регулятор",
+    ),
+    "peptides": (
+        "peptide",
+        "glp-1",
+        "glp 1",
+        "semaglutide",
+        "tirzepatide",
+        "пептид",
+        "гпп-1",
+        "семаглутид",
+        "тирзепатид",
+    ),
+    "bodybuilding": (
+        "bodybuilding",
+        "bodybuilder",
+        "physique competition",
+        "contest prep",
+        "anabolic steroid",
+        "testosterone",
+        "trenbolone",
+        "sarm",
+        "бодибилд",
+        "соревновательн",
+        "анаболик",
+        "стероид",
+        "тестостерон",
+        "тренболон",
+        "сарм",
+    ),
+}
+PRIORITY_KEYWORDS = {
+    "practical": (
+        "practical",
+        "recommend",
+        "guideline",
+        "how to",
+        "примен",
+        "рекоменд",
+        "практич",
+        "инструкц",
+    ),
+    "new_research": (
         "systematic review",
         "meta-analysis",
         "randomized",
-        "guideline",
+        "clinical trial",
+        "study",
+        "research",
         "исследован",
         "метаанализ",
-        "рекомендац",
+        "рандомизир",
+        "клиническ испытан",
     ),
-    "industry_product": (
-        "product update",
-        "industry",
+    "tools_products": (
+        "fitness tool",
+        "training tool",
+        "nutrition tool",
+        "fitness app",
+        "training app",
+        "nutrition app",
+        "health app",
         "wearable",
-        "platform",
-        "обновлен",
-        "индустр",
-        "трекер",
+        "fitness tracker",
+        "training platform",
+        "health platform",
+        "fitness product",
+        "gym equipment",
+        "фитнес-инструмент",
+        "инструмент для трениров",
+        "приложение для трениров",
+        "приложение для питани",
+        "фитнес-трекер",
+        "трекер активности",
+        "фитнес-платформ",
+        "фитнес-продукт",
+        "тренажер",
     ),
 }
 SOURCE_QUALITY = {
@@ -687,15 +781,19 @@ def score_candidate(
         reasons.append(f"topic:{topic}")
     else:
         reasons.append("topic:not_allowlisted")
-    if any(
-        word in text.lower()
-        for word in ("practical", "recommend", "guideline", "примен", "рекоменд")
-    ):
-        score += 10
-        reasons.append("practical_context")
-    if item.published_at and item.published_at >= now - timedelta(days=30):
+        risks.append("topic_not_allowlisted")
+    normalized_text = text.lower()
+    for priority, keywords in PRIORITY_KEYWORDS.items():
+        if any(keyword in normalized_text for keyword in keywords):
+            score += 10
+            reasons.append(f"priority:{priority}")
+    current_month = is_current_month_publication(item.published_at, now=now)
+    if current_month:
         score += 15
-        reasons.append("recent")
+        reasons.append("freshness:current_month")
+    else:
+        risks.append("source_not_current_month")
+        reasons.append("freshness_gate_failed")
     if supporting_source_count > 0:
         score += min(10, supporting_source_count * 5)
         reasons.append("supporting_sources")
@@ -713,6 +811,8 @@ def score_candidate(
     if prohibited:
         score = 0
         reasons.append("prohibited_topic")
+    if not current_month or topic == "other":
+        score = 0
     return max(0, min(100, score)), topic, reasons, list(dict.fromkeys(risks))
 
 

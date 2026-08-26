@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import io
-from datetime import UTC, timedelta
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
@@ -99,7 +99,7 @@ def _source_and_candidate(*, external_id: str = "publication-1") -> str:
                     title=title,
                     summary=summary,
                     publisher="Publishing Journal",
-                    published_at=utcnow() - timedelta(hours=8),
+                    published_at=utcnow(),
                     doi=f"10.1000/{external_id}",
                 )
             ],
@@ -166,6 +166,97 @@ def test_html_renderer_escapes_user_text_and_keeps_source_as_named_link() -> Non
     assert "<b>Почему это важно:</b>" not in artifact.text
     assert "\n\nЭто важно для корректной интерпретации &amp; сравнения.\n\n" in artifact.text
     assert artifact.text.count("https://") == 1
+
+
+def test_review_artifact_blocks_source_outside_current_month() -> None:
+    cluster_id = _source_and_candidate(external_id="stale-review")
+    draft_id, _ = _draft(cluster_id)
+    with get_session_context() as db:
+        draft = db.get(NewsDraftRevision, draft_id)
+        assert draft is not None
+        previous_month = utcnow().replace(
+            day=1,
+            hour=0,
+            minute=0,
+            second=0,
+            microsecond=0,
+        ) - timedelta(seconds=1)
+        draft.evidence_metadata = {
+            **draft.evidence_metadata,
+            "source_published_at": previous_month.isoformat(),
+        }
+
+        review = compose_review_artifact(db, draft, channel_ready=True)
+        assert "source_not_current_month" in review.blockers
+
+
+def test_scheduling_cannot_cross_source_freshness_month(monkeypatch) -> None:
+    cluster_id = _source_and_candidate(external_id="cross-month-schedule")
+    draft_id, _ = _draft(cluster_id)
+    fixed_now = datetime(2026, 8, 26, 12, 0, 0)
+    monkeypatch.setattr(settings, "news_publication_enabled", True)
+    monkeypatch.setattr(settings, "news_channel_id", -1001234567890)
+    monkeypatch.setattr(news_publication, "utcnow", lambda: fixed_now)
+    with get_session_context() as db:
+        draft = db.get(NewsDraftRevision, draft_id)
+        assert draft is not None
+        draft.warnings = []
+        enqueue_review_deliveries(db, {7001})
+        draft.evidence_metadata = {
+            **draft.evidence_metadata,
+            "source_published_at": "2026-08-04T00:00:00",
+        }
+
+        result = approve_publication(
+            db,
+            draft_id=draft.id,
+            expected_image_revision=0,
+            admin_telegram_user_id=7001,
+            mode="scheduled",
+            scheduled_local=datetime(2026, 9, 1, 12, 0, 0),
+            timezone_name="Europe/Moscow",
+            expected_artifact_hash=_artifact_hash(db, draft),
+        )
+
+        assert result.status == "quality_blocked"
+        assert result.blockers == ("source_not_current_month_at_publication",)
+        assert db.query(NewsPublicationSnapshot).count() == 0
+
+
+def test_queued_publication_is_failed_after_month_rollover(monkeypatch) -> None:
+    cluster_id = _source_and_candidate(external_id="month-rollover")
+    draft_id, _ = _draft(cluster_id)
+    august_now = datetime(2026, 8, 26, 12, 0, 0)
+    monkeypatch.setattr(settings, "news_publication_enabled", True)
+    monkeypatch.setattr(settings, "news_channel_id", -1001234567890)
+    monkeypatch.setattr(news_publication, "utcnow", lambda: august_now)
+    with get_session_context() as db:
+        draft = db.get(NewsDraftRevision, draft_id)
+        assert draft is not None
+        draft.warnings = []
+        enqueue_review_deliveries(db, {7001})
+        draft.evidence_metadata = {
+            **draft.evidence_metadata,
+            "source_published_at": "2026-08-04T00:00:00",
+        }
+        approved = approve_publication(
+            db,
+            draft_id=draft.id,
+            expected_image_revision=0,
+            admin_telegram_user_id=7001,
+            mode="immediate",
+            expected_artifact_hash=_artifact_hash(db, draft),
+        )
+        assert approved.snapshot_id is not None
+        snapshot = db.get(NewsPublicationSnapshot, approved.snapshot_id)
+        assert snapshot is not None
+        september_now = datetime(2026, 9, 1, 0, 0, 0)
+        snapshot.next_attempt_at = september_now - timedelta(seconds=1)
+        monkeypatch.setattr(news_publication, "utcnow", lambda: september_now)
+
+        assert claim_due_publications(db) == []
+        assert snapshot.status == "failed"
+        assert snapshot.last_error_code == "source_not_current_month"
 
 
 def test_brand_mark_is_in_the_top_right_safe_area(monkeypatch) -> None:
@@ -390,7 +481,7 @@ def test_cloudflare_free_generation_is_news_specific_and_stores_provenance(monke
         assert request.url.path.endswith("/@cf/black-forest-labs/flux-1-schnell")
         body = request.content.decode()
         assert "Resistance training changed" in body
-        assert "Topic category: strength" in body
+        assert "Topic category: fitness" in body
         assert "publishing-journal.example" not in body
         return httpx.Response(
             200,
@@ -518,8 +609,8 @@ def test_exact_approval_is_idempotent_and_edit_revokes_schedule(monkeypatch) -> 
             expected_image_revision=image_revision,
             admin_telegram_user_id=7001,
             draft_text=draft.draft_text.replace(
-                "Новый материал о силовых тренировках требует редакторской проверки",
-                "Проверенный материал о силовых тренировках",
+                "Новый материал о фитнесе и тренировках требует редакторской проверки",
+                "Проверенный материал о фитнесе и тренировках",
             ),
         )
         assert edited.status == "queued"
@@ -540,7 +631,7 @@ def test_exact_approval_is_idempotent_and_edit_revokes_schedule(monkeypatch) -> 
         )
         assert latest is not None
         assert latest.evidence_metadata["editorial_fields"]["headline"] == (
-            "Проверенный материал о силовых тренировках"
+            "Проверенный материал о фитнесе и тренировках"
         )
         assert latest.evidence_metadata["trusted_source_url"] == (
             "https://publishing-journal.example/publication-1"

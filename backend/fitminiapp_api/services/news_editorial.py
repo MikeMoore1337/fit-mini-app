@@ -25,6 +25,7 @@ from fitminiapp_api.models.news import (
 from fitminiapp_api.services.audit import record_audit_event
 from fitminiapp_api.services.news_content import parse_editorial_content
 from fitminiapp_api.services.news_drafts import quality_warnings
+from fitminiapp_api.services.news_freshness import source_metadata_is_current_month
 from fitminiapp_api.services.news_images import create_uploaded_image_revision, current_image
 from fitminiapp_api.services.news_ingestion import utcnow
 from fitminiapp_api.services.news_publication import (
@@ -490,6 +491,15 @@ def enqueue_review_deliveries(db: Session, admin_telegram_user_ids: set[int]) ->
     for cluster in clusters:
         draft = latest_draft(db, cluster)
         if draft is None:
+            continue
+        if not source_metadata_is_current_month(draft.evidence_metadata, now=now):
+            _cancel_pending_deliveries(db, draft.id)
+            transition_news_cluster(
+                db,
+                cluster,
+                "clustered",
+                reason_code="source_not_current_month",
+            )
             continue
         created_for_cluster = 0
         is_preview_upgrade = False

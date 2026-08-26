@@ -148,8 +148,13 @@ def _rubric(draft: NewsDraftRevision) -> str:
             if value:
                 return value[:48]
     return {
-        "strength": "Силовые тренировки",
+        "fitness": "Фитнес и тренировки",
         "nutrition": "Питание и спортпит",
+        "medicine_pharmacology": "Медицина и фармакология",
+        "peptides": "Пептиды",
+        "bodybuilding": "Бодибилдинг",
+        # Historical topics remain readable for already-created immutable revisions.
+        "strength": "Силовые тренировки",
         "cardio_recovery": "Кардио и восстановление",
         "research": "Исследования",
         "industry_product": "Индустрия и продукты",

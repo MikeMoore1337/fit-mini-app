@@ -16,6 +16,7 @@ from fitminiapp_api.db.session import get_session_context
 from fitminiapp_api.models.news import (
     NewsCluster,
     NewsDraftRevision,
+    NewsItem,
     NewsReviewDelivery,
     NewsSource,
 )
@@ -28,6 +29,7 @@ from fitminiapp_api.services.news_editorial import (
     prune_news_editorial,
     review_message,
 )
+from fitminiapp_api.services.news_freshness import is_current_month_publication
 from fitminiapp_api.services.news_images import create_image_revision
 from fitminiapp_api.services.news_ingestion import (
     SafeNewsFetcher,
@@ -41,6 +43,7 @@ from fitminiapp_api.services.news_publication import (
     mark_publication_succeeded,
     publication_payload,
 )
+from fitminiapp_api.services.news_state import transition_news_cluster
 from fitminiapp_api.services.notifications import safe_delivery_error
 
 logger = logging.getLogger(__name__)
@@ -191,6 +194,18 @@ async def generate_candidate_drafts(client: httpx.AsyncClient) -> int:
                 .first()
             )
             if cluster is None:
+                continue
+            primary = db.get(NewsItem, cluster.primary_item_id)
+            if primary is None or not is_current_month_publication(
+                primary.published_at,
+                now=utcnow(),
+            ):
+                transition_news_cluster(
+                    db,
+                    cluster,
+                    "clustered",
+                    reason_code="source_not_current_month",
+                )
                 continue
             try:
                 draft = await create_draft_revision(db, cluster, client=client)

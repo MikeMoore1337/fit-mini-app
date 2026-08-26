@@ -225,8 +225,13 @@ def quality_warnings(
 
 def _topic_label(topic: str) -> str:
     return {
-        "strength": "силовых тренировках",
+        "fitness": "фитнесе и тренировках",
         "nutrition": "питании и спортивных добавках",
+        "medicine_pharmacology": "медицине и фармакологии",
+        "peptides": "пептидах",
+        "bodybuilding": "бодибилдинге",
+        # Historical topics remain readable for already-created immutable revisions.
+        "strength": "силовых тренировках",
         "cardio_recovery": "кардио и восстановлении",
         "research": "спортивных исследованиях",
         "industry_product": "фитнес-индустрии и продуктах",
