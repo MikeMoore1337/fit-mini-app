@@ -1,4 +1,4 @@
-# Execution status v37
+# Execution status v38
 
 Подтверждённое владельцем состояние на 26.08.2026:
 
@@ -18,10 +18,11 @@
 - [x] owner-selected task `89A` реализовала exact Telegram HTML preview/channel parity, прошла review/QA, реальную staging-публикацию и архивирована после owner approval;
 - [x] owner-selected task `90` реализовала отдельный default-off opt-in, owner-approved weekly digest и мгновенную изолированную отписку, прошла review/QA и архивирована после owner approval;
 - [x] task `74A` внедрила product-wide semantic motion language и data-viz animation, прошла review/QA, получила owner approval и архивирована;
-- [ ] **current:** `74-responsive-accessibility-states.md` — назначена в `PENDING`, реализация не начата;
-- [ ] remaining release tasks `75-79` и остальные post-release tasks сохраняют собственные Trigger, dependency и owner decision.
+- [x] task `74` завершила cross-product responsive/accessibility/states hardening, прошла QA, получила owner screenshot approval и архивирована;
+- [ ] **current:** `75-performance-motion-hardening.md` — назначена в `PENDING`, реализация не начата;
+- [ ] remaining release tasks `76-79` и остальные post-release tasks сохраняют собственные Trigger, dependency и owner decision.
 
-Не выполнять повторно tasks `00-73A`, включая `69B`, task `74A` и tasks `88-90`. Следующей
-pending task назначена `74`: её реализация и lifecycle начинаются только в отдельной сессии.
+Не выполнять повторно tasks `00-74`, включая `69B`, `73A`, task `74A` и tasks `88-90`. Следующей
+pending task назначена `75`: её реализация и lifecycle начинаются только в отдельной сессии.
 Umbrella `91` отдельно не выполняется; `91A` не назначена без собственного Trigger, dependency
 и owner decision. Другие pending tasks автоматически не реализуются.

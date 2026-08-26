@@ -33,6 +33,11 @@ const todayStates = [
   },
 ] as const;
 
+const TASK_74_CAPTURE_PHASE = (
+  globalThis as { process?: { env?: Record<string, string | undefined> } }
+).process?.env?.YFC_CAPTURE_TASK_74_PHASE;
+const TASK_74_SCREENSHOT_DIR = '../.artifacts/screenshots/task-74';
+
 async function expectLimeStartBoundary(locator: Locator) {
   const colors = await locator.evaluate((element) => {
     const sample = document.createElement('span');
@@ -1853,11 +1858,20 @@ test('nutrition quick paths recover in TMA and match Mobile Web before core navi
   await expect(tmaPage.getByRole('heading', { name: 'Питание', exact: true })).toBeVisible();
   await expect(mobilePage.getByRole('heading', { name: 'Питание', exact: true })).toBeVisible();
   expect(await sharedSurfaceSignature(tmaPage)).toEqual(await sharedSurfaceSignature(mobilePage));
-  for (const currentPage of [tmaPage, mobilePage]) {
+  for (const [surface, currentPage] of [
+    ['mock-tma', tmaPage],
+    ['mobile-web', mobilePage],
+  ] as const) {
     const week = currentPage.getByRole('navigation', { name: 'Неделя дневника' });
     await expect(week.locator('button[aria-current="date"]')).toBeVisible();
     await expect(week.locator('button[aria-pressed="true"]')).toBeVisible();
     await expect(currentPage.getByRole('navigation', { name: 'Дата дневника' })).not.toBeAttached();
+    if (TASK_74_CAPTURE_PHASE) {
+      await currentPage.evaluate(() => window.scrollTo(0, 0));
+      await currentPage.screenshot({
+        path: `${TASK_74_SCREENSHOT_DIR}/${TASK_74_CAPTURE_PHASE}-${surface}-390x844-light-nutrition-week.png`,
+      });
+    }
     expect(
       await week.evaluate((element) => {
         const style = getComputedStyle(element);
@@ -1925,6 +1939,11 @@ test('nutrition quick paths recover in TMA and match Mobile Web before core navi
   await tmaPage.screenshot({
     path: '../.artifacts/screenshots/task-62/tma-390x844-dark-food-logged.png',
   });
+  if (TASK_74_CAPTURE_PHASE === 'after') {
+    await tmaPage.screenshot({
+      path: `${TASK_74_SCREENSHOT_DIR}/mock-tma-390x844-dark-food-logged.png`,
+    });
+  }
   const analyticsEvents = await tmaPage.evaluate(
     () =>
       (

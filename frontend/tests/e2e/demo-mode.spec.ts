@@ -22,6 +22,10 @@ const CABINET_CAPTURE =
   (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
     ?.YFC_CAPTURE_TASK_69A === '1';
 const CABINET_SCREENSHOT_DIR = '../.artifacts/screenshots/task-69a';
+const TASK_74_CAPTURE =
+  (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
+    ?.YFC_CAPTURE_TASK_74 === '1';
+const TASK_74_SCREENSHOT_DIR = '../.artifacts/screenshots/task-74';
 const TASK_74A_DEMO_VIDEO =
   (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
     ?.YFC_CAPTURE_TASK_74A_DEMO === '1';
@@ -637,6 +641,16 @@ test('Web cabinet preview uses production shell across the required viewport mat
     ) {
       await page.screenshot({
         path: `${CABINET_SCREENSHOT_DIR}/${viewport.name}-today.png`,
+      });
+    }
+    if (
+      TASK_74_CAPTURE &&
+      ['mobile-360-light', 'mobile-390-dark', 'desktop-1280-light', 'desktop-1440-dark'].includes(
+        viewport.name,
+      )
+    ) {
+      await page.screenshot({
+        path: `${TASK_74_SCREENSHOT_DIR}/cabinet-${viewport.name}-today.png`,
       });
     }
     if (viewport.width >= 900) {

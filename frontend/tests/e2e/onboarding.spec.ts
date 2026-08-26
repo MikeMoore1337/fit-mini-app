@@ -188,7 +188,7 @@ test('returning user skips onboarding, while the first-run layout stays responsi
   await mockOnboardingApi(page, 'complete');
   await page.goto('/app');
   await expect(page).toHaveURL('/app');
-  await expect(page.getByRole('heading', { name: /^Сегодня/ })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /^Сегодня ·/ })).toBeVisible();
 
   await page.unroute('**/api/v1/**');
   await mockOnboardingApi(page, 'required');

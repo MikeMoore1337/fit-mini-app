@@ -2501,7 +2501,7 @@ body.public-shell-mode.public-shell-mode:has(.auth-public-shell--design-v2) {
 
   .week-strip {
     gap: var(--v2-space-1);
-    padding: 0;
+    padding: 0 0 var(--v2-space-2);
     border-width: 0 0 1px;
     border-radius: 0;
     background: transparent;

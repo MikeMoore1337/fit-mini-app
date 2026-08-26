@@ -313,7 +313,9 @@ test('valid Telegram launch authenticates automatically without browser Login', 
 test('linking callback показывает success и conflict без raw данных', async ({ page }) => {
   await mockAuthApi(page, { authenticated: true });
   await page.goto('/app?auth_linked=google');
-  await expect(page.getByRole('status')).toContainText('Google привязан к аккаунту');
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Google привязан к аккаунту' }),
+  ).toBeVisible();
 
   await page.goto('/app?auth_error=conflict&identity=provider-secret');
   await expect(page.getByRole('alert')).toContainText(

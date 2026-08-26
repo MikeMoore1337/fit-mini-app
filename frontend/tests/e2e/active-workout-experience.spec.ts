@@ -298,7 +298,7 @@ test('active workout keeps one obvious next action through logging, timer and fi
   await thirdSet.getByRole('spinbutton', { name: 'Повторы, Жим штанги лёжа, подход 3' }).fill('10');
   await thirdSet.getByRole('button', { name: 'Завершить: Жим штанги лёжа, подход 3' }).click();
 
-  await expect(page.getByText('Все подходы выполнены')).toBeVisible();
+  await expect(page.getByText('Все подходы отмечены — можно завершать.')).toBeVisible();
   await expect(page.getByText('Синхронизировано')).toBeVisible();
   await page.getByRole('button', { name: 'Завершить тренировку' }).click();
   const completedHeading = page.getByRole('heading', { name: 'Тренировка завершена' });

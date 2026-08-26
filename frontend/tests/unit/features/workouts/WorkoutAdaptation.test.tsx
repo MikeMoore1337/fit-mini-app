@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -97,12 +97,12 @@ describe('WorkoutAdaptation', () => {
 
     await openTimePreview(user);
 
-    expect(screen.getByRole('list', { name: 'Сравнение тренировки' })).toHaveTextContent(
-      '32 мин→18 мин',
-    );
-    expect(screen.getByRole('list', { name: 'Сравнение тренировки' })).toHaveTextContent(
-      'Разведение гантелей→Убрать',
-    );
+    const comparison = screen.getByRole('list', { name: 'Сравнение тренировки' });
+    expect(within(comparison).getByText('32 мин')).toBeInTheDocument();
+    expect(within(comparison).getByText('18 мин')).toBeInTheDocument();
+    expect(within(comparison).getByText('Разведение гантелей')).toBeInTheDocument();
+    expect(within(comparison).getByText('Убрать')).toBeInTheDocument();
+    expect(comparison.querySelectorAll('[data-icon="arrow-right"]')).toHaveLength(2);
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
     await user.click(screen.getByRole('button', { name: 'Отмена' }));

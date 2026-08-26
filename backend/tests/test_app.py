@@ -3339,6 +3339,20 @@ def test_csp_blocks_unhashed_inline_scripts(client):
     inline_sources = re.findall(r"<script(?:\s+[^>]*)?>([\s\S]*?)</script>", html)
     assert all(not source.strip() for source in inline_sources)
 
+    source_template = (Path(__file__).resolve().parents[2] / "frontend" / "index.html").read_text(
+        encoding="utf-8"
+    )
+    assert '<script src="/assets/theme-bootstrap-20260826.js"></script>' in source_template
+    source_inline_scripts = re.findall(r"<script(?:\s+[^>]*)?>([\s\S]*?)</script>", source_template)
+    assert all(not source.strip() for source in source_inline_scripts)
+    assert (
+        Path(__file__).resolve().parents[2]
+        / "frontend"
+        / "public"
+        / "assets"
+        / "theme-bootstrap-20260826.js"
+    ).is_file()
+
     api_client = (
         Path(__file__).resolve().parents[2] / "frontend" / "src" / "shared" / "api" / "client.ts"
     ).read_text(encoding="utf-8")
