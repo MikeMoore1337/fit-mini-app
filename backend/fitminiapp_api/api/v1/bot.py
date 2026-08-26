@@ -326,6 +326,7 @@ def act_on_news_revision_from_bot(
             scheduled_local=payload.scheduled_local,
             timezone_name=payload.timezone,
             urgent_override=payload.urgent_override,
+            expected_artifact_hash=payload.expected_artifact_hash or "",
         )
         return BotNewsRevisionActionResponse(
             status=approval.status,

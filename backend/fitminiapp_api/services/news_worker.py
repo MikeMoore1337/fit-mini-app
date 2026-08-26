@@ -19,14 +19,16 @@ from fitminiapp_api.models.news import (
     NewsReviewDelivery,
     NewsSource,
 )
+from fitminiapp_api.services.audit import record_audit_event
 from fitminiapp_api.services.news_drafts import create_draft_revision
 from fitminiapp_api.services.news_editorial import (
+    compose_review_artifact,
     editorial_actor_ref,
     enqueue_review_deliveries,
     prune_news_editorial,
     review_message,
 )
-from fitminiapp_api.services.news_images import create_image_revision, current_image
+from fitminiapp_api.services.news_images import create_image_revision
 from fitminiapp_api.services.news_ingestion import (
     SafeNewsFetcher,
     SourceFetchError,
@@ -290,7 +292,8 @@ def _claim_deliveries() -> list[int]:
 async def deliver_review_queue(
     client: httpx.AsyncClient,
     send_message: Callable[..., Awaitable[int | None]],
-    send_photo: Callable[..., Awaitable[int | None]],
+    send_preview: Callable[..., Awaitable[PublicationResult]],
+    channel_ready: bool,
 ) -> int:
     recipient_ids = {
         editorial_actor_ref(telegram_id): telegram_id
@@ -315,15 +318,34 @@ async def deliver_review_queue(
                 delivery.status = "cancelled"
                 delivery.processing_started_at = None
                 continue
-            message, _, markup = review_message(db, draft)
-            image = current_image(db, cluster)
-            image_data = image.image_data if image is not None else None
+            review = compose_review_artifact(db, draft, channel_ready=channel_ready)
+            message, _, markup = review_message(db, draft, channel_ready=channel_ready)
+            image_data = review.image.image_data if review.image is not None else None
+            preview_message_id = delivery.telegram_message_id
+            artifact = review.artifact
+            artifact_hash = review.artifact_hash
+            draft_resource_id = draft.id
+            text_revision = draft.revision
+            image_revision = cluster.current_image_revision
             attempt_count = delivery.attempt_count
             queue_age = max(0, round((utcnow() - delivery.created_at).total_seconds()))
         try:
-            if image_data is not None:
-                await send_photo(client, chat_id, image_data)
-            message_id = await send_message(
+            if artifact is not None and preview_message_id is None:
+                preview_result = await send_preview(
+                    client,
+                    chat_id,
+                    artifact.text,
+                    image_data,
+                    parse_mode=artifact.parse_mode,
+                    link_preview_disabled=artifact.link_preview_disabled,
+                )
+                preview_message_id = preview_result.message_id
+                with get_session_context() as db:
+                    current_delivery = db.get(NewsReviewDelivery, delivery_id)
+                    if current_delivery is None or current_delivery.status != "processing":
+                        continue
+                    current_delivery.telegram_message_id = preview_message_id
+            control_message_id = await send_message(
                 client,
                 chat_id,
                 message,
@@ -361,9 +383,22 @@ async def deliver_review_queue(
                 continue
             delivery.status = "sent"
             delivery.sent_at = utcnow()
-            delivery.telegram_message_id = message_id
+            delivery.telegram_message_id = preview_message_id or control_message_id
             delivery.processing_started_at = None
             delivery.last_error_code = None
+            record_audit_event(
+                db,
+                action="news.preview_created",
+                resource_type="news_draft_revision",
+                resource_id=draft_resource_id,
+                details={
+                    "artifact_hash": artifact_hash,
+                    "preview_message_id": preview_message_id,
+                    "control_message_id": control_message_id,
+                    "text_revision": text_revision,
+                    "image_revision": image_revision,
+                },
+            )
         delivered += 1
         logger.info(
             "news_review_delivery_succeeded",
@@ -490,7 +525,7 @@ async def publish_due_snapshots(
 async def run_news_pipeline_once(
     *,
     send_message: Callable[..., Awaitable[int | None]],
-    send_photo: Callable[..., Awaitable[int | None]],
+    send_preview: Callable[..., Awaitable[PublicationResult]],
     send_publication: Callable[..., Awaitable[PublicationResult]],
     publication_ready: bool,
     fetch_sources: bool,
@@ -514,7 +549,9 @@ async def run_news_pipeline_once(
         await generate_pending_images(client)
         with get_session_context() as db:
             enqueue_review_deliveries(db, settings.admin_telegram_id_set)
-        delivered = await deliver_review_queue(client, send_message, send_photo)
+        delivered = await deliver_review_queue(
+            client, send_message, send_preview, publication_ready
+        )
     logger.info(
         "news_pipeline_cycle_completed",
         extra={

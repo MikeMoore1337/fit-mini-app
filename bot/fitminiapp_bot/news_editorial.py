@@ -16,7 +16,9 @@ from .config import settings
 
 router = Router()
 NEWS_CALLBACK_PATTERN = re.compile(r"news:([sdra]):([0-9a-f]{32})\Z")
-PUBLISHING_CALLBACK_PATTERN = re.compile(r"newsp:([pcesiunvxq]):([0-9a-f]{32}):(\d{1,5})\Z")
+PUBLISHING_CALLBACK_PATTERN = re.compile(
+    r"newsp:([pcesiunvxqz]):([0-9a-f]{32}):(\d{1,5})(?::([0-9a-f]{16}))?\Z"
+)
 POST_CALLBACK_PATTERN = re.compile(r"newspost:([edc]):([0-9a-f]{32})\Z")
 RECONCILE_CALLBACK_PATTERN = re.compile(r"newsrec:([rt]):([0-9a-f]{32})\Z")
 SCHEDULE_INPUT_PATTERN = re.compile(
@@ -48,6 +50,7 @@ STATUS_TEXT = {
 class NewsEditorialStates(StatesGroup):
     awaiting_text = State()
     awaiting_schedule = State()
+    awaiting_schedule_confirmation = State()
     awaiting_image = State()
     awaiting_post_text = State()
     awaiting_reconcile_message_id = State()
@@ -89,6 +92,7 @@ async def revision_action(
     admin_telegram_user_id: int,
     action: str,
     image_revision: int,
+    artifact_hash: str | None = None,
     scheduled_local: str | None = None,
     timezone: str | None = None,
 ) -> tuple[str, list[str]]:
@@ -97,6 +101,8 @@ async def revision_action(
         "action": action,
         "expected_image_revision": image_revision,
     }
+    if artifact_hash is not None:
+        body["expected_artifact_hash"] = artifact_hash
     if scheduled_local is not None:
         body["scheduled_local"] = scheduled_local
     if timezone is not None:
@@ -174,6 +180,24 @@ def _state_expired(data: dict[str, object]) -> bool:
     )
 
 
+def _control_channel_line(message: Message) -> str:
+    text = getattr(message, "text", None) or getattr(message, "caption", None)
+    if isinstance(text, str):
+        for line in text.splitlines():
+            if line.startswith("Канал: "):
+                return line
+    return "Канал: server-side config"
+
+
+def _control_revision_line(message: Message, *, draft_id: str, image_revision: int) -> str:
+    text = getattr(message, "text", None) or getattr(message, "caption", None)
+    if isinstance(text, str):
+        for line in text.splitlines():
+            if line.startswith("Материал ") and " · text r" in line and " · image r" in line:
+                return line
+    return f"Материал {draft_id[:8]} · image r{image_revision}"
+
+
 @router.callback_query(F.data.startswith("news:"))
 async def news_editorial_callback(callback: CallbackQuery) -> None:
     telegram_user_id = callback.from_user.id
@@ -222,25 +246,26 @@ async def news_publishing_callback(callback: CallbackQuery, state: FSMContext) -
     if match is None:
         await callback.answer("Некорректное действие", show_alert=True)
         return
-    action, draft_id, revision_text = match.groups()
+    action, draft_id, revision_text, artifact_hash = match.groups()
     image_revision = int(revision_text)
+    if action in {"p", "s", "c", "z"} and artifact_hash is None:
+        await callback.answer("Preview устарел: откройте новую карточку", show_alert=True)
+        return
+
     if action == "p":
-        card_preview = getattr(callback.message, "text", None) or getattr(
-            callback.message, "caption", None
-        )
         confirmation_text = (
-            "Подтвердите отправку показанной text/image revision в staging-канал. "
-            "Это служебный plain payload task 89; production и финальный formatted preview "
-            "заблокированы до отдельного approval gate."
+            "Подтвердите публикацию exact preview.\n"
+            f"{_control_channel_line(callback.message)}\n"
+            "Режим: опубликовать сейчас\n"
+            f"{_control_revision_line(callback.message, draft_id=draft_id, image_revision=image_revision)}\n"
+            f"Artifact: {artifact_hash}"
         )
-        if isinstance(card_preview, str) and card_preview:
-            confirmation_text += f"\n\n{card_preview[:3200]}"
         markup = InlineKeyboardMarkup(
             inline_keyboard=[
                 [
                     InlineKeyboardButton(
                         text="Подтвердить публикацию",
-                        callback_data=f"newsp:c:{draft_id}:{image_revision}",
+                        callback_data=(f"newsp:c:{draft_id}:{image_revision}:{artifact_hash}"),
                     )
                 ],
                 [InlineKeyboardButton(text="Отмена", callback_data=f"newsp:n:{draft_id}:99999")],
@@ -260,6 +285,13 @@ async def news_publishing_callback(callback: CallbackQuery, state: FSMContext) -
             {
                 "draft_id": draft_id,
                 "image_revision": image_revision,
+                "artifact_hash": artifact_hash,
+                "channel_line": _control_channel_line(callback.message),
+                "revision_line": _control_revision_line(
+                    callback.message,
+                    draft_id=draft_id,
+                    image_revision=image_revision,
+                ),
                 "started_at": time.monotonic(),
             }
         )
@@ -270,6 +302,34 @@ async def news_publishing_callback(callback: CallbackQuery, state: FSMContext) -
         }[action]
         await callback.message.answer(prompt)
         await callback.answer()
+        return
+    if action == "z":
+        data = await state.get_data()
+        if (
+            _state_expired(data)
+            or data.get("draft_id") != draft_id
+            or data.get("image_revision") != image_revision
+            or data.get("artifact_hash") != artifact_hash
+        ):
+            await state.clear()
+            await callback.answer("Подтверждение устарело", show_alert=True)
+            return
+        status, blockers = await revision_action(
+            draft_id=draft_id,
+            admin_telegram_user_id=callback.from_user.id,
+            action="schedule",
+            image_revision=image_revision,
+            artifact_hash=artifact_hash,
+            scheduled_local=str(data["scheduled_local"]),
+            timezone=str(data["timezone"]),
+        )
+        await state.clear()
+        message = STATUS_TEXT.get(status, STATUS_TEXT["unavailable"])
+        if blockers:
+            message += ": " + ", ".join(blockers[:5])
+        if status in {"scheduled", "already_queued"}:
+            await callback.message.edit_reply_markup(reply_markup=None)
+        await callback.answer(message, show_alert=status in {"unavailable", "quality_blocked"})
         return
     if action == "n" and image_revision == 99999:
         await callback.message.edit_reply_markup(reply_markup=None)
@@ -310,8 +370,13 @@ async def news_publishing_callback(callback: CallbackQuery, state: FSMContext) -
         admin_telegram_user_id=callback.from_user.id,
         action=api_action,
         image_revision=image_revision,
+        artifact_hash=artifact_hash,
     )
-    message = STATUS_TEXT.get(status, STATUS_TEXT["unavailable"])
+    message = (
+        "Публикация поставлена в очередь"
+        if action == "c" and status == "queued"
+        else STATUS_TEXT.get(status, STATUS_TEXT["unavailable"])
+    )
     if blockers:
         message += ": " + ", ".join(blockers[:5])
     if status in {"queued", "scheduled", "already_queued"}:
@@ -415,19 +480,45 @@ async def news_schedule_input(message: Message, state: FSMContext) -> None:
         await message.answer("Формат: 2026-08-26 12:00 Europe/Moscow")
         return
     local_value = f"{match.group(1)}T{match.group(2)}:00"
-    status, blockers = await revision_action(
-        draft_id=str(data["draft_id"]),
-        admin_telegram_user_id=user.id,
-        action="schedule",
-        image_revision=int(data["image_revision"]),
-        scheduled_local=local_value,
-        timezone=match.group(3),
+    artifact_hash = data.get("artifact_hash")
+    if not isinstance(artifact_hash, str) or not re.fullmatch(r"[0-9a-f]{16}", artifact_hash):
+        await state.clear()
+        await message.answer("Preview устарел: откройте новую карточку")
+        return
+    timezone = match.group(3)
+    await state.set_state(NewsEditorialStates.awaiting_schedule_confirmation)
+    await state.set_data(
+        {
+            **data,
+            "scheduled_local": local_value,
+            "timezone": timezone,
+            "started_at": time.monotonic(),
+        }
     )
-    await state.clear()
-    text = STATUS_TEXT.get(status, STATUS_TEXT["unavailable"])
-    if blockers:
-        text += ": " + ", ".join(blockers[:5])
-    await message.answer(text)
+    revision_line = data.get("revision_line")
+    if not isinstance(revision_line, str):
+        revision_line = f"Материал {str(data['draft_id'])[:8]} · image r{data['image_revision']}"
+
+    await message.answer(
+        "Подтвердите публикацию точного preview по расписанию.\n"
+        f"{data.get('channel_line', 'Канал: server-side config')}\n"
+        f"Время: {match.group(1)} {match.group(2)}\n"
+        f"Timezone: {timezone}\n"
+        f"{revision_line}\n"
+        f"Artifact: {artifact_hash}",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="Подтвердить расписание",
+                        callback_data=(
+                            f"newsp:z:{data['draft_id']}:{data['image_revision']}:{artifact_hash}"
+                        ),
+                    )
+                ]
+            ]
+        ),
+    )
 
 
 @router.message(NewsEditorialStates.awaiting_text, F.text, ~F.text.startswith("/"))

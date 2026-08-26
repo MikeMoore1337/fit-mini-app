@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import html
 import logging
+import re
 import secrets
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from typing import Literal
+from urllib.parse import urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy import text
@@ -23,7 +26,10 @@ from fitminiapp_api.models.news import (
     NewsReviewDelivery,
 )
 from fitminiapp_api.services.audit import record_audit_event
-from fitminiapp_api.services.news_content import editorial_content_from_metadata
+from fitminiapp_api.services.news_content import (
+    EditorialContent,
+    editorial_content_from_metadata,
+)
 from fitminiapp_api.services.news_images import current_image
 from fitminiapp_api.services.news_ingestion import utcnow
 from fitminiapp_api.services.news_state import transition_news_cluster
@@ -61,6 +67,10 @@ PROHIBITED_EDITORIAL_PATTERNS = (
 CLICKBAIT_PATTERNS = ("100%", "гарант", "сенсац", "шокир", "результат без усилий")
 PROCESSING_TTL = timedelta(minutes=10)
 MAX_PUBLICATION_ATTEMPTS = 5
+PUBLICATION_RENDERER_VERSION = "news-publication-html-v1"
+TELEGRAM_MESSAGE_LIMIT = 4096
+TELEGRAM_PHOTO_CAPTION_LIMIT = 1024
+ARTIFACT_HASH_PREFIX_LENGTH = 16
 
 
 @dataclass(frozen=True)
@@ -81,6 +91,26 @@ class PublicationPayload:
     link_preview_disabled: bool
     image_data: bytes | None
     image_content_type: str | None
+
+
+@dataclass(frozen=True)
+class PublicationArtifact:
+    text: str
+    renderer_version: str
+    transport: Literal["message", "photo"]
+    parse_mode: Literal["HTML"]
+    link_preview_disabled: bool
+    visible_length: int
+    limit: int
+
+
+@dataclass(frozen=True)
+class PublicationComposition:
+    artifact: PublicationArtifact | None
+    blockers: tuple[str, ...] = ()
+    transport: Literal["message", "photo"] | None = None
+    visible_length: int | None = None
+    limit: int | None = None
 
 
 def _cancel_review_deliveries(db: Session, cluster_id: str) -> None:
@@ -171,9 +201,143 @@ def _schedule_utc(
     return scheduled_utc, first.date()
 
 
-def publication_preview_text(draft: NewsDraftRevision) -> str:
-    """Return the provisional task-89 payload without mutating task-88 editorial content."""
-    return draft.draft_text.rstrip()
+def _telegram_character_count(value: str) -> int:
+    """Count UTF-16 code units, matching Telegram entity offset semantics."""
+    return len(value.encode("utf-16-le")) // 2
+
+
+def _credential_free_https_url(value: str) -> bool:
+    if any(character in value for character in "\r\n<>\"'"):
+        return False
+    parsed = urlparse(value)
+    return bool(
+        parsed.scheme == "https"
+        and parsed.hostname
+        and parsed.username is None
+        and parsed.password is None
+    )
+
+
+def _normalized_paragraphs(value: str) -> tuple[str, ...]:
+    return tuple(
+        " ".join(paragraph.split())
+        for paragraph in re.split(r"\n\s*\n", value.strip())
+        if paragraph.strip()
+    )
+
+
+def _sentence_count(value: str) -> int:
+    normalized = " ".join(value.split())
+    if not normalized:
+        return 0
+    return len([part for part in re.split(r"(?<=[.!?])\s+", normalized) if part])
+
+
+def compose_editorial_artifact(
+    content: EditorialContent,
+    image: NewsImageRevision | None,
+    *,
+    trusted_source_url: str,
+) -> PublicationComposition:
+    blockers: list[str] = []
+    if content.source_url != trusted_source_url:
+        blockers.append("trusted_source_mismatch")
+    if not _credential_free_https_url(trusted_source_url):
+        blockers.append("trusted_source_invalid")
+    paragraphs = _normalized_paragraphs(content.summary)
+    if not 1 <= len(paragraphs) <= 2:
+        blockers.append("summary_paragraph_count_invalid")
+    why_it_matters = " ".join(content.why_it_matters.split())
+    if _sentence_count(why_it_matters) > 1:
+        blockers.append("why_it_matters_sentence_count_invalid")
+    if blockers:
+        return PublicationComposition(artifact=None, blockers=tuple(dict.fromkeys(blockers)))
+
+    headline = " ".join(content.headline.split())
+    html_parts = [f"<b>{html.escape(headline, quote=False)}</b>"]
+    visible_parts = [headline]
+    for paragraph in paragraphs:
+        html_parts.append(html.escape(paragraph, quote=False))
+        visible_parts.append(paragraph)
+    if why_it_matters:
+        html_parts.append(html.escape(why_it_matters, quote=False))
+        visible_parts.append(why_it_matters)
+    html_parts.append(f'<a href="{html.escape(trusted_source_url, quote=True)}">Источник</a>')
+    visible_parts.append("Источник")
+    rendered = "\n\n".join(html_parts)
+    visible_length = _telegram_character_count("\n\n".join(visible_parts))
+    transport: Literal["message", "photo"] = "photo" if image is not None else "message"
+    limit = TELEGRAM_PHOTO_CAPTION_LIMIT if image is not None else TELEGRAM_MESSAGE_LIMIT
+    if visible_length > limit:
+        blocker = (
+            "telegram_photo_caption_too_long" if image is not None else "telegram_message_too_long"
+        )
+        return PublicationComposition(
+            artifact=None,
+            blockers=(blocker,),
+            transport=transport,
+            visible_length=visible_length,
+            limit=limit,
+        )
+    return PublicationComposition(
+        artifact=PublicationArtifact(
+            text=rendered,
+            renderer_version=PUBLICATION_RENDERER_VERSION,
+            transport=transport,
+            parse_mode="HTML",
+            link_preview_disabled=True,
+            visible_length=visible_length,
+            limit=limit,
+        ),
+        transport=transport,
+        visible_length=visible_length,
+        limit=limit,
+    )
+
+
+def compose_publication_artifact(
+    draft: NewsDraftRevision,
+    image: NewsImageRevision | None,
+    *,
+    trusted_source_url: str,
+) -> PublicationComposition:
+    content = editorial_content_from_metadata(
+        draft.evidence_metadata,
+        fallback_text=draft.draft_text,
+    )
+    if content is None:
+        return PublicationComposition(
+            artifact=None,
+            blockers=("editorial_structure_invalid",),
+        )
+    return compose_editorial_artifact(
+        content,
+        image,
+        trusted_source_url=trusted_source_url,
+    )
+
+
+def publication_content_hash(
+    artifact: PublicationArtifact,
+    *,
+    image_sha256: str | None,
+    channel_id: int,
+) -> str:
+    return hashlib.sha256(
+        "\x00".join(
+            (
+                artifact.text,
+                image_sha256 or "none",
+                str(channel_id),
+                artifact.renderer_version,
+                artifact.transport,
+                artifact.parse_mode,
+                "link-preview-disabled"
+                if artifact.link_preview_disabled
+                else "link-preview-default",
+            )
+        ).encode("utf-8")
+    ).hexdigest()
 
 
 def publication_quality_blockers(
@@ -191,15 +355,16 @@ def publication_quality_blockers(
         if warning in CRITICAL_DRAFT_WARNINGS
     )
     text_value = draft.draft_text
-    rendered = publication_preview_text(draft)
+    composition = compose_publication_artifact(
+        draft,
+        image,
+        trusted_source_url=trusted_source_url,
+    )
+    blockers.extend(composition.blockers)
     content = editorial_content_from_metadata(
         draft.evidence_metadata,
         fallback_text=text_value,
     )
-    if content is None:
-        blockers.append("editorial_structure_invalid")
-    elif content.source_url != trusted_source_url:
-        blockers.append("trusted_source_mismatch")
     if not isinstance(draft.evidence_metadata.get("source_published_at"), str):
         blockers.append("source_date_missing")
     if content is not None and draft.evidence_metadata.get("topic") == "research":
@@ -214,10 +379,6 @@ def publication_quality_blockers(
         blockers.append("prohibited_medical_or_aas_language")
     if any(pattern in lowered for pattern in CLICKBAIT_PATTERNS):
         blockers.append("clickbait_or_guarantee_language")
-    if image is not None and len(rendered) > 1024:
-        blockers.append("telegram_photo_caption_too_long")
-    if image is None and len(rendered) > 4096:
-        blockers.append("telegram_message_too_long")
     return tuple(dict.fromkeys(blockers))
 
 
@@ -230,6 +391,7 @@ def _idempotency_key(
     scheduled_for_utc: datetime,
     reviewer_ref: str,
     urgent_override: bool,
+    content_hash: str,
 ) -> str:
     value = ":".join(
         (
@@ -240,6 +402,7 @@ def _idempotency_key(
             scheduled_for_utc.isoformat(timespec="seconds"),
             reviewer_ref,
             "urgent" if urgent_override else "normal",
+            content_hash,
         )
     )
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
@@ -255,6 +418,7 @@ def approve_publication(
     scheduled_local: datetime | None = None,
     timezone_name: str | None = None,
     urgent_override: bool = False,
+    expected_artifact_hash: str,
 ) -> ApprovalResult:
     if not settings.news_publication_enabled or settings.news_channel_id is None:
         return ApprovalResult(status="publishing_disabled")
@@ -270,6 +434,8 @@ def approve_publication(
         db.query(NewsPublicationSnapshot)
         .filter(
             NewsPublicationSnapshot.cluster_id == cluster.id,
+            NewsPublicationSnapshot.target_channel_id == settings.news_channel_id,
+            NewsPublicationSnapshot.renderer_version == PUBLICATION_RENDERER_VERSION,
             NewsPublicationSnapshot.text_revision_id == draft.id,
             NewsPublicationSnapshot.image_revision_id
             == (
@@ -290,6 +456,13 @@ def approve_publication(
         .first()
     )
     if existing_exact is not None:
+        if not re.fullmatch(r"[0-9a-f]{16}", expected_artifact_hash) or not (
+            hmac.compare_digest(
+                existing_exact.content_hash[:ARTIFACT_HASH_PREFIX_LENGTH],
+                expected_artifact_hash,
+            )
+        ):
+            return ApprovalResult(status="stale")
         logger.info(
             "news_publication_duplicate_suppressed",
             extra={"pipeline_stage": "approval", "outcome": "already_queued"},
@@ -313,7 +486,12 @@ def approve_publication(
         image,
         trusted_source_url=trusted_source_url,
     )
-    if blockers:
+    composition = compose_publication_artifact(
+        draft,
+        image,
+        trusted_source_url=trusted_source_url,
+    )
+    if blockers or composition.artifact is None:
         logger.info(
             "news_publication_quality_blocked",
             extra={
@@ -323,6 +501,19 @@ def approve_publication(
             },
         )
         return ApprovalResult(status="quality_blocked", blockers=blockers)
+    artifact = composition.artifact
+    content_hash = publication_content_hash(
+        artifact,
+        image_sha256=image.sha256 if image is not None else None,
+        channel_id=settings.news_channel_id,
+    )
+    if not re.fullmatch(r"[0-9a-f]{16}", expected_artifact_hash) or not (
+        hmac.compare_digest(
+            content_hash[:ARTIFACT_HASH_PREFIX_LENGTH],
+            expected_artifact_hash,
+        )
+    ):
+        return ApprovalResult(status="stale")
     timezone_value = timezone_name or settings.news_publication_timezone
     now = utcnow()
     schedule = _schedule_utc(
@@ -343,6 +534,7 @@ def approve_publication(
         scheduled_for_utc=scheduled_for_utc,
         reviewer_ref=reviewer_ref,
         urgent_override=urgent_override,
+        content_hash=content_hash,
     )
     existing = (
         db.query(NewsPublicationSnapshot)
@@ -367,24 +559,6 @@ def approve_publication(
         approved_at=approved_at,
         status="active",
     )
-    text_value = publication_preview_text(draft)
-    transport = "photo" if image is not None else "message"
-    renderer_version = settings.news_publication_renderer
-    parse_mode = None
-    link_preview_disabled = False
-    content_hash = hashlib.sha256(
-        "\x00".join(
-            (
-                text_value,
-                image.sha256 if image is not None else "none",
-                str(settings.news_channel_id),
-                renderer_version,
-                transport,
-                parse_mode or "none",
-                "link-preview-disabled" if link_preview_disabled else "link-preview-default",
-            )
-        ).encode("utf-8")
-    ).hexdigest()
     snapshot = NewsPublicationSnapshot(
         id=secrets.token_hex(16),
         decision_id=decision.id,
@@ -401,17 +575,19 @@ def approve_publication(
         approved_at=approved_at,
         status="queued" if mode == "immediate" else "scheduled",
         urgent_override=urgent_override,
-        publication_text=text_value,
-        renderer_version=renderer_version,
-        transport=transport,
-        parse_mode=parse_mode,
-        link_preview_disabled=link_preview_disabled,
+        publication_text=artifact.text,
+        renderer_version=artifact.renderer_version,
+        transport=artifact.transport,
+        parse_mode=artifact.parse_mode,
+        link_preview_disabled=artifact.link_preview_disabled,
         image_sha256=image.sha256 if image is not None else None,
         content_hash=content_hash,
         idempotency_key=key,
         next_attempt_at=scheduled_for_utc,
     )
-    db.add_all((decision, snapshot))
+    db.add(decision)
+    db.flush()
+    db.add(snapshot)
     _cancel_review_deliveries(db, cluster.id)
     transition_news_cluster(
         db,
@@ -556,10 +732,40 @@ def publication_payload(db: Session, snapshot_id: str) -> PublicationPayload | N
         row.last_error_code = "snapshot_image_hash_mismatch"
         row.processing_started_at = None
         return None
-    expected_transport = "photo" if image is not None else "message"
+    expected_transport: Literal["message", "photo"] = "photo" if image is not None else "message"
     if row.transport != expected_transport:
         row.status = "failed"
         row.last_error_code = "snapshot_transport_mismatch"
+        row.processing_started_at = None
+        return None
+    if (
+        row.renderer_version != PUBLICATION_RENDERER_VERSION
+        or row.parse_mode != "HTML"
+        or not row.link_preview_disabled
+    ):
+        row.status = "failed"
+        row.last_error_code = "snapshot_renderer_contract_mismatch"
+        row.processing_started_at = None
+        return None
+    stored_artifact = PublicationArtifact(
+        text=row.publication_text,
+        renderer_version=row.renderer_version,
+        transport=expected_transport,
+        parse_mode="HTML",
+        link_preview_disabled=row.link_preview_disabled,
+        visible_length=0,
+        limit=0,
+    )
+    if (
+        publication_content_hash(
+            stored_artifact,
+            image_sha256=row.image_sha256,
+            channel_id=row.target_channel_id,
+        )
+        != row.content_hash
+    ):
+        row.status = "failed"
+        row.last_error_code = "snapshot_content_hash_mismatch"
         row.processing_started_at = None
         return None
     return PublicationPayload(

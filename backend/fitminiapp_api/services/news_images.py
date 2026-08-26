@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from time import monotonic
+from typing import cast
 
 import httpx
 from PIL import Image, ImageDraw, ImageFont, ImageOps, UnidentifiedImageError
@@ -23,6 +24,12 @@ from fitminiapp_api.services.news_state import transition_news_cluster
 logger = logging.getLogger(__name__)
 
 CANVAS_SIZE = (1200, 800)
+BRAND_CIRCLE_BOUNDS = (760, -40, 1185, 385)
+BRAND_MARK_SIZE = (220, 220)
+BRAND_MARK_POSITION = (
+    (BRAND_CIRCLE_BOUNDS[0] + BRAND_CIRCLE_BOUNDS[2] - BRAND_MARK_SIZE[0] + 1) // 2,
+    (BRAND_CIRCLE_BOUNDS[1] + BRAND_CIRCLE_BOUNDS[3] - BRAND_MARK_SIZE[1] + 1) // 2,
+)
 MAX_DECODED_PIXELS = 20_000_000
 MAX_PROVIDER_RESPONSE_BYTES = 13_000_000
 CLOUDFLARE_IMAGES_ENDPOINT = (
@@ -88,6 +95,30 @@ def _brand_mark_path() -> Path | None:
         Path("/app/frontend-dist/assets/brand/apple-touch-icon.png"),
     )
     return next((path for path in candidates if path.is_file()), None)
+
+
+def _transparent_brand_mark(source: Image.Image) -> Image.Image:
+    mark = source.convert("RGBA")
+    background = cast(tuple[int, int, int, int], mark.getpixel((0, 0)))[:3]
+    pixels = mark.load()
+    if pixels is None:
+        raise NewsImageError("brand_mark_decode_invalid")
+    for y in range(mark.height):
+        for x in range(mark.width):
+            red, green, blue, alpha = cast(tuple[int, int, int, int], pixels[x, y])
+            distance = max(
+                abs(red - background[0]),
+                abs(green - background[1]),
+                abs(blue - background[2]),
+            )
+            if distance <= 3:
+                converted_alpha = 0
+            elif distance < 96:
+                converted_alpha = round((distance - 3) * 255 / 93)
+            else:
+                converted_alpha = alpha
+            pixels[x, y] = (red, green, blue, min(alpha, converted_alpha))
+    return mark
 
 
 def _headline(draft: NewsDraftRevision) -> str:
@@ -182,9 +213,10 @@ def _draw_brand_overlay(image: Image.Image, draft: NewsDraftRevision) -> Image.I
     mark_path = _brand_mark_path()
     if mark_path is not None:
         with Image.open(mark_path) as mark_source:
-            mark = mark_source.convert("RGBA").resize((220, 220), Image.Resampling.LANCZOS)
-        draw.rounded_rectangle((885, 270, 1125, 510), radius=44, fill=(16, 24, 18, 225))
-        overlay.alpha_composite(mark, (895, 280))
+            mark = _transparent_brand_mark(mark_source).resize(
+                BRAND_MARK_SIZE, Image.Resampling.LANCZOS
+            )
+        overlay.alpha_composite(mark, BRAND_MARK_POSITION)
     return Image.alpha_composite(canvas.convert("RGBA"), overlay).convert("RGB")
 
 
@@ -257,7 +289,7 @@ def render_template_image(draft: NewsDraftRevision) -> NormalizedImage:
     base = Image.new("RGB", CANVAS_SIZE, "#101310")
     draw = ImageDraw.Draw(base)
     draw.ellipse((675, -140, 1285, 470), fill="#172018")
-    draw.ellipse((760, -40, 1185, 385), outline="#9EE02B", width=5)
+    draw.ellipse(BRAND_CIRCLE_BOUNDS, outline="#9EE02B", width=5)
     draw.line((760, 0, 520, 800), fill="#2F4315", width=4)
     return _encode_jpeg(
         _draw_brand_overlay(base, draft), maximum_bytes=settings.news_image_max_bytes

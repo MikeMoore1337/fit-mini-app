@@ -4,11 +4,13 @@ import asyncio
 import base64
 import io
 from datetime import UTC, timedelta
+from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
 import httpx
 import pytest
-from PIL import Image
+from PIL import Image, ImageChops
+from sqlalchemy import event
 
 from fitminiapp_api.core.config import Settings, settings
 from fitminiapp_api.db.session import get_session_context
@@ -19,14 +21,17 @@ from fitminiapp_api.models.news import (
     NewsImageRevision,
     NewsItem,
     NewsPublicationSnapshot,
+    NewsReviewDelivery,
     NewsSource,
 )
-from fitminiapp_api.services import news_publication
-from fitminiapp_api.services.news_content import parse_editorial_content
+from fitminiapp_api.services import news_images, news_publication
+from fitminiapp_api.services.news_content import EditorialContent, parse_editorial_content
 from fitminiapp_api.services.news_drafts import create_draft_revision
 from fitminiapp_api.services.news_editorial import (
+    compose_review_artifact,
     edit_text_revision,
     enqueue_review_deliveries,
+    review_message,
 )
 from fitminiapp_api.services.news_images import (
     NewsImageError,
@@ -36,6 +41,7 @@ from fitminiapp_api.services.news_images import (
 from fitminiapp_api.services.news_ingestion import ParsedNewsItem, ingest_items, utcnow
 from fitminiapp_api.services.news_post_management import manage_published_post
 from fitminiapp_api.services.news_publication import (
+    ARTIFACT_HASH_PREFIX_LENGTH,
     approve_publication,
     claim_due_publications,
     mark_publication_failed,
@@ -45,6 +51,7 @@ from fitminiapp_api.services.news_publication import (
     retry_uncertain_publication,
 )
 from fitminiapp_api.services.news_sources import apply_source_allowlist, parse_source_allowlist
+from fitminiapp_api.services.news_worker import deliver_review_queue
 from fitminiapp_api.services.worker import (
     TelegramPublicationError,
     check_news_channel_rights,
@@ -122,6 +129,157 @@ def _draft(cluster_id: str) -> tuple[str, str]:
         return draft.id, cluster.id
 
 
+def _artifact_hash(db, draft: NewsDraftRevision) -> str:
+    review = compose_review_artifact(db, draft)
+    assert review.artifact is not None
+    assert review.artifact_hash is not None
+    return review.artifact_hash[:ARTIFACT_HASH_PREFIX_LENGTH]
+
+
+def test_html_renderer_escapes_user_text_and_keeps_source_as_named_link() -> None:
+    source_url = "https://example.test/research?a=1&b=2"
+    content = EditorialContent(
+        headline='Рост силы <контекст> & "границы"',
+        summary="Первая строка <без HTML> & с кавычками.\n\nВторая строка — без разделителей.",
+        why_it_matters="Это важно для корректной интерпретации & сравнения.",
+        source_url=source_url,
+    )
+
+    composition = news_publication.compose_editorial_artifact(
+        content,
+        None,
+        trusted_source_url=source_url,
+    )
+
+    assert composition.blockers == ()
+    assert composition.artifact is not None
+    artifact = composition.artifact
+    assert artifact.parse_mode == "HTML"
+    assert artifact.link_preview_disabled is True
+    assert "&lt;контекст&gt; &amp;" in artifact.text
+    assert "&lt;без HTML&gt; &amp;" in artifact.text
+    assert '<a href="https://example.test/research?a=1&amp;b=2">Источник</a>' in artifact.text
+    assert "ЗАГОЛОВОК" not in artifact.text
+    assert "КРАТКО" not in artifact.text
+    assert "────────" not in artifact.text
+    assert artifact.text.startswith('<b>Рост силы &lt;контекст&gt; &amp; "границы"</b>')
+    assert "<b>Почему это важно:</b>" not in artifact.text
+    assert "\n\nЭто важно для корректной интерпретации &amp; сравнения.\n\n" in artifact.text
+    assert artifact.text.count("https://") == 1
+
+
+def test_brand_mark_is_in_the_top_right_safe_area(monkeypatch) -> None:
+    cluster_id = _source_and_candidate(external_id="brand-mark-position")
+    draft_id, _ = _draft(cluster_id)
+    with get_session_context() as db:
+        draft = db.get(NewsDraftRevision, draft_id)
+        assert draft is not None
+        base = Image.new("RGB", news_images.CANVAS_SIZE, "#101310")
+        with_mark = news_images._draw_brand_overlay(base, draft)
+        monkeypatch.setattr(news_images, "_brand_mark_path", lambda: None)
+        without_mark = news_images._draw_brand_overlay(base, draft)
+
+    bounds = ImageChops.difference(with_mark, without_mark).getbbox()
+    assert bounds is not None
+    left, top, right, bottom = bounds
+    mark_x, mark_y = news_images.BRAND_MARK_POSITION
+    mark_width, mark_height = news_images.BRAND_MARK_SIZE
+    assert mark_x <= left < right <= mark_x + mark_width
+    assert mark_y <= top < bottom <= mark_y + mark_height
+    assert with_mark.getpixel((mark_x, mark_y)) == without_mark.getpixel((mark_x, mark_y))
+    circle_left, circle_top, circle_right, circle_bottom = news_images.BRAND_CIRCLE_BOUNDS
+    assert abs((2 * mark_x + mark_width) - (circle_left + circle_right)) <= 1
+    assert abs((2 * mark_y + mark_height) - (circle_top + circle_bottom)) <= 1
+
+
+def test_renderer_enforces_exact_telegram_photo_and_message_boundaries() -> None:
+    source_url = "https://example.test/source"
+    image = NewsImageRevision()
+
+    photo_at_limit = news_publication.compose_editorial_artifact(
+        EditorialContent(
+            headline="Тест",
+            summary="Я" * 1008,
+            why_it_matters="",
+            source_url=source_url,
+        ),
+        image,
+        trusted_source_url=source_url,
+    )
+    assert photo_at_limit.artifact is not None
+    assert photo_at_limit.artifact.visible_length == 1024
+    assert photo_at_limit.artifact.limit == news_publication.TELEGRAM_PHOTO_CAPTION_LIMIT
+    assert photo_at_limit.artifact.transport == "photo"
+    assert "Почему это важно" not in photo_at_limit.artifact.text
+    photo_over_limit = news_publication.compose_editorial_artifact(
+        EditorialContent(
+            headline="Тест",
+            summary="Я" * 1009,
+            why_it_matters="",
+            source_url=source_url,
+        ),
+        image,
+        trusted_source_url=source_url,
+    )
+    assert photo_over_limit.blockers == ("telegram_photo_caption_too_long",)
+
+    assert photo_over_limit.transport == "photo"
+    assert photo_over_limit.visible_length == 1025
+    assert photo_over_limit.limit == 1024
+    message_at_limit = news_publication.compose_editorial_artifact(
+        EditorialContent(
+            headline="Тест",
+            summary="Я" * 4080,
+            why_it_matters="",
+            source_url=source_url,
+        ),
+        None,
+        trusted_source_url=source_url,
+    )
+    assert message_at_limit.artifact is not None
+    assert message_at_limit.artifact.visible_length == 4096
+    assert message_at_limit.artifact.limit == news_publication.TELEGRAM_MESSAGE_LIMIT
+    message_over_limit = news_publication.compose_editorial_artifact(
+        EditorialContent(
+            headline="Тест",
+            summary="Я" * 4081,
+            why_it_matters="",
+            source_url=source_url,
+        ),
+        None,
+        trusted_source_url=source_url,
+    )
+    assert message_over_limit.blockers == ("telegram_message_too_long",)
+
+    assert message_over_limit.transport == "message"
+    assert message_over_limit.visible_length == 4097
+    assert message_over_limit.limit == 4096
+
+
+def test_renderer_and_content_hash_are_stable_and_bind_delivery_policy() -> None:
+    source_url = "https://example.test/source"
+    content = EditorialContent("Заголовок", "Проверенная сводка.", "", source_url)
+    first = news_publication.compose_editorial_artifact(
+        content, None, trusted_source_url=source_url
+    ).artifact
+    second = news_publication.compose_editorial_artifact(
+        content, None, trusted_source_url=source_url
+    ).artifact
+    assert first is not None and second is not None
+    first_hash = news_publication.publication_content_hash(
+        first, image_sha256=None, channel_id=-1001
+    )
+    same_hash = news_publication.publication_content_hash(
+        second, image_sha256=None, channel_id=-1001
+    )
+    other_channel_hash = news_publication.publication_content_hash(
+        second, image_sha256=None, channel_id=-1002
+    )
+    assert first == second
+    assert first_hash == same_hash
+    assert first_hash != other_channel_hash
+
+
 def test_image_provider_is_free_only_and_requires_explicit_free_plan() -> None:
     base = {
         "_env_file": None,
@@ -194,7 +352,7 @@ def test_legacy_task88_revision_remains_parseable_for_existing_rows() -> None:
     assert parsed.source_url == "https://publishing-journal.example/legacy-publication"
 
 
-def test_provisional_task89_renderer_cannot_publish_in_production() -> None:
+def test_production_channel_still_requires_separate_owner_authorization() -> None:
     values = {
         "_env_file": None,
         "app_debug": False,
@@ -213,7 +371,7 @@ def test_provisional_task89_renderer_cannot_publish_in_production() -> None:
         "news_publication_enabled": True,
     }
     for app_env in ("dev", "prod"):
-        with pytest.raises(ValueError, match="task 89A renderer"):
+        with pytest.raises(ValueError, match="separate owner authorization"):
             Settings(
                 **values,
                 app_env=app_env,
@@ -317,20 +475,37 @@ def test_exact_approval_is_idempotent_and_edit_revokes_schedule(monkeypatch) -> 
         asyncio.run(create_image_revision(db, cluster, draft, client=None))
         enqueue_review_deliveries(db, {7001})
         image_revision = cluster.current_image_revision
-        approved = approve_publication(
-            db,
-            draft_id=draft.id,
-            expected_image_revision=image_revision,
-            admin_telegram_user_id=7001,
-            mode="immediate",
-        )
+        insert_order: list[str] = []
+
+        def capture_insert(_conn, _cursor, statement, _parameters, _context, _executemany) -> None:
+            normalized = statement.lower()
+            if normalized.startswith("insert into news_review_decisions"):
+                insert_order.append("decision")
+            elif normalized.startswith("insert into news_publication_snapshots"):
+                insert_order.append("snapshot")
+
+        bind = db.get_bind()
+        event.listen(bind, "before_cursor_execute", capture_insert)
+        try:
+            approved = approve_publication(
+                db,
+                draft_id=draft.id,
+                expected_image_revision=image_revision,
+                admin_telegram_user_id=7001,
+                mode="immediate",
+                expected_artifact_hash=_artifact_hash(db, draft),
+            )
+        finally:
+            event.remove(bind, "before_cursor_execute", capture_insert)
         assert approved.status == "queued"
+        assert insert_order == ["decision", "snapshot"]
         repeated = approve_publication(
             db,
             draft_id=draft.id,
             expected_image_revision=image_revision,
             admin_telegram_user_id=7001,
             mode="immediate",
+            expected_artifact_hash=_artifact_hash(db, draft),
         )
         assert repeated.status == "already_queued"
         snapshot = db.get(NewsPublicationSnapshot, approved.snapshot_id)
@@ -349,11 +524,14 @@ def test_exact_approval_is_idempotent_and_edit_revokes_schedule(monkeypatch) -> 
         )
         assert edited.status == "queued"
         assert snapshot.status == "cancelled"
-        assert snapshot.publication_text == draft.draft_text
-        assert snapshot.renderer_version == "news-publication-plain-v0"
+        assert snapshot.publication_text.startswith("<b>")
+        assert '<a href="https://publishing-journal.example/publication-1">Источник</a>' in (
+            snapshot.publication_text
+        )
+        assert snapshot.renderer_version == "news-publication-html-v1"
         assert snapshot.transport == "photo"
-        assert snapshot.parse_mode is None
-        assert snapshot.link_preview_disabled is False
+        assert snapshot.parse_mode == "HTML"
+        assert snapshot.link_preview_disabled is True
         latest = (
             db.query(NewsDraftRevision)
             .filter(NewsDraftRevision.cluster_id == cluster.id)
@@ -391,6 +569,7 @@ def test_no_image_snapshot_and_daily_cap_are_checked_when_claimed(monkeypatch) -
                 expected_image_revision=0,
                 admin_telegram_user_id=7001,
                 mode="immediate",
+                expected_artifact_hash=_artifact_hash(db, draft),
             )
             assert approved.status == "queued"
             assert approved.snapshot_id is not None
@@ -402,10 +581,10 @@ def test_no_image_snapshot_and_daily_cap_are_checked_when_claimed(monkeypatch) -
         assert claimed_id in snapshot_ids
         payload = publication_payload(db, claimed_id)
         assert payload is not None
-        assert payload.renderer_version == "news-publication-plain-v0"
+        assert payload.renderer_version == "news-publication-html-v1"
         assert payload.transport == "message"
-        assert payload.parse_mode is None
-        assert payload.link_preview_disabled is False
+        assert payload.parse_mode == "HTML"
+        assert payload.link_preview_disabled is True
     with get_session_context() as db:
         second_claim = claim_due_publications(db, limit=5)
         assert second_claim == []
@@ -416,7 +595,38 @@ def test_no_image_snapshot_and_daily_cap_are_checked_when_claimed(monkeypatch) -
         assert second.last_error_code == "daily_cap_reached"
 
 
-def test_channel_preflight_and_plain_telegram_publication(monkeypatch) -> None:
+def test_publisher_rejects_tampered_stored_snapshot(monkeypatch) -> None:
+    cluster_id = _source_and_candidate(external_id="snapshot-tamper")
+    draft_id, _ = _draft(cluster_id)
+    monkeypatch.setattr(settings, "news_publication_enabled", True)
+    monkeypatch.setattr(settings, "news_channel_id", -1001234567890)
+    monkeypatch.setattr(settings, "news_channel_username", "yfc_test_news")
+    monkeypatch.setattr(settings, "admin_telegram_user_ids", "7001")
+    with get_session_context() as db:
+        cluster = db.get(NewsCluster, cluster_id)
+        draft = db.get(NewsDraftRevision, draft_id)
+        assert cluster is not None and draft is not None
+        draft.warnings = []
+        enqueue_review_deliveries(db, {7001})
+        approved = approve_publication(
+            db,
+            draft_id=draft.id,
+            expected_image_revision=0,
+            admin_telegram_user_id=7001,
+            mode="immediate",
+            expected_artifact_hash=_artifact_hash(db, draft),
+        )
+        assert approved.snapshot_id is not None
+        assert claim_due_publications(db) == [approved.snapshot_id]
+        snapshot = db.get(NewsPublicationSnapshot, approved.snapshot_id)
+        assert snapshot is not None
+        snapshot.publication_text += " "
+        assert publication_payload(db, snapshot.id) is None
+        assert snapshot.status == "failed"
+        assert snapshot.last_error_code == "snapshot_content_hash_mismatch"
+
+
+def test_channel_preflight_and_exact_text_photo_telegram_serialization(monkeypatch) -> None:
     monkeypatch.setattr(settings, "news_publication_enabled", True)
     monkeypatch.setattr(settings, "news_channel_id", -1001234567890)
     monkeypatch.setattr(settings, "telegram_bot_token", "bot-token")
@@ -458,16 +668,32 @@ def test_channel_preflight_and_plain_telegram_publication(monkeypatch) -> None:
                 link_preview_disabled=True,
             )
             assert html_result.message_id == 91
+            photo_result = await send_telegram_publication(
+                client,
+                -1001234567890,
+                "<b>Проверенный заголовок</b>",
+                b"fake-jpeg",
+                parse_mode="HTML",
+                link_preview_disabled=True,
+            )
+            assert photo_result.message_id == 91
 
     asyncio.run(exercise())
-    sent = requests[-2]
+    sent = requests[-3]
     assert sent.url.path.endswith("/sendMessage")
     body = sent.content.decode()
     assert "parse_mode" not in body
     assert "<safe>" in body
-    html_body = requests[-1].content.decode()
+    html_body = requests[-2].content.decode()
     assert '"parse_mode":"HTML"' in html_body
     assert '"link_preview_options":{"is_disabled":true}' in html_body
+
+    photo = requests[-1]
+    assert photo.url.path.endswith("/sendPhoto")
+    photo_body = photo.content.decode()
+    assert 'name="caption"' in photo_body
+    assert "<b>Проверенный заголовок</b>" in photo_body
+    assert 'name="parse_mode"' in photo_body and "HTML" in photo_body
 
     async def malformed_success() -> None:
         transport = httpx.MockTransport(
@@ -507,6 +733,7 @@ def test_post_edit_and_delete_are_owner_only_and_audited(monkeypatch) -> None:
             mode="scheduled",
             scheduled_local=utcnow(),
             timezone_name="Europe/Moscow",
+            expected_artifact_hash=_artifact_hash(db, draft),
         )
         assert invalid_schedule.status == "schedule_invalid"
         approved = approve_publication(
@@ -515,6 +742,7 @@ def test_post_edit_and_delete_are_owner_only_and_audited(monkeypatch) -> None:
             expected_image_revision=0,
             admin_telegram_user_id=7001,
             mode="immediate",
+            expected_artifact_hash=_artifact_hash(db, draft),
         )
         assert approved.snapshot_id is not None
         assert claim_due_publications(db) == [approved.snapshot_id]
@@ -534,6 +762,8 @@ def test_post_edit_and_delete_are_owner_only_and_audited(monkeypatch) -> None:
         "https://publishing-journal.example/publication-1"
     )
 
+    successful_requests: list[httpx.Request] = []
+
     async def exercise() -> None:
         malformed_transport = httpx.MockTransport(lambda _: httpx.Response(200, json={"ok": False}))
         async with httpx.AsyncClient(transport=malformed_transport) as malformed_client:
@@ -547,7 +777,12 @@ def test_post_edit_and_delete_are_owner_only_and_audited(monkeypatch) -> None:
                     client=malformed_client,
                 )
                 assert malformed.status == "unavailable"
-        transport = httpx.MockTransport(lambda _: httpx.Response(200, json={"ok": True}))
+
+        def respond(request: httpx.Request) -> httpx.Response:
+            successful_requests.append(request)
+            return httpx.Response(200, json={"ok": True})
+
+        transport = httpx.MockTransport(respond)
         async with httpx.AsyncClient(transport=transport) as client:
             with get_session_context() as db:
                 forbidden = await manage_published_post(
@@ -581,6 +816,11 @@ def test_post_edit_and_delete_are_owner_only_and_audited(monkeypatch) -> None:
                 assert deleted.status == "deleted"
 
     asyncio.run(exercise())
+    edit_request = successful_requests[0]
+    assert edit_request.url.path.endswith("/editMessageText")
+    edit_body = edit_request.content.decode()
+    assert '"parse_mode":"HTML"' in edit_body
+    assert '"link_preview_options":{"is_disabled":true}' in edit_body
     with get_session_context() as db:
         snapshot = db.get(NewsPublicationSnapshot, snapshot_id)
         assert snapshot is not None
@@ -613,6 +853,7 @@ def test_uncertain_send_never_retries_until_owner_reconciles(monkeypatch) -> Non
             expected_image_revision=0,
             admin_telegram_user_id=7001,
             mode="immediate",
+            expected_artifact_hash=_artifact_hash(db, draft),
         )
         assert approved.snapshot_id is not None
         assert claim_due_publications(db) == [approved.snapshot_id]
@@ -665,6 +906,7 @@ def test_immediate_daily_cap_date_is_recomputed_at_claim_time(monkeypatch) -> No
             expected_image_revision=0,
             admin_telegram_user_id=7001,
             mode="immediate",
+            expected_artifact_hash=_artifact_hash(db, draft),
         )
         assert approved.snapshot_id is not None
         snapshot = db.get(NewsPublicationSnapshot, approved.snapshot_id)
@@ -676,3 +918,192 @@ def test_immediate_daily_cap_date_is_recomputed_at_claim_time(monkeypatch) -> No
         assert claim_due_publications(db) == [approved.snapshot_id]
         expected_date = fixed_now.replace(tzinfo=UTC).astimezone(ZoneInfo(snapshot.timezone)).date()
         assert snapshot.publication_local_date == expected_date
+
+
+def test_private_preview_matches_exact_artifact_and_retry_does_not_duplicate_it(
+    monkeypatch,
+) -> None:
+    cluster_id = _source_and_candidate(external_id="preview-parity")
+    draft_id, _ = _draft(cluster_id)
+    monkeypatch.setattr(settings, "news_image_provider", "disabled")
+    monkeypatch.setattr(settings, "news_publication_enabled", True)
+    monkeypatch.setattr(settings, "news_channel_id", -1001234567890)
+    monkeypatch.setattr(settings, "news_channel_username", "yfc_test_news")
+    monkeypatch.setattr(settings, "admin_telegram_user_ids", "7001")
+    with get_session_context() as db:
+        cluster = db.get(NewsCluster, cluster_id)
+        draft = db.get(NewsDraftRevision, draft_id)
+        assert cluster is not None and draft is not None
+        draft.warnings = []
+        asyncio.run(create_image_revision(db, cluster, draft, client=None))
+        enqueue_review_deliveries(db, {7001})
+        expected = compose_review_artifact(db, draft, channel_ready=True)
+        assert expected.artifact is not None
+        assert expected.artifact_hash is not None
+        assert expected.image is not None
+        expected_text = expected.artifact.text
+        expected_image_data = expected.image.image_data
+        expected_hash = expected.artifact_hash
+
+    preview_calls: list[dict[str, object]] = []
+    control_calls: list[dict[str, object]] = []
+
+    async def send_preview(
+        _client,
+        chat_id,
+        text,
+        image_data,
+        *,
+        parse_mode,
+        link_preview_disabled,
+    ):
+        preview_calls.append(
+            {
+                "chat_id": chat_id,
+                "text": text,
+                "image_data": image_data,
+                "parse_mode": parse_mode,
+                "link_preview_disabled": link_preview_disabled,
+            }
+        )
+        return SimpleNamespace(message_id=101, message_date=utcnow())
+
+    async def send_control(_client, chat_id, text, *, reply_markup):
+        control_calls.append(
+            {
+                "chat_id": chat_id,
+                "text": text,
+                "reply_markup": reply_markup,
+            }
+        )
+        if len(control_calls) == 1:
+            raise RuntimeError("simulated control-card failure")
+        return 202
+
+    async def deliver() -> int:
+        async with httpx.AsyncClient() as client:
+            return await deliver_review_queue(
+                client,
+                send_control,
+                send_preview,
+                channel_ready=True,
+            )
+
+    assert asyncio.run(deliver()) == 0
+    with get_session_context() as db:
+        delivery = db.query(NewsReviewDelivery).one()
+        assert delivery.status == "queued"
+        assert delivery.telegram_message_id == 101
+        delivery.next_attempt_at = utcnow() - timedelta(seconds=1)
+
+    assert asyncio.run(deliver()) == 1
+    assert len(preview_calls) == 1
+    assert len(control_calls) == 2
+    preview = preview_calls[0]
+    assert preview["chat_id"] == 7001
+    assert preview["text"] == expected_text
+    assert preview["image_data"] == expected_image_data
+    assert preview["parse_mode"] == "HTML"
+    assert preview["link_preview_disabled"] is True
+    control = control_calls[-1]
+    assert expected_text not in control["text"]
+    callback_values = [
+        button["callback_data"]
+        for row in control["reply_markup"]["inline_keyboard"]
+        for button in row
+        if "callback_data" in button
+    ]
+    assert any(expected_hash[:16] in value for value in callback_values)
+    with get_session_context() as db:
+        delivery = db.query(NewsReviewDelivery).one()
+        assert delivery.status == "sent"
+        event = db.query(AuditEvent).filter_by(action="news.preview_created").one()
+        assert event.details["artifact_hash"] == expected_hash
+        assert event.details["preview_message_id"] == 101
+        assert event.details["control_message_id"] == 202
+
+
+def test_over_limit_photo_control_card_shows_measurement_and_recovery_actions(
+    monkeypatch,
+) -> None:
+    cluster_id = _source_and_candidate(external_id="over-limit-control")
+    draft_id, _ = _draft(cluster_id)
+    monkeypatch.setattr(settings, "news_image_provider", "disabled")
+    monkeypatch.setattr(settings, "news_publication_enabled", True)
+    monkeypatch.setattr(settings, "news_channel_id", -1001234567890)
+    monkeypatch.setattr(settings, "news_channel_username", "yfc_test_news")
+    with get_session_context() as db:
+        cluster = db.get(NewsCluster, cluster_id)
+        draft = db.get(NewsDraftRevision, draft_id)
+        assert cluster is not None and draft is not None
+        metadata = dict(draft.evidence_metadata)
+        metadata["editorial_fields"] = {
+            "headline": "Тест",
+            "summary": "Я" * 1009,
+            "why_it_matters": "",
+        }
+        draft.evidence_metadata = metadata
+        draft.warnings = []
+        asyncio.run(create_image_revision(db, cluster, draft, client=None))
+        message, _, markup = review_message(db, draft, channel_ready=True)
+        labels = {button["text"] for row in markup["inline_keyboard"] for button in row}
+        assert "Точный preview: недоступен · photo · 1025/1024 символов" in message
+        assert "telegram_photo_caption_too_long" in message
+        assert "Опубликовать сейчас" not in labels
+        assert {
+            "Изменить текст",
+            "Перегенерировать текст",
+            "Убрать изображение",
+            "Отклонить",
+        }.issubset(labels)
+
+
+def test_legacy_plain_snapshot_does_not_block_html_renderer_approval(monkeypatch) -> None:
+    cluster_id = _source_and_candidate(external_id="renderer-cutover")
+    draft_id, _ = _draft(cluster_id)
+    monkeypatch.setattr(settings, "news_publication_enabled", True)
+    monkeypatch.setattr(settings, "news_channel_id", -1001234567890)
+    monkeypatch.setattr(settings, "news_channel_username", "yfc_test_news")
+    monkeypatch.setattr(settings, "admin_telegram_user_ids", "7001")
+    with get_session_context() as db:
+        cluster = db.get(NewsCluster, cluster_id)
+        draft = db.get(NewsDraftRevision, draft_id)
+        assert cluster is not None and draft is not None
+        draft.warnings = []
+        enqueue_review_deliveries(db, {7001})
+        artifact_hash = _artifact_hash(db, draft)
+        first = approve_publication(
+            db,
+            draft_id=draft.id,
+            expected_image_revision=0,
+            admin_telegram_user_id=7001,
+            mode="immediate",
+            expected_artifact_hash=artifact_hash,
+        )
+        assert first.snapshot_id is not None
+        old_snapshot = db.get(NewsPublicationSnapshot, first.snapshot_id)
+        assert old_snapshot is not None
+        old_snapshot.renderer_version = "news-publication-plain-v0"
+        old_snapshot.content_hash = "0" * 64
+        old_snapshot.idempotency_key = "1" * 64
+        old_snapshot.publication_text = draft.draft_text
+        old_snapshot.parse_mode = None
+        old_snapshot.link_preview_disabled = False
+        cluster.status = "awaiting_review"
+        db.flush()
+        second = approve_publication(
+            db,
+            draft_id=draft.id,
+            expected_image_revision=0,
+            admin_telegram_user_id=7001,
+            mode="immediate",
+            expected_artifact_hash=_artifact_hash(db, draft),
+        )
+        assert second.status == "queued"
+        assert second.snapshot_id is not None and second.snapshot_id != old_snapshot.id
+        assert old_snapshot.status == "cancelled"
+        current = db.get(NewsPublicationSnapshot, second.snapshot_id)
+        assert current is not None
+        assert current.renderer_version == "news-publication-html-v1"
+        assert current.parse_mode == "HTML"
+        assert current.link_preview_disabled is True

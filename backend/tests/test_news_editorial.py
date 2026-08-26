@@ -770,7 +770,7 @@ def test_owner_only_moderation_is_revision_bound_idempotent_and_never_publishes(
         draft_id = draft.id
         enqueue_review_deliveries(db, {7001})
         message, source_url, markup = review_message(db, draft)
-        assert "Редакционный черновик" in message
+        assert "Черновик — в канал ещё не отправлен" in message
         assert source_url.startswith("https://")
         callback_values = [
             button["callback_data"]
@@ -882,3 +882,41 @@ def test_callback_contract_is_bounded_and_has_no_public_action() -> None:
     draft_id = "a" * 32
     assert callback_data("accept_for_design", draft_id) == f"news:a:{draft_id}"
     assert len(callback_data("regenerate", draft_id).encode()) <= 64
+
+
+def test_legacy_sent_delivery_is_requeued_once_for_exact_preview(monkeypatch) -> None:
+    _create_source()
+    cluster_id = _candidate_cluster()
+    monkeypatch.setattr(settings, "news_llm_provider", "disabled")
+    with get_session_context() as db:
+        cluster = db.get(NewsCluster, cluster_id)
+        assert cluster is not None
+        draft = asyncio.run(create_draft_revision(db, cluster))
+        draft_id = draft.id
+        assert enqueue_review_deliveries(db, {7001}) == 1
+        delivery = db.query(NewsReviewDelivery).one()
+        delivery.status = "sent"
+        delivery.telegram_message_id = 89
+        assert cluster.status == "awaiting_review"
+        assert cluster.delivery_round == 0
+
+    with get_session_context() as db:
+        assert enqueue_review_deliveries(db, {7001}) == 1
+        cluster = db.get(NewsCluster, cluster_id)
+        assert cluster is not None
+        deliveries = db.query(NewsReviewDelivery).order_by(NewsReviewDelivery.delivery_round).all()
+        assert [row.delivery_round for row in deliveries] == [0, 1]
+        assert [row.status for row in deliveries] == ["sent", "queued"]
+        event = (
+            db.query(AuditEvent)
+            .filter_by(action="news.preview_upgrade_queued", resource_id=draft_id)
+            .one()
+        )
+        assert event.details["renderer_version"] == "news-publication-html-v1"
+
+    with get_session_context() as db:
+        cluster = db.get(NewsCluster, cluster_id)
+        assert cluster is not None
+        assert enqueue_review_deliveries(db, {7001}) == 0
+        assert cluster.delivery_round == 1
+        assert db.query(NewsReviewDelivery).count() == 2

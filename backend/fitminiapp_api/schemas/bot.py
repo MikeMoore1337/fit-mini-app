@@ -102,6 +102,7 @@ class BotNewsRevisionActionRequest(BaseModel):
         "remove_image",
     ]
     expected_image_revision: int = Field(..., ge=0, le=10_000)
+    expected_artifact_hash: str | None = Field(default=None, pattern=r"^[0-9a-f]{16}$")
     scheduled_local: datetime | None = None
     timezone: str | None = Field(default=None, min_length=1, max_length=64)
     urgent_override: bool = False

@@ -114,7 +114,7 @@ class Settings(BaseSettings):
     news_image_max_bytes: int = Field(default=8_388_608, ge=262_144, le=9_500_000)
     news_image_upload_max_bytes: int = Field(default=8_388_608, ge=262_144, le=9_500_000)
     news_publication_enabled: bool = False
-    news_publication_renderer: Literal["news-publication-plain-v0"] = "news-publication-plain-v0"
+    news_publication_renderer: Literal["news-publication-html-v1"] = "news-publication-html-v1"
     news_channel_environment: Literal["staging", "production"] = "staging"
     news_publication_timezone: str = "Europe/Moscow"
     news_schedule_min_minutes: int = Field(default=5, ge=1, le=1440)
@@ -235,9 +235,7 @@ class Settings(BaseSettings):
                 "NEWS_CHANNEL_ENVIRONMENT must be production for enabled production publishing"
             )
         if self.news_publication_enabled and self.news_channel_environment == "production":
-            raise ValueError(
-                "Production news publishing requires the owner-approved task 89A renderer"
-            )
+            raise ValueError("Production channel publishing requires separate owner authorization")
         try:
             ZoneInfo(self.news_publication_timezone)
         except ZoneInfoNotFoundError as exc:

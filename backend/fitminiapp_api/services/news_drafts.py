@@ -195,22 +195,27 @@ def _validated_fields(raw: object) -> dict[str, str]:
     return fields
 
 
-def _quality_warnings(fields: dict[str, str], packet: NewsEvidencePacket) -> list[str]:
+def quality_warnings(
+    fields: dict[str, str],
+    *,
+    source_title: str,
+    source_summary: str,
+) -> list[str]:
     output = " ".join(fields.values())
     warnings: list[str] = []
     if HYPE_PATTERN.search(output):
         warnings.append("sensational_or_guaranteed_claim")
     if PRESCRIPTION_PATTERN.search(output):
         warnings.append("medical_prescription_language")
-    source_text = f"{packet.title} {packet.summary}"
+    source_text = f"{source_title} {source_summary}"
     source_numbers = set(NUMBER_PATTERN.findall(source_text))
     output_numbers = set(NUMBER_PATTERN.findall(output))
     if output_numbers - source_numbers:
         warnings.append("unsupported_number")
     if (
-        packet.summary
-        and SequenceMatcher(None, output.lower(), packet.summary.lower())
-        .find_longest_match(0, len(output), 0, len(packet.summary))
+        source_summary
+        and SequenceMatcher(None, output.lower(), source_summary.lower())
+        .find_longest_match(0, len(output), 0, len(source_summary))
         .size
         > 140
     ):
@@ -325,7 +330,11 @@ class OpenAICompatibleDraftGenerator:
             fields = _validated_fields(json.loads(content))
         except (KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError) as exc:
             raise DraftGenerationError("provider_malformed_response") from exc
-        warnings = _quality_warnings(fields, packet)
+        warnings = quality_warnings(
+            fields,
+            source_title=packet.title,
+            source_summary=packet.summary,
+        )
         if warnings:
             raise DraftGenerationError(warnings[0])
         usage = payload.get("usage") if isinstance(payload, dict) else None

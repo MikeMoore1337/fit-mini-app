@@ -9,10 +9,15 @@ import httpx
 from sqlalchemy.orm import Session
 
 from fitminiapp_api.core.config import settings
-from fitminiapp_api.models.news import NewsPublicationSnapshot
+from fitminiapp_api.models.news import (
+    NewsDraftRevision,
+    NewsImageRevision,
+    NewsPublicationSnapshot,
+)
 from fitminiapp_api.services.audit import record_audit_event
 from fitminiapp_api.services.news_content import parse_editorial_content
 from fitminiapp_api.services.news_ingestion import utcnow
+from fitminiapp_api.services.news_publication import compose_editorial_artifact
 
 logger = logging.getLogger(__name__)
 
@@ -49,19 +54,34 @@ async def manage_published_post(
     payload: dict[str, object]
     if action == "edit":
         clean_text = (text or "").strip()
-        maximum = 1024 if row.image_revision_id is not None else 4096
         content = parse_editorial_content(clean_text)
-        previous_content = parse_editorial_content(row.publication_text)
-        if not 100 <= len(clean_text) <= maximum or content is None or previous_content is None:
+        draft = db.get(NewsDraftRevision, row.text_revision_id)
+        image = (
+            db.get(NewsImageRevision, row.image_revision_id)
+            if row.image_revision_id is not None
+            else None
+        )
+        if content is None or draft is None:
             return PostActionResult(status="invalid")
-        if content.source_url != previous_content.source_url:
+        trusted_source_url = str(draft.evidence_metadata.get("trusted_source_url", ""))
+        composition = compose_editorial_artifact(
+            content,
+            image,
+            trusted_source_url=trusted_source_url,
+        )
+        if composition.artifact is None:
             return PostActionResult(status="invalid")
+        artifact = composition.artifact
+        clean_text = artifact.text
         endpoint = "editMessageCaption" if row.image_revision_id is not None else "editMessageText"
         payload = {
             "chat_id": row.target_channel_id,
             "message_id": row.telegram_message_id,
             "caption" if row.image_revision_id is not None else "text": clean_text,
+            "parse_mode": artifact.parse_mode,
         }
+        if row.image_revision_id is None:
+            payload["link_preview_options"] = {"is_disabled": True}
     else:
         clean_text = ""
         endpoint = "deleteMessage"

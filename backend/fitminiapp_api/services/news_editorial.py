@@ -10,6 +10,7 @@ from typing import Literal
 from sqlalchemy.orm import Session
 
 from fitminiapp_api.core.config import settings
+from fitminiapp_api.models.audit import AuditEvent
 from fitminiapp_api.models.news import (
     NewsCluster,
     NewsDraftRevision,
@@ -23,10 +24,16 @@ from fitminiapp_api.models.news import (
 )
 from fitminiapp_api.services.audit import record_audit_event
 from fitminiapp_api.services.news_content import parse_editorial_content
-from fitminiapp_api.services.news_images import create_uploaded_image_revision
+from fitminiapp_api.services.news_drafts import quality_warnings
+from fitminiapp_api.services.news_images import create_uploaded_image_revision, current_image
 from fitminiapp_api.services.news_ingestion import utcnow
 from fitminiapp_api.services.news_publication import (
-    publication_preview_text,
+    ARTIFACT_HASH_PREFIX_LENGTH,
+    PUBLICATION_RENDERER_VERSION,
+    PublicationArtifact,
+    compose_publication_artifact,
+    publication_content_hash,
+    publication_quality_blockers,
     revoke_active_decisions,
 )
 from fitminiapp_api.services.news_state import transition_news_cluster
@@ -55,12 +62,30 @@ REVISION_EDITABLE_STATUSES = {
     "publication_scheduled",
     "publication_failed",
 }
+OWNER_EDIT_REVALIDATED_WARNINGS = {
+    "deterministic_fallback_requires_editor",
+    "medical_prescription_language",
+    "unsupported_number",
+    "possible_source_copy",
+    "sensational_or_guaranteed_claim",
+}
 
 
 @dataclass(frozen=True)
 class ModerationResult:
     status: ModerationStatus
     cluster_status: str | None = None
+
+
+@dataclass(frozen=True)
+class ReviewArtifact:
+    artifact: PublicationArtifact | None
+    image: NewsImageRevision | None
+    artifact_hash: str | None
+    blockers: tuple[str, ...]
+    transport: Literal["message", "photo"] | None
+    visible_length: int | None
+    limit: int | None
 
 
 def editorial_actor_ref(telegram_user_id: int) -> str:
@@ -84,8 +109,15 @@ def callback_data(action: EditorialAction, draft_id: str) -> str:
     return value
 
 
-def publishing_callback_data(action: str, draft_id: str, image_revision: int) -> str:
+def publishing_callback_data(
+    action: str,
+    draft_id: str,
+    image_revision: int,
+    artifact_hash: str | None = None,
+) -> str:
     value = f"newsp:{action}:{draft_id}:{image_revision}"
+    if artifact_hash is not None:
+        value += f":{artifact_hash[:ARTIFACT_HASH_PREFIX_LENGTH]}"
     if len(value.encode("utf-8")) > 64:
         raise ValueError("callback_data_too_long")
     return value
@@ -131,6 +163,8 @@ def edit_text_revision(
         return ModerationResult(status="stale")
     actor_ref = editorial_actor_ref(admin_telegram_user_id)
     primary = db.get(NewsItem, draft.primary_item_id)
+    if primary is None:
+        return ModerationResult(status="unavailable")
     trusted_source_url = str(
         draft.evidence_metadata.get(
             "trusted_source_url",
@@ -139,6 +173,14 @@ def edit_text_revision(
     )
     if editorial_content.source_url != trusted_source_url:
         return ModerationResult(status="unavailable")
+    revalidated_warnings = quality_warnings(
+        editorial_content.fields(),
+        source_title=primary.title,
+        source_summary=primary.summary,
+    )
+    preserved_warnings = tuple(
+        warning for warning in draft.warnings if warning not in OWNER_EDIT_REVALIDATED_WARNINGS
+    )
     revoke_active_decisions(db, cluster.id, reason="text_revision_changed")
     revision = cluster.latest_draft_revision + 1
     row = NewsDraftRevision(
@@ -156,13 +198,14 @@ def edit_text_revision(
             "editorial_contract_version": "news-editorial-v2",
             "editorial_fields": editorial_content.fields(),
             "trusted_source_url": trusted_source_url,
+            "source_published_at": (
+                primary.published_at.isoformat()
+                if primary.published_at is not None
+                else draft.evidence_metadata.get("source_published_at")
+            ),
         },
         draft_text=clean_text,
-        warnings=[
-            warning
-            for warning in draft.warnings
-            if warning != "deterministic_fallback_requires_editor"
-        ],
+        warnings=list(dict.fromkeys((*preserved_warnings, *revalidated_warnings))),
         generation_latency_ms=0,
     )
     db.add(row)
@@ -440,7 +483,7 @@ def enqueue_review_deliveries(db: Session, admin_telegram_user_ids: set[int]) ->
     db.flush()
     clusters = (
         db.query(NewsCluster)
-        .filter(NewsCluster.status.in_({"draft_ready", "publication_failed"}))
+        .filter(NewsCluster.status.in_({"draft_ready", "publication_failed", "awaiting_review"}))
         .all()
     )
     created = 0
@@ -448,6 +491,45 @@ def enqueue_review_deliveries(db: Session, admin_telegram_user_ids: set[int]) ->
         draft = latest_draft(db, cluster)
         if draft is None:
             continue
+        created_for_cluster = 0
+        is_preview_upgrade = False
+        if cluster.status == "awaiting_review":
+            preview_recorded = (
+                db.query(AuditEvent.id)
+                .filter(
+                    AuditEvent.action == "news.preview_created",
+                    AuditEvent.resource_type == "news_draft_revision",
+                    AuditEvent.resource_id == draft.id,
+                )
+                .first()
+                is not None
+            )
+            upgrade_queued = (
+                db.query(AuditEvent.id)
+                .filter(
+                    AuditEvent.action == "news.preview_upgrade_queued",
+                    AuditEvent.resource_type == "news_draft_revision",
+                    AuditEvent.resource_id == draft.id,
+                )
+                .first()
+                is not None
+            )
+            active_delivery = (
+                db.query(NewsReviewDelivery.id)
+                .filter(
+                    NewsReviewDelivery.draft_id == draft.id,
+                    NewsReviewDelivery.delivery_round == cluster.delivery_round,
+                    NewsReviewDelivery.status.in_({"queued", "processing"}),
+                )
+                .first()
+                is not None
+            )
+            if preview_recorded or upgrade_queued or active_delivery:
+                continue
+            if not admin_telegram_user_ids:
+                continue
+            cluster.delivery_round += 1
+            is_preview_upgrade = True
         for telegram_user_id in sorted(admin_telegram_user_ids):
             recipient_ref = editorial_actor_ref(telegram_user_id)
             existing = (
@@ -470,7 +552,19 @@ def enqueue_review_deliveries(db: Session, admin_telegram_user_ids: set[int]) ->
                     )
                 )
                 created += 1
-        if admin_telegram_user_ids:
+                created_for_cluster += 1
+        if is_preview_upgrade and created_for_cluster:
+            record_audit_event(
+                db,
+                action="news.preview_upgrade_queued",
+                resource_type="news_draft_revision",
+                resource_id=draft.id,
+                details={
+                    "renderer_version": PUBLICATION_RENDERER_VERSION,
+                    "delivery_count": created_for_cluster,
+                },
+            )
+        if admin_telegram_user_ids and cluster.status != "awaiting_review":
             transition_news_cluster(
                 db,
                 cluster,
@@ -481,30 +575,108 @@ def enqueue_review_deliveries(db: Session, admin_telegram_user_ids: set[int]) ->
     return created
 
 
-def review_message(db: Session, draft: NewsDraftRevision) -> tuple[str, str, dict]:
+def compose_review_artifact(
+    db: Session,
+    draft: NewsDraftRevision,
+    *,
+    channel_ready: bool | None = None,
+) -> ReviewArtifact:
     cluster = db.get(NewsCluster, draft.cluster_id)
     if cluster is None:
         raise ValueError("cluster_missing")
     primary = db.get(NewsItem, draft.primary_item_id)
     if primary is None or primary.id not in draft.evidence_item_ids:
         raise ValueError("primary_source_missing")
+    image = current_image(db, cluster)
+    trusted_source_url = str(draft.evidence_metadata.get("trusted_source_url", "")) or (
+        primary.primary_url or primary.canonical_url
+    )
+    composition = compose_publication_artifact(
+        draft,
+        image,
+        trusted_source_url=trusted_source_url,
+    )
+    blockers = list(
+        publication_quality_blockers(
+            draft,
+            image,
+            trusted_source_url=trusted_source_url,
+        )
+    )
+    if not settings.news_publication_enabled or settings.news_channel_id is None:
+        blockers.append("publishing_disabled")
+    if channel_ready is False:
+        blockers.append("channel_rights_missing")
+    artifact_hash = None
+    if composition.artifact is not None and settings.news_channel_id is not None:
+        artifact_hash = publication_content_hash(
+            composition.artifact,
+            image_sha256=image.sha256 if image is not None else None,
+            channel_id=settings.news_channel_id,
+        )
+    return ReviewArtifact(
+        artifact=composition.artifact,
+        image=image,
+        artifact_hash=artifact_hash,
+        blockers=tuple(dict.fromkeys(blockers)),
+        transport=composition.transport,
+        visible_length=composition.visible_length,
+        limit=composition.limit,
+    )
+
+
+def review_message(
+    db: Session,
+    draft: NewsDraftRevision,
+    *,
+    channel_ready: bool | None = None,
+) -> tuple[str, str, dict]:
+    cluster = db.get(NewsCluster, draft.cluster_id)
+    if cluster is None:
+        raise ValueError("cluster_missing")
+    primary = db.get(NewsItem, draft.primary_item_id)
+    if primary is None or primary.id not in draft.evidence_item_ids:
+        raise ValueError("primary_source_missing")
+    review = compose_review_artifact(db, draft, channel_ready=channel_ready)
     metadata = draft.evidence_metadata
     warnings = ", ".join(draft.warnings) if draft.warnings else "нет автоматических флагов"
     score_reasons = ", ".join(metadata.get("score_reasons", [])[:6])
     supporting_count = metadata.get("supporting_source_count", 0)
     if not isinstance(supporting_count, int):
         supporting_count = 0
-    prefix = (
+    artifact_line = "Точный preview: недоступен до исправления блокеров"
+    if review.artifact is not None:
+        artifact_line = (
+            f"Точный preview: {review.artifact.transport} · "
+            f"{review.artifact.visible_length}/{review.artifact.limit} символов · "
+            f"{review.artifact.renderer_version}"
+        )
+    elif review.visible_length is not None and review.limit is not None:
+        artifact_line = (
+            f"Точный preview: недоступен · {review.transport} · "
+            f"{review.visible_length}/{review.limit} символов"
+        )
+    artifact_hash = (
+        review.artifact_hash[:ARTIFACT_HASH_PREFIX_LENGTH]
+        if review.artifact_hash is not None
+        else "—"
+    )
+    blocker_text = ", ".join(review.blockers) if review.blockers else "нет"
+    message = (
         "Черновик — в канал ещё не отправлен\n"
-        f"Редакционный черновик · text r{draft.revision} · image r{cluster.current_image_revision}\n"
+        f"Материал {draft.id[:8]} · text r{draft.revision} · "
+        f"image r{cluster.current_image_revision}\n"
         f"Состояние: {cluster.status}\n"
         f"Канал: @{settings.news_channel_username or 'private'} "
         f"({settings.news_channel_environment})\n"
+        f"{artifact_line}\n"
+        f"Artifact: {artifact_hash}\n"
+        f"Блокеры публикации: {blocker_text}\n"
         f"Topic: {metadata.get('topic', 'other')} · score {metadata.get('score', 0)}/100 "
         f"({metadata.get('score_version', 'unknown')})\n"
         f"Причины: {score_reasons}\n"
         f"Supporting sources: {max(0, supporting_count)}\n"
-        f"Warnings: {warnings}\n\n"
+        f"Warnings: {warnings}"
     )
     failure = (
         db.query(NewsPublicationSnapshot)
@@ -516,34 +688,36 @@ def review_message(db: Session, draft: NewsDraftRevision) -> tuple[str, str, dic
         .first()
     )
     if failure is not None:
-        prefix += f"Предыдущая публикация не выполнена: {failure.last_error_code}\n\n"
-    message = (
-        prefix
-        + "Служебное представление text revision (не финальный preview канала):\n\n"
-        + publication_preview_text(draft)
+        message += f"\nПредыдущая публикация не выполнена: {failure.last_error_code}"
+    source_url = str(metadata.get("trusted_source_url", "")) or (
+        primary.primary_url or primary.canonical_url
     )
-    if len(message) > MAX_REVIEW_MESSAGE_CHARS:
-        message = (
-            message[: MAX_REVIEW_MESSAGE_CHARS - 40].rstrip()
-            + "\n\n[черновик сокращён для Telegram]"
-        )
-    markup = {
-        "inline_keyboard": [
-            [{"text": "Открыть источник", "url": primary.primary_url or primary.canonical_url}],
+    buttons = [[{"text": "Открыть источник", "url": source_url}]]
+    if not review.blockers and review.artifact_hash is not None:
+        buttons.append(
             [
                 {
-                    "text": "Опубликовать",
+                    "text": "Опубликовать сейчас",
                     "callback_data": publishing_callback_data(
-                        "p", draft.id, cluster.current_image_revision
+                        "p",
+                        draft.id,
+                        cluster.current_image_revision,
+                        review.artifact_hash,
                     ),
                 },
                 {
                     "text": "Запланировать",
                     "callback_data": publishing_callback_data(
-                        "s", draft.id, cluster.current_image_revision
+                        "s",
+                        draft.id,
+                        cluster.current_image_revision,
+                        review.artifact_hash,
                     ),
                 },
-            ],
+            ]
+        )
+    buttons.extend(
+        [
             [
                 {
                     "text": "Изменить текст",
@@ -585,11 +759,15 @@ def review_message(db: Session, draft: NewsDraftRevision) -> tuple[str, str, dic
                         "x", draft.id, cluster.current_image_revision
                     ),
                 },
-                {"text": "Отложить", "callback_data": callback_data("defer", draft.id)},
+                {
+                    "text": "Отложить рассмотрение",
+                    "callback_data": callback_data("defer", draft.id),
+                },
             ],
         ]
-    }
-    return message, primary.primary_url or primary.canonical_url, markup
+    )
+    markup = {"inline_keyboard": buttons}
+    return message[:MAX_REVIEW_MESSAGE_CHARS], source_url, markup
 
 
 def prune_news_editorial(db: Session, *, retention_days: int, batch_size: int = 200) -> int:

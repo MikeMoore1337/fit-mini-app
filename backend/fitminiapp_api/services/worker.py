@@ -208,24 +208,6 @@ async def send_telegram_message(
     raise _telegram_delivery_error(response)
 
 
-async def send_telegram_photo(
-    client: httpx.AsyncClient,
-    chat_id: int,
-    image_data: bytes,
-) -> int | None:
-    response = await client.post(
-        f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendPhoto",
-        data={"chat_id": str(chat_id)},
-        files={"photo": ("news-preview.jpg", image_data, "image/jpeg")},
-    )
-    if response.is_success:
-        payload = response.json()
-        result = payload.get("result") if isinstance(payload, dict) else None
-        message_id = result.get("message_id") if isinstance(result, dict) else None
-        return message_id if isinstance(message_id, int) else None
-    raise _telegram_delivery_error(response)
-
-
 async def check_news_channel_rights(client: httpx.AsyncClient) -> bool:
     if not settings.news_publication_enabled or settings.news_channel_id is None:
         return False
@@ -258,29 +240,27 @@ async def check_news_channel_rights(client: httpx.AsyncClient) -> bool:
     return ready
 
 
-async def send_telegram_publication(
+async def send_telegram_preview(
     client: httpx.AsyncClient,
-    channel_id: int,
+    chat_id: int,
     text: str,
     image_data: bytes | None,
     *,
     parse_mode: str | None = None,
     link_preview_disabled: bool = False,
 ) -> TelegramPublicationResult:
-    if channel_id != settings.news_channel_id:
-        raise TelegramPublicationError("channel_mismatch", terminal=True)
     endpoint = "sendPhoto" if image_data is not None else "sendMessage"
     url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/{endpoint}"
     try:
         if image_data is None:
-            request_payload: dict[str, object] = {"chat_id": channel_id, "text": text}
+            request_payload: dict[str, object] = {"chat_id": chat_id, "text": text}
             if parse_mode is not None:
                 request_payload["parse_mode"] = parse_mode
             if link_preview_disabled:
                 request_payload["link_preview_options"] = {"is_disabled": True}
             response = await client.post(url, json=request_payload)
         else:
-            form_data: dict[str, str] = {"chat_id": str(channel_id), "caption": text}
+            form_data: dict[str, str] = {"chat_id": str(chat_id), "caption": text}
             if parse_mode is not None:
                 form_data["parse_mode"] = parse_mode
             response = await client.post(
@@ -313,6 +293,27 @@ async def send_telegram_publication(
     if not isinstance(message_id, int):
         raise TelegramPublicationError("telegram_malformed_success", uncertain=True)
     return TelegramPublicationResult(message_id=message_id, message_date=message_date)
+
+
+async def send_telegram_publication(
+    client: httpx.AsyncClient,
+    channel_id: int,
+    text: str,
+    image_data: bytes | None,
+    *,
+    parse_mode: str | None = None,
+    link_preview_disabled: bool = False,
+) -> TelegramPublicationResult:
+    if channel_id != settings.news_channel_id:
+        raise TelegramPublicationError("channel_mismatch", terminal=True)
+    return await send_telegram_preview(
+        client,
+        channel_id,
+        text,
+        image_data,
+        parse_mode=parse_mode,
+        link_preview_disabled=link_preview_disabled,
+    )
 
 
 def _prepare_delivery(
@@ -508,7 +509,7 @@ async def main() -> None:
             try:
                 await run_news_pipeline_once(
                     send_message=send_telegram_message,
-                    send_photo=send_telegram_photo,
+                    send_preview=send_telegram_preview,
                     send_publication=send_telegram_publication,
                     publication_ready=news_publication_ready,
                     fetch_sources=should_fetch_news,

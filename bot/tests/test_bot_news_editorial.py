@@ -12,6 +12,7 @@ class FakeMessage:
     def __init__(self, *, chat_type: str = "private") -> None:
         self.chat = SimpleNamespace(type=chat_type)
         self.text = (
+            "Материал aaaaaaaa · text r7 · image r2\n"
             "Канал: @yfc_test_news (staging)\n\n"
             "Служебное представление text revision (не финальный preview канала)"
         )
@@ -86,8 +87,9 @@ def test_destructive_news_action_requires_confirmation(monkeypatch) -> None:
     callback.answer.assert_awaited_once_with()
 
 
-def test_publish_confirmation_repeats_channel_and_marks_payload_provisional(monkeypatch) -> None:
-    callback = _callback(user_id=7001, data=f"newsp:p:{'a' * 32}:2")
+def test_publish_confirmation_repeats_channel_mode_revision_and_artifact(monkeypatch) -> None:
+    artifact_hash = "f" * 16
+    callback = _callback(user_id=7001, data=f"newsp:p:{'a' * 32}:2:{artifact_hash}")
     state = AsyncMock()
     monkeypatch.setattr(news_editorial, "Message", FakeMessage)
 
@@ -95,8 +97,14 @@ def test_publish_confirmation_repeats_channel_and_marks_payload_provisional(monk
 
     confirmation = callback.message.answer.await_args.args[0]
     assert "Канал: @yfc_test_news (staging)" in confirmation
-    assert "не финальный preview канала" in confirmation
-    assert "production и финальный formatted preview" in confirmation
+    assert "Режим: опубликовать сейчас" in confirmation
+    assert f"Artifact: {artifact_hash}" in confirmation
+    assert "не финальный preview" not in confirmation
+    markup = callback.message.answer.await_args.kwargs["reply_markup"]
+    callback_values = [button.callback_data for row in markup.inline_keyboard for button in row]
+    assert "Материал aaaaaaaa · text r7 · image r2" in confirmation
+    assert f"newsp:c:{'a' * 32}:2:{artifact_hash}" in callback_values
+    assert all(value is not None and len(value.encode()) <= 64 for value in callback_values)
     callback.answer.assert_awaited_once_with()
 
 
@@ -106,6 +114,107 @@ def test_schedule_parser_accepts_nested_iana_timezone() -> None:
     )
     assert match is not None
     assert match.group(3) == "America/Argentina/Buenos_Aires"
+
+
+def test_hashless_publish_callback_is_rejected_as_stale(monkeypatch) -> None:
+    callback = _callback(user_id=7001, data=f"newsp:p:{'a' * 32}:2")
+    state = AsyncMock()
+    backend_call = AsyncMock()
+    monkeypatch.setattr(news_editorial, "Message", FakeMessage)
+    monkeypatch.setattr(news_editorial, "revision_action", backend_call)
+
+    asyncio.run(news_editorial.news_publishing_callback(callback, state))
+
+    backend_call.assert_not_awaited()
+    callback.answer.assert_awaited_once_with(
+        "Preview устарел: откройте новую карточку", show_alert=True
+    )
+
+
+def test_confirmed_publish_calls_exact_hash_bound_revision(monkeypatch) -> None:
+    artifact_hash = "d" * 16
+    callback = _callback(user_id=7001, data=f"newsp:c:{'a' * 32}:2:{artifact_hash}")
+    state = AsyncMock()
+    backend_call = AsyncMock(return_value=("queued", []))
+    monkeypatch.setattr(news_editorial, "Message", FakeMessage)
+    monkeypatch.setattr(news_editorial, "revision_action", backend_call)
+
+    asyncio.run(news_editorial.news_publishing_callback(callback, state))
+
+    backend_call.assert_awaited_once_with(
+        draft_id="a" * 32,
+        admin_telegram_user_id=7001,
+        action="publish",
+        image_revision=2,
+        artifact_hash=artifact_hash,
+    )
+    callback.answer.assert_awaited_once_with("Публикация поставлена в очередь", show_alert=False)
+
+
+def test_schedule_input_requires_explicit_channel_time_and_hash_confirmation(monkeypatch) -> None:
+    artifact_hash = "e" * 16
+    state = AsyncMock()
+    state.get_data.return_value = {
+        "draft_id": "a" * 32,
+        "image_revision": 3,
+        "artifact_hash": artifact_hash,
+        "channel_line": "Канал: @yfc_test_news (staging)",
+        "started_at": news_editorial.time.monotonic(),
+    }
+    message = FakeMessage()
+    message.from_user = SimpleNamespace(id=7001)
+    message.text = "2026-08-27 12:30 Europe/Moscow"
+    backend_call = AsyncMock()
+    monkeypatch.setattr(news_editorial, "revision_action", backend_call)
+
+    asyncio.run(news_editorial.news_schedule_input(message, state))
+
+    backend_call.assert_not_awaited()
+    state.set_state.assert_awaited_once_with(
+        news_editorial.NewsEditorialStates.awaiting_schedule_confirmation
+    )
+    saved = state.set_data.await_args.args[0]
+    assert saved["scheduled_local"] == "2026-08-27T12:30:00"
+    assert saved["timezone"] == "Europe/Moscow"
+    confirmation = message.answer.await_args.args[0]
+    assert "Канал: @yfc_test_news (staging)" in confirmation
+    assert "2026-08-27 12:30" in confirmation
+    assert "Europe/Moscow" in confirmation
+    assert artifact_hash in confirmation
+    markup = message.answer.await_args.kwargs["reply_markup"]
+    callback_values = [button.callback_data for row in markup.inline_keyboard for button in row]
+    assert callback_values == [f"newsp:z:{'a' * 32}:3:{artifact_hash}"]
+
+
+def test_confirmed_schedule_calls_exact_hash_bound_revision(monkeypatch) -> None:
+    artifact_hash = "e" * 16
+    callback = _callback(user_id=7001, data=f"newsp:z:{'a' * 32}:3:{artifact_hash}")
+    state = AsyncMock()
+    state.get_data.return_value = {
+        "draft_id": "a" * 32,
+        "image_revision": 3,
+        "artifact_hash": artifact_hash,
+        "scheduled_local": "2026-08-27T12:30:00",
+        "timezone": "Europe/Moscow",
+        "started_at": news_editorial.time.monotonic(),
+    }
+    backend_call = AsyncMock(return_value=("scheduled", []))
+    monkeypatch.setattr(news_editorial, "Message", FakeMessage)
+    monkeypatch.setattr(news_editorial, "revision_action", backend_call)
+
+    asyncio.run(news_editorial.news_publishing_callback(callback, state))
+
+    backend_call.assert_awaited_once_with(
+        draft_id="a" * 32,
+        admin_telegram_user_id=7001,
+        action="schedule",
+        image_revision=3,
+        artifact_hash=artifact_hash,
+        scheduled_local="2026-08-27T12:30:00",
+        timezone="Europe/Moscow",
+    )
+    state.clear.assert_awaited_once_with()
+    callback.answer.assert_awaited_once_with("Публикация запланирована", show_alert=False)
 
 
 def test_uncertain_reconcile_keeps_exact_snapshot_id(monkeypatch) -> None:
