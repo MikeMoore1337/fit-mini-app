@@ -35,6 +35,7 @@ from fitminiapp_api.models.user import (
     UserProfile,
     UserProfilePriorityMuscle,
 )
+from fitminiapp_api.models.weekly_digest import WeeklyDigestDelivery, WeeklyDigestPreference
 from fitminiapp_api.services.account_export import build_account_export
 from fitminiapp_api.services.programs import delete_template_cascade
 
@@ -214,6 +215,12 @@ def delete_user_cascade(db: Session, user: User) -> None:
     )
     db.query(Notification).filter(Notification.user_id == user.id).delete(synchronize_session=False)
     db.query(NotificationSetting).filter(NotificationSetting.user_id == user.id).delete(
+        synchronize_session=False
+    )
+    db.query(WeeklyDigestDelivery).filter(WeeklyDigestDelivery.user_id == user.id).delete(
+        synchronize_session=False
+    )
+    db.query(WeeklyDigestPreference).filter(WeeklyDigestPreference.user_id == user.id).delete(
         synchronize_session=False
     )
     db.query(Payment).filter(Payment.user_id == user.id).delete(synchronize_session=False)

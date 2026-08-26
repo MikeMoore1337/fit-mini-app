@@ -15,6 +15,7 @@ from fitminiapp_api.models.exercise import Exercise
 from fitminiapp_api.models.notification import Notification, NotificationSetting
 from fitminiapp_api.models.token import RefreshToken
 from fitminiapp_api.models.user import BodyMeasurement, CoachClient, User
+from fitminiapp_api.models.weekly_digest import WeeklyDigestPreference
 from fitminiapp_api.services import account_exports
 
 
@@ -208,6 +209,15 @@ def test_unlink_preserves_account_guards_last_identity_and_disables_telegram(cli
         setting = db.query(NotificationSetting).filter_by(user_id=user_id).one()
         setting.telegram_enabled = True
         db.add(
+            WeeklyDigestPreference(
+                user_id=user_id,
+                telegram_chat_id=9_650_004,
+                weekly_news_digest_enabled=True,
+                consent_version="weekly-news-v1",
+                subscribed_at=now,
+            )
+        )
+        db.add(
             Notification(
                 user_id=user_id,
                 channel="telegram",
@@ -241,6 +251,10 @@ def test_unlink_preserves_account_guards_last_identity_and_disables_telegram(cli
         assert setting.telegram_enabled is False
         assert notification.status == "cancelled"
         assert notification.last_error == "telegram_identity_unlinked"
+        digest_preference = db.query(WeeklyDigestPreference).filter_by(user_id=user_id).one()
+        assert digest_preference.weekly_news_digest_enabled is False
+        assert digest_preference.telegram_chat_id is None
+        assert digest_preference.disabled_reason == "telegram_identity_unlinked"
 
     blocked = client.delete("/api/v1/me/auth/identities/google", headers=headers)
     assert blocked.status_code == 409

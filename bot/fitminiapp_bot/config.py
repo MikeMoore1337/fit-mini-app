@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     bot_profile_sync_state_path: str = "/var/lock/fitminiapp-bot/profile-sync-state.json"
     admin_telegram_user_ids: str = ""
     privacy_policy_url: str = ""
+    news_channel_username: str = ""
 
     @property
     def admin_telegram_id_set(self) -> set[int]:

@@ -43,13 +43,14 @@ from fitminiapp_api.models.user import (
     CoachRoleApplication,
     User,
 )
+from fitminiapp_api.models.weekly_digest import WeeklyDigestDelivery, WeeklyDigestPreference
 from fitminiapp_api.services.profile import serialize_body_priority
 
 if TYPE_CHECKING:
     from fitminiapp_api.models.recipe import RecipeIngredient
 
 
-ACCOUNT_EXPORT_SCHEMA_VERSION = 3
+ACCOUNT_EXPORT_SCHEMA_VERSION = 4
 
 # Every ORM table whose rows can be reached from users through ownership or actor FKs must be
 # classified here. Tests compare this inventory with SQLAlchemy metadata so a new persistent user
@@ -95,6 +96,8 @@ ACCOUNT_EXPORT_DATA_INVENTORY: dict[str, str] = {
     "workout_comment_revisions": "workout_comments",
     "notification_settings": "notification_settings",
     "notifications": "notifications",
+    "weekly_digest_preferences": "weekly_digest_preference",
+    "weekly_digest_deliveries": "weekly_digest_deliveries",
     "audit_events": "audit_events",
 }
 
@@ -598,6 +601,15 @@ def build_account_export(db: Session, user: User) -> dict[str, object]:
         .order_by(Notification.created_at.asc(), Notification.id.asc())
         .all()
     )
+    digest_preference = (
+        db.query(WeeklyDigestPreference).filter(WeeklyDigestPreference.user_id == user.id).first()
+    )
+    digest_deliveries = (
+        db.query(WeeklyDigestDelivery)
+        .filter(WeeklyDigestDelivery.user_id == user.id)
+        .order_by(WeeklyDigestDelivery.created_at.asc(), WeeklyDigestDelivery.id.asc())
+        .all()
+    )
     relations = (
         db.query(CoachClient)
         .filter(or_(CoachClient.coach_user_id == user.id, CoachClient.client_user_id == user.id))
@@ -912,6 +924,36 @@ def build_account_export(db: Session, user: User) -> dict[str, object]:
                 ),
             )
             for row in notifications
+        ],
+        "weekly_digest_preference": (
+            _fields(
+                digest_preference,
+                (
+                    "weekly_news_digest_enabled",
+                    "consent_version",
+                    "subscribed_at",
+                    "unsubscribed_at",
+                    "disabled_reason",
+                    "last_digest_issue_id",
+                    "last_sent_at",
+                ),
+            )
+            if digest_preference
+            else None
+        ),
+        "weekly_digest_deliveries": [
+            _fields(
+                row,
+                (
+                    "issue_id",
+                    "status",
+                    "attempt_count",
+                    "last_error_code",
+                    "created_at",
+                    "sent_at",
+                ),
+            )
+            for row in digest_deliveries
         ],
         "audit_events": [
             _fields(

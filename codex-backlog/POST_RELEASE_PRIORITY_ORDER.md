@@ -20,8 +20,9 @@ Tasks `80-96` и их буквенные подзадачи находятся �
 | `17` | `96` | Native feasibility | Web/TMA/PWA ограничения измеримо вредят критическому сценарию |
 | `18` | umbrella `87C` -> independently gated `87C1`, `87C2` | Advanced AI | Beta отдельно доказала спрос на memory и/или provider resilience |
 
-Текущее routing-состояние Telegram news потока: tasks `88-89A` завершены и архивированы; task `90`
-назначена current в статусе `PENDING`, но её реализация начинается только отдельным lifecycle.
+Текущее routing-состояние Telegram news потока: tasks `88-90` завершены и архивированы. Следующей
+current остаётся release task `74`; umbrella `91` отдельно не выполняется, а `91A` требует
+собственных dependency, Trigger и owner decision.
 
 ## Routing rules
 

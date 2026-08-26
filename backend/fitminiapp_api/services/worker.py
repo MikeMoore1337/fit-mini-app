@@ -17,6 +17,7 @@ from fitminiapp_api.core.logging_config import configure_logging
 from fitminiapp_api.db.session import get_session_context
 from fitminiapp_api.models.notification import Notification, NotificationSetting
 from fitminiapp_api.models.user import User
+from fitminiapp_api.models.weekly_digest import WeeklyDigestDelivery
 from fitminiapp_api.services.account_exports import prune_account_exports
 from fitminiapp_api.services.bot_support import prune_support_cases
 from fitminiapp_api.services.news_worker import run_news_pipeline_once
@@ -34,6 +35,15 @@ from fitminiapp_api.services.notifications import (
     sync_weekly_check_in_reminders,
     sync_workout_reminders,
     validate_notification_destination,
+)
+from fitminiapp_api.services.weekly_digest import (
+    claim_due_digest_deliveries,
+    digest_delivery_counts,
+    digest_delivery_payload,
+    finalize_digest_issues,
+    mark_digest_delivery_failed,
+    mark_digest_delivery_succeeded,
+    prune_weekly_digest,
 )
 
 logger = logging.getLogger(__name__)
@@ -161,6 +171,8 @@ async def send_telegram_message(
     *,
     open_app_path: str | None = None,
     reply_markup: dict | None = None,
+    parse_mode: str | None = None,
+    link_preview_disabled: bool = False,
 ) -> int | None:
     if not settings.telegram_bot_token or settings.telegram_bot_token in {
         "change-me",
@@ -171,6 +183,10 @@ async def send_telegram_message(
             terminal_status="failed",
         )
     payload: dict = {"chat_id": chat_id, "text": text}
+    if parse_mode is not None:
+        payload["parse_mode"] = parse_mode
+    if link_preview_disabled:
+        payload["link_preview_options"] = {"is_disabled": True}
     if open_app_path and reply_markup is not None:
         raise ValueError("Only one Telegram reply markup contract may be used")
     if open_app_path:
@@ -206,6 +222,123 @@ async def send_telegram_message(
         message_id = result.get("message_id") if isinstance(result, dict) else None
         return message_id if isinstance(message_id, int) else None
     raise _telegram_delivery_error(response)
+
+
+async def run_weekly_digest_once() -> None:
+    with get_session_context() as db:
+        delivery_ids = claim_due_digest_deliveries(db)
+        issue_by_delivery = {
+            row.id: row.issue_id
+            for row in db.query(WeeklyDigestDelivery)
+            .filter(WeeklyDigestDelivery.id.in_(delivery_ids))
+            .all()
+        }
+    if not delivery_ids:
+        return
+
+    semaphore = asyncio.Semaphore(settings.weekly_digest_delivery_concurrency)
+    rate_limiter = TelegramRateLimiter(TELEGRAM_DELIVERY_RATE_PER_SECOND)
+    async with httpx.AsyncClient(timeout=20) as client:
+
+        async def deliver(delivery_id: int) -> tuple[int, Exception | None, int | None]:
+            try:
+                async with semaphore:
+                    await rate_limiter.acquire()
+                    with get_session_context() as preflight_db:
+                        payload = digest_delivery_payload(preflight_db, delivery_id)
+                    if payload is None:
+                        return delivery_id, None, None
+                    message_id = await send_telegram_message(
+                        client,
+                        payload.chat_id,
+                        payload.text,
+                        reply_markup={
+                            "inline_keyboard": [
+                                [{"text": "Открыть Telegram-канал", "url": payload.channel_url}],
+                                [
+                                    {
+                                        "text": "Отключить еженедельный дайджест",
+                                        "callback_data": "wd:off",
+                                    }
+                                ],
+                            ]
+                        },
+                        parse_mode="HTML",
+                        link_preview_disabled=True,
+                    )
+                    if message_id is None:
+                        raise TelegramPublicationError(
+                            "telegram_malformed_success",
+                            uncertain=True,
+                        )
+                    return delivery_id, None, message_id
+            except httpx.TimeoutException:
+                return (
+                    delivery_id,
+                    TelegramPublicationError("telegram_send_timeout", uncertain=True),
+                    None,
+                )
+            except NotificationDeliveryError as exc:
+                if exc.retry_after is not None:
+                    await rate_limiter.defer(exc.retry_after.total_seconds())
+                return delivery_id, exc, None
+            except Exception as exc:
+                return delivery_id, exc, None
+
+        results = await asyncio.gather(*(deliver(delivery_id) for delivery_id in delivery_ids))
+
+    issue_ids = set(issue_by_delivery.values())
+    with get_session_context() as db:
+        for delivery_id, error, message_id in results:
+            row = db.get(WeeklyDigestDelivery, delivery_id)
+            if row is None or row.status != "processing":
+                continue
+            if error is None and message_id is not None:
+                mark_digest_delivery_succeeded(
+                    db,
+                    delivery_id,
+                    telegram_message_id=message_id,
+                )
+            elif error is not None:
+                if isinstance(error, NotificationDeliveryError):
+                    mark_digest_delivery_failed(
+                        db,
+                        delivery_id,
+                        error_code=error.code,
+                        retry_after=error.retry_after,
+                        terminal=error.terminal_status is not None,
+                    )
+                elif isinstance(error, TelegramPublicationError) and error.uncertain:
+                    mark_digest_delivery_failed(
+                        db,
+                        delivery_id,
+                        error_code=error.code,
+                        uncertain=True,
+                    )
+                else:
+                    mark_digest_delivery_failed(
+                        db,
+                        delivery_id,
+                        error_code=type(error).__name__,
+                    )
+        finalize_digest_issues(db, issue_ids)
+        counts = {
+            status: sum(
+                digest_delivery_counts(db, issue_id).get(status, 0) for issue_id in issue_ids
+            )
+            for status in (
+                "queued",
+                "processing",
+                "sent",
+                "failed",
+                "cancelled",
+                "uncertain",
+            )
+        }
+    logger.info(
+        "weekly_digest_delivery_batch_completed",
+        extra={"issue_count": len(issue_ids), **counts},
+    )
 
 
 async def check_news_channel_rights(client: httpx.AsyncClient) -> bool:
@@ -362,6 +495,7 @@ async def run_once(*, sync_reminders: bool = True) -> None:
     with get_session_context() as db:
         prune_account_exports(db)
         if sync_reminders:
+            prune_weekly_digest(db, retention_days=settings.news_retention_days)
             prune_support_cases(db)
             sync_workout_reminders(db)
             sync_weekly_check_in_reminders(db)
@@ -502,6 +636,8 @@ async def main() -> None:
         current = monotonic()
         should_sync = current >= next_reminder_sync
         await run_once(sync_reminders=should_sync)
+        if settings.weekly_digest_enabled:
+            await run_weekly_digest_once()
         if should_sync:
             next_reminder_sync = current + settings.reminder_sync_seconds
         if settings.news_ingestion_enabled:

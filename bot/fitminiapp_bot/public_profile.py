@@ -43,7 +43,15 @@ PUBLIC_COMMANDS = (
     PublicCommand("help", "Возможности и команды"),
     PublicCommand("privacy", "Политика конфиденциальности"),
 )
-HIDDEN_COMMANDS = ("feedback", "cancel", "timezone")
+HIDDEN_COMMANDS = (
+    "feedback",
+    "cancel",
+    "timezone",
+    "digest_review",
+    "news_off",
+    "unsubscribe",
+    "stop_news",
+)
 
 
 def is_valid_public_https_url(url: str) -> bool:

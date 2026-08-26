@@ -8,6 +8,7 @@ from fitminiapp_api.models.support import BotSupportCase
 from fitminiapp_api.models.user import User
 from fitminiapp_api.services.audit import record_audit_event
 from fitminiapp_api.services.root_admin import is_root_user
+from fitminiapp_api.services.weekly_digest import disable_digest_for_unlinked_telegram
 
 
 class IdentityUnlinkError(ValueError):
@@ -49,6 +50,7 @@ def unlink_auth_identity(db: Session, user: User, provider: str) -> None:
 
     if normalized_provider == "telegram":
         telegram_user_id = user.telegram_user_id
+        disable_digest_for_unlinked_telegram(db, user.id)
         user.telegram_user_id = None
         user.username = None
         setting = (

@@ -121,6 +121,10 @@ class Settings(BaseSettings):
     news_schedule_max_days: int = Field(default=30, ge=1, le=90)
     news_schedule_missed_minutes: int = Field(default=120, ge=5, le=1440)
     news_daily_publication_limit: int = Field(default=1, ge=1, le=10)
+    weekly_digest_enabled: bool = False
+    weekly_digest_consent_version: str = "weekly-news-v1"
+    weekly_digest_min_items: int = Field(default=3, ge=1, le=5)
+    weekly_digest_delivery_concurrency: int = Field(default=8, ge=1, le=20)
 
     @model_validator(mode="after")
     def validate_production_safety(self) -> Settings:
@@ -181,7 +185,11 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_news_pipeline(self) -> Settings:
-        news_active = self.news_ingestion_enabled or self.news_publication_enabled
+        news_active = (
+            self.news_ingestion_enabled
+            or self.news_publication_enabled
+            or self.weekly_digest_enabled
+        )
         if news_active and not self.admin_telegram_id_set:
             raise ValueError(
                 "ADMIN_TELEGRAM_USER_IDS must be configured when the news workflow is enabled"
@@ -226,6 +234,12 @@ class Settings(BaseSettings):
             raise ValueError(
                 "NEWS_INGESTION_ENABLED must be true when NEWS_PUBLICATION_ENABLED=true"
             )
+        if self.weekly_digest_enabled and not self.news_publication_enabled:
+            raise ValueError(
+                "NEWS_PUBLICATION_ENABLED must be true when WEEKLY_DIGEST_ENABLED=true"
+            )
+        if self.weekly_digest_enabled and not self.news_channel_username:
+            raise ValueError("NEWS_CHANNEL_USERNAME is required when WEEKLY_DIGEST_ENABLED=true")
         if (
             self.app_env == "prod"
             and self.news_publication_enabled
@@ -241,6 +255,14 @@ class Settings(BaseSettings):
         except ZoneInfoNotFoundError as exc:
             raise ValueError("NEWS_PUBLICATION_TIMEZONE must be a valid IANA timezone") from exc
         return self
+
+    @field_validator("weekly_digest_consent_version")
+    @classmethod
+    def validate_weekly_digest_consent_version(cls, value: str) -> str:
+        normalized = value.strip()
+        if not re.fullmatch(r"[a-z0-9][a-z0-9._-]{2,63}", normalized):
+            raise ValueError("WEEKLY_DIGEST_CONSENT_VERSION is invalid")
+        return normalized
 
     @field_validator("open_food_facts_user_agent")
     @classmethod

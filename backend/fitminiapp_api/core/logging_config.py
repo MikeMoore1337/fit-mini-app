@@ -40,6 +40,7 @@ SAFE_EVENT_NAMES = frozenset(
         "telegram_delivery_skipped",
         "unhandled_exception",
         "worker_started",
+        "weekly_digest_delivery_batch_completed",
     }
 )
 SAFE_PROVIDER_NAMES = frozenset(
@@ -79,6 +80,13 @@ STRUCTURED_FIELDS = (
     "queue_age_seconds",
     "attempt_count",
     "latency_ms",
+    "issue_count",
+    "queued",
+    "processing",
+    "sent",
+    "failed",
+    "cancelled",
+    "uncertain",
 )
 INTEGER_FIELDS = {
     "status_code",
@@ -92,6 +100,13 @@ INTEGER_FIELDS = {
     "candidate_count",
     "queue_age_seconds",
     "attempt_count",
+    "issue_count",
+    "queued",
+    "processing",
+    "sent",
+    "failed",
+    "cancelled",
+    "uncertain",
 }
 FLOAT_FIELDS = {"duration_ms", "sql_duration_ms", "latency_ms"}
 CODE_FIELDS = {

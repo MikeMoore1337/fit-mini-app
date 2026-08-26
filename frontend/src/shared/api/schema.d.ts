@@ -2464,6 +2464,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/bot/digest/preference": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Digest Preference From Bot */
+        post: operations["digest_preference_from_bot_api_v1_bot_digest_preference_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bot/digest/issues/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Digest Draft From Bot */
+        post: operations["create_digest_draft_from_bot_api_v1_bot_digest_issues_draft_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bot/digest/issues/{issue_id}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Act On Digest Issue From Bot */
+        post: operations["act_on_digest_issue_from_bot_api_v1_bot_digest_issues__issue_id__actions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/bot/support/cases": {
         parameters: {
             query?: never;
@@ -2526,6 +2577,125 @@ export interface paths {
         put?: never;
         /** Complete Support Reply From Bot */
         post: operations["complete_support_reply_from_bot_api_v1_bot_support_cases__case_id__reply_result_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bot/news/drafts/{draft_id}/moderate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Moderate News Draft From Bot */
+        post: operations["moderate_news_draft_from_bot_api_v1_bot_news_drafts__draft_id__moderate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bot/news/drafts/{draft_id}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Act On News Revision From Bot */
+        post: operations["act_on_news_revision_from_bot_api_v1_bot_news_drafts__draft_id__actions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bot/news/drafts/{draft_id}/text": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Edit News Text From Bot */
+        post: operations["edit_news_text_from_bot_api_v1_bot_news_drafts__draft_id__text_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bot/news/drafts/{draft_id}/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replace News Image From Bot */
+        post: operations["replace_news_image_from_bot_api_v1_bot_news_drafts__draft_id__image_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bot/news/publications/{snapshot_id}/post-action": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Manage Published News From Bot */
+        post: operations["manage_published_news_from_bot_api_v1_bot_news_publications__snapshot_id__post_action_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bot/news/publications/{snapshot_id}/reconcile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reconcile News Publication From Bot */
+        post: operations["reconcile_news_publication_from_bot_api_v1_bot_news_publications__snapshot_id__reconcile_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bot/news/publications/{snapshot_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retry News Publication From Bot */
+        post: operations["retry_news_publication_from_bot_api_v1_bot_news_publications__snapshot_id__retry_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3211,6 +3381,192 @@ export interface components {
             mode: "balanced" | "muscle_groups";
             /** Muscle Group Ids */
             muscle_group_ids?: string[];
+        };
+        /** BotDigestDraftRequest */
+        BotDigestDraftRequest: {
+            /** Admin Telegram User Id */
+            admin_telegram_user_id: number;
+            /** Min Items */
+            min_items?: number | null;
+        };
+        /** BotDigestIssueActionRequest */
+        BotDigestIssueActionRequest: {
+            /** Admin Telegram User Id */
+            admin_telegram_user_id: number;
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "approve" | "schedule" | "cancel" | "reject" | "remove" | "move_up" | "move_down" | "edit_intro" | "edit_item";
+            /** Expected Content Hash */
+            expected_content_hash: string;
+            /** Position */
+            position?: number | null;
+            /** Text */
+            text?: string | null;
+            /** Scheduled Local */
+            scheduled_local?: string | null;
+            /** Timezone */
+            timezone?: string | null;
+        };
+        /** BotDigestIssueActionResponse */
+        BotDigestIssueActionResponse: {
+            /** Status */
+            status: string;
+            issue?: components["schemas"]["BotDigestIssueResponse"] | null;
+        };
+        /** BotDigestIssueItemResponse */
+        BotDigestIssueItemResponse: {
+            /** Position */
+            position: number;
+            /** Headline */
+            headline: string;
+            /** Takeaway */
+            takeaway: string;
+            /** Category */
+            category: string;
+            /** Channel Permalink */
+            channel_permalink: string;
+            /** Requires Owner Review */
+            requires_owner_review: boolean;
+        };
+        /** BotDigestIssueResponse */
+        BotDigestIssueResponse: {
+            /** Issue Id */
+            issue_id: string;
+            /** Issue Key */
+            issue_key: string;
+            /** Revision */
+            revision: number;
+            /** Status */
+            status: string;
+            /** Rendered Text */
+            rendered_text: string;
+            /** Content Hash */
+            content_hash: string;
+            /** Channel Url */
+            channel_url: string;
+            /** Min Items */
+            min_items: number;
+            /** Scheduled For Utc */
+            scheduled_for_utc?: string | null;
+            /** Timezone */
+            timezone: string;
+            /** Items */
+            items: components["schemas"]["BotDigestIssueItemResponse"][];
+            /** Blockers */
+            blockers: string[];
+        };
+        /** BotDigestPreferenceRequest */
+        BotDigestPreferenceRequest: {
+            /** Telegram User Id */
+            telegram_user_id: number;
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Consent Version */
+            consent_version?: string | null;
+            /** Username */
+            username?: string | null;
+            /** First Name */
+            first_name?: string | null;
+            /** Last Name */
+            last_name?: string | null;
+        };
+        /** BotDigestPreferenceResponse */
+        BotDigestPreferenceResponse: {
+            /** Enabled */
+            enabled: boolean;
+            /** Consent Version */
+            consent_version?: string | null;
+            /** Subscribed At */
+            subscribed_at?: string | null;
+        };
+        /** BotNewsModerationRequest */
+        BotNewsModerationRequest: {
+            /** Admin Telegram User Id */
+            admin_telegram_user_id: number;
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "skip" | "defer" | "regenerate" | "accept_for_design";
+        };
+        /** BotNewsModerationResponse */
+        BotNewsModerationResponse: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "accepted" | "queued" | "deferred" | "already_processed" | "stale" | "limit_reached" | "unavailable";
+            /** Cluster Status */
+            cluster_status?: string | null;
+        };
+        /** BotNewsPostActionRequest */
+        BotNewsPostActionRequest: {
+            /** Admin Telegram User Id */
+            admin_telegram_user_id: number;
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "edit" | "delete";
+            /** Text */
+            text?: string | null;
+        };
+        /** BotNewsReconcileRequest */
+        BotNewsReconcileRequest: {
+            /** Admin Telegram User Id */
+            admin_telegram_user_id: number;
+            /** Channel Message Id */
+            channel_message_id: number;
+        };
+        /** BotNewsRetryRequest */
+        BotNewsRetryRequest: {
+            /** Admin Telegram User Id */
+            admin_telegram_user_id: number;
+        };
+        /** BotNewsRevisionActionRequest */
+        BotNewsRevisionActionRequest: {
+            /** Admin Telegram User Id */
+            admin_telegram_user_id: number;
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "publish" | "schedule" | "regenerate_image" | "remove_image";
+            /** Expected Image Revision */
+            expected_image_revision: number;
+            /** Expected Artifact Hash */
+            expected_artifact_hash?: string | null;
+            /** Scheduled Local */
+            scheduled_local?: string | null;
+            /** Timezone */
+            timezone?: string | null;
+            /**
+             * Urgent Override
+             * @default false
+             */
+            urgent_override: boolean;
+        };
+        /** BotNewsRevisionActionResponse */
+        BotNewsRevisionActionResponse: {
+            /** Status */
+            status: string;
+            /** Cluster Status */
+            cluster_status?: string | null;
+            /** Snapshot Id */
+            snapshot_id?: string | null;
+            /** Blockers */
+            blockers?: string[];
+        };
+        /** BotNewsTextEditRequest */
+        BotNewsTextEditRequest: {
+            /** Admin Telegram User Id */
+            admin_telegram_user_id: number;
+            /** Expected Image Revision */
+            expected_image_revision: number;
+            /** Draft Text */
+            draft_text: string;
         };
         /** BotSupportCaseCreateRequest */
         BotSupportCaseCreateRequest: {
@@ -12649,6 +13005,113 @@ export interface operations {
             };
         };
     };
+    digest_preference_from_bot_api_v1_bot_digest_preference_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-bot-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BotDigestPreferenceRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BotDigestPreferenceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_digest_draft_from_bot_api_v1_bot_digest_issues_draft_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-bot-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BotDigestDraftRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BotDigestIssueResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    act_on_digest_issue_from_bot_api_v1_bot_digest_issues__issue_id__actions_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-bot-token"?: string | null;
+            };
+            path: {
+                issue_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BotDigestIssueActionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BotDigestIssueActionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_support_case_from_bot_api_v1_bot_support_cases_post: {
         parameters: {
             query?: never;
@@ -12784,6 +13247,263 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BotSupportReplyResultResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    moderate_news_draft_from_bot_api_v1_bot_news_drafts__draft_id__moderate_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-bot-token"?: string | null;
+            };
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BotNewsModerationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BotNewsModerationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    act_on_news_revision_from_bot_api_v1_bot_news_drafts__draft_id__actions_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-bot-token"?: string | null;
+            };
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BotNewsRevisionActionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BotNewsRevisionActionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    edit_news_text_from_bot_api_v1_bot_news_drafts__draft_id__text_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-bot-token"?: string | null;
+            };
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BotNewsTextEditRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BotNewsRevisionActionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    replace_news_image_from_bot_api_v1_bot_news_drafts__draft_id__image_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-bot-token"?: string | null;
+                "x-admin-telegram-user-id": number;
+                "x-expected-image-revision": number;
+            };
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BotNewsRevisionActionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manage_published_news_from_bot_api_v1_bot_news_publications__snapshot_id__post_action_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-bot-token"?: string | null;
+            };
+            path: {
+                snapshot_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BotNewsPostActionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BotNewsRevisionActionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reconcile_news_publication_from_bot_api_v1_bot_news_publications__snapshot_id__reconcile_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-bot-token"?: string | null;
+            };
+            path: {
+                snapshot_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BotNewsReconcileRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BotNewsRevisionActionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retry_news_publication_from_bot_api_v1_bot_news_publications__snapshot_id__retry_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-bot-token"?: string | null;
+            };
+            path: {
+                snapshot_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BotNewsRetryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BotNewsRevisionActionResponse"];
                 };
             };
             /** @description Validation Error */

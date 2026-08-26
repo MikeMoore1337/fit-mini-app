@@ -43,6 +43,8 @@ from .public_profile import (
     menu_button_matches,
     notification_settings_keyboard,
 )
+from .weekly_digest import router as weekly_digest_router
+from .weekly_digest import send_digest_settings
 
 try:
     import fcntl
@@ -475,6 +477,7 @@ async def answer_settings(message: Message) -> None:
         "Настройки уведомлений доступны в приложении. Часовой пояс можно изменить здесь: /timezone",
         reply_markup=notification_settings_keyboard(settings.frontend_base_url),
     )
+    await send_digest_settings(message)
 
 
 @public_router.message(Command("settings"), F.chat.type == "private")
@@ -592,6 +595,7 @@ async def unknown_command(message: Message) -> None:
     )
 
 
+dp.include_router(weekly_digest_router)
 dp.include_router(news_editorial_router)
 dp.include_router(feedback_router)
 dp.include_router(public_router)

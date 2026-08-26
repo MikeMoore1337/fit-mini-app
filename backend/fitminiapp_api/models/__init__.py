@@ -61,6 +61,12 @@ from fitminiapp_api.models.user import (
     UserProfile,
     UserProfilePriorityMuscle,
 )
+from fitminiapp_api.models.weekly_digest import (
+    WeeklyDigestDelivery,
+    WeeklyDigestIssue,
+    WeeklyDigestIssueItem,
+    WeeklyDigestPreference,
+)
 
 __all__ = [
     "AccountDataExport",
@@ -121,6 +127,10 @@ __all__ = [
     "UserWorkoutExercise",
     "UserWorkoutSet",
     "WeeklyCheckIn",
+    "WeeklyDigestDelivery",
+    "WeeklyDigestIssue",
+    "WeeklyDigestIssueItem",
+    "WeeklyDigestPreference",
     "WorkoutAdaptation",
     "WorkoutComment",
     "WorkoutCommentRevision",

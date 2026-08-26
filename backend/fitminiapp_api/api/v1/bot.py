@@ -1,5 +1,5 @@
 import hmac
-from typing import Annotated, cast
+from typing import Annotated, Literal, cast
 
 import httpx
 from fastapi import APIRouter, Header, HTTPException, Path, Request
@@ -11,6 +11,13 @@ from fitminiapp_api.db.session import get_session_context
 from fitminiapp_api.models.notification import NotificationSetting
 from fitminiapp_api.models.user import User, UserProfile
 from fitminiapp_api.schemas.bot import (
+    BotDigestDraftRequest,
+    BotDigestIssueActionRequest,
+    BotDigestIssueActionResponse,
+    BotDigestIssueItemResponse,
+    BotDigestIssueResponse,
+    BotDigestPreferenceRequest,
+    BotDigestPreferenceResponse,
     BotNewsModerationRequest,
     BotNewsModerationResponse,
     BotNewsPostActionRequest,
@@ -63,10 +70,47 @@ from fitminiapp_api.services.telegram_auth import (
     get_or_insert_telegram_user,
     normalize_telegram_username,
 )
+from fitminiapp_api.services.weekly_digest import (
+    DigestIssueView,
+    approve_digest_issue,
+    close_digest_issue,
+    create_digest_draft,
+    edit_digest_issue,
+    get_digest_preference,
+    schedule_digest_issue,
+    set_digest_preference,
+)
 
 router = APIRouter()
 SupportCaseId = Annotated[str, Path(pattern=r"^[0-9a-f]{32}$")]
 NewsDraftId = Annotated[str, Path(pattern=r"^[0-9a-f]{32}$")]
+
+
+def _digest_issue_response(issue: DigestIssueView) -> BotDigestIssueResponse:
+    return BotDigestIssueResponse(
+        issue_id=issue.issue_id,
+        issue_key=issue.issue_key,
+        revision=issue.revision,
+        status=issue.status,
+        rendered_text=issue.rendered_text,
+        content_hash=issue.content_hash,
+        channel_url=issue.channel_url,
+        min_items=issue.min_items,
+        scheduled_for_utc=issue.scheduled_for_utc,
+        timezone=issue.timezone,
+        items=[
+            BotDigestIssueItemResponse(
+                position=item.position,
+                headline=item.headline,
+                takeaway=item.takeaway,
+                category=item.category,
+                channel_permalink=item.channel_permalink,
+                requires_owner_review=item.requires_owner_review,
+            )
+            for item in issue.items
+        ],
+        blockers=list(issue.blockers),
+    )
 
 
 def _check_bot_token(x_bot_token: str | None) -> None:
@@ -174,6 +218,108 @@ def link_telegram_from_bot(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except TelegramLinkError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/digest/preference", response_model=BotDigestPreferenceResponse)
+def digest_preference_from_bot(
+    payload: BotDigestPreferenceRequest,
+    x_bot_token: str | None = Header(default=None),
+) -> BotDigestPreferenceResponse:
+    _check_bot_token(x_bot_token)
+    if (
+        payload.enabled is True
+        and payload.consent_version != settings.weekly_digest_consent_version
+    ):
+        raise HTTPException(status_code=409, detail="Digest consent version mismatch")
+    with get_session_context() as db:
+        preference = (
+            get_digest_preference(db, telegram_user_id=payload.telegram_user_id)
+            if payload.enabled is None
+            else set_digest_preference(
+                db,
+                telegram_user_id=payload.telegram_user_id,
+                enabled=payload.enabled,
+                presented_consent_version=payload.consent_version,
+                username=payload.username,
+                first_name=payload.first_name,
+                last_name=payload.last_name,
+            )
+        )
+        return BotDigestPreferenceResponse(
+            enabled=preference.enabled,
+            consent_version=preference.consent_version,
+            subscribed_at=preference.subscribed_at,
+        )
+
+
+@router.post("/digest/issues/draft", response_model=BotDigestIssueResponse)
+def create_digest_draft_from_bot(
+    payload: BotDigestDraftRequest,
+    x_bot_token: str | None = Header(default=None),
+) -> BotDigestIssueResponse:
+    _check_bot_token(x_bot_token)
+    _check_support_admin(payload.admin_telegram_user_id)
+    with get_session_context() as db:
+        issue = create_digest_draft(
+            db,
+            admin_telegram_user_id=payload.admin_telegram_user_id,
+            min_items=payload.min_items,
+        )
+        return _digest_issue_response(issue)
+
+
+@router.post(
+    "/digest/issues/{issue_id}/actions",
+    response_model=BotDigestIssueActionResponse,
+)
+def act_on_digest_issue_from_bot(
+    issue_id: NewsDraftId,
+    payload: BotDigestIssueActionRequest,
+    x_bot_token: str | None = Header(default=None),
+) -> BotDigestIssueActionResponse:
+    _check_bot_token(x_bot_token)
+    _check_support_admin(payload.admin_telegram_user_id)
+    with get_session_context() as db:
+        if payload.action in {"remove", "move_up", "move_down", "edit_intro", "edit_item"}:
+            result = edit_digest_issue(
+                db,
+                issue_id=issue_id,
+                admin_telegram_user_id=payload.admin_telegram_user_id,
+                expected_content_hash=payload.expected_content_hash,
+                action=payload.action,
+                position=payload.position,
+                text_value=payload.text,
+            )
+        elif payload.action == "approve":
+            result = approve_digest_issue(
+                db,
+                issue_id=issue_id,
+                admin_telegram_user_id=payload.admin_telegram_user_id,
+                expected_content_hash=payload.expected_content_hash,
+            )
+        elif payload.action == "schedule":
+            if payload.scheduled_local is None or payload.timezone is None:
+                raise HTTPException(status_code=422, detail="Schedule and timezone are required")
+            result = schedule_digest_issue(
+                db,
+                issue_id=issue_id,
+                admin_telegram_user_id=payload.admin_telegram_user_id,
+                expected_content_hash=payload.expected_content_hash,
+                scheduled_local=payload.scheduled_local,
+                timezone_name=payload.timezone,
+            )
+        else:
+            result = close_digest_issue(
+                db,
+                issue_id=issue_id,
+                admin_telegram_user_id=payload.admin_telegram_user_id,
+                expected_content_hash=payload.expected_content_hash,
+                action=cast(Literal["cancel", "reject"], payload.action),
+            )
+        return BotDigestIssueActionResponse(
+            status=result.status,
+            issue=_digest_issue_response(result.issue) if result.issue is not None else None,
+        )
 
 
 @router.post("/support/cases", response_model=BotSupportCaseCreateResponse)

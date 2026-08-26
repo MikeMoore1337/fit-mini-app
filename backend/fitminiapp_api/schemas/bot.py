@@ -29,6 +29,75 @@ class BotTelegramLinkResponse(BaseModel):
     status: Literal["linked", "already_linked"]
 
 
+class BotDigestPreferenceRequest(BaseModel):
+    telegram_user_id: int = Field(..., ge=1, le=9_223_372_036_854_775_807)
+    enabled: bool | None = None
+    consent_version: str | None = Field(default=None, pattern=r"^[a-z0-9][a-z0-9._-]{2,63}$")
+    username: str | None = Field(default=None, max_length=64)
+    first_name: str | None = Field(default=None, max_length=64)
+    last_name: str | None = Field(default=None, max_length=64)
+
+
+class BotDigestPreferenceResponse(BaseModel):
+    enabled: bool
+    consent_version: str | None = None
+    subscribed_at: datetime | None = None
+
+
+class BotDigestIssueItemResponse(BaseModel):
+    position: int
+    headline: str
+    takeaway: str
+    category: str
+    channel_permalink: str
+    requires_owner_review: bool
+
+
+class BotDigestIssueResponse(BaseModel):
+    issue_id: str
+    issue_key: str
+    revision: int
+    status: str
+    rendered_text: str
+    content_hash: str
+    channel_url: str
+    min_items: int
+    scheduled_for_utc: datetime | None = None
+    timezone: str
+    items: list[BotDigestIssueItemResponse]
+    blockers: list[str]
+
+
+class BotDigestDraftRequest(BaseModel):
+    admin_telegram_user_id: int = Field(..., ge=1, le=9_223_372_036_854_775_807)
+    min_items: int | None = Field(default=None, ge=1, le=5)
+
+
+class BotDigestIssueActionRequest(BaseModel):
+    admin_telegram_user_id: int = Field(..., ge=1, le=9_223_372_036_854_775_807)
+    action: Literal[
+        "approve",
+        "schedule",
+        "cancel",
+        "reject",
+        "remove",
+        "move_up",
+        "move_down",
+        "edit_intro",
+        "edit_item",
+    ]
+    expected_content_hash: str = Field(..., pattern=r"^[0-9a-f]{16}$")
+    position: int | None = Field(default=None, ge=1, le=5)
+    text: str | None = Field(default=None, max_length=600)
+    scheduled_local: datetime | None = None
+    timezone: str | None = Field(default=None, min_length=1, max_length=64)
+
+
+class BotDigestIssueActionResponse(BaseModel):
+    status: str
+    issue: BotDigestIssueResponse | None = None
+
+
 BotSupportCategory = Literal["bug", "account", "idea", "contact", "other"]
 BotSupportCaseStatus = Literal[
     "pending_relay",

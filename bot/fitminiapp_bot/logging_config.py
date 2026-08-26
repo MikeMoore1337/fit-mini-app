@@ -37,12 +37,15 @@ SAFE_EVENT_NAMES = frozenset(
         "telegram_polling_started",
         "telegram_polling_starting",
         "timezone_backend_update_failed",
+        "weekly_digest_backend_failed",
+        "weekly_digest_backend_unavailable",
     }
 )
 STRUCTURED_FIELDS = (
     "error_code",
     "retry_seconds",
     "retry_attempt",
+    "status_code",
 )
 
 
@@ -63,7 +66,7 @@ class JsonFormatter(logging.Formatter):
         }
         for field in STRUCTURED_FIELDS:
             value = getattr(record, field, None)
-            if field in {"retry_seconds", "retry_attempt"}:
+            if field in {"retry_seconds", "retry_attempt", "status_code"}:
                 if isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0:
                     payload[field] = value
             elif isinstance(value, str) and SAFE_CODE_PATTERN.fullmatch(value):
