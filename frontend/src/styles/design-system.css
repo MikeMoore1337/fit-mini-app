@@ -83,10 +83,17 @@
   --touch-target-dense: 2rem;
   --focus-width: 0.1875rem;
   --focus-offset: 0.1875rem;
-  --motion-fast: 120ms;
-  --motion-standard: 180ms;
-  --motion-slow: 260ms;
+  --motion-press: 120ms;
+  --motion-state: 180ms;
+  --motion-spatial: 260ms;
+  --motion-data: 560ms;
+  --motion-data-total: 760ms;
+  --motion-data-stagger: 25ms;
   --motion-ease: cubic-bezier(0.2, 0, 0, 1);
+  /* Compatibility aliases for pre-74A styles. New rules use semantic names above. */
+  --motion-fast: var(--motion-press);
+  --motion-standard: var(--motion-state);
+  --motion-slow: var(--motion-spatial);
   --elevation-raised: 0 8px 24px rgba(0, 0, 0, 0.16);
   --elevation-overlay: 0 18px 42px rgba(0, 0, 0, 0.28);
 }
@@ -134,6 +141,9 @@
   --v2-progress-fill: var(--v2-text-primary);
   --elevation-raised: 0 8px 24px rgba(23, 32, 24, 0.08);
   --elevation-overlay: 0 18px 42px rgba(23, 32, 24, 0.14);
+}
+
+@keyframes yfc-motion-phase-marker {
 }
 
 body {
@@ -190,11 +200,11 @@ body {
 .ui-select,
 .ui-tab {
   transition:
-    background-color var(--motion-standard) var(--motion-ease),
-    border-color var(--motion-standard) var(--motion-ease),
-    color var(--motion-standard) var(--motion-ease),
-    box-shadow var(--motion-standard) var(--motion-ease),
-    transform var(--motion-fast) var(--motion-ease);
+    background-color var(--motion-state) var(--motion-ease),
+    border-color var(--motion-state) var(--motion-ease),
+    color var(--motion-state) var(--motion-ease),
+    box-shadow var(--motion-state) var(--motion-ease),
+    transform var(--motion-press) var(--motion-ease);
 }
 
 .ui-button,
@@ -477,7 +487,7 @@ body {
     var(--color-surface-subtle) 65%
   );
   background-size: 240% 100%;
-  animation: ui-skeleton-shimmer 1.3s linear infinite;
+  animation: ui-skeleton-shimmer 1.3s linear 3;
 }
 
 .ui-state {
@@ -516,8 +526,27 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .ui-button,
+  .ui-icon-button,
+  .ui-input,
+  .ui-select,
+  .ui-tab,
+  .ui-skeleton {
+    animation: none;
+    scroll-behavior: auto;
+    transition: none;
+  }
+
   .ui-state__icon--loading {
     animation: none;
+  }
+
+  .toast,
+  .modal__backdrop,
+  .modal__panel {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
   }
 }
 

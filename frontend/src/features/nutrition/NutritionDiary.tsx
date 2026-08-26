@@ -6,6 +6,7 @@ import { invalidateNutritionSummaries, queryKeys } from '../../shared/queryKeys'
 import { WeekStrip } from '../../shared/ui/WeekStrip';
 import { QuantitativeProgress } from '../../shared/ui/DataViz';
 import { Icon } from '../../shared/ui/Icon';
+import { useSemanticMotion } from '../../shared/ui/useSemanticMotion';
 import type {
   FoodDiaryDay,
   FoodDiaryEntry,
@@ -119,8 +120,18 @@ function MacroProgress({
 
 function DaySummary({ day }: { day: FoodDiaryDay }) {
   const { totals, targets, remaining } = day;
+  const motion = useSemanticMotion<HTMLElement>(JSON.stringify([totals, targets, remaining]), {
+    animateInitial: false,
+  });
   return (
-    <aside className="nutrition-day-summary" aria-labelledby="nutrition-summary-title">
+    <aside
+      className="nutrition-day-summary"
+      id={motion.elementId}
+      aria-labelledby="nutrition-summary-title"
+      data-motion-phase={motion.motionPhase}
+      data-motion-revision={motion.motionRevision}
+      onAnimationEnd={motion.onMotionAnimationEnd}
+    >
       <div className="nutrition-day-summary__head">
         <span className="eyebrow">Баланс дня</span>
         <h2 id="nutrition-summary-title">Итоги и цель</h2>
@@ -183,12 +194,24 @@ function DaySummary({ day }: { day: FoodDiaryDay }) {
   );
 }
 
-function EntryRow({ entry, onCopy }: { entry: FoodDiaryEntry; onCopy: () => void }) {
+function EntryRow({
+  entry,
+  isNew,
+  onCopy,
+}: {
+  entry: FoodDiaryEntry;
+  isNew: boolean;
+  onCopy: () => void;
+}) {
   const queryClient = useQueryClient();
   const { confirm, toast } = useFeedback();
   const [editing, setEditing] = useState(false);
   const [amount, setAmount] = useState(entry.amount);
   const [amountUnit, setAmountUnit] = useState<'g' | 'serving'>(entry.amount_unit);
+  const motion = useSemanticMotion<HTMLLIElement>(
+    JSON.stringify([entry.amount, entry.amount_unit, entry.nutrition]),
+    { animateInitial: isNew },
+  );
 
   const update = useMutation({
     mutationFn: () =>
@@ -221,7 +244,13 @@ function EntryRow({ entry, onCopy }: { entry: FoodDiaryEntry; onCopy: () => void
   };
 
   return (
-    <li className="nutrition-entry">
+    <li
+      className="nutrition-entry"
+      id={motion.elementId}
+      data-motion-phase={motion.motionPhase}
+      data-motion-revision={motion.motionRevision}
+      onAnimationEnd={motion.onMotionAnimationEnd}
+    >
       <div className="nutrition-entry__content">
         <div className="nutrition-entry__title">
           <div>
@@ -337,12 +366,14 @@ function EntryRow({ entry, onCopy }: { entry: FoodDiaryEntry; onCopy: () => void
 
 function MealSection({
   meal,
+  newEntryIds,
   onAdd,
   onCopy,
   onRepeatYesterday,
   onCopyEntry,
 }: {
   meal: FoodDiaryMeal;
+  newEntryIds: ReadonlySet<number>;
   onAdd: () => void;
   onCopy: () => void;
   onRepeatYesterday: () => void;
@@ -376,7 +407,12 @@ function MealSection({
       {meal.entries.length ? (
         <ul className="nutrition-entry-list">
           {meal.entries.map((entry) => (
-            <EntryRow entry={entry} key={entry.id} onCopy={() => onCopyEntry(entry)} />
+            <EntryRow
+              entry={entry}
+              isNew={newEntryIds.has(entry.id)}
+              key={entry.id}
+              onCopy={() => onCopyEntry(entry)}
+            />
           ))}
         </ul>
       ) : (
@@ -439,8 +475,18 @@ function DayCompleteness({ day }: { day: FoodDiaryDay }) {
   });
   const hasEntries = day.meals.some((meal) => meal.entries.length > 0);
   const copy = completenessCopy[day.status];
+  const motion = useSemanticMotion<HTMLElement>(`${day.status}|${day.status_is_explicit}`, {
+    animateInitial: false,
+  });
   return (
-    <section className="nutrition-completeness" aria-labelledby="nutrition-completeness-title">
+    <section
+      className="nutrition-completeness"
+      id={motion.elementId}
+      aria-labelledby="nutrition-completeness-title"
+      data-motion-phase={motion.motionPhase}
+      data-motion-revision={motion.motionRevision}
+      onAnimationEnd={motion.onMotionAnimationEnd}
+    >
       <div className="nutrition-completeness__copy">
         <div>
           <span className="eyebrow">Полнота данных</span>
@@ -562,12 +608,17 @@ export function NutritionDiary({
     initialView?: 'browse' | 'quick-add';
   } | null>(null);
   const [copySubject, setCopySubject] = useState<CopySubject | null>(null);
+  const [lastAddedEntryId, setLastAddedEntryId] = useState<number | null>(null);
   const diary = useQuery({
     queryKey: queryKeys.nutrition.diaryDate(selectedDate),
     queryFn: () => api<FoodDiaryDay>(`/api/v1/nutrition/diary?diary_date=${selectedDate}`),
   });
   const dateLabel = formatDate(selectedDate, today);
   const meals = useMemo(() => normalizeMeals(diary.data?.meals ?? []), [diary.data?.meals]);
+  const newEntryIds = useMemo(
+    () => (lastAddedEntryId == null ? new Set<number>() : new Set([lastAddedEntryId])),
+    [lastAddedEntryId],
+  );
 
   return (
     <div className="nutrition-diary nutrition-diary--design-v2">
@@ -598,7 +649,14 @@ export function NutritionDiary({
         </div>
       </header>
 
-      <NutritionWeekSelector selectedDate={selectedDate} today={today} onSelect={setSelectedDate} />
+      <NutritionWeekSelector
+        selectedDate={selectedDate}
+        today={today}
+        onSelect={(date) => {
+          setLastAddedEntryId(null);
+          setSelectedDate(date);
+        }}
+      />
 
       {diary.data && diary.data.meals.some((meal) => meal.entries.length > 0) && (
         <div className="nutrition-day-actions">
@@ -638,6 +696,7 @@ export function NutritionDiary({
                 <MealSection
                   key={meal.meal_type}
                   meal={meal}
+                  newEntryIds={newEntryIds}
                   onAdd={() =>
                     setAddingTo({ mealType: meal.meal_type as MealType, initialView: 'browse' })
                   }
@@ -681,6 +740,7 @@ export function NutritionDiary({
           mealType={addingTo.mealType}
           initialView={addingTo.initialView}
           disabled={diary.data?.status === 'fasted'}
+          onAdded={(entry) => setLastAddedEntryId(entry.id)}
           onClose={() => setAddingTo(null)}
         />
       )}

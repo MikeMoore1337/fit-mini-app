@@ -934,7 +934,7 @@ body:has(.app-shell--design-v2) {
 
 .week-strip__legend-chevron {
   justify-self: end;
-  transition: transform 120ms ease;
+  transition: transform var(--motion-state) var(--motion-ease);
 }
 
 .week-strip__legend-disclosure[open] .week-strip__legend-chevron {

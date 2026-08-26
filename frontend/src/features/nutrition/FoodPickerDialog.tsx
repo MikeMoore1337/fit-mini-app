@@ -246,12 +246,14 @@ export function FoodPickerDialog({
   mealType,
   initialView = 'browse',
   disabled = false,
+  onAdded,
   onClose,
 }: {
   diaryDate: string;
   mealType: MealType;
   initialView?: 'browse' | 'quick-add';
   disabled?: boolean;
+  onAdded?: (entry: FoodDiaryEntry) => void;
   onClose: () => void;
 }) {
   const { user } = useAuth();
@@ -399,7 +401,8 @@ export function FoodPickerDialog({
         headers: { 'Idempotency-Key': draft.requestId ?? newEntryRequestId() },
       });
     },
-    onSuccess: async (_entry, variables) => {
+    onSuccess: async (entry, variables) => {
+      onAdded?.(entry);
       clearDraft({
         food: null,
         amount: '100',

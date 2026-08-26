@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   QuantitativeProgress,
   RankedBars,
@@ -15,6 +15,11 @@ const points = [
   { key: '2026-08-04', label: '4 авг.', value: 0, target: 14, status: 'Подтверждённый ноль' },
   { key: '2026-08-05', label: '5 авг.', value: 30, target: 14 },
 ] as const;
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 describe('TimeSeriesChart', () => {
   it('keeps missing values disconnected while rendering a confirmed zero', () => {
@@ -55,6 +60,54 @@ describe('TimeSeriesChart', () => {
     expect(screen.getAllByText('4 авг.').length).toBeGreaterThan(0);
     const table = within(container).getByRole('table', { name: 'Масса тела, Август' });
     expect(within(table).getAllByRole('row')).toHaveLength(points.length + 1);
+  });
+
+  it('enters once, ignores a same-data refetch and uses update motion for changed data', async () => {
+    const { container, rerender } = render(
+      <TimeSeriesChart metric="Масса тела" period="Август" points={points} unit="кг" />,
+    );
+    const chart = container.querySelector<HTMLElement>('.data-viz-chart')!;
+
+    await waitFor(() => expect(chart).toHaveAttribute('data-motion-phase', 'enter'));
+    const entranceRevision = chart.dataset.motionRevision;
+
+    rerender(<TimeSeriesChart metric="Масса тела" period="Август" points={points} unit="кг" />);
+    await new Promise((resolve) => window.requestAnimationFrame(() => resolve(undefined)));
+    expect(chart).toHaveAttribute('data-motion-phase', 'enter');
+    expect(chart).toHaveAttribute('data-motion-revision', entranceRevision);
+
+    rerender(<TimeSeriesChart metric="Масса тела" period="Сентябрь" points={points} unit="кг" />);
+    await waitFor(() => expect(chart).toHaveAttribute('data-motion-phase', 'update'));
+    expect(Number(chart.dataset.motionRevision)).toBeGreaterThan(Number(entranceRevision));
+  });
+
+  it('renders final truthful state without motion when reduced motion is requested', () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query === '(prefers-reduced-motion: reduce)',
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+
+    const { container } = render(
+      <TimeSeriesChart
+        includeZero
+        metric="Калории"
+        period="1—5 августа"
+        points={points}
+        unit="ккал"
+      />,
+    );
+
+    expect(container.querySelector('.data-viz-chart')).toHaveAttribute('data-motion-phase', 'idle');
+    expect(
+      within(container).getByRole('img', { name: 'Калории за период 1—5 августа' }),
+    ).toBeVisible();
+    expect(screen.getAllByText('0 ккал').length).toBeGreaterThan(0);
   });
 });
 

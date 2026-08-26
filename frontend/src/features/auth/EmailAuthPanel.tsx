@@ -5,6 +5,7 @@ import {
   clearProductLoginAttempt,
   markProductLoginStarted,
 } from '../../shared/analytics/productEvents';
+import { useSemanticMotion } from '../../shared/ui/useSemanticMotion';
 
 type AuthMode = 'login' | 'register' | 'recover';
 
@@ -17,6 +18,7 @@ export function EmailAuthPanel({ nextPath }: { nextPath?: string | null }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const modeMotion = useSemanticMotion<HTMLDivElement>(mode, { animateInitial: false });
 
   const switchMode = (nextMode: AuthMode) => {
     setMode(nextMode);
@@ -73,82 +75,93 @@ export function EmailAuthPanel({ nextPath }: { nextPath?: string | null }) {
         </button>
       </div>
 
-      {error && <ErrorState message={error} />}
-      {message && (
-        <p className="auth-success" role="status">
-          {message}
-        </p>
-      )}
-
-      <form className="stack" onSubmit={(event) => void submit(event)}>
-        {mode === 'register' && (
-          <label>
-            Имя пользователя
-            <input
-              required
-              minLength={3}
-              maxLength={32}
-              autoComplete="username"
-              pattern="[a-z0-9][a-z0-9_.-]{2,31}"
-              placeholder="например, alex_fit"
-              value={username}
-              onChange={(event) => setUsername(event.target.value.toLowerCase())}
-            />
-            <small className="muted">Латинские буквы, цифры, точка, дефис или подчёркивание.</small>
-          </label>
+      <div
+        className="email-auth__mode-panel"
+        id={modeMotion.elementId}
+        data-auth-mode={mode}
+        data-motion-phase={modeMotion.motionPhase}
+        data-motion-revision={modeMotion.motionRevision}
+        onAnimationEnd={modeMotion.onMotionAnimationEnd}
+      >
+        {error && <ErrorState message={error} />}
+        {message && (
+          <p className="auth-success" role="status">
+            {message}
+          </p>
         )}
-        <label>
-          Email
-          <input
-            required
-            type="email"
-            maxLength={320}
-            autoComplete="email"
-            placeholder="name@example.com"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-        </label>
-        {mode !== 'recover' && (
-          <label>
-            Пароль
-            <input
-              required
-              type="password"
-              minLength={mode === 'register' ? 12 : 1}
-              maxLength={128}
-              autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
-            {mode === 'register' && (
+
+        <form className="stack" onSubmit={(event) => void submit(event)}>
+          {mode === 'register' && (
+            <label>
+              Имя пользователя
+              <input
+                required
+                minLength={3}
+                maxLength={32}
+                autoComplete="username"
+                pattern="[a-z0-9][a-z0-9_.-]{2,31}"
+                placeholder="например, alex_fit"
+                value={username}
+                onChange={(event) => setUsername(event.target.value.toLowerCase())}
+              />
               <small className="muted">
-                Не менее 12 символов. Подойдёт длинная запоминающаяся фраза.
+                Латинские буквы, цифры, точка, дефис или подчёркивание.
               </small>
-            )}
+            </label>
+          )}
+          <label>
+            Email
+            <input
+              required
+              type="email"
+              maxLength={320}
+              autoComplete="email"
+              placeholder="name@example.com"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
           </label>
-        )}
-        <button type="submit" disabled={busy}>
-          {busy
-            ? 'Подождите…'
-            : mode === 'login'
-              ? 'Войти'
-              : mode === 'register'
-                ? 'Создать аккаунт'
-                : 'Отправить ссылку'}
-        </button>
-      </form>
+          {mode !== 'recover' && (
+            <label>
+              Пароль
+              <input
+                required
+                type="password"
+                minLength={mode === 'register' ? 12 : 1}
+                maxLength={128}
+                autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+              {mode === 'register' && (
+                <small className="muted">
+                  Не менее 12 символов. Подойдёт длинная запоминающаяся фраза.
+                </small>
+              )}
+            </label>
+          )}
+          <button type="submit" disabled={busy}>
+            {busy
+              ? 'Подождите…'
+              : mode === 'login'
+                ? 'Войти'
+                : mode === 'register'
+                  ? 'Создать аккаунт'
+                  : 'Отправить ссылку'}
+          </button>
+        </form>
 
-      {mode === 'login' && (
-        <button className="text-link-button" type="button" onClick={() => switchMode('recover')}>
-          Не помню пароль
-        </button>
-      )}
-      {mode === 'recover' && (
-        <button className="text-link-button" type="button" onClick={() => switchMode('login')}>
-          Вернуться ко входу
-        </button>
-      )}
+        {mode === 'login' && (
+          <button className="text-link-button" type="button" onClick={() => switchMode('recover')}>
+            Не помню пароль
+          </button>
+        )}
+        {mode === 'recover' && (
+          <button className="text-link-button" type="button" onClick={() => switchMode('login')}>
+            Вернуться ко входу
+          </button>
+        )}
+      </div>
     </section>
   );
 }

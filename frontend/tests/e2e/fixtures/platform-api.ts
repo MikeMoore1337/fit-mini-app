@@ -17,6 +17,7 @@ export interface PlatformApiOptions {
   accountExportState?: 'none' | 'ready' | 'expired' | 'error';
   authProviders?: string[];
   trainerActive?: boolean;
+  measurementHistory?: 'none' | 'many';
 }
 
 export interface PlatformApiController {
@@ -121,7 +122,29 @@ export async function installPlatformApi(
     biceps_cm: number | null;
     thigh_cm: number | null;
     note: string | null;
-  }> = [];
+  }> =
+    options.measurementHistory === 'many'
+      ? [
+          { daysAgo: 0, id: 101, weight: 80.9 },
+          { daysAgo: 14, id: 102, weight: 81.6 },
+          { daysAgo: 28, id: 103, weight: 82.4 },
+          { daysAgo: 60, id: 104, weight: 83.3 },
+        ].map(({ daysAgo, id, weight }) => {
+          const measuredOn = new Date(todayDate);
+          measuredOn.setUTCDate(measuredOn.getUTCDate() - daysAgo);
+          return {
+            id,
+            measured_on: measuredOn.toISOString().slice(0, 10),
+            weight_kg: weight,
+            chest_cm: null,
+            waist_cm: null,
+            hips_cm: null,
+            biceps_cm: null,
+            thigh_cm: null,
+            note: null,
+          };
+        })
+      : [];
   let failNextMeasurementSave = false;
   let measurementSaveCalls = 0;
   let failNextCardioSave = false;
@@ -644,7 +667,10 @@ export async function installPlatformApi(
     days: [{ id: 1, day_number: 1, title: 'Силовая', exercises: [] }],
   };
 
-  const measurementTrends = () => {
+  const measurementTrends = (periodDays = 30) => {
+    const cutoff = new Date(todayDate);
+    cutoff.setUTCDate(cutoff.getUTCDate() - Math.max(periodDays - 1, 0));
+    const cutoffDate = cutoff.toISOString().slice(0, 10);
     const metrics = [
       ['weight_kg', 'weight_kg'],
       ['chest_cm', 'chest_cm'],
@@ -655,7 +681,7 @@ export async function installPlatformApi(
     ] as const;
     return metrics.flatMap(([metric, field]) => {
       const points = measurements
-        .filter((item) => item[field] != null)
+        .filter((item) => item.measured_on >= cutoffDate && item[field] != null)
         .map((item) => ({ measured_on: item.measured_on, value: item[field] as number }))
         .sort((left, right) => left.measured_on.localeCompare(right.measured_on));
       const first = points[0];
@@ -690,9 +716,9 @@ export async function installPlatformApi(
     });
   };
 
-  const progressSummary = () => ({
+  const progressSummary = (periodDays = 30) => ({
     user_id: 7,
-    period_days: 30,
+    period_days: periodDays,
     period_start: today,
     period_end: today,
     training: {
@@ -721,7 +747,7 @@ export async function installPlatformApi(
     },
     body: {
       latest_measurement: measurements[0] ?? null,
-      trends: measurementTrends(),
+      trends: measurementTrends(periodDays),
       priority: { mode: 'balanced', muscle_group_ids: [] },
       guidance: {
         comparison_basis: 'self',
@@ -821,7 +847,7 @@ export async function installPlatformApi(
               : 'insufficient',
         counters: {
           point_count: measurements.length,
-          span_days: measurementTrends()[0]?.span_days ?? 0,
+          span_days: measurementTrends(periodDays)[0]?.span_days ?? 0,
           required_point_count: 3,
           required_span_days: 14,
         },
@@ -852,6 +878,34 @@ export async function installPlatformApi(
       },
     },
   });
+
+  const nutritionTotals = () => {
+    const sums = nutritionEntries.reduce<{
+      energy: number;
+      protein: number;
+      fat: number;
+      carbs: number;
+      fiber: number;
+    }>(
+      (totals, entry) => {
+        const nutrition = entry.nutrition as Record<string, string | null | undefined>;
+        totals.energy += Number(nutrition.energy_kcal ?? 0);
+        totals.protein += Number(nutrition.protein_g ?? 0);
+        totals.fat += Number(nutrition.fat_g ?? 0);
+        totals.carbs += Number(nutrition.carbs_g ?? 0);
+        totals.fiber += Number(nutrition.fiber_g ?? 0);
+        return totals;
+      },
+      { energy: 0, protein: 0, fat: 0, carbs: 0, fiber: 0 },
+    );
+    return {
+      energy_kcal: sums.energy.toFixed(2),
+      protein_g: sums.protein.toFixed(3),
+      fat_g: sums.fat.toFixed(3),
+      carbs_g: sums.carbs.toFixed(3),
+      fiber_g: nutritionEntries.length ? sums.fiber.toFixed(3) : null,
+    };
+  };
 
   const nutritionReport = (period = 'days_7') => {
     const dates = Array.from({ length: 7 }, (_, index) => {
@@ -1408,7 +1462,9 @@ export async function installPlatformApi(
       return route.fulfill({ status: 204, body: '' });
     }
     if (path.endsWith('/workouts/progress/summary')) {
-      return route.fulfill({ json: progressSummary() });
+      return route.fulfill({
+        json: progressSummary(Number(url.searchParams.get('period_days')) || 30),
+      });
     }
     if (path.endsWith('/workouts/progress/training-analytics')) {
       const workingSets = progressSummary().data_sufficiency.working_sets;
@@ -1737,17 +1793,18 @@ export async function installPlatformApi(
       return route.fulfill({ json: currentTarget });
     }
     if (path.endsWith('/nutrition/diary') && request.method() === 'GET') {
+      const totals = nutritionTotals();
       return route.fulfill({
         json: {
           diary_date: url.searchParams.get('diary_date') || today,
           timezone: 'Europe/Moscow',
           meals: [
-            { meal_type: 'breakfast', entries: nutritionEntries, totals: zeroNutrition },
+            { meal_type: 'breakfast', entries: nutritionEntries, totals },
             { meal_type: 'lunch', entries: [], totals: zeroNutrition },
             { meal_type: 'dinner', entries: [], totals: zeroNutrition },
             { meal_type: 'snacks', entries: [], totals: zeroNutrition },
           ],
-          totals: zeroNutrition,
+          totals,
           targets: {
             energy_kcal: '2100.00',
             protein_g: '140.000',
@@ -1755,10 +1812,10 @@ export async function installPlatformApi(
             carbs_g: '230.000',
           },
           remaining: {
-            energy_kcal: '2100.00',
-            protein_g: '140.000',
-            fat_g: '70.000',
-            carbs_g: '230.000',
+            energy_kcal: String(2100 - Number(totals.energy_kcal)),
+            protein_g: String(140 - Number(totals.protein_g)),
+            fat_g: String(70 - Number(totals.fat_g)),
+            carbs_g: String(230 - Number(totals.carbs_g)),
           },
           status: nutritionEntries.length ? 'incomplete' : 'unlogged',
           status_is_explicit: false,

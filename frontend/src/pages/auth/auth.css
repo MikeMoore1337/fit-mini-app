@@ -130,9 +130,9 @@
   background: transparent;
   color: var(--landing-ink);
   transition:
-    background-color 180ms ease,
-    border-color 180ms ease,
-    transform 120ms ease;
+    background-color var(--motion-state) var(--motion-ease),
+    border-color var(--motion-state) var(--motion-ease),
+    transform var(--motion-press) var(--motion-ease);
 }
 
 .login-card .oauth-button:hover {
@@ -186,10 +186,10 @@
   background: transparent;
   color: var(--landing-ink);
   transition:
-    background-color 180ms ease,
-    border-color 180ms ease,
-    color 180ms ease,
-    transform 120ms ease;
+    background-color var(--motion-state) var(--motion-ease),
+    border-color var(--motion-state) var(--motion-ease),
+    color var(--motion-state) var(--motion-ease),
+    transform var(--motion-press) var(--motion-ease);
 }
 
 .login-retry:hover {
@@ -218,6 +218,61 @@
 
 .login-card .email-auth {
   border-color: var(--landing-border);
+}
+
+.login-layout[data-motion-phase='pending'] :is(.login-intro, .login-card) {
+  opacity: 0.88;
+  transform: translateY(8px);
+}
+
+.login-layout:is([data-motion-phase='enter'], [data-motion-phase='update']) {
+  animation: yfc-motion-phase-marker var(--motion-spatial) linear;
+}
+
+.login-layout:is([data-motion-phase='enter'], [data-motion-phase='update'])
+  :is(.login-intro, .login-card) {
+  animation: login-plane-enter var(--motion-spatial) var(--motion-ease) both;
+}
+
+.login-layout:is([data-motion-phase='enter'], [data-motion-phase='update']) .login-card {
+  animation-delay: 30ms;
+}
+
+.oauth-button[data-motion-feedback='busy'] {
+  border-color: var(--v2-text-secondary);
+  background: var(--v2-surface-secondary);
+}
+
+.oauth-button[data-motion-feedback='busy'] .oauth-button__arrow {
+  transform: translateX(3px);
+  transition: transform var(--motion-press) var(--motion-ease);
+}
+
+.email-auth__mode-panel {
+  display: grid;
+  min-block-size: 390px;
+  align-content: start;
+  gap: 14px;
+}
+
+.email-auth__mode-panel[data-motion-phase='update'] {
+  animation:
+    auth-mode-update var(--motion-state) var(--motion-ease),
+    yfc-motion-phase-marker var(--motion-state) linear;
+}
+
+@keyframes login-plane-enter {
+  from {
+    opacity: 0.88;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes auth-mode-update {
+  from {
+    opacity: 0.72;
+    transform: translateY(5px);
+  }
 }
 
 .auth-aux-layout {
@@ -295,8 +350,14 @@
 
 @media (prefers-reduced-motion: reduce) {
   .login-card .oauth-button,
-  .login-retry {
+  .login-retry,
+  .login-layout,
+  .login-layout :is(.login-intro, .login-card),
+  .email-auth__mode-panel {
+    animation: none !important;
     transition: none;
+    opacity: 1;
+    transform: none;
   }
 }
 

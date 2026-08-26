@@ -134,7 +134,9 @@ html {
     border: 1px solid var(--border);
     border-radius: 12px;
     background: var(--surface);
-    transition: border-color .18s ease, transform .18s ease;
+    transition:
+        border-color var(--motion-state) var(--motion-ease),
+        transform var(--motion-press) var(--motion-ease);
 }
 
 .coach-client-card:hover {
@@ -865,7 +867,10 @@ textarea {
     color: var(--text);
     padding: 12px 14px;
     outline: none;
-    transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    transition:
+        border-color var(--motion-state) var(--motion-ease),
+        box-shadow var(--motion-state) var(--motion-ease),
+        background var(--motion-state) var(--motion-ease);
 }
 
 .field {
@@ -929,7 +934,10 @@ button,
     line-height: 1.2;
     text-align: center;
     white-space: normal;
-    transition: transform 0.08s ease, background 0.18s ease, opacity 0.18s ease;
+    transition:
+        transform var(--motion-press) var(--motion-ease),
+        background var(--motion-state) var(--motion-ease),
+        opacity var(--motion-state) var(--motion-ease);
 }
 
 button:hover,
@@ -2013,8 +2021,13 @@ button:disabled {
     color: var(--danger-toast-text);
 }
 
-.toast:not(.hidden) {
-    animation: toast-in 0.24s ease-out;
+.toast[data-motion-phase='opening'] {
+    animation: toast-in var(--motion-state) var(--motion-ease) both;
+}
+
+.toast[data-motion-phase='closing'] {
+    pointer-events: none;
+    animation: toast-out var(--motion-state) var(--motion-ease) both;
 }
 
 @keyframes toast-in {
@@ -2026,6 +2039,34 @@ button:disabled {
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+@keyframes toast-out {
+    to {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+}
+
+.modal__backdrop {
+    animation: modal-backdrop-in var(--motion-state) var(--motion-ease) both;
+}
+
+.modal__panel {
+    animation: modal-panel-in var(--motion-spatial) var(--motion-ease) both;
+}
+
+@keyframes modal-backdrop-in {
+    from {
+        opacity: 0;
+    }
+}
+
+@keyframes modal-panel-in {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
     }
 }
 
@@ -2386,8 +2427,12 @@ a {
         transform: none;
     }
 
-    .toast:not(.hidden) {
+    .toast,
+    .modal__backdrop,
+    .modal__panel {
         animation: none;
+        opacity: 1;
+        transform: none;
     }
 }
 

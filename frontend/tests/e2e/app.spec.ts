@@ -599,6 +599,14 @@ async function mockApi(
             last_completed_workout_on: null,
             next_workout: null,
           },
+          cardio: {
+            completed_sessions: 0,
+            planned_sessions: 0,
+            frequency_per_week: 0,
+            duration_minutes: 0,
+            distance_km: null,
+            zone_duration: [],
+          },
           nutrition: {
             visible: true,
             logged_days: 0,
@@ -609,7 +617,12 @@ async function mockApi(
             target_protein_g: null,
             target_effective_on: null,
           },
-          body: { latest_measurement: null, trends: [], priority: null, guidance: {} },
+          body: {
+            latest_measurement: null,
+            trends: [],
+            priority: null,
+            guidance: { consistency_tips: [], circumference_limitations: [] },
+          },
           adherence: {
             formula_version: 'adherence-v1',
             overall_percent: null,
@@ -730,7 +743,9 @@ async function mockApi(
             anthropometry_trends: [],
             body_priority: null,
             progression: { training_volume_kg: 0, new_personal_records: 0 },
-            data_sufficiency: {},
+            data_sufficiency: {
+              weight_trend: { status: 'insufficient', counters: {}, reason_keys: [] },
+            },
           },
         },
       });
@@ -1207,6 +1222,9 @@ async function mockApi(
             ]
           : [],
       });
+    if (path.endsWith('/workouts/progress/nutrition-report')) {
+      return route.fulfill({ status: 503, json: { detail: 'Отчёт не входит в этот fixture' } });
+    }
     return route.fulfill({ json: [] });
   });
 }

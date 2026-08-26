@@ -132,6 +132,7 @@ function WorkoutSetRow({
     pending?.values.reached_failure ?? set.reached_failure ?? false,
   );
   const [completed, setCompleted] = useState(pending?.values.is_completed ?? set.is_completed);
+  const [justConfirmed, setJustConfirmed] = useState(false);
   const editing = useRef(false);
   const lastCompletionActionAt = useRef(0);
   const serverVersion = set.version ?? 1;
@@ -217,8 +218,12 @@ function WorkoutSetRow({
     <div
       className={classes}
       data-workout-set-id={set.id}
+      data-motion-confirm={justConfirmed || undefined}
       aria-busy={syncing || undefined}
       aria-current={isCurrent ? 'step' : undefined}
+      onAnimationEnd={(event) => {
+        if (event.animationName === 'active-workout-set-confirm') setJustConfirmed(false);
+      }}
     >
       <div className="active-workout-set__head">
         <div className="active-workout-set__identity">
@@ -292,6 +297,7 @@ function WorkoutSetRow({
             const nextCompleted = !completed;
             editing.current = true;
             setCompleted(nextCompleted);
+            setJustConfirmed(nextCompleted);
             enqueueSave({ completed: nextCompleted }, true);
           }}
         >

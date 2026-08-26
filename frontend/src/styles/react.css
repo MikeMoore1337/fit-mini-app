@@ -165,9 +165,9 @@
   background: var(--bg-soft);
   cursor: pointer;
   transition:
-    border-color 0.18s ease,
-    background 0.18s ease,
-    transform 0.18s ease;
+    border-color var(--motion-state) var(--motion-ease),
+    background var(--motion-state) var(--motion-ease),
+    transform var(--motion-press) var(--motion-ease);
 }
 .onboarding-goal:hover {
   border-color: var(--accent-line);
@@ -315,8 +315,8 @@ select:not([multiple]) {
   cursor: pointer;
   text-decoration: none;
   transition:
-    border-color 0.18s ease,
-    background 0.18s ease;
+    border-color var(--motion-state) var(--motion-ease),
+    background var(--motion-state) var(--motion-ease);
 }
 .workout-day-link:hover,
 .workout-day-link:focus-visible {
@@ -837,7 +837,7 @@ select:not([multiple]) {
   stroke: currentColor;
   stroke-linecap: round;
   stroke-width: 1.8;
-  transition: transform 140ms ease;
+  transition: transform var(--motion-state) var(--motion-ease);
 }
 
 details[open] > summary .disclosure-icon svg {
@@ -1707,7 +1707,7 @@ details[open] > summary .disclosure-icon svg {
 }
 .exercise-guide-image__frame img {
   display: block;
-  transition: transform 0.18s ease;
+  transition: transform var(--motion-state) var(--motion-ease);
 }
 @media (prefers-reduced-motion: reduce) {
   .exercise-guide-image__frame img {
@@ -2624,9 +2624,9 @@ details[open] > summary .disclosure-icon svg {
   border-radius: var(--radius-sm);
   background: var(--bg-soft);
   transition:
-    border-color 0.18s ease,
-    box-shadow 0.18s ease,
-    background 0.18s ease;
+    border-color var(--motion-state) var(--motion-ease),
+    box-shadow var(--motion-state) var(--motion-ease),
+    background var(--motion-state) var(--motion-ease);
 }
 .date-control:focus-within,
 .time-control:focus-within {
@@ -3965,6 +3965,9 @@ button.today-text-link {
 .active-workout-set.is-completed:not(.is-current) {
   border-color: var(--success-line);
 }
+.active-workout-set[data-motion-confirm='true'] {
+  animation: active-workout-set-confirm var(--motion-state) var(--motion-ease);
+}
 .active-workout-set__head,
 .active-workout-set__identity,
 .active-workout-set__complete-label {
@@ -4010,6 +4013,9 @@ button.today-text-link {
   color: var(--success-text);
   font-size: 0.72rem;
   font-weight: 850;
+}
+.active-workout-set[data-motion-confirm='true'] .active-workout-set__complete-label {
+  animation: active-workout-confirm-label var(--motion-state) var(--motion-ease);
 }
 .active-workout-set__complete-label .ui-icon,
 .active-workout-set__done .ui-icon {
@@ -4401,6 +4407,28 @@ button.today-text-link {
   border-radius: 16px;
   background: var(--nav-bg);
   box-shadow: var(--elevation-overlay);
+  animation: active-workout-rest-enter var(--motion-state) var(--motion-ease);
+}
+
+@keyframes active-workout-set-confirm {
+  50% {
+    border-color: var(--success-line);
+    background: var(--success-soft);
+  }
+}
+
+@keyframes active-workout-confirm-label {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@keyframes active-workout-rest-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
 }
 .active-workout-rest__time {
   display: grid;
@@ -4551,8 +4579,13 @@ button.today-text-link {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .active-workout-progress__track > span {
+  .active-workout-progress__track > span,
+  .active-workout-set,
+  .active-workout-set__complete-label,
+  .active-workout-rest {
+    animation: none;
     transition: none;
+    transform: none;
   }
 }
 
@@ -4562,6 +4595,29 @@ button.today-text-link {
 }
 .app-shell__content {
   min-width: 0;
+}
+.app-section[data-motion-surface='progress'][data-motion-phase='pending'] > .page-stack {
+  opacity: 0.88;
+  transform: translateY(6px);
+}
+.app-section[data-motion-surface='progress']:is(
+    [data-motion-phase='enter'],
+    [data-motion-phase='update']
+  ) {
+  animation: yfc-motion-phase-marker var(--motion-state) linear;
+}
+.app-section[data-motion-surface='progress']:is(
+    [data-motion-phase='enter'],
+    [data-motion-phase='update']
+  )
+  > .page-stack {
+  animation: app-section-context-enter var(--motion-state) var(--motion-ease);
+}
+@keyframes app-section-context-enter {
+  from {
+    opacity: 0.88;
+    transform: translateY(6px);
+  }
 }
 body:has(#appBottomNav) {
   padding-bottom: max(86px, calc(env(safe-area-inset-bottom, 0px) + 72px));
@@ -4612,8 +4668,8 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   text-decoration: none;
   cursor: pointer;
   transition:
-    background var(--motion-standard) var(--motion-ease),
-    color var(--motion-standard) var(--motion-ease);
+    background var(--motion-state) var(--motion-ease),
+    color var(--motion-state) var(--motion-ease);
 }
 .app-bottom-nav__btn:hover {
   background: var(--surface-hover);
@@ -4648,6 +4704,7 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   border-radius: 9px;
   background: transparent;
   line-height: 1;
+  pointer-events: none;
 }
 .app-bottom-nav__btn.is-active .app-bottom-nav__icon {
   background: var(--accent);
@@ -4670,6 +4727,7 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
+  pointer-events: none;
 }
 .app-bottom-nav__avatar {
   overflow: hidden;
@@ -4698,7 +4756,6 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   justify-content: center;
   padding-top: max(16px, env(safe-area-inset-top, 0px));
   background: rgba(10, 16, 12, 0.54);
-  animation: app-more-backdrop-in var(--motion-standard) var(--motion-ease);
 }
 .app-more-panel {
   overflow-y: auto;
@@ -4713,7 +4770,19 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   border-radius: 24px 24px 0 0;
   background: var(--card);
   box-shadow: var(--elevation-overlay);
-  animation: app-more-panel-in var(--motion-slow) var(--motion-ease);
+}
+.app-more-layer[data-motion-phase='opening'] {
+  animation: app-more-backdrop-in var(--motion-state) var(--motion-ease);
+}
+.app-more-layer[data-motion-phase='opening'] .app-more-panel {
+  animation: app-more-panel-in var(--motion-spatial) var(--motion-ease);
+}
+.app-more-layer[data-motion-phase='closing'] {
+  pointer-events: none;
+  animation: app-more-backdrop-out var(--motion-state) var(--motion-ease) both;
+}
+.app-more-layer[data-motion-phase='closing'] .app-more-panel {
+  animation: app-more-panel-out var(--motion-state) var(--motion-ease) both;
 }
 .app-more-panel__header,
 .app-more-panel__account {
@@ -4820,6 +4889,26 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   from {
     transform: translateY(24px);
     opacity: 0;
+  }
+}
+@keyframes app-more-backdrop-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes app-more-panel-out {
+  to {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-more-layer,
+  .app-more-panel {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
   }
 }
 
@@ -6353,6 +6442,19 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   padding: 13px 14px;
   border-top: 1px solid var(--border);
 }
+.nutrition-entry[data-motion-phase='pending'] {
+  opacity: 0;
+}
+.nutrition-entry[data-motion-phase='enter'] {
+  animation:
+    nutrition-entry-enter var(--motion-state) var(--motion-ease),
+    yfc-motion-phase-marker var(--motion-state) linear;
+}
+.nutrition-entry[data-motion-phase='update'] {
+  animation:
+    nutrition-entry-update var(--motion-state) var(--motion-ease),
+    yfc-motion-phase-marker var(--motion-state) linear;
+}
 .nutrition-entry__content {
   display: grid;
   gap: 5px;
@@ -6464,6 +6566,33 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   border: 1px solid var(--accent-line);
   border-radius: 18px;
   background: linear-gradient(155deg, var(--accent-soft), transparent 42%), var(--surface);
+}
+.nutrition-day-summary[data-motion-phase='update'],
+.nutrition-completeness[data-motion-phase='update'] {
+  animation:
+    nutrition-summary-update var(--motion-state) var(--motion-ease),
+    yfc-motion-phase-marker var(--motion-state) linear;
+}
+
+@keyframes nutrition-entry-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes nutrition-entry-update {
+  from {
+    background: var(--surface-active);
+    opacity: 0.72;
+  }
+}
+
+@keyframes nutrition-summary-update {
+  from {
+    opacity: 0.68;
+    transform: translateY(4px);
+  }
 }
 .nutrition-day-summary__head h2 {
   font-size: 1.12rem;
@@ -7227,5 +7356,18 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   }
   .nutrition-copy__source {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-section[data-motion-surface='progress'],
+  .app-section[data-motion-surface='progress'] > .page-stack,
+  .nutrition-entry,
+  .nutrition-day-summary,
+  .nutrition-completeness {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
   }
 }

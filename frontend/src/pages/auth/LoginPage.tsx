@@ -8,6 +8,7 @@ import { ErrorState, LoadingState } from '../../shared/ui/common';
 import { BrandLockup } from '../../shared/ui/BrandLogo';
 import { PublicShell } from '../../shared/ui/PublicShell';
 import { telegramMiniAppUrl } from '../../app/AuthGate';
+import { useSemanticMotion } from '../../shared/ui/useSemanticMotion';
 import {
   clearProductLoginAttempt,
   markProductLoginStarted,
@@ -126,6 +127,11 @@ export default function LoginPage() {
   const telegramAppUrl = config?.telegram_bot_username
     ? telegramMiniAppUrl(config.telegram_bot_username)
     : null;
+  const loginMotion = useSemanticMotion<HTMLElement>(loading ? 'loading' : 'ready', {
+    animateInitial: !loading && !user && !authErrorCode,
+    elementId: 'login-content',
+  });
+  const loginMotionEnabled = !user && !authErrorCode;
 
   useEffect(() => {
     if (!loading && user) navigate(nextPath, true);
@@ -140,7 +146,14 @@ export default function LoginPage() {
       className="auth-public-shell auth-public-shell--design-v2 auth-public-shell--design-v2-1"
       skipTarget="login-content"
     >
-      <main id="login-content" className="login-layout" tabIndex={-1}>
+      <main
+        id="login-content"
+        className="login-layout"
+        data-motion-phase={loginMotionEnabled ? loginMotion.motionPhase : 'idle'}
+        data-motion-revision={loginMotion.motionRevision}
+        onAnimationEnd={loginMotion.onMotionAnimationEnd}
+        tabIndex={-1}
+      >
         <section className="login-intro" aria-labelledby="login-title">
           <BrandLockup className="login-continuation-brand" surface="dark" />
           <div className="login-continuation">

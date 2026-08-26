@@ -150,16 +150,16 @@ fallback.
 Зафиксированный набор task `73A` снят `26.08.2026` из ordinary authenticated routes с локальными
 fixtures; `/demo` и production-данные не использовались:
 
-| Файл | Route / fixture | Тема и viewport | Bytes | SHA-256 |
-| --- | --- | --- | ---: | --- |
-| `landing-today-desktop-light.png` | `/app`; `mockDashboard(planned)` | Light, `1440×900` | 71 421 | `AA37ECAFDEA2853A04967AB9175CE655B3C97F3D75207B35F6876A86DAC213E5` |
-| `landing-today-desktop-dark.png` | `/app`; `mockDashboard(planned)` | Dark, `1440×900` | 70 950 | `F574E31702F228D066D9914E64B052E222001A2ED170CF4EB78E1DAC8BB13DBC` |
-| `landing-today-mobile-light.png` | `/app`; `mockDashboard(planned)` | Light, `390×844` | 36 786 | `34CE7B5082DD42F3EBB7327050882751DC34CE8E2D71F15B4BE164D2CF12D7CA` |
-| `landing-today-mobile-dark.png` | `/app`; `mockDashboard(planned)` | Dark, `390×844` | 36 781 | `48DB3C944E5C566FC284BBBB5C41E70C6054402C6E511B771087D4F7A4E9FAB2` |
-| `landing-workout-mobile-light.png` | `/app → Continue workout`; `mockActiveWorkout` | Light, `390×844` | 32 952 | `F054AA815382F5D55CE522EFA97A95E05F1F07DF6EA3284BEAD694B45EFD1B75` |
-| `landing-workout-mobile-dark.png` | `/app → Continue workout`; `mockActiveWorkout` | Dark, `390×844` | 32 689 | `77DFD809E599A31FD5FFFE694724D89ACA02BD005E959026AE9EB2769841B231` |
-| `landing-trainer-desktop-light.png` | `/coach`; `mockCoachWorkspace` | Light, `1280×972` | 93 333 | `685F00981F7253FF1F9E345CF86C736D69B7F0769DB51F41A3317B89358615AD` |
-| `landing-trainer-desktop-dark.png` | `/coach`; `mockCoachWorkspace` | Dark, `1280×972` | 93 346 | `9D58D878B859A61D1E67C587FB11E0849A267607FE9C4D4835A2BE3BCCB79CFE` |
+| Файл                                | Route / fixture                                | Тема и viewport   |  Bytes | SHA-256                                                            |
+| ----------------------------------- | ---------------------------------------------- | ----------------- | -----: | ------------------------------------------------------------------ |
+| `landing-today-desktop-light.png`   | `/app`; `mockDashboard(planned)`               | Light, `1440×900` | 71 421 | `AA37ECAFDEA2853A04967AB9175CE655B3C97F3D75207B35F6876A86DAC213E5` |
+| `landing-today-desktop-dark.png`    | `/app`; `mockDashboard(planned)`               | Dark, `1440×900`  | 70 950 | `F574E31702F228D066D9914E64B052E222001A2ED170CF4EB78E1DAC8BB13DBC` |
+| `landing-today-mobile-light.png`    | `/app`; `mockDashboard(planned)`               | Light, `390×844`  | 36 786 | `34CE7B5082DD42F3EBB7327050882751DC34CE8E2D71F15B4BE164D2CF12D7CA` |
+| `landing-today-mobile-dark.png`     | `/app`; `mockDashboard(planned)`               | Dark, `390×844`   | 36 781 | `48DB3C944E5C566FC284BBBB5C41E70C6054402C6E511B771087D4F7A4E9FAB2` |
+| `landing-workout-mobile-light.png`  | `/app → Continue workout`; `mockActiveWorkout` | Light, `390×844`  | 32 952 | `F054AA815382F5D55CE522EFA97A95E05F1F07DF6EA3284BEAD694B45EFD1B75` |
+| `landing-workout-mobile-dark.png`   | `/app → Continue workout`; `mockActiveWorkout` | Dark, `390×844`   | 32 689 | `77DFD809E599A31FD5FFFE694724D89ACA02BD005E959026AE9EB2769841B231` |
+| `landing-trainer-desktop-light.png` | `/coach`; `mockCoachWorkspace`                 | Light, `1280×972` | 93 333 | `685F00981F7253FF1F9E345CF86C736D69B7F0769DB51F41A3317B89358615AD` |
+| `landing-trainer-desktop-dark.png`  | `/coach`; `mockCoachWorkspace`                 | Dark, `1280×972`  | 93 346 | `9D58D878B859A61D1E67C587FB11E0849A267607FE9C4D4835A2BE3BCCB79CFE` |
 
 Capture hooks включаются только явным `YFC_CAPTURE_LANDING_PRODUCT_PROOFS=1` в соответствующих
 Playwright specs. Обычный test run не перезаписывает production assets.
@@ -223,6 +223,18 @@ Playwright specs. Обычный test run не перезаписывает prod
 - Valid TMA launch пропускает browser provider stack и входит в platform auth loading/error.
 
 ## Финальные evidence и ограничения
+
+### Motion `/login`
+
+- Initial composition использует один спокойный `--motion-spatial` entrance без задержки формы,
+  focus или provider actions.
+- Provider click немедленно показывает busy label, блокирует duplicate submit и не задерживает
+  фактический redirect. OAuth-return error и recovery доступны сразу.
+- Email login/register/recover меняют только локальную mode panel через `--motion-state`; введённые
+  данные, validation и focus сохраняют semantic order.
+- `prefers-reduced-motion: reduce`, hidden document и inactive TMA сразу показывают final state.
+- Landing hero motion остаётся owner-approved bounded исключением task `73A`; task `74A`
+  унифицирует control feedback, но не переигрывает его композицию или storytelling.
 
 - Frozen renders покрывают Landing desktop/mobile Light/Dark и `/login` desktop/mobile Light/Dark с
   loading/error representation.

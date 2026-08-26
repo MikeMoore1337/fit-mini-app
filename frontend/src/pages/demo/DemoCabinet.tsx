@@ -16,6 +16,7 @@ import { productEventSurface, trackProductEvent } from '../../shared/analytics/p
 import { calendarWeek, dateInputValue } from '../../shared/dateTime';
 import { AppLink, useNavigation } from '../../shared/navigation/router';
 import { DataConfidence } from '../../shared/ui/DataConfidence';
+import { useSemanticMotion } from '../../shared/ui/useSemanticMotion';
 import { QuantitativeProgress, TaskProgress } from '../../shared/ui/DataViz';
 import {
   TRAINING_WEEK_LEGEND,
@@ -629,6 +630,14 @@ export default function DemoCabinet() {
       });
   };
   const isLoading = loading || loadedScenario !== scenario;
+  const cabinetMotion = useSemanticMotion<HTMLDivElement>(
+    isLoading
+      ? `loading:${scenario}`
+      : error
+        ? `error:${scenario}:${error.status}`
+        : `${scenario}:${section}:${snapshot?.revision ?? 'empty'}`,
+    { animateInitial: false },
+  );
   const destinations: DemoAppShellConfig['destinations'] = [
     { key: 'today', label: 'Сегодня', icon: 'today', to: demoCabinetPath(scenario, 'today') },
     {
@@ -670,6 +679,11 @@ export default function DemoCabinet() {
     <AppShell demo={shellDemo}>
       <div
         className={`page-stack app-section app-section--design-v2 demo-cabinet demo-cabinet--${section}`}
+        id={cabinetMotion.elementId}
+        data-demo-state={isLoading ? 'loading' : error ? 'error' : 'ready'}
+        data-motion-phase={cabinetMotion.motionPhase}
+        data-motion-revision={cabinetMotion.motionRevision}
+        onAnimationEnd={cabinetMotion.onMotionAnimationEnd}
       >
         <section className="demo-cabinet-boundary" aria-label="Граница демо-режима">
           <div>

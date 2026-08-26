@@ -111,7 +111,7 @@
   font-size: 0.78rem;
   font-weight: 720;
   text-decoration: none;
-  transition: color 180ms ease;
+  transition: color var(--motion-state) var(--motion-ease);
 }
 
 .landing-nav a:hover {
@@ -138,10 +138,10 @@
   text-decoration: none;
   touch-action: manipulation;
   transition:
-    transform 180ms ease,
-    background-color 180ms ease,
-    border-color 180ms ease,
-    box-shadow 180ms ease;
+    transform var(--motion-press) var(--motion-ease),
+    background-color var(--motion-state) var(--motion-ease),
+    border-color var(--motion-state) var(--motion-ease),
+    box-shadow var(--motion-state) var(--motion-ease);
 }
 
 .landing-button:hover {
@@ -216,8 +216,8 @@
   line-height: 1.55;
   text-align: center;
   transition:
-    opacity 180ms ease,
-    visibility 180ms ease;
+    opacity var(--motion-state) var(--motion-ease),
+    visibility var(--motion-state) var(--motion-ease);
 }
 
 .landing-product-image.is-loaded > .landing-product-image__fallback,
@@ -1080,7 +1080,7 @@
   border-bottom: 1px solid var(--landing-line);
   color: var(--landing-ink);
   text-decoration: none;
-  transition: color 180ms ease;
+  transition: color var(--motion-state) var(--motion-ease);
 }
 
 .landing-start__demo nav > a:hover {
@@ -1239,7 +1239,7 @@
 .landing-assurance__details summary > svg {
   flex: 0 0 auto;
   color: #729d18;
-  transition: transform 180ms ease;
+  transition: transform var(--motion-state) var(--motion-ease);
 }
 
 .public-shell--dark :is(.landing-faq-list, .landing-assurance__details) summary svg {

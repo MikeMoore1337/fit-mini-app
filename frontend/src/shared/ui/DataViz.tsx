@@ -1,5 +1,6 @@
-import { useId, useMemo, useState, type KeyboardEvent } from 'react';
+import { useId, useMemo, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { Icon } from './Icon';
+import { useSemanticMotion } from './useSemanticMotion';
 
 export interface TimeSeriesPoint {
   href?: string;
@@ -107,6 +108,20 @@ export function TimeSeriesChart({
   const [selectedIndex, setSelectedIndex] = useState(initialIndex);
   const activeIndex = validIndexes.includes(selectedIndex) ? selectedIndex : initialIndex;
   const selectedPoint = points[activeIndex];
+  const motionSignature = points
+    .map((point) =>
+      [
+        point.key,
+        point.value ?? 'missing',
+        point.target ?? 'missing',
+        point.targetChanged ?? false,
+      ].join(':'),
+    )
+    .join('|');
+  const motion = useSemanticMotion<HTMLElement>(
+    `${metric}|${period}|${includeZero}|${motionSignature}`,
+    { observe: true },
+  );
 
   const scale = useMemo(() => {
     const rawMinimum = values.length ? Math.min(...values) : 0;
@@ -141,6 +156,8 @@ export function TimeSeriesChart({
     chartInset.top +
     ((scale.maximum - value) / (scale.maximum - scale.minimum)) *
       (chartHeight - chartInset.top - chartInset.bottom);
+  const visualBaseline =
+    includeZero && scale.minimum <= 0 && scale.maximum >= 0 ? 0 : scale.minimum;
   const actualSegments = seriesSegments(points, x, y, 'value');
   const targetSegments = targetSeriesSegments(points, x, y);
   const labelIndexes = Array.from(
@@ -184,6 +201,10 @@ export function TimeSeriesChart({
   return (
     <figure
       className={`data-viz-chart${print ? ' data-viz-chart--print' : ''} ${className}`.trim()}
+      id={motion.elementId}
+      data-motion-phase={print ? 'idle' : motion.motionPhase}
+      data-motion-revision={motion.motionRevision}
+      onAnimationEnd={motion.onMotionAnimationEnd}
     >
       <figcaption className="data-viz-chart__heading">
         <span>
@@ -251,7 +272,16 @@ export function TimeSeriesChart({
           )}
           {points.map((point, index) =>
             point.value == null ? null : (
-              <g className={index === activeIndex ? 'is-selected' : undefined} key={point.key}>
+              <g
+                className={`data-viz-chart__point${index === activeIndex ? ' is-selected' : ''}`}
+                key={point.key}
+                style={
+                  {
+                    '--data-viz-point-rise': `${y(visualBaseline) - y(point.value)}px`,
+                    '--data-viz-stagger-index': Math.min(index, 8),
+                  } as CSSProperties
+                }
+              >
                 <circle
                   aria-hidden="true"
                   className="data-viz-chart__point-hit"
@@ -387,8 +417,18 @@ export function QuantitativeProgress({
 }) {
   const safeMaximum = Math.max(maximum, 1);
   const percent = clamp((value / safeMaximum) * 100, 0, 100);
+  const motion = useSemanticMotion<HTMLDivElement>(`${label}|${safeMaximum}|${value}`, {
+    observe: true,
+  });
   return (
-    <div className="data-viz-progress" data-progress-kind="quantitative">
+    <div
+      className="data-viz-progress"
+      id={motion.elementId}
+      data-motion-phase={motion.motionPhase}
+      data-motion-revision={motion.motionRevision}
+      data-progress-kind="quantitative"
+      onAnimationEnd={motion.onMotionAnimationEnd}
+    >
       <div className="data-viz-progress__label">
         <span>{label}</span>
         <strong>
@@ -420,8 +460,18 @@ export function TaskProgress({
   total: number;
 }) {
   const safeTotal = Math.max(total, 1);
+  const motion = useSemanticMotion<HTMLDivElement>(`${label}|${safeTotal}|${completed}`, {
+    animateInitial: false,
+  });
   return (
-    <div className="data-viz-progress" data-progress-kind="task">
+    <div
+      className="data-viz-progress"
+      id={motion.elementId}
+      data-motion-phase={motion.motionPhase}
+      data-motion-revision={motion.motionRevision}
+      data-progress-kind="task"
+      onAnimationEnd={motion.onMotionAnimationEnd}
+    >
       <div className="data-viz-progress__label">
         <span>{label}</span>
         <strong>
@@ -443,10 +493,17 @@ export function TaskProgress({
 }
 
 export function StepProgress({ current, labels }: { current: number; labels: readonly string[] }) {
+  const motion = useSemanticMotion<HTMLOListElement>(`${current}|${labels.join('|')}`, {
+    animateInitial: false,
+  });
   return (
     <ol
       className="data-viz-steps"
+      id={motion.elementId}
       aria-label={`Шаг ${current} из ${labels.length}`}
+      data-motion-phase={motion.motionPhase}
+      data-motion-revision={motion.motionRevision}
+      onAnimationEnd={motion.onMotionAnimationEnd}
       style={{ gridTemplateColumns: `repeat(${labels.length}, minmax(0, 1fr))` }}
     >
       {labels.map((label, index) => {
@@ -475,13 +532,32 @@ export interface RankedBarItem {
 
 export function RankedBars({ items, label }: { items: readonly RankedBarItem[]; label: string }) {
   const maximum = Math.max(...items.map((item) => item.value), 1);
+  const motion = useSemanticMotion<HTMLDivElement>(
+    `${label}|${items.map((item) => `${item.label}:${item.value}`).join('|')}`,
+    { observe: true },
+  );
   return (
-    <div aria-label={label} className="data-viz-ranked-bars" role="list">
-      {items.map((item) => (
+    <div
+      aria-label={label}
+      className="data-viz-ranked-bars"
+      id={motion.elementId}
+      data-motion-phase={motion.motionPhase}
+      data-motion-revision={motion.motionRevision}
+      onAnimationEnd={motion.onMotionAnimationEnd}
+      role="list"
+    >
+      {items.map((item, index) => (
         <div className="data-viz-ranked-bars__row" key={item.label} role="listitem">
           <span>{item.label}</span>
           <div aria-hidden="true">
-            <i style={{ width: `${clamp((item.value / maximum) * 100, 0, 100)}%` }} />
+            <i
+              style={
+                {
+                  width: `${clamp((item.value / maximum) * 100, 0, 100)}%`,
+                  '--data-viz-stagger-index': Math.min(index, 8),
+                } as CSSProperties
+              }
+            />
           </div>
           <strong>
             {formatValue(item.value)} {item.unit}

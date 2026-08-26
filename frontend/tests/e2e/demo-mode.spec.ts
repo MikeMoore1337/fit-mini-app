@@ -22,6 +22,9 @@ const CABINET_CAPTURE =
   (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
     ?.YFC_CAPTURE_TASK_69A === '1';
 const CABINET_SCREENSHOT_DIR = '../.artifacts/screenshots/task-69a';
+const TASK_74A_DEMO_VIDEO =
+  (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
+    ?.YFC_CAPTURE_TASK_74A_DEMO === '1';
 
 function cabinetFixture(scenario: DemoScenario): DemoSessionSnapshot['cabinet'] {
   return {
@@ -402,7 +405,10 @@ async function openMobilePage(browser: Browser, scenario: DemoScenario, width: 3
     viewport,
     hasTouch: true,
     isMobile: true,
-    reducedMotion: 'reduce',
+    reducedMotion: TASK_74A_DEMO_VIDEO ? 'no-preference' : 'reduce',
+    recordVideo: TASK_74A_DEMO_VIDEO
+      ? { dir: '../.artifacts/videos/task-74a/demo', size: viewport }
+      : undefined,
   });
   const page = await context.newPage();
   const api = LIVE_DEMO ? null : await installDemoApi(page);

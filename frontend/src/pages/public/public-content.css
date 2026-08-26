@@ -420,8 +420,8 @@
   color: var(--landing-ink);
   text-decoration: none;
   transition:
-    transform 0.18s ease,
-    border-color 0.18s ease;
+    transform var(--motion-press) var(--motion-ease),
+    border-color var(--motion-state) var(--motion-ease);
 }
 
 .public-related-card:hover {

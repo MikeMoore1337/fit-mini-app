@@ -10,6 +10,48 @@
   --data-viz-surface: var(--v2-surface-primary, var(--surface));
 }
 
+.data-viz-chart[data-motion-phase='enter'],
+.data-viz-progress[data-motion-phase='enter'],
+.data-viz-ranked-bars[data-motion-phase='enter'] {
+  animation: yfc-motion-phase-marker var(--motion-data-total) linear;
+}
+
+.data-viz-chart[data-motion-phase='update'],
+.data-viz-progress[data-progress-kind='quantitative'][data-motion-phase='update'],
+.data-viz-ranked-bars[data-motion-phase='update'] {
+  animation: yfc-motion-phase-marker var(--motion-spatial) linear;
+}
+
+.data-viz-progress[data-progress-kind='task'][data-motion-phase='update'],
+.data-viz-steps[data-motion-phase='update'] {
+  animation: yfc-motion-phase-marker var(--motion-state) linear;
+}
+
+.data-viz-chart[data-motion-phase='pending'] :is(.data-viz-chart__actual, .data-viz-chart__point),
+.data-viz-progress[data-motion-phase='pending'] .data-viz-progress__track > span,
+.data-viz-ranked-bars[data-motion-phase='pending'] .data-viz-ranked-bars__row i {
+  opacity: 0;
+}
+
+.data-viz-chart[data-motion-phase='enter'] .data-viz-chart__actual {
+  animation: data-viz-line-enter var(--motion-data) var(--motion-ease) both;
+}
+
+.data-viz-chart__point {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.data-viz-chart[data-motion-phase='enter'] .data-viz-chart__point {
+  animation: data-viz-point-enter var(--motion-data) var(--motion-ease) both;
+  animation-delay: calc(var(--data-viz-stagger-index, 0) * var(--motion-data-stagger));
+}
+
+.data-viz-chart[data-motion-phase='update'] .data-viz-chart__actual,
+.data-viz-chart[data-motion-phase='update'] .data-viz-chart__point {
+  animation: data-viz-geometry-update var(--motion-spatial) var(--motion-ease) both;
+}
+
 .data-viz-chart__heading,
 .data-viz-chart__selection,
 .data-viz-progress__label {
@@ -231,6 +273,30 @@
   height: 100%;
   border-radius: inherit;
   background: var(--v2-lime, var(--accent));
+  transform-origin: left center;
+}
+
+.data-viz-progress[data-progress-kind='quantitative'][data-motion-phase='enter']
+  .data-viz-progress__track
+  > span {
+  animation: data-viz-bar-enter var(--motion-data) var(--motion-ease) both;
+}
+
+.data-viz-progress[data-progress-kind='quantitative'][data-motion-phase='update']
+  .data-viz-progress__track
+  > span {
+  animation: data-viz-bar-update var(--motion-spatial) var(--motion-ease) both;
+}
+
+.data-viz-progress[data-progress-kind='task'] .data-viz-progress__track > span {
+  transition: width var(--motion-state) var(--motion-ease);
+}
+
+.data-viz-progress[data-progress-kind='task'][data-motion-phase='update']
+  .data-viz-progress__track
+  > span,
+.data-viz-steps[data-motion-phase='update'] li[data-state='current'] > span {
+  animation: data-viz-state-confirm var(--motion-state) var(--motion-ease) both;
 }
 
 .data-viz-progress[data-progress-kind='quantitative'] .data-viz-progress__track > i {
@@ -300,6 +366,83 @@
   height: 100%;
   border-radius: inherit;
   background: var(--v2-lime, var(--accent));
+  transform-origin: left center;
+}
+
+.data-viz-ranked-bars[data-motion-phase='enter'] .data-viz-ranked-bars__row i {
+  animation: data-viz-bar-enter var(--motion-data) var(--motion-ease) both;
+  animation-delay: calc(var(--data-viz-stagger-index, 0) * var(--motion-data-stagger));
+}
+
+.data-viz-ranked-bars[data-motion-phase='update'] .data-viz-ranked-bars__row i {
+  animation: data-viz-bar-update var(--motion-spatial) var(--motion-ease) both;
+}
+
+@keyframes data-viz-line-enter {
+  from {
+    opacity: 0.45;
+    clip-path: inset(0 100% 0 0);
+  }
+
+  to {
+    opacity: 1;
+    clip-path: inset(0);
+  }
+}
+
+@keyframes data-viz-point-enter {
+  from {
+    opacity: 0;
+    transform: translateY(var(--data-viz-point-rise, 12px)) scale(0.82);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes data-viz-geometry-update {
+  from {
+    opacity: 0.55;
+    transform: translateY(3px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes data-viz-bar-enter {
+  from {
+    opacity: 0.5;
+    transform: scaleX(0);
+  }
+
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes data-viz-bar-update {
+  from {
+    opacity: 0.58;
+    transform: scaleX(0.94);
+  }
+
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes data-viz-state-confirm {
+  50% {
+    filter: brightness(1.12);
+    transform: scaleY(1.35);
+  }
 }
 
 @media (max-width: 520px) {
@@ -345,8 +488,24 @@
 
 @media (prefers-reduced-motion: reduce) {
   .data-viz-chart *,
-  .data-viz-progress * {
+  .data-viz-progress *,
+  .data-viz-ranked-bars *,
+  .data-viz-steps * {
+    animation: none !important;
     transition: none !important;
+  }
+
+  .data-viz-chart,
+  .data-viz-progress,
+  .data-viz-ranked-bars,
+  .data-viz-steps,
+  .data-viz-chart *,
+  .data-viz-progress *,
+  .data-viz-ranked-bars *,
+  .data-viz-steps * {
+    clip-path: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }
 
@@ -385,6 +544,19 @@
 
   .data-viz-chart__target {
     stroke-dasharray: 5 4;
+  }
+
+  .data-viz-chart,
+  .data-viz-chart *,
+  .data-viz-progress,
+  .data-viz-progress *,
+  .data-viz-ranked-bars,
+  .data-viz-ranked-bars * {
+    animation: none !important;
+    clip-path: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
   }
 
   .data-viz-chart__table-wrap.sr-only {

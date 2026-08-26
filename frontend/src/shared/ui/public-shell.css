@@ -162,10 +162,10 @@ body.public-shell-mode #root {
   box-shadow: 0 4px 14px rgba(23, 32, 24, 0.08);
   color: var(--landing-ink) !important;
   transition:
-    transform 0.18s ease,
-    border-color 0.18s ease,
-    background-color 0.18s ease,
-    box-shadow 0.18s ease;
+    transform var(--motion-press) var(--motion-ease),
+    border-color var(--motion-state) var(--motion-ease),
+    background-color var(--motion-state) var(--motion-ease),
+    box-shadow var(--motion-state) var(--motion-ease);
 }
 
 .public-shell :is(.landing-theme-toggle, .landing-button--compact, .login-home-link):hover {

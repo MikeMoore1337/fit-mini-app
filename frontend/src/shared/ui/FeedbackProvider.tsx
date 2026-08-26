@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { CloseIcon } from './common';
 import { useModalA11y } from './useModalA11y';
+import { useMotionPresence } from './useMotionPresence';
 
 interface ConfirmOptions {
   title: string;
@@ -24,15 +25,26 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
   const [toastState, setToastState] = useState<{ message: string; type: string } | null>(null);
   const [confirmState, setConfirmState] = useState<ConfirmState | null>(null);
   const toastTimer = useRef<number | null>(null);
+  const toastPresence = useMotionPresence({
+    closingAnimationName: 'toast-out',
+    openingAnimationName: 'toast-in',
+  });
 
-  const toast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
+  const dismissToast = useCallback(() => {
     if (toastTimer.current) window.clearTimeout(toastTimer.current);
-    setToastState({ message, type });
-    toastTimer.current = window.setTimeout(
-      () => setToastState(null),
-      type === 'error' ? 7000 : 3200,
-    );
-  }, []);
+    toastTimer.current = null;
+    toastPresence.hide();
+  }, [toastPresence]);
+
+  const toast = useCallback(
+    (message: string, type: 'success' | 'error' = 'success') => {
+      if (toastTimer.current) window.clearTimeout(toastTimer.current);
+      setToastState({ message, type });
+      toastPresence.show();
+      toastTimer.current = window.setTimeout(toastPresence.hide, type === 'error' ? 7000 : 3200);
+    },
+    [toastPresence],
+  );
 
   const confirm = useCallback(
     (options: ConfirmOptions) =>
@@ -52,18 +64,28 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
   return (
     <FeedbackContext.Provider value={value}>
       {children}
-      {toastState && (
+      {toastState && toastPresence.present && (
         <div
           className={`toast${toastState.type === 'error' ? ' error' : ''}`}
-          role={toastState.type === 'error' ? 'alert' : 'status'}
+          data-motion-phase={toastPresence.phase}
+          role={
+            toastPresence.phase === 'closing'
+              ? undefined
+              : toastState.type === 'error'
+                ? 'alert'
+                : 'status'
+          }
           aria-live={toastState.type === 'error' ? 'assertive' : 'polite'}
+          aria-hidden={toastPresence.phase === 'closing' || undefined}
+          inert={toastPresence.phase === 'closing'}
+          onAnimationEnd={toastPresence.onAnimationEnd}
         >
           <span>{toastState.message}</span>
           <button
             type="button"
             className="toast__close"
             aria-label="Закрыть сообщение"
-            onClick={() => setToastState(null)}
+            onClick={dismissToast}
           >
             <CloseIcon />
           </button>

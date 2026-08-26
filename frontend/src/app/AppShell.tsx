@@ -6,6 +6,7 @@ import { BrandLockup } from '../shared/ui/BrandLogo';
 import { AppNavigationIcon, type AppNavigationIconName } from './AppNavigationIcon';
 import { useOptionalAuth } from './AuthProvider';
 import { useTelegramOverlayBackButton } from '../shared/telegram/useTelegramOverlayBackButton';
+import { useMotionPresence } from '../shared/ui/useMotionPresence';
 
 export type AppSection = 'today' | 'progress' | 'programs' | 'catalog' | 'nutrition' | 'profile';
 
@@ -89,6 +90,10 @@ export function AppShell({
   const logout = auth?.logout;
   const { path } = useNavigation();
   const [moreOpen, setMoreOpen] = useState(false);
+  const morePresence = useMotionPresence({
+    closingAnimationName: 'app-more-backdrop-out',
+    openingAnimationName: 'app-more-panel-in',
+  });
   const morePanelRef = useRef<HTMLDivElement>(null);
   const displayName =
     demo?.displayName ||
@@ -102,21 +107,33 @@ export function AppShell({
   const shellDestinations = demo?.destinations ?? APP_DESTINATIONS;
   const brandTo = demo?.brandTo ?? '/app?section=today';
   const shellVisible = Boolean(user || demo);
+  const morePresent = moreOpen || morePresence.present;
+  const morePhase = moreOpen && morePresence.phase === 'closed' ? 'open' : morePresence.phase;
 
   const closeMore = (restoreFocus = false) => {
     setMoreOpen(false);
+    morePresence.hide();
     if (restoreFocus) document.getElementById('appMoreButton')?.focus();
   };
-  useTelegramOverlayBackButton(moreOpen, () => closeMore(true));
+  const openMore = () => {
+    setMoreOpen(true);
+    morePresence.show();
+  };
+  useTelegramOverlayBackButton(morePresent, () => closeMore(true));
 
   useEffect(() => {
-    if (!moreOpen) return;
+    if (!morePresent) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    morePanelRef.current?.querySelector<HTMLElement>('button, a')?.focus();
     return () => {
       document.body.style.overflow = previousOverflow;
     };
+  }, [morePresent]);
+
+  useEffect(() => {
+    if (moreOpen) {
+      morePanelRef.current?.querySelector<HTMLElement>('button, a')?.focus();
+    }
   }, [moreOpen]);
 
   if (!demo && !auth) {
@@ -192,7 +209,7 @@ export function AppShell({
                 }`}
                 aria-expanded={moreOpen}
                 aria-controls="appMorePanel"
-                onClick={() => setMoreOpen((open) => !open)}
+                onClick={() => (moreOpen ? closeMore() : openMore())}
               >
                 <AppNavigationIcon name="more" />
                 <span className="app-bottom-nav__label">{demo ? 'Сценарии' : 'Ещё'}</span>
@@ -290,9 +307,12 @@ export function AppShell({
             </div>
           </nav>
 
-          {moreOpen && (
+          {morePresent && (
             <div
               className="app-more-layer"
+              data-motion-phase={morePhase}
+              aria-hidden={morePhase === 'closing' || undefined}
+              onAnimationEnd={morePresence.onAnimationEnd}
               onMouseDown={(event) => {
                 if (event.target === event.currentTarget) closeMore(true);
               }}
@@ -304,6 +324,8 @@ export function AppShell({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="appMoreTitle"
+                aria-hidden={morePhase === 'closing' || undefined}
+                inert={morePhase === 'closing'}
                 onKeyDown={handleMoreKeyDown}
               >
                 <header className="app-more-panel__header">

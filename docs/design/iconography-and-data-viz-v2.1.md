@@ -71,6 +71,20 @@ adjacent selected detail. Desktop использует тот же язык, н�
 рядом с графиком и не требует hover. `prefers-reduced-motion` отключает transition, а
 `forced-colors` сохраняет solid/dashed/marker различия.
 
+## Motion contract
+
+Shared `DataViz` использует утверждённые tokens из `motion-v2.md`: `560ms` для первого meaningful
+entrance, общий sequence не более `760ms`, stagger `25ms`, compatible update `260ms`. Entrance
+запускается один раз после первой успешной загрузки/full reload или первого попадания готового
+below-fold plot в viewport. Same-data refetch, theme/viewport change, TMA resume и point selection
+не являются trigger.
+
+До первого кадра axes, labels, table/ARIA alternative и final scale уже содержат фактические
+значения. Actual geometry визуально раскрывается от truthful baseline: mathematical zero только
+когда он включён в scale, иначе от нижней границы plot. Missing не превращается в zero и не
+соединяется с соседней точкой. При reduced motion, print/PDF/export и interruption отображается
+статичное конечное состояние без потери interaction или focus.
+
 ## Text/table и print
 
 Каждый `TimeSeriesChart` содержит таблицу тех же подтверждённых данных. На экране она доступна

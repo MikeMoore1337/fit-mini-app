@@ -7,6 +7,7 @@ import type { WorkoutNavigationTarget } from '../../features/workouts/WorkoutHis
 import { AppLink, focusedContextReturn, useNavigation } from '../../shared/navigation/router';
 import { Badge } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
+import { useSemanticMotion } from '../../shared/ui/useSemanticMotion';
 import { programProfileReadiness } from '../../features/profile/programReadiness';
 import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
 
@@ -166,6 +167,9 @@ export default function MiniAppPage() {
       : 'today';
   });
   const section = requestedSection(search) ?? fallbackSection;
+  const sectionMotion = useSemanticMotion<HTMLDivElement>(section, {
+    animateInitial: section === 'progress',
+  });
   const analyticsSurface = productEventSurface();
   const requestedFeedback = requestedWorkoutFeedback(search);
   const historicalProgramWorkout = requestedHistoricalProgramWorkout(search);
@@ -248,7 +252,14 @@ export default function MiniAppPage() {
 
   return (
     <AppShell section={section}>
-      <div className={`page-stack app-section app-section--${section} app-section--design-v2`}>
+      <div
+        className={`page-stack app-section app-section--${section} app-section--design-v2`}
+        id={sectionMotion.elementId}
+        data-motion-phase={section === 'progress' ? sectionMotion.motionPhase : 'idle'}
+        data-motion-revision={sectionMotion.motionRevision}
+        data-motion-surface={section === 'progress' ? 'progress' : undefined}
+        onAnimationEnd={sectionMotion.onMotionAnimationEnd}
+      >
         {section !== 'today' && section !== 'progress' && section !== 'nutrition' && (
           <header className="card hero-card">
             <div>
@@ -317,9 +328,7 @@ export default function MiniAppPage() {
                 <ProgramBuilder />
               </>
             )}
-            {section === 'catalog' && (
-              <ExerciseCatalog canCreate={Boolean(user?.is_coach)} />
-            )}
+            {section === 'catalog' && <ExerciseCatalog canCreate={Boolean(user?.is_coach)} />}
             {section === 'nutrition' && (
               <NutritionPage
                 key={JSON.stringify(user?.profile?.kbju ?? null)}

@@ -1,9 +1,9 @@
-# GLOBAL_RULES - правила выполнения release backlog v13 resource-aware
+# GLOBAL_RULES - правила выполнения release backlog v14 resource-aware
 
-Этот файл действует для current task `74A`, remaining release tasks `74-79`, включая `76A`, и
+Этот файл действует для current task `74`, remaining release tasks `75-79`, включая `76A`, и
 trigger-gated post-release pool `80-96` с буквенными подзадачами. Completed tasks `00-73A`, включая
-буквенные подзадачи, и отдельно завершённые tasks `88-89` не переигрываются и хранятся в
-`tasks/done/`. Owner-selected task `89A` остаётся pending, но не является текущей.
+буквенные подзадачи, task `74A` и отдельно завершённые tasks `88-89A` не переигрываются и хранятся
+в `tasks/done/`. Owner-selected task `90` остаётся pending, но не является текущей.
 
 
 ## Полный task lifecycle
@@ -54,13 +54,14 @@ Lifecycle не расширяет scope task и не отменяет owner chec
 - Tasks `00-73A`, включая буквенные подзадачи, подтверждены владельцем как завершённые, перенесены в `tasks/done/` и не выполняются повторно.
 - Owner-selected task `88` завершена после owner approval и архивирована.
 - Owner-selected task `89` завершена после owner approval и архивирована.
-- Current task — `74A`: product-wide motion system и анимация data visualization; она только
-  назначена и не реализуется в completion run task `73A`.
-- После task `74A` следует `74`; каждая выполняется только в отдельной сессии. Task `74` остаётся
-  финальным cross-product responsive, accessibility и states hardening после motion rollout.
-- Owner-selected task `89A` остаётся `PENDING`, но не является текущей; `90` следует после неё
-  только внутри Telegram news потока. Это назначение не разрешает их автоматический запуск.
-- Remaining release tasks `74-79` и остальные trigger-gated tasks сохраняют собственные Trigger,
+- Owner-selected task `89A` завершена после owner approval и архивирована.
+- Task `74A` завершила product-wide motion system и data visualization animation после owner
+  approval и архивирована.
+- Current task — `74`: финальный cross-product responsive, accessibility и states hardening; она
+  только назначена и не реализуется в completion run task `74A`.
+- Owner-selected task `90` остаётся `PENDING` внутри Telegram news потока и не является текущей.
+  Это назначение не разрешает её автоматический запуск.
+- Remaining release tasks `75-79` и остальные trigger-gated tasks сохраняют собственные Trigger,
   dependency и owner decision.
 - Task `50A` уже создала общий continuous Mobile Web/TMA gate, который переиспользуют последующие client-facing tasks.
 - Перед client-facing task прочитать `MOBILE_TMA_FIRST_CONTRACT.md` и применимые пункты `.agents/references/MOBILE_TMA_ACCEPTANCE_MATRIX.md`.

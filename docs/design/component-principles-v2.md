@@ -23,6 +23,8 @@
 - Самостоятельное secondary, danger или destructive text-action визуально остаётся кнопкой:
   имеет постоянный контур, достаточный padding и `44 px` touch target. Borderless допустим только
   для очевидного inline navigation/action внутри текста; появление контура лишь на hover запрещено.
+- Press использует общий `--motion-press`, а изменение surface/state — `--motion-state`. Motion не
+  задерживает click, submit, validation или focus и не заменяет текстовое/shape-подтверждение.
 
 ## Inputs и forms
 
@@ -96,6 +98,12 @@ inside card и универсальная `surface` вокруг каждого 
 - Нужны title, close action, focus trap/return, Escape, scroll lock и safe-area/keyboard behavior.
 - Destructive confirmation описывает объект и последствие. Toast не перекрывает header/close или
   current mobile action.
+- Общий dialog/sheet использует `--motion-spatial` только для spatial entrance. Focus перемещается
+  сразу. Interruptible layers, которым нужен видимый exit, сохраняют слой в DOM лишь на bounded
+  transition, делают его `inert` и немедленно возвращают focus trigger; при reduced motion слой
+  закрывается без движения.
+- Toast использует `--motion-state` для появления и закрытия, остаётся доступным через
+  `status`/`alert` и во время exit не объявляется повторно.
 
 ## Demo и conversion copy
 
@@ -109,6 +117,9 @@ inside card и универсальная `surface` вокруг каждого 
 - Progress показывает current/total и period. Color не является единственным различием series.
 - Chart labels, axes, units, empty/insufficient states и methodology доступны без hover-only UI.
 - Skeleton не изображает вымышленные data points. Reduced motion не скрывает финальное значение.
+- Canonical chart entrance запускается только при первой успешной загрузке/full reload или первом
+  входе готового below-fold plot в viewport. Same-data refetch, theme/resize и TMA resume не
+  перезапускают его; axes, labels, table и ARIA сразу содержат final truth.
 
 ## Достаточность данных
 

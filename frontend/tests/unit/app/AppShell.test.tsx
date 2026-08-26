@@ -1,8 +1,13 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppShell } from '../../../src/app/AppShell';
 
 const logout = vi.fn();
+function finishAnimation(element: Element, animationName: string) {
+  const event = new Event('animationend', { bubbles: true });
+  Object.defineProperty(event, 'animationName', { value: animationName });
+  fireEvent(element, event);
+}
 const { authState, navigation, user } = vi.hoisted(() => ({
   authState: { missing: false },
   navigation: { path: '/coach', search: '' },
@@ -11,7 +16,7 @@ const { authState, navigation, user } = vi.hoisted(() => ({
     username: 'mikhail',
     first_name: 'Михаил',
     is_coach: true,
-    is_admin: false,
+    is_root: false,
     photo_url: null as string | null,
   },
 }));
@@ -34,10 +39,11 @@ describe('AppShell', () => {
     cleanup();
     authState.missing = false;
     user.photo_url = null;
-    user.is_admin = false;
+    user.is_root = false;
     navigation.path = '/coach';
     navigation.search = '';
     logout.mockClear();
+    vi.unstubAllGlobals();
     delete window.Telegram;
   });
 
@@ -61,7 +67,7 @@ describe('AppShell', () => {
     expect(logout).toHaveBeenCalledOnce();
   });
 
-  it('открывает доступное mobile-меню с secondary navigation', () => {
+  it('открывает доступное mobile-меню с secondary navigation и завершает exit после возврата фокуса', async () => {
     navigation.path = '/app';
     render(<AppShell section="profile">Содержимое</AppShell>);
 
@@ -83,10 +89,17 @@ describe('AppShell', () => {
 
     fireEvent.keyDown(dialog, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(more).toHaveFocus();
+    const closingLayer = document.querySelector<HTMLElement>(
+      '.app-more-layer[data-motion-phase="closing"]',
+    );
+    expect(closingLayer).toBeInTheDocument();
+    finishAnimation(closingLayer!, 'app-more-backdrop-out');
+    await waitFor(() => expect(document.querySelector('.app-more-layer')).not.toBeInTheDocument());
   });
 
   it('показывает admin entry только аккаунту с соответствующей capability', () => {
-    user.is_admin = true;
+    user.is_root = true;
     navigation.path = '/admin';
     render(<AppShell>Содержимое</AppShell>);
 
@@ -94,6 +107,26 @@ describe('AppShell', () => {
       'aria-current',
       'page',
     );
+  });
+
+  it('открывает и закрывает mobile-меню сразу при reduced motion', () => {
+    vi.stubGlobal('matchMedia', () => ({
+      addEventListener: vi.fn(),
+      matches: true,
+      removeEventListener: vi.fn(),
+    }));
+    navigation.path = '/app';
+    render(<AppShell section="today">Содержимое</AppShell>);
+
+    const more = screen.getByRole('button', { name: 'Ещё' });
+    fireEvent.click(more);
+    const dialog = screen.getByRole('dialog', { name: 'Михаил' });
+    expect(dialog).toBeInTheDocument();
+
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(document.querySelector('.app-more-layer')).not.toBeInTheDocument();
+    expect(more).toHaveFocus();
   });
 
   it('сохраняет обязательный AuthProvider для обычного production shell', () => {

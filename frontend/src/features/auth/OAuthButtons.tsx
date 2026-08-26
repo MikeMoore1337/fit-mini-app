@@ -69,6 +69,8 @@ export function OAuthButtons({
             className={`oauth-button oauth-button--${provider}`}
             href={`/api/v1/auth/oauth/${provider}/start${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ''}`}
             aria-disabled={redirectingProvider !== null}
+            aria-busy={redirectingProvider === provider || undefined}
+            data-motion-feedback={redirectingProvider === provider ? 'busy' : undefined}
             onClick={(event) => {
               if (redirectingProvider !== null) {
                 event.preventDefault();
