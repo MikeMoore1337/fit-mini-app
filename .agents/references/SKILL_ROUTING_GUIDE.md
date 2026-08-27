@@ -1,45 +1,91 @@
-# Skill routing guide v5 - core/conditional
+# Skill routing guide v6
 
-## Два уровня skills
+## Принцип
 
-- `Рекомендуемые skills` в task - core skills primary role. Загружать в начале.
-- `Условные skills` - загружать только после фактического trigger, указанного task.
-- Для code/diff review base skill - `$code-reviewer`; для QA - `$qa-engineer`. Non-code design/decision reviewer не загружает `$code-reviewer` автоматически. Base skills не обязаны повторяться в task.
-- Skill никогда не расширяет scope.
+Skill = профильный рабочий контракт.
+Role = ответственность lifecycle.
+Task = scope и результат.
 
-## Маршрутизация по фактическому изменению
+Не компенсируй слабую маршрутизацию загрузкой всех skills.
 
-| Изменение | Обычно достаточно | Подключать дополнительно только при trigger |
-|---|---|---|
-| Client-facing smartphone UI | `$frontend-engineer` + `$mobile-engineer` | `$telegram-engineer` при Telegram-specific runtime/API; `$accessibility-engineer` при сложном interaction/a11y finding |
-| Shared desktop UI | `$frontend-engineer`; `$product-designer` если есть UX/visual decision | `$mobile-engineer` если тот же flow обязан быть smartphone-first |
-| Telegram platform | `$telegram-engineer` + `$mobile-engineer` | `$security-engineer` при trust boundary/initData/auth |
-| Backend/API/domain logic | `$backend-engineer` | `$data-engineer` при schema/query/invariant; `$security-engineer` при auth/permission boundary |
-| DB/migration | `$data-engineer` + `$backend-engineer` | `$privacy-engineer` при sensitive lifecycle/retention/export/delete |
-| Fitness/nutrition/cardio semantics | `$fitness-domain-reviewer` + фактический implementation skill | Не нужен отдельный domain pass для простого отображения уже утверждённых значений |
-| Public evidence content | `$evidence-content-editor` | `$seo-auditor` если меняется public discoverability/metadata/indexation |
-| Landing composition | `$landing-art-director` + `$product-designer` + `$frontend-engineer` | `$seo-auditor`, `$performance-engineer` по фактическому scope |
-| Dedicated UI hardening | `$ui-audit` / `$accessibility-engineer` / `$performance-engineer` по цели task | Не загружать все три автоматически |
-| Release/operations | `$release-manager` + `$platform-engineer` | security/privacy/observability streams только по task/risk |
+## Основные маршруты
 
-## Важные исключения
+| Изменение | Обычно достаточно | Добавлять при trigger |
+| --- | --- | --- |
+| Обычный React UI | `$frontend-engineer` | `$product-designer` при реальном UX/visual decision |
+| Client-facing smartphone UI | `$frontend-engineer` | `$mobile-engineer` при keyboard/safe-area/lifecycle/device runtime; `$product-designer` при composition decision |
+| Существенный motion | `$motion-design-engineer` + implementation skill | `$performance-engineer` при подтверждённой стоимости; `$accessibility-engineer` при сложном reduced-motion/a11y |
+| Design exploration | `$product-designer` + explicit `$ui-prototyper` | `$landing-art-director` для Landing; `$motion-design-engineer` если motion является частью концепции |
+| Landing | `$landing-art-director` + `$product-designer` | `$frontend-engineer` при реализации; SEO/performance только по scope |
+| UI audit | `$ui-audit` | `$motion-design-engineer` при существенном motion review; a11y/perf по риску |
+| Backend/API | `$backend-engineer` | `$python-engineer` при Python implementation; data/security/privacy по границе |
+| Python | `$python-engineer` | domain skill по фактическому коду |
+| DB/schema/query | `$data-engineer` | backend/privacy по изменению contract/lifecycle |
+| Telegram Bot/TMA platform API | `$telegram-engineer` | `$mobile-engineer` для smartphone runtime; security при trust boundary |
+| AI Coach / LLM | `$llm-engineer` | backend/python для implementation; fitness/privacy/security/evidence/analytics/observability по scope |
+| Product discovery | `$product-discovery` | `$ux-researcher` только для real-user evidence |
+| Release | `$release-manager` + `$platform-engineer` по необходимости | observability/security/privacy только по реальному release risk |
 
-### TMA
+## `mobile-engineer` v6
 
-То, что shared React UI запускается внутри Telegram Mini App, не означает автоматический `$telegram-engineer`. Он нужен, когда меняется Telegram-specific contract: `initData`, `BackButton`, viewport/safe area events, platform deep-link adapter, Telegram auth/runtime или real-client compatibility.
+Не загружай его только потому, что UI виден на телефоне.
 
-### Accessibility
+Trigger:
 
-`$frontend-engineer` и `$mobile-engineer` обязаны соблюдать базовые labels, focus, keyboard/touch и semantic controls. Отдельный `$accessibility-engineer` нужен для dedicated hardening, сложного нового interaction или подтверждённой проблемы.
+- mobile keyboard;
+- safe area;
+- dynamic/stable viewport;
+- foreground/background;
+- reload/resume;
+- offline/reconnect;
+- touch/device-specific behavior;
+- Mobile Web/TMA runtime parity;
+- device performance.
 
-### QA/review
+Responsive layout сам по себе принадлежит `$frontend-engineer`.
 
-Не включай `$qa-engineer` и `$code-reviewer` в core skill list каждой feature-task. `$qa-engineer` загружается при назначенном QA; `$code-reviewer` - при назначенном code/diff review, но не для purely design/decision gate.
+## Motion
 
-### Architecture
+`$motion-design-engineer` нужен, когда task:
 
-Не подключай `$solution-architect` для обычного использования существующих contracts. Он нужен при реальном cross-system conflict, новой архитектурной границе или explicit architecture/audit task.
+- создаёт/перерабатывает motion language;
+- добавляет transition/gesture/data animation как заметную часть UX;
+- проверяет качество существующих animations;
+- ищет motion opportunities;
+- выполняет dedicated motion hardening.
+
+Одна короткая стандартная CSS transition не требует отдельного skill.
+
+## UI prototyping
+
+`$ui-prototyper` - explicit only.
+
+Он не должен сам запускаться из обычной feature-task. Используй его, когда владелец хочет несколько действительно разных visual/interaction directions до production implementation.
+
+## AI Coach
+
+Не создавать `$ai-engineer`.
+
+`$llm-engineer` - canonical AI/LLM skill для:
+
+- provider decision/routing;
+- AI Coach jobs;
+- prompts;
+- retrieval;
+- tools;
+- memory;
+- safety;
+- evals;
+- product AI UX;
+- provider reliability/cost/privacy.
+
+## Удалённый skill
+
+`commercial-product-builder` удалён. Крупный multi-stage scope координирует role `orchestrator`, подбирая реальные domain skills по streams.
 
 ## Бюджет контекста
 
-Для обычной implementation task старайся удерживать core набор примерно в 2-5 skills. Review/QA pass - base skill роли + максимум 1-2 профильных skills. Большие audit/release tasks загружают skills последовательно по независимым streams, а не все сразу.
+- обычная implementation task: примерно 2-5 core skills;
+- review/QA: base skill роли + 1-2 профильных;
+- audit/release: последовательные streams;
+- не загружать одинаковые общие правила из нескольких skills, если один уже владеет областью.

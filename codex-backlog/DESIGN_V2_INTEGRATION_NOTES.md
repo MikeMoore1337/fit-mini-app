@@ -105,11 +105,11 @@ Functional scope перечисленных tasks не изменён: прав�
 | `77` | Profile/Admin/Coach application flow мог разойтись визуально. | Зафиксированы общие form/status/navigation primitives и state pass. | Не изменён. |
 | `78` | TMA мог трактоваться как отдельный редизайн, а bot-specific work было смешано с main backlog в dependency line. | Зафиксирована формула shared UI + responsive composition + adapter, только platform differences и отдельная bot-workstream boundary без зависимости main backlog. | Не изменён. |
 | `79` | Legacy Landing PNG считались composition source of truth. | Источник заменён на Approved Design V2 renders/shared implementation; PNG оставлены historical. | Не изменён. |
-| `80` | Responsive/a11y audit мог проверять legacy UI и Landing PNG. | Gate переведён на фактический Design V2, parity, states и browser coverage. | Не изменён. |
+| `102` | Responsive/a11y audit мог проверять legacy UI и Landing PNG. | Gate переведён на фактический Design V2, parity, states и browser coverage. | Не изменён. |
 | `81` | Performance task могла измерять абстрактный redesign и legacy assets. | Уточнены реальные V2 assets, fonts/images, CLS, main-thread, motion и reduced motion. | Не изменён. |
-| `96` | AI UI мог создать отдельный generic chat/AI style. | Закреплены shared shell/components/states и запрет provider-inspired styling. | Не изменён. |
-| `98` | Readiness не перечисляла актуальные production skills и V2 recovery states. | Добавлены профильные skills и production-build state evidence без повторения закрытых audits. | Не изменён. |
-| `99` | Final gate не проверял весь Design V2 и решения findings `46A-46C`; bot-specific work ранее было смешано с main dependency list. | Добавлены human-made flows, legacy-fragment gate, связь с task `77` evidence и separate bot-workstream boundary. | Не изменён. |
+| `99` | AI UI мог создать отдельный generic chat/AI style. | Закреплены shared shell/components/states и запрет provider-inspired styling. | Не изменён. |
+| `82` | Readiness не перечисляла актуальные production skills и V2 recovery states. | Добавлены профильные skills и production-build state evidence без повторения закрытых audits. | Не изменён. |
+| `83` | Final gate не проверял весь Design V2 и решения findings `46A-46C`; bot-specific work ранее было смешано с main dependency list. | Добавлены human-made flows, legacy-fragment gate, связь с task `77` evidence и separate bot-workstream boundary. | Не изменён. |
 
 ## Design alternatives и consistency checkpoint после завершённых tasks 00-49
 

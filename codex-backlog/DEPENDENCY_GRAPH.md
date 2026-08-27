@@ -21,8 +21,14 @@ completed 00-55 (archived under tasks/done)
   -> 72 Final TMA hardening
   -> 73 Landing finalization
   -> 74 Responsive/a11y/states
-  -> 75 Performance/motion
-  -> 76 Skill-aware retrospective audit
+  -> 75 Performance/motion [COMPLETED]
+  -> 75A Design/UX/UI/motion Rethink audit on final 75 snapshot [COMPLETED]
+       -> KEEP: continue to 76
+       -> EVOLVE: bounded remediation
+       -> RETHINK [SELECTED]: 75B isolated exploration + owner selection
+            -> selected direction: specification -> pilot/rollout/performance verification
+            -> keep/stop: continue to 76
+  -> 76 Skill-aware retrospective audit (after 75B outcome and required design delivery)
   -> 76A Adversarial negative/destructive testing gate
   -> 77 Real-user usability checkpoint
   -> 78 Production readiness

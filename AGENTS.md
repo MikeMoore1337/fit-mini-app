@@ -79,11 +79,11 @@ For cross-cutting changes, identify all affected surfaces before implementation:
 frontend, Telegram Mini App, bot, database, generated API types, tests,
 deployment/configuration and documentation.
 
-For any user-facing seven-day week context or date selector, reuse the shared frontend
-`WeekStrip` component and its documented `overview`/`picker` modes. Do not create page-local week
-markup or a parallel responsive visual system. Keep adjacent page content in normal layout flow;
-do not overlap the week strip with negative margins or absolute positioning. Verify adjacent
-bounding boxes at desktop and relevant mobile widths; see `docs/design/component-principles-v2.md`.
+For ordinary feature/fix work, reuse the current shared frontend `WeekStrip` for user-facing
+seven-day week contexts instead of creating page-local duplicates. This is a current production
+consistency rule, not an immutable design law: an explicit owner-approved redesign task may replace
+the component/pattern together with the active design system. In ordinary tasks keep adjacent content
+in normal layout flow and verify relevant desktop/mobile geometry.
 
 # Skills
 
@@ -99,6 +99,9 @@ Repository skills live under `.agents/skills/`.
 - Do not load every skill merely because the product surface could theoretically involve it.
   In particular, visible-in-TMA UI does not by itself require `$telegram-engineer`; ordinary UI
   does not by itself require a separate `$accessibility-engineer` pass.
+- `$motion-design-engineer` is the specialized skill for substantial motion/gesture/data-animation work.
+  `$ui-prototyper` is explicit-only for isolated design exploration and must not start automatically.
+- `$llm-engineer` is the canonical AI/AI Coach engineering skill; do not create a parallel `ai-engineer`.
 - A skill never expands task scope. New schema/API/platform/product work requires the task or a
   reproducible `BLOCKER/HIGH`, not a broad skill checklist.
 - Repository/backlog rules take precedence over generic skill guidance when they conflict.
@@ -130,10 +133,10 @@ Current backlog families include:
 - `codex-backlog/bugs/pending/` for owner-selected standalone bug-fix tasks;
 - `codex-backlog/telegram-core-release-backlog/tasks/`.
 
-Trigger-gated post-release tasks `80-96` и их буквенные подзадачи входят в `codex-backlog/tasks/` и используют те же
-`codex-backlog/GLOBAL_RULES.md` и `codex-backlog/TASK_EXECUTION_LIFECYCLE.md`. Их номер/product
-rank не заменяет Trigger, dependency и owner decision; umbrella `83`, `87`, `87C`, `91`, `92`
-отдельно не выполняются.
+Trigger-gated post-release tasks `80-102` и их буквенные подзадачи входят в `codex-backlog/tasks/` и используют те же
+`codex-backlog/GLOBAL_RULES.md` и `codex-backlog/TASK_EXECUTION_LIFECYCLE.md`. Их номер задаёт
+предпочтительную последовательность, но не заменяет Trigger, dependency и owner decision; umbrella
+`91`, `93`, `94`, `96`, `100`, `101` отдельно не выполняются.
 
 When a task file is explicitly provided:
 

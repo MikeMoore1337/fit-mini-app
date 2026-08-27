@@ -13,7 +13,7 @@ Tasks `49A-49G` plus `49B1` are a design exploration/normalization/conditional v
 
 Task `76` is retrospective audit, task `77` is real usability validation, tasks `78-79` close operational/release risks.
 
-After task `75`, no new feature may be added except a fix required by factual P0/P1 evidence involving security, privacy, data loss, auth/TMA launch, core workout/nutrition/progress/trainer flow, domain correctness, severe accessibility or production operations.
+After task `75`, no new feature may be added except a fix required by factual `BLOCKER/HIGH` evidence involving security, privacy, data loss, auth/TMA launch, core workout/nutrition/progress/trainer flow, domain correctness, severe accessibility or production operations.
 
 ## Explicitly post-release
 

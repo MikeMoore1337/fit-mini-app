@@ -17,7 +17,7 @@
 Текущая task:
 
 ```text
-Выполни `codex-backlog/tasks/89-telegram-news-images-moderation-publishing.md`.
+Выполни `codex-backlog/tasks/104-telegram-news-images-moderation-publishing.md`.
 
 Соблюдай `AGENTS.md`, `codex-backlog/GLOBAL_RULES.md`
 и полный task lifecycle.

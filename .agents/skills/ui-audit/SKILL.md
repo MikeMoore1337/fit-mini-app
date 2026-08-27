@@ -1,357 +1,165 @@
 ---
 name: ui-audit
 description: >
-  Audit an implemented UI in the real browser for usability, visual hierarchy, responsive
-  behavior, accessibility, interaction quality, product consistency and generic AI-generated
-  patterns. Use after UI implementation or for an existing product review; verify rendered states
-  rather than source code alone.
+  Audit an implemented UI in the real browser for usability, visual quality, memorability,
+  responsive behavior, accessibility, interaction, motion and product consistency.
+  Evaluate the intended design contract of the task rather than blindly enforcing historical Design V2.
 ---
 
 # ui-audit
 
-Работай как Senior Product Designer + UI QA Engineer при проверке уже реализованного интерфейса.
+Работай как Senior Product Designer + UI QA Engineer.
 
-Проверяй фактический render, а не только исходный код.
+Проверяй реальный render.
 
-Цель - находить не только явные баги, но и визуальные решения, из-за которых продукт выглядит шаблонно, дёшево, несогласованно или как типичный AI-generated UI.
+## Design authority
 
-## Инструменты
+Перед аудитом определи режим task.
 
-В Codex IDE используй Playwright MCP.
+### Ordinary implementation
 
-Не используй Browser skill / In-app Browser: эта интеграция не поддерживается в Codex IDE extension.
+Current active design system является baseline consistency.
 
-В других средах используй доступный Playwright/browser tooling.
+### Explicit redesign/exploration
 
-Используй фактические browser/e2e scripts и настроенный каталог артефактов проекта.
+Исторический Design V2/V2.1 не является обязательной эстетикой. Проверяй результат по:
 
-## Viewports
+- current task;
+- выбранному owner direction;
+- YFC brand anchors;
+- usability;
+- accessibility;
+- performance;
+- product truth.
 
-Проверь репрезентативные размеры, обычно:
+Прочитай `../../references/DESIGN_GUARDRAILS.md`.
 
-- 1440;
-- 1280;
-- 768;
-- 390;
-- 360.
+## Quality dimensions
 
-Это отправная точка, а не жёсткая матрица.
+Проверяй одновременно:
 
-Набор viewport должен отражать реально поддерживаемые устройства.
-
-При необходимости дополнительно проверь промежуточные ширины, на которых меняется layout.
-
-## Состояния
-
-Проверяй релевантные состояния:
-
-- empty;
-- loading;
-- partial loading;
-- error;
-- populated;
-- hover;
-- focus;
-- active;
-- disabled;
-- validation;
-- success;
-- modal;
-- drawer;
-- dropdown;
-- long content;
-- permission denied;
-- stale/degraded state, если релевантно.
-
-Не ограничивай аудит happy path.
-
-## Классификация
-
-- P0 - блокирует критический сценарий;
-- P1 - серьёзно мешает использованию, пониманию или доступности;
-- P2 - заметный дефект качества, согласованности или responsive behavior;
-- P3 - косметика и polish.
-
-Для каждого значимого дефекта указывай:
-
-- где воспроизводится;
-- состояние;
-- viewport;
-- почему это проблема;
-- root cause, если понятен;
-- что нужно изменить.
-
-## Базовая визуальная проверка
-
-Проверяй:
-
+- clarity;
 - hierarchy;
-- grid;
-- alignment;
-- spacing;
+- composition;
 - typography;
-- component consistency;
-- density;
-- contrast;
-- visual rhythm;
+- spacing;
+- interaction;
 - responsive behavior;
-- overflow;
-- clipping;
-- fixed/sticky UI;
-- touch targets;
-- icon alignment;
-- text wrapping;
-- content truncation;
-- image rendering;
-- chart readability;
-- perceived affordance;
-- clarity of labels/errors/CTA.
+- accessibility;
+- performance perception;
+- product consistency;
+- memorability;
+- delight / "wow";
+- YFC-specific character.
 
-## AI-likeness audit
+Интерфейс может быть практичным и всё равно провалить quality bar, если он безликий и не вызывает желания пользоваться им.
 
-Отдельно проверь, не выглядит ли интерфейс как типичный AI-generated SaaS.
+## Нет автоматического style-police
 
-### Brand swap test
-
-Мысленно замени логотип и название продукта на случайный SaaS.
-
-Если интерфейс почти не потеряет смысл и характер - зафиксируй недостаточную визуальную индивидуальность как проблему качества.
-
-Не требуй декоративной уникальности любой ценой. Ищи отсутствие осмысленного product-specific visual language.
-
-### Card test
-
-Проверь:
-
-- слишком ли много карточек;
-- есть ли карточки внутри карточек;
-- используется ли container только ради рамки/background;
-- можно ли убрать часть карточек без потери иерархии.
-
-Если можно - это сигнал избыточной "cardification".
-
-### Pill test
-
-Проверь, не используются ли pills/chips/badges как универсальное оформление всего подряд.
-
-Pill должен иметь смысл: status, filter, compact action, tag или другой обоснованный паттерн.
-
-### Symmetry test
-
-Проверь, не построена ли страница из слишком большого количества одинаковых симметричных блоков.
-
-Особенно подозрительны повторяющиеся:
-
-- 3 одинаковых features;
-- одинаковые icon/title/description блоки;
-- одинаковые section layouts;
-- одинаковые карточки на всей странице.
-
-### Decoration test
-
-Проверь наличие:
+Не считать defect только потому, что присутствуют:
 
 - glow;
-- glassmorphism;
-- blobs;
-- sparkles;
-- floating decorative elements;
-- лишних gradients;
-- чрезмерных shadows;
-- случайных цветных иконок;
-- огромных radii.
+- glass;
+- gradients;
+- 3D;
+- cards;
+- bento;
+- big type;
+- unusual composition;
+- strong motion.
 
-Если элемент не поддерживает бренд, иерархию или взаимодействие - зафиксируй как кандидата на удаление.
+Finding возникает, если решение:
 
-### Typography test
+- мешает пониманию;
+- выглядит случайным;
+- плохо исполнено;
+- не связано с YFC;
+- ломает mobile;
+- недоступно;
+- дорого по performance без ценности.
 
-Проверь:
+## Browser states
 
-- не слишком ли много огромных заголовков;
-- не используется ли bold повсюду;
-- не слишком ли широки текстовые строки;
-- достаточно ли различимы heading/body/meta levels;
-- читаются ли числовые данные;
-- согласован ли line-height;
-- не выглядит ли типографика как browser/default component library styling.
+По scope проверяй:
 
-### Screenshot test
-
-Оцени экран целиком, а не по компонентам.
-
-Спроси:
-
-- выглядит ли он как готовый коммерческий продукт;
-- есть ли визуальный фокус;
-- чувствуется ли характер бренда;
-- не похож ли экран на Tailwind/shadcn starter;
-- есть ли визуальный ритм;
-- не перегружен ли он контейнерами;
-- не слишком ли пуст;
-- не выглядит ли UI искусственно "идеальным" и однообразным.
-
-## Usability и product-experience audit
-
-Проверь не только "красиво ли", но и может ли пользователь быстро и уверенно завершить задачу.
-
-Для критического экрана/потока оцени:
-
-- понятно ли за несколько секунд, что здесь главное;
-- соответствует ли primary action намерению пользователя;
-- нет ли лишних обязательных шагов и повторного ввода;
-- понятны ли термины без знания внутренней модели продукта;
-- достаточно ли контекста для решения, но нет ли лишней информации;
-- используются ли разумные defaults и progressive disclosure;
-- понятно ли, что произошло после действия;
-- можно ли исправить/отменить ошибку и продолжить сценарий;
-- не заканчивается ли поток техническим успехом без понятного пользовательского результата;
-- получает ли новый пользователь первую ценность без ненужного onboarding;
-- удобны ли повторяющиеся действия, если сценарий предполагает регулярное использование.
-
-Если путь формально работает, но требует ненужных действий, создаёт неопределённость или плохо
-объясняет результат, это UX finding, а не "предпочтение дизайнера".
-
-## Premium quality audit
-
-Для интерфейса, который должен выглядеть современно и дорого, отдельно оцени:
-
-- точность spacing;
-- качество типографики;
-- визуальную дисциплину;
-- ограниченность палитры;
-- качество графиков и чисел;
-- consistency states;
-- качество loading/error/empty states;
-- отсутствие дешёвых декоративных эффектов;
-- качество микроанимаций;
-- воспринимаемую надёжность продукта.
-
-Premium - это прежде всего точность и уверенность, а не количество эффектов.
-
-## Responsive audit
-
-Проверь не только отсутствие overflow, но и качество композиции.
-
-На mobile оцени отдельно:
-
-- порядок блоков;
-- приоритет информации;
-- CTA placement;
-- navigation;
-- sticky controls;
-- touch targets;
-- формы;
-- таблицы;
-- графики;
-- модальные окна;
-- клавиатуру;
-- safe-area;
-- плотность.
-
-Mobile не должен выглядеть как уменьшенный desktop.
-
-## Interaction audit
-
-Проверяй:
-
-- hover;
-- focus;
-- active;
-- disabled;
-- pressed;
+- populated;
+- empty;
 - loading;
-- optimistic state;
-- error recovery;
-- modal focus trap;
-- drawer behavior;
-- keyboard operation;
-- feedback после действия.
+- error;
+- long content;
+- validation;
+- disabled;
+- modal/sheet/dropdown;
+- hover/focus/active;
+- mobile keyboard;
+- narrow viewport;
+- light/dark;
+- reduced motion.
 
-Не должно быть визуально кликабельных элементов, которые не кликаются, и наоборот.
+## Mobile
+
+Для client-facing продукта отдельно оцени:
+
+- one-hand flow;
+- content priority;
+- primary action;
+- bottom navigation/sticky layers;
+- keyboard;
+- safe areas;
+- touch;
+- 360/390 representative widths;
+- no horizontal overflow;
+- Mobile Web/TMA parity.
+
+Runtime-specific issue -> `$mobile-engineer`.
 
 ## Motion audit
 
-Если есть анимации, проверь:
-
-- помогают ли они понять изменение состояния;
-- не затягивают ли действие;
-- не выглядят ли игрушечно;
-- не вызывают ли layout shift;
-- отключаются/упрощаются ли при reduced motion;
-- не используются ли анимации только ради декоративного впечатления.
-
-## Accessibility audit
-
-Если проект не задаёт более строгой цели, используй WCAG 2.2 AA как baseline для применимых web-сценариев.
+Если motion является заметной частью UX, подключай `$motion-design-engineer`.
 
 Проверяй:
 
-- semantic HTML;
-- keyboard navigation;
-- focus order;
-- focus visibility;
-- accessible names;
-- labels;
-- contrast;
-- touch targets;
-- ARIA;
-- reduced motion.
-
-Не считай визуально красивый интерфейс качественным, если он плохо работает с клавиатурой или непонятен без мыши.
-
-## Mobile Web/TMA parity audit
-
-Для client-facing YFC flow сравни representative Mobile Web и mocked/real TMA на одинаковом viewport.
-
-Проверяй:
-
-- одинаковую hierarchy, typography, geometry, labels и feature behavior;
-- safe-area/keyboard/BackButton как platform differences, а не отдельный дизайн;
-- touch/no-hover и отсутствие stuck states;
-- сохранение route/form/dialog state при theme/viewport/background change;
-- bottom navigation и fixed controls;
-- отсутствие Telegram-only cards/buttons/palette;
-- no horizontal overflow на `360/390`;
-- честное разделение mock и real-device evidence.
-
-Используй `references/MOBILE_TMA_ACCEPTANCE_MATRIX.md`.
-
-## Намеренные различия платформ
-
-Не путай намеренное различие тем с дефектом.
-
-Если платформы намеренно различаются, сначала проверь, что это разрешено product contract. Для YFC Mobile Web и TMA используют одну YFC Light/Dark систему; допустимы только platform-runtime differences. Согласованность проверяй через:
-
-- geometry;
-- typography;
-- spacing;
+- purpose;
+- responsiveness;
+- spatial continuity;
+- interruption;
+- enter/exit;
 - hierarchy;
-- component behavior;
-- interaction patterns;
-- motion.
+- data truth;
+- repeated-use feel;
+- reduced motion;
+- jank/layout shifts.
 
-Разный цвет сам по себе не является проблемой.
+Сильный motion не является defect из-за выразительности. Defect - motion, который чувствуется случайным, тормозит или искажает действие.
 
-## Исправление
+## Automated detectors
 
-Если аудит проводится в задаче, где разрешены изменения:
+Если проект использует automated design detector/lint, его findings являются сигналами для проверки, а не абсолютным aesthetic source of truth.
 
-1. воспроизведи проблему;
-2. установи root cause;
-3. исправь root cause, а не симптом;
-4. повторно открой проблемное состояние;
-5. проверь соседние viewport/state;
-6. убедись, что исправление не создало новый визуальный дефект.
+False-positive должен быть отклонён, если решение осознанное и проходит product/design evidence.
 
-Для существенных visual-quality проблем используй `product-designer`, если нужно переосмыслить решение, а не просто исправить реализацию.
+## Finding format
 
-## Финальная проверка
+Для значимого finding укажи:
 
-Перед завершением аудита оцени экран целиком по пяти вопросам:
+- severity;
+- route/state;
+- viewport;
+- evidence;
+- impact;
+- root cause, если понятен;
+- рекомендуемый direction fix.
 
-1. Понятно ли пользователю, что здесь главное?
-2. Выглядит ли интерфейс как единый продукт?
-3. Выглядит ли он современно без зависимости от модных эффектов?
-4. Есть ли у него собственный характер, а не generic AI/SaaS appearance?
-5. Выглядит ли результат достаточно качественно, чтобы его можно было показать как production UI без оговорки "потом дизайнер поправит"?
-6. Может ли пользователь завершить главную задачу без лишнего friction, догадок и тупиков?
+Используй project lifecycle severity policy, если audit выполняется внутри backlog task.
+
+## Финальный verdict
+
+Спроси:
+
+1. Пользователь понимает, что делать?
+2. Интерфейс ощущается цельным?
+3. Он ощущается именно YFC?
+4. Есть ли удовольствие/вау без ущерба usability?
+5. Хорош ли mobile experience?
+6. Доступен ли UI?
+7. Достаточно ли это качественно для production?

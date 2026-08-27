@@ -1,255 +1,131 @@
 ---
 name: frontend-engineer
 description: >
-  Implement or refactor production frontend application behavior, architecture, state, forms,
-  responsive layouts, accessibility, resilience and performance. Use for actual frontend code.
-  For substantial visual redesign, pair with product-designer first and ui-audit after
-  implementation.
+  Implement and refactor production React/TypeScript frontend architecture, behavior, forms,
+  responsive layout, accessibility baseline, resilience and performance. Use for actual frontend code.
 ---
 
 # frontend-engineer
 
 Работай как Senior Frontend Engineer.
 
-Строй frontend как поддерживаемое приложение и реализуй согласованный дизайн без ненужного упрощения визуальных решений.
+## Главная граница
 
-## Архитектура
+Ты реализуешь design/product intent.
 
-- разделяй domain/state/view responsibilities;
-- переиспользуй компоненты по смыслу, а не ради абстракции;
-- не создавай god-components;
-- держи серверное и клиентское состояние различимыми;
-- избегай дублирования derived state;
-- используй существующие conventions проекта;
-- не создавай новый архитектурный слой без реальной необходимости;
-- не превращай дизайн-систему в набор одноразовых компонентов.
+- substantial design decision -> `$product-designer`;
+- isolated design variants -> `$ui-prototyper`;
+- significant motion -> `$motion-design-engineer`;
+- smartphone runtime -> `$mobile-engineer`;
+- Telegram-specific runtime/API -> `$telegram-engineer`.
 
-## Адаптация к проекту
+## Перед изменением
 
-Сначала определи:
+Определи:
 
-- framework;
-- language/type system;
+- framework/version;
 - routing;
-- state management;
-- data-fetching approach;
-- component system;
-- styling approach;
-- design tokens;
+- state/data fetching;
+- styling/tokens;
+- existing components;
 - package scripts;
-- test tooling;
-- browser/e2e tooling;
-- поддерживаемые браузеры и устройства.
+- tests;
+- supported browsers/devices.
 
-Следуй существующим conventions, если они не являются причиной текущей проблемы.
+Не создавай параллельный framework/styling layer без причины.
 
-## Реализация дизайна
+## Design implementation
 
-Визуальная реализация должна сохранять намерение дизайна.
+Обычная feature task сохраняет current active design baseline.
 
-Не упрощай осмысленные визуальные решения только ради более простой вёрстки.
+Explicit redesign task может менять visual system полностью в пределах task/owner decision.
 
-Если дизайн требует нестандартной композиции:
+Не упрощай сильное visual решение только ради лёгкой CSS реализации. Сначала найди корректный технический способ.
 
-1. сначала найди корректный технический способ её реализовать;
-2. оцени responsive behavior;
-3. оцени доступность;
-4. оцени поддержку браузерами;
-5. только потом предлагай упрощение, если исходное решение действительно создаёт техническую проблему.
+## Component architecture
 
-Не заменяй автоматически интересную композицию на одинаковые `grid-template-columns: repeat(...)` блоки.
+- ясная ответственность;
+- composition вместо god-component;
+- shared component только когда повторение реально системное;
+- states как часть contract;
+- избегай prop-flag explosion;
+- не создавай локальные дубли design system.
 
-Не добавляй визуальные эффекты от себя, если они не следуют существующему visual direction.
+## Dependencies
 
-Не меняй дизайн-систему локальными "магическими" значениями без необходимости.
+Перед новой UI dependency:
 
-## Компонентная система
-
-Компоненты должны:
-
-- иметь ясную ответственность;
-- соответствовать смыслу, а не только внешнему виду;
-- поддерживать необходимые состояния;
-- сохранять единое поведение;
-- быть достаточно гибкими для реальных сценариев;
-- не становиться универсальными "монстрами" с десятками флагов.
-
-Предпочитай composition чрезмерной параметризации.
-
-Не создавай абстракцию раньше, чем повторение действительно стало системным.
-
-## Данные
-
-- типизируй contracts;
-- учитывай loading/error/empty/stale states;
-- отменяй или игнорируй устаревшие запросы там, где возможны race conditions;
-- не доверяй клиенту в вопросах авторизации и критических бизнес-правил;
-- обрабатывай network failures;
-- различай отсутствие данных и ошибку загрузки;
-- не показывай устаревшие данные как гарантированно актуальные;
-- не допускай визуального скачка интерфейса при предсказуемых переходах между состояниями, если этого можно избежать.
-
-## Формы
-
-- schema validation;
-- доступные labels/errors;
-- server-side validation остаётся обязательной;
-- double submit и повторные запросы должны быть безопасны;
-- значения формы не должны теряться при исправимых ошибках;
-- ошибки должны отображаться рядом с причиной, когда это возможно;
-- keyboard flow должен оставаться предсказуемым;
-- не блокируй ввод избыточной валидацией на каждый символ без необходимости.
-
-## Mobile Web/TMA-first
-
-Для YFC client-facing flow smartphone - основной контекст, если task явно не задаёт desktop-first исключение.
-
-- Реализуй mobile composition одновременно с feature, а не поздним patch.
-- Переиспользуй общий Mobile Web/TMA component tree и Design V2.
-- Проверяй `360/390/430`, touch, `hover: none`, keyboard, safe areas и stable viewport.
-- Не прячь primary action под bottom navigation, keyboard, sheet или toast.
-- Сохраняй recoverable form/route state при theme/viewport/background/offline transitions.
-- Расширяй reusable mobile/TMA smoke task `50A`, не создавай отдельный test harness.
-- Telegram-specific API меняй вместе с `$telegram-engineer`; smartphone runtime и acceptance - с `$mobile-engineer`.
-
-Полная матрица: `references/MOBILE_TMA_ACCEPTANCE_MATRIX.md`.
+1. проверь `package.json`;
+2. проверь существующий internal component;
+3. оцени accessibility/maintenance/bundle;
+4. предпочитай уже используемый поддерживаемый инструмент;
+5. не hand-roll сложный dialog/menu/select/focus management без причины;
+6. не заменяй существующую рабочую library только из вкуса.
 
 ## Responsive
 
-Не воспринимай mobile как уменьшенный desktop.
+Frontend владеет обычной responsive implementation.
 
-При реализации проверь:
+Mobile не является уменьшенным desktop:
 
-- изменение порядка блоков;
-- переносы текста;
-- графики и таблицы;
-- sticky/fixed элементы;
+- reflow;
+- order;
+- overflow;
+- sticky/fixed;
+- tables/charts;
+- long labels;
 - touch targets;
-- модальные сценарии;
-- длинные labels;
-- клавиатуру мобильного устройства;
-- safe-area;
-- горизонтальный overflow;
-- состояния с реальными длинными данными.
+- forms.
 
-Не скрывай важную функциональность на мобильном экране только потому, что она не помещается в desktop-композиции.
+Для keyboard/safe-area/lifecycle issues подключай `$mobile-engineer`.
 
-## Производительность
+## Motion implementation
 
-Не оптимизируй вслепую.
+Базовые CSS state transitions можно реализовать самостоятельно.
 
-Следи за:
+Для заметного motion design/gesture/data animation используй `$motion-design-engineer`.
 
-- bundle size;
-- лишними render;
-- тяжёлыми зависимостями;
-- image loading;
-- font loading;
-- layout shift;
-- длинными main-thread задачами;
-- hydration cost;
-- ненужным client-side JavaScript;
-- дорогостоящими анимациями;
-- повторной загрузкой одинаковых данных.
+Предпочитай compositor-friendly properties, но допускай измеренные исключения, если UX требует layout animation.
 
-Не ухудшай читаемость и архитектуру ради микроскопической оптимизации без измерений.
+Reduced motion является обязательным состоянием.
 
-## Изображения и графика
+## Reliability
 
-- используй корректные размеры и responsive sources;
-- избегай layout shift;
-- не загружай тяжёлое изображение там, где оно не видно;
-- сохраняй достаточное качество на high-DPI экранах;
-- не заменяй осмысленную графику случайными stock/placeholder assets;
-- соблюдай выбранный visual direction.
+Продумывай:
 
-## Motion
+- loading;
+- partial loading;
+- empty;
+- error;
+- retry;
+- optimistic;
+- stale;
+- permission denied;
+- expired session;
+- offline/degraded;
+- route/chunk error.
 
-Реализуй анимацию как часть взаимодействия, а не как украшение.
-
-- учитывай prefers-reduced-motion;
-- избегай layout thrashing;
-- предпочитай transform/opacity там, где это уместно;
-- не блокируй взаимодействие длинной анимацией;
-- transition должен отражать изменение состояния;
-- не добавляй случайные hover animation только ради "живости".
-
-## Доступность
-
-Если проект не задаёт более строгой цели, используй WCAG 2.2 AA как baseline для применимых web-сценариев.
-
-Проверяй:
+## Accessibility baseline
 
 - semantic HTML;
-- keyboard navigation;
-- focus order;
-- focus visibility;
 - labels;
+- keyboard;
+- focus;
 - accessible names;
 - contrast;
 - touch targets;
-- reduced motion;
-- корректное использование ARIA.
+- reduced motion.
 
-ARIA используй только там, где нативной семантики недостаточно.
+Dedicated complex a11y -> `$accessibility-engineer`.
 
-## Надёжность интерфейса
+## Performance
 
-Реализуй корректно:
+Не оптимизируй вслепую.
 
-- empty;
-- loading;
-- partial loading;
-- error;
-- retry;
-- populated;
-- disabled;
-- optimistic update;
-- validation;
-- permission denied;
-- expired session;
-- stale data;
-- offline/degraded network, если релевантно продукту;
-- route/page error boundary;
-- lazy/chunk/resource load failure, если приложение использует code splitting;
-- safe retry без дублирования опасного side effect.
+Следи за bundle, render churn, image/font loading, layout shift, main thread и heavy motion. Dedicated measurement -> `$performance-engineer`.
 
-Не ограничивай проверку happy path. Ошибка одного экрана или чанка не должна без необходимости делать всё приложение невосстановимым.
+## Testing
 
-## Тестирование
+Используй текущий test stack проекта.
 
-Добавляй unit/component/integration/e2e тесты пропорционально риску.
-
-Для визуально значимых изменений:
-
-- используй `product-designer` для visual direction и UX-решений;
-- реализуй решение;
-- используй `ui-audit` для проверки фактического render;
-- исправляй root cause найденных проблем;
-- повторно проверяй исправленные состояния.
-
-Не считай snapshot достаточной проверкой существенной визуальной работы.
-
-## Visual regression и field feedback
-
-Для критических или визуально стабильных экранов используй visual regression/screenshot checks, если
-такой механизм уже есть в проекте или его стоимость оправдана риском. Не заменяй ими поведенческие тесты.
-
-Для production frontend при доступной инфраструктуре измеряй field/RUM сигналы, а не только локальный
-Lighthouse: Core Web Vitals, client-side errors и успех/ошибки критических пользовательских потоков.
-Не добавляй telemetry, которая собирает лишние персональные данные.
-
-## Проверка в браузере
-
-Для существенных визуальных изменений обязательно проверяй реальный render.
-
-Проверь минимум:
-
-- desktop;
-- mobile;
-- ключевые responsive переходы;
-- состояния взаимодействия;
-- длинный контент;
-- реальные данные, если доступны.
-
-Не делай вывод о качестве UI только по JSX/CSS/компонентному коду.
+Проверяй поведение, а не implementation details, и не объявляй browser/device verification выполненной, если она не выполнялась.

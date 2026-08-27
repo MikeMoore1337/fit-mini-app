@@ -1,9 +1,9 @@
-# Порядок выполнения release backlog v39
+# Порядок выполнения release backlog v40
 
 ## Completed
 
-`00-75A`, включая `69B`, `73A` и предшествующие буквенные подзадачи, task `74A`, а также owner-selected
-tasks `88-90`.
+`00-75A`, включая `69B`, `73A`, `74A` и предшествующие буквенные подзадачи, а также
+owner-selected Telegram tasks `103-105`.
 Task-файлы находятся в `tasks/done/`.
 
 ## Current
@@ -26,6 +26,23 @@ Conditional release sequence:
 ```
 
 Task `75B` назначена текущей, но не выполняется автоматически в completion-сессии `75A`.
-Owner-selected tasks `88-90` завершены вне этой последовательности. Umbrella `91` отдельно не
-выполняется, а `91A` не назначена без собственного Trigger, dependency и owner decision.
 Trigger-gated tasks сохраняют собственные gates. Никакая task не запускает следующую автоматически.
+
+## Последовательность после `79`
+
+После release gate использовать task ID как предпочтительный порядок:
+
+```text
+80 -> 81 -> 82 -> 83 -> 84 -> 85 -> 86 -> 87
+-> 88 -> 89 -> 90 -> 91A -> 91B -> 92
+-> independently gated 93A / 93B
+-> 94A -> owner Go/Narrow Go -> 94B
+-> 95 -> 96A -> 96B -> 97 -> 98 -> 99
+-> 100A -> 100B -> 100C
+-> 101A -> 101B
+-> 102 private progress photos without AI/body analysis
+```
+
+Food-photo стоит после AI-блока. Billing/монетизация, перевод и фотографии прогресса оставлены в
+самом конце. Анализ фото тела отсутствует. Каждая стрелка дополнительно требует Trigger, dependency
+и отдельного owner decision; umbrella-файлы отдельно не выполняются.

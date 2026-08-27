@@ -39,7 +39,7 @@
 - [ ] Tasks `00-55` remained untouched as completed history under `tasks/done/`.
 - [ ] Current task did not alter the closed `49A-49G` design decision.
 - [ ] Current client-facing task reused the continuous gate established by completed task `50A`.
-- [ ] Task `76` has no open release-blocking P0/P1.
+- [ ] Task `76` has no open release-blocking `BLOCKER/HIGH`.
 - [ ] Task `77` evidence is factual.
 - [ ] Task `78` production evidence exists.
 - [ ] Task `79` contains go/no-go evidence.

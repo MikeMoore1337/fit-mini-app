@@ -1,14 +1,13 @@
 {
   "package": "your-fitness-coach-agents",
-  "version": "5",
+  "version": "6",
   "root": ".agents",
-  "skill_count": 31,
+  "skill_count": 32,
   "skills": [
     "accessibility-engineer",
     "backend-engineer",
     "billing-engineer",
     "code-reviewer",
-    "commercial-product-builder",
     "data-engineer",
     "document-import-engineer",
     "evidence-content-editor",
@@ -18,6 +17,7 @@
     "llm-engineer",
     "localization-engineer",
     "mobile-engineer",
+    "motion-design-engineer",
     "observability-engineer",
     "performance-engineer",
     "platform-engineer",
@@ -34,6 +34,7 @@
     "technical-writer",
     "telegram-engineer",
     "ui-audit",
+    "ui-prototyper",
     "ux-researcher"
   ],
   "roles": [
@@ -44,317 +45,28 @@
     "qa-verifier",
     "integration-release"
   ],
-  "routing_model": "core-plus-conditional-skills; task-declared-lifecycle-roles",
-  "review_policy": "BLOCKER/HIGH blocking only; one full review plus targeted recheck",
-  "updated_routing_files": [
-    "README.md",
-    "roles/README.md",
-    "roles/orchestrator.md",
-    "roles/researcher.md",
-    "roles/implementer.md",
-    "roles/independent-reviewer.md",
-    "roles/qa-verifier.md",
-    "roles/integration-release.md",
-    "references/ROLE_ROUTING_GUIDE.md",
-    "references/SKILL_ROUTING_GUIDE.md"
+  "deprecated_skills": [
+    "commercial-product-builder"
   ],
-  "generated_at": "2026-08-22T10:28:23.459656+00:00",
-  "validation_errors": [],
-  "files": [
-    {
-      "path": "README.md",
-      "size": 1665,
-      "sha256": "176f1df02afab9fbaaef8876e6d4ac5a3863e077d790c3243c968d29edc17edb"
-    },
-    {
-      "path": "references/ACCESSIBILITY_VERIFICATION_MATRIX.md",
-      "size": 1022,
-      "sha256": "820ed4de989bd765720cd363d880e6cbba0c225be033c4faf07139eed422d155"
-    },
-    {
-      "path": "references/BILLING_ENTITLEMENT_CHECKLIST.md",
-      "size": 1168,
-      "sha256": "0f715eef8d9f13af55dfc22c6464b438ea5aa7363ee0d86b639fd31f6e5e12b9"
-    },
-    {
-      "path": "references/COMMERCIAL_DEFINITION_OF_DONE.md",
-      "size": 8697,
-      "sha256": "3e0e32771e4b61bef5f95ac7bf8a539244fb65757ad7bd816635c1083699729f"
-    },
-    {
-      "path": "references/MOBILE_TMA_ACCEPTANCE_MATRIX.md",
-      "size": 7575,
-      "sha256": "5176ef236984250347455435a70dd923f44612b47a8d8c640327b381399ee0ef"
-    },
-    {
-      "path": "references/ROLE_ROUTING_GUIDE.md",
-      "size": 3811,
-      "sha256": "fe9685e67009fde1512701d98ba412bf3faf1491b3dace8b5906b6f30745d248"
-    },
-    {
-      "path": "references/SKILL_ROUTING_GUIDE.md",
-      "size": 4339,
-      "sha256": "1c3a2f8e5f44392003a2c31372dd71ee0f6c18ad3035f7e70a90bb2f2d427ca9"
-    },
-    {
-      "path": "references/USABILITY_RESEARCH_CHECKLIST.md",
-      "size": 1867,
-      "sha256": "39ae36d1c7ba9487b14c1f123e7cb176feb9df22308ac8944deb9b54849b61b7"
-    },
-    {
-      "path": "roles/README.md",
-      "size": 1703,
-      "sha256": "6b6bd389cefcdf87730007bb969b65912e11f5c1a24831ae6987e37fe9b3feff"
-    },
-    {
-      "path": "roles/implementer.md",
-      "size": 3670,
-      "sha256": "a959408f46fd8833f97cda5c674895316af7e089d0df4339d8ebfc27564e70a2"
-    },
-    {
-      "path": "roles/independent-reviewer.md",
-      "size": 5430,
-      "sha256": "c4c3bd13043a0b787d55d706b0da20399c0b42bcebeba3a7be43f5c80f8a5414"
-    },
-    {
-      "path": "roles/integration-release.md",
-      "size": 3184,
-      "sha256": "cded806ef8a00ace8cf5bbf0244dff212df7412dee60a02500dd9f0fa8be7fe1"
-    },
-    {
-      "path": "roles/orchestrator.md",
-      "size": 2622,
-      "sha256": "cbaad9586ef305c443d3f51d3a1ce08aee990b3f16bee44ad0c5a5bb1a7e5fbd"
-    },
-    {
-      "path": "roles/qa-verifier.md",
-      "size": 3424,
-      "sha256": "3922d762772452d64fb3b88ebe86b0167e82fdacc635472d58fba6d36fd66376"
-    },
-    {
-      "path": "roles/researcher.md",
-      "size": 2840,
-      "sha256": "49f7d76f73a1b3469e55082e4e1b7a1a1242eebb100571e9ccc8f703eabb8b43"
-    },
-    {
-      "path": "skills/accessibility-engineer/SKILL.md",
-      "size": 9902,
-      "sha256": "da17e270ffd7017c225fb899ef05b32504e82b5238900f5e842907445e202f18"
-    },
-    {
-      "path": "skills/backend-engineer/SKILL.md",
-      "size": 3285,
-      "sha256": "d70c4f33b774241744c629e43e7db2c3da2685454ba7c70dae9c75ebbdfc97c2"
-    },
-    {
-      "path": "skills/billing-engineer/SKILL.md",
-      "size": 7719,
-      "sha256": "af4b78218e8d33fb8cdfe98857ca195da9d6f8e30c69e2845d501a1e764f567d"
-    },
-    {
-      "path": "skills/code-reviewer/SKILL.md",
-      "size": 1731,
-      "sha256": "e8edfdf20e8ae4edc404acdab055ad76323a52675e57b3a37b8b64a60780d150"
-    },
-    {
-      "path": "skills/commercial-product-builder/SKILL.md",
-      "size": 8023,
-      "sha256": "89e237fede8a947d797fdf7bbf2129da159c481187dba3a93a9d37d901b622a4"
-    },
-    {
-      "path": "skills/data-engineer/SKILL.md",
-      "size": 3069,
-      "sha256": "28c33fc10d40c3684086e44230391e36efc9da1e045809ebbfee2b5d146b043a"
-    },
-    {
-      "path": "skills/document-import-engineer/SKILL.md",
-      "size": 11880,
-      "sha256": "51f1eb09ffee349c3938ec3aa9db2c8d5dd7cdb8d60cd566cae048d10d03196c"
-    },
-    {
-      "path": "skills/document-import-engineer/references/SAFE_IMPORT_CHECKLIST.md",
-      "size": 5730,
-      "sha256": "aa09924696c68c8796d494bad91ce4462bf7dcd585d2f7e21c6d67973cb6a4cf"
-    },
-    {
-      "path": "skills/evidence-content-editor/SKILL.md",
-      "size": 11307,
-      "sha256": "bddf60fe77f0af4a6bd1816336abc3571bdeb909944efd9282e96e4e9f234610"
-    },
-    {
-      "path": "skills/evidence-content-editor/references/EDITORIAL_EVIDENCE_CHECKLIST.md",
-      "size": 5313,
-      "sha256": "552ee474c00c9bbdf40710a26059f2c3cccdc62485acc0e2ab69324ab411e68d"
-    },
-    {
-      "path": "skills/fitness-domain-reviewer/SKILL.md",
-      "size": 15346,
-      "sha256": "53886da901d1d3766655812dfa708627d9e1f1a08d88dc9f4e3c0a59a142647d"
-    },
-    {
-      "path": "skills/fitness-domain-reviewer/references/FITNESS_DOMAIN_CHECKLIST.md",
-      "size": 7116,
-      "sha256": "df9501f7bd2a6933393c37dab4fd2b6dd395af9de950e7f76e6fff3c06d17922"
-    },
-    {
-      "path": "skills/frontend-engineer/SKILL.md",
-      "size": 12242,
-      "sha256": "e5a797f1896e9e98b9032c96bbd6be6093e4de38da8dcafa1864ee7ec77a83d7"
-    },
-    {
-      "path": "skills/landing-art-director/SKILL.md",
-      "size": 24733,
-      "sha256": "7f67ec488f3883714cd4064f87123137b07266d90366ba82ceb2016b5468ea3c"
-    },
-    {
-      "path": "skills/llm-engineer/SKILL.md",
-      "size": 16107,
-      "sha256": "705eda79f1b31f19712266edb2f3e2b28f792b37b8d205dfaa3935c6a911f05f"
-    },
-    {
-      "path": "skills/llm-engineer/references/PROVIDER_ROUTING_AND_PRIVACY.md",
-      "size": 7244,
-      "sha256": "20845d6171ddd31e2a65b358d11f9c729e66381e9f68b1e4e521acddd1235b82"
-    },
-    {
-      "path": "skills/llm-engineer/references/TOOL_RAG_SECURITY_EVALS.md",
-      "size": 5487,
-      "sha256": "761afa2dcc632ef8aa41568cee17016da1419504892dfc12b0a77a967d801cd1"
-    },
-    {
-      "path": "skills/localization-engineer/SKILL.md",
-      "size": 11168,
-      "sha256": "e421d2118e7bd170771d5d5ae973b71e630c52c685df37ef987ccabfbb1283fa"
-    },
-    {
-      "path": "skills/localization-engineer/references/LOCALIZATION_ARCHITECTURE_CHECKLIST.md",
-      "size": 4070,
-      "sha256": "44267efb11b744cc9ffb2120939d6373f125b12cabd3fc5c4358ea008cf2dbfa"
-    },
-    {
-      "path": "skills/localization-engineer/references/LOCALIZATION_REGRESSION_MATRIX.md",
-      "size": 3798,
-      "sha256": "c70eacca721fe5766d1fd672099d382e76a12a114f2738c5d0c521bb2af12016"
-    },
-    {
-      "path": "skills/mobile-engineer/SKILL.md",
-      "size": 7675,
-      "sha256": "ad8c4d59afad20b205233f54e401a2069bbbeb766f32148e57131d23cb0c5dac"
-    },
-    {
-      "path": "skills/observability-engineer/SKILL.md",
-      "size": 5561,
-      "sha256": "2933bfc239cdbcf64c48dcc73f36911f8229bce6e4750dbc9987fcefe97f74fa"
-    },
-    {
-      "path": "skills/performance-engineer/SKILL.md",
-      "size": 2779,
-      "sha256": "5b5be5918160b712e7c39d3018707750f50b4916dcd5ba7d9731de2f5223c113"
-    },
-    {
-      "path": "skills/platform-engineer/SKILL.md",
-      "size": 2709,
-      "sha256": "542fd6a9a34909ec7d42f1eeb4d9fc48f549ebafb8710f9dc3367a2929cf4f2c"
-    },
-    {
-      "path": "skills/privacy-engineer/SKILL.md",
-      "size": 7652,
-      "sha256": "36a5ccbf53b7320f8eb541c1a4a6eb2b1b00b8791d1da7490b05ad61525b9752"
-    },
-    {
-      "path": "skills/product-analytics-engineer/SKILL.md",
-      "size": 11763,
-      "sha256": "ef41516f8848c24d558247a53b2f0f7070dfff88afddc3167999f860a2e6e0d0"
-    },
-    {
-      "path": "skills/product-analytics-engineer/references/PRODUCT_ANALYTICS_CHECKLIST.md",
-      "size": 5928,
-      "sha256": "f677a4190055c990abed41e55110d76e17034aacb08a519c29786dd78268f794"
-    },
-    {
-      "path": "skills/product-designer/SKILL.md",
-      "size": 17083,
-      "sha256": "1630590633d990976e614fbf1d67c6d60c406229ed93ba7fa005f5237df0188c"
-    },
-    {
-      "path": "skills/product-discovery/SKILL.md",
-      "size": 9457,
-      "sha256": "ea0474d064189a681127a900a7135d1fe6208a28e0303f57fee56ac6e553d9ad"
-    },
-    {
-      "path": "skills/python-engineer/SKILL.md",
-      "size": 2830,
-      "sha256": "c2576acf9404e8e021c855638031290103c8ff42294eff4d78e17a6c36bd02e9"
-    },
-    {
-      "path": "skills/qa-engineer/SKILL.md",
-      "size": 4211,
-      "sha256": "5a45d6bb4f0d9339aed204bea6d66f66badd3bbc35554d97d5ed6e07446c6576"
-    },
-    {
-      "path": "skills/release-manager/SKILL.md",
-      "size": 2647,
-      "sha256": "3fdbf35649ba21221fb7671388edd98db286577e52763619ea1e3eb1b769f915"
-    },
-    {
-      "path": "skills/security-engineer/SKILL.md",
-      "size": 2643,
-      "sha256": "4f8b50fe51960009b798429d17a6c00978bcd6d18daf1dcd4644c0fe9ad2ac4e"
-    },
-    {
-      "path": "skills/seo-auditor/SKILL.md",
-      "size": 13539,
-      "sha256": "8628261a326c9e93c7979361a1ab5c04e2483e28ba7f5e7f543d88219c45cf58"
-    },
-    {
-      "path": "skills/seo-auditor/references/INTERNATIONAL_AND_DEPLOYMENT_SEO.md",
-      "size": 2651,
-      "sha256": "b9784bbe277353b6a68a94e873ccbffad660edd19b8f9b13ab8ffd340b4b531b"
-    },
-    {
-      "path": "skills/seo-auditor/references/SEO_REGRESSION_CHECKS.md",
-      "size": 1730,
-      "sha256": "02fcdceb7b86507afe3ed3c093b49ad9f3091e44ce00257c1d1995748a7eefdb"
-    },
-    {
-      "path": "skills/seo-auditor/references/STRUCTURED_DATA_AND_CONTENT.md",
-      "size": 4233,
-      "sha256": "6b64b164776fdb029338f1592d30aa376929576d48a4bf821a0221ec56028cdf"
-    },
-    {
-      "path": "skills/seo-auditor/references/TECHNICAL_SEO_CHECKLIST.md",
-      "size": 5470,
-      "sha256": "623bcb7499ef877e004df71fb6c4043ef4307aaf1dab41a8fd7f88d0cb028511"
-    },
-    {
-      "path": "skills/solution-architect/SKILL.md",
-      "size": 3070,
-      "sha256": "b1538684d6d621a387fa3cb19a7cc6d861745480299d26f21a91e81b39eed86a"
-    },
-    {
-      "path": "skills/technical-writer/SKILL.md",
-      "size": 3162,
-      "sha256": "20c71711eb3ef968fccc70b8b7926925637b99fdbcdf93e3581b379f618a7c29"
-    },
-    {
-      "path": "skills/telegram-engineer/SKILL.md",
-      "size": 15913,
-      "sha256": "4533d9db4a746362a98eca2c26dc8886b2485d576b257d34cf3332c89890a8fc"
-    },
-    {
-      "path": "skills/telegram-engineer/references/TELEGRAM_VERIFICATION_MATRIX.md",
-      "size": 9830,
-      "sha256": "18eac53dee9b6b3a2db0764c70c7bf982bebc7beb16d81ecf36ab56661351b29"
-    },
-    {
-      "path": "skills/ui-audit/SKILL.md",
-      "size": 14581,
-      "sha256": "f38079a44f0c7405fa8d2e13024ddf30040ccbb7ae1249d56e68031315da85d4"
-    },
-    {
-      "path": "skills/ux-researcher/SKILL.md",
-      "size": 10304,
-      "sha256": "36e09a2f23ea76c8426b5396f3bcc854efde72d5d8911c7b43427e26c26b3ef3"
-    }
+  "canonical_ai_skill": "llm-engineer",
+  "design_policy": {
+    "active_baseline": "DESIGN_V2_1 until replaced by owner-approved design task",
+    "fully_revisable": true,
+    "hard_brand_anchors": [
+      "sport-tech",
+      "mobile-first",
+      "lime-black-white"
+    ],
+    "wow_is_first_class_quality": true
+  },
+  "routing_model": "focused-core-plus-conditional-skills; task-declared-lifecycle-roles",
+  "role_count": 6,
+  "notes": [
+    "commercial-product-builder removed because orchestration belongs to role orchestrator",
+    "mobile-engineer narrowed to smartphone runtime/lifecycle",
+    "landing-art-director is a marketing overlay, not a second product-designer",
+    "llm-engineer expanded to AI/LLM product engineering and AI Coach",
+    "motion-design-engineer and ui-prototyper added",
+    "role contracts slimmed; lifecycle policy remains canonical in TASK_EXECUTION_LIFECYCLE.md"
   ]
 }

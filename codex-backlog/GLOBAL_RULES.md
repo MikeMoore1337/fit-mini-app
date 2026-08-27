@@ -1,9 +1,10 @@
 # GLOBAL_RULES - правила выполнения release backlog v14 resource-aware
 
-Этот файл действует для current task `74`, remaining release tasks `75-79`, включая `76A`, и
-trigger-gated post-release pool `80-96` с буквенными подзадачами. Completed tasks `00-73A`, включая
-буквенные подзадачи, task `74A` и отдельно завершённые tasks `88-89A` не переигрываются и хранятся
-в `tasks/done/`. Owner-selected task `90` остаётся pending, но не является текущей.
+Этот файл действует для завершённых и архивированных tasks `75`/`75A`, current owner-approved
+exploration gate `75B`, remaining release tasks `76-79`, включая `76A`, и
+trigger-gated post-release pool `80-102` с буквенными подзадачами. Completed tasks `00-73A`, включая
+буквенные подзадачи, tasks `74A-75` и отдельно завершённые tasks `103-105` не переигрываются и
+хранятся в `tasks/done/`.
 
 
 ## Полный task lifecycle
@@ -33,13 +34,15 @@ Lifecycle не расширяет scope task и не отменяет owner chec
 
 Маршрутизация по фактическому scope:
 
-- `$mobile-engineer` + `$frontend-engineer` - нормальная основа client-facing smartphone UI.
+- `$frontend-engineer` - базовый skill обычной client-facing UI implementation. `$mobile-engineer` подключается при mobile keyboard/safe-area/viewport/lifecycle/touch/device-runtime риске, а не только потому, что UI виден на смартфоне.
 - `$telegram-engineer` нужен только при изменении Telegram-specific API/runtime/adapter/initData/BackButton/safe-area/deep-link/real-client behavior. То, что shared UI показывается внутри TMA, само по себе не является trigger.
 - `$accessibility-engineer` подключается отдельно при сложном/new interaction, подтверждённом accessibility finding или в dedicated hardening task. Базовые labels/focus/keyboard/touch требования остаются обязанностью frontend/mobile implementation.
 - `$fitness-domain-reviewer` нужен, когда меняются fitness/nutrition/cardio/anthropometry формулы, семантика данных или интерпретация. Простое отображение уже утверждённых значений не требует отдельного доменного прохода.
 - `$data-engineer` нужен при schema/migration/query/invariant scope; `$backend-engineer` - при реальном backend/API/domain change. Не подключать их только из-за теоретического edge case.
 - `$security-engineer`/`$privacy-engineer` подключаются при соответствующей trust/data boundary или dedicated audit, а не на каждый authenticated экран.
 - `$product-designer` нужен для реального UX/visual decision; `$ui-audit` - для dedicated visual audit/hardening, а не каждого UI diff.
+- `$motion-design-engineer` нужен для существенного motion design/gesture/data animation или dedicated motion review. Одна обычная короткая CSS transition не требует отдельного skill.
+- `$ui-prototyper` используется только явно для isolated design exploration нескольких направлений и не запускается автоматически.
 - `$solution-architect` нужен при cross-system contract conflict/architecture decision, а не для обычной реализации существующего паттерна.
 
 При конфликте соблюдать приоритет: безопасность и приватность -> фактическое поведение продукта -> текущая task -> профильные skills.
@@ -47,32 +50,34 @@ Lifecycle не расширяет scope task и не отменяет owner chec
 ## Главный процесс
 
 - Один executable task-файл = одна отдельная Codex-сессия = один законченный логический результат.
-  Umbrella `83`, `87`, `87C`, `91`, `92` являются coordination contracts и отдельно не выполняются.
+  Umbrella `91`, `93`, `94`, `96`, `100`, `101` являются coordination contracts и отдельно не выполняются.
 - Работать только в `feature/yfc-platform-v2`.
 - Не переходить к следующему task автоматически.
 - Перед началом прочитать корневой `AGENTS.md`, этот файл, lifecycle и только текущую task.
 - Tasks `00-73A`, включая буквенные подзадачи, подтверждены владельцем как завершённые, перенесены в `tasks/done/` и не выполняются повторно.
-- Owner-selected task `88` завершена после owner approval и архивирована.
-- Owner-selected task `89` завершена после owner approval и архивирована.
-- Owner-selected task `89A` завершена после owner approval и архивирована.
-- Task `74A` завершила product-wide motion system и data visualization animation после owner
-  approval и архивирована.
-- Current task — `74`: финальный cross-product responsive, accessibility и states hardening; она
-  только назначена и не реализуется в completion run task `74A`.
-- Owner-selected task `90` остаётся `PENDING` внутри Telegram news потока и не является текущей.
-  Это назначение не разрешает её автоматический запуск.
-- Remaining release tasks `75-79` и остальные trigger-gated tasks сохраняют собственные Trigger,
+- Owner-selected task `103` завершена после owner approval и архивирована.
+- Owner-selected task `104` завершена после owner approval и архивирована.
+- Owner-selected task `104A` завершена после owner approval и архивирована.
+- Tasks `74A` и `74` завершены после owner approval и архивированы.
+- Task `75A` завершена и архивирована после owner screenshot approval и решения
+  `START_RETHINK_EXPLORATION`; её audit/frozen findings являются входом `75B`.
+- Owner-approved task `75B` является current explicit exploration/selection gate и не запускается
+  автоматически в completion-сессии `75A`; production baseline остаётся `DESIGN_V2_1`.
+- Owner-selected tasks `103-105` завершены и архивированы.
+- Remaining release tasks `75B-79` и остальные trigger-gated tasks сохраняют собственные Trigger,
   dependency и owner decision.
 - Task `50A` уже создала общий continuous Mobile Web/TMA gate, который переиспользуют последующие client-facing tasks.
 - Перед client-facing task прочитать `MOBILE_TMA_FIRST_CONTRACT.md` и применимые пункты `.agents/references/MOBILE_TMA_ACCEPTANCE_MATRIX.md`.
-- Не повторять полный аудит репозитория без прямого требования task.
+- Не повторять полный аудит репозитория без прямого требования task; завершённая `75A` была таким
+  явным design/motion-аудитом, `75B` выполняет только exploration, а `76` проверяет последующие
+  regressions/gaps после разрешения design gate.
 - `masters/`, старые changelog и выполненные task-файлы являются историческим контекстом и не задают pending order.
 
 ### Роли lifecycle
 
 `Основная роль` и `Дополнительные роли lifecycle` в task являются точным маршрутом. Не строить автоматическую цепочку `researcher -> reviewer -> QA` и не создавать отдельного агента на каждый skill.
 
-Если следующая task сама является dedicated review/approval gate, не дублировать полный аналогичный review в предыдущей task без явного требования. Примеры: `49B1 -> 49C`, `49E -> 49F`, `78 -> 79`.
+Если следующая task сама является dedicated review/approval gate, не дублировать полный аналогичный review в предыдущей task без явного требования. Примеры: `49B1 -> 49C`, `49E -> 49F`, `75A -> 75B`, `78 -> 79`.
 
 ### Blocking policy review/QA
 
@@ -91,15 +96,16 @@ Lifecycle не расширяет scope task и не отменяет owner chec
 
 ## Active design source и alternatives gate
 
-- Перед любой visual work прочитать `ACTIVE_DESIGN_SOURCE.md`.
-- `DESIGN_V2_1` является единственным active production source согласно `ACTIVE_DESIGN_SOURCE.md`.
-- Tasks `49A-49G` завершили exploration, owner selection и rollout Design V2.1.
-- Закрытые owner checkpoints `49C` и `49F` не переигрываются без прямого решения владельца.
-- Task `49G` оставила ровно один active production design source; task `50A` завершила следующий mobile/TMA quality foundation gate.
-- Новые skills улучшают качество exploration, но не являются доказательством, что V2 нужно заменить.
-- Исторические требования tasks `49B1-49G` сохраняются в task-файлах и `DESIGN_ALTERNATIVES_EXPLORATION_CONTRACT.md`, но не расширяют scope текущих tasks.
-- Landing оценивается как две самостоятельные responsive compositions: desktop и mobile.
-- TMA остаётся той же mobile product system, а не отдельным visual direction.
+- Перед visual work прочитать `ACTIVE_DESIGN_SOURCE.md`.
+- `DESIGN_V2_1` является текущим production baseline, пока отдельная owner-approved design task не активирует новую систему.
+- Для обычных feature/fix tasks baseline используется как consistency contract и не переигрывается побочно.
+- Для explicit design exploration/redesign весь Design V2/V2.1 разрешено пересматривать.
+- Устойчивые design anchors: sport-tech, mobile-first, lime/black/white brand core, product truth, accessibility, usability и performance feasibility.
+- Новые design/motion skills являются инструментом исследования качества, а не автоматическим доказательством, что baseline нужно заменить.
+- Любой полный redesign требует owner selection/checkpoint перед массовой production rollout.
+- После выбора новой системы обновить `ACTIVE_DESIGN_SOURCE.md`, durable design docs и применимые backlog contracts.
+- Landing и authenticated product могут получать новый visual language в рамках такой design task, сохраняя единый YFC brand core.
+- TMA остаётся частью того же продукта; platform-specific runtime не требует отдельной случайной эстетики.
 
 ## Обязательный design delivery contract для tasks `57-79`
 
@@ -135,7 +141,9 @@ checkpoint до массовой реализации.
 Это не отдельный redesign artifact и не расширение scope. Brief нужен, чтобы visual decisions не
 возникали случайно во время CSS-правок.
 
-### Неизменяемые component rules
+### Текущие component baseline для обычных implementation tasks
+
+Эти правила удерживают consistency текущей production системы в обычных tasks. Dedicated owner-approved redesign может заменить их полностью вместе с active design source. Они не являются вечными эстетическими запретами.
 
 - На одной decision surface один primary action: `--v2-lime` + `--v2-on-lime`. Secondary,
   navigation и recovery остаются neutral. Compatibility token `--accent` нельзя использовать как
@@ -224,13 +232,17 @@ blocking finding.
 - wearables/Health/Strava;
 - delegated admin hierarchy;
 - native mobile application.
+- hydration tracking, daily sleep/mood check-ins и новые habit reminder templates;
+- explicit trainer report handoff и AI report interpretation;
+- food-photo recognition;
+- новые knowledge packages, calculators и post-release repository cleanup.
 
-Эти направления находятся только в trigger-gated tasks `80-96` и их буквенных подзадачах после release gate `79`. В release
+Эти направления находятся только в trigger-gated tasks `80-102` и их буквенных подзадачах после release gate `79`. В release
 UI нельзя показывать фиктивные, locked или `coming soon` entry points для них.
 
-## Trigger-gated post-release pool `80-96`
+## Trigger-gated post-release pool `80-102`
 
-Tasks `80-96` и их буквенные подзадачи находятся в общей папке `codex-backlog/tasks/`, но не становятся линейным
+Tasks `80-102` и их буквенные подзадачи находятся в общей папке `codex-backlog/tasks/`, но не становятся линейным
 продолжением release sequence. Перед запуском читать:
 
 1. `POST_RELEASE_PRIORITY_ORDER.md`;
@@ -241,9 +253,9 @@ Tasks `80-96` и их буквенные подзадачи находятся �
 
 Правила:
 
-- product rank/номер не заменяет evidence, dependency или owner decision;
+- номер задаёт предпочтительную последовательность, но не заменяет evidence, dependency или owner decision;
 - допустимо выполнить более высокий номер раньше низкого, если его Trigger подтверждён;
-- `83`, `87`, `87C`, `91`, `92` отдельно не реализовывать — запускать только дочернюю task;
+- `91`, `93`, `94`, `96`, `100`, `101` отдельно не реализовывать — запускать только дочернюю task;
 - umbrella не получает отдельную сессию или commit и считается закрытой после завершения всех
   owner-approved дочерних tasks либо фиксации `Defer/No-Go` для остальных;
 - downstream task не запускается автоматически после upstream commit;

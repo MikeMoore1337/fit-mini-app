@@ -1,20 +1,16 @@
-# YFC Codex roles v2 - resource-aware
+# YFC Codex roles v3
 
-Роль задаёт ответственность конкретного агента/прохода, skill - профильный контракт, task - scope и результат.
+Role определяет ответственность прохода. Skill определяет профильные знания. Task определяет scope.
 
-## Доступные роли
+Доступно шесть ролей:
 
-1. `orchestrator` - маршрутизация только реально независимых streams.
-2. `researcher` - узкое read-only исследование при настоящей неизвестности.
-3. `implementer` - единственный primary production writer обычной task.
-4. `independent-reviewer` - bounded review текущей task/diff; production-код не меняет.
-5. `qa-verifier` - bounded risk-based verification; production-код не меняет.
-6. `integration-release` - интеграция/release scope без feature expansion.
+1. `orchestrator`
+2. `researcher`
+3. `implementer`
+4. `independent-reviewer`
+5. `qa-verifier`
+6. `integration-release`
 
-## Как выбирать
+Lifecycle/severity/recheck/commit policy не дублируется здесь. Для backlog task canonical source - `codex-backlog/TASK_EXECUTION_LIFECYCLE.md`.
 
-Начиная с task `49`, task-файл явно задаёт `Основная роль` и `Дополнительные роли lifecycle`. Это source of truth. Не запускать автоматическую цепочку из всех ролей и не создавать агента на каждый skill.
-
-Code/diff reviewer использует `$code-reviewer` как base skill, QA - `$qa-engineer`; non-code design/decision gate не загружает `$code-reviewer` автоматически. Base skills можно не повторять в task metadata. После blocking fix повторный pass является targeted recheck, а не новым полным аудитом.
-
-См. `../references/ROLE_ROUTING_GUIDE.md` и `codex-backlog/TASK_EXECUTION_LIFECYCLE.md`.
+Не создавать роль на каждый skill.
