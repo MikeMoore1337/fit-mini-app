@@ -49,6 +49,7 @@ photos без AI/body analysis остаются в конце.
 | `100A-100B` | Декомпозировать и оставить в хвосте | Core locale и Public Web/SEO требуют разных scope и language review. |
 | `101` | Последняя очередь | Body images чувствительны; нужны спрос, safe storage и lifecycle task `65`. AI/body analysis исключён. |
 | `103-105` | Завершённая отдельная ветка | Telegram editorial operations архивированы и не входят в pending sequence. |
+| `106` | Owner-selected bounded Landing task | Развести запуск Mini App, поддержку и подписку на подтверждённый публичный канал без redesign, нового Telegram runtime или изменения editorial pipeline. Implementation требует отдельного owner запуска. |
 
 ## Контракт AI-assisted импорта `93`
 

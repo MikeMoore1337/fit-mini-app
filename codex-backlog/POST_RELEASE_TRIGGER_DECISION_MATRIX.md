@@ -34,6 +34,7 @@
 | `100A` | | | | Подтверждены target segment, reviewer capacity и scope первой волны | | |
 | `100B` | Результат `100A` | | | Locale foundation стабильна; подтверждены public/SEO/content scope и reviewer | | |
 | `101` | | | | Есть повторяющийся спрос и готов sensitive-media lifecycle; AI/body analysis исключён | | |
+| `106` | Owner request и аудит Landing ветки `feature/yfc-platform-v2` | Telegram Mini App описан, но бот доступен только через support-flow; канал на Landing отсутствует | Владелец подтвердил публичный канал `https://t.me/your_fitness_news` | Task creation approved; implementation требует отдельного owner запуска и screenshot checkpoint | Создать task, implementation pending | 2026-08-28 |
 
 ## Завершённые owner decisions
 

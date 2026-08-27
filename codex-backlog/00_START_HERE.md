@@ -55,6 +55,7 @@ V2.1 / A / B / C / explicit hybrid
   -> keep/stop: continue to 76
   -> 76 only after resolved owner decision and release state
 103-105 owner-selected Telegram news flow [done]
+106 Landing Telegram app/support/news links [OWNER-SELECTED PENDING; NOT CURRENT]
 ```
 
 ## Что изменено в v12

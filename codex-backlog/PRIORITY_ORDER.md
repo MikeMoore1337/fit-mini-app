@@ -49,3 +49,13 @@ Trigger-gated tasks сохраняют собственные gates. Никак�
 перевод и фотографии прогресса оставлены в самом конце. Анализ фото тела отсутствует. Каждая
 стрелка дополнительно требует Trigger, dependency и отдельного owner decision; umbrella-файлы
 отдельно не выполняются.
+
+## Owner-selected pending вне основной последовательности
+
+```text
+106 Landing: Telegram Mini App, поддержка и новостной канал
+    [TASK CREATED, IMPLEMENTATION NOT STARTED]
+```
+
+Task `106` не меняет current task `76` и порядок `76-101`. Её implementation запускается только
+отдельным решением владельца.

@@ -2,9 +2,9 @@
 
 Этот файл действует для завершённых и архивированных tasks `75`/`75A`/`75B`, current
 owner-approved Pulse concepts pilot `75C`, remaining release tasks `76-79`, включая `76A`, и
-trigger-gated post-release pool `80-101` с буквенными подзадачами. Completed tasks `00-73A`, включая
-буквенные подзадачи, tasks `74A-75` и отдельно завершённые tasks `103-105` не переигрываются и
-хранятся в `tasks/done/`.
+trigger-gated post-release pool `80-101` с буквенными подзадачами и owner-selected pending task
+`106`. Completed tasks `00-73A`, включая буквенные подзадачи, tasks `74A-75` и отдельно
+завершённые tasks `103-105` не переигрываются и хранятся в `tasks/done/`.
 
 
 ## Полный task lifecycle
@@ -66,6 +66,8 @@ Lifecycle не расширяет scope task и не отменяет owner chec
 - Owner-approved task `75C` является current bounded production pilot и не запускается
   автоматически в completion-сессии `75B`; production baseline остаётся `DESIGN_V2_1`.
 - Owner-selected tasks `103-105` завершены и архивированы.
+- Owner-selected task `106` создана для Landing discoverability Telegram Mini App, поддержки и
+  подтверждённого публичного канала; она не является current и требует отдельного owner запуска.
 - Remaining release tasks `75C-79` и остальные trigger-gated tasks сохраняют собственные Trigger,
   dependency и owner decision.
 - Task `50A` уже создала общий continuous Mobile Web/TMA gate, который переиспользуют последующие client-facing tasks.

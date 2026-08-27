@@ -43,6 +43,9 @@ Report delivery 95A -> 95B External share/Telegram delivery
 Telegram Core release task 04
   -> 103 News ingestion -> 104 Moderated publishing -> 104A Exact publication composition
   -> 105 Weekly opt-in digest [COMPLETED]
+
+Current Landing + canonical `@your_fitness_coach_bot` Main Mini App + confirmed `@your_fitness_news`
+  -> 106 Landing Telegram app/support/news discoverability [OWNER-SELECTED, PENDING]
 ```
 
 Прежние import tasks `81-program-import-xlsx-csv` и `95-program-import-txt-docx` объединены в

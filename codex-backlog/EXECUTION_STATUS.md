@@ -32,6 +32,9 @@
 - [ ] remaining release tasks `76A-79` и post-release tasks `80-101` сохраняют собственные Trigger,
       dependency и owner decision; task ID задают предпочтительный порядок, но ни одна pending task
       этой очереди не запущена.
+- [ ] owner-selected task `106-landing-telegram-product-news-links.md` создана с подтверждённым
+      публичным каналом `https://t.me/your_fitness_news`; implementation отдельно не одобрена,
+      task не является current и не меняет порядок `76-101`.
 
 Не выполнять повторно tasks `00-75C`, включая `69B`, `73A`, task `74A` и tasks `103-105`.
 Следующей pending task назначена `76`: её audit начинается только в отдельной сессии.
