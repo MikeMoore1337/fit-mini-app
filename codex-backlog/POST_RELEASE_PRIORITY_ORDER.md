@@ -1,41 +1,44 @@
-# Приоритет направлений после release gate `79`
+# Порядок направлений после release gate `79`
 
-Tasks `80-96` и их буквенные подзадачи находятся в общей папке `codex-backlog/tasks/`, но образуют trigger-gated pool, а не
-обязательную линейную очередь. Номер сохраняет product rank исходного направления и удобство
-ссылок. Он не разрешает реализацию без evidence, dependencies и owner decision.
+Tasks `80-102` и их буквенные подзадачи образуют trigger-gated post-release pool. Сам номер task
+теперь задаёт предпочтительную последовательность реализации: отдельного product rank больше нет.
+Номер не отменяет фактический Trigger, dependency и отдельное решение владельца.
 
-| Product rank | Tasks | Направление | Trigger в одном предложении |
-|---:|---|---|---|
-| `01` | `80` | Приватные фотографии прогресса | Есть повторяющийся запрос и готово безопасное image storage |
-| `02` | `81` | XLSX/CSV import | Тренеры/пользователи теряют измеримое время на ручной перенос таблиц |
-| `03` | `82` | PWA | Web return/launch ограничивает удержание после фактических performance fixes |
-| `04` | umbrella `83` -> `83A-83C` | Монетизация | Есть operating costs или доказанная готовность платить за конкретную ценность |
-| `05-08` | `84-86`, umbrella `87` -> `87A-87B` | Ограниченная AI Coach beta | Есть конкретный AI job, прошедший safety/privacy/eval и real-user gates |
-| `09-11` | `88-90` | Telegram editorial/news | Бот стабилен, owner готов модерировать, аудитория отдельно запрашивает контент/digest |
-| `12` | umbrella `91` -> `91A-91B` | Английская локализация | Есть измеримый target segment и capacity на native review/support/content |
-| `13` | umbrella `92` -> `92A-92B` | Серверный PDF/delivery | Browser print-to-PDF не закрывает регулярный подтверждённый delivery job |
-| `14` | `93` | Wearables discovery | Конкретный ручной ввод или integration gap измеримо мешает approved job |
-| `15` | `94` | Делегированные admins | Появилась реальная команда и owner-approved responsibility matrix |
-| `16` | `95` | TXT/DOCX import | Pipeline `81` доказал ценность, а значимая доля программ остаётся в поддерживаемых документах |
-| `17` | `96` | Native feasibility | Web/TMA/PWA ограничения измеримо вредят критическому сценарию |
-| `18` | umbrella `87C` -> independently gated `87C1`, `87C2` | Advanced AI | Beta отдельно доказала спрос на memory и/или provider resilience |
+## Последовательность pending-задач
 
-Текущее routing-состояние Telegram news потока: tasks `88-90` завершены и архивированы. Следующей
-current остаётся release task `74`; umbrella `91` отдельно не выполняется, а `91A` требует
-собственных dependency, Trigger и owner decision.
+| Task | Направление | Почему здесь |
+|---:|---|---|
+| `80` | Repository hygiene/security/README | Уменьшает риск утечек, мусора и stale setup до новых изменений |
+| `81` | XLSX/CSV import | Даёт trainer workflow измеримую экономию ручного переноса |
+| `82` | Hydration в Nutrition | Частый optional daily flow на готовых diary/report foundations |
+| `83` | Daily sleep + mood | Добавляет субъективный контекст в дневные и периодические отчёты |
+| `84` | Handoff отчёта trainer | Закрывает core coaching loop без публичной ссылки |
+| `85` | Reminder templates | Переиспользует task `64` и данные hydration после `82` |
+| `86` | Knowledge package | Низкий runtime risk, практичная польза и grounding для AI |
+| `87` | PWA | Улучшает возврат к тренировке при подтверждённом Web retention gap |
+| `88-92` | AI Coach beta и period insights | Сначала privacy/provider gate, затем grounded core, tools, evals, rollout и bounded report insights |
+| `93A-93B` | Advanced AI | Memory и multiprovider остаются рядом с AI Coach, но запускаются независимо только после evidence beta |
+| `94A-94B` | Распознавание еды по фото | Важная функция после всего AI Coach-кластера: feasibility/eval, затем только подтверждаемый draft |
+| `95` | TXT/DOCX import | Расширяет доказавший ценность pipeline `81` |
+| `96A-96B` | Server PDF и внешняя доставка | Нужны только при доказанном gap после in-product handoff `84` |
+| `97` | Wearables discovery | Research-only для конкретного data/platform job |
+| `98` | Delegated admins | Требует реальной команды и responsibility matrix |
+| `99` | Native feasibility | Только при измеримом ограничении Web/TMA/PWA |
+| `100A-100C` | Billing/монетизация | По решению владельца оставлено почти в самом конце |
+| `101A-101B` | Английская локализация | По решению владельца оставлена в хвосте |
+| `102` | Приватные фотографии прогресса | Последняя очередь; AI/body analysis полностью исключён |
 
 ## Routing rules
 
-- Umbrella `83`, `87`, `87C`, `91`, `92` читать как общий contract, но не выполнять. Например,
-  английская локализация выполняется `91A -> отдельная остановка/решение -> 91B`; task `91` до или
-  после них не запускается.
-- Task `81` может быть первым post-release implementation, а `80` — отложен: rank не заменяет Trigger.
-- Внутри dependency chains порядок обязателен: `84 -> 85 -> 86 -> 87A -> 87B`,
-  `88 -> 89 -> 89A -> 90`,
-  `83A -> 83B -> 83C`, `91A -> 91B`, `92A -> 92B`.
-- После `87B` advanced capabilities остаются independent: `87C1` и `87C2` запускаются отдельно
-  только по собственному Trigger; task `87C` не запускается.
-- Task `95` запускается только после доказанной ценности и стабильного pipeline `81`.
-- `87C1` и `87C2` независимы: потребность в memory не доказывает потребность во втором provider, и
-  наоборот.
+- Umbrella `91`, `93`, `94`, `96`, `100`, `101` — coordination contracts, а не executable tasks.
+- Внутри обязательных цепочек соблюдать порядок: `88 -> 89 -> 90 -> 91A -> 91B -> 92`,
+  `94A -> 94B`, `96A -> 96B`, `100A -> 100B -> 100C`, `101A -> 101B`.
+- Food-photo выполняется после основного AI-блока: сначала task `94A`, а task `94B` — только после
+  owner `Go/Narrow Go` с зафиксированными thresholds, privacy и cost contract.
+- `93A` и `93B` независимы: потребность в memory не доказывает потребность во втором provider.
+- `84` не заменяет `96B`: первая task создаёт authenticated in-product handoff текущему trainer,
+  вторая отдельно владеет expiring share/Telegram delivery.
+- `102` не включает и не порождает AI-анализ фото тела, оценку формы или рекомендации по внешности.
 - После любой task остановиться; следующая задача требует отдельного запуска.
+
+Завершённые Telegram-задачи `103-105` архивированы и не входят в pending-последовательность.

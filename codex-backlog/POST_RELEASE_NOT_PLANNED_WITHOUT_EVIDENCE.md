@@ -11,6 +11,7 @@
 - medical diagnosis/treatment;
 - ААС/SARMs/pharmacology guidance;
 - AI body analysis;
+- точные калории/порции по одному фото еды и автоматическое сохранение AI-result без проверки;
 - autonomous AI program/nutrition changes;
 - universal readiness/health score;
 - automatic news posting;
