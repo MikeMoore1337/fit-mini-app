@@ -4,12 +4,13 @@
 
 ```text
 ACTIVE_DESIGN = DESIGN_V2_1
-STATUS = CURRENT_PRODUCTION_BASELINE_WITH_SELECTED_PULSE_PILOT_PENDING
+STATUS = CURRENT_PRODUCTION_BASELINE_WITH_OWNER_APPROVED_SELECTED_PULSE_PILOT
 DESIGN_REVIEWABILITY = FULLY_REVISABLE_BY_OWNER_APPROVED_DESIGN_TASK
 BRAND_CORE = SPORT_TECH + MOBILE_FIRST + LIME_BLACK_WHITE
 OWNER_DECISION_75A = START_RETHINK_EXPLORATION
 OWNER_DECISION_75B = SELECT_DIRECTION_PULSE
-CURRENT_PILOT_TASK = 75C_CURRENT_NOT_STARTED
+OWNER_DECISION_75C = APPROVED
+CURRENT_PILOT_TASK = 75C_COMPLETED_AND_ARCHIVED
 ```
 
 `DESIGN_V2_1` остаётся текущей production baseline для Landing, `/login`, authenticated Web, Mobile Web и TMA до тех пор, пока отдельная owner-approved design task не выберет и не активирует новую систему.
@@ -19,8 +20,9 @@ Baseline нужен для consistency обычных feature/fix tasks. Он н
 27.08.2026 владелец одобрил результат Rethink-аудита `75A`, выбрал
 `START_RETHINK_EXPLORATION`, затем завершил selection gate `75B` решением
 `SELECT_DIRECTION_PULSE`. Это решение не активирует отдельную новую дизайн-систему и не разрешает
-массовый redesign/rollout. `DESIGN_V2_1` и текущие canonical paths сохраняются; task `75C` должна
-проверить ограниченный перенос выбранных концепций поверх существующего production UI.
+массовый redesign/rollout. `DESIGN_V2_1` и текущие canonical paths сохраняются. Task `75C`
+реализовала ограниченный перенос выбранных концепций поверх существующего production UI, получила
+owner screenshot approval 28.08.2026 и архивирована.
 
 В owner-approved scope `75C` входят только:
 
@@ -30,6 +32,11 @@ Baseline нужен для consistency обычных feature/fix tasks. Он н
 - Pulse motion grammar с reduced-motion и performance budget.
 
 Landing/Login, typography, layout hierarchy, content и product flows не перерисовываются.
+
+Pilot использует canonical `TimeSeriesChart`, `AppShell`, production icons и текущие
+Today/completion surfaces. Новые styles загружаются с authenticated `MiniAppPage`, не входят в
+initial public bundle и не создают новую runtime dependency. Browser/Mobile Web/mocked TMA
+evidence не является real Telegram, physical-device или field-performance подтверждением.
 
 ## Что является устойчивым
 
@@ -94,7 +101,8 @@ Design task может:
 - переосмысливать ранее утверждённые V2.1 решения.
 
 До массовой production реализации нужен owner selection/checkpoint. Для выбранного bounded scope
-этим следующим checkpoint является screenshot approval task `75C`.
+этот checkpoint завершён owner approval task `75C`; он не разрешает автоматически расширять pilot
+до полного Pulse restyle.
 
 После выбора новая система должна:
 

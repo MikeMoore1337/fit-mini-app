@@ -4,31 +4,31 @@
 
 Breakpoints trigger composition changes, not device labels.
 
-| Range / target | Contract |
-| --- | --- |
-| `360x800` | minimum supported phone; `16px` gutters; one-column; no clipped Russian labels |
-| `390x844` | baseline Mobile Web/TMA board; one-column; `16px` gutters |
-| `430x932` | large phone; `20px` gutters; still mobile navigation |
-| `768x900` | tablet/small desktop; Landing tablet composition; app retains mobile nav until `900px` |
-| `900–1023` | desktop rail starts at `220px`; app content one/two regions by data need |
-| `1024` | compact desktop Landing and Login split; `24px` outer gutters |
-| `1280` | full desktop composition; `32px` gutters; max containers apply |
-| `1440` | reference desktop composition; no uncontrolled whitespace expansion |
+| Range / target | Contract                                                                               |
+| -------------- | -------------------------------------------------------------------------------------- |
+| `360x800`      | minimum supported phone; `16px` gutters; one-column; no clipped Russian labels         |
+| `390x844`      | baseline Mobile Web/TMA board; one-column; `16px` gutters                              |
+| `430x932`      | large phone; `20px` gutters; still mobile navigation                                   |
+| `768x900`      | tablet/small desktop; Landing tablet composition; app retains mobile nav until `900px` |
+| `900–1023`     | desktop rail starts at `220px`; app content one/two regions by data need               |
+| `1024`         | compact desktop Landing and Login split; `24px` outer gutters                          |
+| `1280`         | full desktop composition; `32px` gutters; max containers apply                         |
+| `1440`         | reference desktop composition; no uncontrolled whitespace expansion                    |
 
 Global requirements at every width: no page-level horizontal overflow; 200% zoom/reflow preserves
 the primary flow; long labels wrap or truncate only when full accessible name remains available.
 
 ## Landing composition by required width
 
-| Width | Composition |
-| ---: | --- |
-| `1440` | Header `logo / nav / sign-in`; hero two columns `1.02fr/.98fr`; copy max `650px`, product proof max `580px`; next chapter begins near fold. Twelve-column sections, varied grouping, max `1180px`. |
-| `1280` | Same desktop story; hero gap `40px`; product proof does not exceed `48%`; section padding reduced from `120` to `96px`; no scale/zoom. |
-| `1024` | Two-column hero remains if each track is at least `420px`; `48–64px` display; nav may collapse to accessible menu at `<=980`; feature/dual-audience blocks use two columns where readable. |
-| `768` | Tablet composition: header menu, hero copy before a full-width product proof, CTA visible before proof; sections one/two columns by content; workflow becomes two columns with final item spanning. |
-| `430` | Mobile composition: logo/menu; promise → one primary CTA → readable workout proof in first meaningful sequence; `20px` gutters, `44px` display; secondary CTA moves below proof/context, not beside primary. |
-| `390` | Same mobile order; `16px` gutters, `42px` display; proof values retain three aligned columns only if each value remains readable; otherwise two-row factual layout. |
-| `360` | `40px` display; `16px` gutters; hero proof is flat/full-width, no negative margins or transform scaling; navigation/action targets `>=44px`; supporting copy capped to product truth, not hidden. |
+|  Width | Composition                                                                                                                                                                                                  |
+| -----: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `1440` | Header `logo / nav / sign-in`; hero two columns `1.02fr/.98fr`; copy max `650px`, product proof max `580px`; next chapter begins near fold. Twelve-column sections, varied grouping, max `1180px`.           |
+| `1280` | Same desktop story; hero gap `40px`; product proof does not exceed `48%`; section padding reduced from `120` to `96px`; no scale/zoom.                                                                       |
+| `1024` | Two-column hero remains if each track is at least `420px`; `48–64px` display; nav may collapse to accessible menu at `<=980`; feature/dual-audience blocks use two columns where readable.                   |
+|  `768` | Tablet composition: header menu, hero copy before a full-width product proof, CTA visible before proof; sections one/two columns by content; workflow becomes two columns with final item spanning.          |
+|  `430` | Mobile composition: logo/menu; promise → one primary CTA → readable workout proof in first meaningful sequence; `20px` gutters, `44px` display; secondary CTA moves below proof/context, not beside primary. |
+|  `390` | Same mobile order; `16px` gutters, `42px` display; proof values retain three aligned columns only if each value remains readable; otherwise two-row factual layout.                                          |
+|  `360` | `40px` display; `16px` gutters; hero proof is flat/full-width, no negative margins or transform scaling; navigation/action targets `>=44px`; supporting copy capped to product truth, not hidden.            |
 
 Публичные product/index routes (`/training`, `/nutrition`, `/progress`, `/for-trainers`,
 `/knowledge`) используют компактный первый блок: display не превышает `4.8rem` на desktop и
@@ -102,12 +102,15 @@ Desktop and mobile are one system but different compositions. Mobile never uses 
 
 ### Mobile `<900`
 
-- Bottom navigation is fixed to the stable viewport bottom, never after short content.
-- Five destinations: `Сегодня`, `План`, `Прогресс`, `Питание`, `Ещё`; each `>=58px` plus safe area.
-- Content bottom reserve equals nav measured height + safe/content inset + `12px` separation.
-- `Ещё` opens a bottom sheet; secondary sections, account, theme and logout are grouped there.
-- Screen composition remains V2. Related facts are closer (`12–18px`); section changes remain
-  `28px`; body/meta/font guardrails are unchanged.
+- Bottom navigation закреплена у stable viewport как floating rounded dock с отступом от
+  safe/content-safe edges, а не после короткого content.
+- Пять направлений: `Сегодня`, `План`, `Прогресс`, `Питание`, `Ещё`; каждое сохраняет production
+  icon/label и цель не меньше `44px` (`58px` по высоте в текущей геометрии).
+- Нижний reserve content включает высоту dock, safe/content inset и дополнительное разделение;
+  последний actionable content остаётся достижимым без перекрытия.
+- `Ещё` открывает bottom sheet; secondary sections, account, theme и logout сгруппированы внутри.
+- Композиция остаётся V2. Связанные факты используют `12–18px`, смена section — `28px`;
+  body/meta/font guardrails не меняются.
 
 ## Feature-specific mobile rules
 
@@ -131,8 +134,14 @@ Production browser/TMA adapter публикует shared CSS variables:
 ```css
 --yfc-viewport-stable-height: 100dvh;
 --yfc-safe-top: max(env(safe-area-inset-top, 0px), var(--yfc-tg-safe-top));
---yfc-safe-right: max(env(safe-area-inset-right, 0px), var(--yfc-tg-safe-right));
---yfc-safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--yfc-tg-safe-bottom));
+--yfc-safe-right: max(
+  env(safe-area-inset-right, 0px),
+  var(--yfc-tg-safe-right)
+);
+--yfc-safe-bottom: max(
+  env(safe-area-inset-bottom, 0px),
+  var(--yfc-tg-safe-bottom)
+);
 --yfc-safe-left: max(env(safe-area-inset-left, 0px), var(--yfc-tg-safe-left));
 --yfc-content-safe-top: var(--yfc-tg-content-safe-top);
 --yfc-content-safe-bottom: var(--yfc-tg-content-safe-bottom);

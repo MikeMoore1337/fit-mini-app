@@ -60,6 +60,9 @@
   для метрик, где она помогает чтению, например калорий.
 - Одна точка остаётся одной точкой; insufficient/empty/error/stale не получают fake series.
 - Business formulas, API aggregates и provenance не меняются визуальным слоем.
+- Actual line строится монотонной smooth curve с rounded joins/caps внутри каждого непрерывного
+  участка. Area fill замыкается к той же truthful visual baseline, что и reveal; пропуск разрывает
+  и линию, и fill, поэтому визуальный слой не создаёт несуществующее наблюдение.
 
 ## Responsive и interaction
 

@@ -53,19 +53,77 @@ function niceStep(range: number): number {
   return factor * power;
 }
 
-function seriesSegments(
+interface SeriesCoordinate {
+  x: number;
+  y: number;
+}
+
+function seriesRuns(
   points: readonly TimeSeriesPoint[],
   x: (index: number) => number,
   y: (value: number) => number,
   field: 'target' | 'value',
-): string[] {
-  return points.slice(1).flatMap((point, index) => {
-    const previous = points[index];
-    const previousValue = previous?.[field];
+): SeriesCoordinate[][] {
+  const runs: SeriesCoordinate[][] = [];
+  let current: SeriesCoordinate[] = [];
+  points.forEach((point, index) => {
     const value = point[field];
-    if (previousValue == null || value == null) return [];
-    return [`M ${x(index)} ${y(previousValue)} L ${x(index + 1)} ${y(value)}`];
+    if (value == null) {
+      if (current.length) runs.push(current);
+      current = [];
+      return;
+    }
+    current.push({ x: x(index), y: y(value) });
   });
+  if (current.length) runs.push(current);
+  return runs;
+}
+
+function smoothSeriesPath(points: readonly SeriesCoordinate[]): string {
+  if (points.length === 0) return '';
+  if (points.length === 1) return `M ${points[0]!.x} ${points[0]!.y}`;
+
+  const slopes = points.slice(1).map((point, index) => {
+    const previous = points[index]!;
+    const deltaX = point.x - previous.x;
+    return deltaX === 0 ? 0 : (point.y - previous.y) / deltaX;
+  });
+  const tangents = points.map((_, index) => {
+    if (index === 0) return slopes[0] ?? 0;
+    if (index === points.length - 1) return slopes.at(-1) ?? 0;
+    const previous = slopes[index - 1] ?? 0;
+    const next = slopes[index] ?? 0;
+    return previous * next <= 0 ? 0 : (previous + next) / 2;
+  });
+
+  slopes.forEach((slope, index) => {
+    if (slope === 0) {
+      tangents[index] = 0;
+      tangents[index + 1] = 0;
+      return;
+    }
+    const startRatio = (tangents[index] ?? 0) / slope;
+    const endRatio = (tangents[index + 1] ?? 0) / slope;
+    const magnitude = Math.hypot(startRatio, endRatio);
+    if (magnitude <= 3) return;
+    const scale = 3 / magnitude;
+    tangents[index] = scale * startRatio * slope;
+    tangents[index + 1] = scale * endRatio * slope;
+  });
+
+  return points.slice(1).reduce((path, point, index) => {
+    const previous = points[index]!;
+    const deltaX = point.x - previous.x;
+    const controlOffset = deltaX / 3;
+    return `${path} C ${previous.x + controlOffset} ${previous.y + (tangents[index] ?? 0) * controlOffset} ${point.x - controlOffset} ${point.y - (tangents[index + 1] ?? 0) * controlOffset} ${point.x} ${point.y}`;
+  }, `M ${points[0]!.x} ${points[0]!.y}`);
+}
+
+function areaSeriesPath(points: readonly SeriesCoordinate[], baseline: number): string {
+  if (points.length < 2) return '';
+  const first = points[0]!;
+  const last = points.at(-1)!;
+  return `${smoothSeriesPath(points)} L ${last.x} ${baseline} L ${first.x} ${baseline} Z`;
 }
 
 function targetSeriesSegments(
@@ -101,6 +159,7 @@ export function TimeSeriesChart({
 }: TimeSeriesChartProps) {
   const titleId = useId();
   const descriptionId = useId();
+  const areaGradientId = `data-viz-area-${useId().replaceAll(':', '')}`;
   const values = points.flatMap((point) =>
     [point.value, point.target].filter((value): value is number => value != null),
   );
@@ -159,7 +218,7 @@ export function TimeSeriesChart({
       (chartHeight - chartInset.top - chartInset.bottom);
   const visualBaseline =
     includeZero && scale.minimum <= 0 && scale.maximum >= 0 ? 0 : scale.minimum;
-  const actualSegments = seriesSegments(points, x, y, 'value');
+  const actualRuns = seriesRuns(points, x, y, 'value').filter((run) => run.length > 1);
   const targetSegments = targetSeriesSegments(points, x, y);
   const labelIndexes = Array.from(
     new Set([0, Math.floor((points.length - 1) / 2), Math.max(points.length - 1, 0)]),
@@ -237,6 +296,12 @@ export function TimeSeriesChart({
           role="img"
           viewBox={`0 0 ${chartWidth} ${chartHeight}`}
         >
+          <defs>
+            <linearGradient id={areaGradientId} x1="0" x2="0" y1="0" y2="1">
+              <stop className="data-viz-chart__area-start" offset="0%" />
+              <stop className="data-viz-chart__area-end" offset="100%" />
+            </linearGradient>
+          </defs>
           {scale.ticks.map((tick) => (
             <g className="data-viz-chart__grid" key={tick}>
               <line
@@ -250,11 +315,24 @@ export function TimeSeriesChart({
               </text>
             </g>
           ))}
+          {actualRuns.map((run, index) => (
+            <path
+              className="data-viz-chart__area"
+              d={areaSeriesPath(run, y(visualBaseline))}
+              fill={`url(#${areaGradientId})`}
+              key={`actual-area-${index}`}
+            />
+          ))}
           {targetSegments.map((segment) => (
             <path className="data-viz-chart__target" d={segment} key={`target-${segment}`} />
           ))}
-          {actualSegments.map((segment) => (
-            <path className="data-viz-chart__actual" d={segment} key={`actual-${segment}`} />
+          {actualRuns.map((run, index) => (
+            <path
+              className="data-viz-chart__actual"
+              d={smoothSeriesPath(run)}
+              key={`actual-${index}`}
+              pathLength="1"
+            />
           ))}
           {points.map((point, index) =>
             point.targetChanged ? (

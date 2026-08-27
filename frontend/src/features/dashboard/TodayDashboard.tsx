@@ -25,7 +25,7 @@ import {
 } from '../workouts/activeWorkoutQueue';
 import { WorkoutAdaptation } from '../workouts/WorkoutAdaptation';
 import { TodayWorkout } from '../workouts/TodayWorkout';
-import { Badge, Button, Skeleton } from '../../shared/ui/common';
+import { Badge, Button, SemanticArtwork, Skeleton } from '../../shared/ui/common';
 import { Icon } from '../../shared/ui/Icon';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { CardioQuickLog } from '../cardio/CardioLogging';
@@ -520,6 +520,7 @@ function WorkoutOverview({
     const started = workout.status === 'in_progress';
     return (
       <>
+        <SemanticArtwork variant="current-action" />
         <div className="today-workout-copy">
           <div className="today-workout-copy__status">
             <Badge tone={started ? 'warning' : 'neutral'}>
@@ -539,6 +540,7 @@ function WorkoutOverview({
         </div>
         <div className="today-workout-actions">
           <Button
+            className="today-pulse-action"
             fullWidth
             disabled={startPending}
             type="button"

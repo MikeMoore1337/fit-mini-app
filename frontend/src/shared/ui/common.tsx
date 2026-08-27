@@ -4,6 +4,7 @@ import { Icon } from './Icon';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type BadgeTone = 'neutral' | 'success' | 'warning' | 'danger';
+type SemanticArtworkVariant = 'current-action' | 'data-insight' | 'workout-completion';
 
 export function Button({
   className = '',
@@ -79,6 +80,16 @@ export function Surface({
     <section {...props} className={`ui-surface${variants} ${className}`.trim()}>
       {children}
     </section>
+  );
+}
+
+export function SemanticArtwork({ variant }: { variant: SemanticArtworkVariant }) {
+  return (
+    <span aria-hidden="true" className={`ui-semantic-artwork ui-semantic-artwork--${variant}`}>
+      <i />
+      <i />
+      <i />
+    </span>
   );
 }
 

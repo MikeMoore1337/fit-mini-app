@@ -2859,6 +2859,28 @@ body.public-shell-mode.public-shell-mode:has(.auth-public-shell--design-v2) {
   }
 }
 
+/* Task 75C: the mobile dock keeps the shared AppShell and changes only its compact shape. */
+@media (max-width: 899px) {
+  body:has(.app-shell--design-v2 #appBottomNav) {
+    padding-bottom: calc(96px + max(8px, var(--yfc-layout-safe-bottom)));
+  }
+
+  body:has(.app-shell--design-v2 #appBottomNav) .toast:not(.hidden) {
+    bottom: calc(82px + max(8px, var(--yfc-layout-safe-bottom)));
+  }
+
+  .app-shell--design-v2 .app-bottom-nav {
+    inset: auto max(10px, var(--yfc-layout-safe-right)) max(8px, var(--yfc-layout-safe-bottom))
+      max(10px, var(--yfc-layout-safe-left));
+    width: auto;
+    padding: 6px;
+    border: 1px solid var(--v2-border);
+    border-radius: var(--v2-panel-radius);
+    background: var(--v2-surface);
+    box-shadow: var(--elevation-overlay);
+  }
+}
+
 /* Core rollout: shared semantic scope for completed user surfaces (tasks 00-46). */
 :where(
   .app-section--design-v2,
@@ -5796,6 +5818,7 @@ body.public-shell-mode:has(.public-shell.public-shell--design-v2) {
 .cardio-form__optional-fields {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
   gap: var(--v2-space-3);
 }
 

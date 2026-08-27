@@ -15,6 +15,7 @@ import {
   ErrorState,
   LoadingState,
   SegmentedControl,
+  SemanticArtwork,
 } from '../../shared/ui/common';
 import { NutritionPeriodReport } from './NutritionReport';
 import { Icon } from '../../shared/ui/Icon';
@@ -551,7 +552,11 @@ function BodySection({
                   const unit = bodyMetricUnits[trend.metric];
                   const interpretation = trendInterpretationText(trend, body.guidance);
                   return (
-                    <article className="progress-body-metric" key={trend.metric}>
+                    <article
+                      className={`progress-body-metric${trend.metric === 'weight_kg' ? ' progress-body-metric--data-insight' : ''}`}
+                      key={trend.metric}
+                    >
+                      {trend.metric === 'weight_kg' && <SemanticArtwork variant="data-insight" />}
                       <header>
                         <div>
                           <span className="progress-body-metric__kind">

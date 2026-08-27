@@ -27,7 +27,8 @@
   animation: yfc-motion-phase-marker var(--motion-state) linear;
 }
 
-.data-viz-chart[data-motion-phase='pending'] :is(.data-viz-chart__actual, .data-viz-chart__point),
+.data-viz-chart[data-motion-phase='pending']
+  :is(.data-viz-chart__actual, .data-viz-chart__area, .data-viz-chart__point),
 .data-viz-progress[data-motion-phase='pending'] .data-viz-progress__track > span,
 .data-viz-ranked-bars[data-motion-phase='pending'] .data-viz-ranked-bars__row i {
   opacity: 0;
@@ -35,6 +36,10 @@
 
 .data-viz-chart[data-motion-phase='enter'] .data-viz-chart__actual {
   animation: data-viz-line-enter var(--motion-data) var(--motion-ease) both;
+}
+
+.data-viz-chart[data-motion-phase='enter'] .data-viz-chart__area {
+  animation: data-viz-area-enter var(--motion-data) var(--motion-ease) both;
 }
 
 .data-viz-chart__point {
@@ -48,6 +53,7 @@
 }
 
 .data-viz-chart[data-motion-phase='update'] .data-viz-chart__actual,
+.data-viz-chart[data-motion-phase='update'] .data-viz-chart__area,
 .data-viz-chart[data-motion-phase='update'] .data-viz-chart__point {
   animation: data-viz-geometry-update var(--motion-spatial) var(--motion-ease) both;
 }
@@ -131,8 +137,24 @@
   vector-effect: non-scaling-stroke;
 }
 
+.data-viz-chart__area {
+  pointer-events: none;
+}
+
+.data-viz-chart__area-start {
+  stop-color: var(--data-viz-accent);
+  stop-opacity: 0.28;
+}
+
+.data-viz-chart__area-end {
+  stop-color: var(--data-viz-accent);
+  stop-opacity: 0.02;
+}
+
 .data-viz-chart__actual {
   stroke: var(--data-viz-accent);
+  stroke-linecap: round;
+  stroke-linejoin: round;
   stroke-width: 2.5;
 }
 
@@ -380,7 +402,21 @@
 
 @keyframes data-viz-line-enter {
   from {
-    opacity: 0.45;
+    opacity: 0.72;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+  }
+
+  to {
+    opacity: 1;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes data-viz-area-enter {
+  from {
+    opacity: 0;
     clip-path: inset(0 100% 0 0);
   }
 
@@ -518,6 +554,10 @@
     --data-viz-grid: GrayText;
     --data-viz-surface: Canvas;
   }
+
+  .data-viz-chart__area {
+    display: none;
+  }
 }
 
 @media print {
@@ -540,6 +580,10 @@
 
   .data-viz-chart__actual {
     stroke-width: 2;
+  }
+
+  .data-viz-chart__area {
+    display: none;
   }
 
   .data-viz-chart__target {

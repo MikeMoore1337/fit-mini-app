@@ -1,0 +1,245 @@
+/* Owner-selected Pulse concepts for the bounded authenticated-app pilot in task 75C. */
+.ui-semantic-artwork {
+  position: absolute;
+  z-index: 0;
+  display: block;
+  overflow: hidden;
+  color: var(--v2-lime);
+  pointer-events: none;
+}
+
+.ui-semantic-artwork i {
+  position: absolute;
+  display: block;
+}
+
+.today-workout-spotlight > .ui-semantic-artwork--current-action {
+  inset: -54px -42px auto auto;
+  width: 210px;
+  height: 210px;
+  border: 1px solid color-mix(in srgb, var(--v2-lime) 48%, transparent);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 62% 42%,
+    color-mix(in srgb, var(--v2-lime) 18%, transparent),
+    transparent 64%
+  );
+  opacity: 0.72;
+}
+
+.ui-semantic-artwork--current-action i:first-child,
+.ui-semantic-artwork--current-action i:nth-child(2) {
+  top: 88px;
+  right: 42px;
+  width: 72px;
+  height: 1px;
+  background: currentColor;
+  transform: rotate(-31deg);
+  transform-origin: right center;
+}
+
+.ui-semantic-artwork--current-action i:nth-child(2) {
+  top: 101px;
+  width: 58px;
+  opacity: 0.42;
+}
+
+.ui-semantic-artwork--current-action i:last-child {
+  right: 36px;
+  bottom: 38px;
+  width: 76px;
+  height: 6px;
+  transform: skewX(-18deg);
+  background: currentColor;
+}
+
+.today-pulse-action {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.today-pulse-action::after {
+  position: absolute;
+  inset: 3px;
+  border: 1px solid currentColor;
+  border-radius: calc(var(--radius-action) - 3px);
+  content: '';
+  opacity: 0;
+  pointer-events: none;
+  transform: scaleX(0.76);
+  transition:
+    opacity var(--motion-state) var(--motion-ease),
+    transform var(--motion-state) var(--motion-ease);
+}
+
+.today-pulse-action:active:not(:disabled)::after {
+  opacity: 0.42;
+  transform: scaleX(1);
+  transition-duration: var(--motion-press);
+}
+
+.progress-body-metric--data-insight {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: linear-gradient(
+    145deg,
+    var(--v2-surface-secondary) 52%,
+    color-mix(in srgb, var(--v2-lime) 10%, var(--v2-surface-secondary)) 100%
+  ) !important;
+}
+
+.progress-body-metric--data-insight > :not(.ui-semantic-artwork) {
+  position: relative;
+  z-index: 1;
+}
+
+.progress-body-metric--data-insight > .ui-semantic-artwork--data-insight {
+  inset: -60px -48px auto auto;
+  width: 180px;
+  height: 180px;
+  border: 1px solid color-mix(in srgb, var(--v2-lime) 34%, transparent);
+  border-radius: 50%;
+  opacity: 0.48;
+}
+
+.ui-semantic-artwork--data-insight i {
+  right: 20px;
+  width: 98px;
+  height: 1px;
+  background: currentColor;
+  transform: rotate(-26deg);
+  transform-origin: right center;
+}
+
+.ui-semantic-artwork--data-insight i:first-child {
+  top: 88px;
+}
+
+.ui-semantic-artwork--data-insight i:nth-child(2) {
+  top: 101px;
+  width: 74px;
+  opacity: 0.5;
+}
+
+.ui-semantic-artwork--data-insight i:last-child {
+  top: 114px;
+  width: 48px;
+  opacity: 0.25;
+}
+
+.workout-completion__hero {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: linear-gradient(
+    142deg,
+    var(--v2-surface) 58%,
+    color-mix(in srgb, var(--v2-lime) 11%, var(--v2-surface)) 100%
+  );
+}
+
+.workout-completion__hero > :not(.ui-semantic-artwork) {
+  position: relative;
+  z-index: 1;
+}
+
+.workout-completion__hero > .ui-semantic-artwork--workout-completion {
+  inset: -76px -54px auto auto;
+  width: 230px;
+  height: 230px;
+  border: 1px solid color-mix(in srgb, var(--v2-lime) 54%, transparent);
+  border-radius: 50%;
+  opacity: 0.68;
+}
+
+.ui-semantic-artwork--workout-completion i {
+  inset: 22px;
+  border: 1px solid color-mix(in srgb, currentColor 72%, transparent);
+  border-radius: 50%;
+}
+
+.ui-semantic-artwork--workout-completion i:nth-child(2) {
+  inset: 48px;
+  opacity: 0.64;
+}
+
+.ui-semantic-artwork--workout-completion i:last-child {
+  inset: 76px;
+  opacity: 0.38;
+}
+
+.workout-completion[data-motion-phase='enter'] {
+  animation: yfc-motion-phase-marker var(--motion-data-total) linear;
+}
+
+.workout-completion[data-motion-phase='enter'] .workout-completion__hero {
+  animation: pulse-completion-surface var(--motion-data-total) var(--motion-ease) both;
+}
+
+.workout-completion[data-motion-phase='enter'] .workout-completion__check {
+  animation: pulse-completion-check var(--motion-data-total) var(--motion-ease) both;
+}
+
+.workout-completion[data-motion-phase='enter'] .ui-semantic-artwork--workout-completion {
+  animation: pulse-completion-gather var(--motion-data-total) var(--motion-ease) both;
+}
+
+@keyframes pulse-completion-surface {
+  0% {
+    transform: translateY(8px);
+  }
+
+  36% {
+    transform: translateY(-2px);
+  }
+
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-completion-check {
+  0% {
+    transform: scale(0.84);
+  }
+
+  48% {
+    transform: scale(1.08);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse-completion-gather {
+  0% {
+    opacity: 0.22;
+    transform: scale(0.68) rotate(-8deg);
+  }
+
+  58% {
+    opacity: 0.78;
+    transform: scale(1.04) rotate(2deg);
+  }
+
+  100% {
+    opacity: 0.68;
+    transform: scale(1) rotate(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .today-pulse-action::after {
+    transform: none;
+  }
+
+  .workout-completion__hero,
+  .workout-completion__check,
+  .ui-semantic-artwork {
+    animation: none !important;
+    transform: none !important;
+  }
+}

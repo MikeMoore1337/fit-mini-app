@@ -146,6 +146,13 @@ describe('WorkoutCompletionSummary', () => {
     const { onReturnToday } = renderSummary();
 
     expect(screen.getByRole('heading', { name: 'Тренировка завершена' })).toBeInTheDocument();
+    const completion = screen
+      .getByRole('heading', { name: 'Тренировка завершена' })
+      .closest('.workout-completion');
+    expect(completion).toHaveAttribute('data-motion-phase', expect.stringMatching(/pending|enter/));
+    expect(
+      completion?.querySelector('.ui-semantic-artwork--workout-completion'),
+    ).toBeInTheDocument();
     expect(screen.getByText('1 ч 15 мин')).toBeInTheDocument();
     expect(screen.getByText(/1 подход/)).toBeInTheDocument();
     expect(screen.getByText(/Следующая тренировка .* Верх тела/)).toBeInTheDocument();

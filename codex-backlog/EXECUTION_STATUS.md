@@ -1,11 +1,11 @@
-# Execution status v40
+# Execution status v41
 
-Подтверждённое владельцем состояние на 27.08.2026:
+Подтверждённое владельцем состояние на 28.08.2026:
 
 - [x] tasks `00-73`, включая `69B` и предшествующие буквенные подзадачи, complete;
 - [x] завершённые task-файлы перенесены в `tasks/done/` и доступны для чтения;
 - [x] `DESIGN_V2_1` — current production baseline, полностью пересматриваемый owner-approved
-  Rethink task;
+      Rethink task;
 - [x] task `50A` создала continuous Mobile Web/TMA gate;
 - [x] task `69A` заменила guided demo ограниченным Web-кабинетом и архивирована;
 - [x] task `69B` унифицировала иконографику и data visualization и архивирована после owner approval;
@@ -21,19 +21,20 @@
 - [x] task `74A` внедрила product-wide semantic motion language и data-viz animation, прошла review/QA, получила owner approval и архивирована;
 - [x] task `74` завершила cross-product responsive/accessibility/states hardening, прошла QA, получила owner screenshot approval и архивирована;
 - [x] task `75` завершила UI performance и motion hardening, прошла independent review, получила
-  owner screenshot approval и архивирована;
+      owner screenshot approval и архивирована;
 - [x] task `75A` завершила evidence-based Rethink-аудит design/UX/UI/motion, получила owner
-  screenshot approval и решение `START_RETHINK_EXPLORATION`, синхронизировала findings и архивирована;
+      screenshot approval и решение `START_RETHINK_EXPLORATION`, синхронизировала findings и архивирована;
 - [x] task `75B` завершила isolated exploration, bounded refinement и owner selection; владелец
-  выбрал `SELECT_DIRECTION_PULSE` как четыре концепции поверх текущего UI, task архивирована;
-- [ ] **current:** `75c-current-ui-pulse-concepts-pilot.md` — bounded production pilot выбранных
-  chart/dock/card-artwork/motion концепций без restyle; назначена, реализация не начата;
-- [ ] remaining release tasks `76-79` и post-release tasks `80-101` сохраняют собственные Trigger,
-  dependency и owner decision; task ID задают предпочтительный порядок, но ни одна pending task
-  этой очереди не запущена.
+      выбрал `SELECT_DIRECTION_PULSE` как четыре концепции поверх текущего UI, task архивирована;
+- [x] task `75C` перенесла выбранные chart/dock/card-artwork/motion концепции поверх текущего UI без
+      restyle, прошла review/QA, получила owner screenshot approval и архивирована;
+- [ ] **current:** `76-skill-aware-retrospective-release-audit.md` — назначена, реализация не начата;
+- [ ] remaining release tasks `76A-79` и post-release tasks `80-101` сохраняют собственные Trigger,
+      dependency и owner decision; task ID задают предпочтительный порядок, но ни одна pending task
+      этой очереди не запущена.
 
-Не выполнять повторно tasks `00-75B`, включая `69B`, `73A`, task `74A` и tasks `103-105`.
-Следующей pending task назначена `75C`: её production implementation начинается только в отдельной
-сессии. До завершения pilot и отдельного owner checkpoint `DESIGN_V2_1` остаётся production baseline.
+Не выполнять повторно tasks `00-75C`, включая `69B`, `73A`, task `74A` и tasks `103-105`.
+Следующей pending task назначена `76`: её audit начинается только в отдельной сессии.
+`DESIGN_V2_1` с owner-approved bounded Pulse pilot остаётся production baseline.
 Umbrella `100` отдельно не выполняется; `100A` не назначена без собственного Trigger, dependency
 и owner decision. Другие pending tasks автоматически не реализуются.

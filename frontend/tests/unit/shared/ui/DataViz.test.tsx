@@ -33,7 +33,13 @@ describe('TimeSeriesChart', () => {
       />,
     );
 
-    expect(container.querySelectorAll('.data-viz-chart__actual')).toHaveLength(2);
+    const actual = container.querySelector('.data-viz-chart__actual');
+    const area = container.querySelector('.data-viz-chart__area');
+    expect(container.querySelectorAll('.data-viz-chart__actual')).toHaveLength(1);
+    expect(container.querySelectorAll('.data-viz-chart__area')).toHaveLength(1);
+    expect(actual?.getAttribute('d')).toMatch(/ C /);
+    expect(actual).toHaveAttribute('pathLength', '1');
+    expect(area?.getAttribute('d')).toMatch(/ Z$/);
     expect(screen.getByText('Подтверждённый ноль')).toBeInTheDocument();
     expect(screen.getAllByText('0 ккал').length).toBeGreaterThan(0);
     expect(screen.getByText('цель изменилась')).toBeInTheDocument();

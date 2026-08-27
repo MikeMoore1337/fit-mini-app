@@ -146,13 +146,16 @@ units, period and text/table alternative; цвет не является еди�
 
 ## Motion
 
-- Durations: fast `120ms`, standard `180ms`, slow `260ms`; easing `cubic-bezier(.2,0,0,1)`.
-- Allowed: color/border change, `translateY(1px)` press, sheet/dialog enter/exit, short completion
-  confirmation, chart update after period change.
+- Базовые durations: fast `120ms`, standard `180ms`, slow `260ms`; easing
+  `cubic-bezier(.2,0,0,1)`.
+- Selected Pulse pilot добавляет grammar `respond -> gather -> settle`: frequent current-action
+  feedback остаётся в `120–180ms`, а редкая workout completion choreography ограничена `760ms`.
+- Shared chart reveal использует `560ms`, не откладывает axes/units/period/values и завершается в
+  общем окне не более `760ms`.
 - Prohibited: autoplay loops, scroll hijacking, decorative parallax, staggered list entrance,
   motion-dependent understanding.
-- `prefers-reduced-motion: reduce`: transitions/animations collapse to near-instant state change;
-  status, focus and content remain identical.
+- `prefers-reduced-motion: reduce`: travel/overshoot/reveal отключаются; final color, boundary,
+  artwork, status, focus и content остаются доступны.
 
 ## Final render set
 

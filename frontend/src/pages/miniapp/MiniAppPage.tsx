@@ -10,6 +10,7 @@ import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { useSemanticMotion } from '../../shared/ui/useSemanticMotion';
 import { programProfileReadiness } from '../../features/profile/programReadiness';
 import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
+import '../../styles/pulse-concepts.css';
 
 const NotificationsPanel = lazy(() =>
   import('../../features/account/NotificationsPanel').then((module) => ({

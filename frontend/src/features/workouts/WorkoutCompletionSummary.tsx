@@ -4,7 +4,8 @@ import { api } from '../../shared/api/client';
 import type { Workout } from '../../shared/api/types';
 import { formatCalendarDate } from '../../shared/dateTime';
 import { AppLink } from '../../shared/navigation/router';
-import { Badge, Button, CheckIcon } from '../../shared/ui/common';
+import { Badge, Button, CheckIcon, SemanticArtwork } from '../../shared/ui/common';
+import { useSemanticMotion } from '../../shared/ui/useSemanticMotion';
 import { WorkoutFeedbackDisclosure } from './WorkoutFeedback';
 import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
 
@@ -76,6 +77,7 @@ export function WorkoutCompletionSummary({
     note: summary?.note ?? '',
   });
   const changed = feedback !== saved.feedback || note.trim() !== saved.note;
+  const motion = useSemanticMotion<HTMLElement>(`workout-completion:${workout.id}`);
 
   useEffect(() => {
     trackProductEvent(
@@ -104,8 +106,16 @@ export function WorkoutCompletionSummary({
   };
 
   return (
-    <section className="workout-completion" aria-labelledby="workout-completion-title">
+    <section
+      className="workout-completion"
+      id={motion.elementId}
+      aria-labelledby="workout-completion-title"
+      data-motion-phase={motion.motionPhase}
+      data-motion-revision={motion.motionRevision}
+      onAnimationEnd={motion.onMotionAnimationEnd}
+    >
       <header className="workout-completion__hero">
+        <SemanticArtwork variant="workout-completion" />
         <span className="workout-completion__check" aria-hidden="true">
           <CheckIcon />
         </span>
