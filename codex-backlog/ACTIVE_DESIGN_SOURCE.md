@@ -4,58 +4,113 @@
 
 ```text
 ACTIVE_DESIGN = DESIGN_V2_1
-SELECTED_DESIGN = DESIGN_V2_1
-DECISION_STATE = ACTIVE_PRODUCTION_AFTER_49G
-DECIDED_AT = 2026-08-22
-ACTIVATED_AT = 2026-08-22
+STATUS = CURRENT_PRODUCTION_BASELINE_UNDER_APPROVED_EXPLORATION
+DESIGN_REVIEWABILITY = FULLY_REVISABLE_BY_OWNER_APPROVED_DESIGN_TASK
+BRAND_CORE = SPORT_TECH + MOBILE_FIRST + LIME_BLACK_WHITE
+OWNER_DECISION_75A = START_RETHINK_EXPLORATION
+CURRENT_EXPLORATION_TASK = 75B_PENDING_NOT_STARTED
 ```
 
-`DESIGN_V2_1` — единственный active production source для Landing, `/login`, authenticated Web,
-Mobile Web и TMA. Tasks `49A-49F` являются historical exploration/decision/evidence; их artifacts
-не создают второй active visual source. Design V2 docs/renders сохранены как historical baseline.
+`DESIGN_V2_1` остаётся текущей production baseline для Landing, `/login`, authenticated Web, Mobile Web и TMA до тех пор, пока отдельная owner-approved design task не выберет и не активирует новую систему.
 
-## Точное решение владельца
+Baseline нужен для consistency обычных feature/fix tasks. Он не является вечной эстетической догмой.
 
-```text
-FINAL_APPROVE_V2_1: Landing=DESIGN_V2_QUIET_PACE; LOGIN=A_SURFACES_STATES+V2_TYPE+OPTION_1_SPLIT+240PX_CENTERED_AUTH+35PX_CONTINUATION; DESKTOP_APP=V2_CONTENT+A_RAIL+V2_ICONS_TYPE; MOBILE_TMA=V2_COMPACT_FONT_NORMALIZED+BOTTOM_NAV_VIEWPORT_PINNED
-ACTIVE_WORKOUT_TMA_BACK = KEEP_IN_PAGE_BACK
-BLOCKING_MISMATCHES = NONE
-REAL_TELEGRAM = NOT_RUN
-```
+27.08.2026 владелец одобрил результат Rethink-аудита `75A` и выбрал
+`START_RETHINK_EXPLORATION`. Это решение разрешает только отдельную task `75B` с несколькими
+изолированными visual + motion directions и owner selection. Оно не активирует новый дизайн,
+не разрешает production rollout и не меняет текущие canonical paths.
 
-Для active workout в TMA сохраняется видимый in-page back, а native Telegram BackButton скрыт,
-чтобы не дублировать navigation control. Для остальных nested routes/overlays действует canonical
-TMA platform contract.
+## Что является устойчивым
 
-## Canonical DESIGN_V2_1 paths
+Независимо от конкретной версии дизайна сохраняются:
 
-1. `docs/design/design-direction-v2.1.md` — specification, tokens и component contracts.
-2. `docs/design/responsive-v2.1.md` — breakpoints, rail/mobile geometry и layout formulas.
-3. `docs/design/component-states-v2.1.md` — shared components и state matrix.
-4. `docs/design/landing-login-v2.1.md` — Landing и `/login` contract.
-5. `docs/design/tma-platform-v2.1.md` — shared Mobile Web/TMA platform contract.
-6. `docs/design/references/design-v2.1/README.md` — approved render index;
-   `render-manifest.sha256` фиксирует exact bytes.
-7. `codex-backlog/DESIGN_V2_1_INTEGRATION_NOTES.md` — rollout gap matrix, backlog alignment и
-   residual risks.
+- YFC как sport-tech продукт;
+- mobile-first подход для client-facing flows;
+- lime, black и white как фирменное цветовое ядро;
+- фактическое поведение продукта и data truth;
+- accessibility;
+- usability;
+- performance feasibility;
+- единый продукт Web + TMA, если task не меняет platform strategy.
 
-## Порядок источников
+## Что можно пересматривать
 
-1. фактические product/security/privacy/accessibility/SEO contracts и verified behavior;
-2. этот active source и перечисленные canonical `DESIGN_V2_1` docs;
-3. фактическая shared production implementation и tests;
-4. frozen V2.1 renders как hierarchy/composition evidence;
-5. Design V2 docs/renders только как historical baseline;
-6. `.artifacts/design-alternatives/49d-selected-candidate/`, `49e-pilot/` и `49f/` только как
-   historical approval/evidence packet.
+В отдельной design exploration/redesign task можно пересмотреть полностью:
 
-Static renders и mocked TMA не доказывают OAuth, assistive technology, physical keyboard, field
-performance или real Telegram Android/iOS. `REAL_TELEGRAM = NOT_RUN` остаётся residual risk.
+- Design V2/V2.1;
+- typography;
+- spacing;
+- grid;
+- radii;
+- card/surface model;
+- shadows;
+- gradients;
+- glow;
+- glass/transparency;
+- 3D/illustration/photo language;
+- iconography;
+- charts/data visualization;
+- navigation;
+- Landing composition;
+- authenticated app composition;
+- light/dark visual system;
+- motion language;
+- shared components;
+- current visual motifs.
 
-## Правило для pending tasks
+Current V2.1 docs/renders в такой задаче являются evidence/current baseline, а не обязательным visual answer.
 
-Tasks `50A`, `50-79` обязаны читать этот файл и использовать только canonical `DESIGN_V2_1`
-paths плюс фактическую implementation. Они не возвращают 49E pilot, не выбирают новый visual
-direction и не трактуют coverage matrix task `49G` как требование переработать каждый экран.
+## Ordinary implementation tasks
 
-Изменить active source после closure `49G` можно только отдельным owner-approved design task.
+Если task не является redesign/exploration:
+
+1. использовать текущий active baseline;
+2. переиспользовать existing tokens/components;
+3. не создавать случайный parallel design system;
+4. не расширять scope визуальным redesign;
+5. исправлять drift относительно текущей production system.
+
+Это правило не означает, что baseline нельзя заменить отдельной design task.
+
+## Dedicated design task
+
+Design task может:
+
+- сравнивать несколько направлений;
+- использовать новые design/motion skills;
+- создавать isolated prototypes;
+- предлагать полный replacement visual system;
+- переосмысливать ранее утверждённые V2.1 решения.
+
+До массовой production реализации нужен owner selection/checkpoint.
+
+После выбора новая система должна:
+
+- получить собственные durable design docs/tokens/contracts;
+- обновить этот файл;
+- определить migration/rollout scope;
+- обновить применимые backlog contracts.
+
+## Current V2.1 reference paths
+
+Пока новая система не активирована, текущими reference paths остаются:
+
+1. `docs/design/design-direction-v2.1.md`
+2. `docs/design/responsive-v2.1.md`
+3. `docs/design/component-states-v2.1.md`
+4. `docs/design/landing-login-v2.1.md`
+5. `docs/design/tma-platform-v2.1.md`
+6. `docs/design/references/design-v2.1/README.md`
+7. `codex-backlog/DESIGN_V2_1_INTEGRATION_NOTES.md`
+
+Они описывают текущий baseline, а не вечные запреты.
+
+## Historical artifacts
+
+Tasks `49A-49G`, прежние renders и pilots остаются historical evidence. Они не создают второй active source и не запрещают будущий redesign.
+
+## Activation rule
+
+Изменение active production design происходит только через явное owner решение в design task.
+
+До такого решения production tasks не должны самовольно смешивать V2.1 с новыми экспериментальными направлениями.
