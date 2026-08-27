@@ -99,7 +99,7 @@ class Settings(BaseSettings):
     news_llm_api_key: str = ""
     news_llm_model: str = ""
     news_llm_timeout_seconds: float = Field(default=20, ge=5, le=60)
-    news_llm_prompt_version: str = "news-draft-v2"
+    news_llm_prompt_version: str = "news-draft-v3"
     news_image_provider: Literal["disabled", "cloudflare_workers_ai"] = "disabled"
     news_image_cloudflare_account_id: str = ""
     news_image_cloudflare_api_token: str = ""

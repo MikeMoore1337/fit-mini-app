@@ -710,33 +710,108 @@ def test_draft_contract_normalizes_extra_paragraphs_and_importance_sentences() -
     assert fields["why_it_matters"] == "Первое предложение."
 
 
-def test_generation_is_immutable_grounded_and_falls_back_on_invented_number(monkeypatch) -> None:
+def test_generation_repairs_invented_number_before_creating_revision(monkeypatch) -> None:
     _create_source()
     cluster_id = _candidate_cluster()
     monkeypatch.setattr(settings, "news_llm_provider", "openai_compatible")
     monkeypatch.setattr(settings, "news_llm_endpoint", "https://llm.example/v1/chat/completions")
     monkeypatch.setattr(settings, "news_llm_api_key", "test-key")
     monkeypatch.setattr(settings, "news_llm_model", "test-model")
-    payload = {
+    rejected_payload = {
         "headline": "Что показала новая работа",
         "summary": (
             "Авторы описали результат для изученной группы. Нагрузка вырастет на 99% за неделю."
         ),
         "why_it_matters": "Материал помогает уточнить контекст силовых тренировок.",
     }
+    repaired_payload = {
+        "headline": "Что показала новая работа",
+        "summary": "Авторы описали результат для изученной группы в заданном контексте.",
+        "why_it_matters": "Материал помогает уточнить контекст силовых тренировок.",
+    }
+    request_count = 0
 
     def respond(request: httpx.Request) -> httpx.Response:
+        nonlocal request_count
+        request_count += 1
         request_payload = json.loads(request.content)
         assert request_payload["messages"][0]["role"] == "system"
         assert "одном или двух коротких абзацах" in request_payload["messages"][0]["content"]
         assert request_payload["messages"][1]["content"].startswith("SOURCE_DATA_JSON")
+        if request_count == 2:
+            assert request_payload["messages"][-1]["content"].startswith("REPAIR_REQUEST")
+            assert "unsupported_number" in request_payload["messages"][-1]["content"]
         return httpx.Response(
             200,
             request=request,
             json={
                 "model": "actual-test-model",
-                "choices": [{"message": {"content": json.dumps(payload, ensure_ascii=False)}}],
+                "choices": [
+                    {
+                        "message": {
+                            "content": json.dumps(
+                                rejected_payload if request_count == 1 else repaired_payload,
+                                ensure_ascii=False,
+                            )
+                        }
+                    }
+                ],
                 "usage": {"prompt_tokens": 100, "completion_tokens": 50},
+            },
+        )
+
+    async def generate():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+            with get_session_context() as db:
+                cluster = db.get(NewsCluster, cluster_id)
+                assert cluster is not None
+                draft = await create_draft_revision(db, cluster, client=client)
+                return draft.id
+
+    draft_id = asyncio.run(generate())
+    with get_session_context() as db:
+        stored = db.get(NewsDraftRevision, draft_id)
+        assert stored is not None
+        assert stored.provider == "openai_compatible"
+        assert stored.warnings == []
+        assert "99%" not in stored.draft_text
+        assert "Авторы описали результат" in stored.draft_text
+        assert stored.revision == 1
+        assert stored.source_digest
+        assert stored.generation_input_tokens == 200
+        assert stored.generation_output_tokens == 100
+        assert "КРАТКО" in stored.draft_text
+        assert "ПОЧЕМУ ЭТО ВАЖНО" in stored.draft_text
+        assert "ИСТОЧНИК" in stored.draft_text
+        assert "Ограничения" not in stored.draft_text
+    assert request_count == 2
+
+
+def test_generation_falls_back_when_repair_still_contains_invented_number(monkeypatch) -> None:
+    _create_source()
+    cluster_id = _candidate_cluster()
+    monkeypatch.setattr(settings, "news_llm_provider", "openai_compatible")
+    monkeypatch.setattr(settings, "news_llm_endpoint", "https://llm.example/v1/chat/completions")
+    monkeypatch.setattr(settings, "news_llm_api_key", "test-key")
+    monkeypatch.setattr(settings, "news_llm_model", "test-model")
+    rejected_payload = {
+        "headline": "Что показала новая работа",
+        "summary": "Авторы обещают улучшение результата на 99%.",
+        "why_it_matters": "Материал помогает уточнить контекст силовых тренировок.",
+    }
+    request_count = 0
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        nonlocal request_count
+        request_count += 1
+        return httpx.Response(
+            200,
+            request=request,
+            json={
+                "model": "actual-test-model",
+                "choices": [
+                    {"message": {"content": json.dumps(rejected_payload, ensure_ascii=False)}}
+                ],
             },
         )
 
@@ -755,12 +830,7 @@ def test_generation_is_immutable_grounded_and_falls_back_on_invented_number(monk
         assert stored.provider == "deterministic"
         assert "unsupported_number" in stored.warnings
         assert "99%" not in stored.draft_text
-        assert stored.revision == 1
-        assert stored.source_digest
-        assert "КРАТКО" in stored.draft_text
-        assert "ПОЧЕМУ ЭТО ВАЖНО" in stored.draft_text
-        assert "ИСТОЧНИК" in stored.draft_text
-        assert "Ограничения" not in stored.draft_text
+    assert request_count == 2
 
 
 def test_fetch_and_worker_generation_are_idempotent(monkeypatch) -> None:

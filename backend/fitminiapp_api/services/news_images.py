@@ -37,6 +37,11 @@ CLOUDFLARE_IMAGES_ENDPOINT = (
     "@cf/black-forest-labs/flux-1-schnell"
 )
 PROVIDER_POLICY_CHECKED_AT = "2026-08-26"
+BRAND_LABEL_POSITION = (90, 84)
+RUBRIC_POSITION = (90, 155)
+HEADLINE_X = 86
+REVIEW_LABEL_POSITION = (90, 685)
+HEADLINE_SPACING = 10
 
 
 class NewsImageError(RuntimeError):
@@ -191,6 +196,27 @@ def _what_happened(draft: NewsDraftRevision) -> str:
     return " ".join(summary.split())[:500] or _headline(draft)
 
 
+def _centered_headline_y(
+    draw: ImageDraw.ImageDraw,
+    headline: str,
+    font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+    *,
+    rubric_bounds: tuple[float, float, float, float],
+    review_label_bounds: tuple[float, float, float, float],
+) -> int:
+    headline_bounds = draw.multiline_textbbox(
+        (0, 0),
+        headline,
+        font=font,
+        spacing=HEADLINE_SPACING,
+    )
+    available_top = rubric_bounds[3]
+    available_bottom = review_label_bounds[1]
+    headline_height = headline_bounds[3] - headline_bounds[1]
+    centered_top = available_top + (available_bottom - available_top - headline_height) / 2
+    return round(centered_top - headline_bounds[1])
+
+
 def _draw_brand_overlay(image: Image.Image, draft: NewsDraftRevision) -> Image.Image:
     canvas = ImageOps.fit(image.convert("RGB"), CANVAS_SIZE, method=Image.Resampling.LANCZOS)
     overlay = Image.new("RGBA", CANVAS_SIZE, (0, 0, 0, 0))
@@ -199,21 +225,40 @@ def _draw_brand_overlay(image: Image.Image, draft: NewsDraftRevision) -> Image.I
     draw.polygon(((0, 0), (690, 0), (455, 800), (0, 800)), fill=(10, 16, 11, 220))
     draw.line((691, 0, 455, 800), fill=(158, 224, 43, 150), width=3)
     draw.rounded_rectangle((54, 50, 1146, 750), radius=32, outline=(158, 224, 43, 110), width=2)
-    draw.text((90, 84), "YOUR FITNESS COACH", font=_font(30, bold=True), fill="#9EE02B")
-    draw.text((90, 155), _rubric(draft).upper(), font=_font(24, bold=True), fill="#EEF0EA")
-    headline_lines = textwrap.wrap(_headline(draft), width=27)[:4]
-    draw.multiline_text(
-        (86, 260),
-        "\n".join(headline_lines),
-        font=_font(55, bold=True),
-        fill="#FFFFFF",
-        spacing=10,
-    )
+    draw.text(BRAND_LABEL_POSITION, "YOUR FITNESS COACH", font=_font(30, bold=True), fill="#9EE02B")
+    rubric_font = _font(24, bold=True)
+    rubric_text = _rubric(draft).upper()
+    draw.text(RUBRIC_POSITION, rubric_text, font=rubric_font, fill="#EEF0EA")
+    review_label_font = _font(22)
+    review_label_text = "Проверено редактором • Источник — в публикации"
     draw.text(
-        (90, 685),
-        "Проверено редактором • Источник — в публикации",
-        font=_font(22),
+        REVIEW_LABEL_POSITION,
+        review_label_text,
+        font=review_label_font,
         fill="#EEF0EA",
+    )
+    headline_lines = textwrap.wrap(_headline(draft), width=27)[:4]
+    headline_text = "\n".join(headline_lines)
+    headline_font = _font(55, bold=True)
+    rubric_bounds = draw.textbbox(RUBRIC_POSITION, rubric_text, font=rubric_font)
+    review_label_bounds = draw.textbbox(
+        REVIEW_LABEL_POSITION,
+        review_label_text,
+        font=review_label_font,
+    )
+    headline_y = _centered_headline_y(
+        draw,
+        headline_text,
+        headline_font,
+        rubric_bounds=rubric_bounds,
+        review_label_bounds=review_label_bounds,
+    )
+    draw.multiline_text(
+        (HEADLINE_X, headline_y),
+        headline_text,
+        font=headline_font,
+        fill="#FFFFFF",
+        spacing=HEADLINE_SPACING,
     )
     mark_path = _brand_mark_path()
     if mark_path is not None:

@@ -283,6 +283,41 @@ def test_brand_mark_is_in_the_top_right_safe_area(monkeypatch) -> None:
     assert abs((2 * mark_y + mark_height) - (circle_top + circle_bottom)) <= 1
 
 
+def test_news_card_headline_is_centered_between_rubric_and_review_label() -> None:
+    canvas = Image.new("RGB", news_images.CANVAS_SIZE, "#101310")
+    draw = news_images.ImageDraw.Draw(canvas)
+    rubric_font = news_images._font(24, bold=True)
+    review_label_font = news_images._font(22)
+    headline_font = news_images._font(55, bold=True)
+    rubric_text = "ПИТАНИЕ И СПОРТПИТ"
+    headline_text = "Новый материал о питании и\nспортивных добавках требует\nредакторской проверки"
+    review_label_text = "Проверено редактором • Источник — в публикации"
+    rubric_bounds = draw.textbbox(news_images.RUBRIC_POSITION, rubric_text, font=rubric_font)
+    review_label_bounds = draw.textbbox(
+        news_images.REVIEW_LABEL_POSITION,
+        review_label_text,
+        font=review_label_font,
+    )
+
+    headline_y = news_images._centered_headline_y(
+        draw,
+        headline_text,
+        headline_font,
+        rubric_bounds=rubric_bounds,
+        review_label_bounds=review_label_bounds,
+    )
+    headline_bounds = draw.multiline_textbbox(
+        (news_images.HEADLINE_X, headline_y),
+        headline_text,
+        font=headline_font,
+        spacing=news_images.HEADLINE_SPACING,
+    )
+
+    top_gap = headline_bounds[1] - rubric_bounds[3]
+    bottom_gap = review_label_bounds[1] - headline_bounds[3]
+    assert abs(top_gap - bottom_gap) <= 1
+
+
 def test_renderer_enforces_exact_telegram_photo_and_message_boundaries() -> None:
     source_url = "https://example.test/source"
     image = NewsImageRevision()
