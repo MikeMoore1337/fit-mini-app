@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import LandingPage, {
   appUrlForHostname,
@@ -257,7 +257,7 @@ describe('LandingPage', () => {
     expect(menuButton).toHaveFocus();
   });
 
-  it('publishes useful metadata and a keyboard skip link', () => {
+  it('publishes useful metadata and a keyboard skip link', async () => {
     const description = document.createElement('meta');
     description.name = 'description';
     document.head.append(description);
@@ -273,7 +273,9 @@ describe('LandingPage', () => {
 
     const { unmount } = renderLanding();
 
-    expect(document.title).toMatch(/тренировки, питание и прогресс в браузере и telegram/i);
+    await waitFor(() =>
+      expect(document.title).toMatch(/тренировки, питание и прогресс в браузере и telegram/i),
+    );
     expect(description.content).toMatch(/фиксировать результаты.*ориентиры кбжу/i);
     expect(ogTitle.content).toMatch(/в браузере и telegram/i);
     expect(ogDescription.content).toMatch(/компьютере или смартфоне.*telegram mini app/i);

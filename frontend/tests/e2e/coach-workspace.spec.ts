@@ -484,13 +484,14 @@ test('dashboard даёт обзор и фильтрует клиентов бе�
   await page.getByRole('button', { name: 'Включить светлую тему' }).click();
 
   await page.getByLabel('Показать').selectOption('attention');
-  await expect(page.getByText('Анна Петрова', { exact: true })).toHaveCount(1);
-  await expect(page.getByText('Борис Александрович С Очень Длинной Фамилией')).toBeVisible();
-  await expect(page.getByText('Мария Орлова')).toBeVisible();
+  const clientList = page.locator('.coach-client-list');
+  await expect(clientList.getByText('Анна Петрова', { exact: true })).toHaveCount(1);
+  await expect(clientList.getByText('Борис Александрович С Очень Длинной Фамилией')).toBeVisible();
+  await expect(clientList.getByText('Мария Орлова')).toBeVisible();
 
   await page.getByLabel('Найти клиента').fill('Борис');
-  await expect(page.getByText('Мария Орлова')).toHaveCount(0);
-  await expect(page.getByText('Борис Александрович С Очень Длинной Фамилией')).toBeVisible();
+  await expect(clientList.getByText('Мария Орлова')).toHaveCount(0);
+  await expect(clientList.getByText('Борис Александрович С Очень Длинной Фамилией')).toBeVisible();
   await page.getByLabel('Найти клиента').fill('');
   await page.getByLabel('Показать').selectOption('pending');
   await expect(page.locator('.coach-client-roster .coach-client-row')).toHaveCount(1);
@@ -521,7 +522,11 @@ test('trainer nutrition report stays scoped to the active client and remains rea
   const report = nutrition.locator('#nutrition-period-report');
   await expect(report.getByRole('heading', { name: 'Отчёт по питанию' })).toBeVisible();
   await expect(report.getByText('Заполнено 1 из 30 дней')).toBeVisible();
-  await expect(report.getByRole('table')).toBeAttached();
+  await expect(
+    report.getByRole('table', {
+      name: 'Дневные КБЖУ, статус заполнения и действовавшая цель',
+    }),
+  ).toBeAttached();
   await expect(report.getByRole('link', { name: /Открыть дневник/ })).toHaveCount(0);
   expect(reportRequests.some((url) => url.includes('/coach/clients/11/nutrition-report'))).toBe(
     true,

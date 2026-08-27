@@ -11,7 +11,7 @@ import {
 import { api } from '../../shared/api/client';
 import type { PublicExerciseDetail, PublicExerciseSummary } from '../../shared/api/types';
 import { appUrlForHostname } from '../../shared/navigation/appUrl';
-import { AppLink, useNavigation } from '../../shared/navigation/router';
+import { AppLink, Redirect, useNavigation } from '../../shared/navigation/router';
 import { BrandLockup } from '../../shared/ui/BrandLogo';
 import { AppThemeToggle } from '../../shared/ui/AppThemeToggle';
 import { Icon } from '../../shared/ui/Icon';
@@ -20,6 +20,7 @@ import { applyRouteMetadata } from '../../shared/seo/metadata';
 import '../../shared/ui/public-shell.css';
 import '../landing/landing.css';
 import './public-content.css';
+import NotFoundPage from '../NotFoundPage';
 
 function PublicHeader({ theme }: { theme: 'light' | 'dark' }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -428,8 +429,8 @@ export default function PublicContentPage() {
   const { colorScheme: theme } = useWebTheme();
 
   useEffect(() => {
-    applyRouteMetadata(path);
-  }, [path]);
+    applyRouteMetadata(path, page);
+  }, [page, path]);
 
   useEffect(() => {
     document.body.classList.add('public-shell-mode');
@@ -439,7 +440,8 @@ export default function PublicContentPage() {
     };
   }, [theme]);
 
-  if (!page || page.kind === 'landing') return null;
+  if (!page || page.kind === 'landing') return <NotFoundPage />;
+  if (window.Telegram?.WebApp?.initData) return <Redirect to="/app" />;
 
   const appUrl = appUrlForHostname(window.location.hostname);
 

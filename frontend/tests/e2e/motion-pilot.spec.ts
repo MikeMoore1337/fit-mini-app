@@ -253,6 +253,22 @@ test('workout confirmation and Nutrition add keep final production state immedia
   const completedSet = page.locator('.active-workout-set').first();
   await expect(completedSet).toHaveAttribute('data-motion-confirm', 'true');
   await expect(completedSet).toContainText('Выполнен');
+  const restTimer = page.locator('.active-workout-rest');
+  await expect(restTimer).toBeVisible();
+  await restTimer.evaluate(async (element) => {
+    await Promise.all(element.getAnimations().map((animation) => animation.finished));
+  });
+  const restGeometry = await restTimer.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    return {
+      background: getComputedStyle(element).backgroundColor,
+      bottom: box.bottom,
+    };
+  });
+  expect(restGeometry.background).toBe('rgb(255, 255, 255)');
+  expect(restGeometry.bottom).toBeLessThanOrEqual(
+    (await completedSet.boundingBox())?.y ?? Number.NEGATIVE_INFINITY,
+  );
   if (capture) await page.screenshot({ path: `${screenshotRoot}/app-workout-390-confirmed.png` });
 
   await page.getByRole('link', { name: 'Питание', exact: true }).click();

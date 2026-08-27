@@ -1,4 +1,4 @@
-import { getPublicContentPage, type PublicContentPage } from '../../content/publicContent';
+import type { PublicContentPage } from '../../content/publicContent';
 
 export const INDEX_ROBOTS = 'index, follow';
 export const NOINDEX_ROBOTS = 'noindex, nofollow';
@@ -117,8 +117,7 @@ function replaceStructuredData(page: PublicContentPage | undefined): void {
   }
 }
 
-export function applyRouteMetadata(path: string): void {
-  const page = getPublicContentPage(path);
+export function applyRouteMetadata(path: string, page?: PublicContentPage): void {
   const title = page?.title ?? 'Your Fitness Coach';
   const description = page?.description ?? 'Личный интерфейс Your Fitness Coach.';
   const robots = page ? INDEX_ROBOTS : NOINDEX_ROBOTS;

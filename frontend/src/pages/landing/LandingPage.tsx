@@ -221,11 +221,17 @@ export default function LandingPage() {
   const navigationRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    applyRouteMetadata('/');
+    let mounted = true;
+    void import('../../content/publicContent').then(({ getPublicContentPage }) => {
+      if (mounted) applyRouteMetadata('/', getPublicContentPage('/'));
+    });
     trackProductEvent(
       { name: 'landing_viewed', surface: productEventSurface() },
       { dedupe: 'session' },
     );
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   useEffect(() => {

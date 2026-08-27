@@ -12,13 +12,26 @@ import { isTelegramLaunch } from './shared/telegram/launch';
 import { applyPlatformTheme, useTelegram } from './shared/telegram/useTelegram';
 import { NavigationProvider, Redirect, useNavigation } from './shared/navigation/router';
 import { applyRouteMetadata } from './shared/seo/metadata';
-import { isPublicContentPath } from './content/publicContent';
 import { clearAllDemoSessions } from './features/demo/demoApi';
 import './styles/legacy.css';
 import './styles/react.css';
 import './styles/design-system.css';
 import './styles/design-v2.css';
-import './styles/data-viz.css';
+
+const publicContentRoots = new Set([
+  '/training',
+  '/nutrition',
+  '/progress',
+  '/for-trainers',
+  '/knowledge',
+  '/exercises',
+]);
+
+function isPublicContentRoute(path: string): boolean {
+  return (
+    publicContentRoots.has(path) || path.startsWith('/knowledge/') || path.startsWith('/exercises/')
+  );
+}
 
 const MiniAppPage = lazy(() => import('./pages/miniapp/MiniAppPage'));
 const ProgressReportPage = lazy(() => import('./pages/reports/ProgressReportPage'));
@@ -64,14 +77,15 @@ function AuthenticatedRoute({ children }: { children: React.ReactNode }) {
 
 function AppRoutes() {
   const { path } = useNavigation();
-  useEffect(() => applyRouteMetadata(path), [path]);
+  useEffect(() => {
+    if (path !== '/' && !isPublicContentRoute(path)) applyRouteMetadata(path);
+  }, [path]);
   if (path === '/') return <LandingPage />;
   if (path === '/demo') {
     if (isTelegramLaunch(window.location)) return <Redirect to="/app" />;
     return <DemoPage />;
   }
-  if (isPublicContentPath(path)) {
-    if (window.Telegram?.WebApp?.initData) return <Redirect to="/app" />;
+  if (isPublicContentRoute(path)) {
     return <PublicContentPage />;
   }
   if (path === '/login')

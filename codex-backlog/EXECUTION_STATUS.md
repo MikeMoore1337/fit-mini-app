@@ -1,6 +1,6 @@
-# Execution status v38
+# Execution status v39
 
-Подтверждённое владельцем состояние на 26.08.2026:
+Подтверждённое владельцем состояние на 27.08.2026:
 
 - [x] tasks `00-73`, включая `69B` и предшествующие буквенные подзадачи, complete;
 - [x] завершённые task-файлы перенесены в `tasks/done/` и доступны для чтения;
@@ -19,10 +19,11 @@
 - [x] owner-selected task `90` реализовала отдельный default-off opt-in, owner-approved weekly digest и мгновенную изолированную отписку, прошла review/QA и архивирована после owner approval;
 - [x] task `74A` внедрила product-wide semantic motion language и data-viz animation, прошла review/QA, получила owner approval и архивирована;
 - [x] task `74` завершила cross-product responsive/accessibility/states hardening, прошла QA, получила owner screenshot approval и архивирована;
-- [ ] **current:** `75-performance-motion-hardening.md` — назначена в `PENDING`, реализация не начата;
-- [ ] remaining release tasks `76-79` и остальные post-release tasks сохраняют собственные Trigger, dependency и owner decision.
+- [x] task `75` завершила UI performance и motion hardening, прошла independent review, получила owner screenshot approval и архивирована;
+- [ ] **current:** `76-skill-aware-retrospective-release-audit.md` — назначена в `PENDING`, реализация не начата;
+- [ ] remaining release tasks `76A-79` и остальные post-release tasks сохраняют собственные Trigger, dependency и owner decision.
 
-Не выполнять повторно tasks `00-74`, включая `69B`, `73A`, task `74A` и tasks `88-90`. Следующей
-pending task назначена `75`: её реализация и lifecycle начинаются только в отдельной сессии.
+Не выполнять повторно tasks `00-75`, включая `69B`, `73A`, task `74A` и tasks `88-90`. Следующей
+pending task назначена `76`: её реализация и lifecycle начинаются только в отдельной сессии.
 Umbrella `91` отдельно не выполняется; `91A` не назначена без собственного Trigger, dependency
 и owner decision. Другие pending tasks автоматически не реализуются.

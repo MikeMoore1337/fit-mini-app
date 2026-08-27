@@ -1,6 +1,7 @@
 import { useId, useMemo, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { Icon } from './Icon';
 import { useSemanticMotion } from './useSemanticMotion';
+import '../../styles/data-viz.css';
 
 export interface TimeSeriesPoint {
   href?: string;
