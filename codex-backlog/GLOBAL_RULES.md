@@ -2,7 +2,7 @@
 
 Этот файл действует для завершённых и архивированных tasks `75`/`75A`, current owner-approved
 exploration gate `75B`, remaining release tasks `76-79`, включая `76A`, и
-trigger-gated post-release pool `80-102` с буквенными подзадачами. Completed tasks `00-73A`, включая
+trigger-gated post-release pool `80-101` с буквенными подзадачами. Completed tasks `00-73A`, включая
 буквенные подзадачи, tasks `74A-75` и отдельно завершённые tasks `103-105` не переигрываются и
 хранятся в `tasks/done/`.
 
@@ -50,7 +50,7 @@ Lifecycle не расширяет scope task и не отменяет owner chec
 ## Главный процесс
 
 - Один executable task-файл = одна отдельная Codex-сессия = один законченный логический результат.
-  Umbrella `91`, `93`, `94`, `96`, `100`, `101` являются coordination contracts и отдельно не выполняются.
+  Umbrella `90`, `92`, `94`, `95`, `99`, `100` являются coordination contracts и отдельно не выполняются.
 - Работать только в `feature/yfc-platform-v2`.
 - Не переходить к следующему task автоматически.
 - Перед началом прочитать корневой `AGENTS.md`, этот файл, lifecycle и только текущую task.
@@ -237,12 +237,12 @@ blocking finding.
 - food-photo recognition;
 - новые knowledge packages, calculators и post-release repository cleanup.
 
-Эти направления находятся только в trigger-gated tasks `80-102` и их буквенных подзадачах после release gate `79`. В release
+Эти направления находятся только в trigger-gated tasks `80-101` и их буквенных подзадачах после release gate `79`. В release
 UI нельзя показывать фиктивные, locked или `coming soon` entry points для них.
 
-## Trigger-gated post-release pool `80-102`
+## Trigger-gated post-release pool `80-101`
 
-Tasks `80-102` и их буквенные подзадачи находятся в общей папке `codex-backlog/tasks/`, но не становятся линейным
+Tasks `80-101` и их буквенные подзадачи находятся в общей папке `codex-backlog/tasks/`, но не становятся линейным
 продолжением release sequence. Перед запуском читать:
 
 1. `POST_RELEASE_PRIORITY_ORDER.md`;
@@ -255,7 +255,7 @@ Tasks `80-102` и их буквенные подзадачи находятся 
 
 - номер задаёт предпочтительную последовательность, но не заменяет evidence, dependency или owner decision;
 - допустимо выполнить более высокий номер раньше низкого, если его Trigger подтверждён;
-- `91`, `93`, `94`, `96`, `100`, `101` отдельно не реализовывать — запускать только дочернюю task;
+- `90`, `92`, `94`, `95`, `99`, `100` отдельно не реализовывать — запускать только дочернюю task;
 - umbrella не получает отдельную сессию или commit и считается закрытой после завершения всех
   owner-approved дочерних tasks либо фиксации `Defer/No-Go` для остальных;
 - downstream task не запускается автоматически после upstream commit;

@@ -33,16 +33,18 @@ Trigger-gated tasks сохраняют собственные gates. Никак�
 После release gate использовать task ID как предпочтительный порядок:
 
 ```text
-80 -> 81 -> 82 -> 83 -> 84 -> 85 -> 86 -> 87
--> 88 -> 89 -> 90 -> 91A -> 91B -> 92
--> independently gated 93A / 93B
+80 -> 81 -> 82 -> 83 -> 84 -> 85 -> 86
+-> 87 -> 88 -> 89 -> 90A -> 90B -> 91
+-> independently gated 92A / 92B
+-> 93 AI-assisted XLSX/CSV/TXT/DOCX program import
 -> 94A -> owner Go/Narrow Go -> 94B
--> 95 -> 96A -> 96B -> 97 -> 98 -> 99
--> 100A -> 100B -> 100C
--> 101A -> 101B
--> 102 private progress photos without AI/body analysis
+-> 95A -> 95B -> 96 -> 97 -> 98
+-> 99A -> 99B -> 99C
+-> 100A -> 100B
+-> 101 private progress photos without AI/body analysis
 ```
 
-Food-photo стоит после AI-блока. Billing/монетизация, перевод и фотографии прогресса оставлены в
-самом конце. Анализ фото тела отсутствует. Каждая стрелка дополнительно требует Trigger, dependency
-и отдельного owner decision; umbrella-файлы отдельно не выполняются.
+Единый AI-assisted import и food-photo стоят после основного AI-блока. Billing/монетизация,
+перевод и фотографии прогресса оставлены в самом конце. Анализ фото тела отсутствует. Каждая
+стрелка дополнительно требует Trigger, dependency и отдельного owner decision; umbrella-файлы
+отдельно не выполняются.

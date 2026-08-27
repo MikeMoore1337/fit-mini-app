@@ -54,36 +54,37 @@ Tasks `00-49` remain completed and are not renumbered or replayed.
 
 Tasks `49A-49G` inserted after completed task `49` and before `50A`. Existing numeric tasks were not renumbered.
 
-## 2026-08-27 — post-release pool после task `79`
+## 2026-08-27 — объединение imports и финальный post-release order
 
-Pending post-release tasks перенумерованы так, чтобы сам ID отражал предпочтительную
-последовательность реализации. Отдельный product rank удалён. Актуальные ID являются source of
-truth; старые используются только для чтения истории Git.
+Прежние tasks `81-program-import-xlsx-csv` и `95-program-import-txt-docx` объединены в единую
+task `93-ai-assisted-program-import`. Один формат файла не создаёт отдельного product pipeline:
+все поддержанные форматы проходят общий AI-assisted analysis, exercise matching, preview и
+confirmed write.
 
-| Прежний ID | Актуальный ID | Направление |
+| ID до объединения | Актуальный ID | Направление |
 |---:|---:|---|
-| `97` | `80` | Repository hygiene/security/README |
-| `81` | `81` | XLSX/CSV import |
-| `98` | `82` | Hydration tracking |
-| `99` | `83` | Sleep/mood check-in |
-| `100` | `84` | Trainer report handoff |
-| `101` | `85` | Reminder templates |
-| `102` | `86` | Knowledge package |
-| `82` | `87` | PWA |
-| `84-86` | `88-90` | AI decision, grounded core, personal tools |
-| `87A-87B` | `91A-91B` | AI UI/evals и rollout |
-| `104` | `92` | AI period report insights |
-| `87C1-87C2` | `93A-93B` | Advanced AI memory/provider routing |
-| `103A-103B` | `94A-94B` | Food-photo feasibility и assisted entry |
-| `95` | `95` | TXT/DOCX import |
-| `92A-92B` | `96A-96B` | Server PDF и private delivery |
-| `93` | `97` | Wearables discovery |
-| `94` | `98` | Delegated admins |
-| `96` | `99` | Native feasibility |
-| `83A-83C` | `100A-100C` | Billing/монетизация |
-| `91A-91B` | `101A-101B` | Английская локализация |
-| `80` | `102` | Private progress photos без AI/body analysis |
-| completed `88-90` | completed `103-105` | Telegram news/digest history |
+| `80` | `80` | Repository hygiene/security/README |
+| `82` | `81` | Hydration tracking |
+| `83` | `82` | Sleep/mood check-in |
+| `84` | `83` | Trainer report handoff |
+| `85` | `84` | Reminder templates |
+| `86` | `85` | Knowledge package |
+| `87` | `86` | PWA |
+| `88-90` | `87-89` | AI decision, grounded core, personal tools |
+| `91A-91B` | `90A-90B` | AI UI/evals и rollout |
+| `92` | `91` | AI period report insights |
+| `93A-93B` | `92A-92B` | Advanced AI memory/provider routing |
+| `81` + `95` | `93` | AI-assisted program import XLSX/CSV/TXT/DOCX |
+| `94A-94B` | `94A-94B` | Food-photo feasibility и assisted entry |
+| `96A-96B` | `95A-95B` | Server PDF и private delivery |
+| `97` | `96` | Wearables discovery |
+| `98` | `97` | Delegated admins |
+| `99` | `98` | Native feasibility |
+| `100A-100C` | `99A-99C` | Billing/монетизация |
+| `101A-101B` | `100A-100B` | Английская локализация |
+| `102` | `101` | Private progress photos без AI/body analysis |
 
-AI Coach занимает непрерывный кластер `88-93`; food-photo следует сразу после него как
-`94/94A/94B`. Анализ фото тела не входит в task `102` и не имеет отдельной downstream task.
+Актуальный pending pool — `80-101`. AI Coach занимает непрерывный кластер `87-92`, единый
+AI-assisted import следует за ним как `93`, а food-photo — как `94/94A/94B`. Анализ фото тела не
+входит в task `101` и не имеет отдельной downstream task. Старые ID используются только для чтения
+истории Git.

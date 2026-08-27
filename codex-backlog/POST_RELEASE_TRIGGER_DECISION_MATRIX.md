@@ -6,35 +6,34 @@
 | Task/direction | Evidence source | Baseline | Observed problem/demand | Decision rule | Owner decision | Date |
 |---:|---|---|---|---|---|---|
 | `80` | | | | Release `79` закрыт; owner запускает bounded cleanup без history rewrite | | |
-| `81` | | | | Реальные XLSX/CSV подтверждают повторяемую экономию ручного переноса | | |
-| `82` | | | | Есть повторяемый optional hydration job и подтверждён report/reminder scope | | |
-| `83` | | | | Daily subjective context полезен пользователю/тренеру и не дублирует weekly check-in | | |
-| `84` | | | | Есть потребность в explicit handoff сверх пассивного coach access | | |
-| `85` | | | | Пользователи явно включают meal/water/movement templates; anti-spam contract принят | | |
-| `86` | | | | Есть editorial capacity, primary sources и подтверждённые вопросы пользователей | | |
-| `87` | | | | Измеримый Web return/installability gap не закрывается текущим shell | | |
-| `88` | | | | Определены конкретные AI jobs, privacy boundary, evals и допустимая стоимость | | |
-| `89` | Результат `88` | | | Только explicit owner `Go` после provider/privacy decision | | |
-| `90` | Результат `89` | | | Grounded core прошёл evals; доказана потребность в consented personal tools | | |
-| `91A` | Результат `90` | | | Core/tools готовы к internal UI/evaluation gate | | |
-| `91B` | Результат `91A` | | | Есть реальные participants, consent и готовность к ограниченному rollout | | |
-| `92` | | | | `91B` завершилась rollout Go, а пользователи просят interpretation factual report | | |
-| `93A` memory | | | | `91B` доказала конкретный repeated continuity job | | |
-| `93B` provider routing | | | | `91B` выявила измеримый provider outage/capability/cost gap | | |
+| `81` | | | | Есть повторяемый optional hydration job и подтверждён report/reminder scope | | |
+| `82` | | | | Daily subjective context полезен пользователю/тренеру и не дублирует weekly check-in | | |
+| `83` | | | | Есть потребность в explicit handoff сверх пассивного coach access | | |
+| `84` | | | | Пользователи явно включают meal/water/movement templates; anti-spam contract принят | | |
+| `85` | | | | Есть editorial capacity, primary sources и подтверждённые вопросы пользователей | | |
+| `86` | | | | Измеримый Web return/installability gap не закрывается текущим shell | | |
+| `87` | | | | Определены конкретные AI jobs, privacy boundary, evals и допустимая стоимость | | |
+| `88` | Результат `87` | | | Только explicit owner `Go` после provider/privacy decision | | |
+| `89` | Результат `88` | | | Grounded core прошёл evals; доказана потребность в consented personal tools | | |
+| `90A` | Результат `89` | | | Core/tools готовы к internal UI/evaluation gate | | |
+| `90B` | Результат `90A` | | | Есть реальные participants, consent и готовность к ограниченному rollout | | |
+| `91` | Результат `90B` | | | Rollout получил `Go`, а пользователям нужна интерпретация factual report | | |
+| `92A` memory | Результат `90B` | | | Beta доказала конкретный repeated continuity job | | |
+| `92B` provider routing | Результат `90B` | | | Beta выявила измеримый provider outage/capability/cost gap | | |
+| `93` | Corpus XLSX/CSV/TXT/DOCX и AI decisions `87-92` | | | Файлы дают повторяемую экономию ручного переноса; extraction и exercise-matching evals проходят заданные пороги, privacy/cost contract принят | | |
 | `94A` | | | | После AI-блока manual food entry friction измерим; owner одобрил bounded research/provider-cost boundary | | |
 | `94B` | Результат `94A` | | | Только owner `Go/Narrow Go` с locked cases/thresholds/privacy/cost | | |
-| `95` | | | | Pipeline `81` доказал ценность, но значимая доля реальных программ приходит в TXT/DOCX | | |
-| `96A` | | | | Browser print-to-PDF из `67` не закрывает повторяемый delivery job | | |
-| `96B` | Результат `96A` | | | Отдельно доказан temporary share и/или Telegram delivery | | |
-| `97` | | | | Подтверждён один конкретный wearable datum/platform/job | | |
-| `98` | | | | Есть реальная команда и owner-approved responsibility matrix | | |
-| `99` | | | | Есть измеримое ограничение Web/TMA/PWA, требующее native feasibility | | |
-| `100A` | | | | Есть payer/value contract и измеримые operating/AI/storage costs | | |
-| `100B` | Результат `100A` | | | Только explicit commercial/provider `Go` | | |
-| `100C` | Результат `100B` | | | Sandbox стабилен; owner утвердил цены, тексты и rollout cohort | | |
-| `101A` | | | | Подтверждены target segment, reviewer capacity и scope первой волны | | |
-| `101B` | Результат `101A` | | | Locale foundation стабильна; подтверждены public/SEO/content scope и reviewer | | |
-| `102` | | | | Есть повторяющийся спрос и готов sensitive-media lifecycle; AI/body analysis исключён | | |
+| `95A` | | | | Browser print-to-PDF из `67` не закрывает повторяемый delivery job | | |
+| `95B` | Результат `95A` | | | Отдельно доказан temporary share и/или Telegram delivery | | |
+| `96` | | | | Подтверждён один конкретный wearable datum/platform/job | | |
+| `97` | | | | Есть реальная команда и owner-approved responsibility matrix | | |
+| `98` | | | | Есть измеримое ограничение Web/TMA/PWA, требующее native feasibility | | |
+| `99A` | | | | Есть payer/value contract и измеримые operating/AI/storage costs | | |
+| `99B` | Результат `99A` | | | Только explicit commercial/provider `Go` | | |
+| `99C` | Результат `99B` | | | Sandbox стабилен; owner утвердил цены, тексты и rollout cohort | | |
+| `100A` | | | | Подтверждены target segment, reviewer capacity и scope первой волны | | |
+| `100B` | Результат `100A` | | | Locale foundation стабильна; подтверждены public/SEO/content scope и reviewer | | |
+| `101` | | | | Есть повторяющийся спрос и готов sensitive-media lifecycle; AI/body analysis исключён | | |
 
 ## Завершённые owner decisions
 
