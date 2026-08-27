@@ -99,7 +99,7 @@ class Settings(BaseSettings):
     news_llm_api_key: str = ""
     news_llm_model: str = ""
     news_llm_timeout_seconds: float = Field(default=20, ge=5, le=60)
-    news_llm_prompt_version: str = "news-draft-v3"
+    news_llm_prompt_version: str = "news-draft-v4"
     news_image_provider: Literal["disabled", "cloudflare_workers_ai"] = "disabled"
     news_image_cloudflare_account_id: str = ""
     news_image_cloudflare_api_token: str = ""
@@ -116,6 +116,7 @@ class Settings(BaseSettings):
     news_publication_enabled: bool = False
     news_publication_renderer: Literal["news-publication-html-v1"] = "news-publication-html-v1"
     news_channel_environment: Literal["staging", "production"] = "staging"
+    news_production_publication_confirmed: bool = False
     news_publication_timezone: str = "Europe/Moscow"
     news_schedule_min_minutes: int = Field(default=5, ge=1, le=1440)
     news_schedule_max_days: int = Field(default=30, ge=1, le=90)
@@ -248,8 +249,15 @@ class Settings(BaseSettings):
             raise ValueError(
                 "NEWS_CHANNEL_ENVIRONMENT must be production for enabled production publishing"
             )
-        if self.news_publication_enabled and self.news_channel_environment == "production":
-            raise ValueError("Production channel publishing requires separate owner authorization")
+        if (
+            self.news_publication_enabled
+            and self.news_channel_environment == "production"
+            and not self.news_production_publication_confirmed
+        ):
+            raise ValueError(
+                "NEWS_PRODUCTION_PUBLICATION_CONFIRMED must be true after separate "
+                "owner authorization"
+            )
         try:
             ZoneInfo(self.news_publication_timezone)
         except ZoneInfoNotFoundError as exc:

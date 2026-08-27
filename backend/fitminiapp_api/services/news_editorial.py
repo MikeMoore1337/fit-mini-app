@@ -65,10 +65,13 @@ REVISION_EDITABLE_STATUSES = {
 }
 OWNER_EDIT_REVALIDATED_WARNINGS = {
     "deterministic_fallback_requires_editor",
+    "invalid_draft_schema",
     "medical_prescription_language",
+    "provider_unavailable",
     "unsupported_number",
     "possible_source_copy",
     "sensational_or_guaranteed_claim",
+    "telegram_photo_caption_too_long",
 }
 
 

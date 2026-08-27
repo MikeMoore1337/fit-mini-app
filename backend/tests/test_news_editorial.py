@@ -833,6 +833,61 @@ def test_generation_falls_back_when_repair_still_contains_invented_number(monkey
     assert request_count == 2
 
 
+def test_generation_repairs_text_that_exceeds_telegram_photo_caption(monkeypatch) -> None:
+    _create_source()
+    cluster_id = _candidate_cluster()
+    monkeypatch.setattr(settings, "news_llm_provider", "openai_compatible")
+    monkeypatch.setattr(settings, "news_llm_endpoint", "https://llm.example/v1/chat/completions")
+    monkeypatch.setattr(settings, "news_llm_api_key", "test-key")
+    monkeypatch.setattr(settings, "news_llm_model", "test-model")
+    overlong_payload = {
+        "headline": "Что показала новая работа",
+        "summary": " ".join(["Авторы описали результат для изученной группы."] * 24),
+        "why_it_matters": "Материал помогает уточнить контекст силовых тренировок.",
+    }
+    repaired_payload = {
+        "headline": "Что показала новая работа",
+        "summary": "Авторы описали результат для изученной группы и обозначили его ограничения.",
+        "why_it_matters": "Материал помогает уточнить контекст силовых тренировок.",
+    }
+    request_count = 0
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        nonlocal request_count
+        request_count += 1
+        request_payload = json.loads(request.content)
+        if request_count == 2:
+            assert "telegram_photo_caption_too_long" in request_payload["messages"][-1]["content"]
+            assert "до 900 символов" in request_payload["messages"][-1]["content"]
+        payload = overlong_payload if request_count == 1 else repaired_payload
+        return httpx.Response(
+            200,
+            request=request,
+            json={
+                "model": "actual-test-model",
+                "choices": [{"message": {"content": json.dumps(payload, ensure_ascii=False)}}],
+            },
+        )
+
+    async def generate():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+            with get_session_context() as db:
+                cluster = db.get(NewsCluster, cluster_id)
+                assert cluster is not None
+                draft = await create_draft_revision(db, cluster, client=client)
+                return draft.id
+
+    draft_id = asyncio.run(generate())
+    with get_session_context() as db:
+        stored = db.get(NewsDraftRevision, draft_id)
+        assert stored is not None
+        assert stored.provider == "openai_compatible"
+        assert stored.warnings == []
+        assert repaired_payload["summary"] in stored.draft_text
+        assert overlong_payload["summary"] not in stored.draft_text
+    assert request_count == 2
+
+
 def test_fetch_and_worker_generation_are_idempotent(monkeypatch) -> None:
     _create_source()
     with get_session_context() as db:

@@ -478,7 +478,7 @@ def test_legacy_task88_revision_remains_parseable_for_existing_rows() -> None:
     assert parsed.source_url == "https://publishing-journal.example/legacy-publication"
 
 
-def test_production_channel_still_requires_separate_owner_authorization() -> None:
+def test_production_channel_requires_explicit_owner_confirmation() -> None:
     values = {
         "_env_file": None,
         "app_debug": False,
@@ -497,11 +497,39 @@ def test_production_channel_still_requires_separate_owner_authorization() -> Non
         "news_publication_enabled": True,
     }
     for app_env in ("dev", "prod"):
-        with pytest.raises(ValueError, match="separate owner authorization"):
-            Settings(
-                **values,
-                app_env=app_env,
-            )
+        with pytest.raises(ValueError, match="NEWS_PRODUCTION_PUBLICATION_CONFIRMED"):
+            Settings(**values, app_env=app_env)
+
+        configured = Settings(
+            **values,
+            app_env=app_env,
+            news_production_publication_confirmed=True,
+        )
+        assert configured.news_channel_environment == "production"
+        assert configured.news_production_publication_confirmed is True
+
+
+def test_prod_publishing_rejects_staging_channel_even_with_owner_confirmation() -> None:
+    with pytest.raises(ValueError, match="NEWS_CHANNEL_ENVIRONMENT must be production"):
+        Settings(
+            _env_file=None,
+            app_env="prod",
+            app_debug=False,
+            secret_key="task-89-production-secret-key-long-enough",
+            database_url="sqlite://",
+            enable_dev_auth=False,
+            enable_web_auth=False,
+            enable_email_auth=False,
+            telegram_bot_token="123456:configured-token",
+            bot_internal_token="task-89-internal-token-that-is-long-enough",
+            frontend_base_url="https://example.test",
+            admin_telegram_user_ids="7001",
+            news_channel_id=-1001234567890,
+            news_channel_environment="staging",
+            news_ingestion_enabled=True,
+            news_publication_enabled=True,
+            news_production_publication_confirmed=True,
+        )
 
 
 def test_cloudflare_free_generation_is_news_specific_and_stores_provenance(monkeypatch) -> None:
@@ -638,6 +666,7 @@ def test_exact_approval_is_idempotent_and_edit_revokes_schedule(monkeypatch) -> 
         assert snapshot is not None
         payload = publication_payload(db, snapshot.id)
         assert payload is None  # Snapshot is immutable but not claimed yet.
+        draft.warnings = ["deterministic_fallback_requires_editor", "invalid_draft_schema"]
         edited = edit_text_revision(
             db,
             draft_id=draft.id,
@@ -671,6 +700,7 @@ def test_exact_approval_is_idempotent_and_edit_revokes_schedule(monkeypatch) -> 
         assert latest.evidence_metadata["trusted_source_url"] == (
             "https://publishing-journal.example/publication-1"
         )
+        assert latest.warnings == []
 
 
 def test_no_image_snapshot_and_daily_cap_are_checked_when_claimed(monkeypatch) -> None:
