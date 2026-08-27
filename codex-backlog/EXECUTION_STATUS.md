@@ -1,4 +1,4 @@
-# Execution status v39
+# Execution status v40
 
 Подтверждённое владельцем состояние на 27.08.2026:
 
@@ -24,14 +24,16 @@
   owner screenshot approval и архивирована;
 - [x] task `75A` завершила evidence-based Rethink-аудит design/UX/UI/motion, получила owner
   screenshot approval и решение `START_RETHINK_EXPLORATION`, синхронизировала findings и архивирована;
-- [ ] **current:** `75b-product-design-motion-rethink-exploration.md` — отдельная explicit exploration
-  task с 2–3 directions и owner selection; назначена в `PENDING`, реализация не начата;
+- [x] task `75B` завершила isolated exploration, bounded refinement и owner selection; владелец
+  выбрал `SELECT_DIRECTION_PULSE` как четыре концепции поверх текущего UI, task архивирована;
+- [ ] **current:** `75c-current-ui-pulse-concepts-pilot.md` — bounded production pilot выбранных
+  chart/dock/card-artwork/motion концепций без restyle; назначена, реализация не начата;
 - [ ] remaining release tasks `76-79` и post-release tasks `80-101` сохраняют собственные Trigger,
   dependency и owner decision; task ID задают предпочтительный порядок, но ни одна pending task
   этой очереди не запущена.
 
-Не выполнять повторно tasks `00-75A`, включая `69B`, `73A`, task `74A` и tasks `103-105`.
-Следующей pending task назначена `75B`: её exploration, prototypes и lifecycle начинаются только
-в отдельной сессии. До owner selection, specification и pilot `DESIGN_V2_1` остаётся production baseline.
+Не выполнять повторно tasks `00-75B`, включая `69B`, `73A`, task `74A` и tasks `103-105`.
+Следующей pending task назначена `75C`: её production implementation начинается только в отдельной
+сессии. До завершения pilot и отдельного owner checkpoint `DESIGN_V2_1` остаётся production baseline.
 Umbrella `100` отдельно не выполняется; `100A` не назначена без собственного Trigger, dependency
 и owner decision. Другие pending tasks автоматически не реализуются.

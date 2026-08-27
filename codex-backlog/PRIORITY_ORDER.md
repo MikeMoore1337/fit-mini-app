@@ -1,20 +1,21 @@
-# Порядок выполнения release backlog v40
+# Порядок выполнения release backlog v41
 
 ## Completed
 
-`00-75A`, включая `69B`, `73A`, `74A` и предшествующие буквенные подзадачи, а также
+`00-75B`, включая `69B`, `73A`, `74A` и предшествующие буквенные подзадачи, а также
 owner-selected Telegram tasks `103-105`.
 Task-файлы находятся в `tasks/done/`.
 
 ## Current
 
 ```text
-75B Product-wide visual + motion directions и owner selection [CURRENT, PENDING]
+75C Перенос выбранных Pulse-концепций в текущий production UI [CURRENT, NOT STARTED]
 ```
 
-Task `75A` завершена после owner screenshot approval. Владелец выбрал
-`START_RETHINK_EXPLORATION`; task `75B` только назначена и не реализуется в completion run `75A`.
-До owner selection, specification и pilot текущим production baseline остаётся `DESIGN_V2_1`.
+Task `75B` завершена после owner screenshot review. Владелец выбрал `SELECT_DIRECTION_PULSE` только
+как перенос chart/dock/card-artwork/motion концепций поверх текущего UI. Task `75C` назначена текущей,
+но не реализуется в completion run `75B`. До pilot и отдельного owner checkpoint production baseline
+остаётся `DESIGN_V2_1`.
 
 Conditional release sequence:
 
@@ -22,10 +23,10 @@ Conditional release sequence:
 75 [COMPLETED] -> 75A Rethink audit [COMPLETED] -> START_RETHINK_EXPLORATION
   KEEP -> 76 -> 76A -> 77 -> 78 -> 79
   EVOLVE -> bounded remediation -> 76
-  RETHINK -> 75B exploration + owner selection -> specification -> pilot/rollout/performance verification -> 76
+  RETHINK -> 75B exploration [COMPLETED] -> 75C bounded current-UI pilot -> owner checkpoint -> 76
 ```
 
-Task `75B` назначена текущей, но не выполняется автоматически в completion-сессии `75A`.
+Task `75C` назначена текущей, но не выполняется автоматически в completion-сессии `75B`.
 Trigger-gated tasks сохраняют собственные gates. Никакая task не запускает следующую автоматически.
 
 ## Последовательность после `79`

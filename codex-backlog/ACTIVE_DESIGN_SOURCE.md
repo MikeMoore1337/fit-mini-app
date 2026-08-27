@@ -4,21 +4,32 @@
 
 ```text
 ACTIVE_DESIGN = DESIGN_V2_1
-STATUS = CURRENT_PRODUCTION_BASELINE_UNDER_APPROVED_EXPLORATION
+STATUS = CURRENT_PRODUCTION_BASELINE_WITH_SELECTED_PULSE_PILOT_PENDING
 DESIGN_REVIEWABILITY = FULLY_REVISABLE_BY_OWNER_APPROVED_DESIGN_TASK
 BRAND_CORE = SPORT_TECH + MOBILE_FIRST + LIME_BLACK_WHITE
 OWNER_DECISION_75A = START_RETHINK_EXPLORATION
-CURRENT_EXPLORATION_TASK = 75B_PENDING_NOT_STARTED
+OWNER_DECISION_75B = SELECT_DIRECTION_PULSE
+CURRENT_PILOT_TASK = 75C_CURRENT_NOT_STARTED
 ```
 
 `DESIGN_V2_1` остаётся текущей production baseline для Landing, `/login`, authenticated Web, Mobile Web и TMA до тех пор, пока отдельная owner-approved design task не выберет и не активирует новую систему.
 
 Baseline нужен для consistency обычных feature/fix tasks. Он не является вечной эстетической догмой.
 
-27.08.2026 владелец одобрил результат Rethink-аудита `75A` и выбрал
-`START_RETHINK_EXPLORATION`. Это решение разрешает только отдельную task `75B` с несколькими
-изолированными visual + motion directions и owner selection. Оно не активирует новый дизайн,
-не разрешает production rollout и не меняет текущие canonical paths.
+27.08.2026 владелец одобрил результат Rethink-аудита `75A`, выбрал
+`START_RETHINK_EXPLORATION`, затем завершил selection gate `75B` решением
+`SELECT_DIRECTION_PULSE`. Это решение не активирует отдельную новую дизайн-систему и не разрешает
+массовый redesign/rollout. `DESIGN_V2_1` и текущие canonical paths сохраняются; task `75C` должна
+проверить ограниченный перенос выбранных концепций поверх существующего production UI.
+
+В owner-approved scope `75C` входят только:
+
+- smooth lime area chart;
+- форма floating bottom dock с текущими production icons/labels;
+- выборочные линии, геометрия и градиенты current-action/insight/completion cards;
+- Pulse motion grammar с reduced-motion и performance budget.
+
+Landing/Login, typography, layout hierarchy, content и product flows не перерисовываются.
 
 ## Что является устойчивым
 
@@ -82,7 +93,8 @@ Design task может:
 - предлагать полный replacement visual system;
 - переосмысливать ранее утверждённые V2.1 решения.
 
-До массовой production реализации нужен owner selection/checkpoint.
+До массовой production реализации нужен owner selection/checkpoint. Для выбранного bounded scope
+этим следующим checkpoint является screenshot approval task `75C`.
 
 После выбора новая система должна:
 
