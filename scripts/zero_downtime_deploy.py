@@ -66,6 +66,7 @@ class DeployConfig:
     readiness_timeout_seconds: int
     probe_interval_seconds: float
     probe_timeout_seconds: float
+    seo_timeout_seconds: float
     backend_drain_seconds: int
     worker_drain_seconds: int
     bot_drain_seconds: int
@@ -554,7 +555,15 @@ def _public_smoke(config: DeployConfig) -> None:
             "prod",
         ]
     )
-    _run([sys.executable, "scripts/check_seo_surface.py", config.public_base_url])
+    _run(
+        [
+            sys.executable,
+            "scripts/check_seo_surface.py",
+            config.public_base_url,
+            "--timeout",
+            str(config.seo_timeout_seconds),
+        ]
+    )
 
 
 def _write_evidence(path: Path, evidence: Evidence) -> None:
@@ -1377,6 +1386,7 @@ def _config(args: argparse.Namespace) -> DeployConfig:
         readiness_timeout_seconds=configured_timeout("DEPLOY_READINESS_TIMEOUT_SECONDS", 180),
         probe_interval_seconds=float(_deployment_setting("DEPLOY_PROBE_INTERVAL_SECONDS", "1")),
         probe_timeout_seconds=float(_deployment_setting("DEPLOY_PROBE_TIMEOUT_SECONDS", "5")),
+        seo_timeout_seconds=float(_deployment_setting("DEPLOY_SEO_TIMEOUT_SECONDS", "20")),
         backend_drain_seconds=configured_timeout("DEPLOY_BACKEND_DRAIN_SECONDS", 45),
         worker_drain_seconds=configured_timeout("DEPLOY_WORKER_DRAIN_SECONDS", 90),
         bot_drain_seconds=configured_timeout("DEPLOY_BOT_DRAIN_SECONDS", 45),

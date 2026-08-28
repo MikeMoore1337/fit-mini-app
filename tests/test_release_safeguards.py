@@ -8,6 +8,14 @@ def test_automated_deploy_keeps_revision_provenance_and_stale_run_guards() -> No
     deploy_script = (root / "scripts" / "deploy_production.sh").read_text(encoding="utf-8")
 
     assert "org.opencontainers.image.revision=${{ github.sha }}" in ci_workflow
+    assert "workflow_dispatch:" not in deploy_workflow
+    assert "pull-requests: read" in deploy_workflow
+    assert '"repos/$REPOSITORY/commits/$DEPLOY_SHA/pulls"' in deploy_workflow
+    assert '.merged_at != null and .base.ref == \\"master\\"' in deploy_workflow
+    assert '.merge_commit_sha == \\"$DEPLOY_SHA\\"' in deploy_workflow
+    assert deploy_workflow.index("Verify merged pull request provenance") < deploy_workflow.index(
+        "Configure production SSH access"
+    )
     assert "LATEST_MASTER_SHA=\\$(git rev-parse origin/master)" in deploy_workflow
     assert deploy_workflow.index("LATEST_MASTER_SHA=") < deploy_workflow.index(
         "git reset --hard '$DEPLOY_SHA'"

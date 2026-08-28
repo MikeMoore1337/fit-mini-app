@@ -67,6 +67,23 @@ def test_json_formatter_includes_request_context() -> None:
     assert payload["db_pool_overflow"] == 0
 
 
+def test_json_formatter_preserves_worker_lifecycle_markers() -> None:
+    formatter = JsonFormatter(service="notification-worker")
+
+    for event_name in ("worker_started", "worker_drain_requested", "worker_stopped"):
+        record = logging.LogRecord(
+            name="fitminiapp_api.services.worker",
+            level=logging.INFO,
+            pathname=__file__,
+            lineno=1,
+            msg=event_name,
+            args=(),
+            exc_info=None,
+        )
+
+        assert json.loads(formatter.format(record))["message"] == event_name
+
+
 def test_json_formatter_rejects_arbitrary_values_and_keeps_safe_diagnostics() -> None:
     markers = (
         "private_note_marker",

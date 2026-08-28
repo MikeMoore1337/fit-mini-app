@@ -759,6 +759,11 @@ def save_manual_nutrition_target(
         )
 
     ensure_profile(db, target_user)
+    # Build the retry snapshot under the same per-user lock used for versioning.
+    # Otherwise a concurrent request can commit between this read and
+    # create_nutrition_target_version(), making ORM-populated defaults look like
+    # a real target change and creating a duplicate same-day audit version.
+    db.query(User.id).filter(User.id == target_user.id).with_for_update().one()
     current = get_current_nutrition_target(db, target_user.id)
     context = nutrition_target_context(current)
     if current is None and target_user.profile is not None:

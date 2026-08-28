@@ -31,6 +31,7 @@ def _config(tmp_path: Path) -> deploy.DeployConfig:
         readiness_timeout_seconds=5,
         probe_interval_seconds=0.1,
         probe_timeout_seconds=1,
+        seo_timeout_seconds=20,
         backend_drain_seconds=45,
         worker_drain_seconds=120,
         bot_drain_seconds=60,
@@ -47,6 +48,21 @@ def _state(config: deploy.DeployConfig, *, revision: str = OLD_SHA) -> None:
         active_bot_image="registry/bot@sha256:" + "2" * 64,
     )
     deploy._atomic_json(config.state_root / "state.json", asdict(state))
+
+
+def test_public_smoke_uses_bounded_seo_timeout(tmp_path: Path, monkeypatch) -> None:
+    commands: list[list[str]] = []
+    monkeypatch.setattr(deploy, "_run", lambda command, **kwargs: commands.append(command))
+
+    deploy._public_smoke(_config(tmp_path))
+
+    assert commands[-1] == [
+        deploy.sys.executable,
+        "scripts/check_seo_surface.py",
+        "https://example.test",
+        "--timeout",
+        "20",
+    ]
 
 
 def _patch_runtime(monkeypatch, *, fail_at: str | None = None):

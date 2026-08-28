@@ -63,10 +63,12 @@ Lifecycle не расширяет scope task и не отменяет owner chec
   Umbrella `90`, `92`, `94`, `95`, `99`, `100` являются coordination contracts и отдельно не выполняются.
 - Работать только в `feature/yfc-platform-v2`.
 - Не переходить к следующему task автоматически.
-- Любой push/force-push remote `master`, включая history rewrite и docs-only change, после green CI
-  намеренно запускает production deploy. Поэтому до изменения `master` обязательны explicit deploy
-  approval и проверенная remote backup-ветка точного текущего `origin/master`; без них разрешены
-  только non-master refs.
+- Новая production revision попадает в remote `master` только через merged PR с обязательным green
+  check `checks`; direct push, force-push и удаление `master` запрещены Ruleset. Merge PR является
+  release authorization и без отдельного ручного approval запускает post-merge CI, exact-SHA
+  provenance gate и автоматический production deploy. History rewrite, ручные production-команды,
+  bootstrap, infrastructure recovery и SHA вне текущего merged `master` остаются exceptional
+  actions с отдельным owner approval, backup и preflight.
 - Перед началом прочитать корневой `AGENTS.md`, этот файл, lifecycle и только текущую task.
 - Tasks `00-73A`, включая буквенные подзадачи, подтверждены владельцем как завершённые, перенесены в `tasks/done/` и не выполняются повторно.
 - Owner-selected task `103` завершена после owner approval и архивирована.
