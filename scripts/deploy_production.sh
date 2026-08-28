@@ -8,21 +8,6 @@ readonly PUBLIC_BASE_URL="${3:-https://your-fitness-coach.ru}"
 readonly BACKEND_IMAGE="${BACKEND_IMAGE:?BACKEND_IMAGE must reference the tested backend image}"
 readonly BOT_IMAGE="${BOT_IMAGE:?BOT_IMAGE must reference the tested bot image}"
 
-verify_image_revision() {
-  local image_ref="$1"
-  local actual_revision
-
-  actual_revision="$(
-    docker image inspect \
-      --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' \
-      "$image_ref"
-  )"
-  if [[ "$actual_revision" != "$TARGET_SHA" ]]; then
-    echo "Image $image_ref revision $actual_revision does not match $TARGET_SHA" >&2
-    exit 1
-  fi
-}
-
 profile_report_has_api_error() {
   python3 -c '
 import json
@@ -92,53 +77,12 @@ python3 scripts/configure_production_auth.py .env
 echo "Validating Compose configuration for $TARGET_SHA"
 docker compose config --quiet
 
-stage_started=$SECONDS
-echo "Pulling tested application images"
-docker compose pull backend bot edge
-verify_image_revision "$BACKEND_IMAGE"
-verify_image_revision "$BOT_IMAGE"
-echo "Application images pulled in $((SECONDS - stage_started))s"
-
-echo "Validating fail-closed production runtime configuration"
-docker run --rm --network none --env-file .env "$BACKEND_IMAGE" \
-  python -c "from fitminiapp_api.core.config import settings; assert settings.app_env == 'prod'; print('Backend production config is valid')"
-docker run --rm --network none --env-file .env "$BOT_IMAGE" \
-  python -c "from fitminiapp_bot.config import settings; assert settings.app_env == 'prod'; print('Bot production config is valid')"
-
-stage_started=$SECONDS
-echo "Creating a pre-deploy database backup"
-python3 scripts/db_maintenance.py backup
-echo "Database backup completed in $((SECONDS - stage_started))s"
-
-stage_started=$SECONDS
-echo "Starting application services"
-# Target application services explicitly so the currently selected HTTPS/tunnel
-# profile stays selected while its active gateway receives the new edge route.
-gateway_services=(edge)
-# A failed rollout can leave the selected public gateway stopped after its
-# backend dependency was recreated. Preserve that selection during recovery.
-if docker compose ps --services --all | grep -qx caddy; then
-  gateway_services+=(caddy)
-fi
-if docker compose ps --services --all | grep -qx cloudflared; then
-  gateway_services+=(cloudflared)
-fi
-docker compose up \
-  -d \
-  --no-build \
-  --remove-orphans \
-  --wait \
-  --wait-timeout 180 \
-  backend worker bot "${gateway_services[@]}"
-echo "Application services became ready in $((SECONDS - stage_started))s"
-
-docker compose ps
-
-stage_started=$SECONDS
-echo "Running the external deployment smoke check"
-python3 scripts/check_deployment.py "$BASE_URL" --expected-environment prod
-python3 scripts/check_seo_surface.py "$PUBLIC_BASE_URL"
-echo "External smoke check completed in $((SECONDS - stage_started))s"
+echo "Starting fail-closed blue/green rollout"
+python3 scripts/zero_downtime_deploy.py \
+  deploy \
+  "$TARGET_SHA" \
+  "$BASE_URL" \
+  "$PUBLIC_BASE_URL"
 
 echo "Checking the public Telegram bot profile"
 set +e
@@ -188,6 +132,4 @@ esac
 echo "Public Telegram bot profile sync result: $profile_sync_result"
 echo "Review owner actions in the profile reports when Telegram Bot API is reachable"
 
-install -d -m 700 .artifacts/deployments
-printf '%s\n' "$TARGET_SHA" > .artifacts/deployments/last-successful-revision
 echo "Production deployment completed: $TARGET_SHA"

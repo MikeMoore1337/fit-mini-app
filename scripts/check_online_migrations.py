@@ -1,0 +1,353 @@
+"""Fail closed when a release contains migrations unsafe for an online slot switch."""
+
+from __future__ import annotations
+
+import argparse
+import ast
+import re
+import subprocess
+from pathlib import Path
+
+MIGRATION_ROOT = Path("backend/alembic/versions")
+ALLOWED_PHASES = {"expand", "backfill"}
+DESTRUCTIVE_CALLS = {
+    "alter_column",
+    "drop_column",
+    "drop_constraint",
+    "drop_index",
+    "drop_table",
+    "rename_table",
+}
+FORBIDDEN_ONLINE_CALLS = {
+    "create_check_constraint",
+    "create_exclude_constraint",
+    "create_foreign_key",
+    "create_index",
+    "create_primary_key",
+    "create_unique_constraint",
+}
+SAFE_COLUMN_TYPES = {
+    "BigInteger",
+    "Boolean",
+    "Date",
+    "DateTime",
+    "Float",
+    "Integer",
+    "JSON",
+    "LargeBinary",
+    "Numeric",
+    "SmallInteger",
+    "String",
+    "Text",
+    "Time",
+}
+
+
+class OnlineMigrationError(RuntimeError):
+    """The release cannot coexist with the currently active revision."""
+
+
+def _git(*args: str) -> str:
+    completed = subprocess.run(
+        ["git", *args],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return completed.stdout
+
+
+def changed_migrations(active_revision: str, target_revision: str) -> list[tuple[str, Path]]:
+    try:
+        ancestor = subprocess.run(
+            ["git", "merge-base", "--is-ancestor", active_revision, target_revision],
+            check=False,
+        )
+    except OSError as exc:
+        raise OnlineMigrationError(f"cannot execute Git: {exc}") from exc
+    if ancestor.returncode != 0:
+        raise OnlineMigrationError(
+            f"active revision {active_revision} is not an ancestor of {target_revision}"
+        )
+
+    rows = _git(
+        "diff",
+        "--name-status",
+        active_revision,
+        target_revision,
+        "--",
+        MIGRATION_ROOT.as_posix(),
+    ).splitlines()
+    changes: list[tuple[str, Path]] = []
+    for row in rows:
+        fields = row.split("\t")
+        status = fields[0]
+        path = Path(fields[-1])
+        if path.suffix == ".py" and path.name != "__init__.py":
+            changes.append((status, path))
+    return changes
+
+
+def _assignment(tree: ast.Module, name: str) -> object | None:
+    for node in tree.body:
+        if not isinstance(node, (ast.Assign, ast.AnnAssign)):
+            continue
+        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+        if not any(isinstance(target, ast.Name) and target.id == name for target in targets):
+            continue
+        value = node.value
+        if value is None:
+            return None
+        try:
+            return ast.literal_eval(value)
+        except ValueError, TypeError:
+            return None
+    return None
+
+
+def _upgrade_body(tree: ast.Module, path: Path) -> ast.FunctionDef | ast.AsyncFunctionDef:
+    upgrades = [
+        node
+        for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == "upgrade"
+    ]
+    if len(upgrades) != 1:
+        raise OnlineMigrationError(f"{path} must define exactly one upgrade() function")
+    return upgrades[0]
+
+
+def _op_calls(upgrade: ast.AST) -> list[ast.Call]:
+    return [
+        node
+        for node in ast.walk(upgrade)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "op"
+    ]
+
+
+def _validate_upgrade_call_allowlist(path: Path, upgrade: ast.AST, phase: object) -> None:
+    for call in (node for node in ast.walk(upgrade) if isinstance(node, ast.Call)):
+        function = call.func
+        allowed = False
+        if isinstance(function, ast.Attribute) and isinstance(function.value, ast.Name):
+            owner = function.value.id
+            if phase == "expand":
+                allowed = (owner == "op" and function.attr == "add_column") or (
+                    owner == "sa"
+                    and (function.attr == "Column" or function.attr in SAFE_COLUMN_TYPES)
+                )
+            elif phase == "backfill":
+                allowed = owner == "op" and function.attr == "execute"
+        if not allowed:
+            raise OnlineMigrationError(
+                f"{path} calls a helper or operation outside the {phase!r} online allowlist"
+            )
+
+
+def _validate_nullable_add_column(path: Path, call: ast.Call) -> None:
+    if len(call.args) < 2 or not isinstance(call.args[1], ast.Call):
+        raise OnlineMigrationError(
+            f"{path} add_column must contain a statically verifiable nullable Column"
+        )
+    column = call.args[1]
+    if not isinstance(column.func, ast.Attribute) or column.func.attr != "Column":
+        raise OnlineMigrationError(
+            f"{path} add_column must contain a statically verifiable nullable Column"
+        )
+    if len(column.args) != 2:
+        raise OnlineMigrationError(
+            f"{path} add_column cannot contain positional constraints or generated values"
+        )
+    column_type = column.args[1]
+    if (
+        not isinstance(column_type, ast.Call)
+        or not isinstance(column_type.func, ast.Attribute)
+        or not isinstance(column_type.func.value, ast.Name)
+        or column_type.func.value.id != "sa"
+        or column_type.func.attr not in SAFE_COLUMN_TYPES
+        or any(not isinstance(argument, ast.Constant) for argument in column_type.args)
+        or any(
+            keyword.arg is None or not isinstance(keyword.value, ast.Constant)
+            for keyword in column_type.keywords
+        )
+    ):
+        raise OnlineMigrationError(
+            f"{path} add_column must use an allowlisted static SQLAlchemy scalar type"
+        )
+    keywords = {keyword.arg: keyword.value for keyword in column.keywords if keyword.arg}
+    nullable = keywords.get("nullable")
+    if not isinstance(nullable, ast.Constant) or nullable.value is not True:
+        raise OnlineMigrationError(
+            f"{path} add_column must explicitly use nullable=True during expand"
+        )
+    for unsafe_keyword in ("server_default", "unique", "index"):
+        value = keywords.get(unsafe_keyword)
+        if value is not None and not (
+            isinstance(value, ast.Constant) and value.value in {None, False}
+        ):
+            raise OnlineMigrationError(
+                f"{path} add_column cannot use {unsafe_keyword} during an online expand"
+            )
+
+
+def validate_added_migration(path: Path) -> None:
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    upgrade = _upgrade_body(tree, path)
+    phase = _assignment(tree, "online_rollout_phase")
+    if phase not in ALLOWED_PHASES:
+        raise OnlineMigrationError(
+            f"{path} must declare online_rollout_phase as one of {sorted(ALLOWED_PHASES)}"
+        )
+
+    notes = _assignment(tree, "online_rollout_notes")
+    if not isinstance(notes, str) or not notes.strip():
+        raise OnlineMigrationError(
+            f"{path} must declare non-empty online_rollout_notes with lock/data bounds"
+        )
+
+    if phase == "backfill":
+        batch_size = _assignment(tree, "online_rollout_batch_size")
+        idempotent = _assignment(tree, "online_rollout_idempotent")
+        if (
+            not isinstance(batch_size, int)
+            or isinstance(batch_size, bool)
+            or not 1 <= batch_size <= 10_000
+        ):
+            raise OnlineMigrationError(
+                f"{path} backfill must declare online_rollout_batch_size between 1 and 10000"
+            )
+        if idempotent is not True:
+            raise OnlineMigrationError(
+                f"{path} backfill must declare online_rollout_idempotent = True"
+            )
+
+    destructive = sorted(
+        {
+            node.func.attr
+            for node in _op_calls(upgrade)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr in DESTRUCTIVE_CALLS
+        }
+    )
+    if destructive:
+        raise OnlineMigrationError(
+            f"{path} contains destructive operations forbidden during an online rollout: "
+            + ", ".join(destructive)
+        )
+
+    for node in ast.walk(upgrade):
+        if (
+            not isinstance(node, ast.Call)
+            or not isinstance(node.func, ast.Attribute)
+            or node.func.attr not in {"execute", "exec_driver_sql"}
+        ):
+            continue
+        if not (
+            node.func.attr == "execute"
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id == "op"
+        ):
+            raise OnlineMigrationError(
+                f"{path} uses SQL execution outside the verified op.execute backfill contract"
+            )
+
+    forbidden = sorted(
+        {
+            node.func.attr
+            for node in _op_calls(upgrade)
+            if isinstance(node.func, ast.Attribute) and node.func.attr in FORBIDDEN_ONLINE_CALLS
+        }
+    )
+    if forbidden:
+        raise OnlineMigrationError(
+            f"{path} contains lock-prone operations forbidden during an online rollout: "
+            + ", ".join(forbidden)
+        )
+
+    for call in _op_calls(upgrade):
+        operation = call.func.attr if isinstance(call.func, ast.Attribute) else ""
+        if phase == "expand" and operation == "add_column":
+            _validate_nullable_add_column(path, call)
+        elif phase == "expand" and operation not in {"add_column"}:
+            raise OnlineMigrationError(
+                f"{path} uses op.{operation}, which is not allowlisted for online expand"
+            )
+        elif phase == "backfill" and operation != "execute":
+            raise OnlineMigrationError(
+                f"{path} uses op.{operation}, which is not allowlisted for online backfill"
+            )
+
+    for node in _op_calls(upgrade):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "execute"
+        ):
+            if (
+                not node.args
+                or not isinstance(node.args[0], ast.Constant)
+                or not isinstance(node.args[0].value, str)
+            ):
+                raise OnlineMigrationError(
+                    f"{path} uses dynamic op.execute; online safety cannot be verified"
+                )
+            sql = re.sub(r"\s+", " ", node.args[0].value).strip().upper()
+            if re.search(r"\b(DROP|ALTER|TRUNCATE|DELETE)\b", sql):
+                raise OnlineMigrationError(
+                    f"{path} contains destructive SQL forbidden during an online rollout"
+                )
+            if phase != "backfill":
+                raise OnlineMigrationError(
+                    f"{path} uses op.execute but online_rollout_phase is not 'backfill'"
+                )
+            if not sql.startswith("UPDATE ") or " WHERE " not in sql or ";" in sql:
+                raise OnlineMigrationError(
+                    f"{path} backfill SQL must be one bounded UPDATE with an explicit WHERE"
+                )
+
+    if phase == "backfill" and not any(
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "execute"
+        for node in _op_calls(upgrade)
+    ):
+        raise OnlineMigrationError(
+            f"{path} declares backfill without an explicit bounded op.execute"
+        )
+
+    _validate_upgrade_call_allowlist(path, upgrade, phase)
+
+
+def check_online_migrations(active_revision: str, target_revision: str) -> list[Path]:
+    changes = changed_migrations(active_revision, target_revision)
+    unsafe_history = [(status, path) for status, path in changes if status != "A"]
+    if unsafe_history:
+        details = ", ".join(f"{status}:{path}" for status, path in unsafe_history)
+        raise OnlineMigrationError(
+            "applied migration history is immutable during an online rollout: " + details
+        )
+    added = [path for _status, path in changes]
+    for path in added:
+        validate_added_migration(path)
+    return added
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("active_revision")
+    parser.add_argument("target_revision")
+    args = parser.parse_args()
+    try:
+        migrations = check_online_migrations(args.active_revision, args.target_revision)
+    except (OSError, SyntaxError, subprocess.CalledProcessError, OnlineMigrationError) as exc:
+        print(f"Online migration gate failed: {exc}")
+        return 1
+    print(f"Online migration gate passed: {len(migrations)} added migration(s)")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

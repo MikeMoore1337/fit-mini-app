@@ -402,23 +402,26 @@ def test_support_start_payload_runs_before_generic_product_entry(monkeypatch):
     menu_button.assert_not_awaited()
 
 
-def test_runtime_has_one_main_token_owner_and_no_legacy_support_contract() -> None:
+def test_runtime_supports_one_active_bot_owner_across_deployment_slots() -> None:
     root = Path(__file__).resolve().parents[2]
     compose = (root / "docker-compose.yml").read_text(encoding="utf-8")
     deploy_script = (root / "scripts" / "deploy_production.sh").read_text(encoding="utf-8")
     env_example = (root / ".env.example").read_text(encoding="utf-8")
-    assert compose.count("TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}") == 1
-    assert compose.count("TELEGRAM_BOT_PROXY_URL: ${TELEGRAM_BOT_PROXY_URL:-}") == 1
-    assert compose.count('"host.docker.internal:host-gateway"') == 3
+    assert compose.count("TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}") == 3
+    assert compose.count("TELEGRAM_BOT_PROXY_URL: ${TELEGRAM_BOT_PROXY_URL:-}") == 3
+    assert compose.count("BOT_POLLING_LOCK_DIR: /var/lock/fitminiapp-bot") == 3
+    assert "bot-blue:" in compose
+    assert "bot-green:" in compose
+    assert "name: fitminiapp_bot_polling_lock" in compose
+    assert 'profiles: ["production-slots"]' in compose
     assert "support-bot" not in compose
     assert "support-bot" not in deploy_script
-    assert "--remove-orphans" in deploy_script
+    assert "scripts/zero_downtime_deploy.py" in deploy_script
     assert deploy_script.count("python -m fitminiapp_bot.profile_sync check") == 1
     assert deploy_script.count("python -m fitminiapp_bot.profile_sync apply") == 1
     assert deploy_script.count("docker compose run --rm --no-deps bot") == 2
-    assert deploy_script.count('docker run --rm --network none --env-file .env "$BOT_IMAGE"') == 1
     assert deploy_script.index("profile_sync check") > deploy_script.index(
-        'scripts/check_deployment.py "$BASE_URL"'
+        "scripts/zero_downtime_deploy.py"
     )
     assert "Public Telegram Bot API fields were applied and read back" in deploy_script
     assert 'profile_sync_result="pending"' in deploy_script

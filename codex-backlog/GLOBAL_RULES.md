@@ -3,8 +3,9 @@
 Этот файл действует для завершённых и архивированных release tasks `75-80`, включая буквенные
 подзадачи и owner-approved Pulse concepts pilot `75C`, current post-release task `81`, и
 trigger-gated post-release pool `81-101` с буквенными подзадачами и owner-selected pending tasks
-`107-111`. Completed tasks `00-73A`, включая буквенные подзадачи, tasks `74A-75` и отдельно
-завершённые tasks `103-106` не переигрываются и хранятся в `tasks/done/`.
+`107-111`. Completed tasks `00-73A`, включая буквенные подзадачи, tasks `74A-75`, отдельно
+завершённые tasks `103-106` и owner-selected task `112` не переигрываются и хранятся в
+`tasks/done/`.
 
 Tasks `109-111` остаются owner-selected pending: Landing offer использует только factual claims и
 approved security baseline task `108`; avatar сохраняет private-media lifecycle; Progress не
@@ -91,6 +92,10 @@ Lifecycle не расширяет scope task и не отменяет owner chec
   порядок `81-101`, требует отдельного owner запуска, primary role `product-lawyer` и обязательной
   проверки итогового baseline/gate профильным российским юристом; `LEGAL_COUNSEL_REQUIRED`
   выделяет дополнительные спорные вопросы.
+- Owner-selected task `112` завершена и архивирована: current-stack blue/green deployment,
+  online-migration gate, old-asset overlap, single-owner worker/bot handoff и rollback проверены
+  локально; production rollout остаётся отдельным owner checkpoint. Current `81` и порядок
+  `81-101` не изменены.
 - Current post-release task `81` и остальные trigger-gated tasks сохраняют собственные Trigger,
   dependency и owner decision.
 - Task `50A` уже создала общий continuous Mobile Web/TMA gate, который переиспользуют последующие client-facing tasks.

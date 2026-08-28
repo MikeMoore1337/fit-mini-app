@@ -1,0 +1,23 @@
+services:
+  release-a:
+    image: ${DRILL_APP_IMAGE:-fit-mini-app-backend:local}
+    command: python /drill/server.py a
+    volumes:
+      - ./server.py:/drill/server.py:ro
+
+  release-b:
+    image: ${DRILL_APP_IMAGE:-fit-mini-app-backend:local}
+    command: python /drill/server.py b
+    volumes:
+      - ./server.py:/drill/server.py:ro
+
+  edge:
+    image: ${CADDY_IMAGE:-caddy:2-alpine}
+    command: caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
+    environment:
+      YFC_ACTIVE_UPSTREAM: release-a:8000
+      YFC_ASSET_FALLBACK_UPSTREAM: release-a:8000
+    ports:
+      - "127.0.0.1:${DRILL_PORT:-18080}:8080"
+    volumes:
+      - ../../../deploy/Caddyfile.edge:/etc/caddy/Caddyfile:ro

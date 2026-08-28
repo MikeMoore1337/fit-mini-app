@@ -72,6 +72,10 @@
 - [ ] owner-selected task `111-progress-bento-dashboard-periods.md` создана вне основной очереди для
       YFC bento-дашборда и периодов `1/7/30/90/365/custom`; визуальный референс не разрешает
       выдумывать hydration/steps/health score или новый data pipeline.
+- [x] owner-selected task `112-zero-downtime-production-deployment.md` завершена и архивирована вне
+      основной очереди: stable gateway, blue/green slots, online-migration fail-closed gate,
+      old-asset overlap, single-owner worker/bot handoff, rollback и production-like drill прошли
+      review/QA; production rollout не выполнялся и требует отдельного owner approval.
 
 Не выполнять повторно tasks `00-80`, включая `69B`, `73A`, task `74A` и tasks `103-106`.
 Task `77` закрыта не как factual real-user validation, а по явному owner decision принять отсутствие
@@ -79,7 +83,9 @@ Task `77` закрыта не как factual real-user validation, а по яв�
 запустил предусмотренный automatic production workflow; runtime diff относительно прежнего master
 был нулевым, health после rollout зелёный, а владелец подтвердил auto-deploy как feature. Task `81`
 назначена следующей, но её Trigger/реализация не запускались.
-`DESIGN_V2_1` с owner-approved bounded Pulse pilot остаётся production baseline.
+`DESIGN_V2_1` с owner-approved bounded Pulse pilot остаётся production baseline. Task `81` остаётся
+current/not started; выполнение следующей task не запускалось.
 Umbrella `100` отдельно не выполняется; `100A` не назначена без собственного Trigger, dependency
-и owner decision. Tasks `107-111` также не запускаются автоматически. Другие pending tasks
+и owner decision. Tasks `107-111` также не запускаются автоматически. Завершённая task `112` не
+изменила их порядок. Другие pending tasks
 автоматически не реализуются.

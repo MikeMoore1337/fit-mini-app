@@ -26,7 +26,11 @@ def _read(base_url: str, path: str, *, timeout: float) -> HttpResponse:
         urljoin(base_url.rstrip("/") + "/", path.lstrip("/")),
         headers={"User-Agent": "fitminiapp-deployment-check/2"},
     )
-    with urllib.request.urlopen(request, timeout=timeout) as response:
+    try:
+        response = urllib.request.urlopen(request, timeout=timeout)
+    except urllib.error.HTTPError as exc:
+        response = exc
+    with response:
         return HttpResponse(
             status=response.status,
             body=response.read(),
@@ -114,6 +118,13 @@ def check_deployment(
         }
         if mismatches:
             raise RuntimeError(f"public production auth flags are unsafe: {mismatches!r}")
+
+    auth_boundary = reader(base_url, "/api/v1/me", timeout=timeout)
+    _expect_same_origin(base_url, auth_boundary, "authenticated boundary")
+    if auth_boundary.status != 401:
+        raise RuntimeError(
+            f"authenticated boundary returned {auth_boundary.status}, expected anonymous 401"
+        )
 
     app = reader(base_url, "/app", timeout=timeout)
     _expect_same_origin(base_url, app, "application shell")

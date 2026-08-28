@@ -3,6 +3,7 @@ import json
 import logging
 from datetime import datetime, timedelta
 from itertools import pairwise
+from pathlib import Path
 from time import monotonic
 from unittest.mock import AsyncMock
 
@@ -629,3 +630,30 @@ def test_worker_rechecks_invalidation_after_waiting_for_delivery_slot(monkeypatc
         stored = session.get(Notification, reminder_id)
         assert stored is not None
         assert stored.status == "cancelled"
+
+
+def test_worker_finishes_current_cycle_before_graceful_stop(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    events: list[str] = []
+
+    async def scenario() -> None:
+        stop_requested = asyncio.Event()
+
+        async def run_once(*, sync_reminders: bool) -> None:
+            events.append(f"cycle:{sync_reminders}")
+            stop_requested.set()
+
+        monkeypatch.setattr(worker, "run_once", run_once)
+        monkeypatch.setattr(worker, "WORKER_HEARTBEAT_PATH", tmp_path / "worker-heartbeat")
+        monkeypatch.setattr(worker.settings, "weekly_digest_enabled", False)
+        monkeypatch.setattr(worker.settings, "news_ingestion_enabled", False)
+
+        await worker.run_until_stopped(
+            stop_requested,
+            news_publication_ready=False,
+        )
+
+    asyncio.run(scenario())
+
+    assert events == ["cycle:True"]

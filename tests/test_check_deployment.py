@@ -34,6 +34,13 @@ def _fake_read(config: dict[str, object]):
             json.dumps(config).encode(),
             "application/json",
         ),
+        "/api/v1/me": check_deployment.HttpResponse(
+            status=401,
+            body=b'{"detail":"Not authenticated"}',
+            content_type="application/json",
+            final_url=f"{base_url}/api/v1/me",
+            headers={"cache-control": "no-store"},
+        ),
         "/app": response("/app", html, "text/html; charset=utf-8"),
         "/login": response("/login", html, "text/html; charset=utf-8"),
         "/app?tgWebAppPlatform=android": response(
