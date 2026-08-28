@@ -1200,6 +1200,7 @@ details[open] > summary .disclosure-icon svg {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
   width: min(760px, 100%);
+  min-width: 0;
   max-width: 760px;
   max-height: calc(100dvh - 32px);
   padding: 0;
@@ -1207,11 +1208,18 @@ details[open] > summary .disclosure-icon svg {
 }
 .program-wizard__header {
   display: flex;
+  min-width: 0;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
   padding: 20px 22px 14px;
   border-bottom: 1px solid var(--border);
+}
+.program-wizard__header > div,
+.program-wizard__progress > *,
+.program-wizard__form,
+.program-wizard-result {
+  min-width: 0;
 }
 .program-wizard__header h2,
 .program-wizard__header p,
@@ -1266,12 +1274,14 @@ details[open] > summary .disclosure-icon svg {
   background: var(--accent);
 }
 .program-wizard__prefill {
+  min-width: 0;
   margin: 0;
   padding: 10px 22px;
   border-bottom: 1px solid var(--accent-line);
   background: var(--accent-soft);
   font-size: 0.82rem;
   line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 .program-wizard__form,
 .program-wizard-result {

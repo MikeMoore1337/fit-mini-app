@@ -149,12 +149,12 @@
 .public-article--product .public-hero,
 .public-article--knowledge-index .public-hero {
   gap: clamp(36px, 5vw, 72px);
-  padding-block: clamp(48px, 6vw, 76px);
+  padding-block: clamp(44px, 5vw, 64px);
 }
 
 .public-article--product .public-hero h1,
 .public-article--knowledge-index .public-hero h1 {
-  font-size: clamp(2.8rem, 4.8vw, 4.8rem);
+  font-size: clamp(2.7rem, 4.2vw, 4.2rem);
   line-height: 1.03;
 }
 

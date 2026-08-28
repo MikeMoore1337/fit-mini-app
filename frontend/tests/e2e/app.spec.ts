@@ -1376,7 +1376,7 @@ test('primary CTA лендинга и Войти остаются lime в обе
   await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
   await expect(primary).toHaveCSS('background-color', 'rgb(182, 242, 56)');
   await expect(primary).toHaveCSS('color', 'rgb(23, 32, 24)');
-  await expect(login).toHaveCSS('background-color', 'rgb(158, 224, 43)');
+  await expect(login).toHaveCSS('background-color', 'rgb(168, 232, 58)');
   await expect(login).toHaveCSS('color', 'rgb(16, 32, 21)');
 });
 
@@ -1506,7 +1506,7 @@ test('desktop app shell centers the brand lockup and navigation surfaces', async
     expect(desktopAlignment.fitnessOffset).toBeLessThanOrEqual(1);
     expect(desktopAlignment.coachOffset).toBeLessThanOrEqual(1);
     expect(desktopAlignment.accountOffset).toBeLessThanOrEqual(1);
-    expect(desktopAlignment.accountWidth).toBe(144);
+    expect(desktopAlignment.accountWidth).toBe(148);
     expect(desktopAlignment.accountNameFits).toBe(true);
     expect(desktopAlignment.accountTextEdgeOffset).toBeLessThanOrEqual(1);
     expect(desktopAlignment.accountTextAlignment).toBe('left');

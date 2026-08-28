@@ -1485,6 +1485,7 @@ body:has(.app-shell--design-v2) {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   width: min(760px, calc(100vw - 64px));
+  min-height: 0;
   max-width: 760px;
   max-height: min(calc(var(--yfc-viewport-stable-height, 100dvh) - 64px), calc(100dvh - 64px));
   margin: 0;
@@ -2398,7 +2399,7 @@ body.public-shell-mode.public-shell-mode:has(.auth-public-shell--design-v2) {
 
   .app-shell--design-v2 .app-bottom-nav__account {
     display: grid;
-    width: min(9rem, 100%);
+    width: min(9.25rem, 100%);
     grid-template-columns: minmax(0, 1fr) 34px;
     grid-template-rows: repeat(2, auto);
     gap: 2px var(--v2-space-1);
