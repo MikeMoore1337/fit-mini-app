@@ -189,6 +189,49 @@ test('selected current-action artwork and floating dock preserve the shared navi
   }
 });
 
+test('current-action artwork remains visible on a rest day', async ({ page }) => {
+  await page.setViewportSize({ width: 430, height: 932 });
+  await installPlatformApi(page, { browserSession: true, workoutStatus: 'none' });
+  await page.goto('/app?section=today');
+
+  await expect(page.getByRole('heading', { name: 'Сегодня без тренировки' })).toBeVisible();
+  const surface = page.locator('.today-workout-spotlight');
+  const artwork = surface.locator('.ui-semantic-artwork--current-action');
+  await expect(surface).toHaveClass(/today-workout-spotlight--rest-day/);
+  await expect(artwork).toHaveCount(1);
+
+  const visualImpact = await surface.evaluate((element) => {
+    const surfaceStyle = getComputedStyle(element);
+    const artworkStyle = getComputedStyle(
+      element.querySelector<HTMLElement>('.ui-semantic-artwork--current-action')!,
+    );
+    return {
+      artworkOpacity: Number.parseFloat(artworkStyle.opacity),
+      artworkShadow: artworkStyle.boxShadow,
+      artworkWidth: Number.parseFloat(artworkStyle.width),
+      background: surfaceStyle.backgroundImage,
+      stripeWidth: Number.parseFloat(getComputedStyle(element, '::before').width),
+    };
+  });
+
+  expect(visualImpact.artworkOpacity).toBeGreaterThanOrEqual(0.9);
+  expect(visualImpact.stripeWidth).toBe(2);
+  expect(visualImpact.artworkWidth).toBeGreaterThanOrEqual(250);
+  expect(visualImpact.artworkShadow).not.toBe('none');
+  expect(visualImpact.background).toContain('radial-gradient');
+  await expectNoOverlap(
+    page.getByRole('heading', { name: 'Сегодня без тренировки' }),
+    artwork.locator('i').last(),
+  );
+  await expectNoHorizontalOverflow(page);
+
+  if (capture) {
+    await page.screenshot({
+      path: `${screenshotRoot}/today-rest-day-mobile-web-430-light.png`,
+    });
+  }
+});
+
 test('frequent current action feedback is interruptible, repeatable and reduced-motion safe', async ({
   page,
 }) => {

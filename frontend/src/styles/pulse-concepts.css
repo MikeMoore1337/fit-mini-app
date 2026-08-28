@@ -81,6 +81,10 @@
   background: currentColor;
 }
 
+.today-workout-spotlight--rest-day > .ui-semantic-artwork--current-action i:last-child {
+  bottom: 12px;
+}
+
 .today-pulse-action {
   position: relative;
   overflow: hidden;
