@@ -19,7 +19,19 @@ def test_automated_deploy_keeps_revision_provenance_and_stale_run_guards() -> No
         'is no longer master head (\\$LATEST_MASTER_SHA)\\"' in deploy_workflow
     )
 
+    assert "PROD_ROLLOUT_MODE: single-slot" in deploy_workflow
+    assert "DEPLOY_SINGLE_SLOT_CONFIRMED_SHA='$DEPLOY_SHA'" in deploy_workflow
+    assert "'$PROD_ROLLOUT_MODE'" in deploy_workflow
+    assert deploy_workflow.index("LATEST_MASTER_SHA=") < deploy_workflow.index(
+        "DEPLOY_SINGLE_SLOT_CONFIRMED_SHA="
+    )
+
     assert "scripts/zero_downtime_deploy.py" in deploy_script
+    assert 'ROLLOUT_MODE="${4:-zero-downtime}"' in deploy_script
+    assert "single-slot" in deploy_script
+    assert "DEPLOY_SINGLE_SLOT_CONFIRMED_SHA" in (
+        root / "scripts" / "zero_downtime_deploy.py"
+    ).read_text(encoding="utf-8")
     assert "docker compose config --quiet" in deploy_script
     assert "--remove-orphans" not in deploy_script
     assert "docker compose up" not in deploy_script

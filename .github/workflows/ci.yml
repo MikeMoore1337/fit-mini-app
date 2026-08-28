@@ -393,10 +393,15 @@ jobs:
             context: .
             dockerfile: backend/Dockerfile
             tag: fit-mini-app-backend:ci
+            no_cache: false
           - image: bot
             context: bot
             dockerfile: bot/Dockerfile
             tag: fit-mini-app-bot:ci
+            # A corrupted shared GHA COPY cache previously published a correctly
+            # labelled image with stale runtime sources. Keep this small image
+            # fail-closed until cache provenance can be proven independently.
+            no_cache: true
 
     steps:
       - uses: actions/checkout@v4
@@ -414,8 +419,21 @@ jobs:
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
           load: true
           tags: ${{ matrix.tag }}
+          no-cache: ${{ matrix.no_cache }}
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+      - name: Verify bot runtime image contract
+        if: matrix.image == 'bot'
+        shell: bash
+        env:
+          LOCAL_TAG: ${{ matrix.tag }}
+        run: |
+          docker run --rm --network none \
+            --env TELEGRAM_BOT_TOKEN=ci-image-contract-token \
+            --env BOT_INTERNAL_TOKEN=ci-image-contract-internal-token \
+            "$LOCAL_TAG" \
+            python -c "import fitminiapp_bot.profile_sync; import fitminiapp_bot.public_profile; import fitminiapp_bot.telegram_client"
 
       # v0.36.0 is an immutable, signed post-remediation release. Keep the full SHA.
       - name: Scan image
