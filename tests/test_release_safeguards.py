@@ -30,3 +30,5 @@ def test_automated_deploy_keeps_revision_provenance_and_stale_run_guards() -> No
     )
     assert "docker compose ps --services --all | grep -qx caddy" in deploy_script
     assert "docker compose ps --services --all | grep -qx cloudflared" in deploy_script
+    assert 'docker run --rm --network none --env-file .env "$BACKEND_IMAGE"' in deploy_script
+    assert 'docker run --rm --network none --env-file .env "$BOT_IMAGE"' in deploy_script

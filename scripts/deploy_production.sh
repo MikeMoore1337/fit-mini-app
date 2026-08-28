@@ -100,9 +100,9 @@ verify_image_revision "$BOT_IMAGE"
 echo "Application images pulled in $((SECONDS - stage_started))s"
 
 echo "Validating fail-closed production runtime configuration"
-docker compose run --rm --no-deps backend \
+docker run --rm --network none --env-file .env "$BACKEND_IMAGE" \
   python -c "from fitminiapp_api.core.config import settings; assert settings.app_env == 'prod'; print('Backend production config is valid')"
-docker compose run --rm --no-deps bot \
+docker run --rm --network none --env-file .env "$BOT_IMAGE" \
   python -c "from fitminiapp_bot.config import settings; assert settings.app_env == 'prod'; print('Bot production config is valid')"
 
 stage_started=$SECONDS
