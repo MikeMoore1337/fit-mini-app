@@ -328,13 +328,20 @@ Use `technical-writer` for substantial documentation work.
 Treat schema migrations, deployment configuration and infrastructure changes as
 production-sensitive.
 
-Repository-specific deployment trigger: a push or force-push to `master` starts CI, and a
-successful CI run intentionally starts `.github/workflows/deploy.yml` through `workflow_run`.
-Therefore **any** operation that changes remote `master`—including history rewrite, privacy cleanup,
-metadata-only changes or restoring a ref—is a production-affecting deployment action. Before it,
-obtain explicit deployment approval, create and verify the required remote backup branch from the
-exact current `origin/master`, and follow the production preflight. To change GitHub history without
-deployment approval, rewrite only non-`master` refs and stop for an owner checkpoint before master.
+Repository-specific release entry: every new production revision must enter remote `master` only as
+the result of a merged pull request. Direct pushes, force-pushes and branch deletion are prohibited
+by the `master` ruleset. The required post-merge CI run intentionally starts
+`.github/workflows/deploy.yml` through `workflow_run`; the workflow additionally verifies that the
+exact SHA is associated with a merged pull request into `master` and is still the current
+`origin/master` head. A successful PR merge is the release authorization: deployment, backup,
+migrations, blue/green switch, smoke checks and automatic failure rollback continue without a
+separate human approval. The `production` environment must therefore not require reviewers or a wait
+timer. Manual workflow dispatch is not part of the normal release path.
+
+Any exceptional operation that bypasses this path—history rewrite, direct/force push, manual
+production command, infrastructure recovery or deployment of a SHA other than the current merged
+`master` head—remains production-affecting and requires explicit owner authorization plus the
+relevant preflight and verified remote backup branch.
 
 Do not:
 

@@ -4,6 +4,30 @@ Production использует blue/green rollout на одном Docker Compos
 observed user-facing downtime во время управляемого релиза, но не high availability при отказе
 VPS, PostgreSQL, Cloudflare или сети.
 
+## Release entry и полностью автоматический deploy
+
+Новая production revision попадает в `master` только через merged pull request. Внешний GitHub
+ruleset для `master` обязан требовать pull request и успешный check `checks`, запрещать direct push,
+force-push и удаление ветки и не разрешать bypass обычного release path.
+
+После merge участие человека заканчивается:
+
+1. `push` merge result в `master` запускает полный CI для точного SHA и публикует проверенные
+   backend/bot images с immutable SHA tag;
+2. успешный CI запускает `.github/workflows/deploy.yml` через `workflow_run`;
+3. отдельный job без production secrets через GitHub API проверяет, что SHA является результатом
+   merged PR в `master`;
+4. deployment job получает доступ к `production` environment, повторно проверяет, что SHA остаётся
+   текущим `origin/master`, и выполняет rollout;
+5. smoke/observation gates фиксируют успех, а ошибка до commit state автоматически возвращает
+   прежний живой slot.
+
+У `production` environment не должно быть required reviewers или wait timer: это добавило бы
+ручную стадию после уже одобренного merge. `workflow_dispatch` отсутствует, поэтому normal path не
+может вручную выбрать или повторно отправить произвольный SHA. Environment ограничивается
+защищённой веткой `master`; production secrets остаются только в environment и не доступны PR CI
+или provenance job.
+
 ## Топология и источник состояния
 
 - `caddy` или `cloudflared` остаётся публичным transport и всегда направляет запросы в стабильный
@@ -98,7 +122,9 @@ asset, anonymous `401` auth boundary, public config и TMA-safe shell без cre
 зафиксированы в private operator runbook. Обычный deploy fail-closed, пока bootstrap не завершён.
 
 Локально разрешены static/unit checks, Compose render, Caddy validation и production-like drill без
-production credentials. Push/force-push remote `master`, bootstrap production, workflow rerun,
-реальная migration, DNS/Cloudflare/secret action и public continuous probe требуют отдельного
-owner approval. Локальные tests не доказывают production zero downtime, real Telegram client или
+production credentials. Обычный merged PR в защищённый `master` является авторизацией полностью
+автоматического release path и не требует отдельного deploy approval. Bootstrap production,
+workflow rerun через исключительный операторский путь, direct/force push, реальная ручная migration,
+DNS/Cloudflare/secret action и public continuous probe вне workflow требуют отдельного owner
+approval. Локальные tests не доказывают production zero downtime, real Telegram client или
 фактический host headroom.
