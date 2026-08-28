@@ -1,4 +1,4 @@
-# Execution status v44
+# Execution status v45
 
 Подтверждённое владельцем состояние на 28.08.2026:
 
@@ -36,17 +36,18 @@
 - [x] task `76A` завершила pre-human adversarial negative/destructive testing gate с verdict `PASS`,
       закрыла все подтверждённые `BLOCKER/HIGH`, синхронизировала findings и архивирована после
       owner approval;
-- [ ] **current:** `77-real-user-usability-validation.md` — назначена, но не начата; реальные
-      участники, фактические сессии и последующий owner decision остаются обязательным checkpoint;
-- [ ] remaining release tasks `78-79` и post-release tasks `80-101` сохраняют собственные Trigger,
+- [x] task `77` подготовила полный research packet, но реальные сессии не проводились; владелец явно
+      принял отсутствие real-user validation и связанный residual risk, после чего task архивирована;
+- [ ] **current:** `78-production-operational-readiness.md` — назначена, но не начата;
+- [ ] remaining release task `79` и post-release tasks `80-101` сохраняют собственные Trigger,
       dependency и owner decision; task ID задают предпочтительный порядок, но ни одна pending task
       этой очереди не запущена.
 - [x] owner-selected task `106-landing-telegram-product-news-links.md` завершена вне основной
-      очереди и не изменила порядок `77-101`.
+      очереди и не изменила порядок `78-101`.
 
-Не выполнять повторно tasks `00-76A`, включая `69B`, `73A`, task `74A` и tasks `103-106`.
-Следующей pending task назначена `77`: её real-user research начинается только в отдельной сессии
-с фактическими участниками; нулевое число реальных сессий не является validation evidence.
+Не выполнять повторно tasks `00-77`, включая `69B`, `73A`, task `74A` и tasks `103-106`.
+Task `77` закрыта не как factual real-user validation, а по явному owner decision принять отсутствие
+сессий и residual risk. Следующей pending task назначена `78`, но её реализация не начата.
 `DESIGN_V2_1` с owner-approved bounded Pulse pilot остаётся production baseline.
 Umbrella `100` отдельно не выполняется; `100A` не назначена без собственного Trigger, dependency
 и owner decision. Другие pending tasks автоматически не реализуются.
