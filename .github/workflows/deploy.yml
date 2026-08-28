@@ -37,6 +37,8 @@ jobs:
       PROD_USER: root
       PROD_PATH: /root/fit-mini-app
       PROD_URL: https://app.your-fitness-coach.ru
+      PROD_PUBLIC_URL: https://your-fitness-coach.ru
+      PROD_ROLLOUT_MODE: single-slot
       GHCR_BACKEND_IMAGE: ghcr.io/mikemoore1337/fit-mini-app-backend
       GHCR_BOT_IMAGE: ghcr.io/mikemoore1337/fit-mini-app-bot
 
@@ -79,6 +81,11 @@ jobs:
                exit 0
              fi
              git reset --hard '$DEPLOY_SHA'
+             DEPLOY_SINGLE_SLOT_CONFIRMED_SHA='$DEPLOY_SHA' \
              BACKEND_IMAGE='$GHCR_BACKEND_IMAGE:$DEPLOY_SHA' \
              BOT_IMAGE='$GHCR_BOT_IMAGE:$DEPLOY_SHA' \
-             bash scripts/deploy_production.sh '$DEPLOY_SHA' '$PROD_URL'"
+             bash scripts/deploy_production.sh \
+               '$DEPLOY_SHA' \
+               '$PROD_URL' \
+               '$PROD_PUBLIC_URL' \
+               '$PROD_ROLLOUT_MODE'"

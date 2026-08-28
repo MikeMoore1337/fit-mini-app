@@ -91,36 +91,32 @@ constraint операции fail-closed. `backfill` допускает толь�
 меняются при switch. Candidate smoke проверяет liveness, readiness/DB, document, matching hashed
 asset, anonymous `401` auth boundary, public config и TMA-safe shell без credentials или записей.
 
-## Ручной режим для малоресурсного host
+## Автоматический single-slot режим для малоресурсного host
 
 Если production host объективно не может одновременно держать два application slot, уменьшать
-blue/green capacity gates запрещено. Для такого host доступен отдельный owner-approved режим с
-ограниченным техническим перерывом. Он не является zero-downtime и не включается автоматическим
-workflow: оператор передаёт четвёртый аргумент `single-slot` и одноразово подтверждает точный SHA
-через process environment `DEPLOY_SINGLE_SLOT_CONFIRMED_SHA`.
+blue/green capacity gates запрещено. Для текущего малоресурсного host owner разрешил автоматический
+single-slot rollout с ограниченным техническим перерывом. Он не является zero-downtime: после
+успешного post-merge CI production workflow сам передаёт четвёртый аргумент `single-slot` и
+подтверждает ровно проверенный SHA через process environment
+`DEPLOY_SINGLE_SLOT_CONFIRMED_SHA`. Произвольный SHA или другой rollout mode workflow не принимает.
 
-До запуска обязательны off-host PostgreSQL backup, проверенный текущий
-`last-successful-revision`, не менее `2 GiB` свободного диска, explicit maintenance window и
-готовность публичного smoke. Команда сначала скачивает и проверяет immutable images, создаёт ещё
-один локальный dump и запускает migration gate. Только после этого она последовательно останавливает
-legacy worker, bot и backend, выполняет setup/migrations, запускает новый backend и проверяет его,
-затем запускает единственных worker/bot и записывает успешную revision.
+Перед включением режима owner подтвердил off-host PostgreSQL backup, текущий
+`last-successful-revision` и допустимость bounded downtime. Каждый rollout заново проверяет не менее
+`2 GiB` свободного диска, актуальную revision и публичный smoke, затем скачивает и проверяет
+immutable images, создаёт свежий локальный dump и запускает migration gate. Только после этого
+команда последовательно останавливает legacy worker, bot и backend, выполняет setup/migrations,
+запускает новый backend и проверяет его, затем запускает единственных worker/bot и записывает
+успешную revision.
 
 Ошибка после остановки приложения пересоздаёт legacy services из зафиксированных прежних image
 digests и проверяет public smoke. Schema автоматически не откатывается: общий online-migration gate
 сохраняет совместимость старого кода. Если возврат не подтверждён, evidence получает verdict
 `manual intervention required`, а оператор действует по recovery runbook.
 
-~~~console
-DEPLOY_SINGLE_SLOT_CONFIRMED_SHA=<TARGET_SHA> \
-BACKEND_IMAGE=ghcr.io/...:<TARGET_SHA> \
-BOT_IMAGE=ghcr.io/...:<TARGET_SHA> \
-bash scripts/deploy_production.sh \
-  <TARGET_SHA> \
-  https://app.your-fitness-coach.ru \
-  https://your-fitness-coach.ru \
-  single-slot
-~~~
+В normal path оператор не запускает production command: merge PR является release authorization,
+а CI, exact-SHA confirmation, backup, migration gate, остановка, запуск, smoke и rollback проходят
+автоматически. Ручной запуск той же команды остаётся exceptional recovery operation и требует
+нового owner approval.
 
 Отсутствие четвёртого аргумента всегда сохраняет fail-closed blue/green path. Single-slot не создаёт
 `state.json`; переход к blue/green в будущем по-прежнему требует отдельного bootstrap и фактического

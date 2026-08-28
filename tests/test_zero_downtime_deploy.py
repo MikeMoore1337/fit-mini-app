@@ -621,8 +621,16 @@ def test_single_slot_stop_is_ordered_and_uses_bounded_timeouts(tmp_path: Path, m
     config = _config(tmp_path)
     running = {"worker", "bot", "backend"}
     commands = []
+    worker_lease = deploy.ConsumerLease(
+        service="worker",
+        container_id="worker-current",
+        started_at="2026-08-28T12:00:00Z",
+        required_markers=("worker_started",),
+    )
 
     monkeypatch.setattr(deploy, "_service_is_running", lambda service: service in running)
+    monkeypatch.setattr(deploy, "_consumer_lease", lambda *args: worker_lease)
+    monkeypatch.setattr(deploy, "_current_run_logs", lambda lease: "worker_stopped\n")
 
     def compose(*args, **kwargs):
         del kwargs
@@ -640,3 +648,36 @@ def test_single_slot_stop_is_ordered_and_uses_bounded_timeouts(tmp_path: Path, m
         ("stop", "-t", "60", "bot"),
         ("stop", "-t", "45", "backend"),
     ]
+
+
+def test_single_slot_stop_fails_closed_when_worker_drain_is_unconfirmed(
+    tmp_path: Path, monkeypatch
+) -> None:
+    config = _config(tmp_path)
+    running = {"worker", "bot", "backend"}
+    commands = []
+    worker_lease = deploy.ConsumerLease(
+        service="worker",
+        container_id="worker-current",
+        started_at="2026-08-28T12:00:00Z",
+        required_markers=("worker_started",),
+    )
+
+    monkeypatch.setattr(deploy, "_service_is_running", lambda service: service in running)
+    monkeypatch.setattr(deploy, "_consumer_lease", lambda *args: worker_lease)
+    monkeypatch.setattr(deploy, "_current_run_logs", lambda lease: "worker_drain_requested\n")
+
+    def compose(*args, **kwargs):
+        del kwargs
+        commands.append(args)
+        if args[0] == "stop":
+            running.remove(args[-1])
+        return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(deploy, "_compose", compose)
+
+    with pytest.raises(deploy.DeploymentError, match="consumer state is uncertain"):
+        deploy._stop_legacy_services(config)
+
+    assert commands == [("stop", "-t", "120", "worker")]
+    assert running == {"bot", "backend"}

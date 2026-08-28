@@ -1085,9 +1085,17 @@ def _stop_legacy_services(config: DeployConfig) -> None:
     ):
         if not _service_is_running(service):
             raise DeploymentError(f"legacy service {service} stopped before maintenance handoff")
+        worker_lease = (
+            _consumer_lease(service, ("worker_started",)) if service == "worker" else None
+        )
         _compose("stop", "-t", str(timeout), service)
         if _service_is_running(service):
             raise DeploymentError(f"legacy service {service} remained running after stop")
+        if worker_lease is not None and "worker_stopped" not in _current_run_logs(worker_lease):
+            raise DeploymentError(
+                "worker did not acknowledge a completed drain within "
+                f"{config.worker_drain_seconds}s; consumer state is uncertain"
+            )
 
 
 def _start_legacy_backend(env: dict[str, str], config: DeployConfig) -> None:
