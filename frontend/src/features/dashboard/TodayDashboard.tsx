@@ -520,7 +520,6 @@ function WorkoutOverview({
     const started = workout.status === 'in_progress';
     return (
       <>
-        <SemanticArtwork variant="current-action" />
         <div className="today-workout-copy">
           <div className="today-workout-copy__status">
             <Badge tone={started ? 'warning' : 'neutral'}>
@@ -899,8 +898,12 @@ export function TodayDashboard() {
       />
 
       <div className="today-dashboard__overview">
-        <section className="today-workout-spotlight" aria-labelledby="today-workout-title">
+        <section
+          className={`today-workout-spotlight${noTodayWorkout ? ' today-workout-spotlight--rest-day' : ''}`}
+          aria-labelledby="today-workout-title"
+        >
           <span className="today-workout-spotlight__label">Тренировка</span>
+          <SemanticArtwork variant="current-action" />
           {workout.isLoading ||
           priorityContextLoading ||
           (noTodayWorkout && progress.isLoading && user?.has_active_program) ? (
