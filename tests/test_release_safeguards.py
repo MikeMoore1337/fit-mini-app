@@ -28,3 +28,5 @@ def test_automated_deploy_keeps_revision_provenance_and_stale_run_guards() -> No
     assert deploy_script.index("--expected-environment prod") < deploy_script.index(
         "last-successful-revision"
     )
+    assert "docker compose ps --services --all | grep -qx caddy" in deploy_script
+    assert "docker compose ps --services --all | grep -qx cloudflared" in deploy_script

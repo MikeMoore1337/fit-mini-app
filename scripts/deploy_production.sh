@@ -115,10 +115,12 @@ echo "Starting application services"
 # Target application services explicitly so the currently selected HTTPS/tunnel
 # profile stays selected while its active gateway receives the new edge route.
 gateway_services=(edge)
-if docker compose ps --services --status running | grep -qx caddy; then
+# A failed rollout can leave the selected public gateway stopped after its
+# backend dependency was recreated. Preserve that selection during recovery.
+if docker compose ps --services --all | grep -qx caddy; then
   gateway_services+=(caddy)
 fi
-if docker compose ps --services --status running | grep -qx cloudflared; then
+if docker compose ps --services --all | grep -qx cloudflared; then
   gateway_services+=(cloudflared)
 fi
 docker compose up \
