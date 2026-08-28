@@ -1274,6 +1274,15 @@ details[open] > summary .disclosure-icon svg {
 .program-wizard__progress li.is-complete {
   background: var(--accent);
 }
+.program-wizard__progress .data-viz-steps li {
+  min-width: 0;
+}
+.program-wizard__progress .data-viz-steps small {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
 .program-wizard__prefill {
   min-width: 0;
   margin: 0;
