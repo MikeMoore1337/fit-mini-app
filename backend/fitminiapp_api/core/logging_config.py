@@ -39,7 +39,9 @@ SAFE_EVENT_NAMES = frozenset(
         "telegram_auth_rejected",
         "telegram_delivery_skipped",
         "unhandled_exception",
+        "worker_drain_requested",
         "worker_started",
+        "worker_stopped",
         "weekly_digest_delivery_batch_completed",
     }
 )
