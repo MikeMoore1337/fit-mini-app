@@ -52,6 +52,15 @@ Current GitHub Actions CI + Pytest/Vitest/Playwright harness + owner access/rete
 
 Current code/data/infrastructure + all backlog families + owner facts + product-lawyer/ru-legal-risk + RF counsel
   -> 108 Russian law compliance audit + continuous future-task gate [OWNER-SELECTED, PENDING; NOT CURRENT]
+
+Current factual Landing + DESIGN_V2_1 + optional approved public security claims baseline from 108
+  -> 109 Landing value proposition + conversion story [OWNER-SELECTED, PENDING; NOT CURRENT]
+
+Current AppShell avatar fallback + provider photo + private media/export/delete lifecycle
+  -> 110 User custom avatar upload desktop/mobile [OWNER-SELECTED, PENDING; NOT CURRENT]
+
+Current Progress/report services + TimeSeriesChart/DataConfidence + DESIGN_V2_1/Pulse
+  -> 111 Progress bento dashboard + 1/7/30/90/365/custom periods [OWNER-SELECTED, PENDING; NOT CURRENT]
 ```
 
 Прежние import tasks `81-program-import-xlsx-csv` и `95-program-import-txt-docx` объединены в

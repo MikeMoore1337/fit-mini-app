@@ -1,4 +1,4 @@
-# Execution status v48
+# Execution status v49
 
 Подтверждённое владельцем состояние на 28.08.2026:
 
@@ -63,6 +63,15 @@
       согласие на обработку ПД и server-side auth-gate для Web/TMA/Bot; до screenshot approval
       commit/archive запрещены. Запуск lifecycle, production activation и external legal actions
       не авторизованы созданием task.
+- [ ] owner-selected task `109-landing-value-proposition-conversion-story.md` создана вне основной
+      очереди для factual оффера и conversion story без сравнений, fake proof и неподтверждённых
+      claims; security/trust copy допускается только из approved baseline task `108`.
+- [ ] owner-selected task `110-user-custom-avatar-upload.md` создана вне основной очереди для
+      private custom avatar на desktop/mobile с безопасной обработкой, export/delete и fallback
+      `custom -> provider -> emoji`; migration/deploy требуют отдельного запуска/approval.
+- [ ] owner-selected task `111-progress-bento-dashboard-periods.md` создана вне основной очереди для
+      YFC bento-дашборда и периодов `1/7/30/90/365/custom`; визуальный референс не разрешает
+      выдумывать hydration/steps/health score или новый data pipeline.
 
 Не выполнять повторно tasks `00-80`, включая `69B`, `73A`, task `74A` и tasks `103-106`.
 Task `77` закрыта не как factual real-user validation, а по явному owner decision принять отсутствие
@@ -72,5 +81,5 @@ Task `77` закрыта не как factual real-user validation, а по яв�
 назначена следующей, но её Trigger/реализация не запускались.
 `DESIGN_V2_1` с owner-approved bounded Pulse pilot остаётся production baseline.
 Umbrella `100` отдельно не выполняется; `100A` не назначена без собственного Trigger, dependency
-и owner decision. Tasks `107-108` также не запускаются автоматически. Другие pending tasks
+и owner decision. Tasks `107-111` также не запускаются автоматически. Другие pending tasks
 автоматически не реализуются.

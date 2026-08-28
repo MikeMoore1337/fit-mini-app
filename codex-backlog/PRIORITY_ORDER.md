@@ -1,4 +1,4 @@
-# Порядок выполнения release backlog v48
+# Порядок выполнения release backlog v49
 
 ## Completed
 
@@ -66,3 +66,8 @@ Owner-selected task `108` создана для комплексного ауд�
 current, не меняет порядок `81-101` и требует отдельного owner запуска через `product-lawyer` и
 `$ru-legal-risk`; итоговый baseline/gate обязательно проверяет профильный российский юрист, а
 `LEGAL_COUNSEL_REQUIRED` выделяет дополнительные спорные вопросы.
+
+Owner-selected tasks `109-111` созданы вне основной очереди: `109` — factual Landing offer и
+conversion story, `110` — private custom avatar desktop/mobile, `111` — Progress bento dashboard и
+периоды `1/7/30/90/365/custom`. Они не меняют current `81` или порядок `81-101`, не запускаются
+автоматически и требуют отдельных owner запусков; для UI до commit действует screenshot approval.

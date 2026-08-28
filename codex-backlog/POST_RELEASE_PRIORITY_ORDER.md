@@ -66,3 +66,8 @@ Owner-selected task `108` создана вне pending-последовател
 соответствия законодательству РФ и непрерывного legal-impact gate будущих задач. Она не меняет
 current task `81` или порядок `81-101`; запуск, legal review и любые remediation/external actions
 требуют отдельных owner decisions.
+
+Owner-selected tasks `109-111` также находятся вне pending-последовательности: factual Landing
+offer, private avatar upload и Progress bento dashboard. Они не меняют current task `81` или
+порядок `81-101`, не образуют общую implementation batch и запускаются только отдельными owner
+решениями.

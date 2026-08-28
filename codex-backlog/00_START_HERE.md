@@ -1,4 +1,4 @@
-# Your Fitness Coach - backlog первого публичного релиза v15
+# Your Fitness Coach - backlog первого публичного релиза v16
 
 Backlog использует resource-aware lifecycle. В owner workspace завершённые задачи архивируются в
 локальный ignored `tasks/done/` и остаются доступными владельцу для чтения.
@@ -15,7 +15,7 @@ Backlog использует resource-aware lifecycle. В owner workspace зав
 - task `79` завершила final release gate без deployment, task `80` завершила approved repository
   hygiene/privacy cleanup; обе архивированы после owner approval;
 - task `81` назначена current, но её Trigger/реализация не запускались;
-- owner-selected tasks `107-108` созданы вне основной очереди и не являются current.
+- owner-selected tasks `107-111` созданы вне основной очереди и не являются current.
 
 ## Текущая задача
 
@@ -24,7 +24,7 @@ Backlog использует resource-aware lifecycle. В owner workspace зав
 ```
 
 Не запускать заново `00-80`, `74A` и `103-106`. Назначение `81` не запускает её реализацию, а
-создание owner-selected tasks `107-108` не разрешает их implementation, external actions или
+создание owner-selected tasks `107-111` не разрешает их implementation, external actions или
 юридически значимые owner decisions. Stage C task 108 реализует пользовательское соглашение,
 отдельное согласие на обработку ПД и technical auth-gate только после legal/owner checkpoint;
 до commit обязателен screenshot approval Web/Mobile Web/mocked TMA.
@@ -65,9 +65,12 @@ V2.1 / A / B / C / explicit hybrid
 103-106 owner-selected Telegram flow/Landing tasks [done]
 107 Scheduled regression + private Allure reports [OWNER-SELECTED PENDING; NOT CURRENT]
 108 Russian law compliance audit + continuous legal gate [OWNER-SELECTED PENDING; NOT CURRENT]
+109 Landing value proposition + conversion story [OWNER-SELECTED PENDING; NOT CURRENT]
+110 User custom avatar upload desktop/mobile [OWNER-SELECTED PENDING; NOT CURRENT]
+111 Progress bento dashboard + 1/7/30/90/365/custom periods [OWNER-SELECTED PENDING; NOT CURRENT]
 ```
 
-## Что изменено в v15
+## Что изменено в v16
 
 - Tasks `79-80` завершены и архивированы после owner approval; deployment не выполнялся.
 - Current task назначена `81`; её Trigger и реализация не запускались.
@@ -75,6 +78,8 @@ V2.1 / A / B / C / explicit hybrid
   на `allure.your-fitness-coach.ru` с явным access/retention owner contract.
 - Добавлена owner-selected pending task `108` для полного аудита соответствия законодательству РФ,
   покрытия всех существующих tasks и непрерывного gate для ещё не созданных будущих задач.
+- Добавлены owner-selected pending tasks `109-111`: factual Landing offer, безопасный custom avatar
+  на desktop/mobile и YFC bento-представление Progress с периодами `1/7/30/90/365/custom`.
 - Resource-aware review policy `BLOCKER/HIGH only` сохранена; `MEDIUM/LOW` синхронизируются в
   `bugs/FINDINGS.md`.
 

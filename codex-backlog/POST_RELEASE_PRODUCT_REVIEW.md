@@ -1,6 +1,6 @@
 # Product review post-release направлений `80-101`
 
-Дата ревизии: 2026-08-27.
+Дата ревизии: 2026-08-28.
 
 ## Итог
 
@@ -52,6 +52,9 @@ photos без AI/body analysis остаются в конце.
 | `106` | Завершённая owner-selected bounded Landing task | Развела запуск Mini App, поддержку и подписку на подтверждённый публичный канал без нового Telegram runtime. |
 | `107` | Owner-selected QA/platform task вне основной очереди | Scheduled Daily/Weekly regression, единый закрытый Allure HTML и retention уменьшают latency обнаружения regressions. Публичный repo требует реальной access boundary; implementation и внешняя инфраструктура запускаются только отдельным owner approval. |
 | `108` | Owner-selected legal-risk task вне основной очереди | Разовый snapshot недостаточен: read-only baseline и owner decision package объединены с отдельно одобряемым legal-impact intake/delta gate будущих задач. Primary role — `product-lawyer`, core skill — `$ru-legal-risk`; итоговый baseline/gate обязательно проверяет профильный российский юрист, а `LEGAL_COUNSEL_REQUIRED` выделяет дополнительные спорные вопросы; remediation отделена в follow-ups. |
+| `109` | Owner-selected Landing task вне основной очереди | Уникальность выражается через фактический feedback loop YFC, без competitor comparison, fake proof и гарантий результата. Security/trust claim не обязателен и разрешён только из approved baseline task `108`; copy и screenshots требуют owner approval до commit. |
+| `110` | Owner-selected profile/media task вне основной очереди | Текущий emoji fallback детерминирован и остаётся последней ступенью. Custom avatar — private media с mobile/desktop upload, safe processing, replace/delete/export и precedence `custom -> provider -> emoji`; production migration/deploy отдельно gated. |
+| `111` | Owner-selected Progress redesign task вне основной очереди | Референс задаёт bento hierarchy, но не palette и не новые hydration/steps/health-score данные. Периоды `1/7/30/90/365/custom` используют единый factual progress/report contract, inclusive dates/timezone и измеренную performance. |
 
 ## Контракт AI-assisted импорта `93`
 
