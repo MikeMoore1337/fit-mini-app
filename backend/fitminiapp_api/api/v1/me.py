@@ -2,7 +2,7 @@ from typing import Literal, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import set_committed_value
 
@@ -112,16 +112,17 @@ def _account_export_status(row: AccountDataExport | None) -> AccountExportStatus
     )
 
 
-def _account_export_file_response(row: AccountDataExport) -> StreamingResponse:
+def _account_export_file_response(row: AccountDataExport) -> Response:
     if row.archive_bytes is None or row.filename is None:
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="Архив больше недоступен")
-    return StreamingResponse(
-        iter((row.archive_bytes,)),
+    archive_bytes = bytes(row.archive_bytes)
+    return Response(
+        content=archive_bytes,
         media_type="application/zip",
         headers={
             "Cache-Control": "no-store, private",
             "Content-Disposition": f'attachment; filename="{row.filename}"',
-            "Content-Length": str(len(row.archive_bytes)),
+            "Content-Length": str(len(archive_bytes)),
         },
     )
 
@@ -463,7 +464,7 @@ def download_account_export(
     export_id: str,
     user=Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> StreamingResponse:
+) -> Response:
     row = (
         db.query(AccountDataExport)
         .filter(
@@ -520,7 +521,7 @@ def create_account_export_download_link(
 def download_account_export_by_token(
     download_token: str,
     db: Session = Depends(get_db),
-) -> StreamingResponse:
+) -> Response:
     row = account_export_by_download_token(db, download_token)
     if row is None:
         db.commit()
