@@ -23,6 +23,7 @@ Task = scope и результат.
 | DB/schema/query | `$data-engineer` | backend/privacy по изменению contract/lifecycle |
 | Telegram Bot/TMA platform API | `$telegram-engineer` | `$mobile-engineer` для smartphone runtime; security при trust boundary |
 | AI Coach / LLM | `$llm-engineer` | backend/python для implementation; fitness/privacy/security/evidence/analytics/observability по scope |
+| Юридический риск РФ | `$ru-legal-risk` | privacy/security/data/AI/billing/Telegram/technical writing только по фактической поверхности |
 | Product discovery | `$product-discovery` | `$ux-researcher` только для real-user evidence |
 | Release | `$release-manager` + `$platform-engineer` по необходимости | observability/security/privacy только по реальному release risk |
 
@@ -82,6 +83,17 @@ Responsive layout сам по себе принадлежит `$frontend-enginee
 ## Удалённый skill
 
 `commercial-product-builder` удалён. Крупный multi-stage scope координирует role `orchestrator`, подбирая реальные domain skills по streams.
+
+## Legal risk РФ
+
+`$ru-legal-risk` обязателен для dedicated legal-risk audit. В обычной feature/fix task он является
+условным skill только при изменении персональных/health-related данных, external providers, AI,
+payments, legal/consent UI, analytics/cookies, data residency, recommendation logic,
+advertising/claims или external content licenses.
+
+Skill готовит `SAFE / BALANCED / ACCEPT_RISK / AVOID`, recommendation, остаточный риск и
+`LEGAL_COUNSEL_REQUIRED`, но не принимает решение за владельца и не превращает `HIGH` legal risk
+в lifecycle blocker без отдельного task/release gate.
 
 ## Бюджет контекста
 

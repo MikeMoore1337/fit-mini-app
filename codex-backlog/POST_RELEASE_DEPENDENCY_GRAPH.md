@@ -50,7 +50,7 @@ Current Landing + canonical `@your_fitness_coach_bot` Main Mini App + confirmed 
 Current GitHub Actions CI + Pytest/Vitest/Playwright harness + owner access/retention decisions
   -> 107 Scheduled regression + private Allure reports [OWNER-SELECTED, PENDING; NOT CURRENT]
 
-Current code/data/infrastructure + all backlog families + owner legal/business facts + RF counsel
+Current code/data/infrastructure + all backlog families + owner facts + product-lawyer/ru-legal-risk + RF counsel
   -> 108 Russian law compliance audit + continuous future-task gate [OWNER-SELECTED, PENDING; NOT CURRENT]
 ```
 

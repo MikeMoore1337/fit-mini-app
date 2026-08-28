@@ -102,6 +102,11 @@ Repository skills live under `.agents/skills/`.
 - `$motion-design-engineer` is the specialized skill for substantial motion/gesture/data-animation work.
   `$ui-prototyper` is explicit-only for isolated design exploration and must not start automatically.
 - `$llm-engineer` is the canonical AI/AI Coach engineering skill; do not create a parallel `ai-engineer`.
+- `$ru-legal-risk` is mandatory for a dedicated Russian legal-risk audit and conditional for an
+  ordinary task only when its factual diff changes personal/health data, providers, payments,
+  legal/consent UI, data residency, recommendation logic, advertising/claims or external licenses.
+  It requires current authoritative sources, prepares owner options and `LEGAL_COUNSEL_REQUIRED`,
+  and does not provide a compliance guarantee or expand a feature task into a legal audit.
 - A skill never expands task scope. New schema/API/platform/product work requires the task or a
   reproducible `BLOCKER/HIGH`, not a broad skill checklist.
 - Repository/backlog rules take precedence over generic skill guidance when they conflict.
@@ -122,6 +127,9 @@ Reusable role contracts live under `.agents/roles/`.
 - Use `.agents/references/ROLE_ROUTING_GUIDE.md` only when routing/delegation is actually needed.
 - Do not let multiple write-agents edit the same working tree or core contract concurrently.
 - `orchestrator` or `integration-release` does not override branch/worktree restrictions.
+- `product-lawyer` is a dedicated read-only primary role for legal-risk audit, register and owner
+  decision preparation. Ordinary implementation tasks keep their production role; remediation
+  returns to a separate owner-approved task with the normal implementation role.
 - If real subagents are unavailable, perform required role stages as clearly separated
   sequential passes in the same session and report that accurately.
 

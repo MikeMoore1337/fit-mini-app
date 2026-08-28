@@ -44,6 +44,11 @@ Lifecycle не расширяет scope task и не отменяет owner chec
 - `$motion-design-engineer` нужен для существенного motion design/gesture/data animation или dedicated motion review. Одна обычная короткая CSS transition не требует отдельного skill.
 - `$ui-prototyper` используется только явно для isolated design exploration нескольких направлений и не запускается автоматически.
 - `$solution-architect` нужен при cross-system contract conflict/architecture decision, а не для обычной реализации существующего паттерна.
+- `$ru-legal-risk` обязателен для dedicated legal-risk audit; в обычной task он conditional только
+  при фактическом изменении personal/health data, providers, payments, legal/consent UI, data
+  residency, recommendation logic, advertising/claims или external licenses. Dedicated audit
+  использует primary role `product-lawyer`, существенные выводы требуют актуальных авторитетных
+  источников, а remediation после owner decision выполняется отдельной implementation task.
 
 При конфликте соблюдать приоритет: безопасность и приватность -> фактическое поведение продукта -> текущая task -> профильные skills.
 
@@ -72,7 +77,9 @@ Lifecycle не расширяет scope task и не отменяет owner chec
   Cloudflare Access/hosting, secrets и paid resources требуют дополнительного explicit approval.
 - Owner-selected task `108` создана для полного аудита соответствия законодательству РФ и
   непрерывного legal-impact gate для любых будущих tasks; она не является current, не меняет
-  порядок `79-101`, требует отдельного owner запуска и проверки профильным российским юристом.
+  порядок `79-101`, требует отдельного owner запуска, primary role `product-lawyer` и обязательной
+  проверки итогового baseline/gate профильным российским юристом; `LEGAL_COUNSEL_REQUIRED`
+  выделяет дополнительные спорные вопросы.
 - Current release task `79` и остальные trigger-gated tasks сохраняют собственные Trigger,
   dependency и owner decision.
 - Task `50A` уже создала общий continuous Mobile Web/TMA gate, который переиспользуют последующие client-facing tasks.
@@ -87,12 +94,19 @@ Lifecycle не расширяет scope task и не отменяет owner chec
 
 `Основная роль` и `Дополнительные роли lifecycle` в task являются точным маршрутом. Не строить автоматическую цепочку `researcher -> reviewer -> QA` и не создавать отдельного агента на каждый skill.
 
+Для dedicated legal-risk audit основной ролью может быть read-only `product-lawyer` с обязательным
+`$ru-legal-risk`. В обычной implementation task legal surface не меняет основную роль автоматически.
+
 Если следующая task сама является dedicated review/approval gate, не дублировать полный аналогичный review в предыдущей task без явного требования. Примеры: `49B1 -> 49C`, `49E -> 49F`, `75A -> 75B`, `78 -> 79`.
 
 ### Blocking policy review/QA
 
 - Только `BLOCKER/HIGH` блокируют завершение.
 - `MEDIUM/LOW/NIT/OUT_OF_SCOPE` не блокируют commit и не открывают новый workstream.
+- Legal fields `RISK: CRITICAL/HIGH/MEDIUM/LOW` из `$ru-legal-risk` являются отдельной
+  product/legal risk scale, не lifecycle severity. Canonical legal risks хранятся в
+  `docs/legal/LEGAL_RISK_REGISTER.md` после owner checkpoint; только technical/audit-deliverable
+  findings с lifecycle severity `MEDIUM/LOW` синхронизируются в `bugs/FINDINGS.md`.
 - Каждый `MEDIUM/LOW` из review, QA или audit до commit и финализации обязательно добавляется или
   обновляется в `codex-backlog/bugs/FINDINGS.md`, даже если исправлен в той же task. Финальный
   ответ или ignored `.artifacts/` не заменяют tracked-реестр.

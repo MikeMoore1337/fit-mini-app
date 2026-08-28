@@ -51,8 +51,13 @@
       очереди, не назначена current и требует отдельного owner запуска; DNS/Cloudflare/hosting
       actions остаются под дополнительным explicit approval.
 - [ ] owner-selected task `108-russian-law-compliance-audit-continuous-gate.md` создана вне основной
-      очереди, не назначена current и требует отдельного owner запуска и проверки профильным
-      российским юристом; audit/remediation/external legal actions не авторизованы созданием task.
+      очереди, не назначена current и требует отдельного owner запуска через `product-lawyer` и
+      `$ru-legal-risk`; итоговый baseline/gate обязательно проверяет профильный российский юрист,
+      а `LEGAL_COUNSEL_REQUIRED` выделяет дополнительные спорные вопросы. После legal/owner
+      checkpoint Stage C этой же task реализует versioned пользовательское соглашение, отдельное
+      согласие на обработку ПД и server-side auth-gate для Web/TMA/Bot; до screenshot approval
+      commit/archive запрещены. Запуск lifecycle, production activation и external legal actions
+      не авторизованы созданием task.
 
 Не выполнять повторно tasks `00-78`, включая `69B`, `73A`, task `74A` и tasks `103-106`.
 Task `77` закрыта не как factual real-user validation, а по явному owner decision принять отсутствие

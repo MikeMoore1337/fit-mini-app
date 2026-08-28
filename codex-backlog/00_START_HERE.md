@@ -22,7 +22,9 @@ Backlog использует resource-aware lifecycle. Завершённые з
 
 Не запускать заново `00-78`, `74A` и `103-106`. Назначение `79` не запускает её реализацию, а
 создание owner-selected tasks `107-108` не разрешает их implementation, external actions или
-юридически значимые выводы без профильной проверки.
+юридически значимые owner decisions. Stage C task 108 реализует пользовательское соглашение,
+отдельное согласие на обработку ПД и technical auth-gate только после legal/owner checkpoint;
+до commit обязателен screenshot approval Web/Mobile Web/mocked TMA.
 
 ## Design alternatives flow
 

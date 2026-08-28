@@ -15,6 +15,11 @@ Skills задают профессиональный способ выполне
 9. Отдельного `ai-engineer` нет: AI/LLM/AI Coach scope принадлежит `$llm-engineer`.
 10. `$ui-prototyper` используется только явно для design exploration.
 11. `$motion-design-engineer` используется для существенного motion design/implementation/review, а не автоматически для любой CSS transition.
+12. `$ru-legal-risk` обязателен для dedicated legal-risk audit и подключается условно к обычной
+    task только при фактическом legal trigger; он требует актуальных источников, не является
+    гарантией compliance и не принимает owner decision.
+13. Dedicated legal-risk audit использует primary role `product-lawyer`; remediation после owner
+    decision возвращается в отдельную task с обычной implementation-ролью.
 
 ## Design v6
 
@@ -41,3 +46,5 @@ Skills задают профессиональный способ выполне
 - `references/SKILL_ROUTING_GUIDE.md`;
 - `references/ROLE_ROUTING_GUIDE.md`;
 - `references/DESIGN_GUARDRAILS.md`.
+- `skills/ru-legal-risk/references/RU_LEGAL_SOURCE_POLICY.md` для юридической source freshness.
+- `../docs/audits/yfc-skills-v6-overlap-audit.md` — исторический v6 overlap audit до legal extension.
