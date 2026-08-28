@@ -573,10 +573,46 @@ def test_single_slot_failure_after_stop_restores_previous_images(
         "registry/backend@sha256:" + "b" * 64,
         "registry/backend@sha256:" + "a" * 64,
     ]
-    assert calls["consumer_starts"] == [("registry/bot@sha256:" + "a" * 64, False)]
+    assert calls["consumer_starts"] == [("registry/bot@sha256:" + "a" * 64, True)]
     summaries = list(config.state_root.glob("single-slot-*/summary.json"))
     assert len(summaries) == 1
     assert json.loads(summaries[0].read_text(encoding="utf-8"))["verdict"] == "rolled back"
+
+
+def test_single_slot_rollback_requires_verified_consumer_ownership(
+    tmp_path: Path, monkeypatch
+) -> None:
+    config = _config(tmp_path)
+    calls = _patch_single_slot_runtime(tmp_path, monkeypatch)
+    starts = 0
+
+    def fail_target_once(env, value):
+        nonlocal starts
+        del value
+        starts += 1
+        calls["backend_starts"].append(env["BACKEND_IMAGE"])
+        if starts == 1:
+            raise deploy.DeploymentError("new backend failed")
+
+    def fail_consumer_ownership(env, evidence, value, *, require_markers):
+        del env, evidence, value
+        assert require_markers is True
+        raise deploy.DeploymentError("bot ownership confirmation timed out")
+
+    monkeypatch.setattr(deploy, "_start_legacy_backend", fail_target_once)
+    monkeypatch.setattr(deploy, "_start_legacy_consumers", fail_consumer_ownership)
+    monkeypatch.setattr(deploy, "_service_is_running", lambda service: False)
+
+    with pytest.raises(deploy.DeploymentError, match="new backend failed"):
+        deploy.single_slot_deploy(config)
+
+    summaries = list(config.state_root.glob("single-slot-*/summary.json"))
+    assert len(summaries) == 1
+    summary = json.loads(summaries[0].read_text(encoding="utf-8"))
+    assert summary["verdict"] == "manual intervention required"
+    rollback = next(stage for stage in summary["stages"] if stage["name"] == "single_slot_rollback")
+    assert rollback["status"] == "failed"
+    assert "ownership confirmation timed out" in rollback["reason"]
 
 
 def test_single_slot_rechecks_capacity_after_pull_and_backup(tmp_path: Path, monkeypatch) -> None:

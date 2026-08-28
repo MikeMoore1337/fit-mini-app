@@ -1342,7 +1342,7 @@ def single_slot_deploy(config: DeployConfig) -> Evidence:
                     rollback_env,
                     evidence,
                     config,
-                    require_markers=False,
+                    require_markers=True,
                 )
                 _public_smoke(config)
                 evidence.verdict = "rolled back"
