@@ -7,6 +7,7 @@ import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from time import monotonic
 
 import httpx
@@ -19,6 +20,7 @@ from fitminiapp_api.models.notification import Notification, NotificationSetting
 from fitminiapp_api.models.user import User
 from fitminiapp_api.models.weekly_digest import WeeklyDigestDelivery
 from fitminiapp_api.services.account_exports import prune_account_exports
+from fitminiapp_api.services.audit import prune_audit_events
 from fitminiapp_api.services.bot_support import prune_support_cases
 from fitminiapp_api.services.news_worker import run_news_pipeline_once
 from fitminiapp_api.services.notifications import (
@@ -48,6 +50,7 @@ from fitminiapp_api.services.weekly_digest import (
 
 logger = logging.getLogger(__name__)
 TELEGRAM_DELIVERY_RATE_PER_SECOND = 20
+WORKER_HEARTBEAT_PATH = Path("/tmp/fitminiapp-worker-heartbeat")
 
 
 @dataclass(frozen=True)
@@ -495,6 +498,7 @@ async def run_once(*, sync_reminders: bool = True) -> None:
     with get_session_context() as db:
         prune_account_exports(db)
         if sync_reminders:
+            prune_audit_events(db, retention_days=settings.audit_event_retention_days)
             prune_weekly_digest(db, retention_days=settings.news_retention_days)
             prune_support_cases(db)
             sync_workout_reminders(db)
@@ -632,6 +636,7 @@ async def main() -> None:
         news_publication_ready = await check_news_channel_rights(preflight_client)
     next_reminder_sync = 0.0
     next_news_sync = 0.0
+    WORKER_HEARTBEAT_PATH.touch()
     while True:
         current = monotonic()
         should_sync = current >= next_reminder_sync
@@ -660,6 +665,7 @@ async def main() -> None:
                 )
             if should_fetch_news:
                 next_news_sync = current + settings.news_ingestion_cycle_seconds
+        WORKER_HEARTBEAT_PATH.touch()
         await asyncio.sleep(settings.worker_poll_seconds)
 
 

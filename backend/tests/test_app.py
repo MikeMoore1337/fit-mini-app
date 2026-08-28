@@ -217,6 +217,13 @@ def test_production_settings_reject_placeholder_secret():
         )
 
 
+def test_versioned_frontend_assets_have_immutable_cache_contract(client):
+    response = client.get("/assets/test.js")
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "public, max-age=31536000, immutable"
+
+
 def test_production_settings_reject_placeholder_bot_internal_token():
     with pytest.raises(ValidationError, match="BOT_INTERNAL_TOKEN"):
         Settings(

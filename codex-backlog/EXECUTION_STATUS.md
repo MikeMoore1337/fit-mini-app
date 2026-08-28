@@ -1,4 +1,4 @@
-# Execution status v45
+# Execution status v46
 
 Подтверждённое владельцем состояние на 28.08.2026:
 
@@ -38,8 +38,11 @@
       owner approval;
 - [x] task `77` подготовила полный research packet, но реальные сессии не проводились; владелец явно
       принял отсутствие real-user validation и связанный residual risk, после чего task архивирована;
-- [ ] **current:** `78-production-operational-readiness.md` — назначена, но не начата;
-- [ ] remaining release task `79` и post-release tasks `80-101` сохраняют собственные Trigger,
+- [x] task `78` завершила production operational readiness: fail-closed config/deploy gates,
+      audit retention, PostgreSQL migration/backup/restore drill, monitoring/rollback contract и
+      production-like regression evidence; владелец подтвердил external controls и screenshot packet;
+- [ ] **current:** `79-final-integrated-release-audit.md` — назначена, но не начата;
+- [ ] current release task `79` и post-release tasks `80-101` сохраняют собственные Trigger,
       dependency и owner decision; task ID задают предпочтительный порядок, но ни одна pending task
       этой очереди не запущена.
 - [x] owner-selected task `106-landing-telegram-product-news-links.md` завершена вне основной
@@ -48,9 +51,10 @@
       очереди, не назначена current и требует отдельного owner запуска; DNS/Cloudflare/hosting
       actions остаются под дополнительным explicit approval.
 
-Не выполнять повторно tasks `00-77`, включая `69B`, `73A`, task `74A` и tasks `103-106`.
+Не выполнять повторно tasks `00-78`, включая `69B`, `73A`, task `74A` и tasks `103-106`.
 Task `77` закрыта не как factual real-user validation, а по явному owner decision принять отсутствие
-сессий и residual risk. Следующей pending task назначена `78`, но её реализация не начата.
+сессий и residual risk. Task `78` закрыта после owner approval; production deployment в рамках task
+не выполнялся. Следующей pending task назначена `79`, но её реализация не начата.
 `DESIGN_V2_1` с owner-approved bounded Pulse pilot остаётся production baseline.
 Umbrella `100` отдельно не выполняется; `100A` не назначена без собственного Trigger, dependency
 и owner decision. Task `107` также не запускается автоматически. Другие pending tasks автоматически

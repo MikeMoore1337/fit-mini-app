@@ -1,24 +1,26 @@
-# Your Fitness Coach - backlog первого публичного релиза v13
+# Your Fitness Coach - backlog первого публичного релиза v14
 
 Backlog использует resource-aware lifecycle. Завершённые задачи архивируются в `tasks/done/` и остаются доступными для чтения.
 
 ## Текущее состояние
 
-- tasks `00-77`, включая буквенные подзадачи, `69B`, `73A` и `74A`, а также owner-selected tasks
+- tasks `00-78`, включая буквенные подзадачи, `69B`, `73A` и `74A`, а также owner-selected tasks
   `103-106` подтверждены как завершённые;
 - завершённые task-файлы перенесены в `tasks/done/` без переименования;
 - `DESIGN_V2_1` с owner-approved bounded Pulse pilot остаётся current production baseline;
 - task `77` закрыта по explicit owner acceptance отсутствия real-user sessions и residual risk;
-- task `78` назначена current production-readiness task, но ещё не начата;
+- task `78` завершила production operational readiness после owner approval и подтверждения
+  внешних operational controls;
+- task `79` назначена current final release gate, но ещё не начата;
 - owner-selected task `107` создана вне основной очереди и не является current.
 
 ## Текущая задача
 
 ```text
-78-production-operational-readiness.md [CURRENT NOT STARTED]
+79-final-integrated-release-audit.md [CURRENT NOT STARTED]
 ```
 
-Не запускать заново `00-77`, `74A` и `103-106`. Назначение `78` не запускает task `79`, а
+Не запускать заново `00-78`, `74A` и `103-106`. Назначение `79` не запускает её реализацию, а
 создание owner-selected task `107` не разрешает её implementation или внешние infrastructure actions.
 
 ## Design alternatives flow
@@ -52,15 +54,15 @@ V2.1 / A / B / C / explicit hybrid
   -> 75C bounded production pilot [COMPLETED]
   -> 76 audit [COMPLETED] -> 76A adversarial gate [COMPLETED]
   -> 77 real-user gate [CLOSED BY OWNER ACCEPTED RESIDUAL RISK]
-  -> 78 production readiness [CURRENT, NOT STARTED] -> 79 final release gate
+  -> 78 production readiness [COMPLETED] -> 79 final release gate [CURRENT, NOT STARTED]
 103-106 owner-selected Telegram flow/Landing tasks [done]
 107 Scheduled regression + private Allure reports [OWNER-SELECTED PENDING; NOT CURRENT]
 ```
 
-## Что изменено в v13
+## Что изменено в v14
 
-- Синхронизирован current state после завершения tasks `75B-77` и owner-selected tasks `103-106`.
-- Current task остаётся `78`; основная release/post-release последовательность не изменена.
+- Task `78` завершила production readiness, restore drill и operator contract после owner approval.
+- Current task назначена `79`; её реализация не начата, release/post-release порядок не изменён.
 - Добавлена owner-selected pending task `107` для scheduled regression и закрытых Allure-отчётов
   на `allure.your-fitness-coach.ru` с явным access/retention owner contract.
 - Resource-aware review policy `BLOCKER/HIGH only` сохранена; `MEDIUM/LOW` синхронизируются в

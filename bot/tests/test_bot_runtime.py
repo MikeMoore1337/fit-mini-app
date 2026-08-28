@@ -12,6 +12,7 @@ from aiogram.exceptions import TelegramConflictError
 from aiogram.types import MenuButtonCommands
 from bot.fitminiapp_bot import bot as bot_module
 from bot.fitminiapp_bot.bot import PollingConflict, PollingFileLock, StableDispatcher
+from bot.fitminiapp_bot.config import Settings as BotSettings
 from bot.fitminiapp_bot.logging_config import JsonFormatter
 from bot.fitminiapp_bot.public_profile import HIDDEN_COMMANDS, PUBLIC_COMMANDS
 
@@ -415,6 +416,32 @@ def test_runtime_has_one_main_token_owner_and_no_legacy_support_contract() -> No
     assert (
         type(bot_module.settings).model_fields["bot_token"].validation_alias == "TELEGRAM_BOT_TOKEN"
     )
+
+
+def test_production_bot_config_fails_closed_on_placeholder_credentials() -> None:
+    with pytest.raises(ValueError, match="TELEGRAM_BOT_TOKEN"):
+        BotSettings(
+            app_env="prod",
+            TELEGRAM_BOT_TOKEN="change-me",
+            bot_internal_token="a-valid-internal-token-that-is-long-enough",
+        )
+
+    with pytest.raises(ValueError, match="BOT_INTERNAL_TOKEN"):
+        BotSettings(
+            app_env="prod",
+            TELEGRAM_BOT_TOKEN="123456:configured-token",
+            bot_internal_token="replace-with-a-token",
+        )
+
+
+def test_production_bot_config_requires_https_public_origin() -> None:
+    with pytest.raises(ValueError, match="FRONTEND_BASE_URL"):
+        BotSettings(
+            app_env="prod",
+            TELEGRAM_BOT_TOKEN="123456:configured-token",
+            bot_internal_token="a-valid-internal-token-that-is-long-enough",
+            frontend_base_url="http://app.example.test",
+        )
 
 
 def test_json_formatter_excludes_arbitrary_message_and_exception_values() -> None:

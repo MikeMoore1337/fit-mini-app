@@ -1,7 +1,7 @@
 # GLOBAL_RULES - правила выполнения release backlog v15 resource-aware
 
-Этот файл действует для завершённых и архивированных tasks `75`/`75A`/`75B`, current
-owner-approved Pulse concepts pilot `75C`, remaining release tasks `76-79`, включая `76A`, и
+Этот файл действует для завершённых и архивированных release tasks `75-78`, включая буквенные
+подзадачи и owner-approved Pulse concepts pilot `75C`, current release task `79`, и
 trigger-gated post-release pool `80-101` с буквенными подзадачами и owner-selected pending task
 `107`. Completed tasks `00-73A`, включая буквенные подзадачи, tasks `74A-75` и отдельно
 завершённые tasks `103-106` не переигрываются и хранятся в `tasks/done/`.
@@ -63,14 +63,14 @@ Lifecycle не расширяет scope task и не отменяет owner chec
   `START_RETHINK_EXPLORATION`; её audit/frozen findings стали входом `75B`.
 - Task `75B` завершила explicit exploration/selection gate; владелец выбрал
   `SELECT_DIRECTION_PULSE` только как набор концепций поверх текущего UI.
-- Owner-approved task `75C` является current bounded production pilot и не запускается
-  автоматически в completion-сессии `75B`; production baseline остаётся `DESIGN_V2_1`.
+- Owner-approved task `75C` завершила bounded production pilot; production baseline остаётся
+  `DESIGN_V2_1` с выбранными Pulse-концепциями.
 - Owner-selected tasks `103-105` завершены и архивированы.
 - Owner-selected task `106` завершена и архивирована после owner screenshot approval.
 - Owner-selected task `107` создана для scheduled regression и закрытых Allure-отчётов; она не
-  является current, не меняет порядок `78-101` и требует отдельного owner запуска. DNS,
+  является current, не меняет порядок `79-101` и требует отдельного owner запуска. DNS,
   Cloudflare Access/hosting, secrets и paid resources требуют дополнительного explicit approval.
-- Remaining release tasks `75C-79` и остальные trigger-gated tasks сохраняют собственные Trigger,
+- Current release task `79` и остальные trigger-gated tasks сохраняют собственные Trigger,
   dependency и owner decision.
 - Task `50A` уже создала общий continuous Mobile Web/TMA gate, который переиспользуют последующие client-facing tasks.
 - Перед client-facing task прочитать `MOBILE_TMA_FIRST_CONTRACT.md` и применимые пункты `.agents/references/MOBILE_TMA_ACCEPTANCE_MATRIX.md`.

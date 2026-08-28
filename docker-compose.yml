@@ -10,7 +10,7 @@ x-bot-image: &bot-image
 
 services:
   db:
-    image: postgres:16-alpine
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -75,6 +75,7 @@ services:
       PRIVACY_POLICY_URL: ${PRIVACY_POLICY_URL:-}
       BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:-http://backend:8000}
       BOT_INTERNAL_TOKEN: ${BOT_INTERNAL_TOKEN}
+      APP_ENV: ${APP_ENV:-dev}
       BOT_POLLING_ENABLED: ${BOT_POLLING_ENABLED:-true}
       BOT_POLLING_LOCK_DIR: /var/lock/fitminiapp-bot
       BOT_CONFLICT_RETRY_SECONDS: ${BOT_CONFLICT_RETRY_SECONDS:-300}
@@ -87,7 +88,7 @@ services:
       - bot_polling_lock:/var/lock/fitminiapp-bot
 
   edge:
-    image: caddy:2-alpine
+    image: ${CADDY_IMAGE:-caddy:2-alpine}
     restart: unless-stopped
     command: caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
     depends_on:
@@ -107,7 +108,7 @@ services:
         ipv4_address: 172.28.0.12
 
   caddy:
-    image: caddy:2-alpine
+    image: ${CADDY_IMAGE:-caddy:2-alpine}
     restart: unless-stopped
     profiles: ["direct-https"]
     environment:
@@ -155,7 +156,7 @@ services:
         ipv4_address: 172.28.0.10
 
   cloudflared:
-    image: cloudflare/cloudflared:latest
+    image: ${CLOUDFLARED_IMAGE:-cloudflare/cloudflared:latest}
     restart: unless-stopped
     profiles: ["cloudflare"]
     environment:
@@ -179,6 +180,16 @@ services:
       db:
         condition: service_healthy
     command: /app/worker-entrypoint.sh
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import os,time; from fitminiapp_api.core.config import settings; age=time.time()-os.path.getmtime('/tmp/fitminiapp-worker-heartbeat'); assert age < max(120, settings.worker_poll_seconds * 3 + 30)\"",
+        ]
+      interval: 30s
+      timeout: 6s
+      retries: 3
+      start_period: 90s
 
 volumes:
   postgres_data:

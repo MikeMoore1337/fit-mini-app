@@ -1,3 +1,6 @@
+from typing import Literal
+from urllib.parse import urlparse
+
 from pydantic import AliasChoices, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -11,6 +14,7 @@ class Settings(BaseSettings):
         hide_input_in_errors=True,
     )
 
+    app_env: Literal["dev", "test", "prod"] = "dev"
     bot_token: str = Field(validation_alias="TELEGRAM_BOT_TOKEN")
     frontend_base_url: str = "https://app.your-fitness-coach.ru"
     backend_internal_url: str = "http://backend:8000"
@@ -40,8 +44,28 @@ class Settings(BaseSettings):
         return result
 
     @model_validator(mode="after")
-    def validate_admin_ids(self) -> Settings:
+    def validate_runtime(self) -> Settings:
         _ = self.admin_telegram_id_set
+        if self.app_env != "prod":
+            return self
+        if not self.bot_token.strip() or self.bot_token.strip().lower() in {
+            "change-me",
+            "replace-me",
+        }:
+            raise ValueError("TELEGRAM_BOT_TOKEN must be configured in prod")
+        normalized_internal_token = self.bot_internal_token.strip().lower()
+        if len(self.bot_internal_token) < 32 or normalized_internal_token.startswith(
+            ("change-", "replace-")
+        ):
+            raise ValueError(
+                "BOT_INTERNAL_TOKEN must be at least 32 characters and non-placeholder in prod"
+            )
+        frontend = urlparse(self.frontend_base_url)
+        if frontend.scheme != "https" or not frontend.netloc:
+            raise ValueError("FRONTEND_BASE_URL must be an absolute HTTPS URL in prod")
+        backend = urlparse(self.backend_internal_url)
+        if backend.scheme not in {"http", "https"} or not backend.netloc:
+            raise ValueError("BACKEND_INTERNAL_URL must be an absolute HTTP(S) URL in prod")
         return self
 
 

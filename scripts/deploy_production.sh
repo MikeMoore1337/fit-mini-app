@@ -4,6 +4,7 @@ set -Eeuo pipefail
 readonly EXPECTED_ROOT="/root/fit-mini-app"
 readonly TARGET_SHA="${1:?usage: deploy_production.sh TARGET_SHA BASE_URL}"
 readonly BASE_URL="${2:?usage: deploy_production.sh TARGET_SHA BASE_URL}"
+readonly PUBLIC_BASE_URL="${3:-https://your-fitness-coach.ru}"
 
 cd "$EXPECTED_ROOT"
 
@@ -22,6 +23,20 @@ if [[ ! -f .env ]]; then
   exit 1
 fi
 
+require_digest_ref() {
+  local key="$1"
+  local value
+  value="$(sed -n "s/^${key}=//p" .env | tail -n 1)"
+  if [[ ! "$value" =~ @sha256:[0-9a-f]{64}$ ]]; then
+    echo "$key must be an immutable image reference ending in @sha256:<64 hex>" >&2
+    exit 1
+  fi
+}
+
+require_digest_ref POSTGRES_IMAGE
+require_digest_ref CADDY_IMAGE
+require_digest_ref CLOUDFLARED_IMAGE
+
 readonly CURRENT_SHA="$(git rev-parse HEAD)"
 if [[ "$CURRENT_SHA" != "$TARGET_SHA" ]]; then
   echo "Checked-out revision $CURRENT_SHA does not match requested revision $TARGET_SHA" >&2
@@ -38,6 +53,12 @@ stage_started=$SECONDS
 echo "Pulling tested application images"
 docker compose pull backend bot edge
 echo "Application images pulled in $((SECONDS - stage_started))s"
+
+echo "Validating fail-closed production runtime configuration"
+docker compose run --rm --no-deps backend \
+  python -c "from fitminiapp_api.core.config import settings; assert settings.app_env == 'prod'; print('Backend production config is valid')"
+docker compose run --rm --no-deps bot \
+  python -c "from fitminiapp_bot.config import settings; assert settings.app_env == 'prod'; print('Bot production config is valid')"
 
 stage_started=$SECONDS
 echo "Creating a pre-deploy database backup"
@@ -68,7 +89,8 @@ docker compose ps
 
 stage_started=$SECONDS
 echo "Running the external deployment smoke check"
-python3 scripts/check_deployment.py "$BASE_URL"
+python3 scripts/check_deployment.py "$BASE_URL" --expected-environment prod
+python3 scripts/check_seo_surface.py "$PUBLIC_BASE_URL"
 echo "External smoke check completed in $((SECONDS - stage_started))s"
 
 install -d -m 700 .artifacts/deployments

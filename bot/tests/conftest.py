@@ -2,6 +2,7 @@ import os
 
 # Bot settings read `.env` at import time. Explicit test environment values keep local
 # credentials and administrator identifiers out of test objects, failures, and snapshots.
+os.environ["APP_ENV"] = "test"
 os.environ["TELEGRAM_BOT_TOKEN"] = "test-token"
 os.environ["BOT_INTERNAL_TOKEN"] = "test-bot-internal-token"
 os.environ["BACKEND_INTERNAL_URL"] = "http://backend.test:8000"
