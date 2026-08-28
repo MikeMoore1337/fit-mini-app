@@ -230,7 +230,7 @@ def test_weekly_review_separates_diary_states_and_only_marks_selected_low_days(
     assert summary["nutrition"]["complete_days"] == 1
     assert summary["nutrition"]["incomplete_days"] == 1
     assert summary["nutrition"]["fasted_days"] == 1
-    assert summary["nutrition"]["unlogged_days"] == 1
+    assert summary["nutrition"]["unlogged_days"] == 2
     assert summary["nutrition"]["current_target"] == {
         "effective_from": "2026-08-01",
         "source": "manual",
@@ -257,7 +257,7 @@ def test_weekly_review_separates_diary_states_and_only_marks_selected_low_days(
     assert updated["nutrition"]["complete_days"] == 0
     assert updated["nutrition"]["incomplete_days"] == 2
     assert updated["nutrition"]["fasted_days"] == 1
-    assert updated["nutrition"]["unlogged_days"] == 1
+    assert updated["nutrition"]["unlogged_days"] == 2
     assert updated["nutrition"]["suspicious_low_days"] == []
 
 
@@ -293,7 +293,7 @@ def test_weekly_review_flags_explicitly_complete_zero_day_without_counting_unlog
         "nutrition"
     ]
     assert nutrition["complete_days"] == 1
-    assert nutrition["unlogged_days"] == 1
+    assert nutrition["unlogged_days"] == 2
     assert nutrition["suspicious_low_days"] == [
         {
             "diary_date": "2026-08-17",

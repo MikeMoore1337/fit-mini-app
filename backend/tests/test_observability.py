@@ -1,6 +1,7 @@
 import json
 import logging
 import sys
+from contextlib import contextmanager
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -9,6 +10,24 @@ from sqlalchemy import text
 from fitminiapp_api.core.logging_config import JsonFormatter
 from fitminiapp_api.db.session import engine
 from fitminiapp_api.middleware.request_context import RequestContextMiddleware
+
+
+@contextmanager
+def _capture_http_logs(caplog):
+    logger = logging.getLogger("app.http")
+    previous_disabled = logger.disabled
+    previous_propagate = logger.propagate
+    # Alembic's in-process replay can disable pre-existing loggers on this worker.
+    logger.disabled = False
+    logger.propagate = False
+    logger.addHandler(caplog.handler)
+    try:
+        with caplog.at_level(logging.INFO, logger="app.http"):
+            yield
+    finally:
+        logger.removeHandler(caplog.handler)
+        logger.disabled = previous_disabled
+        logger.propagate = previous_propagate
 
 
 def test_json_formatter_includes_request_context() -> None:
@@ -103,7 +122,7 @@ def test_request_log_has_duration_and_health_probes_are_quiet(caplog) -> None:
     def profile(profile_id: str) -> dict[str, str]:
         return {"profile_id": profile_id}
 
-    with TestClient(test_app) as test_client, caplog.at_level(logging.INFO, logger="app.http"):
+    with TestClient(test_app) as test_client, _capture_http_logs(caplog):
         response = test_client.get("/example", headers={"X-Request-ID": "edge-123"})
         health_response = test_client.get("/health/ready")
         profile_response = test_client.get("/profiles/private-user-99887766")
@@ -135,7 +154,7 @@ def test_request_log_includes_sql_metrics_from_sync_endpoint(caplog) -> None:
             connection.execute(text("SELECT 1"))
         return {"status": "ok"}
 
-    with TestClient(test_app) as test_client, caplog.at_level(logging.INFO, logger="app.http"):
+    with TestClient(test_app) as test_client, _capture_http_logs(caplog):
         response = test_client.get("/database-example")
 
     assert response.status_code == 200

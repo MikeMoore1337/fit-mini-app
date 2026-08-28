@@ -120,6 +120,9 @@ def _drop_worker_database() -> None:
 @pytest.fixture(scope="session", autouse=True)
 def database_schema():
     _create_worker_database()
+    if engine.dialect.name == "postgresql":
+        with engine.begin() as connection:
+            connection.exec_driver_sql("CREATE EXTENSION IF NOT EXISTS pg_trgm")
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     yield

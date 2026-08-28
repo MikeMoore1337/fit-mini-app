@@ -123,6 +123,9 @@ NUTRITION_INPUT_FIELDS = (
     "cardio_trainings",
     "goal",
 )
+NUTRITION_REQUIRED_INPUT_FIELDS = tuple(
+    field for field in NUTRITION_INPUT_FIELDS if field != "strength_rest"
+)
 NUTRITION_CONTEXT_FIELDS = (
     "sex",
     "weight_kg",
@@ -485,7 +488,7 @@ def build_nutrition_target_response_for_user(
 
 
 def _target_payload(target: NutritionTarget) -> NutritionTargetSave:
-    if any(getattr(target, field) is None for field in NUTRITION_INPUT_FIELDS):
+    if any(getattr(target, field) is None for field in NUTRITION_REQUIRED_INPUT_FIELDS):
         raise NutritionError("Nutrition calculator context is incomplete")
     return NutritionTargetSave.model_validate(
         {

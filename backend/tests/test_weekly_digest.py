@@ -552,7 +552,7 @@ def test_bot_api_rejects_non_admin_digest_draft(client, monkeypatch) -> None:
     _configure(monkeypatch)
     response = client.post(
         "/api/v1/bot/digest/issues/draft",
-        headers={"X-Bot-Token": "test-token"},
+        headers={"X-Bot-Token": settings.bot_internal_token},
         json={"admin_telegram_user_id": 7999},
     )
     assert response.status_code == 403
@@ -562,7 +562,7 @@ def test_bot_api_preference_never_treats_start_or_read_as_consent(client, monkey
     _configure(monkeypatch)
     response = client.post(
         "/api/v1/bot/digest/preference",
-        headers={"X-Bot-Token": "test-token"},
+        headers={"X-Bot-Token": settings.bot_internal_token},
         json={"telegram_user_id": 9001},
     )
     assert response.status_code == 200

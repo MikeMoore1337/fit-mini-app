@@ -16,23 +16,21 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "news_clusters",
-        sa.Column("latest_image_revision", sa.Integer(), server_default="0", nullable=False),
-    )
-    op.add_column(
-        "news_clusters",
-        sa.Column("current_image_revision", sa.Integer(), server_default="0", nullable=False),
-    )
-    op.drop_constraint("ck_news_clusters_status", "news_clusters", type_="check")
-    op.create_check_constraint(
-        "ck_news_clusters_status",
-        "news_clusters",
-        "status IN ('clustered', 'rejected_by_rules', 'candidate', 'draft_ready', "
-        "'image_pending', 'awaiting_review', 'deferred', 'rejected', "
-        "'accepted_for_design', 'publication_approved', 'publication_scheduled', "
-        "'publication_failed', 'published')",
-    )
+    with op.batch_alter_table("news_clusters") as batch_op:
+        batch_op.add_column(
+            sa.Column("latest_image_revision", sa.Integer(), server_default="0", nullable=False)
+        )
+        batch_op.add_column(
+            sa.Column("current_image_revision", sa.Integer(), server_default="0", nullable=False)
+        )
+        batch_op.drop_constraint("ck_news_clusters_status", type_="check")
+        batch_op.create_check_constraint(
+            "ck_news_clusters_status",
+            "status IN ('clustered', 'rejected_by_rules', 'candidate', 'draft_ready', "
+            "'image_pending', 'awaiting_review', 'deferred', 'rejected', "
+            "'accepted_for_design', 'publication_approved', 'publication_scheduled', "
+            "'publication_failed', 'published')",
+        )
 
     op.create_table(
         "news_image_revisions",
@@ -213,12 +211,12 @@ def downgrade() -> None:
         "WHERE status IN ('image_pending', 'publication_approved', 'publication_scheduled', "
         "'publication_failed', 'published')"
     )
-    op.drop_constraint("ck_news_clusters_status", "news_clusters", type_="check")
-    op.create_check_constraint(
-        "ck_news_clusters_status",
-        "news_clusters",
-        "status IN ('clustered', 'rejected_by_rules', 'candidate', 'draft_ready', "
-        "'awaiting_review', 'deferred', 'rejected', 'accepted_for_design')",
-    )
-    op.drop_column("news_clusters", "current_image_revision")
-    op.drop_column("news_clusters", "latest_image_revision")
+    with op.batch_alter_table("news_clusters") as batch_op:
+        batch_op.drop_constraint("ck_news_clusters_status", type_="check")
+        batch_op.create_check_constraint(
+            "ck_news_clusters_status",
+            "status IN ('clustered', 'rejected_by_rules', 'candidate', 'draft_ready', "
+            "'awaiting_review', 'deferred', 'rejected', 'accepted_for_design')",
+        )
+        batch_op.drop_column("current_image_revision")
+        batch_op.drop_column("latest_image_revision")

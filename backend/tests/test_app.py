@@ -728,7 +728,7 @@ def test_client_parameter_and_weight_changes_recalculate_kbju_and_notify(client)
     assert len(client.get("/api/v1/notifications", headers=headers).json()) == 3
 
 
-def test_coach_profile_and_measurement_changes_recalculate_and_notify_client(client):
+def test_coach_profile_and_measurement_changes_preserve_explicit_trainer_target(client):
     coach_headers = auth(client, telegram_user_id=6104, is_coach=True)
     client_headers = auth(client, telegram_user_id=6105, is_coach=False)
     client_user = client.get("/api/v1/me", headers=client_headers).json()
@@ -754,7 +754,7 @@ def test_coach_profile_and_measurement_changes_recalculate_and_notify_client(cli
         headers=coach_headers,
     )
     assert profile.status_code == 200
-    assert profile.json()["kbju"]["height_cm"] == 170
+    assert profile.json()["kbju"]["height_cm"] == 168
 
     measurement = client.post(
         f"/api/v1/coach/clients/{client_user['id']}/measurements",
@@ -764,12 +764,14 @@ def test_coach_profile_and_measurement_changes_recalculate_and_notify_client(cli
     assert measurement.status_code == 200
 
     kbju = client.get("/api/v1/me", headers=client_headers).json()["profile"]["kbju"]
-    assert kbju["weight_kg"] == 63.5
+    assert kbju["weight_kg"] == 64.5
     assert kbju["assigned_by"]["telegram_user_id"] == 6104
     notifications = client.get("/api/v1/notifications", headers=client_headers).json()
-    nutrition_notifications = [row for row in notifications if row["title"] == "КБЖУ пересчитаны"]
-    assert len(nutrition_notifications) == 3
-    assert "Тренер обновил параметры питания" in nutrition_notifications[0]["body"]
+    nutrition_notifications = [
+        row for row in notifications if row["title"] == "Ориентиры КБЖУ обновлены"
+    ]
+    assert len(nutrition_notifications) == 1
+    assert "Тренер обновил ориентиры питания" in nutrition_notifications[0]["body"]
 
 
 def test_nutrition_form_only_notifies_when_calculation_inputs_change(client):
@@ -1840,7 +1842,7 @@ def test_cardio_exercises_have_specific_guides_and_generated_images(client):
         guide = response.json()
         assert len(guide["technique_steps"]) >= 3
         assert guide["source_name"] == "Your Fitness Coach"
-        assert guide["images"][0]["phase"] == "Две фазы движения"
+        assert guide["images"][0]["phase"] == "Техника движения"
         assert guide["media"][0]["source_license"] == "Иллюстрация создана для приложения"
 
 
@@ -2665,7 +2667,10 @@ def test_trainer_capability_lock_refreshes_auth_identity_state(client):
     with get_session_context() as db:
         stale_user = db.query(User).filter(User.id == user_id).one()
         assert stale_user.is_coach is False
-        db.execute(text("UPDATE users SET is_coach = 1 WHERE id = :user_id"), {"user_id": user_id})
+        db.execute(
+            text("UPDATE users SET is_coach = :is_coach WHERE id = :user_id"),
+            {"is_coach": True, "user_id": user_id},
+        )
 
         state = activate_trainer_capability(db, stale_user)
 
@@ -2689,7 +2694,10 @@ def test_invite_creation_lock_rejects_stale_trainer_capability(client):
     with get_session_context() as db:
         stale_user = db.query(User).filter(User.id == user_id).one()
         assert stale_user.is_coach is True
-        db.execute(text("UPDATE users SET is_coach = 0 WHERE id = :user_id"), {"user_id": user_id})
+        db.execute(
+            text("UPDATE users SET is_coach = :is_coach WHERE id = :user_id"),
+            {"is_coach": False, "user_id": user_id},
+        )
 
         with pytest.raises(ProgramError, match="Режим тренера недоступен"):
             create_coach_invite_link(db, stale_user)
