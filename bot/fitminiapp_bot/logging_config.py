@@ -14,6 +14,7 @@ SAFE_EVENT_NAMES = frozenset(
         "frontend_url_invalid",
         "menu_button_configuration_failed",
         "menu_button_configured",
+        "menu_button_verification_failed",
         "open_button_delivery_failed",
         "polling_disabled",
         "polling_file_lock_acquired",

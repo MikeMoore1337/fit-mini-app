@@ -68,9 +68,10 @@ def check_deployment(
     *,
     timeout: float,
     expected_environment: str | None = None,
-    read=_read,
+    read=None,
 ) -> str:
-    ready = read(base_url, "/health/ready", timeout=timeout)
+    reader = read or _read
+    ready = reader(base_url, "/health/ready", timeout=timeout)
     _expect_same_origin(base_url, ready, "readiness")
     ready_payload = json.loads(ready.body)
     if (
@@ -80,7 +81,7 @@ def check_deployment(
     ):
         raise RuntimeError(f"readiness returned {ready.status}: {ready_payload!r}")
 
-    live = read(base_url, "/health/live", timeout=timeout)
+    live = reader(base_url, "/health/live", timeout=timeout)
     _expect_same_origin(base_url, live, "liveness")
     live_payload = json.loads(live.body)
     if (
@@ -90,7 +91,7 @@ def check_deployment(
     ):
         raise RuntimeError(f"liveness returned {live.status}: {live_payload!r}")
 
-    config_response = read(base_url, "/api/v1/public/config", timeout=timeout)
+    config_response = reader(base_url, "/api/v1/public/config", timeout=timeout)
     _expect_same_origin(base_url, config_response, "public config")
     config = json.loads(config_response.body)
     if not isinstance(config, dict) or config_response.status != 200 or "app_env" not in config:
@@ -100,21 +101,34 @@ def check_deployment(
         raise RuntimeError(
             f"deployment reports environment {environment!r}, expected {expected_environment!r}"
         )
+    if expected_environment == "prod":
+        expected_auth = {
+            "enable_dev_auth": False,
+            "enable_web_auth": True,
+            "enable_email_auth": False,
+        }
+        mismatches = {
+            key: config.get(key)
+            for key, expected in expected_auth.items()
+            if config.get(key) is not expected
+        }
+        if mismatches:
+            raise RuntimeError(f"public production auth flags are unsafe: {mismatches!r}")
 
-    app = read(base_url, "/app", timeout=timeout)
+    app = reader(base_url, "/app", timeout=timeout)
     _expect_same_origin(base_url, app, "application shell")
     _expect_frontend(app, "application shell")
 
-    login = read(base_url, "/login", timeout=timeout)
+    login = reader(base_url, "/login", timeout=timeout)
     _expect_same_origin(base_url, login, "browser auth shell")
     _expect_frontend(login, "browser auth shell")
 
-    tma_shell = read(base_url, "/app?tgWebAppPlatform=android", timeout=timeout)
+    tma_shell = reader(base_url, "/app?tgWebAppPlatform=android", timeout=timeout)
     _expect_same_origin(base_url, tma_shell, "TMA shell")
     _expect_frontend(tma_shell, "TMA shell")
 
     asset_path = _first_versioned_asset(app.body)
-    asset = read(base_url, asset_path, timeout=timeout)
+    asset = reader(base_url, asset_path, timeout=timeout)
     _expect_same_origin(base_url, asset, "frontend asset")
     if asset.status != 200 or not asset.body:
         raise RuntimeError(f"frontend asset returned {asset.status} or an empty body")
@@ -130,11 +144,25 @@ def main() -> int:
     parser.add_argument("--timeout", type=float, default=10.0)
     parser.add_argument("--expected-environment", choices=("dev", "test", "prod"))
     parser.add_argument(
+        "--expect-app-env",
+        choices=("dev", "test", "prod"),
+        default=None,
+        help="require the public configuration to report this application environment",
+    )
+    parser.add_argument(
         "--allow-http",
         action="store_true",
         help="allow plain HTTP for a local/private smoke test",
     )
     args = parser.parse_args()
+
+    if (
+        args.expected_environment is not None
+        and args.expect_app_env is not None
+        and args.expected_environment != args.expect_app_env
+    ):
+        parser.error("--expected-environment and --expect-app-env must match")
+    expected_environment = args.expected_environment or args.expect_app_env
 
     parsed = urlparse(args.base_url)
     allowed_schemes = {"https", "http"} if args.allow_http else {"https"}
@@ -145,7 +173,7 @@ def main() -> int:
         environment = check_deployment(
             args.base_url,
             timeout=args.timeout,
-            expected_environment=args.expected_environment,
+            expected_environment=expected_environment,
         )
     except (OSError, RuntimeError, urllib.error.URLError, json.JSONDecodeError) as exc:
         print(f"Deployment check failed: {exc}", file=sys.stderr)

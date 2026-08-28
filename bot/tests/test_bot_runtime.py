@@ -408,9 +408,24 @@ def test_runtime_has_one_main_token_owner_and_no_legacy_support_contract() -> No
     deploy_script = (root / "scripts" / "deploy_production.sh").read_text(encoding="utf-8")
     env_example = (root / ".env.example").read_text(encoding="utf-8")
     assert compose.count("TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}") == 1
+    assert compose.count("TELEGRAM_BOT_PROXY_URL: ${TELEGRAM_BOT_PROXY_URL:-}") == 1
+    assert compose.count('"host.docker.internal:host-gateway"') == 3
     assert "support-bot" not in compose
     assert "support-bot" not in deploy_script
     assert "--remove-orphans" in deploy_script
+    assert deploy_script.count("python -m fitminiapp_bot.profile_sync check") == 1
+    assert deploy_script.count("python -m fitminiapp_bot.profile_sync apply") == 1
+    assert deploy_script.count("docker compose run --rm --no-deps bot") == 3
+    assert deploy_script.index("profile_sync check") > deploy_script.index(
+        'scripts/check_deployment.py "$BASE_URL"'
+    )
+    assert "Public Telegram Bot API fields were applied and read back" in deploy_script
+    assert 'profile_sync_result="pending"' in deploy_script
+    assert 'if [[ "$profile_apply_status" -eq 0 ]]' in deploy_script
+    assert 'identity_status == "API_ERROR"' in deploy_script
+    assert '"API_ERROR" in field_statuses' in deploy_script
+    assert 'exit "$profile_check_status"' in deploy_script
+    assert "Telegram Bot API is unavailable; metadata remains pending" in deploy_script
     assert "SUPPORT_BOT_" not in env_example
     assert "SUPPORT_ADMIN_TELEGRAM_USER_IDS" not in compose
     assert (

@@ -50,6 +50,7 @@ class Settings(BaseSettings):
     telegram_bot_token: str
     telegram_bot_username: str = ""
     telegram_init_data_max_age_seconds: int = Field(default=300, ge=60, le=3600)
+    telegram_bot_proxy_url: str = ""
     bot_internal_token: str = ""
 
     smtp_host: str = ""
@@ -290,7 +291,7 @@ class Settings(BaseSettings):
             return None
         return value
 
-    @field_validator("oauth_proxy_url", "telegram_oauth_proxy_url")
+    @field_validator("oauth_proxy_url", "telegram_oauth_proxy_url", "telegram_bot_proxy_url")
     @classmethod
     def validate_oauth_proxy_url(cls, value: str) -> str:
         normalized = value.strip()
@@ -302,6 +303,10 @@ class Settings(BaseSettings):
         if parsed.query or parsed.fragment:
             raise ValueError("OAuth proxy URL must not contain query parameters or a fragment")
         return normalized
+
+    @property
+    def bot_api_proxy_url(self) -> str:
+        return self.telegram_bot_proxy_url
 
     @property
     def admin_telegram_id_set(self) -> set[int]:

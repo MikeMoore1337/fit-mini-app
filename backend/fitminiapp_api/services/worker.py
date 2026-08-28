@@ -152,6 +152,15 @@ def _telegram_delivery_error(response: httpx.Response) -> NotificationDeliveryEr
     return NotificationDeliveryError(f"telegram_http_status:{error_code}")
 
 
+def telegram_transport_options() -> dict[str, object]:
+    """Return an explicit Bot API route without inheriting ambient proxy settings."""
+
+    options: dict[str, object] = {"trust_env": False}
+    if settings.bot_api_proxy_url:
+        options["proxy"] = settings.bot_api_proxy_url
+    return options
+
+
 def _log_delivery_failure(notification_id: int, error: Exception) -> None:
     notification_ref = hmac.new(
         settings.secret_key.encode("utf-8"),
@@ -529,7 +538,7 @@ async def run_once(*, sync_reminders: bool = True) -> None:
         semaphore = asyncio.Semaphore(settings.notification_delivery_concurrency)
         rate_limiter = TelegramRateLimiter(TELEGRAM_DELIVERY_RATE_PER_SECOND)
 
-        async with httpx.AsyncClient(timeout=20) as client:
+        async with httpx.AsyncClient(timeout=20, **telegram_transport_options()) as client:
 
             async def deliver(
                 notification_id: int,

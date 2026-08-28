@@ -69,8 +69,11 @@ services:
   bot:
     <<: *bot-image
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_BOT_PROXY_URL: ${TELEGRAM_BOT_PROXY_URL:-}
       FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-https://app.your-fitness-coach.ru}
       PRIVACY_POLICY_URL: ${PRIVACY_POLICY_URL:-}
       BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:-http://backend:8000}
@@ -174,6 +177,8 @@ services:
     <<: *backend-image
     restart: unless-stopped
     env_file: .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       backend:
         condition: service_healthy

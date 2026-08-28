@@ -33,7 +33,12 @@ def test_deployment_smoke_covers_health_auth_tma_and_versioned_asset() -> None:
             "/health/live", body=b'{"status":"ok"}', content_type="application/json"
         ),
         "/api/v1/public/config": _response(
-            "/api/v1/public/config", body=b'{"app_env":"prod"}', content_type="application/json"
+            "/api/v1/public/config",
+            body=(
+                b'{"app_env":"prod","enable_dev_auth":false,'
+                b'"enable_web_auth":true,"enable_email_auth":false}'
+            ),
+            content_type="application/json",
         ),
         "/app": _response("/app", body=HTML, content_type="text/html"),
         "/login": _response("/login", body=HTML, content_type="text/html"),

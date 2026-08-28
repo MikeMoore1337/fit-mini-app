@@ -43,6 +43,7 @@ from .public_profile import (
     menu_button_matches,
     notification_settings_keyboard,
 )
+from .telegram_client import create_bot_api_session
 from .weekly_digest import router as weekly_digest_router
 from .weekly_digest import send_digest_settings
 
@@ -617,7 +618,7 @@ async def main() -> None:
 
     while True:
         await polling_lock.acquire()
-        bot = Bot(settings.bot_token)
+        bot = Bot(settings.bot_token, session=create_bot_api_session())
         conflict = False
         try:
             logger.info("telegram_polling_starting")

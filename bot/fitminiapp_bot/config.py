@@ -1,7 +1,7 @@
 from typing import Literal
 from urllib.parse import urlparse
 
-from pydantic import AliasChoices, Field, model_validator
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -26,9 +26,29 @@ class Settings(BaseSettings):
     bot_polling_lock_dir: str = "/var/lock/fitminiapp-bot"
     bot_conflict_retry_seconds: int = Field(default=300, ge=30)
     bot_profile_sync_state_path: str = "/var/lock/fitminiapp-bot/profile-sync-state.json"
+    telegram_bot_proxy_url: str = Field(default="", validation_alias="TELEGRAM_BOT_PROXY_URL")
     admin_telegram_user_ids: str = ""
     privacy_policy_url: str = ""
     news_channel_username: str = ""
+
+    @field_validator("telegram_bot_proxy_url")
+    @classmethod
+    def validate_telegram_proxy_url(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            return ""
+        parsed = urlparse(normalized)
+        if parsed.scheme not in {"http", "socks5", "socks5h"} or not parsed.hostname:
+            raise ValueError("Telegram proxy URL must be an absolute HTTP or SOCKS5 URL")
+        if parsed.query or parsed.fragment:
+            raise ValueError("Telegram proxy URL must not contain query parameters or a fragment")
+        return normalized
+
+    @property
+    def bot_api_proxy_url(self) -> str:
+        """Return only the explicitly configured Bot API route."""
+
+        return self.telegram_bot_proxy_url
 
     @property
     def admin_telegram_id_set(self) -> set[int]:

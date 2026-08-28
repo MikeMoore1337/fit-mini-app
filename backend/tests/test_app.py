@@ -259,7 +259,8 @@ def test_production_oauth_does_not_require_smtp_when_email_auth_is_disabled():
         smtp_host="",
         smtp_from_email="",
         oauth_proxy_url="",
-        telegram_oauth_proxy_url="",
+        telegram_oauth_proxy_url="socks5://host.docker.internal:1081",
+        telegram_bot_proxy_url="",
     )
 
     assert configured.enable_web_auth is True
@@ -267,7 +268,8 @@ def test_production_oauth_does_not_require_smtp_when_email_auth_is_disabled():
     assert configured.oauth_http_timeout_seconds == 15
     assert configured.oauth_force_ipv4 is True
     assert configured.oauth_proxy_url == ""
-    assert configured.telegram_oauth_proxy_url == ""
+    assert configured.telegram_oauth_proxy_url == "socks5://host.docker.internal:1081"
+    assert configured.telegram_bot_proxy_url == ""
 
 
 def test_oauth_http_timeout_is_bounded():
@@ -292,6 +294,8 @@ def test_oauth_http_timeout_is_bounded():
         Settings(**common, oauth_proxy_url="socks5://proxy.example/?unsafe=true")
     with pytest.raises(ValidationError, match="OAuth proxy URL"):
         Settings(**common, telegram_oauth_proxy_url="file:///tmp/proxy")
+    with pytest.raises(ValidationError, match="OAuth proxy URL"):
+        Settings(**common, telegram_bot_proxy_url="file:///tmp/proxy")
 
 
 def test_oidc_clients_ignore_ambient_proxy_settings(monkeypatch):
@@ -4346,7 +4350,11 @@ def test_alembic_revision_ids_fit_version_table_column():
     versions_dir = Path(__file__).resolve().parents[2] / "backend" / "alembic" / "versions"
     for migration in versions_dir.glob("*.py"):
         source = migration.read_text(encoding="utf-8")
-        match = re.search(r'^revision\s*=\s*["\']([^"\']+)["\']', source, re.MULTILINE)
+        match = re.search(
+            r'^revision(?:\s*:\s*[^=]+)?\s*=\s*["\']([^"\']+)["\']',
+            source,
+            re.MULTILINE,
+        )
         assert match, f"Revision id not found in {migration.name}"
         assert len(match.group(1)) <= 32, f"Revision id is too long in {migration.name}"
 

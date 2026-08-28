@@ -27,9 +27,47 @@ from fitminiapp_api.services.worker import (
     TelegramRateLimiter,
     _log_delivery_failure,
     send_telegram_message,
+    telegram_transport_options,
 )
 
 SECRET_TOKEN = "123456:telegram-secret-token"
+
+
+def test_worker_uses_dedicated_bot_api_proxy(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "fitminiapp_api.services.worker.settings.telegram_bot_proxy_url",
+        "socks5://bot-proxy.test:1081",
+    )
+    assert telegram_transport_options() == {
+        "trust_env": False,
+        "proxy": "socks5://bot-proxy.test:1081",
+    }
+
+
+def test_worker_does_not_reuse_telegram_oauth_proxy(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "fitminiapp_api.services.worker.settings.telegram_bot_proxy_url",
+        "",
+    )
+    monkeypatch.setattr(
+        "fitminiapp_api.services.worker.settings.telegram_oauth_proxy_url",
+        "socks5://telegram-proxy.test:1081",
+    )
+
+    assert telegram_transport_options() == {"trust_env": False}
+
+
+def test_worker_does_not_inherit_ambient_proxy(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "fitminiapp_api.services.worker.settings.telegram_bot_proxy_url",
+        "",
+    )
+    monkeypatch.setattr(
+        "fitminiapp_api.services.worker.settings.telegram_oauth_proxy_url",
+        "",
+    )
+
+    assert telegram_transport_options() == {"trust_env": False}
 
 
 def telegram_http_error(status_code: int = 500) -> httpx.HTTPStatusError:

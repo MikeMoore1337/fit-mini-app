@@ -4,9 +4,11 @@ import json
 import logging
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, call
 
 from aiogram.types import BotCommand, BotCommandScopeAllPrivateChats, MenuButtonCommands
-from bot.fitminiapp_bot.profile_sync import sync_public_profile
+from bot.fitminiapp_bot import profile_sync as profile_sync_module
+from bot.fitminiapp_bot.profile_sync import SyncReport, sync_public_profile
 from bot.fitminiapp_bot.public_profile import (
     AVATAR_PATH,
     EXPECTED_BOT_USERNAME,
@@ -372,3 +374,48 @@ def test_absent_optional_flags_are_false_and_missing_main_app_is_a_mismatch(tmp_
     assert report.botfather_flags["has_main_web_app"]["current"] is False
     assert report.exit_code() == 1
     assert any("https://app.your-fitness-coach.ru/app" in action for action in report.owner_actions)
+
+
+def test_profile_sync_retries_transient_api_error_and_recovers(monkeypatch) -> None:
+    api_error = SyncReport(mode="apply", identity={"status": "API_ERROR"})
+    matched = SyncReport(mode="apply", identity={"status": "VERIFIED"})
+    sync = AsyncMock(side_effect=[api_error, matched])
+    sleep = AsyncMock()
+    monkeypatch.setattr(profile_sync_module, "sync_public_profile", sync)
+    monkeypatch.setattr(profile_sync_module.asyncio, "sleep", sleep)
+
+    report = asyncio.run(
+        profile_sync_module._sync_public_profile_with_retry(
+            object(),
+            mode="apply",
+            frontend_base_url="https://app.your-fitness-coach.ru",
+        )
+    )
+
+    assert report is matched
+    assert sync.await_count == 2
+    sleep.assert_awaited_once_with(1)
+
+
+def test_profile_sync_retry_is_bounded(monkeypatch) -> None:
+    api_error = SyncReport(
+        mode="check",
+        identity={"status": "VERIFIED"},
+        fields={"commands": {"status": "API_ERROR", "detail": "transport_error"}},
+    )
+    sync = AsyncMock(return_value=api_error)
+    sleep = AsyncMock()
+    monkeypatch.setattr(profile_sync_module, "sync_public_profile", sync)
+    monkeypatch.setattr(profile_sync_module.asyncio, "sleep", sleep)
+
+    report = asyncio.run(
+        profile_sync_module._sync_public_profile_with_retry(
+            object(),
+            mode="check",
+            frontend_base_url="https://app.your-fitness-coach.ru",
+        )
+    )
+
+    assert report is api_error
+    assert sync.await_count == 3
+    assert sleep.await_args_list == [call(1), call(2)]

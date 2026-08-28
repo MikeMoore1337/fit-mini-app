@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Literal
 
 from aiogram import Bot
-from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.types import (
     BotCommand,
     BotCommandScopeAllPrivateChats,
@@ -31,9 +30,11 @@ from .public_profile import (
     menu_button,
     menu_button_matches,
 )
+from .telegram_client import create_bot_api_session
 
 SyncMode = Literal["check", "apply"]
 COMMAND_SCOPE = BotCommandScopeAllPrivateChats()
+PROFILE_SYNC_RETRY_DELAYS_SECONDS = (1, 2)
 
 BOTFATHER_FLAGS: dict[str, bool] = {
     "can_join_groups": False,
@@ -143,6 +144,35 @@ def _write_avatar_state(path: Path, *, asset_sha256: str, file_unique_id: str) -
 
 def _field(status: str, detail: str) -> dict[str, str]:
     return {"status": status, "detail": detail}
+
+
+def _report_has_api_error(report: SyncReport) -> bool:
+    return report.identity.get("status") == "API_ERROR" or any(
+        field.get("status") == "API_ERROR" for field in report.fields.values()
+    )
+
+
+async def _sync_public_profile_with_retry(
+    bot: Bot,
+    *,
+    mode: SyncMode,
+    frontend_base_url: str,
+) -> SyncReport:
+    """Retry transient Bot API failures while keeping writes bounded and idempotent."""
+
+    report: SyncReport | None = None
+    for attempt in range(len(PROFILE_SYNC_RETRY_DELAYS_SECONDS) + 1):
+        report = await sync_public_profile(
+            bot,
+            mode=mode,
+            frontend_base_url=frontend_base_url,
+        )
+        if not _report_has_api_error(report):
+            return report
+        if attempt < len(PROFILE_SYNC_RETRY_DELAYS_SECONDS):
+            await asyncio.sleep(PROFILE_SYNC_RETRY_DELAYS_SECONDS[attempt])
+    assert report is not None
+    return report
 
 
 async def _sync_text_field(
@@ -413,10 +443,10 @@ async def _run(mode: SyncMode) -> int:
         print(json.dumps(report.as_dict(), ensure_ascii=False, indent=2))
         return report.exit_code()
 
-    session = AiohttpSession(timeout=15)
+    session = create_bot_api_session(timeout=15)
     bot = Bot(settings.bot_token, session=session)
     try:
-        report = await sync_public_profile(
+        report = await _sync_public_profile_with_retry(
             bot,
             mode=mode,
             frontend_base_url=settings.frontend_base_url,
