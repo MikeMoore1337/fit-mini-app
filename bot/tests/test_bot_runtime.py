@@ -415,7 +415,8 @@ def test_runtime_has_one_main_token_owner_and_no_legacy_support_contract() -> No
     assert "--remove-orphans" in deploy_script
     assert deploy_script.count("python -m fitminiapp_bot.profile_sync check") == 1
     assert deploy_script.count("python -m fitminiapp_bot.profile_sync apply") == 1
-    assert deploy_script.count("docker compose run --rm --no-deps bot") == 3
+    assert deploy_script.count("docker compose run --rm --no-deps bot") == 2
+    assert deploy_script.count('docker run --rm --network none --env-file .env "$BOT_IMAGE"') == 1
     assert deploy_script.index("profile_sync check") > deploy_script.index(
         'scripts/check_deployment.py "$BASE_URL"'
     )
