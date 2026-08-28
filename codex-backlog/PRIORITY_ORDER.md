@@ -58,3 +58,7 @@ Owner-selected task `106` завершена и архивирована пос�
 Owner-selected task `107` создана для scheduled regression и закрытых Allure-отчётов на
 `allure.your-fitness-coach.ru`. Она не является current, не меняет порядок `78-101` и требует
 отдельного owner запуска плюс explicit approval перед DNS/Cloudflare/hosting actions.
+
+Owner-selected task `108` создана для комплексного аудита соответствия законодательству РФ и
+непрерывного legal-impact gate, охватывающего все текущие и любые будущие задачи. Она не является
+current, не меняет порядок `79-101` и требует отдельного owner запуска и профильного юриста.

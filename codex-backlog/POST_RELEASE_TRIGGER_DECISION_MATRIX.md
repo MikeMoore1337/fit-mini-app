@@ -35,6 +35,7 @@
 | `100B` | Результат `100A` | | | Locale foundation стабильна; подтверждены public/SEO/content scope и reviewer | | |
 | `101` | | | | Есть повторяющийся спрос и готов sensitive-media lifecycle; AI/body analysis исключён | | |
 | `107` | Owner request и аудит current GitHub Actions/test harness | Большой regression scope уже существует, но нет schedule, единого Allure HTML, очевидной browser-ссылки, закрытого доступа и явного lifecycle отчётов | Владелец утвердил `allure.your-fitness-coach.ru`, Cloudflare Access allowlist, Daily `14` дней и Weekly `4` отчёта | Task creation approved; implementation требует отдельного owner запуска, а DNS/Cloudflare/hosting/secrets — дополнительного explicit approval | Создать task, implementation pending | 2026-08-28 |
+| `108` | Прямой owner request на проверку соответствия законодательству РФ | Существующие security/privacy/product audits не дают полного юридического coverage и не охватывают автоматически ещё не созданные задачи | Владелец потребовал охватить весь проект, все backlog tasks и любые будущие задачи через continuous gate | Task creation approved; audit lifecycle, counsel review, remediation и external legal actions требуют отдельных owner decisions | Создать task, audit pending | 2026-08-28 |
 
 ## Завершённые owner decisions
 

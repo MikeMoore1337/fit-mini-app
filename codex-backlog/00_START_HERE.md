@@ -12,7 +12,7 @@ Backlog использует resource-aware lifecycle. Завершённые з
 - task `78` завершила production operational readiness после owner approval и подтверждения
   внешних operational controls;
 - task `79` назначена current final release gate, но ещё не начата;
-- owner-selected task `107` создана вне основной очереди и не является current.
+- owner-selected tasks `107-108` созданы вне основной очереди и не являются current.
 
 ## Текущая задача
 
@@ -21,7 +21,8 @@ Backlog использует resource-aware lifecycle. Завершённые з
 ```
 
 Не запускать заново `00-78`, `74A` и `103-106`. Назначение `79` не запускает её реализацию, а
-создание owner-selected task `107` не разрешает её implementation или внешние infrastructure actions.
+создание owner-selected tasks `107-108` не разрешает их implementation, external actions или
+юридически значимые выводы без профильной проверки.
 
 ## Design alternatives flow
 
@@ -57,6 +58,7 @@ V2.1 / A / B / C / explicit hybrid
   -> 78 production readiness [COMPLETED] -> 79 final release gate [CURRENT, NOT STARTED]
 103-106 owner-selected Telegram flow/Landing tasks [done]
 107 Scheduled regression + private Allure reports [OWNER-SELECTED PENDING; NOT CURRENT]
+108 Russian law compliance audit + continuous legal gate [OWNER-SELECTED PENDING; NOT CURRENT]
 ```
 
 ## Что изменено в v14
@@ -65,6 +67,8 @@ V2.1 / A / B / C / explicit hybrid
 - Current task назначена `79`; её реализация не начата, release/post-release порядок не изменён.
 - Добавлена owner-selected pending task `107` для scheduled regression и закрытых Allure-отчётов
   на `allure.your-fitness-coach.ru` с явным access/retention owner contract.
+- Добавлена owner-selected pending task `108` для полного аудита соответствия законодательству РФ,
+  покрытия всех существующих tasks и непрерывного gate для ещё не созданных будущих задач.
 - Resource-aware review policy `BLOCKER/HIGH only` сохранена; `MEDIUM/LOW` синхронизируются в
   `bugs/FINDINGS.md`.
 

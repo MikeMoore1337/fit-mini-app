@@ -2,8 +2,8 @@
 
 Этот файл действует для завершённых и архивированных release tasks `75-78`, включая буквенные
 подзадачи и owner-approved Pulse concepts pilot `75C`, current release task `79`, и
-trigger-gated post-release pool `80-101` с буквенными подзадачами и owner-selected pending task
-`107`. Completed tasks `00-73A`, включая буквенные подзадачи, tasks `74A-75` и отдельно
+trigger-gated post-release pool `80-101` с буквенными подзадачами и owner-selected pending tasks
+`107-108`. Completed tasks `00-73A`, включая буквенные подзадачи, tasks `74A-75` и отдельно
 завершённые tasks `103-106` не переигрываются и хранятся в `tasks/done/`.
 
 
@@ -70,6 +70,9 @@ Lifecycle не расширяет scope task и не отменяет owner chec
 - Owner-selected task `107` создана для scheduled regression и закрытых Allure-отчётов; она не
   является current, не меняет порядок `79-101` и требует отдельного owner запуска. DNS,
   Cloudflare Access/hosting, secrets и paid resources требуют дополнительного explicit approval.
+- Owner-selected task `108` создана для полного аудита соответствия законодательству РФ и
+  непрерывного legal-impact gate для любых будущих tasks; она не является current, не меняет
+  порядок `79-101`, требует отдельного owner запуска и проверки профильным российским юристом.
 - Current release task `79` и остальные trigger-gated tasks сохраняют собственные Trigger,
   dependency и owner decision.
 - Task `50A` уже создала общий continuous Mobile Web/TMA gate, который переиспользуют последующие client-facing tasks.

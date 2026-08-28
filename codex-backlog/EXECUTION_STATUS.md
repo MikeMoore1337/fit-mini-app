@@ -50,6 +50,9 @@
 - [ ] owner-selected task `107-scheduled-regression-private-allure-reports.md` создана вне основной
       очереди, не назначена current и требует отдельного owner запуска; DNS/Cloudflare/hosting
       actions остаются под дополнительным explicit approval.
+- [ ] owner-selected task `108-russian-law-compliance-audit-continuous-gate.md` создана вне основной
+      очереди, не назначена current и требует отдельного owner запуска и проверки профильным
+      российским юристом; audit/remediation/external legal actions не авторизованы созданием task.
 
 Не выполнять повторно tasks `00-78`, включая `69B`, `73A`, task `74A` и tasks `103-106`.
 Task `77` закрыта не как factual real-user validation, а по явному owner decision принять отсутствие
@@ -57,5 +60,5 @@ Task `77` закрыта не как factual real-user validation, а по яв�
 не выполнялся. Следующей pending task назначена `79`, но её реализация не начата.
 `DESIGN_V2_1` с owner-approved bounded Pulse pilot остаётся production baseline.
 Umbrella `100` отдельно не выполняется; `100A` не назначена без собственного Trigger, dependency
-и owner decision. Task `107` также не запускается автоматически. Другие pending tasks автоматически
-не реализуются.
+и owner decision. Tasks `107-108` также не запускаются автоматически. Другие pending tasks
+автоматически не реализуются.

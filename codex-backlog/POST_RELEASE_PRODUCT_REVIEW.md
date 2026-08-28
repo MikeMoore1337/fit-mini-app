@@ -51,6 +51,7 @@ photos без AI/body analysis остаются в конце.
 | `103-105` | Завершённая отдельная ветка | Telegram editorial operations архивированы и не входят в pending sequence. |
 | `106` | Завершённая owner-selected bounded Landing task | Развела запуск Mini App, поддержку и подписку на подтверждённый публичный канал без нового Telegram runtime. |
 | `107` | Owner-selected QA/platform task вне основной очереди | Scheduled Daily/Weekly regression, единый закрытый Allure HTML и retention уменьшают latency обнаружения regressions. Публичный repo требует реальной access boundary; implementation и внешняя инфраструктура запускаются только отдельным owner approval. |
+| `108` | Owner-selected legal compliance task вне основной очереди | Разовый аудит текущего snapshot недостаточен: product-wide coverage объединён с обязательным legal-impact intake/delta gate для любых будущих задач. Итоговый compliance verdict требует профильного российского юриста; remediation отделена в owner-approved follow-ups. |
 
 ## Контракт AI-assisted импорта `93`
 
