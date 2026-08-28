@@ -328,10 +328,9 @@ test('dark nutrition uses the shared lime status and progress accents', async ({
   await expect(status).toHaveCSS('background-color', 'rgb(30, 34, 30)');
   await expect(status).toHaveCSS('border-color', 'rgb(89, 111, 56)');
   await expect(status).toHaveCSS('color', 'rgb(185, 234, 114)');
-  await expect(page.locator('.nutrition-target__track > span').first()).toHaveCSS(
-    'background-color',
-    'rgb(168, 232, 58)',
-  );
+  await expect(
+    page.getByRole('progressbar', { name: /Калории:/ }).locator(':scope > span'),
+  ).toHaveCSS('background-color', 'rgb(168, 232, 58)');
   await expect(page.getByRole('link', { name: 'Питание', exact: true })).toHaveCSS(
     'background-color',
     'rgb(30, 34, 30)',

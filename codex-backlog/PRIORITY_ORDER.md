@@ -1,31 +1,32 @@
-# Порядок выполнения release backlog v43
+# Порядок выполнения release backlog v44
 
 ## Completed
 
-`00-76`, включая `69B`, `73A`, `74A` и предшествующие буквенные подзадачи, а также
+`00-76A`, включая `69B`, `73A`, `74A` и предшествующие буквенные подзадачи, а также
 owner-selected Telegram tasks `103-106`.
 Task-файлы находятся в `tasks/done/`.
 
 ## Current
 
 ```text
-76A Pre-human adversarial negative и destructive testing gate [CURRENT, NOT STARTED]
+77 Проверка UX реальными пользователями и owner decision gate [CURRENT, NOT STARTED]
 ```
 
-Tasks `75C` и `76` завершены после owner screenshot review. Task `76A` назначена текущей, но не
-реализуется в completion run `76`. Её pre-human adversarial QA начинается только отдельным запуском
-после проверки Preconditions; production baseline остаётся `DESIGN_V2_1` с bounded Pulse pilot.
+Tasks `75C`, `76` и `76A` завершены после применимых owner checkpoints. Task `76A` получила
+adversarial verdict `PASS`, закрыла все `BLOCKER/HIGH` и архивирована. Task `77` назначена текущей,
+но real-user research не запускается в completion run `76A`; production baseline остаётся
+`DESIGN_V2_1` с bounded Pulse pilot.
 
 Conditional release sequence:
 
 ```text
 75 [COMPLETED] -> 75A Rethink audit [COMPLETED] -> START_RETHINK_EXPLORATION
-  KEEP -> 76 [COMPLETED] -> 76A [CURRENT] -> 77 -> 78 -> 79
+  KEEP -> 76 [COMPLETED] -> 76A [COMPLETED] -> 77 [CURRENT] -> 78 -> 79
   EVOLVE -> bounded remediation -> 76 [COMPLETED]
   RETHINK -> 75B exploration [COMPLETED] -> 75C pilot [COMPLETED] -> 76 [COMPLETED]
 ```
 
-Task `76A` назначена текущей, но не выполняется автоматически в completion-сессии `76`.
+Task `77` назначена текущей, но не выполняется автоматически в completion-сессии `76A`.
 Trigger-gated tasks сохраняют собственные gates. Никакая task не запускает следующую автоматически.
 
 ## Последовательность после `79`
@@ -50,4 +51,4 @@ Trigger-gated tasks сохраняют собственные gates. Никак�
 отдельно не выполняются.
 
 Owner-selected task `106` завершена и архивирована после owner screenshot approval. Она не изменила
-current task `76A` и порядок `76A-101`.
+основную release-последовательность; current task теперь `77`, далее сохраняется порядок `77-101`.

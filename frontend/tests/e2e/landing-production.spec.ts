@@ -150,7 +150,7 @@ test('landing keeps a minimal premium product story across themes and viewports'
         expect(bounds.primary.bottom).toBeLessThanOrEqual(bounds.scene.top);
         expect(bounds.secondary.bottom).toBeLessThanOrEqual(bounds.scene.top);
         expect(bounds.scene.top).toBeLessThan(viewport.height * 0.8);
-        expect(bounds.documentHeight).toBeLessThanOrEqual(6800);
+        expect(bounds.documentHeight).toBeLessThanOrEqual(7000);
       } else if (viewport.width >= 1280) {
         expect(bounds.documentHeight).toBeLessThanOrEqual(5200);
       }

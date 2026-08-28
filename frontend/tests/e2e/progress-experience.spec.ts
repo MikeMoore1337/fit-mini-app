@@ -1051,8 +1051,13 @@ test('nutrition report preserves truthful period context, daily drill-down and r
       name: 'Дневные КБЖУ, статус заполнения и действовавшая цель',
     }),
   ).toBeVisible();
-  await expect(report.getByText('Нет данных').first()).toBeVisible();
-  await expect(report.getByText('0 ккал', { exact: true }).first()).toBeVisible();
+  const dailyTable = report.getByRole('table', {
+    name: 'Дневные КБЖУ, статус заполнения и действовавшая цель',
+  });
+  await expect(
+    dailyTable.getByRole('cell', { name: 'Нет данных', exact: true }).first(),
+  ).toBeVisible();
+  await expect(dailyTable.getByRole('cell', { name: '0 ккал', exact: true }).first()).toBeVisible();
 
   for (const period of ['30 дней', '90 дней']) {
     await selector.getByRole('tab', { name: period }).click();

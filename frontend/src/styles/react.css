@@ -654,6 +654,10 @@ select:not([multiple]) {
 .modal__panel {
   position: relative;
   z-index: 1;
+  border-color: var(--v2-border);
+  background: var(--v2-surface);
+  color: var(--v2-text-primary);
+  backdrop-filter: none;
 }
 .exercise-guide-images {
   display: grid;

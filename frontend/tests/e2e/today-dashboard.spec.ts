@@ -309,8 +309,8 @@ test('planned workout starts from the primary Today CTA', async ({ page }) => {
     page.getByRole('spinbutton', { name: 'Повторы, Приседания, подход 1' }),
   ).toBeVisible();
   await page.getByRole('button', { name: /К сводке/ }).click();
-  await expect(page.getByRole('group', { name: /сегодня, В процессе/i })).toBeVisible();
-  await expect(page.getByRole('group', { name: /сегодня, Запланировано/i })).not.toBeAttached();
+  await expect(page.getByRole('group', { name: /сегодня, .*В процессе/i })).toBeVisible();
+  await expect(page.getByRole('group', { name: /сегодня, .*Запланировано/i })).not.toBeAttached();
 });
 
 test('started workout finishes into a factual completed state', async ({ page }) => {

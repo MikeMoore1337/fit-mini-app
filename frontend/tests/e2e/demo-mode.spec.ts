@@ -327,6 +327,7 @@ async function completeScenario(page: Page, scenario: DemoScenario) {
   }
   const authHandoff = page.getByRole('link', { name: 'Войти и начать настройку' });
   await expect(authHandoff).toBeVisible();
+  await authHandoff.scrollIntoViewIfNeeded();
   await expect(authHandoff).toBeInViewport();
 
   const isTma = await page.evaluate(() => Boolean(window.Telegram?.WebApp?.initData?.trim()));
@@ -1111,14 +1112,17 @@ test('Web cabinet reset, reload, expired and forbidden states are predictable', 
 });
 
 test('desktop keeps the canonical content width and separated adjacent regions', async ({
+  browserName,
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   if (!LIVE_DEMO) await installDemoApi(page);
   await page.goto('/demo?scenario=self_training');
   await expect(page.getByText('Демо', { exact: true })).toBeVisible();
-  await page.keyboard.press('Tab');
-  await expect(page.getByRole('link', { name: 'К демо-сценарию' })).toBeFocused();
+  const skipLink = page.getByRole('link', { name: 'К демо-сценарию' });
+  if (browserName === 'webkit') await skipLink.focus();
+  else await page.keyboard.press('Tab');
+  await expect(skipLink).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.locator('#demoContent')).toBeFocused();
 

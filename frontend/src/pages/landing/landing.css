@@ -170,7 +170,7 @@
 }
 
 .landing-button--compact {
-  min-height: 42px;
+  min-height: 44px;
   padding-inline: 18px;
   border-radius: 14px;
   box-shadow: none;
@@ -1823,9 +1823,9 @@
   .landing-page .landing-theme-toggle,
   .landing-button--compact,
   .landing-menu-toggle {
-    width: 42px;
-    height: 42px;
-    min-height: 42px;
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
   }
 
   .landing-header__actions {

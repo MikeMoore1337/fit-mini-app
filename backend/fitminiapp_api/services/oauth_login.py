@@ -19,7 +19,7 @@ from fitminiapp_api.core.config import settings
 from fitminiapp_api.models.auth_identity import AuthIdentity
 from fitminiapp_api.models.notification import NotificationSetting
 from fitminiapp_api.models.user import User, UserProfile
-from fitminiapp_api.services.auth_identities import ensure_auth_identity
+from fitminiapp_api.services.auth_identities import IdentityConflictError, ensure_auth_identity
 from fitminiapp_api.services.password_auth import utcnow
 from fitminiapp_api.services.telegram_auth import normalize_telegram_username
 
@@ -481,7 +481,7 @@ def get_or_create_oauth_user(
                 )
                 db.flush()
             user = candidate
-        except IntegrityError:
+        except IntegrityError, IdentityConflictError:
             identity = (
                 db.query(AuthIdentity)
                 .filter(AuthIdentity.provider == provider, AuthIdentity.subject == subject)

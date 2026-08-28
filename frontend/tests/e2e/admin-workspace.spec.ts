@@ -253,6 +253,15 @@ test('mobile destructive confirmation names the subject and preserves touch geom
     }),
   );
   expect(actionBoxes.every((box) => box.width >= 44 && box.height >= 44)).toBe(true);
+  await expect(dialog.locator('.modal__panel')).toHaveCSS('background-color', 'rgb(22, 25, 22)');
+  await expect(dialog.locator('.modal__panel')).toHaveCSS('opacity', '1');
+  const [cancelBox, confirmBox] = await Promise.all([
+    dialog.getByRole('button', { name: 'Отмена' }).boundingBox(),
+    dialog.getByRole('button', { name: 'Подтвердить блокировку' }).boundingBox(),
+  ]);
+  expect(cancelBox).not.toBeNull();
+  expect(confirmBox).not.toBeNull();
+  expect(cancelBox!.x + cancelBox!.width).toBeLessThanOrEqual(confirmBox!.x);
   await expectNoHorizontalOverflow(page);
   await page.screenshot({
     path: '../.artifacts/screenshots/task-71/390-dark-destructive-confirm.png',
@@ -324,12 +333,11 @@ test('Telegram Mini App has no admin entry and redirects the direct route', asyn
     });
   });
   await mockAdminApi(page);
-  await page.goto('/admin');
+  await page.goto('/admin?tgWebAppPlatform=android&tgWebAppData=tma-root-boundary');
 
   await expect(page).toHaveURL(/\/app$/);
   await expect(
     page.getByRole('heading', { name: 'Операции поддержки и безопасности' }),
   ).toHaveCount(0);
-  await page.getByRole('button', { name: 'Ещё', exact: true }).click();
-  await expect(page.getByRole('link', { name: 'Администрирование' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Войти и продолжить' })).toBeVisible();
 });

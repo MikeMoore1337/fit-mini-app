@@ -36,19 +36,18 @@ test('логотип и кнопки в шапке имеют одинакову
     await page.setViewportSize(viewport);
     await page.goto('/');
 
+    const brandTarget = await page.locator('.landing-header .landing-brand').boundingBox();
     const logo = await page.locator('.landing-header .landing-brand__mark').boundingBox();
     const themeButton = await page.locator('.landing-theme-toggle').boundingBox();
     const loginButton = page.locator('.landing-button--compact');
 
     expect(logo).not.toBeNull();
+    expect(brandTarget).not.toBeNull();
     expect(themeButton).not.toBeNull();
-    expect(logo?.height).toBe(44);
-    expect(themeButton?.height).toBe(logo?.height);
-    if (viewport.width >= 980) {
-      expect((await loginButton.boundingBox())?.height).toBe(logo?.height);
-    } else {
-      await expect(loginButton).toBeHidden();
-    }
+    expect(Math.min(brandTarget!.width, brandTarget!.height)).toBeGreaterThanOrEqual(44);
+    expect(themeButton?.height).toBeGreaterThanOrEqual(44);
+    await expect(loginButton).toBeVisible();
+    expect((await loginButton.boundingBox())?.height).toBeGreaterThanOrEqual(44);
 
     const themeControl = page.getByRole('button', { name: /Включить .* тему/ });
     await themeControl.hover();
@@ -64,7 +63,7 @@ test('логотип и кнопки в шапке имеют одинакову
     const menuButton = page.getByRole('button', { name: 'Открыть меню' });
     if (viewport.width < 980) {
       await expect(menuButton).toBeVisible();
-      expect((await menuButton.boundingBox())?.height).toBe(logo?.height);
+      expect((await menuButton.boundingBox())?.height).toBeGreaterThanOrEqual(44);
       await menuButton.hover();
       await expect(menuButton).toHaveCSS('box-shadow', 'none');
       await expect(menuButton).toHaveCSS('transform', 'none');
@@ -81,31 +80,20 @@ test('логотип и кнопки в шапке имеют одинакову
   }
 });
 
-test('описания audience-карточек имеют одинаковый читаемый цвет', async ({ page }) => {
+test('описания самостоятельного и тренерского сценариев сохраняют читаемый цвет', async ({
+  page,
+}) => {
   for (const scheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/');
 
-    const selfDescription = page
-      .getByText('Занимаетесь самостоятельно?', { exact: true })
-      .locator('xpath=ancestor::article[1]')
-      .locator('p')
-      .nth(1);
-    const coachDescription = page
-      .getByText('Вы тренер?', { exact: true })
-      .locator('xpath=ancestor::article[1]')
-      .locator('p')
-      .nth(1);
+    const selfDescription = page.locator('.landing-core__self > p:not(.landing-kicker)');
+    const coachDescription = page.locator('.landing-trainer__copy > p:not(.landing-kicker)');
 
-    await expect(selfDescription).toHaveCSS(
-      'color',
-      scheme === 'light' ? 'rgb(22, 26, 23)' : 'rgb(238, 240, 234)',
-    );
-    await expect(coachDescription).toHaveCSS(
-      'color',
-      scheme === 'light' ? 'rgb(22, 26, 23)' : 'rgb(238, 240, 234)',
-    );
+    const expectedColor = scheme === 'light' ? 'rgb(89, 96, 91)' : 'rgb(175, 181, 173)';
+    await expect(selfDescription).toHaveCSS('color', expectedColor);
+    await expect(coachDescription).toHaveCSS('color', 'rgb(174, 185, 176)');
   }
 });
 
@@ -163,17 +151,17 @@ test('первый экран лендинга объясняет продукт
 
     await expect(page.getByRole('heading', { name: /знайте, что делать сегодня/i })).toBeVisible();
     await expect(page.getByRole('link', { name: /открыть приложение/i }).first()).toBeVisible();
-    const heroProof = page.locator('.landing-hero-proof');
+    const heroProof = page.locator('.landing-hero-device');
     await expect(
-      heroProof.getByRole('img', { name: /экран сегодня: недельный контекст/i }),
+      heroProof.getByRole('img', { name: /актуальный экран сегодня.*силовой тренировки/i }),
     ).toBeVisible();
-    await expect(heroProof.getByText(/подготовленные данные без информации/i)).toBeVisible();
+    await expect(heroProof.getByText(/актуальный интерфейс/i)).toBeVisible();
     if (viewport.width === 390) {
       const mobileProof = await heroProof.evaluate((element) => {
         const styles = getComputedStyle(element);
-        return { marginInline: styles.marginInline, transform: styles.transform };
+        return { marginInline: styles.marginInline };
       });
-      expect(mobileProof).toEqual({ marginInline: '0px', transform: 'none' });
+      expect(mobileProof.marginInline).toBe('0px');
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
   }
@@ -191,8 +179,10 @@ test('вторичные CTA сохраняют контрастный текс�
     const expectedBackground = scheme === 'light' ? 'rgb(236, 237, 233)' : 'rgb(30, 34, 30)';
     const expectedText = scheme === 'light' ? 'rgb(22, 26, 23)' : 'rgb(238, 240, 234)';
     for (const link of [
-      page.getByRole('link', { name: /Попробовать демо/ }),
-      page.getByRole('link', { name: /Поддержка в Telegram/ }),
+      page.locator('.landing-hero__actions').getByRole('link', { name: /Попробовать демо/ }),
+      page
+        .locator('.landing-assurance__platform')
+        .getByRole('link', { name: /Открыть приложение в Telegram/ }),
     ]) {
       await link.hover();
       await expect(link).toHaveCSS('background-color', expectedBackground);
@@ -216,7 +206,7 @@ test('лендинг остаётся адаптивным на контроль
     expect(pageMetrics.bodyWidth).toBeLessThanOrEqual(pageMetrics.viewport);
     await expect(page.getByRole('link', { name: /открыть приложение/i }).first()).toBeVisible();
     await expect(page.getByRole('button', { name: /Включить .* тему/ })).toBeInViewport();
-    await expect(page.locator('.landing-platforms__facts article')).toHaveCount(2);
+    await expect(page.locator('.landing-continuity__rail')).toBeVisible();
   }
 });
 
@@ -259,7 +249,7 @@ test('блок возможностей показывает пользу спо
     await expect(
       page.getByRole('heading', { name: /у каждого клиента — видимый контекст/i }),
     ).toBeVisible();
-    await expect(page.locator('.landing-showcase article')).toHaveCount(4);
+    await expect(page.locator('.landing-core__features article')).toHaveCount(3);
     if (viewport.width <= 430) {
       const compactTextLinks = page.locator('.landing-brand, .landing-footer a');
       for (const link of await compactTextLinks.all()) {
@@ -279,7 +269,7 @@ test('сценарий и платформы остаются понятными
     await page.setViewportSize(viewport);
     await page.goto('/');
 
-    await expect(page.locator('.landing-workflow li')).toHaveCount(3);
+    await expect(page.locator('.landing-start__steps li')).toHaveCount(3);
     await expect(
       page.getByRole('heading', { name: /от настройки — к повторяемому ритму/i }),
     ).toBeVisible();
@@ -288,35 +278,10 @@ test('сценарий и платформы остаются понятными
       page.getByText(/telegram mini app не является отдельным приложением/i),
     ).toBeVisible();
 
-    const platformCards = page.locator('.landing-platforms__facts article');
-    await expect(platformCards).toHaveCount(2);
-    const platformIcons = platformCards.locator(':scope > span');
-    await expect(platformIcons).toHaveCount(2);
-    for (const icon of await platformIcons.all()) {
-      await expect(icon).toHaveCSS('width', '44px');
-      await expect(icon).toHaveCSS('height', '44px');
-      await expect(icon.locator('svg')).toHaveCSS('width', '24px');
-      await expect(icon.locator('svg')).toHaveCSS('height', '24px');
-    }
-    const browserCard = await platformCards.first().boundingBox();
-    const telegramCard = await platformCards.last().boundingBox();
-    expect(browserCard).not.toBeNull();
-    expect(telegramCard).not.toBeNull();
-    if (viewport.width >= 768) {
-      expect(browserCard!.x + browserCard!.width).toBeLessThanOrEqual(telegramCard!.x);
-      const platformHeadings = await platformCards
-        .locator('h3')
-        .evaluateAll((items) => items.map((item) => item.getBoundingClientRect().y));
-      const platformDescriptions = await platformCards
-        .locator('p')
-        .evaluateAll((items) => items.map((item) => item.getBoundingClientRect().y));
-      expect(Math.max(...platformHeadings) - Math.min(...platformHeadings)).toBeLessThanOrEqual(1);
-      expect(
-        Math.max(...platformDescriptions) - Math.min(...platformDescriptions),
-      ).toBeLessThanOrEqual(1);
-    } else {
-      expect(browserCard!.y + browserCard!.height).toBeLessThanOrEqual(telegramCard!.y);
-    }
+    const platformRail = page.locator('.landing-continuity__rail');
+    await expect(platformRail).toBeVisible();
+    await expect(platformRail).toContainText('Web');
+    await expect(platformRail).toContainText('Telegram Mini App');
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
   }
 });
@@ -330,10 +295,12 @@ test('сценарии спортсмена и тренера ведут в ве
     await page.setViewportSize(viewport);
     await page.goto('/');
 
-    const audienceCards = page.locator('.landing-audience article');
-    await expect(audienceCards).toHaveCount(2);
+    await expect(page.locator('.landing-core__self')).toBeVisible();
+    await expect(page.locator('.landing-trainer')).toBeVisible();
     await expect(page.getByText(/занимаетесь самостоятельно/i)).toBeVisible();
-    await expect(page.getByText(/вы тренер/i)).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: /у каждого клиента — видимый контекст/i }),
+    ).toBeVisible();
     await expect(page.getByRole('link', { name: /начать с тренировок/i })).toHaveAttribute(
       'href',
       '/training',
@@ -342,7 +309,7 @@ test('сценарии спортсмена и тренера ведут в ве
       'href',
       '/for-trainers',
     );
-    await expect(page.getByText(/режим тренера сразу после входа/i)).toBeVisible();
+    await expect(page.getByText(/режим тренера включить позже/i)).toBeVisible();
     await expect(page.getByRole('link', { name: /открыть приложение/i }).last()).toHaveAttribute(
       'href',
       '/app',
@@ -351,51 +318,27 @@ test('сценарии спортсмена и тренера ведут в ве
       'href',
       'https://t.me/your_fitness_coach_bot?start=support',
     );
-    const heroButtons = page.locator(
-      '.landing-hero__primary .landing-button, .landing-hero__continuation .landing-button',
-    );
+    const heroButtons = page.locator('.landing-hero__actions .landing-button');
     const contactButtons = page.locator('.landing-contact__actions .landing-button');
-    const audienceButtons = page.locator('.landing-audience .landing-button');
     for (const buttons of [heroButtons, contactButtons]) {
       await expect(buttons).toHaveCount(2);
       const first = await buttons.first().boundingBox();
       const second = await buttons.last().boundingBox();
       expect(first).not.toBeNull();
       expect(second).not.toBeNull();
-      expect(first!.width).toBeCloseTo(second!.width, 0);
       expect(first!.height).toBe(second!.height);
+      if (viewport.width === 390) expect(first!.width).toBeCloseTo(second!.width, 0);
     }
-    await expect(audienceButtons).toHaveCount(2);
-    expect((await audienceButtons.first().boundingBox())?.height).toBe(
-      (await audienceButtons.last().boundingBox())?.height,
-    );
+    const featureCards = page.locator('.landing-core__features article');
+    await expect(featureCards).toHaveCount(3);
+    await expect(featureCards.getByRole('link')).toHaveCount(3);
     if (viewport.width === 390) {
       const brand = page.locator('.landing-header .landing-brand');
       const brandWordmark = brand.locator('.yfc-lockup__wordmark');
-      await expect(brandWordmark).toBeHidden();
+      await expect(brandWordmark).toBeVisible();
       const brandBox = await brand.boundingBox();
       expect(brandBox).not.toBeNull();
       expect(brandBox!.height).toBeGreaterThanOrEqual(44);
-    }
-
-    const clientCard = await audienceCards.first().boundingBox();
-    const coachCard = await audienceCards.last().boundingBox();
-    expect(clientCard).not.toBeNull();
-    expect(coachCard).not.toBeNull();
-    if (viewport.width >= 768) {
-      expect(clientCard!.x + clientCard!.width).toBeLessThan(coachCard!.x);
-      const audienceHeadings = await audienceCards
-        .locator('h2')
-        .evaluateAll((items) => items.map((item) => item.getBoundingClientRect().y));
-      const audienceDescriptions = await audienceCards
-        .locator(':scope > p:last-of-type')
-        .evaluateAll((items) => items.map((item) => item.getBoundingClientRect().y));
-      expect(Math.max(...audienceHeadings) - Math.min(...audienceHeadings)).toBeLessThanOrEqual(1);
-      expect(
-        Math.max(...audienceDescriptions) - Math.min(...audienceDescriptions),
-      ).toBeLessThanOrEqual(1);
-    } else {
-      expect(clientCard!.y + clientCard!.height).toBeLessThan(coachCard!.y);
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
     if (viewport.width === 390) {
@@ -1269,7 +1212,7 @@ test('цветовая система сохраняет иерархию в с�
   await expect(selectedDestination).toHaveCSS('background-color', 'rgb(30, 34, 30)');
   await expect(selectedDestinationIcon).toBeVisible();
   await expect(nutritionDestinationIcon).toBeVisible();
-  await expect(nutritionDestinationIcon.locator('circle')).toHaveCount(1);
+  await expect(nutritionDestinationIcon.locator('svg')).toBeVisible();
   await expect(page.locator('.app-bottom-nav__sequence')).toHaveCount(0);
   await expect(selectedDestinationIcon).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
   await expect(selectedDestinationIcon).toHaveCSS('color', 'rgb(185, 234, 114)');
@@ -1419,25 +1362,34 @@ test('Mobile Web и Telegram используют одну YFC palette и гео
 
 test('primary CTA лендинга и Войти остаются lime в обеих темах', async ({ page }) => {
   await page.goto('/');
-  const primary = page.getByRole('link', { name: /открыть приложение/i });
+  await page.mouse.move(0, 700);
+  const primary = page.locator('.landing-hero__actions').getByRole('link', {
+    name: 'Открыть приложение',
+    exact: true,
+  });
   const login = page.getByRole('link', { name: 'Войти' });
 
-  await expect(primary).toHaveCSS('background-color', 'rgb(158, 224, 43)');
-  await expect(primary).toHaveCSS('color', 'rgb(16, 32, 21)');
+  await expect(primary).toHaveCSS('background-color', 'rgb(182, 242, 56)');
+  await expect(primary).toHaveCSS('color', 'rgb(23, 32, 24)');
   await expect(login).toHaveCSS('background-color', 'rgb(158, 224, 43)');
   await expect(login).toHaveCSS('color', 'rgb(16, 32, 21)');
   await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
-  await expect(primary).toHaveCSS('background-color', 'rgb(168, 232, 58)');
-  await expect(primary).toHaveCSS('color', 'rgb(16, 32, 21)');
-  await expect(login).toHaveCSS('background-color', 'rgb(168, 232, 58)');
+  await expect(primary).toHaveCSS('background-color', 'rgb(182, 242, 56)');
+  await expect(primary).toHaveCSS('color', 'rgb(23, 32, 24)');
+  await expect(login).toHaveCSS('background-color', 'rgb(158, 224, 43)');
   await expect(login).toHaveCSS('color', 'rgb(16, 32, 21)');
 });
 
 test('deep link показывает тренера до явного подтверждения', async ({ page }) => {
   await mockApi(page);
-  await page.goto('/app?startapp=trainer_test-invite-token');
-  await page.getByRole('button', { name: 'Клиент' }).click();
+  await page.addInitScript(() => sessionStorage.setItem('fit_access_token', 'test-token'));
+  const previewRequest = page.waitForRequest((request) =>
+    new URL(request.url()).pathname.endsWith('/me/coach-invites/link/preview'),
+  );
+  await page.goto('/app?startapp=trainer_test-invite-token-0000');
+  await previewRequest;
 
+  await expect(page.getByRole('heading', { name: 'Мой тренер' })).toBeVisible();
   await openCard(page, 'Мой тренер');
   await expect(page.getByRole('heading', { name: 'Тестовый тренер' })).toBeVisible();
   await page.getByRole('button', { name: 'Подтвердить подключение' }).click();
@@ -2501,11 +2453,11 @@ test('поля адаптируются к разным iPhone, а пример 
   await page.getByRole('button', { name: 'Клиент' }).click();
 
   await openAppDestination(page, 'Прогресс');
-  await openCard(page, 'Дневник замеров');
-  const dateField = page.getByLabel('Дата');
-  const weightField = page.getByLabel('Вес, кг');
-  const diaryGrid = page.locator('.diary-form-grid');
-  const dateControl = page.locator('.diary-date-control');
+  const measurementForm = page.locator('.measurement-diary__form');
+  const dateField = measurementForm.locator('input[type="date"]');
+  const weightField = measurementForm.getByLabel('Вес, кг');
+  const diaryGrid = measurementForm.locator('.diary-form-grid');
+  const dateControl = measurementForm.locator('.diary-date-control');
   const [dateBox, dateControlBox, weightBox, diaryGridBox] = await Promise.all([
     dateField.boundingBox(),
     dateControl.boundingBox(),
@@ -2527,7 +2479,7 @@ test('поля адаптируются к разным iPhone, а пример 
   );
 
   await openAppDestination(page, 'Питание');
-  await openCard(page, 'КБЖУ');
+  await expect(page.getByRole('heading', { name: 'КБЖУ' })).toBeVisible();
   expect(
     await page.evaluate(() => ({
       viewport: document.documentElement.clientWidth,
@@ -2568,10 +2520,10 @@ test('поля адаптируются к разным iPhone, а пример 
   await openAppDestination(page, 'План');
   await expect(page.getByRole('heading', { name: 'Текущий план от тренера' })).toBeVisible();
   await expect(page.getByText('Назначил тренер Тренер Анна')).toBeVisible();
-  await page.getByText('Этапы и история программы', { exact: true }).click();
-  await expect(page.getByText('Блоков пока нет')).toBeVisible();
+  await page.getByText('Все этапы и изменения', { exact: true }).click();
+  await expect(page.getByText('Тренировочные блоки ещё не настроены')).toBeVisible();
   await expect(page.getByText('Программа назначена')).toBeVisible();
-  await page.getByText('Этапы и история программы', { exact: true }).click();
+  await page.getByText('Все этапы и изменения', { exact: true }).click();
   await openCard(page, 'Программы и шаблоны');
   const example = page.getByRole('button', {
     name: 'Посмотреть шаблон «Программа на всё тело — 3 дня»',
@@ -2751,8 +2703,6 @@ test('сенсорное поле даты сохраняет нативный �
     await page.goto('/app');
     await page.getByRole('button', { name: 'Клиент' }).click();
     await openAppDestination(page, 'Прогресс');
-    await openCard(page, 'Дневник замеров');
-
     const dateField = page.getByLabel('Дата');
     const dateControl = page.locator('.diary-date-control');
     await expect(dateField).toHaveAttribute('type', 'date');

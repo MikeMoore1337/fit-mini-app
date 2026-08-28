@@ -1,4 +1,4 @@
-# Execution status v43
+# Execution status v44
 
 Подтверждённое владельцем состояние на 28.08.2026:
 
@@ -33,16 +33,20 @@
       restyle, прошла review/QA, получила owner screenshot approval и архивирована;
 - [x] task `76` завершила skill-aware retrospective release audit, закрыла все подтверждённые
       `BLOCKER/HIGH/MEDIUM`, синхронизировала findings и архивирована после owner screenshot approval;
-- [ ] **current:** `76a-pre-human-adversarial-negative-destructive-testing-gate.md` — назначена,
-      реализация не начата; Preconditions и destructive test safety остаются обязательными;
-- [ ] remaining release tasks `77-79` и post-release tasks `80-101` сохраняют собственные Trigger,
+- [x] task `76A` завершила pre-human adversarial negative/destructive testing gate с verdict `PASS`,
+      закрыла все подтверждённые `BLOCKER/HIGH`, синхронизировала findings и архивирована после
+      owner approval;
+- [ ] **current:** `77-real-user-usability-validation.md` — назначена, но не начата; реальные
+      участники, фактические сессии и последующий owner decision остаются обязательным checkpoint;
+- [ ] remaining release tasks `78-79` и post-release tasks `80-101` сохраняют собственные Trigger,
       dependency и owner decision; task ID задают предпочтительный порядок, но ни одна pending task
       этой очереди не запущена.
 - [x] owner-selected task `106-landing-telegram-product-news-links.md` завершена вне основной
-      очереди и не изменила порядок `76A-101`.
+      очереди и не изменила порядок `77-101`.
 
-Не выполнять повторно tasks `00-76`, включая `69B`, `73A`, task `74A` и tasks `103-106`.
-Следующей pending task назначена `76A`: её adversarial QA gate начинается только в отдельной сессии.
+Не выполнять повторно tasks `00-76A`, включая `69B`, `73A`, task `74A` и tasks `103-106`.
+Следующей pending task назначена `77`: её real-user research начинается только в отдельной сессии
+с фактическими участниками; нулевое число реальных сессий не является validation evidence.
 `DESIGN_V2_1` с owner-approved bounded Pulse pilot остаётся production baseline.
 Umbrella `100` отдельно не выполняется; `100A` не назначена без собственного Trigger, dependency
 и owner decision. Другие pending tasks автоматически не реализуются.

@@ -210,7 +210,7 @@ export function Diary({
             className="measurement-diary__save"
             disabled={mutation.isPending}
             fullWidth
-            onPointerDown={(event) => {
+            onMouseDown={(event) => {
               const activeElement = document.activeElement;
               if (
                 activeElement instanceof HTMLElement &&
@@ -218,6 +218,10 @@ export function Diary({
               ) {
                 event.preventDefault();
               }
+            }}
+            onClick={(event) => {
+              event.preventDefault();
+              formRef.current?.requestSubmit();
             }}
             type="submit"
           >

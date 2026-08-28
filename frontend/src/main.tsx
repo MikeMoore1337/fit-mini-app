@@ -144,12 +144,14 @@ function AppRoutes() {
         <CoachPage />
       </AuthenticatedRoute>
     );
-  if (path === '/admin')
+  if (path === '/admin') {
+    if (isTelegramLaunch(window.location)) return <Redirect to="/app" />;
     return (
       <AuthenticatedRoute>
         <AdminPage />
       </AuthenticatedRoute>
     );
+  }
   return <NotFoundPage />;
 }
 
