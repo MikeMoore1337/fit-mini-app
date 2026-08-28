@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import subprocess
 from dataclasses import asdict
 from pathlib import Path
@@ -440,3 +441,202 @@ def test_manual_rollback_swaps_only_verified_revisions(tmp_path: Path, monkeypat
     assert restored.active_revision == OLD_SHA
     assert restored.rollback_revision == NEW_SHA
     assert calls["switch"] == [("blue", "green")]
+
+
+def _patch_single_slot_runtime(tmp_path: Path, monkeypatch) -> dict[str, list]:
+    calls: dict[str, list] = {
+        "compose": [],
+        "stops": [],
+        "backend_starts": [],
+        "consumer_starts": [],
+    }
+    config = _config(tmp_path)
+    active_revision_path = config.state_root / "last-successful-revision"
+    active_revision_path.parent.mkdir(parents=True)
+    active_revision_path.write_text(OLD_SHA + "\n", encoding="utf-8")
+    monkeypatch.setenv("DEPLOY_SINGLE_SLOT_CONFIRMED_SHA", NEW_SHA)
+    monkeypatch.setattr(
+        deploy,
+        "_single_slot_capacity",
+        lambda: {"cpu_count": 1, "memory_available_mb": 128, "disk_available_mb": 4096},
+    )
+    monkeypatch.setattr(
+        deploy,
+        "_compose",
+        lambda *args, **kwargs: (
+            calls["compose"].append((args, kwargs))
+            or subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+        ),
+    )
+    monkeypatch.setattr(deploy, "_switch_gateway", lambda *args: None)
+    monkeypatch.setattr(deploy, "_public_smoke", lambda *args: None)
+    monkeypatch.setattr(
+        deploy,
+        "_legacy_running_image",
+        lambda service: f"registry/{'bot' if service == 'bot' else 'backend'}:{OLD_SHA}",
+    )
+    monkeypatch.setattr(
+        deploy,
+        "_image_digest",
+        lambda image, revision: f"{image.split(':', maxsplit=1)[0]}@sha256:{revision[0] * 64}",
+    )
+    monkeypatch.setattr(
+        deploy,
+        "_run",
+        lambda args, **kwargs: subprocess.CompletedProcess(args, 0, stdout="", stderr=""),
+    )
+    monkeypatch.setattr(
+        deploy,
+        "_stop_legacy_services",
+        lambda value: calls["stops"].append(value.target_revision),
+    )
+    monkeypatch.setattr(
+        deploy,
+        "_start_legacy_backend",
+        lambda env, value: calls["backend_starts"].append(env["BACKEND_IMAGE"]),
+    )
+
+    def start_consumers(env, evidence, value, *, require_markers):
+        del evidence, value
+        calls["consumer_starts"].append((env["BOT_IMAGE"], require_markers))
+        markers = ("worker_started",) if require_markers else ()
+        return (
+            deploy.ConsumerLease("worker", "worker-id", "now", markers),
+            deploy.ConsumerLease("bot", "bot-id", "now", markers),
+        )
+
+    monkeypatch.setattr(deploy, "_start_legacy_consumers", start_consumers)
+    monkeypatch.setattr(deploy, "_lease_is_current_and_healthy", lambda lease: True)
+    return calls
+
+
+def test_single_slot_rollout_requires_exact_one_shot_confirmation(
+    tmp_path: Path, monkeypatch
+) -> None:
+    config = _config(tmp_path)
+    monkeypatch.delenv("DEPLOY_SINGLE_SLOT_CONFIRMED_SHA", raising=False)
+
+    with pytest.raises(deploy.DeploymentError, match="exact target revision"):
+        deploy.single_slot_deploy(config)
+
+
+def test_single_slot_refuses_initialized_blue_green_host(tmp_path: Path, monkeypatch) -> None:
+    config = _config(tmp_path)
+    _state(config)
+    monkeypatch.setenv("DEPLOY_SINGLE_SLOT_CONFIRMED_SHA", NEW_SHA)
+
+    with pytest.raises(deploy.DeploymentError, match="before blue/green state initialization"):
+        deploy.single_slot_deploy(config)
+
+
+def test_single_slot_rollout_replaces_legacy_services_and_records_success(
+    tmp_path: Path, monkeypatch
+) -> None:
+    config = _config(tmp_path)
+    calls = _patch_single_slot_runtime(tmp_path, monkeypatch)
+
+    evidence = deploy.single_slot_deploy(config)
+
+    assert evidence.verdict == "active"
+    assert calls["stops"] == [NEW_SHA]
+    assert calls["backend_starts"] == ["registry/backend@sha256:" + "b" * 64]
+    assert calls["consumer_starts"] == [("registry/bot@sha256:" + "b" * 64, True)]
+    assert (
+        config.state_root.joinpath("last-successful-revision").read_text(encoding="utf-8").strip()
+        == NEW_SHA
+    )
+    assert not config.state_root.joinpath("state.json").exists()
+
+
+def test_single_slot_failure_after_stop_restores_previous_images(
+    tmp_path: Path, monkeypatch
+) -> None:
+    config = _config(tmp_path)
+    calls = _patch_single_slot_runtime(tmp_path, monkeypatch)
+    starts = 0
+
+    def fail_target_once(env, value):
+        nonlocal starts
+        del value
+        starts += 1
+        calls["backend_starts"].append(env["BACKEND_IMAGE"])
+        if starts == 1:
+            raise deploy.DeploymentError("new backend failed")
+
+    monkeypatch.setattr(deploy, "_start_legacy_backend", fail_target_once)
+    monkeypatch.setattr(deploy, "_service_is_running", lambda service: False)
+
+    with pytest.raises(deploy.DeploymentError, match="new backend failed"):
+        deploy.single_slot_deploy(config)
+
+    assert calls["backend_starts"] == [
+        "registry/backend@sha256:" + "b" * 64,
+        "registry/backend@sha256:" + "a" * 64,
+    ]
+    assert calls["consumer_starts"] == [("registry/bot@sha256:" + "a" * 64, False)]
+    summaries = list(config.state_root.glob("single-slot-*/summary.json"))
+    assert len(summaries) == 1
+    assert json.loads(summaries[0].read_text(encoding="utf-8"))["verdict"] == "rolled back"
+
+
+def test_single_slot_rechecks_capacity_after_pull_and_backup(tmp_path: Path, monkeypatch) -> None:
+    config = _config(tmp_path)
+    calls = _patch_single_slot_runtime(tmp_path, monkeypatch)
+    capacity_checks = 0
+
+    def capacity():
+        nonlocal capacity_checks
+        capacity_checks += 1
+        if capacity_checks == 2:
+            raise deploy.DeploymentError("single-slot capacity gate failed after pull")
+        return {"cpu_count": 1, "memory_available_mb": 128, "disk_available_mb": 4096}
+
+    monkeypatch.setattr(deploy, "_single_slot_capacity", capacity)
+
+    with pytest.raises(deploy.DeploymentError, match="failed after pull"):
+        deploy.single_slot_deploy(config)
+
+    assert capacity_checks == 2
+    assert calls["stops"] == []
+
+
+def test_single_slot_rejects_backend_worker_image_drift(tmp_path: Path, monkeypatch) -> None:
+    config = _config(tmp_path)
+    calls = _patch_single_slot_runtime(tmp_path, monkeypatch)
+
+    def running_image(service):
+        if service == "worker":
+            return f"registry/worker-drift:{OLD_SHA}"
+        return f"registry/{'bot' if service == 'bot' else 'backend'}:{OLD_SHA}"
+
+    monkeypatch.setattr(deploy, "_legacy_running_image", running_image)
+
+    with pytest.raises(deploy.DeploymentError, match="same verified image digest"):
+        deploy.single_slot_deploy(config)
+
+    assert calls["stops"] == []
+
+
+def test_single_slot_stop_is_ordered_and_uses_bounded_timeouts(tmp_path: Path, monkeypatch) -> None:
+    config = _config(tmp_path)
+    running = {"worker", "bot", "backend"}
+    commands = []
+
+    monkeypatch.setattr(deploy, "_service_is_running", lambda service: service in running)
+
+    def compose(*args, **kwargs):
+        del kwargs
+        commands.append(args)
+        if args[0] == "stop":
+            running.remove(args[-1])
+        return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(deploy, "_compose", compose)
+
+    deploy._stop_legacy_services(config)
+
+    assert commands == [
+        ("stop", "-t", "120", "worker"),
+        ("stop", "-t", "60", "bot"),
+        ("stop", "-t", "45", "backend"),
+    ]

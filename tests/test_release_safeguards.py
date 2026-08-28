@@ -20,6 +20,11 @@ def test_automated_deploy_keeps_revision_provenance_and_stale_run_guards() -> No
     )
 
     assert "scripts/zero_downtime_deploy.py" in deploy_script
+    assert 'ROLLOUT_MODE="${4:-zero-downtime}"' in deploy_script
+    assert "single-slot" in deploy_script
+    assert "DEPLOY_SINGLE_SLOT_CONFIRMED_SHA" in (
+        root / "scripts" / "zero_downtime_deploy.py"
+    ).read_text(encoding="utf-8")
     assert "docker compose config --quiet" in deploy_script
     assert "--remove-orphans" not in deploy_script
     assert "docker compose up" not in deploy_script
