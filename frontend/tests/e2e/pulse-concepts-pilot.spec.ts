@@ -2,10 +2,12 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { installTelegramHarness } from './fixtures/mobile-tma';
 import { installPlatformApi } from './fixtures/platform-api';
 
-const capture =
-  (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
-    ?.YFC_CAPTURE_TASK_75C === '1';
-const screenshotRoot = '../.artifacts/screenshots/task-75c/final';
+const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env;
+const captureVisualImpactFix = env?.YFC_CAPTURE_PULSE_VISUAL_IMPACT === '1';
+const capture = env?.YFC_CAPTURE_TASK_75C === '1' || captureVisualImpactFix;
+const screenshotRoot = captureVisualImpactFix
+  ? '../.artifacts/screenshots/bug-20260828-01-pulse-visual-impact/review'
+  : '../.artifacts/screenshots/task-75c/final';
 
 interface PulseLabState {
   cls: number;
@@ -69,7 +71,37 @@ test('selected current-action artwork and floating dock preserve the shared navi
     const action = page.getByRole('button', { name: 'Начать тренировку' });
     const dock = page.locator('#appBottomNav');
     await expect(action).toBeVisible();
-    await expect(page.locator('.ui-semantic-artwork--current-action')).toHaveCount(1);
+    const currentActionArtwork = page.locator('.ui-semantic-artwork--current-action');
+    const currentActionSurface = page.locator('.today-workout-spotlight');
+    await expect(currentActionArtwork).toHaveCount(1);
+    await expect
+      .poll(() =>
+        currentActionArtwork.evaluate((element) =>
+          Number.parseFloat(getComputedStyle(element).opacity),
+        ),
+      )
+      .toBeGreaterThanOrEqual(0.9);
+    const visualImpact = await currentActionSurface.evaluate((element) => {
+      const surface = getComputedStyle(element);
+      const artwork = getComputedStyle(
+        element.querySelector<HTMLElement>('.ui-semantic-artwork--current-action')!,
+      );
+      return {
+        artworkShadow: artwork.boxShadow,
+        artworkWidth: Number.parseFloat(artwork.width),
+        background: surface.backgroundImage,
+        borderLeftWidth: Number.parseFloat(surface.borderLeftWidth),
+        stripeWidth: Number.parseFloat(getComputedStyle(element, '::before').width),
+      };
+    });
+    expect(visualImpact.borderLeftWidth).toBeLessThanOrEqual(2);
+    expect(visualImpact.stripeWidth).toBe(2);
+    expect(visualImpact.artworkWidth).toBeGreaterThanOrEqual(250);
+    expect(visualImpact.artworkShadow).not.toBe('none');
+    expect(visualImpact.background).toContain('radial-gradient');
+    await expect
+      .poll(() => currentActionArtwork.evaluate((element) => element.getAnimations().length))
+      .toBe(0);
     await expect(dock).toHaveCSS('position', 'fixed');
     await expect(dock).toHaveCSS('border-radius', '20px');
     await expectNoOverlap(action, dock);
@@ -262,10 +294,34 @@ test('weight insight keeps smooth truthful geometry, area fill and measurement a
     caps: getComputedStyle(line).strokeLinecap,
     joins: getComputedStyle(line).strokeLinejoin,
     path: line.getAttribute('d'),
+    width: Number.parseFloat(getComputedStyle(line).strokeWidth),
   }));
   expect(lineContract.caps).toBe('round');
   expect(lineContract.joins).toBe('round');
   expect(lineContract.path).toContain(' C ');
+  expect(lineContract.width).toBeGreaterThanOrEqual(4);
+  const insightImpact = await insight.evaluate((element) => {
+    const surface = getComputedStyle(element);
+    const artwork = getComputedStyle(
+      element.querySelector<HTMLElement>('.ui-semantic-artwork--data-insight')!,
+    );
+    const areaStart = getComputedStyle(
+      element.querySelector<SVGStopElement>('.data-viz-chart__area-start')!,
+    );
+    return {
+      areaOpacity: Number.parseFloat(areaStart.stopOpacity),
+      artworkOpacity: Number.parseFloat(artwork.opacity),
+      artworkWidth: Number.parseFloat(artwork.width),
+      background: surface.backgroundImage,
+      borderLeftWidth: Number.parseFloat(surface.borderLeftWidth),
+    };
+  });
+  expect(insightImpact.areaOpacity).toBeGreaterThanOrEqual(0.45);
+  expect(insightImpact.artworkOpacity).toBeGreaterThanOrEqual(0.8);
+  expect(insightImpact.artworkWidth).toBeGreaterThanOrEqual(230);
+  expect(insightImpact.borderLeftWidth).toBeGreaterThanOrEqual(7);
+  expect(insightImpact.background).toContain('radial-gradient');
+  await expect(chart).toHaveAttribute('data-motion-phase', 'idle');
   await expectNoHorizontalOverflow(page);
   await expectNoOverlap(chart, page.locator('#appBottomNav'));
   if (capture) {
@@ -327,6 +383,7 @@ test('mocked TMA dark uses the same chart and safe-area floating dock', async ({
   await expect
     .poll(() => dock.evaluate((element) => getComputedStyle(element).bottom))
     .toBe('28px');
+  await expect(insight.locator('.data-viz-chart')).toHaveAttribute('data-motion-phase', 'idle');
   await expectNoHorizontalOverflow(page);
   if (capture) {
     await page.screenshot({ path: `${screenshotRoot}/progress-mocked-tma-390-dark.png` });
@@ -416,6 +473,27 @@ test('full Pulse completion motion exposes facts immediately and settles within 
   expect(lab.longTasks).toEqual([]);
   expect(lab.cls).toBeLessThanOrEqual(0.01);
   expect(p95FrameGap).toBeLessThanOrEqual(34);
+  const completionImpact = await completion.evaluate((element) => {
+    const hero = getComputedStyle(element.querySelector<HTMLElement>('.workout-completion__hero')!);
+    const artwork = getComputedStyle(
+      element.querySelector<HTMLElement>('.ui-semantic-artwork--workout-completion')!,
+    );
+    const check = getComputedStyle(
+      element.querySelector<HTMLElement>('.workout-completion__check')!,
+    );
+    return {
+      artworkOpacity: Number.parseFloat(artwork.opacity),
+      artworkWidth: Number.parseFloat(artwork.width),
+      background: hero.backgroundImage,
+      borderLeftWidth: Number.parseFloat(hero.borderLeftWidth),
+      checkWidth: Number.parseFloat(check.width),
+    };
+  });
+  expect(completionImpact.artworkOpacity).toBeGreaterThanOrEqual(0.9);
+  expect(completionImpact.artworkWidth).toBeGreaterThanOrEqual(320);
+  expect(completionImpact.borderLeftWidth).toBeGreaterThanOrEqual(7);
+  expect(completionImpact.checkWidth).toBeGreaterThanOrEqual(64);
+  expect(completionImpact.background).toContain('radial-gradient');
   if (capture) {
     await page.screenshot({ path: `${screenshotRoot}/completion-full-390-light-final.png` });
   }
