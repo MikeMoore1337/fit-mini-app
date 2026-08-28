@@ -1,6 +1,6 @@
 # Historical numbering notice
 
-Files under `masters/`, legacy changelogs and older backlog snapshots may describe task `49` as current/resume or use previous pending numbering. They are historical evidence, not current execution order.
+Legacy changelogs and older backlog snapshots may describe task `49` as current/resume or use previous pending numbering. They are historical evidence, not current execution order; removed `masters/` are no longer part of the workspace.
 
 Current execution order is defined only by:
 

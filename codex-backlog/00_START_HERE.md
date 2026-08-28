@@ -1,26 +1,29 @@
-# Your Fitness Coach - backlog первого публичного релиза v14
+# Your Fitness Coach - backlog первого публичного релиза v15
 
-Backlog использует resource-aware lifecycle. Завершённые задачи архивируются в `tasks/done/` и остаются доступными для чтения.
+Backlog использует resource-aware lifecycle. В owner workspace завершённые задачи архивируются в
+локальный ignored `tasks/done/` и остаются доступными владельцу для чтения.
 
 ## Текущее состояние
 
-- tasks `00-78`, включая буквенные подзадачи, `69B`, `73A` и `74A`, а также owner-selected tasks
+- tasks `00-80`, включая буквенные подзадачи, `69B`, `73A` и `74A`, а также owner-selected tasks
   `103-106` подтверждены как завершённые;
-- завершённые task-файлы перенесены в `tasks/done/` без переименования;
+- завершённые task-файлы перенесены в локальный owner-only `tasks/done/` без переименования;
 - `DESIGN_V2_1` с owner-approved bounded Pulse pilot остаётся current production baseline;
 - task `77` закрыта по explicit owner acceptance отсутствия real-user sessions и residual risk;
 - task `78` завершила production operational readiness после owner approval и подтверждения
   внешних operational controls;
-- task `79` назначена current final release gate, но ещё не начата;
+- task `79` завершила final release gate без deployment, task `80` завершила approved repository
+  hygiene/privacy cleanup; обе архивированы после owner approval;
+- task `81` назначена current, но её Trigger/реализация не запускались;
 - owner-selected tasks `107-108` созданы вне основной очереди и не являются current.
 
 ## Текущая задача
 
 ```text
-79-final-integrated-release-audit.md [CURRENT NOT STARTED]
+81-hydration-tracking-nutrition.md [CURRENT NOT STARTED]
 ```
 
-Не запускать заново `00-78`, `74A` и `103-106`. Назначение `79` не запускает её реализацию, а
+Не запускать заново `00-80`, `74A` и `103-106`. Назначение `81` не запускает её реализацию, а
 создание owner-selected tasks `107-108` не разрешает их implementation, external actions или
 юридически значимые owner decisions. Stage C task 108 реализует пользовательское соглашение,
 отдельное согласие на обработку ПД и technical auth-gate только после legal/owner checkpoint;
@@ -57,16 +60,17 @@ V2.1 / A / B / C / explicit hybrid
   -> 75C bounded production pilot [COMPLETED]
   -> 76 audit [COMPLETED] -> 76A adversarial gate [COMPLETED]
   -> 77 real-user gate [CLOSED BY OWNER ACCEPTED RESIDUAL RISK]
-  -> 78 production readiness [COMPLETED] -> 79 final release gate [CURRENT, NOT STARTED]
+  -> 78 production readiness [COMPLETED] -> 79 final release gate [COMPLETED, NO DEPLOY]
+  -> 80 repository hygiene/privacy cleanup [COMPLETED] -> 81 hydration [CURRENT, NOT STARTED]
 103-106 owner-selected Telegram flow/Landing tasks [done]
 107 Scheduled regression + private Allure reports [OWNER-SELECTED PENDING; NOT CURRENT]
 108 Russian law compliance audit + continuous legal gate [OWNER-SELECTED PENDING; NOT CURRENT]
 ```
 
-## Что изменено в v14
+## Что изменено в v15
 
-- Task `78` завершила production readiness, restore drill и operator contract после owner approval.
-- Current task назначена `79`; её реализация не начата, release/post-release порядок не изменён.
+- Tasks `79-80` завершены и архивированы после owner approval; deployment не выполнялся.
+- Current task назначена `81`; её Trigger и реализация не запускались.
 - Добавлена owner-selected pending task `107` для scheduled regression и закрытых Allure-отчётов
   на `allure.your-fitness-coach.ru` с явным access/retention owner contract.
 - Добавлена owner-selected pending task `108` для полного аудита соответствия законодательству РФ,

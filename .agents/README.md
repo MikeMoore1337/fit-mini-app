@@ -47,4 +47,5 @@ Skills задают профессиональный способ выполне
 - `references/ROLE_ROUTING_GUIDE.md`;
 - `references/DESIGN_GUARDRAILS.md`.
 - `skills/ru-legal-risk/references/RU_LEGAL_SOURCE_POLICY.md` для юридической source freshness.
-- `../docs/audits/yfc-skills-v6-overlap-audit.md` — исторический v6 overlap audit до legal extension.
+
+Исторические overlap/release audits являются owner-only material и в public Git не публикуются.

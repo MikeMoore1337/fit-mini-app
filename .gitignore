@@ -127,6 +127,7 @@ celerybeat.pid
 
 # Environments
 .env
+.env copy
 .venv
 env/
 venv/
@@ -194,3 +195,10 @@ frontend/test-results/
 frontend/openapi.json
 
 frontend/.npm-cache*/
+
+# Owner-only planning, findings and operational/legal workpapers stay local.
+/codex-backlog/tasks/
+/codex-backlog/bugs/
+/codex-backlog/telegram-core-release-backlog/
+/codex-backlog/MANIFEST.json
+/docs/private/

@@ -53,4 +53,6 @@ Release notes должны говорить о пользовательски/о
 Собирай порядок релиза из фактических компонентов проекта: services/apps, migrations, generated
 contracts, background jobs, feature flags и external dependencies. Не предполагай конкретную
 схему deployment. Сам production deployment требует явного запроса; подготовка и локальная
-проверка могут выполняться без него, если repository-wide правила не говорят иначе.
+проверка могут выполняться без него, если repository-wide правила не говорят иначе. Для этого
+репозитория push/force-push remote `master` является deployment action: успешный CI автоматически
+запускает production workflow, даже если изменение затрагивает только историю или документацию.

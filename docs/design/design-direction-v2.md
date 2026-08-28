@@ -138,8 +138,7 @@ textual wordmark`. Создавать новые варианты SVG-логот
 
 ## Legacy transition
 
-`codex-backlog/references/landing/landing-reference-dark.png` и
-`landing-reference-light.png` остаются historical input. Они не задают hero, card layout,
+Удалённые legacy landing references больше не являются частью репозитория и не задают hero, card layout,
 testimonials, product imagery, section order или rhythm. Lime + neutral palette сохраняются только
 в контракте Design V2. Старые визуальные указания tasks `01`, `05` и historical masters не
 переопределяют этот документ. Для logo действует утверждённая владельцем geometry C1.1 и canonical

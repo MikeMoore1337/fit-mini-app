@@ -121,7 +121,7 @@ Design task может:
 4. `docs/design/landing-login-v2.1.md`
 5. `docs/design/tma-platform-v2.1.md`
 6. `docs/design/references/design-v2.1/README.md`
-7. `codex-backlog/DESIGN_V2_1_INTEGRATION_NOTES.md`
+7. `codex-backlog/archive/DESIGN_V2_1_INTEGRATION_NOTES.md`
 
 Они описывают текущий baseline, а не вечные запреты.
 

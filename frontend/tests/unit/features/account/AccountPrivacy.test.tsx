@@ -5,23 +5,25 @@ import { AccountPrivacy } from '../../../../src/features/account/AccountPrivacy'
 import { ApiError } from '../../../../src/shared/api/client';
 import { clearSensitiveUserScopedStorage } from '../../../../src/shared/userScopedStorage';
 
-const { apiMock, authState, confirmMock, logoutMock, reloadUserMock, toastMock } = vi.hoisted(() => ({
-  apiMock: vi.fn(),
-  authState: {
-    user: {
-      id: 77,
-      telegram_user_id: null as number | null,
-      auth_providers: [] as string[],
+const { apiMock, authState, confirmMock, logoutMock, reloadUserMock, toastMock } = vi.hoisted(
+  () => ({
+    apiMock: vi.fn(),
+    authState: {
+      user: {
+        id: 77,
+        telegram_user_id: null as number | null,
+        auth_providers: [] as string[],
+      },
+      config: {
+        oauth_providers: [] as string[],
+      },
     },
-    config: {
-      oauth_providers: [] as string[],
-    },
-  },
-  confirmMock: vi.fn(),
-  logoutMock: vi.fn(),
-  reloadUserMock: vi.fn(),
-  toastMock: vi.fn(),
-}));
+    confirmMock: vi.fn(),
+    logoutMock: vi.fn(),
+    reloadUserMock: vi.fn(),
+    toastMock: vi.fn(),
+  }),
+);
 
 vi.mock('../../../../src/shared/api/client', () => ({
   api: apiMock,
@@ -259,7 +261,11 @@ describe('AccountPrivacy Telegram linking', () => {
     unmount();
 
     cleanup();
-    apiMock.mockResolvedValueOnce({ ...emptyExport, status: 'expired', export_id: 'expired-export' });
+    apiMock.mockResolvedValueOnce({
+      ...emptyExport,
+      status: 'expired',
+      export_id: 'expired-export',
+    });
     renderPrivacy();
     expect(await screen.findByText('Срок истёк')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Подготовить архив' })).toBeEnabled();

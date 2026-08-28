@@ -8,7 +8,7 @@ sys.path.insert(0, str(ROOT / "backend"))
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.engine import URL, make_url
 
 _WORKER_ID = os.environ.get("PYTEST_XDIST_WORKER", "main")
@@ -70,6 +70,16 @@ from fitminiapp_api.db.base import Base
 from fitminiapp_api.db.session import engine, get_session_context
 from fitminiapp_api.main import app
 from fitminiapp_api.services.seed import seed_demo_data
+
+if engine.dialect.name == "sqlite":
+
+    @event.listens_for(engine, "connect")
+    def _enable_sqlite_foreign_keys(dbapi_connection, _connection_record) -> None:
+        cursor = dbapi_connection.cursor()
+        try:
+            cursor.execute("PRAGMA foreign_keys=ON")
+        finally:
+            cursor.close()
 
 
 def _admin_database_url(url: URL) -> URL:

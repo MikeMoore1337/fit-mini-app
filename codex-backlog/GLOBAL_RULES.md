@@ -1,8 +1,8 @@
-# GLOBAL_RULES - правила выполнения release backlog v15 resource-aware
+# GLOBAL_RULES - правила выполнения release backlog v16 resource-aware
 
-Этот файл действует для завершённых и архивированных release tasks `75-78`, включая буквенные
-подзадачи и owner-approved Pulse concepts pilot `75C`, current release task `79`, и
-trigger-gated post-release pool `80-101` с буквенными подзадачами и owner-selected pending tasks
+Этот файл действует для завершённых и архивированных release tasks `75-80`, включая буквенные
+подзадачи и owner-approved Pulse concepts pilot `75C`, current post-release task `81`, и
+trigger-gated post-release pool `81-101` с буквенными подзадачами и owner-selected pending tasks
 `107-108`. Completed tasks `00-73A`, включая буквенные подзадачи, tasks `74A-75` и отдельно
 завершённые tasks `103-106` не переигрываются и хранятся в `tasks/done/`.
 
@@ -58,6 +58,10 @@ Lifecycle не расширяет scope task и не отменяет owner chec
   Umbrella `90`, `92`, `94`, `95`, `99`, `100` являются coordination contracts и отдельно не выполняются.
 - Работать только в `feature/yfc-platform-v2`.
 - Не переходить к следующему task автоматически.
+- Любой push/force-push remote `master`, включая history rewrite и docs-only change, после green CI
+  намеренно запускает production deploy. Поэтому до изменения `master` обязательны explicit deploy
+  approval и проверенная remote backup-ветка точного текущего `origin/master`; без них разрешены
+  только non-master refs.
 - Перед началом прочитать корневой `AGENTS.md`, этот файл, lifecycle и только текущую task.
 - Tasks `00-73A`, включая буквенные подзадачи, подтверждены владельцем как завершённые, перенесены в `tasks/done/` и не выполняются повторно.
 - Owner-selected task `103` завершена после owner approval и архивирована.
@@ -72,15 +76,18 @@ Lifecycle не расширяет scope task и не отменяет owner chec
   `DESIGN_V2_1` с выбранными Pulse-концепциями.
 - Owner-selected tasks `103-105` завершены и архивированы.
 - Owner-selected task `106` завершена и архивирована после owner screenshot approval.
+- Tasks `79-80` завершены и архивированы после owner approval. History rewrite `master` запустил
+  намеренный automatic production workflow; владелец подтвердил auto-deploy как feature, а trigger
+  contract закреплён в обязательной документации. Task `81` назначена current, но не запущена.
 - Owner-selected task `107` создана для scheduled regression и закрытых Allure-отчётов; она не
-  является current, не меняет порядок `79-101` и требует отдельного owner запуска. DNS,
+  является current, не меняет порядок `81-101` и требует отдельного owner запуска. DNS,
   Cloudflare Access/hosting, secrets и paid resources требуют дополнительного explicit approval.
 - Owner-selected task `108` создана для полного аудита соответствия законодательству РФ и
   непрерывного legal-impact gate для любых будущих tasks; она не является current, не меняет
-  порядок `79-101`, требует отдельного owner запуска, primary role `product-lawyer` и обязательной
+  порядок `81-101`, требует отдельного owner запуска, primary role `product-lawyer` и обязательной
   проверки итогового baseline/gate профильным российским юристом; `LEGAL_COUNSEL_REQUIRED`
   выделяет дополнительные спорные вопросы.
-- Current release task `79` и остальные trigger-gated tasks сохраняют собственные Trigger,
+- Current post-release task `81` и остальные trigger-gated tasks сохраняют собственные Trigger,
   dependency и owner decision.
 - Task `50A` уже создала общий continuous Mobile Web/TMA gate, который переиспользуют последующие client-facing tasks.
 - Перед client-facing task прочитать `MOBILE_TMA_FIRST_CONTRACT.md` и применимые пункты `.agents/references/MOBILE_TMA_ACCEPTANCE_MATRIX.md`.
@@ -88,7 +95,7 @@ Lifecycle не расширяет scope task и не отменяет owner chec
   явным design/motion-аудитом, `75B` выполнила exploration, `75C` реализует только выбранный pilot,
   а `76` проверяет последующие
   regressions/gaps после разрешения design gate.
-- `masters/`, старые changelog и выполненные task-файлы являются историческим контекстом и не задают pending order.
+- Старые changelog и выполненные task-файлы являются историческим контекстом и не задают pending order. Удалённые legacy `masters/` и `references/` не являются sources of truth.
 
 ### Роли lifecycle
 
@@ -105,7 +112,7 @@ Lifecycle не расширяет scope task и не отменяет owner chec
 - `MEDIUM/LOW/NIT/OUT_OF_SCOPE` не блокируют commit и не открывают новый workstream.
 - Legal fields `RISK: CRITICAL/HIGH/MEDIUM/LOW` из `$ru-legal-risk` являются отдельной
   product/legal risk scale, не lifecycle severity. Canonical legal risks хранятся в
-  `docs/legal/LEGAL_RISK_REGISTER.md` после owner checkpoint; только technical/audit-deliverable
+  `docs/private/legal/LEGAL_RISK_REGISTER.md` после owner checkpoint; только technical/audit-deliverable
   findings с lifecycle severity `MEDIUM/LOW` синхронизируются в `bugs/FINDINGS.md`.
 - Каждый `MEDIUM/LOW` из review, QA или audit до commit и финализации обязательно добавляется или
   обновляется в `codex-backlog/bugs/FINDINGS.md`, даже если исправлен в той же task. Финальный

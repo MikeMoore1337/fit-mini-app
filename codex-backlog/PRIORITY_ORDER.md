@@ -1,42 +1,44 @@
-# Порядок выполнения release backlog v46
+# Порядок выполнения release backlog v48
 
 ## Completed
 
-`00-78`, включая `69B`, `73A`, `74A` и предшествующие буквенные подзадачи, а также
+`00-80`, включая `69B`, `73A`, `74A` и предшествующие буквенные подзадачи, а также
 owner-selected Telegram tasks `103-106`.
-Task-файлы находятся в `tasks/done/`.
+Task-файлы находятся в локальном owner-only `tasks/done/`.
 
 ## Current
 
 ```text
-79 Финальный интегрированный audit, regression и go/no-go [CURRENT, NOT STARTED]
+81 Опциональный hydration tracking в Nutrition [CURRENT, NOT STARTED]
 ```
 
 Tasks `75C`, `76` и `76A` завершены после применимых owner checkpoints. Task `76A` получила
 adversarial verdict `PASS`, закрыла все `BLOCKER/HIGH` и архивирована. В task `77` реальные сессии
 не проводились; владелец явно принял отсутствие real-user validation и residual risk, после чего
 task архивирована. Task `78` завершила production readiness после owner approval и подтверждения
-external controls. Task `79` назначена текущей, но не запущена; production baseline остаётся
-`DESIGN_V2_1` с bounded Pulse pilot.
+external controls. Tasks `79-80` завершены и архивированы после owner approval. History rewrite
+`master` запустил намеренный automatic production workflow; владелец подтвердил это поведение как
+feature, а точный trigger contract закреплён в обязательной документации. Task `81` назначена
+текущей, но её Trigger/реализация не запускались; production baseline остаётся `DESIGN_V2_1`.
 
 Conditional release sequence:
 
 ```text
 75 [COMPLETED] -> 75A Rethink audit [COMPLETED] -> START_RETHINK_EXPLORATION
-  KEEP -> 76 [COMPLETED] -> 76A [COMPLETED] -> 77 [COMPLETED] -> 78 [COMPLETED] -> 79 [CURRENT]
+  KEEP -> 76 [COMPLETED] -> 76A [COMPLETED] -> 77 [COMPLETED] -> 78 [COMPLETED] -> 79 [COMPLETED]
   EVOLVE -> bounded remediation -> 76 [COMPLETED]
   RETHINK -> 75B exploration [COMPLETED] -> 75C pilot [COMPLETED] -> 76 [COMPLETED]
 ```
 
-Task `79` назначена текущей, но не выполняется автоматически в completion-сессии `78`.
+Task `81` назначена текущей, но не выполняется автоматически в completion-сессии `79/80`.
 Trigger-gated tasks сохраняют собственные gates. Никакая task не запускает следующую автоматически.
 
-## Последовательность после `79`
+## Последовательность после `80`
 
 После release gate использовать task ID как предпочтительный порядок:
 
 ```text
-80 -> 81 -> 82 -> 83 -> 84 -> 85 -> 86
+81 -> 82 -> 83 -> 84 -> 85 -> 86
 -> 87 -> 88 -> 89 -> 90A -> 90B -> 91
 -> independently gated 92A / 92B
 -> 93 AI-assisted XLSX/CSV/TXT/DOCX program import
@@ -53,14 +55,14 @@ Trigger-gated tasks сохраняют собственные gates. Никак�
 отдельно не выполняются.
 
 Owner-selected task `106` завершена и архивирована после owner screenshot approval. Она не изменила
-основную release-последовательность; current task теперь `79`, далее сохраняется порядок `79-101`.
+основную release-последовательность; current task теперь `81`, далее сохраняется порядок `81-101`.
 
 Owner-selected task `107` создана для scheduled regression и закрытых Allure-отчётов на
-`allure.your-fitness-coach.ru`. Она не является current, не меняет порядок `78-101` и требует
+`allure.your-fitness-coach.ru`. Она не является current, не меняет порядок `81-101` и требует
 отдельного owner запуска плюс explicit approval перед DNS/Cloudflare/hosting actions.
 
 Owner-selected task `108` создана для комплексного аудита соответствия законодательству РФ и
 непрерывного legal-impact gate, охватывающего все текущие и любые будущие задачи. Она не является
-current, не меняет порядок `79-101` и требует отдельного owner запуска через `product-lawyer` и
+current, не меняет порядок `81-101` и требует отдельного owner запуска через `product-lawyer` и
 `$ru-legal-risk`; итоговый baseline/gate обязательно проверяет профильный российский юрист, а
 `LEGAL_COUNSEL_REQUIRED` выделяет дополнительные спорные вопросы.

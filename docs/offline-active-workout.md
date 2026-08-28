@@ -25,7 +25,7 @@
 
 Auth lifecycle использует общий sensitive-storage registry, поэтому вместе с active workout
 очищаются другие пользовательские черновики, но сохраняется глобальная настройка темы. Полный
-контракт описан в `docs/account-data-export-and-browser-storage.md`.
+контракт описан во внутреннем `docs/private/account-data-export-and-browser-storage.md`.
 
 Прежние ключи `fit_workout_set_*` и `fit_workout_pending_*` не имеют account scope. При первом
 открытии начатой тренировки они переносятся только для входящих в неё server-confirmed set ID,

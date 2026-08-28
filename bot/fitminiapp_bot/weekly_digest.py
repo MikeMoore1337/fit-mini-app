@@ -7,7 +7,7 @@ from datetime import datetime
 
 import httpx
 from aiogram import F, Router
-from aiogram.filters import Command
+from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message, User
@@ -489,7 +489,7 @@ async def digest_schedule_input(message: Message, state: FSMContext) -> None:
     await send_issue_preview(message, response["issue"])
 
 
-@router.message(WeeklyDigestStates, Command("cancel"))
+@router.message(StateFilter(WeeklyDigestStates), Command("cancel"))
 async def cancel_digest_input(message: Message, state: FSMContext) -> None:
     await state.clear()
     await message.answer("Действие с дайджестом отменено.")

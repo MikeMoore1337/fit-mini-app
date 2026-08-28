@@ -59,10 +59,10 @@ Owner-selected task `106` завершила discoverability Telegram Mini App, 
 канала на Landing и не изменила порядок `80-101`.
 
 Owner-selected task `107` создана вне pending-последовательности для scheduled regression и
-закрытых Allure-отчётов. Её owner-approved scope не меняет current task `79` или порядок `80-101`;
+закрытых Allure-отчётов. Её owner-approved scope не меняет current task `81` или порядок `81-101`;
 implementation и внешние DNS/Cloudflare/hosting actions требуют отдельного запуска/approval.
 
 Owner-selected task `108` создана вне pending-последовательности для product-wide аудита
 соответствия законодательству РФ и непрерывного legal-impact gate будущих задач. Она не меняет
-current task `79` или порядок `80-101`; запуск, legal review и любые remediation/external actions
+current task `81` или порядок `81-101`; запуск, legal review и любые remediation/external actions
 требуют отдельных owner decisions.

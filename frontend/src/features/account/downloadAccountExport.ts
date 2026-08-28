@@ -28,9 +28,8 @@ export async function downloadAccountExport(
       try {
         return await new Promise((resolve, reject) => {
           try {
-            telegram.downloadFile?.(
-              { url: link.url, file_name: link.filename },
-              (accepted) => resolve(accepted ? 'telegram' : 'cancelled'),
+            telegram.downloadFile?.({ url: link.url, file_name: link.filename }, (accepted) =>
+              resolve(accepted ? 'telegram' : 'cancelled'),
             );
           } catch (reason) {
             reject(reason);

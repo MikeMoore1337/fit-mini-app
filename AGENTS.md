@@ -33,7 +33,7 @@ For already implemented behavior, current code, migrations, tests, Git history a
 documentation are the source of truth. The task defines the intended change, not assumed
 current state.
 
-Do not load unrelated tasks, roles, skills, masters or historical documents merely because
+Do not load unrelated tasks, roles, skills or historical documents merely because
 they exist.
 
 # Workspace hygiene
@@ -141,6 +141,10 @@ Current backlog families include:
 - `codex-backlog/bugs/pending/` for owner-selected standalone bug-fix tasks;
 - `codex-backlog/telegram-core-release-backlog/tasks/`.
 
+Task files, findings and backlog manifests under these owner-only paths are intentionally local and
+excluded from public Git. When they exist in the current workspace they remain authoritative for
+the explicitly selected task; a public clone without them must not invent or infer task content.
+
 Trigger-gated post-release tasks `80-101` и их буквенные подзадачи входят в `codex-backlog/tasks/` и используют те же
 `codex-backlog/GLOBAL_RULES.md` и `codex-backlog/TASK_EXECUTION_LIFECYCLE.md`. Их номер задаёт
 предпочтительную последовательность, но не заменяет Trigger, dependency и owner decision; umbrella
@@ -172,8 +176,8 @@ review, QA and final verification. Do not create intermediate lifecycle commits 
 current task/backlog explicitly requires them. A read-only/no-code outcome does not require a
 manufactured commit.
 
-Do not read all files under `masters/`, completed tasks or historical changelogs unless the
-current task explicitly requires them.
+Do not read completed tasks or historical changelogs unless the current task explicitly requires
+them. Legacy `masters/` and `references/` were removed and are not sources of truth.
 
 # Resource-aware review and stop policy
 
@@ -293,6 +297,11 @@ Use `security-engineer` for security-sensitive implementation, audit or threat m
 Treat `docs/` as long-term architectural and operational context. Before changing an existing
 subsystem, check for relevant documentation.
 
+Owner-only operational, security, provider, audit and legal-risk workpapers live under the local
+ignored `docs/private/` tree. Read them only when the current task requires that surface, never add
+their contents to public Git, and do not treat their absence in a public clone as evidence that the
+corresponding production obligation does not exist.
+
 Update documentation in the same task when a change makes documented setup, environment
 variables, commands, API contracts, architecture, deployment, migrations, user-visible
 behavior, significant business rules, security constraints or operational procedures
@@ -318,6 +327,14 @@ Use `technical-writer` for substantial documentation work.
 
 Treat schema migrations, deployment configuration and infrastructure changes as
 production-sensitive.
+
+Repository-specific deployment trigger: a push or force-push to `master` starts CI, and a
+successful CI run intentionally starts `.github/workflows/deploy.yml` through `workflow_run`.
+Therefore **any** operation that changes remote `master`—including history rewrite, privacy cleanup,
+metadata-only changes or restoring a ref—is a production-affecting deployment action. Before it,
+obtain explicit deployment approval, create and verify the required remote backup branch from the
+exact current `origin/master`, and follow the production preflight. To change GitHub history without
+deployment approval, rewrite only non-`master` refs and stop for an owner checkpoint before master.
 
 Do not:
 

@@ -1,6 +1,6 @@
 # Landing - Approved Design V2 implementation notes
 
-Legacy files under `references/landing/` and `masters/premium-redesign-master.md` remain historical context only. They do not override:
+Удалённые legacy landing references и masters больше не являются частью workspace. Они не переопределяют:
 
 1. factual product behavior and release scope;
 2. security/privacy/auth/SEO/accessibility requirements;

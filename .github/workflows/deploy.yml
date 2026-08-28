@@ -1,6 +1,9 @@
 name: Deploy production
 
 on:
+  # Intentional continuous deployment: every successful CI run caused by a push/force-push to
+  # master deploys that exact SHA. Owner approval and the verified pre-deploy backup branch are
+  # required before changing remote master, including history-only or documentation-only changes.
   workflow_run:
     workflows: [CI]
     branches: [master]
@@ -11,7 +14,8 @@ permissions:
   contents: read
   packages: read
 
-# A deployment must never be cancelled halfway through by a newer push.
+# Authorization happens before pushing master. A deployment must never be cancelled halfway
+# through by a newer push.
 concurrency:
   group: production
   cancel-in-progress: false

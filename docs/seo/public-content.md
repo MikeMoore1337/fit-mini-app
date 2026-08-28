@@ -1,10 +1,8 @@
 # Архитектура публичного контента
 
 Документ задаёт редакционные правила и информационную архитектуру индексируемой публичной части.
-Технические правила обхода и индексации описаны в [`operations.md`](../operations.md), ручная
-работа вебмастера — в [`search-console-yandex-webmaster.md`](search-console-yandex-webmaster.md),
-а органическое привлечение, распространение материалов и критерии публикации — в
-[`organic-growth-playbook.md`](organic-growth-playbook.md).
+Operator runbooks, доступ к webmaster consoles и внутренний growth playbook являются owner-only
+material и в public Git не публикуются.
 
 ## Текущая информационная архитектура
 

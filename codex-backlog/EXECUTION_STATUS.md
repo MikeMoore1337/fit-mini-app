@@ -1,9 +1,10 @@
-# Execution status v46
+# Execution status v48
 
 Подтверждённое владельцем состояние на 28.08.2026:
 
 - [x] tasks `00-73`, включая `69B` и предшествующие буквенные подзадачи, complete;
-- [x] завершённые task-файлы перенесены в `tasks/done/` и доступны для чтения;
+- [x] завершённые task-файлы перенесены в локальный owner-only `tasks/done/` и доступны владельцу
+      для чтения;
 - [x] `DESIGN_V2_1` — current production baseline, полностью пересматриваемый owner-approved
       Rethink task;
 - [x] task `50A` создала continuous Mobile Web/TMA gate;
@@ -41,10 +42,14 @@
 - [x] task `78` завершила production operational readiness: fail-closed config/deploy gates,
       audit retention, PostgreSQL migration/backup/restore drill, monitoring/rollback contract и
       production-like regression evidence; владелец подтвердил external controls и screenshot packet;
-- [ ] **current:** `79-final-integrated-release-audit.md` — назначена, но не начата;
-- [ ] current release task `79` и post-release tasks `80-101` сохраняют собственные Trigger,
-      dependency и owner decision; task ID задают предпочтительный порядок, но ни одна pending task
-      этой очереди не запущена.
+- [x] task `79` завершила final integrated release gate; владелец уточнил, что auto-deploy после
+      green CI в `master` является намеренной функцией, а trigger contract закреплён в документации;
+- [x] owner-approved task `80` завершила repository hygiene/privacy cleanup, README/config audit,
+      private-path boundary и архивирована вместе с task `79`;
+- [ ] **current:** `81-hydration-tracking-nutrition.md` — назначена, но Trigger и реализация не
+      запускались;
+- [ ] post-release tasks `81-101` сохраняют собственные Trigger, dependency и owner decision; task
+      ID задают предпочтительный порядок, но ни одна pending task этой очереди не запущена.
 - [x] owner-selected task `106-landing-telegram-product-news-links.md` завершена вне основной
       очереди и не изменила порядок `78-101`.
 - [ ] owner-selected task `107-scheduled-regression-private-allure-reports.md` создана вне основной
@@ -59,10 +64,12 @@
       commit/archive запрещены. Запуск lifecycle, production activation и external legal actions
       не авторизованы созданием task.
 
-Не выполнять повторно tasks `00-78`, включая `69B`, `73A`, task `74A` и tasks `103-106`.
+Не выполнять повторно tasks `00-80`, включая `69B`, `73A`, task `74A` и tasks `103-106`.
 Task `77` закрыта не как factual real-user validation, а по явному owner decision принять отсутствие
-сессий и residual risk. Task `78` закрыта после owner approval; production deployment в рамках task
-не выполнялся. Следующей pending task назначена `79`, но её реализация не начата.
+сессий и residual risk. Tasks `78-80` закрыты после owner approval. History rewrite `master`
+запустил предусмотренный automatic production workflow; runtime diff относительно прежнего master
+был нулевым, health после rollout зелёный, а владелец подтвердил auto-deploy как feature. Task `81`
+назначена следующей, но её Trigger/реализация не запускались.
 `DESIGN_V2_1` с owner-approved bounded Pulse pilot остаётся production baseline.
 Umbrella `100` отдельно не выполняется; `100A` не назначена без собственного Trigger, dependency
 и owner decision. Tasks `107-108` также не запускаются автоматически. Другие pending tasks

@@ -2,7 +2,7 @@
 
 Исходный референс первого релиза сохранён как исторический visual input:
 
-`references/brand/your-fitness-coach-logo-reference-light-dark.png`
+Legacy logo reference удалён владельцем как неактуальный; production assets являются source of truth.
 
 Верхняя половина показывает вариант для светлой темы, нижняя — для тёмной.
 

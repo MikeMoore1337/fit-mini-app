@@ -70,3 +70,6 @@ description: >
 Сначала определи фактический container/orchestration/deployment stack и CI/CD workflow. Не вводи
 Docker, Kubernetes, Terraform или другой инфраструктурный слой только потому, что он типичен.
 Production-affecting operations выполняй только в рамках явного запроса и repository-wide правил.
+В этом репозитории любой push/force-push remote `master`, включая history rewrite или docs-only
+change, после успешного CI автоматически запускает production deployment. До изменения `master`
+обязательны explicit deploy approval и проверенная remote backup-ветка точного текущего master.

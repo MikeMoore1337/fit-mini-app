@@ -228,7 +228,7 @@ jobs:
     name: Migrated PostgreSQL stack
     needs: frontend
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     services:
       postgres:
@@ -254,6 +254,13 @@ jobs:
           name: frontend-dist-${{ github.sha }}
           path: frontend/dist
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -270,6 +277,12 @@ jobs:
 
       - name: Install dependencies
         run: uv pip install -r backend/requirements.txt
+
+      - name: Install frontend browser dependencies
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
 
       - name: Dependency consistency
         run: python -m pip check
@@ -290,7 +303,7 @@ jobs:
           TELEGRAM_BOT_TOKEN: test-token
           SECRET_KEY: test-secret-key-at-least-thirty-two-characters
 
-      - name: Migrated PostgreSQL to API and frontend smoke
+      - name: Migrated PostgreSQL API and account-deletion smoke
         run: python scripts/run_pytest.py tests/integration/test_migrated_stack.py -q
         env:
           RUN_MIGRATED_STACK_TEST: "1"
@@ -304,6 +317,31 @@ jobs:
           TELEGRAM_BOT_TOKEN: test-token
           BOT_INTERNAL_TOKEN: test-bot-internal-token
           SECRET_KEY: test-secret-key-at-least-thirty-two-characters
+
+      - name: Migrated PostgreSQL real browser smoke
+        working-directory: frontend
+        run: npm run e2e:migrated-stack
+        env:
+          APP_ENV: test
+          APP_NAME: Your Fitness Coach CI
+          APP_DEBUG: "false"
+          ACCESS_TOKEN_EXPIRE_MINUTES: "60"
+          REFRESH_TOKEN_EXPIRE_DAYS: "30"
+          DATABASE_URL: postgresql+psycopg://fitminiapp:test-password@127.0.0.1:5432/fitminiapp_test
+          ENABLE_DEV_AUTH: "true"
+          TELEGRAM_BOT_TOKEN: test-token
+          BOT_INTERNAL_TOKEN: test-bot-internal-token
+          SECRET_KEY: test-secret-key-at-least-thirty-two-characters
+
+      - name: Upload migrated-stack traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: migrated-stack-playwright-failure-${{ github.run_id }}
+          path: .artifacts/tests/playwright-migrated-stack
+          if-no-files-found: ignore
+          include-hidden-files: true
+          retention-days: 7
 
   dependency-audit:
     name: Dependency audit

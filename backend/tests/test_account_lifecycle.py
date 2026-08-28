@@ -4,6 +4,7 @@ import io
 import json
 import zipfile
 from datetime import timedelta
+from decimal import Decimal
 
 from fastapi.encoders import jsonable_encoder
 
@@ -13,7 +14,15 @@ from fitminiapp_api.models.account import AccountDataExport
 from fitminiapp_api.models.audit import AuditEvent
 from fitminiapp_api.models.auth_identity import AuthIdentity
 from fitminiapp_api.models.exercise import Exercise, ExerciseGuideMetadata
+from fitminiapp_api.models.food import Food, FoodFavorite
+from fitminiapp_api.models.food_diary import (
+    FoodDiaryCopyOperation,
+    FoodDiaryDayStatus,
+    FoodDiaryEntry,
+)
 from fitminiapp_api.models.notification import Notification, NotificationSetting
+from fitminiapp_api.models.nutrition import EnergyCalibration, NutritionTarget
+from fitminiapp_api.models.recipe import Recipe, RecipeIngredient
 from fitminiapp_api.models.token import RefreshToken
 from fitminiapp_api.models.user import BodyMeasurement, CoachClient, CoachClientInvite, User
 from fitminiapp_api.models.weekly_digest import WeeklyDigestPreference
@@ -269,6 +278,7 @@ def test_delete_revokes_sessions_relationships_and_export_but_keeps_shared_catal
     other_id = client.get("/api/v1/me", headers=other_headers).json()["id"]
     ready = client.post("/api/v1/me/exports", headers=headers).json()
     with get_session_context() as db:
+        today = now_msk_naive().date()
         shared_exercise_id = (
             db.query(Exercise.id).filter(Exercise.created_by_user_id.is_(None)).first()[0]
         )
@@ -341,6 +351,151 @@ def test_delete_revokes_sessions_relationships_and_export_but_keeps_shared_catal
         db.flush()
         occupied_exercise_id = occupied_exercise.id
 
+        private_food = Food(
+            name="Удаляемый личный продукт",
+            brand="Личный бренд",
+            energy_kcal_per_100g=Decimal("210"),
+            protein_g_per_100g=Decimal("12"),
+            fat_g_per_100g=Decimal("8"),
+            carbs_g_per_100g=Decimal("20"),
+            fiber_g_per_100g=Decimal("3"),
+            standard_serving_amount=Decimal("1"),
+            standard_serving_unit="serving",
+            standard_serving_weight_g=Decimal("50"),
+            food_type="user",
+            owner_user_id=user_id,
+            provenance="user",
+            source_name=None,
+            trust_level="unverified",
+            status="active",
+        )
+        other_food = Food(
+            name="Чужой личный продукт",
+            energy_kcal_per_100g=Decimal("180"),
+            protein_g_per_100g=Decimal("9"),
+            fat_g_per_100g=Decimal("7"),
+            carbs_g_per_100g=Decimal("22"),
+            food_type="user",
+            owner_user_id=other_id,
+            provenance="user",
+            source_name=None,
+            trust_level="unverified",
+            status="active",
+        )
+        db.add_all([private_food, other_food])
+        db.flush()
+        private_food_id = private_food.id
+        other_food_id = other_food.id
+        db.add(FoodFavorite(user_id=user_id, food_id=private_food_id))
+
+        recipe = Recipe(
+            owner_user_id=user_id,
+            name="Удаляемый личный рецепт",
+            final_weight_g=Decimal("100"),
+        )
+        db.add(recipe)
+        db.flush()
+        recipe_id = recipe.id
+        ingredient = RecipeIngredient(
+            recipe_id=recipe_id,
+            food_id=private_food_id,
+            position=0,
+            amount=Decimal("100"),
+            amount_unit="g",
+            weight_g=Decimal("100"),
+            food_name=private_food.name,
+            food_brand=private_food.brand,
+            energy_kcal_per_100g=Decimal("210"),
+            protein_g_per_100g=Decimal("12"),
+            fat_g_per_100g=Decimal("8"),
+            carbs_g_per_100g=Decimal("20"),
+            fiber_g_per_100g=Decimal("3"),
+        )
+        db.add(ingredient)
+        db.flush()
+        ingredient_id = ingredient.id
+
+        copy_operation = FoodDiaryCopyOperation(
+            user_id=user_id,
+            idempotency_key="account-delete-copy",
+            request_fingerprint="a" * 64,
+            copy_scope="product",
+            source_entry_id=None,
+            source_date=today,
+            source_meal_type="breakfast",
+            target_date=today,
+            target_meal_type="lunch",
+        )
+        db.add(copy_operation)
+        db.flush()
+        copy_operation_id = copy_operation.id
+        diary_entry = FoodDiaryEntry(
+            user_id=user_id,
+            food_id=private_food_id,
+            recipe_id=None,
+            copy_operation_id=copy_operation_id,
+            diary_date=today,
+            meal_type="lunch",
+            amount=Decimal("1"),
+            amount_unit="serving",
+            weight_g=Decimal("50"),
+            food_name=private_food.name,
+            food_brand=private_food.brand,
+            energy_kcal_per_100g=Decimal("210"),
+            protein_g_per_100g=Decimal("12"),
+            fat_g_per_100g=Decimal("8"),
+            carbs_g_per_100g=Decimal("20"),
+            fiber_g_per_100g=Decimal("3"),
+            serving_amount=Decimal("1"),
+            serving_unit="serving",
+            serving_weight_g=Decimal("50"),
+        )
+        db.add(diary_entry)
+        db.add(FoodDiaryDayStatus(user_id=user_id, diary_date=today, status="complete"))
+
+        target = NutritionTarget(
+            user_id=user_id,
+            assigned_by_user_id=user_id,
+            calories=2200,
+            protein_g=150,
+            fat_g=70,
+            carbs_g=240,
+            effective_from=today,
+            source="manual",
+        )
+        db.add(target)
+        db.flush()
+        target_id = target.id
+        calibration = EnergyCalibration(
+            user_id=user_id,
+            ruleset_version="account-delete-test-v1",
+            status="accepted",
+            sufficiency_status="sufficient",
+            period_start=today - timedelta(days=28),
+            period_end=today,
+            goal="maintenance",
+            logged_day_count=28,
+            eligible_day_count=28,
+            weight_point_count=6,
+            weight_span_days=28,
+            average_intake_kcal=2200,
+            smoothed_start_weight_kg=Decimal("80.0"),
+            smoothed_end_weight_kg=Decimal("80.0"),
+            estimated_expenditure_kcal=2200,
+            estimate_low_kcal=2100,
+            estimate_high_kcal=2300,
+            previous_target_calories=2200,
+            previous_target_saved_at=now_msk_naive(),
+            proposed_target_calories=None,
+            sufficiency_counters={"logged_days": 28},
+            sufficiency_reason_keys=[],
+            rationale_keys=["stable_weight"],
+            decided_at=now_msk_naive(),
+        )
+        db.add(calibration)
+        db.flush()
+        calibration_id = calibration.id
+
     unlinked = client.delete("/api/v1/me/auth/identities/telegram", headers=headers)
     assert unlinked.status_code == 200
     assert unlinked.json()["telegram_user_id"] is None
@@ -376,6 +531,16 @@ def test_delete_revokes_sessions_relationships_and_export_but_keeps_shared_catal
         assert db.get(ExerciseGuideMetadata, referenced_exercise_id) is None
         assert db.get(Exercise, retained_reference_id).source_exercise_id == referenced_exercise_id
         assert db.get(Exercise, occupied_exercise_id).slug == occupied_anonymized_slug
+        assert db.get(Food, private_food_id) is None
+        assert db.get(Food, other_food_id) is not None
+        assert db.query(FoodFavorite).filter_by(user_id=user_id).count() == 0
+        assert db.get(Recipe, recipe_id) is None
+        assert db.get(RecipeIngredient, ingredient_id) is None
+        assert db.query(FoodDiaryEntry).filter_by(user_id=user_id).count() == 0
+        assert db.query(FoodDiaryDayStatus).filter_by(user_id=user_id).count() == 0
+        assert db.get(FoodDiaryCopyOperation, copy_operation_id) is None
+        assert db.get(NutritionTarget, target_id) is None
+        assert db.get(EnergyCalibration, calibration_id) is None
         deletion_event = db.query(AuditEvent).filter_by(action="account.self_deleted").one()
         assert deletion_event.actor_user_id is None
         assert deletion_event.target_user_id is None

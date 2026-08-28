@@ -106,7 +106,7 @@ Browser Back следует той же navigation semantics без дублир
 - Сохраняется deterministic return path в `/app` или исходный product section.
 - Переход на arbitrary URL/path из raw `startapp` запрещён.
 - V2.1 не вводит новый deep-link type. Известный residual risk `R49D-11` зафиксирован в
-  `codex-backlog/DESIGN_V2_1_INTEGRATION_NOTES.md` и не входит в visual rollout.
+  `codex-backlog/archive/DESIGN_V2_1_INTEGRATION_NOTES.md` и не входит в visual rollout.
 
 ## Platform buttons, `ready` и `expand`
 

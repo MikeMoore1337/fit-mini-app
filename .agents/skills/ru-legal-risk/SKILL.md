@@ -33,7 +33,7 @@ Skill работает в интересах владельца продукта
 
 ## Текущий контекст YFC
 
-Перед каждым существенным аудитом сначала прочитай `docs/legal/LEGAL_CONTEXT.md`, если он существует, и перепроверь факты по коду/config/deployment/docs.
+Перед каждым существенным аудитом сначала прочитай `docs/private/legal/LEGAL_CONTEXT.md`, если он существует, и перепроверь факты по коду/config/deployment/docs.
 
 Текущие известные вводные, которые нельзя захардкодить навсегда:
 
@@ -492,11 +492,11 @@ Recheck trigger:
 
 Если task явно разрешает менять durable legal docs, обновляй:
 
-- `docs/legal/LEGAL_RISK_REGISTER.md`;
-- `docs/legal/LEGAL_DECISIONS.md` после явного решения владельца;
-- `docs/legal/DATA_FLOW_REGISTER.md`, если изменился data flow;
-- `docs/legal/THIRD_PARTY_REGISTER.md`, если добавился/изменился provider;
-- `docs/legal/LEGAL_CONTEXT.md`, если изменился юридически значимый контекст.
+- `docs/private/legal/LEGAL_RISK_REGISTER.md`;
+- `docs/private/legal/LEGAL_DECISIONS.md` после явного решения владельца;
+- `docs/private/legal/DATA_FLOW_REGISTER.md`, если изменился data flow;
+- `docs/private/legal/THIRD_PARTY_REGISTER.md`, если добавился/изменился provider;
+- `docs/private/legal/LEGAL_CONTEXT.md`, если изменился юридически значимый контекст.
 
 Если audit по правилам проекта read-only, сохраняй подробный отчёт в `.artifacts/legal-audit/` и предложи diff для durable docs, но не коммить его автоматически.
 

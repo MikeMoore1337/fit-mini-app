@@ -64,7 +64,9 @@ test('account lifecycle restores export, guards unlink and keeps destructive con
 
   await tmaPage.reload();
   await tmaPage.getByRole('link', { name: 'Доступ и безопасность' }).click();
-  await expect(tmaPage.getByRole('region', { name: 'Копия данных' }).getByText('Готово')).toBeVisible();
+  await expect(
+    tmaPage.getByRole('region', { name: 'Копия данных' }).getByText('Готово'),
+  ).toBeVisible();
   expect(api.accountDeletes()).toBe(0);
 });
 
@@ -87,7 +89,9 @@ test('account export expired and error states keep one safe recovery action on M
     await page.goto('/app?section=profile');
     await page.getByRole('link', { name: 'Доступ и безопасность' }).click();
     const exportRegion = page.getByRole('region', { name: 'Копия данных' });
-    await expect(exportRegion.getByText(state === 'expired' ? 'Срок истёк' : 'Ошибка')).toBeVisible();
+    await expect(
+      exportRegion.getByText(state === 'expired' ? 'Срок истёк' : 'Ошибка'),
+    ).toBeVisible();
     const recovery = exportRegion.getByRole('button', {
       name: state === 'error' ? 'Повторить подготовку' : 'Подготовить архив',
     });
