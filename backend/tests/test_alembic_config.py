@@ -3,6 +3,9 @@ from contextlib import nullcontext
 from pathlib import Path
 from types import SimpleNamespace
 
+from alembic.config import Config
+from alembic.script import ScriptDirectory
+
 
 def test_alembic_env_accepts_percent_encoded_database_url(monkeypatch) -> None:
     from alembic import context
@@ -30,3 +33,24 @@ def test_alembic_env_accepts_percent_encoded_database_url(monkeypatch) -> None:
     runpy.run_path(str(root / "backend" / "alembic" / "env.py"))
 
     assert captured["sqlalchemy.url"] == ("postgresql+psycopg://app:encoded%%21password@db/app")
+
+
+def test_legacy_support_revision_remains_in_the_linear_upgrade_path() -> None:
+    root = Path(__file__).resolve().parents[2]
+    config = Config(str(root / "backend" / "alembic.ini"))
+    config.set_main_option("script_location", str(root / "backend" / "alembic"))
+    revisions = ScriptDirectory.from_config(config)
+
+    legacy_support = revisions.get_revision("0033_bot_support_cases")
+    auth_families = revisions.get_revision("0033_auth_session_families")
+    relocated_marker = revisions.get_revision("0051_bot_support_cases")
+
+    assert legacy_support is not None
+    assert auth_families is not None
+    assert relocated_marker is not None
+    assert auth_families.down_revision == legacy_support.revision
+    assert revisions.get_heads() == ["0063_audit_retention_index"]
+    assert relocated_marker.revision in {
+        revision.revision
+        for revision in revisions.iterate_revisions("head", legacy_support.revision)
+    }

@@ -1,7 +1,7 @@
 """bind auth actions and refresh rotation to session families
 
 Revision ID: 0033_auth_session_families
-Revises: 0032_coach_role_applications
+Revises: 0033_bot_support_cases
 Create Date: 2026-08-18
 """
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = "0033_auth_session_families"
-down_revision = "0032_coach_role_applications"
+down_revision = "0033_bot_support_cases"
 branch_labels = None
 depends_on = None
 
