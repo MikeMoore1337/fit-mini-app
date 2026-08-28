@@ -91,6 +91,41 @@ constraint операции fail-closed. `backfill` допускает толь�
 меняются при switch. Candidate smoke проверяет liveness, readiness/DB, document, matching hashed
 asset, anonymous `401` auth boundary, public config и TMA-safe shell без credentials или записей.
 
+## Ручной режим для малоресурсного host
+
+Если production host объективно не может одновременно держать два application slot, уменьшать
+blue/green capacity gates запрещено. Для такого host доступен отдельный owner-approved режим с
+ограниченным техническим перерывом. Он не является zero-downtime и не включается автоматическим
+workflow: оператор передаёт четвёртый аргумент `single-slot` и одноразово подтверждает точный SHA
+через process environment `DEPLOY_SINGLE_SLOT_CONFIRMED_SHA`.
+
+До запуска обязательны off-host PostgreSQL backup, проверенный текущий
+`last-successful-revision`, не менее `2 GiB` свободного диска, explicit maintenance window и
+готовность публичного smoke. Команда сначала скачивает и проверяет immutable images, создаёт ещё
+один локальный dump и запускает migration gate. Только после этого она последовательно останавливает
+legacy worker, bot и backend, выполняет setup/migrations, запускает новый backend и проверяет его,
+затем запускает единственных worker/bot и записывает успешную revision.
+
+Ошибка после остановки приложения пересоздаёт legacy services из зафиксированных прежних image
+digests и проверяет public smoke. Schema автоматически не откатывается: общий online-migration gate
+сохраняет совместимость старого кода. Если возврат не подтверждён, evidence получает verdict
+`manual intervention required`, а оператор действует по recovery runbook.
+
+~~~console
+DEPLOY_SINGLE_SLOT_CONFIRMED_SHA=<TARGET_SHA> \
+BACKEND_IMAGE=ghcr.io/...:<TARGET_SHA> \
+BOT_IMAGE=ghcr.io/...:<TARGET_SHA> \
+bash scripts/deploy_production.sh \
+  <TARGET_SHA> \
+  https://app.your-fitness-coach.ru \
+  https://your-fitness-coach.ru \
+  single-slot
+~~~
+
+Отсутствие четвёртого аргумента всегда сохраняет fail-closed blue/green path. Single-slot не создаёт
+`state.json`; переход к blue/green в будущем по-прежнему требует отдельного bootstrap и фактического
+parallel-slot headroom.
+
 ## Bootstrap и production boundary
 
 Существующий single-slot host не получает state/`edge_config` автоматически: первый bootstrap
