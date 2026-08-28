@@ -544,8 +544,9 @@ def _patch_single_slot_runtime(tmp_path: Path, monkeypatch) -> dict[str, list]:
         lambda env, value: calls["backend_starts"].append(env["BACKEND_IMAGE"]),
     )
 
-    def start_consumers(env, evidence, value, *, require_markers):
+    def start_consumers(env, evidence, value, *, require_markers, best_effort=False):
         del evidence, value
+        del best_effort
         calls["consumer_starts"].append((env["BOT_IMAGE"], require_markers))
         markers = ("worker_started",) if require_markers else ()
         return (
@@ -642,9 +643,10 @@ def test_single_slot_rollback_requires_verified_consumer_ownership(
         if starts == 1:
             raise deploy.DeploymentError("new backend failed")
 
-    def fail_consumer_ownership(env, evidence, value, *, require_markers):
+    def fail_consumer_ownership(env, evidence, value, *, require_markers, best_effort=False):
         del env, evidence, value
         assert require_markers is True
+        assert best_effort is True
         raise deploy.DeploymentError("bot ownership confirmation timed out")
 
     monkeypatch.setattr(deploy, "_start_legacy_backend", fail_target_once)
@@ -661,6 +663,123 @@ def test_single_slot_rollback_requires_verified_consumer_ownership(
     rollback = next(stage for stage in summary["stages"] if stage["name"] == "single_slot_rollback")
     assert rollback["status"] == "failed"
     assert "ownership confirmation timed out" in rollback["reason"]
+
+
+def test_single_slot_rollback_attempts_consumers_after_backend_smoke_failure(
+    tmp_path: Path, monkeypatch
+) -> None:
+    config = _config(tmp_path)
+    calls = _patch_single_slot_runtime(tmp_path, monkeypatch)
+    starts = 0
+
+    def fail_target_and_rollback_smoke(env, value):
+        nonlocal starts
+        del value
+        starts += 1
+        calls["backend_starts"].append(env["BACKEND_IMAGE"])
+        if starts == 1:
+            raise deploy.DeploymentError("new backend failed")
+        raise deploy.DeploymentError("rollback smoke timed out")
+
+    monkeypatch.setattr(deploy, "_start_legacy_backend", fail_target_and_rollback_smoke)
+    monkeypatch.setattr(deploy, "_service_is_running", lambda service: False)
+
+    with pytest.raises(deploy.DeploymentError, match="new backend failed"):
+        deploy.single_slot_deploy(config)
+
+    assert calls["consumer_starts"] == [("registry/bot@sha256:" + "a" * 64, True)]
+    summaries = list(config.state_root.glob("single-slot-*/summary.json"))
+    assert len(summaries) == 1
+    summary = json.loads(summaries[0].read_text(encoding="utf-8"))
+    assert summary["verdict"] == "manual intervention required"
+    rollback = next(stage for stage in summary["stages"] if stage["name"] == "single_slot_rollback")
+    assert "rollback smoke timed out" in rollback["reason"]
+
+
+def test_legacy_consumer_restore_attempts_bot_after_worker_failure(
+    tmp_path: Path, monkeypatch
+) -> None:
+    config = _config(tmp_path)
+    evidence = deploy.Evidence(
+        deployment_id="test",
+        target_revision=NEW_SHA,
+        previous_revision=OLD_SHA,
+        active_slot="legacy",
+        candidate_slot="legacy",
+        started_at=0,
+    )
+    started_services = []
+
+    def compose(*args, **kwargs):
+        del kwargs
+        if args[0] == "up":
+            started_services.append(args[-1])
+        return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+    def consumer_lease(service, markers):
+        return deploy.ConsumerLease(
+            service=service,
+            container_id=f"{service}-current",
+            started_at="2026-08-28T12:00:00Z",
+            required_markers=markers,
+        )
+
+    def wait_for_ownership(lease, timeout):
+        del timeout
+        if lease.service == "worker":
+            raise deploy.DeploymentError("worker ownership failed")
+
+    monkeypatch.setattr(deploy, "_compose", compose)
+    monkeypatch.setattr(deploy, "_consumer_lease", consumer_lease)
+    monkeypatch.setattr(deploy, "_wait_for_ownership", wait_for_ownership)
+
+    with pytest.raises(deploy.DeploymentError, match="worker ownership failed"):
+        deploy._start_legacy_consumers({}, evidence, config, require_markers=True, best_effort=True)
+
+    assert started_services == ["worker", "bot"]
+
+
+def test_forward_consumer_start_is_fail_fast_after_worker_failure(
+    tmp_path: Path, monkeypatch
+) -> None:
+    config = _config(tmp_path)
+    evidence = deploy.Evidence(
+        deployment_id="test",
+        target_revision=NEW_SHA,
+        previous_revision=OLD_SHA,
+        active_slot="legacy",
+        candidate_slot="legacy",
+        started_at=0,
+    )
+    started_services = []
+
+    def compose(*args, **kwargs):
+        del kwargs
+        if args[0] == "up":
+            started_services.append(args[-1])
+        return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+    def consumer_lease(service, markers):
+        return deploy.ConsumerLease(
+            service=service,
+            container_id=f"{service}-current",
+            started_at="2026-08-28T12:00:00Z",
+            required_markers=markers,
+        )
+
+    def wait_for_ownership(lease, timeout):
+        del timeout
+        if lease.service == "worker":
+            raise deploy.DeploymentError("worker ownership failed")
+
+    monkeypatch.setattr(deploy, "_compose", compose)
+    monkeypatch.setattr(deploy, "_consumer_lease", consumer_lease)
+    monkeypatch.setattr(deploy, "_wait_for_ownership", wait_for_ownership)
+
+    with pytest.raises(deploy.DeploymentError, match="worker ownership failed"):
+        deploy._start_legacy_consumers({}, evidence, config, require_markers=True)
+
+    assert started_services == ["worker"]
 
 
 def test_single_slot_rechecks_capacity_after_pull_and_backup(tmp_path: Path, monkeypatch) -> None:

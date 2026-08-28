@@ -535,7 +535,7 @@ def _start_slot_consumers(
     return worker_lease, bot_lease
 
 
-def _candidate_smoke(slot: str) -> None:
+def _candidate_smoke(slot: str, *, timeout_seconds: int = 10) -> None:
     if slot == "legacy":
         _run(
             [
@@ -545,6 +545,8 @@ def _candidate_smoke(slot: str) -> None:
                 "--allow-http",
                 "--expected-environment",
                 "prod",
+                "--timeout",
+                str(timeout_seconds),
             ]
         )
         return
@@ -1140,7 +1142,7 @@ def _start_legacy_backend(env: dict[str, str], config: DeployConfig) -> None:
         "backend",
         env=env,
     )
-    _candidate_smoke("legacy")
+    _candidate_smoke("legacy", timeout_seconds=config.readiness_timeout_seconds)
 
 
 def _start_legacy_consumers(
@@ -1149,45 +1151,63 @@ def _start_legacy_consumers(
     config: DeployConfig,
     *,
     require_markers: bool,
+    best_effort: bool = False,
 ) -> tuple[ConsumerLease, ConsumerLease]:
-    started = time.monotonic()
-    _compose(
-        "up",
-        "-d",
-        "--no-build",
-        "--no-deps",
-        "--force-recreate",
-        "--wait",
-        "--wait-timeout",
-        str(config.readiness_timeout_seconds),
-        "worker",
-        env=env,
-    )
-    worker_markers = ("worker_started",) if require_markers else ()
-    worker_lease = _consumer_lease("worker", worker_markers)
-    _wait_for_ownership(worker_lease, timeout=config.readiness_timeout_seconds)
-    evidence.worker_handoff_seconds = round(time.monotonic() - started, 3)
+    errors: list[str] = []
+    worker_lease: ConsumerLease | None = None
+    bot_lease: ConsumerLease | None = None
 
     started = time.monotonic()
-    _compose(
-        "up",
-        "-d",
-        "--no-build",
-        "--no-deps",
-        "--force-recreate",
-        "bot",
-        env=env,
-    )
-    bot_markers = (
-        ("polling_file_lock_acquired", "telegram_polling_started")
-        if config.bot_polling_enabled
-        else ("polling_disabled",)
-    )
-    if not require_markers:
-        bot_markers = ()
-    bot_lease = _consumer_lease("bot", bot_markers)
-    _wait_for_ownership(bot_lease, timeout=config.readiness_timeout_seconds)
-    evidence.bot_handoff_seconds = round(time.monotonic() - started, 3)
+    try:
+        _compose(
+            "up",
+            "-d",
+            "--no-build",
+            "--no-deps",
+            "--force-recreate",
+            "--wait",
+            "--wait-timeout",
+            str(config.readiness_timeout_seconds),
+            "worker",
+            env=env,
+        )
+        worker_markers = ("worker_started",) if require_markers else ()
+        worker_lease = _consumer_lease("worker", worker_markers)
+        _wait_for_ownership(worker_lease, timeout=config.readiness_timeout_seconds)
+        evidence.worker_handoff_seconds = round(time.monotonic() - started, 3)
+    except BaseException as worker_exc:
+        if not best_effort:
+            raise
+        errors.append(f"worker: {type(worker_exc).__name__}: {worker_exc}")
+
+    started = time.monotonic()
+    try:
+        _compose(
+            "up",
+            "-d",
+            "--no-build",
+            "--no-deps",
+            "--force-recreate",
+            "bot",
+            env=env,
+        )
+        bot_markers = (
+            ("polling_file_lock_acquired", "telegram_polling_started")
+            if config.bot_polling_enabled
+            else ("polling_disabled",)
+        )
+        if not require_markers:
+            bot_markers = ()
+        bot_lease = _consumer_lease("bot", bot_markers)
+        _wait_for_ownership(bot_lease, timeout=config.readiness_timeout_seconds)
+        evidence.bot_handoff_seconds = round(time.monotonic() - started, 3)
+    except BaseException as bot_exc:
+        errors.append(f"bot: {type(bot_exc).__name__}: {bot_exc}")
+
+    if errors:
+        raise DeploymentError("consumer restoration was incomplete: " + "; ".join(errors))
+    if worker_lease is None or bot_lease is None:
+        raise DeploymentError("consumer restoration returned no verified ownership lease")
     return worker_lease, bot_lease
 
 
@@ -1365,15 +1385,36 @@ def single_slot_deploy(config: DeployConfig) -> Evidence:
                     backend_image=old_backend,
                     bot_image=old_bot,
                 )
-                _start_legacy_backend(rollback_env, config)
-                _public_smoke(config)
-                _start_legacy_consumers(
-                    rollback_env,
-                    evidence,
-                    config,
-                    require_markers=True,
-                )
-                _public_smoke(config)
+                rollback_errors: list[str] = []
+                try:
+                    _start_legacy_backend(rollback_env, config)
+                except BaseException as rollback_backend_exc:
+                    rollback_errors.append(
+                        f"backend: {type(rollback_backend_exc).__name__}: {rollback_backend_exc}"
+                    )
+                try:
+                    _start_legacy_consumers(
+                        rollback_env,
+                        evidence,
+                        config,
+                        require_markers=True,
+                        best_effort=True,
+                    )
+                except BaseException as rollback_consumers_exc:
+                    rollback_errors.append(
+                        "consumers: "
+                        f"{type(rollback_consumers_exc).__name__}: {rollback_consumers_exc}"
+                    )
+                try:
+                    _public_smoke(config)
+                except BaseException as rollback_smoke_exc:
+                    rollback_errors.append(
+                        f"public smoke: {type(rollback_smoke_exc).__name__}: {rollback_smoke_exc}"
+                    )
+                if rollback_errors:
+                    raise DeploymentError(
+                        "rollback restoration was incomplete: " + "; ".join(rollback_errors)
+                    )
                 evidence.verdict = "rolled back"
                 rollback_stage.status = "passed"
             except BaseException as rollback_exc:
