@@ -1198,6 +1198,7 @@ details[open] > summary .disclosure-icon svg {
 }
 .program-wizard__panel {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto minmax(0, 1fr);
   width: min(760px, 100%);
   min-width: 0;
@@ -1292,6 +1293,7 @@ details[open] > summary .disclosure-icon svg {
 }
 .program-wizard__form {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: 1fr auto;
   gap: 20px;
 }
@@ -1374,10 +1376,12 @@ details[open] > summary .disclosure-icon svg {
 }
 .program-wizard-choice strong {
   line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 .program-wizard-choice small {
   color: var(--muted);
   line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 .program-wizard__choices--compact .program-wizard-choice {
   min-height: 86px;
