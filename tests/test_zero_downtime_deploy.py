@@ -421,6 +421,7 @@ def test_consumer_stop_fails_closed_when_worker_drain_is_unconfirmed(
     monkeypatch.setattr(deploy, "_consumer_lease", lambda *args: lease)
     monkeypatch.setattr(deploy, "_service_is_running", lambda service: True)
     monkeypatch.setattr(deploy, "_current_run_logs", lambda value: "worker_drain_requested\n")
+    monkeypatch.setattr(deploy, "_container_exited_cleanly", lambda value: False)
     monkeypatch.setattr(
         deploy,
         "_compose",
@@ -433,6 +434,37 @@ def test_consumer_stop_fails_closed_when_worker_drain_is_unconfirmed(
         deploy._stop_slot_consumers("blue", config)
 
     assert commands == [("stop", "-t", "120", "worker-blue")]
+
+
+def test_consumer_stop_accepts_exact_container_clean_exit_without_legacy_marker(
+    tmp_path: Path, monkeypatch
+) -> None:
+    config = _config(tmp_path)
+    lease = deploy.ConsumerLease(
+        service="worker-blue",
+        container_id="worker-current",
+        started_at="2026-08-28T12:00:00Z",
+        required_markers=("worker_started",),
+    )
+    commands = []
+    monkeypatch.setattr(deploy, "_consumer_lease", lambda *args: lease)
+    monkeypatch.setattr(deploy, "_service_is_running", lambda service: True)
+    monkeypatch.setattr(deploy, "_current_run_logs", lambda value: "application_log\n")
+    monkeypatch.setattr(deploy, "_container_exited_cleanly", lambda value: True)
+    monkeypatch.setattr(
+        deploy,
+        "_compose",
+        lambda *args, **kwargs: (
+            commands.append(args) or subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+        ),
+    )
+
+    deploy._stop_slot_consumers("blue", config)
+
+    assert commands == [
+        ("stop", "-t", "120", "worker-blue"),
+        ("stop", "-t", "60", "bot-blue"),
+    ]
 
 
 def test_manual_rollback_swaps_only_verified_revisions(tmp_path: Path, monkeypatch) -> None:
@@ -718,6 +750,7 @@ def test_single_slot_stop_fails_closed_when_worker_drain_is_unconfirmed(
     monkeypatch.setattr(deploy, "_service_is_running", lambda service: service in running)
     monkeypatch.setattr(deploy, "_consumer_lease", lambda *args: worker_lease)
     monkeypatch.setattr(deploy, "_current_run_logs", lambda lease: "worker_drain_requested\n")
+    monkeypatch.setattr(deploy, "_container_exited_cleanly", lambda lease: False)
 
     def compose(*args, **kwargs):
         del kwargs
@@ -733,3 +766,22 @@ def test_single_slot_stop_fails_closed_when_worker_drain_is_unconfirmed(
 
     assert commands == [("stop", "-t", "120", "worker")]
     assert running == {"bot", "backend"}
+
+
+def test_clean_exit_evidence_requires_exited_zero(monkeypatch) -> None:
+    lease = deploy.ConsumerLease(
+        service="worker",
+        container_id="worker-current",
+        started_at="2026-08-28T12:00:00Z",
+        required_markers=("worker_started",),
+    )
+
+    for state, expected in (("exited 0\n", True), ("exited 137\n", False), ("running 0\n", False)):
+        monkeypatch.setattr(
+            deploy,
+            "_run",
+            lambda *args, output=state, **kwargs: subprocess.CompletedProcess(
+                args, 0, stdout=output, stderr=""
+            ),
+        )
+        assert deploy._container_exited_cleanly(lease) is expected

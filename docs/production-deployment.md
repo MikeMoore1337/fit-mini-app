@@ -99,10 +99,14 @@ approval. Timeout/readiness/drain/observation параметры перечис�
 измерения только для прохождения gate запрещено.
 
 `DEPLOY_WORKER_DRAIN_SECONDS` одновременно задаёт Compose grace period и timeout команды stop.
-Значение должно быть больше измеренного worst-case времени одного worker cycle. Если после SIGTERM
-нет текущего `worker_stopped`, rollout считается имеющим неопределённое состояние consumer, новый
-worker не получает ownership, а оператор использует evidence для ручного разбора. Старые строки
-логов переиспользованного slot не принимаются: boundary берётся из `StartedAt` текущего container.
+Значение должно быть больше измеренного worst-case времени одного worker cycle. Основное
+доказательство корректного завершения — текущий `worker_stopped`; старые строки логов
+переиспользованного slot не принимаются, boundary берётся из `StartedAt` текущего container.
+Ограниченное исключение для legacy worker без доступного marker допускается только после stop того
+же заранее захваченного container ID, если `docker inspect` подтверждает строго `exited 0`. При
+`running`, ненулевом exit code, исчезнувшем container или любой другой неоднозначности rollout
+считается имеющим неопределённое состояние consumer: новый worker не получает ownership, а оператор
+использует evidence для ручного разбора.
 
 Online migration gate анализирует только `upgrade()`. Для `expand` автоматически допускается лишь
 `op.add_column` со статически проверяемым `nullable=True` без default/index/unique; обычные index и

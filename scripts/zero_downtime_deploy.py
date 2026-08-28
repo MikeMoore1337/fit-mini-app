@@ -414,6 +414,20 @@ def _current_run_logs(lease: ConsumerLease) -> str:
     ).stdout
 
 
+def _container_exited_cleanly(lease: ConsumerLease) -> bool:
+    state = _run(
+        [
+            "docker",
+            "inspect",
+            "--format",
+            "{{.State.Status}} {{.State.ExitCode}}",
+            lease.container_id,
+        ],
+        capture=True,
+    ).stdout.strip()
+    return state == "exited 0"
+
+
 def _wait_for_ownership(lease: ConsumerLease, timeout: float) -> None:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -460,7 +474,9 @@ def _stop_slot_consumers(slot: str, config: DeployConfig, *, require_running: bo
     if _service_is_running(worker):
         worker_lease = _consumer_lease(worker, ("worker_started",))
         _compose("stop", "-t", str(config.worker_drain_seconds), worker)
-        if "worker_stopped" not in _current_run_logs(worker_lease):
+        if "worker_stopped" not in _current_run_logs(
+            worker_lease
+        ) and not _container_exited_cleanly(worker_lease):
             raise DeploymentError(
                 f"{worker} did not acknowledge a completed drain within "
                 f"{config.worker_drain_seconds}s; consumer state is uncertain"
@@ -1100,7 +1116,11 @@ def _stop_legacy_services(config: DeployConfig) -> None:
         _compose("stop", "-t", str(timeout), service)
         if _service_is_running(service):
             raise DeploymentError(f"legacy service {service} remained running after stop")
-        if worker_lease is not None and "worker_stopped" not in _current_run_logs(worker_lease):
+        if (
+            worker_lease is not None
+            and "worker_stopped" not in _current_run_logs(worker_lease)
+            and not _container_exited_cleanly(worker_lease)
+        ):
             raise DeploymentError(
                 "worker did not acknowledge a completed drain within "
                 f"{config.worker_drain_seconds}s; consumer state is uncertain"
