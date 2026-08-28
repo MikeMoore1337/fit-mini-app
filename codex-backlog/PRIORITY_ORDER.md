@@ -1,32 +1,31 @@
-# Порядок выполнения release backlog v41
+# Порядок выполнения release backlog v42
 
 ## Completed
 
-`00-75B`, включая `69B`, `73A`, `74A` и предшествующие буквенные подзадачи, а также
+`00-76`, включая `69B`, `73A`, `74A` и предшествующие буквенные подзадачи, а также
 owner-selected Telegram tasks `103-105`.
 Task-файлы находятся в `tasks/done/`.
 
 ## Current
 
 ```text
-75C Перенос выбранных Pulse-концепций в текущий production UI [CURRENT, NOT STARTED]
+76A Pre-human adversarial negative и destructive testing gate [CURRENT, NOT STARTED]
 ```
 
-Task `75B` завершена после owner screenshot review. Владелец выбрал `SELECT_DIRECTION_PULSE` только
-как перенос chart/dock/card-artwork/motion концепций поверх текущего UI. Task `75C` назначена текущей,
-но не реализуется в completion run `75B`. До pilot и отдельного owner checkpoint production baseline
-остаётся `DESIGN_V2_1`.
+Tasks `75C` и `76` завершены после owner screenshot review. Task `76A` назначена текущей, но не
+реализуется в completion run `76`. Её pre-human adversarial QA начинается только отдельным запуском
+после проверки Preconditions; production baseline остаётся `DESIGN_V2_1` с bounded Pulse pilot.
 
 Conditional release sequence:
 
 ```text
 75 [COMPLETED] -> 75A Rethink audit [COMPLETED] -> START_RETHINK_EXPLORATION
-  KEEP -> 76 -> 76A -> 77 -> 78 -> 79
-  EVOLVE -> bounded remediation -> 76
-  RETHINK -> 75B exploration [COMPLETED] -> 75C bounded current-UI pilot -> owner checkpoint -> 76
+  KEEP -> 76 [COMPLETED] -> 76A [CURRENT] -> 77 -> 78 -> 79
+  EVOLVE -> bounded remediation -> 76 [COMPLETED]
+  RETHINK -> 75B exploration [COMPLETED] -> 75C pilot [COMPLETED] -> 76 [COMPLETED]
 ```
 
-Task `75C` назначена текущей, но не выполняется автоматически в completion-сессии `75B`.
+Task `76A` назначена текущей, но не выполняется автоматически в completion-сессии `76`.
 Trigger-gated tasks сохраняют собственные gates. Никакая task не запускает следующую автоматически.
 
 ## Последовательность после `79`
@@ -57,5 +56,5 @@ Trigger-gated tasks сохраняют собственные gates. Никак�
     [TASK CREATED, IMPLEMENTATION NOT STARTED]
 ```
 
-Task `106` не меняет current task `76` и порядок `76-101`. Её implementation запускается только
+Task `106` не меняет current task `76A` и порядок `76A-101`. Её implementation запускается только
 отдельным решением владельца.

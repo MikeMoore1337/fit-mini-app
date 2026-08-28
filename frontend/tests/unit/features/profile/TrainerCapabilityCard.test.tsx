@@ -7,8 +7,13 @@ import { FeedbackProvider } from '../../../../src/shared/ui/FeedbackProvider';
 
 const apiMock = vi.hoisted(() => vi.fn());
 const reloadUserMock = vi.hoisted(() => vi.fn());
+const trackProductEventMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../../../../src/shared/api/client', () => ({ api: apiMock }));
+vi.mock('../../../../src/shared/analytics/productEvents', () => ({
+  productEventSurface: () => 'tma',
+  trackProductEvent: trackProductEventMock,
+}));
 vi.mock('../../../../src/app/AuthProvider', () => ({
   useAuth: () => ({
     user: { id: 10, is_coach: false, is_admin: false },
@@ -47,6 +52,7 @@ describe('TrainerCapabilityCard', () => {
   beforeEach(() => {
     apiMock.mockReset();
     reloadUserMock.mockReset().mockResolvedValue(null);
+    trackProductEventMock.mockReset();
   });
 
   afterEach(cleanup);
@@ -77,6 +83,30 @@ describe('TrainerCapabilityCard', () => {
       await screen.findByText('Режим тренера включён', { selector: 'strong' }),
     ).toBeInTheDocument();
     expect(reloadUserMock).toHaveBeenCalled();
+    expect(trackProductEventMock).toHaveBeenCalledWith({
+      name: 'trainer_mode_activated',
+      surface: 'tma',
+    });
+  });
+
+  it('не дублирует activation event для идемпотентного ответа API', async () => {
+    let current = state();
+    apiMock.mockImplementation((path: string, options?: { method?: string }) => {
+      if (path === '/api/v1/me/trainer-capability' && options?.method === 'POST') {
+        current = state({ is_active: true, activated_now: false, can_disable: true });
+      }
+      return Promise.resolve(current);
+    });
+    renderCard();
+
+    const activate = await screen.findByRole('button', { name: 'Включить режим тренера' });
+    fireEvent.click(screen.getByRole('checkbox', { name: /принимаю условия/i }));
+    fireEvent.click(activate);
+
+    expect(
+      await screen.findByText('Режим тренера включён', { selector: 'strong' }),
+    ).toBeInTheDocument();
+    expect(trackProductEventMock).not.toHaveBeenCalled();
   });
 
   it('показывает neutral switch и безопасно отключает режим без клиентов', async () => {

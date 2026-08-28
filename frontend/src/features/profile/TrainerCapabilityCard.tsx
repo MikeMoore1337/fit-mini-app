@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
 import { api } from '../../shared/api/client';
 import type { TrainerCapability } from '../../shared/api/types';
+import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Card, ErrorState, LoadingState } from '../../shared/ui/common';
 import { TrainerModeSwitch } from '../trainer/TrainerModeSwitch';
@@ -29,7 +30,10 @@ export function TrainerCapabilityCard() {
         method: 'POST',
         body: { accepted_terms: true },
       }),
-    onSuccess: async () => {
+    onSuccess: async (result) => {
+      if (result.activated_now) {
+        trackProductEvent({ name: 'trainer_mode_activated', surface: productEventSurface() });
+      }
       await refresh();
       toast('Режим тренера включён');
     },

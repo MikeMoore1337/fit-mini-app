@@ -547,7 +547,6 @@ def delete_own_account(
         resource_type="user",
         actor_user_id=user.id,
         target_user_id=user.id,
-        resource_id=user.id,
     )
     db.flush()
     delete_user_cascade(db, user)

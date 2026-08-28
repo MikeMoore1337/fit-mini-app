@@ -301,6 +301,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (cancelled) return;
         setConfig(publicConfig);
 
+        const tg = window.Telegram?.WebApp;
+        if (tg?.initData?.trim()) {
+          clearCurrentUserData();
+          clearAccessToken();
+          setUser(null);
+          queryClient.clear();
+          try {
+            await telegramLogin(tg);
+          } catch (reason) {
+            if (!cancelled) {
+              setError(
+                reason instanceof Error ? reason.message : 'Не удалось войти через Telegram',
+              );
+            }
+          }
+          return;
+        }
+
         if (getAccessToken()) {
           const current = await reloadUser();
           if (current || cancelled) return;
@@ -311,19 +329,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!getAccessToken() && (await refreshAccessToken())) {
           const current = await reloadUser();
           if (current || cancelled) return;
-        }
-
-        const tg = window.Telegram?.WebApp;
-        if (tg?.initData?.trim()) {
-          try {
-            await telegramLogin(tg);
-          } catch (reason) {
-            if (!cancelled) {
-              setError(
-                reason instanceof Error ? reason.message : 'Не удалось войти через Telegram',
-              );
-            }
-          }
         }
       } catch (reason) {
         if (!cancelled) {
@@ -343,7 +348,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [reloadUser, telegramLogin]);
+  }, [clearCurrentUserData, queryClient, reloadUser, telegramLogin]);
 
   const value = useMemo(
     () => ({

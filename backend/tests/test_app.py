@@ -3654,6 +3654,64 @@ def test_draft_public_content_is_noindex_and_absent_from_sitemap_source(monkeypa
     assert seo.metadata_for_path("/review").canonical_url is None
 
 
+def test_public_content_manifest_accepts_null_reviewer(tmp_path, monkeypatch):
+    from fitminiapp_api import seo
+
+    source = (
+        Path(__file__).resolve().parents[2] / "frontend" / "src" / "content" / "publicContent.json"
+    )
+    payload = json.loads(source.read_text(encoding="utf-8"))
+    guide = next(page for page in payload["pages"] if page.get("kind") == "guide")
+    guide["reviewer"] = None
+    manifest = tmp_path / "publicContent.json"
+    manifest.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    monkeypatch.setattr(seo, "_public_content_path", lambda: manifest)
+    seo.public_pages.cache_clear()
+
+    try:
+        loaded_guide = next(page for page in seo.public_pages() if page.get("id") == guide["id"])
+        assert loaded_guide["reviewer"] is None
+    finally:
+        seo.public_pages.cache_clear()
+
+
+def test_knowledge_fallback_lists_only_published_guides(monkeypatch):
+    from fitminiapp_api import seo
+
+    monkeypatch.setattr(
+        seo,
+        "public_pages",
+        lambda: (
+            {
+                "kind": "knowledge-index",
+                "path": "/knowledge",
+                "status": "published",
+                "heading": "База знаний",
+                "intro": "Проверенные материалы.",
+            },
+            {
+                "kind": "guide",
+                "path": "/knowledge/published",
+                "status": "published",
+                "heading": "Опубликованный материал",
+                "description": "Доступен читателям.",
+            },
+            {
+                "kind": "guide",
+                "path": "/knowledge/draft",
+                "status": "draft",
+                "heading": "Черновой материал",
+                "description": "Не готов к публикации.",
+            },
+        ),
+    )
+
+    fallback = seo.render_public_fallback("/knowledge")
+
+    assert "Опубликованный материал" in fallback
+    assert "Черновой материал" not in fallback
+
+
 def test_public_fallback_replaces_the_built_vite_marker_without_stale_landing_copy():
     from fitminiapp_api.seo import render_frontend_document
 

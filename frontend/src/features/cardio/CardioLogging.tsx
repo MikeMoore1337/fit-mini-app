@@ -16,6 +16,7 @@ import {
   formatCalendarDate,
 } from '../../shared/dateTime';
 import { queryKeys } from '../../shared/queryKeys';
+import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
 import {
   Badge,
   Button,
@@ -216,6 +217,9 @@ function CardioSessionForm({
     onSuccess: async () => {
       setDirty(false);
       setSubmitError(null);
+      if (!editing) {
+        trackProductEvent({ name: 'cardio_logged', surface: productEventSurface() });
+      }
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.cardio.all }),
         queryClient.invalidateQueries({ queryKey: queryKeys.progress.summaries }),

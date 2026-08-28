@@ -5,6 +5,7 @@ from fitminiapp_api.db.session import get_session_context
 from fitminiapp_api.models.cardio import CardioSession
 from fitminiapp_api.models.nutrition import NutritionTarget
 from fitminiapp_api.models.user import User
+from fitminiapp_api.services.account_export import ACCOUNT_EXPORT_SCHEMA_VERSION
 
 
 def _auth(client, telegram_user_id: int) -> dict[str, str]:
@@ -253,7 +254,7 @@ def test_cardio_is_in_account_export_and_account_deletion(client) -> None:
 
     exported = client.get("/api/v1/me/export", headers=headers)
     assert exported.status_code == 200
-    assert exported.json()["schema_version"] == 3
+    assert exported.json()["schema_version"] == ACCOUNT_EXPORT_SCHEMA_VERSION
     assert exported.json()["cardio_sessions"][0]["average_heart_rate_bpm"] == 148
     assert exported.json()["cardio_sessions"][0]["note"] == "Ровный темп"
 

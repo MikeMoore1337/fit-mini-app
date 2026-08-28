@@ -1,12 +1,17 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CardioQuickLog } from '../../../../src/features/cardio/CardioLogging';
 import { FeedbackProvider } from '../../../../src/shared/ui/FeedbackProvider';
 
 const apiMock = vi.hoisted(() => vi.fn());
+const trackProductEventMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../../../../src/shared/api/client', () => ({ api: apiMock }));
+vi.mock('../../../../src/shared/analytics/productEvents', () => ({
+  productEventSurface: () => 'mobile_web',
+  trackProductEvent: trackProductEventMock,
+}));
 vi.mock('../../../../src/app/AuthProvider', () => ({
   useAuth: () => ({ user: { profile: { timezone: 'Europe/Moscow' } } }),
 }));
@@ -28,6 +33,7 @@ describe('CardioQuickLog', () => {
   beforeEach(() => {
     apiMock.mockReset();
     apiMock.mockResolvedValue([]);
+    trackProductEventMock.mockReset();
   });
 
   afterEach(() => cleanup());
@@ -62,6 +68,10 @@ describe('CardioQuickLog', () => {
           };
           return saved;
         }
+        if (options?.method === 'PATCH') {
+          saved = { ...saved, ...(options.body as Record<string, unknown>) };
+          return saved;
+        }
         if (path.startsWith('/api/v1/workouts/cardio')) return saved ? [saved] : [];
         return null;
       },
@@ -77,6 +87,7 @@ describe('CardioQuickLog', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Временная ошибка сохранения');
     expect(screen.getByLabelText('Длительность, мин')).toHaveValue(35);
     expect(screen.getByLabelText('Заметка')).toHaveValue('Ровный темп');
+    expect(trackProductEventMock).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Сохранить кардио' }));
     await waitFor(() => expect(postAttempts).toBe(2));
@@ -84,5 +95,22 @@ describe('CardioQuickLog', () => {
 
     const posts = apiMock.mock.calls.filter((call) => call[1]?.method === 'POST');
     expect(posts[0]![1].body.client_request_id).toBe(posts[1]![1].body.client_request_id);
+    expect(trackProductEventMock).toHaveBeenCalledWith({
+      name: 'cardio_logged',
+      surface: 'mobile_web',
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Изменить' }));
+    const saveChanges = screen.getByRole('button', { name: 'Сохранить изменения' });
+    const editForm = saveChanges.closest('form');
+    expect(editForm).not.toBeNull();
+    fireEvent.change(within(editForm!).getByLabelText('Длительность, мин'), {
+      target: { value: '40' },
+    });
+    fireEvent.click(saveChanges);
+    await waitFor(() =>
+      expect(apiMock.mock.calls.filter((call) => call[1]?.method === 'PATCH')).toHaveLength(1),
+    );
+    expect(trackProductEventMock).toHaveBeenCalledTimes(1);
   });
 });

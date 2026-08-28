@@ -856,7 +856,7 @@ def build_progress_summaries(
             if protein_days
             else None
         )
-        logged_day_count = sum(row.has_entries for row in diary_days)
+        logged_day_count = len(complete_diary_days)
         complete_day_count = sum(row.status == "complete" for row in diary_days)
         incomplete_day_count = sum(row.status == "incomplete" for row in diary_days)
         fasted_day_count = sum(row.status == "fasted" for row in diary_days)
@@ -936,7 +936,7 @@ def build_progress_summaries(
             "data_sufficiency": {
                 **training_sufficiency,
                 "nutrition_coverage": build_nutrition_coverage_signal(
-                    logged_day_count=len(complete_diary_days) if nutrition_visible else 0,
+                    logged_day_count=logged_day_count if nutrition_visible else 0,
                     eligible_day_count=eligible_nutrition_days,
                     visible=nutrition_visible,
                 ),

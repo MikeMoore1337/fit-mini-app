@@ -95,10 +95,24 @@ def public_pages() -> tuple[dict[str, object], ...]:
                     raise RuntimeError(
                         f"Public guide {content_id!r} field {field!r} must be a non-empty list"
                     )
-            for field in ("author", "reviewer"):
-                if not isinstance(page.get(field), dict):
+            author = page.get("author")
+            if not isinstance(author, dict):
+                raise RuntimeError(
+                    f"Public guide {content_id!r} field 'author' must identify an editor"
+                )
+            reviewer = page.get("reviewer")
+            if reviewer is not None and not isinstance(reviewer, dict):
+                raise RuntimeError(
+                    f"Public guide {content_id!r} field 'reviewer' must identify an editor or be null"
+                )
+            for field, editor in (("author", author), ("reviewer", reviewer)):
+                if not isinstance(editor, dict):
+                    continue
+                _required_string(editor.get("name"), field=f"{field}.name")
+                editor_type = _required_string(editor.get("type"), field=f"{field}.type")
+                if editor_type not in {"Organization", "Person"}:
                     raise RuntimeError(
-                        f"Public guide {content_id!r} field {field!r} must identify an editor"
+                        f"Public content field '{field}.type' must be Organization or Person"
                     )
         seen_paths.add(path)
         pages.append(page)
@@ -396,7 +410,7 @@ def render_public_fallback(path: str) -> str:
                 }
             )
             for guide in public_pages()
-            if guide.get("kind") == "guide"
+            if guide.get("kind") == "guide" and guide.get("status", "published") == "published"
         )
         parts.append(
             f"<section><h2>Опубликованные руководства</h2><ul>{guide_links}</ul></section>"

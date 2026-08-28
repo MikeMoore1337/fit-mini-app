@@ -10,11 +10,12 @@ from fastapi.encoders import jsonable_encoder
 from fitminiapp_api.core.timezone import now_msk_naive
 from fitminiapp_api.db.session import get_session_context
 from fitminiapp_api.models.account import AccountDataExport
+from fitminiapp_api.models.audit import AuditEvent
 from fitminiapp_api.models.auth_identity import AuthIdentity
-from fitminiapp_api.models.exercise import Exercise
+from fitminiapp_api.models.exercise import Exercise, ExerciseGuideMetadata
 from fitminiapp_api.models.notification import Notification, NotificationSetting
 from fitminiapp_api.models.token import RefreshToken
-from fitminiapp_api.models.user import BodyMeasurement, CoachClient, User
+from fitminiapp_api.models.user import BodyMeasurement, CoachClient, CoachClientInvite, User
 from fitminiapp_api.models.weekly_digest import WeeklyDigestPreference
 from fitminiapp_api.services import account_exports
 
@@ -272,6 +273,78 @@ def test_delete_revokes_sessions_relationships_and_export_but_keeps_shared_catal
             db.query(Exercise.id).filter(Exercise.created_by_user_id.is_(None)).first()[0]
         )
         db.add(CoachClient(coach_user_id=other_id, client_user_id=user_id, status="active"))
+        db.add(
+            AuthIdentity(
+                user_id=user_id,
+                provider="google",
+                subject="delete-oauth-only",
+                email="delete-oauth-only@example.test",
+                email_verified=True,
+            )
+        )
+        unrelated_invite = CoachClientInvite(
+            coach_user_id=other_id,
+            source="invite_link",
+            status="pending",
+            token_hash="a" * 64,
+            expires_at=now_msk_naive() + timedelta(days=1),
+        )
+        db.add(unrelated_invite)
+        db.flush()
+        unrelated_invite_id = unrelated_invite.id
+        orphan_marker = "delete-private-orphan-marker"
+        orphan_exercise = Exercise(
+            slug=orphan_marker,
+            title=orphan_marker,
+            primary_muscle=orphan_marker,
+            equipment=orphan_marker,
+            created_by_user_id=user_id,
+        )
+        referenced_marker = "delete-private-referenced-marker"
+        referenced_exercise = Exercise(
+            slug=referenced_marker,
+            title=referenced_marker,
+            primary_muscle=referenced_marker,
+            equipment=referenced_marker,
+            created_by_user_id=user_id,
+        )
+        db.add_all([orphan_exercise, referenced_exercise])
+        db.flush()
+        orphan_exercise_id = orphan_exercise.id
+        referenced_exercise_id = referenced_exercise.id
+        db.add(
+            ExerciseGuideMetadata(
+                exercise_id=referenced_exercise_id,
+                safety_notes=[referenced_marker],
+                source_name=referenced_marker,
+                source_url=f"https://example.test/{referenced_marker}",
+                source_license=referenced_marker,
+                media_reference=referenced_marker,
+            )
+        )
+        retained_reference = Exercise(
+            slug="retained-reference-after-account-delete",
+            title="Retained reference",
+            created_by_user_id=other_id,
+            source_exercise_id=referenced_exercise_id,
+        )
+        db.add(retained_reference)
+        db.flush()
+        retained_reference_id = retained_reference.id
+        occupied_anonymized_slug = f"deleted-user-exercise-{referenced_exercise_id}"
+        occupied_exercise = Exercise(
+            slug=occupied_anonymized_slug,
+            title="Existing unrelated exercise",
+            created_by_user_id=other_id,
+        )
+        db.add(occupied_exercise)
+        db.flush()
+        occupied_exercise_id = occupied_exercise.id
+
+    unlinked = client.delete("/api/v1/me/auth/identities/telegram", headers=headers)
+    assert unlinked.status_code == 200
+    assert unlinked.json()["telegram_user_id"] is None
+    assert unlinked.json()["username"] is None
 
     deleted = client.request(
         "DELETE",
@@ -284,7 +357,27 @@ def test_delete_revokes_sessions_relationships_and_export_but_keeps_shared_catal
     with get_session_context() as db:
         assert db.get(User, user_id) is None
         assert db.get(User, other_id) is not None
+        assert db.get(CoachClientInvite, unrelated_invite_id) is not None
         assert db.get(Exercise, shared_exercise_id) is not None
         assert db.query(CoachClient).filter_by(client_user_id=user_id).count() == 0
         assert db.query(AccountDataExport).filter_by(export_id=ready["export_id"]).count() == 0
         assert db.query(RefreshToken).filter_by(user_id=user_id).count() == 0
+        assert db.get(Exercise, orphan_exercise_id) is None
+        anonymized = db.get(Exercise, referenced_exercise_id)
+        assert anonymized is not None
+        assert anonymized.slug.startswith("deleted-user-exercise-")
+        assert anonymized.slug != occupied_anonymized_slug
+        assert len(anonymized.slug) <= 64
+        assert anonymized.title == "Удалённое пользовательское упражнение"
+        assert anonymized.primary_muscle is None
+        assert anonymized.equipment is None
+        assert anonymized.created_by_user_id is None
+        assert anonymized.is_deleted is True
+        assert db.get(ExerciseGuideMetadata, referenced_exercise_id) is None
+        assert db.get(Exercise, retained_reference_id).source_exercise_id == referenced_exercise_id
+        assert db.get(Exercise, occupied_exercise_id).slug == occupied_anonymized_slug
+        deletion_event = db.query(AuditEvent).filter_by(action="account.self_deleted").one()
+        assert deletion_event.actor_user_id is None
+        assert deletion_event.target_user_id is None
+        assert deletion_event.resource_id is None
+        assert deletion_event.details == {}

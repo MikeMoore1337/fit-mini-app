@@ -345,6 +345,51 @@ def test_user_progress_summary_handles_periods_current_day_and_isolation(client)
     assert other.json()["body"]["latest_measurement"]["weight_kg"] == 250.0
 
 
+def test_progress_counts_fasted_as_logged_and_excludes_incomplete_days(client) -> None:
+    headers = _auth(client, 21_003)
+    user_id = _user_id(21_003)
+    today = today_msk()
+
+    with get_session_context() as db:
+        db.add(_nutrition_target(user_id, cardio_per_week=0))
+        db.add_all(
+            [
+                FoodDiaryDayStatus(
+                    user_id=user_id,
+                    diary_date=today - timedelta(days=1),
+                    status="fasted",
+                ),
+                FoodDiaryDayStatus(
+                    user_id=user_id,
+                    diary_date=today - timedelta(days=2),
+                    status="incomplete",
+                ),
+            ]
+        )
+
+    response = client.get("/api/v1/workouts/progress/summary?period_days=7", headers=headers)
+
+    assert response.status_code == 200, response.text
+    nutrition = response.json()["nutrition"]
+    assert nutrition == {
+        "visible": True,
+        "logged_days": 1,
+        "complete_days": 0,
+        "incomplete_days": 1,
+        "fasted_days": 1,
+        "unlogged_days": 4,
+        "adherence_evaluated_days": 1,
+        "average_calories": 0.0,
+        "target_calories": 2000,
+        "average_protein_g": 0.0,
+        "target_protein_g": 150,
+        "target_effective_on": (today - timedelta(days=30)).isoformat(),
+    }
+    coverage = response.json()["data_sufficiency"]["nutrition_coverage"]
+    assert coverage["counters"]["logged_day_count"] == 1
+    assert coverage["counters"]["eligible_day_count"] == 6
+
+
 def test_progress_uses_calories_only_quick_add_without_inventing_protein(client) -> None:
     headers = _auth(client, 21_050)
     user_id = _user_id(21_050)

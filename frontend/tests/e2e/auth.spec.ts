@@ -2,6 +2,20 @@ import { expect, test, type Page } from '@playwright/test';
 
 const configuredProviders = ['telegram', 'google', 'yandex', 'vk'];
 
+type MockAuthOptions = {
+  authenticated?: boolean;
+  providers?: string[];
+  initialUser?: ReturnType<typeof userPayload>;
+  telegramUser?: ReturnType<typeof userPayload>;
+  rejectTelegramInit?: boolean;
+};
+
+type MockAuthCalls = {
+  refresh: number;
+  telegramInit: number;
+  meAuthorization: string[];
+};
+
 function userPayload() {
   return {
     id: 17,
@@ -20,9 +34,17 @@ function userPayload() {
 
 async function mockAuthApi(
   page: Page,
-  { authenticated = false, providers = configuredProviders } = {},
-) {
+  {
+    authenticated = false,
+    providers = configuredProviders,
+    initialUser = userPayload(),
+    telegramUser = userPayload(),
+    rejectTelegramInit = false,
+  }: MockAuthOptions = {},
+): Promise<MockAuthCalls> {
   let hasSession = authenticated;
+  let activeUser = initialUser;
+  const calls: MockAuthCalls = { refresh: 0, telegramInit: 0, meAuthorization: [] };
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
@@ -39,17 +61,24 @@ async function mockAuthApi(
       });
     }
     if (path.endsWith('/auth/refresh')) {
+      calls.refresh += 1;
       return hasSession
         ? route.fulfill({ json: { access_token: 'refreshed-token' } })
         : route.fulfill({ status: 401, json: { detail: 'Сессия отсутствует' } });
     }
     if (path.endsWith('/auth/telegram/init')) {
+      calls.telegramInit += 1;
+      if (rejectTelegramInit) {
+        return route.fulfill({ status: 401, json: { detail: 'Telegram initData истекли' } });
+      }
       hasSession = true;
+      activeUser = telegramUser;
       return route.fulfill({ json: { access_token: 'telegram-token' } });
     }
     if (path.endsWith('/me')) {
+      calls.meAuthorization.push(request.headers().authorization ?? '');
       return hasSession
-        ? route.fulfill({ json: userPayload() })
+        ? route.fulfill({ json: activeUser })
         : route.fulfill({ status: 401, json: { detail: 'Требуется вход' } });
     }
     if (path.endsWith('/workouts/today')) {
@@ -124,6 +153,7 @@ async function mockAuthApi(
     }
     return route.fulfill({ json: [] });
   });
+  return calls;
 }
 
 test('Landing ведёт на canonical Login, а protected route сохраняет safe next', async ({
@@ -308,6 +338,78 @@ test('valid Telegram launch authenticates automatically without browser Login', 
   await expect(page.getByRole('heading', { name: 'Продолжить в Your Fitness Coach' })).toHaveCount(
     0,
   );
+});
+
+test('Telegram launch replaces a stale browser identity before loading current user', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    sessionStorage.setItem('fit_access_token', 'web-token');
+    window.Telegram = {
+      WebApp: {
+        initData: 'signed-init-data-for-telegram-user',
+        initDataUnsafe: {},
+        colorScheme: 'dark',
+        ready() {},
+        expand() {},
+        BackButton: {
+          show() {},
+          hide() {},
+          onClick() {},
+          offClick() {},
+        },
+      },
+    };
+  });
+  const calls = await mockAuthApi(page, {
+    authenticated: true,
+    initialUser: { ...userPayload(), id: 18, first_name: 'Web A' },
+    telegramUser: {
+      ...userPayload(),
+      id: 19,
+      telegram_user_id: 7019,
+      first_name: 'Telegram B',
+    },
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/app?tgWebAppPlatform=android');
+
+  await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible();
+  expect(calls.telegramInit).toBe(1);
+  expect(calls.refresh).toBe(0);
+  expect(calls.meAuthorization).toEqual(['Bearer telegram-token']);
+});
+
+test('invalid Telegram initData does not expose the stale browser identity', async ({ page }) => {
+  await page.addInitScript(() => {
+    sessionStorage.setItem('fit_access_token', 'web-token');
+    window.Telegram = {
+      WebApp: {
+        initData: 'expired-init-data',
+        initDataUnsafe: {},
+        colorScheme: 'dark',
+        ready() {},
+        expand() {},
+        BackButton: {
+          show() {},
+          hide() {},
+          onClick() {},
+          offClick() {},
+        },
+      },
+    };
+  });
+  const calls = await mockAuthApi(page, { authenticated: true, rejectTelegramInit: true });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/app?tgWebAppPlatform=android');
+
+  await expect(page.getByRole('heading', { name: 'Не удалось подтвердить вход' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toHaveCount(0);
+  expect(calls.telegramInit).toBe(1);
+  expect(calls.refresh).toBe(0);
+  expect(calls.meAuthorization).toEqual([]);
 });
 
 test('linking callback показывает success и conflict без raw данных', async ({ page }) => {

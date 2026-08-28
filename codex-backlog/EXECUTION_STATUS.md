@@ -1,4 +1,4 @@
-# Execution status v41
+# Execution status v42
 
 Подтверждённое владельцем состояние на 28.08.2026:
 
@@ -28,16 +28,19 @@
       выбрал `SELECT_DIRECTION_PULSE` как четыре концепции поверх текущего UI, task архивирована;
 - [x] task `75C` перенесла выбранные chart/dock/card-artwork/motion концепции поверх текущего UI без
       restyle, прошла review/QA, получила owner screenshot approval и архивирована;
-- [ ] **current:** `76-skill-aware-retrospective-release-audit.md` — назначена, реализация не начата;
-- [ ] remaining release tasks `76A-79` и post-release tasks `80-101` сохраняют собственные Trigger,
+- [x] task `76` завершила skill-aware retrospective release audit, закрыла все подтверждённые
+      `BLOCKER/HIGH/MEDIUM`, синхронизировала findings и архивирована после owner screenshot approval;
+- [ ] **current:** `76a-pre-human-adversarial-negative-destructive-testing-gate.md` — назначена,
+      реализация не начата; Preconditions и destructive test safety остаются обязательными;
+- [ ] remaining release tasks `77-79` и post-release tasks `80-101` сохраняют собственные Trigger,
       dependency и owner decision; task ID задают предпочтительный порядок, но ни одна pending task
       этой очереди не запущена.
 - [ ] owner-selected task `106-landing-telegram-product-news-links.md` создана с подтверждённым
       публичным каналом `https://t.me/your_fitness_news`; implementation отдельно не одобрена,
-      task не является current и не меняет порядок `76-101`.
+      task не является current и не меняет порядок `76A-101`.
 
 Не выполнять повторно tasks `00-75C`, включая `69B`, `73A`, task `74A` и tasks `103-105`.
-Следующей pending task назначена `76`: её audit начинается только в отдельной сессии.
+Следующей pending task назначена `76A`: её adversarial QA gate начинается только в отдельной сессии.
 `DESIGN_V2_1` с owner-approved bounded Pulse pilot остаётся production baseline.
 Umbrella `100` отдельно не выполняется; `100A` не назначена без собственного Trigger, dependency
 и owner decision. Другие pending tasks автоматически не реализуются.

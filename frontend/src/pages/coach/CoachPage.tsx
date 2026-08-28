@@ -726,7 +726,7 @@ function CoachClientDetail({
         title="Питание"
         description={
           summary?.nutrition.visible
-            ? `${summary.nutrition.logged_days} дней с записями за период`
+            ? `${summary.nutrition.logged_days} учтённых дней питания за период`
             : 'Агрегаты питания не доступны'
         }
       >

@@ -4,6 +4,12 @@ const captureAudit = Boolean(
   (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
     ?.CAPTURE_COACH_AUDIT,
 );
+const captureTask76 =
+  (
+    globalThis as typeof globalThis & {
+      process?: { env?: Record<string, string | undefined> };
+    }
+  ).process?.env?.CAPTURE_TASK_76 === '1';
 const captureLandingProductProofs =
   (
     globalThis as typeof globalThis & {
@@ -438,6 +444,7 @@ test('dashboard даёт обзор и фильтрует клиентов бе�
   await expect(page.getByText('Борис Александрович С Очень Длинной Фамилией')).toBeVisible();
   await expect(page.getByText('Сейчас открыт клиент')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Анна Петрова', exact: true })).toBeVisible();
+  await expect(page.getByText('16 учтённых дней питания за период')).toBeVisible();
   await expect(page.locator('.coach-client-program .ui-badge--success')).toHaveCSS(
     'border-radius',
     '8px',
@@ -450,6 +457,13 @@ test('dashboard даёт обзор и фильтрует клиентов бе�
     (await page.locator('.coach-client-program .ui-badge--success').boundingBox())?.height,
   ).toBeLessThanOrEqual(26);
   expect(fullHistoryRequests).toEqual([]);
+
+  if (captureTask76) {
+    await page.screenshot({
+      path: '../.artifacts/screenshots/task-76/coach-nutrition-coverage-desktop-light.png',
+      fullPage: true,
+    });
+  }
 
   if (captureAudit) {
     await page.screenshot({

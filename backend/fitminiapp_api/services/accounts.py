@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from uuid import uuid4
+
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -9,7 +11,13 @@ from fitminiapp_api.models.auth_identity import AuthActionToken, AuthIdentity, L
 from fitminiapp_api.models.billing import Payment, Subscription
 from fitminiapp_api.models.cardio import CardioSession
 from fitminiapp_api.models.check_in import WeeklyCheckIn
-from fitminiapp_api.models.exercise import Exercise
+from fitminiapp_api.models.exercise import (
+    Exercise,
+    ExerciseAlternative,
+    ExerciseEquipment,
+    ExerciseGuideMetadata,
+    ExerciseMuscle,
+)
 from fitminiapp_api.models.feedback import WorkoutComment, WorkoutCommentRevision
 from fitminiapp_api.models.notification import Notification, NotificationSetting
 from fitminiapp_api.models.nutrition import EnergyCalibration, NutritionTarget
@@ -17,6 +25,7 @@ from fitminiapp_api.models.program import (
     HiddenProgramTemplate,
     ProgramRevision,
     ProgramTemplate,
+    ProgramTemplateExercise,
     TrainingBlock,
     TrainingBlockPriorityMuscle,
     UserProgram,
@@ -40,6 +49,16 @@ from fitminiapp_api.services.account_export import build_account_export
 from fitminiapp_api.services.programs import delete_template_cascade
 
 __all__ = ["build_account_export", "delete_user_cascade"]
+
+
+_DELETED_USER_EXERCISE_TITLE = "Удалённое пользовательское упражнение"
+
+
+def _new_anonymized_exercise_slug(db: Session) -> str:
+    while True:
+        candidate = f"deleted-user-exercise-{uuid4().hex}"
+        if db.query(Exercise.id).filter(Exercise.slug == candidate).first() is None:
+            return candidate
 
 
 def _delete_user_programs(db: Session, user_program_ids: list[int]) -> None:
@@ -111,6 +130,71 @@ def _delete_user_programs(db: Session, user_program_ids: list[int]) -> None:
     )
 
 
+def _delete_or_anonymize_user_exercises(db: Session, user_id: int) -> None:
+    custom_exercise_ids = [
+        row.id for row in db.query(Exercise.id).filter(Exercise.created_by_user_id == user_id).all()
+    ]
+    if not custom_exercise_ids:
+        return
+
+    referenced_ids = {
+        row.exercise_id
+        for row in db.query(ProgramTemplateExercise.exercise_id)
+        .filter(ProgramTemplateExercise.exercise_id.in_(custom_exercise_ids))
+        .all()
+    }
+    referenced_ids.update(
+        row.exercise_id
+        for row in db.query(UserWorkoutExercise.exercise_id)
+        .filter(UserWorkoutExercise.exercise_id.in_(custom_exercise_ids))
+        .all()
+    )
+    referenced_ids.update(
+        row.source_exercise_id
+        for row in db.query(Exercise.source_exercise_id)
+        .filter(
+            Exercise.source_exercise_id.in_(custom_exercise_ids),
+            Exercise.id.notin_(custom_exercise_ids),
+        )
+        .all()
+        if row.source_exercise_id is not None
+    )
+
+    for model in (ExerciseMuscle, ExerciseEquipment, ExerciseGuideMetadata):
+        db.query(model).filter(model.exercise_id.in_(custom_exercise_ids)).delete(
+            synchronize_session=False
+        )
+    db.query(ExerciseAlternative).filter(
+        or_(
+            ExerciseAlternative.exercise_id.in_(custom_exercise_ids),
+            ExerciseAlternative.alternative_exercise_id.in_(custom_exercise_ids),
+        )
+    ).delete(synchronize_session=False)
+
+    unreferenced_ids = set(custom_exercise_ids) - referenced_ids
+    if unreferenced_ids:
+        db.query(Exercise).filter(
+            Exercise.id.in_(custom_exercise_ids),
+            Exercise.source_exercise_id.in_(unreferenced_ids),
+        ).update({"source_exercise_id": None}, synchronize_session=False)
+        db.query(Exercise).filter(Exercise.id.in_(unreferenced_ids)).delete(
+            synchronize_session=False
+        )
+
+    for exercise_id in referenced_ids:
+        db.query(Exercise).filter(Exercise.id == exercise_id).update(
+            {
+                "slug": _new_anonymized_exercise_slug(db),
+                "title": _DELETED_USER_EXERCISE_TITLE,
+                "primary_muscle": None,
+                "equipment": None,
+                "created_by_user_id": None,
+                "is_deleted": True,
+            },
+            synchronize_session=False,
+        )
+
+
 def delete_user_cascade(db: Session, user: User) -> None:
     """Delete one account while preserving other users' historical snapshots."""
 
@@ -174,20 +258,23 @@ def delete_user_cascade(db: Session, user: User) -> None:
     db.query(UserProgram).filter(UserProgram.assigned_by_user_id == user.id).update(
         {"assigned_by_user_id": None}, synchronize_session=False
     )
-    db.query(Exercise).filter(Exercise.created_by_user_id == user.id).update(
-        {"created_by_user_id": None, "is_deleted": True}, synchronize_session=False
-    )
+    _delete_or_anonymize_user_exercises(db, user.id)
     db.query(CoachClient).filter(
         or_(CoachClient.coach_user_id == user.id, CoachClient.client_user_id == user.id)
     ).delete(synchronize_session=False)
-    db.query(CoachClientInvite).filter(
-        or_(
-            CoachClientInvite.coach_user_id == user.id,
-            CoachClientInvite.client_user_id == user.id,
-            CoachClientInvite.telegram_user_id == user.telegram_user_id,
-            CoachClientInvite.username == user.username,
+    invite_identity_predicates = [
+        CoachClientInvite.coach_user_id == user.id,
+        CoachClientInvite.client_user_id == user.id,
+    ]
+    if user.telegram_user_id is not None:
+        invite_identity_predicates.append(
+            CoachClientInvite.telegram_user_id == user.telegram_user_id
         )
-    ).delete(synchronize_session=False)
+    if user.username is not None:
+        invite_identity_predicates.append(CoachClientInvite.username == user.username)
+    db.query(CoachClientInvite).filter(or_(*invite_identity_predicates)).delete(
+        synchronize_session=False
+    )
     db.query(CoachRoleApplication).filter(
         CoachRoleApplication.reviewed_by_user_id == user.id
     ).update({"reviewed_by_user_id": None}, synchronize_session=False)
