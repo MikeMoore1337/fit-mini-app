@@ -90,7 +90,7 @@ pydantic-settings==2.14.2
     # via -r backend/requirements.in
 pyjwt==2.13.0
     # via -r backend/requirements.in
-python-dotenv==1.2.2
+python-dotenv==1.2.3
     # via
     #   pydantic-settings
     #   uvicorn
