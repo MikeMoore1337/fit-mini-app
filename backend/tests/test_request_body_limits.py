@@ -215,7 +215,8 @@ def test_edge_and_asgi_limits_share_the_reviewed_contract() -> None:
 
     configured_sizes = [int(value) for value in re.findall(r"max_size (\d+)", caddyfile)]
     assert configured_sizes == [AUTH_BODY_LIMIT_BYTES, DEFAULT_BODY_LIMIT_BYTES]
-    assert "reverse_proxy backend:8000" in caddyfile
+    assert "reverse_proxy {$YFC_ACTIVE_UPSTREAM}" in caddyfile
+    assert "reverse_proxy {$YFC_ASSET_FALLBACK_UPSTREAM}" in caddyfile
     assert 'Cache-Control "no-store, private"' in caddyfile
     assert "reverse_proxy edge:8080" in compose
     assert "http://backend:8000" not in compose.split("  cloudflared:", maxsplit=1)[1]

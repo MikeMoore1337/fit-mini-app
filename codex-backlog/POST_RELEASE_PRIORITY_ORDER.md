@@ -71,3 +71,7 @@ Owner-selected tasks `109-111` также находятся вне pending-по
 offer, private avatar upload и Progress bento dashboard. Они не меняют current task `81` или
 порядок `81-101`, не образуют общую implementation batch и запускаются только отдельными owner
 решениями.
+
+Owner-selected task `112` завершена и архивирована вне pending-последовательности после локального
+review/QA zero-downtime deployment contract. Production rollout остался отдельным owner checkpoint;
+current task `81` и порядок `81-101` не изменились.

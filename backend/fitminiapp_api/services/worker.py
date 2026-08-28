@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import hashlib
 import hmac
 import logging
+import signal
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -622,31 +624,15 @@ async def run_once(*, sync_reminders: bool = True) -> None:
         db.commit()
 
 
-async def main() -> None:
-    configure_logging(
-        debug=settings.app_debug,
-        service="notification-worker",
-        sensitive_values=(
-            settings.secret_key,
-            settings.telegram_bot_token,
-            settings.bot_internal_token,
-            settings.smtp_password,
-            settings.telegram_oauth_client_secret,
-            settings.google_oauth_client_secret,
-            settings.yandex_oauth_client_secret,
-            settings.apple_oauth_client_secret,
-            settings.database_url,
-            settings.news_llm_api_key,
-            settings.news_image_cloudflare_api_token,
-        ),
-    )
-    logger.info("worker_started")
-    async with httpx.AsyncClient(timeout=15) as preflight_client:
-        news_publication_ready = await check_news_channel_rights(preflight_client)
+async def run_until_stopped(
+    stop_requested: asyncio.Event,
+    *,
+    news_publication_ready: bool,
+) -> None:
     next_reminder_sync = 0.0
     next_news_sync = 0.0
     WORKER_HEARTBEAT_PATH.touch()
-    while True:
+    while not stop_requested.is_set():
         current = monotonic()
         should_sync = current >= next_reminder_sync
         await run_once(sync_reminders=should_sync)
@@ -675,7 +661,48 @@ async def main() -> None:
             if should_fetch_news:
                 next_news_sync = current + settings.news_ingestion_cycle_seconds
         WORKER_HEARTBEAT_PATH.touch()
-        await asyncio.sleep(settings.worker_poll_seconds)
+        if stop_requested.is_set():
+            break
+        with contextlib.suppress(TimeoutError):
+            await asyncio.wait_for(stop_requested.wait(), timeout=settings.worker_poll_seconds)
+
+
+async def main() -> None:
+    configure_logging(
+        debug=settings.app_debug,
+        service="notification-worker",
+        sensitive_values=(
+            settings.secret_key,
+            settings.telegram_bot_token,
+            settings.bot_internal_token,
+            settings.smtp_password,
+            settings.telegram_oauth_client_secret,
+            settings.google_oauth_client_secret,
+            settings.yandex_oauth_client_secret,
+            settings.apple_oauth_client_secret,
+            settings.database_url,
+            settings.news_llm_api_key,
+            settings.news_image_cloudflare_api_token,
+        ),
+    )
+    stop_requested = asyncio.Event()
+    loop = asyncio.get_running_loop()
+
+    def request_stop() -> None:
+        if not stop_requested.is_set():
+            logger.info("worker_drain_requested")
+            stop_requested.set()
+
+    for signal_name in (signal.SIGTERM, signal.SIGINT):
+        loop.add_signal_handler(signal_name, request_stop)
+    logger.info("worker_started")
+    async with httpx.AsyncClient(timeout=15) as preflight_client:
+        news_publication_ready = await check_news_channel_rights(preflight_client)
+    await run_until_stopped(
+        stop_requested,
+        news_publication_ready=news_publication_ready,
+    )
+    logger.info("worker_stopped")
 
 
 if __name__ == "__main__":

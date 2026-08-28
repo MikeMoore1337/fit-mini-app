@@ -19,16 +19,26 @@ def test_automated_deploy_keeps_revision_provenance_and_stale_run_guards() -> No
         'is no longer master head (\\$LATEST_MASTER_SHA)\\"' in deploy_workflow
     )
 
-    assert 'verify_image_revision "$BACKEND_IMAGE"' in deploy_script
-    assert 'verify_image_revision "$BOT_IMAGE"' in deploy_script
-    assert deploy_script.index('verify_image_revision "$BOT_IMAGE"') < deploy_script.index(
-        "Creating a pre-deploy database backup"
+    assert "scripts/zero_downtime_deploy.py" in deploy_script
+    assert "docker compose config --quiet" in deploy_script
+    assert "--remove-orphans" not in deploy_script
+    assert "docker compose up" not in deploy_script
+
+
+def test_slot_topology_keeps_gateway_stable_and_consumers_single_owner() -> None:
+    root = Path(__file__).resolve().parents[1]
+    compose = (root / "docker-compose.yml").read_text(encoding="utf-8")
+    edge = (root / "deploy" / "Caddyfile.edge").read_text(encoding="utf-8")
+    orchestrator = (root / "scripts" / "zero_downtime_deploy.py").read_text(encoding="utf-8")
+
+    assert "backend-blue:" in compose and "backend-green:" in compose
+    assert "worker-blue:" in compose and "worker-green:" in compose
+    assert "bot-blue:" in compose and "bot-green:" in compose
+    assert "edge_config:/config" in compose
+    assert "caddy run --resume" in (root / "deploy" / "edge-entrypoint.sh").read_text(
+        encoding="utf-8"
     )
-    assert 'scripts/check_deployment.py "$BASE_URL" --expected-environment prod' in deploy_script
-    assert deploy_script.index("--expected-environment prod") < deploy_script.index(
-        "last-successful-revision"
-    )
-    assert "docker compose ps --services --all | grep -qx caddy" in deploy_script
-    assert "docker compose ps --services --all | grep -qx cloudflared" in deploy_script
-    assert 'docker run --rm --network none --env-file .env "$BACKEND_IMAGE"' in deploy_script
-    assert 'docker run --rm --network none --env-file .env "$BOT_IMAGE"' in deploy_script
+    assert "handle_response @asset_missing" in edge
+    assert "lb_retries" not in edge
+    assert orchestrator.index('"validate"') < orchestrator.index('"reload"')
+    assert "another production deployment owns the host lock" in orchestrator

@@ -1,3 +1,7 @@
+{
+	grace_period 30s
+}
+
 :8080 {
 	@auth path /api/v1/auth /api/v1/auth/*
 	request_body @auth {
@@ -9,7 +13,19 @@
 		max_size 1048576
 	}
 
-	reverse_proxy backend:8000
+	@versioned_assets path /assets/*
+	handle @versioned_assets {
+		reverse_proxy {$YFC_ACTIVE_UPSTREAM} {
+			@asset_missing status 404
+			handle_response @asset_missing {
+				reverse_proxy {$YFC_ASSET_FALLBACK_UPSTREAM}
+			}
+		}
+	}
+
+	handle {
+		reverse_proxy {$YFC_ACTIVE_UPSTREAM}
+	}
 
 	handle_errors {
 		@too_large expression {http.error.status_code} == 413

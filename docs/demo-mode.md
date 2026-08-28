@@ -46,7 +46,7 @@ Web пункт нижней навигации называется `Сцена�
 названия путей. Технические слова `fixture`, `snapshot` и названия внутренних контрактов не выводятся
 посетителю: подготовленные данные называются демонстрационным примером.
 
-Текущий production deployment запускает один backend worker, поэтому process-local store даёт
+Текущий production deployment сохраняет ровно одного активного backend worker, поэтому process-local store даёт
 предсказуемую ephemeral isolation без schema и migration. Если topology станет multi-worker,
 маршрутизацию или общий ephemeral store нужно решить отдельной architecture task до увеличения
 числа workers; перенос state в production user tables запрещён.

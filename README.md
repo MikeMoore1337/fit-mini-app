@@ -213,6 +213,7 @@ keyboard, BackButton и lifecycle contracts, но не заменяют Telegram
 - contributor architecture и task boundaries: [`AGENTS.md`](AGENTS.md);
 - Mobile Web/TMA test contract: [`docs/mobile-tma-quality-gate.md`](docs/mobile-tma-quality-gate.md);
 - public content и SEO boundaries: [`docs/seo/public-content.md`](docs/seo/public-content.md);
+- blue/green production contract: [`docs/production-deployment.md`](docs/production-deployment.md);
 - domain contracts: [`docs/exercise-domain.md`](docs/exercise-domain.md),
   [`docs/food-domain.md`](docs/food-domain.md) и
   [`docs/training-analytics.md`](docs/training-analytics.md);
@@ -236,7 +237,7 @@ production-affecting deployment action, а не безопасной Git-опе�
 4. выполнить fail-closed preflight из operator runbook;
 5. после rollout выполнить smoke и наблюдать success signals.
 
-Автоматический workflow находится в `.github/workflows/deploy.yml`, а fail-closed deployment
+Автоматический workflow находится в `.github/workflows/deploy.yml`, а fail-closed blue/green
 entrypoint — в `scripts/deploy_production.sh`. Authorization gate расположен перед изменением
 `master`, а не внутри автоматического workflow. Внутренний operator runbook хранится вне public Git;
 наличие workflow или script не является разрешением на deployment.

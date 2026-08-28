@@ -40,6 +40,13 @@ def test_deployment_smoke_covers_health_auth_tma_and_versioned_asset() -> None:
             ),
             content_type="application/json",
         ),
+        "/api/v1/me": HttpResponse(
+            status=401,
+            body=b'{"detail":"Not authenticated"}',
+            content_type="application/json",
+            final_url=f"{BASE_URL}/api/v1/me",
+            headers={"cache-control": "no-store"},
+        ),
         "/app": _response("/app", body=HTML, content_type="text/html"),
         "/login": _response("/login", body=HTML, content_type="text/html"),
         "/app?tgWebAppPlatform=android": _response(
@@ -88,10 +95,9 @@ def test_production_deploy_is_fail_closed_before_backup_and_runs_public_smoke() 
     )
 
     digest_gate = script.index("require_digest_ref POSTGRES_IMAGE")
-    runtime_gate = script.index("Validating fail-closed production runtime configuration")
-    backup = script.index("Creating a pre-deploy database backup")
-    rollout = script.index("docker compose up")
+    compose_gate = script.index("docker compose config --quiet")
+    rollout = script.index("scripts/zero_downtime_deploy.py")
 
-    assert digest_gate < runtime_gate < backup < rollout
-    assert 'check_deployment.py "$BASE_URL" --expected-environment prod' in script
-    assert 'check_seo_surface.py "$PUBLIC_BASE_URL"' in script
+    assert digest_gate < compose_gate < rollout
+    assert "--remove-orphans" not in script
+    assert "docker compose up" not in script

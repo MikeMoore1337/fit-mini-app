@@ -71,3 +71,8 @@ Owner-selected tasks `109-111` созданы вне основной очере
 conversion story, `110` — private custom avatar desktop/mobile, `111` — Progress bento dashboard и
 периоды `1/7/30/90/365/custom`. Они не меняют current `81` или порядок `81-101`, не запускаются
 автоматически и требуют отдельных owner запусков; для UI до commit действует screenshot approval.
+
+Owner-selected task `112` завершена и архивирована вне основной очереди. Она добавила проверяемый
+current-stack zero-downtime deployment contract, но не выполняла production rollout и не изменила
+current `81`: следующей по основной pending-последовательности остаётся task `81`, затем `82` только
+после её Trigger, completion и отдельного owner decision.
