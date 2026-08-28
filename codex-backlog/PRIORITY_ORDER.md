@@ -1,9 +1,9 @@
-# Порядок выполнения release backlog v42
+# Порядок выполнения release backlog v43
 
 ## Completed
 
 `00-76`, включая `69B`, `73A`, `74A` и предшествующие буквенные подзадачи, а также
-owner-selected Telegram tasks `103-105`.
+owner-selected Telegram tasks `103-106`.
 Task-файлы находятся в `tasks/done/`.
 
 ## Current
@@ -49,12 +49,5 @@ Trigger-gated tasks сохраняют собственные gates. Никак�
 стрелка дополнительно требует Trigger, dependency и отдельного owner decision; umbrella-файлы
 отдельно не выполняются.
 
-## Owner-selected pending вне основной последовательности
-
-```text
-106 Landing: Telegram Mini App, поддержка и новостной канал
-    [TASK CREATED, IMPLEMENTATION NOT STARTED]
-```
-
-Task `106` не меняет current task `76A` и порядок `76A-101`. Её implementation запускается только
-отдельным решением владельца.
+Owner-selected task `106` завершена и архивирована после owner screenshot approval. Она не изменила
+current task `76A` и порядок `76A-101`.

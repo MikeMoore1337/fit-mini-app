@@ -4,11 +4,9 @@ import { ErrorState, LoadingState } from '../shared/ui/common';
 import { loginPathForNext } from '../shared/auth/redirects';
 import { Redirect } from '../shared/navigation/router';
 import { isTelegramLaunch } from '../shared/telegram/launch';
+import { telegramMiniAppUrl } from '../shared/telegram/publicLinks';
 
-export function telegramMiniAppUrl(username: string): string {
-  const normalized = username.trim().replace(/^@/, '');
-  return `https://t.me/${encodeURIComponent(normalized)}?startapp`;
-}
+export { telegramMiniAppUrl } from '../shared/telegram/publicLinks';
 
 function TelegramAuthRecovery() {
   const { config, error, telegramLogin } = useAuth();

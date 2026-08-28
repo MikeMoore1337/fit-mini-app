@@ -105,9 +105,24 @@ describe('LandingPage', () => {
     expect(screen.queryByText(/искусственн.*интеллект|\bai\b/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/отзыв/i)).not.toBeInTheDocument();
 
+    const telegramApp = screen.getByRole('link', { name: 'Открыть приложение в Telegram' });
+    expect(telegramApp).toHaveAttribute('href', 'https://t.me/your_fitness_coach_bot?startapp');
+    expect(telegramApp).toHaveAttribute('target', '_blank');
+    expect(telegramApp).toHaveAttribute('rel', 'noreferrer');
+
+    const news = screen.getByRole('link', {
+      name: 'Telegram-канал о фитнесе и здоровье',
+    });
+    expect(news).toHaveAttribute('href', 'https://t.me/your_fitness_news');
+    expect(news).toHaveAttribute('target', '_blank');
+    expect(news).toHaveAttribute('rel', 'noreferrer');
+    expect(screen.queryByRole('link', { name: 'Приложение в Telegram' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Поддержка' })).not.toBeInTheDocument();
+
     const support = screen.getByRole('link', { name: 'Поддержка в Telegram' });
     expect(support).toHaveAttribute('href', 'https://t.me/your_fitness_coach_bot?start=support');
     expect(support).toHaveAttribute('target', '_blank');
+    expect(support).toHaveAttribute('rel', 'noreferrer');
     expect(container.querySelectorAll('img[src*="/assets/brand/yfc-mark-"]')).toHaveLength(3);
     expect(container.querySelectorAll('img[src*="/assets/brand/yfc-logo-"]')).toHaveLength(0);
 

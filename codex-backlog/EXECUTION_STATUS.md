@@ -1,4 +1,4 @@
-# Execution status v42
+# Execution status v43
 
 Подтверждённое владельцем состояние на 28.08.2026:
 
@@ -18,6 +18,9 @@
 - [x] owner-selected task `104` реализовала тематические изображения, revision-bound модерацию и provisional staging publication pipeline, прошла review/QA и архивирована после owner approval;
 - [x] owner-selected task `104A` реализовала exact Telegram HTML preview/channel parity, прошла review/QA, реальную staging-публикацию и архивирована после owner approval;
 - [x] owner-selected task `105` реализовала отдельный default-off opt-in, owner-approved weekly digest и мгновенную изолированную отписку, прошла review/QA и архивирована после owner approval;
+- [x] owner-selected task `106` добавила на Landing явный запуск Telegram Mini App и ссылку на
+      публичный Telegram-канал о фитнесе и здоровье, прошла review/QA, получила owner screenshot
+      approval и архивирована;
 - [x] task `74A` внедрила product-wide semantic motion language и data-viz animation, прошла review/QA, получила owner approval и архивирована;
 - [x] task `74` завершила cross-product responsive/accessibility/states hardening, прошла QA, получила owner screenshot approval и архивирована;
 - [x] task `75` завершила UI performance и motion hardening, прошла independent review, получила
@@ -35,11 +38,10 @@
 - [ ] remaining release tasks `77-79` и post-release tasks `80-101` сохраняют собственные Trigger,
       dependency и owner decision; task ID задают предпочтительный порядок, но ни одна pending task
       этой очереди не запущена.
-- [ ] owner-selected task `106-landing-telegram-product-news-links.md` создана с подтверждённым
-      публичным каналом `https://t.me/your_fitness_news`; implementation отдельно не одобрена,
-      task не является current и не меняет порядок `76A-101`.
+- [x] owner-selected task `106-landing-telegram-product-news-links.md` завершена вне основной
+      очереди и не изменила порядок `76A-101`.
 
-Не выполнять повторно tasks `00-75C`, включая `69B`, `73A`, task `74A` и tasks `103-105`.
+Не выполнять повторно tasks `00-76`, включая `69B`, `73A`, task `74A` и tasks `103-106`.
 Следующей pending task назначена `76A`: её adversarial QA gate начинается только в отдельной сессии.
 `DESIGN_V2_1` с owner-approved bounded Pulse pilot остаётся production baseline.
 Umbrella `100` отдельно не выполняется; `100A` не назначена без собственного Trigger, dependency

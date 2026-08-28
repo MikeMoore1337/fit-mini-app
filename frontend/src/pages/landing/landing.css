@@ -1151,6 +1151,10 @@
   line-height: 1.54;
 }
 
+.landing-continuity__action {
+  margin-top: 18px;
+}
+
 .landing-continuity__rail {
   position: relative;
   display: grid;
@@ -1393,8 +1397,8 @@
   display: grid;
   grid-template-columns: minmax(220px, 1fr) minmax(300px, 1.35fr) minmax(220px, 0.8fr);
   align-items: start;
-  gap: clamp(28px, 5vw, 72px);
-  padding-block: 42px 50px;
+  gap: clamp(28px, 4vw, 56px);
+  padding-block: 30px 38px;
 }
 
 .landing-page > .landing-footer {
@@ -1418,8 +1422,8 @@
 
 .landing-footer nav {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 11px 24px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px 18px;
 }
 
 .landing-footer nav a {
@@ -1434,6 +1438,10 @@
 
 .landing-footer nav a:hover {
   color: var(--landing-ink);
+}
+
+.landing-footer nav .landing-footer__channel {
+  grid-column: span 2;
 }
 
 .landing-footer__privacy {
@@ -2239,7 +2247,8 @@
   }
 
   .landing-footer nav {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px 12px;
   }
 
   .landing-footer__privacy {

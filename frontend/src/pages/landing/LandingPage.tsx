@@ -7,6 +7,7 @@ import {
 } from '../../shared/navigation/appUrl';
 import { AppLink } from '../../shared/navigation/router';
 import { applyRouteMetadata } from '../../shared/seo/metadata';
+import { PUBLIC_TELEGRAM_LINKS } from '../../shared/telegram/publicLinks';
 import { BrandLockup, BrandLogo } from '../../shared/ui/BrandLogo';
 import { Icon, type IconName } from '../../shared/ui/Icon';
 import { PublicShell } from '../../shared/ui/PublicShell';
@@ -529,6 +530,14 @@ export default function LandingPage() {
                 данные общие с Mobile Web. Тренировка, питание, краткий прогресс и переход к общению
                 с тренером.
               </p>
+              <a
+                className="landing-button landing-button--secondary landing-continuity__action"
+                href={PUBLIC_TELEGRAM_LINKS.miniApp}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Открыть приложение в Telegram <Icon name="external-link" size={20} />
+              </a>
             </div>
             <div className="landing-continuity__rail" aria-label="Один аккаунт и общие данные">
               <span>
@@ -628,7 +637,7 @@ export default function LandingPage() {
             </a>
             <a
               className="landing-button landing-button--secondary"
-              href="https://t.me/your_fitness_coach_bot?start=support"
+              href={PUBLIC_TELEGRAM_LINKS.support}
               target="_blank"
               rel="noreferrer"
             >
@@ -653,11 +662,12 @@ export default function LandingPage() {
           <a href="#faq">Вопросы</a>
           <a href="#privacy">Приватность и данные</a>
           <a
-            href="https://t.me/your_fitness_coach_bot?start=support"
+            className="landing-footer__channel"
+            href={PUBLIC_TELEGRAM_LINKS.news}
             target="_blank"
             rel="noreferrer"
           >
-            Поддержка
+            Telegram-канал о фитнесе и здоровье
           </a>
         </nav>
         <div className="landing-footer__privacy">

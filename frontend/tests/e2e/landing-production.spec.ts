@@ -102,6 +102,20 @@ test('landing keeps a minimal premium product story across themes and viewports'
         'href',
         '/demo?cabinet=1&scenario=self_training&section=today',
       );
+      await expect(
+        page.getByRole('link', { name: 'Открыть приложение в Telegram' }),
+      ).toHaveAttribute('href', 'https://t.me/your_fitness_coach_bot?startapp');
+
+      const footerLinks = page.locator('.landing-footer');
+      await expect(
+        footerLinks.getByRole('link', { name: 'Telegram-канал о фитнесе и здоровье' }),
+      ).toHaveAttribute('href', 'https://t.me/your_fitness_news');
+      await expect(
+        footerLinks.getByRole('link', { name: 'Приложение в Telegram', exact: true }),
+      ).toHaveCount(0);
+      await expect(footerLinks.getByRole('link', { name: 'Поддержка', exact: true })).toHaveCount(
+        0,
+      );
       await expect(page.locator('.landing-hero-scene img')).toHaveCount(2);
       await expectNoHorizontalOverflow(page, viewport.width);
 
@@ -155,6 +169,7 @@ test('landing keeps a minimal premium product story across themes and viewports'
             .every(
               (entry) =>
                 !/telegram.*(sdk|web-app)/i.test(entry.name) &&
+                !/\/api\/v1\/public\/config(?:\?|$)/i.test(entry.name) &&
                 !/candidate-a-deadlift.*\.png/i.test(entry.name),
             ),
         ),

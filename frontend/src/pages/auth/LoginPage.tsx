@@ -7,7 +7,7 @@ import { AppLink, demoReturnPathFromLogin, useNavigation } from '../../shared/na
 import { ErrorState, LoadingState } from '../../shared/ui/common';
 import { BrandLockup } from '../../shared/ui/BrandLogo';
 import { PublicShell } from '../../shared/ui/PublicShell';
-import { telegramMiniAppUrl } from '../../app/AuthGate';
+import { telegramMiniAppUrl } from '../../shared/telegram/publicLinks';
 import { useSemanticMotion } from '../../shared/ui/useSemanticMotion';
 import {
   clearProductLoginAttempt,
