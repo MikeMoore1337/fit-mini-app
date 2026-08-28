@@ -57,3 +57,7 @@ AI предлагает нейтральную структуру програм
 Завершённые Telegram-задачи `103-106` архивированы и не входят в pending-последовательность.
 Owner-selected task `106` завершила discoverability Telegram Mini App, поддержки и публичного
 канала на Landing и не изменила порядок `80-101`.
+
+Owner-selected task `107` создана вне pending-последовательности для scheduled regression и
+закрытых Allure-отчётов. Её owner-approved scope не меняет current task `78` или порядок `80-101`;
+implementation и внешние DNS/Cloudflare/hosting actions требуют отдельного запуска/approval.

@@ -1,27 +1,25 @@
-# Your Fitness Coach - backlog первого публичного релиза v12
+# Your Fitness Coach - backlog первого публичного релиза v13
 
 Backlog использует resource-aware lifecycle. Завершённые задачи архивируются в `tasks/done/` и остаются доступными для чтения.
 
 ## Текущее состояние
 
-- tasks `00-75A`, включая буквенные подзадачи и `74A`, а также owner-selected tasks `103-105`
-  подтверждены как завершённые;
+- tasks `00-77`, включая буквенные подзадачи, `69B`, `73A` и `74A`, а также owner-selected tasks
+  `103-106` подтверждены как завершённые;
 - завершённые task-файлы перенесены в `tasks/done/` без переименования;
-- `DESIGN_V2_1` остаётся текущим production baseline, но полностью пересматриваем в отдельной
-  owner-approved design task;
-- task `75A` завершила Rethink-аудит, получила screenshot approval и owner decision
-  `START_RETHINK_EXPLORATION`, затем архивирована;
-- task `75B` назначена current explicit exploration/selection gate, но ещё не начата;
-- `DESIGN_V2_1` остаётся production baseline до отдельного selection/specification/pilot gate.
+- `DESIGN_V2_1` с owner-approved bounded Pulse pilot остаётся current production baseline;
+- task `77` закрыта по explicit owner acceptance отсутствия real-user sessions и residual risk;
+- task `78` назначена current production-readiness task, но ещё не начата;
+- owner-selected task `107` создана вне основной очереди и не является current.
 
 ## Текущая задача
 
 ```text
-75b-product-design-motion-rethink-exploration.md [CURRENT PENDING NOT STARTED]
+78-production-operational-readiness.md [CURRENT NOT STARTED]
 ```
 
-Не запускать заново `00-75A`, `74A` и `103-105`. Назначение `75B` не запускает exploration,
-prototypes, specification, pilot, rollout или task `76` в completion run `75A`.
+Не запускать заново `00-77`, `74A` и `103-106`. Назначение `78` не запускает task `79`, а
+создание owner-selected task `107` не разрешает её implementation или внешние infrastructure actions.
 
 ## Design alternatives flow
 
@@ -50,22 +48,21 @@ V2.1 / A / B / C / explicit hybrid
   -> KEEP: continue to 76
   -> EVOLVE: bounded remediation
   -> RETHINK [SELECTED]: 75B isolated exploration + owner selection
-75B product-wide visual + motion directions [CURRENT, PENDING]
-  -> selected direction: separate specification/pilot/rollout/performance verification
-  -> keep/stop: continue to 76
-  -> 76 only after resolved owner decision and release state
-103-105 owner-selected Telegram news flow [done]
-106 Landing Telegram app/support/news links [OWNER-SELECTED PENDING; NOT CURRENT]
+75B product-wide visual + motion directions [COMPLETED, SELECT_DIRECTION_PULSE]
+  -> 75C bounded production pilot [COMPLETED]
+  -> 76 audit [COMPLETED] -> 76A adversarial gate [COMPLETED]
+  -> 77 real-user gate [CLOSED BY OWNER ACCEPTED RESIDUAL RISK]
+  -> 78 production readiness [CURRENT, NOT STARTED] -> 79 final release gate
+103-106 owner-selected Telegram flow/Landing tasks [done]
+107 Scheduled regression + private Allure reports [OWNER-SELECTED PENDING; NOT CURRENT]
 ```
 
-## Что изменено в v12
+## Что изменено в v13
 
-- Добавлены design guardrails v6, `$motion-design-engineer` и explicit-only `$ui-prototyper`.
-- Удалён дублирующий `$commercial-product-builder`; pending tasks переведены на реальные domain skills.
-- Design V2/V2.1 теперь current baseline обычных tasks, а не вечная эстетическая догма.
-- Task `75` зафиксирована как завершённая по подтверждению владельца.
-- `75A` завершена с решением `START_RETHINK_EXPLORATION`; добавлена и назначена `75B` для
-  isolated directions и owner selection без production changes.
+- Синхронизирован current state после завершения tasks `75B-77` и owner-selected tasks `103-106`.
+- Current task остаётся `78`; основная release/post-release последовательность не изменена.
+- Добавлена owner-selected pending task `107` для scheduled regression и закрытых Allure-отчётов
+  на `allure.your-fitness-coach.ru` с явным access/retention owner contract.
 - Resource-aware review policy `BLOCKER/HIGH only` сохранена; `MEDIUM/LOW` синхронизируются в
   `bugs/FINDINGS.md`.
 

@@ -34,7 +34,7 @@
 | `100A` | | | | Подтверждены target segment, reviewer capacity и scope первой волны | | |
 | `100B` | Результат `100A` | | | Locale foundation стабильна; подтверждены public/SEO/content scope и reviewer | | |
 | `101` | | | | Есть повторяющийся спрос и готов sensitive-media lifecycle; AI/body analysis исключён | | |
-| `106` | Owner request и аудит Landing ветки `feature/yfc-platform-v2` | Telegram Mini App описан, но бот доступен только через support-flow; канал на Landing отсутствует | Владелец подтвердил публичный канал `https://t.me/your_fitness_news` | Task creation approved; implementation требует отдельного owner запуска и screenshot checkpoint | Создать task, implementation pending | 2026-08-28 |
+| `107` | Owner request и аудит current GitHub Actions/test harness | Большой regression scope уже существует, но нет schedule, единого Allure HTML, очевидной browser-ссылки, закрытого доступа и явного lifecycle отчётов | Владелец утвердил `allure.your-fitness-coach.ru`, Cloudflare Access allowlist, Daily `14` дней и Weekly `4` отчёта | Task creation approved; implementation требует отдельного owner запуска, а DNS/Cloudflare/hosting/secrets — дополнительного explicit approval | Создать task, implementation pending | 2026-08-28 |
 
 ## Завершённые owner decisions
 
@@ -44,6 +44,7 @@
 | `104` | Результат `103` | | | Требовались images/moderation/publication boundaries | `Go`, выполнено | 2026-08-26 |
 | `104A` | Real owner preview task `103` и feedback | Task `104` владеет images/moderation/publication | Служебный plain-text draft не является готовым канальным постом | После `104` нужен formatted artifact gate перед `105` | `Go`, выполнено | 2026-08-26 |
 | `105` | Опубликованные snapshots цепочки `103 -> 104 -> 104A` | Recurring private digest по умолчанию отсутствовал | Подтверждён интерес к недельной подборке и consent copy/version `weekly-news-v1` | Только default-off opt-in и мгновенная изолированная отписка | `Go`, выполнено | 2026-08-26 |
+| `106` | Owner-approved Landing task и screenshot evidence | Telegram destinations были смешаны | Канонические Main Mini App/support/news links | Явные distinct links без нового runtime | `Go`, выполнено | 2026-08-28 |
 
 Допустимые решения для pending: `Go`, `Defer`, `No-Go`, `Research first`. Пустая строка, номер или
 завершённая dependency не считаются согласием.

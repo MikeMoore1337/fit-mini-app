@@ -44,10 +44,14 @@
       этой очереди не запущена.
 - [x] owner-selected task `106-landing-telegram-product-news-links.md` завершена вне основной
       очереди и не изменила порядок `78-101`.
+- [ ] owner-selected task `107-scheduled-regression-private-allure-reports.md` создана вне основной
+      очереди, не назначена current и требует отдельного owner запуска; DNS/Cloudflare/hosting
+      actions остаются под дополнительным explicit approval.
 
 Не выполнять повторно tasks `00-77`, включая `69B`, `73A`, task `74A` и tasks `103-106`.
 Task `77` закрыта не как factual real-user validation, а по явному owner decision принять отсутствие
 сессий и residual risk. Следующей pending task назначена `78`, но её реализация не начата.
 `DESIGN_V2_1` с owner-approved bounded Pulse pilot остаётся production baseline.
 Umbrella `100` отдельно не выполняется; `100A` не назначена без собственного Trigger, dependency
-и owner decision. Другие pending tasks автоматически не реализуются.
+и owner decision. Task `107` также не запускается автоматически. Другие pending tasks автоматически
+не реализуются.

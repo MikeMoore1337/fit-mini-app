@@ -45,7 +45,10 @@ Telegram Core release task 04
   -> 105 Weekly opt-in digest [COMPLETED]
 
 Current Landing + canonical `@your_fitness_coach_bot` Main Mini App + confirmed `@your_fitness_news`
-  -> 106 Landing Telegram app/support/news discoverability [OWNER-SELECTED, PENDING]
+  -> 106 Landing Telegram app/support/news discoverability [COMPLETED]
+
+Current GitHub Actions CI + Pytest/Vitest/Playwright harness + owner access/retention decisions
+  -> 107 Scheduled regression + private Allure reports [OWNER-SELECTED, PENDING; NOT CURRENT]
 ```
 
 Прежние import tasks `81-program-import-xlsx-csv` и `95-program-import-txt-docx` объединены в

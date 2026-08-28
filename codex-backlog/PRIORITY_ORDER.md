@@ -53,3 +53,7 @@ Trigger-gated tasks сохраняют собственные gates. Никак�
 
 Owner-selected task `106` завершена и архивирована после owner screenshot approval. Она не изменила
 основную release-последовательность; current task теперь `78`, далее сохраняется порядок `78-101`.
+
+Owner-selected task `107` создана для scheduled regression и закрытых Allure-отчётов на
+`allure.your-fitness-coach.ru`. Она не является current, не меняет порядок `78-101` и требует
+отдельного owner запуска плюс explicit approval перед DNS/Cloudflare/hosting actions.
