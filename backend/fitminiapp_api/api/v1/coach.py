@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, 
 from sqlalchemy.orm import Session
 
 from fitminiapp_api.api.dependencies.auth import require_coach
+from fitminiapp_api.core.config import settings
 from fitminiapp_api.core.timezone import now_for_user_naive
 from fitminiapp_api.db.session import get_db
 from fitminiapp_api.models.program import (
@@ -31,6 +32,7 @@ from fitminiapp_api.schemas.progress import (
     NutritionReportPeriod,
     NutritionReportResponse,
     ProgressPeriodDays,
+    ProgressReportDownloadLinkResponse,
     ProgressReportResponse,
     ProgressSummaryResponse,
     TrainerClientProgressListResponse,
@@ -86,6 +88,7 @@ from fitminiapp_api.services.progress import (
     build_progress_summary,
     build_trainer_client_summaries,
 )
+from fitminiapp_api.services.progress_report_downloads import create_progress_report_download_token
 from fitminiapp_api.services.progress_reports import build_progress_report
 from fitminiapp_api.services.weekly_check_ins import list_weekly_check_ins
 from fitminiapp_api.services.workout_comments import (
@@ -301,6 +304,46 @@ def coach_client_progress_report(
         )
     except NutritionReportError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc))
+
+
+@router.post(
+    "/clients/{client_id}/progress-report/download-link",
+    response_model=ProgressReportDownloadLinkResponse,
+)
+def coach_client_progress_report_download_link(
+    client_id: int,
+    period: NutritionReportPeriod = NutritionReportPeriod.DAYS_30,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    current_user: User = Depends(require_coach),
+    db: Session = Depends(get_db),
+) -> ProgressReportDownloadLinkResponse:
+    client = _managed_client(db, current_user, client_id)
+    try:
+        report = build_progress_report(
+            db,
+            client,
+            period,
+            date_from=date_from,
+            date_to=date_to,
+            subject_role="client",
+        )
+    except NutritionReportError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc))
+    token, expires_at = create_progress_report_download_token(
+        actor_user_id=current_user.id,
+        subject_user_id=client.id,
+        subject_role="client",
+        period=NutritionReportPeriod.CUSTOM,
+        date_from=date.fromisoformat(report["period_start"]),
+        date_to=date.fromisoformat(report["period_end"]),
+    )
+    filename = f"progress-report-{report['period_start']}_{report['period_end']}.pdf"
+    return ProgressReportDownloadLinkResponse(
+        url=f"{settings.frontend_base_url.rstrip('/')}/api/v1/workouts/progress/report/file/{token}",
+        filename=filename,
+        expires_at=expires_at,
+    )
 
 
 @router.get("/clients/{client_id}/nutrition-report.csv")

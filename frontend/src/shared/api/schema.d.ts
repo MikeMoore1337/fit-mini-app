@@ -1051,6 +1051,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/coach/clients/{client_id}/progress-report/download-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Coach Client Progress Report Download Link */
+        post: operations["coach_client_progress_report_download_link_api_v1_coach_clients__client_id__progress_report_download_link_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/coach/clients/{client_id}/nutrition-report.csv": {
         parameters: {
             query?: never;
@@ -1526,6 +1543,40 @@ export interface paths {
         };
         /** Workout Progress Report */
         get: operations["workout_progress_report_api_v1_workouts_progress_report_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/progress/report/download-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Workout Progress Report Download Link */
+        post: operations["workout_progress_report_download_link_api_v1_workouts_progress_report_download_link_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/progress/report/file/{download_token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Workout Progress Report Download File */
+        get: operations["workout_progress_report_download_file_api_v1_workouts_progress_report_file__download_token__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6036,6 +6087,18 @@ export interface components {
             /** Note */
             note?: string | null;
         };
+        /** ProgressReportDownloadLinkResponse */
+        ProgressReportDownloadLinkResponse: {
+            /** Url */
+            url: string;
+            /** Filename */
+            filename: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+        };
         /** ProgressReportExerciseSession */
         ProgressReportExerciseSession: {
             /**
@@ -9982,6 +10045,41 @@ export interface operations {
             };
         };
     };
+    coach_client_progress_report_download_link_api_v1_coach_clients__client_id__progress_report_download_link_post: {
+        parameters: {
+            query?: {
+                period?: components["schemas"]["NutritionReportPeriod"];
+                date_from?: string | null;
+                date_to?: string | null;
+            };
+            header?: never;
+            path: {
+                client_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressReportDownloadLinkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     coach_client_nutrition_report_export_api_v1_coach_clients__client_id__nutrition_report_csv_get: {
         parameters: {
             query?: {
@@ -10962,6 +11060,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProgressReportResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    workout_progress_report_download_link_api_v1_workouts_progress_report_download_link_post: {
+        parameters: {
+            query?: {
+                period?: components["schemas"]["NutritionReportPeriod"];
+                date_from?: string | null;
+                date_to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressReportDownloadLinkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    workout_progress_report_download_file_api_v1_workouts_progress_report_file__download_token__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                download_token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Short-lived progress report PDF */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": unknown;
                 };
             };
             /** @description Validation Error */

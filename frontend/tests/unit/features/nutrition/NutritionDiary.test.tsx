@@ -398,7 +398,7 @@ describe('NutritionDiary', () => {
     renderDiary();
     await screen.findByText('Овсяная каша');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Изменить' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Изменить Овсяная каша' }));
     fireEvent.change(screen.getByRole('spinbutton', { name: 'Количество' }), {
       target: { value: '150' },
     });
@@ -410,7 +410,7 @@ describe('NutritionDiary', () => {
       ),
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Удалить' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Удалить Овсяная каша' }));
     const confirmDialog = await screen.findByRole('dialog', { name: 'Удалить запись?' });
     fireEvent.click(within(confirmDialog).getByRole('button', { name: 'Удалить' }));
     await waitFor(() =>
@@ -749,7 +749,7 @@ describe('NutritionDiary', () => {
     });
     renderDiary();
     await screen.findByText('Овсяная каша');
-    fireEvent.click(screen.getByRole('button', { name: 'Повторить' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Повторить Овсяная каша' }));
     expect(await screen.findByText('Овсяная каша', { selector: 'dd' })).toBeVisible();
     const submit = screen.getByRole('button', { name: 'Повторить продукт' });
     fireEvent.click(submit);

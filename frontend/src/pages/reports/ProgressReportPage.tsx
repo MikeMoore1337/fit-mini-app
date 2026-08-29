@@ -2,6 +2,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import type { NutritionReportPeriod, ProgressReport } from '../../shared/api/types';
 import { api } from '../../shared/api/client';
+import { downloadProgressReport } from '../../features/reports/downloadProgressReport';
 import { AppLink, useNavigation } from '../../shared/navigation/router';
 import { BrandLockup } from '../../shared/ui/BrandLogo';
 import { DataConfidence } from '../../shared/ui/DataConfidence';
@@ -65,6 +66,11 @@ function reportPath(selection: ReportSelection, clientId: number | null): string
     ? `/api/v1/coach/clients/${clientId}/progress-report`
     : '/api/v1/workouts/progress/report';
   return `${base}?${params}`;
+}
+
+function reportDownloadLinkPath(selection: ReportSelection, clientId: number | null): string {
+  const [base, query] = reportPath(selection, clientId).split('?');
+  return `${base}/download-link?${query}`;
 }
 
 function pagePath(selection: ReportSelection, clientId: number | null): string {
@@ -594,7 +600,10 @@ export default function ProgressReportPage() {
   const [draft, setDraft] = useState<ReportSelection>(() => initialSelection(search));
   const [applied, setApplied] = useState<ReportSelection>(() => initialSelection(search));
   const [exerciseSelections, setExerciseSelections] = useState<Record<string, string[]>>({});
-  const [tmaHandoff, setTmaHandoff] = useState<'idle' | 'opened' | 'fallback'>('idle');
+  const [tmaDownload, setTmaDownload] = useState<{
+    status: 'idle' | 'pending' | 'accepted' | 'cancelled' | 'fallback' | 'error';
+    url?: string;
+  }>({ status: 'idle' });
   const isTma = Boolean(window.Telegram?.WebApp?.initData);
   const customError = useMemo(() => {
     if (draft.period !== 'custom') return '';
@@ -638,19 +647,15 @@ export default function ProgressReportPage() {
       navigate(pagePath(next, clientId), true);
     }
   };
-  const printReport = () => {
+  const printReport = async () => {
     if (isTma) {
-      const browserUrl = new URL(pagePath(applied, clientId), window.location.origin).toString();
+      setTmaDownload({ status: 'pending' });
       try {
-        if (window.Telegram?.WebApp?.openLink) {
-          window.Telegram.WebApp.openLink(browserUrl, { try_instant_view: false });
-          setTmaHandoff('opened');
-          return;
-        }
+        const result = await downloadProgressReport(reportDownloadLinkPath(applied, clientId));
+        setTmaDownload(result);
       } catch {
-        // The visible link below remains an actionable fallback when Telegram rejects the handoff.
+        setTmaDownload({ status: 'error' });
       }
-      setTmaHandoff('fallback');
       return;
     }
     window.print();
@@ -709,17 +714,21 @@ export default function ProgressReportPage() {
         )}
       </section>
 
-      {tmaHandoff !== 'idle' && (
+      {!['idle', 'pending'].includes(tmaDownload.status) && (
         <section className="progress-report-tma-fallback report-screen-only" role="status">
           <strong>
-            {tmaHandoff === 'opened'
-              ? 'Отчёт открыт в браузере.'
-              : 'Telegram не смог открыть браузер автоматически.'}
+            {tmaDownload.status === 'accepted'
+              ? 'Telegram открыл сохранение PDF.'
+              : tmaDownload.status === 'cancelled'
+                ? 'Сохранение PDF отменено.'
+                : tmaDownload.status === 'fallback'
+                  ? 'Откройте готовый PDF по ссылке.'
+                  : 'Не удалось подготовить PDF.'}
           </strong>
-          <p>В браузере выберите «Печать» → «Сохранить как PDF».</p>
-          {tmaHandoff === 'fallback' && (
-            <a href={pagePath(applied, clientId)} rel="noreferrer" target="_blank">
-              Открыть отчёт в браузере
+          <p>Ссылка короткоживущая и содержит только этот отчёт.</p>
+          {tmaDownload.url && tmaDownload.status !== 'accepted' && (
+            <a href={tmaDownload.url} rel="noreferrer" target="_blank">
+              Скачать PDF
             </a>
           )}
         </section>
@@ -762,9 +771,17 @@ export default function ProgressReportPage() {
           <Icon name="arrow-left" size={16} /> Назад
         </AppLink>
         <BrandLockup />
-        <Button disabled={!report.data || report.isFetching} onClick={printReport} type="button">
-          <Icon name="print" size={16} />{' '}
-          {isTma ? 'Открыть в браузере для PDF' : 'Печать / Сохранить как PDF'}
+        <Button
+          disabled={!report.data || report.isFetching || tmaDownload.status === 'pending'}
+          onClick={() => void printReport()}
+          type="button"
+        >
+          <Icon name={isTma ? 'download' : 'print'} size={16} />{' '}
+          {isTma
+            ? tmaDownload.status === 'pending'
+              ? 'Готовим PDF…'
+              : 'Скачать PDF'
+            : 'Печать / Сохранить как PDF'}
         </Button>
       </div>
 

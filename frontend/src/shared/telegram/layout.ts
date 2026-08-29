@@ -43,7 +43,7 @@ export function readMobileViewportSnapshot(
   const stableFallback = positiveMetric(window.innerHeight, browserHeight);
   const isMiniApp = Boolean(telegram?.initData);
   const viewportHeight = isMiniApp
-    ? positiveMetric(telegram?.viewportHeight, browserHeight)
+    ? Math.min(positiveMetric(telegram?.viewportHeight, browserHeight), browserHeight)
     : browserHeight;
 
   return {

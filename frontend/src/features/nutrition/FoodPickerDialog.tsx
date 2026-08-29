@@ -401,23 +401,44 @@ export function FoodPickerDialog({
   );
   const activeError = searchQuery.length >= 2 ? search.error : activeCollection.error;
   const activeLoading = searchQuery.length >= 2 ? search.isFetching : activeCollection.isLoading;
+  const quantityMode = Boolean(draft.food || selectedRecipe);
 
   useEffect(() => {
     const viewport = window.visualViewport;
-    if (!viewport) return;
-    const keepSearchVisible = () => {
-      const searchField = panelRef.current?.querySelector<HTMLElement>('#nutrition-food-search');
-      if (searchField && document.activeElement === searchField) {
-        searchField.scrollIntoView({ block: 'center', inline: 'nearest' });
-      }
+    const panel = panelRef.current;
+    let frame: number | null = null;
+    const keepActiveFieldVisible = () => {
+      if (frame !== null) window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        frame = null;
+        const active = document.activeElement;
+        if (active instanceof HTMLElement && panel?.contains(active)) {
+          active.scrollIntoView?.({ block: 'center', inline: 'nearest' });
+        }
+      });
     };
-    viewport.addEventListener('resize', keepSearchVisible);
-    viewport.addEventListener('scroll', keepSearchVisible);
+    viewport?.addEventListener('resize', keepActiveFieldVisible);
+    viewport?.addEventListener('scroll', keepActiveFieldVisible);
+    panel?.addEventListener('focusin', keepActiveFieldVisible);
     return () => {
-      viewport.removeEventListener('resize', keepSearchVisible);
-      viewport.removeEventListener('scroll', keepSearchVisible);
+      if (frame !== null) window.cancelAnimationFrame(frame);
+      viewport?.removeEventListener('resize', keepActiveFieldVisible);
+      viewport?.removeEventListener('scroll', keepActiveFieldVisible);
+      panel?.removeEventListener('focusin', keepActiveFieldVisible);
     };
   }, [panelRef]);
+
+  useEffect(() => {
+    if (!quantityMode) return;
+    const frame = window.requestAnimationFrame(() => {
+      const amountField = panelRef.current?.querySelector<HTMLInputElement>(
+        draft.food ? '#nutrition-food-amount' : '#nutrition-recipe-amount',
+      );
+      amountField?.focus({ preventScroll: true });
+      amountField?.scrollIntoView?.({ block: 'center', inline: 'nearest' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [draft.food, panelRef, quantityMode, selectedRecipe]);
 
   const addEntry = useMutation({
     mutationFn: (submission: { closeAfter: boolean }) => {
@@ -553,8 +574,6 @@ export function FoodPickerDialog({
         barcode: 'Штрихкод',
       } as const
     )[view];
-  const quantityMode = Boolean(draft.food || selectedRecipe);
-
   return (
     <div
       className="modal nutrition-picker"

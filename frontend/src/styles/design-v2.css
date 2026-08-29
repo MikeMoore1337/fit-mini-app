@@ -1397,7 +1397,7 @@ body:has(.app-shell--design-v2) {
 }
 
 .nutrition-diary--design-v2 .nutrition-meal__header .ui-button,
-.nutrition-diary--design-v2 .nutrition-meal__actions > button:not(.ui-button) {
+.nutrition-diary--design-v2 .nutrition-meal__secondary-actions > button {
   min-height: 44px;
 }
 
@@ -2626,7 +2626,9 @@ body.public-shell-mode.public-shell-mode:has(.auth-public-shell--design-v2) {
   }
 
   .nutrition-diary--design-v2 .nutrition-meal__actions {
-    flex-direction: column-reverse;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--v2-space-1);
   }
 
   .active-workout--design-v2 {

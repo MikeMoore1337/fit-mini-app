@@ -6401,6 +6401,11 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   align-items: center;
   gap: 6px;
 }
+.nutrition-meal__secondary-actions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
 .nutrition-completeness {
   display: grid;
   gap: 10px;
@@ -6442,7 +6447,7 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   font-size: 0.78rem;
   text-decoration: underline;
 }
-.nutrition-meal__actions > button:not(.ui-button),
+.nutrition-meal__secondary-actions > button,
 .nutrition-day-actions > button {
   min-height: 36px;
   padding: 7px 9px;
@@ -6450,7 +6455,7 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   color: var(--muted);
   font-size: 0.76rem;
 }
-.nutrition-meal__actions > button:not(.ui-button):hover,
+.nutrition-meal__secondary-actions > button:hover,
 .nutrition-day-actions > button:hover {
   background: var(--surface-hover);
   color: var(--text);
@@ -6547,8 +6552,11 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   gap: 3px;
 }
 .nutrition-entry__actions button {
-  min-height: 34px;
-  padding: 6px 8px;
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
   background: transparent;
   color: var(--muted);
   font-size: 0.72rem;
@@ -6766,10 +6774,11 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   overscroll-behavior: contain;
   padding: 18px 20px 22px;
 }
-html[data-yfc-keyboard='visible'] .nutrition-picker__browse {
+html[data-yfc-keyboard='visible'] .nutrition-picker__browse,
+html[data-yfc-keyboard='visible'] .nutrition-picker__quantity {
   scroll-padding-block: 16px 40%;
 }
-html[data-yfc-keyboard='visible'] #nutrition-food-search {
+html[data-yfc-keyboard='visible'] .nutrition-picker :is(input, select, textarea):focus {
   scroll-margin-block: 16px 40%;
 }
 .nutrition-picker__submit {
@@ -7278,12 +7287,12 @@ html[data-yfc-keyboard='visible'] #nutrition-food-search {
     border-radius: 15px;
   }
   .nutrition-entry {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 7px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px;
     padding: 12px;
   }
   .nutrition-entry__actions {
-    justify-content: flex-start;
+    justify-content: flex-end;
   }
   .nutrition-entry-editor {
     grid-template-columns: repeat(2, minmax(0, 1fr));
