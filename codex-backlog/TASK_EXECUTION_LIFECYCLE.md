@@ -270,14 +270,51 @@ Task является `AUTO_RELEASE_ELIGIBLE`, только если однов�
 
 1. `git fetch --prune origin`, проверить актуальность `origin/master` и при необходимости безопасно
    merge `origin/master -> dev` без rebase/force-push, затем повторить affected checks;
-2. push `dev` и дождаться успешного branch CI;
-3. создать или переиспользовать ровно соответствующий scope PR `dev -> master`;
-4. проверить expected PR head SHA и required check `checks`;
-5. включить GitHub auto-merge либо после green checks выполнить эквивалентный обычный PR merge;
-6. проверить post-merge CI и автоматический production deploy exact merged `master` SHA до terminal
-   success; failure/rollback/manual-intervention verdict останавливает sequence fail-closed;
-7. fetch и fast-forward/sync `dev` к новому `origin/master`, push при необходимости, затем повторно
-   подтвердить post-release state.
+2. push `dev`, определить **push-triggered CI run для exact pushed `dev` SHA** и дождаться строго
+   `status=completed` + `conclusion=success`. До этого gate запрещено создавать новый release PR,
+   включать auto-merge или выполнять merge. PR-triggered CI не заменяет этот branch CI gate;
+3. только после успешного branch CI создать ровно соответствующий scope PR `dev -> master`.
+   Если такой PR уже существовал до push, GitHub может автоматически запустить его PR CI параллельно
+   с branch CI; это допустимо, но агент всё равно обязан дождаться успешного branch CI прежде, чем
+   считать PR release-ready, включать auto-merge или переходить к merge;
+4. проверить expected PR head SHA и required check `checks`; required PR checks должны завершиться
+   успешно именно для текущего PR head, а success более раннего branch CI их не подменяет;
+5. включить GitHub auto-merge либо после green required PR checks выполнить эквивалентный обычный
+   PR merge только для ожидаемого head SHA;
+6. проверить post-merge CI exact merged `master` SHA и затем автоматически запущенный production
+   deploy того же SHA до terminal success. Failure/rollback/manual-intervention verdict останавливает
+   sequence fail-closed. Успешный deploy workflow со встроенными rollout/smoke gates является
+   достаточным production release evidence; дополнительный live smoke выполнять только если task
+   прямо требует его или deploy evidence неоднозначен;
+7. после успешного production deploy выполнить `git fetch --prune origin` и только безопасный
+   fast-forward/sync `dev` к **тому же exact successfully deployed `origin/master` SHA**. Push `dev`
+   выполнять при необходимости, затем подтвердить равенство/ожидаемую ancestry `origin/dev` и
+   `origin/master`;
+8. pure fast-forward sync `dev` на уже успешно проверенный и задеплоенный exact `master` SHA не
+   создаёт нового release candidate. Если такой push автоматически запускает branch CI на `dev`,
+   этот post-sync CI является **информационным, не release gate**: агент не ждёт его terminal result,
+   не запускает повторный PR/deploy и не задерживает финализацию уже успешной task. Исключение - если
+   sync неожиданно изменил tree/content вместо pure fast-forward; тогда считать это новым изменением,
+   остановиться и разобраться до следующей task.
+
+Canonical sequencing для нового release candidate:
+
+```text
+push dev
+  -> WAIT exact push CI: success
+  -> create/reuse PR dev -> master
+  -> WAIT exact PR required checks: success
+  -> merge exact PR head
+  -> WAIT post-merge master CI: success
+  -> WAIT production deploy exact master SHA: success
+  -> fast-forward/sync dev to same deployed SHA
+  -> verify refs
+  -> DONE
+```
+
+Запрещён normal-path вариант, где новый PR создаётся до terminal success push-CI, если PR ещё не
+существовал. Также запрещено считать автоматически запустившийся post-sync `dev` CI новой стадией
+уже завершённого release.
 
 Автоматизация никогда не делает direct push в `master`, не обходит ruleset/required checks,
 PR provenance/exact-SHA guard и не запускает manual production command. Task с human/owner gate
