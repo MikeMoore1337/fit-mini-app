@@ -517,6 +517,46 @@ Primary labels:
 
 ## Проверки и Git
 
+### Git traceability contract
+
+Каждая executable backlog task обязана сохранять свой task ID по всему Git lifecycle. Номер GitHub
+PR не заменяет task ID.
+
+Для task-файла вида `76A-...md` использовать:
+
+- branch: `task/76A-<short-kebab-description>`;
+- commit: `<type>: [Task 76A] <краткое описание>`;
+- PR title: `[Task 76A] <краткое описание>`.
+
+Допустимые примеры:
+
+```text
+task/76A-destructive-pre-release-testing
+test: [Task 76A] add destructive pre-release scenarios
+fix: [Task 76A] prevent mobile keyboard overlap
+[Task 76A] Destructive pre-release testing
+```
+
+Правила:
+
+- task ID брать из текущего executable task-файла и сохранять без изменения регистра/суффикса;
+- один логический task не смешивать в commit/PR с другим task ID;
+- при нескольких commits внутри разрешённого lifecycle каждый commit текущей task содержит тот же
+  `[Task <ID>]`;
+- task ID не опускать в squash/merge title, release PR title и других tracked Git-событиях,
+  представляющих реализацию конкретной backlog task;
+- для merge/release flow предпочитать PR title как итоговый merge commit title, чтобы Actions и
+  история Git сохраняли `[Task <ID>]`;
+- GitHub Actions run name должен наследовать или явно отображать task-aware commit/PR title; не
+  заменять task ID только номером workflow run или GitHub PR;
+- служебные изменения, которые действительно выполняются вне backlog task, могут использовать
+  обычный Conventional Commit без фиктивного task ID, например
+  `ci: normalize permanent dev release flow` или `chore: update dependencies`;
+- если служебное изменение фактически входит в scope текущей backlog task, task ID обязателен:
+  `ci: [Task 76A] normalize release checks`;
+- temporary/recovery branch, созданная не для отдельной executable task, не обязана получать
+  искусственный task ID, но не должна использоваться как способ потерять traceability основной task.
+
 После task:
 
 1. Запустить только связанные unit/API/component/e2e/typecheck/lint/build проверки по `AGENTS.md`.
@@ -528,11 +568,12 @@ Primary labels:
 7. Синхронизировать все новые/изменённые `MEDIUM/LOW` в `codex-backlog/bugs/FINDINGS.md` и
    проверить актуальность их route/status.
 8. Создать один логический commit при tracked changes, даже если остались документированные non-blocking findings.
-9. Для read-only audit без production changes всё равно commit-ить изменение реестра, если task
-   обнаружила новый `MEDIUM/LOW`; без findings и tracked changes commit не создавать.
+9. Перед commit проверить соответствие branch/commit/PR naming правилам `Git traceability contract`.
+10. Для read-only audit без production changes всё равно commit-ить изменение реестра, если task
+    обнаружила новый `MEDIUM/LOW`; без findings и tracked changes commit не создавать.
 
 Финальный отчёт содержит: reused, changed, key files, migrations/config, exact checks,
-limitations/follow-ups, затронутые registry IDs/statuses и commit hash.
+limitations/follow-ups, затронутые registry IDs/statuses, task ID и commit hash.
 
 ## Beginner release acceptance
 
