@@ -1926,7 +1926,7 @@ test('nutrition quick paths recover in TMA and match Mobile Web before core navi
   const breakfast = tmaPage.getByRole('region', { name: 'Завтрак' });
   await breakfast.getByRole('button', { name: /Добавить/ }).click();
   await expect(tmaPage.getByRole('button', { name: 'Добавить Овсяная каша' })).toBeVisible();
-  await tmaPage.getByRole('button', { name: 'Штрихкод', exact: true }).click();
+  await tmaPage.getByRole('button', { name: 'Поиск по штрихкоду', exact: true }).click();
   await tmaPage.getByRole('textbox', { name: 'Штрихкод' }).fill('3017620422003');
   await tmaPage.getByRole('button', { name: 'Найти', exact: true }).click();
   await expect(tmaPage.getByText('Овсяная каша')).toBeVisible();
@@ -2340,7 +2340,7 @@ test('task 72 screenshot packet keeps shared composition across core surfaces', 
           .getByRole('region', { name: 'Завтрак' })
           .getByRole('button', { name: /Добавить/ })
           .click();
-        await page.getByRole('button', { name: 'Штрихкод', exact: true }).click();
+        await page.getByRole('button', { name: 'Поиск по штрихкоду', exact: true }).click();
         const barcodeInput = page.getByRole('textbox', { name: 'Штрихкод' });
         const manualSearch = page.getByRole('button', { name: 'Найти', exact: true });
         await expect(barcodeInput).toBeVisible();
@@ -2392,7 +2392,7 @@ test('task 72 screenshot packet keeps shared composition across core surfaces', 
     .getByRole('region', { name: 'Завтрак' })
     .getByRole('button', { name: /Добавить/ })
     .click();
-  await desktopBarcode.getByRole('button', { name: 'Штрихкод', exact: true }).click();
+  await desktopBarcode.getByRole('button', { name: 'Поиск по штрихкоду', exact: true }).click();
   await expect(
     desktopBarcode.getByRole('button', { name: 'Сканировать камерой' }),
   ).not.toBeAttached();

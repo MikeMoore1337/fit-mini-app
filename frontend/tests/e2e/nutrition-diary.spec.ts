@@ -291,11 +291,12 @@ test('nutrition diary is responsive, keyboard-safe and supports local quick add'
   const addButton = breakfast.getByRole('button', { name: /Добавить/ });
   await addButton.focus();
   await page.keyboard.press('Enter');
+  const barcodeEntry = page.getByRole('button', { name: 'Поиск по штрихкоду' });
   const search = page.getByRole('searchbox', { name: 'Поиск по названию или бренду' });
-  await expect(search).toBeFocused();
+  await expect(barcodeEntry).toBeFocused();
+  await expect(search).toBeVisible();
   await expect(page.getByRole('button', { name: /Свой продукт/ })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Рецепты' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Штрихкод' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(360);
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).not.toBeAttached();
