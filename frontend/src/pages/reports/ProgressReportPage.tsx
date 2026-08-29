@@ -594,7 +594,7 @@ export default function ProgressReportPage() {
   const [draft, setDraft] = useState<ReportSelection>(() => initialSelection(search));
   const [applied, setApplied] = useState<ReportSelection>(() => initialSelection(search));
   const [exerciseSelections, setExerciseSelections] = useState<Record<string, string[]>>({});
-  const [tmaFallback, setTmaFallback] = useState(false);
+  const [tmaHandoff, setTmaHandoff] = useState<'idle' | 'opened' | 'fallback'>('idle');
   const isTma = Boolean(window.Telegram?.WebApp?.initData);
   const customError = useMemo(() => {
     if (draft.period !== 'custom') return '';
@@ -640,7 +640,17 @@ export default function ProgressReportPage() {
   };
   const printReport = () => {
     if (isTma) {
-      setTmaFallback(true);
+      const browserUrl = new URL(pagePath(applied, clientId), window.location.origin).toString();
+      try {
+        if (window.Telegram?.WebApp?.openLink) {
+          window.Telegram.WebApp.openLink(browserUrl, { try_instant_view: false });
+          setTmaHandoff('opened');
+          return;
+        }
+      } catch {
+        // The visible link below remains an actionable fallback when Telegram rejects the handoff.
+      }
+      setTmaHandoff('fallback');
       return;
     }
     window.print();
@@ -699,13 +709,19 @@ export default function ProgressReportPage() {
         )}
       </section>
 
-      {tmaFallback && (
+      {tmaHandoff !== 'idle' && (
         <section className="progress-report-tma-fallback report-screen-only" role="status">
-          <strong>В Telegram системная печать может быть недоступна.</strong>
-          <p>
-            Откройте эту страницу через меню Telegram «Открыть в браузере», затем выберите «Печать»
-            → «Сохранить как PDF». Адрес уже содержит выбранный период и клиента.
-          </p>
+          <strong>
+            {tmaHandoff === 'opened'
+              ? 'Отчёт открыт в браузере.'
+              : 'Telegram не смог открыть браузер автоматически.'}
+          </strong>
+          <p>В браузере выберите «Печать» → «Сохранить как PDF».</p>
+          {tmaHandoff === 'fallback' && (
+            <a href={pagePath(applied, clientId)} rel="noreferrer" target="_blank">
+              Открыть отчёт в браузере
+            </a>
+          )}
         </section>
       )}
 
@@ -747,7 +763,8 @@ export default function ProgressReportPage() {
         </AppLink>
         <BrandLockup />
         <Button disabled={!report.data || report.isFetching} onClick={printReport} type="button">
-          <Icon name="print" size={16} /> Печать / Сохранить как PDF
+          <Icon name="print" size={16} />{' '}
+          {isTma ? 'Открыть в браузере для PDF' : 'Печать / Сохранить как PDF'}
         </Button>
       </div>
 

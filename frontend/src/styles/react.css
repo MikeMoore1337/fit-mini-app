@@ -3176,15 +3176,34 @@ details[open] > summary .disclosure-icon svg {
   padding: 13px 2px;
   border-bottom: 1px solid var(--border);
 }
-.exercise-catalog-item__main {
+.exercise-catalog-item button.exercise-catalog-item__main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  min-width: 0;
+  padding: 2px 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.exercise-catalog-item button.exercise-catalog-item__main:hover {
+  background: var(--bg-soft);
+}
+.exercise-catalog-item__copy {
   display: grid;
   gap: 4px;
   min-width: 0;
 }
-.exercise-catalog-item__main > strong {
+.exercise-catalog-item__copy > strong {
   overflow-wrap: anywhere;
 }
-.exercise-catalog-item__main > span {
+.exercise-catalog-item__copy > span:not(.exercise-catalog-item__badges) {
   color: var(--muted);
   font-size: 0.78rem;
 }

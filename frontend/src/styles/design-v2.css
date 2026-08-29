@@ -5299,6 +5299,14 @@ button.notification-row__main:focus-visible {
   gap: var(--v2-space-4);
 }
 
+.app-section--catalog .exercise-catalog-item button.exercise-catalog-item__main {
+  border-radius: var(--v2-control-radius);
+}
+
+.app-section--catalog .exercise-catalog-item button.exercise-catalog-item__main:hover {
+  background: var(--v2-surface-secondary);
+}
+
 .app-section--catalog .exercise-create {
   border-color: var(--v2-border);
   border-radius: var(--v2-region-radius);
@@ -6036,8 +6044,8 @@ body.public-shell-mode:has(.public-shell.public-shell--design-v2) {
   }
 
   .app-section--catalog .exercise-catalog-item {
-    gap: var(--v2-space-2);
-    padding-block: var(--v2-space-3);
+    gap: var(--v2-space-1);
+    padding-block: var(--v2-space-1);
   }
 
   .workout-schedule-actions {

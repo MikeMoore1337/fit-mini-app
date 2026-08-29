@@ -59,7 +59,11 @@ async function completeWorkout(page: Page) {
 test('selected current-action artwork and floating dock preserve the shared navigation contract', async ({
   page,
 }) => {
-  await installPlatformApi(page, { browserSession: true, workoutStatus: 'planned' });
+  await installPlatformApi(page, {
+    browserSession: true,
+    workoutStatus: 'planned',
+    cardioState: 'planned',
+  });
 
   for (const viewport of [
     { width: 360, height: 800 },
@@ -166,7 +170,7 @@ test('selected current-action artwork and floating dock preserve the shared navi
   const desktopNavigation = page.locator('#appBottomNav');
   await expect(desktopNavigation).toHaveCSS('width', '220px');
   await expect(desktopNavigation).toHaveCSS('border-radius', '0px');
-  await page.getByRole('button', { name: 'Записать кардио' }).click();
+  await page.getByRole('button', { name: 'Добавить фактическое кардио' }).click();
   const cardioFieldTops = await page.locator('.cardio-form__core').evaluate((form) => {
     const top = (selector: string) =>
       form.querySelector<HTMLElement>(selector)!.getBoundingClientRect().top;
@@ -174,11 +178,10 @@ test('selected current-action artwork and floating dock preserve the shared navi
       activity: top('#cardio-activity-new'),
       duration: top('#cardio-duration-new'),
       scheduledAt: top('#cardio-scheduled-new'),
-      status: top('#cardio-status-new'),
     };
   });
   expect(Math.abs(cardioFieldTops.activity - cardioFieldTops.duration)).toBeLessThanOrEqual(1);
-  expect(Math.abs(cardioFieldTops.scheduledAt - cardioFieldTops.status)).toBeLessThanOrEqual(1);
+  expect(cardioFieldTops.scheduledAt).toBeGreaterThanOrEqual(cardioFieldTops.activity);
   if (capture) {
     await page.locator('.cardio-log').screenshot({
       path: `${screenshotRoot}/today-desktop-cardio-1440-light.png`,

@@ -72,20 +72,47 @@ describe('ProgressReportPage', () => {
     });
   });
 
-  it('gives an explicit print fallback in Telegram instead of promising a native PDF', async () => {
+  it('hands the exact report context to the external browser in Telegram', async () => {
+    window.history.replaceState(
+      null,
+      '',
+      '/app/report?period=custom&date_from=2026-08-01&date_to=2026-08-20&client_id=73',
+    );
+    const openLink = vi.fn();
     Object.defineProperty(window, 'Telegram', {
       configurable: true,
-      value: { WebApp: { initData: 'signed-test-data' } },
+      value: { WebApp: { initData: 'signed-test-data', openLink } },
     });
     installApi();
     const print = vi.spyOn(window, 'print').mockImplementation(() => undefined);
     renderPage();
     await screen.findByRole('heading', { name: /Александр Константинович/ });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Печать / Сохранить как PDF' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Открыть в браузере для PDF' }));
 
-    expect(screen.getByText(/В Telegram системная печать может быть недоступна/)).toBeVisible();
-    expect(screen.getByText(/Открыть в браузере/)).toBeVisible();
+    expect(openLink).toHaveBeenCalledWith(
+      `${window.location.origin}/app/report?period=custom&date_from=2026-08-01&date_to=2026-08-20&client_id=73`,
+      { try_instant_view: false },
+    );
+    expect(screen.getByText('Отчёт открыт в браузере.')).toBeVisible();
     expect(print).not.toHaveBeenCalled();
+  });
+
+  it('keeps an actionable browser link when the Telegram handoff is unavailable', async () => {
+    Object.defineProperty(window, 'Telegram', {
+      configurable: true,
+      value: { WebApp: { initData: 'signed-test-data' } },
+    });
+    installApi();
+    renderPage();
+    await screen.findByRole('heading', { name: /Александр Константинович/ });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Открыть в браузере для PDF' }));
+
+    expect(screen.getByText(/не смог открыть браузер автоматически/)).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Открыть отчёт в браузере' })).toHaveAttribute(
+      'href',
+      '/app/report?period=days_30',
+    );
   });
 });

@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import hashlib
 import json
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
@@ -35,6 +36,8 @@ from .telegram_client import create_bot_api_session
 SyncMode = Literal["check", "apply"]
 COMMAND_SCOPE = BotCommandScopeAllPrivateChats()
 PROFILE_SYNC_RETRY_DELAYS_SECONDS = (1, 2)
+PROFILE_SYNC_TOTAL_TIMEOUT_ENV = "BOT_PROFILE_SYNC_TOTAL_TIMEOUT_SECONDS"
+PROFILE_SYNC_DEFAULT_TOTAL_TIMEOUT_SECONDS = 45.0
 
 BOTFATHER_FLAGS: dict[str, bool] = {
     "can_join_groups": False,
@@ -173,6 +176,20 @@ async def _sync_public_profile_with_retry(
             await asyncio.sleep(PROFILE_SYNC_RETRY_DELAYS_SECONDS[attempt])
     assert report is not None
     return report
+
+
+def _profile_sync_total_timeout_seconds() -> float:
+    raw = os.environ.get(
+        PROFILE_SYNC_TOTAL_TIMEOUT_ENV,
+        str(PROFILE_SYNC_DEFAULT_TOTAL_TIMEOUT_SECONDS),
+    ).strip()
+    try:
+        value = float(raw)
+    except ValueError as exc:
+        raise ValueError(f"{PROFILE_SYNC_TOTAL_TIMEOUT_ENV} must be a positive number") from exc
+    if value <= 0:
+        raise ValueError(f"{PROFILE_SYNC_TOTAL_TIMEOUT_ENV} must be a positive number")
+    return value
 
 
 async def _sync_text_field(
@@ -443,14 +460,31 @@ async def _run(mode: SyncMode) -> int:
         print(json.dumps(report.as_dict(), ensure_ascii=False, indent=2))
         return report.exit_code()
 
-    session = create_bot_api_session(timeout=15)
+    try:
+        total_timeout = _profile_sync_total_timeout_seconds()
+    except ValueError as exc:
+        report = SyncReport(mode=mode)
+        report.identity = {"status": "CONFIG_ERROR", "detail": str(exc)}
+        print(json.dumps(report.as_dict(), ensure_ascii=False, indent=2))
+        return report.exit_code()
+
+    request_timeout = max(1, min(15, int(total_timeout)))
+    session = create_bot_api_session(timeout=request_timeout)
     bot = Bot(settings.bot_token, session=session)
     try:
-        report = await _sync_public_profile_with_retry(
-            bot,
-            mode=mode,
-            frontend_base_url=settings.frontend_base_url,
-        )
+        try:
+            async with asyncio.timeout(total_timeout):
+                report = await _sync_public_profile_with_retry(
+                    bot,
+                    mode=mode,
+                    frontend_base_url=settings.frontend_base_url,
+                )
+        except TimeoutError:
+            report = SyncReport(mode=mode)
+            report.identity = {
+                "status": "API_ERROR",
+                "detail": "timeout:profile_sync_total",
+            }
     finally:
         await bot.session.close()
     print(json.dumps(report.as_dict(), ensure_ascii=False, indent=2))

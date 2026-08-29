@@ -63,6 +63,14 @@ describe('ExerciseCatalog', () => {
     renderCatalog();
 
     expect(await screen.findByText('Подтягивания')).toBeInTheDocument();
+    const compactRow = screen.getByRole('button', {
+      name: /Техника и детали: Тяга верхнего блока с очень длинным названием/,
+    });
+    expect(compactRow).toBeVisible();
+    fireEvent.click(compactRow);
+    expect(screen.getByRole('dialog', { name: /Тяга верхнего блока/ })).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Закрыть карточку упражнения' }));
+
     fireEvent.change(screen.getByLabelText('Оборудование'), { target: { value: 'cable' } });
 
     expect(screen.getByText(/Тяга верхнего блока с очень длинным названием/)).toBeInTheDocument();

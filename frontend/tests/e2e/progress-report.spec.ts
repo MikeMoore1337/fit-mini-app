@@ -1,6 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
 import { makeProgressReportFixture } from '../fixtures/progress-report';
-import { expectNoHorizontalOverflow, installTelegramHarness } from './fixtures/mobile-tma';
+import {
+  expectNoHorizontalOverflow,
+  installTelegramHarness,
+  TelegramHarness,
+} from './fixtures/mobile-tma';
 import { installPlatformApi } from './fixtures/platform-api';
 
 type ReportState = Parameters<typeof makeProgressReportFixture>[0];
@@ -98,7 +102,7 @@ test('full report keeps a mobile-first preview and creates a valid light print d
     path: '../.artifacts/screenshots/task-69b/print-grayscale-chart-and-table.png',
   });
   const pdf = await page.pdf({
-    path: '../.artifacts/pdf/task-67/progress-report-2026-07-26_2026-08-24.pdf',
+    path: '../.artifacts/pdf/task-113A-round-2/progress-report-2026-07-26_2026-08-24.pdf',
     format: 'A4',
     printBackground: true,
     preferCSSPageSize: true,
@@ -128,18 +132,22 @@ for (const state of ['partial', 'empty'] as const) {
   });
 }
 
-test('dark TMA explains the print handoff and preserves report context', async ({ page }) => {
+test('dark TMA opens an actionable browser handoff with the exact report context', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await installTelegramHarness(page, { colorScheme: 'dark' });
+  const tma = new TelegramHarness(page);
   await installPlatformApi(page);
   await installReportApi(page);
 
   await page.goto('/app/report?period=custom&date_from=2026-08-01&date_to=2026-08-20&client_id=73');
   await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
   await expect(page.getByRole('heading', { name: /Александр Константинович/ })).toBeVisible();
-  await page.getByRole('button', { name: 'Печать / Сохранить как PDF' }).click();
-  await expect(page.getByText(/В Telegram системная печать может быть недоступна/)).toBeVisible();
-  await expect(page.getByText(/Открыть в браузере/)).toBeVisible();
+  await page.getByRole('button', { name: 'Открыть в браузере для PDF' }).click();
+  await expect(page.getByText('Отчёт открыт в браузере.')).toBeVisible();
+  const expectedBrowserUrl = `${new URL(page.url()).origin}/app/report?period=custom&date_from=2026-08-01&date_to=2026-08-20&client_id=73`;
+  await expect.poll(async () => (await tma.state()).openedLinks).toEqual([expectedBrowserUrl]);
   await expect(page).toHaveURL(/period=custom/);
   await expect(page).toHaveURL(/date_from=2026-08-01/);
   await expect(page).toHaveURL(/client_id=73/);
@@ -148,14 +156,12 @@ test('dark TMA explains the print handoff and preserves report context', async (
   await page.screenshot({
     path: '../.artifacts/screenshots/task-69b/tma-390x844-dark-chart.png',
   });
-  await page
-    .getByText(/В Telegram системная печать может быть недоступна/)
-    .scrollIntoViewIfNeeded();
+  await page.getByText('Отчёт открыт в браузере.').scrollIntoViewIfNeeded();
   await page.screenshot({
-    path: '../.artifacts/screenshots/task-67/tma-390-dark-print-fallback-preview.png',
+    path: '../.artifacts/screenshots/task-113A-round-2/tma-390-dark-pdf-handoff-preview.png',
   });
   await page.screenshot({
-    path: '../.artifacts/screenshots/task-67/tma-390-dark-print-fallback.png',
+    path: '../.artifacts/screenshots/task-113A-round-2/tma-390-dark-pdf-handoff.png',
     fullPage: true,
   });
 });

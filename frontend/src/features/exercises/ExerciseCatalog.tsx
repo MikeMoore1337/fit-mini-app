@@ -401,30 +401,35 @@ export function ExerciseCatalog({
             <div className="exercise-catalog-list" aria-live="polite">
               {filtered.slice(0, visibleLimit).map((exercise) => (
                 <article className="exercise-catalog-item" key={exercise.id}>
-                  <div className="exercise-catalog-item__main">
-                    <strong>{exercise.title}</strong>
-                    <span>
-                      {exercise.primary_muscle || 'Всё тело'} ·{' '}
-                      {exercise.equipment || 'Без оборудования'}
+                  <button
+                    aria-label={`${exercise.has_guide ? 'Техника и детали' : 'Подробнее'}: ${exercise.title}`}
+                    className="exercise-catalog-item__main"
+                    type="button"
+                    onClick={() => setGuide(exercise)}
+                  >
+                    <span className="exercise-catalog-item__copy">
+                      <strong>{exercise.title}</strong>
+                      <span>
+                        {exercise.primary_muscle || 'Всё тело'} ·{' '}
+                        {exercise.equipment || 'Без оборудования'}
+                      </span>
+                      <span className="exercise-catalog-item__badges">
+                        <Badge>{difficultyLabels[exercise.difficulty_level]}</Badge>
+                        {exercise.is_custom && <Badge>Своё</Badge>}
+                        {!!exercise.alternatives?.length && (
+                          <Badge>{exercise.alternatives.length} проверенных замен</Badge>
+                        )}
+                      </span>
                     </span>
-                    <div className="exercise-catalog-item__badges">
-                      <Badge>{difficultyLabels[exercise.difficulty_level]}</Badge>
-                      {exercise.is_custom && <Badge>Своё</Badge>}
-                      {!!exercise.alternatives?.length && (
-                        <Badge>{exercise.alternatives.length} проверенных замен</Badge>
-                      )}
-                    </div>
-                  </div>
-                  <div className="exercise-catalog-item__actions">
-                    <button className="secondary" type="button" onClick={() => setGuide(exercise)}>
-                      {exercise.has_guide ? 'Техника и детали' : 'Подробнее'}
-                    </button>
-                    {canAssign && (
+                    <DisclosureIcon />
+                  </button>
+                  {canAssign && (
+                    <div className="exercise-catalog-item__actions">
                       <button type="button" onClick={() => setAssignment(exercise)}>
                         В программу
                       </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                   {exercise.is_custom && (
                     <details className="exercise-catalog-item__danger">
                       <summary>Другие действия</summary>

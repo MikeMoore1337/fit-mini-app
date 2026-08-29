@@ -18,6 +18,7 @@ export interface PlatformApiOptions {
   authProviders?: string[];
   trainerActive?: boolean;
   measurementHistory?: 'none' | 'many';
+  cardioState?: 'empty' | 'planned' | 'completed';
 }
 
 export interface PlatformApiController {
@@ -149,7 +150,26 @@ export async function installPlatformApi(
   let measurementSaveCalls = 0;
   let failNextCardioSave = false;
   let cardioSaveCalls = 0;
-  let cardioSessions: Array<Record<string, unknown>> = [];
+  let cardioSessions: Array<Record<string, unknown>> =
+    options.cardioState && options.cardioState !== 'empty'
+      ? [
+          {
+            id: 659,
+            activity_type: 'walking',
+            duration_minutes: 30,
+            distance_km: null,
+            average_heart_rate_bpm: null,
+            heart_rate_zone: null,
+            note: options.cardioState === 'planned' ? 'План на сегодня' : 'Фактический результат',
+            scheduled_at: `${today}T09:00:00`,
+            completed_at: options.cardioState === 'completed' ? `${today}T09:30:00` : null,
+            status: options.cardioState,
+            source: 'manual',
+            created_at: `${today}T08:00:00`,
+            updated_at: `${today}T09:30:00`,
+          },
+        ]
+      : [];
   let completionFeedback: string | null = null;
   let completionNote: string | null = null;
   let adaptationApplyCalls = 0;

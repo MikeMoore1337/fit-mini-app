@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from decimal import Decimal
 
 import httpx
@@ -436,6 +437,8 @@ def test_open_food_facts_contract_uses_user_agent_and_parses_search_and_barcode(
         for request in requests
     )
     assert requests[0].method == "POST"
+    search_payload = json.loads(requests[0].content)
+    assert search_payload["q"] == "open product"
     assert requests[1].url.path == "/api/v3.6/product/3017620422003.json"
 
 
