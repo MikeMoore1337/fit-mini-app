@@ -2,7 +2,7 @@
 
 ## Per task
 
-- [ ] Worked only in `feature/yfc-platform-v2`.
+- [ ] Worked in permanent `dev` or an explicitly authorized temporary branch from current `dev`.
 - [ ] Read root `AGENTS.md`, `GLOBAL_RULES.md`, lifecycle, current task and primary role.
 - [ ] Loaded only core `Рекомендуемые skills` initially.
 - [ ] Loaded each `Условный skill` only after its actual trigger was proven.

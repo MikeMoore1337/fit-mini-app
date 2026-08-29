@@ -1,4 +1,4 @@
-# Execution status v49
+# Execution status v50
 
 Подтверждённое владельцем состояние на 28.08.2026:
 
@@ -46,10 +46,12 @@
       green CI в `master` является намеренной функцией, а trigger contract закреплён в документации;
 - [x] owner-approved task `80` завершила repository hygiene/privacy cleanup, README/config audit,
       private-path boundary и архивирована вместе с task `79`;
-- [ ] **current:** `81-hydration-tracking-nutrition.md` — назначена, но Trigger и реализация не
-      запускались;
-- [ ] post-release tasks `81-101` сохраняют собственные Trigger, dependency и owner decision; task
-      ID задают предпочтительный порядок, но ни одна pending task этой очереди не запущена.
+- [x] task `113-development-branch-normalization.md` завершила переход permanent development branch
+      на `dev`, master-only release safeguards и canonical automatic release eligibility contract;
+- [ ] **current, not started:** `114-nutrition-search-barcode-production-regression.md` — следующая
+      задача нового UX-reset cycle; её implementation не запускалась;
+- [ ] owner-driven sequence: `114 -> 115A -> owner approval -> 116..123 -> 81 -> 82 -> 84 ->
+      124A -> owner release approval -> 124B -> conditional 124C`;
 - [x] owner-selected task `106-landing-telegram-product-news-links.md` завершена вне основной
       очереди и не изменила порядок `78-101`.
 - [ ] owner-selected task `107-scheduled-regression-private-allure-reports.md` создана вне основной
@@ -75,16 +77,20 @@
 - [x] owner-selected task `112-zero-downtime-production-deployment.md` завершена и архивирована вне
       основной очереди: stable gateway, blue/green slots, online-migration fail-closed gate,
       old-asset overlap, single-owner worker/bot handoff, rollback и production-like drill прошли
-      review/QA; production rollout не выполнялся и требует отдельного owner approval.
+      review/QA. После explicit owner approval revision `194cf036` развёрнута в production через
+      resource-aware `single-slot` fallback с bounded downtime: deployment verdict `active`, все
+      stages passed, public/API/SEO и ownership worker/bot подтверждены. Production blue/green
+      zero-observed-downtime на этом constrained VPS не заявляется.
 
 Не выполнять повторно tasks `00-80`, включая `69B`, `73A`, task `74A` и tasks `103-106`.
 Task `77` закрыта не как factual real-user validation, а по явному owner decision принять отсутствие
 сессий и residual risk. Tasks `78-80` закрыты после owner approval. History rewrite `master`
 запустил предусмотренный automatic production workflow; runtime diff относительно прежнего master
-был нулевым, health после rollout зелёный, а владелец подтвердил auto-deploy как feature. Task `81`
-назначена следующей, но её Trigger/реализация не запускались.
-`DESIGN_V2_1` с owner-approved bounded Pulse pilot остаётся production baseline. Task `81` остаётся
-current/not started; выполнение следующей task не запускалось.
+был нулевым, health после rollout зелёный, а владелец подтвердил auto-deploy как feature. После
+branch normalization Task `114` назначена следующей, но её Trigger/реализация не запускались.
+`DESIGN_V2_1` с owner-approved bounded Pulse pilot остаётся production baseline. Permanent branch
+source разработки — `dev`, production source — protected `master`. Task `114` назначена current/not
+started; выполнение следующей task не запускалось.
 Umbrella `100` отдельно не выполняется; `100A` не назначена без собственного Trigger, dependency
 и owner decision. Tasks `107-111` также не запускаются автоматически. Завершённая task `112` не
 изменила их порядок. Другие pending tasks

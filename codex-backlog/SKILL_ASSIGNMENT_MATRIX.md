@@ -10,6 +10,31 @@ Tasks `00-55` завершены и не переигрываются. Их task
 - Для code/diff review base skill - `$code-reviewer`, для QA - `$qa-engineer`; non-code decision review не загружает `$code-reviewer` автоматически.
 - Task-файл остаётся source of truth при расхождении с этой сводкой.
 
+## UX-reset cycle addendum
+
+| Task | Core skills | Primary role |
+|---:|---|---|
+| `113` | `$platform-engineer`, `$release-manager`, `$qa-engineer` | `integration-release` |
+| `114` | `$qa-engineer`, `$frontend-engineer`, `$backend-engineer`, `$data-engineer` | `implementer` |
+| `115A` | `$product-discovery`, `$product-designer`, `$ui-audit`, `$ui-prototyper` | `researcher` |
+| `116` | `$product-designer`, `$frontend-engineer`, `$mobile-engineer`, `$ui-audit` | `implementer` |
+| `117` | `$product-designer`, `$frontend-engineer`, `$mobile-engineer`, `$qa-engineer` | `implementer` |
+| `118` | `$product-designer`, `$frontend-engineer`, `$mobile-engineer`, `$fitness-domain-reviewer` | `implementer` |
+| `119` | `$fitness-domain-reviewer`, `$frontend-engineer`, `$mobile-engineer`, `$backend-engineer` | `implementer` |
+| `120A` | `$fitness-domain-reviewer`, `$data-engineer`, `$evidence-content-editor` | `researcher` |
+| `120B` | `$data-engineer`, `$fitness-domain-reviewer`, `$evidence-content-editor`, `$frontend-engineer` | `implementer` |
+| `120C` | `$data-engineer`, `$fitness-domain-reviewer`, `$evidence-content-editor`, `$frontend-engineer` | `implementer` |
+| `120D` | `$data-engineer`, `$fitness-domain-reviewer`, `$frontend-engineer`, `$qa-engineer` | `implementer` |
+| `121` | `$product-designer`, `$frontend-engineer`, `$mobile-engineer`, `$telegram-engineer` | `implementer` |
+| `122` | `$product-designer`, `$frontend-engineer`, `$mobile-engineer`, `$ui-audit` | `implementer` |
+| `123` | `$product-designer`, `$ui-audit`, `$motion-design-engineer`, `$frontend-engineer` | `implementer` |
+| `124A` | `$qa-engineer`, `$ui-audit`, `$accessibility-engineer`, `$mobile-engineer` | `qa-verifier` |
+| `124B` | `$ux-researcher`, `$product-designer`, `$mobile-engineer`, `$ui-audit` | `researcher` |
+| `124C` | `$qa-engineer`, `$product-designer`, `$frontend-engineer`, `$mobile-engineer` | `implementer` |
+
+Conditional skills и дополнительные lifecycle roles берутся только из canonical task file. Tasks
+`81/82/84` используют собственные roles/skills после dependency amendments UX-reset package.
+
 | Task | Файл | Core skills | Conditional skills | Primary role | Дополнительные роли |
 |---:|---|---|---|---|---|
 | `49B1` | `49b1-current-ui-consistency-mobile-first-normalization.md` | `$frontend-engineer`, `$mobile-engineer`, `$ui-audit` | `$accessibility-engineer` only for proven non-trivial a11y defect; `$telegram-engineer` only when remediation changes Telegram-specific runtime/adapter; `$performance-engineer` only for measured shared-UI regression | **`implementer`** | `independent-reviewer` -> `qa-verifier` |

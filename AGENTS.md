@@ -176,6 +176,12 @@ review, QA and final verification. Do not create intermediate lifecycle commits 
 current task/backlog explicitly requires them. A read-only/no-code outcome does not require a
 manufactured commit.
 
+After that commit, apply the canonical release eligibility contract from
+`codex-backlog/TASK_EXECUTION_LIFECYCLE.md`. An `AUTO_RELEASE_ELIGIBLE` task proceeds through the
+normal `dev -> pull request -> master -> post-merge CI -> production deploy -> dev sync` path
+without another owner prompt. A task with a mandatory owner checkpoint, owner approval, human
+evidence or manual visual approval stops before release until that gate is actually completed.
+
 Do not read completed tasks or historical changelogs unless the current task explicitly requires
 them. Legacy `masters/` and `references/` were removed and are not sources of truth.
 
@@ -217,10 +223,10 @@ Before changing files for a backlog task, verify the branch with:
 The current backlog's `GLOBAL_RULES.md` defines the expected branch.
 
 For `codex-backlog/tasks/`, `codex-backlog/bugs/pending/` and
-`codex-backlog/telegram-core-release-backlog/tasks/`, the expected long-lived implementation
-branch is:
-
-`feature/yfc-platform-v2`
+`codex-backlog/telegram-core-release-backlog/tasks/`, the expected permanent implementation branch
+is `dev`. A temporary task branch/worktree is allowed only when the task or backlog explicitly
+requires real isolation; it must branch from current `dev` and be deleted after merge/close when it
+is not a recovery anchor.
 
 Unless the current backlog rules or user explicitly permit otherwise:
 
@@ -228,7 +234,7 @@ Unless the current backlog rules or user explicitly permit otherwise:
 - do not switch/checkout another branch;
 - do not merge or rebase unrelated branches;
 - do not modify another worktree;
-- do not push;
+- do not push outside the current task's canonical release/remote-operation contract;
 - keep unrelated user changes intact.
 
 If the expected branch is not active, stop before tracked changes and report the mismatch.
@@ -328,15 +334,24 @@ Use `technical-writer` for substantial documentation work.
 Treat schema migrations, deployment configuration and infrastructure changes as
 production-sensitive.
 
-Repository-specific release entry: every new production revision must enter remote `master` only as
-the result of a merged pull request. Direct pushes, force-pushes and branch deletion are prohibited
-by the `master` ruleset. The required post-merge CI run intentionally starts
+Repository-specific release entry: product work is accumulated on permanent `dev`; every new
+production revision must enter remote `master` only as the result of a checked pull request from
+`dev` (or a narrowly justified temporary hotfix/recovery branch). Direct pushes, force-pushes and
+branch deletion are prohibited by the `master` ruleset. The required post-merge CI run intentionally starts
 `.github/workflows/deploy.yml` through `workflow_run`; the workflow additionally verifies that the
 exact SHA is associated with a merged pull request into `master` and is still the current
 `origin/master` head. A successful PR merge is the release authorization: deployment, backup,
 migrations, blue/green switch, smoke checks and automatic failure rollback continue without a
 separate human approval. The `production` environment must therefore not require reviewers or a wait
 timer. Manual workflow dispatch is not part of the normal release path.
+
+For an `AUTO_RELEASE_ELIGIBLE` task, no additional owner prompt is required for push, PR creation,
+checked exact-head merge or the resulting automatic production deployment. Eligibility requires a
+tracked logical commit, completed implementation/review/QA/final verification, zero unresolved
+`BLOCKER`, `HIGH` and `MEDIUM`, synchronized findings, current `master` ancestry in `dev`, a clean
+scoped worktree and no mandatory owner/human/visual gate. The agent must monitor required check
+`checks`, post-merge CI and deployment to terminal success, then fast-forward/sync `dev` to the new
+`master`. Any failed gate stops the backlog sequence fail-closed.
 
 Any exceptional operation that bypasses this path—history rewrite, direct/force push, manual
 production command, infrastructure recovery or deployment of a SHA other than the current merged
@@ -345,7 +360,8 @@ relevant preflight and verified remote backup branch.
 
 Do not:
 
-- deploy to production unless explicitly requested;
+- invoke manual/exceptional production deployment unless explicitly requested; the automatic
+  deployment caused by an eligible checked PR merge is already authorized by this contract;
 - run database migrations against production;
 - modify production auth, secrets, DNS, Cloudflare or external infrastructure without explicit
   user authorization;

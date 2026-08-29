@@ -141,6 +141,10 @@ Reviewer не должен:
 
 Запрещён результат вида `MEDIUM, но коммитить нельзя`. Если finding действительно делает результат неприемлемым, reviewer обязан классифицировать его как `HIGH`/`BLOCKER` и воспроизводимо объяснить почему.
 
+`MEDIUM` не блокирует локальное завершение lifecycle и logical commit, но незакрытый `MEDIUM`
+блокирует `AUTO_RELEASE_ELIGIBLE`: PR/merge/deploy откладываются до verified closure или отдельного
+owner-controlled решения, которое прямо изменяет release scope. Severity нельзя понижать ради release.
+
 Первый review возвращает закрытый набор findings с ID и verdict:
 
 - `APPROVED`;
@@ -240,8 +244,44 @@ Review/QA не могут сами по себе быть основанием �
    `codex-backlog/bugs/FINDINGS.md`; закрытые записи не удалять, а обновлять status/verification.
 8. Создать один логический commit при tracked changes, если task не задаёт другой stage strategy.
    Новый registry entry считается tracked change даже для read-only audit/review task.
-9. Не merge/deploy/push/production action без разрешения.
-10. Не переходить к следующей task.
+9. Классифицировать task как `AUTO_RELEASE_ELIGIBLE` либо `AUTO_RELEASE_BLOCKED` по разделу 9A.
+10. Выполнить разрешённый canonical release final либо остановиться на точном owner/blocker gate.
+11. Не переходить к следующей task автоматически; после eligible release сначала подтвердить
+    terminal deploy success и синхронизацию `dev`.
+
+## 9A. Release eligibility и автоматический normal path
+
+Task является `AUTO_RELEASE_ELIGIBLE`, только если одновременно:
+
+1. созданы tracked releasable changes и один итоговый logical commit;
+2. implementation, применимые review/QA и final verification завершены;
+3. незакрытых `BLOCKER`, `HIGH` и `MEDIUM` ровно ноль, а исправленные blocking/release-blocking
+   findings имеют required targeted recheck evidence;
+4. `codex-backlog/bugs/FINDINGS.md` синхронизирован по действующей policy;
+5. task не содержит незавершённый owner checkpoint/approve, human evidence или manual visual gate;
+6. нет unresolved production/recovery blocker;
+7. рабочая ветка `dev` содержит актуальный `origin/master`, worktree чист от accidental scope,
+   secrets и debug artifacts.
+
+Иначе task получает `AUTO_RELEASE_BLOCKED` с точной причиной. `LOW`, `NIT` и `OUT_OF_SCOPE` сами по
+себе release не блокируют. `no commit` не создаёт искусственный PR/deploy.
+
+Для `AUTO_RELEASE_ELIGIBLE` task агент без дополнительного owner prompt обязан:
+
+1. `git fetch --prune origin`, проверить актуальность `origin/master` и при необходимости безопасно
+   merge `origin/master -> dev` без rebase/force-push, затем повторить affected checks;
+2. push `dev` и дождаться успешного branch CI;
+3. создать или переиспользовать ровно соответствующий scope PR `dev -> master`;
+4. проверить expected PR head SHA и required check `checks`;
+5. включить GitHub auto-merge либо после green checks выполнить эквивалентный обычный PR merge;
+6. проверить post-merge CI и автоматический production deploy exact merged `master` SHA до terminal
+   success; failure/rollback/manual-intervention verdict останавливает sequence fail-closed;
+7. fetch и fast-forward/sync `dev` к новому `origin/master`, push при необходимости, затем повторно
+   подтвердить post-release state.
+
+Автоматизация никогда не делает direct push в `master`, не обходит ruleset/required checks,
+PR provenance/exact-SHA guard и не запускает manual production command. Task с human/owner gate
+останавливается перед PR до фактического решения. Task-specific запрет release/deploy имеет приоритет.
 
 ## 10. Финальный отчёт
 

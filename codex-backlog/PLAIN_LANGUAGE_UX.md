@@ -2,6 +2,28 @@
 
 Default UI is understandable to a person without prior fitness terminology. Advanced terminology remains available through progressive disclosure.
 
+## Compact-first и progressive disclosure
+
+Canonical addendum: `codex-backlog/ux-reset/COMPACT_FIRST_UX_CONTRACT.md`.
+
+- Primary action и текущая операция всегда видимы; пользователь не раскрывает секцию ради
+  единственного базового действия.
+- Secondary, detail и advanced content по умолчанию compact/collapsible/contextual, если без него
+  можно завершить текущую задачу.
+- Допустим максимум один уровень disclosure внутри summary card; длинная форма, большой график,
+  история или несколько самостоятельных действий переходят на detail screen/sheet.
+- Collapsed summary обязан объяснять содержание: короткий title, один ключевой status/metric и не
+  более одного действительно нужного quick action.
+- Выразительный semantic visual treatment концентрируется на meaningful compact surfaces;
+  expanded functional content остаётся спокойным и читаемым.
+- Mobile Web/TMA являются первичным ограничением, desktop получает осмысленный reflow, а не широкое
+  длинное полотно.
+- Expandable control обязан поддерживать semantic button, `aria-expanded`, keyboard/focus, touch,
+  screen reader state, stable scroll и `prefers-reduced-motion`.
+
+Compact-first не разрешает удалять полезную функциональность, скрывать validation/error state,
+схлопывать секцию во время ввода или строить nested accordion.
+
 ## Terminology
 
 | Technical term | Default Russian UI |
