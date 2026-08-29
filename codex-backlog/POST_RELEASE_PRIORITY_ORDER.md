@@ -1,10 +1,42 @@
 # Порядок направлений после release gate `79`
 
+## Текущий owner-driven UX-reset cycle
+
+До возврата к прежнему trigger-gated pool действует линейная canonical очередь:
+
+```text
+113 branch normalization [COMPLETED]
+  -> 114 nutrition/barcode P0 regression [CURRENT, NOT STARTED]
+  -> 115A UX audit + IA + compactness/disclosure prototype/spec
+  -> OWNER APPROVAL
+  -> 116 -> 117 -> 118 -> 119 -> 120A -> 120B -> 120C -> 120D
+  -> 121 -> 122 -> 123
+  -> 81 Hydration -> 82 Sleep/Mood -> 84 Reminders
+  -> 124A pre-release integrated UX/QA gate
+  -> OWNER RELEASE APPROVAL
+  -> dev -> master + production deployment
+  -> 124B production real-user usability validation
+  -> 124C only if 124B has BLOCKER/HIGH
+```
+
+Task `115B` и pre-implementation gate `116+ blocked until real-user validation` не применяются.
+Human validation выполняется на фактически deployed production build в Task `124B`; Task `115A`
+остаётся owner design gate, а Task `124A` — pre-release QA gate.
+
+Tasks `85`, `110`, `111` остаются pending вне critical path: соответственно после `121`, `122`,
+`123`. Они входят в `124A` только если владелец отдельно включил их в тот же release candidate.
+
+После завершения Task `113` source разработки — permanent `dev`, production source — protected
+`master`. Выполнение следующей task не начинается автоматически.
+
 Tasks `80-101` и их буквенные подзадачи образуют trigger-gated post-release pool. Номер task
 задаёт предпочтительную последовательность реализации, но не отменяет фактический Trigger,
 dependency и отдельное решение владельца.
 
 ## Последовательность pending-задач
+
+Таблица ниже сохраняет порядок общего pool после текущего UX-reset cycle и не переопределяет
+описанный выше critical path.
 
 | Task | Направление | Почему здесь |
 |---:|---|---|
@@ -59,21 +91,21 @@ Owner-selected task `106` завершила discoverability Telegram Mini App, 
 канала на Landing и не изменила порядок `80-101`.
 
 Owner-selected task `107` создана вне pending-последовательности для scheduled regression и
-закрытых Allure-отчётов. Её owner-approved scope не меняет current task `81` или порядок `81-101`;
+закрытых Allure-отчётов. Её owner-approved scope не меняет current task `114` или UX-reset path;
 implementation и внешние DNS/Cloudflare/hosting actions требуют отдельного запуска/approval.
 
 Owner-selected task `108` создана вне pending-последовательности для product-wide аудита
 соответствия законодательству РФ и непрерывного legal-impact gate будущих задач. Она не меняет
-current task `81` или порядок `81-101`; запуск, legal review и любые remediation/external actions
+current task `114` или UX-reset path; запуск, legal review и любые remediation/external actions
 требуют отдельных owner decisions.
 
 Owner-selected tasks `109-111` также находятся вне pending-последовательности: factual Landing
-offer, private avatar upload и Progress bento dashboard. Они не меняют current task `81` или
-порядок `81-101`, не образуют общую implementation batch и запускаются только отдельными owner
+offer, private avatar upload и Progress bento dashboard. Они не меняют current task `114` или
+UX-reset path, не образуют общую implementation batch и запускаются только отдельными owner
 решениями.
 
 Owner-selected task `112` завершена и архивирована вне pending-последовательности после локального
 review/QA zero-downtime deployment contract. Отдельно разрешённый production rollout revision
 `194cf036` завершён через `single-slot` fallback с bounded downtime и verdict `active`; production
-blue/green zero observed downtime на constrained VPS не заявляется. Current task `81` и порядок
-`81-101` не изменились.
+blue/green zero observed downtime на constrained VPS не заявляется. Current task `114` и UX-reset
+path не изменились.

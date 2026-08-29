@@ -6,9 +6,25 @@ VPS, PostgreSQL, Cloudflare или сети.
 
 ## Release entry и полностью автоматический deploy
 
-Новая production revision попадает в `master` только через merged pull request. Внешний GitHub
+Постоянная ветка разработки — `dev`, production source of truth — `master`. Новая production
+revision попадает в `master` только через checked merged pull request из `dev` либо узкой временной
+hotfix/recovery branch. Внешний GitHub
 ruleset для `master` обязан требовать pull request и успешный check `checks`, запрещать direct push,
 force-push и удаление ветки и не разрешать bypass обычного release path.
+
+Task получает normal automatic release только при `AUTO_RELEASE_ELIGIBLE`: есть tracked logical
+commit, lifecycle/review/QA/final verification завершены, незакрытых `BLOCKER/HIGH/MEDIUM` нет,
+findings синхронизированы и отсутствует обязательный owner/human/manual visual gate. Тогда агент без
+дополнительного owner prompt push-ит `dev`, проверяет branch CI, создаёт/обновляет PR `dev -> master`,
+проверяет exact PR head SHA и required check `checks`, включает auto-merge или делает эквивалентный
+checked merge, а затем наблюдает post-merge CI/deploy до terminal success. После успешного release
+`dev` fast-forward/sync к новому `master`. Failure/rollback/manual intervention required блокирует
+следующую backlog task.
+
+Permanent `dev` защищена от deletion/non-fast-forward отдельным узким ruleset. Repository
+`delete_branch_on_merge` удаляет merged temporary branches, но не permanent `dev`; production
+environment использует explicit branch policy только для `master`. `allow_auto_merge` не ослабляет
+`master` ruleset и required checks.
 
 После merge участие человека заканчивается:
 
@@ -24,8 +40,8 @@ force-push и удаление ветки и не разрешать bypass об
 
 У `production` environment не должно быть required reviewers или wait timer: это добавило бы
 ручную стадию после уже одобренного merge. `workflow_dispatch` отсутствует, поэтому normal path не
-может вручную выбрать или повторно отправить произвольный SHA. Environment ограничивается
-защищённой веткой `master`; production secrets остаются только в environment и не доступны PR CI
+может вручную выбрать или повторно отправить произвольный SHA. Environment ограничивается explicit
+branch policy только для `master`; production secrets остаются только в environment и не доступны PR CI
 или provenance job.
 
 ## Топология и источник состояния

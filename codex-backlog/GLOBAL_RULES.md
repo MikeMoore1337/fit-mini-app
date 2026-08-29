@@ -1,7 +1,7 @@
 # GLOBAL_RULES - правила выполнения release backlog v17 resource-aware
 
 Этот файл действует для завершённых и архивированных release tasks `75-80`, включая буквенные
-подзадачи и owner-approved Pulse concepts pilot `75C`, current post-release task `81`, и
+подзадачи и owner-approved Pulse concepts pilot `75C`, current UX-reset task `114`, и
 trigger-gated post-release pool `81-101` с буквенными подзадачами и owner-selected pending tasks
 `107-111`. Completed tasks `00-73A`, включая буквенные подзадачи, tasks `74A-75`, отдельно
 завершённые tasks `103-106` и owner-selected task `112` не переигрываются и хранятся в
@@ -61,7 +61,9 @@ Lifecycle не расширяет scope task и не отменяет owner chec
 
 - Один executable task-файл = одна отдельная Codex-сессия = один законченный логический результат.
   Umbrella `90`, `92`, `94`, `95`, `99`, `100` являются coordination contracts и отдельно не выполняются.
-- Работать только в `feature/yfc-platform-v2`.
+- Работать в постоянной development-ветке `dev`. Temporary branch/worktree от актуальной `dev`
+  допускается только при явной необходимости изоляции; после merge/close её нужно безопасно удалить,
+  если она не является recovery anchor и не содержит уникальную недостижимую историю.
 - Не переходить к следующему task автоматически.
 - Новая production revision попадает в remote `master` только через merged PR с обязательным green
   check `checks`; direct push, force-push и удаление `master` запрещены Ruleset. Merge PR является
@@ -69,6 +71,11 @@ Lifecycle не расширяет scope task и не отменяет owner chec
   provenance gate и автоматический production deploy. History rewrite, ручные production-команды,
   bootstrap, infrastructure recovery и SHA вне текущего merged `master` остаются exceptional
   actions с отдельным owner approval, backup и preflight.
+- Для `AUTO_RELEASE_ELIGIBLE` task нормальный release path выполняется без дополнительного вопроса
+  владельцу: `dev -> PR master -> required checks -> exact-head merge -> post-merge CI -> automatic
+  production deploy -> terminal success -> sync dev to master`. Direct push в `master` запрещён.
+- Task с обязательным owner checkpoint/approve/human evidence/manual visual approval останавливается
+  перед release до фактического прохождения gate. Task без tracked logical commit не создаёт PR.
 - Перед началом прочитать корневой `AGENTS.md`, этот файл, lifecycle и только текущую task.
 - Tasks `00-73A`, включая буквенные подзадачи, подтверждены владельцем как завершённые, перенесены в `tasks/done/` и не выполняются повторно.
 - Owner-selected task `103` завершена после owner approval и архивирована.
@@ -85,13 +92,14 @@ Lifecycle не расширяет scope task и не отменяет owner chec
 - Owner-selected task `106` завершена и архивирована после owner screenshot approval.
 - Tasks `79-80` завершены и архивированы после owner approval. History rewrite `master` запустил
   намеренный automatic production workflow; владелец подтвердил auto-deploy как feature, а trigger
-  contract закреплён в обязательной документации. Task `81` назначена current, но не запущена.
+  contract закреплён в обязательной документации. После Task `113` current task — `114`, но её
+  implementation не запущена.
 - Owner-selected task `107` создана для scheduled regression и закрытых Allure-отчётов; она не
-  является current, не меняет порядок `81-101` и требует отдельного owner запуска. DNS,
+  не является current, не меняет UX-reset critical path и требует отдельного owner запуска. DNS,
   Cloudflare Access/hosting, secrets и paid resources требуют дополнительного explicit approval.
 - Owner-selected task `108` создана для полного аудита соответствия законодательству РФ и
   непрерывного legal-impact gate для любых будущих tasks; она не является current, не меняет
-  порядок `81-101`, требует отдельного owner запуска, primary role `product-lawyer` и обязательной
+  UX-reset critical path, требует отдельного owner запуска, primary role `product-lawyer` и обязательной
   проверки итогового baseline/gate профильным российским юристом; `LEGAL_COUNSEL_REQUIRED`
   выделяет дополнительные спорные вопросы.
 - Owner-selected task `112` завершена и архивирована: current-stack blue/green deployment,
@@ -99,10 +107,10 @@ Lifecycle не расширяет scope task и не отменяет owner chec
   локально. После explicit owner approval production revision `194cf036` успешно развёрнута на
   constrained VPS через предусмотренный `single-slot` fallback с bounded downtime; evidence имеет
   verdict `active`, все stages прошли, public/API/SEO и ownership worker/bot проверены. Это не
-  является доказательством production zero observed downtime или общей HA. Current `81` и порядок
-  `81-101` не изменены.
-- Current post-release task `81` и остальные trigger-gated tasks сохраняют собственные Trigger,
-  dependency и owner decision.
+  является доказательством production zero observed downtime или общей HA.
+- Current task `114` и UX-reset sequence `114 -> 115A -> owner approval -> 116..123 -> 81 -> 82 ->
+  84 -> 124A -> owner release approval -> 124B -> conditional 124C` не отменяют собственные Trigger,
+  dependency и owner decisions task files.
 - Task `50A` уже создала общий continuous Mobile Web/TMA gate, который переиспользуют последующие client-facing tasks.
 - Перед client-facing task прочитать `MOBILE_TMA_FIRST_CONTRACT.md` и применимые пункты `.agents/references/MOBILE_TMA_ACCEPTANCE_MATRIX.md`.
 - Не повторять полный аудит репозитория без прямого требования task; завершённая `75A` была таким
@@ -123,6 +131,8 @@ Lifecycle не расширяет scope task и не отменяет owner chec
 ### Blocking policy review/QA
 
 - Только `BLOCKER/HIGH` блокируют завершение.
+- Незакрытый `MEDIUM` не блокирует локальный lifecycle/commit, но блокирует автоматический release:
+  перед `AUTO_RELEASE_ELIGIBLE` PR незакрытых `BLOCKER/HIGH/MEDIUM` должно быть ровно ноль.
 - `MEDIUM/LOW/NIT/OUT_OF_SCOPE` не блокируют commit и не открывают новый workstream.
 - Legal fields `RISK: CRITICAL/HIGH/MEDIUM/LOW` из `$ru-legal-risk` являются отдельной
   product/legal risk scale, не lifecycle severity. Canonical legal risks хранятся в

@@ -1,5 +1,25 @@
 # Dependency graph — post-release trigger-gated pool
 
+## Текущий UX-reset critical path
+
+```text
+113 -> 114 -> 115A -> OWNER APPROVAL
+ -> 116 -> 117 -> 118 -> 119
+ -> 120A -> 120B -> 120C -> 120D
+ -> 121 -> 122 -> 123
+ -> 81 -> 82 -> 84 -> 124A
+ -> OWNER RELEASE APPROVAL
+ -> dev -> master -> production deployment
+ -> 124B -> 124C only if BLOCKER/HIGH
+```
+
+- `81` зависит от `123`; Today использует compact quick action, detail/history — Nutrition.
+- `82` зависит от `81` и semantic system `123`; check-in compact, insights/history — Progress.
+- `84` зависит от `82` и `122`; settings compact/default-off, Today только actionable state.
+- `85 -> 121`, `110 -> 122`, `111 -> 123`; эти tasks вне critical path `124A`, пока владелец не
+  включил их в release candidate.
+- `115B` отсутствует; real-user validation выполняется Task `124B` после production release.
+
 ```text
 release 79
   -> 80 Repository hygiene/security/README

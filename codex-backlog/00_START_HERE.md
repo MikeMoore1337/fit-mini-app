@@ -1,4 +1,4 @@
-# Your Fitness Coach - backlog первого публичного релиза v16
+# Your Fitness Coach - backlog первого публичного релиза v17
 
 Backlog использует resource-aware lifecycle. В owner workspace завершённые задачи архивируются в
 локальный ignored `tasks/done/` и остаются доступными владельцу для чтения.
@@ -17,16 +17,17 @@ Backlog использует resource-aware lifecycle. В owner workspace зав
 - owner-selected task `112` завершена и архивирована; revision `194cf036` развёрнута после explicit
   owner approval через constrained-host `single-slot` fallback с bounded downtime и verdict
   `active`, без заявления production blue/green zero observed downtime;
-- task `81` назначена current, но её Trigger/реализация не запускались;
+- task `113` завершила branch normalization и automatic release eligibility contract;
+- task `114` назначена current, но её Trigger/реализация не запускались;
 - owner-selected tasks `107-111` созданы вне основной очереди и не являются current.
 
 ## Текущая задача
 
 ```text
-81-hydration-tracking-nutrition.md [CURRENT NOT STARTED]
+114-nutrition-search-barcode-production-regression.md [CURRENT NOT STARTED]
 ```
 
-Не запускать заново `00-80`, `74A` и `103-106`. Назначение `81` не запускает её реализацию, а
+Не запускать заново `00-80`, `74A`, `103-106` и `113`. Назначение `114` не запускает её реализацию, а
 создание owner-selected tasks `107-111` не разрешает их implementation, external actions или
 юридически значимые owner decisions. Stage C task 108 реализует пользовательское соглашение,
 отдельное согласие на обработку ПД и technical auth-gate только после legal/owner checkpoint;
@@ -64,7 +65,11 @@ V2.1 / A / B / C / explicit hybrid
   -> 76 audit [COMPLETED] -> 76A adversarial gate [COMPLETED]
   -> 77 real-user gate [CLOSED BY OWNER ACCEPTED RESIDUAL RISK]
   -> 78 production readiness [COMPLETED] -> 79 final release gate [COMPLETED, NO DEPLOY]
-  -> 80 repository hygiene/privacy cleanup [COMPLETED] -> 81 hydration [CURRENT, NOT STARTED]
+  -> 80 repository hygiene/privacy cleanup [COMPLETED]
+  -> 113 branch normalization [COMPLETED]
+  -> 114 nutrition/barcode P0 regression [CURRENT, NOT STARTED]
+  -> 115A -> OWNER APPROVAL -> 116..123 -> 81 -> 82 -> 84 -> 124A
+  -> OWNER RELEASE APPROVAL -> 124B -> conditional 124C
 103-106 owner-selected Telegram flow/Landing tasks [done]
 107 Scheduled regression + private Allure reports [OWNER-SELECTED PENDING; NOT CURRENT]
 108 Russian law compliance audit + continuous legal gate [OWNER-SELECTED PENDING; NOT CURRENT]
@@ -73,10 +78,12 @@ V2.1 / A / B / C / explicit hybrid
 111 Progress bento dashboard + 1/7/30/90/365/custom periods [OWNER-SELECTED PENDING; NOT CURRENT]
 ```
 
-## Что изменено в v16
+## Что изменено в v17
 
 - Tasks `79-80` завершены и архивированы после owner approval; deployment не выполнялся.
-- Current task назначена `81`; её Trigger и реализация не запускались.
+- Permanent development branch — `dev`; protected `master` остаётся production source.
+- Canonical lifecycle различает `AUTO_RELEASE_ELIGIBLE` и owner/human-gated tasks.
+- UX-reset critical path начинается с Task `114`; Task `81` перенесена после `123`.
 - Добавлена owner-selected pending task `107` для scheduled regression и закрытых Allure-отчётов
   на `allure.your-fitness-coach.ru` с явным access/retention owner contract.
 - Добавлена owner-selected pending task `108` для полного аудита соответствия законодательству РФ,

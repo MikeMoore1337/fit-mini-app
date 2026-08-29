@@ -31,3 +31,21 @@ The backlog recommends models but never switches Codex automatically.
 | 76-79 | Sol High |
 
 Do not downgrade owner decision, mobile/TMA integrity, auth, security, privacy, data migrations, domain integrity or release gates.
+
+## UX-reset cycle
+
+| Tasks | Model |
+|---|---|
+| 113-114 | Sol High |
+| 115A | Sol High; Terra High допустима для focused prototype work |
+| 116 | Terra High |
+| 117 | Sol High |
+| 118 | Terra High; Sol High при backend/domain contract |
+| 119-120D | Sol High |
+| 121 | Terra High; Sol High при TMA/routing architecture change |
+| 122-123 | Terra High |
+| 124A-124C | Sol High |
+
+Tasks `81/82/84` сохраняют recommendation своих canonical task files. Model recommendation не
+переключает Codex автоматически и не понижает уровень для auth, migration, domain integrity,
+platform/release gate, human evidence synthesis или cross-surface audit.
