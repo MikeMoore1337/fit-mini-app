@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import timedelta
 
 from fitminiapp_api.core.timezone import today_msk
 from fitminiapp_api.db.session import get_session_context
@@ -60,7 +60,7 @@ def _create_template(client, headers, *, sets: int = 1, assigned: bool = False) 
 def test_recurring_schedule_snapshots_notes_and_requires_replacement_confirmation(client):
     headers = _auth(client, 91001)
     template_id = _create_template(client, headers)
-    start_date = date.today() + timedelta(days=1)
+    start_date = today_msk() + timedelta(days=1)
     second_date = start_date + timedelta(days=2)
     next_week_start = start_date + timedelta(days=7)
     next_week_second = start_date + timedelta(days=9)
@@ -248,7 +248,7 @@ def test_assignment_rejects_a_start_date_in_the_past(client):
     response = client.post(
         f"/api/v1/programs/templates/{template_id}/assign-to-me",
         headers=headers,
-        json={"start_date": (date.today() - timedelta(days=1)).isoformat()},
+        json={"start_date": (today_msk() - timedelta(days=1)).isoformat()},
     )
 
     assert response.status_code == 422

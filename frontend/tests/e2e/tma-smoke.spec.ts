@@ -143,7 +143,7 @@ test('TMA auth, shared UI, theme, viewport, safe areas and BackButton stay on on
     secondary: { visible: false, shown: 0, hidden: 0 },
   });
 
-  await tmaPage.getByRole('button', { name: /воскресенье.*Силовая.*Предстоит тренировк/i }).click();
+  await tmaPage.getByRole('button', { name: /воскресенье.*Силовая.*Запланирован/i }).click();
   const weekLink = tmaPage.getByRole('link', { name: 'Открыть тренировку' });
   await weekLink.focus();
   await expect(weekLink).toBeFocused();
