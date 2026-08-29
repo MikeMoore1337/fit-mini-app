@@ -149,6 +149,31 @@ describe('NutritionDiary', () => {
     );
   });
 
+  it('keeps empty meals compact and lets every meal be expanded or collapsed', async () => {
+    apiMock.mockResolvedValue(makeDay());
+    renderDiary();
+
+    await screen.findByText('Овсяная каша');
+    const breakfast = breakfastSection();
+    const lunch = screen.getByRole('heading', { name: 'Обед' }).closest('section') as HTMLElement;
+    const breakfastToggle = within(breakfast).getByRole('button', { name: 'Завтрак' });
+    const lunchToggle = within(lunch).getByRole('button', { name: 'Обед' });
+
+    expect(breakfastToggle).toHaveAttribute('aria-expanded', 'true');
+    expect(lunchToggle).toHaveAttribute('aria-expanded', 'false');
+    expect(
+      within(lunch).queryByText('Добавьте продукт — недавние будут под рукой.'),
+    ).not.toBeVisible();
+
+    fireEvent.click(lunchToggle);
+    expect(lunchToggle).toHaveAttribute('aria-expanded', 'true');
+    expect(within(lunch).getByText('Добавьте продукт — недавние будут под рукой.')).toBeVisible();
+
+    fireEvent.click(breakfastToggle);
+    expect(breakfastToggle).toHaveAttribute('aria-expanded', 'false');
+    expect(within(breakfast).queryByText('Овсяная каша')).not.toBeVisible();
+  });
+
   it('names an intentionally empty day without ambiguous fasting terminology', async () => {
     apiMock.mockResolvedValue({
       ...makeDay([]),

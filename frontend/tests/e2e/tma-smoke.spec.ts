@@ -199,7 +199,10 @@ test('progress report starts native PDF download and keeps BackButton contract',
   await expect(tmaPage).toHaveURL('/app?section=progress');
 });
 
-test('an unplanned day does not invent a cardio entry prompt in Today', async ({ tmaPage }) => {
+test('an unplanned day keeps the first factual cardio entry compact but available in Today', async ({
+  tma,
+  tmaPage,
+}) => {
   await installPlatformApi(tmaPage, { cardioState: 'empty' });
   const cardioRequest = tmaPage.waitForResponse((response) => {
     const url = new URL(response.url());
@@ -208,12 +211,25 @@ test('an unplanned day does not invent a cardio entry prompt in Today', async ({
   await tmaPage.goto('/app?section=today');
   await cardioRequest;
 
-  await expect(tmaPage.locator('.cardio-log--quick')).toHaveCount(0);
-  await expect(tmaPage.getByRole('button', { name: /кардио/i })).toHaveCount(0);
-  await tmaPage.screenshot({
-    path: '../.artifacts/screenshots/task-113A-round-2/tma-cardio-unplanned-empty-390x844.png',
-    fullPage: true,
+  const cardio = tmaPage.locator('.cardio-log--quick');
+  await expect(cardio).toHaveClass(/cardio-log--empty/);
+  await expect(cardio.getByRole('heading', { name: 'Кардио', exact: true })).toBeVisible();
+  await expect(cardio.getByRole('button', { name: 'Добавить' })).toBeVisible();
+  await expect(cardio.getByLabel('Длительность, мин')).toHaveCount(0);
+  await cardio.scrollIntoViewIfNeeded();
+  await cardio.screenshot({
+    path: '../.artifacts/screenshots/task-113A-round-5/tma-cardio-empty-entry-390x844.png',
   });
+
+  await cardio.getByRole('button', { name: 'Добавить' }).click();
+  const duration = cardio.getByLabel('Длительность, мин');
+  await duration.focus();
+  await expect(tmaPage.locator('html')).toHaveAttribute('data-yfc-keyboard', 'visible');
+  await expect(duration).toBeVisible();
+  await expect(tmaPage.locator('#appBottomNav')).toBeHidden();
+  await tma.setActive(false);
+  await tma.setActive(true);
+  await expect(duration).toBeVisible();
 });
 
 test('cardio quick log keeps retry, editing and shared Mobile Web/TMA behavior', async ({

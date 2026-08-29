@@ -54,13 +54,20 @@ describe('CardioQuickLog', () => {
 
   afterEach(() => cleanup());
 
-  it('does not show a cardio entry prompt on an unplanned empty day', async () => {
+  it('keeps the first factual cardio entry compact but available on an unplanned empty day', async () => {
     apiMock.mockResolvedValue([]);
     renderCardio();
 
     await waitFor(() => expect(apiMock).toHaveBeenCalled());
-    expect(screen.queryByRole('heading', { name: 'Кардио' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /кардио/i })).not.toBeInTheDocument();
+    const cardio = await screen.findByRole('region', { name: 'Кардио' });
+    expect(cardio).toHaveClass('cardio-log--empty');
+    expect(screen.getByText('Нет записи за выбранный день.')).toBeVisible();
+    expect(screen.queryByLabelText('Длительность, мин')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Добавить' }));
+
+    expect(screen.getByLabelText('Длительность, мин')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Сохранить кардио' })).toBeDisabled();
   });
 
   it('shows the plan before a secondary factual entry and validates required duration', async () => {

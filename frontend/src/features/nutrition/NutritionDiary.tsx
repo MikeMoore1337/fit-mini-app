@@ -396,14 +396,30 @@ function MealSection({
   onRepeatYesterday: () => void;
   onCopyEntry: (entry: FoodDiaryEntry) => void;
 }) {
+  const hasEntries = meal.entries.length > 0;
+  const [expanded, setExpanded] = useState(hasEntries);
+  const contentId = `nutrition-meal-content-${meal.meal_type}`;
+  const headingId = `nutrition-meal-${meal.meal_type}`;
+
   return (
-    <section className="nutrition-meal" aria-labelledby={`nutrition-meal-${meal.meal_type}`}>
+    <section className="nutrition-meal" aria-labelledby={headingId} data-expanded={expanded}>
       <header className="nutrition-meal__header">
         <div>
-          <h2 id={`nutrition-meal-${meal.meal_type}`}>{mealLabels[meal.meal_type as MealType]}</h2>
+          <h2 id={headingId}>
+            <button
+              aria-controls={contentId}
+              aria-expanded={expanded}
+              className="nutrition-meal__toggle"
+              onClick={() => setExpanded((current) => !current)}
+              type="button"
+            >
+              <span>{mealLabels[meal.meal_type as MealType]}</span>
+              <Icon name={expanded ? 'chevron-up' : 'chevron-down'} size={16} />
+            </button>
+          </h2>
           <span>
-            {meal.entries.length
-              ? `${formatNumber(meal.totals.energy_kcal)} ккал`
+            {hasEntries
+              ? `${formatNumber(meal.totals.energy_kcal)} ккал · ${meal.entries.length} ${meal.entries.length === 1 ? 'запись' : 'записи'}`
               : 'Пока без записей'}
           </span>
         </div>
@@ -411,32 +427,34 @@ function MealSection({
           <Button variant="secondary" type="button" onClick={onAdd}>
             <Icon name="plus" size={16} /> Добавить
           </Button>
-          <div className="nutrition-meal__secondary-actions">
-            <button type="button" onClick={onRepeatYesterday} aria-label="Повторить вчера">
-              Вчера
-            </button>
-            {meal.entries.length > 0 && (
-              <button type="button" onClick={onCopy}>
-                Копировать
-              </button>
-            )}
-          </div>
         </div>
       </header>
-      {meal.entries.length ? (
-        <ul className="nutrition-entry-list">
-          {meal.entries.map((entry) => (
-            <EntryRow
-              entry={entry}
-              isNew={newEntryIds.has(entry.id)}
-              key={entry.id}
-              onCopy={() => onCopyEntry(entry)}
-            />
-          ))}
-        </ul>
-      ) : (
-        <p className="nutrition-meal__empty">Добавьте продукт — недавние будут под рукой.</p>
-      )}
+      <div className="nutrition-meal__content" hidden={!expanded} id={contentId}>
+        <div className="nutrition-meal__secondary-actions">
+          <button type="button" onClick={onRepeatYesterday} aria-label="Повторить вчера">
+            Вчера
+          </button>
+          {hasEntries && (
+            <button type="button" onClick={onCopy}>
+              Копировать
+            </button>
+          )}
+        </div>
+        {hasEntries ? (
+          <ul className="nutrition-entry-list">
+            {meal.entries.map((entry) => (
+              <EntryRow
+                entry={entry}
+                isNew={newEntryIds.has(entry.id)}
+                key={entry.id}
+                onCopy={() => onCopyEntry(entry)}
+              />
+            ))}
+          </ul>
+        ) : (
+          <p className="nutrition-meal__empty">Добавьте продукт — недавние будут под рукой.</p>
+        )}
+      </div>
     </section>
   );
 }
@@ -714,7 +732,7 @@ export function NutritionDiary({
             <div className="nutrition-meals">
               {meals.map((meal) => (
                 <MealSection
-                  key={meal.meal_type}
+                  key={`${meal.meal_type}-${meal.entries.find((entry) => newEntryIds.has(entry.id))?.id ?? 'existing'}`}
                   meal={meal}
                   newEntryIds={newEntryIds}
                   onAdd={() =>

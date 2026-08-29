@@ -266,6 +266,7 @@ test('nutrition diary is responsive, keyboard-safe and supports local quick add'
   }
 
   const compactBreakfast = page.getByRole('region', { name: 'Завтрак' });
+  const compactLunch = page.getByRole('region', { name: 'Обед' });
   const entry = compactBreakfast.locator('.nutrition-entry').first();
   const [entryBox, headerBox] = await Promise.all([
     entry.boundingBox(),
@@ -275,11 +276,25 @@ test('nutrition diary is responsive, keyboard-safe and supports local quick add'
   expect(headerBox).not.toBeNull();
   expect(entryBox!.height).toBeLessThanOrEqual(96);
   expect(headerBox!.height).toBeLessThanOrEqual(124);
+  await expect(compactLunch.getByRole('button', { name: 'Обед' })).toHaveAttribute(
+    'aria-expanded',
+    'false',
+  );
+  expect((await compactLunch.boundingBox())?.height).toBeLessThanOrEqual(88);
+  await compactLunch.getByRole('button', { name: 'Обед' }).click();
+  await expect(compactLunch.getByRole('button', { name: 'Обед' })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
+  await expect(
+    compactLunch.getByText('Добавьте продукт — недавние будут под рукой.'),
+  ).toBeVisible();
+  await compactLunch.getByRole('button', { name: 'Обед' }).click();
   for (const action of await entry.locator('.nutrition-entry__actions button').all()) {
     expect((await action.boundingBox())?.height).toBeGreaterThanOrEqual(44);
   }
   await compactBreakfast.screenshot({
-    path: '../.artifacts/screenshots/task-113A-round-4/nutrition-compact-cards-360.png',
+    path: '../.artifacts/screenshots/task-113A-round-5/nutrition-collapsible-meals-360.png',
   });
 
   await page.getByRole('button', { name: 'Предыдущая неделя' }).click();
@@ -340,6 +355,7 @@ test('nutrition diary is responsive, keyboard-safe and supports local quick add'
 test('dark nutrition uses the shared lime status and progress accents', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('app-theme', 'dark'));
   await mockNutritionApi(page);
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/app?section=nutrition');
 
   const status = page.getByText('Цель КБЖУ настроена');
@@ -353,4 +369,14 @@ test('dark nutrition uses the shared lime status and progress accents', async ({
     'background-color',
     'rgb(30, 34, 30)',
   );
+  const lunch = page.getByRole('region', { name: 'Обед' });
+  await expect(lunch.getByRole('button', { name: 'Обед' })).toHaveAttribute(
+    'aria-expanded',
+    'false',
+  );
+  expect((await lunch.boundingBox())?.height).toBeLessThanOrEqual(88);
+  await lunch.scrollIntoViewIfNeeded();
+  await lunch.screenshot({
+    path: '../.artifacts/screenshots/task-113A-round-5/nutrition-collapsible-meals-dark-390x844.png',
+  });
 });
