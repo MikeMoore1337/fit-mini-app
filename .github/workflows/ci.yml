@@ -118,22 +118,14 @@ jobs:
         working-directory: frontend
         run: npx vite build
 
-      - name: Upload frontend production build
-        uses: actions/upload-artifact@v7
-        with:
-          name: frontend-dist-${{ github.sha }}
-          path: frontend/dist
-          if-no-files-found: error
-          retention-days: 1
-
   frontend-smoke:
-    name: Frontend smoke (${{ matrix.shard }}/2)
+    name: Frontend smoke (${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3]
 
     steps:
       - uses: actions/checkout@v4
@@ -149,7 +141,7 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      # Build locally so both Playwright shards can start immediately instead of
+      # Build locally so all Playwright shards can start immediately instead of
       # waiting for the full frontend job only to reuse its fast Vite build.
       - name: Build frontend for smoke tests
         working-directory: frontend
@@ -161,7 +153,7 @@ jobs:
 
       - name: Frontend smoke tests
         working-directory: frontend
-        run: npm run e2e:ci -- --shard=${{ matrix.shard }}/2
+        run: npm run e2e:ci -- --shard=${{ matrix.shard }}/3
 
       - name: Upload Playwright traces on failure
         if: failure()
@@ -174,9 +166,17 @@ jobs:
           retention-days: 7
 
   python-tests:
-    name: Python tests
+    name: Python tests (${{ matrix.shard }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: "1/2"
+            index: 0
+          - shard: "2/2"
+            index: 1
 
     services:
       postgres:
@@ -219,17 +219,55 @@ jobs:
         run: python -m pip check
 
       - name: Pytest on PostgreSQL
-        run: python scripts/run_pytest.py backend/tests bot/tests -q -n 4 --dist=worksteal --durations=20
+        shell: bash
         env:
           TEST_DATABASE_URL: postgresql+psycopg://fitminiapp:test-password@127.0.0.1:5432/fitminiapp_test
           ENABLE_DEV_AUTH: "true"
           TELEGRAM_BOT_TOKEN: test-token
           BOT_INTERNAL_TOKEN: test-bot-internal-token
           SECRET_KEY: test-secret-key-at-least-thirty-two-characters
+          PYTEST_SHARD_INDEX: ${{ matrix.index }}
+        run: |
+          set -euo pipefail
+
+          # Split test files deterministically across two independent runners.
+          # Greedy balancing by file size is a stable proxy for test volume and
+          # avoids adding another pytest/plugin dependency solely for CI sharding.
+          mapfile -t test_files < <(
+            python - <<'PY'
+          import os
+          from pathlib import Path
+
+          shard_index = int(os.environ["PYTEST_SHARD_INDEX"])
+          shard_count = 2
+          files = [
+              *Path("backend/tests").glob("test_*.py"),
+              *Path("bot/tests").glob("test_*.py"),
+          ]
+          files.sort(key=lambda path: (-path.stat().st_size, str(path)))
+
+          groups = [[] for _ in range(shard_count)]
+          sizes = [0 for _ in range(shard_count)]
+          for path in files:
+              target = min(range(shard_count), key=lambda i: (sizes[i], i))
+              groups[target].append(path)
+              sizes[target] += path.stat().st_size
+
+          for path in sorted(groups[shard_index], key=str):
+              print(path)
+          PY
+          )
+
+          if (( ${#test_files[@]} == 0 )); then
+            echo "No tests selected for shard ${PYTEST_SHARD_INDEX}" >&2
+            exit 1
+          fi
+
+          printf 'Selected %s test files for shard %s/2\n' "${#test_files[@]}" "$((PYTEST_SHARD_INDEX + 1))"
+          python scripts/run_pytest.py "${test_files[@]}" -q -n 4 --dist=worksteal --durations=20
 
   migrated-stack:
     name: Migrated PostgreSQL stack
-    needs: frontend
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -250,12 +288,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Download frontend production build
-        uses: actions/download-artifact@v7
-        with:
-          name: frontend-dist-${{ github.sha }}
-          path: frontend/dist
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -281,10 +313,11 @@ jobs:
       - name: Install dependencies
         run: uv pip install -r backend/requirements.txt
 
-      - name: Install frontend browser dependencies
+      - name: Build frontend and install browser dependencies
         working-directory: frontend
         run: |
           npm ci
+          npx vite build
           npx playwright install --with-deps chromium
 
       - name: Dependency consistency
