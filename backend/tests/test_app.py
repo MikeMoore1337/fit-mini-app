@@ -3751,6 +3751,7 @@ def test_public_fallback_replaces_the_built_vite_marker_without_stale_landing_co
     "path",
     [
         "/app",
+        "/app/report?period=days_30",
         "/admin",
         "/coach",
         "/login",

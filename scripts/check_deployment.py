@@ -130,6 +130,10 @@ def check_deployment(
     _expect_same_origin(base_url, app, "application shell")
     _expect_frontend(app, "application shell")
 
+    report = reader(base_url, "/app/report?period=days_30", timeout=timeout)
+    _expect_same_origin(base_url, report, "progress report shell")
+    _expect_frontend(report, "progress report shell")
+
     login = reader(base_url, "/login", timeout=timeout)
     _expect_same_origin(base_url, login, "browser auth shell")
     _expect_frontend(login, "browser auth shell")

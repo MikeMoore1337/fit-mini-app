@@ -508,7 +508,17 @@ describe('NutritionDiary', () => {
 
   it('automatically shows real external matches when the local search is empty', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    apiMock.mockImplementation((path: string) => {
+    const importedFood: Food = {
+      ...food,
+      id: 82,
+      name: 'Nutella hazelnut spread',
+      brand: 'Ferrero',
+      barcode: '3017620422003',
+      food_type: 'user',
+      is_favorite: false,
+      standard_serving_weight_g: null,
+    };
+    apiMock.mockImplementation((path: string, options?: { method?: string; body?: unknown }) => {
       if (path.startsWith('/api/v1/nutrition/diary?')) return Promise.resolve(makeDay([]));
       if (path.startsWith('/api/v1/nutrition/foods/recent'))
         return Promise.resolve({ items: [], total: 0, limit: 12, offset: 0 });
@@ -557,12 +567,20 @@ describe('NutritionDiary', () => {
           provider_status: 'not_requested',
         });
       }
+      if (path === '/api/v1/nutrition/foods' && options?.method === 'POST') {
+        return Promise.resolve(importedFood);
+      }
       throw new Error(`Unexpected API call: ${path}`);
     });
     renderDiary();
     await screen.findAllByText('Пока без записей');
     fireEvent.click(within(breakfastSection()).getByRole('button', { name: /Добавить/ }));
-    fireEvent.change(screen.getByRole('searchbox', { name: 'Поиск по названию или бренду' }), {
+    const barcodeEntry = screen.getByRole('button', { name: 'Поиск по штрихкоду' });
+    const nameSearch = screen.getByRole('searchbox', { name: 'Поиск по названию или бренду' });
+    expect(
+      barcodeEntry.compareDocumentPosition(nameSearch) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    fireEvent.change(nameSearch, {
       target: { value: 'нутелла' },
     });
     await act(() => vi.advanceTimersByTimeAsync(250));
@@ -573,6 +591,23 @@ describe('NutritionDiary', () => {
       'href',
       'https://world.openfoodfacts.org/product/3017620422003',
     );
+    fireEvent.click(screen.getByRole('button', { name: 'Выбрать продукт' }));
+    await waitFor(() =>
+      expect(apiMock).toHaveBeenCalledWith(
+        '/api/v1/nutrition/foods',
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.objectContaining({
+            name: 'Nutella hazelnut spread',
+            brand: 'Ferrero',
+            barcode: '3017620422003',
+            energy_kcal_per_100g: '539.00',
+          }),
+        }),
+      ),
+    );
+    expect(await screen.findByRole('heading', { name: 'Nutella hazelnut spread' })).toBeVisible();
+    expect(screen.getByRole('spinbutton', { name: 'Количество' })).toHaveValue(100);
   });
 
   it('validates and creates an own food before selecting its serving', async () => {
@@ -772,7 +807,7 @@ describe('NutritionDiary', () => {
     renderDiary();
     await screen.findAllByText('Пока без записей');
     fireEvent.click(within(breakfastSection()).getByRole('button', { name: /Добавить/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Штрихкод' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Поиск по штрихкоду' }));
     expect(screen.queryByRole('button', { name: 'Сканировать камерой' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Найти' })).toHaveClass('ui-button--primary');
     fireEvent.change(screen.getByRole('textbox', { name: 'Штрихкод' }), {
@@ -836,7 +871,7 @@ describe('NutritionDiary', () => {
     renderDiary();
     await screen.findAllByText('Пока без записей');
     fireEvent.click(within(breakfastSection()).getByRole('button', { name: /Добавить/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Штрихкод' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Поиск по штрихкоду' }));
     expect(screen.queryByRole('button', { name: 'Сканировать камерой' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Найти' })).toHaveClass('ui-button--primary');
     const barcode = screen.getByRole('textbox', { name: 'Штрихкод' });
@@ -901,7 +936,7 @@ describe('NutritionDiary', () => {
       renderDiary();
       await screen.findAllByText('Пока без записей');
       fireEvent.click(within(breakfastSection()).getByRole('button', { name: /Добавить/ }));
-      fireEvent.click(screen.getByRole('button', { name: 'Штрихкод' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Поиск по штрихкоду' }));
       const scan = screen.getByRole('button', { name: 'Сканировать камерой' });
       expect(scan).toHaveClass('ui-button--primary');
       expect(screen.getByRole('button', { name: 'Найти' })).toHaveClass('ui-button--secondary');
