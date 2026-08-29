@@ -3254,6 +3254,27 @@ body:has(.standalone-page--design-v2) {
   font-weight: 750;
   line-height: 1.25;
   text-decoration: none;
+  gap: var(--v2-space-2);
+}
+
+.profile-settings-group > summary h2,
+.profile-primary-card > summary h2,
+.training-preferences-card > summary h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--v2-space-2);
+}
+
+.workout-schedule-actions {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(120px, 0.8fr) auto auto;
+  align-items: end;
+}
+
+.workout-schedule-actions .field > span:first-child {
+  color: var(--v2-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
 }
 
 .profile-settings-nav a:last-child {
@@ -5902,6 +5923,12 @@ body.public-shell-mode:has(.public-shell.public-shell--design-v2) {
   border-bottom: 1px solid var(--v2-border);
 }
 
+@media (max-width: 899px) {
+  .cardio-session-row {
+    scroll-margin-bottom: calc(96px + max(8px, var(--yfc-layout-safe-bottom)));
+  }
+}
+
 .cardio-session-row--editing {
   padding-inline: var(--v2-space-3);
   background: var(--v2-surface-secondary);
@@ -6006,6 +6033,20 @@ body.public-shell-mode:has(.public-shell.public-shell--design-v2) {
   .app-section--programs .program-template-card,
   .app-section--catalog .exercise-catalog-item {
     grid-template-columns: 1fr;
+  }
+
+  .app-section--catalog .exercise-catalog-item {
+    gap: var(--v2-space-2);
+    padding-block: var(--v2-space-3);
+  }
+
+  .workout-schedule-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .workout-schedule-actions button {
+    width: 100%;
   }
 
   .app-section--programs .program-wizard__panel,

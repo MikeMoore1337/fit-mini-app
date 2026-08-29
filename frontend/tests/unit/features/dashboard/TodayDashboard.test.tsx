@@ -537,7 +537,7 @@ describe('TodayDashboard', () => {
     });
     renderDashboard();
 
-    const weekRegion = await screen.findByRole('region', { name: 'Эта неделя' });
+    const weekRegion = await screen.findByRole('navigation', { name: 'Эта неделя' });
     fireEvent.click(screen.getByText('Обозначения').closest('summary')!);
     const legend = screen.getByRole('list', { name: 'Обозначения недели' });
     expect(legend).toHaveTextContent('Силовая');
@@ -549,19 +549,21 @@ describe('TodayDashboard', () => {
     expect(currentDay).toHaveAccessibleName(/сегодня/i);
     expect(currentDay).not.toHaveTextContent(/сегодня/i);
     if (pastDay) {
-      expect(screen.getByRole('link', { name: /Выполнено.*Открыть тренировку/i })).toHaveAttribute(
+      const pastButton = screen.getByRole('button', { name: /Выполнено/i });
+      fireEvent.click(pastButton);
+      expect(await screen.findByRole('heading', { name: 'Силовая база' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Открыть тренировку' })).toHaveAttribute(
         'href',
         '/app?section=progress&workout_id=31',
       );
+      expect(pastButton).toHaveAttribute('aria-pressed', 'true');
     }
     if (futureDay) {
-      expect(
-        screen.getByRole('link', { name: /Предстоит тренировка.*Открыть тренировку/i }),
-      ).toHaveAttribute('href', '/app?section=progress&workout_id=32');
+      expect(screen.getByRole('button', { name: /Предстоит тренировка/i })).toBeVisible();
     }
     if (cardioDay) {
       expect(
-        screen.getByRole('group', {
+        screen.getByRole('button', {
           name: new RegExp(`${Number(cardioDay.slice(-2))}.*Кардио`),
         }),
       ).toBeVisible();
@@ -661,7 +663,7 @@ describe('TodayDashboard', () => {
       screen.getByRole('heading', { name: 'Сегодня · понедельник, 7 января' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('group', { name: /7 января, сегодня, Силовая, Запланировано/i }),
+      screen.getByRole('button', { name: /7 января, сегодня.*Силовая, Запланировано/i }),
     ).toHaveAttribute('aria-current', 'date');
     expect(apiMock.mock.calls.filter(([path]) => path === '/api/v1/workouts/week')).toHaveLength(2);
   });

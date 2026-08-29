@@ -3,7 +3,7 @@
 ## Текущий UX-reset critical path
 
 ```text
-113 -> 114 -> 115A -> OWNER APPROVAL
+113 -> 113A STABILIZATION -> production smoke -> OWNER VERIFICATION -> 114 -> 115A -> OWNER APPROVAL
  -> 116 -> 117 -> 118 -> 119
  -> 120A -> 120B -> 120C -> 120D
  -> 121 -> 122 -> 123

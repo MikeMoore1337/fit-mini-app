@@ -1246,33 +1246,12 @@ details[open] > summary .disclosure-icon svg {
   padding: 12px 22px;
   background: var(--surface-subtle);
 }
-.program-wizard__progress > div {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
 .program-wizard__progress span {
   color: var(--muted);
   font-size: 0.75rem;
 }
 .program-wizard__progress strong {
   font-size: 0.83rem;
-}
-.program-wizard__progress ol {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 5px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.program-wizard__progress li {
-  height: 4px;
-  border-radius: 99px;
-  background: var(--border);
-}
-.program-wizard__progress li.is-complete {
-  background: var(--accent);
 }
 .program-wizard__progress .data-viz-steps li {
   min-width: 0;
@@ -3391,12 +3370,12 @@ details[open] > summary .disclosure-icon svg {
     grid-template-columns: minmax(0, 1fr);
   }
   .exercise-catalog-item__actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     justify-content: stretch;
   }
   .exercise-catalog-item__actions button {
-    width: 100%;
+    width: auto;
   }
   .exercise-catalog-item__danger {
     grid-column: auto;
@@ -3943,6 +3922,15 @@ button.today-text-link {
   display: grid;
   gap: 5px;
   min-width: 0;
+}
+.active-workout-exercise__head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.active-workout-exercise__toggle {
+  min-height: 44px;
 }
 .active-workout-exercise__step {
   color: var(--accent-strong, var(--accent));
@@ -4525,6 +4513,13 @@ button.today-text-link {
   }
   .active-workout-exercise__head .exercise-guide-trigger {
     width: 100%;
+  }
+  .active-workout-exercise__head-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+  .active-workout-exercise__head-actions button {
+    flex: 1 1 150px;
   }
   .active-workout-set {
     padding: 11px;
@@ -6750,6 +6745,12 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 18px 20px 22px;
+}
+html[data-yfc-keyboard='visible'] .nutrition-picker__browse {
+  scroll-padding-block: 16px 40%;
+}
+html[data-yfc-keyboard='visible'] #nutrition-food-search {
+  scroll-margin-block: 16px 40%;
 }
 .nutrition-picker__submit {
   position: sticky;

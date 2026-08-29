@@ -128,20 +128,24 @@ function combinedWeekStatus(
 
 function WeekContext({
   cardio,
+  selectedDate,
   today,
   timeZone,
   workouts,
   loading,
   error,
   onRetry,
+  onSelect,
 }: {
   cardio?: CardioSession[];
+  selectedDate: string;
   today: string;
   timeZone: string;
   workouts?: WorkoutScheduleItem[];
   loading: boolean;
   error: boolean;
   onRetry(): void;
+  onSelect(value: string): void;
 }) {
   return (
     <WeekStrip
@@ -159,27 +163,9 @@ function WeekContext({
         if (activities.length === 0 && !loading && !error) {
           activities.push({ key: 'rest', label: 'Отдых' });
         }
-        const isToday = date === today;
-        const canOpenWorkout =
-          item &&
-          !isToday &&
-          (item.status === 'completed' ||
-            (date >= today && ['planned', 'in_progress', 'skipped'].includes(item.status)));
         return {
           activities,
           status,
-          link: canOpenWorkout
-            ? {
-                label: `Открыть тренировку ${item.title}`,
-                onClick: () =>
-                  trackProductEvent({
-                    name: 'today_week_navigated',
-                    surface: productEventSurface(),
-                    direction: 'workout_day',
-                  }),
-                to: `/app?section=progress&workout_id=${item.id}`,
-              }
-            : undefined,
         };
       }}
       headerAction={
@@ -192,7 +178,9 @@ function WeekContext({
       loading={loading}
       loadingLabel="Загружаем план недели"
       legend={TRAINING_WEEK_LEGEND}
-      mode="overview"
+      mode="picker"
+      onSelect={onSelect}
+      selectedDate={selectedDate}
       title="Эта неделя"
       today={today}
     />
@@ -265,10 +253,10 @@ function Macro({
   );
 }
 
-function NutritionSummary({ today }: { today: string }) {
+function NutritionSummary({ date }: { date: string }) {
   const diary = useQuery({
-    queryKey: ['nutrition', 'diary', today],
-    queryFn: () => api<FoodDiaryDay>(`/api/v1/nutrition/diary?diary_date=${today}`),
+    queryKey: ['nutrition', 'diary', date],
+    queryFn: () => api<FoodDiaryDay>(`/api/v1/nutrition/diary?diary_date=${date}`),
   });
 
   return (
@@ -278,7 +266,7 @@ function NutritionSummary({ today }: { today: string }) {
           <span className="today-panel__kicker">За день</span>
           <h2 id="today-nutrition-title">Питание</h2>
         </div>
-        <AppLink className="today-text-link" to="/app?section=nutrition">
+        <AppLink className="today-text-link" to={`/app?section=nutrition&date=${date}`}>
           Открыть
         </AppLink>
       </div>
@@ -728,8 +716,18 @@ export function TodayDashboard() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const timeZone = user?.profile?.timezone || detectedTimeZone();
   const today = useCalendarDay(timeZone);
+  const [selectedDate, setSelectedDate] = useState(today);
   const calendarContextRef = useRef(`${timeZone}:${today}`);
-  const heading = formatTodayHeading(today);
+  const heading =
+    selectedDate === today
+      ? formatTodayHeading(today)
+      : {
+          title: formatCalendarDate(selectedDate, {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+          }),
+        };
   const progress = useProgressSummary();
   const weekDates = calendarWeek(today);
   const weekStart = weekDates[0] ?? today;
@@ -774,6 +772,7 @@ export function TodayDashboard() {
           week_number: visibleWorkout.week_number,
         }
       : undefined);
+  const selectedScheduleItem = weekWorkoutForDate(week.data, selectedDate);
   const comments = useQuery({
     queryKey: todayScheduleItem
       ? queryKeys.workoutComments.client(todayScheduleItem.id)
@@ -838,6 +837,7 @@ export function TodayDashboard() {
     const calendarContext = `${timeZone}:${today}`;
     if (calendarContextRef.current === calendarContext) return;
     calendarContextRef.current = calendarContext;
+    setSelectedDate(today);
     setDetailsOpen(false);
     void Promise.all([
       queryClient.invalidateQueries({ queryKey: ['workout', 'today'], exact: true }),
@@ -889,12 +889,24 @@ export function TodayDashboard() {
 
       <WeekContext
         cardio={cardioWeek.data}
+        selectedDate={selectedDate}
         today={today}
         timeZone={timeZone}
         workouts={week.data}
         loading={week.isLoading || cardioWeek.isLoading}
         error={Boolean(week.error || cardioWeek.error)}
         onRetry={() => void Promise.all([week.refetch(), cardioWeek.refetch()])}
+        onSelect={(date) => {
+          setSelectedDate(date);
+          setDetailsOpen(false);
+          if (date !== today) {
+            trackProductEvent({
+              name: 'today_week_navigated',
+              surface: productEventSurface(),
+              direction: 'workout_day',
+            });
+          }
+        }}
       />
 
       <div className="today-dashboard__overview">
@@ -904,9 +916,50 @@ export function TodayDashboard() {
         >
           <span className="today-workout-spotlight__label">Тренировка</span>
           <SemanticArtwork variant="current-action" />
-          {workout.isLoading ||
-          priorityContextLoading ||
-          (noTodayWorkout && progress.isLoading && user?.has_active_program) ? (
+          {selectedDate !== today ? (
+            week.isLoading ? (
+              <div
+                className="today-summary-skeleton"
+                aria-label="Загружаем выбранный день"
+                role="status"
+              >
+                <Skeleton height="34px" width="62%" />
+                <Skeleton height="20px" width="44%" />
+              </div>
+            ) : week.error ? (
+              <div className="today-inline-state" role="alert">
+                <strong id="today-workout-title">Не удалось загрузить выбранный день</strong>
+                <button
+                  className="today-text-link"
+                  type="button"
+                  onClick={() => void week.refetch()}
+                >
+                  Повторить
+                </button>
+              </div>
+            ) : selectedScheduleItem ? (
+              <div className="today-selected-day">
+                <h2 id="today-workout-title">{selectedScheduleItem.title}</h2>
+                <p>
+                  {workoutStatusLabel(selectedScheduleItem.status)} ·{' '}
+                  {formatWorkoutDate(selectedScheduleItem.scheduled_date, today)}
+                </p>
+                <AppLink
+                  className="today-text-link"
+                  to={`/app?section=progress&workout_id=${selectedScheduleItem.id}`}
+                >
+                  Открыть тренировку
+                </AppLink>
+              </div>
+            ) : (
+              <div className="today-selected-day">
+                <h2 id="today-workout-title">Силовая тренировка не запланирована</h2>
+                <p>Выберите другой день или откройте программу тренировок.</p>
+              </div>
+            )
+          ) : workout.isLoading ||
+            priorityContextLoading ||
+            (noTodayWorkout && progress.isLoading && user?.has_active_program) ? (
             <div
               className="today-summary-skeleton"
               aria-label="Проверяем план на сегодня"
@@ -945,12 +998,12 @@ export function TodayDashboard() {
         </section>
 
         <div className="today-dashboard__facts">
-          <NutritionSummary today={today} />
+          <NutritionSummary date={selectedDate} />
           <ProgressSummaryPanel summary={progress} />
         </div>
       </div>
 
-      <CardioQuickLog today={today} />
+      <CardioQuickLog today={selectedDate} />
 
       {profileMissing && (
         <aside className="today-profile-nudge">
@@ -963,12 +1016,6 @@ export function TodayDashboard() {
           </AppLink>
         </aside>
       )}
-
-      <nav className="today-secondary-actions" aria-label="Быстрые действия">
-        <AppLink to="/app?section=programs">План тренировок</AppLink>
-        <AppLink to="/app?section=progress">Прогресс</AppLink>
-        <AppLink to="/app?section=nutrition">Настроить питание</AppLink>
-      </nav>
     </div>
   );
 }

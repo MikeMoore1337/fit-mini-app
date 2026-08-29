@@ -190,7 +190,8 @@ describe('TemplatesList editing', () => {
   it('previews a deterministic recommendation before explicit start', async () => {
     renderList();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Начать подбор' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Подобрать другую' }));
+    expect(screen.queryByRole('button', { name: 'Начать подбор' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Далее' }));
     fireEvent.click(screen.getByRole('button', { name: 'Далее' }));
     fireEvent.click(screen.getByRole('button', { name: 'Далее' }));

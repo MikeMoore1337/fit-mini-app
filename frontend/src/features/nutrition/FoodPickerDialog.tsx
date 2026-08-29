@@ -271,7 +271,6 @@ export function FoodPickerDialog({
   );
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [externalQuery, setExternalQuery] = useState('');
   const [editingFood, setEditingFood] = useState<Food | undefined>();
   const [editorBarcode, setEditorBarcode] = useState('');
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
@@ -297,11 +296,11 @@ export function FoodPickerDialog({
     });
   }, [draft, quick, setDraft]);
 
+  const normalizedSearchInput = searchInput.trim().replace(/\s+/g, ' ');
   useEffect(() => {
-    const normalized = searchInput.trim().replace(/\s+/g, ' ');
-    const timer = window.setTimeout(() => setSearchQuery(normalized), 250);
+    const timer = window.setTimeout(() => setSearchQuery(normalizedSearchInput), 250);
     return () => window.clearTimeout(timer);
-  }, [searchInput]);
+  }, [normalizedSearchInput]);
   const recent = useQuery({
     queryKey: ['nutrition', 'foods', 'recent'],
     queryFn: () => api<FoodList>('/api/v1/nutrition/foods/recent?limit=12'),
@@ -319,6 +318,14 @@ export function FoodPickerDialog({
       ),
     enabled: searchQuery.length >= 2,
   });
+  const externalQuery =
+    searchQuery.length >= 2 &&
+    searchQuery === normalizedSearchInput &&
+    !search.isFetching &&
+    !search.error &&
+    search.data?.items.length === 0
+      ? searchQuery
+      : '';
   const external = useQuery({
     queryKey: ['nutrition', 'foods', 'external-search', externalQuery],
     queryFn: ({ signal }) =>
@@ -343,10 +350,27 @@ export function FoodPickerDialog({
   const activeError = searchQuery.length >= 2 ? search.error : activeCollection.error;
   const activeLoading = searchQuery.length >= 2 ? search.isFetching : activeCollection.isLoading;
 
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    const keepSearchVisible = () => {
+      const searchField = panelRef.current?.querySelector<HTMLElement>('#nutrition-food-search');
+      if (searchField && document.activeElement === searchField) {
+        searchField.scrollIntoView({ block: 'center', inline: 'nearest' });
+      }
+    };
+    viewport.addEventListener('resize', keepSearchVisible);
+    viewport.addEventListener('scroll', keepSearchVisible);
+    return () => {
+      viewport.removeEventListener('resize', keepSearchVisible);
+      viewport.removeEventListener('scroll', keepSearchVisible);
+    };
+  }, [panelRef]);
+
   const addEntry = useMutation({
     mutationFn: (submission: { closeAfter: boolean }) => {
       void submission.closeAfter;
-      if (disabled) throw new Error('Сначала снимите отметку поста для этого дня');
+      if (disabled) throw new Error('Сначала снимите отметку «Без приёмов пищи» для этого дня');
       const selected =
         view === 'quick-add'
           ? (() => {
@@ -492,8 +516,8 @@ export function FoodPickerDialog({
         {disabled ? (
           <div className="nutrition-picker__browse">
             <div className="nutrition-provider-fallback" role="status">
-              <strong>День отмечен как пост</strong>
-              <span>Снимите отметку поста в блоке полноты дня, чтобы добавить запись.</span>
+              <strong>День отмечен без приёмов пищи</strong>
+              <span>Снимите отметку «Без приёмов пищи», чтобы добавить запись.</span>
             </div>
           </div>
         ) : quantityMode ? (
@@ -825,7 +849,6 @@ export function FoodPickerDialog({
                 onChange={(event) => {
                   if (event.target.value.trim()) setEntryMethod('search');
                   setSearchInput(event.target.value);
-                  setExternalQuery('');
                 }}
                 placeholder="Например, овсянка"
               />
@@ -883,19 +906,6 @@ export function FoodPickerDialog({
                 Не удалось обновить избранное.
               </p>
             )}
-            {searchQuery.length >= 2 &&
-              !activeLoading &&
-              !activeError &&
-              shownFoods.length === 0 &&
-              externalQuery !== searchQuery && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setExternalQuery(searchQuery)}
-                >
-                  Искать во внешнем каталоге
-                </Button>
-              )}
             {external.isFetching && <LoadingState label="Проверяем внешний каталог…" />}
             {external.error && (
               <div className="nutrition-provider-fallback" role="status">
