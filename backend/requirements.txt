@@ -35,7 +35,9 @@ cffi==2.1.1
 cfgv==3.5.0
     # via pre-commit
 charset-normalizer==3.4.9
-    # via requests
+    # via
+    #   reportlab
+    #   requests
 click==8.4.2
     # via uvicorn
 colorama==0.4.6 ; sys_platform == 'win32'
@@ -45,6 +47,7 @@ colorama==0.4.6 ; sys_platform == 'win32'
     #   qrcode
 cryptography==50.0.0
     # via
+    #   -r backend/requirements.in
     #   authlib
     #   joserfc
 cyclonedx-python-lib==11.11.0
@@ -126,7 +129,9 @@ packaging==26.2
 pathspec==1.1.1
     # via mypy
 pillow==12.3.0
-    # via qrcode
+    # via
+    #   qrcode
+    #   reportlab
 pip==26.2
     # via pip-api
 pip-api==0.0.34
@@ -190,6 +195,8 @@ pyyaml==6.0.3
     #   pre-commit
     #   uvicorn
 qrcode==8.2
+    # via -r backend/requirements.in
+reportlab==5.0.1
     # via -r backend/requirements.in
 requests==2.34.2
     # via
