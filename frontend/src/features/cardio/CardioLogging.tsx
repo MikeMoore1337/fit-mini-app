@@ -560,7 +560,9 @@ export function CardioQuickLog({ today }: { today: string }) {
   const { user } = useAuth();
   const timeZone = user?.profile?.timezone || detectedTimeZone();
   const [formOpen, setFormOpen] = useState(false);
-  const isToday = today === dateInputValue(new Date(), timeZone);
+  const currentDate = dateInputValue(new Date(), timeZone);
+  const isToday = today === currentDate;
+  const canLogFactual = today <= currentDate;
   const sessions = useQuery({
     queryKey: queryKeys.cardio.range(today, today),
     queryFn: () =>
@@ -598,14 +600,18 @@ export function CardioQuickLog({ today }: { today: string }) {
           <h2 id="cardio-quick-title">Кардио</h2>
           <p>
             {isEmpty
-              ? 'Нет записи за выбранный день.'
+              ? canLogFactual
+                ? 'Нет записи за выбранный день.'
+                : 'Фактическую активность можно добавить в день тренировки или позже.'
               : 'Записи за выбранный день. Планирование кардио находится в разделе программы.'}
           </p>
         </div>
-        {isEmpty ? (
+        {isEmpty && canLogFactual ? (
           <Button type="button" variant="secondary" onClick={() => setFormOpen(true)}>
             <Icon name="plus" size={16} /> Добавить
           </Button>
+        ) : isEmpty ? (
+          <Badge>Будущий день</Badge>
         ) : (
           <Badge>{`${daySessions.length} ${isToday ? 'сегодня' : 'за день'}`}</Badge>
         )}
@@ -622,7 +628,7 @@ export function CardioQuickLog({ today }: { today: string }) {
           <SessionList sessions={plannedSessions} timeZone={timeZone} />
         </div>
       )}
-      {formOpen ? (
+      {formOpen && canLogFactual ? (
         <div className="cardio-log__entry-form">
           <CardioSessionForm
             key={today}
@@ -632,7 +638,7 @@ export function CardioQuickLog({ today }: { today: string }) {
             timeZone={timeZone}
           />
         </div>
-      ) : !isEmpty ? (
+      ) : !isEmpty && canLogFactual ? (
         <Button type="button" variant="secondary" onClick={() => setFormOpen(true)}>
           {completedSessions.length ? 'Добавить ещё кардио' : 'Добавить фактическое кардио'}
         </Button>

@@ -53,6 +53,16 @@ function formatNumber(
   return new Intl.NumberFormat('ru-RU', { maximumFractionDigits }).format(number);
 }
 
+function plural(value: number, one: string, few: string, many: string): string {
+  const absolute = Math.abs(value);
+  const lastTwo = absolute % 100;
+  if (lastTwo >= 11 && lastTwo <= 14) return many;
+  const last = absolute % 10;
+  if (last === 1) return one;
+  if (last >= 2 && last <= 4) return few;
+  return many;
+}
+
 function formatDate(value: string, today: string): { title: string; subtitle: string } {
   const date = new Date(`${value}T12:00:00`);
   const formatted = new Intl.DateTimeFormat('ru-RU', {
@@ -384,6 +394,8 @@ function EntryRow({
 function MealSection({
   meal,
   newEntryIds,
+  expanded,
+  onExpandedChange,
   onAdd,
   onCopy,
   onRepeatYesterday,
@@ -391,13 +403,14 @@ function MealSection({
 }: {
   meal: FoodDiaryMeal;
   newEntryIds: ReadonlySet<number>;
+  expanded: boolean;
+  onExpandedChange: (expanded: boolean) => void;
   onAdd: () => void;
   onCopy: () => void;
   onRepeatYesterday: () => void;
   onCopyEntry: (entry: FoodDiaryEntry) => void;
 }) {
   const hasEntries = meal.entries.length > 0;
-  const [expanded, setExpanded] = useState(hasEntries);
   const contentId = `nutrition-meal-content-${meal.meal_type}`;
   const headingId = `nutrition-meal-${meal.meal_type}`;
 
@@ -410,7 +423,7 @@ function MealSection({
               aria-controls={contentId}
               aria-expanded={expanded}
               className="nutrition-meal__toggle"
-              onClick={() => setExpanded((current) => !current)}
+              onClick={() => onExpandedChange(!expanded)}
               type="button"
             >
               <span>{mealLabels[meal.meal_type as MealType]}</span>
@@ -419,7 +432,7 @@ function MealSection({
           </h2>
           <span>
             {hasEntries
-              ? `${formatNumber(meal.totals.energy_kcal)} ккал · ${meal.entries.length} ${meal.entries.length === 1 ? 'запись' : 'записи'}`
+              ? `${formatNumber(meal.totals.energy_kcal)} ккал · ${meal.entries.length} ${plural(meal.entries.length, 'запись', 'записи', 'записей')}`
               : 'Пока без записей'}
           </span>
         </div>
@@ -647,6 +660,7 @@ export function NutritionDiary({
   } | null>(null);
   const [copySubject, setCopySubject] = useState<CopySubject | null>(null);
   const [lastAddedEntryId, setLastAddedEntryId] = useState<number | null>(null);
+  const [mealExpansion, setMealExpansion] = useState<Partial<Record<MealType, boolean>>>({});
   const diary = useQuery({
     queryKey: queryKeys.nutrition.diaryDate(selectedDate),
     queryFn: () => api<FoodDiaryDay>(`/api/v1/nutrition/diary?diary_date=${selectedDate}`),
@@ -692,6 +706,7 @@ export function NutritionDiary({
         today={today}
         onSelect={(date) => {
           setLastAddedEntryId(null);
+          setMealExpansion({});
           setSelectedDate(date);
         }}
       />
@@ -732,9 +747,16 @@ export function NutritionDiary({
             <div className="nutrition-meals">
               {meals.map((meal) => (
                 <MealSection
-                  key={`${meal.meal_type}-${meal.entries.find((entry) => newEntryIds.has(entry.id))?.id ?? 'existing'}`}
+                  key={meal.meal_type}
                   meal={meal}
                   newEntryIds={newEntryIds}
+                  expanded={mealExpansion[meal.meal_type as MealType] ?? meal.entries.length > 0}
+                  onExpandedChange={(expanded) =>
+                    setMealExpansion((current) => ({
+                      ...current,
+                      [meal.meal_type]: expanded,
+                    }))
+                  }
                   onAdd={() =>
                     setAddingTo({ mealType: meal.meal_type as MealType, initialView: 'browse' })
                   }
@@ -778,7 +800,13 @@ export function NutritionDiary({
           mealType={addingTo.mealType}
           initialView={addingTo.initialView}
           disabled={diary.data?.status === 'fasted'}
-          onAdded={(entry) => setLastAddedEntryId(entry.id)}
+          onAdded={(entry) => {
+            setLastAddedEntryId(entry.id);
+            setMealExpansion((current) => ({
+              ...current,
+              [addingTo.mealType]: true,
+            }));
+          }}
           onClose={() => setAddingTo(null)}
         />
       )}

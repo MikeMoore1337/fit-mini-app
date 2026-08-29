@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CardioQuickLog } from '../../../../src/features/cardio/CardioLogging';
+import { addCalendarDays, dateInputValue } from '../../../../src/shared/dateTime';
 import { FeedbackProvider } from '../../../../src/shared/ui/FeedbackProvider';
 
 const apiMock = vi.hoisted(() => vi.fn());
@@ -16,14 +17,16 @@ vi.mock('../../../../src/app/AuthProvider', () => ({
   useAuth: () => ({ user: { profile: { timezone: 'Europe/Moscow' } } }),
 }));
 
-function renderCardio() {
+const todayMoscow = dateInputValue(new Date(), 'Europe/Moscow');
+
+function renderCardio(today = todayMoscow) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <QueryClientProvider client={queryClient}>
       <FeedbackProvider>
-        <CardioQuickLog today="2030-01-10" />
+        <CardioQuickLog today={today} />
       </FeedbackProvider>
     </QueryClientProvider>,
   );
@@ -70,6 +73,18 @@ describe('CardioQuickLog', () => {
     expect(screen.getByRole('button', { name: 'Сохранить кардио' })).toBeDisabled();
   });
 
+  it('does not offer a factual cardio entry for an empty future day', async () => {
+    apiMock.mockResolvedValue([]);
+    renderCardio(addCalendarDays(todayMoscow, 1));
+
+    expect(
+      await screen.findByText('Фактическую активность можно добавить в день тренировки или позже.'),
+    ).toBeVisible();
+    expect(screen.getByText('Будущий день')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Добавить' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Длительность, мин')).not.toBeInTheDocument();
+  });
+
   it('shows the plan before a secondary factual entry and validates required duration', async () => {
     renderCardio();
     await screen.findByRole('heading', { name: 'План кардио' });
@@ -95,17 +110,18 @@ describe('CardioQuickLog', () => {
         </FeedbackProvider>
       </QueryClientProvider>
     );
-    const view = render(ui('2030-01-10'));
+    const previousDay = addCalendarDays(todayMoscow, -1);
+    const view = render(ui(previousDay));
     await screen.findByRole('heading', { name: 'План кардио' });
     fireEvent.click(screen.getByRole('button', { name: 'Добавить фактическое кардио' }));
     expect((screen.getByLabelText('Дата и время') as HTMLInputElement).value).toMatch(
-      /^2030-01-10T/,
+      new RegExp(`^${previousDay}T`),
     );
 
-    view.rerender(ui('2030-01-11'));
+    view.rerender(ui(todayMoscow));
 
     expect(((await screen.findByLabelText('Дата и время')) as HTMLInputElement).value).toMatch(
-      /^2030-01-11T/,
+      new RegExp(`^${todayMoscow}T`),
     );
   });
 
