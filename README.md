@@ -225,22 +225,22 @@ legal-risk и owner-only документы также не публикуютс
 
 ## Production и deployment
 
-Push в `master`, production deploy, migrations против production, provider changes и реальные
-Telegram действия требуют отдельного owner approval. Любой push или force-push удалённого
-`master` — включая history rewrite, privacy cleanup и изменение только документации — запускает CI;
-успешный CI намеренно запускает `Deploy production`. Поэтому изменение `master` уже является
-production-affecting deployment action, а не безопасной Git-операцией. Перед ним необходимо:
+Новая production revision попадает в удалённый `master` только как результат merged pull request.
+Ruleset требует green check `checks`, запрещает direct push, force-push и удаление `master`; workflow
+дополнительно проверяет provenance exact SHA и его соответствие текущему `origin/master`.
 
-1. получить green CI для release SHA;
-2. сохранить точный текущий `master` SHA в отдельной remote backup-ветке и проверить её ref;
-3. создать и вынести off-host pre-deploy PostgreSQL backup;
-4. выполнить fail-closed preflight из operator runbook;
-5. после rollout выполнить smoke и наблюдать success signals.
+Merge PR является release authorization. После него человек не участвует в normal deployment path:
+post-merge CI публикует проверенные immutable images и автоматически запускает
+`.github/workflows/deploy.yml`; `production` environment не содержит reviewers или wait timer.
+Fail-closed `scripts/deploy_production.sh` выполняет preflight, PostgreSQL backup, migrations,
+blue/green rollout, smoke/observation gates и автоматический возврат прежнего slot при ошибке до
+commit state.
 
-Автоматический workflow находится в `.github/workflows/deploy.yml`, а fail-closed blue/green
-entrypoint — в `scripts/deploy_production.sh`. Authorization gate расположен перед изменением
-`master`, а не внутри автоматического workflow. Внутренний operator runbook хранится вне public Git;
-наличие workflow или script не является разрешением на deployment.
+`workflow_dispatch` не используется, поэтому normal path не выбирает произвольный SHA и не требует
+ручного подтверждения после merge. History rewrite, direct/force push, ручные production-команды,
+bootstrap, восстановление инфраструктуры, DNS/Cloudflare/secrets и deployment SHA вне текущего
+merged `master` остаются exceptional production actions и требуют отдельного owner approval,
+проверенной backup-ветки и operator preflight.
 
 ## Ограничения
 

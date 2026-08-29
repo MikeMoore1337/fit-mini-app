@@ -70,6 +70,9 @@ description: >
 Сначала определи фактический container/orchestration/deployment stack и CI/CD workflow. Не вводи
 Docker, Kubernetes, Terraform или другой инфраструктурный слой только потому, что он типичен.
 Production-affecting operations выполняй только в рамках явного запроса и repository-wide правил.
-В этом репозитории любой push/force-push remote `master`, включая history rewrite или docs-only
-change, после успешного CI автоматически запускает production deployment. До изменения `master`
-обязательны explicit deploy approval и проверенная remote backup-ветка точного текущего master.
+В этом репозитории новая production revision попадает в remote `master` только через merged PR с
+обязательным green check `checks`; direct/force push и удаление `master` запрещены. Merge является
+release authorization: post-merge CI, exact-SHA provenance gate и production deployment проходят
+автоматически без отдельного ручного approval. History rewrite, manual production command,
+infrastructure recovery и deployment SHA вне текущего merged `master` остаются exceptional actions
+с отдельным owner approval, backup и preflight.

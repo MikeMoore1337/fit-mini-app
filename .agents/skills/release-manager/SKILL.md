@@ -52,7 +52,9 @@ Release notes должны говорить о пользовательски/о
 
 Собирай порядок релиза из фактических компонентов проекта: services/apps, migrations, generated
 contracts, background jobs, feature flags и external dependencies. Не предполагай конкретную
-схему deployment. Сам production deployment требует явного запроса; подготовка и локальная
-проверка могут выполняться без него, если repository-wide правила не говорят иначе. Для этого
-репозитория push/force-push remote `master` является deployment action: успешный CI автоматически
-запускает production workflow, даже если изменение затрагивает только историю или документацию.
+схему deployment. Авторизация production deployment определяется repository-wide правилами;
+подготовка и локальная проверка сами по себе её не создают. В этом репозитории новая production
+revision входит в remote `master` только через merged PR с green check `checks`. Merge является
+release authorization и автоматически запускает post-merge CI, exact-SHA provenance gate и
+production workflow без отдельного ручного approval. Direct/force push, history rewrite и manual
+production actions вне этого normal path требуют отдельного owner approval, backup и preflight.
