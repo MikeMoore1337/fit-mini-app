@@ -419,7 +419,13 @@ def test_runtime_supports_one_active_bot_owner_across_deployment_slots() -> None
     assert "scripts/zero_downtime_deploy.py" in deploy_script
     assert deploy_script.count("python -m fitminiapp_bot.profile_sync check") == 1
     assert deploy_script.count("python -m fitminiapp_bot.profile_sync apply") == 1
-    assert deploy_script.count("docker compose run --rm --no-deps bot") == 2
+    assert deploy_script.count("docker compose run --rm --no-deps") == 2
+    assert (
+        deploy_script.count(
+            "BOT_PROFILE_SYNC_TOTAL_TIMEOUT_SECONDS=$PROFILE_SYNC_TOTAL_TIMEOUT_SECONDS"
+        )
+        == 2
+    )
     assert deploy_script.index("profile_sync check") > deploy_script.index(
         "scripts/zero_downtime_deploy.py"
     )

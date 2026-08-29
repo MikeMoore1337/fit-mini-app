@@ -256,6 +256,7 @@ services:
       timeout: 6s
       retries: 3
       start_period: 90s
+      start_interval: 2s
 
   worker-blue:
     <<: *backend-image
@@ -280,6 +281,7 @@ services:
       timeout: 6s
       retries: 3
       start_period: 90s
+      start_interval: 2s
 
   worker-green:
     <<: *backend-image
@@ -304,6 +306,7 @@ services:
       timeout: 6s
       retries: 3
       start_period: 90s
+      start_interval: 2s
 
   bot-blue:
     <<: *bot-image

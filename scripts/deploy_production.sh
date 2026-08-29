@@ -8,6 +8,12 @@ readonly PUBLIC_BASE_URL="${3:-https://your-fitness-coach.ru}"
 readonly ROLLOUT_MODE="${4:-zero-downtime}"
 readonly BACKEND_IMAGE="${BACKEND_IMAGE:?BACKEND_IMAGE must reference the tested backend image}"
 readonly BOT_IMAGE="${BOT_IMAGE:?BOT_IMAGE must reference the tested bot image}"
+readonly PROFILE_SYNC_TOTAL_TIMEOUT_SECONDS="${DEPLOY_PROFILE_SYNC_TIMEOUT_SECONDS:-12}"
+
+if [[ ! "$PROFILE_SYNC_TOTAL_TIMEOUT_SECONDS" =~ ^[1-9][0-9]*$ ]]; then
+  echo "DEPLOY_PROFILE_SYNC_TIMEOUT_SECONDS must be a positive whole number" >&2
+  exit 1
+fi
 
 profile_report_has_api_error() {
   python3 -c '
@@ -75,6 +81,9 @@ fi
 echo "Enabling browser OAuth and keeping email registration disabled"
 python3 scripts/configure_production_auth.py .env
 
+echo "Enabling the production Open Food Facts search provider"
+python3 scripts/configure_production_food_search.py .env
+
 echo "Validating Compose configuration for $TARGET_SHA"
 docker compose config --quiet
 
@@ -104,7 +113,9 @@ esac
 echo "Checking the public Telegram bot profile"
 set +e
 profile_check_output="$(
-  docker compose run --rm --no-deps bot \
+  docker compose run --rm --no-deps \
+    -e "BOT_PROFILE_SYNC_TOTAL_TIMEOUT_SECONDS=$PROFILE_SYNC_TOTAL_TIMEOUT_SECONDS" \
+    bot \
     python -m fitminiapp_bot.profile_sync check
 )"
 profile_check_status=$?
@@ -121,7 +132,9 @@ case "$profile_check_status" in
     echo "Applying the bounded public Telegram bot profile diff"
     set +e
     profile_apply_output="$(
-      docker compose run --rm --no-deps bot \
+      docker compose run --rm --no-deps \
+        -e "BOT_PROFILE_SYNC_TOTAL_TIMEOUT_SECONDS=$PROFILE_SYNC_TOTAL_TIMEOUT_SECONDS" \
+        bot \
         python -m fitminiapp_bot.profile_sync apply
     )"
     profile_apply_status=$?

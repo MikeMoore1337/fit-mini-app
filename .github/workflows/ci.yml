@@ -173,10 +173,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - shard: "1/2"
+          - shard: "1/3"
             index: 0
-          - shard: "2/2"
+          - shard: "2/3"
             index: 1
+          - shard: "3/3"
+            index: 2
 
     services:
       postgres:
@@ -230,41 +232,35 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Split test files deterministically across two independent runners.
-          # Greedy balancing by file size is a stable proxy for test volume and
-          # avoids adding another pytest/plugin dependency solely for CI sharding.
-          mapfile -t test_files < <(
-            python - <<'PY'
-          import os
-          from pathlib import Path
-
-          shard_index = int(os.environ["PYTEST_SHARD_INDEX"])
-          shard_count = 2
-          files = [
-              *Path("backend/tests").glob("test_*.py"),
-              *Path("bot/tests").glob("test_*.py"),
-          ]
-          files.sort(key=lambda path: (-path.stat().st_size, str(path)))
-
-          groups = [[] for _ in range(shard_count)]
-          sizes = [0 for _ in range(shard_count)]
-          for path in files:
-              target = min(range(shard_count), key=lambda i: (sizes[i], i))
-              groups[target].append(path)
-              sizes[target] += path.stat().st_size
-
-          for path in sorted(groups[shard_index], key=str):
-              print(path)
-          PY
+          # Collect the exact pytest node IDs first, then distribute them round-robin
+          # across three independent runners. This balances parametrized/heavy test
+          # modules much better than file-size sharding while keeping every test.
+          mapfile -t all_test_nodes < <(
+            python scripts/run_pytest.py backend/tests bot/tests --collect-only -q \
+              | sed -n '/::/p'
           )
 
-          if (( ${#test_files[@]} == 0 )); then
+          if (( ${#all_test_nodes[@]} == 0 )); then
+            echo "Pytest collection returned no tests" >&2
+            exit 1
+          fi
+
+          test_nodes=()
+          shard_count=3
+          for i in "${!all_test_nodes[@]}"; do
+            if (( i % shard_count == PYTEST_SHARD_INDEX )); then
+              test_nodes+=("${all_test_nodes[$i]}")
+            fi
+          done
+
+          if (( ${#test_nodes[@]} == 0 )); then
             echo "No tests selected for shard ${PYTEST_SHARD_INDEX}" >&2
             exit 1
           fi
 
-          printf 'Selected %s test files for shard %s/2\n' "${#test_files[@]}" "$((PYTEST_SHARD_INDEX + 1))"
-          python scripts/run_pytest.py "${test_files[@]}" -q -n 4 --dist=worksteal --durations=20
+          printf 'Selected %s of %s tests for shard %s/3\n' \
+            "${#test_nodes[@]}" "${#all_test_nodes[@]}" "$((PYTEST_SHARD_INDEX + 1))"
+          python scripts/run_pytest.py "${test_nodes[@]}" -q -n 4 --dist=worksteal --durations=20
 
   migrated-stack:
     name: Migrated PostgreSQL stack

@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import hashlib
 import logging
 import math
@@ -79,6 +80,9 @@ class StableDispatcher(Dispatcher):
         if bot.session.timeout:
             request_kwargs["request_timeout"] = int(bot.session.timeout + polling_timeout)
 
+        # Polling ownership/readiness must not wait for non-critical Telegram
+        # metadata/menu synchronization.
+        logger.info("telegram_polling_started")
         failed = False
         while True:
             try:
@@ -365,6 +369,23 @@ async def set_mini_app_menu_button(bot: Bot, chat_id: int | None = None) -> bool
         return False
 
 
+async def sync_default_menu_button_in_background(
+    bot: Bot,
+    *,
+    timeout_seconds: float = 10.0,
+) -> None:
+    """Keep the default Telegram menu self-healing without blocking polling startup."""
+
+    try:
+        async with asyncio.timeout(timeout_seconds):
+            await set_mini_app_menu_button(bot)
+    except TimeoutError:
+        logger.warning(
+            "menu_button_configuration_timed_out",
+            extra={"timeout_seconds": timeout_seconds},
+        )
+
+
 async def answer_with_open_button(message: Message) -> None:
     url = mini_app_url()
 
@@ -620,10 +641,10 @@ async def main() -> None:
         await polling_lock.acquire()
         bot = Bot(settings.bot_token, session=create_bot_api_session())
         conflict = False
+        menu_button_task: asyncio.Task[None] | None = None
         try:
             logger.info("telegram_polling_starting")
-            await set_mini_app_menu_button(bot)
-            logger.info("telegram_polling_started")
+            menu_button_task = asyncio.create_task(sync_default_menu_button_in_background(bot))
             await dp.start_polling(bot)
         except PollingConflict:
             conflict = True
@@ -632,6 +653,11 @@ async def main() -> None:
                 extra={"retry_seconds": settings.bot_conflict_retry_seconds},
             )
         finally:
+            if menu_button_task is not None:
+                if not menu_button_task.done():
+                    menu_button_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await menu_button_task
             polling_lock.release()
 
         if not conflict:
