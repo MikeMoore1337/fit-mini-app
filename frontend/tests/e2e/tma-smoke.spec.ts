@@ -143,7 +143,15 @@ test('TMA auth, shared UI, theme, viewport, safe areas and BackButton stay on on
     secondary: { visible: false, shown: 0, hidden: 0 },
   });
 
-  await tmaPage.getByRole('button', { name: /воскресенье.*Силовая.*Запланирован/i }).click();
+  const workoutDays = tmaPage.getByRole('button', {
+    name: /Силовая.*(?:Запланировано|Выполнено)/i,
+  });
+  const contextualDayIndex = await workoutDays.evaluateAll((days) =>
+    days.findIndex((day) => day.getAttribute('aria-current') !== 'date'),
+  );
+  expect(contextualDayIndex).toBeGreaterThanOrEqual(0);
+  const contextualWorkoutDay = workoutDays.nth(contextualDayIndex);
+  await contextualWorkoutDay.click();
   const weekLink = tmaPage.getByRole('link', { name: 'Открыть тренировку' });
   await weekLink.focus();
   await expect(weekLink).toBeFocused();
@@ -1161,6 +1169,7 @@ test('workout adaptation keeps preview, cancel, apply and conflict recovery in M
     await expect.poll(() => mobilePage.evaluate(() => window.innerHeight)).toBe(viewport.height);
     await expectNoHorizontalOverflow(mobilePage);
     const panel = mobilePage.locator('.workout-adaptation-dialog__panel');
+    await panel.scrollIntoViewIfNeeded();
     const box = await panel.boundingBox();
     expect(box).not.toBeNull();
     expect(box!.x).toBeGreaterThanOrEqual(0);
