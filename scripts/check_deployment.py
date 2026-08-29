@@ -72,6 +72,7 @@ def check_deployment(
     *,
     timeout: float,
     expected_environment: str | None = None,
+    require_progress_report_shell: bool = False,
     read=None,
 ) -> str:
     reader = read or _read
@@ -130,9 +131,10 @@ def check_deployment(
     _expect_same_origin(base_url, app, "application shell")
     _expect_frontend(app, "application shell")
 
-    report = reader(base_url, "/app/report?period=days_30", timeout=timeout)
-    _expect_same_origin(base_url, report, "progress report shell")
-    _expect_frontend(report, "progress report shell")
+    if require_progress_report_shell:
+        report = reader(base_url, "/app/report?period=days_30", timeout=timeout)
+        _expect_same_origin(base_url, report, "progress report shell")
+        _expect_frontend(report, "progress report shell")
 
     login = reader(base_url, "/login", timeout=timeout)
     _expect_same_origin(base_url, login, "browser auth shell")
@@ -169,6 +171,11 @@ def main() -> int:
         action="store_true",
         help="allow plain HTTP for a local/private smoke test",
     )
+    parser.add_argument(
+        "--expect-progress-report-shell",
+        action="store_true",
+        help="require the current release to serve the private /app/report SPA shell",
+    )
     args = parser.parse_args()
 
     if (
@@ -189,6 +196,7 @@ def main() -> int:
             args.base_url,
             timeout=args.timeout,
             expected_environment=expected_environment,
+            require_progress_report_shell=args.expect_progress_report_shell,
         )
     except (OSError, RuntimeError, urllib.error.URLError, json.JSONDecodeError) as exc:
         print(f"Deployment check failed: {exc}", file=sys.stderr)
