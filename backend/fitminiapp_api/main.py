@@ -204,6 +204,11 @@ def miniapp() -> HTMLResponse:
     return _frontend_index("/app")
 
 
+@app.get("/app/report", include_in_schema=False)
+def progress_report_page() -> HTMLResponse:
+    return _frontend_index("/app/report")
+
+
 @app.get("/demo")
 def demo_page() -> HTMLResponse:
     return _frontend_index("/demo")

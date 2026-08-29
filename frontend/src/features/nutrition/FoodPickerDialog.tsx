@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
-import { api } from '../../shared/api/client';
+import { ApiError, api } from '../../shared/api/client';
 import type {
   ExternalFood,
   Food,
+  FoodBarcodeLookup,
   FoodDiaryEntry,
   FoodList,
   FoodSearch,
   Recipe,
+  UserFoodCreate,
 } from '../../shared/api/types';
 import { usePersistentState } from '../../shared/storage';
 import { Icon } from '../../shared/ui/Icon';
@@ -197,7 +199,31 @@ function FoodResults({
   );
 }
 
-function ExternalResults({ response }: { response: FoodSearch }) {
+function externalFoodPayload(food: ExternalFood): UserFoodCreate {
+  return {
+    name: food.name,
+    brand: food.brand,
+    barcode: food.barcode,
+    energy_kcal_per_100g: food.energy_kcal_per_100g,
+    protein_g_per_100g: food.protein_g_per_100g,
+    fat_g_per_100g: food.fat_g_per_100g,
+    carbs_g_per_100g: food.carbs_g_per_100g,
+    fiber_g_per_100g: food.fiber_g_per_100g,
+    standard_serving_amount: food.standard_serving_amount,
+    standard_serving_unit: food.standard_serving_unit,
+    standard_serving_weight_g: food.standard_serving_weight_g,
+  };
+}
+
+function ExternalResults({
+  response,
+  onSelect,
+  pendingExternalId,
+}: {
+  response: FoodSearch;
+  onSelect: (food: ExternalFood) => void;
+  pendingExternalId: string | null;
+}) {
   const fallback = providerMessage(response.provider_status);
   if (fallback)
     return (
@@ -215,7 +241,7 @@ function ExternalResults({ response }: { response: FoodSearch }) {
     );
   return (
     <div className="nutrition-external-results">
-      <p>Внешние карточки доступны для сверки и не сохраняются автоматически.</p>
+      <p>Выберите карточку — продукт сохранится в «Мои продукты», затем укажите порцию.</p>
       {response.external_items.map((food: ExternalFood) => (
         <article
           className="nutrition-external-result"
@@ -235,6 +261,14 @@ function ExternalResults({ response }: { response: FoodSearch }) {
               {food.source.attribution} · {food.source.license}
             </a>
           </div>
+          <Button
+            fullWidth
+            type="button"
+            disabled={pendingExternalId !== null}
+            onClick={() => onSelect(food)}
+          >
+            {pendingExternalId === food.external_id ? 'Сохраняем…' : 'Выбрать продукт'}
+          </Button>
         </article>
       ))}
     </div>
@@ -262,7 +296,7 @@ export function FoodPickerDialog({
   const panelRef = useModalA11y<HTMLDivElement>(
     true,
     onClose,
-    initialView === 'quick-add' ? '#nutrition-quick-calories' : '#nutrition-food-search',
+    initialView === 'quick-add' ? '#nutrition-quick-calories' : '#nutrition-barcode-entry',
   );
   const [view, setView] = useState<PickerView>(initialView);
   const [source, setSource] = useState<PickerSource>('recent');
@@ -341,6 +375,24 @@ export function FoodPickerDialog({
         method: food.is_favorite ? 'DELETE' : 'PUT',
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['nutrition', 'foods'] }),
+  });
+  const importExternal = useMutation({
+    mutationFn: async (food: ExternalFood) => {
+      try {
+        return await api<Food>('/api/v1/nutrition/foods', {
+          method: 'POST',
+          body: externalFoodPayload(food),
+        });
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 409 && food.barcode) {
+          const existing = await api<FoodBarcodeLookup>(
+            `/api/v1/nutrition/foods/barcode/${encodeURIComponent(food.barcode)}`,
+          );
+          if (existing.local_item) return existing.local_item;
+        }
+        throw error;
+      }
+    },
   });
   const activeCollection = source === 'recent' ? recent : favorites;
   const shownFoods = useMemo(
@@ -469,6 +521,14 @@ export function FoodPickerDialog({
       food: foodDraftSelection(food),
       amount: food.standard_serving_weight_g ? '1' : '100',
       amountUnit: food.standard_serving_weight_g ? 'serving' : 'g',
+    });
+  };
+  const selectExternalFood = (food: ExternalFood) => {
+    importExternal.mutate(food, {
+      onSuccess: async (savedFood) => {
+        await queryClient.invalidateQueries({ queryKey: ['nutrition', 'foods'] });
+        selectFood(savedFood);
+      },
     });
   };
   const selectRecipe = (recipe: Recipe) => {
@@ -789,7 +849,34 @@ export function FoodPickerDialog({
           </div>
         ) : (
           <div className="nutrition-picker__browse">
-            <div className="nutrition-picker__tools" aria-label="Способы добавления">
+            <Button
+              id="nutrition-barcode-entry"
+              fullWidth
+              type="button"
+              onClick={() => {
+                setEntryMethod('barcode');
+                setView('barcode');
+              }}
+            >
+              Поиск по штрихкоду
+            </Button>
+            <Field
+              label="Поиск по названию или бренду"
+              labelFor="nutrition-food-search"
+              hint="Локальный поиск начинается после двух символов"
+            >
+              <Input
+                id="nutrition-food-search"
+                type="search"
+                value={searchInput}
+                onChange={(event) => {
+                  if (event.target.value.trim()) setEntryMethod('search');
+                  setSearchInput(event.target.value);
+                }}
+                placeholder="Например, овсянка"
+              />
+            </Field>
+            <div className="nutrition-picker__tools" aria-label="Другие способы добавления">
               <Button
                 type="button"
                 onClick={() => {
@@ -826,33 +913,7 @@ export function FoodPickerDialog({
               >
                 Рецепты
               </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setEntryMethod('barcode');
-                  setView('barcode');
-                }}
-              >
-                Штрихкод
-              </Button>
             </div>
-            <Field
-              label="Поиск по названию или бренду"
-              labelFor="nutrition-food-search"
-              hint="Локальный поиск начинается после двух символов"
-            >
-              <Input
-                id="nutrition-food-search"
-                type="search"
-                value={searchInput}
-                onChange={(event) => {
-                  if (event.target.value.trim()) setEntryMethod('search');
-                  setSearchInput(event.target.value);
-                }}
-                placeholder="Например, овсянка"
-              />
-            </Field>
             {searchQuery.length < 2 && (
               <div className="nutrition-picker__tabs" aria-label="Быстрое добавление">
                 <button
@@ -914,7 +975,18 @@ export function FoodPickerDialog({
               </div>
             )}
             {external.data && externalQuery === searchQuery && (
-              <ExternalResults response={external.data} />
+              <ExternalResults
+                response={external.data}
+                onSelect={selectExternalFood}
+                pendingExternalId={
+                  importExternal.isPending ? (importExternal.variables?.external_id ?? null) : null
+                }
+              />
+            )}
+            {importExternal.error && (
+              <p className="nutrition-form-error" role="alert">
+                Не удалось сохранить продукт. Попробуйте снова.
+              </p>
             )}
           </div>
         )}

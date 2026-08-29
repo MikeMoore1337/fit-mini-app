@@ -48,6 +48,9 @@ def test_deployment_smoke_covers_health_auth_tma_and_versioned_asset() -> None:
             headers={"cache-control": "no-store"},
         ),
         "/app": _response("/app", body=HTML, content_type="text/html"),
+        "/app/report?period=days_30": _response(
+            "/app/report?period=days_30", body=HTML, content_type="text/html"
+        ),
         "/login": _response("/login", body=HTML, content_type="text/html"),
         "/app?tgWebAppPlatform=android": _response(
             "/app?tgWebAppPlatform=android", body=HTML, content_type="text/html"
