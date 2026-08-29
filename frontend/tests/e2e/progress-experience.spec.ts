@@ -255,7 +255,7 @@ async function mockProgress(page: Page, reportState: NutritionReportState = 'par
           has_workout_history: true,
           onboarding: { status: 'complete', required_fields: [], missing_fields: [] },
           profile: { full_name: 'Анна Петрова', timezone: 'Europe/Moscow', kbju: null },
-          trainer: null,
+          trainer: { id: 70 },
         },
       });
     }
