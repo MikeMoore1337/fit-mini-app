@@ -17,6 +17,7 @@ import {
 } from '../../shared/dateTime';
 import { queryKeys } from '../../shared/queryKeys';
 import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
+import { Icon } from '../../shared/ui/Icon';
 import {
   Badge,
   Button,
@@ -254,7 +255,18 @@ function CardioSessionForm({
   };
 
   return (
-    <form className="cardio-form" onSubmit={submit} noValidate>
+    <form
+      className="cardio-form"
+      noValidate
+      onFocusCapture={(event) => {
+        const focused = event.target;
+        if (!(focused instanceof HTMLElement)) return;
+        requestAnimationFrame(() => {
+          focused.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        });
+      }}
+      onSubmit={submit}
+    >
       <div className="cardio-form__core">
         <Field label="Вид активности" labelFor={`cardio-activity-${editing?.id ?? 'new'}`}>
           <Select
@@ -548,7 +560,9 @@ export function CardioQuickLog({ today }: { today: string }) {
   const { user } = useAuth();
   const timeZone = user?.profile?.timezone || detectedTimeZone();
   const [formOpen, setFormOpen] = useState(false);
-  const isToday = today === dateInputValue(new Date(), timeZone);
+  const currentDate = dateInputValue(new Date(), timeZone);
+  const isToday = today === currentDate;
+  const canLogFactual = today <= currentDate;
   const sessions = useQuery({
     queryKey: queryKeys.cardio.range(today, today),
     queryFn: () =>
@@ -571,19 +585,36 @@ export function CardioQuickLog({ today }: { today: string }) {
   }
 
   const daySessions = sessions.data ?? [];
-  if (!daySessions.length) return null;
   const completedSessions = daySessions.filter((session) => session.status === 'completed');
   const plannedSessions = daySessions.filter((session) => session.status === 'planned');
+  const isEmpty = daySessions.length === 0;
 
   return (
-    <section className="cardio-log cardio-log--quick" aria-labelledby="cardio-quick-title">
+    <section
+      className={`cardio-log cardio-log--quick${isEmpty ? ' cardio-log--empty' : ''}`}
+      aria-labelledby="cardio-quick-title"
+    >
       <header className="cardio-log__header">
         <div>
           <span className="eyebrow">Фактическая активность</span>
           <h2 id="cardio-quick-title">Кардио</h2>
-          <p>Записи за выбранный день. Планирование кардио находится в разделе программы.</p>
+          <p>
+            {isEmpty
+              ? canLogFactual
+                ? 'Нет записи за выбранный день.'
+                : 'Фактическую активность можно добавить в день тренировки или позже.'
+              : 'Записи за выбранный день. Планирование кардио находится в разделе программы.'}
+          </p>
         </div>
-        <Badge>{`${daySessions.length} ${isToday ? 'сегодня' : 'за день'}`}</Badge>
+        {isEmpty && canLogFactual ? (
+          <Button type="button" variant="secondary" onClick={() => setFormOpen(true)}>
+            <Icon name="plus" size={16} /> Добавить
+          </Button>
+        ) : isEmpty ? (
+          <Badge>Будущий день</Badge>
+        ) : (
+          <Badge>{`${daySessions.length} ${isToday ? 'сегодня' : 'за день'}`}</Badge>
+        )}
       </header>
       {completedSessions.length > 0 && (
         <div className="cardio-log__today">
@@ -597,7 +628,7 @@ export function CardioQuickLog({ today }: { today: string }) {
           <SessionList sessions={plannedSessions} timeZone={timeZone} />
         </div>
       )}
-      {formOpen ? (
+      {formOpen && canLogFactual ? (
         <div className="cardio-log__entry-form">
           <CardioSessionForm
             key={today}
@@ -607,11 +638,11 @@ export function CardioQuickLog({ today }: { today: string }) {
             timeZone={timeZone}
           />
         </div>
-      ) : (
+      ) : !isEmpty && canLogFactual ? (
         <Button type="button" variant="secondary" onClick={() => setFormOpen(true)}>
           {completedSessions.length ? 'Добавить ещё кардио' : 'Добавить фактическое кардио'}
         </Button>
-      )}
+      ) : null}
     </section>
   );
 }

@@ -149,6 +149,54 @@ describe('NutritionDiary', () => {
     );
   });
 
+  it('keeps empty meals compact and lets every meal be expanded or collapsed', async () => {
+    apiMock.mockResolvedValue(makeDay());
+    renderDiary();
+
+    await screen.findByText('Овсяная каша');
+    const breakfast = breakfastSection();
+    const lunch = screen.getByRole('heading', { name: 'Обед' }).closest('section') as HTMLElement;
+    const breakfastToggle = within(breakfast).getByRole('button', { name: 'Завтрак' });
+    const lunchToggle = within(lunch).getByRole('button', { name: 'Обед' });
+
+    expect(breakfastToggle).toHaveAttribute('aria-expanded', 'true');
+    expect(lunchToggle).toHaveAttribute('aria-expanded', 'false');
+    expect(
+      within(lunch).queryByText('Добавьте продукт — недавние будут под рукой.'),
+    ).not.toBeVisible();
+
+    fireEvent.click(lunchToggle);
+    expect(lunchToggle).toHaveAttribute('aria-expanded', 'true');
+    expect(within(lunch).getByText('Добавьте продукт — недавние будут под рукой.')).toBeVisible();
+
+    fireEvent.click(breakfastToggle);
+    expect(breakfastToggle).toHaveAttribute('aria-expanded', 'false');
+    expect(within(breakfast).queryByText('Овсяная каша')).not.toBeVisible();
+  });
+
+  it('uses Russian plural forms in compact meal summaries', async () => {
+    const entries = (count: number, mealType: FoodDiaryEntry['meal_type'], idOffset: number) =>
+      Array.from({ length: count }, (_, index) => ({
+        ...entry,
+        id: idOffset + index,
+        meal_type: mealType,
+        food_name: `${mealType}-${index}`,
+      }));
+    const day = makeDay([]);
+    day.meals = [
+      { meal_type: 'breakfast', entries: entries(5, 'breakfast', 100), totals: nutrition },
+      { meal_type: 'lunch', entries: entries(11, 'lunch', 200), totals: nutrition },
+      { meal_type: 'dinner', entries: entries(21, 'dinner', 300), totals: nutrition },
+      { meal_type: 'snacks', entries: [], totals: zeroNutrition },
+    ];
+    apiMock.mockResolvedValue(day);
+    renderDiary();
+
+    expect(await screen.findByText(/5 записей/)).toBeVisible();
+    expect(screen.getByText(/11 записей/)).toBeVisible();
+    expect(screen.getByText(/21 запись/)).toBeVisible();
+  });
+
   it('names an intentionally empty day without ambiguous fasting terminology', async () => {
     apiMock.mockResolvedValue({
       ...makeDay([]),
@@ -206,6 +254,44 @@ describe('NutritionDiary', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(await screen.findByText('Овсяная каша')).toBeVisible();
     expect(localStorage.getItem('fit_food_draft_10_2026-08-19_breakfast')).toBeNull();
+  });
+
+  it('keeps an unsaved entry edit when another product is added to the meal', async () => {
+    let currentEntries = [entry];
+    const addedEntry = { ...entry, id: 42, food_name: 'Второй продукт' };
+    apiMock.mockImplementation((path: string, options?: { method?: string }) => {
+      if (path.startsWith('/api/v1/nutrition/diary?')) {
+        return Promise.resolve(makeDay(currentEntries));
+      }
+      if (path.startsWith('/api/v1/nutrition/foods/recent')) {
+        return Promise.resolve({ items: [food], total: 1, limit: 12, offset: 0 });
+      }
+      if (path.startsWith('/api/v1/nutrition/foods/favorites')) {
+        return Promise.resolve({ items: [], total: 0, limit: 12, offset: 0 });
+      }
+      if (path === '/api/v1/nutrition/diary/entries' && options?.method === 'POST') {
+        currentEntries = [...currentEntries, addedEntry];
+        return Promise.resolve(addedEntry);
+      }
+      throw new Error(`Unexpected API call: ${path}`);
+    });
+    renderDiary();
+    await screen.findByText('Овсяная каша');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Изменить Овсяная каша' }));
+    const breakfast = breakfastSection();
+    const draftAmount = within(breakfast).getByRole('spinbutton', { name: 'Количество' });
+    fireEvent.change(draftAmount, { target: { value: '175' } });
+    fireEvent.click(within(breakfast).getByRole('button', { name: /Добавить/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Добавить Овсяная каша' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Добавить в дневник' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(await screen.findByText('Второй продукт')).toBeVisible();
+    expect(within(breakfastSection()).getByRole('spinbutton', { name: 'Количество' })).toHaveValue(
+      175,
+    );
+    expect(within(breakfastSection()).getByRole('button', { name: 'Сохранить' })).toBeVisible();
   });
 
   it('keeps a calories-only Quick Add draft and reuses its idempotency key on retry', async () => {

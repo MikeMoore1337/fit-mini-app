@@ -53,6 +53,16 @@ function formatNumber(
   return new Intl.NumberFormat('ru-RU', { maximumFractionDigits }).format(number);
 }
 
+function plural(value: number, one: string, few: string, many: string): string {
+  const absolute = Math.abs(value);
+  const lastTwo = absolute % 100;
+  if (lastTwo >= 11 && lastTwo <= 14) return many;
+  const last = absolute % 10;
+  if (last === 1) return one;
+  if (last >= 2 && last <= 4) return few;
+  return many;
+}
+
 function formatDate(value: string, today: string): { title: string; subtitle: string } {
   const date = new Date(`${value}T12:00:00`);
   const formatted = new Intl.DateTimeFormat('ru-RU', {
@@ -384,6 +394,8 @@ function EntryRow({
 function MealSection({
   meal,
   newEntryIds,
+  expanded,
+  onExpandedChange,
   onAdd,
   onCopy,
   onRepeatYesterday,
@@ -391,19 +403,36 @@ function MealSection({
 }: {
   meal: FoodDiaryMeal;
   newEntryIds: ReadonlySet<number>;
+  expanded: boolean;
+  onExpandedChange: (expanded: boolean) => void;
   onAdd: () => void;
   onCopy: () => void;
   onRepeatYesterday: () => void;
   onCopyEntry: (entry: FoodDiaryEntry) => void;
 }) {
+  const hasEntries = meal.entries.length > 0;
+  const contentId = `nutrition-meal-content-${meal.meal_type}`;
+  const headingId = `nutrition-meal-${meal.meal_type}`;
+
   return (
-    <section className="nutrition-meal" aria-labelledby={`nutrition-meal-${meal.meal_type}`}>
+    <section className="nutrition-meal" aria-labelledby={headingId} data-expanded={expanded}>
       <header className="nutrition-meal__header">
         <div>
-          <h2 id={`nutrition-meal-${meal.meal_type}`}>{mealLabels[meal.meal_type as MealType]}</h2>
+          <h2 id={headingId}>
+            <button
+              aria-controls={contentId}
+              aria-expanded={expanded}
+              className="nutrition-meal__toggle"
+              onClick={() => onExpandedChange(!expanded)}
+              type="button"
+            >
+              <span>{mealLabels[meal.meal_type as MealType]}</span>
+              <Icon name={expanded ? 'chevron-up' : 'chevron-down'} size={16} />
+            </button>
+          </h2>
           <span>
-            {meal.entries.length
-              ? `${formatNumber(meal.totals.energy_kcal)} ккал`
+            {hasEntries
+              ? `${formatNumber(meal.totals.energy_kcal)} ккал · ${meal.entries.length} ${plural(meal.entries.length, 'запись', 'записи', 'записей')}`
               : 'Пока без записей'}
           </span>
         </div>
@@ -411,32 +440,34 @@ function MealSection({
           <Button variant="secondary" type="button" onClick={onAdd}>
             <Icon name="plus" size={16} /> Добавить
           </Button>
-          <div className="nutrition-meal__secondary-actions">
-            <button type="button" onClick={onRepeatYesterday} aria-label="Повторить вчера">
-              Вчера
-            </button>
-            {meal.entries.length > 0 && (
-              <button type="button" onClick={onCopy}>
-                Копировать
-              </button>
-            )}
-          </div>
         </div>
       </header>
-      {meal.entries.length ? (
-        <ul className="nutrition-entry-list">
-          {meal.entries.map((entry) => (
-            <EntryRow
-              entry={entry}
-              isNew={newEntryIds.has(entry.id)}
-              key={entry.id}
-              onCopy={() => onCopyEntry(entry)}
-            />
-          ))}
-        </ul>
-      ) : (
-        <p className="nutrition-meal__empty">Добавьте продукт — недавние будут под рукой.</p>
-      )}
+      <div className="nutrition-meal__content" hidden={!expanded} id={contentId}>
+        <div className="nutrition-meal__secondary-actions">
+          <button type="button" onClick={onRepeatYesterday} aria-label="Повторить вчера">
+            Вчера
+          </button>
+          {hasEntries && (
+            <button type="button" onClick={onCopy}>
+              Копировать
+            </button>
+          )}
+        </div>
+        {hasEntries ? (
+          <ul className="nutrition-entry-list">
+            {meal.entries.map((entry) => (
+              <EntryRow
+                entry={entry}
+                isNew={newEntryIds.has(entry.id)}
+                key={entry.id}
+                onCopy={() => onCopyEntry(entry)}
+              />
+            ))}
+          </ul>
+        ) : (
+          <p className="nutrition-meal__empty">Добавьте продукт — недавние будут под рукой.</p>
+        )}
+      </div>
     </section>
   );
 }
@@ -629,6 +660,7 @@ export function NutritionDiary({
   } | null>(null);
   const [copySubject, setCopySubject] = useState<CopySubject | null>(null);
   const [lastAddedEntryId, setLastAddedEntryId] = useState<number | null>(null);
+  const [mealExpansion, setMealExpansion] = useState<Partial<Record<MealType, boolean>>>({});
   const diary = useQuery({
     queryKey: queryKeys.nutrition.diaryDate(selectedDate),
     queryFn: () => api<FoodDiaryDay>(`/api/v1/nutrition/diary?diary_date=${selectedDate}`),
@@ -674,6 +706,7 @@ export function NutritionDiary({
         today={today}
         onSelect={(date) => {
           setLastAddedEntryId(null);
+          setMealExpansion({});
           setSelectedDate(date);
         }}
       />
@@ -717,6 +750,13 @@ export function NutritionDiary({
                   key={meal.meal_type}
                   meal={meal}
                   newEntryIds={newEntryIds}
+                  expanded={mealExpansion[meal.meal_type as MealType] ?? meal.entries.length > 0}
+                  onExpandedChange={(expanded) =>
+                    setMealExpansion((current) => ({
+                      ...current,
+                      [meal.meal_type]: expanded,
+                    }))
+                  }
                   onAdd={() =>
                     setAddingTo({ mealType: meal.meal_type as MealType, initialView: 'browse' })
                   }
@@ -760,7 +800,13 @@ export function NutritionDiary({
           mealType={addingTo.mealType}
           initialView={addingTo.initialView}
           disabled={diary.data?.status === 'fasted'}
-          onAdded={(entry) => setLastAddedEntryId(entry.id)}
+          onAdded={(entry) => {
+            setLastAddedEntryId(entry.id);
+            setMealExpansion((current) => ({
+              ...current,
+              [addingTo.mealType]: true,
+            }));
+          }}
           onClose={() => setAddingTo(null)}
         />
       )}
