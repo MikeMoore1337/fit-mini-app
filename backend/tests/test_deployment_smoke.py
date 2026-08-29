@@ -1,4 +1,5 @@
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from scripts.check_deployment import HttpResponse, check_deployment
@@ -24,7 +25,7 @@ def _response(
     )
 
 
-def test_deployment_smoke_covers_health_auth_tma_and_versioned_asset() -> None:
+def test_deployment_smoke_separates_compatible_preflight_from_release_contract() -> None:
     responses = {
         "/health/ready": _response(
             "/health/ready", body=b'{"status":"ok"}', content_type="application/json"
@@ -63,8 +64,11 @@ def test_deployment_smoke_covers_health_auth_tma_and_versioned_asset() -> None:
         ),
     }
 
+    requested_paths: list[str] = []
+
     def read(_base_url: str, path: str, *, timeout: float) -> HttpResponse:
         assert timeout == 3
+        requested_paths.append(path)
         return responses[path]
 
     assert (
@@ -72,10 +76,64 @@ def test_deployment_smoke_covers_health_auth_tma_and_versioned_asset() -> None:
             BASE_URL,
             timeout=3,
             expected_environment="prod",
+            require_progress_report_shell=True,
             read=read,
         )
         == "prod"
     )
+    assert "/app/report?period=days_30" in requested_paths
+
+    requested_paths.clear()
+    assert check_deployment(BASE_URL, timeout=3, expected_environment="prod", read=read) == "prod"
+    assert "/app/report?period=days_30" not in requested_paths
+
+
+def test_rollout_smoke_requires_new_contract_only_for_candidate_and_post_switch(
+    monkeypatch,
+) -> None:
+    from scripts import zero_downtime_deploy
+
+    commands: list[list[str]] = []
+    monkeypatch.setattr(
+        zero_downtime_deploy,
+        "_run",
+        lambda args, **_kwargs: commands.append(list(args)),
+    )
+    config = SimpleNamespace(
+        base_url=BASE_URL,
+        public_base_url="https://public.example.test",
+        seo_timeout_seconds=4,
+    )
+
+    zero_downtime_deploy._public_smoke(config)
+    assert "--expect-progress-report-shell" not in commands[0]
+
+    commands.clear()
+    zero_downtime_deploy._public_smoke(config, require_progress_report_shell=True)
+    assert "--expect-progress-report-shell" in commands[0]
+
+    commands.clear()
+    zero_downtime_deploy._candidate_smoke("legacy")
+    assert "--expect-progress-report-shell" not in commands[0]
+
+    commands.clear()
+    zero_downtime_deploy._candidate_smoke("legacy", require_progress_report_shell=True)
+    assert "--expect-progress-report-shell" in commands[0]
+
+    source = (
+        Path(__file__).resolve().parents[2] / "scripts" / "zero_downtime_deploy.py"
+    ).read_text(encoding="utf-8")
+    single_preflight_start = source.index('with _stage(evidence, "single_slot_preflight")')
+    single_preflight_end = source.index(
+        'with _stage(evidence, "pull_and_verify")', single_preflight_start
+    )
+    single_preflight = source[single_preflight_start:single_preflight_end]
+    assert "_public_smoke(config)" in single_preflight
+    assert "require_progress_report_shell=True" not in single_preflight
+
+    application_start = source.index('with _stage(evidence, "application_start")')
+    application_end = source.index('with _stage(evidence, "verification")', application_start)
+    assert "require_progress_report_shell=True" in source[application_start:application_end]
 
 
 def test_deployment_smoke_rejects_origin_escape() -> None:

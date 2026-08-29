@@ -535,7 +535,15 @@ def _start_slot_consumers(
     return worker_lease, bot_lease
 
 
-def _candidate_smoke(slot: str, *, timeout_seconds: int = 10) -> None:
+def _candidate_smoke(
+    slot: str,
+    *,
+    timeout_seconds: int = 10,
+    require_progress_report_shell: bool = False,
+) -> None:
+    release_contract_args = (
+        ["--expect-progress-report-shell"] if require_progress_report_shell else []
+    )
     if slot == "legacy":
         _run(
             [
@@ -547,6 +555,7 @@ def _candidate_smoke(slot: str, *, timeout_seconds: int = 10) -> None:
                 "prod",
                 "--timeout",
                 str(timeout_seconds),
+                *release_contract_args,
             ]
         )
         return
@@ -560,10 +569,18 @@ def _candidate_smoke(slot: str, *, timeout_seconds: int = 10) -> None:
         "--allow-http",
         "--expected-environment",
         "prod",
+        *release_contract_args,
     )
 
 
-def _public_smoke(config: DeployConfig) -> None:
+def _public_smoke(
+    config: DeployConfig,
+    *,
+    require_progress_report_shell: bool = False,
+) -> None:
+    release_contract_args = (
+        ["--expect-progress-report-shell"] if require_progress_report_shell else []
+    )
     _run(
         [
             sys.executable,
@@ -571,6 +588,7 @@ def _public_smoke(config: DeployConfig) -> None:
             config.base_url,
             "--expected-environment",
             "prod",
+            *release_contract_args,
         ]
     )
     _run(
@@ -831,7 +849,7 @@ def deploy(config: DeployConfig) -> Evidence:
         if state.rollback_slot is not None:
             _compose("stop", "-t", "45", _slot_service("backend", state.rollback_slot))
         _atomic_text(config.state_root / "last-successful-revision", config.target_revision + "\n")
-        _public_smoke(config)
+        _public_smoke(config, require_progress_report_shell=True)
         print(f"Revision {config.target_revision} is already active; verified idempotent no-op")
         return Evidence(
             deployment_id=f"noop-{config.target_revision[:12]}",
@@ -963,7 +981,7 @@ def deploy(config: DeployConfig) -> Evidence:
             )
 
         with _stage(evidence, "candidate_smoke"):
-            _candidate_smoke(candidate_slot)
+            _candidate_smoke(candidate_slot, require_progress_report_shell=True)
             if probe.poll() is not None:
                 raise DeploymentError("public route failed while the candidate was prepared")
 
@@ -972,7 +990,7 @@ def deploy(config: DeployConfig) -> Evidence:
             switched = True
 
         with _stage(evidence, "external_verification"):
-            _public_smoke(config)
+            _public_smoke(config, require_progress_report_shell=True)
 
         with _stage(evidence, "consumer_handoff"):
             consumers_stopped = True
@@ -1245,7 +1263,7 @@ def single_slot_deploy(config: DeployConfig) -> Evidence:
 
     if active_revision == config.target_revision:
         _switch_gateway("legacy", "legacy")
-        _public_smoke(config)
+        _public_smoke(config, require_progress_report_shell=True)
         evidence.verdict = "active"
         _write_evidence(evidence_path, evidence)
         print(f"Revision {config.target_revision} is already active; verified single-slot no-op")
@@ -1349,7 +1367,7 @@ def single_slot_deploy(config: DeployConfig) -> Evidence:
 
         with _stage(evidence, "application_start"):
             _start_legacy_backend(target_env, config)
-            _public_smoke(config)
+            _public_smoke(config, require_progress_report_shell=True)
             consumer_leases = _start_legacy_consumers(
                 target_env,
                 evidence,
@@ -1363,7 +1381,7 @@ def single_slot_deploy(config: DeployConfig) -> Evidence:
                     raise DeploymentError(
                         f"{lease.service} lost current-run ownership after single-slot start"
                     )
-            _public_smoke(config)
+            _public_smoke(config, require_progress_report_shell=True)
             _atomic_text(active_revision_path, config.target_revision + "\n")
 
         evidence.verdict = "active"
