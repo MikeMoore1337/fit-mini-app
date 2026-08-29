@@ -796,6 +796,7 @@ select:not([multiple]) {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-height: 40px;
   cursor: pointer;
   list-style: none;
 }
