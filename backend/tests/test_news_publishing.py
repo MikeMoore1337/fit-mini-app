@@ -168,29 +168,31 @@ def test_html_renderer_escapes_user_text_and_keeps_source_as_named_link() -> Non
     assert artifact.text.count("https://") == 1
 
 
-def test_review_artifact_blocks_source_outside_current_month() -> None:
+def test_review_artifact_blocks_source_outside_freshness_window() -> None:
     cluster_id = _source_and_candidate(external_id="stale-review")
     draft_id, _ = _draft(cluster_id)
     with get_session_context() as db:
         draft = db.get(NewsDraftRevision, draft_id)
         assert draft is not None
-        previous_month = utcnow().replace(
+        current_month_start = utcnow().replace(
             day=1,
             hour=0,
             minute=0,
             second=0,
             microsecond=0,
-        ) - timedelta(seconds=1)
+        )
+        previous_month_start = (current_month_start - timedelta(days=1)).replace(day=1)
+        stale = previous_month_start - timedelta(seconds=1)
         draft.evidence_metadata = {
             **draft.evidence_metadata,
-            "source_published_at": previous_month.isoformat(),
+            "source_published_at": stale.isoformat(),
         }
 
         review = compose_review_artifact(db, draft, channel_ready=True)
         assert "source_not_current_month" in review.blockers
 
 
-def test_scheduling_cannot_cross_source_freshness_month(monkeypatch) -> None:
+def test_scheduling_cannot_cross_source_freshness_window(monkeypatch) -> None:
     cluster_id = _source_and_candidate(external_id="cross-month-schedule")
     draft_id, _ = _draft(cluster_id)
     fixed_now = datetime(2026, 8, 26, 12, 0, 0)
@@ -204,7 +206,7 @@ def test_scheduling_cannot_cross_source_freshness_month(monkeypatch) -> None:
         enqueue_review_deliveries(db, {7001})
         draft.evidence_metadata = {
             **draft.evidence_metadata,
-            "source_published_at": "2026-08-04T00:00:00",
+            "source_published_at": "2026-07-04T00:00:00",
         }
 
         result = approve_publication(
@@ -223,7 +225,7 @@ def test_scheduling_cannot_cross_source_freshness_month(monkeypatch) -> None:
         assert db.query(NewsPublicationSnapshot).count() == 0
 
 
-def test_queued_publication_is_failed_after_month_rollover(monkeypatch) -> None:
+def test_queued_publication_is_failed_after_freshness_window_rollover(monkeypatch) -> None:
     cluster_id = _source_and_candidate(external_id="month-rollover")
     draft_id, _ = _draft(cluster_id)
     august_now = datetime(2026, 8, 26, 12, 0, 0)
@@ -237,7 +239,7 @@ def test_queued_publication_is_failed_after_month_rollover(monkeypatch) -> None:
         enqueue_review_deliveries(db, {7001})
         draft.evidence_metadata = {
             **draft.evidence_metadata,
-            "source_published_at": "2026-08-04T00:00:00",
+            "source_published_at": "2026-07-04T00:00:00",
         }
         approved = approve_publication(
             db,

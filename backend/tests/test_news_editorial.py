@@ -373,20 +373,21 @@ def test_json_feed_parser_accepts_documented_metadata() -> None:
     assert items[0].published_at is not None
 
 
-def test_current_month_freshness_gate_rejects_old_missing_and_future_dates() -> None:
+def test_freshness_window_rejects_older_missing_and_future_dates() -> None:
     now = datetime(2026, 8, 26, 12, 0, 0)
 
+    assert is_current_month_publication(datetime(2026, 7, 1), now=now)
     assert is_current_month_publication(datetime(2026, 8, 1), now=now)
     assert is_current_month_publication(now, now=now)
-    assert not is_current_month_publication(datetime(2026, 7, 31, 23, 59, 59), now=now)
+    assert not is_current_month_publication(datetime(2026, 6, 30, 23, 59, 59), now=now)
     assert not is_current_month_publication(None, now=now)
     assert not is_current_month_publication(datetime(2026, 8, 26, 12, 0, 1), now=now)
 
 
-def test_ingestion_hard_gates_source_outside_current_month() -> None:
+def test_ingestion_hard_gates_source_outside_freshness_window() -> None:
     _create_source()
     current = datetime(2026, 8, 26, 12, 0, 0)
-    stale = replace(_parsed(), published_at=datetime(2026, 7, 31, 23, 59, 59))
+    stale = replace(_parsed(), published_at=datetime(2026, 6, 30, 23, 59, 59))
 
     with get_session_context() as db:
         source = db.get(NewsSource, "journal-one")
@@ -468,16 +469,18 @@ def test_stale_draft_is_not_enqueued_for_owner_review(monkeypatch) -> None:
         cluster = db.get(NewsCluster, cluster_id)
         assert cluster is not None
         draft = asyncio.run(create_draft_revision(db, cluster))
-        previous_month = utcnow().replace(
+        current_month_start = utcnow().replace(
             day=1,
             hour=0,
             minute=0,
             second=0,
             microsecond=0,
-        ) - timedelta(seconds=1)
+        )
+        previous_month_start = (current_month_start - timedelta(days=1)).replace(day=1)
+        stale = previous_month_start - timedelta(seconds=1)
         draft.evidence_metadata = {
             **draft.evidence_metadata,
-            "source_published_at": previous_month.isoformat(),
+            "source_published_at": stale.isoformat(),
         }
 
         assert enqueue_review_deliveries(db, {7001}) == 0
