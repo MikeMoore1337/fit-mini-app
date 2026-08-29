@@ -506,6 +506,75 @@ describe('NutritionDiary', () => {
     expect(screen.queryByText(/429|timeout/i)).not.toBeInTheDocument();
   });
 
+  it('automatically shows real external matches when the local search is empty', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    apiMock.mockImplementation((path: string) => {
+      if (path.startsWith('/api/v1/nutrition/diary?')) return Promise.resolve(makeDay([]));
+      if (path.startsWith('/api/v1/nutrition/foods/recent'))
+        return Promise.resolve({ items: [], total: 0, limit: 12, offset: 0 });
+      if (path.startsWith('/api/v1/nutrition/foods/favorites'))
+        return Promise.resolve({ items: [], total: 0, limit: 12, offset: 0 });
+      const decoded = decodeURIComponent(path);
+      if (decoded.includes('q=нутелла') && decoded.includes('include_external=true')) {
+        return Promise.resolve({
+          items: [],
+          external_items: [
+            {
+              name: 'Nutella hazelnut spread',
+              brand: 'Ferrero',
+              barcode: '3017620422003',
+              energy_kcal_per_100g: '539.00',
+              protein_g_per_100g: '6.300',
+              fat_g_per_100g: '30.900',
+              carbs_g_per_100g: '57.500',
+              fiber_g_per_100g: null,
+              standard_serving_amount: null,
+              standard_serving_unit: null,
+              standard_serving_weight_g: null,
+              external_id: '3017620422003',
+              source: {
+                provider: 'open_food_facts',
+                attribution: 'Open Food Facts contributors',
+                source_url: 'https://world.openfoodfacts.org/product/3017620422003',
+                license: 'ODbL-1.0',
+                license_url: 'https://opendatacommons.org/licenses/odbl/1-0/',
+              },
+            },
+          ],
+          total: 0,
+          limit: 20,
+          offset: 0,
+          provider_status: 'available',
+        });
+      }
+      if (decoded.includes('q=нутелла')) {
+        return Promise.resolve({
+          items: [],
+          external_items: [],
+          total: 0,
+          limit: 20,
+          offset: 0,
+          provider_status: 'not_requested',
+        });
+      }
+      throw new Error(`Unexpected API call: ${path}`);
+    });
+    renderDiary();
+    await screen.findAllByText('Пока без записей');
+    fireEvent.click(within(breakfastSection()).getByRole('button', { name: /Добавить/ }));
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Поиск по названию или бренду' }), {
+      target: { value: 'нутелла' },
+    });
+    await act(() => vi.advanceTimersByTimeAsync(250));
+
+    expect(await screen.findByText('Nutella hazelnut spread')).toBeVisible();
+    expect(screen.getByText(/Ferrero/)).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Источник' })).toHaveAttribute(
+      'href',
+      'https://world.openfoodfacts.org/product/3017620422003',
+    );
+  });
+
   it('validates and creates an own food before selecting its serving', async () => {
     const ownFood = {
       ...food,

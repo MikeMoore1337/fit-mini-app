@@ -72,7 +72,7 @@ class OpenFoodFactsProvider:
             _SEARCH_URL,
             request_budget=_SEARCH_REQUEST_BUDGET,
             json={
-                "q": self._plain_text_query(normalized),
+                "q": normalized,
                 "page": 1,
                 "page_size": min(limit, 20),
                 "fields": list(_FIELDS),
@@ -159,11 +159,6 @@ class OpenFoodFactsProvider:
                 raise FoodProviderUnavailable("malformed_response")
             return payload
         raise AssertionError("request retry loop must return or raise")
-
-    @staticmethod
-    def _plain_text_query(query: str) -> str:
-        escaped = query.replace("\\", "\\\\").replace('"', '\\"')
-        return f'"{escaped}"'
 
     @classmethod
     def _parse_product(cls, raw_product: object) -> ProviderFood | None:

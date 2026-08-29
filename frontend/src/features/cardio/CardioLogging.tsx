@@ -299,16 +299,18 @@ function CardioSessionForm({
             onChange={(event) => update('scheduledAt', event.target.value)}
           />
         </Field>
-        <Field label="Статус" labelFor={`cardio-status-${editing?.id ?? 'new'}`}>
-          <Select
-            id={`cardio-status-${editing?.id ?? 'new'}`}
-            value={draft.status}
-            onChange={(event) => update('status', event.target.value as CardioStatus)}
-          >
-            <option value="completed">Завершено</option>
-            <option value="planned">Запланировано</option>
-          </Select>
-        </Field>
+        {editing && (
+          <Field label="Статус" labelFor={`cardio-status-${editing.id}`}>
+            <Select
+              id={`cardio-status-${editing.id}`}
+              value={draft.status}
+              onChange={(event) => update('status', event.target.value as CardioStatus)}
+            >
+              <option value="completed">Завершено</option>
+              <option value="planned">Запланировано</option>
+            </Select>
+          </Field>
+        )}
       </div>
 
       <details
@@ -553,6 +555,26 @@ export function CardioQuickLog({ today }: { today: string }) {
       api<CardioSession[]>(`/api/v1/workouts/cardio?date_from=${today}&date_to=${today}`),
   });
 
+  if (sessions.isLoading) {
+    return <LoadingState label="Проверяем кардио за день…" />;
+  }
+
+  if (sessions.error) {
+    return (
+      <section className="cardio-log cardio-log--quick" aria-label="Кардио за выбранный день">
+        <ErrorState
+          message={(sessions.error as Error).message}
+          retry={() => void sessions.refetch()}
+        />
+      </section>
+    );
+  }
+
+  const daySessions = sessions.data ?? [];
+  if (!daySessions.length) return null;
+  const completedSessions = daySessions.filter((session) => session.status === 'completed');
+  const plannedSessions = daySessions.filter((session) => session.status === 'planned');
+
   return (
     <section className="cardio-log cardio-log--quick" aria-labelledby="cardio-quick-title">
       <header className="cardio-log__header">
@@ -561,14 +583,20 @@ export function CardioQuickLog({ today }: { today: string }) {
           <h2 id="cardio-quick-title">Кардио</h2>
           <p>Записи за выбранный день. Планирование кардио находится в разделе программы.</p>
         </div>
-        <Badge>
-          {sessions.data?.length
-            ? `${sessions.data.length} ${isToday ? 'сегодня' : 'за день'}`
-            : isToday
-              ? 'Сегодня'
-              : formatCalendarDate(today, { day: 'numeric', month: 'short' })}
-        </Badge>
+        <Badge>{`${daySessions.length} ${isToday ? 'сегодня' : 'за день'}`}</Badge>
       </header>
+      {completedSessions.length > 0 && (
+        <div className="cardio-log__today">
+          <h3>Результат кардио</h3>
+          <SessionList sessions={completedSessions} timeZone={timeZone} />
+        </div>
+      )}
+      {plannedSessions.length > 0 && (
+        <div className="cardio-log__today">
+          <h3>План кардио</h3>
+          <SessionList sessions={plannedSessions} timeZone={timeZone} />
+        </div>
+      )}
       {formOpen ? (
         <div className="cardio-log__entry-form">
           <CardioSessionForm
@@ -581,22 +609,9 @@ export function CardioQuickLog({ today }: { today: string }) {
         </div>
       ) : (
         <Button type="button" variant="secondary" onClick={() => setFormOpen(true)}>
-          {sessions.data?.length ? 'Добавить ещё' : 'Записать кардио'}
+          {completedSessions.length ? 'Добавить ещё кардио' : 'Добавить фактическое кардио'}
         </Button>
       )}
-      <div className="cardio-log__today">
-        <h3>Записи за день</h3>
-        {sessions.isLoading ? (
-          <LoadingState label="Загружаем кардио за день…" />
-        ) : sessions.error ? (
-          <ErrorState
-            message={(sessions.error as Error).message}
-            retry={() => void sessions.refetch()}
-          />
-        ) : (
-          <SessionList sessions={sessions.data ?? []} timeZone={timeZone} />
-        )}
-      </div>
     </section>
   );
 }

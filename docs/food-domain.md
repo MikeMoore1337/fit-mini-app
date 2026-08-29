@@ -105,10 +105,12 @@ API не добавляет искусственную задержку.
 ## Необязательный внешний каталог
 
 Нейтральный контракт `FoodProvider` предоставляет `search` и `get_by_barcode`; логика области не
-зависит от формата ответа Open Food Facts. По умолчанию задано `FOOD_PROVIDER=disabled`, и внешняя
-настройка не нужна. Для текущего адаптера укажите `FOOD_PROVIDER=open_food_facts` и настоящий
-идентифицирующий `OPEN_FOOD_FACTS_USER_AGENT=AppName/Version (contact)`. Секретный API-ключ не
-требуется. `FOOD_PROVIDER_TIMEOUT_SECONDS` задаёт сетевой тайм-аут одной попытки от 1 до 15 секунд,
+зависит от формата ответа Open Food Facts. Для локальной разработки по умолчанию задано
+`FOOD_PROVIDER=disabled`. Штатный production deploy идемпотентно включает
+`FOOD_PROVIDER=open_food_facts` и идентифицирующий
+`OPEN_FOOD_FACTS_USER_AGENT=YourFitnessCoach/0.1 (https://your-fitness-coach.ru)` через
+`scripts/configure_production_food_search.py`; секретный API-ключ не требуется.
+`FOOD_PROVIDER_TIMEOUT_SECONDS` задаёт сетевой тайм-аут одной попытки от 1 до 15 секунд,
 по умолчанию 4 секунды. Допустимые операции чтения повторяются не более одного раза.
 
 Поиск остаётся локальным в первую очередь. Провайдер вызывается, только когда локальных результатов

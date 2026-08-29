@@ -29,23 +29,49 @@ function renderCardio() {
   );
 }
 
+const plannedSession = {
+  id: 65,
+  activity_type: 'walking',
+  duration_minutes: 30,
+  distance_km: null,
+  average_heart_rate_bpm: null,
+  heart_rate_zone: null,
+  note: null,
+  scheduled_at: '2030-01-10T09:00:00',
+  completed_at: null,
+  status: 'planned',
+  source: 'manual',
+  created_at: '2030-01-09T12:00:00',
+  updated_at: '2030-01-09T12:00:00',
+};
+
 describe('CardioQuickLog', () => {
   beforeEach(() => {
     apiMock.mockReset();
-    apiMock.mockResolvedValue([]);
+    apiMock.mockResolvedValue([plannedSession]);
     trackProductEventMock.mockReset();
   });
 
   afterEach(() => cleanup());
 
-  it('validates required duration next to the field before calling the API', async () => {
+  it('does not show a cardio entry prompt on an unplanned empty day', async () => {
+    apiMock.mockResolvedValue([]);
     renderCardio();
-    await screen.findByText('Кардио пока не записано');
 
-    const openForm = screen.getByRole('button', { name: 'Записать кардио' });
+    await waitFor(() => expect(apiMock).toHaveBeenCalled());
+    expect(screen.queryByRole('heading', { name: 'Кардио' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /кардио/i })).not.toBeInTheDocument();
+  });
+
+  it('shows the plan before a secondary factual entry and validates required duration', async () => {
+    renderCardio();
+    await screen.findByRole('heading', { name: 'План кардио' });
+
+    const openForm = screen.getByRole('button', { name: 'Добавить фактическое кардио' });
     expect(screen.queryByLabelText('Длительность, мин')).not.toBeInTheDocument();
     fireEvent.click(openForm);
 
+    expect(screen.queryByLabelText('Статус')).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Длительность, мин'), { target: { value: '0' } });
     expect(screen.getByRole('button', { name: 'Сохранить кардио' })).toBeDisabled();
     expect(apiMock.mock.calls.filter((call) => call[1]?.method === 'POST')).toHaveLength(0);
@@ -63,15 +89,15 @@ describe('CardioQuickLog', () => {
       </QueryClientProvider>
     );
     const view = render(ui('2030-01-10'));
-    await screen.findByText('Кардио пока не записано');
-    fireEvent.click(screen.getByRole('button', { name: 'Записать кардио' }));
+    await screen.findByRole('heading', { name: 'План кардио' });
+    fireEvent.click(screen.getByRole('button', { name: 'Добавить фактическое кардио' }));
     expect((screen.getByLabelText('Дата и время') as HTMLInputElement).value).toMatch(
       /^2030-01-10T/,
     );
 
     view.rerender(ui('2030-01-11'));
 
-    expect((screen.getByLabelText('Дата и время') as HTMLInputElement).value).toMatch(
+    expect(((await screen.findByLabelText('Дата и время')) as HTMLInputElement).value).toMatch(
       /^2030-01-11T/,
     );
   });
@@ -99,13 +125,13 @@ describe('CardioQuickLog', () => {
           saved = { ...saved, ...(options.body as Record<string, unknown>) };
           return saved;
         }
-        if (path.startsWith('/api/v1/workouts/cardio')) return saved ? [saved] : [];
+        if (path.startsWith('/api/v1/workouts/cardio')) return saved ? [saved] : [plannedSession];
         return null;
       },
     );
     renderCardio();
-    await screen.findByText('Кардио пока не записано');
-    fireEvent.click(screen.getByRole('button', { name: 'Записать кардио' }));
+    await screen.findByRole('heading', { name: 'План кардио' });
+    fireEvent.click(screen.getByRole('button', { name: 'Добавить фактическое кардио' }));
 
     fireEvent.change(screen.getByLabelText('Длительность, мин'), { target: { value: '35' } });
     fireEvent.click(screen.getByText('Дистанция, пульс и заметка'));
@@ -121,7 +147,8 @@ describe('CardioQuickLog', () => {
     await waitFor(() => expect(postAttempts).toBe(2));
     await screen.findByText('35 мин');
     expect(screen.queryByLabelText('Длительность, мин')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Добавить ещё' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Результат кардио' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Добавить ещё кардио' })).toBeVisible();
 
     const posts = apiMock.mock.calls.filter((call) => call[1]?.method === 'POST');
     expect(posts[0]![1].body.client_request_id).toBe(posts[1]![1].body.client_request_id);

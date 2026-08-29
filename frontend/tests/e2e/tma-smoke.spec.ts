@@ -158,7 +158,7 @@ test('TMA auth, shared UI, theme, viewport, safe areas and BackButton stay on on
   await expect.poll(async () => (await tma.state()).backButton.visible).toBe(false);
 });
 
-test('progress report preview, print fallback and BackButton stay inside the TMA contract', async ({
+test('progress report opens the exact browser context for PDF and keeps BackButton contract', async ({
   tma,
   tmaPage,
 }) => {
@@ -170,13 +170,31 @@ test('progress report preview, print fallback and BackButton stay inside the TMA
 
   await expect(tmaPage.getByRole('heading', { name: 'Александр Петров' })).toBeVisible();
   await expectNoHorizontalOverflow(tmaPage);
-  await tmaPage.getByRole('button', { name: 'Печать / Сохранить как PDF' }).click();
-  await expect(
-    tmaPage.getByText(/В Telegram системная печать может быть недоступна/),
-  ).toBeVisible();
+  await tmaPage.getByRole('button', { name: 'Открыть в браузере для PDF' }).click();
+  await expect(tmaPage.getByText('Отчёт открыт в браузере.')).toBeVisible();
+  await expect
+    .poll(async () => (await tma.state()).openedLinks)
+    .toEqual([`${new URL(tmaPage.url()).origin}/app/report?period=days_90`]);
   await expect.poll(async () => (await tma.state()).backButton.visible).toBe(true);
   await tma.clickBack();
   await expect(tmaPage).toHaveURL('/app?section=progress');
+});
+
+test('an unplanned day does not invent a cardio entry prompt in Today', async ({ tmaPage }) => {
+  await installPlatformApi(tmaPage, { cardioState: 'empty' });
+  const cardioRequest = tmaPage.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return url.pathname.endsWith('/api/v1/workouts/cardio') && url.searchParams.has('date_from');
+  });
+  await tmaPage.goto('/app?section=today');
+  await cardioRequest;
+
+  await expect(tmaPage.locator('.cardio-log--quick')).toHaveCount(0);
+  await expect(tmaPage.getByRole('button', { name: /кардио/i })).toHaveCount(0);
+  await tmaPage.screenshot({
+    path: '../.artifacts/screenshots/task-113A-round-2/tma-cardio-unplanned-empty-390x844.png',
+    fullPage: true,
+  });
 });
 
 test('cardio quick log keeps retry, editing and shared Mobile Web/TMA behavior', async ({
@@ -185,25 +203,30 @@ test('cardio quick log keeps retry, editing and shared Mobile Web/TMA behavior',
   tmaPage,
 }) => {
   test.setTimeout(90_000);
-  const tmaApi = await installPlatformApi(tmaPage);
-  const mobileApi = await installPlatformApi(mobilePage, { browserSession: true });
+  const tmaApi = await installPlatformApi(tmaPage, { cardioState: 'planned' });
+  const mobileApi = await installPlatformApi(mobilePage, {
+    browserSession: true,
+    cardioState: 'planned',
+  });
   await Promise.all([tmaPage.goto('/app'), mobilePage.goto('/app')]);
 
   for (const page of [tmaPage, mobilePage]) {
     const cardio = page.locator('.cardio-log--quick');
     await cardio.scrollIntoViewIfNeeded();
-    await expect(cardio.getByRole('heading', { name: 'Кардио' })).toBeVisible();
-    await expect(cardio.getByRole('button', { name: 'Записать кардио' })).toBeVisible();
+    await expect(cardio.getByRole('heading', { name: 'Кардио', exact: true })).toBeVisible();
+    await expect(cardio.getByRole('heading', { name: 'План кардио' })).toBeVisible();
+    await expect(cardio.getByRole('button', { name: 'Добавить фактическое кардио' })).toBeVisible();
     await expect(cardio.getByRole('button', { name: 'Сохранить кардио' })).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
   }
   expect(await sharedSurfaceSignature(tmaPage)).toEqual(await sharedSurfaceSignature(mobilePage));
   await tmaPage.screenshot({
-    path: '../.artifacts/screenshots/task-113A/tma-cardio-state-first-390x844-light.png',
+    path: '../.artifacts/screenshots/task-113A-round-2/tma-cardio-planned-first-390x844-light.png',
   });
 
   const tmaCardio = tmaPage.locator('.cardio-log--quick');
-  await tmaCardio.getByRole('button', { name: 'Записать кардио' }).click();
+  await tmaCardio.getByRole('button', { name: 'Добавить фактическое кардио' }).click();
+  await expect(tmaCardio.getByLabel('Статус')).toHaveCount(0);
   const duration = tmaCardio.getByLabel('Длительность, мин');
   await tmaCardio.getByLabel('Вид активности').selectOption('stationary_bike');
   await duration.focus();
@@ -233,7 +256,13 @@ test('cardio quick log keeps retry, editing and shared Mobile Web/TMA behavior',
   const savedTmaRow = tmaCardio.locator('.cardio-session-row').filter({ hasText: '35 мин' });
   await expect(savedTmaRow).toContainText('5,2 км');
   await expect(savedTmaRow).toContainText('Велотренажёр / велоэргометр');
-  await expect(tmaCardio.getByText('1 сегодня')).toBeVisible();
+  await expect(tmaCardio.getByRole('heading', { name: 'Результат кардио' })).toBeVisible();
+  await expect(tmaCardio.locator('.cardio-log__today > h3')).toHaveText([
+    'Результат кардио',
+    'План кардио',
+  ]);
+  await expect(tmaCardio.getByText('2 сегодня')).toBeVisible();
+  await expect(tmaCardio.getByRole('button', { name: 'Добавить ещё кардио' })).toBeVisible();
   await savedTmaRow.getByRole('button', { name: 'Изменить' }).click();
   const editForm = tmaCardio.locator('.cardio-session-row--editing');
   await editForm.getByLabel('Длительность, мин').fill('40');
@@ -242,9 +271,12 @@ test('cardio quick log keeps retry, editing and shared Mobile Web/TMA behavior',
   const finalTmaRow = tmaCardio.locator('.cardio-session-row').filter({ hasText: '40 мин' });
   await expect(finalTmaRow).toBeVisible();
   await expect(finalTmaRow.getByText('Завершено')).toHaveCSS('white-space', 'nowrap');
+  await tmaCardio.screenshot({
+    path: '../.artifacts/screenshots/task-113A-round-2/tma-cardio-completed-result-first-390x844-light.png',
+  });
 
   const mobileCardio = mobilePage.locator('.cardio-log--quick');
-  await mobileCardio.getByRole('button', { name: 'Записать кардио' }).click();
+  await mobileCardio.getByRole('button', { name: 'Добавить фактическое кардио' }).click();
   await mobileCardio.getByLabel('Длительность, мин').fill('25');
   await mobileCardio.getByRole('button', { name: 'Сохранить кардио' }).click();
   await expect.poll(() => mobileApi.cardioSaveCalls()).toBe(1);
