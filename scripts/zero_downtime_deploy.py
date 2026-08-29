@@ -1,4 +1,4 @@
-"""Blue/green production rollout for the current single-host Docker Compose stack."""
+"""Fail-closed production rollouts for the current single-host Docker Compose stack."""
 
 from __future__ import annotations
 
@@ -66,6 +66,7 @@ class DeployConfig:
     readiness_timeout_seconds: int
     probe_interval_seconds: float
     probe_timeout_seconds: float
+    seo_timeout_seconds: float
     backend_drain_seconds: int
     worker_drain_seconds: int
     bot_drain_seconds: int
@@ -193,6 +194,13 @@ def _slot_environment(
     return env
 
 
+def _legacy_environment(*, backend_image: str, bot_image: str) -> dict[str, str]:
+    env = os.environ.copy()
+    env["BACKEND_IMAGE"] = backend_image
+    env["BOT_IMAGE"] = bot_image
+    return env
+
+
 def _image_digest(image: str, expected_revision: str) -> str:
     result = _run(
         [
@@ -247,6 +255,33 @@ def _capacity() -> dict[str, int]:
     }
     if missing:
         raise DeploymentError(f"parallel-slot capacity gate failed: {missing}")
+    return report
+
+
+def _single_slot_capacity() -> dict[str, int]:
+    memory_kib = 0
+    meminfo = Path("/proc/meminfo")
+    if meminfo.is_file():
+        for line in meminfo.read_text(encoding="utf-8").splitlines():
+            if line.startswith("MemAvailable:"):
+                memory_kib = int(line.split()[1])
+                break
+    disk = shutil.disk_usage(Path.cwd())
+    report = {
+        "cpu_count": os.cpu_count() or 0,
+        "memory_available_mb": memory_kib // 1024,
+        "disk_available_mb": disk.free // (1024 * 1024),
+    }
+    minimums = {
+        "cpu_count": 1,
+        "memory_available_mb": 64,
+        "disk_available_mb": 2048,
+    }
+    missing = {
+        key: (report[key], required) for key, required in minimums.items() if report[key] < required
+    }
+    if missing:
+        raise DeploymentError(f"single-slot capacity gate failed: {missing}")
     return report
 
 
@@ -379,6 +414,20 @@ def _current_run_logs(lease: ConsumerLease) -> str:
     ).stdout
 
 
+def _container_exited_cleanly(lease: ConsumerLease) -> bool:
+    state = _run(
+        [
+            "docker",
+            "inspect",
+            "--format",
+            "{{.State.Status}} {{.State.ExitCode}}",
+            lease.container_id,
+        ],
+        capture=True,
+    ).stdout.strip()
+    return state == "exited 0"
+
+
 def _wait_for_ownership(lease: ConsumerLease, timeout: float) -> None:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -425,7 +474,9 @@ def _stop_slot_consumers(slot: str, config: DeployConfig, *, require_running: bo
     if _service_is_running(worker):
         worker_lease = _consumer_lease(worker, ("worker_started",))
         _compose("stop", "-t", str(config.worker_drain_seconds), worker)
-        if "worker_stopped" not in _current_run_logs(worker_lease):
+        if "worker_stopped" not in _current_run_logs(
+            worker_lease
+        ) and not _container_exited_cleanly(worker_lease):
             raise DeploymentError(
                 f"{worker} did not acknowledge a completed drain within "
                 f"{config.worker_drain_seconds}s; consumer state is uncertain"
@@ -484,7 +535,7 @@ def _start_slot_consumers(
     return worker_lease, bot_lease
 
 
-def _candidate_smoke(slot: str) -> None:
+def _candidate_smoke(slot: str, *, timeout_seconds: int = 10) -> None:
     if slot == "legacy":
         _run(
             [
@@ -494,6 +545,8 @@ def _candidate_smoke(slot: str) -> None:
                 "--allow-http",
                 "--expected-environment",
                 "prod",
+                "--timeout",
+                str(timeout_seconds),
             ]
         )
         return
@@ -520,7 +573,15 @@ def _public_smoke(config: DeployConfig) -> None:
             "prod",
         ]
     )
-    _run([sys.executable, "scripts/check_seo_surface.py", config.public_base_url])
+    _run(
+        [
+            sys.executable,
+            "scripts/check_seo_surface.py",
+            config.public_base_url,
+            "--timeout",
+            str(config.seo_timeout_seconds),
+        ]
+    )
 
 
 def _write_evidence(path: Path, evidence: Evidence) -> None:
@@ -1030,6 +1091,345 @@ def deploy(config: DeployConfig) -> Evidence:
         _write_evidence(evidence_path, evidence)
 
 
+def _legacy_running_image(service: str) -> str:
+    container_id = _compose("ps", "-q", service, capture=True).stdout.strip()
+    if not container_id or not _service_is_running(service):
+        raise DeploymentError(f"single-slot rollout requires running legacy service {service}")
+    image = _run(
+        ["docker", "inspect", "--format", "{{.Config.Image}}", container_id],
+        capture=True,
+    ).stdout.strip()
+    if not image:
+        raise DeploymentError(f"legacy service {service} has no image reference")
+    return image
+
+
+def _stop_legacy_services(config: DeployConfig) -> None:
+    for service, timeout in (
+        ("worker", config.worker_drain_seconds),
+        ("bot", config.bot_drain_seconds),
+        ("backend", config.backend_drain_seconds),
+    ):
+        if not _service_is_running(service):
+            raise DeploymentError(f"legacy service {service} stopped before maintenance handoff")
+        worker_lease = (
+            _consumer_lease(service, ("worker_started",)) if service == "worker" else None
+        )
+        _compose("stop", "-t", str(timeout), service)
+        if _service_is_running(service):
+            raise DeploymentError(f"legacy service {service} remained running after stop")
+        if (
+            worker_lease is not None
+            and "worker_stopped" not in _current_run_logs(worker_lease)
+            and not _container_exited_cleanly(worker_lease)
+        ):
+            raise DeploymentError(
+                "worker did not acknowledge a completed drain within "
+                f"{config.worker_drain_seconds}s; consumer state is uncertain"
+            )
+
+
+def _start_legacy_backend(env: dict[str, str], config: DeployConfig) -> None:
+    _compose(
+        "up",
+        "-d",
+        "--no-build",
+        "--no-deps",
+        "--force-recreate",
+        "--wait",
+        "--wait-timeout",
+        str(config.readiness_timeout_seconds),
+        "backend",
+        env=env,
+    )
+    _candidate_smoke("legacy", timeout_seconds=config.readiness_timeout_seconds)
+
+
+def _start_legacy_consumers(
+    env: dict[str, str],
+    evidence: Evidence,
+    config: DeployConfig,
+    *,
+    require_markers: bool,
+    best_effort: bool = False,
+) -> tuple[ConsumerLease, ConsumerLease]:
+    errors: list[str] = []
+    worker_lease: ConsumerLease | None = None
+    bot_lease: ConsumerLease | None = None
+
+    started = time.monotonic()
+    try:
+        _compose(
+            "up",
+            "-d",
+            "--no-build",
+            "--no-deps",
+            "--force-recreate",
+            "--wait",
+            "--wait-timeout",
+            str(config.readiness_timeout_seconds),
+            "worker",
+            env=env,
+        )
+        worker_markers = ("worker_started",) if require_markers else ()
+        worker_lease = _consumer_lease("worker", worker_markers)
+        _wait_for_ownership(worker_lease, timeout=config.readiness_timeout_seconds)
+        evidence.worker_handoff_seconds = round(time.monotonic() - started, 3)
+    except BaseException as worker_exc:
+        if not best_effort:
+            raise
+        errors.append(f"worker: {type(worker_exc).__name__}: {worker_exc}")
+
+    started = time.monotonic()
+    try:
+        _compose(
+            "up",
+            "-d",
+            "--no-build",
+            "--no-deps",
+            "--force-recreate",
+            "bot",
+            env=env,
+        )
+        bot_markers = (
+            ("polling_file_lock_acquired", "telegram_polling_started")
+            if config.bot_polling_enabled
+            else ("polling_disabled",)
+        )
+        if not require_markers:
+            bot_markers = ()
+        bot_lease = _consumer_lease("bot", bot_markers)
+        _wait_for_ownership(bot_lease, timeout=config.readiness_timeout_seconds)
+        evidence.bot_handoff_seconds = round(time.monotonic() - started, 3)
+    except BaseException as bot_exc:
+        errors.append(f"bot: {type(bot_exc).__name__}: {bot_exc}")
+
+    if errors:
+        raise DeploymentError("consumer restoration was incomplete: " + "; ".join(errors))
+    if worker_lease is None or bot_lease is None:
+        raise DeploymentError("consumer restoration returned no verified ownership lease")
+    return worker_lease, bot_lease
+
+
+def single_slot_deploy(config: DeployConfig) -> Evidence:
+    confirmed_sha = os.environ.get("DEPLOY_SINGLE_SLOT_CONFIRMED_SHA", "")
+    if confirmed_sha != config.target_revision:
+        raise DeploymentError(
+            "single-slot rollout requires DEPLOY_SINGLE_SLOT_CONFIRMED_SHA "
+            "to equal the exact target revision"
+        )
+    if (config.state_root / "state.json").exists():
+        raise DeploymentError(
+            "single-slot rollout is only allowed before blue/green state initialization"
+        )
+
+    active_revision_path = config.state_root / "last-successful-revision"
+    if not active_revision_path.is_file():
+        raise DeploymentError("single-slot rollout requires last-successful-revision evidence")
+    active_revision = active_revision_path.read_text(encoding="utf-8").strip()
+    if not re.fullmatch(r"[0-9a-f]{40}", active_revision):
+        raise DeploymentError("last-successful-revision is not a full Git SHA")
+
+    deployment_id = (
+        f"single-slot-{int(time.time())}-{config.target_revision[:12]}-{uuid.uuid4().hex[:8]}"
+    )
+    evidence = Evidence(
+        deployment_id=deployment_id,
+        target_revision=config.target_revision,
+        previous_revision=active_revision,
+        active_slot="legacy",
+        candidate_slot="legacy",
+        started_at=time.time(),
+    )
+    evidence_path = config.state_root / deployment_id / "summary.json"
+
+    if active_revision == config.target_revision:
+        _switch_gateway("legacy", "legacy")
+        _public_smoke(config)
+        evidence.verdict = "active"
+        _write_evidence(evidence_path, evidence)
+        print(f"Revision {config.target_revision} is already active; verified single-slot no-op")
+        return evidence
+
+    old_backend = ""
+    old_bot = ""
+    target_env: dict[str, str] | None = None
+    services_stopped = False
+
+    try:
+        with _stage(evidence, "single_slot_preflight"):
+            evidence.capacity = _single_slot_capacity()
+            _compose("config", "--quiet")
+            _switch_gateway("legacy", "legacy")
+            _public_smoke(config)
+            old_backend = _image_digest(_legacy_running_image("backend"), active_revision)
+            old_bot = _image_digest(_legacy_running_image("bot"), active_revision)
+            old_worker = _image_digest(_legacy_running_image("worker"), active_revision)
+            if old_worker != old_backend:
+                raise DeploymentError(
+                    "legacy backend and worker do not use the same verified image digest"
+                )
+            _legacy_running_image("edge")
+
+        with _stage(evidence, "pull_and_verify"):
+            preliminary_env = _legacy_environment(
+                backend_image=config.backend_image,
+                bot_image=config.bot_image,
+            )
+            _compose(
+                "pull",
+                "setup",
+                "backend",
+                "worker",
+                "bot",
+                env=preliminary_env,
+            )
+            target_backend = _image_digest(config.backend_image, config.target_revision)
+            target_bot = _image_digest(config.bot_image, config.target_revision)
+            target_env = _legacy_environment(
+                backend_image=target_backend,
+                bot_image=target_bot,
+            )
+            _compose("config", "--quiet", env=target_env)
+            _run(
+                [
+                    "docker",
+                    "run",
+                    "--rm",
+                    "--network",
+                    "none",
+                    "--env-file",
+                    ".env",
+                    target_backend,
+                    "python",
+                    "-c",
+                    "from fitminiapp_api.core.config import settings; assert settings.app_env == 'prod'",
+                ]
+            )
+            _run(
+                [
+                    "docker",
+                    "run",
+                    "--rm",
+                    "--network",
+                    "none",
+                    "--env-file",
+                    ".env",
+                    target_bot,
+                    "python",
+                    "-c",
+                    "from fitminiapp_bot.config import settings; assert settings.app_env == 'prod'",
+                ]
+            )
+
+        with _stage(evidence, "backup"):
+            _run([sys.executable, "scripts/db_maintenance.py", "backup"])
+
+        with _stage(evidence, "migration_gate"):
+            _run(
+                [
+                    sys.executable,
+                    "scripts/check_online_migrations.py",
+                    active_revision,
+                    config.target_revision,
+                ]
+            )
+
+        with _stage(evidence, "pre_stop_capacity"):
+            evidence.capacity = _single_slot_capacity()
+
+        with _stage(evidence, "maintenance_stop"):
+            services_stopped = True
+            _stop_legacy_services(config)
+
+        with _stage(evidence, "migration"):
+            if target_env is None:
+                raise DeploymentError("target images were not resolved before maintenance")
+            _compose("run", "--rm", "--no-deps", "setup", env=target_env)
+
+        with _stage(evidence, "application_start"):
+            _start_legacy_backend(target_env, config)
+            _public_smoke(config)
+            consumer_leases = _start_legacy_consumers(
+                target_env,
+                evidence,
+                config,
+                require_markers=True,
+            )
+
+        with _stage(evidence, "verification"):
+            for lease in consumer_leases:
+                if not _lease_is_current_and_healthy(lease):
+                    raise DeploymentError(
+                        f"{lease.service} lost current-run ownership after single-slot start"
+                    )
+            _public_smoke(config)
+            _atomic_text(active_revision_path, config.target_revision + "\n")
+
+        evidence.verdict = "active"
+        print(f"Single-slot deployment verified: revision={config.target_revision}; slot=legacy")
+        return evidence
+    except BaseException:
+        if services_stopped and old_backend and old_bot:
+            rollback_stage = StageRecord(name="single_slot_rollback", started_at=time.time())
+            evidence.stages.append(rollback_stage)
+            try:
+                for service, timeout in (
+                    ("worker", config.worker_drain_seconds),
+                    ("bot", config.bot_drain_seconds),
+                    ("backend", config.backend_drain_seconds),
+                ):
+                    if _service_is_running(service):
+                        _compose("stop", "-t", str(timeout), service)
+                rollback_env = _legacy_environment(
+                    backend_image=old_backend,
+                    bot_image=old_bot,
+                )
+                rollback_errors: list[str] = []
+                try:
+                    _start_legacy_backend(rollback_env, config)
+                except BaseException as rollback_backend_exc:
+                    rollback_errors.append(
+                        f"backend: {type(rollback_backend_exc).__name__}: {rollback_backend_exc}"
+                    )
+                try:
+                    _start_legacy_consumers(
+                        rollback_env,
+                        evidence,
+                        config,
+                        require_markers=True,
+                        best_effort=True,
+                    )
+                except BaseException as rollback_consumers_exc:
+                    rollback_errors.append(
+                        "consumers: "
+                        f"{type(rollback_consumers_exc).__name__}: {rollback_consumers_exc}"
+                    )
+                try:
+                    _public_smoke(config)
+                except BaseException as rollback_smoke_exc:
+                    rollback_errors.append(
+                        f"public smoke: {type(rollback_smoke_exc).__name__}: {rollback_smoke_exc}"
+                    )
+                if rollback_errors:
+                    raise DeploymentError(
+                        "rollback restoration was incomplete: " + "; ".join(rollback_errors)
+                    )
+                evidence.verdict = "rolled back"
+                rollback_stage.status = "passed"
+            except BaseException as rollback_exc:
+                rollback_stage.status = "failed"
+                rollback_stage.reason = f"{type(rollback_exc).__name__}: {rollback_exc}"
+                evidence.verdict = "manual intervention required"
+            finally:
+                rollback_stage.ended_at = time.time()
+        else:
+            evidence.verdict = "not stopped"
+        raise
+    finally:
+        _write_evidence(evidence_path, evidence)
+
+
 def _config(args: argparse.Namespace) -> DeployConfig:
     root = Path.cwd().resolve()
     polling_value = _deployment_setting("BOT_POLLING_ENABLED", "true").strip().lower()
@@ -1047,6 +1447,7 @@ def _config(args: argparse.Namespace) -> DeployConfig:
         readiness_timeout_seconds=configured_timeout("DEPLOY_READINESS_TIMEOUT_SECONDS", 180),
         probe_interval_seconds=float(_deployment_setting("DEPLOY_PROBE_INTERVAL_SECONDS", "1")),
         probe_timeout_seconds=float(_deployment_setting("DEPLOY_PROBE_TIMEOUT_SECONDS", "5")),
+        seo_timeout_seconds=float(_deployment_setting("DEPLOY_SEO_TIMEOUT_SECONDS", "20")),
         backend_drain_seconds=configured_timeout("DEPLOY_BACKEND_DRAIN_SECONDS", 45),
         worker_drain_seconds=configured_timeout("DEPLOY_WORKER_DRAIN_SECONDS", 90),
         bot_drain_seconds=configured_timeout("DEPLOY_BOT_DRAIN_SECONDS", 45),
@@ -1057,7 +1458,7 @@ def _config(args: argparse.Namespace) -> DeployConfig:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
-    for command in ("deploy", "bootstrap", "rollback"):
+    for command in ("deploy", "bootstrap", "rollback", "single-slot"):
         subparser = subparsers.add_parser(command)
         subparser.add_argument("target_revision")
         subparser.add_argument("base_url")
@@ -1070,6 +1471,12 @@ def main() -> int:
                 bootstrap_state(config)
             elif args.command == "rollback":
                 rollback(config)
+            elif args.command == "single-slot":
+                evidence = single_slot_deploy(config)
+                print(
+                    f"Deployment verdict: {evidence.verdict}; "
+                    f"revision={evidence.target_revision}; slot={evidence.candidate_slot}"
+                )
             else:
                 evidence = deploy(config)
                 print(
@@ -1077,7 +1484,7 @@ def main() -> int:
                     f"revision={evidence.target_revision}; slot={evidence.candidate_slot}"
                 )
     except (KeyError, OSError, ValueError, subprocess.CalledProcessError, DeploymentError) as exc:
-        print(f"Zero-downtime deployment failed: {exc}", file=sys.stderr)
+        print(f"Production deployment failed: {exc}", file=sys.stderr)
         return 1
     return 0
 

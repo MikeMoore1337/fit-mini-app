@@ -5,6 +5,7 @@ readonly EXPECTED_ROOT="/root/fit-mini-app"
 readonly TARGET_SHA="${1:?usage: deploy_production.sh TARGET_SHA BASE_URL}"
 readonly BASE_URL="${2:?usage: deploy_production.sh TARGET_SHA BASE_URL}"
 readonly PUBLIC_BASE_URL="${3:-https://your-fitness-coach.ru}"
+readonly ROLLOUT_MODE="${4:-zero-downtime}"
 readonly BACKEND_IMAGE="${BACKEND_IMAGE:?BACKEND_IMAGE must reference the tested backend image}"
 readonly BOT_IMAGE="${BOT_IMAGE:?BOT_IMAGE must reference the tested bot image}"
 
@@ -77,12 +78,28 @@ python3 scripts/configure_production_auth.py .env
 echo "Validating Compose configuration for $TARGET_SHA"
 docker compose config --quiet
 
-echo "Starting fail-closed blue/green rollout"
-python3 scripts/zero_downtime_deploy.py \
-  deploy \
-  "$TARGET_SHA" \
-  "$BASE_URL" \
-  "$PUBLIC_BASE_URL"
+case "$ROLLOUT_MODE" in
+  zero-downtime)
+    echo "Starting fail-closed blue/green rollout"
+    python3 scripts/zero_downtime_deploy.py \
+      deploy \
+      "$TARGET_SHA" \
+      "$BASE_URL" \
+      "$PUBLIC_BASE_URL"
+    ;;
+  single-slot)
+    echo "Starting explicitly authorized single-slot rollout with bounded downtime"
+    python3 scripts/zero_downtime_deploy.py \
+      single-slot \
+      "$TARGET_SHA" \
+      "$BASE_URL" \
+      "$PUBLIC_BASE_URL"
+    ;;
+  *)
+    echo "Unsupported rollout mode: $ROLLOUT_MODE" >&2
+    exit 1
+    ;;
+esac
 
 echo "Checking the public Telegram bot profile"
 set +e

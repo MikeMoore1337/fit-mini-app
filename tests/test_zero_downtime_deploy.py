@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import subprocess
 from dataclasses import asdict
 from pathlib import Path
@@ -30,6 +31,7 @@ def _config(tmp_path: Path) -> deploy.DeployConfig:
         readiness_timeout_seconds=5,
         probe_interval_seconds=0.1,
         probe_timeout_seconds=1,
+        seo_timeout_seconds=20,
         backend_drain_seconds=45,
         worker_drain_seconds=120,
         bot_drain_seconds=60,
@@ -46,6 +48,21 @@ def _state(config: deploy.DeployConfig, *, revision: str = OLD_SHA) -> None:
         active_bot_image="registry/bot@sha256:" + "2" * 64,
     )
     deploy._atomic_json(config.state_root / "state.json", asdict(state))
+
+
+def test_public_smoke_uses_bounded_seo_timeout(tmp_path: Path, monkeypatch) -> None:
+    commands: list[list[str]] = []
+    monkeypatch.setattr(deploy, "_run", lambda command, **kwargs: commands.append(command))
+
+    deploy._public_smoke(_config(tmp_path))
+
+    assert commands[-1] == [
+        deploy.sys.executable,
+        "scripts/check_seo_surface.py",
+        "https://example.test",
+        "--timeout",
+        "20",
+    ]
 
 
 def _patch_runtime(monkeypatch, *, fail_at: str | None = None):
@@ -404,6 +421,7 @@ def test_consumer_stop_fails_closed_when_worker_drain_is_unconfirmed(
     monkeypatch.setattr(deploy, "_consumer_lease", lambda *args: lease)
     monkeypatch.setattr(deploy, "_service_is_running", lambda service: True)
     monkeypatch.setattr(deploy, "_current_run_logs", lambda value: "worker_drain_requested\n")
+    monkeypatch.setattr(deploy, "_container_exited_cleanly", lambda value: False)
     monkeypatch.setattr(
         deploy,
         "_compose",
@@ -416,6 +434,37 @@ def test_consumer_stop_fails_closed_when_worker_drain_is_unconfirmed(
         deploy._stop_slot_consumers("blue", config)
 
     assert commands == [("stop", "-t", "120", "worker-blue")]
+
+
+def test_consumer_stop_accepts_exact_container_clean_exit_without_legacy_marker(
+    tmp_path: Path, monkeypatch
+) -> None:
+    config = _config(tmp_path)
+    lease = deploy.ConsumerLease(
+        service="worker-blue",
+        container_id="worker-current",
+        started_at="2026-08-28T12:00:00Z",
+        required_markers=("worker_started",),
+    )
+    commands = []
+    monkeypatch.setattr(deploy, "_consumer_lease", lambda *args: lease)
+    monkeypatch.setattr(deploy, "_service_is_running", lambda service: True)
+    monkeypatch.setattr(deploy, "_current_run_logs", lambda value: "application_log\n")
+    monkeypatch.setattr(deploy, "_container_exited_cleanly", lambda value: True)
+    monkeypatch.setattr(
+        deploy,
+        "_compose",
+        lambda *args, **kwargs: (
+            commands.append(args) or subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+        ),
+    )
+
+    deploy._stop_slot_consumers("blue", config)
+
+    assert commands == [
+        ("stop", "-t", "120", "worker-blue"),
+        ("stop", "-t", "60", "bot-blue"),
+    ]
 
 
 def test_manual_rollback_swaps_only_verified_revisions(tmp_path: Path, monkeypatch) -> None:
@@ -440,3 +489,418 @@ def test_manual_rollback_swaps_only_verified_revisions(tmp_path: Path, monkeypat
     assert restored.active_revision == OLD_SHA
     assert restored.rollback_revision == NEW_SHA
     assert calls["switch"] == [("blue", "green")]
+
+
+def _patch_single_slot_runtime(tmp_path: Path, monkeypatch) -> dict[str, list]:
+    calls: dict[str, list] = {
+        "compose": [],
+        "stops": [],
+        "backend_starts": [],
+        "consumer_starts": [],
+    }
+    config = _config(tmp_path)
+    active_revision_path = config.state_root / "last-successful-revision"
+    active_revision_path.parent.mkdir(parents=True)
+    active_revision_path.write_text(OLD_SHA + "\n", encoding="utf-8")
+    monkeypatch.setenv("DEPLOY_SINGLE_SLOT_CONFIRMED_SHA", NEW_SHA)
+    monkeypatch.setattr(
+        deploy,
+        "_single_slot_capacity",
+        lambda: {"cpu_count": 1, "memory_available_mb": 128, "disk_available_mb": 4096},
+    )
+    monkeypatch.setattr(
+        deploy,
+        "_compose",
+        lambda *args, **kwargs: (
+            calls["compose"].append((args, kwargs))
+            or subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+        ),
+    )
+    monkeypatch.setattr(deploy, "_switch_gateway", lambda *args: None)
+    monkeypatch.setattr(deploy, "_public_smoke", lambda *args: None)
+    monkeypatch.setattr(
+        deploy,
+        "_legacy_running_image",
+        lambda service: f"registry/{'bot' if service == 'bot' else 'backend'}:{OLD_SHA}",
+    )
+    monkeypatch.setattr(
+        deploy,
+        "_image_digest",
+        lambda image, revision: f"{image.split(':', maxsplit=1)[0]}@sha256:{revision[0] * 64}",
+    )
+    monkeypatch.setattr(
+        deploy,
+        "_run",
+        lambda args, **kwargs: subprocess.CompletedProcess(args, 0, stdout="", stderr=""),
+    )
+    monkeypatch.setattr(
+        deploy,
+        "_stop_legacy_services",
+        lambda value: calls["stops"].append(value.target_revision),
+    )
+    monkeypatch.setattr(
+        deploy,
+        "_start_legacy_backend",
+        lambda env, value: calls["backend_starts"].append(env["BACKEND_IMAGE"]),
+    )
+
+    def start_consumers(env, evidence, value, *, require_markers, best_effort=False):
+        del evidence, value
+        del best_effort
+        calls["consumer_starts"].append((env["BOT_IMAGE"], require_markers))
+        markers = ("worker_started",) if require_markers else ()
+        return (
+            deploy.ConsumerLease("worker", "worker-id", "now", markers),
+            deploy.ConsumerLease("bot", "bot-id", "now", markers),
+        )
+
+    monkeypatch.setattr(deploy, "_start_legacy_consumers", start_consumers)
+    monkeypatch.setattr(deploy, "_lease_is_current_and_healthy", lambda lease: True)
+    return calls
+
+
+def test_single_slot_rollout_requires_exact_one_shot_confirmation(
+    tmp_path: Path, monkeypatch
+) -> None:
+    config = _config(tmp_path)
+    monkeypatch.delenv("DEPLOY_SINGLE_SLOT_CONFIRMED_SHA", raising=False)
+
+    with pytest.raises(deploy.DeploymentError, match="exact target revision"):
+        deploy.single_slot_deploy(config)
+
+
+def test_single_slot_refuses_initialized_blue_green_host(tmp_path: Path, monkeypatch) -> None:
+    config = _config(tmp_path)
+    _state(config)
+    monkeypatch.setenv("DEPLOY_SINGLE_SLOT_CONFIRMED_SHA", NEW_SHA)
+
+    with pytest.raises(deploy.DeploymentError, match="before blue/green state initialization"):
+        deploy.single_slot_deploy(config)
+
+
+def test_single_slot_rollout_replaces_legacy_services_and_records_success(
+    tmp_path: Path, monkeypatch
+) -> None:
+    config = _config(tmp_path)
+    calls = _patch_single_slot_runtime(tmp_path, monkeypatch)
+
+    evidence = deploy.single_slot_deploy(config)
+
+    assert evidence.verdict == "active"
+    assert calls["stops"] == [NEW_SHA]
+    assert calls["backend_starts"] == ["registry/backend@sha256:" + "b" * 64]
+    assert calls["consumer_starts"] == [("registry/bot@sha256:" + "b" * 64, True)]
+    assert (
+        config.state_root.joinpath("last-successful-revision").read_text(encoding="utf-8").strip()
+        == NEW_SHA
+    )
+    assert not config.state_root.joinpath("state.json").exists()
+
+
+def test_single_slot_failure_after_stop_restores_previous_images(
+    tmp_path: Path, monkeypatch
+) -> None:
+    config = _config(tmp_path)
+    calls = _patch_single_slot_runtime(tmp_path, monkeypatch)
+    starts = 0
+
+    def fail_target_once(env, value):
+        nonlocal starts
+        del value
+        starts += 1
+        calls["backend_starts"].append(env["BACKEND_IMAGE"])
+        if starts == 1:
+            raise deploy.DeploymentError("new backend failed")
+
+    monkeypatch.setattr(deploy, "_start_legacy_backend", fail_target_once)
+    monkeypatch.setattr(deploy, "_service_is_running", lambda service: False)
+
+    with pytest.raises(deploy.DeploymentError, match="new backend failed"):
+        deploy.single_slot_deploy(config)
+
+    assert calls["backend_starts"] == [
+        "registry/backend@sha256:" + "b" * 64,
+        "registry/backend@sha256:" + "a" * 64,
+    ]
+    assert calls["consumer_starts"] == [("registry/bot@sha256:" + "a" * 64, True)]
+    summaries = list(config.state_root.glob("single-slot-*/summary.json"))
+    assert len(summaries) == 1
+    assert json.loads(summaries[0].read_text(encoding="utf-8"))["verdict"] == "rolled back"
+
+
+def test_single_slot_rollback_requires_verified_consumer_ownership(
+    tmp_path: Path, monkeypatch
+) -> None:
+    config = _config(tmp_path)
+    calls = _patch_single_slot_runtime(tmp_path, monkeypatch)
+    starts = 0
+
+    def fail_target_once(env, value):
+        nonlocal starts
+        del value
+        starts += 1
+        calls["backend_starts"].append(env["BACKEND_IMAGE"])
+        if starts == 1:
+            raise deploy.DeploymentError("new backend failed")
+
+    def fail_consumer_ownership(env, evidence, value, *, require_markers, best_effort=False):
+        del env, evidence, value
+        assert require_markers is True
+        assert best_effort is True
+        raise deploy.DeploymentError("bot ownership confirmation timed out")
+
+    monkeypatch.setattr(deploy, "_start_legacy_backend", fail_target_once)
+    monkeypatch.setattr(deploy, "_start_legacy_consumers", fail_consumer_ownership)
+    monkeypatch.setattr(deploy, "_service_is_running", lambda service: False)
+
+    with pytest.raises(deploy.DeploymentError, match="new backend failed"):
+        deploy.single_slot_deploy(config)
+
+    summaries = list(config.state_root.glob("single-slot-*/summary.json"))
+    assert len(summaries) == 1
+    summary = json.loads(summaries[0].read_text(encoding="utf-8"))
+    assert summary["verdict"] == "manual intervention required"
+    rollback = next(stage for stage in summary["stages"] if stage["name"] == "single_slot_rollback")
+    assert rollback["status"] == "failed"
+    assert "ownership confirmation timed out" in rollback["reason"]
+
+
+def test_single_slot_rollback_attempts_consumers_after_backend_smoke_failure(
+    tmp_path: Path, monkeypatch
+) -> None:
+    config = _config(tmp_path)
+    calls = _patch_single_slot_runtime(tmp_path, monkeypatch)
+    starts = 0
+
+    def fail_target_and_rollback_smoke(env, value):
+        nonlocal starts
+        del value
+        starts += 1
+        calls["backend_starts"].append(env["BACKEND_IMAGE"])
+        if starts == 1:
+            raise deploy.DeploymentError("new backend failed")
+        raise deploy.DeploymentError("rollback smoke timed out")
+
+    monkeypatch.setattr(deploy, "_start_legacy_backend", fail_target_and_rollback_smoke)
+    monkeypatch.setattr(deploy, "_service_is_running", lambda service: False)
+
+    with pytest.raises(deploy.DeploymentError, match="new backend failed"):
+        deploy.single_slot_deploy(config)
+
+    assert calls["consumer_starts"] == [("registry/bot@sha256:" + "a" * 64, True)]
+    summaries = list(config.state_root.glob("single-slot-*/summary.json"))
+    assert len(summaries) == 1
+    summary = json.loads(summaries[0].read_text(encoding="utf-8"))
+    assert summary["verdict"] == "manual intervention required"
+    rollback = next(stage for stage in summary["stages"] if stage["name"] == "single_slot_rollback")
+    assert "rollback smoke timed out" in rollback["reason"]
+
+
+def test_legacy_consumer_restore_attempts_bot_after_worker_failure(
+    tmp_path: Path, monkeypatch
+) -> None:
+    config = _config(tmp_path)
+    evidence = deploy.Evidence(
+        deployment_id="test",
+        target_revision=NEW_SHA,
+        previous_revision=OLD_SHA,
+        active_slot="legacy",
+        candidate_slot="legacy",
+        started_at=0,
+    )
+    started_services = []
+
+    def compose(*args, **kwargs):
+        del kwargs
+        if args[0] == "up":
+            started_services.append(args[-1])
+        return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+    def consumer_lease(service, markers):
+        return deploy.ConsumerLease(
+            service=service,
+            container_id=f"{service}-current",
+            started_at="2026-08-28T12:00:00Z",
+            required_markers=markers,
+        )
+
+    def wait_for_ownership(lease, timeout):
+        del timeout
+        if lease.service == "worker":
+            raise deploy.DeploymentError("worker ownership failed")
+
+    monkeypatch.setattr(deploy, "_compose", compose)
+    monkeypatch.setattr(deploy, "_consumer_lease", consumer_lease)
+    monkeypatch.setattr(deploy, "_wait_for_ownership", wait_for_ownership)
+
+    with pytest.raises(deploy.DeploymentError, match="worker ownership failed"):
+        deploy._start_legacy_consumers({}, evidence, config, require_markers=True, best_effort=True)
+
+    assert started_services == ["worker", "bot"]
+
+
+def test_forward_consumer_start_is_fail_fast_after_worker_failure(
+    tmp_path: Path, monkeypatch
+) -> None:
+    config = _config(tmp_path)
+    evidence = deploy.Evidence(
+        deployment_id="test",
+        target_revision=NEW_SHA,
+        previous_revision=OLD_SHA,
+        active_slot="legacy",
+        candidate_slot="legacy",
+        started_at=0,
+    )
+    started_services = []
+
+    def compose(*args, **kwargs):
+        del kwargs
+        if args[0] == "up":
+            started_services.append(args[-1])
+        return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+    def consumer_lease(service, markers):
+        return deploy.ConsumerLease(
+            service=service,
+            container_id=f"{service}-current",
+            started_at="2026-08-28T12:00:00Z",
+            required_markers=markers,
+        )
+
+    def wait_for_ownership(lease, timeout):
+        del timeout
+        if lease.service == "worker":
+            raise deploy.DeploymentError("worker ownership failed")
+
+    monkeypatch.setattr(deploy, "_compose", compose)
+    monkeypatch.setattr(deploy, "_consumer_lease", consumer_lease)
+    monkeypatch.setattr(deploy, "_wait_for_ownership", wait_for_ownership)
+
+    with pytest.raises(deploy.DeploymentError, match="worker ownership failed"):
+        deploy._start_legacy_consumers({}, evidence, config, require_markers=True)
+
+    assert started_services == ["worker"]
+
+
+def test_single_slot_rechecks_capacity_after_pull_and_backup(tmp_path: Path, monkeypatch) -> None:
+    config = _config(tmp_path)
+    calls = _patch_single_slot_runtime(tmp_path, monkeypatch)
+    capacity_checks = 0
+
+    def capacity():
+        nonlocal capacity_checks
+        capacity_checks += 1
+        if capacity_checks == 2:
+            raise deploy.DeploymentError("single-slot capacity gate failed after pull")
+        return {"cpu_count": 1, "memory_available_mb": 128, "disk_available_mb": 4096}
+
+    monkeypatch.setattr(deploy, "_single_slot_capacity", capacity)
+
+    with pytest.raises(deploy.DeploymentError, match="failed after pull"):
+        deploy.single_slot_deploy(config)
+
+    assert capacity_checks == 2
+    assert calls["stops"] == []
+
+
+def test_single_slot_rejects_backend_worker_image_drift(tmp_path: Path, monkeypatch) -> None:
+    config = _config(tmp_path)
+    calls = _patch_single_slot_runtime(tmp_path, monkeypatch)
+
+    def running_image(service):
+        if service == "worker":
+            return f"registry/worker-drift:{OLD_SHA}"
+        return f"registry/{'bot' if service == 'bot' else 'backend'}:{OLD_SHA}"
+
+    monkeypatch.setattr(deploy, "_legacy_running_image", running_image)
+
+    with pytest.raises(deploy.DeploymentError, match="same verified image digest"):
+        deploy.single_slot_deploy(config)
+
+    assert calls["stops"] == []
+
+
+def test_single_slot_stop_is_ordered_and_uses_bounded_timeouts(tmp_path: Path, monkeypatch) -> None:
+    config = _config(tmp_path)
+    running = {"worker", "bot", "backend"}
+    commands = []
+    worker_lease = deploy.ConsumerLease(
+        service="worker",
+        container_id="worker-current",
+        started_at="2026-08-28T12:00:00Z",
+        required_markers=("worker_started",),
+    )
+
+    monkeypatch.setattr(deploy, "_service_is_running", lambda service: service in running)
+    monkeypatch.setattr(deploy, "_consumer_lease", lambda *args: worker_lease)
+    monkeypatch.setattr(deploy, "_current_run_logs", lambda lease: "worker_stopped\n")
+
+    def compose(*args, **kwargs):
+        del kwargs
+        commands.append(args)
+        if args[0] == "stop":
+            running.remove(args[-1])
+        return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(deploy, "_compose", compose)
+
+    deploy._stop_legacy_services(config)
+
+    assert commands == [
+        ("stop", "-t", "120", "worker"),
+        ("stop", "-t", "60", "bot"),
+        ("stop", "-t", "45", "backend"),
+    ]
+
+
+def test_single_slot_stop_fails_closed_when_worker_drain_is_unconfirmed(
+    tmp_path: Path, monkeypatch
+) -> None:
+    config = _config(tmp_path)
+    running = {"worker", "bot", "backend"}
+    commands = []
+    worker_lease = deploy.ConsumerLease(
+        service="worker",
+        container_id="worker-current",
+        started_at="2026-08-28T12:00:00Z",
+        required_markers=("worker_started",),
+    )
+
+    monkeypatch.setattr(deploy, "_service_is_running", lambda service: service in running)
+    monkeypatch.setattr(deploy, "_consumer_lease", lambda *args: worker_lease)
+    monkeypatch.setattr(deploy, "_current_run_logs", lambda lease: "worker_drain_requested\n")
+    monkeypatch.setattr(deploy, "_container_exited_cleanly", lambda lease: False)
+
+    def compose(*args, **kwargs):
+        del kwargs
+        commands.append(args)
+        if args[0] == "stop":
+            running.remove(args[-1])
+        return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(deploy, "_compose", compose)
+
+    with pytest.raises(deploy.DeploymentError, match="consumer state is uncertain"):
+        deploy._stop_legacy_services(config)
+
+    assert commands == [("stop", "-t", "120", "worker")]
+    assert running == {"bot", "backend"}
+
+
+def test_clean_exit_evidence_requires_exited_zero(monkeypatch) -> None:
+    lease = deploy.ConsumerLease(
+        service="worker",
+        container_id="worker-current",
+        started_at="2026-08-28T12:00:00Z",
+        required_markers=("worker_started",),
+    )
+
+    for state, expected in (("exited 0\n", True), ("exited 137\n", False), ("running 0\n", False)):
+        monkeypatch.setattr(
+            deploy,
+            "_run",
+            lambda *args, output=state, **kwargs: subprocess.CompletedProcess(
+                args, 0, stdout=output, stderr=""
+            ),
+        )
+        assert deploy._container_exited_cleanly(lease) is expected

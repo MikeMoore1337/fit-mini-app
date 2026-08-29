@@ -99,10 +99,14 @@ approval. Timeout/readiness/drain/observation параметры перечис�
 измерения только для прохождения gate запрещено.
 
 `DEPLOY_WORKER_DRAIN_SECONDS` одновременно задаёт Compose grace period и timeout команды stop.
-Значение должно быть больше измеренного worst-case времени одного worker cycle. Если после SIGTERM
-нет текущего `worker_stopped`, rollout считается имеющим неопределённое состояние consumer, новый
-worker не получает ownership, а оператор использует evidence для ручного разбора. Старые строки
-логов переиспользованного slot не принимаются: boundary берётся из `StartedAt` текущего container.
+Значение должно быть больше измеренного worst-case времени одного worker cycle. Основное
+доказательство корректного завершения — текущий `worker_stopped`; старые строки логов
+переиспользованного slot не принимаются, boundary берётся из `StartedAt` текущего container.
+Ограниченное исключение для legacy worker без доступного marker допускается только после stop того
+же заранее захваченного container ID, если `docker inspect` подтверждает строго `exited 0`. При
+`running`, ненулевом exit code, исчезнувшем container или любой другой неоднозначности rollout
+считается имеющим неопределённое состояние consumer: новый worker не получает ownership, а оператор
+использует evidence для ручного разбора.
 
 Online migration gate анализирует только `upgrade()`. Для `expand` автоматически допускается лишь
 `op.add_column` со статически проверяемым `nullable=True` без default/index/unique; обычные index и
@@ -114,6 +118,37 @@ constraint операции fail-closed. `backfill` допускает толь�
 Оба slot используют один production `.env`, поэтому cookie/JWT secrets и server-owned auth state не
 меняются при switch. Candidate smoke проверяет liveness, readiness/DB, document, matching hashed
 asset, anonymous `401` auth boundary, public config и TMA-safe shell без credentials или записей.
+
+## Автоматический single-slot режим для малоресурсного host
+
+Если production host объективно не может одновременно держать два application slot, уменьшать
+blue/green capacity gates запрещено. Для текущего малоресурсного host owner разрешил автоматический
+single-slot rollout с ограниченным техническим перерывом. Он не является zero-downtime: после
+успешного post-merge CI production workflow сам передаёт четвёртый аргумент `single-slot` и
+подтверждает ровно проверенный SHA через process environment
+`DEPLOY_SINGLE_SLOT_CONFIRMED_SHA`. Произвольный SHA или другой rollout mode workflow не принимает.
+
+Перед включением режима owner подтвердил off-host PostgreSQL backup, текущий
+`last-successful-revision` и допустимость bounded downtime. Каждый rollout заново проверяет не менее
+`2 GiB` свободного диска, актуальную revision и публичный smoke, затем скачивает и проверяет
+immutable images, создаёт свежий локальный dump и запускает migration gate. Только после этого
+команда последовательно останавливает legacy worker, bot и backend, выполняет setup/migrations,
+запускает новый backend и проверяет его, затем запускает единственных worker/bot и записывает
+успешную revision.
+
+Ошибка после остановки приложения пересоздаёт legacy services из зафиксированных прежних image
+digests и проверяет public smoke. Schema автоматически не откатывается: общий online-migration gate
+сохраняет совместимость старого кода. Если возврат не подтверждён, evidence получает verdict
+`manual intervention required`, а оператор действует по recovery runbook.
+
+В normal path оператор не запускает production command: merge PR является release authorization,
+а CI, exact-SHA confirmation, backup, migration gate, остановка, запуск, smoke и rollback проходят
+автоматически. Ручной запуск той же команды остаётся exceptional recovery operation и требует
+нового owner approval.
+
+Отсутствие четвёртого аргумента всегда сохраняет fail-closed blue/green path. Single-slot не создаёт
+`state.json`; переход к blue/green в будущем по-прежнему требует отдельного bootstrap и фактического
+parallel-slot headroom.
 
 ## Bootstrap и production boundary
 
