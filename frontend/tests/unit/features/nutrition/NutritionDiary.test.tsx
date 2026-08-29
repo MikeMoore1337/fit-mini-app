@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NutritionDiary } from '../../../../src/features/nutrition/NutritionDiary';
@@ -126,7 +126,10 @@ describe('NutritionDiary', () => {
     useAuthMock.mockReturnValue({ user: { id: 10 } });
   });
 
-  afterEach(cleanup);
+  afterEach(() => {
+    vi.useRealTimers();
+    cleanup();
+  });
 
   it('shows all meals, entry macros, targets and navigates by date', async () => {
     apiMock.mockResolvedValue(makeDay());
@@ -436,6 +439,7 @@ describe('NutritionDiary', () => {
   });
 
   it('ignores a stale local search and keeps an unavailable external provider optional', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     let staleSignal: AbortSignal | undefined;
     apiMock.mockImplementation((path: string, options?: { signal?: AbortSignal }) => {
       if (path.startsWith('/api/v1/nutrition/diary?')) return Promise.resolve(makeDay([]));
@@ -475,8 +479,10 @@ describe('NutritionDiary', () => {
     fireEvent.click(within(breakfastSection()).getByRole('button', { name: /Добавить/ }));
     const search = screen.getByRole('searchbox', { name: 'Поиск по названию или бренду' });
     fireEvent.change(search, { target: { value: 'ов' } });
+    await act(() => vi.advanceTimersByTimeAsync(250));
     await waitFor(() => expect(staleSignal).toBeDefined());
     fireEvent.change(search, { target: { value: 'тофу' } });
+    await act(() => vi.advanceTimersByTimeAsync(250));
 
     expect(await screen.findByRole('button', { name: 'Искать во внешнем каталоге' })).toBeVisible();
     await waitFor(() => expect(staleSignal?.aborted).toBe(true));
