@@ -2,7 +2,52 @@ import { useEffect, useRef, type RefObject } from 'react';
 import { useTelegramOverlayBackButton } from '../telegram/useTelegramOverlayBackButton';
 
 let openModalCount = 0;
-let originalBodyOverflow = '';
+let originalScrollPosition = { x: 0, y: 0 };
+let originalBodyStyles: Partial<CSSStyleDeclaration> = {};
+let originalHtmlOverflow = '';
+
+function lockDocumentScroll() {
+  if (openModalCount === 0) {
+    originalScrollPosition = { x: window.scrollX, y: window.scrollY };
+    originalHtmlOverflow = document.documentElement.style.overflow;
+    originalBodyStyles = {
+      overflow: document.body.style.overflow,
+      position: document.body.style.position,
+      top: document.body.style.top,
+      left: document.body.style.left,
+      width: document.body.style.width,
+    };
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${originalScrollPosition.y}px`;
+    document.body.style.left = `-${originalScrollPosition.x}px`;
+    document.body.style.width = '100%';
+  }
+  openModalCount += 1;
+}
+
+function unlockDocumentScroll() {
+  openModalCount = Math.max(0, openModalCount - 1);
+  if (openModalCount !== 0) return;
+  document.documentElement.style.overflow = originalHtmlOverflow;
+  document.body.style.overflow = originalBodyStyles.overflow ?? '';
+  document.body.style.position = originalBodyStyles.position ?? '';
+  document.body.style.top = originalBodyStyles.top ?? '';
+  document.body.style.left = originalBodyStyles.left ?? '';
+  document.body.style.width = originalBodyStyles.width ?? '';
+  if (originalScrollPosition.x !== 0 || originalScrollPosition.y !== 0) {
+    window.scrollTo(originalScrollPosition.x, originalScrollPosition.y);
+  }
+}
+
+export function useDocumentScrollLock(open: boolean) {
+  useEffect(() => {
+    if (!open) return;
+    lockDocumentScroll();
+    return unlockDocumentScroll;
+  }, [open]);
+}
 
 const focusableSelector = [
   'button:not([disabled])',
@@ -21,6 +66,7 @@ export function useModalA11y<T extends HTMLElement>(
   const panelRef = useRef<T | null>(null);
   const closeRef = useRef(onClose);
   useTelegramOverlayBackButton(open, () => closeRef.current());
+  useDocumentScrollLock(open);
 
   useEffect(() => {
     closeRef.current = onClose;
@@ -30,12 +76,6 @@ export function useModalA11y<T extends HTMLElement>(
     if (!open) return;
     const previousFocus =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    if (openModalCount === 0) {
-      originalBodyOverflow = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-    }
-    openModalCount += 1;
-
     const frame = window.requestAnimationFrame(() => {
       const panel = panelRef.current;
       const preferred = initialFocusSelector
@@ -73,8 +113,6 @@ export function useModalA11y<T extends HTMLElement>(
     return () => {
       window.cancelAnimationFrame(frame);
       document.removeEventListener('keydown', onKeyDown);
-      openModalCount = Math.max(0, openModalCount - 1);
-      if (openModalCount === 0) document.body.style.overflow = originalBodyOverflow;
       previousFocus?.focus();
     };
   }, [initialFocusSelector, open]);

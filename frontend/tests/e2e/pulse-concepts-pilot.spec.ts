@@ -166,6 +166,7 @@ test('selected current-action artwork and floating dock preserve the shared navi
   const desktopNavigation = page.locator('#appBottomNav');
   await expect(desktopNavigation).toHaveCSS('width', '220px');
   await expect(desktopNavigation).toHaveCSS('border-radius', '0px');
+  await page.getByRole('button', { name: 'Записать кардио' }).click();
   const cardioFieldTops = await page.locator('.cardio-form__core').evaluate((form) => {
     const top = (selector: string) =>
       form.querySelector<HTMLElement>(selector)!.getBoundingClientRect().top;

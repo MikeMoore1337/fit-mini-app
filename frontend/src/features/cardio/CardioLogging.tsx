@@ -78,7 +78,8 @@ interface CardioDraft {
   clientRequestId: string;
 }
 
-function emptyDraft(timeZone: string): CardioDraft {
+function emptyDraft(timeZone: string, initialDate?: string): CardioDraft {
+  const currentDateTime = dateTimeInputValue(new Date(), timeZone);
   return {
     activityType: 'walking',
     duration: '',
@@ -86,7 +87,7 @@ function emptyDraft(timeZone: string): CardioDraft {
     averageHeartRate: '',
     heartRateZone: '',
     note: '',
-    scheduledAt: dateTimeInputValue(new Date(), timeZone),
+    scheduledAt: initialDate ? `${initialDate}${currentDateTime.slice(10)}` : currentDateTime,
     status: 'completed',
     clientRequestId: requestId(),
   };
@@ -173,16 +174,18 @@ function CardioSessionForm({
   onCancel,
   onSaved,
   timeZone,
+  initialDate,
 }: {
   editing?: CardioSession | null;
   onCancel?: () => void;
   onSaved: () => void;
   timeZone: string;
+  initialDate?: string;
 }) {
   const queryClient = useQueryClient();
   const { toast } = useFeedback();
   const [draft, setDraft] = useState<CardioDraft>(() =>
-    editing ? draftFromSession(editing) : emptyDraft(timeZone),
+    editing ? draftFromSession(editing) : emptyDraft(timeZone, initialDate),
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -227,7 +230,7 @@ function CardioSessionForm({
       toast(editing ? 'Кардио-запись обновлена' : 'Кардио записано');
       if (editing) onSaved();
       else {
-        setDraft(emptyDraft(timeZone));
+        setDraft(emptyDraft(timeZone, initialDate));
         setOptionalOpen(false);
         onSaved();
       }
@@ -390,7 +393,7 @@ function CardioSessionForm({
         </div>
       )}
       <div className="cardio-form__actions">
-        {editing && (
+        {onCancel && (
           <Button
             disabled={save.isPending}
             onClick={() => {
@@ -403,7 +406,11 @@ function CardioSessionForm({
             Отмена
           </Button>
         )}
-        <Button aria-busy={save.isPending} disabled={save.isPending} type="submit">
+        <Button
+          aria-busy={save.isPending}
+          disabled={save.isPending || !dirty || Object.keys(draftErrors(draft)).length > 0}
+          type="submit"
+        >
           {save.isPending ? 'Сохраняем…' : editing ? 'Сохранить изменения' : 'Сохранить кардио'}
         </Button>
       </div>
@@ -538,6 +545,8 @@ function SessionList({ sessions, timeZone }: { sessions: CardioSession[]; timeZo
 export function CardioQuickLog({ today }: { today: string }) {
   const { user } = useAuth();
   const timeZone = user?.profile?.timezone || detectedTimeZone();
+  const [formOpen, setFormOpen] = useState(false);
+  const isToday = today === dateInputValue(new Date(), timeZone);
   const sessions = useQuery({
     queryKey: queryKeys.cardio.range(today, today),
     queryFn: () =>
@@ -548,17 +557,37 @@ export function CardioQuickLog({ today }: { today: string }) {
     <section className="cardio-log cardio-log--quick" aria-labelledby="cardio-quick-title">
       <header className="cardio-log__header">
         <div>
-          <span className="eyebrow">Ручная запись</span>
+          <span className="eyebrow">Фактическая активность</span>
           <h2 id="cardio-quick-title">Кардио</h2>
-          <p>Зафиксируйте факт без часов, калорий и расчётных MET.</p>
+          <p>Записи за выбранный день. Планирование кардио находится в разделе программы.</p>
         </div>
-        <Badge>{sessions.data?.length ? `${sessions.data.length} сегодня` : 'Сегодня'}</Badge>
+        <Badge>
+          {sessions.data?.length
+            ? `${sessions.data.length} ${isToday ? 'сегодня' : 'за день'}`
+            : isToday
+              ? 'Сегодня'
+              : formatCalendarDate(today, { day: 'numeric', month: 'short' })}
+        </Badge>
       </header>
-      <CardioSessionForm onSaved={() => undefined} timeZone={timeZone} />
+      {formOpen ? (
+        <div className="cardio-log__entry-form">
+          <CardioSessionForm
+            key={today}
+            initialDate={today}
+            onCancel={() => setFormOpen(false)}
+            onSaved={() => setFormOpen(false)}
+            timeZone={timeZone}
+          />
+        </div>
+      ) : (
+        <Button type="button" variant="secondary" onClick={() => setFormOpen(true)}>
+          {sessions.data?.length ? 'Добавить ещё' : 'Записать кардио'}
+        </Button>
+      )}
       <div className="cardio-log__today">
-        <h3>Сегодняшние записи</h3>
+        <h3>Записи за день</h3>
         {sessions.isLoading ? (
-          <LoadingState label="Загружаем кардио за сегодня…" />
+          <LoadingState label="Загружаем кардио за день…" />
         ) : sessions.error ? (
           <ErrorState
             message={(sessions.error as Error).message}

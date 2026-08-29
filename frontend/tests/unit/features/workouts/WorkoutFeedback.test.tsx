@@ -10,6 +10,11 @@ import {
 import { FeedbackProvider } from '../../../../src/shared/ui/FeedbackProvider';
 import { queryKeys } from '../../../../src/shared/queryKeys';
 
+const authState = vi.hoisted(() => ({ value: { user: { trainer: { id: 7 } } } as unknown }));
+vi.mock('../../../../src/app/AuthProvider', () => ({
+  useOptionalAuth: () => authState.value,
+}));
+
 const comments = [
   {
     id: 2,
@@ -70,6 +75,7 @@ const trainerProps = {
 
 describe('WorkoutFeedback', () => {
   beforeEach(() => {
+    authState.value = { user: { trainer: { id: 7 } } };
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       if (String(input).endsWith('/comments')) {
         return new Response(JSON.stringify(comments), { status: 200 });
@@ -198,6 +204,21 @@ describe('WorkoutFeedback', () => {
     expect(screen.queryByLabelText('Комментарий')).not.toBeInTheDocument();
     expect(within(document.getElementById('workout-comment-1')!).getByText('Тренер')).toBeVisible();
     expect(document.activeElement).toHaveAttribute('id', 'workout-comment-1');
+  });
+
+  it('скрывает trainer feedback без активной связи с тренером', () => {
+    authState.value = { user: { trainer: null } };
+    renderFeedback(
+      <WorkoutFeedbackDisclosure
+        {...trainerProps}
+        viewer="client"
+        clientId={undefined}
+        clientName={undefined}
+        canCompose={false}
+      />,
+    );
+
+    expect(screen.queryByText('Обратная связь тренера')).not.toBeInTheDocument();
   });
 
   it('оставляет историю read-only при отозванной связи', async () => {

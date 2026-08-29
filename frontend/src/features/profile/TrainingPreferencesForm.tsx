@@ -7,6 +7,7 @@ import { readStorage, removeStorage, writeStorage } from '../../shared/storage';
 import { trainingPreferencesDraftStorageKey } from '../../shared/userScopedStorage';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { Card, DisclosureIcon } from '../../shared/ui/common';
+import { Icon } from '../../shared/ui/Icon';
 
 export type TrainingPreferencesDraft = ApiSchemas['TrainingPreferencesUpdate'];
 type Exercise = ApiSchemas['ExerciseCatalogItem'];
@@ -488,6 +489,8 @@ export function TrainingPreferencesForm() {
     serverDraft,
   );
   const [validationError, setValidationError] = useState<string | null>(null);
+  const formIsDirty = JSON.stringify(form) !== JSON.stringify(serverDraft);
+  const formIsValid = trainingPreferencesValidationError(form) === null;
   const mutation = useMutation({
     mutationFn: () =>
       api<User>('/api/v1/me/profile', {
@@ -504,13 +507,22 @@ export function TrainingPreferencesForm() {
   });
   const editor = response?.updated_by;
   const conflict = response?.conflict;
+  const updateForm = (next: TrainingPreferencesDraft) => {
+    setForm(next);
+    setValidationError(trainingPreferencesValidationError(next));
+    mutation.reset();
+  };
   return (
     <Card
       id="profile-training-preferences"
       className="training-preferences-card"
-      title="Тренировочные предпочтения"
+      title={
+        <>
+          <Icon name="nav-plan" size={20} /> Тренировочные предпочтения
+        </>
+      }
       description="Немедицинский контекст для подбора программы и совместимых замен."
-      collapsible={false}
+      collapsible
     >
       <form
         className="stack"
@@ -541,7 +553,7 @@ export function TrainingPreferencesForm() {
             </a>
           </div>
         )}
-        <TrainingPreferencesFields value={form} onChange={setForm} ownerUserId={user?.id} />
+        <TrainingPreferencesFields value={form} onChange={updateForm} ownerUserId={user?.id} />
         {validationError && (
           <p className="field-error" role="alert">
             {validationError}
@@ -552,7 +564,7 @@ export function TrainingPreferencesForm() {
             {(mutation.error as Error).message} Изменения сохранены в этом браузере.
           </p>
         )}
-        <button type="submit" disabled={mutation.isPending}>
+        <button type="submit" disabled={mutation.isPending || !formIsDirty || !formIsValid}>
           {mutation.isPending ? 'Сохраняем…' : 'Сохранить предпочтения'}
         </button>
       </form>

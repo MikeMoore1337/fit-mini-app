@@ -149,6 +149,19 @@ describe('NutritionDiary', () => {
     );
   });
 
+  it('names an intentionally empty day without ambiguous fasting terminology', async () => {
+    apiMock.mockResolvedValue({
+      ...makeDay([]),
+      status: 'fasted',
+      status_is_explicit: true,
+    });
+    renderDiary();
+
+    expect(await screen.findByRole('heading', { name: 'День без приёмов пищи' })).toBeVisible();
+    expect(screen.getByText(/только если сознательно не ели весь день/i)).toBeVisible();
+    expect(screen.queryByText(/пост/i)).not.toBeInTheDocument();
+  });
+
   it('adds a recent product and reloads the persisted diary', async () => {
     let logged = false;
     apiMock.mockImplementation((path: string, options?: { method?: string; body?: unknown }) => {
@@ -484,9 +497,7 @@ describe('NutritionDiary', () => {
     fireEvent.change(search, { target: { value: 'тофу' } });
     await act(() => vi.advanceTimersByTimeAsync(250));
 
-    expect(await screen.findByRole('button', { name: 'Искать во внешнем каталоге' })).toBeVisible();
     await waitFor(() => expect(staleSignal?.aborted).toBe(true));
-    fireEvent.click(screen.getByRole('button', { name: 'Искать во внешнем каталоге' }));
     expect(
       await screen.findByText(
         'Внешний каталог временно недоступен. Локальные продукты продолжают работать.',

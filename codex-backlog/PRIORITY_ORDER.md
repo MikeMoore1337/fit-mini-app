@@ -9,7 +9,8 @@ Task-файлы находятся в локальном owner-only `tasks/done/
 ## Current
 
 ```text
-114 Nutrition search/barcode production regression [CURRENT, NOT STARTED]
+113A Owner UX Stabilization -> production smoke -> OWNER VERIFICATION [CURRENT]
+  -> 114 Nutrition search/barcode production regression [BLOCKED, NOT STARTED]
 ```
 
 Tasks `75C`, `76` и `76A` завершены после применимых owner checkpoints. Task `76A` получила
@@ -19,8 +20,8 @@ task архивирована. Task `78` завершила production readiness
 external controls. Tasks `79-80` завершены и архивированы после owner approval. History rewrite
 `master` запустил намеренный automatic production workflow; владелец подтвердил это поведение как
 feature, а точный trigger contract закреплён в обязательной документации. Task `113` завершила
-branch normalization; Task `114` назначена текущей, но её Trigger/реализация не запускались;
-production baseline остаётся `DESIGN_V2_1`.
+branch normalization. Owner запустил Task `113A` как обязательный stabilization release перед Task
+`114`; production baseline остаётся `DESIGN_V2_1`.
 
 Conditional release sequence:
 
@@ -31,7 +32,8 @@ Conditional release sequence:
   RETHINK -> 75B exploration [COMPLETED] -> 75C pilot [COMPLETED] -> 76 [COMPLETED]
 ```
 
-Task `114` назначена текущей, но не выполняется автоматически в completion-сессии `113`.
+Task `114` не выполняется до release/smoke Task `113A` и точной команды владельца:
+`Stabilization принята. Можно переходить к Task 114.`
 Trigger-gated tasks сохраняют собственные gates. Никакая task не запускает следующую автоматически.
 
 ## Текущий UX-reset cycle
@@ -39,7 +41,7 @@ Trigger-gated tasks сохраняют собственные gates. Никак�
 Canonical owner-driven порядок:
 
 ```text
-113 [COMPLETED] -> 114 -> 115A -> OWNER APPROVAL
+113 [COMPLETED] -> 113A STABILIZATION -> production smoke -> OWNER VERIFICATION -> 114 -> 115A -> OWNER APPROVAL
 -> 116 -> 117 -> 118 -> 119 -> 120A -> 120B -> 120C -> 120D
 -> 121 -> 122 -> 123 -> 81 -> 82 -> 84 -> 124A
 -> OWNER RELEASE APPROVAL -> dev -> master -> production deployment
@@ -52,7 +54,7 @@ path и входят в `124A` только по отдельному owner ре
 dependency и owner gate своей task; следующая task автоматически не запускается.
 
 Owner-selected task `106` завершена и архивирована после owner screenshot approval. Она не изменила
-основную release-последовательность; current task теперь `114`.
+основную release-последовательность; current owner gate теперь `113A`.
 
 Owner-selected task `107` создана для scheduled regression и закрытых Allure-отчётов на
 `allure.your-fitness-coach.ru`. Она не является current, не меняет UX-reset critical path и требует
@@ -66,12 +68,12 @@ current, не меняет UX-reset critical path и требует отдель
 
 Owner-selected tasks `109-111` созданы вне основной очереди: `109` — factual Landing offer и
 conversion story, `110` — private custom avatar desktop/mobile, `111` — Progress bento dashboard и
-периоды `1/7/30/90/365/custom`. Они не меняют current `114` или UX-reset critical path, не запускаются
+периоды `1/7/30/90/365/custom`. Они не меняют current `113A` или UX-reset critical path, не запускаются
 автоматически и требуют отдельных owner запусков; для UI до commit действует screenshot approval.
 
 Owner-selected task `112` завершена и архивирована вне основной очереди. Она добавила проверяемый
 current-stack zero-downtime deployment contract. После explicit owner approval production revision
 `194cf036` успешно развёрнута через `single-slot` fallback с bounded downtime из-за фактической
 capacity constrained VPS; это не доказательство production blue/green zero observed downtime.
-Task `112` не изменяет текущий UX-reset cycle; после завершённой Task `113` следующей остаётся Task
-`114`, но её implementation не запускается автоматически.
+Task `112` не изменяет текущий UX-reset cycle; Task `114` остаётся blocked за current owner gate
+`113A` и не запускается автоматически.

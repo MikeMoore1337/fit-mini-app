@@ -56,15 +56,16 @@ function ScheduleRow({
       </div>
       {item.status === 'planned' && (
         <form
-          className="list-row__actions"
+          className="list-row__actions workout-schedule-actions"
           onSubmit={(event) => {
             event.preventDefault();
             onReschedule(scheduledDate, scheduledTime);
           }}
         >
           <label className="field compact-field">
-            <span className="sr-only">Новая дата для {item.title}</span>
+            <span>Дата</span>
             <DateInput
+              aria-label={`Новая дата для ${item.title}`}
               min={minDate}
               value={scheduledDate}
               onChange={(event) => setScheduledDate(event.target.value)}
@@ -72,8 +73,9 @@ function ScheduleRow({
             />
           </label>
           <label className="field compact-field">
-            <span className="sr-only">Новое время для {item.title}</span>
+            <span>Время</span>
             <TimeInput
+              aria-label={`Новое время для ${item.title}`}
               value={scheduledTime}
               onChange={(event) => setScheduledTime(event.target.value)}
             />

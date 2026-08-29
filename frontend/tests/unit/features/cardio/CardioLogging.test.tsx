@@ -42,11 +42,38 @@ describe('CardioQuickLog', () => {
     renderCardio();
     await screen.findByText('Кардио пока не записано');
 
-    fireEvent.change(screen.getByLabelText('Длительность, мин'), { target: { value: '0' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Сохранить кардио' }));
+    const openForm = screen.getByRole('button', { name: 'Записать кардио' });
+    expect(screen.queryByLabelText('Длительность, мин')).not.toBeInTheDocument();
+    fireEvent.click(openForm);
 
-    expect(screen.getByText('Укажите длительность от 1 до 600 минут.')).toBeVisible();
+    fireEvent.change(screen.getByLabelText('Длительность, мин'), { target: { value: '0' } });
+    expect(screen.getByRole('button', { name: 'Сохранить кардио' })).toBeDisabled();
     expect(apiMock.mock.calls.filter((call) => call[1]?.method === 'POST')).toHaveLength(0);
+  });
+
+  it('resets an open draft to the newly selected day', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const ui = (today: string) => (
+      <QueryClientProvider client={queryClient}>
+        <FeedbackProvider>
+          <CardioQuickLog today={today} />
+        </FeedbackProvider>
+      </QueryClientProvider>
+    );
+    const view = render(ui('2030-01-10'));
+    await screen.findByText('Кардио пока не записано');
+    fireEvent.click(screen.getByRole('button', { name: 'Записать кардио' }));
+    expect((screen.getByLabelText('Дата и время') as HTMLInputElement).value).toMatch(
+      /^2030-01-10T/,
+    );
+
+    view.rerender(ui('2030-01-11'));
+
+    expect((screen.getByLabelText('Дата и время') as HTMLInputElement).value).toMatch(
+      /^2030-01-11T/,
+    );
   });
 
   it('keeps the draft and idempotency key after a failed save, then refreshes the list', async () => {
@@ -78,6 +105,7 @@ describe('CardioQuickLog', () => {
     );
     renderCardio();
     await screen.findByText('Кардио пока не записано');
+    fireEvent.click(screen.getByRole('button', { name: 'Записать кардио' }));
 
     fireEvent.change(screen.getByLabelText('Длительность, мин'), { target: { value: '35' } });
     fireEvent.click(screen.getByText('Дистанция, пульс и заметка'));
@@ -92,6 +120,8 @@ describe('CardioQuickLog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Сохранить кардио' }));
     await waitFor(() => expect(postAttempts).toBe(2));
     await screen.findByText('35 мин');
+    expect(screen.queryByLabelText('Длительность, мин')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Добавить ещё' })).toBeVisible();
 
     const posts = apiMock.mock.calls.filter((call) => call[1]?.method === 'POST');
     expect(posts[0]![1].body.client_request_id).toBe(posts[1]![1].body.client_request_id);
@@ -102,11 +132,13 @@ describe('CardioQuickLog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Изменить' }));
     const saveChanges = screen.getByRole('button', { name: 'Сохранить изменения' });
+    expect(saveChanges).toBeDisabled();
     const editForm = saveChanges.closest('form');
     expect(editForm).not.toBeNull();
     fireEvent.change(within(editForm!).getByLabelText('Длительность, мин'), {
       target: { value: '40' },
     });
+    expect(saveChanges).toBeEnabled();
     fireEvent.click(saveChanges);
     await waitFor(() =>
       expect(apiMock.mock.calls.filter((call) => call[1]?.method === 'PATCH')).toHaveLength(1),

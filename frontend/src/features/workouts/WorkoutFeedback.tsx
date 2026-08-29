@@ -13,6 +13,7 @@ import {
 } from '../../shared/ui/common';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { formatCalendarDate } from '../../shared/dateTime';
+import { useOptionalAuth } from '../../app/AuthProvider';
 
 export const WORKOUT_COMMENT_MAX_LENGTH = 2000;
 
@@ -416,7 +417,10 @@ export function WorkoutFeedbackDisclosure({
   defaultOpen = false,
   ...feedbackProps
 }: WorkoutFeedbackProps & { defaultOpen?: boolean }) {
+  const auth = useOptionalAuth();
   const [open, setOpen] = useState(defaultOpen || Boolean(feedbackProps.focusedCommentId));
+
+  if (auth && feedbackProps.viewer === 'client' && !auth.user?.trainer) return null;
 
   return (
     <details

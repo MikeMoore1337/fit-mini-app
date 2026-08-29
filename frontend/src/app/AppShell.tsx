@@ -6,6 +6,7 @@ import { BrandLockup } from '../shared/ui/BrandLogo';
 import { AppNavigationIcon, type AppNavigationIconName } from './AppNavigationIcon';
 import { useOptionalAuth } from './AuthProvider';
 import { useTelegramOverlayBackButton } from '../shared/telegram/useTelegramOverlayBackButton';
+import { useDocumentScrollLock } from '../shared/ui/useModalA11y';
 import { useMotionPresence } from '../shared/ui/useMotionPresence';
 
 export type AppSection = 'today' | 'progress' | 'programs' | 'catalog' | 'nutrition' | 'profile';
@@ -121,14 +122,7 @@ export function AppShell({
   };
   useTelegramOverlayBackButton(morePresent, () => closeMore(true));
 
-  useEffect(() => {
-    if (!morePresent) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [morePresent]);
+  useDocumentScrollLock(morePresent);
 
   useEffect(() => {
     if (moreOpen) {

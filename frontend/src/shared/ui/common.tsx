@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef, ReactNode } from 'react';
+import { useState, type ComponentPropsWithoutRef, type ReactNode } from 'react';
 import { handleTabKeyDown } from './tabs';
 import { Icon } from './Icon';
 
@@ -180,6 +180,7 @@ export function Card({
   children,
   className = '',
   collapsible = true,
+  defaultOpen = false,
 }: {
   id?: string;
   title?: ReactNode;
@@ -189,10 +190,18 @@ export function Card({
   className?: string;
   /** Application cards start collapsed to keep long pages easy to scan. */
   collapsible?: boolean;
+  /** Contextual deep links may reveal one disclosure without expanding the rest. */
+  defaultOpen?: boolean;
 }) {
+  const [disclosureOpen, setDisclosureOpen] = useState(defaultOpen);
   if (collapsible && (title || description)) {
     return (
-      <details className={`card card-disclosure ${className}`.trim()} id={id}>
+      <details
+        className={`card card-disclosure ${className}`.trim()}
+        id={id}
+        onToggle={(event) => setDisclosureOpen(event.currentTarget.open)}
+        open={disclosureOpen}
+      >
         <summary>
           <span>
             {title && <h2>{title}</h2>}

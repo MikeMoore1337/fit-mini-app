@@ -143,7 +143,8 @@ test('TMA auth, shared UI, theme, viewport, safe areas and BackButton stay on on
     secondary: { visible: false, shown: 0, hidden: 0 },
   });
 
-  const weekLink = tmaPage.getByRole('link', { name: /Открыть тренировку Контекст недели/ });
+  await tmaPage.getByRole('button', { name: /воскресенье.*Силовая.*Предстоит тренировк/i }).click();
+  const weekLink = tmaPage.getByRole('link', { name: 'Открыть тренировку' });
   await weekLink.focus();
   await expect(weekLink).toBeFocused();
   await weekLink.press('Enter');
@@ -192,12 +193,17 @@ test('cardio quick log keeps retry, editing and shared Mobile Web/TMA behavior',
     const cardio = page.locator('.cardio-log--quick');
     await cardio.scrollIntoViewIfNeeded();
     await expect(cardio.getByRole('heading', { name: 'Кардио' })).toBeVisible();
-    await expect(cardio.getByRole('button', { name: 'Сохранить кардио' })).toBeVisible();
+    await expect(cardio.getByRole('button', { name: 'Записать кардио' })).toBeVisible();
+    await expect(cardio.getByRole('button', { name: 'Сохранить кардио' })).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
   }
   expect(await sharedSurfaceSignature(tmaPage)).toEqual(await sharedSurfaceSignature(mobilePage));
+  await tmaPage.screenshot({
+    path: '../.artifacts/screenshots/task-113A/tma-cardio-state-first-390x844-light.png',
+  });
 
   const tmaCardio = tmaPage.locator('.cardio-log--quick');
+  await tmaCardio.getByRole('button', { name: 'Записать кардио' }).click();
   const duration = tmaCardio.getByLabel('Длительность, мин');
   await tmaCardio.getByLabel('Вид активности').selectOption('stationary_bike');
   await duration.focus();
@@ -238,6 +244,7 @@ test('cardio quick log keeps retry, editing and shared Mobile Web/TMA behavior',
   await expect(finalTmaRow.getByText('Завершено')).toHaveCSS('white-space', 'nowrap');
 
   const mobileCardio = mobilePage.locator('.cardio-log--quick');
+  await mobileCardio.getByRole('button', { name: 'Записать кардио' }).click();
   await mobileCardio.getByLabel('Длительность, мин').fill('25');
   await mobileCardio.getByRole('button', { name: 'Сохранить кардио' }).click();
   await expect.poll(() => mobileApi.cardioSaveCalls()).toBe(1);
@@ -985,6 +992,7 @@ test('direct Trainer activation keeps client context focused in mocked TMA', asy
   const api = await installPlatformApi(tmaPage);
   await tmaPage.goto('/app?section=profile');
 
+  await tmaPage.getByRole('heading', { name: 'Тренер и приглашения' }).click();
   await tmaPage.getByText('Режим тренера', { exact: true }).click();
   await tmaPage
     .getByRole('checkbox', { name: /Принимаю условия использования режима тренера/ })
@@ -1447,11 +1455,11 @@ for (const scenario of todayStates) {
     await expect(tmaAction).toBeVisible();
     await expect(mobileAction).toBeVisible();
     if (scenario.name === 'completed') {
-      await expect(tmaPage.getByRole('region', { name: 'Эта неделя' })).not.toBeAttached();
-      await expect(mobilePage.getByRole('region', { name: 'Эта неделя' })).not.toBeAttached();
+      await expect(tmaPage.getByRole('navigation', { name: 'Эта неделя' })).not.toBeAttached();
+      await expect(mobilePage.getByRole('navigation', { name: 'Эта неделя' })).not.toBeAttached();
     } else {
-      await expect(tmaPage.getByRole('region', { name: 'Эта неделя' })).toBeVisible();
-      await expect(mobilePage.getByRole('region', { name: 'Эта неделя' })).toBeVisible();
+      await expect(tmaPage.getByRole('navigation', { name: 'Эта неделя' })).toBeVisible();
+      await expect(mobilePage.getByRole('navigation', { name: 'Эта неделя' })).toBeVisible();
     }
     expect(await sharedSurfaceSignature(tmaPage)).toEqual(await sharedSurfaceSignature(mobilePage));
     await expectNoHorizontalOverflow(tmaPage);

@@ -13,6 +13,7 @@ import { DateInput } from '../../shared/ui/PickerInput';
 import { profileGoals } from './goals';
 import { BodyPriorityPicker, isBodyPriorityComplete } from './BodyPriorityPicker';
 import { TrainingPreferencesForm } from './TrainingPreferencesForm';
+import { Icon } from '../../shared/ui/Icon';
 
 const emptyProfile: UserProfileUpdate = {
   full_name: '',
@@ -27,6 +28,25 @@ const emptyProfile: UserProfileUpdate = {
   body_priority: null,
   timezone: detectedTimeZone(),
 };
+
+function profileFormFromUser(user: User | null | undefined): UserProfileUpdate {
+  return user?.profile
+    ? {
+        ...emptyProfile,
+        full_name: user.profile.full_name,
+        birth_date: user.profile.birth_date,
+        goal: (user.profile.goal as UserProfileUpdate['goal']) ?? null,
+        level: (user.profile.level as UserProfileUpdate['level']) ?? null,
+        height_cm: user.profile.height_cm,
+        weight_kg: user.profile.weight_kg,
+        workouts_per_week: user.profile.workouts_per_week,
+        cardio_trainings_per_week: user.profile.cardio_trainings_per_week,
+        resting_heart_rate: user.profile.resting_heart_rate,
+        body_priority: user.profile.body_priority,
+        timezone: user.profile.timezone,
+      }
+    : emptyProfile;
+}
 
 const cardioRecommendationDescriptions = {
   fat_loss:
@@ -128,24 +148,15 @@ export function ProfileForm() {
   const [validationErrors, setValidationErrors] = useState<ProfileFieldErrors>({});
   const [form, setForm, clearDraft] = usePersistentState<UserProfileUpdate>(
     profileDraftStorageKey(user?.id ?? 'anonymous'),
-    () =>
-      user?.profile
-        ? {
-            ...emptyProfile,
-            full_name: user.profile.full_name,
-            birth_date: user.profile.birth_date,
-            goal: (user.profile.goal as UserProfileUpdate['goal']) ?? null,
-            level: (user.profile.level as UserProfileUpdate['level']) ?? null,
-            height_cm: user.profile.height_cm,
-            weight_kg: user.profile.weight_kg,
-            workouts_per_week: user.profile.workouts_per_week,
-            cardio_trainings_per_week: user.profile.cardio_trainings_per_week,
-            resting_heart_rate: user.profile.resting_heart_rate,
-            body_priority: user.profile.body_priority,
-            timezone: user.profile.timezone,
-          }
-        : emptyProfile,
+    () => profileFormFromUser(user),
   );
+  const [persistedSnapshot, setPersistedSnapshot] = useState(() =>
+    JSON.stringify(profileFormFromUser(user)),
+  );
+  const formIsDirty = JSON.stringify(form) !== persistedSnapshot;
+  const formIsValid =
+    !Object.values(validateProfileForm(form)).some(Boolean) &&
+    isBodyPriorityComplete(form.body_priority);
   const timezoneOptions = getTimezoneOptions(form.timezone);
   const validBirthDate = Boolean(form.birth_date) && !birthDateError(form.birth_date);
   const validRestingHeartRate =
@@ -174,6 +185,7 @@ export function ProfileForm() {
   const mutation = useMutation({
     mutationFn: () => api<User>('/api/v1/me/profile', { method: 'PATCH', body: form }),
     onSuccess: async () => {
+      setPersistedSnapshot(JSON.stringify(form));
       clearDraft();
       await reloadUser();
       await Promise.all([
@@ -190,8 +202,12 @@ export function ProfileForm() {
     key: Key,
     value: UserProfileUpdate[Key],
   ) => {
-    setForm({ ...form, [key]: value });
-    setValidationErrors((current) => ({ ...current, [key]: undefined }));
+    const nextForm = { ...form, [key]: value };
+    setForm(nextForm);
+    setValidationErrors((current) => ({
+      ...current,
+      [key]: validateProfileForm(nextForm)[key as keyof ProfileFieldErrors],
+    }));
     mutation.reset();
   };
   return (
@@ -199,9 +215,13 @@ export function ProfileForm() {
       <Card
         id="profile-personal"
         className="profile-primary-card"
-        title="Личные данные и фитнес-профиль"
+        title={
+          <>
+            <Icon name="nav-profile" size={20} /> Личные данные и фитнес-профиль
+          </>
+        }
         description="Обновляйте данные, которые помогают подбирать программу и показывать корректные даты."
-        collapsible={false}
+        collapsible
       >
         <form
           className="stack profile-form"
@@ -575,7 +595,7 @@ export function ProfileForm() {
                 </p>
               )}
             </div>
-            <button type="submit" disabled={mutation.isPending}>
+            <button type="submit" disabled={mutation.isPending || !formIsDirty || !formIsValid}>
               {mutation.isPending ? 'Сохраняем…' : 'Сохранить изменения'}
             </button>
           </div>

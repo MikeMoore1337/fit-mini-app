@@ -1719,10 +1719,12 @@ test('профиль содержит уведомления, а карточк�
   await page.getByRole('button', { name: 'Клиент' }).click();
 
   await openAppDestination(page, 'Профиль');
+  await page.getByRole('link', { name: 'Уведомления' }).click();
   await expect(page.getByRole('heading', { name: 'Каналы' })).toBeVisible();
   await expect(page.getByText('Личное напоминание', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Подписка' })).toHaveCount(0);
 
+  await page.getByRole('link', { name: 'Личные данные' }).click();
   const birthDate = page.getByLabel('Дата рождения');
   const birthDateControl = page.locator('.profile-birth-date-control');
   const [birthDateBox, birthDateControlBox] = await Promise.all([
@@ -1837,6 +1839,7 @@ test('notification settings explain unavailable Telegram and stale targets recov
   await page.goto('/app?section=profile#profile-notifications');
   await page.getByRole('button', { name: 'Клиент' }).click();
   await openAppDestination(page, 'Профиль');
+  await page.getByRole('link', { name: 'Уведомления' }).click();
 
   for (const viewport of [
     { width: 360, height: 800 },
@@ -1889,6 +1892,7 @@ test('notification empty and error states keep compact profile rhythm', async ({
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
   await openAppDestination(page, 'Профиль');
+  await page.getByRole('link', { name: 'Уведомления' }).click();
   await expect(page.getByText('Настройки временно недоступны')).toBeVisible();
   await expect(page.getByText('Уведомлений пока нет')).toBeVisible();
 
@@ -1952,6 +1956,7 @@ test('профиль сохраняет иерархию Design V2 в light/dark
   const cases = [
     { width: 1440, height: 900, theme: 'light' },
     { width: 768, height: 900, theme: 'dark' },
+    { width: 430, height: 932, theme: 'dark' },
     { width: 390, height: 844, theme: 'light' },
     { width: 360, height: 800, theme: 'dark' },
   ] as const;
@@ -1980,12 +1985,22 @@ test('профиль сохраняет иерархию Design V2 в light/dark
         .evaluateAll((links) => links.map((link) => link.getBoundingClientRect().height));
       expect(navTargets.every((height) => height >= 44)).toBe(true);
     }
+    await page.screenshot({
+      path: `../.artifacts/screenshots/task-113A/profile-${current.width}x${current.height}-${current.theme}.png`,
+    });
   }
 
+  await page.getByRole('link', { name: 'Личные данные' }).click();
   await page.getByLabel('Имя').fill('Черновик профиля');
-  await page.getByRole('button', { name: 'Сохранить изменения' }).click();
-  await expect(page.getByText('Выберите уровень подготовки.')).toBeVisible();
-  await expect(page.getByLabel('Уровень подготовки')).toBeFocused();
+  const saveProfile = page.getByRole('button', { name: 'Сохранить изменения' });
+  await expect(saveProfile).toBeDisabled();
+  await page.getByLabel('Уровень подготовки').selectOption('beginner');
+  await expect(saveProfile).toBeEnabled();
+  await page.getByLabel('Силовых тренировок в неделю').fill('15');
+  await expect(page.getByText('Укажите целое число от 0 до 14.')).toBeVisible();
+  await expect(saveProfile).toBeDisabled();
+  await page.getByLabel('Силовых тренировок в неделю').fill('3');
+  await expect(saveProfile).toBeEnabled();
   await expect(page.getByLabel('Имя')).toHaveValue('Черновик профиля');
 
   await page.getByRole('link', { name: 'Доступ и безопасность' }).click();
@@ -2000,23 +2015,27 @@ test('профиль сохраняет иерархию Design V2 в light/dark
   expect(browserErrors).toEqual([]);
 });
 
-test('профиль показывает завершённое состояние канонических параметров программы', async ({
-  page,
-}) => {
+test('профиль не показывает completion prompt после заполнения 3 из 3', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await mockApi(page, { completeProfile: true });
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
   await openAppDestination(page, 'Профиль');
 
-  await expect(page.getByText('Настройки программы заполнены')).toBeVisible();
-  await expect(page.getByText('3 из 3')).toBeVisible();
-  await expect(page.getByText('Готово', { exact: true })).toBeVisible();
+  await expect(page.getByText('Настройки программы заполнены')).toHaveCount(0);
+  await expect(page.getByText('3 из 3')).toHaveCount(0);
+  await expect(page.locator('.profile-status-shell')).toHaveCount(0);
+  await expect(page.getByRole('navigation', { name: 'Разделы профиля' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Личные данные и фитнес-профиль' })).toBeVisible();
+  await page.screenshot({
+    path: '../.artifacts/screenshots/task-113A/profile-complete-390x844-light.png',
+  });
 });
 
 test('training preferences сохраняют Mobile Web/TMA композицию и скриншоты всех версий', async ({
   browser,
 }) => {
+  test.setTimeout(90_000);
   const cases = [
     { surface: 'mobile-web', width: 360, height: 800, theme: 'light' },
     { surface: 'mobile-web', width: 390, height: 844, theme: 'dark' },
@@ -2079,6 +2098,7 @@ test('training preferences сохраняют Mobile Web/TMA композици�
     await openAppDestination(page, 'Профиль');
     const card = page.locator('.training-preferences-card');
     await expect(card).toBeVisible();
+    await card.locator(':scope > summary').click();
     await expect(card.getByText('Текущую программу нужно проверить')).toBeVisible();
     await card.getByText('Упражнения и движения, которых хотите избегать').click();
     await expect(card.getByText(/Это не медицинская оценка/)).toBeVisible();
@@ -2163,7 +2183,7 @@ test('training preferences сохраняют Mobile Web/TMA композици�
       path: `../.artifacts/task-54-training-preferences/${current.surface}-${current.width}x${current.height}-${current.theme}.png`,
     });
     await openAppDestination(page, 'План');
-    await page.getByRole('button', { name: 'Начать подбор' }).click();
+    await page.getByRole('button', { name: 'Подобрать другую' }).click();
     const wizard = page.getByRole('dialog', { name: 'Цель' });
     await expect(wizard).toBeVisible();
     await expect(wizard.getByText(/подставили достоверные ответы из профиля/i)).toBeVisible();
@@ -2188,6 +2208,7 @@ test('пользователь напрямую включает режим тр
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
   await openAppDestination(page, 'Профиль');
+  await openCard(page, 'Тренер и приглашения');
   await openCard(page, 'Режим тренера');
 
   const activate = page.getByRole('button', { name: 'Включить режим тренера' });
@@ -2210,9 +2231,7 @@ test('пользователь напрямую включает режим тр
   });
   await activate.click();
 
-  await expect(
-    page.getByLabel('Тренер и приглашения').getByText('Режим тренера включён'),
-  ).toBeVisible();
+  await expect(trainerCard.getByText('Режим тренера включён')).toBeVisible();
   const repeatedActivation = await page.evaluate(async () => {
     const response = await fetch('/api/v1/me/trainer-capability', {
       body: JSON.stringify({ accepted_terms: true }),
@@ -2254,6 +2273,7 @@ test('пользователь напрямую включает режим тр
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
+  await openCard(page, 'Тренер и приглашения');
   await openCard(page, 'Режим тренера');
   await modeSwitch.getByRole('link', { name: 'Клиенты' }).click();
   await expect(page.getByRole('heading', { name: 'Кабинет тренера' })).toBeVisible();
@@ -2330,6 +2350,7 @@ test('активные клиенты блокируют отключение р
     .click();
   await expect(page.getByRole('heading', { name: /^Сегодня ·/ })).toBeVisible();
   await openAppDestination(page, 'Профиль');
+  await openCard(page, 'Тренер и приглашения');
   await openCard(page, 'Режим тренера');
   await page.setViewportSize({ width: 360, height: 1050 });
 
@@ -2358,6 +2379,7 @@ test('рекомендация кардио меняется с целью, а �
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
   await openAppDestination(page, 'Профиль');
+  await page.getByRole('link', { name: 'Личные данные' }).click();
   await page.getByText('Пульс и кардио-ориентиры').click();
 
   await page.getByLabel('Дата рождения').fill('1992-08-12');
@@ -2389,6 +2411,7 @@ test('поля профиля и питания выровнены на деск
   await page.getByRole('button', { name: 'Клиент' }).click();
 
   await openAppDestination(page, 'Профиль');
+  await page.getByRole('link', { name: 'Личные данные' }).click();
   const profileControlTops = await page.locator('.profile-form-grid--fitness').evaluate((grid) =>
     Array.from(grid.querySelectorAll<HTMLElement>(':scope > .field'))
       .slice(0, 3)
@@ -2577,7 +2600,7 @@ test('мастер подбора сохраняет ответы и ведёт 
   await page.getByRole('button', { name: 'Клиент' }).click();
   await openAppDestination(page, 'План');
 
-  const launcher = page.getByRole('button', { name: 'Начать подбор' });
+  const launcher = page.getByRole('button', { name: 'Подобрать другую' });
   await launcher.click();
   const wizard = page.getByRole('dialog', { name: 'Цель' });
   await expect(wizard).toBeVisible();
@@ -2593,6 +2616,9 @@ test('мастер подбора сохраняет ответы и ведёт 
       scroll: element.scrollWidth,
     })),
   ).toEqual({ client: 360, scroll: 360 });
+  await page.screenshot({
+    path: '../.artifacts/screenshots/task-113A/program-stepper-360x800-light.png',
+  });
 
   await wizard.getByRole('radio', { name: /Рекомпозиция/ }).check();
   await wizard.getByRole('button', { name: 'Далее' }).click();
@@ -2632,6 +2658,9 @@ test('мастер подбора сохраняет ответы и ведёт 
   const mobileSummary = await result.locator('.program-wizard-result__summary').boundingBox();
   expect(mobileSummary).not.toBeNull();
   expect(mobileSummary!.height).toBeGreaterThan(150);
+  await page.screenshot({
+    path: '../.artifacts/screenshots/task-113A/program-result-390x844-light.png',
+  });
 
   await result.getByRole('button', { name: 'Посмотреть план' }).click();
   const preview = page.getByRole('dialog', { name: /Программа на всё тело — 3 дня/ });

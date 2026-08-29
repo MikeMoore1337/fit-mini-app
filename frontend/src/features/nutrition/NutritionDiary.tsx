@@ -447,8 +447,9 @@ const completenessCopy: Record<FoodDiaryDay['status'], { label: string; descript
     description: 'Отсутствующий день не считается как 0 ккал.',
   },
   fasted: {
-    label: 'Пост отмечен',
-    description: 'Нулевое потребление сохранено только по вашей явной отметке.',
+    label: 'День без приёмов пищи',
+    description:
+      'Используйте эту отметку, только если сознательно не ели весь день. Записи еды будут недоступны, пока вы не снимете отметку.',
   },
 };
 
@@ -523,7 +524,7 @@ function DayCompleteness({ day }: { day: FoodDiaryDay }) {
           disabled={hasEntries || update.isPending}
           onClick={() => update.mutate('fasted')}
         >
-          Отметить пост
+          Отметить день без приёмов пищи
         </Button>
         {day.status_is_explicit && (
           <button

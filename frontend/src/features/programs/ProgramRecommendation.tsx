@@ -7,7 +7,7 @@ import type {
   ProgramRecommendationResponse,
   ProgramTemplate,
 } from '../../shared/api/types';
-import { Badge, Card, CloseIcon, ErrorState } from '../../shared/ui/common';
+import { Badge, CloseIcon, ErrorState } from '../../shared/ui/common';
 import { useModalA11y } from '../../shared/ui/useModalA11y';
 import { StepProgress } from '../../shared/ui/DataViz';
 import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
@@ -272,23 +272,6 @@ export function ProgramRecommendation({
 
   return (
     <>
-      <Card className="program-selector-entry" collapsible={false}>
-        <div className="program-selector-entry__copy">
-          <span className="eyebrow">Подбор по понятным правилам</span>
-          <h2>Найдите программу под свой ритм</h2>
-          <p>
-            Пять коротких шагов: цель, опыт, частота, место и доступное оборудование. Без AI и
-            скрытых процентов совпадения.
-          </p>
-        </div>
-        <div className="program-selector-entry__actions">
-          <button type="button" onClick={() => onOpenChange(true)}>
-            Начать подбор
-          </button>
-          <AnchorAction href="#program-library">Выбрать вручную</AnchorAction>
-        </div>
-      </Card>
-
       {open && (
         <div
           className="modal program-wizard"

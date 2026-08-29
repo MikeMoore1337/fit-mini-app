@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   formatSetResult,
   formatWorkoutDuration,
+  shouldCollapseCompletedExercise,
 } from '../../../../src/features/workouts/TodayWorkout';
 
 describe('formatWorkoutDuration', () => {
@@ -15,6 +16,27 @@ describe('formatWorkoutDuration', () => {
 
   it('does not display a negative duration', () => {
     expect(formatWorkoutDuration(-10)).toBe('0:00');
+  });
+});
+
+describe('shouldCollapseCompletedExercise', () => {
+  const completedSets = [
+    { id: 1, is_completed: true },
+    { id: 2, is_completed: true },
+  ];
+
+  it('collapses only a fully persisted exercise', () => {
+    expect(shouldCollapseCompletedExercise(completedSets, () => false)).toBe(true);
+    expect(shouldCollapseCompletedExercise(completedSets, (id) => id === 2)).toBe(false);
+    expect(
+      shouldCollapseCompletedExercise(
+        [
+          { id: 1, is_completed: true },
+          { id: 2, is_completed: false },
+        ],
+        () => false,
+      ),
+    ).toBe(false);
   });
 });
 

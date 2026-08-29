@@ -5,7 +5,8 @@ import { TelegramLinkPrompt } from '../../features/account/TelegramLinkPrompt';
 import { TodayDashboard } from '../../features/dashboard/TodayDashboard';
 import type { WorkoutNavigationTarget } from '../../features/workouts/WorkoutHistory';
 import { AppLink, focusedContextReturn, useNavigation } from '../../shared/navigation/router';
-import { Badge } from '../../shared/ui/common';
+import { Badge, Card } from '../../shared/ui/common';
+import { Icon } from '../../shared/ui/Icon';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { useSemanticMotion } from '../../shared/ui/useSemanticMotion';
 import { programProfileReadiness } from '../../features/profile/programReadiness';
@@ -250,6 +251,27 @@ export default function MiniAppPage() {
     user?.profile?.cardio_trainings_per_week,
     user?.profile?.timezone,
   ]);
+  const openProfileSection = (detailsId: string, targetId = detailsId) => {
+    const details = document.getElementById(detailsId);
+    if (details instanceof HTMLDetailsElement) details.open = true;
+    window.requestAnimationFrame(() =>
+      document.getElementById(targetId)?.scrollIntoView({ block: 'start' }),
+    );
+  };
+
+  useEffect(() => {
+    if (section !== 'profile') return;
+    const targetId = window.location.hash.slice(1);
+    if (!targetId.startsWith('profile-')) return;
+    const frame = window.requestAnimationFrame(() => {
+      const target = document.getElementById(targetId);
+      const details =
+        target instanceof HTMLDetailsElement ? target : target?.closest('details.card-disclosure');
+      if (details instanceof HTMLDetailsElement) details.open = true;
+      target?.scrollIntoView({ block: 'start' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [section, search]);
 
   return (
     <AppShell section={section}>
@@ -342,84 +364,103 @@ export default function MiniAppPage() {
             )}
             {section === 'profile' && (
               <div className="profile-settings">
-                <section className="profile-status-shell" aria-labelledby="profile-status-title">
-                  <div className="profile-status-shell__copy">
-                    <span className="eyebrow">Основа рекомендаций</span>
-                    <h2 id="profile-status-title">
-                      {profileReadiness.isComplete
-                        ? 'Настройки программы заполнены'
-                        : 'Профиль стоит дополнить'}
-                    </h2>
-                    <p>
-                      Цель, уровень и число силовых тренировок в неделю помогают предложить
-                      подходящую программу.
-                    </p>
-                  </div>
-                  <div className="profile-status-shell__value">
-                    <span>Заполнено</span>
-                    <strong>
-                      {profileReadiness.completed} из {profileReadiness.total}
-                    </strong>
-                    <Badge tone={profileReadiness.isComplete ? 'success' : 'warning'}>
-                      {profileReadiness.isComplete ? 'Готово' : 'Нужны данные'}
-                    </Badge>
-                  </div>
-                </section>
+                {!profileReadiness.isComplete && (
+                  <section className="profile-status-shell" aria-labelledby="profile-status-title">
+                    <div className="profile-status-shell__copy">
+                      <span className="eyebrow">Основа рекомендаций</span>
+                      <h2 id="profile-status-title">Профиль стоит дополнить</h2>
+                      <p>
+                        Цель, уровень и число силовых тренировок в неделю помогают предложить
+                        подходящую программу.
+                      </p>
+                    </div>
+                    <div className="profile-status-shell__value">
+                      <span>Заполнено</span>
+                      <strong>
+                        {profileReadiness.completed} из {profileReadiness.total}
+                      </strong>
+                      <Badge tone="warning">Нужны данные</Badge>
+                    </div>
+                  </section>
+                )}
 
                 <nav className="profile-settings-nav" aria-label="Разделы профиля">
-                  <a href="#profile-personal">Личные данные</a>
-                  <a href="#profile-fitness">Цели и параметры</a>
-                  <a href="#profile-trainer">Тренер и приглашения</a>
-                  <a href="#profile-notifications">Уведомления</a>
-                  <a href="#profile-security">Доступ и безопасность</a>
+                  <a
+                    href="#profile-personal"
+                    onClick={() => openProfileSection('profile-personal')}
+                  >
+                    <Icon name="nav-profile" size={16} /> Личные данные
+                  </a>
+                  <a
+                    href="#profile-fitness"
+                    onClick={() => openProfileSection('profile-personal', 'profile-fitness')}
+                  >
+                    <Icon name="nav-plan" size={16} /> Цели и параметры
+                  </a>
+                  <a href="#profile-trainer" onClick={() => openProfileSection('profile-trainer')}>
+                    <Icon name="nav-coach" size={16} /> Тренер и приглашения
+                  </a>
+                  <a
+                    href="#profile-notifications"
+                    onClick={() => openProfileSection('profile-notifications')}
+                  >
+                    <Icon name="nav-today" size={16} /> Уведомления
+                  </a>
+                  <a
+                    href="#profile-security"
+                    onClick={() => openProfileSection('profile-security')}
+                  >
+                    <Icon name="permission-denied" size={16} /> Доступ и безопасность
+                  </a>
                 </nav>
 
                 <ProfileForm key={profileFormKey} />
-                <section
+                <Card
                   className="profile-settings-group"
+                  defaultOpen={Boolean(inviteToken)}
                   id="profile-trainer"
-                  aria-labelledby="profile-trainer-title"
+                  title={
+                    <>
+                      <Icon name="nav-coach" size={20} /> Тренер и приглашения
+                    </>
+                  }
+                  description="Управляйте текущим тренером или включите собственный режим тренера."
                 >
-                  <header className="profile-settings-group__head">
-                    <span className="eyebrow">Связи</span>
-                    <h2 id="profile-trainer-title">Тренер и приглашения</h2>
-                    <p>Управляйте текущим тренером или включите собственный режим тренера.</p>
-                  </header>
                   <CoachInvites
                     initialToken={inviteToken}
                     onInitialTokenHandled={() => setInviteToken(null)}
                   />
                   <TrainerCapabilityCard />
-                </section>
-                <section
+                </Card>
+                <Card
                   className="profile-settings-group"
                   id="profile-notifications"
-                  aria-labelledby="profile-notifications-title"
+                  title={
+                    <>
+                      <Icon name="nav-today" size={20} /> Уведомления
+                    </>
+                  }
+                  description="Выберите полезные напоминания и время их отправки."
                 >
-                  <header className="profile-settings-group__head">
-                    <span className="eyebrow">Расписание</span>
-                    <h2 id="profile-notifications-title">Уведомления</h2>
-                    <p>Выберите полезные напоминания и время их отправки.</p>
-                  </header>
                   <NotificationsPanel
                     onNavigate={(destination) => {
                       setFocusedWorkout(null);
                       navigate(destination);
                     }}
                   />
-                </section>
-                <section
+                </Card>
+                <Card
                   className="profile-settings-group profile-settings-group--security"
                   id="profile-security"
-                  aria-labelledby="profile-security-title"
+                  title={
+                    <>
+                      <Icon name="permission-denied" size={20} /> Доступ и безопасность
+                    </>
+                  }
+                  description="Способы входа, копия ваших данных и действия с аккаунтом."
                 >
-                  <header className="profile-settings-group__head">
-                    <span className="eyebrow">Аккаунт</span>
-                    <h2 id="profile-security-title">Доступ и безопасность</h2>
-                    <p>Способы входа, копия ваших данных и действия с аккаунтом.</p>
-                  </header>
                   <AccountPrivacy />
-                </section>
+                </Card>
               </div>
             )}
           </Suspense>

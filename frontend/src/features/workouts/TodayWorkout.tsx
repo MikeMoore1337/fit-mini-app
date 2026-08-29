@@ -54,6 +54,13 @@ export function formatWorkoutDuration(totalSeconds: number): string {
     : `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
 
+export function shouldCollapseCompletedExercise(
+  sets: readonly { id: number; is_completed: boolean }[],
+  hasPending: (setId: number) => boolean,
+): boolean {
+  return sets.length > 0 && sets.every((set) => set.is_completed && !hasPending(set.id));
+}
+
 export function formatSetResult(
   reps: number | null | undefined,
   weight: number | null | undefined,
@@ -487,6 +494,9 @@ export function TodayWorkout({
   const queryClient = useQueryClient();
   const [guide, setGuide] = useState<{ id: number; title: string } | null>(null);
   const [dismissedGuidance, setDismissedGuidance] = useState<Set<number>>(() => new Set());
+  const [expandedCompletedExercises, setExpandedCompletedExercises] = useState<Set<number>>(
+    () => new Set(),
+  );
   const workout = useQuery({
     queryKey: ['workout', 'today'],
     queryFn: () => api<Workout>('/api/v1/workouts/today'),
@@ -714,6 +724,11 @@ export function TodayWorkout({
             const exerciseCompleted = exercise.sets.filter(
               (set) => activeSync.pendingBySet.get(set.id)?.values.is_completed ?? set.is_completed,
             ).length;
+            const isPersistedComplete = shouldCollapseCompletedExercise(exercise.sets, (setId) =>
+              activeSync.pendingBySet.has(setId),
+            );
+            const exerciseOpen =
+              !isPersistedComplete || expandedCompletedExercises.has(exercise.id);
             const isCurrentExercise = currentSet?.exercise.id === exercise.id;
             const supersetLabel = exercise.superset_group
               ? `Суперсет — упражнение ${exercise.superset_order ?? exerciseIndex + 1} из 2`
@@ -753,74 +768,98 @@ export function TodayWorkout({
                     )}
                     {exercise.notes && <p className="exercise-note">{exercise.notes}</p>}
                   </div>
-                  <button
-                    type="button"
-                    className="exercise-guide-trigger compact"
-                    onClick={() =>
-                      setGuide({ id: exercise.exercise_id, title: exercise.exercise_title })
-                    }
-                  >
-                    <span>{exercise.has_guide ? 'Техника' : 'Подробнее'}</span>
-                  </button>
+                  <div className="active-workout-exercise__head-actions">
+                    {isPersistedComplete && (
+                      <button
+                        type="button"
+                        className="secondary active-workout-exercise__toggle"
+                        aria-expanded={exerciseOpen}
+                        aria-controls={`workout-exercise-${exercise.id}-details`}
+                        onClick={() =>
+                          setExpandedCompletedExercises((current) => {
+                            const next = new Set(current);
+                            if (next.has(exercise.id)) next.delete(exercise.id);
+                            else next.add(exercise.id);
+                            return next;
+                          })
+                        }
+                      >
+                        {exerciseOpen
+                          ? 'Скрыть подходы'
+                          : `${exerciseCompleted} из ${exercise.sets.length} сохранено`}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="exercise-guide-trigger compact"
+                      onClick={() =>
+                        setGuide({ id: exercise.exercise_id, title: exercise.exercise_title })
+                      }
+                    >
+                      <span>{exercise.has_guide ? 'Техника' : 'Подробнее'}</span>
+                    </button>
+                  </div>
                 </header>
 
-                {exercise.progression_guidance && !dismissedGuidance.has(exercise.id) && (
-                  <ProgressionGuidance
-                    applied={guidanceApplied}
-                    exerciseKey={exercise.id}
-                    guidance={exercise.progression_guidance}
-                    onApply={
-                      started && suggestedWeight != null && applicableSets.length > 0
-                        ? () => {
-                            for (const set of applicableSets) {
-                              const pending = activeSync.pendingBySet.get(set.id)?.values;
-                              activeSync.enqueue(set.id, set.version ?? 1, {
-                                actual_reps: pending?.actual_reps ?? set.actual_reps ?? null,
-                                actual_weight: suggestedWeight,
-                                rir: pending?.rir ?? set.rir ?? null,
-                                set_kind: pending?.set_kind ?? set.set_kind ?? 'working',
-                                reached_failure:
-                                  pending?.reached_failure ?? set.reached_failure ?? false,
-                                is_completed: pending?.is_completed ?? set.is_completed,
-                              });
+                <div id={`workout-exercise-${exercise.id}-details`} hidden={!exerciseOpen}>
+                  {exercise.progression_guidance && !dismissedGuidance.has(exercise.id) && (
+                    <ProgressionGuidance
+                      applied={guidanceApplied}
+                      exerciseKey={exercise.id}
+                      guidance={exercise.progression_guidance}
+                      onApply={
+                        started && suggestedWeight != null && applicableSets.length > 0
+                          ? () => {
+                              for (const set of applicableSets) {
+                                const pending = activeSync.pendingBySet.get(set.id)?.values;
+                                activeSync.enqueue(set.id, set.version ?? 1, {
+                                  actual_reps: pending?.actual_reps ?? set.actual_reps ?? null,
+                                  actual_weight: suggestedWeight,
+                                  rir: pending?.rir ?? set.rir ?? null,
+                                  set_kind: pending?.set_kind ?? set.set_kind ?? 'working',
+                                  reached_failure:
+                                    pending?.reached_failure ?? set.reached_failure ?? false,
+                                  is_completed: pending?.is_completed ?? set.is_completed,
+                                });
+                              }
                             }
-                          }
-                        : undefined
-                    }
-                    onDismiss={() =>
-                      setDismissedGuidance((current) => new Set(current).add(exercise.id))
-                    }
-                  />
-                )}
+                          : undefined
+                      }
+                      onDismiss={() =>
+                        setDismissedGuidance((current) => new Set(current).add(exercise.id))
+                      }
+                    />
+                  )}
 
-                <div className="active-workout-exercise__sets">
-                  {exercise.sets.map((set, setIndex) => {
-                    const previousSet = setIndex > 0 ? exercise.sets[setIndex - 1] : undefined;
-                    const previousPending = previousSet
-                      ? activeSync.pendingBySet.get(previousSet.id)
-                      : undefined;
-                    const previousResult = previousSet
-                      ? formatSetResult(
-                          previousPending?.values.actual_reps ?? previousSet.actual_reps,
-                          previousPending?.values.actual_weight ?? previousSet.actual_weight,
-                        )
-                      : null;
-                    return (
-                      <WorkoutSetRow
-                        key={set.id}
-                        set={set}
-                        restSeconds={exercise.rest_seconds}
-                        disabled={!started}
-                        workoutId={data.id}
-                        exerciseTitle={exercise.exercise_title}
-                        isCurrent={currentSet?.set.id === set.id}
-                        previousResult={previousResult}
-                        pending={activeSync.pendingBySet.get(set.id)}
-                        syncing={activeSync.syncState === 'syncing'}
-                        enqueue={activeSync.enqueue}
-                      />
-                    );
-                  })}
+                  <div className="active-workout-exercise__sets">
+                    {exercise.sets.map((set, setIndex) => {
+                      const previousSet = setIndex > 0 ? exercise.sets[setIndex - 1] : undefined;
+                      const previousPending = previousSet
+                        ? activeSync.pendingBySet.get(previousSet.id)
+                        : undefined;
+                      const previousResult = previousSet
+                        ? formatSetResult(
+                            previousPending?.values.actual_reps ?? previousSet.actual_reps,
+                            previousPending?.values.actual_weight ?? previousSet.actual_weight,
+                          )
+                        : null;
+                      return (
+                        <WorkoutSetRow
+                          key={set.id}
+                          set={set}
+                          restSeconds={exercise.rest_seconds}
+                          disabled={!started}
+                          workoutId={data.id}
+                          exerciseTitle={exercise.exercise_title}
+                          isCurrent={currentSet?.set.id === set.id}
+                          previousResult={previousResult}
+                          pending={activeSync.pendingBySet.get(set.id)}
+                          syncing={activeSync.syncState === 'syncing'}
+                          enqueue={activeSync.enqueue}
+                        />
+                      );
+                    })}
+                  </div>
                 </div>
               </article>
             );

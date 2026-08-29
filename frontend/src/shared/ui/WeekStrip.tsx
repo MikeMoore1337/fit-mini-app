@@ -138,7 +138,7 @@ type WeekStripProps = WeekStripCommonProps &
         selectedDate?: never;
       }
     | {
-        getDayMeta?: never;
+        getDayMeta?: (date: string) => WeekStripDayMeta;
         isDateDisabled?: (date: string) => boolean;
         mode: 'picker';
         onSelect(date: string): void;
@@ -225,7 +225,7 @@ export function WeekStrip(props: WeekStripProps) {
         {days.map((date) => {
           const isToday = date === props.today;
           const isSelected = isPicker && date === props.selectedDate;
-          const dayMeta = props.mode === 'overview' ? props.getDayMeta?.(date) : undefined;
+          const dayMeta = props.getDayMeta?.(date);
           const status = dayMeta?.status;
           const statusIcon = statusPictogram(status);
           const activityLabel = dayMeta?.activities?.map((activity) => activity.label).join(' и ');
@@ -255,7 +255,7 @@ export function WeekStrip(props: WeekStripProps) {
               </span>
             </>
           );
-          const dayClassName = `week-strip__day${dayMeta?.link ? ' week-strip__day--interactive' : ''}`;
+          const dayClassName = `week-strip__day${isPicker || dayMeta?.link ? ' week-strip__day--interactive' : ''}`;
 
           return (
             <li key={date}>
