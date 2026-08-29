@@ -1,0 +1,45 @@
+{
+  "package": "yfc-post-release-ux-reset-tasks",
+  "revision": 3,
+  "task_count": 17,
+  "control_file_count": 9,
+  "tasks": [
+    "113-development-branch-normalization.md",
+    "114-nutrition-search-barcode-production-regression.md",
+    "115A-post-release-ux-audit-ia-prototype.md",
+    "116-core-navigation-today-quick-start.md",
+    "117-first-run-without-mandatory-onboarding.md",
+    "118-simple-training-program-flow.md",
+    "119-type-aware-workout-logging.md",
+    "120A-exercise-catalog-coverage-taxonomy-media-audit.md",
+    "120B-exercise-library-upper-body-machine-expansion.md",
+    "120C-exercise-library-lower-body-machine-expansion.md",
+    "120D-exercise-library-remaining-coverage-search-hardening.md",
+    "121-knowledge-base-main-ia-removal-public-web-handoff.md",
+    "122-profile-settings-simplification.md",
+    "123-semantic-card-visual-system.md",
+    "124A-pre-release-integrated-ux-qa-gate.md",
+    "124B-production-real-user-usability-validation.md",
+    "124C-post-validation-remediation.md"
+  ],
+  "notes": [
+    "Task 113 normalizes feature/yfc-platform-v2 into permanent dev while preserving master-only production deploy.",
+    "Revision 3 adds COMPACT_FIRST_UX_CONTRACT: primary actions stay visible, secondary/detail content uses progressive disclosure, one expandable level max, and compact semantic cards carry visual wow across the app.",
+    "Task 115A is the owner UX/IA/prototype approval gate; pre-implementation human validation is intentionally not required.",
+    "Existing owner-local Tasks 81, 82 and 84 move after Task 123 and before Task 124A.",
+    "Task 124B validates the actually deployed production version with real users because no realistic external dev/staging validation environment is assumed.",
+    "Task 124C is conditional and runs only when Task 124B finds BLOCKER/HIGH.",
+    "Existing owner-local Tasks 85/110/111 are amended but remain outside the critical release path unless explicitly included by the owner."
+  ],
+  "control_files": [
+    "COMPACT_FIRST_UX_CONTRACT.md",
+    "MODEL_SELECTION_ADDENDUM.md",
+    "PATCH_EXISTING_BACKLOG.md",
+    "POST_RELEASE_UX_RESET_DEPENDENCY_GRAPH.md",
+    "POST_RELEASE_UX_RESET_PRIORITY_ORDER.md",
+    "README.md",
+    "SKILL_ASSIGNMENT_MATRIX_ADDENDUM.md",
+    "TASK_110_AMENDMENT.md",
+    "TASK_111_AMENDMENT.md"
+  ]
+}
