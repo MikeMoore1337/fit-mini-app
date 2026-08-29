@@ -73,6 +73,8 @@ conversion story, `110` — private custom avatar desktop/mobile, `111` — Prog
 автоматически и требуют отдельных owner запусков; для UI до commit действует screenshot approval.
 
 Owner-selected task `112` завершена и архивирована вне основной очереди. Она добавила проверяемый
-current-stack zero-downtime deployment contract, но не выполняла production rollout и не изменила
-current `81`: следующей по основной pending-последовательности остаётся task `81`, затем `82` только
-после её Trigger, completion и отдельного owner decision.
+current-stack zero-downtime deployment contract. После explicit owner approval production revision
+`194cf036` успешно развёрнута через `single-slot` fallback с bounded downtime из-за фактической
+capacity constrained VPS; это не доказательство production blue/green zero observed downtime.
+Task не изменила current `81`: следующей по основной pending-последовательности остаётся task `81`,
+затем `82` только после её Trigger, completion и отдельного owner decision.

@@ -75,7 +75,10 @@
 - [x] owner-selected task `112-zero-downtime-production-deployment.md` завершена и архивирована вне
       основной очереди: stable gateway, blue/green slots, online-migration fail-closed gate,
       old-asset overlap, single-owner worker/bot handoff, rollback и production-like drill прошли
-      review/QA; production rollout не выполнялся и требует отдельного owner approval.
+      review/QA. После explicit owner approval revision `194cf036` развёрнута в production через
+      resource-aware `single-slot` fallback с bounded downtime: deployment verdict `active`, все
+      stages passed, public/API/SEO и ownership worker/bot подтверждены. Production blue/green
+      zero-observed-downtime на этом constrained VPS не заявляется.
 
 Не выполнять повторно tasks `00-80`, включая `69B`, `73A`, task `74A` и tasks `103-106`.
 Task `77` закрыта не как factual real-user validation, а по явному owner decision принять отсутствие

@@ -73,5 +73,7 @@ offer, private avatar upload и Progress bento dashboard. Они не меняю
 решениями.
 
 Owner-selected task `112` завершена и архивирована вне pending-последовательности после локального
-review/QA zero-downtime deployment contract. Production rollout остался отдельным owner checkpoint;
-current task `81` и порядок `81-101` не изменились.
+review/QA zero-downtime deployment contract. Отдельно разрешённый production rollout revision
+`194cf036` завершён через `single-slot` fallback с bounded downtime и verdict `active`; production
+blue/green zero observed downtime на constrained VPS не заявляется. Current task `81` и порядок
+`81-101` не изменились.

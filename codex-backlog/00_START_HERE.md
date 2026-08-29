@@ -14,6 +14,9 @@ Backlog использует resource-aware lifecycle. В owner workspace зав
   внешних operational controls;
 - task `79` завершила final release gate без deployment, task `80` завершила approved repository
   hygiene/privacy cleanup; обе архивированы после owner approval;
+- owner-selected task `112` завершена и архивирована; revision `194cf036` развёрнута после explicit
+  owner approval через constrained-host `single-slot` fallback с bounded downtime и verdict
+  `active`, без заявления production blue/green zero observed downtime;
 - task `81` назначена current, но её Trigger/реализация не запускались;
 - owner-selected tasks `107-111` созданы вне основной очереди и не являются current.
 
