@@ -146,7 +146,9 @@ single-slot rollout с ограниченным техническим пере�
 
 Перед включением режима owner подтвердил off-host PostgreSQL backup, текущий
 `last-successful-revision` и допустимость bounded downtime. Каждый rollout заново проверяет не менее
-`2 GiB` свободного диска, актуальную revision и публичный smoke, затем скачивает и проверяет
+`2 GiB` свободного диска, актуальную revision и публичный smoke. Перед capacity gate single-slot
+удаляет только Docker images и build cache, которые не используются ни одним контейнером; volumes,
+container data и активные images не очищаются. Затем rollout скачивает и проверяет
 immutable images, создаёт свежий локальный dump и запускает migration gate. Только после этого
 команда последовательно останавливает legacy worker, bot и backend, выполняет setup/migrations,
 запускает новый backend и проверяет его, затем запускает единственных worker/bot и записывает

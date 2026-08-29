@@ -83,7 +83,8 @@ def _patch_runtime(monkeypatch, *, fail_at: str | None = None):
 
     public_smoke_count = 0
 
-    def public_smoke(_config):
+    def public_smoke(_config, **kwargs):
+        del kwargs
         nonlocal public_smoke_count
         public_smoke_count += 1
         if fail_at == "external_smoke" and public_smoke_count == 2:
@@ -101,7 +102,8 @@ def _patch_runtime(monkeypatch, *, fail_at: str | None = None):
         if fail_at == "gateway" and active == "green":
             raise deploy.DeploymentError("invalid gateway config")
 
-    def candidate_smoke(slot):
+    def candidate_smoke(slot, **kwargs):
+        del kwargs
         if fail_at == "candidate_smoke":
             raise deploy.DeploymentError(f"{slot} smoke failed")
 
@@ -222,7 +224,11 @@ def test_repeated_same_sha_is_a_verified_no_op(tmp_path: Path, monkeypatch) -> N
     _state(config, revision=NEW_SHA)
     calls = _patch_runtime(monkeypatch)
     smoke = []
-    monkeypatch.setattr(deploy, "_public_smoke", lambda value: smoke.append(value.base_url))
+    monkeypatch.setattr(
+        deploy,
+        "_public_smoke",
+        lambda value, **_kwargs: smoke.append(value.base_url),
+    )
 
     evidence = deploy.deploy(config)
 
@@ -503,6 +509,7 @@ def _patch_single_slot_runtime(tmp_path: Path, monkeypatch) -> dict[str, list]:
     active_revision_path.parent.mkdir(parents=True)
     active_revision_path.write_text(OLD_SHA + "\n", encoding="utf-8")
     monkeypatch.setenv("DEPLOY_SINGLE_SLOT_CONFIRMED_SHA", NEW_SHA)
+    monkeypatch.setattr(deploy, "_reclaim_single_slot_docker_space", lambda: None)
     monkeypatch.setattr(
         deploy,
         "_single_slot_capacity",
@@ -517,7 +524,7 @@ def _patch_single_slot_runtime(tmp_path: Path, monkeypatch) -> dict[str, list]:
         ),
     )
     monkeypatch.setattr(deploy, "_switch_gateway", lambda *args: None)
-    monkeypatch.setattr(deploy, "_public_smoke", lambda *args: None)
+    monkeypatch.setattr(deploy, "_public_smoke", lambda *args, **kwargs: None)
     monkeypatch.setattr(
         deploy,
         "_legacy_running_image",
@@ -595,6 +602,52 @@ def test_single_slot_rollout_replaces_legacy_services_and_records_success(
         == NEW_SHA
     )
     assert not config.state_root.joinpath("state.json").exists()
+
+
+def test_single_slot_docker_reclaim_never_removes_container_data_or_volumes(
+    monkeypatch,
+) -> None:
+    calls = []
+    monkeypatch.setattr(
+        deploy,
+        "_run",
+        lambda args, **kwargs: (
+            calls.append((args, kwargs))
+            or subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+        ),
+    )
+
+    deploy._reclaim_single_slot_docker_space()
+
+    assert calls == [
+        (["docker", "image", "prune", "--all", "--force"], {}),
+        (["docker", "builder", "prune", "--all", "--force"], {}),
+    ]
+    assert all("volume" not in args and "container" not in args for args, _ in calls)
+
+
+def test_single_slot_reclaims_docker_space_before_capacity_gate(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _patch_single_slot_runtime(tmp_path, monkeypatch)
+    events = []
+    monkeypatch.setattr(
+        deploy,
+        "_reclaim_single_slot_docker_space",
+        lambda: events.append("reclaim"),
+    )
+    monkeypatch.setattr(
+        deploy,
+        "_single_slot_capacity",
+        lambda: (
+            events.append("capacity")
+            or {"cpu_count": 1, "memory_available_mb": 128, "disk_available_mb": 4096}
+        ),
+    )
+
+    deploy.single_slot_deploy(_config(tmp_path))
+
+    assert events[:2] == ["reclaim", "capacity"]
 
 
 def test_single_slot_failure_after_stop_restores_previous_images(

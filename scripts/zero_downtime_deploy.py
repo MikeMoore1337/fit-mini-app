@@ -285,6 +285,12 @@ def _single_slot_capacity() -> dict[str, int]:
     return report
 
 
+def _reclaim_single_slot_docker_space() -> None:
+    """Remove only Docker data that is not referenced by any container."""
+    _run(["docker", "image", "prune", "--all", "--force"])
+    _run(["docker", "builder", "prune", "--all", "--force"])
+
+
 @contextlib.contextmanager
 def _deployment_lock(path: Path) -> Iterator[None]:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -1275,6 +1281,9 @@ def single_slot_deploy(config: DeployConfig) -> Evidence:
     services_stopped = False
 
     try:
+        with _stage(evidence, "single_slot_docker_reclaim"):
+            _reclaim_single_slot_docker_space()
+
         with _stage(evidence, "single_slot_preflight"):
             evidence.capacity = _single_slot_capacity()
             _compose("config", "--quiet")
