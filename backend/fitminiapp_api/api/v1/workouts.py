@@ -5,6 +5,7 @@ from sqlalchemy import case, func
 from sqlalchemy.orm import Session, joinedload
 
 from fitminiapp_api.api.dependencies.auth import require_user
+from fitminiapp_api.core.config import settings
 from fitminiapp_api.core.timezone import now_for_user_naive, today_for_user
 from fitminiapp_api.db.session import get_db
 from fitminiapp_api.models.feedback import WorkoutComment, WorkoutCommentRevision
@@ -29,6 +30,7 @@ from fitminiapp_api.schemas.progress import (
     NutritionReportPeriod,
     NutritionReportResponse,
     ProgressPeriodDays,
+    ProgressReportDownloadLinkResponse,
     ProgressReportResponse,
     ProgressSummaryResponse,
 )
@@ -62,6 +64,7 @@ from fitminiapp_api.services.cardio import (
     serialize_cardio_session,
     update_cardio_session,
 )
+from fitminiapp_api.services.coach_clients import get_client_managed_by_coach
 from fitminiapp_api.services.exercise_catalog import get_visible_exercise_display_map
 from fitminiapp_api.services.exercise_guides import get_exercise_guide
 from fitminiapp_api.services.measurements import (
@@ -78,7 +81,13 @@ from fitminiapp_api.services.nutrition_reports import (
     build_nutrition_report,
     nutrition_report_csv,
 )
+from fitminiapp_api.services.program_common import ProgramError
 from fitminiapp_api.services.progress import build_progress_summary
+from fitminiapp_api.services.progress_report_downloads import (
+    create_progress_report_download_token,
+    read_progress_report_download_token,
+)
+from fitminiapp_api.services.progress_report_pdf import build_progress_report_pdf
 from fitminiapp_api.services.progress_reports import build_progress_report
 from fitminiapp_api.services.progression_guidance import build_progression_guidance
 from fitminiapp_api.services.workout_adaptation import (
@@ -627,6 +636,104 @@ def workout_progress_report(
         )
     except NutritionReportError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc))
+
+
+@router.post(
+    "/progress/report/download-link",
+    response_model=ProgressReportDownloadLinkResponse,
+)
+def workout_progress_report_download_link(
+    period: NutritionReportPeriod = NutritionReportPeriod.DAYS_30,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> ProgressReportDownloadLinkResponse:
+    try:
+        report = build_progress_report(
+            db,
+            current_user,
+            period,
+            date_from=date_from,
+            date_to=date_to,
+        )
+    except NutritionReportError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc))
+    token, expires_at = create_progress_report_download_token(
+        actor_user_id=current_user.id,
+        subject_user_id=current_user.id,
+        subject_role="self",
+        period=NutritionReportPeriod.CUSTOM,
+        date_from=date.fromisoformat(report["period_start"]),
+        date_to=date.fromisoformat(report["period_end"]),
+    )
+    filename = f"progress-report-{report['period_start']}_{report['period_end']}.pdf"
+    return ProgressReportDownloadLinkResponse(
+        url=f"{settings.frontend_base_url.rstrip('/')}/api/v1/workouts/progress/report/file/{token}",
+        filename=filename,
+        expires_at=expires_at,
+    )
+
+
+@router.get(
+    "/progress/report/file/{download_token}",
+    response_class=Response,
+    responses={
+        status.HTTP_200_OK: {
+            "description": "Short-lived progress report PDF",
+            "content": {"application/pdf": {}},
+        }
+    },
+)
+def workout_progress_report_download_file(
+    download_token: str,
+    db: Session = Depends(get_db),
+) -> Response:
+    grant = read_progress_report_download_token(download_token)
+    if grant is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ссылка недействительна")
+    actor = db.query(User).filter(User.id == grant.actor_user_id, User.is_active.is_(True)).first()
+    if actor is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ссылка недействительна")
+    subject = actor
+    if grant.subject_role == "client":
+        if not actor.is_coach:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Ссылка недействительна"
+            )
+        try:
+            subject = get_client_managed_by_coach(db, actor, grant.subject_user_id)
+        except ProgramError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Ссылка недействительна"
+            ) from exc
+    elif grant.subject_role != "self" or grant.subject_user_id != actor.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ссылка недействительна")
+    try:
+        report = build_progress_report(
+            db,
+            subject,
+            grant.period,
+            date_from=grant.date_from,
+            date_to=grant.date_to,
+            subject_role=grant.subject_role,
+        )
+        content = build_progress_report_pdf(report)
+    except NutritionReportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Ссылка недействительна"
+        ) from exc
+    filename = f"progress-report-{report['period_start']}_{report['period_end']}.pdf"
+    return Response(
+        content=content,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Access-Control-Allow-Origin": "https://web.telegram.org",
+            "Cache-Control": "private, no-store",
+            "Content-Length": str(len(content)),
+        },
+    )
 
 
 @router.get("/progress/nutrition-report.csv")

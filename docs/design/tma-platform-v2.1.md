@@ -39,6 +39,8 @@ interface MobileViewportSnapshot {
   `deactivated`, когда methods доступны. Старые clients деградируют к browser CSS behavior.
 - `viewportStableHeight` закрепляет bottom navigation и persistent sheets. `viewportHeight` отражает
   live keyboard/resize, но не управляет frame-by-frame bottom animation.
+- На iOS Telegram `viewportHeight` может обновиться позже browser `visualViewport`; current layout
+  использует меньшее положительное значение, чтобы sheet не оставался под клавиатурой.
 - Safe area защищает от device/system UI; content safe area дополнительно учитывает Telegram
   chrome. Берётся больший применимый inset; два inset не суммируются вслепую.
 - Theme, viewport, safe-area и foreground events обновляют только layout и не пересоздают
@@ -52,6 +54,8 @@ interface MobileViewportSnapshot {
   временно скрыть nav; после focusout nav возвращается без reset route, scroll и draft.
 - Numeric fields тренировки, питания и замеров имеют корректный mobile keyboard и
   сохраняют draft при viewport changes.
+- Nutrition picker отслеживает active editable control, а после выбора продукта переводит focus на
+  количество; search/quantity и submit остаются достижимыми во внутреннем scroll sheet.
 - Keyboard mock в frozen render задаёт composition, но не доказывает работу реальной OS keyboard.
 
 ## BackButton

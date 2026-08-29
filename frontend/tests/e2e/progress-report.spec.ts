@@ -15,6 +15,16 @@ async function installReportApi(page: Page, state: ReportState = 'full') {
     async (route) => {
       const report = makeProgressReportFixture(state);
       const url = new URL(route.request().url());
+      if (route.request().method() === 'POST' && url.pathname.endsWith('/download-link')) {
+        await route.fulfill({
+          json: {
+            url: `${url.origin}/api/v1/workouts/progress/report/file/signed-e2e`,
+            filename: 'progress-report-2026-07-26_2026-08-24.pdf',
+            expires_at: '2026-08-29T19:05:00Z',
+          },
+        });
+        return;
+      }
       report.period = (url.searchParams.get('period') ?? report.period) as typeof report.period;
       if (report.period === 'custom') {
         report.period_start = url.searchParams.get('date_from') ?? report.period_start;
@@ -132,9 +142,7 @@ for (const state of ['partial', 'empty'] as const) {
   });
 }
 
-test('dark TMA opens an actionable browser handoff with the exact report context', async ({
-  page,
-}) => {
+test('dark TMA hands an exact short-lived PDF to native download', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await installTelegramHarness(page, { colorScheme: 'dark' });
   const tma = new TelegramHarness(page);
@@ -144,10 +152,16 @@ test('dark TMA opens an actionable browser handoff with the exact report context
   await page.goto('/app/report?period=custom&date_from=2026-08-01&date_to=2026-08-20&client_id=73');
   await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
   await expect(page.getByRole('heading', { name: /Александр Константинович/ })).toBeVisible();
-  await page.getByRole('button', { name: 'Открыть в браузере для PDF' }).click();
-  await expect(page.getByText('Отчёт открыт в браузере.')).toBeVisible();
-  const expectedBrowserUrl = `${new URL(page.url()).origin}/app/report?period=custom&date_from=2026-08-01&date_to=2026-08-20&client_id=73`;
-  await expect.poll(async () => (await tma.state()).openedLinks).toEqual([expectedBrowserUrl]);
+  await page.getByRole('button', { name: 'Скачать PDF' }).click();
+  await expect(page.getByText('Telegram открыл сохранение PDF.')).toBeVisible();
+  await expect
+    .poll(async () => (await tma.state()).downloads)
+    .toEqual([
+      {
+        url: `${new URL(page.url()).origin}/api/v1/workouts/progress/report/file/signed-e2e`,
+        fileName: 'progress-report-2026-07-26_2026-08-24.pdf',
+      },
+    ]);
   await expect(page).toHaveURL(/period=custom/);
   await expect(page).toHaveURL(/date_from=2026-08-01/);
   await expect(page).toHaveURL(/client_id=73/);
@@ -156,12 +170,12 @@ test('dark TMA opens an actionable browser handoff with the exact report context
   await page.screenshot({
     path: '../.artifacts/screenshots/task-69b/tma-390x844-dark-chart.png',
   });
-  await page.getByText('Отчёт открыт в браузере.').scrollIntoViewIfNeeded();
+  await page.getByText('Telegram открыл сохранение PDF.').scrollIntoViewIfNeeded();
   await page.screenshot({
-    path: '../.artifacts/screenshots/task-113A-round-2/tma-390-dark-pdf-handoff-preview.png',
+    path: '../.artifacts/screenshots/task-113A-round-4/tma-390-dark-pdf-download-preview.png',
   });
   await page.screenshot({
-    path: '../.artifacts/screenshots/task-113A-round-2/tma-390-dark-pdf-handoff.png',
+    path: '../.artifacts/screenshots/task-113A-round-4/tma-390-dark-pdf-download.png',
     fullPage: true,
   });
 });

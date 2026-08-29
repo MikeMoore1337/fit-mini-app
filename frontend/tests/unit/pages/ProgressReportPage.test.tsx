@@ -17,9 +17,19 @@ function renderPage() {
 }
 
 function installApi() {
-  vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-    new Response(JSON.stringify(makeProgressReportFixture()), { status: 200 }),
-  );
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    if (String(input).includes('/download-link')) {
+      return new Response(
+        JSON.stringify({
+          url: 'https://app.your-fitness-coach.ru/api/v1/workouts/progress/report/file/signed',
+          filename: 'progress-report-2026-08-01_2026-08-20.pdf',
+          expires_at: '2026-08-29T19:05:00Z',
+        }),
+        { status: 200 },
+      );
+    }
+    return new Response(JSON.stringify(makeProgressReportFixture()), { status: 200 });
+  });
 }
 
 afterEach(() => {
@@ -72,33 +82,45 @@ describe('ProgressReportPage', () => {
     });
   });
 
-  it('hands the exact report context to the external browser in Telegram', async () => {
+  it('hands a short-lived PDF file to native Telegram download', async () => {
     window.history.replaceState(
       null,
       '',
       '/app/report?period=custom&date_from=2026-08-01&date_to=2026-08-20&client_id=73',
     );
-    const openLink = vi.fn();
+    const downloadFile = vi.fn(
+      (_params: { url: string; file_name: string }, callback: (accepted: boolean) => void) =>
+        callback(true),
+    );
     Object.defineProperty(window, 'Telegram', {
       configurable: true,
-      value: { WebApp: { initData: 'signed-test-data', openLink } },
+      value: { WebApp: { initData: 'signed-test-data', downloadFile } },
     });
     installApi();
     const print = vi.spyOn(window, 'print').mockImplementation(() => undefined);
     renderPage();
     await screen.findByRole('heading', { name: /Александр Константинович/ });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Открыть в браузере для PDF' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Скачать PDF' }));
 
-    expect(openLink).toHaveBeenCalledWith(
-      `${window.location.origin}/app/report?period=custom&date_from=2026-08-01&date_to=2026-08-20&client_id=73`,
-      { try_instant_view: false },
+    await waitFor(() =>
+      expect(downloadFile).toHaveBeenCalledWith(
+        {
+          url: 'https://app.your-fitness-coach.ru/api/v1/workouts/progress/report/file/signed',
+          file_name: 'progress-report-2026-08-01_2026-08-20.pdf',
+        },
+        expect.any(Function),
+      ),
     );
-    expect(screen.getByText('Отчёт открыт в браузере.')).toBeVisible();
+    expect(screen.getByText('Telegram открыл сохранение PDF.')).toBeVisible();
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      '/api/v1/coach/clients/73/progress-report/download-link?period=custom&date_from=2026-08-01&date_to=2026-08-20',
+      expect.objectContaining({ method: 'POST' }),
+    );
     expect(print).not.toHaveBeenCalled();
   });
 
-  it('keeps an actionable browser link when the Telegram handoff is unavailable', async () => {
+  it('keeps an actionable signed PDF link when native Telegram download is unavailable', async () => {
     Object.defineProperty(window, 'Telegram', {
       configurable: true,
       value: { WebApp: { initData: 'signed-test-data' } },
@@ -107,12 +129,12 @@ describe('ProgressReportPage', () => {
     renderPage();
     await screen.findByRole('heading', { name: /Александр Константинович/ });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Открыть в браузере для PDF' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Скачать PDF' }));
 
-    expect(screen.getByText(/не смог открыть браузер автоматически/)).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Открыть отчёт в браузере' })).toHaveAttribute(
+    expect(await screen.findByText('Откройте готовый PDF по ссылке.')).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Скачать PDF' })).toHaveAttribute(
       'href',
-      '/app/report?period=days_30',
+      'https://app.your-fitness-coach.ru/api/v1/workouts/progress/report/file/signed',
     );
   });
 });

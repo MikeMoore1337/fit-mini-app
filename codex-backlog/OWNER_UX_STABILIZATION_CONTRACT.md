@@ -13,7 +13,9 @@
   дублирует глобальную навигацию без нового контекста.
 - Blocking modal/sheet использует общий document scroll lock, сохраняет внутренний scroll и
   восстанавливает исходную позицию страницы. Mobile Web/TMA учитывают visual viewport: focused input,
-  результаты и основные действия остаются достижимыми над клавиатурой.
+  результаты и основные действия остаются достижимыми над клавиатурой. Если Telegram сообщает
+  высоту больше фактически видимой области iOS, current viewport ограничивается меньшим browser
+  `visualViewport`; переход от поиска продукта к количеству фокусирует и показывает поле порции.
 - Недоступные capability-dependent действия не показываются. В частности, trainer feedback требует
   актуальную активную связь с тренером.
 - Compact-first не резервирует пустую высоту. Полностью сохранённое упражнение может автоматически
@@ -51,12 +53,22 @@
 ### Progress report PDF
 
 - В Web действие запускает системную печать, из которой фактически сохраняется PDF.
-- В TMA действие реально открывает тот же защищённый report URL во внешнем браузере через
-  `Telegram.WebApp.openLink`; URL сохраняет period, custom dates и `client_id`.
+- В TMA действие создаёт готовый PDF по точному period/custom/client context и передаёт короткоживущую
+  HTTPS-ссылку в `Telegram.WebApp.downloadFile`. Для старого Telegram client используется
+  `openLink` той же ссылки на файл; защищённая HTML-страница не используется как внешний handoff.
 - Прямой browser GET этого report URL обслуживается приватным SPA shell, а не JSON `404`; штатный
   production smoke проверяет `/app/report?period=days_30`.
-- Если platform handoff недоступен, пользователь получает обычную actionable browser link. Простая
-  инструкция без действия не считается экспортом или сохранением PDF.
+- Download URL зашифрован, живёт 5 минут, повторно проверяет активность пользователя и связь
+  тренер—клиент, отдаёт `application/pdf` как attachment с `no-store` и не создаёт persistent artifact.
+- Если platform handoff недоступен, пользователь получает обычную actionable ссылку на готовый PDF.
+  Простая инструкция без действия не считается экспортом или сохранением PDF.
+
+### Nutrition density
+
+- Mobile meal header держит основное добавление отдельно от одной компактной строки вторичных
+  действий; repeat/copy не образуют вертикальную лестницу.
+- Карточка продукта объединяет brand и amount, держит КБЖУ видимыми и размещает repeat/edit/delete
+  рядом в компактных 44 px icon controls с полными accessible names.
 
 ### Exercise catalog
 

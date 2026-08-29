@@ -10,11 +10,13 @@ pydantic-settings
 pydantic
 alembic
 authlib
+cryptography
 PyJWT
 pwdlib[argon2]
 httpx[socks]
 itsdangerous
 python-multipart
 qrcode[pil]
+reportlab
 setuptools>=78.1.1
 slowapi

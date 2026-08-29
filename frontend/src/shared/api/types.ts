@@ -74,6 +74,7 @@ export type WorkoutTimelineItem = ApiSchemas['WorkoutTimelineItem'];
 export type WorkoutComment = ApiSchemas['WorkoutCommentResponse'];
 export type ProgressSummary = ApiSchemas['ProgressSummaryResponse'];
 export type ProgressReport = ApiSchemas['ProgressReportResponse'];
+export type ProgressReportDownloadLink = ApiSchemas['ProgressReportDownloadLinkResponse'];
 export type NutritionReport = ApiSchemas['NutritionReportResponse'];
 export type NutritionReportPeriod = ApiSchemas['NutritionReportPeriod'];
 export type TrainingAnalytics = ApiSchemas['TrainingAnalyticsResponse'];

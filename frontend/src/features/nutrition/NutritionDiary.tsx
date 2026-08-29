@@ -258,16 +258,15 @@ function EntryRow({
             <span>
               {entry.entry_kind === 'quick_add'
                 ? `Быстрый ввод${entry.logged_at ? ` · ${entry.logged_at.slice(0, 5)}` : ''}`
-                : entry.food_brand || amountLabel(entry)}
+                : entry.food_brand
+                  ? `${entry.food_brand} · ${amountLabel(entry)}`
+                  : amountLabel(entry)}
             </span>
           </div>
           <strong className="nutrition-entry__calories">
             {formatNumber(entry.nutrition.energy_kcal)} ккал
           </strong>
         </div>
-        {entry.entry_kind !== 'quick_add' && entry.food_brand && (
-          <span className="nutrition-entry__amount">{amountLabel(entry)}</span>
-        )}
         <div className="nutrition-entry__macros" aria-label="Пищевая ценность записи">
           <span>Б {formatNumber(entry.nutrition.protein_g, 1)}</span>
           <span>Ж {formatNumber(entry.nutrition.fat_g, 1)}</span>
@@ -276,16 +275,34 @@ function EntryRow({
       </div>
       {!editing ? (
         <div className="nutrition-entry__actions">
-          <button type="button" onClick={onCopy} disabled={remove.isPending}>
-            Повторить
+          <button
+            type="button"
+            onClick={onCopy}
+            disabled={remove.isPending}
+            aria-label={`Повторить ${entry.food_name}`}
+            title="Повторить"
+          >
+            <Icon name="sync" size={20} />
           </button>
           {entry.entry_kind !== 'quick_add' && (
-            <button type="button" onClick={() => setEditing(true)} disabled={remove.isPending}>
-              Изменить
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              disabled={remove.isPending}
+              aria-label={`Изменить ${entry.food_name}`}
+              title="Изменить"
+            >
+              <Icon name="edit" size={20} />
             </button>
           )}
-          <button type="button" onClick={() => void requestDelete()} disabled={remove.isPending}>
-            {remove.isPending ? 'Удаляем…' : 'Удалить'}
+          <button
+            type="button"
+            onClick={() => void requestDelete()}
+            disabled={remove.isPending}
+            aria-label={`${remove.isPending ? 'Удаляем' : 'Удалить'} ${entry.food_name}`}
+            title="Удалить"
+          >
+            <Icon name={remove.isPending ? 'loading' : 'trash'} size={20} />
           </button>
         </div>
       ) : (
@@ -391,17 +408,19 @@ function MealSection({
           </span>
         </div>
         <div className="nutrition-meal__actions">
-          <button type="button" onClick={onRepeatYesterday}>
-            Повторить вчера
-          </button>
-          {meal.entries.length > 0 && (
-            <button type="button" onClick={onCopy}>
-              Копировать
-            </button>
-          )}
           <Button variant="secondary" type="button" onClick={onAdd}>
             <Icon name="plus" size={16} /> Добавить
           </Button>
+          <div className="nutrition-meal__secondary-actions">
+            <button type="button" onClick={onRepeatYesterday} aria-label="Повторить вчера">
+              Вчера
+            </button>
+            {meal.entries.length > 0 && (
+              <button type="button" onClick={onCopy}>
+                Копировать
+              </button>
+            )}
+          </div>
         </div>
       </header>
       {meal.entries.length ? (

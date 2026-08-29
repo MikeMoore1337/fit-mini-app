@@ -76,6 +76,7 @@ const iconMarkup = {
   checklist:
     '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 3V2h6v3H9ZM8 10l1.5 1.5L12 9M14 10h3M8 16l1.5 1.5L12 15M14 16h3"/>',
   download: '<path d="M12 3v12M7 10l5 5 5-5M4 20h16"/>',
+  edit: '<path d="M4 20h4l11-11a2.8 2.8 0 0 0-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/>',
   exercise:
     '<rect x="3.5" y="5" width="17" height="14" rx="3" /><line x1="7" y1="9" x2="7" y2="15" /><line x1="9.5" y1="8" x2="9.5" y2="16" /><line x1="14.5" y1="8" x2="14.5" y2="16" /><line x1="17" y1="9" x2="17" y2="15" /><line x1="9.5" y1="12" x2="14.5" y2="12" />',
   print:

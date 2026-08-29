@@ -284,3 +284,60 @@ def test_historical_range_evaluates_its_last_day(client) -> None:
     assert training["completed_workouts"] == 1
     assert training["skipped_workouts"] == 0
     assert payload["data_sufficiency"]["nutrition_coverage"]["counters"]["eligible_day_count"] == 3
+
+
+def test_progress_report_download_link_returns_a_native_pdf_file(client) -> None:
+    headers = _auth(client, 67_301)
+    user_id = _user_id(67_301)
+    _seed_report_data(user_id)
+
+    created = client.post(
+        "/api/v1/workouts/progress/report/download-link",
+        params={"period": "days_30"},
+        headers=headers,
+    )
+
+    assert created.status_code == 200, created.text
+    link = created.json()
+    assert link["filename"].startswith("progress-report-")
+    assert link["filename"].endswith(".pdf")
+    assert link["url"].startswith(
+        "https://app.your-fitness-coach.ru/api/v1/workouts/progress/report/file/"
+    )
+
+    downloaded = client.get(link["url"])
+    assert downloaded.status_code == 200, downloaded.text
+    assert downloaded.headers["content-type"] == "application/pdf"
+    assert downloaded.headers["content-disposition"] == f'attachment; filename="{link["filename"]}"'
+    assert downloaded.headers["access-control-allow-origin"] == "https://web.telegram.org"
+    assert set(downloaded.headers["cache-control"].split(", ")) == {"private", "no-store"}
+    assert int(downloaded.headers["content-length"]) == len(downloaded.content)
+    assert downloaded.content.startswith(b"%PDF-")
+    assert len(downloaded.content) > 5_000
+
+    invalid = client.get("/api/v1/workouts/progress/report/file/not-a-token")
+    assert invalid.status_code == 404
+
+
+def test_coach_progress_report_download_rechecks_active_relationship(client) -> None:
+    _auth(client, 67_401)
+    coach_headers = _auth(client, 67_402, is_coach=True)
+    user_id = _user_id(67_401)
+    coach_id = _user_id(67_402)
+    with get_session_context() as db:
+        db.add(CoachClient(coach_user_id=coach_id, client_user_id=user_id, status="active"))
+
+    created = client.post(
+        f"/api/v1/coach/clients/{user_id}/progress-report/download-link",
+        params={"period": "days_7"},
+        headers=coach_headers,
+    )
+    assert created.status_code == 200, created.text
+    file_url = created.json()["url"]
+
+    with get_session_context() as db:
+        relation = db.query(CoachClient).filter(CoachClient.client_user_id == user_id).one()
+        relation.status = "ended"
+
+    revoked = client.get(file_url)
+    assert revoked.status_code == 404

@@ -158,23 +158,42 @@ test('TMA auth, shared UI, theme, viewport, safe areas and BackButton stay on on
   await expect.poll(async () => (await tma.state()).backButton.visible).toBe(false);
 });
 
-test('progress report opens the exact browser context for PDF and keeps BackButton contract', async ({
+test('progress report starts native PDF download and keeps BackButton contract', async ({
   tma,
   tmaPage,
 }) => {
   await installPlatformApi(tmaPage);
-  await tmaPage.route('**/api/v1/workouts/progress/report*', async (route) => {
-    await route.fulfill({ json: makeProgressReportFixture('partial') });
-  });
+  await tmaPage.route(
+    /\/api\/v1\/workouts\/progress\/report(?:\/download-link)?(?:\?|$)/,
+    async (route) => {
+      const url = new URL(route.request().url());
+      if (route.request().method() === 'POST' && url.pathname.endsWith('/download-link')) {
+        await route.fulfill({
+          json: {
+            url: `${url.origin}/api/v1/workouts/progress/report/file/signed-smoke`,
+            filename: 'progress-report-2026-07-26_2026-08-24.pdf',
+            expires_at: '2026-08-29T19:05:00Z',
+          },
+        });
+        return;
+      }
+      await route.fulfill({ json: makeProgressReportFixture('partial') });
+    },
+  );
   await tmaPage.goto('/app/report?period=days_90');
 
   await expect(tmaPage.getByRole('heading', { name: 'Александр Петров' })).toBeVisible();
   await expectNoHorizontalOverflow(tmaPage);
-  await tmaPage.getByRole('button', { name: 'Открыть в браузере для PDF' }).click();
-  await expect(tmaPage.getByText('Отчёт открыт в браузере.')).toBeVisible();
+  await tmaPage.getByRole('button', { name: 'Скачать PDF' }).click();
+  await expect(tmaPage.getByText('Telegram открыл сохранение PDF.')).toBeVisible();
   await expect
-    .poll(async () => (await tma.state()).openedLinks)
-    .toEqual([`${new URL(tmaPage.url()).origin}/app/report?period=days_90`]);
+    .poll(async () => (await tma.state()).downloads)
+    .toEqual([
+      {
+        url: `${new URL(tmaPage.url()).origin}/api/v1/workouts/progress/report/file/signed-smoke`,
+        fileName: 'progress-report-2026-07-26_2026-08-24.pdf',
+      },
+    ]);
   await expect.poll(async () => (await tma.state()).backButton.visible).toBe(true);
   await tma.clickBack();
   await expect(tmaPage).toHaveURL('/app?section=progress');

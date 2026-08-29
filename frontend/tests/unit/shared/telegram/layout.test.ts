@@ -23,7 +23,22 @@ describe('Mobile Web/TMA layout adapter', () => {
     delete document.documentElement.dataset.yfcKeyboard;
     delete document.documentElement.dataset.yfcLayoutSurface;
     delete document.documentElement.dataset.yfcViewportActive;
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
+  });
+
+  it('uses the smaller iOS visual viewport while the Telegram keyboard is open', () => {
+    vi.stubGlobal('visualViewport', { height: 392 });
+    const controller = createTelegramMock({
+      viewportHeight: 844,
+      viewportStableHeight: 844,
+      isActive: true,
+    });
+
+    expect(readMobileViewportSnapshot(controller.webApp)).toMatchObject({
+      viewportHeight: 392,
+      viewportStableHeight: 844,
+    });
   });
 
   it('normalizes Telegram stable/current viewport and both safe-area layers', () => {

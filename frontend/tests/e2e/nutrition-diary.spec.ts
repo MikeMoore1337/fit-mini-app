@@ -265,6 +265,23 @@ test('nutrition diary is responsive, keyboard-safe and supports local quick add'
     expect(targetBadgeBox!.y).toBeGreaterThanOrEqual(weekBox!.y + weekBox!.height);
   }
 
+  const compactBreakfast = page.getByRole('region', { name: 'Завтрак' });
+  const entry = compactBreakfast.locator('.nutrition-entry').first();
+  const [entryBox, headerBox] = await Promise.all([
+    entry.boundingBox(),
+    compactBreakfast.locator('.nutrition-meal__header').boundingBox(),
+  ]);
+  expect(entryBox).not.toBeNull();
+  expect(headerBox).not.toBeNull();
+  expect(entryBox!.height).toBeLessThanOrEqual(96);
+  expect(headerBox!.height).toBeLessThanOrEqual(124);
+  for (const action of await entry.locator('.nutrition-entry__actions button').all()) {
+    expect((await action.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+  }
+  await compactBreakfast.screenshot({
+    path: '../.artifacts/screenshots/task-113A-round-4/nutrition-compact-cards-360.png',
+  });
+
   await page.getByRole('button', { name: 'Предыдущая неделя' }).click();
   await expect(page.getByRole('heading', { name: 'Неделя', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Следующая неделя' }).click();
@@ -311,7 +328,7 @@ test('nutrition diary is responsive, keyboard-safe and supports local quick add'
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(360);
 
   const oatmeal = page.locator('.nutrition-entry').filter({ hasText: 'Овсяная каша' });
-  await oatmeal.getByRole('button', { name: 'Повторить' }).click();
+  await oatmeal.getByRole('button', { name: 'Повторить Овсяная каша' }).click();
   await expect(page.getByRole('dialog', { name: 'Повторить продукт' })).toBeVisible();
   await expect(page.getByText('Новые записи добавятся к уже существующим.')).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'Дата назначения' })).toHaveValue('2026-08-19');

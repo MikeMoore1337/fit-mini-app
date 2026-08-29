@@ -115,12 +115,33 @@ for (const current of cases) {
       'https://world.openfoodfacts.org/product/3017620422003',
     );
     await expectNoHorizontalOverflow(page);
+    if (current.telegram) {
+      await page.setViewportSize({ width: current.viewport.width, height: 430 });
+      await expect
+        .poll(() =>
+          page.evaluate(() =>
+            document.documentElement.style.getPropertyValue('--yfc-viewport-height'),
+          ),
+        )
+        .toBe('430px');
+      const [searchBox, panelBox] = await Promise.all([
+        nameSearch.boundingBox(),
+        page.locator('.nutrition-picker__panel').boundingBox(),
+      ]);
+      expect(searchBox).not.toBeNull();
+      expect(panelBox).not.toBeNull();
+      expect(searchBox!.y + searchBox!.height).toBeLessThanOrEqual(430);
+      expect(panelBox!.y + panelBox!.height).toBeLessThanOrEqual(430);
+    }
     await page.screenshot({
-      path: `../.artifacts/screenshots/task-113A-round-3/food-search-order-and-action-${current.label}.png`,
+      path: `../.artifacts/screenshots/task-113A-round-4/food-search-keyboard-${current.label}.png`,
     });
     await page.getByRole('button', { name: 'Выбрать продукт' }).click();
     await expect(page.getByRole('heading', { name: 'Nutella hazelnut spread' })).toBeVisible();
-    await expect(page.getByRole('spinbutton', { name: 'Количество' })).toHaveValue('100');
+    const amount = page.getByRole('spinbutton', { name: 'Количество' });
+    await expect(amount).toHaveValue('100');
+    await expect(amount).toBeFocused();
+    await expect(amount).toBeInViewport();
     expect(importedPayload).toMatchObject({
       name: 'Nutella hazelnut spread',
       brand: 'Ferrero',
@@ -129,7 +150,7 @@ for (const current of cases) {
     });
     await expectNoHorizontalOverflow(page);
     await page.screenshot({
-      path: `../.artifacts/screenshots/task-113A-round-3/food-search-selected-result-${current.label}.png`,
+      path: `../.artifacts/screenshots/task-113A-round-4/food-search-selected-result-${current.label}.png`,
     });
   });
 }

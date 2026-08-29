@@ -335,3 +335,9 @@ class ProgressReportResponse(BaseModel):
     data_sufficiency: ProgressDataSufficiency
     program: ProgressReportProgram | None = None
     check_ins: list[ProgressReportCheckIn]
+
+
+class ProgressReportDownloadLinkResponse(BaseModel):
+    url: str
+    filename: str
+    expires_at: datetime
