@@ -117,6 +117,9 @@ Lifecycle не расширяет scope task и не отменяет owner chec
   constrained VPS через предусмотренный `single-slot` fallback с bounded downtime; evidence имеет
   verdict `active`, все stages прошли, public/API/SEO и ownership worker/bot проверены. Это не
   является доказательством production zero observed downtime или общей HA.
+- Task `113A` завершена, выпущена в production revision `17bee56c` и архивирована после owner
+  acceptance `2026-08-30`. Task `114` является current/not started и требует отдельной команды на
+  запуск lifecycle.
 - Current task `114` и UX-reset sequence `114 -> 115A -> owner approval -> 116..123 -> 81 -> 82 ->
   84 -> 124A -> owner release approval -> 124B -> conditional 124C` не отменяют собственные Trigger,
   dependency и owner decisions task files.
