@@ -18,7 +18,9 @@ export interface RevisionWorkoutReference {
 
 export interface RevisionWorkoutExercise {
   exerciseId: number;
+  metricType: 'strength' | 'cardio';
   notes: string | null;
+  prescribedDurationMinutes: number | null;
   prescribedReps: string;
   prescribedSets: number;
   restSeconds: number | null;
@@ -167,7 +169,9 @@ function snapshotExercise(value: JsonRecord): RevisionWorkoutExercise | null {
   if (exerciseId == null) return null;
   return {
     exerciseId,
+    metricType: value.metric_type === 'cardio' ? 'cardio' : 'strength',
     notes: typeof value.notes === 'string' ? value.notes : null,
+    prescribedDurationMinutes: numberValue(value.prescribed_duration_minutes),
     prescribedReps: stringValue(value.prescribed_reps, 'Не указано'),
     prescribedSets: numberValue(value.prescribed_sets) ?? 0,
     restSeconds: numberValue(value.rest_seconds),

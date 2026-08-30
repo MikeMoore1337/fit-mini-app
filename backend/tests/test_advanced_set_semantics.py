@@ -57,6 +57,11 @@ def _template_payload(exercise_ids: list[int]) -> dict:
     }
 
 
+def _strength_exercises(client, headers: dict[str, str]) -> list[dict]:
+    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()
+    return [exercise for exercise in exercises if exercise["metric_type"] == "strength"][:2]
+
+
 def _load_migration():
     path = (
         Path(__file__).resolve().parents[1]
@@ -164,7 +169,7 @@ def test_template_rejects_invalid_superset_pairs(
     client, superset_group: int | None, superset_order: int | None
 ) -> None:
     headers = _auth(client, 29_100 + (superset_order or 0))
-    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()[:2]
+    exercises = _strength_exercises(client, headers)
     payload = _template_payload([exercise["id"] for exercise in exercises])
     payload["days"][0]["exercises"][0]["superset_group"] = superset_group
     payload["days"][0]["exercises"][0]["superset_order"] = superset_order
@@ -176,7 +181,7 @@ def test_template_rejects_invalid_superset_pairs(
 
 def test_template_rejects_a_single_exercise_superset(client) -> None:
     headers = _auth(client, 29_150)
-    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()[:2]
+    exercises = _strength_exercises(client, headers)
     payload = _template_payload([exercise["id"] for exercise in exercises])
     payload["days"][0]["exercises"][1]["superset_group"] = None
     payload["days"][0]["exercises"][1]["superset_order"] = None
@@ -188,7 +193,7 @@ def test_template_rejects_a_single_exercise_superset(client) -> None:
 
 def test_superset_materialization_set_combinations_history_export_and_analytics(client) -> None:
     headers = _auth(client, 29_200)
-    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()[:2]
+    exercises = _strength_exercises(client, headers)
     payload = _template_payload([exercise["id"] for exercise in exercises])
     created = client.post("/api/v1/programs/templates", headers=headers, json=payload)
     assert created.status_code == 200, created.text
@@ -313,7 +318,7 @@ def test_superset_materialization_set_combinations_history_export_and_analytics(
 
 def test_legacy_null_set_kind_remains_in_working_analytics(client) -> None:
     headers = _auth(client, 29_300)
-    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()[:2]
+    exercises = _strength_exercises(client, headers)
     payload = _template_payload([exercise["id"] for exercise in exercises])
     payload["assign_after_create"] = True
     payload["start_date"] = today_msk().isoformat()

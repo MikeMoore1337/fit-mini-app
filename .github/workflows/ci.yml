@@ -83,9 +83,42 @@ jobs:
 
           echo "Release sequence verified by successful push CI run $successful_run_id."
 
+  task-provenance:
+    name: Task provenance
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Validate task PR traceability
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          python scripts/task_session.py
+          --github-repository "$GITHUB_REPOSITORY"
+          validate-pr --event "$GITHUB_EVENT_PATH"
+
+      - name: Validate exact dev update provenance
+        if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APPROVED_RECOVERY_SHA: ${{ vars.DEV_RECOVERY_APPROVED_SHA }}
+        run: >-
+          python scripts/task_session.py
+          --github-repository "$GITHUB_REPOSITORY"
+          verify-dev-provenance --sha "$GITHUB_SHA"
+          --approved-recovery-sha "$APPROVED_RECOVERY_SHA"
+
   quality:
     name: Python quality
-    needs: release-sequence
+    needs: [release-sequence, task-provenance]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -118,7 +151,7 @@ jobs:
 
   frontend:
     name: Frontend
-    needs: release-sequence
+    needs: [release-sequence, task-provenance]
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -182,7 +215,7 @@ jobs:
 
   frontend-smoke:
     name: Frontend smoke (${{ matrix.shard }}/3)
-    needs: release-sequence
+    needs: [release-sequence, task-provenance]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -230,7 +263,7 @@ jobs:
 
   python-tests:
     name: Python tests (${{ matrix.shard }})
-    needs: release-sequence
+    needs: [release-sequence, task-provenance]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -328,7 +361,7 @@ jobs:
 
   migrated-stack:
     name: Migrated PostgreSQL stack
-    needs: release-sequence
+    needs: [release-sequence, task-provenance]
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -442,7 +475,7 @@ jobs:
 
   dependency-audit:
     name: Dependency audit
-    needs: release-sequence
+    needs: [release-sequence, task-provenance]
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -478,7 +511,7 @@ jobs:
 
   containers:
     name: Container (${{ matrix.image }})
-    needs: release-sequence
+    needs: [release-sequence, task-provenance]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -573,6 +606,7 @@ jobs:
     needs:
       [
         release-sequence,
+        task-provenance,
         quality,
         frontend,
         frontend-smoke,
@@ -588,6 +622,7 @@ jobs:
       - name: Verify all CI jobs succeeded
         env:
           RELEASE_SEQUENCE_RESULT: ${{ needs.release-sequence.result }}
+          TASK_PROVENANCE_RESULT: ${{ needs.task-provenance.result }}
           QUALITY_RESULT: ${{ needs.quality.result }}
           FRONTEND_RESULT: ${{ needs.frontend.result }}
           FRONTEND_SMOKE_RESULT: ${{ needs.frontend-smoke.result }}
@@ -597,6 +632,7 @@ jobs:
           CONTAINERS_RESULT: ${{ needs.containers.result }}
         run: |
           test "$RELEASE_SEQUENCE_RESULT" = success
+          test "$TASK_PROVENANCE_RESULT" = success
           test "$QUALITY_RESULT" = success
           test "$FRONTEND_RESULT" = success
           test "$FRONTEND_SMOKE_RESULT" = success

@@ -900,7 +900,8 @@ def test_coach_can_assign_existing_template_to_own_client(client):
     )
     assert alias.status_code == 200
 
-    exercise = client.get("/api/v1/programs/exercises", headers=coach_headers).json()[0]
+    catalog = client.get("/api/v1/programs/exercises", headers=coach_headers).json()
+    exercise = next(item for item in catalog if item["metric_type"] == "strength")
     created = client.post(
         "/api/v1/programs/templates",
         json={
@@ -1129,7 +1130,11 @@ def test_telegram_login_bootstraps_admin_from_env(client, monkeypatch):
 
 def test_create_program_and_today_workout(client):
     headers = auth(client, telegram_user_id=2001, is_coach=False)
-    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()
+    exercises = [
+        item
+        for item in client.get("/api/v1/programs/exercises", headers=headers).json()
+        if item["metric_type"] == "strength"
+    ]
     payload = {
         "title": "Тестовая программа",
         "goal": "recomposition",
@@ -1159,7 +1164,11 @@ def test_create_program_and_today_workout(client):
 
 def test_assign_template_to_self_uses_selected_start_date(client):
     headers = auth(client, telegram_user_id=2002, is_coach=False)
-    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()
+    exercises = [
+        item
+        for item in client.get("/api/v1/programs/exercises", headers=headers).json()
+        if item["metric_type"] == "strength"
+    ]
     payload = {
         "title": "Программа с выбранной датой",
         "goal": "recomposition",
@@ -1219,7 +1228,11 @@ def test_assign_template_to_self_uses_selected_start_date(client):
 
 def test_week_schedule_returns_current_active_program(client):
     headers = auth(client, telegram_user_id=2003, is_coach=False)
-    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()
+    exercises = [
+        item
+        for item in client.get("/api/v1/programs/exercises", headers=headers).json()
+        if item["metric_type"] == "strength"
+    ]
     payload = {
         "title": "Недельная программа",
         "goal": "recomposition",
@@ -1252,7 +1265,11 @@ def test_week_schedule_returns_current_active_program(client):
 
 def test_user_can_clear_completed_workout_history(client):
     headers = auth(client, telegram_user_id=6401, is_coach=False)
-    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()
+    exercises = [
+        item
+        for item in client.get("/api/v1/programs/exercises", headers=headers).json()
+        if item["metric_type"] == "strength"
+    ]
     payload = {
         "title": "Программа для очистки истории",
         "goal": "recomposition",
@@ -1356,7 +1373,11 @@ def test_client_can_save_update_and_delete_body_measurement(client):
 
 def test_workout_set_patch(client):
     headers = auth(client, telegram_user_id=2001, is_coach=False)
-    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()
+    exercises = [
+        item
+        for item in client.get("/api/v1/programs/exercises", headers=headers).json()
+        if item["metric_type"] == "strength"
+    ]
     payload = {
         "title": "Программа для валидации сетов",
         "goal": "recomposition",
@@ -1402,7 +1423,11 @@ def test_workout_set_patch(client):
 
 def test_workout_set_validation(client):
     headers = auth(client, telegram_user_id=2001, is_coach=False)
-    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()
+    exercises = [
+        item
+        for item in client.get("/api/v1/programs/exercises", headers=headers).json()
+        if item["metric_type"] == "strength"
+    ]
     payload = {
         "title": "Программа для проверки валидации",
         "goal": "recomposition",
@@ -1448,7 +1473,11 @@ def test_workout_set_validation(client):
 
 def test_client_cannot_assign_program_as_coach(client):
     headers = auth(client, telegram_user_id=3001, is_coach=False)
-    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()
+    exercises = [
+        item
+        for item in client.get("/api/v1/programs/exercises", headers=headers).json()
+        if item["metric_type"] == "strength"
+    ]
     payload = {
         "title": "Чужая программа",
         "goal": "recomposition",
@@ -1479,7 +1508,11 @@ def test_client_cannot_assign_program_as_coach(client):
 def test_client_target_fields_do_not_assign_program_to_another_user(client):
     target_headers = auth(client, telegram_user_id=3998, is_coach=False)
     headers = auth(client, telegram_user_id=3002, is_coach=False)
-    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()
+    exercises = [
+        item
+        for item in client.get("/api/v1/programs/exercises", headers=headers).json()
+        if item["metric_type"] == "strength"
+    ]
     payload = {
         "title": "Программа только для себя",
         "goal": "recomposition",
@@ -1962,7 +1995,11 @@ def test_coach_cannot_create_exercise_for_non_client(client):
 def test_client_template_is_private(client):
     owner_headers = auth(client, telegram_user_id=3104, is_coach=False)
     other_headers = auth(client, telegram_user_id=3105, is_coach=False)
-    exercises = client.get("/api/v1/programs/exercises", headers=owner_headers).json()
+    exercises = [
+        item
+        for item in client.get("/api/v1/programs/exercises", headers=owner_headers).json()
+        if item["metric_type"] == "strength"
+    ]
     title = "Private Client Template"
     payload = {
         "title": title,
@@ -2008,7 +2045,11 @@ def test_only_configured_root_template_is_public(client, monkeypatch):
     admin_headers = auth(client, telegram_user_id=1104, is_coach=True, is_admin=True)
     client_headers = auth(client, telegram_user_id=3106, is_coach=False)
     coach_headers = auth(client, telegram_user_id=1105, is_coach=True)
-    exercises = client.get("/api/v1/programs/exercises", headers=admin_headers).json()
+    exercises = [
+        item
+        for item in client.get("/api/v1/programs/exercises", headers=admin_headers).json()
+        if item["metric_type"] == "strength"
+    ]
     title = "Global Admin Template"
     payload = {
         "title": title,
@@ -2057,7 +2098,11 @@ def test_coach_can_manage_program_for_own_client(client):
 
     accept_coach_invite(client, coach_headers, client_headers)
 
-    exercises = client.get("/api/v1/programs/exercises", headers=client_headers).json()
+    exercises = [
+        item
+        for item in client.get("/api/v1/programs/exercises", headers=client_headers).json()
+        if item["metric_type"] == "strength"
+    ]
     payload = {
         "title": "Client Managed Program",
         "goal": "recomposition",
@@ -2141,7 +2186,11 @@ def test_coach_can_manage_program_for_own_client(client):
 def test_coach_cannot_create_program_for_non_client(client):
     coach_headers = auth(client, telegram_user_id=1111, is_coach=True)
     target_headers = auth(client, telegram_user_id=3113, is_coach=False)
-    exercises = client.get("/api/v1/programs/exercises", headers=target_headers).json()
+    exercises = [
+        item
+        for item in client.get("/api/v1/programs/exercises", headers=target_headers).json()
+        if item["metric_type"] == "strength"
+    ]
     payload = {
         "title": "Forbidden Client Program",
         "goal": "recomposition",
@@ -2840,7 +2889,11 @@ def test_root_user_deletion_operation_is_not_exposed(client, monkeypatch):
     admin_headers = auth(client, telegram_user_id=1001, is_coach=True, is_admin=True)
     user_headers = auth(client, telegram_user_id=5011, is_coach=False)
     user = client.get("/api/v1/me", headers=user_headers).json()
-    exercises = client.get("/api/v1/programs/exercises", headers=user_headers).json()
+    exercises = [
+        item
+        for item in client.get("/api/v1/programs/exercises", headers=user_headers).json()
+        if item["metric_type"] == "strength"
+    ]
     payload = {
         "title": "Программа удаляемого пользователя",
         "goal": "recomposition",
@@ -2875,7 +2928,11 @@ def test_root_user_deletion_operation_is_not_exposed(client, monkeypatch):
 def test_root_template_deletion_operation_is_not_exposed(client, monkeypatch):
     monkeypatch.setattr(settings, "admin_telegram_user_ids", "1001")
     admin_headers = auth(client, telegram_user_id=1001, is_coach=True, is_admin=True)
-    exercises = client.get("/api/v1/programs/exercises", headers=admin_headers).json()
+    exercises = [
+        item
+        for item in client.get("/api/v1/programs/exercises", headers=admin_headers).json()
+        if item["metric_type"] == "strength"
+    ]
     payload = {
         "title": "Админ удаляет шаблон",
         "goal": "recomposition",
@@ -3153,7 +3210,11 @@ def test_auth_uses_httponly_refresh_cookie(client):
 
 def test_workout_state_machine_rejects_invalid_transitions(client):
     headers = auth(client, telegram_user_id=2050, is_coach=False)
-    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()
+    exercises = [
+        item
+        for item in client.get("/api/v1/programs/exercises", headers=headers).json()
+        if item["metric_type"] == "strength"
+    ]
     payload = {
         "title": "Проверка состояний",
         "goal": "recomposition",
@@ -3255,7 +3316,11 @@ def test_invites_do_not_mutate_profile_or_delete_other_coach_invites(client):
 def test_removed_template_delete_route_preserves_template_and_assigned_program(client):
     headers = auth(client, telegram_user_id=4051, is_coach=True, is_admin=True)
     user = client.get("/api/v1/me", headers=headers).json()
-    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()
+    exercises = [
+        item
+        for item in client.get("/api/v1/programs/exercises", headers=headers).json()
+        if item["metric_type"] == "strength"
+    ]
     payload = {
         "title": "Архивируемый шаблон",
         "goal": "maintenance",
@@ -3301,7 +3366,11 @@ def test_removed_user_delete_route_preserves_coach_program_and_workouts(client):
 
     accept_coach_invite(client, coach_headers, client_headers)
 
-    exercises = client.get("/api/v1/programs/exercises", headers=coach_headers).json()
+    exercises = [
+        item
+        for item in client.get("/api/v1/programs/exercises", headers=coach_headers).json()
+        if item["metric_type"] == "strength"
+    ]
     created = client.post(
         "/api/v1/programs/templates",
         json={

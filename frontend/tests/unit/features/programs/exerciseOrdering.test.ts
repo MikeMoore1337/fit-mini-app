@@ -9,6 +9,7 @@ const exercise = (
 ): Exercise => ({
   id,
   title,
+  metric_type: 'strength',
   slug: `exercise-${id}`,
   primary_muscle_ids: [],
   secondary_muscle_ids: [],

@@ -9,7 +9,8 @@
   -> 113A Owner UX Stabilization [COMPLETED, OWNER ACCEPTED]
   -> 114 nutrition/barcode P0 regression [COMPLETED, OWNER APPROVED, RELEASE AUTHORIZED]
   -> 115A UX audit + IA + compactness/disclosure prototype/spec [COMPLETED, OWNER APPROVED: COMMAND STACK]
-  -> 116 [NEXT, NOT STARTED] -> 117 -> 118 -> 119 -> 120A -> 120B -> 120C -> 120D
+  -> 116 [COMPLETED] -> 117 [COMPLETED] -> 118 [COMPLETED]
+  -> 119 [NEXT PRODUCT TASK, NOT STARTED] -> 120A -> 120B -> 120C -> 120D
   -> 121 -> 122 -> 123
   -> 81 Hydration -> 82 Sleep/Mood -> 84 Reminders
   -> 124A pre-release integrated UX/QA gate
@@ -28,9 +29,9 @@ Tasks `85`, `110`, `111` остаются pending вне critical path: соот
 
 После завершения Task `113` source разработки — permanent `dev`, production source — protected
 `master`. Release/smoke Task `113A` завершены, точная owner-команда
-`Stabilization принята. Можно переходить к Task 114.` получена `2026-08-30`. Tasks `114` и `115A`
-затем запускались отдельными командами, завершены и приняты владельцем; Task `116` не запускается
-автоматически.
+`Stabilization принята. Можно переходить к Task 114.` получена `2026-08-30`. Tasks `114`, `115A`
+и `116-118` затем запускались отдельными командами, завершены и архивированы; Task `119` не
+запускается автоматически.
 
 Tasks `80-101` и их буквенные подзадачи образуют trigger-gated post-release pool. Номер task
 задаёт предпочтительную последовательность реализации, но не отменяет фактический Trigger,
@@ -98,18 +99,18 @@ Owner-selected task `106` завершила discoverability Telegram Mini App, 
 канала на Landing и не изменила порядок `80-101`.
 
 Owner-selected task `107` создана вне pending-последовательности для scheduled regression и
-закрытых Allure-отчётов. Её owner-approved scope не меняет next task `116` или UX-reset path;
+закрытых Allure-отчётов. Её owner-approved scope не меняет next task `119` или UX-reset path;
 implementation и внешние DNS/Cloudflare/hosting actions требуют отдельного запуска/approval.
 
 Owner-selected task `108` создана вне pending-последовательности для product-wide аудита
 соответствия законодательству РФ и непрерывного legal-impact gate будущих задач. Она не меняет
-next task `116` или UX-reset path; запуск, legal review и любые remediation/external actions
+next task `119` или UX-reset path; запуск, legal review и любые remediation/external actions
 требуют отдельных owner decisions.
 
-Owner-selected tasks `109-111` также находятся вне pending-последовательности: factual Landing
-offer, private avatar upload и Progress bento dashboard. Они не меняют next task `116` или
-UX-reset path, не образуют общую implementation batch и запускаются только отдельными owner
-решениями.
+Owner-selected Task `109` завершена и архивирована вне pending-последовательности. Pending Tasks
+`110/111` остаются отдельными направлениями custom avatar и Progress bento dashboard: они не
+меняют next task `119` или UX-reset path, не образуют общую implementation batch и запускаются
+только отдельными owner решениями.
 
 Owner-selected umbrella `126` также находится вне pending-последовательности. Она фиксирует
 future feature распознавания тренажёра камерой без дублирования exercise expansion `120A-120D`.
@@ -122,5 +123,11 @@ image capability; `92A` не относится к job, а `92B/94A/94B` пер�
 Owner-selected task `112` завершена и архивирована вне pending-последовательности после локального
 review/QA zero-downtime deployment contract. Отдельно разрешённый production rollout revision
 `194cf036` завершён через `single-slot` fallback с bounded downtime и verdict `active`; production
-blue/green zero observed downtime на constrained VPS не заявляется. После закрытия `115A`
-next/not-started task — `116`; UX-reset path не изменился.
+blue/green zero observed downtime на constrained VPS не заявляется. Tasks `116-118` завершены;
+next/not-started product task — `119`; UX-reset path не изменился.
+
+Owner-selected Task `127` создана вне product sequence для обязательного перехода на
+`1 task = 1 branch = 1 separate worktree`, integration-only `dev` и единую сериализованную очередь
+task PR merge в `dev`. Она не запускает Task `119` и не меняет её product scope. До завершения
+Task `127` разрешён только прежний строго последовательный single-writer режим; несколько
+параллельных write-сессий не считаются безопасными.

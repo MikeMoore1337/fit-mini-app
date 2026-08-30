@@ -28,7 +28,8 @@ def _auth(client, telegram_user_id: int, *, is_coach: bool = False) -> dict[str,
 
 
 def _create_today_workout(client, headers: dict[str, str]) -> dict:
-    exercise_id = client.get("/api/v1/programs/exercises", headers=headers).json()[0]["id"]
+    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()
+    exercise_id = next(item["id"] for item in exercises if item["metric_type"] == "strength")
     created = client.post(
         "/api/v1/programs/templates",
         headers=headers,

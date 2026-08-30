@@ -177,10 +177,17 @@ current task/backlog explicitly requires them. A read-only/no-code outcome does 
 manufactured commit.
 
 After that commit, apply the canonical release eligibility contract from
-`codex-backlog/TASK_EXECUTION_LIFECYCLE.md`. An `AUTO_RELEASE_ELIGIBLE` task proceeds through the
-normal `dev -> pull request -> master -> post-merge CI -> production deploy -> dev sync` path
-without another owner prompt. A task with a mandatory owner checkpoint, owner approval, human
-evidence or manual visual approval stops before release until that gate is actually completed.
+`codex-backlog/TASK_EXECUTION_LIFECYCLE.md`. If the current task has no explicitly declared owner
+checkpoint, human/device evidence gate, manual visual approval, legal-counsel gate,
+destructive/external authorization or terminal blocker, continue automatically through applicable
+review, QA, commit, PR, merge, CI and normal release stages without waiting for another owner
+prompt. Stop only at the declared gate and report its exact evidence/decision requirement.
+
+Если текущая task не объявляет `OWNER_CHECKPOINT`, `HUMAN_EVIDENCE`, `MANUAL_VISUAL_APPROVAL`,
+`LEGAL_COUNSEL_REQUIRED`, `EXTERNAL_AUTHORIZATION`, `DESTRUCTIVE_ACTION` или terminal blocker,
+controller/lifecycle после terminal success автоматически продолжает применимые review, QA,
+commit, task PR, serial integration, `dev` CI и normal release без дополнительного owner prompt.
+Тишина владельца не является gate. Следующая product task автоматически не запускается.
 
 Do not read completed tasks or historical changelogs unless the current task explicitly requires
 them. Legacy `masters/` and `references/` were removed and are not sources of truth.
@@ -223,15 +230,16 @@ Before changing files for a backlog task, verify the branch with:
 The current backlog's `GLOBAL_RULES.md` defines the expected branch.
 
 For `codex-backlog/tasks/`, `codex-backlog/bugs/pending/` and
-`codex-backlog/telegram-core-release-backlog/tasks/`, the expected permanent implementation branch
-is `dev`. A temporary task branch/worktree is allowed only when the task or backlog explicitly
-requires real isolation; it must branch from current `dev` and be deleted after merge/close when it
-is not a recovery anchor.
+`codex-backlog/telegram-core-release-backlog/tasks/`, `dev` is the permanent integration branch.
+Every executable task uses exactly one `task/<ID>-<slug>` branch and one separate worktree created
+from a clean, verified exact `origin/dev` SHA. The main `dev` worktree is integration-only; feature
+implementation directly in it is forbidden. Delete a task branch/worktree only after merge/close
+and proof that it has no unique commits or unowned changes.
 
 Unless the current backlog rules or user explicitly permit otherwise:
 
-- do not create another branch;
-- do not switch/checkout another branch;
+- do not edit implementation files in the main `dev` worktree;
+- do not create a second branch/worktree for the same task;
 - do not merge or rebase unrelated branches;
 - do not modify another worktree;
 - do not push outside the current task's canonical release/remote-operation contract;
@@ -239,8 +247,16 @@ Unless the current backlog rules or user explicitly permit otherwise:
 
 If the expected branch is not active, stop before tracked changes and report the mismatch.
 
-Parallel write-agents/worktrees are allowed only when the current backlog rules, task or user
-explicitly permits them. Do not infer permission from the existence of multi-agent roles.
+Use `python scripts/task_session.py doctor/start/status/prepare-integration/finish/recover` as the
+repository-native coordination boundary. Runtime leases live only in the shared Git common dir;
+missing/corrupted state is a blocker. Task PRs target only `dev`, preserve `[Task <ID>]` in branch,
+commit and PR provenance, and merge only as the current integration queue head after exact-head
+`checks`. A release lease or open `dev -> master` PR freezes every mutation of `dev`.
+
+Parallel read-only/research sessions are allowed only when task metadata permits them and each has
+its own lease. Parallel write branches may be prepared only when dependency/concurrency metadata
+explicitly marks them compatible; merge into `dev` is always serialized. Without explicit
+compatibility, keep one active writer and stop before creating another write lease.
 
 # Dependencies
 
@@ -334,9 +350,10 @@ Use `technical-writer` for substantial documentation work.
 Treat schema migrations, deployment configuration and infrastructure changes as
 production-sensitive.
 
-Repository-specific release entry: product work is accumulated on permanent `dev`; every new
-production revision must enter remote `master` only as the result of a checked pull request from
-`dev` (or a narrowly justified temporary hotfix/recovery branch). Direct pushes, force-pushes and
+Repository-specific release entry: product work is implemented in task branches/worktrees and
+serially integrated into permanent `dev`; every new production revision must enter remote `master`
+only as the result of a checked pull request from `dev` (or a narrowly justified temporary
+hotfix/recovery branch). Direct pushes, force-pushes and
 branch deletion are prohibited by the `master` ruleset. The required post-merge CI run intentionally starts
 `.github/workflows/deploy.yml` through `workflow_run`; the workflow additionally verifies that the
 exact SHA is associated with a merged pull request into `master` and is still the current
@@ -345,13 +362,15 @@ migrations, blue/green switch, smoke checks and automatic failure rollback conti
 separate human approval. The `production` environment must therefore not require reviewers or a wait
 timer. Manual workflow dispatch is not part of the normal release path.
 
-For an `AUTO_RELEASE_ELIGIBLE` task, no additional owner prompt is required for push, PR creation,
-checked exact-head merge or the resulting automatic production deployment. Eligibility requires a
+For an `AUTO_RELEASE_ELIGIBLE` task, no additional owner prompt is required for task branch push,
+task PR serial integration, release PR creation, checked exact-head merge or the resulting automatic
+production deployment. Eligibility requires a
 tracked logical commit, completed implementation/review/QA/final verification, zero unresolved
 `BLOCKER`, `HIGH` and `MEDIUM`, synchronized findings, current `master` ancestry in `dev`, a clean
 scoped worktree and no mandatory owner/human/visual gate. The agent must monitor required check
-`checks`, post-merge CI and deployment to terminal success, then fast-forward/sync `dev` to the new
-`master`. Any failed gate stops the backlog sequence fail-closed.
+`checks`, exact merged-dev push CI, post-merge CI and deployment to terminal success. The narrow
+deployed-sync GitHub App then fast-forwards `dev` to the exact successful current `master`; ordinary
+direct user/PAT push remains forbidden. Any failed gate stops the backlog sequence fail-closed.
 
 Any exceptional operation that bypasses this path—history rewrite, direct/force push, manual
 production command, infrastructure recovery or deployment of a SHA other than the current merged

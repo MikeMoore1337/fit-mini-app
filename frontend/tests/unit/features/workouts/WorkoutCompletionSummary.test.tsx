@@ -36,6 +36,7 @@ const workout: Workout = {
       id: 101,
       exercise_id: 11,
       exercise_title: 'Приседания',
+      metric_type: 'strength',
       sort_order: 1,
       prescribed_sets: 2,
       prescribed_reps: '8-10',
@@ -83,6 +84,7 @@ const workout: Workout = {
         workout_exercise_id: 101,
         exercise_id: 11,
         exercise_title: 'Приседания',
+        metric_type: 'strength',
         completed_sets: 1,
         reps_total: 8,
         reps_recorded_sets: 1,
@@ -110,7 +112,7 @@ const workout: Workout = {
   },
 };
 
-function renderSummary(onReturnToday = vi.fn()) {
+function renderSummary(onReturnToday = vi.fn(), targetWorkout: Workout = workout) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -118,7 +120,7 @@ function renderSummary(onReturnToday = vi.fn()) {
     <QueryClientProvider client={queryClient}>
       <FeedbackProvider>
         <NavigationProvider>
-          <WorkoutCompletionSummary workout={workout} onReturnToday={onReturnToday} />
+          <WorkoutCompletionSummary workout={targetWorkout} onReturnToday={onReturnToday} />
         </NavigationProvider>
       </FeedbackProvider>
     </QueryClientProvider>,
@@ -221,5 +223,70 @@ describe('WorkoutCompletionSummary', () => {
   it('formats a long workout without rolling hours over', () => {
     expect(formatCompletionDuration(26 * 60 * 60 + 35 * 60)).toBe('26 ч 35 мин');
     expect(formatCompletionDuration(null)).toBe('Не зафиксировано');
+  });
+
+  it('показывает cardio-результат без терминов силового подхода', async () => {
+    const cardioWorkout: Workout = {
+      ...workout,
+      title: 'Смешанная тренировка',
+      exercises: [
+        ...workout.exercises,
+        {
+          id: 102,
+          exercise_id: 12,
+          exercise_title: 'Велотренажёр',
+          metric_type: 'cardio',
+          sort_order: 2,
+          prescribed_sets: 1,
+          prescribed_reps: '',
+          prescribed_duration_minutes: 25,
+          rest_seconds: 0,
+          has_guide: false,
+          sets: [
+            {
+              id: 203,
+              set_number: 1,
+              duration_minutes: 27,
+              distance_km: 6.4,
+              average_heart_rate_bpm: 138,
+              heart_rate_zone: 3,
+              is_completed: true,
+              version: 2,
+            },
+          ],
+        },
+      ],
+      completion_summary: {
+        ...workout.completion_summary!,
+        performed_exercises: 2,
+        completed_sets: 2,
+        total_sets: 3,
+        exercises: [
+          ...workout.completion_summary!.exercises,
+          {
+            workout_exercise_id: 102,
+            exercise_id: 12,
+            exercise_title: 'Велотренажёр',
+            metric_type: 'cardio',
+            completed_sets: 1,
+            reps_total: null,
+            reps_recorded_sets: 0,
+            max_load_kg: null,
+            load_recorded_sets: 0,
+            duration_minutes: 27,
+            distance_km: 6.4,
+            average_heart_rate_bpm: 138,
+            heart_rate_zone: 3,
+          },
+        ],
+      },
+    };
+    renderSummary(vi.fn(), cardioWorkout);
+
+    expect(screen.getByText('Этапов')).toBeInTheDocument();
+    await userEvent.click(screen.getByText('Записанные результаты'));
+    const cardioResult = screen.getByText('Велотренажёр').closest('li');
+    expect(cardioResult).toHaveTextContent('27 мин · 6.4 км · средний пульс 138 · зона 3');
+    expect(cardioResult).not.toHaveTextContent(/подход|повтор|вес/i);
   });
 });

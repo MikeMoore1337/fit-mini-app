@@ -60,6 +60,7 @@ from fitminiapp_api.services.programs import (
     restore_example_template_for_user,
     update_template_for_user,
 )
+from fitminiapp_api.services.workout_metrics import exercise_metric_type
 
 router = APIRouter()
 
@@ -100,6 +101,7 @@ def _serialize_exercise(
         "title": exercise.title,
         "primary_muscle": exercise.primary_muscle,
         "equipment": exercise.equipment,
+        "metric_type": exercise_metric_type(exercise),
         "primary_muscle_ids": [item["identifier"] for item in muscles if item["role"] == "primary"],
         "secondary_muscle_ids": [
             item["identifier"] for item in muscles if item["role"] == "secondary"
@@ -196,6 +198,7 @@ def add_exercise(
             title=payload.title.strip(),
             primary_muscle=payload.primary_muscle,
             equipment=payload.equipment,
+            metric_type=payload.metric_type or "strength",
             difficulty_level=payload.difficulty_level,
             target_telegram_user_id=payload.target_telegram_user_id,
         )
@@ -223,6 +226,7 @@ def edit_exercise(
             title=payload.title.strip(),
             primary_muscle=payload.primary_muscle,
             equipment=payload.equipment,
+            metric_type=payload.metric_type,
             difficulty_level=payload.difficulty_level,
             target_telegram_user_id=payload.target_telegram_user_id,
         )

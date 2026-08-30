@@ -4027,9 +4027,11 @@ export interface components {
             /** Day Number */
             day_number?: number | null;
             /** Prescribed Sets */
-            prescribed_sets: number;
+            prescribed_sets?: number | null;
             /** Prescribed Reps */
-            prescribed_reps: string;
+            prescribed_reps?: string | null;
+            /** Prescribed Duration Minutes */
+            prescribed_duration_minutes?: number | null;
             /**
              * Rest Seconds
              * @default 90
@@ -4448,6 +4450,8 @@ export interface components {
             primary_muscle?: string | null;
             /** Equipment */
             equipment?: string | null;
+            /** Metric Type */
+            metric_type?: ("strength" | "cardio") | null;
             /**
              * Difficulty Level
              * @default intermediate
@@ -4467,6 +4471,11 @@ export interface components {
             primary_muscle?: string | null;
             /** Equipment */
             equipment?: string | null;
+            /**
+             * Metric Type
+             * @enum {string}
+             */
+            metric_type: "strength" | "cardio";
             /** Primary Muscle Ids */
             primary_muscle_ids: string[];
             /** Secondary Muscle Ids */
@@ -5214,6 +5223,14 @@ export interface components {
             actual_reps?: number | null;
             /** Actual Weight */
             actual_weight?: number | null;
+            /** Duration Minutes */
+            duration_minutes?: number | null;
+            /** Distance Km */
+            distance_km?: number | null;
+            /** Average Heart Rate Bpm */
+            average_heart_rate_bpm?: number | null;
+            /** Heart Rate Zone */
+            heart_rate_zone?: number | null;
             /**
              * Rir
              * @description Optional repetitions-in-reserve category after the set; 4+ means many repetitions remained, not an exact value of four
@@ -5969,9 +5986,11 @@ export interface components {
             /** Exercise Id */
             exercise_id: number;
             /** Prescribed Sets */
-            prescribed_sets: number;
+            prescribed_sets?: number | null;
             /** Prescribed Reps */
-            prescribed_reps: string;
+            prescribed_reps?: string | null;
+            /** Prescribed Duration Minutes */
+            prescribed_duration_minutes?: number | null;
             /**
              * Rest Seconds
              * @default 90
@@ -5992,10 +6011,17 @@ export interface components {
             exercise_id: number;
             /** Exercise Title */
             exercise_title: string;
+            /**
+             * Metric Type
+             * @enum {string}
+             */
+            metric_type: "strength" | "cardio";
             /** Prescribed Sets */
             prescribed_sets: number;
             /** Prescribed Reps */
             prescribed_reps: string;
+            /** Prescribed Duration Minutes */
+            prescribed_duration_minutes?: number | null;
             /** Rest Seconds */
             rest_seconds: number;
             /** Notes */
@@ -7611,6 +7637,11 @@ export interface components {
             exercise_id: number;
             /** Exercise Title */
             exercise_title: string;
+            /**
+             * Metric Type
+             * @enum {string}
+             */
+            metric_type: "strength" | "cardio";
             /** Completed Sets */
             completed_sets: number;
             /** Reps Total */
@@ -7621,6 +7652,14 @@ export interface components {
             max_load_kg?: number | null;
             /** Load Recorded Sets */
             load_recorded_sets: number;
+            /** Duration Minutes */
+            duration_minutes?: number | null;
+            /** Distance Km */
+            distance_km?: number | null;
+            /** Average Heart Rate Bpm */
+            average_heart_rate_bpm?: number | null;
+            /** Heart Rate Zone */
+            heart_rate_zone?: number | null;
         };
         /** WorkoutCompletionFeedbackUpdate */
         WorkoutCompletionFeedbackUpdate: {
@@ -7677,12 +7716,19 @@ export interface components {
             exercise_id: number;
             /** Exercise Title */
             exercise_title: string;
+            /**
+             * Metric Type
+             * @enum {string}
+             */
+            metric_type: "strength" | "cardio";
             /** Sort Order */
             sort_order: number;
             /** Prescribed Sets */
             prescribed_sets: number;
             /** Prescribed Reps */
             prescribed_reps: string;
+            /** Prescribed Duration Minutes */
+            prescribed_duration_minutes?: number | null;
             /** Rest Seconds */
             rest_seconds: number;
             /** Notes */
@@ -7839,6 +7885,14 @@ export interface components {
             actual_reps?: number | null;
             /** Actual Weight */
             actual_weight?: number | null;
+            /** Duration Minutes */
+            duration_minutes?: number | null;
+            /** Distance Km */
+            distance_km?: number | null;
+            /** Average Heart Rate Bpm */
+            average_heart_rate_bpm?: number | null;
+            /** Heart Rate Zone */
+            heart_rate_zone?: number | null;
             /**
              * Rir
              * @description Optional repetitions-in-reserve category after the set; 4+ means many repetitions remained, not an exact value of four
@@ -7865,6 +7919,14 @@ export interface components {
             actual_reps?: number | null;
             /** Actual Weight */
             actual_weight?: number | null;
+            /** Duration Minutes */
+            duration_minutes?: number | null;
+            /** Distance Km */
+            distance_km?: number | null;
+            /** Average Heart Rate Bpm */
+            average_heart_rate_bpm?: number | null;
+            /** Heart Rate Zone */
+            heart_rate_zone?: number | null;
             /**
              * Rir
              * @description Optional repetitions-in-reserve category after the set; 4+ means many repetitions remained, not an exact value of four

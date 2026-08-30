@@ -11,6 +11,11 @@ from collections.abc import Sequence
 from datetime import datetime
 from pathlib import Path
 
+try:
+    from scripts.task_session import TaskSessionError, archive_guard
+except ModuleNotFoundError:
+    from task_session import TaskSessionError, archive_guard
+
 TEXT_SUFFIXES = {".json", ".md"}
 
 
@@ -187,6 +192,14 @@ def archive_task(backlog_root: Path, task_name: str) -> Path:
         raise ArchiveError(f"Archive destination already exists: {destination}")
     if not index_path.is_file():
         raise ArchiveError(f"Task index does not exist: {index_path}")
+
+    task_match = re.match(r"^(?P<task_id>[0-9]+[A-Z]?)-", task_name)
+    if task_match is None:
+        raise ArchiveError("Task filename does not contain a canonical task ID")
+    try:
+        archive_guard(backlog_root, task_match.group("task_id"))
+    except TaskSessionError as error:
+        raise ArchiveError(str(error)) from error
 
     original_index = index_path.read_text(encoding="utf-8")
     updated_index = _updated_task_index(original_index, task_name)

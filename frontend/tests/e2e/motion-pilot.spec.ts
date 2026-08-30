@@ -269,8 +269,10 @@ test('workout confirmation and Nutrition add keep final production state immedia
     };
   });
   expect(restGeometry.background).toBe('rgb(255, 255, 255)');
+  const completedExercise = page.locator('.active-workout-exercise').first();
+  await expect(completedExercise.getByRole('button', { name: '1 из 1 сохранено' })).toBeVisible();
   expect(restGeometry.bottom).toBeLessThanOrEqual(
-    (await completedSet.boundingBox())?.y ?? Number.NEGATIVE_INFINITY,
+    (await completedExercise.boundingBox())?.y ?? Number.NEGATIVE_INFINITY,
   );
   if (capture) await page.screenshot({ path: `${screenshotRoot}/app-workout-390-confirmed.png` });
 

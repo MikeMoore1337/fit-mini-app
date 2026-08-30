@@ -490,8 +490,9 @@ export function TemplatesList({
                       <li key={exercise.id}>
                         <strong>{exercise.exercise_title}</strong>
                         <span>
-                          {exercise.prescribed_sets} подх. × {exercise.prescribed_reps} · отдых{' '}
-                          {exercise.rest_seconds} сек.
+                          {exercise.metric_type === 'cardio'
+                            ? `${exercise.prescribed_duration_minutes ?? '—'} мин`
+                            : `${exercise.prescribed_sets} подх. × ${exercise.prescribed_reps} · отдых ${exercise.rest_seconds} сек.`}
                         </span>
                         {exercise.superset_group && (
                           <small>

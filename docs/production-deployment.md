@@ -14,17 +14,24 @@ force-push и удаление ветки и не разрешать bypass об
 
 Task получает normal automatic release только при `AUTO_RELEASE_ELIGIBLE`: есть tracked logical
 commit, lifecycle/review/QA/final verification завершены, незакрытых `BLOCKER/HIGH/MEDIUM` нет,
-findings синхронизированы и отсутствует обязательный owner/human/manual visual gate. Тогда агент без
-дополнительного owner prompt push-ит `dev`, проверяет branch CI, создаёт/обновляет PR `dev -> master`,
-проверяет exact PR head SHA и required check `checks`, включает auto-merge или делает эквивалентный
-checked merge, а затем наблюдает post-merge CI/deploy до terminal success. После успешного release
-`dev` fast-forward/sync к новому `master`. Failure/rollback/manual intervention required блокирует
-следующую backlog task.
+findings синхронизированы и отсутствует обязательный owner/human/manual visual gate. Тогда task
+branch через exact-head checked PR сериализованно интегрируется в `dev`; агент ждёт successful
+push-CI exact merge SHA, создаёт/обновляет PR `dev -> master`, проверяет exact PR head SHA и required
+check `checks`, выполняет checked merge и наблюдает post-merge CI/deploy до terminal success. После
+успешного release узкий GitHub App fast-forward'ит `dev` к exact deployed `master`.
+Failure/rollback/manual intervention required блокирует следующую backlog task.
 
-Permanent `dev` защищена от deletion/non-fast-forward отдельным узким ruleset. Repository
-`delete_branch_on_merge` удаляет merged temporary branches, но не permanent `dev`; production
-environment использует explicit branch policy только для `master`. `allow_auto_merge` не ослабляет
-`master` ruleset и required checks.
+Permanent `dev` является integration-only и защищается PR-only Ruleset с deletion/non-fast-forward,
+strict required `checks` и единственным bypass actor узкого deployed-sync GitHub App. Task PR идут
+только из `task/<ID>-<slug>`, а `scripts/task_session.py` выдаёт integration eligibility только
+queue head. Repository `delete_branch_on_merge` не заменяет owner-safe cleanup worktree/branch.
+`allow_auto_merge` для task PR не используется: second candidate после первого merge обязан
+обновиться от current `dev` и повторить checks.
+
+После successful production deploy `.github/workflows/sync-dev-after-deploy.yml` fast-forward'ит
+`dev` только на exact текущий deployed `master` SHA. Workflow выключен до owner-approved GitHub App,
+Ruleset read-back и variable `ENABLE_DEPLOYED_MASTER_DEV_SYNC=true`; broad PAT/admin bypass запрещён.
+Подробный ADR/runbook: `docs/task-branch-integration.md`.
 
 После merge участие человека заканчивается:
 

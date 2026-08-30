@@ -21,7 +21,8 @@ def _auth(client, telegram_user_id: int) -> dict[str, str]:
 
 
 def _create_started_workout(client, headers: dict[str, str]) -> tuple[dict, dict]:
-    exercise_id = client.get("/api/v1/programs/exercises", headers=headers).json()[0]["id"]
+    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()
+    exercise_id = next(item["id"] for item in exercises if item["metric_type"] == "strength")
     created = client.post(
         "/api/v1/programs/templates",
         headers=headers,

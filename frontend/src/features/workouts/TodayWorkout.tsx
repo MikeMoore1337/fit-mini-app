@@ -71,6 +71,19 @@ export function formatSetResult(
   return `${weight} кг × ${reps}`;
 }
 
+export function formatCardioResult(
+  durationMinutes: number | null | undefined,
+  distanceKm: number | null | undefined,
+): string | null {
+  if (durationMinutes == null && distanceKm == null) return null;
+  return [
+    durationMinutes == null ? null : `${durationMinutes} мин`,
+    distanceKm == null ? null : `${distanceKm} км`,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
 function WorkoutDuration({ startedAt, completedAt }: { startedAt: string; completedAt?: string }) {
   const [now, setNow] = useState(() => Date.now());
   const startTime = new Date(startedAt).getTime();
@@ -394,6 +407,251 @@ function WorkoutSetRow({
   );
 }
 
+function CardioWorkoutRow({
+  set,
+  disabled,
+  isCurrent,
+  previousResult,
+  exerciseTitle,
+  pending,
+  syncing,
+  enqueue,
+}: {
+  set: WorkoutSet;
+  disabled: boolean;
+  isCurrent: boolean;
+  previousResult: string | null;
+  exerciseTitle: string;
+  pending?: ActiveWorkoutMutation;
+  syncing: boolean;
+  enqueue: (
+    setId: number,
+    serverVersion: number,
+    values: ActiveWorkoutSetValues,
+    immediate?: boolean,
+  ) => void;
+}) {
+  const [duration, setDuration] = useState(
+    String(pending?.values.duration_minutes ?? set.duration_minutes ?? ''),
+  );
+  const [distance, setDistance] = useState(
+    String(pending?.values.distance_km ?? set.distance_km ?? ''),
+  );
+  const [averageHeartRate, setAverageHeartRate] = useState(
+    String(pending?.values.average_heart_rate_bpm ?? set.average_heart_rate_bpm ?? ''),
+  );
+  const [heartRateZone, setHeartRateZone] = useState(
+    String(pending?.values.heart_rate_zone ?? set.heart_rate_zone ?? ''),
+  );
+  const [completed, setCompleted] = useState(pending?.values.is_completed ?? set.is_completed);
+  const [validation, setValidation] = useState<string | null>(null);
+  const editing = useRef(false);
+  const lastCompletionActionAt = useRef(0);
+  const serverVersion = set.version ?? 1;
+
+  const enqueueSave = (
+    next: Partial<{
+      duration: string;
+      distance: string;
+      averageHeartRate: string;
+      heartRateZone: string;
+      completed: boolean;
+    }>,
+    immediate = false,
+  ) => {
+    const nextDuration = next.duration ?? duration;
+    const nextDistance = next.distance ?? distance;
+    const nextAverageHeartRate = next.averageHeartRate ?? averageHeartRate;
+    const nextHeartRateZone = next.heartRateZone ?? heartRateZone;
+    const nextCompleted = next.completed ?? completed;
+    enqueue(
+      set.id,
+      serverVersion,
+      {
+        actual_reps: null,
+        actual_weight: null,
+        duration_minutes: nextDuration === '' ? null : Number(nextDuration),
+        distance_km: nextDistance === '' ? null : Number(nextDistance),
+        average_heart_rate_bpm: nextAverageHeartRate === '' ? null : Number(nextAverageHeartRate),
+        heart_rate_zone: nextHeartRateZone === '' ? null : Number(nextHeartRateZone),
+        rir: null,
+        set_kind: null,
+        reached_failure: null,
+        is_completed: nextCompleted,
+      },
+      immediate,
+    );
+    if (immediate && nextCompleted) haptic('success');
+  };
+
+  useEffect(() => {
+    if (editing.current) {
+      if (!pending) editing.current = false;
+      return;
+    }
+    setDuration(String(pending?.values.duration_minutes ?? set.duration_minutes ?? ''));
+    setDistance(String(pending?.values.distance_km ?? set.distance_km ?? ''));
+    setAverageHeartRate(
+      String(pending?.values.average_heart_rate_bpm ?? set.average_heart_rate_bpm ?? ''),
+    );
+    setHeartRateZone(String(pending?.values.heart_rate_zone ?? set.heart_rate_zone ?? ''));
+    setCompleted(pending?.values.is_completed ?? set.is_completed);
+  }, [
+    pending,
+    set.average_heart_rate_bpm,
+    set.distance_km,
+    set.duration_minutes,
+    set.heart_rate_zone,
+    set.is_completed,
+  ]);
+
+  const intervalLabel = set.set_number > 1 ? `Интервал ${set.set_number}` : 'Результат кардио';
+  return (
+    <div
+      className={`active-workout-set active-workout-set--cardio ${isCurrent ? 'is-current' : ''} ${completed ? 'is-completed' : ''}`}
+      data-workout-set-id={set.id}
+      aria-busy={syncing || undefined}
+      aria-current={isCurrent ? 'step' : undefined}
+    >
+      <div className="active-workout-set__head">
+        <div className="active-workout-set__identity">
+          <div>
+            <strong>{isCurrent ? 'Кардио сейчас' : intervalLabel}</strong>
+            {isCurrent && <span>Запишите время, затем завершите</span>}
+          </div>
+        </div>
+        {completed && (
+          <span className="active-workout-set__complete-label">
+            <CheckIcon /> Выполнено
+          </span>
+        )}
+      </div>
+
+      {isCurrent && previousResult && (
+        <p className="active-workout-set__previous">Предыдущий интервал: {previousResult}</p>
+      )}
+
+      <div className="active-workout-set__controls active-workout-set__controls--cardio">
+        <label className="active-workout-input">
+          <span>Длительность, мин</span>
+          <input
+            disabled={disabled}
+            aria-label={`Длительность, ${exerciseTitle}`}
+            enterKeyHint="next"
+            inputMode="numeric"
+            type="number"
+            min="1"
+            max="600"
+            step="1"
+            value={duration}
+            onChange={(event) => {
+              editing.current = true;
+              setValidation(null);
+              setDuration(event.target.value);
+              enqueueSave({ duration: event.target.value });
+            }}
+          />
+        </label>
+        <label className="active-workout-input">
+          <span>Дистанция, км</span>
+          <input
+            disabled={disabled}
+            aria-label={`Дистанция, ${exerciseTitle}`}
+            enterKeyHint="done"
+            inputMode="decimal"
+            type="number"
+            min="0.01"
+            max="1000"
+            step="0.01"
+            value={distance}
+            onChange={(event) => {
+              editing.current = true;
+              setDistance(event.target.value);
+              enqueueSave({ distance: event.target.value });
+            }}
+          />
+        </label>
+        <Button
+          type="button"
+          disabled={disabled}
+          aria-label={`${completed ? 'Отметить кардио незавершённым' : 'Завершить кардио'}: ${exerciseTitle}`}
+          aria-pressed={completed}
+          className="active-workout-set__done"
+          variant={completed ? 'secondary' : 'primary'}
+          onClick={() => {
+            const now = Date.now();
+            if (now - lastCompletionActionAt.current < 600) return;
+            lastCompletionActionAt.current = now;
+            const nextCompleted = !completed;
+            if (nextCompleted && !duration) {
+              setValidation('Укажите длительность кардио.');
+              return;
+            }
+            editing.current = true;
+            setValidation(null);
+            setCompleted(nextCompleted);
+            enqueueSave({ completed: nextCompleted }, true);
+          }}
+        >
+          {completed ? (
+            <>
+              <CheckIcon /> Готово
+            </>
+          ) : (
+            'Завершить кардио'
+          )}
+        </Button>
+      </div>
+      {validation && (
+        <p className="active-workout-set__validation" role="alert">
+          {validation}
+        </p>
+      )}
+
+      <details className="active-workout-set__advanced">
+        <summary>Пульс (необязательно)</summary>
+        <div className="active-workout-set__advanced-body active-workout-cardio-advanced">
+          <label className="active-workout-advanced-field">
+            <span>Средний пульс, уд/мин</span>
+            <input
+              disabled={disabled}
+              inputMode="numeric"
+              type="number"
+              min="30"
+              max="250"
+              value={averageHeartRate}
+              onChange={(event) => {
+                editing.current = true;
+                setAverageHeartRate(event.target.value);
+                enqueueSave({ averageHeartRate: event.target.value });
+              }}
+            />
+          </label>
+          <label className="active-workout-advanced-field">
+            <span>Зона пульса</span>
+            <select
+              disabled={disabled}
+              value={heartRateZone}
+              onChange={(event) => {
+                editing.current = true;
+                setHeartRateZone(event.target.value);
+                enqueueSave({ heartRateZone: event.target.value });
+              }}
+            >
+              <option value="">Не указана</option>
+              {[1, 2, 3, 4, 5].map((zone) => (
+                <option value={zone} key={zone}>
+                  Зона {zone}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </details>
+    </div>
+  );
+}
+
 function RestTimer({
   userId,
   workoutId,
@@ -624,8 +882,11 @@ export function TodayWorkout({
 
   const data = workout.data;
   const started = data.status === 'in_progress';
+  const hasCardio = data.exercises.some((exercise) => exercise.metric_type === 'cardio');
   const nextLabel = currentSet
-    ? `${currentSet.exercise.exercise_title}, подход ${currentSet.set.set_number}`
+    ? currentSet.exercise.metric_type === 'cardio'
+      ? currentSet.exercise.exercise_title
+      : `${currentSet.exercise.exercise_title}, подход ${currentSet.set.set_number}`
     : 'завершить тренировку';
   const syncText =
     activeSync.syncState === 'syncing'
@@ -721,6 +982,7 @@ export function TodayWorkout({
 
         <div className="active-workout-exercises">
           {data.exercises.map((exercise, exerciseIndex) => {
+            const metricType = exercise.metric_type === 'cardio' ? 'cardio' : 'strength';
             const exerciseCompleted = exercise.sets.filter(
               (set) => activeSync.pendingBySet.get(set.id)?.values.is_completed ?? set.is_completed,
             ).length;
@@ -733,7 +995,10 @@ export function TodayWorkout({
             const supersetLabel = exercise.superset_group
               ? `Суперсет — упражнение ${exercise.superset_order ?? exerciseIndex + 1} из 2`
               : null;
-            const suggestedWeight = exercise.progression_guidance?.suggested_weight ?? null;
+            const suggestedWeight =
+              metricType === 'strength'
+                ? (exercise.progression_guidance?.suggested_weight ?? null)
+                : null;
             const applicableSets = exercise.sets.filter((set) => {
               const pending = activeSync.pendingBySet.get(set.id)?.values;
               const completedSet = pending?.is_completed ?? set.is_completed;
@@ -759,10 +1024,18 @@ export function TodayWorkout({
                       Упражнение {exerciseIndex + 1} из {data.exercises.length}
                     </span>
                     <h3>{exercise.exercise_title}</h3>
-                    <p>
-                      {exercise.prescribed_sets} × {exercise.prescribed_reps} · отдых{' '}
-                      {exercise.rest_seconds} сек
-                    </p>
+                    {metricType === 'cardio' ? (
+                      <p>
+                        {exercise.prescribed_duration_minutes
+                          ? `План: ${exercise.prescribed_duration_minutes} мин`
+                          : 'Запишите фактическую длительность'}
+                      </p>
+                    ) : (
+                      <p>
+                        {exercise.prescribed_sets} × {exercise.prescribed_reps} · отдых{' '}
+                        {exercise.rest_seconds} сек
+                      </p>
+                    )}
                     {supersetLabel && (
                       <span className="active-workout-superset">{supersetLabel}</span>
                     )}
@@ -785,8 +1058,12 @@ export function TodayWorkout({
                         }
                       >
                         {exerciseOpen
-                          ? 'Скрыть подходы'
-                          : `${exerciseCompleted} из ${exercise.sets.length} сохранено`}
+                          ? metricType === 'cardio'
+                            ? 'Скрыть результат'
+                            : 'Скрыть подходы'
+                          : metricType === 'cardio'
+                            ? 'Кардио сохранено'
+                            : `${exerciseCompleted} из ${exercise.sets.length} сохранено`}
                       </button>
                     )}
                     <button
@@ -802,34 +1079,36 @@ export function TodayWorkout({
                 </header>
 
                 <div id={`workout-exercise-${exercise.id}-details`} hidden={!exerciseOpen}>
-                  {exercise.progression_guidance && !dismissedGuidance.has(exercise.id) && (
-                    <ProgressionGuidance
-                      applied={guidanceApplied}
-                      exerciseKey={exercise.id}
-                      guidance={exercise.progression_guidance}
-                      onApply={
-                        started && suggestedWeight != null && applicableSets.length > 0
-                          ? () => {
-                              for (const set of applicableSets) {
-                                const pending = activeSync.pendingBySet.get(set.id)?.values;
-                                activeSync.enqueue(set.id, set.version ?? 1, {
-                                  actual_reps: pending?.actual_reps ?? set.actual_reps ?? null,
-                                  actual_weight: suggestedWeight,
-                                  rir: pending?.rir ?? set.rir ?? null,
-                                  set_kind: pending?.set_kind ?? set.set_kind ?? 'working',
-                                  reached_failure:
-                                    pending?.reached_failure ?? set.reached_failure ?? false,
-                                  is_completed: pending?.is_completed ?? set.is_completed,
-                                });
+                  {metricType === 'strength' &&
+                    exercise.progression_guidance &&
+                    !dismissedGuidance.has(exercise.id) && (
+                      <ProgressionGuidance
+                        applied={guidanceApplied}
+                        exerciseKey={exercise.id}
+                        guidance={exercise.progression_guidance}
+                        onApply={
+                          started && suggestedWeight != null && applicableSets.length > 0
+                            ? () => {
+                                for (const set of applicableSets) {
+                                  const pending = activeSync.pendingBySet.get(set.id)?.values;
+                                  activeSync.enqueue(set.id, set.version ?? 1, {
+                                    actual_reps: pending?.actual_reps ?? set.actual_reps ?? null,
+                                    actual_weight: suggestedWeight,
+                                    rir: pending?.rir ?? set.rir ?? null,
+                                    set_kind: pending?.set_kind ?? set.set_kind ?? 'working',
+                                    reached_failure:
+                                      pending?.reached_failure ?? set.reached_failure ?? false,
+                                    is_completed: pending?.is_completed ?? set.is_completed,
+                                  });
+                                }
                               }
-                            }
-                          : undefined
-                      }
-                      onDismiss={() =>
-                        setDismissedGuidance((current) => new Set(current).add(exercise.id))
-                      }
-                    />
-                  )}
+                            : undefined
+                        }
+                        onDismiss={() =>
+                          setDismissedGuidance((current) => new Set(current).add(exercise.id))
+                        }
+                      />
+                    )}
 
                   <div className="active-workout-exercise__sets">
                     {exercise.sets.map((set, setIndex) => {
@@ -838,12 +1117,30 @@ export function TodayWorkout({
                         ? activeSync.pendingBySet.get(previousSet.id)
                         : undefined;
                       const previousResult = previousSet
-                        ? formatSetResult(
-                            previousPending?.values.actual_reps ?? previousSet.actual_reps,
-                            previousPending?.values.actual_weight ?? previousSet.actual_weight,
-                          )
+                        ? metricType === 'cardio'
+                          ? formatCardioResult(
+                              previousPending?.values.duration_minutes ??
+                                previousSet.duration_minutes,
+                              previousPending?.values.distance_km ?? previousSet.distance_km,
+                            )
+                          : formatSetResult(
+                              previousPending?.values.actual_reps ?? previousSet.actual_reps,
+                              previousPending?.values.actual_weight ?? previousSet.actual_weight,
+                            )
                         : null;
-                      return (
+                      return metricType === 'cardio' ? (
+                        <CardioWorkoutRow
+                          key={set.id}
+                          set={set}
+                          disabled={!started}
+                          exerciseTitle={exercise.exercise_title}
+                          isCurrent={currentSet?.set.id === set.id}
+                          previousResult={previousResult}
+                          pending={activeSync.pendingBySet.get(set.id)}
+                          syncing={activeSync.syncState === 'syncing'}
+                          enqueue={activeSync.enqueue}
+                        />
+                      ) : (
                         <WorkoutSetRow
                           key={set.id}
                           set={set}
@@ -872,8 +1169,10 @@ export function TodayWorkout({
               <strong>{currentSet ? 'Закончить раньше' : 'Тренировка готова'}</strong>
               <span>
                 {currentSet
-                  ? `${total - completed} незаполненных подходов останутся в плане без результата.`
-                  : 'Все подходы отмечены — можно завершать.'}
+                  ? `${total - completed} ${hasCardio ? 'незаполненных этапов' : 'незаполненных подходов'} останутся в плане без результата.`
+                  : hasCardio
+                    ? 'Все результаты отмечены — можно завершать.'
+                    : 'Все подходы отмечены — можно завершать.'}
               </span>
             </div>
             <Button
@@ -890,7 +1189,7 @@ export function TodayWorkout({
                   incomplete > 0 &&
                   !(await confirm({
                     title: 'Завершить неполную тренировку?',
-                    message: `Не отмечено подходов: ${incomplete}. Их можно оставить незаполненными и завершить тренировку.`,
+                    message: `Не отмечено ${hasCardio ? 'этапов' : 'подходов'}: ${incomplete}. Их можно оставить незаполненными и завершить тренировку.`,
                     confirmText: 'Завершить',
                     danger: false,
                   }))

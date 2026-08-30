@@ -116,6 +116,7 @@ def create_exercise(
     title: str,
     primary_muscle: str | None,
     equipment: str | None,
+    metric_type: str = "strength",
     difficulty_level: str = "intermediate",
     target_telegram_user_id: int | None = None,
 ) -> Exercise:
@@ -149,6 +150,7 @@ def create_exercise(
         title=normalized_title,
         primary_muscle=normalized_muscle,
         equipment=normalized_equipment,
+        metric_type=metric_type,
         difficulty_level=difficulty_level,
         created_by_user_id=None if is_global_admin_exercise else owner_user.id,
         source_exercise_id=None,
@@ -181,6 +183,7 @@ def update_exercise_for_user(
     title: str,
     primary_muscle: str | None,
     equipment: str | None,
+    metric_type: str | None = None,
     difficulty_level: str = "intermediate",
     target_telegram_user_id: int | None = None,
 ) -> Exercise:
@@ -232,6 +235,8 @@ def update_exercise_for_user(
         exercise.title = normalized_title
         exercise.primary_muscle = normalized_muscle
         exercise.equipment = normalized_equipment
+        if metric_type is not None:
+            exercise.metric_type = metric_type
         exercise.difficulty_level = difficulty_level
         exercise.is_deleted = False
         sync_exercise_domain_metadata(db, exercise)
@@ -247,6 +252,7 @@ def update_exercise_for_user(
                 title=normalized_title,
                 primary_muscle=normalized_muscle,
                 equipment=normalized_equipment,
+                metric_type=metric_type or exercise.metric_type,
                 difficulty_level=difficulty_level,
                 created_by_user_id=owner_user.id,
                 source_exercise_id=exercise.id,
@@ -257,6 +263,8 @@ def update_exercise_for_user(
             override.title = normalized_title
             override.primary_muscle = normalized_muscle
             override.equipment = normalized_equipment
+            if metric_type is not None:
+                override.metric_type = metric_type
             override.difficulty_level = difficulty_level
             override.is_deleted = False
 
@@ -300,6 +308,7 @@ def delete_exercise_for_user(
                 title=exercise.title,
                 primary_muscle=exercise.primary_muscle,
                 equipment=exercise.equipment,
+                metric_type=exercise.metric_type,
                 difficulty_level=exercise.difficulty_level,
                 created_by_user_id=owner_user.id,
                 source_exercise_id=exercise.id,

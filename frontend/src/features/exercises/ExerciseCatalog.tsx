@@ -58,6 +58,7 @@ export function ExerciseCatalog({
   const [assignmentProgramId, setAssignmentProgramId] = useState(0);
   const [assignmentSets, setAssignmentSets] = useState(3);
   const [assignmentReps, setAssignmentReps] = useState('8-12');
+  const [assignmentDuration, setAssignmentDuration] = useState(30);
   const [assignmentRest, setAssignmentRest] = useState(90);
   const [assignmentDay, setAssignmentDay] = useState(1);
   const [assignmentNotes, setAssignmentNotes] = useState('');
@@ -68,6 +69,7 @@ export function ExerciseCatalog({
   const [newMuscle, setNewMuscle] = useState('');
   const [newEquipment, setNewEquipment] = useState('');
   const [newDifficulty, setNewDifficulty] = useState<Exercise['difficulty_level']>('intermediate');
+  const [newMetricType, setNewMetricType] = useState<'strength' | 'cardio'>('strength');
   const assignmentPanelRef = useModalA11y<HTMLDivElement>(Boolean(assignment), () =>
     setAssignment(null),
   );
@@ -89,6 +91,7 @@ export function ExerciseCatalog({
       setNewMuscle('');
       setNewEquipment('');
       setNewDifficulty('intermediate');
+      setNewMetricType('strength');
       toast('Каталог обновлён');
     },
     onError: (reason) => toast((reason as Error).message, 'error'),
@@ -196,12 +199,18 @@ export function ExerciseCatalog({
             expected_revision_number: activeAssignmentProgram?.current_revision_number ?? 0,
             exercise_id: assignment.id,
             day_number: assignmentDay,
-            prescribed_sets: assignmentSets,
-            prescribed_reps: assignmentReps,
+            prescribed_sets: assignment.metric_type === 'cardio' ? null : assignmentSets,
+            prescribed_reps: assignment.metric_type === 'cardio' ? null : assignmentReps,
+            prescribed_duration_minutes:
+              assignment.metric_type === 'cardio' ? assignmentDuration : null,
             rest_seconds: assignmentRest,
             notes: assignmentNotes || null,
-            superset_group: assignmentSupersetGroup || null,
-            superset_order: assignmentSupersetGroup ? assignmentSupersetOrder : null,
+            superset_group:
+              assignment.metric_type === 'cardio' ? null : assignmentSupersetGroup || null,
+            superset_order:
+              assignment.metric_type === 'cardio' || !assignmentSupersetGroup
+                ? null
+                : assignmentSupersetOrder,
             reason: assignmentReason || null,
           },
         },
@@ -331,6 +340,7 @@ export function ExerciseCatalog({
                     primary_muscle: newMuscle || null,
                     equipment: newEquipment || null,
                     difficulty_level: newDifficulty,
+                    metric_type: newMetricType,
                     target_telegram_user_id: targetTelegramId || null,
                   },
                 });
@@ -376,6 +386,18 @@ export function ExerciseCatalog({
                   ))}
                 </select>
               </label>
+              <label className="field">
+                <span>Как записывать результат</span>
+                <select
+                  value={newMetricType}
+                  onChange={(event) =>
+                    setNewMetricType(event.target.value as 'strength' | 'cardio')
+                  }
+                >
+                  <option value="strength">Вес и повторения</option>
+                  <option value="cardio">Время и дистанция</option>
+                </select>
+              </label>
               <button disabled={mutation.isPending}>
                 {mutation.isPending ? 'Создаём…' : 'Создать упражнение'}
               </button>
@@ -415,6 +437,7 @@ export function ExerciseCatalog({
                       </span>
                       <span className="exercise-catalog-item__badges">
                         <Badge>{difficultyLabels[exercise.difficulty_level]}</Badge>
+                        {exercise.metric_type === 'cardio' && <Badge>Время и дистанция</Badge>}
                         {exercise.is_custom && <Badge>Своё</Badge>}
                         {!!exercise.alternatives?.length && (
                           <Badge>{exercise.alternatives.length} проверенных замен</Badge>
@@ -578,36 +601,53 @@ export function ExerciseCatalog({
                   Изменение попадёт только в будущие тренировки выбранного дня. Завершённые и уже
                   начатые тренировки не изменятся.
                 </p>
-                <div className="form-grid assignment-prescription">
-                  <label className="field">
-                    <span>Рабочие подходы</span>
-                    <input
-                      type="number"
-                      min="1"
-                      max="10"
-                      value={assignmentSets}
-                      onChange={(event) => setAssignmentSets(Number(event.target.value))}
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Повторения</span>
-                    <input
-                      value={assignmentReps}
-                      maxLength={32}
-                      onChange={(event) => setAssignmentReps(event.target.value)}
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Отдых, сек</span>
-                    <input
-                      type="number"
-                      min="15"
-                      max="600"
-                      value={assignmentRest}
-                      onChange={(event) => setAssignmentRest(Number(event.target.value))}
-                    />
-                  </label>
-                </div>
+                {assignment.metric_type === 'cardio' ? (
+                  <div className="form-grid assignment-prescription">
+                    <label className="field">
+                      <span>Плановая длительность, мин</span>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min="1"
+                        max="600"
+                        required
+                        value={assignmentDuration}
+                        onChange={(event) => setAssignmentDuration(Number(event.target.value))}
+                      />
+                    </label>
+                  </div>
+                ) : (
+                  <div className="form-grid assignment-prescription">
+                    <label className="field">
+                      <span>Рабочие подходы</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={assignmentSets}
+                        onChange={(event) => setAssignmentSets(Number(event.target.value))}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Повторения</span>
+                      <input
+                        value={assignmentReps}
+                        maxLength={32}
+                        onChange={(event) => setAssignmentReps(event.target.value)}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Отдых, сек</span>
+                      <input
+                        type="number"
+                        min="15"
+                        max="600"
+                        value={assignmentRest}
+                        onChange={(event) => setAssignmentRest(Number(event.target.value))}
+                      />
+                    </label>
+                  </div>
+                )}
                 <label className="field">
                   <span>Заметка клиенту (необязательно)</span>
                   <textarea
@@ -621,43 +661,51 @@ export function ExerciseCatalog({
                   <summary>
                     <span>
                       <strong>Дополнительные настройки</strong>
-                      <small>Суперсет и причина изменения</small>
+                      <small>
+                        {assignment.metric_type === 'cardio'
+                          ? 'Причина изменения'
+                          : 'Суперсет и причина изменения'}
+                      </small>
                     </span>
                     <DisclosureIcon />
                   </summary>
                   <div className="assignment-advanced__body">
-                    <div className="form-grid">
-                      <label className="field">
-                        <span>Номер суперсета</span>
-                        <input
-                          type="number"
-                          min="1"
-                          value={assignmentSupersetGroup}
-                          placeholder="Не задан"
-                          onChange={(event) =>
-                            setAssignmentSupersetGroup(
-                              event.target.value ? Number(event.target.value) : '',
-                            )
-                          }
-                        />
-                      </label>
-                      <label className="field">
-                        <span>Порядок в паре</span>
-                        <select
-                          value={assignmentSupersetOrder}
-                          disabled={!assignmentSupersetGroup}
-                          onChange={(event) =>
-                            setAssignmentSupersetOrder(Number(event.target.value) as 1 | 2)
-                          }
-                        >
-                          <option value="1">Первое</option>
-                          <option value="2">Второе</option>
-                        </select>
-                      </label>
-                    </div>
-                    <small className="muted">
-                      Суперсет — два упражнения подряд. Используйте номер уже существующей пары.
-                    </small>
+                    {assignment.metric_type !== 'cardio' && (
+                      <div className="form-grid">
+                        <label className="field">
+                          <span>Номер суперсета</span>
+                          <input
+                            type="number"
+                            min="1"
+                            value={assignmentSupersetGroup}
+                            placeholder="Не задан"
+                            onChange={(event) =>
+                              setAssignmentSupersetGroup(
+                                event.target.value ? Number(event.target.value) : '',
+                              )
+                            }
+                          />
+                        </label>
+                        <label className="field">
+                          <span>Порядок в паре</span>
+                          <select
+                            value={assignmentSupersetOrder}
+                            disabled={!assignmentSupersetGroup}
+                            onChange={(event) =>
+                              setAssignmentSupersetOrder(Number(event.target.value) as 1 | 2)
+                            }
+                          >
+                            <option value="1">Первое</option>
+                            <option value="2">Второе</option>
+                          </select>
+                        </label>
+                      </div>
+                    )}
+                    {assignment.metric_type !== 'cardio' && (
+                      <small className="muted">
+                        Суперсет — два упражнения подряд. Используйте номер уже существующей пары.
+                      </small>
+                    )}
                     <label className="field">
                       <span>Причина изменения (необязательно)</span>
                       <input
