@@ -8,6 +8,7 @@ const exercises = [
   {
     id: 1,
     title: 'Тяга верхнего блока с очень длинным названием для проверки переноса',
+    metric_type: 'strength',
     slug: 'lat-pulldown',
     primary_muscle: 'Спина',
     equipment: 'Тросовый блок',
@@ -23,6 +24,7 @@ const exercises = [
   {
     id: 2,
     title: 'Подтягивания',
+    metric_type: 'strength',
     slug: 'pull-up',
     primary_muscle: 'Спина',
     equipment: 'Собственный вес',

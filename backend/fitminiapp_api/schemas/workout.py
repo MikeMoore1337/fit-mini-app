@@ -119,6 +119,10 @@ class WorkoutSetCreate(BaseModel):
 class WorkoutSetUpdate(BaseModel):
     actual_reps: int | None = Field(default=None, ge=0)
     actual_weight: float | None = Field(default=None, ge=0)
+    duration_minutes: int | None = Field(default=None, ge=1, le=600)
+    distance_km: float | None = Field(default=None, gt=0, le=1000, allow_inf_nan=False)
+    average_heart_rate_bpm: int | None = Field(default=None, ge=30, le=250)
+    heart_rate_zone: int | None = Field(default=None, ge=1, le=5)
     rir: RirValue | None = Field(default=None, description=RIR_DESCRIPTION)
     set_kind: SetKind | None = None
     reached_failure: bool | None = None
@@ -138,6 +142,10 @@ class LoggedSetItem(BaseModel):
     set_number: int
     actual_reps: int | None = None
     actual_weight: float | None = None
+    duration_minutes: int | None = None
+    distance_km: float | None = None
+    average_heart_rate_bpm: int | None = None
+    heart_rate_zone: int | None = None
     rir: RirValue | None = Field(default=None, description=RIR_DESCRIPTION)
     set_kind: SetKind | None = None
     reached_failure: bool | None = None
@@ -186,9 +194,11 @@ class WorkoutExerciseItem(BaseModel):
     id: int
     exercise_id: int
     exercise_title: str
+    metric_type: Literal["strength", "cardio"]
     sort_order: int
     prescribed_sets: int
     prescribed_reps: str
+    prescribed_duration_minutes: int | None = None
     rest_seconds: int
     notes: str | None = None
     superset_group: int | None = None
@@ -202,11 +212,16 @@ class WorkoutCompletionExercise(BaseModel):
     workout_exercise_id: int
     exercise_id: int
     exercise_title: str
+    metric_type: Literal["strength", "cardio"]
     completed_sets: int
     reps_total: int | None = None
     reps_recorded_sets: int
     max_load_kg: float | None = None
     load_recorded_sets: int
+    duration_minutes: int | None = None
+    distance_km: float | None = None
+    average_heart_rate_bpm: int | None = None
+    heart_rate_zone: int | None = None
 
 
 class WorkoutPersonalRecord(BaseModel):
@@ -264,6 +279,10 @@ class WorkoutStatusResponse(BaseModel):
     set_number: int
     actual_reps: int | None = None
     actual_weight: float | None = None
+    duration_minutes: int | None = None
+    distance_km: float | None = None
+    average_heart_rate_bpm: int | None = None
+    heart_rate_zone: int | None = None
     rir: RirValue | None = Field(default=None, description=RIR_DESCRIPTION)
     set_kind: SetKind | None = None
     reached_failure: bool | None = None

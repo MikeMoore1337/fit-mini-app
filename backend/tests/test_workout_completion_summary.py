@@ -51,7 +51,8 @@ def _user_id(telegram_user_id: int) -> int:
 
 
 def _assigned_workout(client, headers: dict[str, str], *, sets: int = 2) -> dict:
-    exercise_id = client.get("/api/v1/programs/exercises", headers=headers).json()[0]["id"]
+    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()
+    exercise_id = next(item["id"] for item in exercises if item["metric_type"] == "strength")
     template = client.post(
         "/api/v1/programs/templates",
         headers=headers,
@@ -184,11 +185,16 @@ def test_completion_summary_is_factual_stable_and_exposes_feedback_to_trainer(
             "workout_exercise_id": started["exercises"][0]["id"],
             "exercise_id": started["exercises"][0]["exercise_id"],
             "exercise_title": started["exercises"][0]["exercise_title"],
+            "metric_type": "strength",
             "completed_sets": 2,
             "reps_total": 16,
             "reps_recorded_sets": 2,
             "max_load_kg": 50.0,
             "load_recorded_sets": 2,
+            "duration_minutes": None,
+            "distance_km": None,
+            "average_heart_rate_bpm": None,
+            "heart_rate_zone": None,
         }
     ]
     assert summary["personal_records"] == [

@@ -174,7 +174,9 @@ describe('program history presentation', () => {
       exercises: [
         {
           exerciseId: 11,
+          metricType: 'strength',
           notes: 'Сохранённая подсказка',
+          prescribedDurationMinutes: null,
           prescribedReps: '8–10',
           prescribedSets: 3,
           restSeconds: 90,

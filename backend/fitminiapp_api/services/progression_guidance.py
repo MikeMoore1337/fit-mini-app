@@ -14,6 +14,7 @@ from fitminiapp_api.models.program import (
     UserWorkoutExercise,
 )
 from fitminiapp_api.models.user import User
+from fitminiapp_api.services.workout_metrics import workout_exercise_metric_type
 
 ProgressionOutcome = Literal[
     "consider_progressing",
@@ -240,7 +241,11 @@ def build_progression_guidance(
     user: User,
     workout: UserWorkout,
 ) -> dict[int, dict]:
-    exercise_ids = {item.exercise_id for item in workout.exercises}
+    exercise_ids = {
+        item.exercise_id
+        for item in workout.exercises
+        if workout_exercise_metric_type(item) == "strength"
+    }
     if not exercise_ids:
         return {}
 
@@ -274,6 +279,8 @@ def build_progression_guidance(
 
     guidance: dict[int, dict] = {}
     for current in workout.exercises:
+        if workout_exercise_metric_type(current) == "cardio":
+            continue
         target = parse_rep_target(current.prescribed_reps)
         same_exercise = [item for item in candidates if item.exercise_id == current.exercise_id]
         comparable = [

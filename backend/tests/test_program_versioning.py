@@ -29,7 +29,11 @@ def _assigned_program(
     mode: str = "self",
     target_telegram_user_id: int | None = None,
 ) -> tuple[int, list[dict]]:
-    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()
+    exercises = [
+        item
+        for item in client.get("/api/v1/programs/exercises", headers=headers).json()
+        if item["metric_type"] == "strength"
+    ]
     assert len(exercises) >= 2
     start_date = start_date or (today_msk() + timedelta(days=1))
     response = client.post(

@@ -11,6 +11,7 @@ const exercises = Array.from(
     ({
       id: index + 1,
       title: `Упражнение ${index + 1}`,
+      metric_type: 'strength',
       slug: index === 0 ? 'squat' : `exercise-${index}`,
       primary_muscle_ids: [],
       secondary_muscle_ids: [],

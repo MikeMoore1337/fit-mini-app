@@ -5,6 +5,7 @@ from collections.abc import Mapping
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
+from fitminiapp_api.models.exercise import Exercise
 from fitminiapp_api.models.program import (
     UserProgram,
     UserWorkout,
@@ -15,7 +16,7 @@ from fitminiapp_api.models.user import User
 from fitminiapp_api.services.workouts import counts_toward_working_volume, working_volume_set_filter
 
 
-def _exercise_result(exercise: UserWorkoutExercise, title: str) -> dict:
+def _exercise_result(exercise: UserWorkoutExercise, title: str, metric_type: str) -> dict:
     completed_sets = [workout_set for workout_set in exercise.sets if workout_set.is_completed]
     reps = [
         workout_set.actual_reps
@@ -27,15 +28,48 @@ def _exercise_result(exercise: UserWorkoutExercise, title: str) -> dict:
         for workout_set in completed_sets
         if workout_set.actual_weight is not None
     ]
+    durations = [
+        workout_set.duration_minutes
+        for workout_set in completed_sets
+        if workout_set.duration_minutes is not None
+    ]
+    distances = [
+        float(workout_set.distance_km)
+        for workout_set in completed_sets
+        if workout_set.distance_km is not None
+    ]
+    heart_rates = [
+        (workout_set.average_heart_rate_bpm, workout_set.duration_minutes or 1)
+        for workout_set in completed_sets
+        if workout_set.average_heart_rate_bpm is not None
+    ]
+    zones = {
+        workout_set.heart_rate_zone
+        for workout_set in completed_sets
+        if workout_set.heart_rate_zone is not None
+    }
+    weighted_heart_rate = (
+        round(
+            sum(value * weight for value, weight in heart_rates)
+            / sum(weight for _, weight in heart_rates)
+        )
+        if heart_rates
+        else None
+    )
     return {
         "workout_exercise_id": exercise.id,
         "exercise_id": exercise.exercise_id,
         "exercise_title": title,
+        "metric_type": metric_type,
         "completed_sets": len(completed_sets),
         "reps_total": sum(reps) if reps else None,
         "reps_recorded_sets": len(reps),
         "max_load_kg": max(loads) if loads else None,
         "load_recorded_sets": len(loads),
+        "duration_minutes": sum(durations) if durations else None,
+        "distance_km": round(sum(distances), 2) if distances else None,
+        "average_heart_rate_bpm": weighted_heart_rate,
+        "heart_rate_zone": next(iter(zones)) if len(zones) == 1 else None,
     }
 
 
@@ -44,6 +78,7 @@ def _personal_records(
     user: User,
     workout: UserWorkout,
     titles: Mapping[int, str],
+    metric_types: Mapping[int, str],
 ) -> list[dict]:
     if workout.completed_at is None:
         earlier_workout_filter = or_(
@@ -82,12 +117,20 @@ def _personal_records(
         .join(UserWorkout, UserWorkout.id == UserWorkoutExercise.workout_id)
         .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
         .join(UserWorkoutSet, UserWorkoutSet.workout_exercise_id == UserWorkoutExercise.id)
+        .join(Exercise, Exercise.id == UserWorkoutExercise.exercise_id)
         .filter(
             UserProgram.user_id == user.id,
             UserWorkout.status == "completed",
             UserWorkout.id != workout.id,
             earlier_workout_filter,
             UserWorkoutSet.is_completed.is_(True),
+            or_(
+                UserWorkoutExercise.metric_type == "strength",
+                and_(
+                    UserWorkoutExercise.metric_type.is_(None),
+                    or_(Exercise.metric_type.is_(None), Exercise.metric_type == "strength"),
+                ),
+            ),
             working_volume_set_filter(),
         )
         .group_by(UserWorkoutExercise.exercise_id)
@@ -100,6 +143,8 @@ def _personal_records(
 
     current: dict[int, dict] = {}
     for exercise in sorted(workout.exercises, key=lambda item: (item.sort_order, item.id)):
+        if metric_types[exercise.id] != "strength":
+            continue
         working_sets = [
             workout_set
             for workout_set in exercise.sets
@@ -189,12 +234,13 @@ def build_workout_completion_summary(
     user: User,
     workout: UserWorkout,
     exercise_titles: Mapping[int, str],
+    metric_types: Mapping[int, str],
 ) -> dict | None:
     if workout.status != "completed":
         return None
 
     exercise_results = [
-        _exercise_result(exercise, exercise_titles[exercise.id])
+        _exercise_result(exercise, exercise_titles[exercise.id], metric_types[exercise.id])
         for exercise in sorted(workout.exercises, key=lambda item: (item.sort_order, item.id))
     ]
     performed = [result for result in exercise_results if result["completed_sets"] > 0]
@@ -226,7 +272,7 @@ def build_workout_completion_summary(
             workout_set.actual_weight is not None for workout_set in completed_sets
         ),
         "exercises": performed,
-        "personal_records": _personal_records(db, user, workout, exercise_titles),
+        "personal_records": _personal_records(db, user, workout, exercise_titles, metric_types),
         "next_workout": _next_workout(db, user, workout),
         "feedback": workout.completion_feedback,
         "note": workout.completion_note,

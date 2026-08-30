@@ -103,8 +103,11 @@ export function HistoricalProgramWorkout({
                       `Упражнение #${exercise.exerciseId}`}
                   </strong>
                   <span>
-                    {exercise.prescribedSets} подх. · {exercise.prescribedReps} повт.
-                    {exercise.restSeconds != null ? ` · отдых ${exercise.restSeconds} сек.` : ''}
+                    {exercise.metricType === 'cardio'
+                      ? exercise.prescribedDurationMinutes != null
+                        ? `${exercise.prescribedDurationMinutes} мин`
+                        : 'Длительность не была задана'
+                      : `${exercise.prescribedSets} подх. · ${exercise.prescribedReps} повт.${exercise.restSeconds != null ? ` · отдых ${exercise.restSeconds} сек.` : ''}`}
                   </span>
                 </div>
                 {exercise.notes && <p>{exercise.notes}</p>}

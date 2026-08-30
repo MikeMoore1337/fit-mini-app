@@ -7,6 +7,7 @@ import type { Exercise } from '../../../../src/shared/api/types';
 const fullExercise: Exercise = {
   id: 1,
   title: 'Тяга верхнего блока',
+  metric_type: 'strength',
   primary_muscle: 'Спина',
   equipment: 'Тросовый блок',
   primary_muscle_ids: ['back'],
@@ -95,6 +96,7 @@ const fullExercise: Exercise = {
 const customExercise: Exercise = {
   id: 2,
   title: 'Тяга резиновой ленты',
+  metric_type: 'strength',
   primary_muscle: 'Спина',
   equipment: 'Резиновая лента',
   primary_muscle_ids: [],

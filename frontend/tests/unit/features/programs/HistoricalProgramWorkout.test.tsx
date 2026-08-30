@@ -40,10 +40,21 @@ describe('HistoricalProgramWorkout', () => {
             exercises: [
               {
                 exercise_id: 11,
+                metric_type: 'strength',
                 sort_order: 1,
                 prescribed_sets: 3,
                 prescribed_reps: '8–10',
                 rest_seconds: 90,
+                notes: null,
+              },
+              {
+                exercise_id: 12,
+                metric_type: 'cardio',
+                sort_order: 2,
+                prescribed_sets: 1,
+                prescribed_reps: '',
+                prescribed_duration_minutes: 25,
+                rest_seconds: 0,
                 notes: null,
               },
             ],
@@ -59,11 +70,25 @@ describe('HistoricalProgramWorkout', () => {
           {
             id: 11,
             title: 'Присед со штангой',
+            metric_type: 'strength',
             primary_muscle_ids: [],
             secondary_muscle_ids: [],
             equipment_ids: [],
             alternatives: [],
             difficulty_level: 'intermediate',
+            is_custom: false,
+            is_personalized: false,
+            has_guide: false,
+          },
+          {
+            id: 12,
+            title: 'Велотренажёр',
+            metric_type: 'cardio',
+            primary_muscle_ids: ['cardio'],
+            secondary_muscle_ids: [],
+            equipment_ids: ['cardio'],
+            alternatives: [],
+            difficulty_level: 'beginner',
             is_custom: false,
             is_personalized: false,
             has_guide: false,
@@ -86,6 +111,8 @@ describe('HistoricalProgramWorkout', () => {
     expect(screen.getByText('Снимок программы · v3')).toBeInTheDocument();
     expect(screen.getByText('Присед со штангой')).toBeInTheDocument();
     expect(screen.getByText('3 подх. · 8–10 повт. · отдых 90 сек.')).toBeInTheDocument();
+    expect(screen.getByText('Велотренажёр')).toBeInTheDocument();
+    expect(screen.getByText('25 мин')).toBeInTheDocument();
     expect(screen.getByText(/доступен только для просмотра/)).toBeInTheDocument();
   });
 });

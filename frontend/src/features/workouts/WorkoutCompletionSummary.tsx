@@ -44,6 +44,10 @@ function formatLoad(value: number): string {
   return `${Number.isInteger(value) ? value : value.toFixed(1)} кг`;
 }
 
+function formatDistance(value: number): string {
+  return `${Number(value.toFixed(2))} км`;
+}
+
 function nextWorkoutText(workout: NonNullable<Workout['completion_summary']>['next_workout']) {
   if (!workout) {
     return 'Дальше — восстановление. Ближайшая тренировка пока не запланирована.';
@@ -70,6 +74,7 @@ export function WorkoutCompletionSummary({
     (total, exercise) => total + exercise.sets.filter((set) => set.is_completed).length,
     0,
   );
+  const hasCardio = workout.exercises.some((exercise) => exercise.metric_type === 'cardio');
   const [feedback, setFeedback] = useState<CompletionFeedback | null>(summary?.feedback ?? null);
   const [note, setNote] = useState(summary?.note ?? '');
   const [saved, setSaved] = useState({
@@ -136,7 +141,7 @@ export function WorkoutCompletionSummary({
           <dd>{summary?.performed_exercises ?? workout.exercises.length}</dd>
         </div>
         <div>
-          <dt>Подходов</dt>
+          <dt>{hasCardio ? 'Этапов' : 'Подходов'}</dt>
           <dd>{summary?.completed_sets ?? fallbackCompletedSets}</dd>
         </div>
       </dl>
@@ -194,14 +199,29 @@ export function WorkoutCompletionSummary({
             {summary.exercises.map((exercise) => (
               <li key={exercise.workout_exercise_id}>
                 <strong>{exercise.exercise_title}</strong>
-                <span>
-                  {exercise.completed_sets}{' '}
-                  {plural(exercise.completed_sets, 'подход', 'подхода', 'подходов')}
-                  {exercise.reps_total != null ? ` · ${exercise.reps_total} повторов` : ''}
-                  {exercise.max_load_kg != null
-                    ? ` · вес до ${formatLoad(exercise.max_load_kg)}`
-                    : ''}
-                </span>
+                {exercise.metric_type === 'cardio' ? (
+                  <span>
+                    {[
+                      exercise.duration_minutes != null ? `${exercise.duration_minutes} мин` : null,
+                      exercise.distance_km != null ? formatDistance(exercise.distance_km) : null,
+                      exercise.average_heart_rate_bpm != null
+                        ? `средний пульс ${exercise.average_heart_rate_bpm}`
+                        : null,
+                      exercise.heart_rate_zone != null ? `зона ${exercise.heart_rate_zone}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </span>
+                ) : (
+                  <span>
+                    {exercise.completed_sets}{' '}
+                    {plural(exercise.completed_sets, 'подход', 'подхода', 'подходов')}
+                    {exercise.reps_total != null ? ` · ${exercise.reps_total} повторов` : ''}
+                    {exercise.max_load_kg != null
+                      ? ` · вес до ${formatLoad(exercise.max_load_kg)}`
+                      : ''}
+                  </span>
+                )}
               </li>
             ))}
           </ul>

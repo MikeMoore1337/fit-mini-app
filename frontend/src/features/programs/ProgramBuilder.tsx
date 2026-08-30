@@ -41,6 +41,7 @@ const blankExercise = (
   exercise_id: 0,
   prescribed_sets: 3,
   prescribed_reps: '8-12',
+  prescribed_duration_minutes: null,
   rest_seconds: restSeconds,
   notes: '',
 });
@@ -261,6 +262,7 @@ export function ProgramBuilder({
         exercise_id: exercise.exercise_id,
         prescribed_sets: exercise.prescribed_sets,
         prescribed_reps: exercise.prescribed_reps,
+        prescribed_duration_minutes: exercise.prescribed_duration_minutes,
         rest_seconds: exercise.rest_seconds,
         notes: exercise.notes,
         superset_group: exercise.superset_group,
@@ -693,14 +695,35 @@ export function ProgramBuilder({
                       onOpenGuide={(exercise) =>
                         setGuide({ id: exercise.id, title: exercise.title })
                       }
-                      onChange={(exerciseId) =>
+                      onChange={(exerciseId) => {
+                        const selected = exercises.data?.find(
+                          (exercise) => exercise.id === exerciseId,
+                        );
                         updateDay(dayIndex, {
                           ...day,
-                          exercises: day.exercises.map((row, index) =>
-                            index === exerciseIndex ? { ...row, exercise_id: exerciseId } : row,
-                          ),
-                        })
-                      }
+                          exercises: day.exercises.map((row, index) => {
+                            if (index !== exerciseIndex) return row;
+                            if (selected?.metric_type === 'cardio') {
+                              return {
+                                ...row,
+                                exercise_id: exerciseId,
+                                prescribed_sets: null,
+                                prescribed_reps: null,
+                                prescribed_duration_minutes: row.prescribed_duration_minutes ?? 30,
+                                superset_group: null,
+                                superset_order: null,
+                              };
+                            }
+                            return {
+                              ...row,
+                              exercise_id: exerciseId,
+                              prescribed_sets: row.prescribed_sets ?? 3,
+                              prescribed_reps: row.prescribed_reps || '8-12',
+                              prescribed_duration_minutes: null,
+                            };
+                          }),
+                        });
+                      }}
                     />
                     {exercises.data?.some((exercise) => exercise.id === item.exercise_id) && (
                       <button
@@ -721,42 +744,25 @@ export function ProgramBuilder({
                     )}
                   </div>
                   <div className="program-exercise-row__metrics">
-                    {(
-                      [
-                        ['prescribed_sets', 'Рабочие подходы'],
-                        ['prescribed_reps', 'Повторы'],
-                        ['rest_seconds', 'Отдых, сек'],
-                      ] as const
-                    ).map(([key, label]) => (
-                      <label className="field" key={key}>
-                        <span>{label}</span>
+                    {exercises.data?.find((exercise) => exercise.id === item.exercise_id)
+                      ?.metric_type === 'cardio' ? (
+                      <label className="field">
+                        <span>Плановая длительность, мин</span>
                         <input
-                          type={key === 'prescribed_reps' ? 'text' : 'number'}
-                          inputMode={key === 'prescribed_reps' ? undefined : 'numeric'}
-                          min={
-                            key === 'prescribed_sets' ? 1 : key === 'rest_seconds' ? 15 : undefined
-                          }
-                          max={
-                            key === 'prescribed_sets'
-                              ? 10
-                              : key === 'rest_seconds'
-                                ? 600
-                                : undefined
-                          }
-                          maxLength={key === 'prescribed_reps' ? 32 : undefined}
+                          type="number"
+                          inputMode="numeric"
+                          min="1"
+                          max="600"
                           required
-                          value={item[key] ?? ''}
-                          onChange={(e) =>
+                          value={item.prescribed_duration_minutes ?? ''}
+                          onChange={(event) =>
                             updateDay(dayIndex, {
                               ...day,
                               exercises: day.exercises.map((row, index) =>
                                 index === exerciseIndex
                                   ? {
                                       ...row,
-                                      [key]:
-                                        key === 'prescribed_reps'
-                                          ? e.target.value
-                                          : Number(e.target.value),
+                                      prescribed_duration_minutes: Number(event.target.value),
                                     }
                                   : row,
                               ),
@@ -764,12 +770,66 @@ export function ProgramBuilder({
                           }
                         />
                       </label>
-                    ))}
+                    ) : (
+                      (
+                        [
+                          ['prescribed_sets', 'Рабочие подходы'],
+                          ['prescribed_reps', 'Повторы'],
+                          ['rest_seconds', 'Отдых, сек'],
+                        ] as const
+                      ).map(([key, label]) => (
+                        <label className="field" key={key}>
+                          <span>{label}</span>
+                          <input
+                            type={key === 'prescribed_reps' ? 'text' : 'number'}
+                            inputMode={key === 'prescribed_reps' ? undefined : 'numeric'}
+                            min={
+                              key === 'prescribed_sets'
+                                ? 1
+                                : key === 'rest_seconds'
+                                  ? 15
+                                  : undefined
+                            }
+                            max={
+                              key === 'prescribed_sets'
+                                ? 10
+                                : key === 'rest_seconds'
+                                  ? 600
+                                  : undefined
+                            }
+                            maxLength={key === 'prescribed_reps' ? 32 : undefined}
+                            required
+                            value={item[key] ?? ''}
+                            onChange={(e) =>
+                              updateDay(dayIndex, {
+                                ...day,
+                                exercises: day.exercises.map((row, index) =>
+                                  index === exerciseIndex
+                                    ? {
+                                        ...row,
+                                        [key]:
+                                          key === 'prescribed_reps'
+                                            ? e.target.value
+                                            : Number(e.target.value),
+                                      }
+                                    : row,
+                                ),
+                              })
+                            }
+                          />
+                        </label>
+                      ))
+                    )}
                   </div>
                   <details className="program-exercise-advanced compact-disclosure">
                     <summary>
                       <span>
-                        <strong>Заметка, суперсет и замены</strong>
+                        <strong>
+                          {exercises.data?.find((exercise) => exercise.id === item.exercise_id)
+                            ?.metric_type === 'cardio'
+                            ? 'Заметка и замены'
+                            : 'Заметка, суперсет и замены'}
+                        </strong>
                         <small>Необязательные настройки упражнения</small>
                       </span>
                       <Icon name="plus" size={16} />
@@ -793,21 +853,23 @@ export function ProgramBuilder({
                           }
                         />
                       </label>
-                      {exerciseIndex > 0 && (
-                        <label className="checkbox-row">
-                          <input
-                            type="checkbox"
-                            checked={isPairedWithPrevious(day, exerciseIndex)}
-                            onChange={(event) =>
-                              updateDay(
-                                dayIndex,
-                                toggleSuperset(day, exerciseIndex, event.target.checked),
-                              )
-                            }
-                          />
-                          <span>Суперсет — выполнить вместе с предыдущим упражнением подряд</span>
-                        </label>
-                      )}
+                      {exerciseIndex > 0 &&
+                        exercises.data?.find((exercise) => exercise.id === item.exercise_id)
+                          ?.metric_type !== 'cardio' && (
+                          <label className="checkbox-row">
+                            <input
+                              type="checkbox"
+                              checked={isPairedWithPrevious(day, exerciseIndex)}
+                              onChange={(event) =>
+                                updateDay(
+                                  dayIndex,
+                                  toggleSuperset(day, exerciseIndex, event.target.checked),
+                                )
+                              }
+                            />
+                            <span>Суперсет — выполнить вместе с предыдущим упражнением подряд</span>
+                          </label>
+                        )}
                       {(() => {
                         const selected = exercises.data?.find(
                           (exercise) => exercise.id === item.exercise_id,
@@ -846,9 +908,12 @@ export function ProgramBuilder({
                           <small className="muted">Проверенных замен пока нет.</small>
                         );
                       })()}
-                      <small className="muted">
-                        Разминочные и дроп-сеты отмечаются отдельно во время тренировки.
-                      </small>
+                      {exercises.data?.find((exercise) => exercise.id === item.exercise_id)
+                        ?.metric_type !== 'cardio' && (
+                        <small className="muted">
+                          Разминочные и дроп-сеты отмечаются отдельно во время тренировки.
+                        </small>
+                      )}
                     </div>
                   </details>
                 </div>

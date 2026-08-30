@@ -30,6 +30,7 @@ class Exercise(Base):
     title: Mapped[str] = mapped_column(String(128), nullable=False)
     primary_muscle: Mapped[str | None] = mapped_column(String(64), nullable=True)
     equipment: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    metric_type: Mapped[str | None] = mapped_column(String(16), nullable=True)
     difficulty_level: Mapped[str] = mapped_column(
         String(16), nullable=False, default="intermediate", server_default="intermediate"
     )

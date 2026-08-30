@@ -25,13 +25,15 @@ EquipmentIdentifier = Literal[
     "cardio",
     "other",
 ]
+ExerciseMetricType = Literal["strength", "cardio"]
 
 
 class ProgramTemplateExerciseCreate(BaseModel):
     exercise_id: int = Field(ge=1)
-    prescribed_sets: int = Field(ge=1, le=10)
-    prescribed_reps: str = Field(min_length=1, max_length=32)
-    rest_seconds: int = Field(default=90, ge=15, le=600)
+    prescribed_sets: int | None = Field(default=None, ge=1, le=10)
+    prescribed_reps: str | None = Field(default=None, min_length=1, max_length=32)
+    prescribed_duration_minutes: int | None = Field(default=None, ge=1, le=600)
+    rest_seconds: int = Field(default=90, ge=0, le=600)
     notes: str | None = Field(default=None, max_length=2000)
     superset_group: int | None = Field(default=None, ge=1)
     superset_order: int | None = Field(default=None, ge=1, le=2)
@@ -89,8 +91,10 @@ class ProgramTemplateExerciseResponse(BaseModel):
     id: int
     exercise_id: int
     exercise_title: str
+    metric_type: ExerciseMetricType
     prescribed_sets: int
     prescribed_reps: str
+    prescribed_duration_minutes: int | None = None
     rest_seconds: int
     notes: str | None = None
     superset_group: int | None = None
@@ -332,9 +336,10 @@ class CoachProgramExerciseCreate(BaseModel):
     expected_revision_number: int = Field(ge=0)
     exercise_id: int = Field(ge=1)
     day_number: int | None = Field(default=None, ge=1, le=14)
-    prescribed_sets: int = Field(ge=1, le=10)
-    prescribed_reps: str = Field(min_length=1, max_length=32)
-    rest_seconds: int = Field(default=90, ge=15, le=600)
+    prescribed_sets: int | None = Field(default=None, ge=1, le=10)
+    prescribed_reps: str | None = Field(default=None, min_length=1, max_length=32)
+    prescribed_duration_minutes: int | None = Field(default=None, ge=1, le=600)
+    rest_seconds: int = Field(default=90, ge=0, le=600)
     notes: str | None = Field(default=None, max_length=2000)
     superset_group: int | None = Field(default=None, ge=1)
     superset_order: int | None = Field(default=None, ge=1, le=2)
@@ -452,6 +457,7 @@ class ExerciseCatalogItem(BaseModel):
     title: str
     primary_muscle: str | None = None
     equipment: str | None = None
+    metric_type: ExerciseMetricType
     primary_muscle_ids: list[str]
     secondary_muscle_ids: list[str]
     equipment_ids: list[str]
@@ -471,6 +477,7 @@ class ExerciseCatalogCreate(BaseModel):
     title: str = Field(min_length=1, max_length=128)
     primary_muscle: str | None = Field(default=None, max_length=64)
     equipment: str | None = Field(default=None, max_length=64)
+    metric_type: ExerciseMetricType | None = None
     difficulty_level: Literal["beginner", "intermediate", "advanced"] = "intermediate"
     target_telegram_user_id: int | None = Field(default=None, ge=1)
 
