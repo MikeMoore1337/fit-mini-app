@@ -90,6 +90,11 @@ integration: task-pr-to-dev
 -->
 ```
 
+`exclusive-write` несовместим с любой другой write-сессией. Параллельные writer-сессии разрешены
+только когда владелец явно присвоил обеим task `independent-write` после проверки
+непересекающегося scope. Смешанные классы, отсутствующая metadata и любые неизвестные значения
+остаются несовместимыми fail-closed.
+
 Umbrella IDs и `executable: false` не запускаются. Start всегда требует явный `--owner-launch`;
 approval другой task не наследуется.
 
@@ -107,6 +112,7 @@ python scripts/task_session.py recover 119
 python scripts/task_session.py mark-ready 119 --head-sha <sha> --review-verdict APPROVED --qa-verdict PASS
 python scripts/task_session.py enqueue-integration 119 --pr 123
 python scripts/task_session.py prepare-integration 119
+python scripts/task_session.py withdraw-integration 119 --reason "blocking review fix"
 python scripts/task_session.py complete-integration 119 --merge-sha <exact-dev-merge-sha>
 python scripts/task_session.py finish 119
 ```
@@ -159,6 +165,11 @@ owner-approved GitHub App, установленный только в этот r
 `Contents: Read and write`. Его actor становится единственным bypass actor Ruleset `dev` в режиме
 `always`. Secrets `DEV_SYNC_APP_ID` и `DEV_SYNC_APP_PRIVATE_KEY` хранятся в protected `production`
 environment. Широкий PAT/admin bypass не используется.
+
+Expected App actor хранится как несекретный repository contract в
+`.github/deployed-sync-app.json`. `doctor` сравнивает Ruleset `actor_id` с этим exact ID, а не
+принимает произвольный GitHub App. Кроме локального `origin/dev`, online `doctor` и `start`
+сравнивают live GitHub `dev` SHA; stale tracking ref требует fetch/нормализации до новой task.
 
 ## OWNER_CHECKPOINT: live GitHub enforcement
 

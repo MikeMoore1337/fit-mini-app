@@ -29,6 +29,7 @@ TASK_COMMIT_RE = re.compile(rf"\[Task (?P<task_id>{TASK_ID_PATTERN})\]")
 TASK_FILE_RE = re.compile(rf"^(?P<task_id>{TASK_ID_PATTERN})-(?P<slug>.+)\.md$")
 TASK_STATE_VERSION = 1
 STATE_DIRECTORY_NAME = "codex-task-sessions-v1"
+SYNC_APP_CONFIG_PATH = Path(".github/deployed-sync-app.json")
 VALID_CHECK_CONCLUSIONS = {"SUCCESS"}
 FAILED_CHECK_CONCLUSIONS = {
     "ACTION_REQUIRED",
@@ -62,6 +63,19 @@ def task_id_from_branch(branch: str) -> str:
     if match is None:
         raise TaskSessionError(f"Branch {branch!r} must match task/<ID>-<lowercase-kebab-slug>")
     return match.group("task_id")
+
+
+def normalize_concurrency_class(value: str) -> str:
+    concurrency_class = value.strip().lower()
+    if concurrency_class in {"exclusive-write", "independent-write"}:
+        return concurrency_class
+    raise TaskSessionError("Concurrency must be exclusive-write or independent-write")
+
+
+def write_lanes_compatible(first: str, second: str) -> bool:
+    left = normalize_concurrency_class(first)
+    right = normalize_concurrency_class(second)
+    return left == right == "independent-write"
 
 
 def validate_task_commit_messages(task_id: str, messages: Sequence[str]) -> None:
@@ -321,7 +335,9 @@ def find_task_document(canonical_root: Path, task_id: str) -> TaskDocument:
         status=status,
         dependencies=dependencies,
         executable=executable,
-        concurrency_class=metadata.get("concurrency", "exclusive-write"),
+        concurrency_class=normalize_concurrency_class(
+            metadata.get("concurrency", "exclusive-write")
+        ),
         owner_gate=metadata.get("owner_gate", "explicit-launch"),
         integration_policy=metadata.get("integration", "task-pr-to-dev"),
     )
@@ -538,7 +554,21 @@ def validate_task_pull_request_files(files: Sequence[Mapping[str, Any]]) -> None
         )
 
 
-def validate_dev_ruleset(rulesets: Sequence[Mapping[str, Any]]) -> list[str]:
+def expected_sync_app_id(root: Path) -> int:
+    path = root / SYNC_APP_CONFIG_PATH
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        app_id = int(payload["app_id"])
+    except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as error:
+        raise TaskSessionError(f"Invalid deployed-sync App config {path}: {error}") from error
+    if app_id <= 0:
+        raise TaskSessionError(f"Invalid deployed-sync App ID in {path}")
+    return app_id
+
+
+def validate_dev_ruleset(
+    rulesets: Sequence[Mapping[str, Any]], *, expected_app_id: int
+) -> list[str]:
     matching = [
         item
         for item in rulesets
@@ -572,6 +602,11 @@ def validate_dev_ruleset(rulesets: Sequence[Mapping[str, Any]]) -> list[str]:
         or bypass_actors[0].get("bypass_mode") != "always"
     ):
         issues.append("dev Ruleset bypass must be one Integration actor in always mode")
+    elif bypass_actors[0].get("actor_id") != expected_app_id:
+        issues.append(
+            "dev Ruleset bypass App does not match deployed-sync App: "
+            f"expected {expected_app_id}, found {bypass_actors[0].get('actor_id')}"
+        )
     return issues
 
 
@@ -690,8 +725,15 @@ class TaskController:
         open_task_prs: list[dict[str, Any]] | str = "offline"
         active_runs: list[dict[str, Any]] | str = "offline"
         rulesets: list[dict[str, Any]] | str = "offline"
+        live_dev = "offline"
         if not offline:
             try:
+                live_dev = self._github().branch_head("dev")
+                if live_dev != origin_dev:
+                    issues.append(
+                        "local origin/dev is stale: "
+                        f"tracking={origin_dev} live={live_dev}; fetch and normalize canonical dev"
+                    )
                 all_pull_requests = self._github().open_pull_requests()
                 release_prs = [
                     {"number": item.get("number"), "title": item.get("title")}
@@ -742,7 +784,12 @@ class TaskController:
                 ]
                 if release_critical_runs:
                     issues.append("active dev/master CI, deploy or sync run blocks mutation")
-                issues.extend(validate_dev_ruleset(rulesets))
+                issues.extend(
+                    validate_dev_ruleset(
+                        rulesets,
+                        expected_app_id=expected_sync_app_id(self.repository.current_worktree),
+                    )
+                )
             except TaskSessionError as error:
                 issues.append(f"GitHub state unavailable: {error}")
                 release_prs = "unavailable"
@@ -835,6 +882,7 @@ class TaskController:
                 "dev": local_dev,
                 "origin/dev": origin_dev,
                 "origin/master": origin_master,
+                "live/dev": live_dev,
             },
             "leases": leases,
             "release_prs": release_prs,
@@ -940,7 +988,15 @@ class TaskController:
             if any(item.get("task_id") == expected for item in existing):
                 raise TaskSessionError(f"Task {expected} already has an active lease")
             if mode == "write" and any(
-                item.get("mode") in {"write", "integration", "release"} for item in existing
+                item.get("mode") in {"integration", "release"}
+                or (
+                    item.get("mode") == "write"
+                    and not write_lanes_compatible(
+                        document.concurrency_class,
+                        str(item.get("concurrency_class", "exclusive-write")),
+                    )
+                )
+                for item in existing
             ):
                 raise TaskSessionError("An incompatible write/integration/release lane is occupied")
             if mode == "research-readonly" and any(
@@ -948,6 +1004,13 @@ class TaskController:
             ):
                 raise TaskSessionError("Research cannot start during integration/release mutation")
             base_sha = self.repository.ref("origin/dev")
+            if not offline:
+                live_dev_sha = self._github().branch_head("dev")
+                if live_dev_sha != base_sha:
+                    raise TaskSessionError(
+                        "origin/dev changed while start was acquiring its lease: "
+                        f"tracking={base_sha} live={live_dev_sha}"
+                    )
             lease = {
                 "version": TASK_STATE_VERSION,
                 "task_id": expected,
@@ -1034,7 +1097,17 @@ class TaskController:
         }
         with self.store.lock():
             existing = self.store.all_leases()
-            if any(item.get("mode") in {"write", "integration", "release"} for item in existing):
+            if any(
+                item.get("mode") in {"integration", "release"}
+                or (
+                    item.get("mode") == "write"
+                    and not write_lanes_compatible(
+                        document.concurrency_class,
+                        str(item.get("concurrency_class", "exclusive-write")),
+                    )
+                )
+                for item in existing
+            ):
                 raise TaskSessionError("An incompatible write/integration/release lane is occupied")
             self.store.create_json(lease_path, lease)
         return lease
@@ -1234,11 +1307,69 @@ class TaskController:
             "head_sha": head_sha,
         }
         with self.store.lock():
+            if self.store.mode_lease_path("release").exists():
+                raise TaskSessionError("Release freeze acquired while integration was validated")
+            current_queue = self.store.read_json(
+                self.store.queue_path, {"version": 1, "candidates": []}
+            )
+            if (
+                not current_queue["candidates"]
+                or current_queue["candidates"][0].get("task_id") != expected
+                or current_queue["candidates"][0].get("head_sha") != head_sha
+                or current_queue["candidates"][0].get("state") != "queued"
+            ):
+                raise TaskSessionError(
+                    "Integration queue head changed while eligibility was validated"
+                )
             self.store.create_json(self.store.mode_lease_path("integration"), integration_lease)
-            candidate["state"] = "eligible"
-            candidate["eligible_at"] = utc_now()
-            StateStore.replace_json(self.store.queue_path, queue)
+            current_queue["candidates"][0]["state"] = "eligible"
+            current_queue["candidates"][0]["eligible_at"] = utc_now()
+            StateStore.replace_json(self.store.queue_path, current_queue)
         return integration_lease
+
+    def withdraw_integration(self, task_id: str, *, reason: str) -> dict[str, Any]:
+        expected = normalize_task_id(task_id)
+        if not reason.strip():
+            raise TaskSessionError("withdraw-integration requires a non-empty reason")
+        integration_path = self.store.mode_lease_path("integration")
+        integration = self.store.read_json(integration_path)
+        if integration is None or integration.get("task_id") != expected:
+            raise TaskSessionError(f"Task {expected} does not own integration lease")
+        pull_request = self._github().pull_request(int(integration["pr_number"]))
+        if pull_request.get("merged_at"):
+            raise TaskSessionError("Merged integration cannot be withdrawn; verify exact dev CI")
+        with self.store.lock():
+            current = self.store.read_json(integration_path)
+            if current != integration:
+                raise TaskSessionError("Integration lease changed while withdrawal was validated")
+            queue = self.store.read_json(self.store.queue_path)
+            if (
+                not queue["candidates"]
+                or queue["candidates"][0].get("task_id") != expected
+                or queue["candidates"][0].get("head_sha") != integration.get("head_sha")
+            ):
+                raise TaskSessionError("Integration queue head changed before withdrawal")
+            withdrawn = queue["candidates"].pop(0)
+            withdrawn.update(
+                {
+                    "state": "withdrawn-for-fix",
+                    "withdrawn_at": utc_now(),
+                    "reason": reason.strip(),
+                }
+            )
+            task_lease_path = self.store.task_lease_path(expected)
+            task_lease = self.store.read_json(task_lease_path)
+            if task_lease is None:
+                raise TaskSessionError("Task lease is missing during integration withdrawal")
+            task_lease["lifecycle_state"] = "implementation"
+            task_lease["updated_at"] = utc_now()
+            task_lease["last_integration_withdrawal"] = withdrawn
+            for field in ("ready_head_sha", "review_verdict", "qa_verdict"):
+                task_lease.pop(field, None)
+            StateStore.replace_json(self.store.queue_path, queue)
+            StateStore.replace_json(task_lease_path, task_lease)
+            integration_path.unlink()
+        return {"withdrawn": withdrawn, "task_lease": task_lease}
 
     def complete_integration(self, task_id: str, *, merge_sha: str) -> dict[str, Any]:
         expected = normalize_task_id(task_id)
@@ -1328,8 +1459,6 @@ class TaskController:
         path = self.store.mode_lease_path("release")
         self.store.initialize()
         if action == "start":
-            if self.store.mode_lease_path("integration").exists():
-                raise TaskSessionError("Cannot start release while integration lease is active")
             payload = {
                 "version": 1,
                 "task_id": "release",
@@ -1344,6 +1473,8 @@ class TaskController:
                 "session_label": session_label,
             }
             with self.store.lock():
+                if self.store.mode_lease_path("integration").exists():
+                    raise TaskSessionError("Cannot start release while integration lease is active")
                 self.store.create_json(path, payload)
             return payload
         if action != "finish":
@@ -1493,6 +1624,10 @@ def _parser() -> argparse.ArgumentParser:
     prepare = subparsers.add_parser("prepare-integration")
     prepare.add_argument("task_id")
 
+    withdraw = subparsers.add_parser("withdraw-integration")
+    withdraw.add_argument("task_id")
+    withdraw.add_argument("--reason", required=True)
+
     complete = subparsers.add_parser("complete-integration")
     complete.add_argument("task_id")
     complete.add_argument("--merge-sha", required=True)
@@ -1570,6 +1705,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         if args.command == "prepare-integration":
             _print(controller.prepare_integration(args.task_id))
+            return 0
+        if args.command == "withdraw-integration":
+            _print(controller.withdraw_integration(args.task_id, reason=args.reason))
             return 0
         if args.command == "complete-integration":
             _print(controller.complete_integration(args.task_id, merge_sha=args.merge_sha))

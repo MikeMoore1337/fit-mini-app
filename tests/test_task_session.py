@@ -4,6 +4,7 @@ import importlib.util
 import json
 import subprocess
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -68,9 +69,13 @@ def repository(tmp_path: Path) -> tuple[Path, Any]:
     _git(root, "init", "-b", "dev")
     _git(root, "config", "user.name", "Task Session Tests")
     _git(root, "config", "user.email", "task-session@example.invalid")
+    (root / ".github").mkdir()
+    (root / ".github" / "deployed-sync-app.json").write_text(
+        '{"app_id": 123, "app_slug": "test-sync"}\n', encoding="utf-8"
+    )
     (root / ".gitignore").write_text("/codex-backlog/tasks/\n.artifacts/\n", encoding="utf-8")
     (root / "README.md").write_text("initial\n", encoding="utf-8")
-    _git(root, "add", ".gitignore", "README.md")
+    _git(root, "add", ".github/deployed-sync-app.json", ".gitignore", "README.md")
     _git(root, "commit", "-m", "chore: initial")
     _git(tmp_path, "init", "--bare", str(remote))
     _git(root, "remote", "add", "origin", str(remote))
@@ -336,6 +341,55 @@ def test_duplicate_start_and_incompatible_write_lane_fail_closed(
         controller.start("205", owner_launch=True, session_label="pytest", offline=True)
 
 
+def test_owner_approved_compatible_write_cohort_can_prepare_in_parallel(
+    repository: tuple[Path, Any],
+) -> None:
+    root, git_repository = repository
+    metadata = "<!-- task-session\nconcurrency: independent-write\n-->"
+    _write_task(root, "213", "parallel-one", body=metadata)
+    _write_task(root, "214", "parallel-two", body=metadata)
+    controller = task_session.TaskController(
+        git_repository, github=FakeGitHub(git_repository.ref("origin/dev"))
+    )
+
+    first = controller.start("213", owner_launch=True, session_label="first", offline=True)
+    second = controller.start("214", owner_launch=True, session_label="second", offline=True)
+
+    assert first["lease"]["concurrency_class"] == "independent-write"
+    assert second["lease"]["concurrency_class"] == "independent-write"
+
+
+def test_unknown_or_different_write_cohorts_fail_closed(repository: tuple[Path, Any]) -> None:
+    root, git_repository = repository
+    _write_task(
+        root,
+        "215",
+        "parallel-a",
+        body="<!-- task-session\nconcurrency: independent-write\n-->",
+    )
+    _write_task(
+        root,
+        "216",
+        "parallel-b",
+        body="<!-- task-session\nconcurrency: exclusive-write\n-->",
+    )
+    _write_task(
+        root,
+        "217",
+        "invalid-class",
+        body="<!-- task-session\nconcurrency: parallel\n-->",
+    )
+    controller = task_session.TaskController(
+        git_repository, github=FakeGitHub(git_repository.ref("origin/dev"))
+    )
+    controller.start("215", owner_launch=True, session_label="first", offline=True)
+
+    with pytest.raises(task_session.TaskSessionError, match="incompatible"):
+        controller.start("216", owner_launch=True, session_label="second", offline=True)
+    with pytest.raises(task_session.TaskSessionError, match="Concurrency must be"):
+        task_session.find_task_document(root, "217")
+
+
 def test_research_readonly_sessions_can_coexist(repository: tuple[Path, Any]) -> None:
     root, git_repository = repository
     _write_task(root, "206", "research-one")
@@ -555,6 +609,83 @@ def test_release_lease_blocks_queue_and_integration(repository: tuple[Path, Any]
         controller.enqueue_integration("304", pr_number=4)
 
 
+def test_prepare_integration_rechecks_release_lease_under_shared_lock(
+    repository: tuple[Path, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root, git_repository = repository
+    base_sha = git_repository.ref("origin/dev")
+    head_sha = "7" * 40
+    github = FakeGitHub(base_sha)
+    controller = task_session.TaskController(git_repository, github=github)
+    _task_lease(controller, "307", root, base_sha, ready_head_sha=head_sha)
+    github.pulls[7] = _task_pr(7, "307", base_sha, head_sha)
+    github.commits[7] = [_task_commit("307")]
+    github.checks[head_sha] = [_success_check(head_sha)]
+    controller.enqueue_integration("307", pr_number=7)
+
+    @contextmanager
+    def inject_release_lease():
+        task_session.StateStore.replace_json(
+            controller.store.mode_lease_path("release"), {"mode": "release"}
+        )
+        yield
+
+    monkeypatch.setattr(controller.store, "lock", inject_release_lease)
+
+    with pytest.raises(task_session.TaskSessionError, match="acquired while integration"):
+        controller.prepare_integration("307")
+    assert not controller.store.mode_lease_path("integration").exists()
+
+
+def test_release_freeze_rechecks_integration_lease_under_shared_lock(
+    repository: tuple[Path, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _, git_repository = repository
+    controller = task_session.TaskController(
+        git_repository, github=FakeGitHub(git_repository.ref("origin/dev"))
+    )
+    controller.store.initialize()
+
+    @contextmanager
+    def inject_integration_lease():
+        task_session.StateStore.replace_json(
+            controller.store.mode_lease_path("integration"), {"mode": "integration"}
+        )
+        yield
+
+    monkeypatch.setattr(controller.store, "lock", inject_integration_lease)
+
+    with pytest.raises(task_session.TaskSessionError, match="integration lease is active"):
+        controller.release_freeze(
+            "start", sha=git_repository.ref("origin/dev"), session_label="race-test"
+        )
+    assert not controller.store.mode_lease_path("release").exists()
+
+
+def test_unmerged_integration_can_be_withdrawn_for_blocking_fix(
+    repository: tuple[Path, Any],
+) -> None:
+    root, git_repository = repository
+    base_sha = git_repository.ref("origin/dev")
+    head_sha = "6" * 40
+    github = FakeGitHub(base_sha)
+    controller = task_session.TaskController(git_repository, github=github)
+    _task_lease(controller, "308", root, base_sha, ready_head_sha=head_sha)
+    github.pulls[8] = _task_pr(8, "308", base_sha, head_sha)
+    github.commits[8] = [_task_commit("308")]
+    github.checks[head_sha] = [_success_check(head_sha)]
+    controller.enqueue_integration("308", pr_number=8)
+    controller.prepare_integration("308")
+
+    result = controller.withdraw_integration("308", reason="blocking review fix")
+
+    assert result["withdrawn"]["state"] == "withdrawn-for-fix"
+    assert result["task_lease"]["lifecycle_state"] == "implementation"
+    assert "ready_head_sha" not in result["task_lease"]
+    assert controller.store.read_json(controller.store.queue_path)["candidates"] == []
+    assert not controller.store.mode_lease_path("integration").exists()
+
+
 def test_research_readonly_lease_cannot_enter_integration_queue(
     repository: tuple[Path, Any],
 ) -> None:
@@ -618,7 +749,7 @@ def test_dev_ruleset_validation_requires_pr_and_strict_aggregate_checks() -> Non
             "rules": [{"type": "deletion"}, {"type": "non_fast_forward"}],
         }
     ]
-    issues = task_session.validate_dev_ruleset(weak)
+    issues = task_session.validate_dev_ruleset(weak, expected_app_id=123)
     assert "dev Ruleset is missing pull_request" in issues
     assert "dev Ruleset is missing required_status_checks" in issues
 
@@ -644,14 +775,32 @@ def test_dev_ruleset_validation_requires_pr_and_strict_aggregate_checks() -> Non
             ],
         }
     ]
-    assert task_session.validate_dev_ruleset(strict) == []
+    assert task_session.validate_dev_ruleset(strict, expected_app_id=123) == []
+    wrong_app = json.loads(json.dumps(strict))
+    wrong_app[0]["bypass_actors"][0]["actor_id"] = 999
+    assert "does not match deployed-sync App" in " ".join(
+        task_session.validate_dev_ruleset(wrong_app, expected_app_id=123)
+    )
     broad_bypass = json.loads(json.dumps(strict))
     broad_bypass[0]["bypass_actors"] = [
         {"actor_type": "RepositoryRole", "actor_id": 5, "bypass_mode": "always"}
     ]
     assert "dev Ruleset bypass must be one Integration actor in always mode" in (
-        task_session.validate_dev_ruleset(broad_bypass)
+        task_session.validate_dev_ruleset(broad_bypass, expected_app_id=123)
     )
+
+
+def test_doctor_compares_tracking_origin_dev_with_live_github_head(
+    repository: tuple[Path, Any],
+) -> None:
+    _, git_repository = repository
+    github = FakeGitHub("f" * 40)
+    controller = task_session.TaskController(git_repository, github=github)
+
+    report = controller.doctor()
+
+    assert any("local origin/dev is stale" in issue for issue in report["issues"])
+    assert report["refs"]["live/dev"] == "f" * 40
 
 
 def test_doctor_blocks_active_release_critical_workflow_even_without_release_lease(
