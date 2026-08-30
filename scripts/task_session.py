@@ -1056,7 +1056,7 @@ class TaskController:
         lease = self.store.read_json(lease_path)
         if lease is None or lease.get("mode") != "write":
             raise TaskSessionError("Only an active write lease can become integration-ready")
-        if lease.get("lifecycle_state") != "implementation":
+        if lease.get("lifecycle_state") not in {"implementation", "ready-integration"}:
             raise TaskSessionError(
                 f"Task {expected} cannot become ready from {lease.get('lifecycle_state')}"
             )
@@ -1077,6 +1077,16 @@ class TaskController:
             current = self.store.read_json(lease_path)
             if current.get("updated_at") != lease.get("updated_at"):
                 raise TaskSessionError("Task lease changed while readiness was validated")
+            if current.get("lifecycle_state") == "ready-integration":
+                queue = self.store.read_json(
+                    self.store.queue_path, {"version": 1, "candidates": []}
+                )
+                if any(item.get("task_id") == expected for item in queue["candidates"]):
+                    raise TaskSessionError(
+                        "Queued task readiness is immutable; remove it only through explicit recovery"
+                    )
+                if self.store.mode_lease_path("integration").exists():
+                    raise TaskSessionError("Integration lease blocks task readiness replacement")
             current["lifecycle_state"] = "ready-integration"
             current["ready_head_sha"] = head_sha
             current["review_verdict"] = review_verdict

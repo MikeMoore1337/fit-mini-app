@@ -263,6 +263,48 @@ def test_mark_ready_requires_clean_exact_head_and_records_review_qa(
     assert ready["qa_verdict"] == "PASS"
 
 
+def test_mark_ready_replaces_evidence_before_queue_but_not_after_queue(
+    repository: tuple[Path, Any],
+) -> None:
+    root, git_repository = repository
+    _write_task(root, "212", "replacement-evidence")
+    controller = task_session.TaskController(
+        git_repository, github=FakeGitHub(git_repository.ref("origin/dev"))
+    )
+    started = controller.start("212", owner_launch=True, session_label="pytest", offline=True)
+    worktree = Path(started["lease"]["worktree"])
+    change = worktree / "change.txt"
+    change.write_text("first\n", encoding="utf-8")
+    _git(worktree, "add", "change.txt")
+    _git(worktree, "commit", "-m", "feat: [Task 212] add first evidence")
+    first_head = _git(worktree, "rev-parse", "HEAD")
+    controller.mark_ready("212", head_sha=first_head, review_verdict="APPROVED", qa_verdict="PASS")
+
+    change.write_text("second\n", encoding="utf-8")
+    _git(worktree, "add", "change.txt")
+    _git(worktree, "commit", "-m", "fix: [Task 212] update reviewed evidence")
+    second_head = _git(worktree, "rev-parse", "HEAD")
+
+    replaced = controller.mark_ready(
+        "212", head_sha=second_head, review_verdict="APPROVED", qa_verdict="PASS"
+    )
+    assert replaced["ready_head_sha"] == second_head
+
+    task_session.StateStore.replace_json(
+        controller.store.queue_path,
+        {"version": 1, "candidates": [{"task_id": "212"}]},
+    )
+    change.write_text("third\n", encoding="utf-8")
+    _git(worktree, "add", "change.txt")
+    _git(worktree, "commit", "-m", "fix: [Task 212] add queued evidence")
+    third_head = _git(worktree, "rev-parse", "HEAD")
+
+    with pytest.raises(task_session.TaskSessionError, match="readiness is immutable"):
+        controller.mark_ready(
+            "212", head_sha=third_head, review_verdict="APPROVED", qa_verdict="PASS"
+        )
+
+
 def test_start_refuses_local_dev_ahead_or_behind(repository: tuple[Path, Any]) -> None:
     root, git_repository = repository
     _write_task(root, "203", "ahead-dev")
