@@ -101,8 +101,10 @@
       до завершения exercise catalog `120D` и successful AI beta foundation `90B`; после feasibility
       возможны только owner-approved `126B -> 126C`. Tasks `91/92A/92B/94A/94B` не hard dependencies,
       но compatible artifacts `92B/94A/94B` переиспользуются, если к тому моменту существуют.
-- [ ] owner-selected task `127-task-branches-worktrees-serialized-dev-integration.md` создана по
-      прямому запросу владельца после фактического concurrent write/push race. Она закрепляет
+- [ ] owner-selected task `127-task-branches-worktrees-serialized-dev-integration.md` выполняется в
+      `task/127-task-workflow-automation` после прямого запроса владельца. Локальный controller,
+      CI provenance, ADR/runbook и deterministic rehearsal находятся в implementation lifecycle;
+      live GitHub App/Ruleset apply остаётся на обязательном owner checkpoint. Task закрепляет
       `1 task = 1 branch = 1 worktree`, integration-only `dev`, atomic leases, task PR в `dev`,
       единую сериализованную integration queue, provenance/recovery и безопасный `master -> dev`
       sync. Task `127` не запускается автоматически и не заменяет отдельный запуск product Task

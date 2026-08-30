@@ -183,6 +183,12 @@ destructive/external authorization or terminal blocker, continue automatically t
 review, QA, commit, PR, merge, CI and normal release stages without waiting for another owner
 prompt. Stop only at the declared gate and report its exact evidence/decision requirement.
 
+Если текущая task не объявляет `OWNER_CHECKPOINT`, `HUMAN_EVIDENCE`, `MANUAL_VISUAL_APPROVAL`,
+`LEGAL_COUNSEL_REQUIRED`, `EXTERNAL_AUTHORIZATION`, `DESTRUCTIVE_ACTION` или terminal blocker,
+controller/lifecycle после terminal success автоматически продолжает применимые review, QA,
+commit, task PR, serial integration, `dev` CI и normal release без дополнительного owner prompt.
+Тишина владельца не является gate. Следующая product task автоматически не запускается.
+
 Do not read completed tasks or historical changelogs unless the current task explicitly requires
 them. Legacy `masters/` and `references/` were removed and are not sources of truth.
 
@@ -240,6 +246,12 @@ Unless the current backlog rules or user explicitly permit otherwise:
 - keep unrelated user changes intact.
 
 If the expected branch is not active, stop before tracked changes and report the mismatch.
+
+Use `python scripts/task_session.py doctor/start/status/prepare-integration/finish/recover` as the
+repository-native coordination boundary. Runtime leases live only in the shared Git common dir;
+missing/corrupted state is a blocker. Task PRs target only `dev`, preserve `[Task <ID>]` in branch,
+commit and PR provenance, and merge only as the current integration queue head after exact-head
+`checks`. A release lease or open `dev -> master` PR freezes every mutation of `dev`.
 
 Parallel read-only/research sessions are allowed only when task metadata permits them and each has
 its own lease. Parallel write branches may be prepared only when dependency/concurrency metadata
@@ -338,9 +350,10 @@ Use `technical-writer` for substantial documentation work.
 Treat schema migrations, deployment configuration and infrastructure changes as
 production-sensitive.
 
-Repository-specific release entry: product work is accumulated on permanent `dev`; every new
-production revision must enter remote `master` only as the result of a checked pull request from
-`dev` (or a narrowly justified temporary hotfix/recovery branch). Direct pushes, force-pushes and
+Repository-specific release entry: product work is implemented in task branches/worktrees and
+serially integrated into permanent `dev`; every new production revision must enter remote `master`
+only as the result of a checked pull request from `dev` (or a narrowly justified temporary
+hotfix/recovery branch). Direct pushes, force-pushes and
 branch deletion are prohibited by the `master` ruleset. The required post-merge CI run intentionally starts
 `.github/workflows/deploy.yml` through `workflow_run`; the workflow additionally verifies that the
 exact SHA is associated with a merged pull request into `master` and is still the current
@@ -349,13 +362,15 @@ migrations, blue/green switch, smoke checks and automatic failure rollback conti
 separate human approval. The `production` environment must therefore not require reviewers or a wait
 timer. Manual workflow dispatch is not part of the normal release path.
 
-For an `AUTO_RELEASE_ELIGIBLE` task, no additional owner prompt is required for push, PR creation,
-checked exact-head merge or the resulting automatic production deployment. Eligibility requires a
+For an `AUTO_RELEASE_ELIGIBLE` task, no additional owner prompt is required for task branch push,
+task PR serial integration, release PR creation, checked exact-head merge or the resulting automatic
+production deployment. Eligibility requires a
 tracked logical commit, completed implementation/review/QA/final verification, zero unresolved
 `BLOCKER`, `HIGH` and `MEDIUM`, synchronized findings, current `master` ancestry in `dev`, a clean
 scoped worktree and no mandatory owner/human/visual gate. The agent must monitor required check
-`checks`, post-merge CI and deployment to terminal success, then fast-forward/sync `dev` to the new
-`master`. Any failed gate stops the backlog sequence fail-closed.
+`checks`, exact merged-dev push CI, post-merge CI and deployment to terminal success. The narrow
+deployed-sync GitHub App then fast-forwards `dev` to the exact successful current `master`; ordinary
+direct user/PAT push remains forbidden. Any failed gate stops the backlog sequence fail-closed.
 
 Any exceptional operation that bypasses this path—history rewrite, direct/force push, manual
 production command, infrastructure recovery or deployment of a SHA other than the current merged
