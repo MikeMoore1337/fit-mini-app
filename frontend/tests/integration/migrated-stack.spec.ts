@@ -14,15 +14,8 @@ test('migrated PostgreSQL serves a real browser nutrition transaction and idempo
   const devLogin = page.getByRole('region', { name: 'Локальный режим разработки' });
   await expect(devLogin).toBeVisible();
   await devLogin.getByRole('button', { name: 'Клиент', exact: true }).click();
-  await page.getByRole('heading', { name: /Какая у вас главная цель\?|Сегодня/ }).waitFor();
-  if (await page.getByRole('heading', { name: 'Какая у вас главная цель?' }).isVisible()) {
-    await page.getByLabel(/^Поддерживать форму/).check();
-    await page.getByRole('button', { name: 'Продолжить' }).click();
-    await expect(page.getByRole('heading', { name: 'С чего хотите начать?' })).toBeVisible();
-    await page.getByRole('button', { name: /Настроить питание/ }).click();
-  } else {
-    await page.goto('/app?section=nutrition');
-  }
+  await page.getByRole('heading', { level: 1, name: /^Сегодня ·/ }).waitFor();
+  await page.goto('/app?section=nutrition');
   await expect(page).toHaveURL(/\/app\?section=nutrition$/);
   await expect(page.getByRole('heading', { name: 'Питание', exact: true })).toBeVisible();
 

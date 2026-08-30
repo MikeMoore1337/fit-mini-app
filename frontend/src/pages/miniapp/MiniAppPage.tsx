@@ -98,6 +98,11 @@ function requestedNutritionDate(search: string): string | undefined {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined;
 }
 
+function requestedProgramStart(search: string): 'create' | 'templates' | null {
+  const value = new URLSearchParams(search).get('start');
+  return value === 'create' || value === 'templates' ? value : null;
+}
+
 function requestedProgressReturn(search: string): string | undefined {
   const value = new URLSearchParams(search).get('return_to');
   if (!value) return undefined;
@@ -239,6 +244,7 @@ export default function MiniAppPage() {
     );
   }, [toast]);
   const role = user?.is_coach ? 'Тренер' : 'Клиент';
+  const programStart = section === 'programs' ? requestedProgramStart(search) : null;
   const profileReadiness = programProfileReadiness(user?.profile);
   const profileFormKey = JSON.stringify([
     user?.profile?.full_name,
@@ -351,8 +357,14 @@ export default function MiniAppPage() {
             )}
             {section === 'programs' && (
               <>
-                <TemplatesList />
-                <ProgramBuilder />
+                <TemplatesList
+                  key={programStart === 'templates' ? 'templates-start' : 'templates-default'}
+                  defaultLibraryOpen={programStart === 'templates'}
+                />
+                <ProgramBuilder
+                  key={programStart === 'create' ? 'create-start' : 'create-default'}
+                  defaultOpen={programStart === 'create'}
+                />
               </>
             )}
             {section === 'catalog' && <ExerciseCatalog canCreate={Boolean(user?.is_coach)} />}

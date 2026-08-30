@@ -176,7 +176,7 @@ describe('DemoCabinet preview', () => {
     expect(
       screen.getByText('Подготовленный пример останется в демо.', { exact: false }),
     ).toBeVisible();
-    const login = screen.getByRole('link', { name: 'Войти и начать настройку' });
+    const login = screen.getByRole('link', { name: 'Войти в приложение' });
     expect(login).toHaveAttribute(
       'href',
       '/login?next=%2Fapp&from=demo&scenario=nutrition&cabinet=1&section=nutrition',

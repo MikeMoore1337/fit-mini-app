@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../shared/api/client';
 import type { ProgramTemplate } from '../../shared/api/types';
@@ -76,7 +76,7 @@ function programKind(item: ProgramTemplate, currentUserId?: number): string {
   return 'Шаблон';
 }
 
-export function TemplatesList() {
+export function TemplatesList({ defaultLibraryOpen = false }: { defaultLibraryOpen?: boolean }) {
   const { toast, confirm } = useFeedback();
   const { user, reloadUser } = useAuth();
   const queryClient = useQueryClient();
@@ -212,6 +212,18 @@ export function TemplatesList() {
         !item.is_active_for_current_user &&
         (item.is_example || (item.owner_user_id !== user?.id && !item.can_edit)),
     ) ?? [];
+
+  useEffect(() => {
+    if (!defaultLibraryOpen || templates.isLoading) return;
+    const frame = window.requestAnimationFrame(() => {
+      const target = document.getElementById('program-library');
+      if (!(target instanceof HTMLDetailsElement)) return;
+      target.open = true;
+      target.scrollIntoView({ block: 'start' });
+      target.querySelector<HTMLElement>(':scope > summary')?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [defaultLibraryOpen, templates.isLoading]);
 
   const renderTemplate = (item: ProgramTemplate) => (
     <article className="program-template-card" key={item.id}>
@@ -365,6 +377,7 @@ export function TemplatesList() {
         onEditCopy={editCopy}
       />
       <Card
+        defaultOpen={defaultLibraryOpen}
         id="program-library"
         title="Программы и шаблоны"
         description="Ваши заготовки и готовые варианты для быстрого запуска."

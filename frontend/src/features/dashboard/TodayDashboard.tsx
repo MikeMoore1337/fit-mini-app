@@ -510,16 +510,16 @@ function WorkoutOverview({
           <AppLink
             className="button-link"
             onClick={() => trackPrimaryAction('programs')}
-            to="/app?section=programs"
+            to="/app?section=programs&start=create"
           >
-            Создать программу
+            Создать свою программу
           </AppLink>
-          <AppLink className="button-link secondary-link" to="/app?section=nutrition">
-            Записать питание
+          <AppLink
+            className="button-link secondary-link"
+            to="/app?section=programs&start=templates"
+          >
+            Выбрать готовую
           </AppLink>
-          <Button fullWidth variant="secondary" type="button" onClick={onAddActivity}>
-            Добавить активность
-          </Button>
         </div>
       </>
     );
@@ -734,10 +734,14 @@ export function TodayDashboard() {
   const profileMissing = useMemo(
     () =>
       Boolean(
-        user?.profile &&
-        (!user.profile.level || !user.profile.workouts_per_week || !user.profile.height_cm),
+        user &&
+        (!user.profile ||
+          !user.profile.goal ||
+          !user.profile.level ||
+          !user.profile.workouts_per_week ||
+          !user.profile.height_cm),
       ),
-    [user?.profile],
+    [user],
   );
   const start = useMutation({
     mutationFn: (workoutId: number) =>
@@ -948,10 +952,10 @@ export function TodayDashboard() {
         <aside className="today-profile-nudge">
           <div>
             <strong>Сделайте рекомендации точнее</strong>
-            <span>Дополните уровень, рост и желаемую частоту тренировок в профиле.</span>
+            <span>Дополните цель, уровень, рост и желаемую частоту тренировок в профиле.</span>
           </div>
-          <AppLink className="today-text-link" to="/app?section=profile">
-            Дополнить профиль
+          <AppLink className="today-text-link" to="/app?section=profile#profile-fitness">
+            Заполнить профиль
           </AppLink>
         </aside>
       )}

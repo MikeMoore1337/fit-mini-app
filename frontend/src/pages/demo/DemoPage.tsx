@@ -50,7 +50,8 @@ function DemoLoginAction({ scenario }: { scenario: DemoScenario }) {
         <p>Продолжить после демо</p>
         <h3 id={`demoConversion-${scenario}`}>Начните с чистого профиля</h3>
         <span>
-          Демо-изменения не переносятся. После входа начнётся обычная настройка приложения.
+          Демо-изменения не переносятся. После входа приложение откроется сразу, а профиль можно
+          заполнить позже.
         </span>
       </div>
       <AppLink
@@ -64,7 +65,7 @@ function DemoLoginAction({ scenario }: { scenario: DemoScenario }) {
           );
         }}
       >
-        Войти и начать настройку
+        Войти в приложение
       </AppLink>
     </section>
   );
