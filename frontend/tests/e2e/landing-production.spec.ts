@@ -6,8 +6,15 @@ const captureTask109 =
       process?: { env?: Record<string, string | undefined> };
     }
   ).process?.env?.YFC_CAPTURE_TASK_109 === '1';
+const captureTelegramAccess =
+  (
+    globalThis as typeof globalThis & {
+      process?: { env?: Record<string, string | undefined> };
+    }
+  ).process?.env?.YFC_CAPTURE_TELEGRAM_ACCESS === '1';
 const captureEvidence =
   captureTask109 ||
+  captureTelegramAccess ||
   (
     globalThis as typeof globalThis & {
       process?: { env?: Record<string, string | undefined> };
@@ -15,7 +22,9 @@ const captureEvidence =
   ).process?.env?.YFC_CAPTURE_TASK_73A === '1';
 const screenshotRoot = captureTask109
   ? '../.artifacts/screenshots/task-109/final'
-  : '../.artifacts/screenshots/task-73a/final';
+  : captureTelegramAccess
+    ? '../.artifacts/screenshots/landing-telegram-access'
+    : '../.artifacts/screenshots/task-73a/final';
 
 async function openLanding(page: Page, theme: 'light' | 'dark') {
   await page.goto('/', { waitUntil: 'domcontentloaded' });
@@ -123,10 +132,19 @@ test('landing keeps a minimal premium product story across themes and viewports'
         page.locator('.landing-contact').getByRole('link', { name: 'Попробовать демо' }),
       ).toHaveAttribute('href', '/demo?cabinet=1&scenario=self_training&section=today');
       await expect(
-        page.getByRole('link', { name: 'Открыть приложение в Telegram' }),
+        page.locator('.landing-continuity__copy').getByRole('link', {
+          name: 'Открыть приложение в Telegram',
+        }),
+      ).toHaveAttribute('href', 'https://t.me/your_fitness_coach_bot?startapp');
+      await expect(
+        page.locator('.landing-hero').getByRole('link', { name: 'Открыть в Telegram' }),
       ).toHaveAttribute('href', 'https://t.me/your_fitness_coach_bot?startapp');
 
       const footerLinks = page.locator('.landing-footer');
+      await expect(footerLinks.getByRole('link', { name: 'Открыть в Telegram' })).toHaveAttribute(
+        'href',
+        'https://t.me/your_fitness_coach_bot?startapp',
+      );
       await expect(
         footerLinks.getByRole('link', { name: 'Telegram-канал о фитнесе и здоровье' }),
       ).toHaveAttribute('href', 'https://t.me/your_fitness_news');
@@ -136,6 +154,13 @@ test('landing keeps a minimal premium product story across themes and viewports'
       await expect(footerLinks.getByRole('link', { name: 'Поддержка', exact: true })).toHaveCount(
         0,
       );
+      await expect(footerLinks.getByRole('link', { name: 'Поддержка в Telegram' })).toHaveAttribute(
+        'href',
+        'https://t.me/your_fitness_coach_bot?start=support',
+      );
+      await expect(
+        page.locator('.landing-header').getByRole('link', { name: /Telegram/i }),
+      ).toHaveCount(0);
       await expect(page.locator('.landing-hero-scene img')).toHaveCount(2);
       await expectNoHorizontalOverflow(page, viewport.width);
 
@@ -436,6 +461,21 @@ test('keyboard, menu, FAQ and canonical public actions stay operable', async ({ 
   await page.keyboard.press('Enter');
   await expect(page.locator('#landing-content')).toBeFocused();
 
+  for (const telegramAction of [
+    page.locator('.landing-hero__telegram-link'),
+    page.locator('.landing-continuity__action'),
+    page.locator('.landing-footer__telegram-app'),
+  ]) {
+    await telegramAction.focus();
+    await expect(telegramAction).toBeFocused();
+    expect(
+      await telegramAction.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return style.outlineStyle !== 'none' && Number.parseFloat(style.outlineWidth) >= 2;
+      }),
+    ).toBe(true);
+  }
+
   const menu = page.getByRole('button', { name: 'Открыть меню' });
   await menu.click();
   await expect(page.getByRole('navigation', { name: 'Навигация по странице' })).toBeVisible();
@@ -456,6 +496,8 @@ test('keyboard, menu, FAQ and canonical public actions stay operable', async ({ 
 
   const mobileReadability = await page.evaluate(() => {
     const linkSelectors = [
+      '.landing-hero__telegram-link',
+      '.landing-continuity__action',
       '.landing-core__features a',
       '.landing-core__self-link',
       '.landing-assurance__details nav a',
@@ -554,6 +596,14 @@ test('captures the owner-review packet when requested', async ({ page, browser }
     await expectLandingReady(page);
     await settleForScreenshot(page);
     await page.screenshot({ path: `${screenshotRoot}/desktop-1440-${theme}-hero.png` });
+    if (captureTelegramAccess) {
+      await page.locator('.landing-assurance__platform').screenshot({
+        path: `${screenshotRoot}/desktop-1440-${theme}-telegram-platform.png`,
+      });
+      await page.locator('.landing-footer').screenshot({
+        path: `${screenshotRoot}/desktop-1440-${theme}-footer.png`,
+      });
+    }
     await loadAllProductProofs(page);
     await page.locator('#product').screenshot({
       path: `${screenshotRoot}/desktop-1440-${theme}-product.png`,
@@ -577,6 +627,14 @@ test('captures the owner-review packet when requested', async ({ page, browser }
     await expectLandingReady(page);
     await settleForScreenshot(page);
     await page.screenshot({ path: `${screenshotRoot}/mobile-390-${theme}-hero.png` });
+    if (captureTelegramAccess) {
+      await page.locator('.landing-assurance__platform').screenshot({
+        path: `${screenshotRoot}/mobile-390-${theme}-telegram-platform.png`,
+      });
+      await page.locator('.landing-footer').screenshot({
+        path: `${screenshotRoot}/mobile-390-${theme}-footer.png`,
+      });
+    }
     if (captureTask109) {
       await page.locator('.landing-hero').screenshot({
         path: `${screenshotRoot}/mobile-390-${theme}-hero-section.png`,
