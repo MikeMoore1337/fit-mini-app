@@ -667,6 +667,18 @@ async def run_until_stopped(
             await asyncio.wait_for(stop_requested.wait(), timeout=settings.worker_poll_seconds)
 
 
+async def refresh_worker_heartbeat(
+    stop_requested: asyncio.Event,
+    *,
+    interval_seconds: float = 30,
+) -> None:
+    """Keep health tied to event-loop liveness while long async provider calls run."""
+    while not stop_requested.is_set():
+        WORKER_HEARTBEAT_PATH.touch()
+        with contextlib.suppress(TimeoutError):
+            await asyncio.wait_for(stop_requested.wait(), timeout=interval_seconds)
+
+
 async def main() -> None:
     configure_logging(
         debug=settings.app_debug,
@@ -696,12 +708,17 @@ async def main() -> None:
     for signal_name in (signal.SIGTERM, signal.SIGINT):
         loop.add_signal_handler(signal_name, request_stop)
     logger.info("worker_started")
-    async with httpx.AsyncClient(timeout=15) as preflight_client:
-        news_publication_ready = await check_news_channel_rights(preflight_client)
-    await run_until_stopped(
-        stop_requested,
-        news_publication_ready=news_publication_ready,
-    )
+    heartbeat_task = asyncio.create_task(refresh_worker_heartbeat(stop_requested))
+    try:
+        async with httpx.AsyncClient(timeout=15) as preflight_client:
+            news_publication_ready = await check_news_channel_rights(preflight_client)
+        await run_until_stopped(
+            stop_requested,
+            news_publication_ready=news_publication_ready,
+        )
+    finally:
+        stop_requested.set()
+        await heartbeat_task
     logger.info("worker_stopped")
 
 

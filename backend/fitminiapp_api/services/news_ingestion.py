@@ -784,7 +784,8 @@ def prohibited_flags(text: str) -> list[str]:
 
 def _candidate_ref(item: ParsedNewsItem) -> str:
     identity = item.external_id.strip() or item.canonical_url
-    return hashlib.sha256(identity.encode("utf-8", errors="replace")).hexdigest()[:16]
+    digest = hashlib.sha256(identity.encode("utf-8", errors="replace")).hexdigest()[:16]
+    return f"candidate:{digest}"
 
 
 def _log_candidate(

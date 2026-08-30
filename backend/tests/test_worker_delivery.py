@@ -657,3 +657,27 @@ def test_worker_finishes_current_cycle_before_graceful_stop(
     asyncio.run(scenario())
 
     assert events == ["cycle:True"]
+
+
+def test_worker_heartbeat_refreshes_during_long_async_cycle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    touches = 0
+
+    async def scenario() -> None:
+        nonlocal touches
+        stop_requested = asyncio.Event()
+
+        class HeartbeatPath:
+            def touch(self) -> None:
+                nonlocal touches
+                touches += 1
+                if touches == 2:
+                    stop_requested.set()
+
+        monkeypatch.setattr(worker, "WORKER_HEARTBEAT_PATH", HeartbeatPath())
+        await worker.refresh_worker_heartbeat(stop_requested, interval_seconds=0.001)
+
+    asyncio.run(scenario())
+
+    assert touches == 2
