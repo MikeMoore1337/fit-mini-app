@@ -90,6 +90,7 @@ export async function startBarcodeScanner({
         if (!active) return;
         try {
           const found = await detector.detect(video);
+          if (!active) return;
           for (const candidate of found) {
             const value = normalizeDetectedBarcode(
               candidate.rawValue,

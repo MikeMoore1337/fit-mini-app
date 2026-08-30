@@ -170,7 +170,7 @@ export function BarcodeLookup({
           stopCamera();
         },
       });
-      if (!streamRef.current) {
+      if (cameraAttemptRef.current !== attempt || streamRef.current !== stream) {
         scanner.stop();
         return;
       }

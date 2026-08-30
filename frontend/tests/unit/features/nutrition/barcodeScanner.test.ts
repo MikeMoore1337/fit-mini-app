@@ -112,6 +112,43 @@ describe('barcode scanner strategy', () => {
     expect(onDetected).toHaveBeenCalledWith('012345000065');
   });
 
+  it('ignores a native detection that resolves after the session stops', async () => {
+    let scheduled: FrameRequestCallback | undefined;
+    let resolveDetection: ((barcodes: Array<{ rawValue: string }>) => void) | undefined;
+    const pendingDetection = new Promise<Array<{ rawValue: string }>>((resolve) => {
+      resolveDetection = resolve;
+    });
+    vi.stubGlobal(
+      'requestAnimationFrame',
+      vi.fn((callback: FrameRequestCallback) => {
+        scheduled = callback;
+        return 19;
+      }),
+    );
+    Object.defineProperty(globalThis, 'BarcodeDetector', {
+      configurable: true,
+      value: class {
+        detect = vi.fn(() => pendingDetection);
+      },
+    });
+    const onDetected = vi.fn(() => true);
+
+    const session = await startBarcodeScanner({
+      stream,
+      video,
+      onDetected,
+      onFatalError: vi.fn(),
+    });
+    scheduled?.(0);
+    session.stop();
+    await vi.waitFor(() => expect(cancelAnimationFrame).toHaveBeenCalledWith(19));
+    resolveDetection?.([{ rawValue: '4006381333931' }]);
+    await pendingDetection;
+
+    expect(onDetected).not.toHaveBeenCalled();
+    expect(requestAnimationFrame).toHaveBeenCalledOnce();
+  });
+
   it('lazy-loads the local ZXing path without BarcodeDetector and retries decode misses', async () => {
     const onDetected = vi.fn(() => true);
     const onFatalError = vi.fn();

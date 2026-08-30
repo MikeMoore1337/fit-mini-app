@@ -68,6 +68,7 @@ describe('BarcodeLookup camera fallback', () => {
   beforeEach(() => {
     apiMock.mockReset();
     scannerMock.mockReset();
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
     Object.defineProperty(globalThis, 'BarcodeDetector', { configurable: true, value: undefined });
     vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue();
   });
@@ -82,6 +83,7 @@ describe('BarcodeLookup camera fallback', () => {
     });
     Object.defineProperty(globalThis, 'BarcodeDetector', { configurable: true, value: undefined });
     if (originalVisibility) Object.defineProperty(document, 'visibilityState', originalVisibility);
+    else Reflect.deleteProperty(document, 'visibilityState');
   });
 
   it('offers a lazy local decoder without BarcodeDetector and selects the scanned local food', async () => {
@@ -171,6 +173,48 @@ describe('BarcodeLookup camera fallback', () => {
     await waitFor(() => expect(trackStop).toHaveBeenCalledOnce());
     expect(scannerMock).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Сканировать камерой' })).toBeEnabled();
+  });
+
+  it('discards stale scanner startup after a newer camera attempt becomes active', async () => {
+    const firstTrackStop = vi.fn();
+    const secondTrackStop = vi.fn();
+    const firstStream = {
+      getTracks: () => [{ stop: firstTrackStop }],
+    } as unknown as MediaStream;
+    const secondStream = {
+      getTracks: () => [{ stop: secondTrackStop }],
+    } as unknown as MediaStream;
+    let mediaAttempt = 0;
+    installTouchCamera(async () => (mediaAttempt++ === 0 ? firstStream : secondStream));
+    let resolveFirstScanner:
+      ((scanner: { strategy: 'native'; stop: () => void }) => void) | undefined;
+    const firstScanner = new Promise<{ strategy: 'native'; stop: () => void }>((resolve) => {
+      resolveFirstScanner = resolve;
+    });
+    const firstScannerStop = vi.fn();
+    const secondScannerStop = vi.fn();
+    scannerMock
+      .mockImplementationOnce(() => firstScanner)
+      .mockResolvedValueOnce({ strategy: 'zxing', stop: secondScannerStop });
+    renderLookup();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Сканировать камерой' }));
+    await waitFor(() => expect(scannerMock).toHaveBeenCalledOnce());
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+    act(() => document.dispatchEvent(new Event('visibilitychange')));
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+    fireEvent.click(screen.getByRole('button', { name: 'Сканировать камерой' }));
+    expect(
+      await screen.findByText('Камера активна. Код распознаётся на устройстве.'),
+    ).toBeVisible();
+
+    await act(async () => resolveFirstScanner?.({ strategy: 'native', stop: firstScannerStop }));
+    await waitFor(() => expect(firstScannerStop).toHaveBeenCalledOnce());
+    fireEvent.click(screen.getByRole('button', { name: 'Остановить камеру' }));
+
+    expect(secondScannerStop).toHaveBeenCalledOnce();
+    expect(firstTrackStop).toHaveBeenCalledOnce();
+    expect(secondTrackStop).toHaveBeenCalledOnce();
   });
 
   it('keeps manual GTIN lookup primary when camera capture is unavailable', async () => {
