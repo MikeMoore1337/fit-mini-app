@@ -85,6 +85,18 @@ Current AppShell avatar fallback + provider photo + private media/export/delete 
 Current Progress/report services + TimeSeriesChart/DataConfidence + DESIGN_V2_1/Pulse
   -> 111 Progress bento dashboard + 1/7/30/90/365/custom periods [OWNER-SELECTED, PENDING; NOT CURRENT]
 
+Current Git branch/worktree policy + CI + dev/master Rulesets + observed concurrent write/push race
+  -> 127 Task branches/worktrees + serialized dev integration queue [OWNER-SELECTED, P0, PENDING]
+       -> owner launch
+       -> isolated Task 127 branch/worktree
+       -> controller + atomic leases + task PR -> dev checks
+       -> one-at-a-time dev integration + release freeze + dev update provenance
+       -> owner checkpoint for live Ruleset/merge-queue/sync-actor changes
+       -> read-back verification + synthetic two-task rehearsal
+
+Task `127` не зависит от product Task `119` и не меняет product dependency graph. До её завершения
+параллельные write tasks запрещены; действует прежний single-writer последовательный режим.
+
 Exercise catalog expansion 120A -> 120B -> 120C -> 120D
   + successful AI beta foundation 87 -> 88 -> 89 -> 90A -> 90B
   -> 126 umbrella

@@ -3,7 +3,8 @@
 ## Completed
 
 `00-80`, включая `69B`, `73A`, `74A` и предшествующие буквенные подзадачи, а также
-owner-selected Telegram tasks `103-106`, а также owner-approved UX reset gate `115A`.
+owner-selected Telegram tasks `103-106`, tasks `109/112`, owner-approved UX reset gate `115A` и
+UX-reset implementation tasks `116-118`.
 Task-файлы находятся в локальном owner-only `tasks/done/`.
 
 ## Current
@@ -12,7 +13,8 @@ Task-файлы находятся в локальном owner-only `tasks/done/
 113A Owner UX Stabilization [COMPLETED, OWNER ACCEPTED]
   -> 114 Nutrition search/barcode production regression [COMPLETED, OWNER APPROVED, RELEASE AUTHORIZED]
   -> 115A UX audit + IA + compactness/disclosure prototype/spec [COMPLETED, OWNER APPROVED: COMMAND STACK]
-  -> 116 Core navigation + Today quick start [NEXT, NOT STARTED]
+  -> 116 [COMPLETED] -> 117 [COMPLETED] -> 118 [COMPLETED]
+  -> 119 Type-aware workout logging [NEXT PRODUCT TASK, NOT STARTED]
 ```
 
 Tasks `75C`, `76` и `76A` завершены после применимых owner checkpoints. Task `76A` получила
@@ -25,7 +27,8 @@ feature, а точный trigger contract закреплён в обязател
 branch normalization. Task `113A` выпущена в production, принята владельцем и архивирована;
 production baseline остаётся `DESIGN_V2_1`. Task `114` завершена и архивирована после owner
 approval. Task `115A` завершила isolated UX audit/prototype gate, владелец выбрал `Command Stack`,
-разрешил commit, и task архивирована. Task `116` обозначена следующей, но её lifecycle не начат.
+разрешил commit, и task архивирована. Tasks `116-118` завершены и архивированы. Task `119`
+обозначена следующей product task, но её lifecycle не начат.
 
 Conditional release sequence:
 
@@ -37,9 +40,9 @@ Conditional release sequence:
 ```
 
 Release/smoke Task `113A` завершены, а точная owner-команда
-`Stabilization принята. Можно переходить к Task 114.` получена `2026-08-30`. Tasks `114` и `115A`
-затем запускались отдельными командами, завершены и приняты владельцем; Task `116` не запускается
-автоматически.
+`Stabilization принята. Можно переходить к Task 114.` получена `2026-08-30`. Tasks `114`, `115A`
+и `116-118` затем запускались отдельными командами, завершены и архивированы; Task `119` не
+запускается автоматически.
 Trigger-gated tasks сохраняют собственные gates. Никакая task не запускает следующую автоматически.
 
 ## Текущий UX-reset cycle
@@ -49,7 +52,8 @@ Canonical owner-driven порядок:
 ```text
 113 [COMPLETED] -> 113A [COMPLETED, OWNER ACCEPTED] -> 114 [COMPLETED, OWNER APPROVED]
 -> 115A [COMPLETED, OWNER APPROVED: COMMAND STACK]
--> 116 [NEXT, NOT STARTED] -> 117 -> 118 -> 119 -> 120A -> 120B -> 120C -> 120D
+-> 116 [COMPLETED] -> 117 [COMPLETED] -> 118 [COMPLETED]
+-> 119 [NEXT PRODUCT TASK, NOT STARTED] -> 120A -> 120B -> 120C -> 120D
 -> 121 -> 122 -> 123 -> 81 -> 82 -> 84 -> 124A
 -> OWNER RELEASE APPROVAL -> dev -> master -> production deployment
 -> 124B -> 124C only if BLOCKER/HIGH
@@ -61,7 +65,7 @@ path и входят в `124A` только по отдельному owner ре
 dependency и owner gate своей task; следующая task автоматически не запускается.
 
 Owner-selected task `106` завершена и архивирована после owner screenshot approval. Она не изменила
-основную release-последовательность; после закрытия `115A` next/not-started task — `116`.
+основную release-последовательность; после завершения `116-118` next/not-started product task — `119`.
 
 Owner-selected task `107` создана для scheduled regression и закрытых Allure-отчётов на
 `allure.your-fitness-coach.ru`. Она не является current, не меняет UX-reset critical path и требует
@@ -75,11 +79,12 @@ current, не меняет UX-reset critical path и требует отдель
 
 Owner-selected tasks `109-111` созданы вне основной очереди: `109` — factual Landing offer и
 conversion story, `110` — private custom avatar desktop/mobile, `111` — Progress bento dashboard и
-периоды `1/7/30/90/365/custom`. Они не меняют next `116` или UX-reset critical path, не запускаются
-автоматически и требуют отдельных owner запусков; для UI до commit действует screenshot approval.
+периоды `1/7/30/90/365/custom`. Task `109` завершена; `110/111` не меняют next `119` или UX-reset
+critical path, не запускаются автоматически и требуют отдельных owner запусков; для UI до commit
+действует screenshot approval.
 
 Owner-selected umbrella `126` создана вне основной очереди для сценария `камера -> тренажёр ->
-existing exercises -> добавить в программу`. Family не меняет next `116` или UX-reset critical path.
+existing exercises -> добавить в программу`. Family не меняет next `119` или UX-reset critical path.
 Её executable chain: `126A -> owner GO/NARROW GO -> 126B -> 126C`. Task `126A` не может начаться до
 завершения `120D` и successful AI beta foundation `90B`. Tasks `91`, `92A`, `92B`, `94A`, `94B`
 не являются hard dependencies; завершённые `92B/94A/94B` переиспользуются при совместимости.
@@ -89,5 +94,11 @@ Owner-selected task `112` завершена и архивирована вне 
 current-stack zero-downtime deployment contract. После explicit owner approval production revision
 `194cf036` успешно развёрнута через `single-slot` fallback с bounded downtime из-за фактической
 capacity constrained VPS; это не доказательство production blue/green zero observed downtime.
-Task `112` не изменяет текущий UX-reset cycle. Tasks `114` и `115A` завершены отдельно; Task `116`
-не запускается автоматически.
+Task `112` не изменяет текущий UX-reset cycle. Tasks `114`, `115A` и `116-118` завершены отдельно;
+Task `119` не запускается автоматически.
+
+Owner-selected Task `127` создана вне product sequence для перехода на
+`1 task = 1 branch = 1 separate worktree`, integration-only `dev`, atomic session leases и одну
+сериализованную очередь task PR merge в `dev`. Она не запускается автоматически и не меняет scope
+Task `119`. До завершения Task `127` несколько параллельных write-сессий запрещены; допустим только
+прежний строго последовательный single-writer режим.

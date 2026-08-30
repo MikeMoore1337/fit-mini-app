@@ -57,10 +57,13 @@
       compactness/disclosure specs, три isolated prototype direction и plan для Task `124B`;
       владелец выбрал Direction A `Command Stack`, разрешил commit, task архивирована без
       production implementation/release;
-- [ ] **next, not started:** `116-core-navigation-today-quick-start.md` — требует отдельной команды
-      владельца и не запускается автоматически;
+- [x] tasks `116-core-navigation-today-quick-start.md`,
+      `117-first-run-without-mandatory-onboarding.md` и
+      `118-simple-training-program-flow.md` завершены и архивированы отдельными task lifecycle;
+- [ ] **next product task, not started:** `119-type-aware-workout-logging.md` — требует отдельной
+      команды владельца и не запускается автоматически;
 - [ ] owner-driven sequence сохраняется:
-      `114 -> 115A [COMPLETED, OWNER APPROVED] -> 116..123 -> 81 -> 82 -> 84`
+      `114 -> 115A -> 116 -> 117 -> 118 [COMPLETED] -> 119..123 -> 81 -> 82 -> 84`
       `-> 124A -> owner release approval -> 124B -> conditional 124C`;
 - [x] owner-selected task `106-landing-telegram-product-news-links.md` завершена вне основной
       очереди и не изменила порядок `78-101`.
@@ -75,9 +78,10 @@
       согласие на обработку ПД и server-side auth-gate для Web/TMA/Bot; до screenshot approval
       commit/archive запрещены. Запуск lifecycle, production activation и external legal actions
       не авторизованы созданием task.
-- [ ] owner-selected task `109-landing-value-proposition-conversion-story.md` создана вне основной
-      очереди для factual оффера и conversion story без сравнений, fake proof и неподтверждённых
-      claims; security/trust copy допускается только из approved baseline task `108`.
+- [x] owner-selected task `109-landing-value-proposition-conversion-story.md` завершена и
+      архивирована вне основной очереди: factual оффер и conversion story не используют сравнения,
+      fake proof или неподтверждённые claims; security/trust copy остаётся ограничена approved
+      baseline task `108`.
 - [ ] owner-selected task `110-user-custom-avatar-upload.md` создана вне основной очереди для
       private custom avatar на desktop/mobile с безопасной обработкой, export/delete и fallback
       `custom -> provider -> emoji`; migration/deploy требуют отдельного запуска/approval.
@@ -97,6 +101,12 @@
       до завершения exercise catalog `120D` и successful AI beta foundation `90B`; после feasibility
       возможны только owner-approved `126B -> 126C`. Tasks `91/92A/92B/94A/94B` не hard dependencies,
       но compatible artifacts `92B/94A/94B` переиспользуются, если к тому моменту существуют.
+- [ ] owner-selected task `127-task-branches-worktrees-serialized-dev-integration.md` создана по
+      прямому запросу владельца после фактического concurrent write/push race. Она закрепляет
+      `1 task = 1 branch = 1 worktree`, integration-only `dev`, atomic leases, task PR в `dev`,
+      единую сериализованную integration queue, provenance/recovery и безопасный `master -> dev`
+      sync. Task `127` не запускается автоматически и не заменяет отдельный запуск product Task
+      `119`; до завершения `127` несколько параллельных write-сессий не считаются безопасными.
 
 Не выполнять повторно tasks `00-80`, включая `69B`, `73A`, task `74A` и tasks `103-106`.
 Task `77` закрыта не как factual real-user validation, а по явному owner decision принять отсутствие
@@ -106,10 +116,10 @@ Task `77` закрыта не как factual real-user validation, а по яв�
 branch normalization owner вставил и принял Task `113A`; Task `114` завершена и архивирована после
 owner approval, production release явно разрешён.
 `DESIGN_V2_1` с owner-approved bounded Pulse pilot остаётся production baseline. Permanent branch
-source разработки — `dev`, production source — protected `master`. Tasks `114` и `115A` завершены
-и архивированы после owner acceptance; после закрытия Task `115A` следующей обозначена Task `116`,
-но её lifecycle не запускается без отдельной команды владельца.
+source разработки — `dev`, production source — protected `master`. Tasks `114`, `115A` и `116-118`
+завершены и архивированы; фактическая next product task — `119`, но её lifecycle не запускается без
+отдельной команды владельца.
 Umbrella `100` отдельно не выполняется; `100A` не назначена без собственного Trigger, dependency
-и owner decision. Tasks `107-111` и family `126` также не запускаются автоматически. Завершённая task `112` не
-изменила их порядок. Другие pending tasks
-автоматически не реализуются.
+и owner decision. Tasks `107-111`, family `126` и Task `127` также не запускаются автоматически.
+Завершённая task `112` не изменила product order. Другие pending tasks автоматически не
+реализуются.
