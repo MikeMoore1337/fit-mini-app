@@ -144,12 +144,12 @@ describe('barcode scanner strategy', () => {
     expect(onDetected).toHaveBeenCalledWith('012345000065');
   });
 
-  it('falls back to ZXing when a partial native implementation rejects retail formats', async () => {
+  it('falls back to ZXing when native support covers only part of the retail formats', async () => {
     Object.defineProperty(globalThis, 'BarcodeDetector', {
       configurable: true,
       value: class {
         static getSupportedFormats() {
-          return Promise.resolve(['qr_code']);
+          return Promise.resolve(['ean_13']);
         }
       },
     });

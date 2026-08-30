@@ -73,8 +73,8 @@ export async function startBarcodeScanner({
       const supported = Detector.getSupportedFormats
         ? await Detector.getSupportedFormats()
         : NATIVE_FORMATS;
-      const formats = NATIVE_FORMATS.filter((format) => supported.includes(format));
-      if (formats.length > 0) detector = new Detector({ formats });
+      const supportsRetailContract = NATIVE_FORMATS.every((format) => supported.includes(format));
+      if (supportsRetailContract) detector = new Detector({ formats: NATIVE_FORMATS });
     } catch {
       detector = null;
     }
