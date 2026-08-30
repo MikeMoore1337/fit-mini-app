@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState, type ImgHTMLAttributes } from 'react';
-import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
+import {
+  productEventSurface,
+  trackProductEvent,
+  type LandingTelegramPlacement,
+} from '../../shared/analytics/productEvents';
 import {
   appUrlForHostname,
   demoUrlForHostname,
@@ -261,6 +265,12 @@ export default function LandingPage() {
     trackProductEvent({ name: 'landing_app_selected', surface: productEventSurface() });
   const trackDemoSelection = () =>
     trackProductEvent({ name: 'landing_demo_selected', surface: productEventSurface() });
+  const trackTelegramSelection = (placement: LandingTelegramPlacement) =>
+    trackProductEvent({
+      name: 'landing_telegram_selected',
+      surface: productEventSurface(),
+      placement,
+    });
 
   return (
     <PublicShell
@@ -335,10 +345,21 @@ export default function LandingPage() {
                 Попробовать демо <Icon name="arrow-right" size={20} />
               </a>
             </div>
-            <p className="landing-hero__platform-note">
-              <Icon name="web-app" size={16} /> Web и Telegram Mini App · один аккаунт и общие
-              данные
-            </p>
+            <div className="landing-hero__platform">
+              <p className="landing-hero__platform-note">
+                <Icon name="web-app" size={16} /> Web и Telegram Mini App · один аккаунт и общие
+                данные
+              </p>
+              <a
+                className="landing-hero__telegram-link"
+                href={PUBLIC_TELEGRAM_LINKS.miniApp}
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => trackTelegramSelection('hero')}
+              >
+                Открыть в Telegram <Icon name="external-link" size={16} />
+              </a>
+            </div>
           </div>
 
           <div
@@ -521,10 +542,11 @@ export default function LandingPage() {
                 с тренером.
               </p>
               <a
-                className="landing-button landing-button--secondary landing-continuity__action"
+                className="landing-button landing-continuity__action"
                 href={PUBLIC_TELEGRAM_LINKS.miniApp}
                 target="_blank"
                 rel="noreferrer"
+                onClick={() => trackTelegramSelection('continuity')}
               >
                 Открыть приложение в Telegram <Icon name="external-link" size={20} />
               </a>
@@ -650,6 +672,15 @@ export default function LandingPage() {
           <a href="#demo">Условия демо</a>
           <a href="#faq">Вопросы</a>
           <a href="#privacy">Приватность и данные</a>
+          <a
+            className="landing-footer__telegram-app"
+            href={PUBLIC_TELEGRAM_LINKS.miniApp}
+            target="_blank"
+            rel="noreferrer"
+            onClick={() => trackTelegramSelection('footer')}
+          >
+            Открыть в Telegram <Icon name="external-link" size={16} />
+          </a>
           <a
             className="landing-footer__channel"
             href={PUBLIC_TELEGRAM_LINKS.news}

@@ -313,9 +313,25 @@ user food и переводит к выбору порции. Повторный
 объединяет brand и amount, сохраняет видимые КБЖУ и размещает repeat/edit/delete в компактных
 44 px icon controls с полными accessible names; touch targets не уменьшаются ради плотности.
 
-Штрихкод можно ввести вручную на любом устройстве. Камера используется только при наличии
-`Barcode Detection API` и `getUserMedia`; отказ в разрешении, отсутствие камеры и неподдерживаемый
-браузер возвращают пользователя к ручному вводу. Отдельного server scanning path для Telegram нет.
+Штрихкод можно ввести вручную на любом устройстве. На touch-first surface камера доступна при
+наличии `getUserMedia`: нативный `BarcodeDetector` используется как fast path, а при его отсутствии
+лениво загружается локальный `@zxing/browser` decoder. Оба пути ограничены EAN-13, EAN-8, UPC-A,
+UPC-E и ITF с последующей общей GTIN-проверкой; GTIN-14 всегда можно ввести вручную. Video frames
+остаются в браузере и не отправляются provider или отдельному server scanning endpoint. Поток и
+decoder останавливаются при закрытии, unmount и уходе document в background; отказ в разрешении,
+отсутствие камеры или ошибка decoder сохраняют ручной ввод и retry.
+
+Выбор fallback зафиксирован сравнением актуальных вариантов. `@zxing/browser` +
+`@zxing/library` поддерживают нужные retail formats, работают с `MediaStream`, имеют MIT и
+Apache-2.0 лицензии и поставляются отдельным lazy JavaScript chunk без worker/WASM/CSP exception.
+`barcode-detector`/`zxing-wasm` также поддерживают эти форматы и активно развиваются, но reader
+добавляет примерно 1 MiB WASM и потребовал бы разрешить `'wasm-unsafe-eval'` в действующем CSP.
+Для текущего ограниченного scanner contract это лишние bundle/security/runtime границы, поэтому
+WASM-вариант не выбран. Основания: [MDN BarcodeDetector](https://developer.mozilla.org/en-US/docs/Web/API/BarcodeDetector/detect),
+[Can I Use BarcodeDetector](https://caniuse.com/mdn-api_barcodedetector_detect),
+[`@zxing/browser`](https://github.com/zxing-js/browser),
+[`@zxing/library`](https://github.com/zxing-js/library) и
+[`zxing-wasm`](https://github.com/Sec-ant/zxing-wasm).
 
 Ошибки продуктов, рецептов и дневника используют существующий envelope `{"detail": "..."}`:
 отсутствующие и чужие приватные ресурсы дают `404`, конфликт ключа идемпотентности — `409`,

@@ -5,6 +5,10 @@ import LandingPage, {
   demoUrlForHostname,
   loginUrlForHostname,
 } from '../../../../src/pages/landing/LandingPage';
+import {
+  PRODUCT_EVENT_NAME,
+  type ProductEventEnvelope,
+} from '../../../../src/shared/analytics/productEvents';
 import { NavigationProvider } from '../../../../src/shared/navigation/router';
 
 function renderLanding() {
@@ -113,10 +117,13 @@ describe('LandingPage', () => {
     expect(screen.queryByText(/искусственн.*интеллект|\bai\b/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/отзыв/i)).not.toBeInTheDocument();
 
-    const telegramApp = screen.getByRole('link', { name: 'Открыть приложение в Telegram' });
-    expect(telegramApp).toHaveAttribute('href', 'https://t.me/your_fitness_coach_bot?startapp');
-    expect(telegramApp).toHaveAttribute('target', '_blank');
-    expect(telegramApp).toHaveAttribute('rel', 'noreferrer');
+    const telegramApps = screen.getAllByRole('link', { name: /Открыть.*в Telegram/ });
+    expect(telegramApps).toHaveLength(3);
+    for (const telegramApp of telegramApps) {
+      expect(telegramApp).toHaveAttribute('href', 'https://t.me/your_fitness_coach_bot?startapp');
+      expect(telegramApp).toHaveAttribute('target', '_blank');
+      expect(telegramApp).toHaveAttribute('rel', 'noreferrer');
+    }
 
     const news = screen.getByRole('link', {
       name: 'Telegram-канал о фитнесе и здоровье',
@@ -266,6 +273,27 @@ describe('LandingPage', () => {
     );
     expect(document.querySelector('#privacy')).toBeInTheDocument();
     expect(screen.getByText('Ваши данные остаются под вашим управлением.')).toBeInTheDocument();
+  });
+
+  it('tracks Telegram Mini App selections with their landing placement', () => {
+    const events: ProductEventEnvelope[] = [];
+    const listener = (event: Event) => {
+      events.push((event as CustomEvent<ProductEventEnvelope>).detail);
+    };
+    window.addEventListener(PRODUCT_EVENT_NAME, listener);
+    const { container } = renderLanding();
+
+    fireEvent.click(container.querySelector<HTMLAnchorElement>('.landing-hero__telegram-link')!);
+    fireEvent.click(container.querySelector<HTMLAnchorElement>('.landing-continuity__action')!);
+    fireEvent.click(container.querySelector<HTMLAnchorElement>('.landing-footer__telegram-app')!);
+
+    expect(
+      events
+        .filter((event) => event.name === 'landing_telegram_selected')
+        .map((event) => ('placement' in event ? event.placement : undefined)),
+    ).toEqual(['hero', 'continuity', 'footer']);
+
+    window.removeEventListener(PRODUCT_EVENT_NAME, listener);
   });
 
   it('closes mobile navigation by selection and Escape with focus restoration', () => {

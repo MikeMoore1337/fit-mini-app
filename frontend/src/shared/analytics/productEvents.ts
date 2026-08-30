@@ -13,6 +13,7 @@ export type ProductCoreAction =
   | 'food_logged'
   | 'measurement_logged'
   | 'weekly_review_completed';
+export type LandingTelegramPlacement = 'hero' | 'continuity' | 'footer';
 
 type ContextFreeProductEventName =
   | 'landing_viewed'
@@ -66,6 +67,11 @@ type ContextFreeProductEvent = {
 
 export type ProductEvent =
   | ContextFreeProductEvent
+  | {
+      name: 'landing_telegram_selected';
+      surface: ProductSurface;
+      placement: LandingTelegramPlacement;
+    }
   | {
       name: 'onboarding_next_action_selected';
       surface: ProductSurface;
@@ -202,6 +208,11 @@ const PRODUCT_CORE_ACTIONS = new Set<ProductCoreAction>([
   'measurement_logged',
   'weekly_review_completed',
 ]);
+const LANDING_TELEGRAM_PLACEMENTS = new Set<LandingTelegramPlacement>([
+  'hero',
+  'continuity',
+  'footer',
+]);
 const BASE_EVENT_KEYS = ['name', 'surface'] as const;
 const ENVELOPE_KEYS = ['schema_version', 'environment', 'occurred_at'] as const;
 const PROVIDER_NAME_PATTERN = /^[a-z][a-z0-9_-]{0,63}$/;
@@ -218,6 +229,7 @@ function hasOnlyKeys(value: Record<string, unknown>, allowedKeys: readonly strin
 }
 
 function eventPropertyKeys(name: string): readonly string[] {
+  if (name === 'landing_telegram_selected') return ['placement'];
   if (name === 'onboarding_next_action_selected') return ['next_action'];
   if (name === 'today_primary_action_selected') return ['destination'];
   if (name === 'today_week_navigated') return ['direction'];
@@ -228,6 +240,9 @@ function eventPropertyKeys(name: string): readonly string[] {
 
 function hasValidEventProperties(value: Record<string, unknown>): boolean {
   if (CONTEXT_FREE_EVENT_NAMES.has(value.name as ProductEventName)) return true;
+  if (value.name === 'landing_telegram_selected') {
+    return LANDING_TELEGRAM_PLACEMENTS.has(value.placement as LandingTelegramPlacement);
+  }
   if (value.name === 'onboarding_next_action_selected') {
     return ONBOARDING_NEXT_ACTIONS.has(value.next_action as string);
   }

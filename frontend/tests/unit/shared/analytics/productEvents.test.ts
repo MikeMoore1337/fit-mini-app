@@ -157,6 +157,20 @@ describe('product event contract', () => {
   it('validates constrained event context values and surface combinations', () => {
     expect(
       isProductEvent({
+        name: 'landing_telegram_selected',
+        surface: 'desktop_web',
+        placement: 'continuity',
+      }),
+    ).toBe(true);
+    expect(
+      isProductEvent({
+        name: 'landing_telegram_selected',
+        surface: 'mobile_web',
+        placement: 'header',
+      }),
+    ).toBe(false);
+    expect(
+      isProductEvent({
         name: 'onboarding_next_action_selected',
         surface: 'mobile_web',
         next_action: 'programs',

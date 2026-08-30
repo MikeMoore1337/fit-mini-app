@@ -7,8 +7,8 @@
 ```text
 113 branch normalization [COMPLETED]
   -> 113A Owner UX Stabilization [COMPLETED, OWNER ACCEPTED]
-  -> 114 nutrition/barcode P0 regression [CURRENT, NOT STARTED]
-  -> 115A UX audit + IA + compactness/disclosure prototype/spec
+  -> 114 nutrition/barcode P0 regression [COMPLETED, OWNER APPROVED, RELEASE AUTHORIZED]
+  -> 115A UX audit + IA + compactness/disclosure prototype/spec [CURRENT, NOT STARTED]
   -> OWNER APPROVAL
   -> 116 -> 117 -> 118 -> 119 -> 120A -> 120B -> 120C -> 120D
   -> 121 -> 122 -> 123
@@ -29,8 +29,8 @@ Tasks `85`, `110`, `111` остаются pending вне critical path: соот
 
 После завершения Task `113` source разработки — permanent `dev`, production source — protected
 `master`. Release/smoke Task `113A` завершены, точная owner-команда
-`Stabilization принята. Можно переходить к Task 114.` получена `2026-08-30`. Task `114` остаётся
-`CURRENT, NOT STARTED` до отдельной команды на запуск lifecycle.
+`Stabilization принята. Можно переходить к Task 114.` получена `2026-08-30`. Task `114` затем
+запущена отдельной командой, завершена и принята владельцем; Task `115A` не запускается автоматически.
 
 Tasks `80-101` и их буквенные подзадачи образуют trigger-gated post-release pool. Номер task
 задаёт предпочтительную последовательность реализации, но не отменяет фактический Trigger,
@@ -52,7 +52,8 @@ dependency и отдельное решение владельца.
 | `86` | PWA | Улучшает возврат к тренировке при подтверждённом Web retention gap |
 | `87-91` | AI Coach beta и period insights | Сначала privacy/provider gate, затем grounded core, tools, evals, rollout и bounded report insights |
 | `92A-92B` | Advanced AI | Memory и multiprovider остаются рядом с AI Coach, но запускаются независимо только после evidence beta |
-| `93` | AI-assisted import XLSX/CSV/TXT/DOCX | После AI-кластера объединяет форматы в один безопасный pipeline и создаёт программу только после предпросмотра и подтверждения |
+| `93A` | Deterministic import XLSX/CSV без AI | Даёт раннюю ценность через versioned template и общий безопасный preview/confirm pipeline без provider dependency |
+| `93B` | AI-assisted import XLSX/CSV/TXT/DOCX | Только после evidence `93A`: расширяет поддерживаемые layouts/documents, сохраняя deterministic fallback |
 | `94A-94B` | Распознавание еды по фото | Важная функция после основного AI Coach-кластера: feasibility/eval, затем только подтверждаемый draft |
 | `95A-95B` | Server PDF и внешняя доставка | Нужны только при доказанном gap после in-product handoff `83` |
 | `96` | Wearables discovery | Research-only для конкретного data/platform job |
@@ -62,26 +63,28 @@ dependency и отдельное решение владельца.
 | `100A-100B` | Английская локализация | По решению владельца оставлена в хвосте |
 | `101` | Приватные фотографии прогресса | Последняя очередь; AI/body analysis полностью исключён |
 
-## Почему импорт объединён и поставлен после AI
+## Почему импорт разделён на deterministic baseline и AI enhancement
 
-Прежние tasks `81-program-import-xlsx-csv` и `95-program-import-txt-docx` объединены в task `93`.
-Пользовательский job один и тот же: загрузить существующую программу, проверить распознанную
-структуру и получить редактируемый draft. Формат файла меняет детерминированный extractor, но не
-должен создавать второй продуктовый pipeline.
+Прежние tasks `81-program-import-xlsx-csv` и `95-program-import-txt-docx` сначала были объединены в
+task `93`, а затем декомпозированы в `93A` и `93B`. Пользовательский job и pipeline остаются едиными:
+загрузить существующую программу, проверить распознанную структуру и получить редактируемый draft.
+Этапы разделены по независимой ценности и dependency: canonical XLSX/CSV template полезен без AI,
+тогда как heterogeneous documents требуют отдельного evidence/provider/privacy/cost gate.
 
-AI предлагает нейтральную структуру программы и помогает ранжировать только ограниченный список
-кандидатов упражнений. Поиск кандидатов, пороги, права доступа, валидация и запись остаются
-детерминированными. Неоднозначное упражнение всегда требует ручного выбора; AI-score сам по себе
-не разрешает автоматическое сопоставление или создание canonical exercise.
+`93A` строит upload/security, neutral draft, deterministic matching, preview/resolution и atomic
+confirmed write. `93B` переиспользует этот baseline: AI предлагает нейтральную структуру и помогает
+ранжировать только ограниченный список кандидатов. Права доступа, валидация и запись остаются
+детерминированными; AI-score не разрешает auto-match или создание canonical exercise.
 
 ## Routing rules
 
-- Umbrella `90`, `92`, `94`, `95`, `99`, `100` — coordination contracts, а не executable tasks.
+- Umbrella `90`, `92`, `93`, `94`, `95`, `99`, `100` — coordination contracts, а не executable tasks.
 - Внутри обязательных цепочек соблюдать порядок: `87 -> 88 -> 89 -> 90A -> 90B -> 91`,
   `94A -> 94B`, `95A -> 95B`, `99A -> 99B -> 99C`, `100A -> 100B`.
 - `92A` и `92B` независимы: потребность в memory не доказывает потребность во втором provider.
-- Task `93` запускается после решений AI-кластера `87-92`; optional `92A/92B` могут завершиться
-  `Defer/No-Go` и не блокируют импорт.
+- `93A` не зависит от AI-кластера и запускается только по собственному corpus/evidence/owner Trigger.
+- `93B` требует завершённую `93A`, измеримый gap и compatible AI route; `92A/92B` могут завершиться
+  `Defer/No-Go` и не блокируют AI-assisted import.
 - Food-photo выполняется после основного AI-блока: сначала task `94A`, а task `94B` — только после
   owner `Go/Narrow Go` с зафиксированными thresholds, privacy и cost contract.
 - `83` не заменяет `95B`: первая task создаёт authenticated in-product handoff текущему trainer,
@@ -94,21 +97,21 @@ Owner-selected task `106` завершила discoverability Telegram Mini App, 
 канала на Landing и не изменила порядок `80-101`.
 
 Owner-selected task `107` создана вне pending-последовательности для scheduled regression и
-закрытых Allure-отчётов. Её owner-approved scope не меняет current task `114` или UX-reset path;
+закрытых Allure-отчётов. Её owner-approved scope не меняет current task `115A` или UX-reset path;
 implementation и внешние DNS/Cloudflare/hosting actions требуют отдельного запуска/approval.
 
 Owner-selected task `108` создана вне pending-последовательности для product-wide аудита
 соответствия законодательству РФ и непрерывного legal-impact gate будущих задач. Она не меняет
-current task `114` или UX-reset path; запуск, legal review и любые remediation/external actions
+current task `115A` или UX-reset path; запуск, legal review и любые remediation/external actions
 требуют отдельных owner decisions.
 
 Owner-selected tasks `109-111` также находятся вне pending-последовательности: factual Landing
-offer, private avatar upload и Progress bento dashboard. Они не меняют current task `114` или
+offer, private avatar upload и Progress bento dashboard. Они не меняют current task `115A` или
 UX-reset path, не образуют общую implementation batch и запускаются только отдельными owner
 решениями.
 
 Owner-selected task `112` завершена и архивирована вне pending-последовательности после локального
 review/QA zero-downtime deployment contract. Отдельно разрешённый production rollout revision
 `194cf036` завершён через `single-slot` fallback с bounded downtime и verdict `active`; production
-blue/green zero observed downtime на constrained VPS не заявляется. Current/not started task `114`
-и UX-reset path не изменились.
+blue/green zero observed downtime на constrained VPS не заявляется. После закрытия `114`
+current/not started task — `115A`; UX-reset path не изменился.

@@ -20,7 +20,8 @@
 | `91` | Результат `90B` | | | Rollout получил `Go`, а пользователям нужна интерпретация factual report | | |
 | `92A` memory | Результат `90B` | | | Beta доказала конкретный repeated continuity job | | |
 | `92B` provider routing | Результат `90B` | | | Beta выявила измеримый provider outage/capability/cost gap | | |
-| `93` | Corpus XLSX/CSV/TXT/DOCX и AI decisions `87-92` | | | Файлы дают повторяемую экономию ручного переноса; extraction и exercise-matching evals проходят заданные пороги, privacy/cost contract принят | | |
+| `93A` | Corpus structured XLSX/CSV и baseline ручного переноса | | | Versioned template/approved layouts покрывают полезную долю job; deterministic extraction/matching/preview проходят заданные критерии без AI dependency | | |
+| `93B` | Результат и usage baseline `93A`; corpus heterogeneous XLSX/CSV/TXT/DOCX | | | Измеримый unsupported/manual-resolution gap сохраняется; compatible provider privacy/cost contract принят; AI улучшает locked baseline без critical failures | | |
 | `94A` | | | | После AI-блока manual food entry friction измерим; owner одобрил bounded research/provider-cost boundary | | |
 | `94B` | Результат `94A` | | | Только owner `Go/Narrow Go` с locked cases/thresholds/privacy/cost | | |
 | `95A` | | | | Browser print-to-PDF из `67` не закрывает повторяемый delivery job | | |

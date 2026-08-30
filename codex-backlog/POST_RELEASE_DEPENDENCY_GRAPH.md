@@ -37,12 +37,15 @@ release 79
        -> 92 umbrella
             -> 92A Long-term memory (independent Trigger)
             -> 92B Multiprovider routing (independent Trigger)
-  -> 93 AI-assisted program import
-       -> safe XLSX/CSV/TXT/DOCX extraction
-       -> AI neutral draft with source spans
-       -> deterministic exercise candidate retrieval
-       -> bounded AI reranking/advisory
-       -> manual ambiguity resolution -> explicit confirmation -> editable draft
+  -> 93 umbrella
+       -> 93A Deterministic XLSX/CSV template import without AI
+            -> safe extraction -> neutral draft -> deterministic candidates
+            -> manual ambiguity resolution -> explicit confirmation -> editable draft
+       -> observed unsupported/manual-resolution gap + compatible AI route
+            -> 93B AI-assisted heterogeneous XLSX/CSV/TXT/DOCX
+                 -> deterministic extraction -> source-grounded AI proposal
+                 -> deterministic candidates -> bounded AI reranking/advisory
+                 -> same manual resolution/confirmation/fallback from 93A
   -> 94 umbrella -> 94A Food-photo feasibility/evals
        -> owner Go/Narrow Go -> 94B Confirmed assisted entry
   -> 95 umbrella -> 95A Server PDF/authenticated download -> 95B Share/Telegram delivery
@@ -83,10 +86,10 @@ Current Progress/report services + TimeSeriesChart/DataConfidence + DESIGN_V2_1/
   -> 111 Progress bento dashboard + 1/7/30/90/365/custom periods [OWNER-SELECTED, PENDING; NOT CURRENT]
 ```
 
-Прежние import tasks `81-program-import-xlsx-csv` и `95-program-import-txt-docx` объединены в
-единую task `93`: формат файла выбирает extractor, а анализ, matching, preview и confirmed write
-принадлежат одному pipeline. Task идёт после AI-кластера, поскольку использует принятые там
-provider/privacy/safety contracts.
+Import umbrella `93` сохраняет один pipeline, но разделяет independent delivery gates. `93A` даёт
+deterministic XLSX/CSV template import без AI-кластера. Условная `93B` переиспользует тот же draft,
+matching, preview и confirmed write только после evidence `93A` и compatible provider/privacy/cost
+decision. `92A` memory и `92B` multiprovider не являются обязательными зависимостями.
 
 Положение food-photo после AI закреплено и номерами, и графом. Все стрелки дополнительно требуют
 evidence Trigger и owner decision. Umbrella-файлы не являются implementation tasks и не разрешают
