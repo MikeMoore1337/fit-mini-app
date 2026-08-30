@@ -1,19 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type { ExternalFood, Food, FoodBarcodeLookup } from '../../shared/api/types';
 import { Button, Field, Input, LoadingState } from '../../shared/ui/common';
 import { isValidGtin } from './FoodEditor';
-
-interface DetectedBarcode {
-  rawValue: string;
-}
-
-interface BarcodeDetectorLike {
-  detect(source: HTMLVideoElement): Promise<DetectedBarcode[]>;
-}
-
-type BarcodeDetectorConstructor = new (options?: { formats?: string[] }) => BarcodeDetectorLike;
+import { startBarcodeScanner, type BarcodeScannerSession } from './barcodeScanner';
 
 const TOUCH_CAMERA_QUERY = '(hover: none) and (pointer: coarse)';
 
@@ -65,15 +56,16 @@ export function BarcodeLookup({
   const [barcode, setBarcode] = useState('');
   const [validationError, setValidationError] = useState('');
   const [cameraError, setCameraError] = useState('');
+  const [cameraStarting, setCameraStarting] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [scannerStrategy, setScannerStrategy] = useState<BarcodeScannerSession['strategy'] | null>(
+    null,
+  );
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const frameRef = useRef<number | null>(null);
-  const stoppedRef = useRef(false);
-  const Detector = (
-    globalThis as typeof globalThis & { BarcodeDetector?: BarcodeDetectorConstructor }
-  ).BarcodeDetector;
-  const cameraSupported = Boolean(Detector && navigator.mediaDevices?.getUserMedia);
+  const scannerRef = useRef<BarcodeScannerSession | null>(null);
+  const cameraStartRef = useRef(false);
+  const cameraSupported = Boolean(navigator.mediaDevices?.getUserMedia);
   const [touchCameraSurface, setTouchCameraSurface] = useState(
     () => window.matchMedia?.(TOUCH_CAMERA_QUERY).matches ?? false,
   );
@@ -88,15 +80,27 @@ export function BarcodeLookup({
     return () => media.removeEventListener('change', sync);
   }, []);
 
-  const stopCamera = () => {
-    stoppedRef.current = true;
-    if (frameRef.current !== null) window.cancelAnimationFrame(frameRef.current);
-    frameRef.current = null;
+  const stopCamera = useCallback((updateState = true) => {
+    scannerRef.current?.stop();
+    scannerRef.current = null;
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
-    setScanning(false);
-  };
-  useEffect(() => stopCamera, []);
+    if (videoRef.current) videoRef.current.srcObject = null;
+    cameraStartRef.current = false;
+    if (updateState) {
+      setCameraStarting(false);
+      setScanning(false);
+      setScannerStrategy(null);
+    }
+  }, []);
+  useEffect(() => () => stopCamera(false), [stopCamera]);
+  useEffect(() => {
+    const stopInBackground = () => {
+      if (document.visibilityState === 'hidden') stopCamera();
+    };
+    document.addEventListener('visibilitychange', stopInBackground);
+    return () => document.removeEventListener('visibilitychange', stopInBackground);
+  }, [stopCamera]);
 
   const lookup = useMutation({
     mutationFn: (value: string) =>
@@ -113,14 +117,15 @@ export function BarcodeLookup({
     lookup.mutate(normalized);
   };
   const startCamera = async () => {
-    if (!Detector || !navigator.mediaDevices?.getUserMedia) {
+    if (cameraStartRef.current || !navigator.mediaDevices?.getUserMedia) {
       setCameraError(
         'Сканирование камерой не поддерживается в этом браузере. Введите код вручную.',
       );
       return;
     }
+    cameraStartRef.current = true;
+    setCameraStarting(true);
     setCameraError('');
-    stoppedRef.current = false;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: 'environment' } },
@@ -130,37 +135,43 @@ export function BarcodeLookup({
       if (!videoRef.current) return stopCamera();
       videoRef.current.srcObject = stream;
       await videoRef.current.play();
-      setScanning(true);
-      const detector = new Detector({ formats: ['ean_13', 'ean_8', 'upc_a', 'itf'] });
-      const scan = async () => {
-        if (stoppedRef.current || !videoRef.current) return;
-        try {
-          const results = await detector.detect(videoRef.current);
-          const found = results.find((item) => isValidGtin(item.rawValue));
-          if (found) {
-            stopCamera();
-            submitBarcode(found.rawValue);
-            return;
-          }
-        } catch {
+      const scanner = await startBarcodeScanner({
+        stream,
+        video: videoRef.current,
+        onDetected: (value) => {
+          if (!isValidGtin(value)) return false;
+          stopCamera();
+          submitBarcode(value);
+          return true;
+        },
+        onFatalError: () => {
           setCameraError(
             'Не удалось распознать код. Наведите камеру на штрихкод или введите его вручную.',
           );
           stopCamera();
-          return;
-        }
-        frameRef.current = window.requestAnimationFrame(() => void scan());
-      };
-      frameRef.current = window.requestAnimationFrame(() => void scan());
+        },
+      });
+      if (!streamRef.current) {
+        scanner.stop();
+        return;
+      }
+      scannerRef.current = scanner;
+      cameraStartRef.current = false;
+      setCameraStarting(false);
+      setScannerStrategy(scanner.strategy);
+      setScanning(true);
     } catch (error) {
+      const hadStream = Boolean(streamRef.current);
       stopCamera();
       const name = error instanceof DOMException ? error.name : '';
       setCameraError(
-        name === 'NotAllowedError' || name === 'SecurityError'
-          ? 'Доступ к камере запрещён. Разрешите его в настройках браузера или введите код вручную.'
-          : name === 'NotFoundError' || name === 'OverconstrainedError'
-            ? 'Камера не найдена. Введите штрихкод вручную.'
-            : 'Не удалось открыть камеру. Введите штрихкод вручную.',
+        hadStream
+          ? 'Не удалось запустить распознавание. Введите штрихкод вручную или попробуйте снова.'
+          : name === 'NotAllowedError' || name === 'SecurityError'
+            ? 'Доступ к камере запрещён. Разрешите его в настройках браузера или введите код вручную.'
+            : name === 'NotFoundError' || name === 'OverconstrainedError'
+              ? 'Камера не найдена. Введите штрихкод вручную.'
+              : 'Не удалось открыть камеру. Введите штрихкод вручную.',
       );
     }
   };
@@ -185,13 +196,25 @@ export function BarcodeLookup({
             aria-label="Изображение с камеры"
           />
           {scanning ? (
-            <Button type="button" variant="secondary" fullWidth onClick={stopCamera}>
+            <Button type="button" variant="secondary" fullWidth onClick={() => stopCamera()}>
               Остановить камеру
             </Button>
           ) : (
-            <Button type="button" fullWidth onClick={() => void startCamera()}>
-              Сканировать камерой
+            <Button
+              type="button"
+              fullWidth
+              disabled={cameraStarting}
+              onClick={() => void startCamera()}
+            >
+              {cameraStarting ? 'Запускаем камеру…' : 'Сканировать камерой'}
             </Button>
+          )}
+          {scanning && scannerStrategy && (
+            <p className="nutrition-camera__status" role="status">
+              {scannerStrategy === 'native'
+                ? 'Камера активна. Наведите её на штрихкод.'
+                : 'Камера активна. Код распознаётся на устройстве.'}
+            </p>
           )}
           {cameraError && (
             <p className="nutrition-form-error" role="alert">

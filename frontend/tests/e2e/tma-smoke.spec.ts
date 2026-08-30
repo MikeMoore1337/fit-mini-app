@@ -55,14 +55,9 @@ async function expectLimeStartBoundary(locator: Locator) {
 
 async function installBarcodeCameraCapability(page: Page) {
   await page.addInitScript(() => {
-    class CameraCapableBarcodeDetector {
-      detect() {
-        return Promise.resolve([]);
-      }
-    }
     Object.defineProperty(globalThis, 'BarcodeDetector', {
       configurable: true,
-      value: CameraCapableBarcodeDetector,
+      value: undefined,
     });
     Object.defineProperty(navigator, 'mediaDevices', {
       configurable: true,

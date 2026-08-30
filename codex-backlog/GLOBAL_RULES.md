@@ -1,7 +1,7 @@
 # GLOBAL_RULES - правила выполнения release backlog v17 resource-aware
 
 Этот файл действует для завершённых и архивированных release tasks `75-80`, включая буквенные
-подзадачи и owner-approved Pulse concepts pilot `75C`, current UX-reset task `114`, и
+подзадачи и owner-approved Pulse concepts pilot `75C`, current UX-reset task `115A`, и
 trigger-gated post-release pool `81-101` с буквенными подзадачами и owner-selected pending tasks
 `107-111`. Completed tasks `00-73A`, включая буквенные подзадачи, tasks `74A-75`, отдельно
 завершённые tasks `103-106` и owner-selected task `112` не переигрываются и хранятся в
@@ -102,8 +102,8 @@ Lifecycle не расширяет scope task и не отменяет owner chec
 - Owner-selected task `106` завершена и архивирована после owner screenshot approval.
 - Tasks `79-80` завершены и архивированы после owner approval. History rewrite `master` запустил
   намеренный automatic production workflow; владелец подтвердил auto-deploy как feature, а trigger
-  contract закреплён в обязательной документации. После Task `113` current task — `114`, но её
-  implementation не запущена.
+  contract закреплён в обязательной документации. Task `114` завершена и архивирована после
+  отдельного запуска и owner approval; следующей обозначена Task `115A`, но implementation не запущена.
 - Owner-selected task `107` создана для scheduled regression и закрытых Allure-отчётов; она не
   не является current, не меняет UX-reset critical path и требует отдельного owner запуска. DNS,
   Cloudflare Access/hosting, secrets и paid resources требуют дополнительного explicit approval.
@@ -119,9 +119,9 @@ Lifecycle не расширяет scope task и не отменяет owner chec
   verdict `active`, все stages прошли, public/API/SEO и ownership worker/bot проверены. Это не
   является доказательством production zero observed downtime или общей HA.
 - Task `113A` завершена, выпущена в production revision `17bee56c` и архивирована после owner
-  acceptance `2026-08-30`. Task `114` является current/not started и требует отдельной команды на
-  запуск lifecycle.
-- Current task `114` и UX-reset sequence `114 -> 115A -> owner approval -> 116..123 -> 81 -> 82 ->
+  acceptance `2026-08-30`. Task `114` завершена и архивирована после owner approval; Task `115A`
+  является current/not started и требует отдельной команды на запуск lifecycle.
+- Current task `115A` и UX-reset sequence `115A -> owner approval -> 116..123 -> 81 -> 82 ->
   84 -> 124A -> owner release approval -> 124B -> conditional 124C` не отменяют собственные Trigger,
   dependency и owner decisions task files.
 - Task `50A` уже создала общий continuous Mobile Web/TMA gate, который переиспользуют последующие client-facing tasks.

@@ -122,12 +122,16 @@ Browser Back следует той же navigation semantics без дублир
 
 ## Barcode camera hierarchy
 
-- На touch-first surface при фактической поддержке `BarcodeDetector` и `getUserMedia`
-  `Сканировать камерой` — единственный primary action и расположен раньше ручного ввода.
+- На touch-first surface при фактической поддержке `getUserMedia` `Сканировать камерой` —
+  единственный primary action и расположен раньше ручного ввода. Нативный `BarcodeDetector`
+  используется как fast path; без него лениво загружается локальный decoder, поэтому отсутствие
+  экспериментального API само по себе не скрывает camera action.
 - Ручной ввод остаётся доступным fallback. Его `Найти` выровнен с полем штрихкода, а hint/error
   располагаются под общей строкой; когда камера доступна, ручной action имеет secondary hierarchy.
 - Если camera capability отсутствует, disabled primary action не показывается: `Найти` становится
   primary, а интерфейс кратко объясняет ручной fallback.
+- Camera permission запрашивается только после явного нажатия. Frames остаются на устройстве, а
+  MediaStream и decoder останавливаются при закрытии, unmount и уходе document в background.
 - На desktop/fine-pointer surface camera action скрыт даже при наличии webcam: ручной поиск остаётся
   primary. Tablet/hybrid получает camera-first только когда основной input действительно coarse и
   без hover.

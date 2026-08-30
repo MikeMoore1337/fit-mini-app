@@ -3349,6 +3349,9 @@ def test_csp_blocks_unhashed_inline_scripts(client):
     policy = response.headers["content-security-policy"]
     script_policy = policy.split("script-src", 1)[1].split(";", 1)[0]
 
+    assert response.headers["permissions-policy"] == (
+        "camera=(self), microphone=(), geolocation=()"
+    )
     assert "img-src 'self' data: blob:" in policy
     assert "https://t.me https://*.telegram.org https://*.cdn-telegram.org" in policy
     assert "'unsafe-inline'" not in script_policy

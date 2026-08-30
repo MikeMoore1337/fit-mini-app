@@ -86,7 +86,7 @@ class RequestContextMiddleware:
                 headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
                 headers.setdefault(
                     "Permissions-Policy",
-                    "camera=(), microphone=(), geolocation=()",
+                    "camera=(self), microphone=(), geolocation=()",
                 )
                 headers.setdefault(
                     "Content-Security-Policy",

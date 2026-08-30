@@ -50,8 +50,11 @@
       на `dev`, master-only release safeguards и canonical automatic release eligibility contract;
 - [x] `113A-owner-ux-stabilization.md` — stabilization revision `17bee56c` выпущена в production,
       owner verification принята `2026-08-30`, task завершена и архивирована;
-- [ ] **current, not started:** `114-nutrition-search-barcode-production-regression.md` — owner gate
-      снят, но lifecycle требует отдельной команды на запуск;
+- [x] `114-nutrition-search-barcode-production-regression.md` — implementation, review и QA
+      завершены; owner принял visual evidence и явно разрешил production release с risk acceptance
+      отсутствующего real-device/TMA camera evidence; task архивирована, production release явно разрешён;
+- [ ] **current, not started:** `115A-post-release-ux-audit-ia-prototype.md` — lifecycle не запущен
+      и требует отдельной команды владельца;
 - [ ] owner-driven sequence: `114 -> 115A -> owner approval -> 116..123 -> 81 -> 82 -> 84 ->
       124A -> owner release approval -> 124B -> conditional 124C`;
 - [x] owner-selected task `106-landing-telegram-product-news-links.md` завершена вне основной
@@ -89,11 +92,12 @@ Task `77` закрыта не как factual real-user validation, а по яв�
 сессий и residual risk. Tasks `78-80` закрыты после owner approval. History rewrite `master`
 запустил предусмотренный automatic production workflow; runtime diff относительно прежнего master
 был нулевым, health после rollout зелёный, а владелец подтвердил auto-deploy как feature. После
-branch normalization owner вставил и принял Task `113A`; реализация Task `114` не запускалась.
+branch normalization owner вставил и принял Task `113A`; Task `114` завершена и архивирована после
+owner approval, production release явно разрешён.
 `DESIGN_V2_1` с owner-approved bounded Pulse pilot остаётся production baseline. Permanent branch
 source разработки — `dev`, production source — protected `master`. Task `113A` завершена и
-архивирована после owner acceptance; Task `114` является current/not started и требует отдельной
-команды на запуск.
+архивирована после owner acceptance; после закрытия Task `114` следующей обозначена Task `115A`,
+но её lifecycle не запускается без отдельной команды владельца.
 Umbrella `100` отдельно не выполняется; `100A` не назначена без собственного Trigger, dependency
 и owner decision. Tasks `107-111` также не запускаются автоматически. Завершённая task `112` не
 изменила их порядок. Другие pending tasks
