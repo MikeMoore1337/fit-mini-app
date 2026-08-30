@@ -9,6 +9,7 @@ on:
 permissions:
   actions: read
   contents: read
+  pull-requests: read
 
 concurrency:
   # All dev pushes and dev -> master PR runs share the supported native lane.
@@ -42,8 +43,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          PR_GATE_AT: ${{ github.event.action == 'reopened' && github.event.pull_request.updated_at || github.event.pull_request.created_at }}
+          PR_GATE_AT: ${{ github.event.pull_request.updated_at }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
+          current_pr_head="$(
+            gh api --method GET \
+              "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" \
+              --jq ".head.sha"
+          )"
+
+          if [ "$current_pr_head" != "$HEAD_SHA" ]; then
+            echo "Release sequence violation: stale PR event head $HEAD_SHA; current PR head is $current_pr_head." >&2
+            exit 1
+          fi
+
           successful_run_id="$(
             gh api --method GET \
               "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs" \

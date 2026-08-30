@@ -88,6 +88,7 @@ def test_release_pr_requires_completed_exact_sha_push_ci_and_serial_execution() 
     }
 
     assert "actions: read" in ci_workflow
+    assert "pull-requests: read" in ci_workflow
     assert "types: [opened, reopened, ready_for_review, synchronize]" in ci_workflow
     assert "&& 'dev-release' || github.ref" in ci_workflow
     assert "cancel-in-progress: false" in ci_workflow
@@ -98,8 +99,11 @@ def test_release_pr_requires_completed_exact_sha_push_ci_and_serial_execution() 
     assert "-f event=push" in ci_workflow
     assert '-f head_sha="$HEAD_SHA"' in ci_workflow
     assert "-f status=success" in ci_workflow
-    assert "github.event.action == 'reopened'" in ci_workflow
-    assert "github.event.pull_request.updated_at" in ci_workflow
+    assert "PR_GATE_AT: ${{ github.event.pull_request.updated_at }}" in ci_workflow
+    assert "PR_NUMBER: ${{ github.event.pull_request.number }}" in ci_workflow
+    assert '"repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER"' in ci_workflow
+    assert 'if [ "$current_pr_head" != "$HEAD_SHA" ]; then' in ci_workflow
+    assert "Release sequence violation: stale PR event head" in ci_workflow
     assert "github.event.pull_request.head.repo.full_name == github.repository" in ci_workflow
     assert r".updated_at <= \"$PR_GATE_AT\"" in ci_workflow
     assert ci_workflow.count("needs: release-sequence") == 7
