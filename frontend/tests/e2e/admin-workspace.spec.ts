@@ -163,7 +163,11 @@ async function openAccount(page: Page) {
   const submit = page.getByRole('button', { name: 'Найти' });
   await expect(submit).toBeEnabled();
   await search.press('Enter');
-  await page.getByRole('button', { name: /Александра Константинопольская-Северная/ }).click();
+  const result = page.getByRole('button', {
+    name: /Александра Константинопольская-Северная/,
+  });
+  await result.focus();
+  await result.press('Enter');
   await expect(
     page.getByRole('heading', { name: 'Александра Константинопольская-Северная' }),
   ).toBeVisible();

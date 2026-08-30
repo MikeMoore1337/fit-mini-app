@@ -622,7 +622,7 @@ test('program history visual evidence covers compact Mobile Web, dark TMA and de
     }
     if (current.viewport.width < 900) {
       const lastCurrentAction = history.getByRole('button', { name: 'В архив' });
-      await lastCurrentAction.evaluate((element) => element.scrollIntoView({ block: 'center' }));
+      await lastCurrentAction.evaluate((element) => element.scrollIntoView({ block: 'start' }));
       await expectNoOverlap(lastCurrentAction, page.locator('#appBottomNav'));
     }
     await history.getByText('Все этапы и изменения').click();
