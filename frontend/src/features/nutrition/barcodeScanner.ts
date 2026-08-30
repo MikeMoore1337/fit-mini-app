@@ -4,6 +4,7 @@ export interface BarcodeScannerSession {
 }
 
 interface DetectedBarcode {
+  format?: string;
   rawValue: string;
 }
 
@@ -17,6 +18,37 @@ type BarcodeDetectorConstructor = {
 };
 
 const NATIVE_FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf'];
+
+function expandUpceToUpca(value: string): string {
+  if (!/^[01]\d{7}$/.test(value)) return value;
+
+  const numberSystem = value[0];
+  const payload = value.slice(1, 7);
+  const checkDigit = value[7];
+  const expansionRule = payload[5];
+  let manufacturer: string;
+  let product: string;
+
+  if (expansionRule === '0' || expansionRule === '1' || expansionRule === '2') {
+    manufacturer = `${payload.slice(0, 2)}${expansionRule}00`;
+    product = `00${payload.slice(2, 5)}`;
+  } else if (expansionRule === '3') {
+    manufacturer = `${payload.slice(0, 3)}00`;
+    product = `000${payload.slice(3, 5)}`;
+  } else if (expansionRule === '4') {
+    manufacturer = `${payload.slice(0, 4)}0`;
+    product = `0000${payload[4]}`;
+  } else {
+    manufacturer = payload.slice(0, 5);
+    product = `0000${expansionRule}`;
+  }
+
+  return `${numberSystem}${manufacturer}${product}${checkDigit}`;
+}
+
+function normalizeDetectedBarcode(value: string, isUpce: boolean): string {
+  return isUpce ? expandUpceToUpca(value) : value;
+}
 
 function nativeDetector(): BarcodeDetectorConstructor | undefined {
   return (globalThis as typeof globalThis & { BarcodeDetector?: BarcodeDetectorConstructor })
@@ -59,7 +91,11 @@ export async function startBarcodeScanner({
         try {
           const found = await detector.detect(video);
           for (const candidate of found) {
-            if (onDetected(candidate.rawValue)) {
+            const value = normalizeDetectedBarcode(
+              candidate.rawValue,
+              candidate.format === 'upc_e',
+            );
+            if (onDetected(value)) {
               stop();
               return;
             }
@@ -96,7 +132,11 @@ export async function startBarcodeScanner({
   };
   controls = await reader.decodeFromStream(stream, video, (result) => {
     if (!active || !result) return;
-    if (onDetected(result.getText())) stop();
+    const value = normalizeDetectedBarcode(
+      result.getText(),
+      result.getBarcodeFormat() === BarcodeFormat.UPC_E,
+    );
+    if (onDetected(value)) stop();
   });
   if (!active) controls.stop();
   return { strategy: 'zxing', stop };

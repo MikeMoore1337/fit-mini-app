@@ -7,6 +7,7 @@ import { isValidGtin } from './FoodEditor';
 import { startBarcodeScanner, type BarcodeScannerSession } from './barcodeScanner';
 
 const TOUCH_CAMERA_QUERY = '(hover: none) and (pointer: coarse)';
+const documentIsHidden = () => document.visibilityState === 'hidden';
 
 function providerMessage(status: FoodBarcodeLookup['provider_status']): string | null {
   if (status === 'disabled')
@@ -65,6 +66,7 @@ export function BarcodeLookup({
   const streamRef = useRef<MediaStream | null>(null);
   const scannerRef = useRef<BarcodeScannerSession | null>(null);
   const cameraStartRef = useRef(false);
+  const cameraAttemptRef = useRef(0);
   const cameraSupported = Boolean(navigator.mediaDevices?.getUserMedia);
   const [touchCameraSurface, setTouchCameraSurface] = useState(
     () => window.matchMedia?.(TOUCH_CAMERA_QUERY).matches ?? false,
@@ -81,6 +83,7 @@ export function BarcodeLookup({
   }, []);
 
   const stopCamera = useCallback((updateState = true) => {
+    cameraAttemptRef.current += 1;
     scannerRef.current?.stop();
     scannerRef.current = null;
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -96,7 +99,7 @@ export function BarcodeLookup({
   useEffect(() => () => stopCamera(false), [stopCamera]);
   useEffect(() => {
     const stopInBackground = () => {
-      if (document.visibilityState === 'hidden') stopCamera();
+      if (documentIsHidden()) stopCamera();
     };
     document.addEventListener('visibilitychange', stopInBackground);
     return () => document.removeEventListener('visibilitychange', stopInBackground);
@@ -124,6 +127,8 @@ export function BarcodeLookup({
       return;
     }
     cameraStartRef.current = true;
+    const attempt = cameraAttemptRef.current + 1;
+    cameraAttemptRef.current = attempt;
     setCameraStarting(true);
     setCameraError('');
     try {
@@ -131,13 +136,27 @@ export function BarcodeLookup({
         video: { facingMode: { ideal: 'environment' } },
         audio: false,
       });
+      if (cameraAttemptRef.current !== attempt || documentIsHidden()) {
+        stream.getTracks().forEach((track) => track.stop());
+        if (cameraAttemptRef.current === attempt) stopCamera();
+        return;
+      }
       streamRef.current = stream;
-      if (!videoRef.current) return stopCamera();
-      videoRef.current.srcObject = stream;
-      await videoRef.current.play();
+      const video = videoRef.current;
+      if (!video) return stopCamera();
+      video.srcObject = stream;
+      await video.play();
+      if (
+        cameraAttemptRef.current !== attempt ||
+        streamRef.current !== stream ||
+        documentIsHidden()
+      ) {
+        if (cameraAttemptRef.current === attempt) stopCamera();
+        return;
+      }
       const scanner = await startBarcodeScanner({
         stream,
-        video: videoRef.current,
+        video,
         onDetected: (value) => {
           if (!isValidGtin(value)) return false;
           stopCamera();
@@ -161,6 +180,7 @@ export function BarcodeLookup({
       setScannerStrategy(scanner.strategy);
       setScanning(true);
     } catch (error) {
+      if (cameraAttemptRef.current !== attempt) return;
       const hadStream = Boolean(streamRef.current);
       stopCamera();
       const name = error instanceof DOMException ? error.name : '';

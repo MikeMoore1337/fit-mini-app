@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { startBarcodeScanner } from '../../../../src/features/nutrition/barcodeScanner';
 
 const fallback = vi.hoisted(() => ({
-  callback: undefined as ((result?: { getText: () => string }, error?: Error) => void) | undefined,
+  callback: undefined as
+    | ((result?: { getBarcodeFormat: () => number; getText: () => string }, error?: Error) => void)
+    | undefined,
   stop: vi.fn(),
 }));
 
@@ -14,7 +16,10 @@ vi.mock('@zxing/browser', () => ({
     decodeFromStream(
       _stream: MediaStream,
       _video: HTMLVideoElement,
-      callback: (result?: { getText: () => string }, error?: Error) => void,
+      callback: (
+        result?: { getBarcodeFormat: () => number; getText: () => string },
+        error?: Error,
+      ) => void,
     ) {
       fallback.callback = callback;
       return Promise.resolve({ stop: fallback.stop });
@@ -77,6 +82,36 @@ describe('barcode scanner strategy', () => {
     expect(cancelAnimationFrame).toHaveBeenCalledWith(17);
   });
 
+  it('expands native UPC-E results to the equivalent UPC-A value', async () => {
+    let scheduled: FrameRequestCallback | undefined;
+    vi.stubGlobal(
+      'requestAnimationFrame',
+      vi.fn((callback: FrameRequestCallback) => {
+        scheduled = callback;
+        return 18;
+      }),
+    );
+    Object.defineProperty(globalThis, 'BarcodeDetector', {
+      configurable: true,
+      value: class {
+        detect = vi.fn().mockResolvedValue([{ format: 'upc_e', rawValue: '01234565' }]);
+      },
+    });
+    const onDetected = vi.fn(() => true);
+
+    const session = await startBarcodeScanner({
+      stream,
+      video,
+      onDetected,
+      onFatalError: vi.fn(),
+    });
+    scheduled?.(0);
+    await vi.waitFor(() => expect(onDetected).toHaveBeenCalledOnce());
+
+    expect(session.strategy).toBe('native');
+    expect(onDetected).toHaveBeenCalledWith('012345000065');
+  });
+
   it('lazy-loads the local ZXing path without BarcodeDetector and retries decode misses', async () => {
     const onDetected = vi.fn(() => true);
     const onFatalError = vi.fn();
@@ -85,13 +120,28 @@ describe('barcode scanner strategy', () => {
     expect(session.strategy).toBe('zxing');
     fallback.callback?.(undefined, new Error('not found'));
     expect(fallback.stop).not.toHaveBeenCalled();
-    fallback.callback?.({ getText: () => '3017620422003' });
-    fallback.callback?.({ getText: () => '4006381333931' });
+    fallback.callback?.({ getBarcodeFormat: () => 1, getText: () => '3017620422003' });
+    fallback.callback?.({ getBarcodeFormat: () => 1, getText: () => '4006381333931' });
 
     expect(onDetected).toHaveBeenCalledOnce();
     expect(onDetected).toHaveBeenCalledWith('3017620422003');
     expect(fallback.stop).toHaveBeenCalledOnce();
     expect(onFatalError).not.toHaveBeenCalled();
+  });
+
+  it('expands UPC-E results to the equivalent UPC-A value before validation', async () => {
+    const onDetected = vi.fn(() => true);
+    const session = await startBarcodeScanner({
+      stream,
+      video,
+      onDetected,
+      onFatalError: vi.fn(),
+    });
+
+    fallback.callback?.({ getBarcodeFormat: () => 4, getText: () => '01234565' });
+
+    expect(session.strategy).toBe('zxing');
+    expect(onDetected).toHaveBeenCalledWith('012345000065');
   });
 
   it('falls back to ZXing when a partial native implementation rejects retail formats', async () => {

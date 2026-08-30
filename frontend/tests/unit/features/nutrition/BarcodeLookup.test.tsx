@@ -153,6 +153,26 @@ describe('BarcodeLookup camera fallback', () => {
     expect(screen.getByRole('button', { name: 'Сканировать камерой' })).toBeEnabled();
   });
 
+  it('discards a pending camera stream if the document enters background', async () => {
+    let resolveStream: ((stream: MediaStream) => void) | undefined;
+    const pendingStream = new Promise<MediaStream>((resolve) => {
+      resolveStream = resolve;
+    });
+    const trackStop = vi.fn();
+    const stream = { getTracks: () => [{ stop: trackStop }] } as unknown as MediaStream;
+    installTouchCamera(() => pendingStream);
+    renderLookup();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Сканировать камерой' }));
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+    act(() => document.dispatchEvent(new Event('visibilitychange')));
+    await act(async () => resolveStream?.(stream));
+
+    await waitFor(() => expect(trackStop).toHaveBeenCalledOnce());
+    expect(scannerMock).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Сканировать камерой' })).toBeEnabled();
+  });
+
   it('keeps manual GTIN lookup primary when camera capture is unavailable', async () => {
     installTouchCamera();
     apiMock.mockResolvedValue({
