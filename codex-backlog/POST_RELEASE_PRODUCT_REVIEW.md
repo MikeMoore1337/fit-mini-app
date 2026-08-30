@@ -55,6 +55,7 @@ progress photos без AI/body analysis остаются в конце.
 | `109` | Owner-selected Landing task вне основной очереди | Уникальность выражается через фактический feedback loop YFC, без competitor comparison, fake proof и гарантий результата. Security/trust claim не обязателен и разрешён только из approved baseline task `108`; copy и screenshots требуют owner approval до commit. |
 | `110` | Owner-selected profile/media task вне основной очереди | Текущий emoji fallback детерминирован и остаётся последней ступенью. Custom avatar — private media с mobile/desktop upload, safe processing, replace/delete/export и precedence `custom -> provider -> emoji`; production migration/deploy отдельно gated. |
 | `111` | Owner-selected Progress redesign task вне основной очереди | Референс задаёт bento hierarchy, но не palette и не новые hydration/steps/health-score данные. Периоды `1/7/30/90/365/custom` используют единый factual progress/report contract, inclusive dates/timezone и измеренную performance. |
+| `126A-126C` | Owner-selected camera/equipment feature вне основной очереди | Exercise catalog уже расширяется в `120A-120D`, поэтому новую базу не дублировать. После `120D` и successful AI foundation `90B` сначала провести отдельный Vision/privacy/cost/eval gate. Production AI определяет только bounded equipment candidates; упражнения всегда берутся из canonical YFC catalog и добавляются только после явного user choice через existing program flow. |
 
 ## Контракт импорта `93A-93B`
 
@@ -74,7 +75,7 @@ progress photos без AI/body analysis остаются в конце.
 
 ## Общие routing contracts
 
-- Umbrella `90`, `92`, `93`, `94`, `95`, `99`, `100` запрещено выполнять одним change set.
+- Umbrella `90`, `92`, `93`, `94`, `95`, `99`, `100`, `126` запрещено выполнять одним change set.
 - External research, real-user validation, production provider/price/channel actions и rollout
   требуют фактического evidence/owner checkpoint.
 - Все UI tasks `80-101` наследуют active `DESIGN_V2_1`, Mobile Web/TMA contracts и owner screenshot

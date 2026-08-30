@@ -31,6 +31,9 @@ Tasks `00-55` завершены и не переигрываются. Их task
 | `124A` | `$qa-engineer`, `$ui-audit`, `$accessibility-engineer`, `$mobile-engineer` | `qa-verifier` |
 | `124B` | `$ux-researcher`, `$product-designer`, `$mobile-engineer`, `$ui-audit` | `researcher` |
 | `124C` | `$qa-engineer`, `$product-designer`, `$frontend-engineer`, `$mobile-engineer` | `implementer` |
+| `126A` | `$product-discovery`, `$llm-engineer`, `$fitness-domain-reviewer`, `$privacy-engineer`, `$security-engineer` | `researcher` |
+| `126B` | `$llm-engineer`, `$backend-engineer`, `$data-engineer`, `$security-engineer`, `$privacy-engineer`, `$fitness-domain-reviewer` | `implementer` |
+| `126C` | `$product-designer`, `$frontend-engineer`, `$mobile-engineer`, `$qa-engineer`, `$fitness-domain-reviewer` | `implementer` |
 
 Conditional skills и дополнительные lifecycle roles берутся только из canonical task file. Tasks
 `81/82/84` используют собственные roles/skills после dependency amendments UX-reset package.

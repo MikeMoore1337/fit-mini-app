@@ -4,16 +4,19 @@ on:
   push:
     branches: [dev, master]
   pull_request:
-    types: [opened, reopened, ready_for_review]
+    types: [opened, reopened, ready_for_review, synchronize]
 
 permissions:
+  actions: read
   contents: read
+  pull-requests: read
 
 concurrency:
-  # Keep first attempts grouped by ref so newer pushes cancel stale work. A
-  # manually re-run older workflow must not cancel the current branch run.
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.run_attempt == 1 && 'latest' || github.run_id }}
-  cancel-in-progress: true
+  # All dev pushes and dev -> master PR runs share the supported native lane.
+  # The explicit PR gate below still rejects a PR that was opened before its
+  # exact-SHA push CI succeeded.
+  group: ${{ github.workflow }}-${{ (github.ref_name == 'dev' || (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'master' && github.event.pull_request.head.ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository)) && 'dev-release' || github.ref }}
+  cancel-in-progress: false
 
 env:
   NPM_CONFIG_CACHE: ${{ github.workspace }}/.artifacts/cache/npm
@@ -24,8 +27,65 @@ env:
   UV_SYSTEM_PYTHON: "1"
 
 jobs:
+  release-sequence:
+    name: Release sequence
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Require successful push CI before release PR
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.base.ref == 'master' &&
+          github.event.pull_request.head.ref == 'dev' &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_GATE_AT: ${{ github.event.pull_request.updated_at }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          current_pr_head="$(
+            gh api --method GET \
+              "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" \
+              --jq ".head.sha"
+          )"
+
+          if [ "$current_pr_head" != "$HEAD_SHA" ]; then
+            echo "Release sequence violation: stale PR event head $HEAD_SHA; current PR head is $current_pr_head." >&2
+            exit 1
+          fi
+
+          successful_run_id="$(
+            gh api --method GET \
+              "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs" \
+              -f event=push \
+              -f head_sha="$HEAD_SHA" \
+              -f status=success \
+              -f per_page=100 \
+              --jq ".workflow_runs[] | select(
+                .head_branch == \"dev\" and
+                .head_sha == \"$HEAD_SHA\" and
+                .event == \"push\" and
+                .status == \"completed\" and
+                .conclusion == \"success\" and
+                .updated_at <= \"$PR_GATE_AT\"
+              ) | .id" \
+              | head -n 1
+          )"
+
+          if [ -z "$successful_run_id" ]; then
+            echo "Release sequence violation: PR dev -> master was opened before exact-SHA push CI completed successfully." >&2
+            echo "Close the PR, wait for successful push CI for $HEAD_SHA, then reopen or create the PR." >&2
+            exit 1
+          fi
+
+          echo "Release sequence verified by successful push CI run $successful_run_id."
+
   quality:
     name: Python quality
+    needs: release-sequence
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -58,6 +118,7 @@ jobs:
 
   frontend:
     name: Frontend
+    needs: release-sequence
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -121,6 +182,7 @@ jobs:
 
   frontend-smoke:
     name: Frontend smoke (${{ matrix.shard }}/3)
+    needs: release-sequence
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -168,6 +230,7 @@ jobs:
 
   python-tests:
     name: Python tests (${{ matrix.shard }})
+    needs: release-sequence
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -265,6 +328,7 @@ jobs:
 
   migrated-stack:
     name: Migrated PostgreSQL stack
+    needs: release-sequence
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -378,6 +442,7 @@ jobs:
 
   dependency-audit:
     name: Dependency audit
+    needs: release-sequence
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -413,6 +478,7 @@ jobs:
 
   containers:
     name: Container (${{ matrix.image }})
+    needs: release-sequence
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -500,10 +566,13 @@ jobs:
           docker push "$registry_tag"
 
   checks:
-    name: checks
+    # Keep the Ruleset-required `checks` context exclusive to PR validation.
+    # A later push run therefore cannot overwrite a failed release PR verdict.
+    name: ${{ github.event_name == 'pull_request' && 'checks' || 'branch-checks' }}
     if: always()
     needs:
       [
+        release-sequence,
         quality,
         frontend,
         frontend-smoke,
@@ -518,6 +587,7 @@ jobs:
     steps:
       - name: Verify all CI jobs succeeded
         env:
+          RELEASE_SEQUENCE_RESULT: ${{ needs.release-sequence.result }}
           QUALITY_RESULT: ${{ needs.quality.result }}
           FRONTEND_RESULT: ${{ needs.frontend.result }}
           FRONTEND_SMOKE_RESULT: ${{ needs.frontend-smoke.result }}
@@ -526,6 +596,7 @@ jobs:
           DEPENDENCY_AUDIT_RESULT: ${{ needs.dependency-audit.result }}
           CONTAINERS_RESULT: ${{ needs.containers.result }}
         run: |
+          test "$RELEASE_SEQUENCE_RESULT" = success
           test "$QUALITY_RESULT" = success
           test "$FRONTEND_RESULT" = success
           test "$FRONTEND_SMOKE_RESULT" = success

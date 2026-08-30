@@ -78,6 +78,13 @@ conversion story, `110` — private custom avatar desktop/mobile, `111` — Prog
 периоды `1/7/30/90/365/custom`. Они не меняют next `116` или UX-reset critical path, не запускаются
 автоматически и требуют отдельных owner запусков; для UI до commit действует screenshot approval.
 
+Owner-selected umbrella `126` создана вне основной очереди для сценария `камера -> тренажёр ->
+existing exercises -> добавить в программу`. Family не меняет next `116` или UX-reset critical path.
+Её executable chain: `126A -> owner GO/NARROW GO -> 126B -> 126C`. Task `126A` не может начаться до
+завершения `120D` и successful AI beta foundation `90B`. Tasks `91`, `92A`, `92B`, `94A`, `94B`
+не являются hard dependencies; завершённые `92B/94A/94B` переиспользуются при совместимости.
+Task family `125/125A/125B` про migration инфраструктуры также не является dependency `126`.
+
 Owner-selected task `112` завершена и архивирована вне основной очереди. Она добавила проверяемый
 current-stack zero-downtime deployment contract. После explicit owner approval production revision
 `194cf036` успешно развёрнута через `single-slot` fallback с bounded downtime из-за фактической

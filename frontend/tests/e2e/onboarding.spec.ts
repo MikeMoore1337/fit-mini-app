@@ -1,4 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
+import type {
+  NutritionReport,
+  ProgressSummary,
+  TrainingAnalytics,
+  WeeklyCheckInHistory,
+} from '../../src/shared/api/types';
 
 type OnboardingStatus = 'required' | 'complete';
 
@@ -128,25 +134,200 @@ async function mockFirstRunApi(
           training: {
             planned_workouts: 0,
             completed_workouts: 0,
+            skipped_workouts: 0,
             frequency_per_week: 0,
             volume_kg: 0,
             new_personal_records: 0,
             last_completed_workout_on: null,
             next_workout: null,
           },
-          nutrition: { visible: true },
-          body: { latest_measurement: null, trends: [], priority: null, guidance: {} },
+          cardio: {
+            completed_sessions: 0,
+            planned_sessions: 0,
+            frequency_per_week: 0,
+            duration_minutes: 0,
+            distance_km: null,
+            zone_duration: [],
+          },
+          nutrition: {
+            visible: true,
+            logged_days: 0,
+            complete_days: 0,
+            incomplete_days: 0,
+            fasted_days: 0,
+            unlogged_days: 30,
+            adherence_evaluated_days: 0,
+            average_calories: null,
+            target_calories: null,
+            average_protein_g: null,
+            target_protein_g: null,
+            target_effective_on: null,
+          },
+          body: {
+            latest_measurement: null,
+            trends: [],
+            priority: { mode: 'balanced', muscle_group_ids: [] },
+            guidance: {
+              comparison_basis: 'self',
+              minimum_points_for_interpretation: 3,
+              minimum_span_days_for_interpretation: 14,
+              consistency_tips: [],
+              circumference_limitations: [],
+            },
+          },
           adherence: {
             formula_version: 'adherence-v1',
             overall_percent: null,
             included_components: [],
-            workouts: {},
-            cardio: {},
-            calories: {},
-            protein: {},
+            workouts: {
+              status: 'insufficient_data',
+              percent: null,
+              achieved: 0,
+              evaluated: 0,
+              weight: 0,
+              reason: 'insufficient_data',
+            },
+            cardio: {
+              status: 'unsupported',
+              percent: null,
+              achieved: 0,
+              evaluated: 0,
+              weight: 0,
+              reason: 'unsupported',
+            },
+            calories: {
+              status: 'insufficient_data',
+              percent: null,
+              achieved: 0,
+              evaluated: 0,
+              weight: 0,
+              reason: 'insufficient_data',
+            },
+            protein: {
+              status: 'insufficient_data',
+              percent: null,
+              achieved: 0,
+              evaluated: 0,
+              weight: 0,
+              reason: 'insufficient_data',
+            },
           },
-          data_sufficiency: {},
-        },
+          data_sufficiency: {
+            ruleset_version: 'data-sufficiency-v1',
+            workout_logging: {
+              status: 'insufficient',
+              counters: {},
+              reason_keys: ['no_completed_workouts'],
+            },
+            working_sets: {
+              status: 'insufficient',
+              counters: {},
+              reason_keys: ['no_working_sets'],
+            },
+            rir_coverage: {
+              status: 'insufficient',
+              counters: {},
+              reason_keys: ['no_rir_observations'],
+            },
+            nutrition_coverage: {
+              status: 'insufficient',
+              counters: {},
+              reason_keys: ['no_logged_days'],
+            },
+            weight_trend: {
+              status: 'insufficient',
+              counters: {},
+              reason_keys: ['no_measurements'],
+            },
+            anthropometry: {
+              status: 'insufficient',
+              counters: {},
+              reason_keys: ['no_anthropometry_measurements'],
+            },
+            schedule_adherence: {
+              status: 'insufficient',
+              counters: {},
+              reason_keys: ['no_evaluable_planned_workouts'],
+            },
+          },
+        } satisfies ProgressSummary,
+      });
+    }
+    if (path.endsWith('/workouts/progress/training-analytics')) {
+      const insufficient = {
+        status: 'insufficient',
+        counters: {},
+        reason_keys: ['no_completed_workouts'],
+      } satisfies TrainingAnalytics['data_sufficiency']['workout_logging'];
+      return route.fulfill({
+        json: {
+          period_days: 30,
+          period_start: '2030-01-01',
+          period_end: '2030-01-30',
+          exercise_history_limit: 20,
+          completed_set_count: 0,
+          reps_total: null,
+          reps_recorded_sets: 0,
+          external_load_volume_kg: null,
+          volume_recorded_sets: 0,
+          exercises: [],
+          rir: {
+            completed_set_count: 0,
+            recorded_set_count: 0,
+            missing_set_count: 0,
+            distribution: [],
+          },
+          primary_muscle_exposure: [],
+          secondary_muscle_exposure: [],
+          completed_sets_without_muscle_metadata: 0,
+          data_sufficiency: {
+            ruleset_version: 'data-sufficiency-v1',
+            workout_logging: insufficient,
+            working_sets: insufficient,
+            rir_coverage: insufficient,
+          },
+        } satisfies TrainingAnalytics,
+      });
+    }
+    if (path.endsWith('/workouts/progress/nutrition-report')) {
+      const emptyMetric = { average: null, minimum: null, maximum: null, sample_days: 0 };
+      const emptyComparison = {
+        average_actual: null,
+        average_target: null,
+        average_deviation: null,
+        evaluated_days: 0,
+      };
+      return route.fulfill({
+        json: {
+          period: 'days_30',
+          period_start: '2030-01-01',
+          period_end: '2030-01-30',
+          timezone: 'Europe/Moscow',
+          summary: {
+            logged_days: 0,
+            eligible_days: 30,
+            coverage_percent: 0,
+            complete_days: 0,
+            incomplete_days: 0,
+            fasted_days: 0,
+            missing_days: 30,
+            current_day_status: 'missing',
+            calories: emptyMetric,
+            protein_g: emptyMetric,
+            fat_g: emptyMetric,
+            carbs_g: emptyMetric,
+            calorie_comparison: emptyComparison,
+            protein_comparison: emptyComparison,
+            fat_comparison: emptyComparison,
+            carbs_comparison: emptyComparison,
+            days_within_calorie_tolerance: 0,
+            calorie_tolerance_evaluated_days: 0,
+            days_meeting_protein_target: 0,
+            protein_target_evaluated_days: 0,
+          },
+          daily: [],
+          target_changes: [],
+        } satisfies NutritionReport,
       });
     }
     if (path.endsWith('/workouts/progress')) {
@@ -167,6 +348,68 @@ async function mockFirstRunApi(
     }
     if (path.endsWith('/workouts/history/summary')) {
       return route.fulfill({ json: { workouts_completed: 0, completed_sets: 0, volume_kg: 0 } });
+    }
+    if (path.endsWith('/check-ins/weekly/current')) {
+      const unavailable = {
+        status: 'insufficient_data',
+        percent: null,
+        achieved: 0,
+        evaluated: 0,
+        weight: 0,
+        reason: 'insufficient_data',
+      };
+      return route.fulfill({
+        json: {
+          week_start: '2030-01-24',
+          week_end: '2030-01-30',
+          submitted_on: '2030-01-30',
+          timezone: 'Europe/Moscow',
+          existing: null,
+          summary: {
+            ruleset_version: 'weekly-review-summary-v2',
+            period_start: '2030-01-24',
+            period_end: '2030-01-30',
+            goal: null,
+            training: {
+              completed_workouts: 0,
+              planned_workouts: 0,
+              adherence: unavailable,
+            },
+            nutrition: {
+              logged_days: 0,
+              complete_days: 0,
+              incomplete_days: 0,
+              fasted_days: 0,
+              unlogged_days: 7,
+              average_calories: null,
+              target_calories: null,
+              average_protein_g: null,
+              target_protein_g: null,
+              calories_adherence: unavailable,
+              protein_adherence: unavailable,
+              current_target: null,
+              suspicious_low_days: [],
+            },
+            progression: { training_volume_kg: 0, new_personal_records: 0 },
+            weight_trend: null,
+            anthropometry_trends: [],
+            body_priority: null,
+            data_sufficiency: {
+              weight_trend: {
+                status: 'insufficient',
+                counters: { point_count: 0 },
+                reason_keys: ['no_measurements'],
+              },
+            },
+            adaptive_energy: null,
+          },
+        },
+      });
+    }
+    if (path.endsWith('/check-ins/weekly')) {
+      return route.fulfill({
+        json: { items: [], total: 0, limit: 4, offset: 0 } satisfies WeeklyCheckInHistory,
+      });
     }
     if (
       path.endsWith('/workouts/schedule') ||
