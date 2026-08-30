@@ -1513,7 +1513,7 @@ test('desktop app shell centers the brand lockup and navigation surfaces', async
     expect(desktopAlignment.accountNameFits).toBe(true);
     expect(desktopAlignment.accountTextEdgeOffset).toBeLessThanOrEqual(1);
     expect(desktopAlignment.accountTextAlignment).toBe('left');
-    expect(desktopAlignment.accountNameSize).toBe('12px');
+    expect(desktopAlignment.accountNameSize).toBe('11.2px');
     expect(desktopAlignment.accountRoleSize).toBe('11.52px');
     expect(desktopAlignment.groupLabelFits).toBe(true);
     expect(desktopAlignment.labelsFit).toBe(true);

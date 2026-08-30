@@ -162,7 +162,7 @@ async function openAccount(page: Page) {
   await search.fill('@alexandra_support_case');
   const submit = page.getByRole('button', { name: 'Найти' });
   await expect(submit).toBeEnabled();
-  await submit.click();
+  await search.press('Enter');
   await page.getByRole('button', { name: /Александра Константинопольская-Северная/ }).click();
   await expect(
     page.getByRole('heading', { name: 'Александра Константинопольская-Северная' }),

@@ -2615,7 +2615,7 @@ body.public-shell-mode.public-shell-mode:has(.auth-public-shell--design-v2) {
     width: 100%;
     min-width: 0;
     justify-self: stretch;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     text-align: left;
   }
 
