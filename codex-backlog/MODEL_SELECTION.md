@@ -45,6 +45,8 @@ Do not downgrade owner decision, mobile/TMA integrity, auth, security, privacy, 
 | 121 | Terra High; Sol High при TMA/routing architecture change |
 | 122-123 | Terra High |
 | 124A-124C | Sol High |
+| 126A-126B | Sol High |
+| 126C | Terra High; Sol High при platform/TMA/security architecture change |
 
 Tasks `81/82/84` сохраняют recommendation своих canonical task files. Model recommendation не
 переключает Codex автоматически и не понижает уровень для auth, migration, domain integrity,

@@ -92,6 +92,12 @@
       stages passed, public/API/SEO и ownership worker/bot подтверждены. Production blue/green
       zero-observed-downtime на этом constrained VPS не заявляется.
 
+- [ ] owner-selected umbrella `126-equipment-camera-recognition-umbrella.md` создана вне основной
+      очереди по прямому запросу владельца. Она не меняет current UX-reset path. `126A` заблокирована
+      до завершения exercise catalog `120D` и successful AI beta foundation `90B`; после feasibility
+      возможны только owner-approved `126B -> 126C`. Tasks `91/92A/92B/94A/94B` не hard dependencies,
+      но compatible artifacts `92B/94A/94B` переиспользуются, если к тому моменту существуют.
+
 Не выполнять повторно tasks `00-80`, включая `69B`, `73A`, task `74A` и tasks `103-106`.
 Task `77` закрыта не как factual real-user validation, а по явному owner decision принять отсутствие
 сессий и residual risk. Tasks `78-80` закрыты после owner approval. History rewrite `master`
@@ -104,6 +110,6 @@ source разработки — `dev`, production source — protected `master`.
 и архивированы после owner acceptance; после закрытия Task `115A` следующей обозначена Task `116`,
 но её lifecycle не запускается без отдельной команды владельца.
 Umbrella `100` отдельно не выполняется; `100A` не назначена без собственного Trigger, dependency
-и owner decision. Tasks `107-111` также не запускаются автоматически. Завершённая task `112` не
+и owner decision. Tasks `107-111` и family `126` также не запускаются автоматически. Завершённая task `112` не
 изменила их порядок. Другие pending tasks
 автоматически не реализуются.

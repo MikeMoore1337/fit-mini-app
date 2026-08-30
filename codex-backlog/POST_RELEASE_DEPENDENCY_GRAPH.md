@@ -84,6 +84,17 @@ Current AppShell avatar fallback + provider photo + private media/export/delete 
 
 Current Progress/report services + TimeSeriesChart/DataConfidence + DESIGN_V2_1/Pulse
   -> 111 Progress bento dashboard + 1/7/30/90/365/custom periods [OWNER-SELECTED, PENDING; NOT CURRENT]
+
+Exercise catalog expansion 120A -> 120B -> 120C -> 120D
+  + successful AI beta foundation 87 -> 88 -> 89 -> 90A -> 90B
+  -> 126 umbrella
+       -> 126A Equipment-camera Vision feasibility/evals
+            -> owner GO/NARROW GO
+                 -> 126B Server-side Vision + canonical equipment -> existing exercise matching
+                      -> 126C Mobile Web/TMA camera + existing add-to-program flow
+
+Optional reuse only: 92B capability routing, 94A Vision eval contracts, 94B image-ingress/camera primitives.
+Tasks 91/92A/92B/94A/94B are not hard dependencies of 126A.
 ```
 
 Import umbrella `93` сохраняет один pipeline, но разделяет independent delivery gates. `93A` даёт
