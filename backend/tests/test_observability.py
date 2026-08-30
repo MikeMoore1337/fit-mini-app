@@ -119,6 +119,26 @@ def test_news_cycle_summary_preserves_required_bounded_counters() -> None:
     assert {key: payload[key] for key in fields} == fields
 
 
+def test_candidate_reference_with_numeric_digest_remains_visible() -> None:
+    record = logging.LogRecord(
+        name="fitminiapp_api.services.news_ingestion",
+        level=logging.INFO,
+        pathname=__file__,
+        lineno=1,
+        msg="news_candidate_evaluated",
+        args=(),
+        exc_info=None,
+    )
+    record.candidate_ref = "candidate:0123456789abcdef"
+    record.pipeline_stage = "scoring"
+    record.outcome = "eligible"
+    record.reason = "score_threshold_met"
+
+    payload = json.loads(JsonFormatter(service="notification-worker").format(record))
+
+    assert payload["candidate_ref"] == "candidate:0123456789abcdef"
+
+
 def test_json_formatter_rejects_arbitrary_values_and_keeps_safe_diagnostics() -> None:
     markers = (
         "private_note_marker",
