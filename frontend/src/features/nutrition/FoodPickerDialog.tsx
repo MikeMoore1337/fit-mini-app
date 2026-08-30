@@ -212,17 +212,21 @@ function externalFoodPayload(food: ExternalFood): UserFoodCreate {
     standard_serving_amount: food.standard_serving_amount,
     standard_serving_unit: food.standard_serving_unit,
     standard_serving_weight_g: food.standard_serving_weight_g,
+    external_source: {
+      external_id: food.external_id,
+      ...food.source,
+    },
   };
 }
 
 function ExternalResults({
   response,
   onSelect,
-  pendingExternalId,
+  pendingExternalKey,
 }: {
   response: FoodSearch;
   onSelect: (food: ExternalFood) => void;
-  pendingExternalId: string | null;
+  pendingExternalKey: string | null;
 }) {
   const fallback = providerMessage(response.provider_status);
   if (fallback)
@@ -241,6 +245,13 @@ function ExternalResults({
     );
   return (
     <div className="nutrition-external-results">
+      {response.provider_statuses?.some(
+        ({ status }) => status === 'unavailable' || status === 'rate_limited',
+      ) && (
+        <p className="nutrition-provider-fallback" role="status">
+          Часть внешних источников временно недоступна; показаны результаты остальных.
+        </p>
+      )}
       <p>Выберите карточку — продукт сохранится в «Мои продукты», затем укажите порцию.</p>
       {response.external_items.map((food: ExternalFood) => (
         <article
@@ -264,10 +275,12 @@ function ExternalResults({
           <Button
             fullWidth
             type="button"
-            disabled={pendingExternalId !== null}
+            disabled={pendingExternalKey !== null}
             onClick={() => onSelect(food)}
           >
-            {pendingExternalId === food.external_id ? 'Сохраняем…' : 'Выбрать продукт'}
+            {pendingExternalKey === `${food.source.provider}-${food.external_id}`
+              ? 'Сохраняем…'
+              : 'Выбрать продукт'}
           </Button>
         </article>
       ))}
@@ -357,7 +370,8 @@ export function FoodPickerDialog({
     searchQuery === normalizedSearchInput &&
     !search.isFetching &&
     !search.error &&
-    search.data?.items.length === 0
+    search.data !== undefined &&
+    search.data.total < search.data.limit
       ? searchQuery
       : '';
   const external = useQuery({
@@ -997,8 +1011,10 @@ export function FoodPickerDialog({
               <ExternalResults
                 response={external.data}
                 onSelect={selectExternalFood}
-                pendingExternalId={
-                  importExternal.isPending ? (importExternal.variables?.external_id ?? null) : null
+                pendingExternalKey={
+                  importExternal.isPending && importExternal.variables
+                    ? `${importExternal.variables.source.provider}-${importExternal.variables.external_id}`
+                    : null
                 }
               />
             )}

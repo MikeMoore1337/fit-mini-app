@@ -66,7 +66,10 @@ from fitminiapp_api.services.food_diary import (
     set_food_diary_day_status,
     update_food_diary_entry,
 )
-from fitminiapp_api.services.food_provider import FoodProvider, get_food_provider
+from fitminiapp_api.services.food_provider import (
+    FoodProviderRegistry,
+    get_food_provider_registry,
+)
 from fitminiapp_api.services.foods import (
     FoodConflictError,
     FoodError,
@@ -203,7 +206,7 @@ def search_food_library(
     include_external: bool = False,
     current_user: User = Depends(require_user),
     db: Session = Depends(get_db),
-    provider: FoodProvider | None = Depends(get_food_provider),
+    registry: FoodProviderRegistry = Depends(get_food_provider_registry),
 ):
     try:
         return search_food_catalog(
@@ -213,7 +216,7 @@ def search_food_library(
             limit=limit,
             offset=offset,
             include_external=include_external,
-            provider=provider,
+            registry=registry,
         )
     except FoodError as exc:
         _raise_food_http_error(exc)
@@ -224,7 +227,7 @@ def get_food_by_barcode(
     barcode: str,
     current_user: User = Depends(require_user),
     db: Session = Depends(get_db),
-    provider: FoodProvider | None = Depends(get_food_provider),
+    registry: FoodProviderRegistry = Depends(get_food_provider_registry),
 ):
     try:
         normalized = validate_gtin(barcode)
@@ -236,7 +239,7 @@ def get_food_by_barcode(
         db,
         current_user,
         normalized,
-        provider=provider,
+        registry=registry,
     )
 
 

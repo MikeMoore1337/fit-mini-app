@@ -261,11 +261,11 @@ def test_local_search_ranking_normalization_pagination_and_query_bound(client) -
     own_id = client.post(
         "/api/v1/nutrition/foods",
         headers=headers,
-        json=_food_payload(name="личный йогурт", barcode=None),
+        json=_food_payload(name="йогурт", barcode=None),
     ).json()["id"]
     with get_session_context() as db:
         favorite = _catalog_food("избранный йогурт", "branded", brand="Локальная марка")
-        system = _catalog_food("системный йогурт", "system")
+        system = _catalog_food("йогурт", "system")
         branded = _catalog_food("брендовый йогурт", "branded")
         db.add_all([favorite, system, branded])
         db.flush()
@@ -298,9 +298,9 @@ def test_local_search_ranking_normalization_pagination_and_query_bound(client) -
     assert response.status_code == 200
     assert response.json()["total"] == 5
     assert [item["id"] for item in response.json()["items"]] == [
+        own_id,
         recent_id,
         favorite_id,
-        own_id,
         system_id,
         branded_id,
     ]
@@ -310,7 +310,7 @@ def test_local_search_ranking_normalization_pagination_and_query_bound(client) -
         params={"q": "йогурт", "limit": 2, "offset": 2},
     ).json()
     assert page["total"] == 5
-    assert [item["id"] for item in page["items"]] == [own_id, system_id]
+    assert [item["id"] for item in page["items"]] == [favorite_id, system_id]
     assert (
         client.get(
             "/api/v1/nutrition/foods/search",

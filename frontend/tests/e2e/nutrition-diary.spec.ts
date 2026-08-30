@@ -56,6 +56,156 @@ const oatmealFood = {
   updated_at: '2026-07-01T07:00:00Z',
 };
 
+const riceFood = {
+  ...oatmealFood,
+  id: 8,
+  name: 'Рис домашний',
+  energy_kcal_per_100g: '130.00',
+  protein_g_per_100g: '2.700',
+  fat_g_per_100g: '0.300',
+  carbs_g_per_100g: '28.000',
+  standard_serving_amount: null,
+  standard_serving_unit: null,
+  standard_serving_weight_g: null,
+};
+
+const importedRiceFood = {
+  ...riceFood,
+  id: 82,
+  name: 'Рис белый приготовленный, без добавления масла',
+  food_type: 'user',
+  is_favorite: false,
+};
+
+const externalRiceFoods = [
+  {
+    name: 'Рис белый приготовленный, без добавления масла',
+    external_id: '2708408',
+    energy_kcal_per_100g: '130.00',
+  },
+  {
+    name: 'Рис бурый приготовленный, без добавления масла',
+    external_id: '2708414',
+    energy_kcal_per_100g: '123.00',
+  },
+  {
+    name: 'Рис дикий приготовленный, без добавления масла',
+    external_id: '2708424',
+    energy_kcal_per_100g: '101.00',
+  },
+].map(({ name, external_id, energy_kcal_per_100g }) => ({
+  name,
+  brand: null,
+  barcode: null,
+  energy_kcal_per_100g,
+  protein_g_per_100g: '2.700',
+  fat_g_per_100g: '0.300',
+  carbs_g_per_100g: '28.000',
+  fiber_g_per_100g: '0.400',
+  standard_serving_amount: null,
+  standard_serving_unit: null,
+  standard_serving_weight_g: null,
+  external_id,
+  source: {
+    provider: 'usda_fdc',
+    attribution: 'U.S. Department of Agriculture, FoodData Central',
+    source_url: `https://fdc.nal.usda.gov/fdc-app.html#/food-details/${external_id}/nutrients`,
+    license: 'CC0-1.0',
+    license_url: 'https://creativecommons.org/publicdomain/zero/1.0/',
+  },
+}));
+
+const externalPotatoFoods = [
+  {
+    name: 'Картофель запечённый, способ приготовления не указан',
+    external_id: '2709383',
+    energy_kcal_per_100g: '93.00',
+  },
+  {
+    name: 'Картофель отварной, способ приготовления не указан',
+    external_id: '2709385',
+    energy_kcal_per_100g: '87.00',
+  },
+  {
+    name: 'Картофель фри из свежего картофеля, жареный',
+    external_id: '2709458',
+    energy_kcal_per_100g: '289.00',
+  },
+  {
+    name: 'Картофель жареный по-домашнему из свежего картофеля',
+    external_id: '2709474',
+    energy_kcal_per_100g: '185.00',
+  },
+  {
+    name: 'Картофельное пюре, способ приготовления не указан',
+    external_id: '2709492',
+    energy_kcal_per_100g: '113.00',
+  },
+].map(({ name, external_id, energy_kcal_per_100g }) => ({
+  name,
+  brand: null,
+  barcode: null,
+  energy_kcal_per_100g,
+  protein_g_per_100g: '2.000',
+  fat_g_per_100g: '0.500',
+  carbs_g_per_100g: '20.000',
+  fiber_g_per_100g: '2.000',
+  standard_serving_amount: null,
+  standard_serving_unit: null,
+  standard_serving_weight_g: null,
+  external_id,
+  source: {
+    provider: 'usda_fdc',
+    attribution: 'U.S. Department of Agriculture, FoodData Central',
+    source_url: `https://fdc.nal.usda.gov/fdc-app.html#/food-details/${external_id}/nutrients`,
+    license: 'CC0-1.0',
+    license_url: 'https://creativecommons.org/publicdomain/zero/1.0/',
+  },
+}));
+
+const externalEggFoods = [
+  {
+    name: 'Яйцо целое варёное или пашот',
+    external_id: '2707154',
+    energy_kcal_per_100g: '155.00',
+  },
+  {
+    name: 'Яйцо целое жареное без добавления масла',
+    external_id: '2707156',
+    energy_kcal_per_100g: '174.00',
+  },
+  {
+    name: 'Яйцо целое жареное с растительным маслом',
+    external_id: '2707158',
+    energy_kcal_per_100g: '196.00',
+  },
+  {
+    name: 'Яйцо целое жареное со сливочным маслом',
+    external_id: '2707159',
+    energy_kcal_per_100g: '196.00',
+  },
+].map(({ name, external_id, energy_kcal_per_100g }) => ({
+  name,
+  brand: null,
+  barcode: null,
+  energy_kcal_per_100g,
+  protein_g_per_100g: '13.000',
+  fat_g_per_100g: '14.000',
+  carbs_g_per_100g: '1.000',
+  fiber_g_per_100g: '0.000',
+  standard_serving_amount: null,
+  standard_serving_unit: null,
+  standard_serving_weight_g: null,
+  external_id,
+  source: {
+    provider: 'usda_fdc',
+    attribution: 'U.S. Department of Agriculture, FoodData Central',
+    source_url: `https://fdc.nal.usda.gov/fdc-app.html#/food-details/${external_id}/nutrients`,
+    license: 'CC0-1.0',
+    license_url: 'https://creativecommons.org/publicdomain/zero/1.0/',
+  },
+}));
+
 async function mockNutritionApi(page: Page) {
   let entries: FoodDiaryEntry[] = [yogurtEntry];
   let dayStatus: 'incomplete' | 'complete' = 'incomplete';
@@ -146,6 +296,41 @@ async function mockNutritionApi(page: Page) {
     if (path === '/api/v1/nutrition/foods/favorites') {
       return route.fulfill({ json: { items: [oatmealFood], total: 1, limit: 12, offset: 0 } });
     }
+    if (path === '/api/v1/nutrition/foods/search') {
+      const includeExternal = url.searchParams.get('include_external') === 'true';
+      const query = url.searchParams.get('q') ?? '';
+      const isPotatoSearch = query.includes('картофель');
+      const isEggSearch = query.includes('яйцо');
+      const isGenericStateSearch = isPotatoSearch || isEggSearch;
+      const externalFoods = isPotatoSearch
+        ? externalPotatoFoods
+        : isEggSearch
+          ? externalEggFoods
+          : externalRiceFoods;
+      return route.fulfill({
+        json: {
+          items: isGenericStateSearch ? [] : [riceFood],
+          external_items: includeExternal ? externalFoods : [],
+          total: isGenericStateSearch ? 0 : 1,
+          limit: 20,
+          offset: 0,
+          provider_status: includeExternal ? 'available' : 'not_requested',
+          provider_statuses: includeExternal
+            ? [
+                { provider: 'open_food_facts', status: 'available', result_count: 0 },
+                {
+                  provider: 'usda_fdc',
+                  status: 'available',
+                  result_count: externalFoods.length,
+                },
+              ]
+            : [],
+        },
+      });
+    }
+    if (path === '/api/v1/nutrition/foods' && request.method() === 'POST') {
+      return route.fulfill({ status: 201, json: importedRiceFood });
+    }
     if (path === '/api/v1/nutrition/diary/status' && request.method() === 'PUT') {
       dayStatus = 'complete';
       return route.fulfill({
@@ -178,24 +363,37 @@ async function mockNutritionApi(page: Page) {
           fat_g?: number | null;
           carbs_g?: number | null;
         };
+        food_id?: number | null;
+        amount?: number;
+        amount_unit?: 'g' | 'serving';
       };
       const isQuick = Boolean(body.quick_add);
+      const selectedFood = body.food_id === importedRiceFood.id ? importedRiceFood : oatmealFood;
       const created: FoodDiaryEntry = {
         ...yogurtEntry,
         id: 22,
         diary_date: body.diary_date,
         meal_type: body.meal_type,
-        food_id: isQuick ? null : oatmealFood.id,
+        food_id: isQuick ? null : selectedFood.id,
         entry_kind: isQuick ? 'quick_add' : 'food',
         logged_at: body.logged_at ?? null,
-        food_name: body.quick_add?.name || (isQuick ? 'Быстрый ввод' : oatmealFood.name),
+        food_name: body.quick_add?.name || (isQuick ? 'Быстрый ввод' : selectedFood.name),
         food_brand: null,
-        amount: '1.000',
-        amount_unit: 'serving',
-        weight_g: '50.000',
-        serving_amount: '1.000',
-        serving_unit: 'serving',
-        serving_weight_g: '50.000',
+        amount:
+          !isQuick && selectedFood.id === importedRiceFood.id
+            ? String(body.amount ?? 100)
+            : '1.000',
+        amount_unit:
+          !isQuick && selectedFood.id === importedRiceFood.id
+            ? (body.amount_unit ?? 'g')
+            : 'serving',
+        weight_g:
+          !isQuick && selectedFood.id === importedRiceFood.id
+            ? String(body.amount ?? 100)
+            : '50.000',
+        serving_amount: !isQuick && selectedFood.id === importedRiceFood.id ? null : '1.000',
+        serving_unit: !isQuick && selectedFood.id === importedRiceFood.id ? null : 'serving',
+        serving_weight_g: !isQuick && selectedFood.id === importedRiceFood.id ? null : '50.000',
         nutrition: isQuick
           ? {
               energy_kcal: String(body.quick_add?.energy_kcal ?? 0),
@@ -205,13 +403,21 @@ async function mockNutritionApi(page: Page) {
               carbs_g: body.quick_add?.carbs_g == null ? null : String(body.quick_add.carbs_g),
               fiber_g: null,
             }
-          : {
-              energy_kcal: '180.00',
-              protein_g: '6.000',
-              fat_g: '3.000',
-              carbs_g: '31.000',
-              fiber_g: '4.000',
-            },
+          : selectedFood.id === importedRiceFood.id
+            ? {
+                energy_kcal: '130.00',
+                protein_g: '2.700',
+                fat_g: '0.300',
+                carbs_g: '28.000',
+                fiber_g: '0.400',
+              }
+            : {
+                energy_kcal: '180.00',
+                protein_g: '6.000',
+                fat_g: '3.000',
+                carbs_g: '31.000',
+                fiber_g: '4.000',
+              },
       };
       entries = [...entries, created];
       return route.fulfill({ status: 201, json: created });
@@ -219,6 +425,81 @@ async function mockNutritionApi(page: Page) {
     return route.fulfill({ status: 404, json: { detail: `Unhandled ${path}` } });
   });
 }
+
+const russianSearchVisualCases = [
+  { label: 'desktop-1280', viewport: { width: 1280, height: 900 }, dark: false },
+  { label: 'mobile-web-360', viewport: { width: 360, height: 800 }, dark: false },
+  { label: 'dark-mobile-390', viewport: { width: 390, height: 844 }, dark: true },
+] as const;
+
+for (const current of russianSearchVisualCases) {
+  test(`Russian multi-variant food search visual evidence (${current.label})`, async ({ page }) => {
+    await page.setViewportSize(current.viewport);
+    await page.emulateMedia({ colorScheme: current.dark ? 'dark' : 'light' });
+    await mockNutritionApi(page);
+    await page.goto('/app?section=nutrition');
+    const breakfast = page.getByRole('region', { name: 'Завтрак' });
+    await breakfast.getByRole('button', { name: /Добавить/ }).click();
+    await page.getByRole('searchbox', { name: 'Поиск по названию или бренду' }).fill('рис');
+    await expect(page.getByText('Рис белый приготовленный, без добавления масла')).toBeVisible();
+    await expect(page.getByText('Рис бурый приготовленный, без добавления масла')).toBeVisible();
+    await expect(page.getByText('Рис дикий приготовленный, без добавления масла')).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
+      current.viewport.width,
+    );
+    await page.screenshot({
+      path: `../.artifacts/screenshots/task-114a/russian-food-variants-${current.label}.png`,
+    });
+  });
+}
+
+test('Russian search shows separate preparation states with their own macros', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockNutritionApi(page);
+  await page.goto('/app?section=nutrition');
+  const breakfast = page.getByRole('region', { name: 'Завтрак' });
+  await breakfast.getByRole('button', { name: /Добавить/ }).click();
+  await page.getByRole('searchbox', { name: 'Поиск по названию или бренду' }).fill('картофель');
+
+  await expect(
+    page.getByText('Картофель запечённый, способ приготовления не указан'),
+  ).toBeVisible();
+  await expect(page.getByText('Картофель отварной, способ приготовления не указан')).toBeVisible();
+  await expect(page.getByText('Картофель фри из свежего картофеля, жареный')).toBeVisible();
+  await expect(page.getByText('Картофель жареный по-домашнему из свежего картофеля')).toBeVisible();
+  await expect(page.getByText('Картофельное пюре, способ приготовления не указан')).toBeVisible();
+  await expect(page.getByText('93 ккал / 100 г')).toBeVisible();
+  await expect(page.getByText('87 ккал / 100 г')).toBeVisible();
+  await expect(page.getByText('289 ккал / 100 г')).toBeVisible();
+  await page.screenshot({
+    path: '../.artifacts/screenshots/task-114a/russian-food-preparation-states-mobile-390.png',
+  });
+  await page.getByText('Картофель фри из свежего картофеля, жареный').scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: '../.artifacts/screenshots/task-114a/russian-food-preparation-states-lower-mobile-390.png',
+  });
+});
+
+test('Russian preparation states and oil variants apply beyond potatoes', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockNutritionApi(page);
+  await page.goto('/app?section=nutrition');
+  const breakfast = page.getByRole('region', { name: 'Завтрак' });
+  await breakfast.getByRole('button', { name: /Добавить/ }).click();
+  await page.getByRole('searchbox', { name: 'Поиск по названию или бренду' }).fill('яйцо');
+
+  await expect(page.getByText('Яйцо целое варёное или пашот')).toBeVisible();
+  await expect(page.getByText('Яйцо целое жареное без добавления масла')).toBeVisible();
+  await expect(page.getByText('Яйцо целое жареное с растительным маслом')).toBeVisible();
+  await expect(page.getByText('Яйцо целое жареное со сливочным маслом')).toBeVisible();
+  await expect(page.getByText('155 ккал / 100 г')).toBeVisible();
+  await expect(page.getByText('174 ккал / 100 г')).toBeVisible();
+  await expect(page.getByText('196 ккал / 100 г').first()).toBeVisible();
+  await page.getByText('Яйцо целое жареное с растительным маслом').scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: '../.artifacts/screenshots/task-114a/russian-food-oil-variants-mobile-390.png',
+  });
+});
 
 test('nutrition diary is responsive, keyboard-safe and supports local quick add', async ({
   page,
@@ -378,5 +659,54 @@ test('dark nutrition uses the shared lime status and progress accents', async ({
   await lunch.scrollIntoViewIfNeeded();
   await lunch.screenshot({
     path: '../.artifacts/screenshots/task-113A-round-5/nutrition-collapsible-meals-dark-390x844.png',
+  });
+});
+
+test('Russian search supplements local food with USDA generic result and persists the diary entry', async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date('2026-08-19T09:00:00+03:00'));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockNutritionApi(page);
+  await page.goto('/app?section=nutrition');
+
+  const breakfast = page.getByRole('region', { name: 'Завтрак' });
+  await breakfast.getByRole('button', { name: /Добавить/ }).click();
+  const search = page.getByRole('searchbox', { name: 'Поиск по названию или бренду' });
+  await search.fill('рис');
+
+  await expect(page.getByRole('button', { name: 'Добавить Рис домашний' })).toBeVisible();
+  await expect(page.getByText('Рис белый приготовленный, без добавления масла')).toBeVisible();
+  await expect(page.getByText('Рис бурый приготовленный, без добавления масла')).toBeVisible();
+  await expect(page.getByText('Рис дикий приготовленный, без добавления масла')).toBeVisible();
+  await expect(page.getByText(/CC0-1.0/).first()).toBeVisible();
+  await page.screenshot({
+    path: '../.artifacts/screenshots/task-114a/generic-rice-search-390x844.png',
+  });
+  await page
+    .getByText('Рис белый приготовленный, без добавления масла')
+    .locator('..')
+    .locator('..')
+    .getByRole('button', { name: 'Выбрать продукт' })
+    .click();
+  const amount = page.getByRole('spinbutton', { name: 'Количество' });
+  await expect(amount).toHaveValue('100');
+  await expect(amount).toBeFocused();
+  await page.getByRole('button', { name: 'Добавить в дневник' }).click();
+
+  await expect(page.getByRole('dialog')).not.toBeAttached();
+  const entry = page
+    .locator('.nutrition-entry')
+    .filter({ hasText: 'Рис белый приготовленный, без добавления масла' });
+  await expect(entry).toContainText('130');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
+  await page.reload();
+  const reloadedEntry = page
+    .locator('.nutrition-entry')
+    .filter({ hasText: 'Рис белый приготовленный, без добавления масла' });
+  await expect(reloadedEntry).toBeVisible();
+  await reloadedEntry.scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: '../.artifacts/screenshots/task-114a/generic-rice-added-390x844.png',
   });
 });

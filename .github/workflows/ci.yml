@@ -4,6 +4,7 @@ on:
   push:
     branches: [dev, master]
   pull_request:
+    types: [opened, reopened, ready_for_review]
 
 permissions:
   contents: read

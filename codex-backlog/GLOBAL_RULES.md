@@ -72,8 +72,17 @@ Lifecycle не расширяет scope task и не отменяет owner chec
   bootstrap, infrastructure recovery и SHA вне текущего merged `master` остаются exceptional
   actions с отдельным owner approval, backup и preflight.
 - Для `AUTO_RELEASE_ELIGIBLE` task нормальный release path выполняется без дополнительного вопроса
-  владельцу: `dev -> PR master -> required checks -> exact-head merge -> post-merge CI -> automatic
-  production deploy -> terminal success -> sync dev to master`. Direct push в `master` запрещён.
+  владельцу и строго последовательно: `dev push -> exact push CI success -> PR master -> required
+  PR checks -> exact-head merge -> post-merge CI -> automatic production deploy -> terminal success
+  -> sync dev to master`. Direct push в `master` запрещён.
+- Release flow является **strictly serial**. В момент любого pre-release push в `dev` не должно быть
+  открытого release PR `dev -> master`. Если после открытия такого PR требуется новый commit, merge
+  `origin/master -> dev` или любой другой push, агент сначала закрывает текущий release PR, затем
+  выполняет push и ждёт terminal success exact push-CI. Только после этого разрешено переоткрыть тот
+  же PR при неизменном scope/base либо создать новый. Автоматический `pull_request:synchronize` CI,
+  запущенный параллельно с push-CI из-за открытого PR, считается нарушением lifecycle, а не допустимой
+  оптимизацией. Если открытый PR нельзя однозначно идентифицировать как текущий release PR, агент
+  ничего не закрывает автоматически и останавливается с точным blocker.
 - Task с обязательным owner checkpoint/approve/human evidence/manual visual approval останавливается
   перед release до фактического прохождения gate. Task без tracked logical commit не создаёт PR.
 - Перед началом прочитать корневой `AGENTS.md`, этот файл, lifecycle и только текущую task.
@@ -108,6 +117,9 @@ Lifecycle не расширяет scope task и не отменяет owner chec
   constrained VPS через предусмотренный `single-slot` fallback с bounded downtime; evidence имеет
   verdict `active`, все stages прошли, public/API/SEO и ownership worker/bot проверены. Это не
   является доказательством production zero observed downtime или общей HA.
+- Task `113A` завершена, выпущена в production revision `17bee56c` и архивирована после owner
+  acceptance `2026-08-30`. Task `114` является current/not started и требует отдельной команды на
+  запуск lifecycle.
 - Current task `114` и UX-reset sequence `114 -> 115A -> owner approval -> 116..123 -> 81 -> 82 ->
   84 -> 124A -> owner release approval -> 124B -> conditional 124C` не отменяют собственные Trigger,
   dependency и owner decisions task files.

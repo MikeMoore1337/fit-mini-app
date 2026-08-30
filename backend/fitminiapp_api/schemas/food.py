@@ -94,11 +94,24 @@ class FoodValuesInput(FoodNutrientsInput):
         return self
 
 
+class ExternalFoodSource(BaseModel):
+    provider: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]{1,63}$")
+    attribution: str = Field(min_length=1, max_length=256)
+    source_url: HttpUrl
+    license: str = Field(min_length=1, max_length=128)
+    license_url: HttpUrl
+
+
+class ExternalFoodImportSource(ExternalFoodSource):
+    external_id: str = Field(min_length=1, max_length=128)
+
+
 class UserFoodCreate(FoodValuesInput):
     energy_kcal_per_100g: Decimal = Field(ge=0, le=1000)
     protein_g_per_100g: Decimal = Field(ge=0, le=100)
     fat_g_per_100g: Decimal = Field(ge=0, le=100)
     carbs_g_per_100g: Decimal = Field(ge=0, le=100)
+    external_source: ExternalFoodImportSource | None = None
 
 
 class UserFoodUpdate(BaseModel):
@@ -163,27 +176,26 @@ class FoodListResponse(BaseModel):
     offset: int = Field(ge=0)
 
 
-class ExternalFoodSource(BaseModel):
-    provider: str
-    attribution: str
-    source_url: HttpUrl
-    license: str
-    license_url: HttpUrl
-
-
 class ExternalFoodResponse(FoodValuesInput):
     energy_kcal_per_100g: Decimal = Field(ge=0, le=1000)
     protein_g_per_100g: Decimal = Field(ge=0, le=100)
     fat_g_per_100g: Decimal = Field(ge=0, le=100)
     carbs_g_per_100g: Decimal = Field(ge=0, le=100)
-    barcode: str
+    barcode: str | None = None
     external_id: str
     source: ExternalFoodSource
+
+
+class FoodProviderStatusResponse(BaseModel):
+    provider: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]{1,63}$")
+    status: FoodProviderStatus
+    result_count: int = Field(default=0, ge=0)
 
 
 class FoodSearchResponse(FoodListResponse):
     external_items: list[ExternalFoodResponse] = Field(default_factory=list)
     provider_status: FoodProviderStatus = "not_requested"
+    provider_statuses: list[FoodProviderStatusResponse] = Field(default_factory=list)
 
 
 class FoodBarcodeLookupResponse(BaseModel):
@@ -193,6 +205,7 @@ class FoodBarcodeLookupResponse(BaseModel):
     local_item: FoodResponse | None = None
     external_item: ExternalFoodResponse | None = None
     provider_status: FoodProviderStatus
+    provider_statuses: list[FoodProviderStatusResponse] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_result_shape(self) -> FoodBarcodeLookupResponse:
@@ -207,6 +220,8 @@ class FoodBarcodeLookupResponse(BaseModel):
         if self.source == "local" and self.local_item is not None and self.external_item is None:
             return self
         if self.source == "external" and self.external_item is not None and self.local_item is None:
+            if self.external_item.barcode != self.barcode:
+                raise ValueError("an external barcode result must match the requested barcode")
             return self
         raise ValueError(
             "a found barcode lookup must contain exactly one result matching its source"

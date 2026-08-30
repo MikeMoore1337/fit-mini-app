@@ -4681,6 +4681,27 @@ export interface components {
             /** Sets */
             sets: components["schemas"]["TrainingAnalyticsSet"][];
         };
+        /** ExternalFoodImportSource */
+        ExternalFoodImportSource: {
+            /** Provider */
+            provider: string;
+            /** Attribution */
+            attribution: string;
+            /**
+             * Source Url
+             * Format: uri
+             */
+            source_url: string;
+            /** License */
+            license: string;
+            /**
+             * License Url
+             * Format: uri
+             */
+            license_url: string;
+            /** External Id */
+            external_id: string;
+        };
         /** ExternalFoodResponse */
         ExternalFoodResponse: {
             /** Energy Kcal Per 100G */
@@ -4698,7 +4719,7 @@ export interface components {
             /** Brand */
             brand?: string | null;
             /** Barcode */
-            barcode: string;
+            barcode?: string | null;
             /** Standard Serving Amount */
             standard_serving_amount?: string | null;
             /** Standard Serving Unit */
@@ -4746,6 +4767,8 @@ export interface components {
              * @enum {string}
              */
             provider_status: "not_requested" | "not_needed" | "disabled" | "available" | "unavailable" | "rate_limited";
+            /** Provider Statuses */
+            provider_statuses?: components["schemas"]["FoodProviderStatusResponse"][];
         };
         /** FoodDiaryCopyDay */
         FoodDiaryCopyDay: {
@@ -5029,6 +5052,21 @@ export interface components {
             /** Offset */
             offset: number;
         };
+        /** FoodProviderStatusResponse */
+        FoodProviderStatusResponse: {
+            /** Provider */
+            provider: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "not_requested" | "not_needed" | "disabled" | "available" | "unavailable" | "rate_limited";
+            /**
+             * Result Count
+             * @default 0
+             */
+            result_count: number;
+        };
         /** FoodResponse */
         FoodResponse: {
             /** Id */
@@ -5093,6 +5131,8 @@ export interface components {
              * @enum {string}
              */
             provider_status: "not_requested" | "not_needed" | "disabled" | "available" | "unavailable" | "rate_limited";
+            /** Provider Statuses */
+            provider_statuses?: components["schemas"]["FoodProviderStatusResponse"][];
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -6977,6 +7017,7 @@ export interface components {
             standard_serving_unit?: ("g" | "ml" | "piece" | "serving") | null;
             /** Standard Serving Weight G */
             standard_serving_weight_g?: number | string | null;
+            external_source?: components["schemas"]["ExternalFoodImportSource"] | null;
         };
         /** UserFoodUpdate */
         UserFoodUpdate: {
