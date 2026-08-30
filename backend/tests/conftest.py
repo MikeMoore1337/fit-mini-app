@@ -64,6 +64,8 @@ os.environ.setdefault("TELEGRAM_BOT_TOKEN", "test-token")
 os.environ.setdefault("BOT_INTERNAL_TOKEN", "test-token")
 os.environ.setdefault("FRONTEND_BASE_URL", "https://app.your-fitness-coach.ru")
 os.environ.setdefault("FRONTEND_DIST_DIR", str(_TEST_FRONTEND_DIST))
+os.environ["NEWS_INGESTION_ENABLED"] = "false"
+os.environ["NEWS_PUBLICATION_ENABLED"] = "false"
 
 from fitminiapp_api.core.rate_limit import limiter
 from fitminiapp_api.db.base import Base

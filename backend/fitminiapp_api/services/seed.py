@@ -14,6 +14,7 @@ from fitminiapp_api.models.program import (
 from fitminiapp_api.models.user import User, UserProfile
 from fitminiapp_api.services.auth_identities import ensure_telegram_identity
 from fitminiapp_api.services.exercise_domain import sync_catalog_exercise_domain_metadata
+from fitminiapp_api.services.news_sources import bootstrap_default_news_sources
 from fitminiapp_api.services.program_seed_data import (
     EXERCISE_CATALOG,
     LEGACY_TEMPLATE_SLUGS,
@@ -199,6 +200,8 @@ def seed_demo_data(db: Session, include_demo_users: bool = True) -> None:
 
     _delete_legacy_templates(db)
     _seed_strength_templates(db)
+    if settings.news_ingestion_enabled:
+        bootstrap_default_news_sources(db)
     db.commit()
 
 

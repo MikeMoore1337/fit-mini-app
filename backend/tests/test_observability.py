@@ -84,6 +84,41 @@ def test_json_formatter_preserves_worker_lifecycle_markers() -> None:
         assert json.loads(formatter.format(record))["message"] == event_name
 
 
+def test_news_cycle_summary_preserves_required_bounded_counters() -> None:
+    record = logging.LogRecord(
+        name="fitminiapp_api.services.news_worker",
+        level=logging.INFO,
+        pathname=__file__,
+        lineno=1,
+        msg="news_pipeline_cycle_completed",
+        args=(),
+        exc_info=None,
+    )
+    fields = {
+        "sources_total": 3,
+        "sources_checked": 2,
+        "sources_success": 1,
+        "sources_failed": 1,
+        "candidates_fetched": 20,
+        "candidates_new": 8,
+        "candidates_duplicate": 4,
+        "candidates_stale": 3,
+        "candidates_below_threshold": 2,
+        "candidates_eligible": 3,
+        "drafts_created": 2,
+        "drafts_skipped_daily_limit": 1,
+        "llm_failures": 1,
+        "telegram_delivery_failures": 0,
+    }
+    for key, value in fields.items():
+        setattr(record, key, value)
+
+    payload = json.loads(JsonFormatter(service="notification-worker").format(record))
+
+    assert payload["message"] == "news_pipeline_cycle_completed"
+    assert {key: payload[key] for key in fields} == fields
+
+
 def test_json_formatter_rejects_arbitrary_values_and_keeps_safe_diagnostics() -> None:
     markers = (
         "private_note_marker",

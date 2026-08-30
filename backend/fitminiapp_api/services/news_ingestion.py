@@ -4,6 +4,7 @@ import hashlib
 import html
 import ipaddress
 import json
+import logging
 import re
 import socket
 import xml.etree.ElementTree as ET
@@ -21,6 +22,8 @@ from sqlalchemy.orm import Session
 from fitminiapp_api.models.news import NewsCluster, NewsItem, NewsSource
 from fitminiapp_api.services.news_freshness import is_current_month_publication
 from fitminiapp_api.services.news_state import transition_news_cluster
+
+logger = logging.getLogger(__name__)
 
 MAX_TITLE_CHARS = 500
 MAX_SUMMARY_CHARS = 4000
@@ -197,6 +200,18 @@ PRIORITY_KEYWORDS = {
         "тренажер",
     ),
 }
+ESPORTS_PHYSICAL_CONTEXT = (
+    "physical activity",
+    "physical health",
+    "exercise",
+    "fitness",
+    "injury",
+    "nutrition",
+    "physiological",
+    "recovery",
+    "sleep",
+    "training load",
+)
 SOURCE_QUALITY = {
     "primary_research": 25,
     "systematic_review": 28,
@@ -751,6 +766,10 @@ def _event_match(
 
 def _topic(text: str) -> str:
     normalized = text.lower()
+    if "esport" in normalized and not any(
+        marker in normalized for marker in ESPORTS_PHYSICAL_CONTEXT
+    ):
+        return "other"
     scored = {
         topic: sum(1 for keyword in keywords if keyword in normalized)
         for topic, keywords in TOPIC_KEYWORDS.items()
@@ -761,6 +780,32 @@ def _topic(text: str) -> str:
 
 def prohibited_flags(text: str) -> list[str]:
     return [name for name, pattern in PROHIBITED_PATTERNS.items() if pattern.search(text)]
+
+
+def _candidate_ref(item: ParsedNewsItem) -> str:
+    identity = item.external_id.strip() or item.canonical_url
+    return hashlib.sha256(identity.encode("utf-8", errors="replace")).hexdigest()[:16]
+
+
+def _log_candidate(
+    item: ParsedNewsItem,
+    *,
+    outcome: str,
+    reason: str,
+    score: int = 0,
+    topic: str = "other",
+) -> None:
+    logger.info(
+        "news_candidate_evaluated",
+        extra={
+            "pipeline_stage": "scoring",
+            "candidate_ref": _candidate_ref(item),
+            "outcome": outcome,
+            "reason": reason,
+            "score": score,
+            "topic": topic,
+        },
+    )
 
 
 def score_candidate(
@@ -854,7 +899,16 @@ def ingest_items(
     fetched_at: datetime | None = None,
 ) -> dict[str, int]:
     current = fetched_at or utcnow()
-    counts = {"new": 0, "duplicate": 0, "clustered": 0, "candidate": 0, "rejected": 0}
+    counts = {
+        "new": 0,
+        "duplicate": 0,
+        "clustered": 0,
+        "candidate": 0,
+        "rejected": 0,
+        "stale": 0,
+        "below_threshold": 0,
+        "eligible": 0,
+    }
     for parsed in parsed_items:
         try:
             canonical_url = _item_reference_url(source, parsed.canonical_url)
@@ -865,11 +919,13 @@ def ingest_items(
             )
         except ValueError:
             counts["rejected"] += 1
+            _log_candidate(item=parsed, outcome="rejected", reason="invalid_item_url")
             continue
         title = plain_text(parsed.title, maximum=MAX_TITLE_CHARS)
         summary = plain_text(parsed.summary, maximum=MAX_SUMMARY_CHARS)
         if not title:
             counts["rejected"] += 1
+            _log_candidate(item=parsed, outcome="rejected", reason="missing_title")
             continue
         external_id = parsed.external_id.strip()[:512] or canonical_url
         external_hash = sha256_text(external_id)
@@ -899,6 +955,7 @@ def ingest_items(
         )
         if existing_revision is not None:
             counts["duplicate"] += 1
+            _log_candidate(item=parsed, outcome="duplicate", reason="duplicate_revision")
             continue
         matched, merge_reason, uncertain = _event_match(db, parsed, canonical_hash)
         cluster = (
@@ -994,6 +1051,13 @@ def ingest_items(
             )
             item.status = "rejected_by_rules"
             counts["rejected"] += 1
+            _log_candidate(
+                item=parsed,
+                outcome="rejected",
+                reason="prohibited_content_rule",
+                score=score,
+                topic=topic,
+            )
         else:
             item.status = "clustered"
             if score >= candidate_threshold:
@@ -1005,6 +1069,14 @@ def ingest_items(
                         reason_code="score_threshold_met",
                     )
                 counts["candidate"] += 1
+                counts["eligible"] += 1
+                _log_candidate(
+                    item=parsed,
+                    outcome="eligible",
+                    reason="score_threshold_met",
+                    score=score,
+                    topic=topic,
+                )
             else:
                 transition_news_cluster(
                     db,
@@ -1013,4 +1085,19 @@ def ingest_items(
                     reason_code="score_below_threshold",
                 )
                 counts["clustered"] += 1
+                if "source_not_current_month" in risks:
+                    counts["stale"] += 1
+                    reason = "source_not_current_month"
+                elif "topic_not_allowlisted" in risks:
+                    reason = "topic_not_allowlisted"
+                else:
+                    counts["below_threshold"] += 1
+                    reason = "score_below_threshold"
+                _log_candidate(
+                    item=parsed,
+                    outcome="rejected",
+                    reason=reason,
+                    score=score,
+                    topic=topic,
+                )
     return counts

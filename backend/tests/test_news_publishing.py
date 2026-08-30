@@ -38,7 +38,13 @@ from fitminiapp_api.services.news_images import (
     create_image_revision,
     create_uploaded_image_revision,
 )
-from fitminiapp_api.services.news_ingestion import ParsedNewsItem, ingest_items, utcnow
+from fitminiapp_api.services.news_ingestion import (
+    ParsedNewsItem,
+    SafeNewsFetcher,
+    SourceFetchResult,
+    ingest_items,
+    utcnow,
+)
 from fitminiapp_api.services.news_post_management import manage_published_post
 from fitminiapp_api.services.news_publication import (
     ARTIFACT_HASH_PREFIX_LENGTH,
@@ -51,7 +57,11 @@ from fitminiapp_api.services.news_publication import (
     retry_uncertain_publication,
 )
 from fitminiapp_api.services.news_sources import apply_source_allowlist, parse_source_allowlist
-from fitminiapp_api.services.news_worker import deliver_review_queue
+from fitminiapp_api.services.news_worker import (
+    NewsCycleStats,
+    deliver_review_queue,
+    run_news_pipeline_once,
+)
 from fitminiapp_api.services.worker import (
     TelegramPublicationError,
     check_news_channel_rights,
@@ -1138,6 +1148,8 @@ def test_private_preview_matches_exact_artifact_and_retry_does_not_duplicate_it(
             raise RuntimeError("simulated control-card failure")
         return 202
 
+    stats = NewsCycleStats()
+
     async def deliver() -> int:
         async with httpx.AsyncClient() as client:
             return await deliver_review_queue(
@@ -1145,9 +1157,11 @@ def test_private_preview_matches_exact_artifact_and_retry_does_not_duplicate_it(
                 send_control,
                 send_preview,
                 channel_ready=True,
+                cycle_stats=stats,
             )
 
     assert asyncio.run(deliver()) == 0
+    assert stats.telegram_delivery_failures == 1
     with get_session_context() as db:
         delivery = db.query(NewsReviewDelivery).one()
         assert delivery.status == "queued"
@@ -1155,6 +1169,7 @@ def test_private_preview_matches_exact_artifact_and_retry_does_not_duplicate_it(
         delivery.next_attempt_at = utcnow() - timedelta(seconds=1)
 
     assert asyncio.run(deliver()) == 1
+    assert stats.telegram_delivery_failures == 1
     assert len(preview_calls) == 1
     assert len(control_calls) == 2
     preview = preview_calls[0]
@@ -1179,6 +1194,129 @@ def test_private_preview_matches_exact_artifact_and_retry_does_not_duplicate_it(
         assert event.details["artifact_hash"] == expected_hash
         assert event.details["preview_message_id"] == 101
         assert event.details["control_message_id"] == 202
+
+
+def test_successful_pipeline_fetches_scores_drafts_and_delivers_for_approval(
+    monkeypatch,
+) -> None:
+    definitions = parse_source_allowlist(
+        [
+            {
+                "id": "pipeline-journal",
+                "name": "Pipeline Journal",
+                "type": "primary_research",
+                "fetch_kind": "rss",
+                "url": "https://pipeline-journal.example/feed",
+                "language": "en",
+                "enabled": True,
+                "fetch_interval_minutes": 60,
+                "trust_notes": "Primary publisher",
+                "licensing_notes": "Metadata and short excerpt only",
+            }
+        ]
+    )
+    with get_session_context() as db:
+        apply_source_allowlist(db, definitions)
+
+    async def fetch(_self, _source):
+        return SourceFetchResult(
+            status="fetched",
+            items=(
+                ParsedNewsItem(
+                    external_id="pipeline-study-1",
+                    canonical_url="https://pipeline-journal.example/pipeline-study-1",
+                    primary_url="https://pipeline-journal.example/pipeline-study-1",
+                    title="Resistance training improved measured strength in adults",
+                    summary=(
+                        "A randomized controlled exercise study measured strength and "
+                        "muscle recovery outcomes."
+                    ),
+                    publisher="Pipeline Journal",
+                    published_at=utcnow(),
+                    doi="10.1000/pipeline.1",
+                ),
+            ),
+        )
+
+    monkeypatch.setattr(SafeNewsFetcher, "fetch", fetch)
+    monkeypatch.setattr(settings, "news_llm_provider", "disabled")
+    monkeypatch.setattr(settings, "news_image_provider", "disabled")
+    monkeypatch.setattr(settings, "news_daily_draft_limit", 3)
+    monkeypatch.setattr(settings, "news_publication_enabled", True)
+    monkeypatch.setattr(settings, "news_channel_id", -1001234567890)
+    monkeypatch.setattr(settings, "news_channel_username", "yfc_test_news")
+    monkeypatch.setattr(settings, "admin_telegram_user_ids", "7001")
+    preview_calls: list[dict[str, object]] = []
+    control_calls: list[dict[str, object]] = []
+
+    async def send_preview(
+        _client,
+        chat_id,
+        text,
+        image_data,
+        *,
+        parse_mode,
+        link_preview_disabled,
+    ):
+        preview_calls.append(
+            {
+                "chat_id": chat_id,
+                "text": text,
+                "image_data": image_data,
+                "parse_mode": parse_mode,
+                "link_preview_disabled": link_preview_disabled,
+            }
+        )
+        return SimpleNamespace(message_id=301, message_date=utcnow())
+
+    async def send_control(_client, chat_id, text, *, reply_markup):
+        control_calls.append(
+            {
+                "chat_id": chat_id,
+                "text": text,
+                "reply_markup": reply_markup,
+            }
+        )
+        return 302
+
+    async def unexpected_publication(*_args, **_kwargs):
+        raise AssertionError("approval pipeline must not publish without an owner action")
+
+    stats = asyncio.run(
+        run_news_pipeline_once(
+            send_message=send_control,
+            send_preview=send_preview,
+            send_publication=unexpected_publication,
+            publication_ready=True,
+            fetch_sources=True,
+        )
+    )
+
+    assert stats == NewsCycleStats(
+        sources_total=1,
+        sources_checked=1,
+        sources_success=1,
+        candidates_fetched=1,
+        candidates_new=1,
+        candidates_eligible=1,
+        drafts_created=1,
+    )
+    assert len(preview_calls) == 1
+    assert preview_calls[0]["chat_id"] == 7001
+    assert len(control_calls) == 1
+    assert control_calls[0]["chat_id"] == 7001
+    with get_session_context() as db:
+        draft = db.query(NewsDraftRevision).one()
+        delivery = db.query(NewsReviewDelivery).one()
+        cluster = db.query(NewsCluster).one()
+        assert draft.provider == "deterministic"
+        assert delivery.status == "sent"
+        assert delivery.telegram_message_id == 301
+        assert cluster.status == "awaiting_review"
+        assert db.query(NewsPublicationSnapshot).count() == 0
+        event = db.query(AuditEvent).filter_by(action="news.preview_created").one()
+        assert event.details["preview_message_id"] == 301
+        assert event.details["control_message_id"] == 302
 
 
 def test_over_limit_photo_control_card_shows_measurement_and_recovery_actions(

@@ -1,0 +1,30 @@
+[
+  {
+    "id": "frontiers-nutrition",
+    "name": "Frontiers in Nutrition",
+    "type": "primary_research",
+    "fetch_kind": "rss",
+    "url": "https://www.frontiersin.org/journals/nutrition/rss",
+    "language": "en",
+    "enabled": true,
+    "fetch_interval_minutes": 360,
+    "trust_notes": "Научный журнал. Тип статьи, дизайн, ограничения и conflicts требуют редакционной проверки.",
+    "licensing_notes": "Хранить только metadata и короткий audit excerpt; не копировать полный текст или изображения.",
+    "allowed_redirect_hosts": [],
+    "allowed_item_hosts": []
+  },
+  {
+    "id": "frontiers-sports-active-living",
+    "name": "Frontiers in Sports and Active Living",
+    "type": "primary_research",
+    "fetch_kind": "rss",
+    "url": "https://www.frontiersin.org/journals/sports-and-active-living/rss",
+    "language": "en",
+    "enabled": true,
+    "fetch_interval_minutes": 360,
+    "trust_notes": "Научный журнал. Материал должен иметь прямую связь с тренировками, восстановлением или спортивной медициной.",
+    "licensing_notes": "Хранить только metadata и короткий audit excerpt; не копировать полный текст или изображения.",
+    "allowed_redirect_hosts": [],
+    "allowed_item_hosts": []
+  }
+]
