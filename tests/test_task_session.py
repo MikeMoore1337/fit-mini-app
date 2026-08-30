@@ -23,6 +23,24 @@ def _load_module():
 task_session = _load_module()
 
 
+def test_run_decodes_command_output_as_utf8(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    observed: dict[str, Any] = {}
+
+    def fake_run(*args: Any, **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        observed.update(kwargs)
+        return subprocess.CompletedProcess(args[0], 0, stdout="ветка\n", stderr="")
+
+    monkeypatch.setattr(task_session.subprocess, "run", fake_run)
+
+    completed = task_session._run(["gh", "api", "repos/owner/repository"], cwd=tmp_path)
+
+    assert completed.stdout == "ветка\n"
+    assert observed["text"] is True
+    assert observed["encoding"] == "utf-8"
+
+
 def _git(path: Path, *args: str) -> str:
     completed = subprocess.run(["git", *args], cwd=path, check=True, text=True, capture_output=True)
     return completed.stdout.strip()

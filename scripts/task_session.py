@@ -87,6 +87,7 @@ def _run(
         cwd=cwd,
         check=False,
         text=True,
+        encoding="utf-8",
         capture_output=True,
         env=dict(os.environ) | dict(env or {}),
     )
