@@ -81,7 +81,7 @@ test('production Progress uses one entrance, semantic update and no theme or res
   await expect(reloadedChart).toHaveAttribute('data-motion-phase', 'idle', { timeout: 1_500 });
   const updateRevision = await reloadedChart.getAttribute('data-motion-revision');
 
-  await page.getByRole('button', { name: 'Ещё', exact: true }).click();
+  await page.getByRole('button', { name: 'Открыть профиль и настройки', exact: true }).click();
   await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
   await page.getByRole('button', { name: 'Закрыть меню' }).click();
   await expect(page.locator('.app-more-layer')).not.toBeAttached();
@@ -111,7 +111,10 @@ test('production Progress exposes final data immediately with reduced motion', a
   await expect(chart).toHaveAttribute('data-motion-phase', 'idle');
   await expect(chart.getByRole('img')).toBeVisible();
   await expect(chart.getByRole('table')).toBeAttached();
-  const more = page.getByRole('button', { name: 'Ещё', exact: true });
+  const more = page.getByRole('button', {
+    name: 'Открыть профиль и настройки',
+    exact: true,
+  });
   await more.click();
   await expect(page.locator('.app-more-layer')).toHaveAttribute('data-motion-phase', 'open');
   await expect(page.getByRole('dialog')).toBeVisible();
@@ -306,7 +309,10 @@ test('mocked TMA overlay keeps BackButton, focus and lifecycle interruption sema
   await expect(chart).toHaveAttribute('data-motion-phase', 'idle', { timeout: 2_000 });
   const revision = await chart.getAttribute('data-motion-revision');
 
-  const more = page.getByRole('button', { name: 'Ещё', exact: true });
+  const more = page.getByRole('button', {
+    name: 'Открыть профиль и настройки',
+    exact: true,
+  });
   await more.click();
   await expect(page.locator('.app-more-layer')).toHaveAttribute(
     'data-motion-phase',

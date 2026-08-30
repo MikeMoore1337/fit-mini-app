@@ -19,9 +19,9 @@ const APP_DESTINATIONS: ReadonlyArray<{
   icon: AppNavigationIconName;
 }> = [
   { section: 'today', label: 'Сегодня', icon: 'today' },
-  { section: 'programs', label: 'План', icon: 'plan' },
-  { section: 'progress', label: 'Прогресс', icon: 'progress' },
+  { section: 'programs', label: 'Программа', icon: 'plan' },
   { section: 'nutrition', label: 'Питание', icon: 'nutrition' },
+  { section: 'progress', label: 'Прогресс', icon: 'progress' },
 ];
 
 export interface DemoAppShellConfig {
@@ -96,6 +96,7 @@ export function AppShell({
     openingAnimationName: 'app-more-panel-in',
   });
   const morePanelRef = useRef<HTMLDivElement>(null);
+  const moreTriggerRef = useRef<HTMLElement | null>(null);
   const displayName =
     demo?.displayName ||
     user?.profile?.full_name ||
@@ -114,9 +115,10 @@ export function AppShell({
   const closeMore = (restoreFocus = false) => {
     setMoreOpen(false);
     morePresence.hide();
-    if (restoreFocus) document.getElementById('appMoreButton')?.focus();
+    if (restoreFocus) moreTriggerRef.current?.focus();
   };
-  const openMore = () => {
+  const openMore = (trigger?: HTMLElement) => {
+    if (trigger) moreTriggerRef.current = trigger;
     setMoreOpen(true);
     morePresence.show();
   };
@@ -158,12 +160,38 @@ export function AppShell({
 
   return (
     <div className="app-shell app-shell--design-v2">
+      {!demo && shellVisible && (
+        <header className="app-mobile-header">
+          <AppLink
+            className="app-mobile-header__brand"
+            to={brandTo}
+            aria-label="Your Fitness Coach — сегодня"
+          >
+            <BrandLockup markClassName="app-mobile-header__brand-mark" />
+          </AppLink>
+          <button
+            id="appProfileButton"
+            type="button"
+            className={`app-mobile-header__profile${moreOpen || secondaryActive ? ' is-active' : ''}`}
+            aria-expanded={moreOpen}
+            aria-controls="appMorePanel"
+            aria-label="Открыть профиль и настройки"
+            onClick={(event) => (moreOpen ? closeMore() : openMore(event.currentTarget))}
+          >
+            <Avatar name={displayName} photoUrl={user?.photo_url} />
+          </button>
+        </header>
+      )}
       <main id="appContent" className={`container app-shell__content${narrow ? ' narrow' : ''}`}>
         {children}
       </main>
       {shellVisible && (
         <>
-          <nav id="appBottomNav" className="app-bottom-nav" aria-label="Основная навигация">
+          <nav
+            id="appBottomNav"
+            className={`app-bottom-nav${demo ? ' app-bottom-nav--demo' : ''}`}
+            aria-label="Основная навигация"
+          >
             <AppLink
               className="app-bottom-nav__brand"
               to={brandTo}
@@ -193,21 +221,19 @@ export function AppShell({
                   </AppLink>
                 );
               })}
-              <button
-                id="appMoreButton"
-                type="button"
-                className={`app-bottom-nav__btn app-bottom-nav__more${
-                  (demo ? moreOpen : secondaryActive || path === '/coach' || path === '/admin')
-                    ? ' is-active'
-                    : ''
-                }`}
-                aria-expanded={moreOpen}
-                aria-controls="appMorePanel"
-                onClick={() => (moreOpen ? closeMore() : openMore())}
-              >
-                <AppNavigationIcon name="more" />
-                <span className="app-bottom-nav__label">{demo ? 'Сценарии' : 'Ещё'}</span>
-              </button>
+              {demo && (
+                <button
+                  id="appMoreButton"
+                  type="button"
+                  className={`app-bottom-nav__btn app-bottom-nav__more${moreOpen ? ' is-active' : ''}`}
+                  aria-expanded={moreOpen}
+                  aria-controls="appMorePanel"
+                  onClick={(event) => (moreOpen ? closeMore() : openMore(event.currentTarget))}
+                >
+                  <AppNavigationIcon name="more" />
+                  <span className="app-bottom-nav__label">Сценарии</span>
+                </button>
+              )}
             </div>
 
             {!demo && (
@@ -270,13 +296,32 @@ export function AppShell({
             <div className="app-bottom-nav__utility">
               <AppThemeToggle navigation />
               <div className="app-bottom-nav__account">
-                <Avatar name={displayName} photoUrl={user?.photo_url} />
-                <strong className="app-bottom-nav__account-name">{displayName}</strong>
-                <small className="app-bottom-nav__account-role">
-                  {demo
-                    ? 'Отдельная сессия'
-                    : accountRole(Boolean(user?.is_root), Boolean(user?.is_coach))}
-                </small>
+                {demo ? (
+                  <Avatar name={displayName} photoUrl={user?.photo_url} />
+                ) : (
+                  <button
+                    type="button"
+                    className="app-bottom-nav__account-entry"
+                    aria-expanded={moreOpen}
+                    aria-controls="appMorePanel"
+                    aria-label="Открыть меню аккаунта"
+                    onClick={(event) => (moreOpen ? closeMore() : openMore(event.currentTarget))}
+                  >
+                    <Avatar name={displayName} photoUrl={user?.photo_url} />
+                    <span>
+                      <strong className="app-bottom-nav__account-name">{displayName}</strong>
+                      <small className="app-bottom-nav__account-role">
+                        {accountRole(Boolean(user?.is_root), Boolean(user?.is_coach))}
+                      </small>
+                    </span>
+                  </button>
+                )}
+                {demo && (
+                  <>
+                    <strong className="app-bottom-nav__account-name">{displayName}</strong>
+                    <small className="app-bottom-nav__account-role">Отдельная сессия</small>
+                  </>
+                )}
                 {demo ? (
                   <AppLink
                     className="app-bottom-nav__logout"
@@ -326,7 +371,9 @@ export function AppShell({
                   <div className="app-more-panel__account">
                     <Avatar name={displayName} photoUrl={user?.photo_url} />
                     <span>
-                      <strong id="appMoreTitle">{demo?.menuTitle ?? displayName}</strong>
+                      <strong id="appMoreTitle">
+                        {demo?.menuTitle ?? (demo ? displayName : 'Профиль и настройки')}
+                      </strong>
                       <small>
                         {demo
                           ? 'Отдельная сессия'

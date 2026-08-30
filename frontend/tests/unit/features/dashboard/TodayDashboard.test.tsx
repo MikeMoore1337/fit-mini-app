@@ -328,11 +328,9 @@ describe('TodayDashboard', () => {
 
     expect(await screen.findByRole('heading', { name: 'Силовая база' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Начать тренировку' })).toBeInTheDocument();
-    expect(screen.getByText('1450')).toBeInTheDocument();
-    expect(screen.getByText('из 2100 ккал')).toBeInTheDocument();
-    expect(screen.getByText('68,4 кг')).toBeInTheDocument();
-    expect(screen.getByText('84%')).toBeInTheDocument();
-    expect(screen.getByText('Учтены: тренировки, калории и белок')).toBeInTheDocument();
+    expect(screen.getByText('Записей за день пока нет')).toBeInTheDocument();
+    expect(screen.getByText(/последний вес 68,4 кг/)).toBeInTheDocument();
+    expect(screen.queryByText('84%')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Начать тренировку' }));
 
@@ -360,7 +358,7 @@ describe('TodayDashboard', () => {
 
     expect(await screen.findByRole('button', { name: 'Начать тренировку' })).toBeInTheDocument();
     expect(await screen.findByText('Сводка питания временно недоступна')).toBeInTheDocument();
-    expect(screen.getByText('68,4 кг')).toBeInTheDocument();
+    expect(screen.getByText(/последний вес 68,4 кг/)).toBeInTheDocument();
   });
 
   it('shows a completed state without invented duration or volume', async () => {
@@ -439,10 +437,7 @@ describe('TodayDashboard', () => {
       'href',
       '/app?section=nutrition',
     );
-    expect(screen.getByRole('link', { name: 'Записать замер' })).toHaveAttribute(
-      'href',
-      '/app?section=progress',
-    );
+    expect(screen.getByRole('button', { name: 'Добавить активность' })).toBeInTheDocument();
   });
 
   it('guides a new user to a program and keeps incomplete profile secondary', async () => {
@@ -463,7 +458,11 @@ describe('TodayDashboard', () => {
             overall_percent: null,
             included_components: [],
           },
-          training: { ...progressSummary.training, next_workout: null },
+          training: {
+            ...progressSummary.training,
+            completed_workouts: 0,
+            next_workout: null,
+          },
         });
       }
       if (path.startsWith('/api/v1/nutrition/diary')) {
@@ -475,15 +474,18 @@ describe('TodayDashboard', () => {
     });
     renderDashboard();
 
-    expect(
-      await screen.findByRole('heading', { name: 'Выберите тренировочный план' }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Подобрать программу' })).toHaveAttribute(
+    expect(await screen.findByRole('heading', { name: 'С чего начнём?' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Создать программу' })).toHaveAttribute(
       'href',
       '/app?section=programs',
     );
+    expect(screen.getByRole('link', { name: 'Записать питание' })).toHaveAttribute(
+      'href',
+      '/app?section=nutrition',
+    );
+    expect(screen.getByRole('button', { name: 'Добавить активность' })).toBeInTheDocument();
     expect(screen.getByText('Сделайте рекомендации точнее')).toBeInTheDocument();
-    expect(screen.getByText('Пока мало данных для общей сводки.')).toBeInTheDocument();
+    expect(screen.getByText('Появится после первых тренировок и замеров')).toBeInTheDocument();
   });
 
   it('shows a compact week with honest workout links and textual states', async () => {
