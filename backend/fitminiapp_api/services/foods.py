@@ -128,11 +128,20 @@ def calculate_food_servings(food: Food, servings: Decimal) -> FoodNutrition:
 
 
 def create_user_food(db: Session, owner: User, payload: UserFoodCreate) -> Food:
+    external_source = payload.external_source
+    values = payload.model_dump(exclude={"external_source"})
     food = Food(
-        **payload.model_dump(),
+        **values,
         food_type="user",
         owner_user_id=owner.id,
         provenance="user",
+        source_name=external_source.provider if external_source is not None else None,
+        source_license=external_source.license if external_source is not None else None,
+        source_url=str(external_source.source_url) if external_source is not None else None,
+        source_license_url=(
+            str(external_source.license_url) if external_source is not None else None
+        ),
+        external_id=external_source.external_id if external_source is not None else None,
         trust_level="unverified",
         status="active",
     )
@@ -318,7 +327,7 @@ def update_user_food(
     if not changes:
         raise FoodError("at least one field must be provided")
 
-    editable_fields = UserFoodCreate.model_fields
+    editable_fields = set(UserFoodCreate.model_fields) - {"external_source"}
     merged = {field: getattr(food, field) for field in editable_fields}
     merged.update(changes)
     try:
@@ -326,7 +335,7 @@ def update_user_food(
     except ValueError as exc:
         raise FoodError(str(exc)) from exc
 
-    for field, value in validated.model_dump().items():
+    for field, value in validated.model_dump(exclude={"external_source"}).items():
         setattr(food, field, value)
     try:
         db.commit()
@@ -477,24 +486,22 @@ def search_foods(
             limit=limit,
             offset=offset,
         )
-    category_rank = case(
-        (recent.c.last_used_at.is_not(None), 0),
-        (favorites.c.food_id.is_not(None), 1),
-        (Food.food_type == "user", 2),
-        (Food.food_type == "system", 3),
-        else_=4,
-    )
-    match_rank = case(
-        (Food.search_text == exact, 0),
-        (Food.search_text.like(prefix, escape="\\"), 1),
-        else_=2,
+    exact_name = Food.name.ilike(exact, escape="\\")
+    priority_rank = case(
+        (and_(Food.food_type == "user", exact_name), 0),
+        (recent.c.last_used_at.is_not(None), 1),
+        (favorites.c.food_id.is_not(None), 2),
+        (exact_name, 3),
+        (Food.search_text.like(prefix, escape="\\"), 4),
+        (Food.food_type == "user", 5),
+        (Food.food_type == "system", 6),
+        else_=7,
     )
     rows = (
         filtered.order_by(
-            category_rank.asc(),
+            priority_rank.asc(),
             recent.c.last_used_at.desc(),
             favorites.c.favorite_created_at.desc(),
-            match_rank.asc(),
             *((similarity.desc(),) if is_postgresql else ()),
             Food.name.asc(),
             Food.id.asc(),

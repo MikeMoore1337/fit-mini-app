@@ -1,22 +1,29 @@
 from __future__ import annotations
 
 import time
-from collections import deque
 from collections.abc import Mapping
 from decimal import Decimal, InvalidOperation
-from threading import Lock
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 
 from fitminiapp_api.schemas.food import ServingUnit, validate_gtin
-from fitminiapp_api.services.food_provider import FoodProviderUnavailable, ProviderFood
+from fitminiapp_api.services.food_provider import (
+    FoodProviderUnavailable,
+    ProviderFood,
+    RequestBudget,
+)
+from fitminiapp_api.services.food_search_aliases import is_russian_food_query
 
 _API_BASE_URL = "https://world.openfoodfacts.org"
 _SEARCH_URL = "https://search.openfoodfacts.org/search"
 _FIELDS = (
     "code",
     "product_name",
+    "product_name_ru",
+    "product_name_en",
+    "lang",
+    "countries_tags",
     "brands",
     "nutriments",
     "serving_quantity",
@@ -26,25 +33,7 @@ _LICENSE_URL = "https://opendatacommons.org/licenses/odbl/1-0/"
 _RETRY_DELAY_SECONDS = 0.1
 
 
-class _RequestBudget:
-    def __init__(self, limit: int, *, window_seconds: float = 60.0) -> None:
-        self._limit = limit
-        self._window_seconds = window_seconds
-        self._timestamps: deque[float] = deque()
-        self._lock = Lock()
-
-    def try_acquire(self) -> bool:
-        now = time.monotonic()
-        cutoff = now - self._window_seconds
-        with self._lock:
-            while self._timestamps and self._timestamps[0] <= cutoff:
-                self._timestamps.popleft()
-            if len(self._timestamps) >= self._limit:
-                return False
-            self._timestamps.append(now)
-            return True
-
-
+_RequestBudget = RequestBudget
 _SEARCH_REQUEST_BUDGET = _RequestBudget(10)
 _PRODUCT_REQUEST_BUDGET = _RequestBudget(15)
 
@@ -85,7 +74,10 @@ class OpenFoodFactsProvider:
             raise FoodProviderUnavailable("malformed_response")
         results: list[ProviderFood] = []
         for raw_hit in raw_hits:
-            product = self._parse_product(raw_hit)
+            product = self._parse_product(
+                raw_hit,
+                require_russian_name=is_russian_food_query(query),
+            )
             if product is not None:
                 results.append(product)
         return results
@@ -105,7 +97,7 @@ class OpenFoodFactsProvider:
         raw_product = payload.get("product")
         if raw_product is None:
             raise FoodProviderUnavailable("malformed_response")
-        return self._parse_product(raw_product)
+        return self._parse_product(raw_product, require_russian_name=False)
 
     def _request_json(
         self,
@@ -161,7 +153,12 @@ class OpenFoodFactsProvider:
         raise AssertionError("request retry loop must return or raise")
 
     @classmethod
-    def _parse_product(cls, raw_product: object) -> ProviderFood | None:
+    def _parse_product(
+        cls,
+        raw_product: object,
+        *,
+        require_russian_name: bool,
+    ) -> ProviderFood | None:
         if not isinstance(raw_product, dict):
             return None
         nested_source = raw_product.get("_source")
@@ -172,7 +169,17 @@ class OpenFoodFactsProvider:
             barcode = validate_gtin(str(raw_barcode)) if raw_barcode is not None else None
         except ValueError:
             return None
-        name = cls._text(product.get("product_name"))
+        product_name = cls._text(product.get("product_name"))
+        russian_name = cls._text(product.get("product_name_ru"))
+        if russian_name is None and product.get("lang") == "ru":
+            russian_name = product_name
+        name_language: Literal["ru", "en", "und"]
+        if require_russian_name or russian_name is not None:
+            name = russian_name
+            name_language = "ru"
+        else:
+            name = cls._text(product.get("product_name_en")) or product_name
+            name_language = "en" if name is not None else "und"
         if barcode is None or name is None:
             return None
         nutriments = product.get("nutriments")
@@ -220,6 +227,8 @@ class OpenFoodFactsProvider:
             source_url=f"{_API_BASE_URL}/product/{barcode}",
             license="ODbL-1.0",
             license_url=_LICENSE_URL,
+            name_language=name_language,
+            is_russian_market=cls._is_russian_market(product.get("countries_tags")),
         )
 
     @staticmethod
@@ -234,6 +243,12 @@ class OpenFoodFactsProvider:
         if isinstance(value, list):
             value = ", ".join(item for item in value if isinstance(item, str))
         return cls._text(value)
+
+    @staticmethod
+    def _is_russian_market(value: object) -> bool:
+        if not isinstance(value, list):
+            return False
+        return any(item == "en:russia" for item in value)
 
     @staticmethod
     def _positive_decimal(value: object) -> Decimal | None:

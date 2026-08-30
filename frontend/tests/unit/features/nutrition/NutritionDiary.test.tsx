@@ -696,6 +696,118 @@ describe('NutritionDiary', () => {
     expect(screen.getByRole('spinbutton', { name: 'Количество' })).toHaveValue(100);
   });
 
+  it('supplements local search with a generic no-barcode result during partial provider failure', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const localFood: Food = { ...food, id: 91, name: 'Рис домашний' };
+    const importedFood: Food = {
+      ...food,
+      id: 92,
+      name: 'Рис белый приготовленный, без добавления масла',
+      brand: null,
+      barcode: null,
+      food_type: 'user',
+      is_favorite: false,
+      standard_serving_weight_g: null,
+    };
+    apiMock.mockImplementation((path: string, options?: { method?: string; body?: unknown }) => {
+      if (path.startsWith('/api/v1/nutrition/diary?')) return Promise.resolve(makeDay([]));
+      if (path.startsWith('/api/v1/nutrition/foods/recent'))
+        return Promise.resolve({ items: [], total: 0, limit: 12, offset: 0 });
+      if (path.startsWith('/api/v1/nutrition/foods/favorites'))
+        return Promise.resolve({ items: [], total: 0, limit: 12, offset: 0 });
+      const decoded = decodeURIComponent(path);
+      if (decoded.includes('q=рис') && decoded.includes('include_external=true')) {
+        return Promise.resolve({
+          items: [localFood],
+          external_items: [
+            {
+              name: 'Рис белый приготовленный, без добавления масла',
+              brand: null,
+              barcode: null,
+              energy_kcal_per_100g: '130.00',
+              protein_g_per_100g: '2.700',
+              fat_g_per_100g: '0.300',
+              carbs_g_per_100g: '28.000',
+              fiber_g_per_100g: '0.400',
+              standard_serving_amount: null,
+              standard_serving_unit: null,
+              standard_serving_weight_g: null,
+              external_id: '2708360',
+              source: {
+                provider: 'usda_fdc',
+                attribution: 'U.S. Department of Agriculture, FoodData Central',
+                source_url: 'https://fdc.nal.usda.gov/fdc-app.html#/food-details/2708360/nutrients',
+                license: 'CC0-1.0',
+                license_url: 'https://creativecommons.org/publicdomain/zero/1.0/',
+              },
+            },
+          ],
+          total: 1,
+          limit: 20,
+          offset: 0,
+          provider_status: 'available',
+          provider_statuses: [
+            { provider: 'open_food_facts', status: 'unavailable', result_count: 0 },
+            { provider: 'usda_fdc', status: 'available', result_count: 1 },
+          ],
+        });
+      }
+      if (decoded.includes('q=рис')) {
+        return Promise.resolve({
+          items: [localFood],
+          external_items: [],
+          total: 1,
+          limit: 20,
+          offset: 0,
+          provider_status: 'not_requested',
+          provider_statuses: [],
+        });
+      }
+      if (path === '/api/v1/nutrition/foods' && options?.method === 'POST') {
+        return Promise.resolve(importedFood);
+      }
+      throw new Error(`Unexpected API call: ${path}`);
+    });
+    renderDiary();
+    await screen.findAllByText('Пока без записей');
+    fireEvent.click(within(breakfastSection()).getByRole('button', { name: /Добавить/ }));
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Поиск по названию или бренду' }), {
+      target: { value: 'рис' },
+    });
+    await act(() => vi.advanceTimersByTimeAsync(250));
+
+    expect(await screen.findByRole('button', { name: 'Добавить Рис домашний' })).toBeVisible();
+    expect(await screen.findByText('Рис белый приготовленный, без добавления масла')).toBeVisible();
+    expect(
+      screen.getByText(
+        'Часть внешних источников временно недоступна; показаны результаты остальных.',
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText(/штрихкод отсутствует/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Выбрать продукт' }));
+    await waitFor(() =>
+      expect(apiMock).toHaveBeenCalledWith(
+        '/api/v1/nutrition/foods',
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.objectContaining({
+            barcode: null,
+            external_source: expect.objectContaining({
+              provider: 'usda_fdc',
+              external_id: '2708360',
+              license: 'CC0-1.0',
+            }),
+          }),
+        }),
+      ),
+    );
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Рис белый приготовленный, без добавления масла',
+      }),
+    ).toBeVisible();
+  });
+
   it('validates and creates an own food before selecting its serving', async () => {
     const ownFood = {
       ...food,

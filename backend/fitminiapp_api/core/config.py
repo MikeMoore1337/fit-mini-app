@@ -3,7 +3,7 @@ from typing import Literal
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -77,6 +77,8 @@ class Settings(BaseSettings):
 
     food_provider: Literal["disabled", "open_food_facts"] = "disabled"
     open_food_facts_user_agent: str = ""
+    food_usda_enabled: bool = False
+    usda_fdc_api_key: SecretStr = SecretStr("")
     food_provider_timeout_seconds: float = Field(default=4, ge=1, le=15)
 
     worker_poll_seconds: int = Field(default=10, ge=1, le=3600)
@@ -172,18 +174,19 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_food_provider(self) -> Settings:
-        if self.food_provider == "disabled":
-            return self
-        user_agent = self.open_food_facts_user_agent.strip()
-        if (
-            not user_agent
-            or "/" not in user_agent
-            or "(" not in user_agent
-            or ")" not in user_agent
-        ):
-            raise ValueError(
-                "OPEN_FOOD_FACTS_USER_AGENT must identify the app, version, and contact"
-            )
+        if self.food_provider == "open_food_facts":
+            user_agent = self.open_food_facts_user_agent.strip()
+            if (
+                not user_agent
+                or "/" not in user_agent
+                or "(" not in user_agent
+                or ")" not in user_agent
+            ):
+                raise ValueError(
+                    "OPEN_FOOD_FACTS_USER_AGENT must identify the app, version, and contact"
+                )
+        if self.food_usda_enabled and not self.usda_fdc_api_key.get_secret_value().strip():
+            raise ValueError("USDA_FDC_API_KEY must be configured when FOOD_USDA_ENABLED is true")
         return self
 
     @model_validator(mode="after")
