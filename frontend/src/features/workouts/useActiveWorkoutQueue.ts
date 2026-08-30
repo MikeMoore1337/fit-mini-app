@@ -76,7 +76,7 @@ export function useActiveWorkoutQueue(userId: number | undefined, workout: Worko
     key,
     data:
       userId && workoutId
-        ? loadActiveWorkoutQueue(userId, workoutId, validSetIds)
+        ? loadActiveWorkoutQueue(userId, workoutId, validSetIds, workout)
         : emptyActiveWorkoutQueue(0, 0),
   }));
   const memoryState = useRef(storedState.data);
@@ -84,9 +84,9 @@ export function useActiveWorkoutQueue(userId: number | undefined, workout: Worko
   const loadedState = useMemo(
     () =>
       userId && workoutId
-        ? loadActiveWorkoutQueue(userId, workoutId, validSetIds)
+        ? loadActiveWorkoutQueue(userId, workoutId, validSetIds, workout)
         : emptyActiveWorkoutQueue(0, 0),
-    [userId, validSetIds, workoutId],
+    [userId, validSetIds, workout, workoutId],
   );
   const state = storedState.key === key ? storedState.data : loadedState;
   const [syncState, setSyncState] = useState<SyncState>('idle');
@@ -110,10 +110,10 @@ export function useActiveWorkoutQueue(userId: number | undefined, workout: Worko
         ? current
         : emptyActiveWorkoutQueue(userId, workoutId);
     }
-    const fresh = loadActiveWorkoutQueue(userId, workoutId, validSetIds);
+    const fresh = loadActiveWorkoutQueue(userId, workoutId, validSetIds, workout);
     memoryState.current = fresh;
     return fresh;
-  }, [userId, validSetIds, workoutId]);
+  }, [userId, validSetIds, workout, workoutId]);
 
   useEffect(() => {
     if (!userId || !workout || workout.status !== 'in_progress') return;
@@ -339,7 +339,10 @@ export function useActiveWorkoutQueue(userId: number | undefined, workout: Worko
 
   const pendingBySet = useMemo(() => {
     const result = new Map<number, ReturnType<typeof latestMutationForSet>>();
-    for (const setId of validSetIds) result.set(setId, latestMutationForSet(state, setId));
+    for (const setId of validSetIds) {
+      const pending = latestMutationForSet(state, setId);
+      if (pending) result.set(setId, pending);
+    }
     return result;
   }, [state, validSetIds]);
 

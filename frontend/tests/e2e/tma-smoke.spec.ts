@@ -139,7 +139,7 @@ test('TMA auth, shared UI, theme, viewport, safe areas and BackButton stay on on
   });
 
   const workoutDays = tmaPage.getByRole('button', {
-    name: /Силовая.*(?:Запланировано|Выполнено)/i,
+    name: /Силовая.*(?:Запланировано|Предстоит тренировка|Выполнено)/i,
   });
   const contextualDayIndex = await workoutDays.evaluateAll((days) =>
     days.findIndex((day) => day.getAttribute('aria-current') !== 'date'),
@@ -1680,6 +1680,7 @@ test('active workout starts, logs offline and resumes once after reconnect and r
 
   await tmaPage.reload();
   await tmaPage.getByRole('button', { name: 'Продолжить тренировку' }).click();
+  await tmaPage.getByRole('button', { name: '1 из 1 сохранено' }).click();
   await expect(
     tmaPage.getByRole('spinbutton', { name: 'Повторы, Приседания, подход 1' }),
   ).toHaveValue('8');

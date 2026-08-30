@@ -40,6 +40,11 @@ from fitminiapp_api.services.nutrition import build_nutrition_target_response_fr
 from fitminiapp_api.services.program_common import ProgramError
 from fitminiapp_api.services.program_versioning import record_program_revision
 from fitminiapp_api.services.root_admin import has_verified_root_identity
+from fitminiapp_api.services.workout_metrics import (
+    ExercisePrescription,
+    exercise_metric_type,
+    normalize_exercise_prescription,
+)
 
 GOALS = {"muscle_gain", "fat_loss", "maintenance", "recomposition"}
 LEVELS = {"beginner", "intermediate", "advanced"}
@@ -105,8 +110,12 @@ def _serialize_template_with_context(
                             if ex.exercise_id in visible_map
                             else ex.exercise.title
                         ),
+                        "metric_type": exercise_metric_type(
+                            visible_map.get(ex.exercise_id, ex.exercise)
+                        ),
                         "prescribed_sets": ex.prescribed_sets,
                         "prescribed_reps": ex.prescribed_reps,
+                        "prescribed_duration_minutes": ex.prescribed_duration_minutes,
                         "rest_seconds": ex.rest_seconds,
                         "notes": ex.notes,
                         "superset_group": ex.superset_group,
@@ -283,8 +292,9 @@ def create_template(
     db.flush()
 
     exercise_scope_user = _exercise_scope_for_template(current_user, owner_user, is_public)
-    visible_effective_ids = {
-        _effective_exercise_id(ex) for ex in _load_visible_exercise_rows(db, exercise_scope_user)
+    visible_by_effective_id = {
+        _effective_exercise_id(ex): ex
+        for ex in _load_visible_exercise_rows(db, exercise_scope_user)
     }
 
     for index, day in enumerate(payload.days, start=1):
@@ -297,17 +307,26 @@ def create_template(
         db.flush()
 
         for sort_order, ex in enumerate(day.exercises, start=1):
-            if ex.exercise_id not in visible_effective_ids:
+            exercise = visible_by_effective_id.get(ex.exercise_id)
+            if exercise is None:
                 raise ProgramError("Exercise is not available for current user")
+            prescription = normalize_exercise_prescription(
+                exercise,
+                prescribed_sets=ex.prescribed_sets,
+                prescribed_reps=ex.prescribed_reps,
+                prescribed_duration_minutes=ex.prescribed_duration_minutes,
+                rest_seconds=ex.rest_seconds,
+            )
 
             db.add(
                 ProgramTemplateExercise(
                     day_id=day_row.id,
                     exercise_id=ex.exercise_id,
                     sort_order=sort_order,
-                    prescribed_sets=ex.prescribed_sets,
-                    prescribed_reps=ex.prescribed_reps,
-                    rest_seconds=ex.rest_seconds,
+                    prescribed_sets=prescription.prescribed_sets,
+                    prescribed_reps=prescription.prescribed_reps,
+                    prescribed_duration_minutes=prescription.prescribed_duration_minutes,
+                    rest_seconds=prescription.rest_seconds,
                     notes=ex.notes,
                     superset_group=ex.superset_group,
                     superset_order=ex.superset_order,
@@ -376,8 +395,24 @@ def assign_template_to_user(
     ordered_days = sorted(template.days, key=lambda row: row.day_number)
     if len(ordered_days) > 8:
         raise ProgramError("A program cycle supports at most eight training days")
+    visible_by_effective_id = get_visible_exercise_display_map(db, target_user)
+    assignment_exercises: dict[int, Exercise] = {}
+    assignment_prescriptions: dict[int, ExercisePrescription] = {}
+    for day in ordered_days:
+        for exercise_item in day.exercises:
+            exercise = visible_by_effective_id.get(exercise_item.exercise_id)
+            if exercise is None:
+                raise ProgramError("Exercise is not available for program owner")
+            assignment_exercises[exercise_item.id] = exercise
+            assignment_prescriptions[exercise_item.id] = normalize_exercise_prescription(
+                exercise,
+                prescribed_sets=exercise_item.prescribed_sets,
+                prescribed_reps=exercise_item.prescribed_reps,
+                prescribed_duration_minutes=exercise_item.prescribed_duration_minutes,
+                rest_seconds=exercise_item.rest_seconds,
+            )
     generated_sets = (
-        sum(exercise.prescribed_sets for day in ordered_days for exercise in day.exercises)
+        sum(prescription.prescribed_sets for prescription in assignment_prescriptions.values())
         * duration_weeks
     )
     if generated_sets > MAX_GENERATED_SETS:
@@ -444,20 +479,24 @@ def assign_template_to_user(
             db.add(workout)
 
             for exercise_item in sorted(day.exercises, key=lambda row: row.sort_order):
+                exercise = assignment_exercises[exercise_item.id]
+                prescription = assignment_prescriptions[exercise_item.id]
                 workout_exercise = UserWorkoutExercise(
                     workout=workout,
                     exercise_id=exercise_item.exercise_id,
+                    metric_type=exercise_metric_type(exercise),
                     sort_order=exercise_item.sort_order,
-                    prescribed_sets=exercise_item.prescribed_sets,
-                    prescribed_reps=exercise_item.prescribed_reps,
-                    rest_seconds=exercise_item.rest_seconds,
+                    prescribed_sets=prescription.prescribed_sets,
+                    prescribed_reps=prescription.prescribed_reps,
+                    prescribed_duration_minutes=prescription.prescribed_duration_minutes,
+                    rest_seconds=prescription.rest_seconds,
                     notes=exercise_item.notes,
                     superset_group=exercise_item.superset_group,
                     superset_order=exercise_item.superset_order,
                 )
                 db.add(workout_exercise)
 
-                for set_number in range(1, exercise_item.prescribed_sets + 1):
+                for set_number in range(1, prescription.prescribed_sets + 1):
                     db.add(
                         UserWorkoutSet(
                             workout_exercise=workout_exercise,
@@ -743,8 +782,8 @@ def update_template_for_user(
         )
         db.flush()
 
-    visible_effective_ids = {
-        _effective_exercise_id(ex) for ex in _load_visible_exercise_rows(db, target_user)
+    visible_by_effective_id = {
+        _effective_exercise_id(ex): ex for ex in _load_visible_exercise_rows(db, target_user)
     }
 
     for index, day in enumerate(payload.days, start=1):
@@ -757,17 +796,26 @@ def update_template_for_user(
         db.flush()
 
         for sort_order, ex in enumerate(day.exercises, start=1):
-            if ex.exercise_id not in visible_effective_ids:
+            exercise = visible_by_effective_id.get(ex.exercise_id)
+            if exercise is None:
                 raise ProgramError("Exercise is not available for current user")
+            prescription = normalize_exercise_prescription(
+                exercise,
+                prescribed_sets=ex.prescribed_sets,
+                prescribed_reps=ex.prescribed_reps,
+                prescribed_duration_minutes=ex.prescribed_duration_minutes,
+                rest_seconds=ex.rest_seconds,
+            )
 
             db.add(
                 ProgramTemplateExercise(
                     day_id=day_row.id,
                     exercise_id=ex.exercise_id,
                     sort_order=sort_order,
-                    prescribed_sets=ex.prescribed_sets,
-                    prescribed_reps=ex.prescribed_reps,
-                    rest_seconds=ex.rest_seconds,
+                    prescribed_sets=prescription.prescribed_sets,
+                    prescribed_reps=prescription.prescribed_reps,
+                    prescribed_duration_minutes=prescription.prescribed_duration_minutes,
+                    rest_seconds=prescription.rest_seconds,
                     notes=ex.notes,
                     superset_group=ex.superset_group,
                     superset_order=ex.superset_order,

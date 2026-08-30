@@ -18,6 +18,7 @@ import {
 } from '../../../../src/features/workouts/activeWorkoutQueue';
 import { useActiveWorkoutQueue } from '../../../../src/features/workouts/useActiveWorkoutQueue';
 import { createCrossContextCoordinator } from '../../../../src/shared/browser/crossContextLock';
+import { activeWorkoutPointerStorageKey } from '../../../../src/shared/userScopedStorage';
 
 const workout: Workout = {
   id: 42,
@@ -32,6 +33,7 @@ const workout: Workout = {
       id: 101,
       exercise_id: 11,
       exercise_title: 'Жим штанги лежа',
+      metric_type: 'strength',
       sort_order: 1,
       prescribed_sets: 1,
       prescribed_reps: '8-10',
@@ -69,6 +71,19 @@ const workout: Workout = {
       ],
     },
   ],
+};
+
+const cardioWorkout: Workout = {
+  ...workout,
+  exercises: workout.exercises.map((exercise) => ({
+    ...exercise,
+    metric_type: 'cardio',
+    prescribed_sets: 1,
+    prescribed_reps: '',
+    prescribed_duration_minutes: 25,
+    rest_seconds: 0,
+    progression_guidance: null,
+  })),
 };
 
 function setOnline(value: boolean) {
@@ -351,7 +366,15 @@ describe('active workout durable queue', () => {
     expect(loadActiveWorkoutQueue(7, 42).queue.map((item) => item.set_id)).toEqual([204]);
   });
 
-  it('читает сохранённый queue/snapshot v1 после coordination upgrade', () => {
+  it('мигрирует queue v1 только после получения актуального metric type', () => {
+    const legacySnapshot = {
+      ...workout,
+      exercises: workout.exercises.map((exercise) => {
+        const legacyExercise = { ...exercise } as Partial<typeof exercise>;
+        delete legacyExercise.metric_type;
+        return legacyExercise;
+      }),
+    };
     localStorage.setItem(
       activeWorkoutQueueKey(7, 42),
       JSON.stringify({
@@ -367,15 +390,25 @@ describe('active workout durable queue', () => {
             created_at: 1,
           },
         ],
-        workout_snapshot: workout,
+        workout_snapshot: legacySnapshot,
       }),
     );
+    localStorage.setItem(activeWorkoutPointerStorageKey(7), '42');
 
-    const restored = loadActiveWorkoutQueue(7, 42);
+    expect(loadCurrentActiveWorkoutSnapshot(7)).toBeUndefined();
+    expect(localStorage.getItem(activeWorkoutQueueKey(7, 42))).not.toBeNull();
 
-    expect(restored.schema_version).toBe(1);
-    expect(restored.queue[0]?.values.actual_reps).toBe(9);
+    const restored = loadActiveWorkoutQueue(7, 42, new Set([201]), cardioWorkout);
+
+    expect(restored.schema_version).toBe(2);
+    expect(restored.queue[0]?.values).toEqual({
+      actual_reps: null,
+      actual_weight: null,
+      is_completed: false,
+    });
     expect(restored.workout_snapshot?.id).toBe(42);
+    expect(restored.workout_snapshot?.exercises[0]?.metric_type).toBe('cardio');
+    expect(loadCurrentActiveWorkoutSnapshot(7)?.exercises[0]?.metric_type).toBe('cardio');
   });
 
   it('сохраняет расширенные поля подхода в offline-очереди', () => {
@@ -401,6 +434,38 @@ describe('active workout durable queue', () => {
       rir: '2',
       set_kind: 'drop',
       reached_failure: false,
+      is_completed: true,
+    });
+  });
+
+  it('сохраняет cardio-показатели без силовых значений в offline-очереди', () => {
+    const state = enqueueWorkoutMutation(emptyActiveWorkoutQueue(7, 42), {
+      setId: 204,
+      serverVersion: 1,
+      values: {
+        actual_reps: null,
+        actual_weight: null,
+        duration_minutes: 27,
+        distance_km: 6.4,
+        average_heart_rate_bpm: 138,
+        heart_rate_zone: 3,
+        rir: null,
+        set_kind: null,
+        reached_failure: null,
+        is_completed: true,
+      },
+      now: 1,
+    });
+
+    saveActiveWorkoutQueue(state);
+
+    expect(loadActiveWorkoutQueue(7, 42).queue[0]?.values).toMatchObject({
+      actual_reps: null,
+      actual_weight: null,
+      duration_minutes: 27,
+      distance_km: 6.4,
+      average_heart_rate_bpm: 138,
+      heart_rate_zone: 3,
       is_completed: true,
     });
   });
@@ -447,6 +512,20 @@ describe('active workout durable queue', () => {
       values: { actual_reps: 9, actual_weight: 42.5, is_completed: true },
     });
     expect(localStorage.getItem('fit_workout_set_201')).toBeNull();
+    expect(localStorage.getItem('fit_workout_pending_201')).toBeNull();
+  });
+
+  it('не переносит силовой unscoped draft в кардио-тренировку', () => {
+    localStorage.setItem(
+      'fit_workout_pending_201',
+      JSON.stringify({ actual_reps: 9, actual_weight: 42.5, is_completed: true }),
+    );
+
+    saveActiveWorkoutSnapshot(7, cardioWorkout);
+
+    const restored = loadActiveWorkoutQueue(7, 42);
+    expect(restored.queue).toEqual([]);
+    expect(restored.workout_snapshot?.exercises[0]?.metric_type).toBe('cardio');
     expect(localStorage.getItem('fit_workout_pending_201')).toBeNull();
   });
 });

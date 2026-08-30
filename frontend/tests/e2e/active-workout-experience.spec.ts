@@ -10,6 +10,10 @@ const captureLandingProductProofs =
 type SetState = {
   actual_reps: number | null;
   actual_weight: number | null;
+  duration_minutes?: number | null;
+  distance_km?: number | null;
+  average_heart_rate_bpm?: number | null;
+  heart_rate_zone?: number | null;
   rir: '0' | '1' | '2' | '3' | '4+' | null;
   set_kind: 'warmup' | 'working' | 'drop' | null;
   reached_failure: boolean | null;
@@ -17,10 +21,14 @@ type SetState = {
   version: number;
 };
 
-async function mockActiveWorkout(page: Page) {
+async function mockActiveWorkout(page: Page, mixed = false) {
   const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Moscow' });
   let finished = false;
   let failSetPatch = false;
+  let resolveCardioCompleted!: () => void;
+  const cardioCompleted = new Promise<void>((resolve) => {
+    resolveCardioCompleted = resolve;
+  });
   const sets = new Map<number, SetState>([
     [
       201,
@@ -58,6 +66,26 @@ async function mockActiveWorkout(page: Page) {
         version: 1,
       },
     ],
+    ...(mixed
+      ? ([
+          [
+            204,
+            {
+              actual_reps: null,
+              actual_weight: null,
+              duration_minutes: null,
+              distance_km: null,
+              average_heart_rate_bpm: null,
+              heart_rate_zone: null,
+              rir: null,
+              set_kind: null,
+              reached_failure: null,
+              is_completed: false,
+              version: 1,
+            },
+          ],
+        ] as Array<[number, SetState]>)
+      : []),
   ]);
   const workout = () => ({
     id: 42,
@@ -73,18 +101,40 @@ async function mockActiveWorkout(page: Page) {
         id: 101,
         exercise_id: 11,
         exercise_title: 'Жим штанги лёжа',
+        metric_type: 'strength',
         sort_order: 1,
         prescribed_sets: 3,
         prescribed_reps: '8–10',
         rest_seconds: 90,
         notes: 'Сохраняйте устойчивое положение корпуса.',
         has_guide: true,
-        sets: [...sets].map(([id, state], index) => ({
-          id,
-          set_number: index + 1,
-          ...state,
-        })),
+        sets: [...sets]
+          .filter(([id]) => id !== 204)
+          .map(([id, state], index) => ({
+            id,
+            set_number: index + 1,
+            ...state,
+          })),
       },
+      ...(mixed
+        ? [
+            {
+              id: 102,
+              exercise_id: 12,
+              exercise_title: 'Велотренажёр',
+              metric_type: 'cardio',
+              sort_order: 2,
+              prescribed_sets: 1,
+              prescribed_reps: '',
+              prescribed_duration_minutes: 25,
+              rest_seconds: 0,
+              notes: 'Ровный разговорный темп.',
+              has_guide: false,
+              progression_guidance: null,
+              sets: [{ id: 204, set_number: 1, ...sets.get(204)! }],
+            },
+          ]
+        : []),
     ],
   });
 
@@ -156,6 +206,7 @@ async function mockActiveWorkout(page: Page) {
         json: {
           id: 11,
           title: 'Жим штанги лёжа',
+          metric_type: 'strength',
           primary_muscle: 'Грудь',
           equipment: 'Штанга и скамья',
           primary_muscle_ids: ['chest'],
@@ -208,6 +259,10 @@ async function mockActiveWorkout(page: Page) {
         ...current,
         actual_reps: body.actual_reps ?? null,
         actual_weight: body.actual_weight ?? null,
+        duration_minutes: body.duration_minutes ?? null,
+        distance_km: body.distance_km ?? null,
+        average_heart_rate_bpm: body.average_heart_rate_bpm ?? null,
+        heart_rate_zone: body.heart_rate_zone ?? null,
         rir: body.rir ?? null,
         set_kind: body.set_kind ?? null,
         reached_failure: body.reached_failure ?? null,
@@ -215,8 +270,9 @@ async function mockActiveWorkout(page: Page) {
         version: current.version + 1,
       };
       sets.set(setId, next);
+      if (setId === 204 && next.is_completed) resolveCardioCompleted();
       return route.fulfill({
-        json: { id: setId, set_number: setId - 200, ...next },
+        json: { id: setId, set_number: setId === 204 ? 1 : setId - 200, ...next },
       });
     }
     if (path.endsWith('/workouts/42/finish')) {
@@ -230,6 +286,7 @@ async function mockActiveWorkout(page: Page) {
     failSetPatch(value: boolean) {
       failSetPatch = value;
     },
+    cardioCompleted,
   };
 }
 
@@ -339,6 +396,8 @@ test('active workout has touch-size controls and no horizontal overflow', async 
 
   for (const viewport of [
     { width: 1280, height: 900 },
+    { width: 768, height: 900 },
+    { width: 430, height: 932 },
     { width: 390, height: 844 },
     { width: 360, height: 800 },
   ]) {
@@ -361,6 +420,118 @@ test('active workout has touch-size controls and no horizontal overflow', async 
       await expect(focusHeader.getByText('Текущая тренировка')).toBeVisible();
     }
   }
+});
+
+test('touch Mobile Web keeps mixed controls usable with hover none', async ({
+  browser,
+  baseURL,
+}) => {
+  const context = await browser.newContext({
+    baseURL,
+    viewport: { width: 430, height: 932 },
+    hasTouch: true,
+    isMobile: true,
+    colorScheme: 'light',
+    reducedMotion: 'reduce',
+  });
+  const page = await context.newPage();
+  try {
+    await mockActiveWorkout(page, true);
+    await page.goto('/app');
+    await page.getByRole('button', { name: 'Клиент' }).click();
+    await page.getByRole('button', { name: 'Продолжить тренировку' }).click();
+    expect(await page.evaluate(() => matchMedia('(hover: none)').matches)).toBe(true);
+    expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true);
+    const cardio = page.locator('.active-workout-exercise').filter({ hasText: 'Велотренажёр' });
+    const done = cardio.getByRole('button', { name: 'Завершить кардио: Велотренажёр' });
+    expect((await done.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        ),
+      )
+      .toBe(true);
+  } finally {
+    await context.close();
+  }
+});
+
+test('mixed workout keeps cardio type-aware, compact and stable during input', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'dark' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  const server = await mockActiveWorkout(page, true);
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Клиент' }).click();
+  await page.getByRole('button', { name: 'Продолжить тренировку' }).click();
+
+  const cardio = page.locator('.active-workout-exercise').filter({ hasText: 'Велотренажёр' });
+  await expect(cardio.getByRole('heading', { name: 'Велотренажёр' })).toBeVisible();
+  await expect(cardio.getByText('План: 25 мин')).toBeVisible();
+  await expect(cardio.getByText(/Рабочие подходы|Повторы|Отдых, сек/)).toHaveCount(0);
+  await expect(cardio.getByRole('spinbutton', { name: /Вес/ })).toHaveCount(0);
+
+  await cardio.getByRole('button', { name: 'Завершить кардио: Велотренажёр' }).click();
+  await expect(cardio.getByRole('alert')).toHaveText('Укажите длительность кардио.');
+  await cardio.getByRole('spinbutton', { name: 'Длительность, Велотренажёр' }).fill('27');
+  await cardio.getByRole('spinbutton', { name: 'Дистанция, Велотренажёр' }).fill('6.4');
+  const pulse = cardio.getByText('Пульс (необязательно)');
+  await pulse.click();
+  await cardio.getByRole('spinbutton', { name: 'Средний пульс, уд/мин' }).fill('138');
+  await cardio.getByRole('combobox', { name: 'Зона пульса' }).selectOption('3');
+  await expect(cardio.locator('details')).toHaveAttribute('open', '');
+  await expect(page.getByText('Синхронизировано')).toBeVisible();
+  await page.screenshot({
+    path: '../.artifacts/screenshots/task-119/mobile-web-390x844-dark-mixed-workout.png',
+    fullPage: true,
+  });
+
+  await cardio.getByRole('button', { name: 'Завершить кардио: Велотренажёр' }).click();
+  await server.cardioCompleted;
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const stored = localStorage.getItem('fit_active_workout_v1_user_7_workout_42');
+        if (!stored) return -1;
+        return (JSON.parse(stored) as { queue: unknown[] }).queue.length;
+      }),
+    )
+    .toBe(0);
+  await page.reload();
+  const clientEntry = page.getByRole('button', { name: 'Клиент' });
+  if (await clientEntry.isVisible()) await clientEntry.click();
+  await page.getByRole('button', { name: 'Продолжить тренировку' }).click();
+  await expect(cardio.getByRole('button', { name: 'Кардио сохранено' })).toBeVisible();
+  await expect(cardio.getByRole('spinbutton', { name: 'Длительность, Велотренажёр' })).toHaveCount(
+    0,
+  );
+  await cardio.getByRole('button', { name: 'Кардио сохранено' }).click();
+  await expect(cardio.getByRole('spinbutton', { name: 'Длительность, Велотренажёр' })).toHaveValue(
+    '27',
+  );
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.evaluate(() => localStorage.setItem('app-theme', 'light'));
+  await page.reload();
+  const desktopClientEntry = page.getByRole('button', { name: 'Клиент' });
+  if (await desktopClientEntry.isVisible()) await desktopClientEntry.click();
+  await page.getByRole('button', { name: 'Продолжить тренировку' }).click();
+  const desktopCardio = page
+    .locator('.active-workout-exercise')
+    .filter({ hasText: 'Велотренажёр' });
+  await desktopCardio.getByRole('button', { name: 'Кардио сохранено' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'light');
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
+    )
+    .toBe(true);
+  await page.screenshot({
+    path: '../.artifacts/screenshots/task-119/desktop-web-1280x900-light-mixed-workout.png',
+    fullPage: true,
+  });
 });
 
 test('TMA active workout keeps in-page back while native back stays hidden and keyboard nav restores', async ({
@@ -410,7 +581,7 @@ test('TMA active workout keeps in-page back while native back stays hidden and k
       __backButtonState: backState,
     });
   });
-  await mockActiveWorkout(page);
+  await mockActiveWorkout(page, true);
 
   await page.goto('/app?tgWebAppPlatform=android');
   await page.getByRole('button', { name: 'Продолжить тренировку' }).click();
@@ -430,6 +601,11 @@ test('TMA active workout keeps in-page back while native back stays hidden and k
         .trim(),
     ),
   ).toBe('844px');
+  const tmaCardio = page.locator('.active-workout-exercise').filter({ hasText: 'Велотренажёр' });
+  await expect(
+    tmaCardio.getByRole('spinbutton', { name: 'Длительность, Велотренажёр' }),
+  ).toBeVisible();
+  await expect(tmaCardio.getByRole('spinbutton', { name: /Вес/ })).toHaveCount(0);
 
   const navigation = page.locator('#appBottomNav');
   await expect(navigation).toBeVisible();

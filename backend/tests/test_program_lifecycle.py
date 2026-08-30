@@ -16,7 +16,8 @@ def _auth(client, telegram_user_id: int) -> dict[str, str]:
 
 
 def _create_template(client, headers, *, sets: int = 1, assigned: bool = False) -> int:
-    exercise_id = client.get("/api/v1/programs/exercises", headers=headers).json()[0]["id"]
+    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()
+    exercise_id = next(item["id"] for item in exercises if item["metric_type"] == "strength")
     response = client.post(
         "/api/v1/programs/templates",
         headers=headers,
@@ -147,7 +148,8 @@ def test_recurring_schedule_snapshots_notes_and_requires_replacement_confirmatio
 
 def test_finish_requires_explicit_incomplete_confirmation_and_completes_program(client):
     headers = _auth(client, 91002)
-    exercise_id = client.get("/api/v1/programs/exercises", headers=headers).json()[0]["id"]
+    exercises = client.get("/api/v1/programs/exercises", headers=headers).json()
+    exercise_id = next(item["id"] for item in exercises if item["metric_type"] == "strength")
     created = client.post(
         "/api/v1/programs/templates",
         headers=headers,

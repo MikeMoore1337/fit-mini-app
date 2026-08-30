@@ -289,13 +289,17 @@ def _serialize_program_template(template: ProgramTemplate) -> dict[str, object]:
                             "sort_order",
                             "prescribed_sets",
                             "prescribed_reps",
+                            "prescribed_duration_minutes",
                             "rest_seconds",
                             "notes",
                             "superset_group",
                             "superset_order",
                         ),
                     )
-                    | {"exercise_title": exercise.exercise.title}
+                    | {
+                        "exercise_title": exercise.exercise.title,
+                        "metric_type": exercise.exercise.metric_type or "strength",
+                    }
                     for exercise in day.exercises
                 ],
             }
@@ -400,6 +404,7 @@ def _serialize_program(program: UserProgram) -> dict[str, object]:
                                 "sort_order",
                                 "prescribed_sets",
                                 "prescribed_reps",
+                                "prescribed_duration_minutes",
                                 "rest_seconds",
                                 "notes",
                                 "superset_group",
@@ -407,6 +412,12 @@ def _serialize_program(program: UserProgram) -> dict[str, object]:
                             ),
                         ),
                         "title": exercise.exercise.title if exercise.exercise else None,
+                        "metric_type": exercise.metric_type
+                        or (
+                            exercise.exercise.metric_type or "strength"
+                            if exercise.exercise
+                            else "strength"
+                        ),
                         "sets": [
                             _fields(
                                 workout_set,
@@ -415,6 +426,10 @@ def _serialize_program(program: UserProgram) -> dict[str, object]:
                                     "set_number",
                                     "actual_reps",
                                     "actual_weight",
+                                    "duration_minutes",
+                                    "distance_km",
+                                    "average_heart_rate_bpm",
+                                    "heart_rate_zone",
                                     "rir",
                                     "set_kind",
                                     "reached_failure",

@@ -28,6 +28,11 @@ from fitminiapp_api.services.exercise_catalog import (
 )
 from fitminiapp_api.services.notifications import queue_notification
 from fitminiapp_api.services.program_common import ProgramError
+from fitminiapp_api.services.workout_metrics import (
+    exercise_metric_type,
+    normalize_exercise_prescription,
+    workout_exercise_metric_type,
+)
 
 MUTABLE_PROGRAM_STATUSES = {"scheduled", "active"}
 BLOCK_STATUS_TRANSITIONS = {
@@ -152,9 +157,11 @@ def _build_program_snapshot(db: Session, program: UserProgram) -> dict:
                 "exercises": [
                     {
                         "exercise_id": exercise.exercise_id,
+                        "metric_type": workout_exercise_metric_type(exercise),
                         "sort_order": exercise.sort_order,
                         "prescribed_sets": exercise.prescribed_sets,
                         "prescribed_reps": exercise.prescribed_reps,
+                        "prescribed_duration_minutes": exercise.prescribed_duration_minutes,
                         "rest_seconds": exercise.rest_seconds,
                         "notes": exercise.notes,
                         "superset_group": exercise.superset_group,
@@ -460,12 +467,20 @@ def upsert_future_program_exercise(
     _ensure_program_mutable(program)
     _ensure_expected_revision(program, payload.expected_revision_number)
     target_user = db.query(User).filter(User.id == program.user_id).one()
-    visible_exercise_ids = {
-        _effective_exercise_id(exercise)
+    visible_by_effective_id = {
+        _effective_exercise_id(exercise): exercise
         for exercise in _load_visible_exercise_rows(db, target_user)
     }
-    if payload.exercise_id not in visible_exercise_ids:
+    exercise = visible_by_effective_id.get(payload.exercise_id)
+    if exercise is None:
         raise ProgramError("Exercise is not available for program owner")
+    prescription = normalize_exercise_prescription(
+        exercise,
+        prescribed_sets=payload.prescribed_sets,
+        prescribed_reps=payload.prescribed_reps,
+        prescribed_duration_minutes=payload.prescribed_duration_minutes,
+        rest_seconds=payload.rest_seconds,
+    )
 
     future_workouts = (
         db.query(UserWorkout)
@@ -512,10 +527,12 @@ def upsert_future_program_exercise(
             workout_exercise = UserWorkoutExercise(
                 workout_id=workout.id,
                 exercise_id=payload.exercise_id,
+                metric_type=exercise_metric_type(exercise),
                 sort_order=max((row.sort_order for row in workout.exercises), default=0) + 1,
-                prescribed_sets=payload.prescribed_sets,
-                prescribed_reps=payload.prescribed_reps,
-                rest_seconds=payload.rest_seconds,
+                prescribed_sets=prescription.prescribed_sets,
+                prescribed_reps=prescription.prescribed_reps,
+                prescribed_duration_minutes=prescription.prescribed_duration_minutes,
+                rest_seconds=prescription.rest_seconds,
                 notes=payload.notes,
                 superset_group=payload.superset_group,
                 superset_order=payload.superset_order,
@@ -523,9 +540,11 @@ def upsert_future_program_exercise(
             db.add(workout_exercise)
             db.flush()
         else:
-            workout_exercise.prescribed_sets = payload.prescribed_sets
-            workout_exercise.prescribed_reps = payload.prescribed_reps
-            workout_exercise.rest_seconds = payload.rest_seconds
+            workout_exercise.metric_type = exercise_metric_type(exercise)
+            workout_exercise.prescribed_sets = prescription.prescribed_sets
+            workout_exercise.prescribed_reps = prescription.prescribed_reps
+            workout_exercise.prescribed_duration_minutes = prescription.prescribed_duration_minutes
+            workout_exercise.rest_seconds = prescription.rest_seconds
             workout_exercise.notes = payload.notes
             workout_exercise.superset_group = payload.superset_group
             workout_exercise.superset_order = payload.superset_order
@@ -533,7 +552,7 @@ def upsert_future_program_exercise(
                 UserWorkoutSet.workout_exercise_id == workout_exercise.id
             ).delete(synchronize_session=False)
 
-        for set_number in range(1, payload.prescribed_sets + 1):
+        for set_number in range(1, prescription.prescribed_sets + 1):
             db.add(
                 UserWorkoutSet(
                     workout_exercise_id=workout_exercise.id,

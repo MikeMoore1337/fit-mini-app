@@ -13,7 +13,10 @@ from fitminiapp_api.models.program import (
 )
 from fitminiapp_api.models.user import User, UserProfile
 from fitminiapp_api.services.auth_identities import ensure_telegram_identity
-from fitminiapp_api.services.exercise_domain import sync_catalog_exercise_domain_metadata
+from fitminiapp_api.services.exercise_domain import (
+    canonical_muscle_identifier,
+    sync_catalog_exercise_domain_metadata,
+)
 from fitminiapp_api.services.news_sources import bootstrap_default_news_sources
 from fitminiapp_api.services.program_seed_data import (
     EXERCISE_CATALOG,
@@ -57,6 +60,9 @@ def _seed_exercise_catalog(db: Session) -> None:
         exercise.title = title
         exercise.primary_muscle = primary_muscle
         exercise.equipment = equipment
+        exercise.metric_type = (
+            "cardio" if canonical_muscle_identifier(primary_muscle) == "cardio" else "strength"
+        )
         exercise.difficulty_level = exercise_difficulty_level(slug)
         exercise.is_deleted = False
 
@@ -159,6 +165,7 @@ def _seed_strength_templates(db: Session) -> None:
                         sort_order=sort_order,
                         prescribed_sets=sets,
                         prescribed_reps=reps,
+                        prescribed_duration_minutes=None,
                         rest_seconds=rest,
                     )
                 )

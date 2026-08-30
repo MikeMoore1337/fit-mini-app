@@ -102,6 +102,10 @@ from fitminiapp_api.services.workout_comments import (
     serialize_workout_comment,
 )
 from fitminiapp_api.services.workout_completion import build_workout_completion_summary
+from fitminiapp_api.services.workout_metrics import (
+    validate_workout_set_changes,
+    workout_exercise_metric_type,
+)
 from fitminiapp_api.services.workout_sync import (
     WorkoutSetSyncError,
     apply_workout_set_update,
@@ -320,6 +324,7 @@ def _serialize_workout(workout: UserWorkout, db: Session, current_user: User) ->
         for item in workout.exercises
     }
     progression_guidance = build_progression_guidance(db, current_user, workout)
+    metric_types = {item.id: workout_exercise_metric_type(item) for item in workout.exercises}
 
     return {
         "id": workout.id,
@@ -336,9 +341,11 @@ def _serialize_workout(workout: UserWorkout, db: Session, current_user: User) ->
                 "id": item.id,
                 "exercise_id": item.exercise_id,
                 "exercise_title": exercise_titles[item.id],
+                "metric_type": metric_types[item.id],
                 "sort_order": item.sort_order,
                 "prescribed_sets": item.prescribed_sets,
                 "prescribed_reps": item.prescribed_reps,
+                "prescribed_duration_minutes": item.prescribed_duration_minutes,
                 "rest_seconds": item.rest_seconds,
                 "notes": item.notes,
                 "superset_group": item.superset_group,
@@ -347,13 +354,19 @@ def _serialize_workout(workout: UserWorkout, db: Session, current_user: User) ->
                     (visible_map.get(item.exercise_id) or item.exercise)
                     and get_exercise_guide(visible_map.get(item.exercise_id) or item.exercise)
                 ),
-                "progression_guidance": progression_guidance[item.id],
+                "progression_guidance": (
+                    progression_guidance[item.id] if metric_types[item.id] == "strength" else None
+                ),
                 "sets": [
                     {
                         "id": set_item.id,
                         "set_number": set_item.set_number,
                         "actual_reps": set_item.actual_reps,
                         "actual_weight": set_item.actual_weight,
+                        "duration_minutes": set_item.duration_minutes,
+                        "distance_km": set_item.distance_km,
+                        "average_heart_rate_bpm": set_item.average_heart_rate_bpm,
+                        "heart_rate_zone": set_item.heart_rate_zone,
                         "rir": set_item.rir,
                         "set_kind": set_item.set_kind,
                         "reached_failure": set_item.reached_failure,
@@ -370,6 +383,7 @@ def _serialize_workout(workout: UserWorkout, db: Session, current_user: User) ->
             current_user,
             workout,
             exercise_titles,
+            metric_types,
         ),
     }
 
@@ -869,16 +883,35 @@ def finish_workout(
         )
         .all()
     )
+    metric_types = {
+        exercise.id: workout_exercise_metric_type(exercise) for exercise in workout.exercises
+    }
+    contains_cardio = "cardio" in metric_types.values()
     completed_sets = [row for row in all_sets if row.is_completed]
     if not completed_sets:
         raise HTTPException(
             status_code=409,
-            detail="Отметьте хотя бы один выполненный подход",
+            detail=(
+                "Отметьте хотя бы один выполненный этап"
+                if contains_cardio
+                else "Отметьте хотя бы один выполненный подход"
+            ),
         )
+    incomplete_cardio = [
+        row
+        for row in completed_sets
+        if metric_types[row.workout_exercise_id] == "cardio" and row.duration_minutes is None
+    ]
+    if incomplete_cardio:
+        raise HTTPException(status_code=409, detail="Укажите длительность выполненного кардио")
     if len(completed_sets) < len(all_sets) and not (payload and payload.confirm_incomplete):
         raise HTTPException(
             status_code=409,
-            detail="Есть незаполненные подходы. Подтвердите досрочное завершение",
+            detail=(
+                "Есть незаполненные этапы. Подтвердите досрочное завершение"
+                if contains_cardio
+                else "Есть незаполненные подходы. Подтвердите досрочное завершение"
+            ),
         )
 
     workout.completed_at = now_for_user_naive(current_user)
@@ -923,7 +956,7 @@ def update_workout_set(
     db: Session = Depends(get_db),
 ):
     result = (
-        db.query(UserWorkoutSet, UserWorkout, UserProgram)
+        db.query(UserWorkoutSet, UserWorkout, UserProgram, UserWorkoutExercise)
         .join(UserWorkoutExercise, UserWorkoutExercise.id == UserWorkoutSet.workout_exercise_id)
         .join(UserWorkout, UserWorkout.id == UserWorkoutExercise.workout_id)
         .join(UserProgram, UserProgram.id == UserWorkout.user_program_id)
@@ -937,13 +970,21 @@ def update_workout_set(
     if not result:
         raise HTTPException(status_code=404, detail="Подход не найден")
 
-    set_row, workout, _ = result
+    set_row, workout, _, workout_exercise = result
     program = _lock_program(db, workout.user_program_id)
     db.refresh(workout)
     db.refresh(set_row)
     changes = payload.model_dump(exclude_unset=True)
     expected_version = changes.pop("expected_version", None)
     mutation_id = changes.pop("mutation_id", None)
+    try:
+        validate_workout_set_changes(
+            workout_exercise_metric_type(workout_exercise),
+            changes,
+            current_duration_minutes=set_row.duration_minutes,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     try:
         replayed = replayed_workout_set(db, set_row, mutation_id, changes)

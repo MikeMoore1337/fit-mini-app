@@ -24,6 +24,7 @@ const activeWorkout: Workout = {
       id: 101,
       exercise_id: 11,
       exercise_title: 'Жим штанги лежа',
+      metric_type: 'strength',
       sort_order: 1,
       prescribed_sets: 1,
       prescribed_reps: '8-10',

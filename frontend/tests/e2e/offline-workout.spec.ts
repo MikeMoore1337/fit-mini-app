@@ -25,6 +25,7 @@ test('active workout переживает offline edit, refresh и reconnect б�
         id: 101,
         exercise_id: 11,
         exercise_title: 'Жим штанги лежа',
+        metric_type: 'strength',
         sort_order: 1,
         prescribed_sets: 1,
         prescribed_reps: '8-10',
@@ -167,10 +168,11 @@ test('active workout переживает offline edit, refresh и reconnect б�
         const key = Object.keys(localStorage).find((item) =>
           item.startsWith('fit_active_workout_v1_user_7_workout_42'),
         );
-        return key ? JSON.parse(localStorage.getItem(key) || '{}').queue?.length : 0;
+        const queue = key ? JSON.parse(localStorage.getItem(key) || '{}').queue : [];
+        return queue?.at(-1)?.values?.is_completed ?? null;
       }),
     )
-    .toBe(1);
+    .toBe(true);
 
   workoutMissing = true;
   await page.reload();
