@@ -441,9 +441,10 @@ test('brand-new Web user enters Today without a mandatory profile step', async (
   await page.getByRole('link', { name: 'Создать свою программу' }).click();
   await expect(page).toHaveURL('/app?section=programs&start=create');
   const builder = page.locator('#program-builder');
-  await expect(builder).toHaveAttribute('open', '');
-  await expect(builder.locator(':scope > summary')).toBeFocused();
-  await expect(page.getByRole('textbox', { name: 'Название', exact: true })).toBeVisible();
+  const programTitle = builder.getByRole('textbox', { name: 'Название', exact: true });
+  await expect(programTitle).toBeVisible();
+  await programTitle.blur();
+  await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible();
 
   await page.getByRole('link', { name: 'Сегодня', exact: true }).click();
   await page.getByRole('link', { name: 'Выбрать готовую' }).click();

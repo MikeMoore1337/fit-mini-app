@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import type { Exercise } from '../../shared/api/types';
@@ -12,6 +13,14 @@ const difficultyLabels: Record<Exercise['difficulty_level'], string> = {
   advanced: 'Продвинутый уровень',
 };
 
+function resolveDialogDocumentTop() {
+  if (document.body.style.position === 'fixed') {
+    const lockedBodyTop = Number.parseFloat(document.body.style.top);
+    if (Number.isFinite(lockedBodyTop)) return Math.max(0, -lockedBodyTop);
+  }
+  return window.scrollY;
+}
+
 export function ExerciseGuideDialog({
   exerciseId,
   exerciseTitle,
@@ -22,6 +31,7 @@ export function ExerciseGuideDialog({
   onClose: () => void;
 }) {
   const [currentExercise, setCurrentExercise] = useState({ id: exerciseId, title: exerciseTitle });
+  const [dialogScrollTop] = useState(resolveDialogDocumentTop);
   const [mediaExpanded, setMediaExpanded] = useState(false);
   const panelRef = useModalA11y<HTMLDivElement>(!mediaExpanded, onClose);
   const details = useQuery({
@@ -45,12 +55,13 @@ export function ExerciseGuideDialog({
     if (panelRef.current) panelRef.current.scrollTop = 0;
   };
 
-  return (
+  return createPortal(
     <div
       className="modal exercise-guide-modal"
       role="dialog"
       aria-modal="true"
       aria-labelledby="exercise-guide-title"
+      style={{ position: 'absolute', top: dialogScrollTop, bottom: 'auto', height: '100dvh' }}
     >
       <div className="modal__backdrop" aria-hidden="true" onClick={onClose} />
       <div className="modal__panel card exercise-guide-modal__panel" ref={panelRef} tabIndex={-1}>
@@ -249,6 +260,7 @@ export function ExerciseGuideDialog({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

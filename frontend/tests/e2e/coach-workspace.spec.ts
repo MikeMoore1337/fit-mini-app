@@ -583,7 +583,7 @@ test('mobile использует список и отдельный конте�
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
 
   await page.getByText('Назначить новую программу').click();
-  await expect(page.getByRole('heading', { name: 'Тренировочные дни' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Добавьте упражнения' })).toBeVisible();
   const trainingFields = page.locator('.program-exercise-row__metrics .field');
   await expect(trainingFields).toHaveCount(3);
   const fieldBoxes = await trainingFields.evaluateAll((fields) =>

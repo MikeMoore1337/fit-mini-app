@@ -360,11 +360,12 @@ export default function MiniAppPage() {
                 <TemplatesList
                   key={programStart === 'templates' ? 'templates-start' : 'templates-default'}
                   defaultLibraryOpen={programStart === 'templates'}
-                />
-                <ProgramBuilder
-                  key={programStart === 'create' ? 'create-start' : 'create-default'}
-                  defaultOpen={programStart === 'create'}
-                />
+                >
+                  <ProgramBuilder
+                    key={programStart === 'create' ? 'create-start' : 'create-default'}
+                    defaultOpen={programStart === 'create'}
+                  />
+                </TemplatesList>
               </>
             )}
             {section === 'catalog' && <ExerciseCatalog canCreate={Boolean(user?.is_coach)} />}

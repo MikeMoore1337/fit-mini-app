@@ -2695,35 +2695,100 @@ test('мастер подбора сохраняет ответы и ведёт 
 
 test('клиент собирает и переупорядочивает личную программу', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await mockApi(page);
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
   await openAppDestination(page, 'Программа');
-  await openCard(page, 'Создать свою программу');
 
-  const exercisePicker = page.getByRole('combobox', { name: 'Поиск упражнения' }).first();
+  const builder = page.locator('#program-builder');
+  await expect(builder.getByRole('heading', { name: 'Создать свою программу' })).toBeVisible();
+  expect(
+    await page
+      .locator('#program-builder, #program-library')
+      .evaluateAll((elements) => elements.map((element) => element.id)),
+  ).toEqual(['program-builder', 'program-library']);
+  await expect(builder.getByLabel('Название', { exact: true })).toHaveValue('Моя программа');
+  await expect(builder.getByLabel('Название дня 1')).toHaveValue('Тренировка 1');
+  await expect(builder.getByText('Настройки программы', { exact: true })).toBeVisible();
+  await expect(builder.getByRole('combobox', { name: 'Цель', exact: true })).toBeHidden();
+  const settings = builder.locator('.program-builder-settings');
+  await settings.locator('summary').click();
+  const goal = builder.getByRole('combobox', { name: 'Цель', exact: true });
+  await goal.selectOption('recomposition');
+  await expect(goal).toHaveValue('recomposition');
+  await goal.selectOption('maintenance');
+  const duration = builder.getByRole('spinbutton', { name: 'Длительность, недель' });
+  await duration.fill('2');
+  await expect(duration).toHaveValue('2');
+  await duration.fill('1');
+  await settings.locator('summary').click();
+  await expect(goal).toBeHidden();
+
+  const exercisePicker = builder.getByRole('combobox', { name: 'Поиск упражнения' }).first();
   await exercisePicker.fill('Тяга');
-  await page.getByRole('option', { name: /Тяга блока/ }).click();
+  await builder.getByRole('button', { name: 'Техника: Тяга блока' }).click();
+  await expect(page.getByRole('dialog', { name: /Тяга блока/ })).toBeVisible();
+  const closeGuide = page.getByRole('button', { name: 'Закрыть карточку упражнения' });
+  await expect(closeGuide).toBeInViewport();
+  await closeGuide.click();
+  await expect(exercisePicker).toHaveValue('Тяга');
+  await exercisePicker.focus();
+  await builder.getByRole('option', { name: /Тяга блока/ }).click();
+  await expect(exercisePicker).toHaveValue('Тяга блока');
+  await expect(builder.getByText('1 тренировка · 1 упр.', { exact: true })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Добавить упражнение' }).first().click();
-  await page.getByRole('button', { name: 'Переместить упражнение 2 выше' }).click();
-  await page.getByRole('button', { name: 'Удалить упражнение 1 из дня 1' }).click();
+  await builder.getByRole('button', { name: 'Добавить упражнение' }).first().click();
+  const exercisePickers = builder.getByRole('combobox', { name: 'Поиск упражнения' });
+  await expect(exercisePickers.nth(0)).toHaveValue('Тяга блока');
+  await expect(exercisePickers.nth(1)).toHaveValue('');
+  const moveExerciseDown = builder.getByRole('button', {
+    name: 'Переместить упражнение 1 ниже',
+  });
+  await moveExerciseDown.focus();
+  await moveExerciseDown.press('Enter');
+  const exerciseRows = builder.locator('.program-exercise-row');
+  await expect(exerciseRows.nth(0).getByRole('button', { name: 'Техника и детали' })).toHaveCount(
+    0,
+  );
+  await expect(exerciseRows.nth(1).getByRole('button', { name: 'Техника и детали' })).toBeVisible();
+  await expect(exercisePickers.nth(0)).toHaveValue('');
+  await expect(exercisePickers.nth(1)).toHaveValue('Тяга блока');
+  await builder.getByRole('button', { name: 'Удалить упражнение 1 из дня 1' }).click();
 
-  await page.getByRole('button', { name: 'Добавить день' }).click();
-  await page.getByRole('button', { name: 'Переместить день 2 выше' }).click();
-  await page.getByRole('button', { name: 'Удалить день 1' }).click();
+  await builder.getByRole('button', { name: 'Добавить день' }).click();
+  const moveDayUp = builder.getByRole('button', { name: 'Переместить день 2 выше' });
+  await moveDayUp.focus();
+  await moveDayUp.press('Enter');
+  await expect(builder.getByLabel('Название дня 1')).toHaveValue('Тренировка 2');
+  await expect(builder.getByLabel('Название дня 2')).toHaveValue('Тренировка 1');
+  await builder.getByRole('button', { name: 'Удалить день 1' }).click();
+  await expect(builder.getByLabel('Название дня 1')).toHaveValue('Тренировка 1');
 
   const createRequest = page.waitForRequest(
     (request) =>
       new URL(request.url()).pathname.endsWith('/programs/templates') &&
       request.method() === 'POST',
   );
-  await page.getByRole('button', { name: 'Создать программу' }).click();
+  await builder.getByRole('button', { name: 'Создать программу' }).click();
   const payload = (await createRequest).postDataJSON() as {
+    title: string;
+    goal: string;
+    level: string;
+    duration_weeks: number;
+    schedule_weekdays: number[];
     days: Array<{ exercises: Array<{ exercise_id: number }> }>;
   };
+  expect(payload).toMatchObject({
+    title: 'Моя программа',
+    goal: 'maintenance',
+    level: 'beginner',
+    duration_weeks: 1,
+  });
+  expect(payload.schedule_weekdays).toHaveLength(1);
   expect(payload.days).toHaveLength(1);
   expect(payload.days[0]?.exercises).toEqual([expect.objectContaining({ exercise_id: 1 })]);
+  await expect(builder.getByRole('link', { name: 'Перейти к тренировке' })).toBeVisible();
 });
 
 test('сенсорное поле даты сохраняет нативный пикер и показывает иконку календаря', async ({

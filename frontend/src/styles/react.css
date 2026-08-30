@@ -1045,6 +1045,7 @@ details[open] > summary .disclosure-icon svg {
   right: 0;
   z-index: 80;
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   max-height: 280px;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -1054,12 +1055,19 @@ details[open] > summary .disclosure-icon svg {
   background: var(--card);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
 }
+.exercise-picker__options,
+.exercise-picker__guides {
+  display: grid;
+  grid-auto-rows: minmax(44px, auto);
+  align-items: stretch;
+}
 .exercise-picker__option {
   display: grid;
   gap: 2px;
   width: 100%;
-  min-height: 0;
+  min-height: 44px;
   padding: 9px 10px;
+  border: 0;
   border-radius: 8px;
   background: transparent;
   color: var(--text);
@@ -1068,6 +1076,16 @@ details[open] > summary .disclosure-icon svg {
   justify-items: start;
   align-items: start;
   line-height: 1.2;
+}
+.exercise-picker__option-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.exercise-picker__guide {
+  min-height: 100%;
+  padding-inline: 9px;
+  white-space: nowrap;
 }
 .exercise-picker__option strong {
   width: 100%;
@@ -2991,11 +3009,24 @@ details[open] > summary .disclosure-icon svg {
   background: var(--surface);
 }
 .program-builder-tools__body,
+.program-builder-settings__body,
 .program-exercise-advanced__body,
 .assignment-advanced__body {
   margin-top: 14px;
   padding-top: 14px;
   border-top: 1px solid var(--border);
+}
+.program-builder-settings {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  background: var(--surface);
+}
+.program-builder summary {
+  min-height: 44px;
+}
+.program-builder-settings__body {
+  gap: 12px;
 }
 .program-builder-days-heading {
   align-items: center;
@@ -3041,8 +3072,8 @@ details[open] > summary .disclosure-icon svg {
 }
 .program-order-controls button,
 .program-exercise-row__actions button {
-  min-width: 38px;
-  min-height: 38px;
+  min-width: 44px;
+  min-height: 44px;
   padding: 6px;
 }
 .program-exercise-row {
@@ -3113,23 +3144,50 @@ details[open] > summary .disclosure-icon svg {
   text-align: left;
 }
 .program-builder-footer {
-  position: sticky;
-  z-index: 4;
-  bottom: 0;
+  position: static;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin: 0 -4px -4px;
+  margin: 0;
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: 14px;
   background: color-mix(in srgb, var(--card-bg) 94%, transparent);
   box-shadow: 0 -10px 30px color-mix(in srgb, var(--text) 8%, transparent);
-  backdrop-filter: blur(10px);
+  backdrop-filter: none;
+}
+.program-builder-footer__summary {
+  display: grid;
+  gap: 2px;
+  min-width: 145px;
+}
+.program-builder-footer__summary strong {
+  font-size: 0.84rem;
 }
 .program-builder-footer__save {
   min-width: min(240px, 100%);
+}
+.program-builder-success {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 18px;
+  border: 1px solid var(--accent-line);
+  border-radius: 17px;
+  background: linear-gradient(135deg, var(--accent-soft), var(--surface));
+}
+.program-builder-success h3,
+.program-builder-success p {
+  margin: 0;
+}
+.program-builder-success__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.program-builder-success__actions > * {
+  min-height: 44px;
 }
 .exercise-catalog__search {
   max-width: 720px;
@@ -3352,6 +3410,7 @@ details[open] > summary .disclosure-icon svg {
   .program-active__actions,
   .program-template-card__actions,
   .program-builder-footer,
+  .program-builder-success__actions,
   .exercise-create__form,
   .coach-program-row__actions {
     display: grid;
@@ -3360,6 +3419,7 @@ details[open] > summary .disclosure-icon svg {
   .program-active__actions button,
   .program-template-card__actions button,
   .program-builder-footer button,
+  .program-builder-success__actions > *,
   .coach-client-programs__head button,
   .coach-program-row__actions button {
     width: 100%;
@@ -3379,6 +3439,9 @@ details[open] > summary .disclosure-icon svg {
     position: static;
     margin: 0;
     backdrop-filter: none;
+  }
+  .program-builder-footer__summary {
+    min-width: 0;
   }
   .program-builder-footer__save {
     min-width: 0;
