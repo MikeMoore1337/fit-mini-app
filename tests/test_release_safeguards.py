@@ -74,6 +74,31 @@ def test_dev_runs_ci_but_cannot_publish_or_deploy_production() -> None:
     assert "workflow_dispatch:" not in deploy_workflow
 
 
+def test_release_pr_requires_completed_exact_sha_push_ci_and_serial_execution() -> None:
+    root = Path(__file__).resolve().parents[1]
+    ci_workflow = (root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+
+    assert "actions: read" in ci_workflow
+    assert "types: [opened, reopened, ready_for_review, synchronize]" in ci_workflow
+    assert "&& 'dev-release' || github.ref" in ci_workflow
+    assert "cancel-in-progress: false" in ci_workflow
+    assert "queue: max" in ci_workflow
+    assert "release-sequence:" in ci_workflow
+    assert "Require successful push CI before release PR" in ci_workflow
+    assert '"repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs"' in ci_workflow
+    assert "-f event=push" in ci_workflow
+    assert '-f head_sha="$HEAD_SHA"' in ci_workflow
+    assert "-f status=success" in ci_workflow
+    assert "github.event.action == 'reopened'" in ci_workflow
+    assert "github.event.pull_request.updated_at" in ci_workflow
+    assert "github.event.pull_request.head.repo.full_name == github.repository" in ci_workflow
+    assert r".updated_at <= \"$PR_GATE_AT\"" in ci_workflow
+    assert ci_workflow.count("needs: release-sequence") == 7
+    assert "RELEASE_SEQUENCE_RESULT: ${{ needs.release-sequence.result }}" in ci_workflow
+    assert 'test "$RELEASE_SEQUENCE_RESULT" = success' in ci_workflow
+    assert "github.event_name == 'pull_request' && 'checks' || 'branch-checks'" in ci_workflow
+
+
 def test_auto_release_contract_is_fail_closed_for_medium_and_human_gates() -> None:
     agents, global_rules, lifecycle = _release_policy_sources()
 
@@ -84,7 +109,7 @@ def test_auto_release_contract_is_fail_closed_for_medium_and_human_gates() -> No
 
     assert "незакрытых `BLOCKER`, `HIGH` и `MEDIUM` ровно ноль" in lifecycle
     assert "owner checkpoint/approve, human evidence или manual visual gate" in lifecycle
-    assert "failure/rollback/manual-intervention verdict" in lifecycle
+    assert "failure/rollback/manual-intervention verdict" in lifecycle.lower()
     assert "Direct push в `master` запрещён" in global_rules
     assert "expected PR head SHA" in lifecycle
     assert "required check `checks`" in lifecycle
