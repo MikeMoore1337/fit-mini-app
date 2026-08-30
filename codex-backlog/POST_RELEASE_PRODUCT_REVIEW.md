@@ -1,6 +1,6 @@
 # Product review post-release направлений `80-101`
 
-Дата ревизии: 2026-08-28.
+Дата ревизии: 2026-08-30.
 
 ## Итог
 
@@ -8,11 +8,11 @@ Tasks `80-101` и их буквенные подзадачи — trigger-gated p
 начинается только после наблюдаемой проблемы/спроса, проверки более дешёвого решения и owner
 decision. Номер задаёт предпочтительный порядок, но не заменяет Trigger или dependency.
 
-Импорт XLSX/CSV и TXT/DOCX объединён в task `93` и поставлен после AI-кластера. Это один
-пользовательский job и один pipeline: формат определяет extractor, а AI-разбор, exercise matching,
-preview и confirmed write не должны расходиться между двумя реализациями. Food-photo остаётся
-важной задачей `94`, следующей за AI-assisted import. Billing, локализация и private progress
-photos без AI/body analysis остаются в конце.
+Импорт остаётся одним пользовательским job и pipeline под umbrella `93`, но delivery разделён:
+`93A` даёт deterministic XLSX/CSV template import без AI, а `93B` условно добавляет AI-разбор
+неоднородных XLSX/CSV/TXT/DOCX после измеримого gap. Draft, matching, preview и confirmed write не
+расходятся между этапами. Food-photo остаётся отдельной задачей `94`. Billing, локализация и private
+progress photos без AI/body analysis остаются в конце.
 
 ## Критерии ревизии
 
@@ -39,7 +39,7 @@ photos без AI/body analysis остаются в конце.
 | `90A-90B` | Декомпозировать | Internal UI/evals и real-user rollout имеют разные evidence gates; синтетические user results запрещены. |
 | `91` | Только после успешной beta | AI итог периода расширяет factual report; нужны consent, evidence anchors, domain evals и non-AI fallback. |
 | `92A`, `92B` | Оценивать независимо | Memory решает continuity, routing — provider resilience/cost; допустим `Go` только для одной capability. |
-| `93` | Объединить imports и выполнять после AI | Нужны corpus реальных файлов и измеримая экономия времени. AI создаёт проверяемый нейтральный draft и может rerank только bounded candidates. Stable ID, exact/alias/fuzzy retrieval и пороги детерминированы; неоднозначность разрешает пользователь. |
+| `93A-93B` | Один pipeline, два delivery gate | `93A` даёт canonical XLSX/CSV import без provider dependency. `93B` запускается только при измеримом gap и добавляет source-grounded AI proposal/rerank поверх того же deterministic matching/preview/confirm. |
 | `94A-94B` | Декомпозировать после AI/import | Фото еды сначала проходит corpus/eval/privacy/cost Go/No-Go; production output — только editable draft. |
 | `95A-95B` | Только после gap task `67` | Browser print-to-PDF остаётся fallback; share/Telegram добавляют отдельный риск. |
 | `96` | Research-only | Нужен один конкретный wearable datum/platform/job; calories/readiness не становятся product truth. |
@@ -56,12 +56,12 @@ photos без AI/body analysis остаются в конце.
 | `110` | Owner-selected profile/media task вне основной очереди | Текущий emoji fallback детерминирован и остаётся последней ступенью. Custom avatar — private media с mobile/desktop upload, safe processing, replace/delete/export и precedence `custom -> provider -> emoji`; production migration/deploy отдельно gated. |
 | `111` | Owner-selected Progress redesign task вне основной очереди | Референс задаёт bento hierarchy, но не palette и не новые hydration/steps/health-score данные. Периоды `1/7/30/90/365/custom` используют единый factual progress/report contract, inclusive dates/timezone и измеренную performance. |
 
-## Контракт AI-assisted импорта `93`
+## Контракт импорта `93A-93B`
 
-- Upload проходит allowlist, size/complexity limits, безопасное хранение и детерминированное
-  извлечение текста/таблиц до AI.
-- AI возвращает только строгую нейтральную схему, source spans и `null` для отсутствующих данных;
-  он не пишет canonical entities и не придумывает значения.
+- `93A` строит versioned XLSX/CSV template, allowlist, size/complexity limits, безопасное хранение,
+  deterministic extraction, neutral draft, preview/resolution и atomic confirmed write без AI.
+- `93B` переиспользует этот pipeline для evidence-backed heterogeneous XLSX/CSV/TXT/DOCX. AI
+  возвращает только строгую нейтральную схему, source spans и `null` для отсутствующих данных.
 - Matching сначала использует stable ID, normalization, exact match, global/user aliases и
   token/fuzzy retrieval с domain hints, включая транслитерацию и языковые варианты.
 - AI может только rerank ограниченный список разрешённых кандидатов. Один AI-score никогда не
@@ -70,10 +70,11 @@ photos без AI/body analysis остаются в конце.
   сохраняются только после явного подтверждения и не меняют global aliases.
 - До транзакционной записи пользователь видит preview, unresolved/ambiguous rows и вручную
   подтверждает каждое опасное сопоставление. Результат — редактируемый draft программы.
+- При unavailable/quota/policy/cost failure `93A` остаётся полноценным deterministic fallback.
 
 ## Общие routing contracts
 
-- Umbrella `90`, `92`, `94`, `95`, `99`, `100` запрещено выполнять одним change set.
+- Umbrella `90`, `92`, `93`, `94`, `95`, `99`, `100` запрещено выполнять одним change set.
 - External research, real-user validation, production provider/price/channel actions и rollout
   требуют фактического evidence/owner checkpoint.
 - Все UI tasks `80-101` наследуют active `DESIGN_V2_1`, Mobile Web/TMA contracts и owner screenshot

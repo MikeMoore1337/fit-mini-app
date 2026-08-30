@@ -148,7 +148,7 @@ the explicitly selected task; a public clone without them must not invent or inf
 Trigger-gated post-release tasks `80-101` и их буквенные подзадачи входят в `codex-backlog/tasks/` и используют те же
 `codex-backlog/GLOBAL_RULES.md` и `codex-backlog/TASK_EXECUTION_LIFECYCLE.md`. Их номер задаёт
 предпочтительную последовательность, но не заменяет Trigger, dependency и owner decision; umbrella
-`90`, `92`, `94`, `95`, `99`, `100` отдельно не выполняются.
+`90`, `92`, `93`, `94`, `95`, `99`, `100` отдельно не выполняются.
 
 When a task file is explicitly provided:
 
