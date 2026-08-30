@@ -78,11 +78,20 @@ def test_release_pr_requires_completed_exact_sha_push_ci_and_serial_execution() 
     root = Path(__file__).resolve().parents[1]
     ci_workflow = (root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 
+    concurrency_lines = ci_workflow.split("\nconcurrency:\n", maxsplit=1)[1].split(
+        "\nenv:\n", maxsplit=1
+    )[0]
+    concurrency_keys = {
+        line.strip().split(":", maxsplit=1)[0]
+        for line in concurrency_lines.splitlines()
+        if line.startswith("  ") and not line.lstrip().startswith("#")
+    }
+
     assert "actions: read" in ci_workflow
     assert "types: [opened, reopened, ready_for_review, synchronize]" in ci_workflow
     assert "&& 'dev-release' || github.ref" in ci_workflow
     assert "cancel-in-progress: false" in ci_workflow
-    assert "queue: max" in ci_workflow
+    assert concurrency_keys == {"group", "cancel-in-progress"}
     assert "release-sequence:" in ci_workflow
     assert "Require successful push CI before release PR" in ci_workflow
     assert '"repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs"' in ci_workflow

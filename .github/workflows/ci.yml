@@ -11,11 +11,11 @@ permissions:
   contents: read
 
 concurrency:
-  # All dev pushes and dev -> master PR runs share one lane. The explicit PR
-  # gate below still rejects a PR that was opened before its push CI succeeded.
+  # All dev pushes and dev -> master PR runs share the supported native lane.
+  # The explicit PR gate below still rejects a PR that was opened before its
+  # exact-SHA push CI succeeded.
   group: ${{ github.workflow }}-${{ (github.ref_name == 'dev' || (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'master' && github.event.pull_request.head.ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository)) && 'dev-release' || github.ref }}
   cancel-in-progress: false
-  queue: max
 
 env:
   NPM_CONFIG_CACHE: ${{ github.workspace }}/.artifacts/cache/npm
