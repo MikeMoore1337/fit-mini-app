@@ -29,6 +29,10 @@ class DeploymentError(RuntimeError):
     """The rollout stopped without an unverified traffic state."""
 
 
+REGISTRY_PULL_ATTEMPTS = 5
+REGISTRY_PULL_BASE_DELAY_SECONDS = 10
+
+
 @dataclass(frozen=True)
 class ReleaseState:
     version: int
@@ -171,6 +175,22 @@ def _compose(*args: str, env: dict[str, str] | None = None, capture: bool = Fals
         env=env,
         capture=capture,
     )
+
+
+def _pull_images_with_retry(*services: str, env: dict[str, str]) -> None:
+    for attempt in range(1, REGISTRY_PULL_ATTEMPTS + 1):
+        try:
+            _compose("pull", *services, env=env)
+            return
+        except subprocess.CalledProcessError:
+            if attempt == REGISTRY_PULL_ATTEMPTS:
+                raise
+            delay = REGISTRY_PULL_BASE_DELAY_SECONDS * attempt
+            print(
+                f"Registry pull attempt {attempt} failed; retrying in {delay} seconds",
+                file=sys.stderr,
+            )
+            time.sleep(delay)
 
 
 def _slot_service(kind: str, slot: str) -> str:
@@ -906,8 +926,7 @@ def deploy(config: DeployConfig) -> Evidence:
                 backend_image=config.backend_image,
                 bot_image=config.bot_image,
             )
-            _compose(
-                "pull",
+            _pull_images_with_retry(
                 "setup",
                 _slot_service("backend", candidate_slot),
                 _slot_service("worker", candidate_slot),
@@ -1303,8 +1322,7 @@ def single_slot_deploy(config: DeployConfig) -> Evidence:
                 backend_image=config.backend_image,
                 bot_image=config.bot_image,
             )
-            _compose(
-                "pull",
+            _pull_images_with_retry(
                 "setup",
                 "backend",
                 "worker",

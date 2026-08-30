@@ -98,7 +98,23 @@ jobs:
              DOCKER_CONFIG_DIR=\$(mktemp -d)
              trap 'rm -rf \"\$DOCKER_CONFIG_DIR\"' EXIT
              export DOCKER_CONFIG=\"\$DOCKER_CONFIG_DIR\"
-             printf '%s' \"\$GHCR_TOKEN\" | docker login ghcr.io --username '$GITHUB_ACTOR' --password-stdin >/dev/null
+             registry_login_succeeded=false
+             for attempt in 1 2 3 4 5; do
+               if printf '%s' \"\$GHCR_TOKEN\" | docker login ghcr.io --username '$GITHUB_ACTOR' --password-stdin >/dev/null; then
+                 registry_login_succeeded=true
+                 break
+               fi
+               if [ \"\$attempt\" -eq 5 ]; then
+                 break
+               fi
+               delay=\$((attempt * 10))
+               echo \"GHCR login attempt \$attempt failed; retrying in \$delay seconds\" >&2
+               sleep \"\$delay\"
+             done
+             if [ \"\$registry_login_succeeded\" != true ]; then
+               echo \"GHCR login failed after 5 attempts\" >&2
+               exit 1
+             fi
              cd '$PROD_PATH'
              git fetch --prune origin master
              LATEST_MASTER_SHA=\$(git rev-parse origin/master)

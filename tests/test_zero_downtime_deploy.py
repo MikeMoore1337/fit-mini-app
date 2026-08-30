@@ -65,6 +65,47 @@ def test_public_smoke_uses_bounded_seo_timeout(tmp_path: Path, monkeypatch) -> N
     ]
 
 
+def test_registry_pull_retries_transient_failures_with_bounded_backoff(monkeypatch) -> None:
+    attempts = 0
+    sleeps: list[int] = []
+
+    def compose(*args, **kwargs):
+        nonlocal attempts
+        del kwargs
+        attempts += 1
+        if attempts < 3:
+            raise subprocess.CalledProcessError(1, args)
+        return subprocess.CompletedProcess(args, 0)
+
+    monkeypatch.setattr(deploy, "_compose", compose)
+    monkeypatch.setattr(deploy.time, "sleep", sleeps.append)
+
+    deploy._pull_images_with_retry("backend", "bot", env={"BACKEND_IMAGE": "image"})
+
+    assert attempts == 3
+    assert sleeps == [10, 20]
+
+
+def test_registry_pull_fails_after_bounded_attempts(monkeypatch) -> None:
+    attempts = 0
+
+    def compose(*args, **kwargs):
+        nonlocal attempts
+        del kwargs
+        attempts += 1
+        raise subprocess.CalledProcessError(1, args)
+
+    monkeypatch.setattr(deploy, "_compose", compose)
+    monkeypatch.setattr(deploy, "REGISTRY_PULL_ATTEMPTS", 3)
+    monkeypatch.setattr(deploy, "REGISTRY_PULL_BASE_DELAY_SECONDS", 0)
+    monkeypatch.setattr(deploy.time, "sleep", lambda _delay: None)
+
+    with pytest.raises(subprocess.CalledProcessError):
+        deploy._pull_images_with_retry("backend", env={"BACKEND_IMAGE": "image"})
+
+    assert attempts == 3
+
+
 def _patch_runtime(monkeypatch, *, fail_at: str | None = None):
     calls: dict[str, list] = {
         "compose": [],
