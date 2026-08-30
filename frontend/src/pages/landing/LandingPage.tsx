@@ -68,22 +68,22 @@ const workflow: ReadonlyArray<{
   text: string;
 }> = [
   {
-    icon: 'nav-profile',
+    icon: 'nav-today',
     number: '01',
-    title: 'Настройте профиль',
-    text: 'Цель, опыт и исходные параметры задают первый понятный ориентир.',
+    title: 'Откройте план на сегодня',
+    text: 'Экран «Сегодня» показывает ближайшую запланированную тренировку и контекст недели.',
   },
   {
     icon: 'week-strength',
     number: '02',
-    title: 'Действуйте сегодня',
-    text: 'Откройте тренировку или дневник питания и фиксируйте факты по ходу дня.',
+    title: 'Фиксируйте факты',
+    text: 'Отмечайте выполненные подходы, добавляйте питание и замеры по ходу дня.',
   },
   {
     icon: 'nav-progress',
     number: '03',
     title: 'Сверяйтесь с динамикой',
-    text: 'Смотрите подтверждённые результаты сами или разбирайте их вместе с тренером.',
+    text: 'Смотрите подтверждённые изменения и ограничения данных перед следующим шагом.',
   },
 ];
 
@@ -314,15 +314,14 @@ export default function LandingPage() {
         <section className="landing-hero" aria-labelledby="landing-title">
           <EnergyFlow className="landing-energy-path" />
           <div className="landing-hero__copy">
-            <p className="landing-kicker">План на сегодня. Результат — в динамике.</p>
+            <p className="landing-kicker">Один связный цикл на каждый день</p>
             <h1 id="landing-title">
               Знайте, что делать <span>сегодня.</span>
             </h1>
             <p className="landing-hero__lead">
-              Когда программа настроена, экран «Сегодня» показывает ближайшее запланированное
-              действие — не нужно каждый раз решать, что делать дальше. Тренировки, дневник питания
-              и честная картина прогресса — в одном продукте для самостоятельной работы или занятий
-              с тренером.
+              YFC связывает план на сегодня, выполнение, питание и замеры с честной динамикой —
+              чтобы следующий шаг был понятен. Занимайтесь самостоятельно или подключите тренера
+              позже.
             </p>
             <div className="landing-hero__actions">
               <a className="landing-button" href={appUrl} onClick={trackAppSelection}>
@@ -368,13 +367,6 @@ export default function LandingPage() {
                 Подготовленные данные без информации реальных пользователей
               </figcaption>
             </figure>
-            <div className="landing-hero-signals" aria-label="В одном профиле">
-              {coreFeatures.map((feature) => (
-                <span key={feature.label}>
-                  <Icon name={feature.icon} size={20} /> {feature.label}
-                </span>
-              ))}
-            </div>
           </div>
         </section>
 
@@ -382,16 +374,14 @@ export default function LandingPage() {
           <div className="landing-core__intro">
             <header>
               <p className="landing-kicker">Продукт в действии</p>
-              <h2 id="product-title">Не каталог функций, а связный день.</h2>
+              <h2 id="product-title">Один цикл — от плана до следующего шага.</h2>
               <p>
-                Экран «Сегодня» связывает запланированное действие с фактом выполнения и последующей
-                динамикой.
+                «Сегодня» показывает план. Выполненные тренировки, питание и замеры добавляют факты.
+                Progress показывает динамику и честно отмечает, когда данных пока мало.
               </p>
               <div className="landing-core__self">
                 <p className="landing-kicker">Занимаетесь самостоятельно?</p>
-                <h3>
-                  План на сегодня, тренировки, питание и отслеживание прогресса — в одном месте.
-                </h3>
+                <h3>Начните сами. Тренера можно подключить позже.</h3>
                 <p>
                   Выберите готовую программу или соберите свою. Выполняйте занятия и отслеживайте
                   фактическую динамику в браузере — Telegram для этого не нужен.
@@ -425,7 +415,7 @@ export default function LandingPage() {
               <div className="landing-core__context">
                 <BrandLogo decorative surface={colorScheme} variant="mark" width={38} height={38} />
                 <span>Один профиль</span>
-                <strong>План → факт → динамика</strong>
+                <strong>План → факт → динамика → следующий шаг</strong>
               </div>
             </div>
           </div>
@@ -626,9 +616,9 @@ export default function LandingPage() {
         <section id="contact" className="landing-contact">
           <div>
             <p className="landing-kicker">Ваш следующий шаг</p>
-            <h2>Откройте продукт и настройте чистый профиль.</h2>
+            <h2>Начните с одного понятного шага.</h2>
             <p>
-              Можно начать самостоятельно, а режим тренера включить позже — без заявки и ожидания.
+              Откройте свой профиль или сначала проверьте связный сценарий в демо без регистрации.
             </p>
           </div>
           <div className="landing-contact__actions">
@@ -637,11 +627,10 @@ export default function LandingPage() {
             </a>
             <a
               className="landing-button landing-button--secondary"
-              href={PUBLIC_TELEGRAM_LINKS.support}
-              target="_blank"
-              rel="noreferrer"
+              href={cabinetScenarioUrl(demoUrl, 'self_training')}
+              onClick={trackDemoSelection}
             >
-              Поддержка в Telegram <Icon name="external-link" size={20} />
+              Попробовать демо <Icon name="arrow-right" size={20} />
             </a>
           </div>
         </section>
@@ -668,6 +657,9 @@ export default function LandingPage() {
             rel="noreferrer"
           >
             Telegram-канал о фитнесе и здоровье
+          </a>
+          <a href={PUBLIC_TELEGRAM_LINKS.support} target="_blank" rel="noreferrer">
+            Поддержка в Telegram
           </a>
         </nav>
         <div className="landing-footer__privacy">

@@ -1179,7 +1179,10 @@ test('Landing entry opens the cabinet and keeps scenario history plus browser au
   await installDemoApi(page);
 
   await page.goto('/');
-  await page.getByRole('link', { name: /Попробовать демо/ }).click();
+  await page
+    .locator('.landing-hero__actions')
+    .getByRole('link', { name: /Попробовать демо/ })
+    .click();
   await expect(page).toHaveURL('/demo?cabinet=1&scenario=self_training&section=today');
   await page.getByRole('button', { name: 'Продолжить тренировку' }).click();
   await page.getByRole('button', { name: 'Завершить текущий подход' }).click();

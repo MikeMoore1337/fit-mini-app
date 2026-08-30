@@ -53,17 +53,23 @@ describe('LandingPage', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
       'Знайте, что делать сегодня.',
     );
-    expect(screen.getByText(/когда программа настроена.*экран «сегодня»/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/yfc связывает план на сегодня.*питание и замеры/i),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('heading', {
-        name: 'План на сегодня, тренировки, питание и отслеживание прогресса — в одном месте.',
+        name: 'Начните сами. Тренера можно подключить позже.',
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Не каталог функций, а связный день.')).toBeInTheDocument();
+    expect(screen.getByText('Один цикл — от плана до следующего шага.')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('group', { name: 'Почему YFC помогает действовать' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('План → факт → динамика → следующий шаг')).toBeInTheDocument();
     expect(screen.getAllByText(/web.*telegram.*общие данные/i).length).toBeGreaterThan(0);
     expect(
       screen.getByRole('group', { name: 'Силовая тренировка и актуальный интерфейс YFC' }),
-    ).toHaveTextContent(/трениров.*питание.*прогресс/i);
+    ).toHaveTextContent(/актуальный интерфейс.*подготовленные данные/i);
     expect(screen.getByText('Актуальный интерфейс · подготовленные данные')).toBeInTheDocument();
     expect(screen.queryByText('Демо · подготовленные данные')).not.toBeInTheDocument();
 
@@ -90,6 +96,8 @@ describe('LandingPage', () => {
     ).toBeGreaterThan(0);
 
     expect(screen.getByRole('heading', { name: /три сценария/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Откройте план на сегодня' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Фиксируйте факты' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /пройдите тренировку/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /добавьте питание/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /посмотрите кабинет тренера/i })).toBeInTheDocument();
@@ -211,7 +219,11 @@ describe('LandingPage', () => {
       'href',
       '/app',
     );
-    expect(screen.getByRole('link', { name: 'Попробовать демо' })).toHaveAttribute(
+    expect(screen.getAllByRole('link', { name: 'Попробовать демо' })[0]).toHaveAttribute(
+      'href',
+      '/demo?cabinet=1&scenario=self_training&section=today',
+    );
+    expect(screen.getAllByRole('link', { name: 'Попробовать демо' })[1]).toHaveAttribute(
       'href',
       '/demo?cabinet=1&scenario=self_training&section=today',
     );
