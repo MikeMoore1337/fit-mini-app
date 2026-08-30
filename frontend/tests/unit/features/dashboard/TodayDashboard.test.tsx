@@ -475,16 +475,21 @@ describe('TodayDashboard', () => {
     renderDashboard();
 
     expect(await screen.findByRole('heading', { name: 'С чего начнём?' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Создать программу' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Создать свою программу' })).toHaveAttribute(
       'href',
-      '/app?section=programs',
+      '/app?section=programs&start=create',
     );
-    expect(screen.getByRole('link', { name: 'Записать питание' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Выбрать готовую' })).toHaveAttribute(
       'href',
-      '/app?section=nutrition',
+      '/app?section=programs&start=templates',
     );
-    expect(screen.getByRole('button', { name: 'Добавить активность' })).toBeInTheDocument();
     expect(screen.getByText('Сделайте рекомендации точнее')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Заполнить профиль' })).toHaveAttribute(
+      'href',
+      '/app?section=profile#profile-fitness',
+    );
+    expect(screen.queryByRole('link', { name: 'Записать питание' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Добавить активность' })).not.toBeInTheDocument();
     expect(screen.getByText('Появится после первых тренировок и замеров')).toBeInTheDocument();
   });
 

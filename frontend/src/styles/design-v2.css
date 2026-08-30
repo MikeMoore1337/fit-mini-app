@@ -1156,11 +1156,7 @@ body:has(.app-shell--design-v2) {
 
 .today-dashboard--design-v2 .today-workout-actions--quick-start {
   width: min(100%, 440px);
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.today-dashboard--design-v2 .today-workout-actions--quick-start > :first-child {
-  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .today-dashboard--design-v2 .today-workout-actions--quick-start .button-link.secondary-link {

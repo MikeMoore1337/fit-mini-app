@@ -386,50 +386,27 @@ test('new and incomplete profile states keep program selection primary', async (
 
   await expect(page.getByRole('heading', { name: 'С чего начнём?' })).toBeVisible();
   await expect(page.getByText('Сделайте рекомендации точнее')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Создать программу' })).toBeVisible();
-  const logNutrition = page.getByRole('link', { name: 'Записать питание' });
-  const addActivity = page.getByRole('button', { name: 'Добавить активность' });
-  await expect(logNutrition).toBeVisible();
-  await expect(addActivity).toBeVisible();
-  await expect(logNutrition).toHaveCSS('border-top-style', 'solid');
-  await expect(logNutrition).toHaveCSS('border-top-width', '1px');
-  await expect(addActivity).toHaveCSS('border-top-width', '1px');
-  const [nutritionOutline, activityOutline] = await Promise.all([
-    logNutrition.evaluate((element) => {
-      const style = window.getComputedStyle(element);
-      return {
-        color: style.borderTopColor,
-        fontSize: style.fontSize,
-        fontWeight: style.fontWeight,
-        height: element.getBoundingClientRect().height,
-        innerStroke: style.boxShadow,
-        lineHeight: style.lineHeight,
-      };
-    }),
-    addActivity.evaluate((element) => {
-      const style = window.getComputedStyle(element);
-      return {
-        color: style.borderTopColor,
-        fontSize: style.fontSize,
-        fontWeight: style.fontWeight,
-        height: element.getBoundingClientRect().height,
-        innerStroke: style.boxShadow,
-        lineHeight: style.lineHeight,
-      };
-    }),
-  ]);
-  expect(activityOutline.color).toBe(nutritionOutline.color);
-  expect(activityOutline.fontSize).toBe(nutritionOutline.fontSize);
-  expect(activityOutline.fontWeight).toBe(nutritionOutline.fontWeight);
-  expect(nutritionOutline.fontWeight).toBe('600');
-  expect(activityOutline.innerStroke).toBe(nutritionOutline.innerStroke);
-  expect(activityOutline.lineHeight).toBe(nutritionOutline.lineHeight);
-  expect(nutritionOutline.innerStroke).toContain('0.5px');
-  expect(Math.abs(activityOutline.height - nutritionOutline.height)).toBeLessThanOrEqual(1);
+  await expect(page.getByRole('link', { name: 'Создать свою программу' })).toBeVisible();
+  const chooseReady = page.getByRole('link', { name: 'Выбрать готовую' });
+  await expect(chooseReady).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Заполнить профиль' })).toBeVisible();
+  await expect(chooseReady).toHaveCSS('border-top-style', 'solid');
+  await expect(chooseReady).toHaveCSS('border-top-width', '1px');
+  const readyOutline = await chooseReady.evaluate((element) => {
+    const style = window.getComputedStyle(element);
+    return {
+      fontWeight: style.fontWeight,
+      height: element.getBoundingClientRect().height,
+      innerStroke: style.boxShadow,
+    };
+  });
+  expect(readyOutline.fontWeight).toBe('600');
+  expect(readyOutline.height).toBeGreaterThanOrEqual(44);
+  expect(readyOutline.innerStroke).toContain('0.5px');
+  await expect(page.getByRole('link', { name: 'Записать питание' })).not.toBeAttached();
+  await expect(page.getByRole('button', { name: 'Добавить активность' })).not.toBeAttached();
   await expect(page.locator('.today-dashboard__facts')).toHaveCSS('border-top-style', 'none');
-  await addActivity.click();
-  await expect(page.getByRole('combobox', { name: 'Вид активности' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Создать программу' })).toBeAttached();
+  await expect(page.getByRole('link', { name: 'Создать свою программу' })).toBeAttached();
   await expect(page.locator('.today-dashboard details details')).toHaveCount(0);
 });
 

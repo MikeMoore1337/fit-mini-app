@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../shared/api/client';
 import type { Exercise, ProgramTemplate, ProgramTemplateCreate } from '../../shared/api/types';
@@ -176,12 +176,14 @@ export function ProgramBuilder({
   targetName,
   editingTemplate,
   saveAsCopy = false,
+  defaultOpen = false,
   onSaved,
 }: {
   targetTelegramId?: number | null;
   targetName?: string | null;
   editingTemplate?: ProgramTemplate | null;
   saveAsCopy?: boolean;
+  defaultOpen?: boolean;
   onSaved?: () => void;
 }) {
   const { toast, confirm } = useFeedback();
@@ -395,10 +397,24 @@ export function ProgramBuilder({
     if (nextRule.warning) toast(nextRule.warning, 'error');
     else toast('Силовой шаблон загружен');
   };
+
+  useEffect(() => {
+    if (!defaultOpen || editingTemplate || targetTelegramId) return;
+    const frame = window.requestAnimationFrame(() => {
+      const target = document.getElementById('program-builder');
+      if (!(target instanceof HTMLDetailsElement)) return;
+      target.open = true;
+      target.scrollIntoView({ block: 'start' });
+      target.querySelector<HTMLElement>(':scope > summary')?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [defaultOpen, editingTemplate, targetTelegramId]);
+
   return (
     <Card
       className="program-builder"
       collapsible={!editingTemplate && !targetTelegramId}
+      defaultOpen={defaultOpen}
       id={!editingTemplate && !targetTelegramId ? 'program-builder' : undefined}
       title={
         editingTemplate

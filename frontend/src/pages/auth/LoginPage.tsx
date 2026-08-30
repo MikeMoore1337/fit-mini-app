@@ -178,7 +178,7 @@ export default function LoginPage() {
             <aside className="login-demo-context" aria-label="Переход из демо">
               <div>
                 <strong>После демо — чистый профиль</strong>
-                <span>Изменения не переносятся, настройка начнётся заново.</span>
+                <span>Изменения не переносятся. Приложение откроется сразу.</span>
               </div>
               <AppLink to={demoReturnPath}>Вернуться в демо</AppLink>
             </aside>

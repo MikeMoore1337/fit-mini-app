@@ -29,7 +29,7 @@ const todayStates = [
   {
     name: 'no-program',
     options: { workoutStatus: 'none' as const, activeProgram: false },
-    action: 'Создать программу',
+    action: 'Создать свою программу',
   },
 ] as const;
 

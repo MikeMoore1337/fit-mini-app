@@ -227,7 +227,7 @@ describe('DemoPage', () => {
 
     expect(await screen.findByText('Начните с чистого профиля')).toBeVisible();
     expect(screen.getByText(/Демо-изменения не переносятся/)).toBeVisible();
-    const handoff = screen.getByRole('link', { name: 'Войти и начать настройку' });
+    const handoff = screen.getByRole('link', { name: 'Войти в приложение' });
     expect(handoff).toHaveAttribute('href', '/login?next=%2Fapp&from=demo&scenario=self_training');
     await user.click(handoff);
 

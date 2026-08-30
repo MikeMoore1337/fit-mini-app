@@ -325,7 +325,7 @@ async function completeScenario(page: Page, scenario: DemoScenario) {
   } else {
     await page.getByRole('button', { name: 'Сохранить комментарий' }).click();
   }
-  const authHandoff = page.getByRole('link', { name: 'Войти и начать настройку' });
+  const authHandoff = page.getByRole('link', { name: 'Войти в приложение' });
   await expect(authHandoff).toBeVisible();
   await authHandoff.scrollIntoViewIfNeeded();
   await expect(authHandoff).toBeInViewport();
@@ -492,8 +492,8 @@ test('signed TMA launch does not open the Web-only demo', async ({ browser }) =>
 
   await page.goto('/demo?scenario=trainer&tgWebAppPlatform=android');
 
-  await expect(page).toHaveURL(/\/onboarding\?next=%2Fapp$/);
-  await expect(page.getByRole('heading', { name: 'Какая у вас главная цель?' })).toBeVisible();
+  await expect(page).toHaveURL(/\/app$/);
+  await expect(page.getByRole('heading', { level: 1, name: /^Сегодня ·/ })).toBeVisible();
   await expect(page.getByText('Демо', { exact: true })).toHaveCount(0);
   expect(requestedPaths.some((path) => path.includes('/api/v1/demo/'))).toBe(false);
   expect(requestedPaths.some((path) => path.includes('/auth/telegram/init'))).toBe(true);
@@ -819,7 +819,7 @@ test('desktop demo keeps metric groups separated and conversion copy honest', as
   await expect(
     page.getByText('Подготовленный пример останется в демо.', { exact: false }),
   ).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Войти и начать настройку' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Войти в приложение' })).toBeVisible();
 
   await page.getByRole('link', { name: 'Сегодня', exact: true }).click();
   const pictogramSizes = await page.locator('.week-strip__pictogram').evaluateAll((pictograms) =>
@@ -1048,7 +1048,7 @@ test('Web cabinet auth return stays clean and damaged routes recover safely', as
   await page.goto('/demo?cabinet=1&scenario=nutrition&section=admin');
   await expect(page).toHaveURL('/demo?cabinet=1&scenario=nutrition&section=today');
   await page.getByRole('button', { name: 'Добавить недавний продукт' }).click();
-  await page.getByRole('link', { name: 'Войти и начать настройку' }).click();
+  await page.getByRole('link', { name: 'Войти в приложение' }).click();
   await expect(page).toHaveURL(
     '/login?next=%2Fapp&from=demo&scenario=nutrition&cabinet=1&section=today',
   );
@@ -1196,7 +1196,7 @@ test('Landing entry opens the cabinet and keeps scenario history plus browser au
   );
   expect(demoTokenBeforeHandoff).not.toBeNull();
 
-  await page.getByRole('link', { name: 'Войти и начать настройку' }).click();
+  await page.getByRole('link', { name: 'Войти в приложение' }).click();
   await expect(page).toHaveURL(
     '/login?next=%2Fapp&from=demo&scenario=self_training&cabinet=1&section=progress',
   );
@@ -1231,7 +1231,7 @@ test('Landing entry opens the cabinet and keeps scenario history plus browser au
   await context.close();
 });
 
-test('signed TMA launch clears a stale Web demo session before clean onboarding', async ({
+test('signed TMA launch clears a stale Web demo session before clean first run', async ({
   browser,
 }) => {
   const context = await browser.newContext({
@@ -1251,8 +1251,8 @@ test('signed TMA launch clears a stale Web demo session before clean onboarding'
   await installAuthApi(page);
   await page.goto('/demo?scenario=nutrition&tgWebAppPlatform=android');
 
-  await expect(page).toHaveURL(/\/onboarding\?next=%2Fapp$/);
-  await expect(page.getByRole('heading', { name: 'Какая у вас главная цель?' })).toBeVisible();
+  await expect(page).toHaveURL(/\/app$/);
+  await expect(page.getByRole('heading', { level: 1, name: /^Сегодня ·/ })).toBeVisible();
   expect(await page.evaluate(() => sessionStorage.getItem('fit_demo_sessions_v1'))).toBeNull();
   await context.close();
 });
