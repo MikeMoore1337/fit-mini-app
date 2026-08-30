@@ -8,9 +8,8 @@
 113 branch normalization [COMPLETED]
   -> 113A Owner UX Stabilization [COMPLETED, OWNER ACCEPTED]
   -> 114 nutrition/barcode P0 regression [COMPLETED, OWNER APPROVED, RELEASE AUTHORIZED]
-  -> 115A UX audit + IA + compactness/disclosure prototype/spec [CURRENT, NOT STARTED]
-  -> OWNER APPROVAL
-  -> 116 -> 117 -> 118 -> 119 -> 120A -> 120B -> 120C -> 120D
+  -> 115A UX audit + IA + compactness/disclosure prototype/spec [COMPLETED, OWNER APPROVED: COMMAND STACK]
+  -> 116 [NEXT, NOT STARTED] -> 117 -> 118 -> 119 -> 120A -> 120B -> 120C -> 120D
   -> 121 -> 122 -> 123
   -> 81 Hydration -> 82 Sleep/Mood -> 84 Reminders
   -> 124A pre-release integrated UX/QA gate
@@ -22,15 +21,16 @@
 
 Task `115B` и pre-implementation gate `116+ blocked until real-user validation` не применяются.
 Human validation выполняется на фактически deployed production build в Task `124B`; Task `115A`
-остаётся owner design gate, а Task `124A` — pre-release QA gate.
+закрыла owner design gate выбором `Command Stack`, а Task `124A` остаётся pre-release QA gate.
 
 Tasks `85`, `110`, `111` остаются pending вне critical path: соответственно после `121`, `122`,
 `123`. Они входят в `124A` только если владелец отдельно включил их в тот же release candidate.
 
 После завершения Task `113` source разработки — permanent `dev`, production source — protected
 `master`. Release/smoke Task `113A` завершены, точная owner-команда
-`Stabilization принята. Можно переходить к Task 114.` получена `2026-08-30`. Task `114` затем
-запущена отдельной командой, завершена и принята владельцем; Task `115A` не запускается автоматически.
+`Stabilization принята. Можно переходить к Task 114.` получена `2026-08-30`. Tasks `114` и `115A`
+затем запускались отдельными командами, завершены и приняты владельцем; Task `116` не запускается
+автоматически.
 
 Tasks `80-101` и их буквенные подзадачи образуют trigger-gated post-release pool. Номер task
 задаёт предпочтительную последовательность реализации, но не отменяет фактический Trigger,
@@ -41,27 +41,27 @@ dependency и отдельное решение владельца.
 Таблица ниже сохраняет порядок общего pool после текущего UX-reset cycle и не переопределяет
 описанный выше critical path.
 
-| Task | Направление | Почему здесь |
-|---:|---|---|
-| `80` | Repository hygiene/security/README | Уменьшает риск утечек, мусора и stale setup до новых изменений |
-| `81` | Hydration в Nutrition | Частый optional daily flow на готовых diary/report foundations |
-| `82` | Daily sleep + mood | Добавляет субъективный контекст в дневные и периодические отчёты |
-| `83` | Handoff отчёта trainer | Закрывает core coaching loop без публичной ссылки |
-| `84` | Reminder templates | Переиспользует task `64` и данные hydration после `81` |
-| `85` | Knowledge package | Низкий runtime risk, практичная польза и grounding для AI |
-| `86` | PWA | Улучшает возврат к тренировке при подтверждённом Web retention gap |
-| `87-91` | AI Coach beta и period insights | Сначала privacy/provider gate, затем grounded core, tools, evals, rollout и bounded report insights |
-| `92A-92B` | Advanced AI | Memory и multiprovider остаются рядом с AI Coach, но запускаются независимо только после evidence beta |
-| `93A` | Deterministic import XLSX/CSV без AI | Даёт раннюю ценность через versioned template и общий безопасный preview/confirm pipeline без provider dependency |
-| `93B` | AI-assisted import XLSX/CSV/TXT/DOCX | Только после evidence `93A`: расширяет поддерживаемые layouts/documents, сохраняя deterministic fallback |
-| `94A-94B` | Распознавание еды по фото | Важная функция после основного AI Coach-кластера: feasibility/eval, затем только подтверждаемый draft |
-| `95A-95B` | Server PDF и внешняя доставка | Нужны только при доказанном gap после in-product handoff `83` |
-| `96` | Wearables discovery | Research-only для конкретного data/platform job |
-| `97` | Delegated admins | Требует реальной команды и responsibility matrix |
-| `98` | Native feasibility | Только при измеримом ограничении Web/TMA/PWA |
-| `99A-99C` | Billing/монетизация | По решению владельца оставлено почти в самом конце |
-| `100A-100B` | Английская локализация | По решению владельца оставлена в хвосте |
-| `101` | Приватные фотографии прогресса | Последняя очередь; AI/body analysis полностью исключён |
+|        Task | Направление                          | Почему здесь                                                                                                      |
+| ----------: | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+|        `80` | Repository hygiene/security/README   | Уменьшает риск утечек, мусора и stale setup до новых изменений                                                    |
+|        `81` | Hydration в Nutrition                | Частый optional daily flow на готовых diary/report foundations                                                    |
+|        `82` | Daily sleep + mood                   | Добавляет субъективный контекст в дневные и периодические отчёты                                                  |
+|        `83` | Handoff отчёта trainer               | Закрывает core coaching loop без публичной ссылки                                                                 |
+|        `84` | Reminder templates                   | Переиспользует task `64` и данные hydration после `81`                                                            |
+|        `85` | Knowledge package                    | Низкий runtime risk, практичная польза и grounding для AI                                                         |
+|        `86` | PWA                                  | Улучшает возврат к тренировке при подтверждённом Web retention gap                                                |
+|     `87-91` | AI Coach beta и period insights      | Сначала privacy/provider gate, затем grounded core, tools, evals, rollout и bounded report insights               |
+|   `92A-92B` | Advanced AI                          | Memory и multiprovider остаются рядом с AI Coach, но запускаются независимо только после evidence beta            |
+|       `93A` | Deterministic import XLSX/CSV без AI | Даёт раннюю ценность через versioned template и общий безопасный preview/confirm pipeline без provider dependency |
+|       `93B` | AI-assisted import XLSX/CSV/TXT/DOCX | Только после evidence `93A`: расширяет поддерживаемые layouts/documents, сохраняя deterministic fallback          |
+|   `94A-94B` | Распознавание еды по фото            | Важная функция после основного AI Coach-кластера: feasibility/eval, затем только подтверждаемый draft             |
+|   `95A-95B` | Server PDF и внешняя доставка        | Нужны только при доказанном gap после in-product handoff `83`                                                     |
+|        `96` | Wearables discovery                  | Research-only для конкретного data/platform job                                                                   |
+|        `97` | Delegated admins                     | Требует реальной команды и responsibility matrix                                                                  |
+|        `98` | Native feasibility                   | Только при измеримом ограничении Web/TMA/PWA                                                                      |
+|   `99A-99C` | Billing/монетизация                  | По решению владельца оставлено почти в самом конце                                                                |
+| `100A-100B` | Английская локализация               | По решению владельца оставлена в хвосте                                                                           |
+|       `101` | Приватные фотографии прогресса       | Последняя очередь; AI/body analysis полностью исключён                                                            |
 
 ## Почему импорт разделён на deterministic baseline и AI enhancement
 
@@ -97,21 +97,21 @@ Owner-selected task `106` завершила discoverability Telegram Mini App, 
 канала на Landing и не изменила порядок `80-101`.
 
 Owner-selected task `107` создана вне pending-последовательности для scheduled regression и
-закрытых Allure-отчётов. Её owner-approved scope не меняет current task `115A` или UX-reset path;
+закрытых Allure-отчётов. Её owner-approved scope не меняет next task `116` или UX-reset path;
 implementation и внешние DNS/Cloudflare/hosting actions требуют отдельного запуска/approval.
 
 Owner-selected task `108` создана вне pending-последовательности для product-wide аудита
 соответствия законодательству РФ и непрерывного legal-impact gate будущих задач. Она не меняет
-current task `115A` или UX-reset path; запуск, legal review и любые remediation/external actions
+next task `116` или UX-reset path; запуск, legal review и любые remediation/external actions
 требуют отдельных owner decisions.
 
 Owner-selected tasks `109-111` также находятся вне pending-последовательности: factual Landing
-offer, private avatar upload и Progress bento dashboard. Они не меняют current task `115A` или
+offer, private avatar upload и Progress bento dashboard. Они не меняют next task `116` или
 UX-reset path, не образуют общую implementation batch и запускаются только отдельными owner
 решениями.
 
 Owner-selected task `112` завершена и архивирована вне pending-последовательности после локального
 review/QA zero-downtime deployment contract. Отдельно разрешённый production rollout revision
 `194cf036` завершён через `single-slot` fallback с bounded downtime и verdict `active`; production
-blue/green zero observed downtime на constrained VPS не заявляется. После закрытия `114`
-current/not started task — `115A`; UX-reset path не изменился.
+blue/green zero observed downtime на constrained VPS не заявляется. После закрытия `115A`
+next/not-started task — `116`; UX-reset path не изменился.

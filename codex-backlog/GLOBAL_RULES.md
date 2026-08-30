@@ -1,7 +1,8 @@
 # GLOBAL_RULES - правила выполнения release backlog v17 resource-aware
 
 Этот файл действует для завершённых и архивированных release tasks `75-80`, включая буквенные
-подзадачи и owner-approved Pulse concepts pilot `75C`, current UX-reset task `115A`, и
+подзадачи, owner-approved Pulse concepts pilot `75C`, завершённую UX-reset gate `115A` и
+current/not-started implementation task `116`, а также
 trigger-gated post-release pool `81-101` с буквенными подзадачами и owner-selected pending tasks
 `107-111`. Completed tasks `00-73A`, включая буквенные подзадачи, tasks `74A-75`, отдельно
 завершённые tasks `103-106` и owner-selected task `112` не переигрываются и хранятся в
@@ -10,7 +11,6 @@ trigger-gated post-release pool `81-101` с буквенными подзада�
 Tasks `109-111` остаются owner-selected pending: Landing offer использует только factual claims и
 approved security baseline task `108`; avatar сохраняет private-media lifecycle; Progress не
 выдумывает данные из визуального референса. Каждая требует отдельного owner запуска.
-
 
 ## Полный task lifecycle
 
@@ -74,8 +74,8 @@ Lifecycle не расширяет scope task и не отменяет owner chec
   actions с отдельным owner approval, backup и preflight.
 - Для `AUTO_RELEASE_ELIGIBLE` task нормальный release path выполняется без дополнительного вопроса
   владельцу и строго последовательно: `dev push -> exact push CI success -> PR master -> required
-  PR checks -> exact-head merge -> post-merge CI -> automatic production deploy -> terminal success
-  -> sync dev to master`. Direct push в `master` запрещён.
+PR checks -> exact-head merge -> post-merge CI -> automatic production deploy -> terminal success
+-> sync dev to master`. Direct push в `master` запрещён.
 - Release flow является **strictly serial**. В момент любого pre-release push в `dev` не должно быть
   открытого release PR `dev -> master`. Если после открытия такого PR требуется новый commit, merge
   `origin/master -> dev` или любой другой push, агент сначала закрывает текущий release PR, затем
@@ -102,8 +102,8 @@ Lifecycle не расширяет scope task и не отменяет owner chec
 - Owner-selected task `106` завершена и архивирована после owner screenshot approval.
 - Tasks `79-80` завершены и архивированы после owner approval. History rewrite `master` запустил
   намеренный automatic production workflow; владелец подтвердил auto-deploy как feature, а trigger
-  contract закреплён в обязательной документации. Task `114` завершена и архивирована после
-  отдельного запуска и owner approval; следующей обозначена Task `115A`, но implementation не запущена.
+  contract закреплён в обязательной документации. Tasks `114` и `115A` завершены и архивированы
+  после отдельных owner approvals; следующей обозначена Task `116`, но implementation не запущена.
 - Owner-selected task `107` создана для scheduled regression и закрытых Allure-отчётов; она не
   не является current, не меняет UX-reset critical path и требует отдельного owner запуска. DNS,
   Cloudflare Access/hosting, secrets и paid resources требуют дополнительного explicit approval.
@@ -122,7 +122,7 @@ Lifecycle не расширяет scope task и не отменяет owner chec
   acceptance `2026-08-30`. Task `114` завершена и архивирована после owner approval; Task `115A`
   является current/not started и требует отдельной команды на запуск lifecycle.
 - Current task `115A` и UX-reset sequence `115A -> owner approval -> 116..123 -> 81 -> 82 ->
-  84 -> 124A -> owner release approval -> 124B -> conditional 124C` не отменяют собственные Trigger,
+84 -> 124A -> owner release approval -> 124B -> conditional 124C` не отменяют собственные Trigger,
   dependency и owner decisions task files.
 - Task `50A` уже создала общий continuous Mobile Web/TMA gate, который переиспользуют последующие client-facing tasks.
 - Перед client-facing task прочитать `MOBILE_TMA_FIRST_CONTRACT.md` и применимые пункты `.agents/references/MOBILE_TMA_ACCEPTANCE_MATRIX.md`.
@@ -492,7 +492,6 @@ purposeful motion
 - Loading, empty, partial, error, offline и long-data states являются частью acceptance criteria.
 - Не добавлять локальные palette/card/button systems поверх shared Design V2.
 
-
 ## UI consistency contract
 
 Для любой pending client-facing UI task действуют эти правила независимо от того, загружен ли `$product-designer` или `$ui-audit`:
@@ -514,17 +513,17 @@ Dedicated product-wide consistency audit после смены правил/ди
 
 Primary labels:
 
-| Internal term | User-facing Russian |
-|---|---|
-| RIR | Повторы в запасе |
-| working set | Рабочий подход |
-| warm-up set | Разминочный подход |
-| drop set | Дроп-сет - объяснить при первом использовании |
-| superset | Суперсет - два упражнения подряд |
-| adherence | Соблюдение плана |
-| deload | Облегчённая неделя |
-| progression | Увеличение нагрузки |
-| data confidence | Достаточно ли данных для вывода |
+| Internal term   | User-facing Russian                           |
+| --------------- | --------------------------------------------- |
+| RIR             | Повторы в запасе                              |
+| working set     | Рабочий подход                                |
+| warm-up set     | Разминочный подход                            |
+| drop set        | Дроп-сет - объяснить при первом использовании |
+| superset        | Суперсет - два упражнения подряд              |
+| adherence       | Соблюдение плана                              |
+| deload          | Облегчённая неделя                            |
+| progression     | Увеличение нагрузки                           |
+| data confidence | Достаточно ли данных для вывода               |
 
 Не показывать raw internal English values только потому, что они существуют в коде.
 

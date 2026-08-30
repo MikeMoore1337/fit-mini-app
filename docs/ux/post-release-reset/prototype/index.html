@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ru" data-theme="light" data-variant="a" data-frame="mobile">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="color-scheme" content="light dark" />
+    <title>Task 115A — UX reset prototype</title>
+    <link rel="stylesheet" href="./styles.css?v=owner-detail-13" />
+  </head>
+  <body>
+    <header class="prototype-toolbar" aria-label="Настройки прототипа">
+      <div>
+        <strong>YFC · Task 115A</strong>
+        <span id="directionLabel">Command Stack</span>
+      </div>
+      <label
+        >Направление
+        <select id="variantSelect">
+          <option value="a">A · Command Stack</option>
+          <option value="b">B · Day Rail</option>
+          <option value="c">C · Signal Grid</option>
+        </select>
+      </label>
+      <label
+        >Состояние
+        <select id="screenSelect">
+          <option value="today-new">Сегодня · новый пользователь</option>
+          <option value="today-workout">Сегодня · тренировка</option>
+          <option value="today-rest">Сегодня · без тренировки</option>
+          <option value="program">Программа</option>
+          <option value="active-strength">Active strength</option>
+          <option value="active-cardio">Active cardio</option>
+          <option value="nutrition-search">Питание · поиск</option>
+          <option value="nutrition-empty">Питание · empty</option>
+          <option value="nutrition-barcode">Питание · barcode</option>
+          <option value="progress-data">Прогресс · с данными</option>
+          <option value="progress-empty">Прогресс · мало данных</option>
+          <option value="profile-compact">Профиль · compact</option>
+          <option value="profile-expanded">Профиль · detail</option>
+        </select>
+      </label>
+      <label
+        >Frame
+        <select id="frameSelect">
+          <option value="mobile">Mobile Web</option>
+          <option value="tma">Mock TMA</option>
+          <option value="desktop">Desktop</option>
+        </select>
+      </label>
+      <button id="themeButton" type="button">Тёмная тема</button>
+    </header>
+
+    <main class="prototype-stage">
+      <section
+        class="device"
+        aria-label="Изолированный прототип Your Fitness Coach"
+      >
+        <div class="tma-chrome" aria-hidden="true">
+          <span>Telegram</span><strong>Your Fitness Coach</strong
+          ><span class="tma-actions"></span>
+        </div>
+        <div class="app" id="app"></div>
+      </section>
+    </main>
+    <script type="module" src="./app.js?v=owner-detail-13"></script>
+  </body>
+</html>
