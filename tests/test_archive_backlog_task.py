@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -28,7 +29,14 @@ def _manifest(path: Path) -> None:
 
 def _nested_backlog(tmp_path: Path) -> tuple[Path, Path]:
     repository = tmp_path / "repository"
-    (repository / ".git").mkdir(parents=True)
+    repository.mkdir(parents=True)
+    subprocess.run(
+        ["git", "init", "-b", "dev"],
+        cwd=repository,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
     parent = repository / "codex-backlog"
     backlog = parent / "telegram-core-release-backlog"
     tasks = backlog / "tasks"
@@ -72,3 +80,24 @@ def test_archive_task_rejects_missing_index_link_without_moving_file(tmp_path: P
 
     assert (backlog / "tasks" / "03-notifications.md").is_file()
     assert not (backlog / "tasks" / "done" / "03-notifications.md").exists()
+
+
+def test_archive_task_requires_finished_controller_history_when_contract_is_active(
+    tmp_path: Path,
+) -> None:
+    parent, backlog = _nested_backlog(tmp_path)
+    state_root = parent.parent / ".git" / "codex-task-sessions-v1"
+    history = state_root / "history"
+    history.mkdir(parents=True)
+    (state_root / "contract.json").write_text('{"version": 1}\n', encoding="utf-8")
+
+    with pytest.raises(archive_backlog_task.ArchiveError, match="controller finish"):
+        archive_backlog_task.archive_task(backlog, "03-notifications.md")
+
+    (history / "task-03.json").write_text(
+        json.dumps({"task_id": "03", "state": "finished"}) + "\n",
+        encoding="utf-8",
+    )
+    destination = archive_backlog_task.archive_task(backlog, "03-notifications.md")
+
+    assert destination.is_file()

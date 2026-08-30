@@ -1,0 +1,66 @@
+name: Sync deployed master to dev
+
+on:
+  workflow_run:
+    workflows: [Deploy production]
+    branches: [master]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dev-release-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    # The repository variable is enabled only after the owner-approved GitHub App and
+    # dev Ruleset bypass actor have been configured and read back successfully.
+    if: >-
+      github.event.workflow_run.event == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      vars.ENABLE_DEPLOYED_MASTER_DEV_SYNC == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: production
+
+    steps:
+      - name: Create narrowly scoped sync token
+        id: app-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ secrets.DEV_SYNC_APP_ID }}
+          private-key: ${{ secrets.DEV_SYNC_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Check out exact deployed master revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Fast-forward dev to exact deployed master
+        shell: bash
+        env:
+          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -Eeuo pipefail
+          git fetch --no-tags origin master dev
+          master_sha="$(git rev-parse refs/remotes/origin/master)"
+          dev_sha="$(git rev-parse refs/remotes/origin/dev)"
+          if [ "$master_sha" != "$DEPLOY_SHA" ]; then
+            echo "Refusing sync: deployed SHA $DEPLOY_SHA is no longer current master $master_sha" >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$dev_sha" "$DEPLOY_SHA"; then
+            echo "Refusing sync: dev $dev_sha is not an ancestor of deployed master $DEPLOY_SHA" >&2
+            exit 1
+          fi
+          if [ "$dev_sha" = "$DEPLOY_SHA" ]; then
+            echo "dev already equals deployed master $DEPLOY_SHA"
+            exit 0
+          fi
+          git push origin "$DEPLOY_SHA:refs/heads/dev"

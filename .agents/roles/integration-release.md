@@ -16,6 +16,11 @@ purpose: Integrate already approved workstreams and prove combined release compa
 - запустить broad checks по объединённому риску;
 - остановиться при настоящем architecture conflict;
 - вернуть release readiness status.
+- получить global integration lease, проверить queue head/current `origin/dev`/exact-head `checks`
+  и merge только одного task PR;
+- держать `dev` frozen при release lease/open `dev -> master` PR и освобождать queue только после
+  exact merge SHA + terminal successful `dev` push-CI;
+- не удалять branch/worktree с dirty/unique/unknown state без отдельного owner confirmation.
 
 Не добавлять новый feature scope.
 

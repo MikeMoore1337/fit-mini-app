@@ -73,6 +73,10 @@ gate, evidence и точки остановки в task-файле.
 - Внутри текущей task после terminal success автоматически выполняются применимые review, QA,
   commit, PR, serial merge в `dev`, CI и normal release шаги, если task явно не объявляет checkpoint
   или blocker. Следующая product task автоматически не запускается.
+- `scripts/task_session.py` и shared Git common-dir leases являются обязательной coordination
+  boundary. Task PR идёт только в `dev`; exact-head `checks`, current-base policy и global
+  integration lease разрешают merge только queue head. Release lease/open `dev -> master` PR
+  замораживает mutations `dev`.
 - Новая production revision попадает в remote `master` только через merged PR с обязательным green
   check `checks`; direct push, force-push и удаление `master` запрещены Ruleset. Merge PR является
   release authorization и без отдельного ручного approval запускает post-merge CI, exact-SHA
@@ -80,21 +84,28 @@ gate, evidence и точки остановки в task-файле.
   bootstrap, infrastructure recovery и SHA вне текущего merged `master` остаются exceptional
   actions с отдельным owner approval, backup и preflight.
 - Для `AUTO_RELEASE_ELIGIBLE` task нормальный release path выполняется без дополнительного вопроса
-  владельцу и строго последовательно: `dev push -> exact push CI success -> PR master -> required
-PR checks -> exact-head merge -> post-merge CI -> automatic production deploy -> terminal success
--> sync dev to master`. Direct push в `master` запрещён.
-- Release flow является **strictly serial**. В момент любого pre-release push в `dev` не должно быть
-  открытого release PR `dev -> master`. Если после открытия такого PR требуется новый commit, merge
-  `origin/master -> dev` или любой другой push, агент сначала закрывает текущий release PR, затем
-  выполняет push и ждёт terminal success exact push-CI. Только после этого разрешено переоткрыть тот
-  же PR при неизменном scope/base либо создать новый. Автоматический `pull_request:synchronize` CI,
-  запущенный параллельно с push-CI из-за открытого PR, считается нарушением lifecycle, а не допустимой
-  оптимизацией. Если открытый PR нельзя однозначно идентифицировать как текущий release PR, агент
-  ничего не закрывает автоматически и останавливается с точным blocker.
+  владельцу и строго последовательно: `task branch -> task PR dev -> exact-head checks -> serial
+  merge -> exact merged-dev push CI -> PR master -> required PR checks -> exact-head merge ->
+  post-merge CI -> automatic production deploy -> terminal success -> narrow App sync dev to exact
+  deployed master`. Direct feature push в `dev` и direct push в `master` запрещены.
+- Release flow является **strictly serial**. При release lease/open `dev -> master` PR task merge и
+  любой другой update `dev` запрещены. Если требуется новая task integration, release PR сначала
+  закрывается, candidate обновляется от current `dev`, повторяет exact-head checks и serial merge.
+  Если release PR нельзя однозначно идентифицировать, агент ничего не закрывает автоматически и
+  останавливается с точным blocker.
 - Task с явно обязательным owner checkpoint/approve, human/device evidence, manual visual approval,
   legal-counsel gate или destructive/external authorization останавливается ровно перед указанным
   gate до фактического прохождения. Task без tracked logical commit не создаёт PR; отсутствие
   checkpoint само по себе не является причиной ожидания.
+
+Если текущая task не объявляет `OWNER_CHECKPOINT`, `HUMAN_EVIDENCE`, `MANUAL_VISUAL_APPROVAL`,
+`LEGAL_COUNSEL_REQUIRED`, `EXTERNAL_AUTHORIZATION`, `DESTRUCTIVE_ACTION` или terminal blocker,
+controller/lifecycle после terminal success автоматически продолжает применимые review, QA,
+commit, task PR, serial integration, `dev` CI и normal release без дополнительного owner prompt.
+Тишина владельца не является gate. Следующая product task автоматически не запускается.
+
+Direct push в `master` запрещён. Direct feature push в `dev` также запрещён; единственное bypass
+исключение — exact deployed `master -> dev` sync узкого owner-approved GitHub App.
 - Перед началом прочитать корневой `AGENTS.md`, этот файл, lifecycle и только текущую task.
 - Tasks `00-73A`, включая буквенные подзадачи, подтверждены владельцем как завершённые, перенесены в `tasks/done/` и не выполняются повторно.
 - Owner-selected task `103` завершена после owner approval и архивирована.
@@ -111,8 +122,9 @@ PR checks -> exact-head merge -> post-merge CI -> automatic production deploy ->
 - Owner-selected task `106` завершена и архивирована после owner screenshot approval.
 - Tasks `79-80` завершены и архивированы после owner approval. History rewrite `master` запустил
   намеренный automatic production workflow; владелец подтвердил auto-deploy как feature, а trigger
-  contract закреплён в обязательной документации. Tasks `114` и `115A` завершены и архивированы
-  после отдельных owner approvals; следующей обозначена Task `116`, но implementation не запущена.
+  contract закреплён в обязательной документации. Tasks `114`, `115A` и `116-118` завершены и
+  архивированы после отдельных owner approvals; factual next product task — `119`, но её
+  implementation не запущена.
 - Owner-selected task `107` создана для scheduled regression и закрытых Allure-отчётов; она не
   не является current, не меняет UX-reset critical path и требует отдельного owner запуска. DNS,
   Cloudflare Access/hosting, secrets и paid resources требуют дополнительного explicit approval.
@@ -130,8 +142,8 @@ PR checks -> exact-head merge -> post-merge CI -> automatic production deploy ->
 - Task `113A` завершена, выпущена в production revision `17bee56c` и архивирована после owner
   acceptance `2026-08-30`. Task `114` завершена и архивирована после owner approval; Task `115A`
   является current/not started и требует отдельной команды на запуск lifecycle.
-- Current task `115A` и UX-reset sequence `115A -> owner approval -> 116..123 -> 81 -> 82 ->
-84 -> 124A -> owner release approval -> 124B -> conditional 124C` не отменяют собственные Trigger,
+- UX-reset sequence `115A -> owner approval -> 116..123 -> 81 -> 82 -> 84 -> 124A -> owner release
+  approval -> 124B -> conditional 124C` продолжается с current/not-started Task `119` и не отменяет собственные Trigger,
   dependency и owner decisions task files.
 - Task `50A` уже создала общий continuous Mobile Web/TMA gate, который переиспользуют последующие client-facing tasks.
 - Перед client-facing task прочитать `MOBILE_TMA_FIRST_CONTRACT.md` и применимые пункты `.agents/references/MOBILE_TMA_ACCEPTANCE_MATRIX.md`.
