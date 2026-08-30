@@ -36,6 +36,12 @@ def test_automated_deploy_keeps_revision_provenance_and_stale_run_guards() -> No
         'is no longer master head (\\$LATEST_MASTER_SHA)\\"' in deploy_workflow
     )
 
+    assert "for attempt in 1 2 3 4 5; do" in deploy_workflow
+    assert "GHCR login failed after 5 attempts" in deploy_workflow
+    assert "_pull_images_with_retry" in (root / "scripts" / "zero_downtime_deploy.py").read_text(
+        encoding="utf-8"
+    )
+
     assert "PROD_ROLLOUT_MODE: single-slot" in deploy_workflow
     assert "DEPLOY_SINGLE_SLOT_CONFIRMED_SHA='$DEPLOY_SHA'" in deploy_workflow
     assert "'$PROD_ROLLOUT_MODE'" in deploy_workflow
