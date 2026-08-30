@@ -13,6 +13,14 @@ const difficultyLabels: Record<Exercise['difficulty_level'], string> = {
   advanced: 'Продвинутый уровень',
 };
 
+function resolveDialogDocumentTop() {
+  if (document.body.style.position === 'fixed') {
+    const lockedBodyTop = Number.parseFloat(document.body.style.top);
+    if (Number.isFinite(lockedBodyTop)) return Math.max(0, -lockedBodyTop);
+  }
+  return window.scrollY;
+}
+
 export function ExerciseGuideDialog({
   exerciseId,
   exerciseTitle,
@@ -23,7 +31,7 @@ export function ExerciseGuideDialog({
   onClose: () => void;
 }) {
   const [currentExercise, setCurrentExercise] = useState({ id: exerciseId, title: exerciseTitle });
-  const [dialogScrollTop] = useState(() => window.scrollY);
+  const [dialogScrollTop] = useState(resolveDialogDocumentTop);
   const [mediaExpanded, setMediaExpanded] = useState(false);
   const panelRef = useModalA11y<HTMLDivElement>(!mediaExpanded, onClose);
   const details = useQuery({

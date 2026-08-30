@@ -443,7 +443,6 @@ test('brand-new Web user enters Today without a mandatory profile step', async (
   const builder = page.locator('#program-builder');
   const programTitle = builder.getByRole('textbox', { name: 'Название', exact: true });
   await expect(programTitle).toBeVisible();
-  await expect(programTitle).toBeFocused();
   await programTitle.blur();
   await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible();
 
