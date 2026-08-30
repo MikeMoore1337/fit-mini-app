@@ -55,10 +55,16 @@ describe('AppShell', () => {
       'href',
       '/app?section=today',
     );
-    expect(screen.getByRole('link', { name: 'План' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Программа' })).toHaveAttribute(
       'href',
       '/app?section=programs',
     );
+    expect(
+      Array.from(document.querySelectorAll('.app-bottom-nav__primary > a')).map(
+        (link) => link.textContent,
+      ),
+    ).toEqual(['Сегодня', 'Программа', 'Питание', 'Прогресс']);
+    expect(screen.queryByRole('button', { name: 'Ещё' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Тренер' })).toHaveAttribute('aria-current', 'page');
     expect(screen.queryByRole('link', { name: 'Админ-панель' })).not.toBeInTheDocument();
     expect(screen.getByText('Михаил')).toBeInTheDocument();
@@ -67,16 +73,30 @@ describe('AppShell', () => {
     expect(logout).toHaveBeenCalledOnce();
   });
 
+  it('сохраняет active state для каждого прямого core route', () => {
+    navigation.path = '/app';
+    for (const [section, label] of [
+      ['today', 'Сегодня'],
+      ['programs', 'Программа'],
+      ['nutrition', 'Питание'],
+      ['progress', 'Прогресс'],
+    ] as const) {
+      const view = render(<AppShell section={section}>Содержимое</AppShell>);
+      expect(screen.getByRole('link', { name: label })).toHaveAttribute('aria-current', 'page');
+      view.unmount();
+    }
+  });
+
   it('открывает доступное mobile-меню с secondary navigation и завершает exit после возврата фокуса', async () => {
     navigation.path = '/app';
     render(<AppShell section="profile">Содержимое</AppShell>);
 
-    const more = screen.getByRole('button', { name: 'Ещё' });
+    const more = screen.getByRole('button', { name: 'Открыть профиль и настройки' });
     expect(more).toHaveAttribute('aria-expanded', 'false');
     fireEvent.click(more);
 
     expect(more).toHaveAttribute('aria-expanded', 'true');
-    const dialog = screen.getByRole('dialog', { name: 'Михаил' });
+    const dialog = screen.getByRole('dialog', { name: 'Профиль и настройки' });
     expect(dialog).toBeInTheDocument();
     expect(within(dialog).getByRole('link', { name: 'Профиль и настройки' })).toHaveAttribute(
       'aria-current',
@@ -118,9 +138,9 @@ describe('AppShell', () => {
     navigation.path = '/app';
     render(<AppShell section="today">Содержимое</AppShell>);
 
-    const more = screen.getByRole('button', { name: 'Ещё' });
+    const more = screen.getByRole('button', { name: 'Открыть профиль и настройки' });
     fireEvent.click(more);
-    const dialog = screen.getByRole('dialog', { name: 'Михаил' });
+    const dialog = screen.getByRole('dialog', { name: 'Профиль и настройки' });
     expect(dialog).toBeInTheDocument();
 
     fireEvent.keyDown(dialog, { key: 'Escape' });
@@ -169,7 +189,7 @@ describe('AppShell', () => {
     render(<AppShell section="today">Содержимое</AppShell>);
 
     expect(screen.queryByRole('link', { name: 'База знаний' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Ещё' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Открыть профиль и настройки' }));
     expect(
       within(screen.getByRole('dialog')).queryByRole('link', { name: 'База знаний' }),
     ).not.toBeInTheDocument();

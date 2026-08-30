@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
 import { api } from '../../shared/api/client';
@@ -556,18 +556,37 @@ function SessionList({ sessions, timeZone }: { sessions: CardioSession[]; timeZo
   );
 }
 
-export function CardioQuickLog({ today }: { today: string }) {
+export function CardioQuickLog({
+  startOpen = false,
+  today,
+}: {
+  startOpen?: boolean;
+  today: string;
+}) {
   const { user } = useAuth();
   const timeZone = user?.profile?.timezone || detectedTimeZone();
-  const [formOpen, setFormOpen] = useState(false);
   const currentDate = dateInputValue(new Date(), timeZone);
   const isToday = today === currentDate;
   const canLogFactual = today <= currentDate;
+  const [formOpen, setFormOpen] = useState(startOpen && canLogFactual);
+  const sectionRef = useRef<HTMLElement>(null);
   const sessions = useQuery({
     queryKey: queryKeys.cardio.range(today, today),
     queryFn: () =>
       api<CardioSession[]>(`/api/v1/workouts/cardio?date_from=${today}&date_to=${today}`),
   });
+
+  useEffect(() => {
+    if (!startOpen || !canLogFactual || sessions.isLoading) return;
+    window.requestAnimationFrame(() => {
+      const reducedMotion =
+        window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+      sectionRef.current?.scrollIntoView({
+        behavior: reducedMotion ? 'auto' : 'smooth',
+        block: 'start',
+      });
+    });
+  }, [canLogFactual, sessions.isLoading, startOpen]);
 
   if (sessions.isLoading) {
     return <LoadingState label="Проверяем кардио за день…" />;
@@ -593,6 +612,7 @@ export function CardioQuickLog({ today }: { today: string }) {
     <section
       className={`cardio-log cardio-log--quick${isEmpty ? ' cardio-log--empty' : ''}`}
       aria-labelledby="cardio-quick-title"
+      ref={sectionRef}
     >
       <header className="cardio-log__header">
         <div>

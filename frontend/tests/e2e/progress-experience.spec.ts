@@ -1338,7 +1338,7 @@ test('notification deep-link opens exact workout feedback and preserves back nav
     historyRowBox!.x + historyRowBox!.width + 1,
   );
 
-  await page.getByRole('button', { name: 'Ещё', exact: true }).click();
+  await page.getByRole('button', { name: 'Открыть профиль и настройки', exact: true }).click();
   await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
   await page.keyboard.press('Escape');
   await expect(page.locator('.workout-feedback').first()).toHaveCSS('color', 'rgb(238, 240, 234)');
@@ -1488,7 +1488,7 @@ test('exercise catalogue uses the selected folder and dumbbell glyph on desktop 
 
   await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole('button', { name: 'Ещё', exact: true }).click();
+  await page.getByRole('button', { name: 'Открыть профиль и настройки', exact: true }).click();
   const morePanel = page.getByRole('dialog');
   const mobileCatalogue = morePanel.getByRole('link', { name: 'Упражнения' });
   await expect(mobileCatalogue.locator('svg[data-icon="nav-exercise-catalog"]')).toBeVisible();

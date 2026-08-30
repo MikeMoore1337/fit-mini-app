@@ -29,7 +29,7 @@ const todayStates = [
   {
     name: 'no-program',
     options: { workoutStatus: 'none' as const, activeProgram: false },
-    action: 'Подобрать программу',
+    action: 'Создать программу',
   },
 ] as const;
 
@@ -622,7 +622,24 @@ test('program history visual evidence covers compact Mobile Web, dark TMA and de
     }
     if (current.viewport.width < 900) {
       const lastCurrentAction = history.getByRole('button', { name: 'В архив' });
-      await lastCurrentAction.scrollIntoViewIfNeeded();
+      await lastCurrentAction.evaluate((element) => {
+        const dock = document.querySelector<HTMLElement>('#appBottomNav');
+        if (!dock) return;
+        const actionBox = element.getBoundingClientRect();
+        const dockBox = dock.getBoundingClientRect();
+        const overlap = actionBox.bottom - dockBox.top;
+        if (overlap >= 0) window.scrollBy(0, overlap + 16);
+      });
+      await expect
+        .poll(async () => {
+          const [actionBox, dockBox] = await Promise.all([
+            lastCurrentAction.boundingBox(),
+            page.locator('#appBottomNav').boundingBox(),
+          ]);
+          return Boolean(actionBox && dockBox && actionBox.y + actionBox.height <= dockBox.y);
+        })
+        .toBe(true);
+      await expect(lastCurrentAction).toBeInViewport();
       await expectNoOverlap(lastCurrentAction, page.locator('#appBottomNav'));
     }
     await history.getByText('Все этапы и изменения').click();
@@ -1042,7 +1059,7 @@ test('weekly review focus exposes a predictable TMA BackButton return path', asy
   await expect(tmaPage).toHaveURL('/app?section=progress&weekly_review=1');
   await expect.poll(async () => (await tma.state()).backButton.visible).toBe(true);
 
-  await tmaPage.getByRole('button', { name: 'Ещё', exact: true }).click();
+  await tmaPage.getByRole('button', { name: 'Открыть профиль и настройки', exact: true }).click();
   await expect(tmaPage.getByRole('dialog')).toBeVisible();
   await tma.clickBack();
   await expect(tmaPage.getByRole('dialog')).not.toBeAttached();
@@ -1071,7 +1088,7 @@ test('direct Trainer activation keeps client context focused in mocked TMA', asy
   await expect(tmaPage.getByText('Режим тренера включён').first()).toBeVisible();
   expect(api.trainerActivationCalls()).toBe(1);
 
-  await tmaPage.getByRole('button', { name: 'Ещё', exact: true }).click();
+  await tmaPage.getByRole('button', { name: 'Открыть профиль и настройки', exact: true }).click();
   await tmaPage.getByRole('link', { name: 'Кабинет тренера' }).click();
   await expect(tmaPage).toHaveURL('/coach');
   await expect(tmaPage.getByRole('heading', { name: 'Кабинет тренера' })).toBeVisible();
@@ -2060,7 +2077,7 @@ test('nutrition quick paths recover in TMA and match Mobile Web before core navi
 
   await tmaPage.getByRole('link', { name: 'Прогресс', exact: true }).click();
   await expect(tmaPage).toHaveURL('/app?section=progress');
-  await tmaPage.getByRole('button', { name: 'Ещё', exact: true }).click();
+  await tmaPage.getByRole('button', { name: 'Открыть профиль и настройки', exact: true }).click();
   await tmaPage
     .getByRole('dialog')
     .getByRole('link', { name: 'Профиль и настройки', exact: true })

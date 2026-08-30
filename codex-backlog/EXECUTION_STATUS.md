@@ -1,4 +1,4 @@
-# Execution status v50
+# Execution status v51
 
 Подтверждённое владельцем состояние на 28.08.2026:
 
@@ -53,10 +53,15 @@
 - [x] `114-nutrition-search-barcode-production-regression.md` — implementation, review и QA
       завершены; owner принял visual evidence и явно разрешил production release с risk acceptance
       отсутствующего real-device/TMA camera evidence; task архивирована, production release явно разрешён;
-- [ ] **current, not started:** `115A-post-release-ux-audit-ia-prototype.md` — lifecycle не запущен
-      и требует отдельной команды владельца;
-- [ ] owner-driven sequence: `114 -> 115A -> owner approval -> 116..123 -> 81 -> 82 -> 84 ->
-      124A -> owner release approval -> 124B -> conditional 124C`;
+- [x] `115A-post-release-ux-audit-ia-prototype.md` завершила current-state audit, target IA,
+      compactness/disclosure specs, три isolated prototype direction и plan для Task `124B`;
+      владелец выбрал Direction A `Command Stack`, разрешил commit, task архивирована без
+      production implementation/release;
+- [ ] **next, not started:** `116-core-navigation-today-quick-start.md` — требует отдельной команды
+      владельца и не запускается автоматически;
+- [ ] owner-driven sequence сохраняется:
+      `114 -> 115A [COMPLETED, OWNER APPROVED] -> 116..123 -> 81 -> 82 -> 84`
+      `-> 124A -> owner release approval -> 124B -> conditional 124C`;
 - [x] owner-selected task `106-landing-telegram-product-news-links.md` завершена вне основной
       очереди и не изменила порядок `78-101`.
 - [ ] owner-selected task `107-scheduled-regression-private-allure-reports.md` создана вне основной
@@ -95,8 +100,8 @@ Task `77` закрыта не как factual real-user validation, а по яв�
 branch normalization owner вставил и принял Task `113A`; Task `114` завершена и архивирована после
 owner approval, production release явно разрешён.
 `DESIGN_V2_1` с owner-approved bounded Pulse pilot остаётся production baseline. Permanent branch
-source разработки — `dev`, production source — protected `master`. Task `113A` завершена и
-архивирована после owner acceptance; после закрытия Task `114` следующей обозначена Task `115A`,
+source разработки — `dev`, production source — protected `master`. Tasks `114` и `115A` завершены
+и архивированы после owner acceptance; после закрытия Task `115A` следующей обозначена Task `116`,
 но её lifecycle не запускается без отдельной команды владельца.
 Umbrella `100` отдельно не выполняется; `100A` не назначена без собственного Trigger, dependency
 и owner decision. Tasks `107-111` также не запускаются автоматически. Завершённая task `112` не

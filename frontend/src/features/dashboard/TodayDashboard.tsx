@@ -211,48 +211,6 @@ function workoutStatusLabel(status: string): string {
   return 'Запланирована';
 }
 
-function formatIncludedComponents(components: string[]): string {
-  const labels = components
-    .map(
-      (component) =>
-        ({
-          workouts: 'тренировки',
-          cardio: 'кардио',
-          calories: 'калории',
-          protein: 'белок',
-        })[component],
-    )
-    .filter((label): label is string => Boolean(label));
-  if (labels.length < 2) return labels[0] ?? '';
-  return `${labels.slice(0, -1).join(', ')} и ${labels.at(-1)}`;
-}
-
-function Macro({
-  label,
-  total,
-  target,
-}: {
-  label: string;
-  total: string | null;
-  target?: string | null;
-}) {
-  return (
-    <div className="today-macro">
-      <span>{label}</span>
-      <strong>
-        {formatAmount(total)}
-        {total === null ? (
-          <small> не указано</small>
-        ) : target ? (
-          <small> / {formatAmount(target)} г</small>
-        ) : (
-          <small> г</small>
-        )}
-      </strong>
-    </div>
-  );
-}
-
 function NutritionSummary({ date }: { date: string }) {
   const diary = useQuery({
     queryKey: ['nutrition', 'diary', date],
@@ -260,61 +218,53 @@ function NutritionSummary({ date }: { date: string }) {
   });
 
   return (
-    <section className="today-panel today-nutrition" aria-labelledby="today-nutrition-title">
-      <div className="today-panel__head">
-        <div>
-          <span className="today-panel__kicker">За день</span>
-          <h2 id="today-nutrition-title">Питание</h2>
-        </div>
-        <AppLink className="today-text-link" to={`/app?section=nutrition&date=${date}`}>
-          Открыть
-        </AppLink>
-      </div>
+    <section
+      className="today-panel today-summary-card today-summary-card--nutrition today-nutrition"
+      aria-labelledby="today-nutrition-title"
+    >
       {diary.isLoading ? (
-        <div className="today-summary-skeleton" aria-label="Загружаем питание" role="status">
-          <Skeleton height="42px" width="58%" />
-          <Skeleton height="58px" width="100%" />
-        </div>
-      ) : diary.error || !diary.data ? (
-        <div className="today-inline-state" role="alert">
-          <strong>Сводка питания временно недоступна</strong>
-          <button className="today-text-link" type="button" onClick={() => void diary.refetch()}>
-            Повторить
-          </button>
-        </div>
-      ) : (
         <>
-          <div className="today-calories">
-            <strong>{formatAmount(diary.data.totals.energy_kcal)}</strong>
+          <h2 className="sr-only" id="today-nutrition-title">
+            Питание
+          </h2>
+          <div className="today-summary-skeleton" aria-label="Загружаем питание" role="status">
+            <Skeleton height="48px" width="100%" />
+          </div>
+        </>
+      ) : diary.error || !diary.data ? (
+        <>
+          <h2 className="sr-only" id="today-nutrition-title">
+            Питание
+          </h2>
+          <div className="today-inline-state" role="alert">
+            <strong>Сводка питания временно недоступна</strong>
+            <button className="today-text-link" type="button" onClick={() => void diary.refetch()}>
+              Повторить
+            </button>
+          </div>
+        </>
+      ) : (
+        <div className="today-summary-card__row">
+          <span className="today-summary-card__icon" aria-hidden="true">
+            <Icon name="nav-nutrition" size={20} />
+          </span>
+          <div className="today-summary-card__main">
+            <h2 id="today-nutrition-title">Питание</h2>
             <span>
-              {diary.data.targets
-                ? `из ${formatAmount(diary.data.targets.energy_kcal)} ккал`
-                : 'ккал записано'}
+              {diary.data.meals.some((meal) => meal.entries.length > 0)
+                ? diary.data.targets
+                  ? `${formatAmount(diary.data.totals.energy_kcal)} из ${formatAmount(diary.data.targets.energy_kcal)} ккал · белок ${formatAmount(diary.data.totals.protein_g)} г`
+                  : `${formatAmount(diary.data.totals.energy_kcal)} ккал записано`
+                : 'Записей за день пока нет'}
             </span>
           </div>
-          <div className="today-macros" aria-label="Белки, жиры и углеводы">
-            <Macro
-              label="Белки"
-              total={diary.data.totals.protein_g}
-              target={diary.data.targets?.protein_g}
-            />
-            <Macro
-              label="Жиры"
-              total={diary.data.totals.fat_g}
-              target={diary.data.targets?.fat_g}
-            />
-            <Macro
-              label="Углеводы"
-              total={diary.data.totals.carbs_g}
-              target={diary.data.targets?.carbs_g}
-            />
-          </div>
-          <p className="today-panel__note">
-            {diary.data.targets
-              ? 'Добавляйте продукты и приёмы пищи в разделе «Питание».'
-              : 'Настройте ориентиры, чтобы видеть дневную цель.'}
-          </p>
-        </>
+          <AppLink
+            className="today-summary-card__action"
+            to={`/app?section=nutrition&date=${date}`}
+          >
+            Добавить
+          </AppLink>
+        </div>
       )}
     </section>
   );
@@ -324,8 +274,7 @@ function ProgressSummaryPanel({ summary }: { summary: ReturnType<typeof useProgr
   if (summary.isLoading) {
     return (
       <section className="today-progress-grid" aria-label="Загружаем прогресс">
-        <Skeleton className="today-progress-skeleton" height="150px" width="100%" />
-        <Skeleton className="today-progress-skeleton" height="150px" width="100%" />
+        <Skeleton className="today-progress-skeleton" height="76px" width="100%" />
       </section>
     );
   }
@@ -340,60 +289,34 @@ function ProgressSummaryPanel({ summary }: { summary: ReturnType<typeof useProgr
     );
   }
 
-  const weight = summary.data.body.latest_measurement?.weight_kg;
-  const weightTrend = summary.data.body.trends.find((item) => item.metric === 'weight_kg');
-  const weightChange =
-    weightTrend?.point_count && weightTrend.point_count > 1 ? weightTrend.change : null;
-  const adherence = summary.data.adherence;
-  const adherenceAvailable =
-    adherence.formula_version === 'adherence-v1' &&
-    adherence.overall_percent != null &&
-    adherence.included_components.length > 0;
+  const completedWorkouts = summary.data.training.completed_workouts;
+  const latestWeight = summary.data.body.latest_measurement?.weight_kg;
+  const progressSignals = [
+    completedWorkouts > 0
+      ? `${completedWorkouts} ${completedWorkouts === 1 ? 'тренировка' : completedWorkouts < 5 ? 'тренировки' : 'тренировок'} за 30 дней`
+      : null,
+    latestWeight != null ? `последний вес ${latestWeight.toLocaleString('ru-RU')} кг` : null,
+  ].filter((value): value is string => Boolean(value));
 
   return (
     <section className="today-progress-grid" aria-label="Главное о прогрессе">
-      <article className="today-panel today-signal today-signal--weight">
-        <div className="today-panel__head">
-          <div>
-            <span className="today-panel__kicker">Последний замер</span>
-            <h2>Вес</h2>
+      <article className="today-panel today-summary-card today-summary-card--progress">
+        <div className="today-summary-card__row">
+          <span className="today-summary-card__icon" aria-hidden="true">
+            <Icon name="nav-progress" size={20} />
+          </span>
+          <div className="today-summary-card__main">
+            <h2>Прогресс</h2>
+            <span>
+              {progressSignals.length > 0
+                ? progressSignals.join(' · ')
+                : 'Появится после первых тренировок и замеров'}
+            </span>
           </div>
-          <AppLink className="today-text-link" to="/app?section=progress">
-            Все замеры
+          <AppLink className="today-summary-card__action" to="/app?section=progress">
+            Открыть
           </AppLink>
         </div>
-        {weight == null ? (
-          <p className="today-signal__empty">Добавьте первый замер, чтобы видеть изменения.</p>
-        ) : (
-          <div className="today-signal__value">
-            <strong>{weight.toLocaleString('ru-RU')} кг</strong>
-            {weightChange != null && (
-              <span>
-                {weightChange > 0 ? '+' : ''}
-                {weightChange.toLocaleString('ru-RU')} кг за период наблюдений
-              </span>
-            )}
-          </div>
-        )}
-      </article>
-      <article className="today-panel today-signal">
-        <div className="today-panel__head">
-          <div>
-            <span className="today-panel__kicker">Последние 30 дней</span>
-            <h2>Выполнение плана</h2>
-          </div>
-          <AppLink className="today-text-link" to="/app?section=progress">
-            Подробнее
-          </AppLink>
-        </div>
-        {adherenceAvailable ? (
-          <div className="today-signal__value">
-            <strong>{Math.round(adherence.overall_percent!)}%</strong>
-            <span>Учтены: {formatIncludedComponents(adherence.included_components)}</span>
-          </div>
-        ) : (
-          <p className="today-signal__empty">Пока мало данных для общей сводки.</p>
-        )}
       </article>
     </section>
   );
@@ -416,6 +339,7 @@ function WorkoutOverview({
   detailsOpen,
   startPending,
   onOpenDetails,
+  onAddActivity,
   onStart,
 }: {
   today: string;
@@ -427,6 +351,7 @@ function WorkoutOverview({
   detailsOpen: boolean;
   startPending: boolean;
   onOpenDetails(): void;
+  onAddActivity(): void;
   onStart(): void;
 }) {
   const { user } = useAuth();
@@ -578,16 +503,24 @@ function WorkoutOverview({
           <span className="today-workout-copy__marker" aria-hidden="true">
             01
           </span>
-          <h2 id="today-workout-title">Выберите тренировочный план</h2>
-          <p>План создаст понятное расписание и покажет, с чего начать сегодня.</p>
+          <h2 id="today-workout-title">С чего начнём?</h2>
+          <p>Настройки можно заполнить позже. Выберите полезное действие прямо сейчас.</p>
         </div>
-        <AppLink
-          className="button-link"
-          onClick={() => trackPrimaryAction('programs')}
-          to="/app?section=programs"
-        >
-          Подобрать программу
-        </AppLink>
+        <div className="today-workout-actions today-workout-actions--quick-start">
+          <AppLink
+            className="button-link"
+            onClick={() => trackPrimaryAction('programs')}
+            to="/app?section=programs"
+          >
+            Создать программу
+          </AppLink>
+          <AppLink className="button-link secondary-link" to="/app?section=nutrition">
+            Записать питание
+          </AppLink>
+          <Button fullWidth variant="secondary" type="button" onClick={onAddActivity}>
+            Добавить активность
+          </Button>
+        </div>
       </>
     );
   }
@@ -649,9 +582,9 @@ function WorkoutOverview({
         >
           Добавить питание
         </AppLink>
-        <AppLink className="button-link secondary-link" to="/app?section=progress">
-          Записать замер
-        </AppLink>
+        <Button fullWidth variant="secondary" type="button" onClick={onAddActivity}>
+          Добавить активность
+        </Button>
       </div>
     </>
   );
@@ -714,6 +647,7 @@ export function TodayDashboard() {
   const detailsRef = useRef<HTMLDivElement>(null);
   const autoOpenedCompletionRef = useRef<number | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [cardioOpenRequest, setCardioOpenRequest] = useState(0);
   const timeZone = user?.profile?.timezone || detectedTimeZone();
   const today = useCalendarDay(timeZone);
   const [selectedDate, setSelectedDate] = useState(today);
@@ -992,6 +926,7 @@ export function TodayDashboard() {
               detailsOpen={detailsOpen}
               startPending={start.isPending}
               onOpenDetails={() => setDetailsOpen(true)}
+              onAddActivity={() => setCardioOpenRequest((request) => request + 1)}
               onStart={() => visibleWorkout && start.mutate(visibleWorkout.id)}
             />
           )}
@@ -1003,7 +938,11 @@ export function TodayDashboard() {
         </div>
       </div>
 
-      <CardioQuickLog today={selectedDate} />
+      <CardioQuickLog
+        key={`${selectedDate}:${cardioOpenRequest}`}
+        startOpen={cardioOpenRequest > 0}
+        today={selectedDate}
+      />
 
       {profileMissing && (
         <aside className="today-profile-nudge">

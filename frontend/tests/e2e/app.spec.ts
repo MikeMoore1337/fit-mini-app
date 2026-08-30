@@ -9,7 +9,7 @@ async function openCard(page: Page, title: string) {
   await expect(card).toHaveAttribute('open');
 }
 
-type AppDestination = 'Сегодня' | 'План' | 'Прогресс' | 'Питание' | 'Упражнения' | 'Профиль';
+type AppDestination = 'Сегодня' | 'Программа' | 'Прогресс' | 'Питание' | 'Упражнения' | 'Профиль';
 
 async function openAppDestination(page: Page, destination: AppDestination) {
   await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible();
@@ -23,7 +23,7 @@ async function openAppDestination(page: Page, destination: AppDestination) {
       return;
     }
   }
-  await page.getByRole('button', { name: 'Ещё', exact: true }).click();
+  await page.getByRole('button', { name: 'Открыть профиль и настройки', exact: true }).click();
   await page.locator('#appMorePanel').getByRole('link', { name: mobileLabel, exact: true }).click();
 }
 
@@ -1179,7 +1179,7 @@ test('клиент входит и видит экран тренировки', 
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
   await expect(page.getByRole('heading', { name: /^Сегодня ·/ })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Выберите тренировочный план' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'С чего начнём?' })).toBeVisible();
 });
 
 test('цветовая система сохраняет иерархию в светлой и тёмной темах', async ({ page }) => {
@@ -1346,7 +1346,7 @@ test('Mobile Web и Telegram используют одну YFC palette и гео
     ),
   ).toBe('#f4f5f2');
 
-  await webPage.getByRole('button', { name: 'Ещё', exact: true }).click();
+  await webPage.getByRole('button', { name: 'Открыть профиль и настройки', exact: true }).click();
   await webPage.getByRole('dialog').getByRole('button', { name: 'Включить тёмную тему' }).click();
   await webPage.getByRole('button', { name: 'Закрыть меню' }).click();
   await telegramPage.evaluate(() =>
@@ -1508,11 +1508,12 @@ test('desktop app shell centers the brand lockup and navigation surfaces', async
     expect(desktopAlignment.fitnessOffset).toBeLessThanOrEqual(1);
     expect(desktopAlignment.coachOffset).toBeLessThanOrEqual(1);
     expect(desktopAlignment.accountOffset).toBeLessThanOrEqual(1);
-    expect(desktopAlignment.accountWidth).toBe(148);
+    expect(desktopAlignment.accountWidth).toBeGreaterThanOrEqual(160);
+    expect(desktopAlignment.accountWidth).toBeLessThanOrEqual(196);
     expect(desktopAlignment.accountNameFits).toBe(true);
     expect(desktopAlignment.accountTextEdgeOffset).toBeLessThanOrEqual(1);
     expect(desktopAlignment.accountTextAlignment).toBe('left');
-    expect(desktopAlignment.accountNameSize).toBe('12.8px');
+    expect(desktopAlignment.accountNameSize).toBe('11.2px');
     expect(desktopAlignment.accountRoleSize).toBe('11.52px');
     expect(desktopAlignment.groupLabelFits).toBe(true);
     expect(desktopAlignment.labelsFit).toBe(true);
@@ -1554,7 +1555,7 @@ test('desktop app shell centers the brand lockup and navigation surfaces', async
   await expect(page.locator('.app-bottom-nav__brand')).not.toBeVisible();
   await expect(
     page.locator('.app-bottom-nav__primary a:visible, .app-bottom-nav__primary button:visible'),
-  ).toHaveCount(5);
+  ).toHaveCount(4);
 });
 
 test('app shell сохраняет композицию и доступность на целевых viewport', async ({ page }) => {
@@ -1573,12 +1574,14 @@ test('app shell сохраняет композицию и доступност�
     await page.setViewportSize(viewport);
     const primaryNavigation = page.locator('.app-bottom-nav__primary');
     const visibleDestinations = primaryNavigation.locator('a:visible, button:visible');
-    await expect(visibleDestinations).toHaveCount(viewport.width >= 900 ? 4 : 5);
+    await expect(visibleDestinations).toHaveCount(4);
     for (const destination of await visibleDestinations.all()) {
       await expect(destination).toBeInViewport();
     }
     if (viewport.width >= 900) {
-      await expect(page.getByRole('button', { name: 'Ещё', exact: true })).not.toBeVisible();
+      await expect(
+        page.getByRole('button', { name: 'Открыть профиль и настройки', exact: true }),
+      ).not.toBeVisible();
       await expect(page.getByRole('link', { name: 'Упражнения', exact: true })).toBeVisible();
       await expect(page.getByRole('link', { name: 'Профиль', exact: true })).toBeVisible();
       await expect(page.getByRole('link', { name: 'База знаний', exact: true })).toBeVisible();
@@ -1625,7 +1628,10 @@ test('app shell сохраняет композицию и доступност�
   await expect(page.getByRole('heading', { name: /^Сегодня ·/ })).toBeVisible();
 
   await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeInViewport();
-  const moreButton = page.getByRole('button', { name: 'Ещё', exact: true });
+  const moreButton = page.getByRole('button', {
+    name: 'Открыть профиль и настройки',
+    exact: true,
+  });
   await moreButton.focus();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('dialog')).toBeVisible();
@@ -1688,7 +1694,9 @@ test('desktop sidebar keeps trainer workspaces reachable at a short viewport', a
 
   const navigation = page.getByRole('navigation', { name: 'Основная навигация' });
   await expect(navigation).toHaveCSS('overflow-y', 'auto');
-  await expect(page.getByRole('button', { name: 'Ещё', exact: true })).not.toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Открыть профиль и настройки', exact: true }),
+  ).not.toBeVisible();
   await expect(page.getByRole('link', { name: 'Тренер', exact: true })).toBeVisible();
   expect(await navigation.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(
     true,
@@ -2184,7 +2192,7 @@ test('training preferences сохраняют Mobile Web/TMA композици�
     await page.screenshot({
       path: `../.artifacts/task-54-training-preferences/${current.surface}-${current.width}x${current.height}-${current.theme}.png`,
     });
-    await openAppDestination(page, 'План');
+    await openAppDestination(page, 'Программа');
     await page.getByRole('button', { name: 'Подобрать другую' }).click();
     const wizard = page.getByRole('dialog', { name: 'Цель' });
     await expect(wizard).toBeVisible();
@@ -2330,7 +2338,7 @@ test('активные клиенты блокируют отключение р
   await mockApi(page, { coachClientName: longClientName, withCoachClient: true });
   await page.goto('/app');
   await page.getByRole('button', { name: 'Тренер' }).click();
-  await page.getByRole('button', { name: 'Ещё', exact: true }).click();
+  await page.getByRole('button', { name: 'Открыть профиль и настройки', exact: true }).click();
   await page
     .locator('#appMorePanel')
     .getByRole('link', { name: 'Кабинет тренера', exact: true })
@@ -2542,7 +2550,7 @@ test('поля адаптируются к разным iPhone, а пример 
   await expect(search).toHaveValue('Тяга');
   await expect(page.getByText('Тяга блока', { exact: true })).toBeVisible();
 
-  await openAppDestination(page, 'План');
+  await openAppDestination(page, 'Программа');
   await expect(page.getByRole('heading', { name: 'Текущий план от тренера' })).toBeVisible();
   await expect(page.getByText('Назначил тренер Тренер Анна')).toBeVisible();
   await page.getByText('Все этапы и изменения', { exact: true }).click();
@@ -2600,7 +2608,7 @@ test('мастер подбора сохраняет ответы и ведёт 
   await mockApi(page);
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
-  await openAppDestination(page, 'План');
+  await openAppDestination(page, 'Программа');
 
   const launcher = page.getByRole('button', { name: 'Подобрать другую' });
   await launcher.click();
@@ -2690,7 +2698,7 @@ test('клиент собирает и переупорядочивает лич
   await mockApi(page);
   await page.goto('/app');
   await page.getByRole('button', { name: 'Клиент' }).click();
-  await openAppDestination(page, 'План');
+  await openAppDestination(page, 'Программа');
   await openCard(page, 'Создать свою программу');
 
   const exercisePicker = page.getByRole('combobox', { name: 'Поиск упражнения' }).first();

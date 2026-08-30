@@ -653,7 +653,7 @@ test('mobile использует список и отдельный конте�
     });
   }
 
-  await page.getByRole('button', { name: 'Ещё', exact: true }).click();
+  await page.getByRole('button', { name: 'Открыть профиль и настройки', exact: true }).click();
   await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
   await page.keyboard.press('Escape');
   await expect(dayInput).toHaveCSS('background-color', 'rgb(22, 25, 22)');
@@ -677,7 +677,7 @@ test('mobile использует список и отдельный конте�
       )
     ).every((width) => width >= 65),
   ).toBe(true);
-  await page.getByRole('button', { name: 'Ещё', exact: true }).click();
+  await page.getByRole('button', { name: 'Открыть профиль и настройки', exact: true }).click();
   await page.getByRole('button', { name: 'Включить светлую тему' }).click();
   await page.keyboard.press('Escape');
 
@@ -753,7 +753,7 @@ test('trainer leaves contextual workout and exercise feedback without messenger 
     .getByRole('button', { name: /Анна Петрова/ })
     .first()
     .click();
-  await page.getByRole('button', { name: 'Ещё', exact: true }).click();
+  await page.getByRole('button', { name: 'Открыть профиль и настройки', exact: true }).click();
   await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
   await page.keyboard.press('Escape');
   await expect(feedback.getByText('Колени держите по направлению носков.')).toBeVisible();

@@ -290,12 +290,16 @@ export default function MiniAppPage() {
               <h1>
                 {section === 'profile'
                   ? 'Профиль и настройки'
-                  : user?.profile?.full_name || user?.first_name || 'Мой фитнес'}
+                  : section === 'programs'
+                    ? 'Программа тренировок'
+                    : user?.profile?.full_name || user?.first_name || 'Мой фитнес'}
               </h1>
               <p className="muted">
                 {section === 'profile'
                   ? 'Личные данные, связи, уведомления и безопасность аккаунта.'
-                  : 'Тренировки, питание и прогресс в одном месте.'}
+                  : section === 'programs'
+                    ? 'Текущая программа, тренировочные дни и создание своего плана.'
+                    : 'Тренировки, питание и прогресс в одном месте.'}
               </p>
             </div>
             <div className="hero-card__meta">

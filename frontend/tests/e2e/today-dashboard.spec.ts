@@ -6,6 +6,12 @@ const captureLandingProductProofs =
       process?: { env?: Record<string, string | undefined> };
     }
   ).process?.env?.YFC_CAPTURE_LANDING_PRODUCT_PROOFS === '1';
+const captureTask116Proofs =
+  (
+    globalThis as typeof globalThis & {
+      process?: { env?: Record<string, string | undefined> };
+    }
+  ).process?.env?.YFC_CAPTURE_TASK_116_PROOFS === '1';
 
 type DashboardState = {
   workout?: 'planned' | 'in_progress' | 'completed' | 'none';
@@ -280,6 +286,53 @@ async function openDashboard(page: Page) {
   await expect(page.getByRole('heading', { name: /^Сегодня ·/ })).toBeVisible();
 }
 
+test('core navigation keeps the locked order, labels, active state and deep links', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => localStorage.setItem('app-theme', 'light'));
+  await mockDashboard(page, { workout: 'planned' });
+  await openDashboard(page);
+
+  const destinations = page.locator('#appBottomNav .app-bottom-nav__primary > a');
+  await expect(destinations).toHaveCount(4);
+  expect(await destinations.allTextContents()).toEqual([
+    'Сегодня',
+    'Программа',
+    'Питание',
+    'Прогресс',
+  ]);
+  expect(
+    await destinations.evaluateAll((links) => links.map((link) => link.getAttribute('href'))),
+  ).toEqual([
+    '/app?section=today',
+    '/app?section=programs',
+    '/app?section=nutrition',
+    '/app?section=progress',
+  ]);
+  await expect(page.getByRole('button', { name: 'Ещё', exact: true })).not.toBeAttached();
+
+  const profileButton = page.getByRole('button', {
+    name: 'Открыть профиль и настройки',
+    exact: true,
+  });
+  const profileButtonBox = await profileButton.boundingBox();
+  expect(profileButtonBox).not.toBeNull();
+  expect(profileButtonBox!.width).toBeGreaterThanOrEqual(44);
+  expect(profileButtonBox!.height).toBeGreaterThanOrEqual(44);
+  await expect(profileButton).toHaveCSS('border-color', 'rgb(158, 224, 43)');
+  await profileButton.click();
+  await expect(page.getByRole('dialog', { name: 'Профиль и настройки' })).toBeVisible();
+  await page.getByRole('button', { name: 'Закрыть меню' }).click();
+
+  await page.getByRole('link', { name: 'Программа', exact: true }).click();
+  await expect(page.getByRole('link', { name: 'Программа', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  await expect(page.getByRole('heading', { name: 'Программа тренировок' })).toBeVisible();
+});
+
 test('planned workout starts from the primary Today CTA', async ({ page }) => {
   if (captureLandingProductProofs) {
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -331,9 +384,96 @@ test('new and incomplete profile states keep program selection primary', async (
   });
   await openDashboard(page);
 
-  await expect(page.getByRole('heading', { name: 'Выберите тренировочный план' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'С чего начнём?' })).toBeVisible();
   await expect(page.getByText('Сделайте рекомендации точнее')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Подобрать программу' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Создать программу' })).toBeVisible();
+  const logNutrition = page.getByRole('link', { name: 'Записать питание' });
+  const addActivity = page.getByRole('button', { name: 'Добавить активность' });
+  await expect(logNutrition).toBeVisible();
+  await expect(addActivity).toBeVisible();
+  await expect(logNutrition).toHaveCSS('border-top-style', 'solid');
+  await expect(logNutrition).toHaveCSS('border-top-width', '1px');
+  await expect(addActivity).toHaveCSS('border-top-width', '1px');
+  const [nutritionOutline, activityOutline] = await Promise.all([
+    logNutrition.evaluate((element) => {
+      const style = window.getComputedStyle(element);
+      return {
+        color: style.borderTopColor,
+        fontSize: style.fontSize,
+        fontWeight: style.fontWeight,
+        height: element.getBoundingClientRect().height,
+        innerStroke: style.boxShadow,
+        lineHeight: style.lineHeight,
+      };
+    }),
+    addActivity.evaluate((element) => {
+      const style = window.getComputedStyle(element);
+      return {
+        color: style.borderTopColor,
+        fontSize: style.fontSize,
+        fontWeight: style.fontWeight,
+        height: element.getBoundingClientRect().height,
+        innerStroke: style.boxShadow,
+        lineHeight: style.lineHeight,
+      };
+    }),
+  ]);
+  expect(activityOutline.color).toBe(nutritionOutline.color);
+  expect(activityOutline.fontSize).toBe(nutritionOutline.fontSize);
+  expect(activityOutline.fontWeight).toBe(nutritionOutline.fontWeight);
+  expect(nutritionOutline.fontWeight).toBe('600');
+  expect(activityOutline.innerStroke).toBe(nutritionOutline.innerStroke);
+  expect(activityOutline.lineHeight).toBe(nutritionOutline.lineHeight);
+  expect(nutritionOutline.innerStroke).toContain('0.5px');
+  expect(Math.abs(activityOutline.height - nutritionOutline.height)).toBeLessThanOrEqual(1);
+  await expect(page.locator('.today-dashboard__facts')).toHaveCSS('border-top-style', 'none');
+  await addActivity.click();
+  await expect(page.getByRole('combobox', { name: 'Вид активности' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Создать программу' })).toBeAttached();
+  await expect(page.locator('.today-dashboard details details')).toHaveCount(0);
+});
+
+test('task 116 owner-checkpoint screenshots', async ({ browser }) => {
+  test.skip(!captureTask116Proofs, 'Owner-checkpoint capture is opt-in');
+
+  const cases = [
+    {
+      name: 'desktop-today-planned-light-1440x900.png',
+      viewport: { width: 1440, height: 900 },
+      theme: 'light',
+      state: { workout: 'planned' as const },
+      heading: 'Силовая база',
+    },
+    {
+      name: 'mobile-today-quick-start-light-390x844.png',
+      viewport: { width: 390, height: 844 },
+      theme: 'light',
+      state: { workout: 'none' as const, activeProgram: false, incompleteProfile: true },
+      heading: 'С чего начнём?',
+    },
+    {
+      name: 'mobile-today-planned-dark-390x844.png',
+      viewport: { width: 390, height: 844 },
+      theme: 'dark',
+      state: { workout: 'planned' as const },
+      heading: 'Силовая база',
+    },
+  ];
+
+  for (const capture of cases) {
+    const context = await browser.newContext({ viewport: capture.viewport });
+    const page = await context.newPage();
+    await page.addInitScript((theme) => localStorage.setItem('app-theme', theme), capture.theme);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await mockDashboard(page, capture.state);
+    await openDashboard(page);
+    await expect(page.getByRole('heading', { name: capture.heading })).toBeVisible();
+    await page.screenshot({
+      path: `../.artifacts/screenshots/task-116/${capture.name}`,
+      fullPage: true,
+    });
+    await context.close();
+  }
 });
 
 test('rest, completed, weekly review and trainer comment use one primary action', async ({
@@ -370,7 +510,7 @@ test('secondary API failure does not erase the dashboard', async ({ page }) => {
 
   await expect(page.getByRole('button', { name: 'Начать тренировку' })).toBeVisible();
   await expect(page.getByText('Сводка питания временно недоступна')).toBeVisible();
-  await expect(page.getByText('68,4 кг')).toBeVisible();
+  await expect(page.getByText(/последний вес 68,4 кг/)).toBeVisible();
 });
 
 test('Today keeps hierarchy and has no horizontal overflow at required widths', async ({
@@ -389,6 +529,17 @@ test('Today keeps hierarchy and has no horizontal overflow at required widths', 
     await page.setViewportSize(viewport);
     await expect(page.getByRole('button', { name: 'Начать тренировку' })).toBeInViewport();
     await expect(page.getByRole('heading', { name: 'Питание' })).toBeVisible();
+    const summaryCards = page.locator('.today-dashboard__facts .today-summary-card');
+    await expect(summaryCards).toHaveCount(2);
+    const [nutritionBox, progressBox] = await Promise.all([
+      summaryCards.nth(0).boundingBox(),
+      summaryCards.nth(1).boundingBox(),
+    ]);
+    expect(nutritionBox).not.toBeNull();
+    expect(progressBox).not.toBeNull();
+    const summaryGap = progressBox!.y - (nutritionBox!.y + nutritionBox!.height);
+    expect(summaryGap).toBeGreaterThanOrEqual(11);
+    expect(summaryGap).toBeLessThanOrEqual(13);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
   }
 });

@@ -4667,12 +4667,63 @@ body:has(#appBottomNav) {
 body:has(#appBottomNav) .toast:not(.hidden) {
   bottom: max(86px, calc(env(safe-area-inset-bottom, 0px) + 72px));
 }
+.app-mobile-header {
+  display: flex;
+  width: 100%;
+  max-width: 1200px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 auto 14px;
+}
+.app-mobile-header__brand {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 44px;
+  align-items: center;
+  color: var(--text);
+  text-decoration: none;
+}
+.app-mobile-header__brand .yfc-lockup {
+  min-width: 0;
+}
+.app-mobile-header__brand-mark {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+}
+.app-mobile-header__profile {
+  display: grid;
+  width: 48px;
+  min-height: 48px;
+  flex: 0 0 48px;
+  place-items: center;
+  padding: 2px;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+}
+.app-mobile-header__profile .app-bottom-nav__avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+}
+.app-mobile-header__profile:focus-visible,
+.app-bottom-nav__account-entry:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.app-mobile-header__profile.is-active {
+  background: var(--surface-active);
+}
 .app-bottom-nav {
   position: fixed;
   inset: auto 0 0;
   z-index: 9000;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 2px;
   padding: 6px max(6px, env(safe-area-inset-right, 0px)) max(6px, env(safe-area-inset-bottom, 0px))
     max(6px, env(safe-area-inset-left, 0px));
@@ -4681,6 +4732,9 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   background: var(--nav-bg);
   box-shadow: 0 -10px 30px rgba(17, 28, 21, 0.08);
   backdrop-filter: blur(18px);
+}
+.app-bottom-nav--demo {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 .app-bottom-nav__primary {
   display: contents;
@@ -4788,6 +4842,13 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+.app-bottom-nav__account-entry {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
 }
 .app-more-layer {
   position: fixed;
@@ -4978,6 +5039,9 @@ body:has(#appBottomNav) .toast:not(.hidden) {
     border-right: 1px solid var(--border);
     box-shadow: 12px 0 36px rgba(17, 28, 21, 0.04);
   }
+  .app-mobile-header {
+    display: none;
+  }
   .app-bottom-nav__brand {
     display: flex;
     align-items: center;
@@ -5077,6 +5141,26 @@ body:has(#appBottomNav) .toast:not(.hidden) {
     align-items: center;
     gap: 2px 9px;
     padding: 3px 4px;
+  }
+  .app-bottom-nav__account-entry {
+    display: grid;
+    min-width: 0;
+    grid-column: 1 / 3;
+    grid-row: 1 / span 2;
+    grid-template-columns: 36px minmax(0, 1fr);
+    align-items: center;
+    gap: 9px;
+    padding: 3px 4px;
+    border-radius: 11px;
+    text-align: left;
+  }
+  .app-bottom-nav__account-entry:hover {
+    background: var(--surface-hover);
+  }
+  .app-bottom-nav__account-entry > span:last-child {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
   }
   .app-bottom-nav__account-name,
   .app-bottom-nav__account-role {
