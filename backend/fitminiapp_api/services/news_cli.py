@@ -8,19 +8,7 @@ from urllib.parse import urlparse
 from fitminiapp_api.core.config import settings
 from fitminiapp_api.db.session import get_session_context
 from fitminiapp_api.services.news_rescore import rescore_freshness_blocked_clusters
-from fitminiapp_api.services.news_sources import apply_source_allowlist, parse_source_allowlist
-
-MAX_ALLOWLIST_BYTES = 1_048_576
-
-
-def _definitions(path: Path):
-    if not path.is_file() or path.stat().st_size > MAX_ALLOWLIST_BYTES:
-        raise ValueError("allowlist file is missing or too large")
-    try:
-        raw = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise ValueError("allowlist file is not valid UTF-8 JSON") from exc
-    return parse_source_allowlist(raw)
+from fitminiapp_api.services.news_sources import apply_source_allowlist, load_source_allowlist
 
 
 def main() -> None:
@@ -50,7 +38,7 @@ def main() -> None:
         return
 
     try:
-        definitions = _definitions(args.path)
+        definitions = load_source_allowlist(args.path)
     except ValueError as exc:
         raise SystemExit(str(exc)) from exc
     safe_summary = [

@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import logging
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from time import monotonic
 from typing import Protocol
@@ -52,6 +53,43 @@ MAX_DELIVERIES_PER_CYCLE = 20
 MAX_DELIVERY_ATTEMPTS = 5
 PROCESSING_TTL = timedelta(minutes=10)
 
+
+@dataclass
+class NewsCycleStats:
+    sources_total: int = 0
+    sources_checked: int = 0
+    sources_success: int = 0
+    sources_failed: int = 0
+    candidates_fetched: int = 0
+    candidates_new: int = 0
+    candidates_duplicate: int = 0
+    candidates_stale: int = 0
+    candidates_below_threshold: int = 0
+    candidates_eligible: int = 0
+    drafts_created: int = 0
+    drafts_skipped_daily_limit: int = 0
+    llm_failures: int = 0
+    telegram_delivery_failures: int = 0
+
+    def log_fields(self) -> dict[str, int]:
+        return {
+            "sources_total": self.sources_total,
+            "sources_checked": self.sources_checked,
+            "sources_success": self.sources_success,
+            "sources_failed": self.sources_failed,
+            "candidates_fetched": self.candidates_fetched,
+            "candidates_new": self.candidates_new,
+            "candidates_duplicate": self.candidates_duplicate,
+            "candidates_stale": self.candidates_stale,
+            "candidates_below_threshold": self.candidates_below_threshold,
+            "candidates_eligible": self.candidates_eligible,
+            "drafts_created": self.drafts_created,
+            "drafts_skipped_daily_limit": self.drafts_skipped_daily_limit,
+            "llm_failures": self.llm_failures,
+            "telegram_delivery_failures": self.telegram_delivery_failures,
+        }
+
+
 SendMessage = Callable[
     [httpx.AsyncClient, int, str],
     Awaitable[int | None],
@@ -84,7 +122,7 @@ async def _fetch_source(
         with get_session_context() as db:
             source = db.get(NewsSource, source_id)
             if source is None or not source.enabled:
-                return {"new": 0, "duplicate": 0, "candidate": 0}
+                return {}
             fetcher = SafeNewsFetcher(client, max_bytes=settings.news_source_max_bytes)
             try:
                 result = await fetcher.fetch(source)
@@ -107,7 +145,7 @@ async def _fetch_source(
                         "latency_ms": round((monotonic() - started) * 1000, 2),
                     },
                 )
-                return {"new": 0, "duplicate": 0, "candidate": 0}
+                return {"sources_failed": 1}
             current = utcnow()
             source.last_success_at = current
             source.last_error_code = None
@@ -115,7 +153,14 @@ async def _fetch_source(
             source.consecutive_error_count = 0
             source.next_fetch_at = current + timedelta(minutes=source.fetch_interval_minutes)
             if result.status == "not_modified":
-                counts = {"new": 0, "duplicate": 0, "candidate": 0}
+                counts = {
+                    "new": 0,
+                    "duplicate": 0,
+                    "candidate": 0,
+                    "stale": 0,
+                    "below_threshold": 0,
+                    "eligible": 0,
+                }
             else:
                 source.etag = result.etag
                 source.last_modified = result.last_modified
@@ -126,6 +171,8 @@ async def _fetch_source(
                     candidate_threshold=settings.news_candidate_score_threshold,
                     fetched_at=current,
                 )
+            counts["sources_success"] = 1
+            counts["fetched"] = len(result.items)
             logger.info(
                 "news_source_fetch_succeeded",
                 extra={
@@ -144,6 +191,7 @@ async def _fetch_source(
 async def fetch_due_sources(client: httpx.AsyncClient) -> dict[str, int]:
     current = utcnow()
     with get_session_context() as db:
+        sources_total = db.query(NewsSource.id).filter(NewsSource.enabled.is_(True)).count()
         source_ids = [
             row.id
             for row in db.query(NewsSource.id)
@@ -155,36 +203,66 @@ async def fetch_due_sources(client: httpx.AsyncClient) -> dict[str, int]:
             .limit(40)
             .all()
         ]
+    if sources_total == 0:
+        logger.error(
+            "news_pipeline_no_enabled_sources",
+            extra={"pipeline_stage": "fetch", "reason": "no_enabled_sources"},
+        )
     semaphore = asyncio.Semaphore(settings.news_fetch_concurrency)
     results = await asyncio.gather(
         *(_fetch_source(source_id, client, semaphore) for source_id in source_ids)
     )
-    return {
-        key: sum(item.get(key, 0) for item in results) for key in ("new", "duplicate", "candidate")
-    }
+    keys = (
+        "new",
+        "duplicate",
+        "candidate",
+        "stale",
+        "below_threshold",
+        "eligible",
+        "fetched",
+        "sources_success",
+        "sources_failed",
+    )
+    counts = {key: sum(item.get(key, 0) for item in results) for key in keys}
+    counts["sources_total"] = sources_total
+    counts["sources_checked"] = len(source_ids)
+    return counts
 
 
-async def generate_candidate_drafts(client: httpx.AsyncClient) -> int:
+async def generate_candidate_drafts(
+    client: httpx.AsyncClient,
+    *,
+    cycle_stats: NewsCycleStats | None = None,
+) -> int:
     with get_session_context() as db:
         generated_since = utcnow() - timedelta(days=1)
         generated_last_day = (
             db.query(NewsDraftRevision.id)
-            .filter(NewsDraftRevision.created_at >= generated_since)
+            .filter(
+                NewsDraftRevision.created_at >= generated_since,
+                NewsDraftRevision.revision == 1,
+            )
             .count()
         )
         remaining_daily = max(0, settings.news_daily_draft_limit - generated_last_day)
         if remaining_daily == 0:
+            if cycle_stats is not None:
+                cycle_stats.drafts_skipped_daily_limit += (
+                    db.query(NewsCluster.id).filter(NewsCluster.status == "candidate").count()
+                )
             return 0
         cluster_ids = [
             row.id
             for row in db.query(NewsCluster.id)
             .filter(NewsCluster.status == "candidate")
             .order_by(NewsCluster.score.desc(), NewsCluster.created_at.asc())
-            .limit(min(MAX_GENERATIONS_PER_CYCLE, remaining_daily))
+            .limit(MAX_GENERATIONS_PER_CYCLE)
             .all()
         ]
     generated = 0
     for cluster_id in cluster_ids:
+        if generated >= remaining_daily:
+            break
         started = monotonic()
         with get_session_context() as db:
             cluster = (
@@ -221,6 +299,13 @@ async def generate_candidate_drafts(client: httpx.AsyncClient) -> int:
                 )
                 continue
             generated += 1
+            if cycle_stats is not None:
+                cycle_stats.drafts_created += 1
+                if (
+                    settings.news_llm_provider == "openai_compatible"
+                    and draft.provider == "deterministic"
+                ):
+                    cycle_stats.llm_failures += 1
             logger.info(
                 "news_draft_generation_succeeded",
                 extra={
@@ -229,6 +314,11 @@ async def generate_candidate_drafts(client: httpx.AsyncClient) -> int:
                     "outcome": "fallback" if draft.provider == "deterministic" else "generated",
                     "latency_ms": draft.generation_latency_ms,
                 },
+            )
+    if cycle_stats is not None and generated >= remaining_daily:
+        with get_session_context() as db:
+            cycle_stats.drafts_skipped_daily_limit += (
+                db.query(NewsCluster.id).filter(NewsCluster.status == "candidate").count()
             )
     return generated
 
@@ -309,6 +399,8 @@ async def deliver_review_queue(
     send_message: Callable[..., Awaitable[int | None]],
     send_preview: Callable[..., Awaitable[PublicationResult]],
     channel_ready: bool,
+    *,
+    cycle_stats: NewsCycleStats | None = None,
 ) -> int:
     recipient_ids = {
         editorial_actor_ref(telegram_id): telegram_id
@@ -367,6 +459,8 @@ async def deliver_review_queue(
                 reply_markup=markup,
             )
         except Exception as exc:
+            if cycle_stats is not None:
+                cycle_stats.telegram_delivery_failures += 1
             error_code = safe_delivery_error(exc)
             with get_session_context() as db:
                 delivery = db.get(NewsReviewDelivery, delivery_id)
@@ -544,8 +638,9 @@ async def run_news_pipeline_once(
     send_publication: Callable[..., Awaitable[PublicationResult]],
     publication_ready: bool,
     fetch_sources: bool,
-) -> None:
+) -> NewsCycleStats:
     started = monotonic()
+    cycle_stats = NewsCycleStats()
     with get_session_context() as db:
         prune_news_editorial(db, retention_days=settings.news_retention_days)
     timeout = httpx.Timeout(settings.news_source_timeout_seconds)
@@ -555,28 +650,46 @@ async def run_news_pipeline_once(
             if publication_ready
             else 0
         )
-        counts = (
-            await fetch_due_sources(client)
-            if fetch_sources
-            else {"new": 0, "duplicate": 0, "candidate": 0}
-        )
-        await generate_candidate_drafts(client)
+        counts = await fetch_due_sources(client) if fetch_sources else {}
+        cycle_stats.sources_total = counts.get("sources_total", 0)
+        cycle_stats.sources_checked = counts.get("sources_checked", 0)
+        cycle_stats.sources_success = counts.get("sources_success", 0)
+        cycle_stats.sources_failed = counts.get("sources_failed", 0)
+        cycle_stats.candidates_fetched = counts.get("fetched", 0)
+        cycle_stats.candidates_new = counts.get("new", 0)
+        cycle_stats.candidates_duplicate = counts.get("duplicate", 0)
+        cycle_stats.candidates_stale = counts.get("stale", 0)
+        cycle_stats.candidates_below_threshold = counts.get("below_threshold", 0)
+        cycle_stats.candidates_eligible = counts.get("eligible", 0)
+        await generate_candidate_drafts(client, cycle_stats=cycle_stats)
         await generate_pending_images(client)
         with get_session_context() as db:
             enqueue_review_deliveries(db, settings.admin_telegram_id_set)
         delivered = await deliver_review_queue(
-            client, send_message, send_preview, publication_ready
+            client,
+            send_message,
+            send_preview,
+            publication_ready,
+            cycle_stats=cycle_stats,
         )
-    logger.info(
-        "news_pipeline_cycle_completed",
-        extra={
-            "pipeline_stage": "cycle",
-            "outcome": "completed",
-            "items_count": counts["new"],
-            "duplicate_count": counts["duplicate"],
-            "candidate_count": counts["candidate"],
-            "attempt_count": delivered,
-            "published_count": published,
-            "latency_ms": round((monotonic() - started) * 1000, 2),
-        },
-    )
+    if fetch_sources or any(
+        (
+            cycle_stats.drafts_created,
+            delivered,
+            published,
+            cycle_stats.llm_failures,
+            cycle_stats.telegram_delivery_failures,
+        )
+    ):
+        logger.info(
+            "news_pipeline_cycle_completed",
+            extra={
+                "pipeline_stage": "cycle",
+                "outcome": "completed",
+                **cycle_stats.log_fields(),
+                "attempt_count": delivered,
+                "published_count": published,
+                "latency_ms": round((monotonic() - started) * 1000, 2),
+            },
+        )
+    return cycle_stats

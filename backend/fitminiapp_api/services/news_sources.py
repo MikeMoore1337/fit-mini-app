@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Literal, cast
 from urllib.parse import urlparse
 
@@ -20,6 +22,9 @@ SOURCE_TYPES = {
     "yfc",
 }
 FETCH_KINDS = {"rss", "json_feed", "html_metadata"}
+DEFAULT_SOURCE_ALLOWLIST_PATH = (
+    Path(__file__).resolve().parent.parent / "resources" / "news_sources.json"
+)
 type NewsSourceType = Literal[
     "primary_research",
     "systematic_review",
@@ -137,6 +142,16 @@ def parse_source_allowlist(raw: object) -> list[NewsSourceDefinition]:
     return definitions
 
 
+def load_source_allowlist(path: Path = DEFAULT_SOURCE_ALLOWLIST_PATH) -> list[NewsSourceDefinition]:
+    if not path.is_file() or path.stat().st_size > 1_048_576:
+        raise ValueError("source allowlist file is missing or too large")
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError("source allowlist file is not valid UTF-8 JSON") from exc
+    return parse_source_allowlist(raw)
+
+
 def apply_source_allowlist(
     db: Session,
     definitions: list[NewsSourceDefinition],
@@ -177,3 +192,14 @@ def apply_source_allowlist(
                 row.enabled = False
     db.flush()
     return created, updated
+
+
+def bootstrap_default_news_sources(db: Session) -> int:
+    """Create the versioned baseline only when an environment has no source records yet."""
+    if db.query(NewsSource.id).first() is not None:
+        return 0
+    definitions = load_source_allowlist()
+    if not any(item.enabled for item in definitions):
+        raise ValueError("default source allowlist must contain an enabled source")
+    created, _ = apply_source_allowlist(db, definitions)
+    return created

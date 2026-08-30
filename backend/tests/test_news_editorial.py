@@ -50,9 +50,15 @@ from fitminiapp_api.services.news_ingestion import (
 )
 from fitminiapp_api.services.news_sources import (
     apply_source_allowlist,
+    load_source_allowlist,
     parse_source_allowlist,
 )
-from fitminiapp_api.services.news_worker import fetch_due_sources, generate_candidate_drafts
+from fitminiapp_api.services.news_worker import (
+    NewsCycleStats,
+    fetch_due_sources,
+    generate_candidate_drafts,
+)
+from fitminiapp_api.services.seed import seed_demo_data
 
 
 def _definition(
@@ -183,6 +189,32 @@ def test_source_allowlist_is_explicit_validated_and_operator_managed() -> None:
         )
     with pytest.raises(ValueError, match="unique"):
         parse_source_allowlist([_definition(), _definition()])
+
+
+def test_default_source_allowlist_bootstraps_once_without_overwriting_operator_state(
+    monkeypatch,
+) -> None:
+    definitions = load_source_allowlist()
+    assert {item.id for item in definitions} == {
+        "frontiers-nutrition",
+        "frontiers-sports-active-living",
+    }
+    assert all(item.enabled and item.fetch_kind == "rss" for item in definitions)
+
+    monkeypatch.setattr(settings, "news_ingestion_enabled", True)
+    with get_session_context() as db:
+        seed_demo_data(db)
+        assert db.query(NewsSource).count() == 2
+        source = db.get(NewsSource, "frontiers-nutrition")
+        assert source is not None
+        source.enabled = False
+
+    with get_session_context() as db:
+        seed_demo_data(db)
+        assert db.query(NewsSource).count() == 2
+        source = db.get(NewsSource, "frontiers-nutrition")
+        assert source is not None
+        assert source.enabled is False
 
 
 def test_news_activation_requires_owner_ids_and_confirmed_channel() -> None:
@@ -432,6 +464,32 @@ def test_ingestion_hard_gates_non_channel_topic_even_with_low_threshold() -> Non
         assert "topic_not_allowlisted" in cluster.risk_flags
 
 
+def test_scoring_rejects_esports_coaching_without_physical_health_context() -> None:
+    _create_source()
+    with get_session_context() as db:
+        source = db.get(NewsSource, "journal-one")
+        assert source is not None
+        counts = ingest_items(
+            db,
+            source,
+            [
+                _parsed(
+                    title="Coaching beyond the game in grassroots esports",
+                    summary=(
+                        "A qualitative study evaluated volunteer coaching practices and "
+                        "training platforms for competitive video games."
+                    ),
+                )
+            ],
+            candidate_threshold=55,
+        )
+        cluster = db.query(NewsCluster).one()
+        assert counts["candidate"] == 0
+        assert cluster.topic == "other"
+        assert cluster.score == 0
+        assert "topic_not_allowlisted" in cluster.risk_flags
+
+
 def test_ingestion_accepts_safe_research_in_expanded_channel_topics() -> None:
     _create_source()
     with get_session_context() as db:
@@ -549,6 +607,12 @@ def test_source_outage_is_isolated_and_applies_per_source_backoff(monkeypatch) -
     counts = asyncio.run(run())
     assert counts["new"] == 1
     assert counts["candidate"] == 1
+    assert counts["sources_total"] == 2
+    assert counts["sources_checked"] == 2
+    assert counts["sources_success"] == 1
+    assert counts["sources_failed"] == 1
+    assert counts["fetched"] == 1
+    assert counts["eligible"] == 1
     with get_session_context() as db:
         broken = db.get(NewsSource, "broken")
         healthy = db.get(NewsSource, "healthy")
@@ -836,6 +900,32 @@ def test_generation_falls_back_when_repair_still_contains_invented_number(monkey
     assert request_count == 2
 
 
+def test_worker_cycle_counts_llm_failure_when_safe_fallback_creates_draft(monkeypatch) -> None:
+    _create_source()
+    _candidate_cluster()
+    monkeypatch.setattr(settings, "news_llm_provider", "openai_compatible")
+    monkeypatch.setattr(settings, "news_llm_endpoint", "https://llm.example/v1/chat/completions")
+    monkeypatch.setattr(settings, "news_llm_api_key", "test-key")
+    monkeypatch.setattr(settings, "news_llm_model", "test-model")
+    monkeypatch.setattr(settings, "news_image_provider", "disabled")
+    stats = NewsCycleStats()
+
+    def timeout(request: httpx.Request) -> httpx.Response:
+        raise httpx.ReadTimeout("provider timeout", request=request)
+
+    async def generate() -> int:
+        async with httpx.AsyncClient(transport=httpx.MockTransport(timeout)) as client:
+            return await generate_candidate_drafts(client, cycle_stats=stats)
+
+    assert asyncio.run(generate()) == 1
+    assert stats.drafts_created == 1
+    assert stats.llm_failures == 1
+    with get_session_context() as db:
+        draft = db.query(NewsDraftRevision).one()
+        assert draft.provider == "deterministic"
+        assert "provider_timeout" in draft.warnings
+
+
 def test_generation_repairs_text_that_exceeds_telegram_photo_caption(monkeypatch) -> None:
     _create_source()
     cluster_id = _candidate_cluster()
@@ -913,6 +1003,80 @@ def test_fetch_and_worker_generation_are_idempotent(monkeypatch) -> None:
     assert asyncio.run(generate_twice()) == (1, 0)
     with get_session_context() as db:
         assert db.query(NewsDraftRevision).count() == 1
+
+
+def test_daily_draft_limit_counts_only_first_revision_of_a_new_cluster(monkeypatch) -> None:
+    _create_source()
+    monkeypatch.setattr(settings, "news_llm_provider", "disabled")
+    monkeypatch.setattr(settings, "news_image_provider", "disabled")
+    monkeypatch.setattr(settings, "news_daily_draft_limit", 1)
+
+    with get_session_context() as db:
+        source = db.get(NewsSource, "journal-one")
+        assert source is not None
+        ingest_items(db, source, [_parsed()], candidate_threshold=55)
+        first_cluster = db.query(NewsCluster).one()
+        first_revision = asyncio.run(create_draft_revision(db, first_cluster))
+        first_revision.created_at = utcnow() - timedelta(days=2)
+        second_revision = asyncio.run(create_draft_revision(db, first_cluster))
+        assert second_revision.revision == 2
+        third_revision = asyncio.run(create_draft_revision(db, first_cluster))
+        assert third_revision.revision == 3
+        first_cluster.status = "awaiting_review"
+
+        ingest_items(
+            db,
+            source,
+            [
+                _parsed(
+                    external_id="article-2",
+                    url="https://journal-one.example/article-2",
+                    title="Cardio recovery study in trained runners",
+                    summary="A randomized exercise study assessed cardio recovery and sleep.",
+                    doi="10.1000/test.2",
+                )
+            ],
+            candidate_threshold=55,
+        )
+
+    stats = NewsCycleStats()
+
+    async def generate() -> int:
+        async with httpx.AsyncClient() as client:
+            return await generate_candidate_drafts(client, cycle_stats=stats)
+
+    assert asyncio.run(generate()) == 1
+    assert stats.drafts_created == 1
+    assert stats.drafts_skipped_daily_limit == 0
+    with get_session_context() as db:
+        assert db.query(NewsDraftRevision).count() == 4
+        assert db.query(NewsDraftRevision).filter(NewsDraftRevision.revision == 1).count() == 2
+        source = db.get(NewsSource, "journal-one")
+        assert source is not None
+        ingest_items(
+            db,
+            source,
+            [
+                _parsed(
+                    external_id="article-3",
+                    url="https://journal-one.example/article-3",
+                    title="Sleep and strength recovery in trained adults",
+                    summary="A controlled exercise study assessed sleep and muscle recovery.",
+                    doi="10.1000/test.3",
+                )
+            ],
+            candidate_threshold=55,
+        )
+
+    blocked_stats = NewsCycleStats()
+
+    async def generate_after_limit() -> int:
+        async with httpx.AsyncClient() as client:
+            return await generate_candidate_drafts(client, cycle_stats=blocked_stats)
+
+    assert asyncio.run(generate_after_limit()) == 0
+    assert blocked_stats.drafts_created == 0
+    assert blocked_stats.drafts_skipped_daily_limit == 1
 
 
 def test_source_revisions_do_not_inflate_support_and_draft_binds_exact_evidence(
