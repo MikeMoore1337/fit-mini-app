@@ -2,10 +2,10 @@
 
 Этот файл действует для завершённых и архивированных release tasks `75-80`, включая буквенные
 подзадачи, owner-approved Pulse concepts pilot `75C`, завершённую UX-reset gate `115A` и
-current/not-started implementation task `116`, а также
+completed implementation tasks `116-118`, current product task `119`, а также
 trigger-gated post-release pool `81-101` с буквенными подзадачами и owner-selected pending tasks
-`107-111`. Completed tasks `00-73A`, включая буквенные подзадачи, tasks `74A-75`, отдельно
-завершённые tasks `103-106` и owner-selected task `112` не переигрываются и хранятся в
+`107-111` и owner-selected governance task `127`. Completed tasks `00-73A`, включая буквенные
+подзадачи, tasks `74A-75`, отдельно завершённые tasks `103-106`, `112-118` не переигрываются и хранятся в
 `tasks/done/`.
 
 Tasks `109-111` остаются owner-selected pending: Landing offer использует только factual claims и
@@ -18,7 +18,12 @@ approved security baseline task `108`; avatar сохраняет private-media l
 
 Фраза владельца `полный task lifecycle` ссылается именно на этот контракт. Он выполняет только основную роль, core/conditional skills и дополнительные lifecycle-роли, которые явно применимы к текущей task, с конечными review/QA циклами и одним логическим commit.
 
-Lifecycle не расширяет scope task и не отменяет owner checkpoints, Trigger/evidence gates, conditional/skip conditions, security/privacy rules или запрет внешних production actions без разрешения.
+Lifecycle не расширяет scope task и не отменяет явно объявленные owner checkpoints, Trigger/evidence
+gates, conditional/skip conditions, security/privacy rules или запрет внешних production actions
+без разрешения. Если текущая task не содержит обязательного checkpoint, lifecycle автоматически
+продолжает следующий разрешённый шаг после terminal success и не ждёт дополнительного owner prompt.
+Нельзя создавать неявную остановку формулировкой «нужно подтверждение владельца» без конкретного
+gate, evidence и точки остановки в task-файле.
 
 ## Skills: обязательный контракт выбора
 
@@ -59,13 +64,15 @@ Lifecycle не расширяет scope task и не отменяет owner chec
 
 ## Главный процесс
 
-- Один executable task-файл = одна отдельная Codex-сессия = один законченный логический результат.
-  Umbrella `90`, `92`, `93`, `94`, `95`, `99`, `100` являются coordination contracts и отдельно не
-  выполняются.
-- Работать в постоянной development-ветке `dev`. Temporary branch/worktree от актуальной `dev`
-  допускается только при явной необходимости изоляции; после merge/close её нужно безопасно удалить,
-  если она не является recovery anchor и не содержит уникальную недостижимую историю.
-- Не переходить к следующему task автоматически.
+- Один executable task-файл = одна Codex-сессия = одна `task/<ID>-<slug>` ветка = один отдельный
+  worktree = один законченный логический результат. Umbrella `90`, `92`, `93`, `94`, `95`, `99`,
+  `100` являются coordination contracts и отдельно не выполняются.
+- `dev` используется только как интеграционная ветка. Task branch/worktree создаются от чистого,
+  проверенного exact `origin/dev` SHA; feature implementation непосредственно в основном `dev`
+  worktree запрещена.
+- Внутри текущей task после terminal success автоматически выполняются применимые review, QA,
+  commit, PR, serial merge в `dev`, CI и normal release шаги, если task явно не объявляет checkpoint
+  или blocker. Следующая product task автоматически не запускается.
 - Новая production revision попадает в remote `master` только через merged PR с обязательным green
   check `checks`; direct push, force-push и удаление `master` запрещены Ruleset. Merge PR является
   release authorization и без отдельного ручного approval запускает post-merge CI, exact-SHA
@@ -84,8 +91,10 @@ PR checks -> exact-head merge -> post-merge CI -> automatic production deploy ->
   запущенный параллельно с push-CI из-за открытого PR, считается нарушением lifecycle, а не допустимой
   оптимизацией. Если открытый PR нельзя однозначно идентифицировать как текущий release PR, агент
   ничего не закрывает автоматически и останавливается с точным blocker.
-- Task с обязательным owner checkpoint/approve/human evidence/manual visual approval останавливается
-  перед release до фактического прохождения gate. Task без tracked logical commit не создаёт PR.
+- Task с явно обязательным owner checkpoint/approve, human/device evidence, manual visual approval,
+  legal-counsel gate или destructive/external authorization останавливается ровно перед указанным
+  gate до фактического прохождения. Task без tracked logical commit не создаёт PR; отсутствие
+  checkpoint само по себе не является причиной ожидания.
 - Перед началом прочитать корневой `AGENTS.md`, этот файл, lifecycle и только текущую task.
 - Tasks `00-73A`, включая буквенные подзадачи, подтверждены владельцем как завершённые, перенесены в `tasks/done/` и не выполняются повторно.
 - Owner-selected task `103` завершена после owner approval и архивирована.

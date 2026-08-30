@@ -248,6 +248,9 @@ Review/QA не могут сами по себе быть основанием �
 10. Выполнить разрешённый canonical release final либо остановиться на точном owner/blocker gate.
 11. Не переходить к следующей task автоматически; после eligible release сначала подтвердить
     terminal deploy success и синхронизацию `dev`.
+12. Если task не содержит явно обязательного owner checkpoint, human/device evidence, legal-counsel
+    gate, destructive/external authorization или terminal blocker, не ждать отдельного сообщения
+    владельца: автоматически продолжать следующий разрешённый lifecycle step после terminal success.
 
 ## 9A. Release eligibility и автоматический normal path
 
@@ -258,7 +261,8 @@ Task является `AUTO_RELEASE_ELIGIBLE`, только если однов�
 3. незакрытых `BLOCKER`, `HIGH` и `MEDIUM` ровно ноль, а исправленные blocking/release-blocking
    findings имеют required targeted recheck evidence;
 4. `codex-backlog/bugs/FINDINGS.md` синхронизирован по действующей policy;
-5. task не содержит незавершённый owner checkpoint/approve, human evidence или manual visual gate;
+5. task не содержит незавершённый явно обязательный owner checkpoint/approve, human/device evidence,
+   legal-counsel gate или manual visual gate;
 6. нет unresolved production/recovery blocker;
 7. рабочая ветка `dev` содержит актуальный `origin/master`, worktree чист от accidental scope,
    secrets и debug artifacts.
@@ -329,8 +333,10 @@ ensure NO open release PR dev -> master
 новой стадией уже завершённого release.
 
 Автоматизация никогда не делает direct push в `master`, не обходит ruleset/required checks,
-PR provenance/exact-SHA guard и не запускает manual production command. Task с human/owner gate
-останавливается перед PR до фактического решения. Task-specific запрет release/deploy имеет приоритет.
+PR provenance/exact-SHA guard и не запускает manual production command. Task с явно объявленным
+human/owner gate останавливается перед указанным gate до фактического решения. Если такой gate не
+объявлен, ожидание общего «подтверждения владельца» запрещено: lifecycle продолжает normal path
+автоматически. Task-specific запрет release/deploy имеет приоритет.
 
 ## 10. Финальный отчёт
 

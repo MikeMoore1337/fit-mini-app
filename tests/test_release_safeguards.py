@@ -117,16 +117,34 @@ def test_auto_release_contract_is_fail_closed_for_medium_and_human_gates() -> No
 
     for source in (agents, global_rules, lifecycle):
         assert "AUTO_RELEASE_ELIGIBLE" in source
-        assert "dev ->" in source
         assert "master" in source
 
+    assert "dev ->" in global_rules
+    assert "dev ->" in lifecycle
     assert "незакрытых `BLOCKER`, `HIGH` и `MEDIUM` ровно ноль" in lifecycle
-    assert "owner checkpoint/approve, human evidence или manual visual gate" in lifecycle
+    assert "явно обязательный owner checkpoint/approve, human/device evidence" in lifecycle
     assert "failure/rollback/manual-intervention verdict" in lifecycle.lower()
     assert "Direct push в `master` запрещён" in global_rules
     assert "expected PR head SHA" in lifecycle
     assert "required check `checks`" in lifecycle
     assert "fast-forward/sync `dev`" in lifecycle
+
+
+def test_task127_global_auto_continue_contract_has_no_implicit_wait() -> None:
+    agents, global_rules, lifecycle = _release_policy_sources()
+    sources = (agents, global_rules, lifecycle)
+
+    for source in sources:
+        assert "terminal success" in source
+        assert "не жд" in source or "не ждать" in source or "without waiting" in source
+    assert "do not start the next task automatically" in agents
+    assert "Следующая product task автоматически не запускается" in global_rules
+    assert "Не переходить к следующей task автоматически" in lifecycle
+
+    assert "Один executable task-файл = одна Codex-сессия = одна" in global_rules
+    assert "не ждёт дополнительного owner prompt" in global_rules
+    assert "integration-only" in agents
+    assert "serial merge в `dev`" in global_rules
 
 
 def test_compact_first_contract_is_canonical() -> None:
