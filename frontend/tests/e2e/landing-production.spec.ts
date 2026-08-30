@@ -1,12 +1,21 @@
 import { expect, test, type Page } from '@playwright/test';
 
+const captureTask109 =
+  (
+    globalThis as typeof globalThis & {
+      process?: { env?: Record<string, string | undefined> };
+    }
+  ).process?.env?.YFC_CAPTURE_TASK_109 === '1';
 const captureEvidence =
+  captureTask109 ||
   (
     globalThis as typeof globalThis & {
       process?: { env?: Record<string, string | undefined> };
     }
   ).process?.env?.YFC_CAPTURE_TASK_73A === '1';
-const screenshotRoot = '../.artifacts/screenshots/task-73a/final';
+const screenshotRoot = captureTask109
+  ? '../.artifacts/screenshots/task-109/final'
+  : '../.artifacts/screenshots/task-73a/final';
 
 async function openLanding(page: Page, theme: 'light' | 'dark') {
   await page.goto('/', { waitUntil: 'domcontentloaded' });
@@ -71,6 +80,11 @@ async function settleForScreenshot(page: Page) {
 test('landing keeps a minimal premium product story across themes and viewports', async ({
   page,
 }) => {
+  const browserErrors: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text());
+  });
+  page.on('pageerror', (error) => browserErrors.push(error.message));
   await page.emulateMedia({ reducedMotion: 'reduce' });
 
   for (const theme of ['light', 'dark'] as const) {
@@ -91,6 +105,10 @@ test('landing keeps a minimal premium product story across themes and viewports'
 
       await expect(page.locator('html')).toHaveAttribute('data-color-scheme', theme);
       await expect(page.locator('h1')).toHaveCount(1);
+      await expect(page.locator('.landing-hero-signals')).toHaveCount(0);
+      await expect(
+        page.getByRole('heading', { name: 'Один цикл — от плана до следующего шага.' }),
+      ).toBeVisible();
       await expect(page.locator('.landing-core__features article')).toHaveCount(3);
       await expect(page.locator('.landing-trainer')).toBeVisible();
       await expect(page.locator('.landing-bento-card, .landing-system__card')).toHaveCount(0);
@@ -98,10 +116,12 @@ test('landing keeps a minimal premium product story across themes and viewports'
         'href',
         '/app',
       );
-      await expect(page.getByRole('link', { name: 'Попробовать демо' })).toHaveAttribute(
-        'href',
-        '/demo?cabinet=1&scenario=self_training&section=today',
-      );
+      await expect(
+        page.locator('.landing-hero__actions').getByRole('link', { name: 'Попробовать демо' }),
+      ).toHaveAttribute('href', '/demo?cabinet=1&scenario=self_training&section=today');
+      await expect(
+        page.locator('.landing-contact').getByRole('link', { name: 'Попробовать демо' }),
+      ).toHaveAttribute('href', '/demo?cabinet=1&scenario=self_training&section=today');
       await expect(
         page.getByRole('link', { name: 'Открыть приложение в Telegram' }),
       ).toHaveAttribute('href', 'https://t.me/your_fitness_coach_bot?startapp');
@@ -185,10 +205,10 @@ test('landing keeps a minimal premium product story across themes and viewports'
           const secondary = document.querySelector<HTMLElement>(
             '.landing-hero__actions .landing-button--secondary',
           )!;
+          const themeToggle = document.querySelector<HTMLElement>('.landing-theme-toggle')!;
+          const themeIcon = themeToggle.querySelector<SVGElement>('svg')!;
           const header = document.querySelector<HTMLElement>('.public-shell__header')!;
           const device = document.querySelector<HTMLElement>('.landing-hero-device')!;
-          const signals = document.querySelector<HTMLElement>('.landing-hero-signals')!;
-          const signalIcon = signals.querySelector<SVGElement>('svg')!;
           const energy = document.querySelector<HTMLElement>('.landing-energy-path')!;
           const desktopFlow = energy.querySelector<SVGGElement>('.energy-flow__scene--desktop')!;
           const filament = desktopFlow.querySelector<SVGPathElement>(
@@ -207,7 +227,10 @@ test('landing keeps a minimal premium product story across themes and viewports'
           const core = document.querySelector<HTMLElement>('.landing-core')!;
           const pathLength = filament.getTotalLength();
           const pathMatrix = filament.getScreenCTM()!;
+          const primaryBounds = primary.getBoundingClientRect();
           const secondaryBounds = secondary.getBoundingClientRect();
+          const themeToggleBounds = themeToggle.getBoundingClientRect();
+          const themeIconBounds = themeIcon.getBoundingClientRect();
           const pathSamples = Array.from({ length: 161 }, (_, index) => {
             const point = filament.getPointAtLength((pathLength * index) / 160);
             return new DOMPoint(point.x, point.y).matrixTransform(pathMatrix);
@@ -219,14 +242,22 @@ test('landing keeps a minimal premium product story across themes and viewports'
             headingFontSize: Number.parseFloat(getComputedStyle(heading).fontSize),
             headingFontFamily: getComputedStyle(heading).fontFamily,
             primaryBackground: getComputedStyle(primary).backgroundColor,
+            primaryWidth: primaryBounds.width,
             secondaryBackground: getComputedStyle(secondary).backgroundColor,
+            secondaryWidth: secondaryBounds.width,
             secondaryBorderWidth: Number.parseFloat(getComputedStyle(secondary).borderLeftWidth),
+            themeIconOffsetX:
+              themeIconBounds.left +
+              themeIconBounds.width / 2 -
+              (themeToggleBounds.left + themeToggleBounds.width / 2),
+            themeIconCenterDeltaY: Math.abs(
+              themeIconBounds.top +
+                themeIconBounds.height / 2 -
+                (themeToggleBounds.top + themeToggleBounds.height / 2),
+            ),
             headerBackground: getComputedStyle(header).backgroundColor,
             deviceWidth: device.getBoundingClientRect().width,
             devicePadding: Number.parseFloat(getComputedStyle(device).paddingLeft),
-            signalsBackground: getComputedStyle(signals).backgroundColor,
-            signalsBackdrop: getComputedStyle(signals).backdropFilter,
-            signalIconColor: getComputedStyle(signalIcon).color,
             energyLayer: Number.parseFloat(getComputedStyle(energy).zIndex),
             athleteLayer: Number.parseFloat(getComputedStyle(athleteFrame).zIndex),
             deviceLayer: Number.parseFloat(getComputedStyle(device).zIndex),
@@ -253,6 +284,7 @@ test('landing keeps a minimal premium product story across themes and viewports'
             athleteLift: new DOMMatrix(getComputedStyle(athleteFrame).transform).m42,
             coreMobilePadding: Number.parseFloat(getComputedStyle(coreMobile).paddingLeft),
             trainerBorder: Number.parseFloat(getComputedStyle(trainerProof).borderLeftWidth),
+            corePaddingTop: Number.parseFloat(getComputedStyle(core).paddingTop),
             coreHeight: core.getBoundingClientRect().height,
           };
         });
@@ -263,15 +295,20 @@ test('landing keeps a minimal premium product story across themes and viewports'
         expect(directionStyles.headingFontFamily).toMatch(/^Inter,/i);
         expect(directionStyles.headingFontFamily).not.toMatch(/Georgia|Times New Roman/i);
         expect(directionStyles.primaryBackground).not.toBe(directionStyles.secondaryBackground);
+        expect(
+          Math.abs(directionStyles.primaryWidth - directionStyles.secondaryWidth),
+        ).toBeLessThanOrEqual(1);
         expect(directionStyles.secondaryBorderWidth).toBeGreaterThanOrEqual(1);
+        if (theme === 'light') {
+          expect(directionStyles.themeIconOffsetX).toBeGreaterThanOrEqual(1.5);
+          expect(directionStyles.themeIconOffsetX).toBeLessThanOrEqual(2.5);
+        } else {
+          expect(Math.abs(directionStyles.themeIconOffsetX)).toBeLessThanOrEqual(1);
+        }
+        expect(directionStyles.themeIconCenterDeltaY).toBeLessThanOrEqual(1);
         expect(directionStyles.headerBackground).toBe('rgba(0, 0, 0, 0)');
         expect(directionStyles.deviceWidth).toBeGreaterThanOrEqual(200);
         expect(directionStyles.devicePadding).toBeLessThanOrEqual(3);
-        expect(directionStyles.signalsBackground).toBe('rgba(0, 0, 0, 0)');
-        expect(directionStyles.signalsBackdrop).toBe('none');
-        expect(directionStyles.signalIconColor).toBe(
-          theme === 'light' ? 'rgb(86, 122, 13)' : 'rgb(182, 242, 56)',
-        );
         expect(directionStyles.energyLayer).toBeLessThan(directionStyles.athleteLayer);
         expect(directionStyles.energyLayer).toBeLessThan(directionStyles.deviceLayer);
         expect(directionStyles.energyPointerEvents).toBe('none');
@@ -291,12 +328,16 @@ test('landing keeps a minimal premium product story across themes and viewports'
         expect(directionStyles.athleteLift).toBeLessThanOrEqual(-40);
         expect(directionStyles.coreMobilePadding).toBeLessThanOrEqual(3);
         expect(directionStyles.trainerBorder).toBeLessThanOrEqual(2);
+        expect(directionStyles.corePaddingTop).toBeLessThanOrEqual(48);
         expect(directionStyles.coreHeight).toBeGreaterThanOrEqual(800);
       }
 
       if (viewport.width <= 430) {
         const mobileFlow = await page.evaluate(() => {
           const energy = document.querySelector<HTMLElement>('.landing-energy-path')!;
+          const athlete = document.querySelector<HTMLImageElement>('.landing-athlete-frame img')!;
+          const device = document.querySelector<HTMLElement>('.landing-hero-device')!;
+          const core = document.querySelector<HTMLElement>('.landing-core')!;
           const mobileScene = energy.querySelector<SVGGElement>('.energy-flow__scene--mobile')!;
           const filaments = Array.from(
             mobileScene.querySelectorAll<SVGPathElement>('.energy-flow__filament'),
@@ -314,6 +355,12 @@ test('landing keeps a minimal premium product story across themes and viewports'
             glowCount: Array.from(
               mobileScene.querySelectorAll<SVGPathElement>('.energy-flow__glow'),
             ).filter((path) => getComputedStyle(path).display !== 'none').length,
+            visualGap:
+              core.getBoundingClientRect().top -
+              Math.max(
+                athlete.getBoundingClientRect().bottom,
+                device.getBoundingClientRect().bottom,
+              ),
           };
         });
         expect(mobileFlow.visibleCount).toBeGreaterThanOrEqual(7);
@@ -321,6 +368,8 @@ test('landing keeps a minimal premium product story across themes and viewports'
         expect(mobileFlow.maxWidth).toBeLessThanOrEqual(1.5);
         expect(mobileFlow.ambientOpacity).toBeLessThanOrEqual(0.04);
         expect(mobileFlow.glowCount).toBeLessThanOrEqual(1);
+        expect(mobileFlow.visualGap).toBeGreaterThanOrEqual(16);
+        expect(mobileFlow.visualGap).toBeLessThanOrEqual(90);
       }
 
       const footer = page.locator('.landing-footer');
@@ -332,6 +381,7 @@ test('landing keeps a minimal premium product story across themes and viewports'
       );
     }
   }
+  expect(browserErrors).toEqual([]);
 });
 
 test('media failures preserve the story and product proofs reserve their layout', async ({
@@ -494,7 +544,7 @@ test('motion has an immediate reduced-motion final state', async ({ page }) => {
   expect(motionState.productAnimation).toBe('none');
 });
 
-test('captures the task 73A owner-review packet when requested', async ({ page, browser }) => {
+test('captures the owner-review packet when requested', async ({ page, browser }) => {
   if (!captureEvidence) return;
 
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -511,6 +561,11 @@ test('captures the task 73A owner-review packet when requested', async ({ page, 
     await page.locator('.landing-trainer').screenshot({
       path: `${screenshotRoot}/desktop-1440-${theme}-trainer.png`,
     });
+    if (captureTask109) {
+      await page.locator('.landing-contact').screenshot({
+        path: `${screenshotRoot}/desktop-1440-${theme}-final-cta.png`,
+      });
+    }
     await settleForScreenshot(page);
     await page.screenshot({
       path: `${screenshotRoot}/desktop-1440-${theme}-full.png`,
@@ -522,11 +577,21 @@ test('captures the task 73A owner-review packet when requested', async ({ page, 
     await expectLandingReady(page);
     await settleForScreenshot(page);
     await page.screenshot({ path: `${screenshotRoot}/mobile-390-${theme}-hero.png` });
+    if (captureTask109) {
+      await page.locator('.landing-hero').screenshot({
+        path: `${screenshotRoot}/mobile-390-${theme}-hero-section.png`,
+      });
+    }
     await loadAllProductProofs(page);
     await page.addStyleTag({ content: '.public-shell__skip-link { display: none !important; }' });
     await page.locator('#product').screenshot({
       path: `${screenshotRoot}/mobile-390-${theme}-product.png`,
     });
+    if (captureTask109) {
+      await page.locator('.landing-contact').screenshot({
+        path: `${screenshotRoot}/mobile-390-${theme}-final-cta.png`,
+      });
+    }
     await settleForScreenshot(page);
     await page.screenshot({
       path: `${screenshotRoot}/mobile-390-${theme}-full.png`,

@@ -241,7 +241,7 @@ test('блок возможностей показывает пользу спо
     await page.goto('/');
 
     await expect(
-      page.getByRole('heading', { name: /не каталог функций, а связный день/i }),
+      page.getByRole('heading', { name: /один цикл — от плана до следующего шага/i }),
     ).toBeVisible();
     await expect(
       page.getByRole('heading', { name: /сначала — одно понятное действие/i }),
@@ -309,11 +309,14 @@ test('сценарии спортсмена и тренера ведут в ве
       'href',
       '/for-trainers',
     );
-    await expect(page.getByText(/режим тренера включить позже/i)).toBeVisible();
+    await expect(page.getByText(/тренера (можно )?подключи(ть|те) позже/i).first()).toBeVisible();
     await expect(page.getByRole('link', { name: /открыть приложение/i }).last()).toHaveAttribute(
       'href',
       '/app',
     );
+    await expect(
+      page.locator('.landing-contact').getByRole('link', { name: /попробовать демо/i }),
+    ).toHaveAttribute('href', '/demo?cabinet=1&scenario=self_training&section=today');
     await expect(page.getByRole('link', { name: /поддержка в telegram/i })).toHaveAttribute(
       'href',
       'https://t.me/your_fitness_coach_bot?start=support',
