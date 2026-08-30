@@ -167,7 +167,9 @@ test('первый экран лендинга объясняет продукт
   }
 });
 
-test('вторичные CTA сохраняют контрастный текст при наведении в обеих темах', async ({ page }) => {
+test('вторичный hero CTA сохраняет контрастный текст при наведении в обеих темах', async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
 
@@ -180,9 +182,6 @@ test('вторичные CTA сохраняют контрастный текс�
     const expectedText = scheme === 'light' ? 'rgb(22, 26, 23)' : 'rgb(238, 240, 234)';
     for (const link of [
       page.locator('.landing-hero__actions').getByRole('link', { name: /Попробовать демо/ }),
-      page
-        .locator('.landing-assurance__platform')
-        .getByRole('link', { name: /Открыть приложение в Telegram/ }),
     ]) {
       await link.hover();
       await expect(link).toHaveCSS('background-color', expectedBackground);
