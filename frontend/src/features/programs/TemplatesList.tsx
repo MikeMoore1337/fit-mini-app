@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../shared/api/client';
 import type { ProgramTemplate } from '../../shared/api/types';
@@ -76,7 +76,13 @@ function programKind(item: ProgramTemplate, currentUserId?: number): string {
   return 'Шаблон';
 }
 
-export function TemplatesList({ defaultLibraryOpen = false }: { defaultLibraryOpen?: boolean }) {
+export function TemplatesList({
+  children,
+  defaultLibraryOpen = false,
+}: {
+  children?: ReactNode;
+  defaultLibraryOpen?: boolean;
+}) {
   const { toast, confirm } = useFeedback();
   const { user, reloadUser } = useAuth();
   const queryClient = useQueryClient();
@@ -358,18 +364,19 @@ export function TemplatesList({ defaultLibraryOpen = false }: { defaultLibraryOp
           <div className="program-active__empty">
             <span className="eyebrow">Текущая программа</span>
             <h2 id="active-program-title">План ещё не выбран</h2>
-            <p>Ответьте на пять коротких вопросов или выберите готовый вариант вручную.</p>
+            <p>Создайте свою программу сразу или выберите готовый шаблон.</p>
             <div className="program-active__actions">
-              <button type="button" onClick={() => setRecommendationOpen(true)}>
-                Подобрать программу
-              </button>
+              <a className="button-link program-wizard__anchor" href="#program-builder">
+                Создать свою программу
+              </a>
               <a className="secondary program-wizard__anchor" href="#program-library">
-                Выбрать вручную
+                Программы и шаблоны
               </a>
             </div>
           </div>
         )}
       </section>
+      {children}
       <ProgramRecommendation
         open={recommendationOpen}
         onOpenChange={setRecommendationOpen}

@@ -187,6 +187,32 @@ describe('TemplatesList editing', () => {
     expect(screen.getByText('Активна')).toBeInTheDocument();
   });
 
+  it('makes own-program creation primary when no program is active', async () => {
+    vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+      const path = String(input);
+      if (path === '/api/v1/programs/templates/mine') {
+        return new Response(JSON.stringify([]), { status: 200 });
+      }
+      if (path === '/api/v1/programs/templates/hidden') {
+        return new Response(JSON.stringify([]), { status: 200 });
+      }
+      return new Response(JSON.stringify({ detail: 'Unexpected request' }), { status: 500 });
+    });
+
+    renderList();
+
+    expect(await screen.findByRole('heading', { name: 'План ещё не выбран' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Создать свою программу' })).toHaveAttribute(
+      'href',
+      '#program-builder',
+    );
+    expect(screen.getByRole('link', { name: 'Программы и шаблоны' })).toHaveAttribute(
+      'href',
+      '#program-library',
+    );
+    expect(screen.queryByRole('button', { name: 'Подобрать программу' })).not.toBeInTheDocument();
+  });
+
   it('previews a deterministic recommendation before explicit start', async () => {
     renderList();
 

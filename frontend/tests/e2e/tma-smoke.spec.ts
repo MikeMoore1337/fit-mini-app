@@ -544,6 +544,87 @@ test('program history renders empty, one-block and full lifecycle states honestl
   }
 });
 
+test('simple program builder stays lightweight across Mobile Web, mocked TMA and desktop', async ({
+  mobilePage,
+  tma,
+  tmaPage,
+}) => {
+  await Promise.all([
+    tmaPage.emulateMedia({ reducedMotion: 'reduce' }),
+    mobilePage.emulateMedia({ reducedMotion: 'reduce' }),
+  ]);
+  await installPlatformApi(tmaPage, { programHistory: 'many' });
+  await installPlatformApi(mobilePage, { browserSession: true, programHistory: 'many' });
+  await Promise.all([
+    tmaPage.goto('/app?section=programs'),
+    mobilePage.goto('/app?section=programs'),
+  ]);
+
+  for (const page of [tmaPage, mobilePage]) {
+    const builder = page.locator('#program-builder');
+    await expect(builder.getByRole('heading', { name: 'Создать свою программу' })).toBeVisible();
+    await expect(builder.getByLabel('Название', { exact: true })).toHaveValue('Моя программа');
+    await expect(builder.getByLabel('Название дня 1')).toHaveValue('Тренировка 1');
+    await expect(builder.getByRole('combobox', { name: 'Цель', exact: true })).toBeHidden();
+    await expect(builder.getByRole('button', { name: 'Добавить упражнение' })).toBeVisible();
+    await expect(builder.getByRole('button', { name: 'Создать программу' })).toBeVisible();
+    expect(
+      await page
+        .locator('#program-builder, #program-library')
+        .evaluateAll((elements) => elements.map((element) => element.id)),
+    ).toEqual(['program-builder', 'program-library']);
+  }
+
+  for (const viewport of [
+    { width: 360, height: 800 },
+    { width: 390, height: 844 },
+    { width: 430, height: 932 },
+  ]) {
+    await tmaPage.setViewportSize(viewport);
+    await tma.setViewport(viewport.height, viewport.height);
+    await mobilePage.setViewportSize(viewport);
+    await expectNoHorizontalOverflow(tmaPage);
+    await expectNoHorizontalOverflow(mobilePage);
+    await expectTouchTargets(tmaPage.locator('#program-builder summary:visible'));
+    await expectTouchTargets(mobilePage.locator('#program-builder summary:visible'));
+    await expectTouchTargets(tmaPage.locator('#program-builder button:visible'));
+    await expectTouchTargets(mobilePage.locator('#program-builder button:visible'));
+  }
+
+  await mobilePage.setViewportSize({ width: 390, height: 844 });
+  await mobilePage.screenshot({
+    path: '../.artifacts/screenshots/task-118/mobile-web-390x844-light.png',
+    fullPage: true,
+  });
+  const mobileSearch = mobilePage
+    .locator('#program-builder')
+    .getByRole('combobox', { name: 'Поиск упражнения' });
+  await mobileSearch.fill('Тяга');
+  await expect(mobilePage.locator('html')).toHaveAttribute('data-yfc-keyboard', 'visible');
+  await expect(mobilePage.locator('#appBottomNav')).toBeHidden();
+  await mobileSearch.evaluate((element) => element.blur());
+  await expect(mobilePage.locator('html')).toHaveAttribute('data-yfc-keyboard', 'hidden');
+  await expect(mobileSearch).toHaveValue('Тяга');
+  await mobileSearch.fill('');
+  await mobileSearch.evaluate((element) => element.blur());
+
+  await tma.setTheme('dark');
+  await tmaPage.setViewportSize({ width: 430, height: 932 });
+  await tma.setViewport(932, 932);
+  await expect(tmaPage.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
+  await tmaPage.screenshot({
+    path: '../.artifacts/screenshots/task-118/mocked-tma-430x932-dark.png',
+    fullPage: true,
+  });
+
+  await mobilePage.setViewportSize({ width: 1280, height: 900 });
+  await expectNoHorizontalOverflow(mobilePage);
+  await mobilePage.screenshot({
+    path: '../.artifacts/screenshots/task-118/desktop-1280x900-light.png',
+    fullPage: true,
+  });
+});
+
 test('program history visual evidence covers compact Mobile Web, dark TMA and desktop', async ({
   browser,
 }) => {

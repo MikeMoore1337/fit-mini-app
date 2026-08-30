@@ -5409,7 +5409,12 @@ button.notification-row__main:focus-visible {
 }
 
 .app-section--programs
-  :where(.program-builder-tools, .program-exercise-advanced, .compact-disclosure) {
+  :where(
+    .program-builder-tools,
+    .program-builder-settings,
+    .program-exercise-advanced,
+    .compact-disclosure
+  ) {
   border-color: var(--v2-border);
   border-radius: var(--v2-control-radius);
   background: transparent;
