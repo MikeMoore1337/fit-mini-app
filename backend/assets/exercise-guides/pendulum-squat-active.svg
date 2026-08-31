@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="520" viewBox="0 0 720 520" role="img">
+  <style>
+    .background { fill: #111416; }
+    .frame { stroke: #879096; stroke-width: 15; fill: none; }
+    .lever { stroke: #b8c0c4; stroke-width: 13; fill: none; }
+    .bar { stroke: #d1d7da; stroke-width: 10; fill: none; }
+    .stop { stroke: #6f787d; stroke-width: 10; fill: none; }
+    .ghost { stroke: #5c666b; stroke-width: 6; stroke-dasharray: 10 12; fill: none; }
+    .cable { stroke: #b8c0c4; stroke-width: 4; fill: none; }
+    .pad { stroke: #3b454a; stroke-width: 24; fill: none; }
+    .seat { stroke: #3b454a; stroke-width: 28; fill: none; }
+    .platform { stroke: #6f787d; stroke-width: 18; fill: none; }
+    .weight { stroke: #6f787d; stroke-width: 11; fill: #242a2d; }
+    .body { stroke: #f2f5f3; stroke-width: 17; fill: none; }
+    .ghost-body { stroke: #aab2b6; stroke-width: 14; fill: none; }
+    .torso { stroke: #f2f5f3; stroke-width: 34; fill: none; }
+    .body-fill { fill: #f2f5f3; }
+    .grip { fill: #c8ff2e; }
+    .grip-line { stroke: #c8ff2e; stroke-width: 10; fill: none; }
+  </style>
+  <rect width="720" height="520" rx="32" class="background" />
+  <circle cx="660" cy="55" r="28" fill="#c8ff2e" />
+  <text x="660" y="64" text-anchor="middle" font-family="Arial, sans-serif" font-size="26" font-weight="700" fill="#111416">2</text>
+  <line x1="85" y1="450" x2="660" y2="450" class="frame" stroke-linecap="round" /><line x1="105" y1="445" x2="135" y2="75" class="frame" stroke-linecap="round" /><line x1="135" y1="75" x2="430" y2="165" class="lever" stroke-linecap="round" /><line x1="135" y1="75" x2="600" y2="420" class="ghost" stroke-linecap="round" /><line x1="470" y1="440" x2="635" y2="440" class="platform" stroke-linecap="round" /><line x1="395" y1="160" x2="465" y2="160" class="pad" stroke-linecap="round" /><circle cx="175" cy="105" r="30" class="weight" /><circle cx="175" cy="105" r="9" class="background" /><circle cx="425" cy="110" r="23" class="body-fill" /><line x1="430" y1="165" x2="425" y2="290" class="torso" stroke-linecap="round" /><line x1="425" y1="290" x2="465" y2="360" class="body" stroke-linecap="round" /><line x1="465" y1="360" x2="520" y2="435" class="body" stroke-linecap="round" /><line x1="430" y1="165" x2="485" y2="210" class="body" stroke-linecap="round" />
+</svg>

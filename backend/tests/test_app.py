@@ -1790,7 +1790,7 @@ def test_every_seeded_exercise_has_complete_guide_and_local_images(client):
     standard_exercises = [item for item in exercises if not item["is_custom"]]
     static_dir = Path(__file__).resolve().parents[2] / "backend" / "assets"
 
-    assert len(standard_exercises) == 168
+    assert len(standard_exercises) == 176
     assert len(client.get("/api/v1/programs/exercises", headers=headers).content) < 120_000
     assert all(
         exercise["has_guide"] and exercise["guide"] is None for exercise in standard_exercises

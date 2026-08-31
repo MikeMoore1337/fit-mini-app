@@ -23,6 +23,7 @@ from fitminiapp_api.models.exercise import (
 )
 from fitminiapp_api.services.exercise_catalog_metadata import (
     CATALOG_METADATA,
+    LOWER_BODY_MACHINE_SLUGS,
     UPPER_BODY_MACHINE_SLUGS,
 )
 from fitminiapp_api.services.seed import seed_demo_data
@@ -350,7 +351,7 @@ def test_task_120b_upper_body_machine_batch_contract(client) -> None:
     assert catalog_response.status_code == 200
     catalog = catalog_response.json()
     by_slug = {item["slug"]: item for item in catalog}
-    assert len(by_slug) == len(catalog) == 168
+    assert len(by_slug) == len(catalog) == 176
     assert set(UPPER_BODY_MACHINE_SLUGS) <= set(by_slug)
     assert len({item["title"] for item in catalog}) == len(catalog)
 
@@ -417,8 +418,8 @@ def test_task_120b_vector_media_provenance_and_integrity() -> None:
     assets = Path(__file__).resolve().parents[1] / "assets" / "exercise-guides"
     manifest = json.loads((assets / "manifest.json").read_text(encoding="utf-8"))
 
-    assert manifest["asset_count"] == 327
-    assert len(manifest["exercises"]) == 168
+    assert manifest["asset_count"] == 343
+    assert len(manifest["exercises"]) == 176
     for slug in UPPER_BODY_MACHINE_SLUGS:
         exercise = manifest["exercises"][slug]
         source = exercise["source"]
@@ -451,6 +452,142 @@ def test_task_120b_vector_media_provenance_and_integrity() -> None:
             filename = f"{slug}-{phase}.svg"
             digest = hashlib.sha256((assets / filename).read_bytes()).hexdigest()
             assert hashes_to_names[digest] == [filename]
+
+
+def test_task_120c_lower_body_machine_batch_contract_and_workout_integration(client) -> None:
+    headers = auth(client, telegram_user_id=32306, is_coach=False)
+    catalog_response = client.get("/api/v1/programs/exercises", headers=headers)
+
+    assert catalog_response.status_code == 200
+    catalog = catalog_response.json()
+    by_slug = {item["slug"]: item for item in catalog}
+    assert len(by_slug) == len(catalog) == 176
+    assert set(LOWER_BODY_MACHINE_SLUGS) <= set(by_slug)
+    assert len({item["title"] for item in catalog}) == len(catalog)
+
+    expected_patterns = {
+        "pendulum-squat": "squat",
+        "plate-loaded-leg-press": "squat",
+        "unilateral-leg-press": "squat",
+        "machine-hip-thrust": "glute",
+        "smith-split-squat": "lunge",
+        "machine-glute-kickback": "leg_isolation",
+        "v-squat-machine": "squat",
+        "reverse-hyperextension": "hinge",
+    }
+    for slug, movement_pattern in expected_patterns.items():
+        item = by_slug[slug]
+        assert item["metric_type"] == "strength"
+        assert item["aliases"]
+        assert item["movement_pattern"] == movement_pattern
+        assert item["machine_variant_tags"]
+        assert item["execution_variant_tags"]
+        assert item["equipment_ids"] == ["machine"]
+        assert item["has_guide"] is True
+
+        guide_response = client.get(
+            f"/api/v1/programs/exercises/{item['id']}/guide",
+            headers=headers,
+        )
+        assert guide_response.status_code == 200
+        guide = guide_response.json()
+        assert len(guide["technique_steps"]) == 3
+        assert len(guide["common_mistakes"]) == 3
+        assert guide["safety_notes"]
+        assert guide["source_name"] == "Your Fitness Coach"
+        assert guide["source_license"] == "Иллюстрация создана для приложения"
+        assert [media["url"].rsplit("/", 1)[-1] for media in guide["media"]] == [
+            f"{slug}-active.svg",
+            f"{slug}-start.svg",
+        ]
+        assert all(media["alt"] for media in guide["media"])
+
+    assert "жим ногами на блинах" in by_slug["plate-loaded-leg-press"]["aliases"]
+    assert "pendulum squat" in by_slug["pendulum-squat"]["aliases"]
+    assert "ягодичный тренажер" in by_slug["machine-hip-thrust"]["aliases"]
+    assert "smith lunge" in by_slug["smith-split-squat"]["aliases"]
+    assert "смит присед" in by_slug["smith-squat"]["aliases"]
+    assert "hack squat" in by_slug["hack-squat"]["aliases"]
+    assert "сгибание ног лежа" in by_slug["leg-curl"]["aliases"]
+    assert "сгибание ног сидя" in by_slug["seated-leg-curl"]["aliases"]
+    assert "сгибание ног стоя" in by_slug["standing-leg-curl"]["aliases"]
+    assert "жим ногами широкая постановка" in by_slug["leg-press"]["aliases"]
+    assert by_slug["calf-press"]["movement_pattern"] == "calf"
+    assert by_slug["unilateral-leg-press"]["execution_variant_tags"] == ["unilateral"]
+    assert by_slug["smith-split-squat"]["machine_variant_tags"] == ["smith"]
+    assert {item["slug"] for item in by_slug["machine-hip-thrust"]["alternatives"]} == {
+        "hip-thrust"
+    }
+
+    machine_hip_thrust = by_slug["machine-hip-thrust"]
+    created = client.post(
+        "/api/v1/programs/templates",
+        headers=headers,
+        json={
+            "title": "Ноги и ягодицы 120C",
+            "goal": "recomposition",
+            "level": "beginner",
+            "mode": "self",
+            "assign_after_create": True,
+            "days": [
+                {
+                    "title": "Низ тела",
+                    "exercises": [
+                        {
+                            "exercise_id": machine_hip_thrust["id"],
+                            "prescribed_sets": 1,
+                            "prescribed_reps": "10-12",
+                            "rest_seconds": 90,
+                        }
+                    ],
+                }
+            ],
+        },
+    )
+    assert created.status_code == 200
+    today = client.get("/api/v1/workouts/today", headers=headers)
+    assert today.status_code == 200
+    workout = today.json()
+    assert workout["exercises"][0]["exercise_id"] == machine_hip_thrust["id"]
+    assert workout["exercises"][0]["exercise_title"] == machine_hip_thrust["title"]
+    started = client.post(f"/api/v1/workouts/{workout['id']}/start", headers=headers)
+    assert started.status_code == 200
+
+
+def test_task_120c_vector_media_provenance_and_integrity() -> None:
+    assets = Path(__file__).resolve().parents[1] / "assets" / "exercise-guides"
+    manifest = json.loads((assets / "manifest.json").read_text(encoding="utf-8"))
+
+    hashes_to_names: dict[str, list[str]] = {}
+    for path in assets.iterdir():
+        if path.suffix not in {".jpg", ".svg"}:
+            continue
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        hashes_to_names.setdefault(digest, []).append(path.name)
+
+    for slug in LOWER_BODY_MACHINE_SLUGS:
+        exercise = manifest["exercises"][slug]
+        source = exercise["source"]
+        assert source["source_kind"] == "yfc_original"
+        assert source["author_or_generator_record"] == (
+            "scripts/build_lower_body_machine_guide_assets.py@Task-120C"
+        )
+        assert source["reviewer"] == "fitness-domain-reviewer / Task 120C"
+        assert source["commercial_use_verified"] is True
+        assert source["redistribution_verified"] is True
+        assert source["semantic_identity_verified"] is True
+        assert source["setup_verified"] is True
+        assert source["key_positions_verified"] is True
+        assert len(exercise["media"]) == 2
+        for media in exercise["media"]:
+            path = assets / media["path"]
+            assert path.suffix == ".svg"
+            assert media["alt"]
+            assert media["width"] == 720
+            assert media["height"] == 520
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+            assert digest == media["asset_sha256"]
+            assert hashes_to_names[digest] == [path.name]
 
 
 def test_custom_exercise_structured_metadata_can_be_partial(client) -> None:
@@ -555,5 +692,5 @@ def test_exercise_catalog_metadata_loading_has_no_per_row_queries(client) -> Non
         event.remove(engine, "before_cursor_execute", count_selects)
 
     assert response.status_code == 200
-    assert len(response.json()) == 168
+    assert len(response.json()) == 176
     assert select_count <= 20
