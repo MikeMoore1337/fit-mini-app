@@ -2775,8 +2775,8 @@ details[open] > summary .disclosure-icon svg {
     font-size: 1rem;
   }
   .exercise-guide-images {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
   .exercise-guide-image figcaption {
     padding: 8px 4px;

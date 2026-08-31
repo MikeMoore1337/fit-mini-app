@@ -4573,10 +4573,18 @@ export interface components {
             url: string;
             /** Poster */
             poster: string;
+            /** Phase Id */
+            phase_id: string;
             /** Phase */
             phase: string;
             /** Alt */
             alt: string;
+            /** Asset Id */
+            asset_id?: string | null;
+            /** Asset Version */
+            asset_version?: string | null;
+            /** Variant Key */
+            variant_key?: string | null;
             /** Source Name */
             source_name: string;
             /** Source Url */
@@ -4593,6 +4601,21 @@ export interface components {
             byte_size: number;
             /** Sort Order */
             sort_order: number;
+            /** Sources */
+            sources: components["schemas"]["ExerciseGuideMediaSource"][];
+        };
+        /** ExerciseGuideMediaSource */
+        ExerciseGuideMediaSource: {
+            /** Url */
+            url: string;
+            /** Mime Type */
+            mime_type: string;
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
+            /** Byte Size */
+            byte_size: number;
         };
         /** ExerciseGuideMuscle */
         ExerciseGuideMuscle: {

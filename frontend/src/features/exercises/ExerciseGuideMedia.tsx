@@ -5,6 +5,17 @@ import { useModalA11y } from '../../shared/ui/useModalA11y';
 
 type GuideMediaItem = ExerciseGuide['media'][number];
 
+const cardSizes = '(max-width: 620px) calc(100vw - 48px), (max-width: 1040px) 44vw, 470px';
+const lightboxSizes = '(max-width: 620px) calc(100vw - 24px), min(92vw, 1280px)';
+
+function responsiveSources(item: GuideMediaItem) {
+  return item.sources
+    .slice()
+    .sort((left, right) => left.width - right.width)
+    .map((source) => `${source.url} ${source.width}w`)
+    .join(', ');
+}
+
 export function ExerciseGuideMedia({
   items,
   onExpandedChange,
@@ -22,7 +33,7 @@ export function ExerciseGuideMedia({
   const activeItem = expandedIndex === null ? null : items[expandedIndex];
   const availableItemsCount = items.filter((item) => !failedUrls.has(item.url)).length;
   const hasStrengthPhases = items.some(
-    (item) => item.phase === 'Фаза усилия' || item.phase === 'Фаза возврата',
+    (item) => item.phase_id === 'concentric_end' || item.phase_id === 'eccentric_end',
   );
 
   const showAdjacent = (direction: -1 | 1) => {
@@ -56,7 +67,7 @@ export function ExerciseGuideMedia({
         {items.map((item, index) => {
           const failed = failedUrls.has(item.url);
           return (
-            <figure className="exercise-guide-image" key={item.url}>
+            <figure className="exercise-guide-image" key={item.asset_id ?? item.url}>
               {failed ? (
                 <div
                   className="exercise-guide-image__frame exercise-guide-image__fallback"
@@ -79,6 +90,8 @@ export function ExerciseGuideMedia({
                 >
                   <img
                     src={item.url}
+                    srcSet={responsiveSources(item)}
+                    sizes={cardSizes}
                     alt={item.alt}
                     width={item.width}
                     height={item.height}
@@ -131,7 +144,9 @@ export function ExerciseGuideMedia({
           )}
           <figure>
             <img
-              src={activeItem.url}
+              src={activeItem.sources.at(-1)?.url ?? activeItem.url}
+              srcSet={responsiveSources(activeItem)}
+              sizes={lightboxSizes}
               alt={activeItem.alt}
               width={activeItem.width}
               height={activeItem.height}

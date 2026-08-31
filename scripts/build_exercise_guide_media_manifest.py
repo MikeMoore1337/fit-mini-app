@@ -10,11 +10,19 @@ import argparse
 import hashlib
 import json
 import sys
-import xml.etree.ElementTree as ET
 from functools import lru_cache
 from pathlib import Path
 
 from PIL import Image
+
+from build_exercise_human_visual_assets import (
+    ASSET_VERSION,
+    HUMAN_VISUAL_SPECS,
+    load_review_lock,
+)
+from build_exercise_human_visual_assets import (
+    PHASES as HUMAN_PHASES,
+)
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 BACKEND_DIR = ROOT_DIR / "backend"
@@ -24,29 +32,6 @@ INTERNAL_SOURCE = {
     "url": "/",
     "license": "Иллюстрация создана для приложения",
     "license_url": None,
-}
-VECTOR_SOURCE = {
-    "source_kind": "yfc_original",
-    "name": "Your Fitness Coach",
-    "url": "/",
-    "source_revision_or_retrieved_at": "2026-08-31",
-    "license": "Иллюстрация создана для приложения",
-    "license_url": None,
-    "license_url_or_local_notice": "backend/assets/exercise-guides/NOTICE.md",
-    "author_or_generator_record": "scripts/build_upper_body_machine_guide_assets.py@Task-120B",
-    "reviewer": "fitness-domain-reviewer / Task 120B",
-    "reviewed_at": "2026-08-31",
-    "commercial_use_verified": True,
-    "redistribution_verified": True,
-    "modification_verified": True,
-    "semantic_identity_verified": True,
-    "setup_verified": True,
-    "key_positions_verified": True,
-}
-LOWER_BODY_VECTOR_SOURCE = {
-    **VECTOR_SOURCE,
-    "author_or_generator_record": "scripts/build_lower_body_machine_guide_assets.py@Task-120C",
-    "reviewer": "fitness-domain-reviewer / Task 120C",
 }
 PHASES = {
     "concentric_end": "Фаза усилия",
@@ -259,13 +244,11 @@ def catalog_definition() -> tuple[
     set[str],
     dict[str, str | None],
     dict[str, dict[str, str]],
-    set[str],
 ]:
     if str(BACKEND_DIR) not in sys.path:
         sys.path.insert(0, str(BACKEND_DIR))
 
     from fitminiapp_api.services.exercise_catalog_metadata import (
-        LOWER_BODY_MACHINE_SLUGS,
         MEDIA_ALT_BY_PHASE,
     )
     from fitminiapp_api.services.exercise_guides import (
@@ -316,15 +299,12 @@ def catalog_definition() -> tuple[
         if {start_phase, active_phase} == {"concentric_end", "eccentric_end"}:
             files.sort(key=lambda item: item[1] != "concentric_end")
         result[slug] = files
+    if set(YFC_ORIGINAL_VECTOR_SLUGS) != set(HUMAN_VISUAL_SPECS):
+        raise ValueError("Task 120E visual specs do not cover the full YFC machine batch")
     for slug in YFC_ORIGINAL_VECTOR_SLUGS:
-        start_phase, active_phase = phase_ids_for_slug(slug)
-        files = [
-            (f"{slug}-start.svg", start_phase),
-            (f"{slug}-active.svg", active_phase),
+        result[slug] = [
+            (f"human-v1/{slug}/{phase_id}-480w.webp", phase_id) for phase_id in HUMAN_PHASES
         ]
-        if {start_phase, active_phase} == {"concentric_end", "eccentric_end"}:
-            files.sort(key=lambda item: item[1] != "concentric_end")
-        result[slug] = files
     result.update(
         {slug: [(f"{slug}-technique.jpg", "technique")] for slug in GENERATED_CARDIO_SLUGS}
     )
@@ -339,22 +319,30 @@ def catalog_definition() -> tuple[
         GENERATED_CARDIO_SLUGS,
         upstream_source,
         MEDIA_ALT_BY_PHASE,
-        set(LOWER_BODY_MACHINE_SLUGS),
     )
 
 
-def build_manifest(asset_dir: Path) -> dict:
+def build_manifest(asset_dir: Path, review_lock: Path) -> dict:
     (
         expected,
         generated_cardio_slugs,
         upstream_source,
         media_alt_by_phase,
-        lower_body_vector_slugs,
     ) = catalog_definition()
-    expected_names = {name for files in expected.values() for name, _ in files}
-    actual_names = {path.name for pattern in ("*.jpg", "*.svg") for path in asset_dir.glob(pattern)}
-    missing = sorted(expected_names - actual_names)
-    unexpected = sorted(actual_names - expected_names)
+    human_review = load_review_lock(review_lock)
+    expected_paths = {
+        name for files in expected.values() for name, _ in files if not name.startswith("human-v1/")
+    }
+    for exercise in human_review["exercises"].values():
+        for phase in exercise["phases"].values():
+            expected_paths.update(source["path"] for source in phase["sources"])
+    actual_paths = {
+        path.relative_to(asset_dir).as_posix()
+        for pattern in ("*.jpg", "*.webp", "*.svg")
+        for path in asset_dir.rglob(pattern)
+    }
+    missing = sorted(expected_paths - actual_paths)
+    unexpected = sorted(actual_paths - expected_paths)
     if missing or unexpected:
         details = []
         if missing:
@@ -364,27 +352,34 @@ def build_manifest(asset_dir: Path) -> dict:
         raise ValueError("Exercise guide asset inventory mismatch (" + "; ".join(details) + ")")
 
     exercises = {}
+    human_hashes: dict[str, str] = {}
     for slug in sorted(expected):
-        source = (
-            INTERNAL_SOURCE
-            if slug in generated_cardio_slugs
-            else LOWER_BODY_VECTOR_SOURCE
-            if slug in lower_body_vector_slugs
-            else VECTOR_SOURCE
-            if slug in media_alt_by_phase
-            else upstream_source
-        )
+        if slug in HUMAN_VISUAL_SPECS:
+            review_exercise = human_review["exercises"][slug]
+            source = {
+                "source_kind": "yfc_ai_generated",
+                "name": "Your Fitness Coach",
+                "url": "/",
+                "source_revision_or_retrieved_at": human_review["created_at"],
+                "license": "Иллюстрация создана для приложения",
+                "license_url": None,
+                "license_url_or_local_notice": human_review["rights"]["local_notice"],
+                "origin": human_review["origin"],
+                "asset_type": human_review["asset_type"],
+                "asset_version": human_review["asset_version"],
+                "variant_key": review_exercise["variant_key"],
+                "generation": human_review["generation"],
+                "rights": human_review["rights"],
+                "owner_gates": human_review["owner_gates"],
+            }
+        else:
+            source = INTERNAL_SOURCE if slug in generated_cardio_slugs else upstream_source
         media = []
         for sort_order, (filename, phase_id) in enumerate(expected[slug]):
             path = asset_dir / filename
-            if path.suffix == ".svg":
-                root = ET.parse(path).getroot()
-                width = int(root.attrib["width"])
-                height = int(root.attrib["height"])
-            else:
-                with Image.open(path) as image:
-                    width, height = image.size
-                    image.verify()
+            with Image.open(path) as image:
+                width, height = image.size
+                image.verify()
             media_item = {
                 "type": "image",
                 "path": filename,
@@ -396,20 +391,66 @@ def build_manifest(asset_dir: Path) -> dict:
                 "byte_size": path.stat().st_size,
                 "sort_order": sort_order,
             }
-            if slug in media_alt_by_phase:
+            if slug in HUMAN_VISUAL_SPECS:
+                locked_phase = human_review["exercises"][slug]["phases"][phase_id]
+                locked_sources = locked_phase["sources"]
+                for locked_source in locked_sources:
+                    source_path = asset_dir / locked_source["path"]
+                    if source_path.stat().st_size != locked_source["byte_size"]:
+                        raise ValueError(f"Byte-size mismatch: {source_path}")
+                    with Image.open(source_path) as derivative:
+                        derivative.load()
+                        if derivative.size != (
+                            locked_source["width"],
+                            locked_source["height"],
+                        ):
+                            raise ValueError(f"Dimension mismatch: {source_path}")
+                    digest = hashlib.sha256(source_path.read_bytes()).hexdigest()
+                    if digest != locked_source["sha256"]:
+                        raise ValueError(f"SHA-256 mismatch: {source_path}")
+                    if previous := human_hashes.get(digest):
+                        raise ValueError(
+                            f"Duplicate Task 120E derivative hash: {previous}, {source_path}"
+                        )
+                    human_hashes[digest] = source_path.as_posix()
+                mobile_source = next(source for source in locked_sources if source["width"] == 480)
+                if mobile_source["byte_size"] > 160 * 1024:
+                    raise ValueError(f"Mobile phase exceeds 160 KB: {slug}/{phase_id}")
+                variant_key = human_review["exercises"][slug]["variant_key"]
+                media_item.update(
+                    {
+                        "asset_id": f"{slug}:{variant_key}:{phase_id}:{ASSET_VERSION}",
+                        "asset_version": ASSET_VERSION,
+                        "variant_key": variant_key,
+                        "asset_type": human_review["asset_type"],
+                        "origin": human_review["origin"],
+                        "source_master_sha256": locked_phase["source_master_sha256"],
+                        "asset_sha256": mobile_source["sha256"],
+                        "sources": locked_sources,
+                        "reviews": locked_phase["reviews"],
+                    }
+                )
+            elif slug in media_alt_by_phase:
                 media_item["asset_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
             if alt := media_alt_by_phase.get(slug, {}).get(phase_id):
                 media_item["alt"] = alt
             media.append(media_item)
         exercises[slug] = {"source": source, "media": media}
 
+        if slug in HUMAN_VISUAL_SPECS:
+            mobile_pair_bytes = sum(
+                next(source for source in item["sources"] if source["width"] == 480)["byte_size"]
+                for item in media
+            )
+            if mobile_pair_bytes > 320 * 1024:
+                raise ValueError(f"Mobile pair exceeds 320 KB: {slug}")
+
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "default_pattern": "static-phases",
         "asset_count": sum(len(item["media"]) for item in exercises.values()),
-        "total_bytes": sum(
-            media["byte_size"] for item in exercises.values() for media in item["media"]
-        ),
+        "derivative_count": len(expected_paths),
+        "total_bytes": sum((asset_dir / path).stat().st_size for path in expected_paths),
         "exercises": exercises,
     }
 
@@ -426,10 +467,15 @@ def main() -> None:
         type=Path,
         default=ROOT_DIR / "backend" / "assets" / "exercise-guides" / "manifest.json",
     )
+    parser.add_argument(
+        "--review-lock",
+        type=Path,
+        default=ROOT_DIR / "docs" / "exercises" / "catalog-v2" / "120E_ASSET_REVIEW.json",
+    )
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
 
-    manifest = build_manifest(args.asset_dir)
+    manifest = build_manifest(args.asset_dir, args.review_lock)
     rendered = json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
     if args.check:
         if not args.output.exists() or args.output.read_text(encoding="utf-8") != rendered:

@@ -808,11 +808,15 @@ async function mockApi(
             media: [
               {
                 type: 'image',
+                phase_id: 'concentric_end',
                 phase: 'Фаза усилия',
                 url: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>',
                 poster:
                   'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>',
                 alt: 'Фаза усилия',
+                asset_id: 'test-lat-pulldown-concentric',
+                asset_version: 'test-v1',
+                variant_key: 'test-cable-lat-pulldown',
                 source_name: 'Test source',
                 source_url: 'https://example.com',
                 source_license: 'Public domain',
@@ -821,14 +825,27 @@ async function mockApi(
                 height: 300,
                 byte_size: 100,
                 sort_order: 0,
+                sources: [
+                  {
+                    url: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>',
+                    mime_type: 'image/svg+xml',
+                    width: 400,
+                    height: 300,
+                    byte_size: 100,
+                  },
+                ],
               },
               {
                 type: 'image',
+                phase_id: 'eccentric_end',
                 phase: 'Фаза возврата',
                 url: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>%20',
                 poster:
                   'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>%20',
                 alt: 'Фаза возврата',
+                asset_id: 'test-lat-pulldown-eccentric',
+                asset_version: 'test-v1',
+                variant_key: 'test-cable-lat-pulldown',
                 source_name: 'Test source',
                 source_url: 'https://example.com',
                 source_license: 'Public domain',
@@ -837,6 +854,15 @@ async function mockApi(
                 height: 300,
                 byte_size: 100,
                 sort_order: 1,
+                sources: [
+                  {
+                    url: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"/>%20',
+                    mime_type: 'image/svg+xml',
+                    width: 400,
+                    height: 300,
+                    byte_size: 100,
+                  },
+                ],
               },
             ],
             source_name: 'Test source',

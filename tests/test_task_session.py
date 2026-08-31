@@ -911,6 +911,40 @@ def test_task_pr_forbids_artifacts_and_credential_paths(filename: str) -> None:
         task_session.validate_task_pull_request_files([{"filename": filename}])
 
 
+def test_task_pr_accepts_complete_inventory_larger_than_one_api_page() -> None:
+    files = [{"filename": f"assets/exercise-{index}.webp"} for index in range(169)]
+
+    task_session.validate_task_pull_request_files(files, expected_count=169)
+
+
+def test_task_pr_rejects_incomplete_paginated_inventory() -> None:
+    files = [{"filename": f"assets/exercise-{index}.webp"} for index in range(100)]
+
+    with pytest.raises(task_session.TaskSessionError, match="received 100 of 169"):
+        task_session.validate_task_pull_request_files(files, expected_count=169)
+
+
+def test_github_client_collects_every_task_pr_file_page(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = task_session.GitHubClient(object(), repo_slug="owner/repository")
+    calls: list[str] = []
+
+    def fake_api(endpoint: str) -> list[dict[str, str]]:
+        calls.append(endpoint)
+        if endpoint.endswith("page=1"):
+            return [{"filename": f"assets/exercise-{index}.webp"} for index in range(100)]
+        return [{"filename": f"assets/exercise-{index}.webp"} for index in range(100, 169)]
+
+    monkeypatch.setattr(client, "api", fake_api)
+
+    assert len(client.pull_request_files(101)) == 169
+    assert calls == [
+        "pulls/101/files?per_page=100&page=1",
+        "pulls/101/files?per_page=100&page=2",
+    ]
+
+
 def test_recover_is_read_only_and_preserves_dirty_unique_task_state(
     repository: tuple[Path, Any],
 ) -> None:
