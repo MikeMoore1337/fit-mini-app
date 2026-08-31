@@ -234,8 +234,12 @@ def test_seeded_exercise_metadata_and_alternatives_are_serialized(client) -> Non
         "type": "image",
         "url": "/static/exercise-guides/bench-press-start.jpg",
         "poster": "/static/exercise-guides/bench-press-start.jpg",
+        "phase_id": "concentric_end",
         "phase": "Фаза усилия",
         "alt": "Жим лежа: фаза усилия",
+        "asset_id": None,
+        "asset_version": None,
+        "variant_key": None,
         "source_name": "free-exercise-db",
         "source_url": "https://github.com/yuhonas/free-exercise-db",
         "source_license": "Unlicense (общественное достояние)",
@@ -244,6 +248,15 @@ def test_seeded_exercise_metadata_and_alternatives_are_serialized(client) -> Non
         "height": 567,
         "byte_size": 72816,
         "sort_order": 0,
+        "sources": [
+            {
+                "url": "/static/exercise-guides/bench-press-start.jpg",
+                "mime_type": "image/jpeg",
+                "width": 850,
+                "height": 567,
+                "byte_size": 72816,
+            }
+        ],
     }
     assert guide["media"][1]["phase"] == "Фаза возврата"
     assert guide["images"] == [
@@ -388,9 +401,15 @@ def test_task_120b_upper_body_machine_batch_contract(client) -> None:
         "forearms",
     }
     assert [item["url"].rsplit("/", 1)[-1] for item in guide["media"]] == [
-        "lever-high-row-active.svg",
-        "lever-high-row-start.svg",
+        "concentric_end-480w.webp",
+        "eccentric_end-480w.webp",
     ]
+    assert [item["phase_id"] for item in guide["media"]] == [
+        "concentric_end",
+        "eccentric_end",
+    ]
+    assert all(item["asset_version"] == "120e-v1" for item in guide["media"])
+    assert all(len(item["sources"]) == 3 for item in guide["media"])
     assert [item["phase"] for item in guide["media"]] == [
         "Фаза усилия",
         "Фаза возврата",
@@ -414,44 +433,184 @@ def test_task_120b_upper_body_machine_batch_contract(client) -> None:
                 assert normalized_titles[normalized] == slug
 
 
-def test_task_120b_vector_media_provenance_and_integrity() -> None:
+def test_task_120e_human_visual_manifest_provenance_and_integrity() -> None:
     assets = Path(__file__).resolve().parents[1] / "assets" / "exercise-guides"
     manifest = json.loads((assets / "manifest.json").read_text(encoding="utf-8"))
+    slugs = set(UPPER_BODY_MACHINE_SLUGS) | set(LOWER_BODY_MACHINE_SLUGS)
 
+    assert manifest["schema_version"] == 2
     assert manifest["asset_count"] == 343
+    assert manifest["derivative_count"] == 415
     assert len(manifest["exercises"]) == 176
-    for slug in UPPER_BODY_MACHINE_SLUGS:
+    derivative_hashes: dict[str, str] = {}
+    for slug in slugs:
         exercise = manifest["exercises"][slug]
         source = exercise["source"]
-        assert source["source_kind"] == "yfc_original"
+        assert source["source_kind"] == "yfc_ai_generated"
         assert source["source_revision_or_retrieved_at"] == "2026-08-31"
         assert source["license_url_or_local_notice"] == "backend/assets/exercise-guides/NOTICE.md"
-        assert source["commercial_use_verified"] is True
-        assert source["redistribution_verified"] is True
-        assert source["semantic_identity_verified"] is True
-        assert source["setup_verified"] is True
-        assert source["key_positions_verified"] is True
+        assert source["origin"] == "ai_generated"
+        assert source["asset_type"] == "render_3d"
+        assert source["asset_version"] == "120e-v1"
+        assert source["variant_key"].startswith("canonical_")
+        assert source["generation"]["provider"] == "OpenAI built-in image_gen"
+        assert source["rights"]["commercial_use_verified"] is True
+        assert source["rights"]["redistribution_verified"] is True
+        assert source["rights"]["modification_verified"] is True
+        assert source["owner_gates"]["gate_a"]["status"] == "approved"
+        assert source["owner_gates"]["gate_b"]["status"] == "approved"
+        assert source["owner_gates"]["gate_b"]["verdict"] == "APPROVE_120E_EXACT_ASSET_REVISION"
         assert len(exercise["media"]) == 2
+        assert [item["phase_id"] for item in exercise["media"]] == [
+            "concentric_end",
+            "eccentric_end",
+        ]
+        mobile_pair_bytes = 0
         for media in exercise["media"]:
             path = assets / media["path"]
-            assert path.suffix == ".svg"
+            assert path.suffix == ".webp"
             assert path.is_file()
             assert media["alt"]
-            assert media["width"] == 720
-            assert media["height"] == 520
+            assert media["width"] == 480
+            assert media["height"] == 320
+            assert media["asset_version"] == "120e-v1"
+            assert media["variant_key"] == source["variant_key"]
+            assert media["asset_id"].endswith(":120e-v1")
+            assert len(media["sources"]) == 3
+            assert [item["width"] for item in media["sources"]] == [480, 768, 1280]
             assert hashlib.sha256(path.read_bytes()).hexdigest() == media["asset_sha256"]
+            mobile_pair_bytes += media["byte_size"]
+            assert media["byte_size"] <= 160 * 1024
+            assert all(
+                value in {"pass", "pass_with_limitations"}
+                for value in media["reviews"].values()
+                if isinstance(value, str) and value != "2026-08-31"
+            )
+            for derivative in media["sources"]:
+                derivative_path = assets / derivative["path"]
+                assert derivative_path.is_file()
+                assert derivative_path.stat().st_size == derivative["byte_size"]
+                digest = hashlib.sha256(derivative_path.read_bytes()).hexdigest()
+                assert digest == derivative["sha256"]
+                assert digest not in derivative_hashes
+                derivative_hashes[digest] = derivative["path"]
+        assert mobile_pair_bytes <= 320 * 1024
 
-    hashes_to_names: dict[str, list[str]] = {}
-    for path in assets.iterdir():
-        if path.suffix not in {".jpg", ".svg"}:
-            continue
-        digest = hashlib.sha256(path.read_bytes()).hexdigest()
-        hashes_to_names.setdefault(digest, []).append(path.name)
-    for slug in UPPER_BODY_MACHINE_SLUGS:
-        for phase in ("start", "active"):
-            filename = f"{slug}-{phase}.svg"
-            digest = hashlib.sha256((assets / filename).read_bytes()).hexdigest()
-            assert hashes_to_names[digest] == [filename]
+    legacy_names = {f"{slug}-{phase}.svg" for slug in slugs for phase in ("start", "active")}
+    assert not any((assets / name).exists() for name in legacy_names)
+
+
+def test_task_120e_builder_cannot_mint_semantic_approval(tmp_path: Path) -> None:
+    from scripts.build_exercise_human_visual_assets import load_review_lock
+
+    review_path = (
+        Path(__file__).resolve().parents[2]
+        / "docs"
+        / "exercises"
+        / "catalog-v2"
+        / "120E_ASSET_REVIEW.json"
+    )
+    review = json.loads(review_path.read_text(encoding="utf-8"))
+    review["automated_semantic_approval"] = True
+    invalid_lock = tmp_path / "invalid-review-lock.json"
+    invalid_lock.write_text(json.dumps(review), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Automated semantic approval"):
+        load_review_lock(invalid_lock)
+
+
+def test_task_120e_builders_require_exact_gate_b_verdict(tmp_path: Path) -> None:
+    from scripts.build_exercise_human_visual_assets import load_review_lock
+
+    review_path = (
+        Path(__file__).resolve().parents[2]
+        / "docs"
+        / "exercises"
+        / "catalog-v2"
+        / "120E_ASSET_REVIEW.json"
+    )
+    review = json.loads(review_path.read_text(encoding="utf-8"))
+    review["owner_gates"]["gate_b"] = {
+        "status": "approved",
+        "verdict": "APPROVE_DIFFERENT_REVISION",
+        "approved_at": "2026-08-31",
+    }
+    invalid_lock = tmp_path / "wrong-gate-b-verdict-review-lock.json"
+    invalid_lock.write_text(json.dumps(review), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Gate B exact verdict"):
+        load_review_lock(invalid_lock)
+
+
+def test_task_120e_builder_stages_before_replacing_derivatives(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from PIL import Image
+    from scripts import build_exercise_human_visual_assets as builder
+
+    slug = "test-machine"
+    monkeypatch.setattr(
+        builder,
+        "HUMAN_VISUAL_SPECS",
+        {slug: builder.HumanVisualSpec("canonical_test_machine")},
+    )
+    source_dir = tmp_path / "sources"
+    source_dir.mkdir()
+    source_name = f"{slug}-concentric_end-v1.png"
+    source_path = source_dir / source_name
+    Image.new("RGB", (1536, 1024), (32, 32, 32)).save(source_path)
+    source_digest = builder.sha256(source_path)
+    reviews = {
+        "domain": "pass",
+        "anatomy": "pass",
+        "equipment": "pass",
+        "phase": "pass",
+        "visual_style": "pass",
+        "mobile": "pass",
+        "legal": "pass_with_limitations",
+    }
+    lock = {
+        "schema_version": 1,
+        "asset_version": builder.ASSET_VERSION,
+        "review_record_kind": "human_review_exact_revision",
+        "automated_semantic_approval": False,
+        "owner_gates": {
+            "gate_a": {
+                "status": "approved",
+                "verdict": "APPROVE_120E_VISUAL_DIRECTION",
+            },
+            "gate_b": {
+                "status": "approved",
+                "verdict": "APPROVE_120E_EXACT_ASSET_REVISION",
+            },
+        },
+        "exercises": {
+            slug: {
+                "variant_key": "canonical_test_machine",
+                "phases": {
+                    "concentric_end": {
+                        "source_master_filename": source_name,
+                        "source_master_sha256": source_digest,
+                        "reviews": reviews,
+                        "sources": [],
+                    }
+                },
+            }
+        },
+        "source_set_sha256": "not-reached",
+        "derivative_set_sha256": "not-reached",
+    }
+    lock_path = tmp_path / "review-lock.json"
+    lock_path.write_text(json.dumps(lock), encoding="utf-8")
+    asset_dir = tmp_path / "assets"
+    existing = asset_dir / "human-v1" / slug / "concentric_end-480w.webp"
+    existing.parent.mkdir(parents=True)
+    existing.write_bytes(b"approved-existing-derivative")
+
+    with pytest.raises(ValueError, match="Derivative output is not the reviewed revision"):
+        builder.build(source_dir, asset_dir, lock_path)
+
+    assert existing.read_bytes() == b"approved-existing-derivative"
 
 
 def test_task_120c_lower_body_machine_batch_contract_and_workout_integration(client) -> None:
@@ -497,9 +656,14 @@ def test_task_120c_lower_body_machine_batch_contract_and_workout_integration(cli
         assert guide["source_name"] == "Your Fitness Coach"
         assert guide["source_license"] == "Иллюстрация создана для приложения"
         assert [media["url"].rsplit("/", 1)[-1] for media in guide["media"]] == [
-            f"{slug}-active.svg",
-            f"{slug}-start.svg",
+            "concentric_end-480w.webp",
+            "eccentric_end-480w.webp",
         ]
+        assert [media["phase_id"] for media in guide["media"]] == [
+            "concentric_end",
+            "eccentric_end",
+        ]
+        assert all(media["asset_version"] == "120e-v1" for media in guide["media"])
         assert all(media["alt"] for media in guide["media"])
 
     assert "жим ногами на блинах" in by_slug["plate-loaded-leg-press"]["aliases"]
@@ -552,42 +716,6 @@ def test_task_120c_lower_body_machine_batch_contract_and_workout_integration(cli
     assert workout["exercises"][0]["exercise_title"] == machine_hip_thrust["title"]
     started = client.post(f"/api/v1/workouts/{workout['id']}/start", headers=headers)
     assert started.status_code == 200
-
-
-def test_task_120c_vector_media_provenance_and_integrity() -> None:
-    assets = Path(__file__).resolve().parents[1] / "assets" / "exercise-guides"
-    manifest = json.loads((assets / "manifest.json").read_text(encoding="utf-8"))
-
-    hashes_to_names: dict[str, list[str]] = {}
-    for path in assets.iterdir():
-        if path.suffix not in {".jpg", ".svg"}:
-            continue
-        digest = hashlib.sha256(path.read_bytes()).hexdigest()
-        hashes_to_names.setdefault(digest, []).append(path.name)
-
-    for slug in LOWER_BODY_MACHINE_SLUGS:
-        exercise = manifest["exercises"][slug]
-        source = exercise["source"]
-        assert source["source_kind"] == "yfc_original"
-        assert source["author_or_generator_record"] == (
-            "scripts/build_lower_body_machine_guide_assets.py@Task-120C"
-        )
-        assert source["reviewer"] == "fitness-domain-reviewer / Task 120C"
-        assert source["commercial_use_verified"] is True
-        assert source["redistribution_verified"] is True
-        assert source["semantic_identity_verified"] is True
-        assert source["setup_verified"] is True
-        assert source["key_positions_verified"] is True
-        assert len(exercise["media"]) == 2
-        for media in exercise["media"]:
-            path = assets / media["path"]
-            assert path.suffix == ".svg"
-            assert media["alt"]
-            assert media["width"] == 720
-            assert media["height"] == 520
-            digest = hashlib.sha256(path.read_bytes()).hexdigest()
-            assert digest == media["asset_sha256"]
-            assert hashes_to_names[digest] == [path.name]
 
 
 def test_custom_exercise_structured_metadata_can_be_partial(client) -> None:

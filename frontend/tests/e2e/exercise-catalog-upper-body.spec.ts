@@ -65,33 +65,66 @@ const guide = {
   media: [
     {
       type: 'image',
-      url: '/static/exercise-guides/lever-high-row-active.svg',
-      poster: '/static/exercise-guides/lever-high-row-active.svg',
+      url: '/static/exercise-guides/human-v1/lever-high-row/concentric_end-480w.webp',
+      poster: '/static/exercise-guides/human-v1/lever-high-row/concentric_end-480w.webp',
+      phase_id: 'concentric_end',
       phase: 'Фаза усилия',
       alt: 'Верхняя рычажная тяга: конечное положение, локти отведены вниз и назад',
       source_name: 'Your Fitness Coach',
       source_url: '/',
       source_license: 'Иллюстрация создана для приложения',
       source_license_url: null,
-      width: 720,
-      height: 520,
-      byte_size: 3200,
+      asset_id: 'lever-high-row:canonical_bilateral_plate_loaded_high_row:concentric_end:120e-v1',
+      asset_version: '120e-v1',
+      variant_key: 'canonical_bilateral_plate_loaded_high_row',
+      width: 480,
+      height: 320,
+      byte_size: 12000,
       sort_order: 0,
+      sources: [
+        {
+          url: '/static/exercise-guides/human-v1/lever-high-row/concentric_end-480w.webp',
+          mime_type: 'image/webp',
+          width: 480,
+          height: 320,
+          byte_size: 12000,
+        },
+        {
+          url: '/static/exercise-guides/human-v1/lever-high-row/concentric_end-1280w.webp',
+          mime_type: 'image/webp',
+          width: 1280,
+          height: 853,
+          byte_size: 45000,
+        },
+      ],
     },
     {
       type: 'image',
-      url: '/static/exercise-guides/lever-high-row-start.svg',
-      poster: '/static/exercise-guides/lever-high-row-start.svg',
+      url: '/static/exercise-guides/human-v1/lever-high-row/eccentric_end-480w.webp',
+      poster: '/static/exercise-guides/human-v1/lever-high-row/eccentric_end-480w.webp',
+      phase_id: 'eccentric_end',
       phase: 'Фаза возврата',
       alt: 'Верхняя рычажная тяга: исходное положение, грудь на опоре и руки направлены вверх-вперёд',
       source_name: 'Your Fitness Coach',
       source_url: '/',
       source_license: 'Иллюстрация создана для приложения',
       source_license_url: null,
-      width: 720,
-      height: 520,
-      byte_size: 3200,
+      asset_id: 'lever-high-row:canonical_bilateral_plate_loaded_high_row:eccentric_end:120e-v1',
+      asset_version: '120e-v1',
+      variant_key: 'canonical_bilateral_plate_loaded_high_row',
+      width: 480,
+      height: 320,
+      byte_size: 12000,
       sort_order: 1,
+      sources: [
+        {
+          url: '/static/exercise-guides/human-v1/lever-high-row/eccentric_end-480w.webp',
+          mime_type: 'image/webp',
+          width: 480,
+          height: 320,
+          byte_size: 12000,
+        },
+      ],
     },
   ],
   images: [],
@@ -108,12 +141,12 @@ async function installExerciseMocks(page: Page) {
   await page.route('**/api/v1/programs/exercises/12001', (route) =>
     route.fulfill({ json: { ...exercise, guide } }),
   );
-  await page.route('**/static/exercise-guides/lever-high-row-*.svg', (route) => {
-    const filename = route.request().url().split('/').at(-1);
-    if (!filename) throw new Error('SVG filename is missing');
+  await page.route('**/static/exercise-guides/human-v1/lever-high-row/*.webp', (route) => {
+    const relativePath = route.request().url().split('/static/exercise-guides/').at(-1);
+    if (!relativePath) throw new Error('WebP path is missing');
     return route.fulfill({
-      path: `../backend/assets/exercise-guides/${filename}`,
-      contentType: 'image/svg+xml',
+      path: `../backend/assets/exercise-guides/${relativePath}`,
+      contentType: 'image/webp',
     });
   });
 }
@@ -152,7 +185,7 @@ test('upper-body alias, compact row and guide work in mocked TMA mobile viewport
       .toBe(true);
     await expectNoHorizontalOverflow(page);
     await dialog.screenshot({
-      path: `../.artifacts/screenshots/task-120b/guide-${name}-${viewport.width}.png`,
+      path: `../.artifacts/screenshots/task-120E/upper-guide-${name}-${viewport.width}.png`,
     });
     await dialog.getByRole('button', { name: 'Закрыть карточку упражнения' }).click();
   }

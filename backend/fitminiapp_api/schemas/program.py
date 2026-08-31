@@ -451,12 +451,24 @@ class ExerciseGuideImage(BaseModel):
     alt: str
 
 
+class ExerciseGuideMediaSource(BaseModel):
+    url: str
+    mime_type: str
+    width: int = Field(gt=0)
+    height: int = Field(gt=0)
+    byte_size: int = Field(gt=0)
+
+
 class ExerciseGuideMedia(BaseModel):
     type: Literal["image"]
     url: str
     poster: str
+    phase_id: str
     phase: str
     alt: str
+    asset_id: str | None = None
+    asset_version: str | None = None
+    variant_key: str | None = None
     source_name: str
     source_url: str
     source_license: str
@@ -465,6 +477,7 @@ class ExerciseGuideMedia(BaseModel):
     height: int = Field(gt=0)
     byte_size: int = Field(gt=0)
     sort_order: int = Field(ge=0)
+    sources: list[ExerciseGuideMediaSource] = Field(min_length=1)
 
 
 class ExerciseGuide(BaseModel):

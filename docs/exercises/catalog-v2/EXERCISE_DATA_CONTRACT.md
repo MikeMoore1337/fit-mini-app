@@ -49,6 +49,22 @@ provenance
 
 Его можно реализовать расширением текущего seed/catalog module и derived API payload без migration. Нельзя создавать второй расходящийся alias/media registry во frontend. Если 120B докажет необходимость редактировать эти поля для global catalog через DB/admin flow, это отдельное migration decision с backfill и validation, а не скрытое условие 120A.
 
+## Media manifest v2 для human-visual assets
+
+Task 120E сохраняет stable `media_reference` и code-owned architecture без новой
+DB-модели. Для 18 machine/free-weight items manifest schema v2 связывает каждую
+фазу с exact `asset_id`, `asset_version`, `variant_key`, explicit `phase_id`,
+source-master SHA-256, responsive local sources `480/768/1280` и versioned
+human-review record. API отдаёт клиенту только identity, phase, dimensions,
+responsive URLs и безопасные source/license fields; generation lineage, rights и
+review evidence остаются server-side manifest/documentation contract.
+
+Display `phase` не используется как logic key. Frontend выбирает responsive source
+через `srcset/sizes`, а отсутствие изображения сохраняет текстовую технику без
+fallback на устаревший schematic asset. Legacy JPEG entries остаются совместимы:
+API формирует для них один source и nullable asset/version/variant identity до их
+отдельной remediation.
+
 ## Инварианты
 
 1. `slug` уникален и стабилен; rename display не ломает history/API.

@@ -46,6 +46,7 @@ const fullExercise: Exercise = {
         type: 'image',
         url: '/static/exercise-guides/lat-pulldown-active.jpg',
         poster: '/static/exercise-guides/lat-pulldown-active.jpg',
+        phase_id: 'concentric_end',
         phase: 'Фаза усилия',
         alt: 'Тяга верхнего блока: фаза усилия',
         source_name: 'Проверенный источник',
@@ -56,11 +57,21 @@ const fullExercise: Exercise = {
         height: 567,
         byte_size: 75_000,
         sort_order: 0,
+        sources: [
+          {
+            url: '/static/exercise-guides/lat-pulldown-active.jpg',
+            mime_type: 'image/jpeg',
+            width: 850,
+            height: 567,
+            byte_size: 75_000,
+          },
+        ],
       },
       {
         type: 'image',
         url: '/static/exercise-guides/lat-pulldown-start.jpg',
         poster: '/static/exercise-guides/lat-pulldown-start.jpg',
+        phase_id: 'eccentric_end',
         phase: 'Фаза возврата',
         alt: 'Тяга верхнего блока: фаза возврата',
         source_name: 'Проверенный источник',
@@ -71,6 +82,15 @@ const fullExercise: Exercise = {
         height: 567,
         byte_size: 75_000,
         sort_order: 1,
+        sources: [
+          {
+            url: '/static/exercise-guides/lat-pulldown-start.jpg',
+            mime_type: 'image/jpeg',
+            width: 850,
+            height: 567,
+            byte_size: 75_000,
+          },
+        ],
       },
     ],
     images: [

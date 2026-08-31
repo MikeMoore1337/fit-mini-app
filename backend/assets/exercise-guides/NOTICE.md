@@ -14,20 +14,23 @@
 Your Fitness Coach и не используют материалы Fitness Online или удалённый media API.
 Они учитываются как собственные материалы приложения.
 
-Файлы `*.svg` для batch Task 120B созданы специально для Your Fitness Coach
-детерминированным скриптом `scripts/build_upper_body_machine_guide_assets.py`.
-Это оригинальные схематические key-position illustrations без сторонних логотипов,
-изображений людей и внешних media. Сопоставление exercise/setup/key positions и alt-текст
-проверены в domain-review Task 120B; сведения о проверке и SHA-256 каждого файла находятся
-в `manifest.json`.
+Файлы `human-v1/**/*.webp` для 18 упражнений Tasks 120B–120C созданы в
+YFC-controlled workflow Task 120E через OpenAI built-in `image_gen`. Входами были
+текстовые production briefs и созданные в том же наборе YFC assets для pair-lock;
+сторонние изображения, узнаваемые реальные лица, логотипы и trademarks не
+использовались. Source masters являются review artifacts и не входят в production
+bundle.
 
-Файлы `*.svg` для lower-body batch Task 120C созданы тем же воспроизводимым способом
-скриптом `scripts/build_lower_body_machine_guide_assets.py`. Они показывают отдельные
-machine/plate-loaded/Smith setup и две ключевые позиции без сторонних логотипов или внешних
-media. Сопоставление exercise identity, опор, траектории и key positions проверено в
-fitness-domain review Task 120C; provenance и SHA-256 каждого файла записаны в `manifest.json`.
+Каждая из 36 фаз вручную проверена на exercise identity, оборудование, анатомию,
+опоры, направление движения, единый стиль и читаемость на мобильном экране.
+Production содержит только оптимизированные responsive WebP `480/768/1280` с
+versioned local URL. Exact hashes, variant binding, generation record, ограничения
+правового review и статусы owner gates находятся в `manifest.json` и
+`docs/exercises/catalog-v2/120E_ASSET_REVIEW.json`. Воспроизводимая derivative
+pipeline: `scripts/build_exercise_human_visual_assets.py`.
 
-`manifest.json` содержит проверяемый инвентарь: размеры, вес, порядок фаз и
-provenance каждого файла; для SVG Tasks 120B–120C также хранится SHA-256. Он пересобирается командой
+`manifest.json` schema v2 содержит проверяемый инвентарь: размеры, вес, responsive
+sources, explicit `phase_id`, asset/version/variant identity, hashes и provenance.
+Он пересобирается командой
 `python scripts/build_exercise_guide_media_manifest.py` и проверяется той же
 командой с флагом `--check`.

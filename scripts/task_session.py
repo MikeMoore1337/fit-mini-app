@@ -456,7 +456,14 @@ class GitHubClient:
         return list(self.api(f"pulls/{number}/commits?per_page=100"))
 
     def pull_request_files(self, number: int) -> list[dict[str, Any]]:
-        return list(self.api(f"pulls/{number}/files?per_page=100"))
+        files: list[dict[str, Any]] = []
+        page = 1
+        while True:
+            batch = list(self.api(f"pulls/{number}/files?per_page=100&page={page}"))
+            files.extend(batch)
+            if len(batch) < 100:
+                return files
+            page += 1
 
     def check_runs(self, sha: str) -> list[dict[str, Any]]:
         payload = self.api(f"commits/{sha}/check-runs?per_page=100")
@@ -532,10 +539,12 @@ def validate_task_pull_request(
     return task_id
 
 
-def validate_task_pull_request_files(files: Sequence[Mapping[str, Any]]) -> None:
-    if len(files) >= 100:
+def validate_task_pull_request_files(
+    files: Sequence[Mapping[str, Any]], *, expected_count: int | None = None
+) -> None:
+    if expected_count is not None and len(files) != expected_count:
         raise TaskSessionError(
-            "Task PR file inventory reached the API page limit; scope is ambiguous"
+            f"Task PR file inventory is incomplete: received {len(files)} of {expected_count} files"
         )
     forbidden: list[str] = []
     for item in files:
@@ -1246,7 +1255,9 @@ class TaskController:
             raise TaskSessionError(f"PR task ID {actual} does not match lease {expected}")
         if pull_request["head"]["sha"] != lease.get("ready_head_sha"):
             raise TaskSessionError("PR head does not match the review/QA-ready task SHA")
-        validate_task_pull_request_files(files)
+        validate_task_pull_request_files(
+            files, expected_count=int(pull_request.get("changed_files", len(files)))
+        )
         with self.store.lock():
             queue = self.store.read_json(self.store.queue_path, {"version": 1, "candidates": []})
             if any(item["task_id"] == expected for item in queue["candidates"]):
@@ -1288,7 +1299,9 @@ class TaskController:
         )
         if task_id_from_pr != expected or head_sha != candidate["head_sha"]:
             raise TaskSessionError("Queued candidate changed; enqueue fresh exact-head evidence")
-        validate_task_pull_request_files(files)
+        validate_task_pull_request_files(
+            files, expected_count=int(pull_request.get("changed_files", len(files)))
+        )
         integration_lease = {
             "version": 1,
             "task_id": expected,
@@ -1544,7 +1557,9 @@ def validate_pr_event(
         expected_dev_sha=str(pull_request["base"]["sha"]),
         require_checks=False,
     )
-    validate_task_pull_request_files(files)
+    validate_task_pull_request_files(
+        files, expected_count=int(pull_request.get("changed_files", len(files)))
+    )
     return {"kind": "task-pr", "task_id": task_id, "head_sha": pull_request["head"]["sha"]}
 
 
