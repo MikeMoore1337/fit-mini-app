@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type MouseEventHandler, type ReactNode } from 'react';
 import { safeAuthNextPath } from '../../shared/auth/redirects';
 import { markProductLoginStarted } from '../../shared/analytics/productEvents';
 import { Icon } from '../../shared/ui/Icon';
@@ -46,6 +46,73 @@ function ProviderIcon({ provider }: { provider: string }) {
   );
 }
 
+export function OAuthProviderButton({
+  busy = false,
+  children,
+  disabled = false,
+  href,
+  onClick,
+  provider,
+  rel,
+  target,
+}: {
+  busy?: boolean;
+  children: ReactNode;
+  disabled?: boolean;
+  href?: string;
+  onClick?: MouseEventHandler<HTMLAnchorElement | HTMLButtonElement>;
+  provider: string;
+  rel?: string;
+  target?: string;
+}) {
+  const content = (
+    <>
+      <span className="oauth-button__icon" aria-hidden="true">
+        <ProviderIcon provider={provider} />
+      </span>
+      <span className="oauth-button__label">{children}</span>
+      <Icon className="oauth-button__arrow" name="arrow-right" size={16} />
+    </>
+  );
+  const className = `oauth-button oauth-button--${provider}`;
+
+  if (href) {
+    return (
+      <a
+        className={className}
+        href={href}
+        target={target}
+        rel={rel}
+        aria-disabled={disabled || undefined}
+        aria-busy={busy || undefined}
+        data-motion-feedback={busy ? 'busy' : undefined}
+        onClick={(event) => {
+          if (disabled) {
+            event.preventDefault();
+            return;
+          }
+          onClick?.(event);
+        }}
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <button
+      className={className}
+      type="button"
+      disabled={disabled}
+      aria-busy={busy || undefined}
+      data-motion-feedback={busy ? 'busy' : undefined}
+      onClick={onClick as MouseEventHandler<HTMLButtonElement> | undefined}
+    >
+      {content}
+    </button>
+  );
+}
+
 export function OAuthButtons({
   providers,
   nextPath,
@@ -64,13 +131,12 @@ export function OAuthButtons({
       <p className="muted">Войти с помощью</p>
       <div className="oauth-auth__grid">
         {configuredProviders.map((provider) => (
-          <a
+          <OAuthProviderButton
             key={provider}
-            className={`oauth-button oauth-button--${provider}`}
+            provider={provider}
             href={`/api/v1/auth/oauth/${provider}/start${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ''}`}
-            aria-disabled={redirectingProvider !== null}
-            aria-busy={redirectingProvider === provider || undefined}
-            data-motion-feedback={redirectingProvider === provider ? 'busy' : undefined}
+            disabled={redirectingProvider !== null}
+            busy={redirectingProvider === provider}
             onClick={(event) => {
               if (redirectingProvider !== null) {
                 event.preventDefault();
@@ -80,12 +146,8 @@ export function OAuthButtons({
               markProductLoginStarted();
             }}
           >
-            <span className="oauth-button__icon" aria-hidden="true">
-              <ProviderIcon provider={provider} />
-            </span>
             {redirectingProvider === provider ? 'Переходим…' : PROVIDER_LABELS[provider]}
-            <Icon className="oauth-button__arrow" name="arrow-right" size={16} />
-          </a>
+          </OAuthProviderButton>
         ))}
       </div>
     </section>

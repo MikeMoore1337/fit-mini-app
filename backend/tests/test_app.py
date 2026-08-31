@@ -4444,11 +4444,11 @@ def test_tma_navigation_excludes_root_admin_entry():
     source = (
         Path(__file__).resolve().parents[2] / "frontend" / "src" / "app" / "AppShell.tsx"
     ).read_text(encoding="utf-8")
-    assert 'to="/coach"' in source
-    assert 'to="/admin"' in source
+    assert "to: '/coach'" in source
+    assert "to: '/admin'" in source
     assert "user.is_coach || user.is_admin" not in source
-    assert "{user?.is_coach && (" in source
-    assert "{user?.is_root && !isMiniApp && (" in source
+    assert "visible: Boolean(user?.is_coach)" in source
+    assert "visible: Boolean(user?.is_root) && !isMiniApp" in source
 
 
 def test_client_management_is_consolidated_in_coach_section():

@@ -118,6 +118,7 @@ describe('TrainingPreferencesForm', () => {
       'href',
       '/app?section=programs',
     );
+    expect(screen.getByText('Расписание').closest('details')).not.toHaveAttribute('open');
 
     const preferred = screen
       .getByText('Предпочитаемые упражнения')

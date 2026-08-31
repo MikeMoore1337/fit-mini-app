@@ -227,6 +227,14 @@ class GitRepository:
         output = self.git("log", "--oneline", "HEAD", "--not", "--all", cwd=path, check=False)
         return output.splitlines() if output else []
 
+    def remove_worktree(self, path: Path) -> None:
+        canonical = self.canonical_dev_worktree().path
+        self.git("worktree", "remove", "--", str(path), cwd=canonical)
+
+    def delete_merged_branch(self, branch: str) -> None:
+        canonical = self.canonical_dev_worktree().path
+        self.git("branch", "--delete", "--", branch, cwd=canonical)
+
     def upstream(self, branch: str) -> str | None:
         completed = _run(
             [
@@ -1449,23 +1457,118 @@ class TaskController:
         history = self.store.read_json(history_path)
         if lease is None or history is None:
             raise TaskSessionError("finish requires task lease and completed integration history")
+        if lease.get("task_id") != expected:
+            raise TaskSessionError("finish task lease does not match the requested task ID")
+        if history.get("task_id") != expected or history.get("state") != "dev-ci-success":
+            raise TaskSessionError(
+                "finish integration history does not match the requested terminal task state"
+            )
         if lease.get("lifecycle_state") != "dev-ci-success":
             raise TaskSessionError("finish requires terminal dev-ci-success state")
-        recovery = self.recover(expected)
-        cleanup_allowed = not any(
-            item["dirty"] or item["operation_issues"] or item["unique_commits"]
-            for item in recovery["worktrees"]
-        )
+
+        branch = str(lease.get("branch", ""))
+        worktree_path = Path(str(lease.get("worktree", ""))).resolve()
+        expected_head = str(history.get("head_sha", ""))
+        merge_sha = str(history.get("merge_sha", ""))
+        canonical = self.repository.canonical_dev_worktree().path
+        if self.repository.current_worktree != canonical:
+            raise TaskSessionError("finish cleanup must run from the canonical dev worktree")
+        if worktree_path == canonical:
+            raise TaskSessionError("finish cleanup refuses to remove the canonical dev worktree")
+        expected_parent = (canonical / ".artifacts" / "worktrees").resolve()
+        if worktree_path.parent != expected_parent:
+            raise TaskSessionError(
+                "finish cleanup worktree is outside the canonical task worktree directory"
+            )
+        if task_id_from_branch(branch) != expected:
+            raise TaskSessionError("finish cleanup branch does not match the task lease")
+        if not expected_head or expected_head != lease.get("ready_head_sha"):
+            raise TaskSessionError("finish cleanup head does not match integration-ready evidence")
+        if not merge_sha:
+            raise TaskSessionError("finish cleanup requires an exact integration merge SHA")
+
+        origin_dev = self.repository.ref("origin/dev")
+        origin_master = self.repository.ref("origin/master")
+        if origin_dev != origin_master:
+            raise TaskSessionError(
+                "finish cleanup requires exact deployed master -> dev sync: "
+                f"origin/dev {origin_dev} != origin/master {origin_master}"
+            )
+        if not self.repository.is_ancestor(merge_sha, origin_dev):
+            raise TaskSessionError(
+                "finish cleanup integration merge is not contained in synchronized origin/dev"
+            )
+
+        matching_branches = [
+            line.removeprefix("refs/heads/")
+            for line in self.repository.git(
+                "for-each-ref", "--format=%(refname)", f"refs/heads/task/{expected}-*"
+            ).splitlines()
+            if line
+        ]
+        matching_worktrees = [
+            item
+            for item in self.repository.worktrees()
+            if item.path == worktree_path
+            or (item.branch and item.branch.startswith(f"task/{expected}-"))
+        ]
+        if matching_branches != [branch] or len(matching_worktrees) != 1:
+            raise TaskSessionError(
+                "finish cleanup requires exactly one matching task branch and worktree"
+            )
+        worktree = matching_worktrees[0]
+        if worktree.path != worktree_path or worktree.branch != branch:
+            raise TaskSessionError("finish cleanup worktree does not exactly match the task lease")
+        branch_head = self.repository.ref(branch)
+        if branch_head != expected_head or worktree.head != expected_head:
+            raise TaskSessionError("finish cleanup branch/worktree head changed after integration")
+
+        dirty = self.repository.status(worktree_path)
+        operations = self.repository.operation_issues(worktree_path)
+        unique_commits = self.repository.unique_commits(branch)
+        if dirty:
+            raise TaskSessionError(
+                f"finish cleanup refuses dirty task worktree {worktree_path}: {dirty}"
+            )
+        if operations:
+            raise TaskSessionError(
+                f"finish cleanup refuses interrupted Git operation in {worktree_path}: {operations}"
+            )
+        if unique_commits:
+            raise TaskSessionError(
+                f"finish cleanup refuses task branch with unique commits: {unique_commits}"
+            )
+
+        upstream = self.repository.upstream(branch)
+        if upstream is not None:
+            ahead, behind = self.repository.ahead_behind(branch, upstream)
+            if ahead or behind:
+                raise TaskSessionError(
+                    "finish cleanup refuses divergent task branch/upstream: "
+                    f"ahead={ahead}, behind={behind}"
+                )
+
+        self.repository.remove_worktree(worktree_path)
+        if self.repository.ref(branch) != expected_head:
+            raise TaskSessionError(
+                "finish cleanup branch changed after worktree removal; local branch was preserved"
+            )
+        self.repository.delete_merged_branch(branch)
         with self.store.lock():
             history["state"] = "finished"
             history["finished_at"] = utc_now()
-            history["cleanup_allowed_after_owner_confirmation"] = cleanup_allowed
+            history["cleanup"] = {
+                "worktree": str(worktree_path),
+                "branch": branch,
+                "performed_at": history["finished_at"],
+            }
             StateStore.replace_json(history_path, history)
             lease_path.unlink()
         return {
             "history": history,
-            "cleanup_performed": False,
-            "cleanup_allowed_after_owner_confirmation": cleanup_allowed,
+            "cleanup_performed": True,
+            "removed_worktree": str(worktree_path),
+            "deleted_local_branch": branch,
         }
 
     def release_freeze(self, action: str, *, sha: str, session_label: str) -> dict[str, Any]:

@@ -316,6 +316,15 @@ Task является `AUTO_RELEASE_ELIGIBLE`, только если однов�
    не запускает повторный PR/deploy и не задерживает финализацию уже успешной task. Исключение - если
    sync неожиданно изменил tree/content вместо pure fast-forward; тогда считать это новым изменением,
    остановиться и разобраться до следующей task.
+10. после подтверждения exact ref sync выполнить `git fetch --prune origin`, перейти в canonical
+    `dev` worktree и запустить `scripts/task_session.py finish <ID>`. `finish` без отдельного owner
+    prompt удаляет только exact matching clean task worktree и merged local branch. Dirty state,
+    Git operation, unique commits, ambiguous/mismatched state или divergence refs останавливают
+    closeout fail-closed без `--force` и без очистки сохранившихся данных;
+11. после successful `finish` автоматически перенести canonical task-файл через
+    `scripts/archive_backlog_task.py archive`, затем выполнить `scripts/archive_backlog_task.py
+    check`. Ошибка archive/manifest check является terminal closeout blocker и не скрывается;
+12. сформировать terminal final report только после successful finish, archive и manifest check.
 
 Canonical sequencing для нового release candidate:
 
@@ -331,6 +340,8 @@ task branch -> PR dev -> exact-head checks
   -> WAIT production deploy exact master SHA: success
   -> narrow GitHub App fast-forward/sync dev to same deployed SHA
   -> verify refs
+  -> finish: clean worktree + merged local branch cleanup
+  -> archive task + rebuild/check manifests
   -> DONE
 ```
 

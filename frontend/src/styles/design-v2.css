@@ -653,6 +653,10 @@ body:has(.app-shell--design-v2) {
   border-color: var(--v2-border);
 }
 
+.app-shell--design-v2 .app-bottom-nav__secondary-group {
+  display: contents;
+}
+
 .app-shell--design-v2 .app-bottom-nav__group-label,
 .app-shell--design-v2 .app-bottom-nav__account-role {
   color: var(--v2-text-secondary);
@@ -679,6 +683,23 @@ body:has(.app-shell--design-v2) {
   background: var(--v2-surface-secondary);
 }
 
+.app-shell--design-v2 .app-more-panel__identity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--v2-space-3);
+}
+
+.app-shell--design-v2 .account-identity__copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.app-shell--design-v2 .app-bottom-nav__profile-slot {
+  display: none;
+}
+
 .app-shell--design-v2 .telegram-link-prompt {
   border-color: var(--v2-border);
   border-radius: var(--v2-region-radius);
@@ -686,7 +707,13 @@ body:has(.app-shell--design-v2) {
   box-shadow: none;
 }
 
-.app-shell--design-v2 :where(.app-bottom-nav__btn, .app-bottom-nav__logout):focus-visible,
+.app-shell--design-v2
+  :where(
+    .app-bottom-nav__btn,
+    .app-bottom-nav__logout,
+    .app-bottom-nav__account-entry,
+    .app-desktop-account-entry
+  ):focus-visible,
 .today-dashboard--design-v2 :where(button, a):focus-visible,
 .nutrition-diary--design-v2 :where(button, a, input, select):focus-visible,
 .active-workout--design-v2 :where(button, a, input, select, summary):focus-visible,
@@ -2462,9 +2489,78 @@ body.public-shell-mode.public-shell-mode:has(.auth-public-shell--design-v2) {
     scrollbar-gutter: stable both-edges;
   }
 
+  .app-shell--design-v2 .app-bottom-nav__profile-slot {
+    display: block;
+    margin-bottom: var(--v2-space-5);
+    padding-bottom: var(--v2-space-4);
+    border-bottom: 1px solid var(--v2-border);
+  }
+
+  .app-shell--design-v2 .app-desktop-account-entry {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    border: 1px solid transparent;
+    border-radius: var(--v2-control-radius);
+    background: transparent;
+    color: var(--v2-text-primary);
+    text-decoration: none;
+  }
+
+  .app-shell--design-v2 .app-desktop-account-entry:hover,
+  .app-shell--design-v2 .app-desktop-account-entry.is-active {
+    border-color: var(--v2-border-strong);
+    background: var(--v2-surface-secondary);
+  }
+
+  .app-shell--design-v2 .app-desktop-account-entry__identity {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 4px;
+  }
+
+  .app-shell--design-v2 .app-desktop-account-entry__avatar {
+    overflow: hidden;
+    display: grid;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    place-items: center;
+    border: 2px solid var(--v2-lime);
+    border-radius: 50%;
+    background: var(--v2-lime-soft);
+    color: var(--v2-accent-text);
+  }
+
+  .app-shell--design-v2 .app-desktop-account-entry__avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .app-shell--design-v2 .app-desktop-account-entry .account-identity__name,
+  .app-shell--design-v2 .app-desktop-account-entry .account-identity__role {
+    overflow: hidden;
+    display: block;
+    max-width: 18ch;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-shell--design-v2 .app-desktop-account-entry .account-identity__name {
+    font-size: 0.75rem;
+  }
+
+  .app-shell--design-v2 .app-desktop-account-entry .account-identity__role {
+    color: var(--v2-text-secondary);
+    font-size: 0.72rem;
+  }
+
   .app-shell--design-v2 .app-bottom-nav__brand {
     justify-content: center;
-    margin-bottom: var(--v2-space-6);
+    margin-bottom: var(--v2-space-4);
     padding: 0;
   }
 
@@ -2522,7 +2618,9 @@ body.public-shell-mode.public-shell-mode:has(.auth-public-shell--design-v2) {
     margin-top: var(--v2-space-4);
   }
 
-  .app-shell--design-v2 .app-bottom-nav__secondary > .app-bottom-nav__group-label:first-child {
+  .app-shell--design-v2
+    .app-bottom-nav__secondary-group:first-child
+    > .app-bottom-nav__group-label:first-child {
     white-space: nowrap;
   }
 
@@ -2575,6 +2673,15 @@ body.public-shell-mode.public-shell-mode:has(.auth-public-shell--design-v2) {
     text-align: left;
   }
 
+  .app-shell--design-v2 .app-bottom-nav__account-entry:hover,
+  .app-shell--design-v2 .app-bottom-nav__account-entry.is-active {
+    background: var(--v2-surface-secondary);
+  }
+
+  .app-shell--design-v2 .app-bottom-nav__account-entry.is-active {
+    box-shadow: inset 3px 0 var(--v2-lime);
+  }
+
   .app-shell--design-v2 .app-bottom-nav__account-entry > span:last-child {
     display: grid;
     min-width: 0;
@@ -2590,8 +2697,12 @@ body.public-shell-mode.public-shell-mode:has(.auth-public-shell--design-v2) {
     border-radius: 50%;
   }
 
-  .app-shell--design-v2 .app-bottom-nav__utility > .app-theme-toggle--nav {
+  .app-shell--design-v2
+    .app-bottom-nav__utility
+    > :where(.app-theme-toggle--nav, .app-bottom-nav__utility-action) {
     display: grid;
+    width: 100%;
+    min-height: 42px;
     grid-template-columns: 18px max-content;
     align-items: center;
     justify-content: center;
@@ -2600,10 +2711,21 @@ body.public-shell-mode.public-shell-mode:has(.auth-public-shell--design-v2) {
     background: transparent;
   }
 
-  .app-shell--design-v2 .app-bottom-nav__utility > .app-theme-toggle--nav .app-bottom-nav__icon {
+  .app-shell--design-v2
+    .app-bottom-nav__utility
+    > :where(.app-theme-toggle--nav, .app-bottom-nav__utility-action)
+    .app-bottom-nav__icon {
     width: 18px;
     height: 24px;
     flex-basis: 18px;
+  }
+
+  .app-shell--design-v2 .app-bottom-nav__utility > .app-bottom-nav__utility-action {
+    grid-column: auto;
+    grid-row: auto;
+    justify-self: stretch;
+    padding: 6px 9px;
+    color: var(--v2-text-secondary);
   }
 
   .app-shell--design-v2 .app-bottom-nav__account-name {
@@ -3451,7 +3573,7 @@ body:has(.standalone-page--design-v2) {
   min-height: 52px;
   padding: var(--v2-space-3);
   border-right: 1px solid var(--v2-border);
-  color: var(--v2-text-secondary);
+  color: var(--v2-text-primary);
   font-size: 0.82rem;
   font-weight: 750;
   line-height: 1.25;
@@ -3486,6 +3608,12 @@ body:has(.standalone-page--design-v2) {
 .profile-settings-nav a:hover {
   background: var(--v2-surface-secondary);
   color: var(--v2-text-primary);
+}
+
+.profile-settings-nav a:focus-visible,
+.app-section--profile summary:focus-visible {
+  outline: 3px solid var(--v2-lime);
+  outline-offset: 3px;
 }
 
 .profile-primary-card,
@@ -3710,6 +3838,9 @@ body:has(.standalone-page--design-v2) {
 }
 
 .profile-form-section__head h3 {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--v2-space-2);
   font-size: 1.1rem;
   letter-spacing: -0.01em;
 }
@@ -4096,10 +4227,19 @@ button.notification-row__main:focus-visible {
   margin: 0;
 }
 
-#profile-notifications,
-.profile-settings-group.profile-settings-group--security {
-  gap: var(--v2-space-3);
-  padding-top: var(--v2-space-4);
+.app-section--profile .profile-settings > details.card-disclosure {
+  gap: 0;
+  padding: var(--v2-space-5);
+}
+
+@media (min-width: 900px) {
+  .app-section--profile .profile-settings > details.card-disclosure:not([open]) {
+    min-block-size: 108px;
+  }
+
+  .app-section--profile .profile-settings > details.card-disclosure:not([open]) > summary {
+    min-block-size: 66px;
+  }
 }
 
 .profile-data-export {
@@ -4186,6 +4326,42 @@ button.notification-row__main:focus-visible {
 
 .auth-method-row .list-row__actions {
   flex-wrap: wrap;
+}
+
+.app-section--profile .auth-method-row .oauth-button {
+  justify-content: flex-start;
+  min-width: min(100%, 240px);
+  min-height: 44px;
+  padding: 7px 12px;
+  border-color: var(--v2-border);
+  border-radius: var(--v2-control-radius);
+  background: var(--v2-surface);
+  color: var(--v2-text-primary);
+  text-align: left;
+}
+
+.app-section--profile .auth-method-row .oauth-button:hover:not(:disabled) {
+  border-color: var(--v2-border-strong);
+  background: var(--v2-surface-secondary);
+}
+
+.app-section--profile .auth-method-row .oauth-button__label {
+  min-width: 0;
+  flex: 1;
+}
+
+.app-section--profile .auth-method-row .oauth-button__arrow {
+  margin-left: auto;
+  color: var(--v2-accent-text);
+}
+
+.notification-center.profile-disclosure {
+  padding-block: var(--v2-space-3);
+  border-block: 1px solid var(--v2-border);
+}
+
+.notification-center.profile-disclosure > .profile-disclosure__body {
+  margin-top: var(--v2-space-3);
 }
 
 .account-delete-modal__panel {
@@ -6483,6 +6659,18 @@ body.public-shell-mode:has(.public-shell.public-shell--design-v2) {
   .app-section--profile .profile-primary-card,
   .app-section--profile .training-preferences-card {
     padding: var(--v2-space-4);
+  }
+
+  .app-section--profile .profile-settings > details.card-disclosure {
+    padding: var(--v2-space-4);
+  }
+
+  .app-section--profile .profile-settings > details.card-disclosure:not([open]) {
+    min-block-size: 124px;
+  }
+
+  .app-section--profile .profile-settings > details.card-disclosure:not([open]) > summary {
+    min-block-size: 90px;
   }
 
   .app-section--profile .profile-form-grid,
