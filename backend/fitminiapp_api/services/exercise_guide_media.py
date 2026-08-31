@@ -20,6 +20,16 @@ def _public_url(path: str) -> str:
     return f"/static/exercise-guides/{path}"
 
 
+def _image_mime_type(path: str) -> str:
+    if path.endswith(".jpg"):
+        return "image/jpeg"
+    if path.endswith(".png"):
+        return "image/png"
+    if path.endswith(".webp"):
+        return "image/webp"
+    return "image/svg+xml"
+
+
 def get_guide_media(
     slug: str,
     *,
@@ -37,7 +47,7 @@ def get_guide_media(
         sources = media.get("sources") or [
             {
                 "path": media["path"],
-                "mime_type": "image/jpeg" if media["path"].endswith(".jpg") else "image/svg+xml",
+                "mime_type": _image_mime_type(media["path"]),
                 "width": media["width"],
                 "height": media["height"],
                 "byte_size": media["byte_size"],

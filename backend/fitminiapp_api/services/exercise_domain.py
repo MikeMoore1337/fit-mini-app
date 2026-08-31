@@ -82,6 +82,9 @@ EQUIPMENT_IDENTIFIER_BY_LEGACY_VALUE = {
     "Гиря": "kettlebell",
     "Бассейн": "cardio",
     "Беговая дорожка": "cardio",
+    "Гребной тренажёр": "cardio",
+    "Воздушный велотренажёр": "cardio",
+    "Горизонтальный велотренажёр": "cardio",
     "Велосипед": "cardio",
     "Велотренажёр": "cardio",
     "Лыжный эргометр": "cardio",
@@ -120,6 +123,7 @@ CURATED_ALTERNATIVE_SLUG_PAIRS = (
     ("dumbbell-pullover", "straight-arm-pulldown"),
     ("dumbbell-pullover", "machine-pullover"),
     ("squat", "goblet-squat"),
+    ("squat", "bodyweight-squat"),
     ("squat", "leg-press"),
     ("front-squat", "hack-squat"),
     ("hack-squat", "pendulum-squat"),
@@ -132,6 +136,7 @@ CURATED_ALTERNATIVE_SLUG_PAIRS = (
     ("romanian-deadlift", "stiff-leg-deadlift"),
     ("leg-curl", "seated-leg-curl"),
     ("hip-thrust", "barbell-glute-bridge"),
+    ("barbell-glute-bridge", "bodyweight-glute-bridge"),
     ("hip-thrust", "machine-hip-thrust"),
     ("cable-kickback", "machine-glute-kickback"),
     ("hyperextension", "reverse-hyperextension"),
@@ -153,6 +158,7 @@ CURATED_ALTERNATIVE_SLUG_PAIRS = (
     ("outdoor-run", "treadmill-run"),
     ("outdoor-walk", "treadmill-walk"),
     ("outdoor-cycling", "stationary-bike"),
+    ("stationary-bike", "recumbent-bike"),
 )
 
 DEFAULT_SAFETY_NOTES = [
@@ -328,15 +334,15 @@ def _sync_guide_metadata(db: Session, exercise: Exercise, *, has_guide: bool) ->
         return
 
     from fitminiapp_api.services.exercise_guides import (
-        GENERATED_CARDIO_SLUGS,
         SOURCE_LICENSE,
         SOURCE_NAME,
         SOURCE_URL,
         YFC_ORIGINAL_VECTOR_SLUGS,
+        YFC_SINGLE_IMAGE_SLUGS,
     )
 
     slug = _base_slug(exercise)
-    generated = slug in GENERATED_CARDIO_SLUGS or slug in YFC_ORIGINAL_VECTOR_SLUGS
+    generated = slug in YFC_SINGLE_IMAGE_SLUGS or slug in YFC_ORIGINAL_VECTOR_SLUGS
     values = {
         "safety_notes": list(DEFAULT_SAFETY_NOTES),
         "source_name": "Your Fitness Coach" if generated else SOURCE_NAME,

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { matchesExerciseSearch } from '../../../../src/features/exercises/exerciseSearch';
+import {
+  matchesExerciseSearch,
+  normalizeExerciseSearchText,
+  rankExercisesForSearch,
+} from '../../../../src/features/exercises/exerciseSearch';
 import type { Exercise } from '../../../../src/shared/api/types';
 
 const lowerBodyExercises = [
@@ -60,6 +64,100 @@ describe('lower-body exercise aliases', () => {
   ])('finds %s as one canonical record', (query, expectedSlug) => {
     expect(exercises.filter((exercise) => matchesExerciseSearch(exercise, query))).toMatchObject([
       { slug: expectedSlug },
+    ]);
+  });
+});
+
+describe('Task 120D hardened exercise search', () => {
+  const baseExercise = exercises[0] as Exercise;
+  const remaining = [
+    {
+      ...baseExercise,
+      id: 13001,
+      slug: 'bodyweight-squat',
+      title: 'Приседания с собственным весом',
+      equipment: 'Собственный вес',
+      equipment_ids: ['bodyweight'],
+      aliases: ['воздушные приседания', 'air squat', 'bodyweight squat'],
+      machine_variant_tags: [],
+    },
+    {
+      ...baseExercise,
+      id: 13002,
+      slug: 'dead-hang',
+      title: 'Вис на перекладине',
+      primary_muscle: 'Хват',
+      primary_muscle_ids: ['grip'],
+      equipment: 'Турник',
+      equipment_ids: ['bodyweight'],
+      aliases: ['вис на турнике', 'пассивный вис', 'dead hang'],
+      movement_pattern: 'grip',
+      machine_variant_tags: [],
+      execution_variant_tags: ['isometric'],
+    },
+    {
+      ...baseExercise,
+      id: 13003,
+      slug: 'rowing-machine',
+      title: 'Гребля на кардиотренажёре',
+      aliases: ['гребля тренажер', 'rowing machine', 'row erg'],
+      movement_pattern: 'cardio_row',
+      equipment: 'Гребной тренажёр',
+      equipment_ids: ['cardio'],
+      metric_type: 'cardio',
+      machine_variant_tags: [],
+      execution_variant_tags: ['cyclic'],
+    },
+    {
+      ...baseExercise,
+      id: 13004,
+      slug: 'goblet-squat',
+      title: 'Гоблет-присед с гирей',
+      aliases: ['гоблет', 'goblet squat', 'kettlebell goblet squat'],
+      equipment: 'Гиря',
+      equipment_ids: ['kettlebell'],
+      machine_variant_tags: [],
+    },
+    {
+      ...baseExercise,
+      id: 13005,
+      slug: 'kettlebell-goblet-squat',
+      canonical_slug: 'goblet-squat',
+      title: 'Гоблет-присед с гирей',
+      aliases: [],
+      equipment: 'Гиря',
+      equipment_ids: ['kettlebell'],
+      machine_variant_tags: [],
+    },
+  ] satisfies Exercise[];
+
+  it('normalizes Unicode, punctuation, hyphens and ё consistently', () => {
+    expect(normalizeExerciseSearchText('  ГРЕБЛЯ-на/тренажёре  ')).toBe('гребля на тренажере');
+  });
+
+  it.each([
+    ['Приседания с собственным весом', 'bodyweight-squat'],
+    ['приседания с собств', 'bodyweight-squat'],
+    ['air squat', 'bodyweight-squat'],
+    ['пассивный вис', 'dead-hang'],
+    ['dead hang', 'dead-hang'],
+    ['кардиотренажер гребля', 'rowing-machine'],
+    ['row erg', 'rowing-machine'],
+    ['гоблет', 'goblet-squat'],
+  ])('ranks query %s with the intended canonical result first', (query, expectedSlug) => {
+    expect(rankExercisesForSearch(remaining, query)[0]?.slug).toBe(expectedSlug);
+  });
+
+  it('collapses a legacy redirect into one canonical result', () => {
+    expect(rankExercisesForSearch(remaining, 'goblet squat')).toMatchObject([
+      { slug: 'goblet-squat' },
+    ]);
+    expect(rankExercisesForSearch(remaining, '')).toHaveLength(4);
+  });
+
+  it('keeps deterministic relevance ahead of alphabetical order', () => {
+    expect(rankExercisesForSearch(remaining, 'гребля').map((item) => item.slug)).toEqual([
+      'rowing-machine',
     ]);
   });
 });

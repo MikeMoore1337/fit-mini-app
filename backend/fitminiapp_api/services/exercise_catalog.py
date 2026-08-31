@@ -34,6 +34,21 @@ def _personal_slug(base: str) -> str:
     return f"{base}-u-{uuid4().hex[:8]}"
 
 
+def _source_exercise_slug(exercise: Exercise) -> str:
+    if exercise.source_exercise_id is None:
+        return exercise.slug
+
+    base_slug, marker, suffix = exercise.slug.rpartition("-u-")
+    if (
+        marker
+        and base_slug
+        and len(suffix) == 8
+        and all(character in "0123456789abcdef" for character in suffix)
+    ):
+        return base_slug
+    return exercise.slug
+
+
 def _normalize_optional_text(value: str | None) -> str | None:
     cleaned = (value or "").strip()
     return cleaned or None

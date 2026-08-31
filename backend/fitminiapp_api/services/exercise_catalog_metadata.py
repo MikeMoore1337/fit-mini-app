@@ -41,8 +41,156 @@ LOWER_BODY_MACHINE_SLUGS = (
     "reverse-hyperextension",
 )
 
+REMAINING_COVERAGE_SLUGS = (
+    "bodyweight-squat",
+    "bodyweight-glute-bridge",
+    "barbell-wrist-curl",
+    "barbell-wrist-extension",
+    "dead-hang",
+    "recumbent-bike",
+)
+
+# The old row remains in storage for program/workout history. Search consumers
+# group it into the canonical record instead of deleting or rewriting references.
+CANONICAL_EXERCISE_REDIRECTS = {
+    "kettlebell-goblet-squat": "goblet-squat",
+}
+
 
 CATALOG_METADATA: dict[str, ExerciseCatalogMetadata] = {
+    "cable-fly": {
+        "aliases": (
+            "cable crossover",
+            "сведение рук сверху вниз в кроссовере",
+            "high to low cable fly",
+        ),
+        "movement_pattern": "chest_fly",
+        "machine_variant_tags": (),
+        "execution_variant_tags": ("bilateral",),
+    },
+    "goblet-squat": {
+        "aliases": (
+            "гоблет",
+            "goblet squat",
+            "kettlebell goblet squat",
+            "гоблет присед",
+        ),
+        "movement_pattern": "squat",
+        "machine_variant_tags": (),
+        "execution_variant_tags": ("bilateral",),
+    },
+    "bodyweight-squat": {
+        "aliases": (
+            "приседания без веса",
+            "воздушные приседания",
+            "air squat",
+            "bodyweight squat",
+        ),
+        "movement_pattern": "squat",
+        "machine_variant_tags": (),
+        "execution_variant_tags": ("bilateral",),
+    },
+    "hip-thrust": {
+        "aliases": (
+            "hip thrust",
+            "хип траст",
+            "ягодичный мост на скамье",
+        ),
+        "movement_pattern": "glute",
+        "machine_variant_tags": (),
+        "execution_variant_tags": ("bilateral",),
+    },
+    "bodyweight-glute-bridge": {
+        "aliases": (
+            "ягодичный мост без веса",
+            "glute bridge",
+            "bodyweight glute bridge",
+        ),
+        "movement_pattern": "glute",
+        "machine_variant_tags": (),
+        "execution_variant_tags": ("bilateral",),
+    },
+    "barbell-wrist-curl": {
+        "aliases": (
+            "сгибание запястий со штангой",
+            "barbell wrist curl",
+            "wrist curl",
+        ),
+        "movement_pattern": "wrist",
+        "machine_variant_tags": (),
+        "execution_variant_tags": ("bilateral",),
+    },
+    "barbell-wrist-extension": {
+        "aliases": (
+            "разгибание запястий со штангой",
+            "обратные сгибания кистей",
+            "barbell wrist extension",
+            "reverse wrist curl",
+        ),
+        "movement_pattern": "wrist",
+        "machine_variant_tags": (),
+        "execution_variant_tags": ("bilateral",),
+    },
+    "dead-hang": {
+        "aliases": (
+            "вис на турнике",
+            "пассивный вис",
+            "dead hang",
+        ),
+        "movement_pattern": "grip",
+        "machine_variant_tags": (),
+        "execution_variant_tags": ("isometric",),
+    },
+    "rowing-machine": {
+        "aliases": (
+            "гребля тренажер",
+            "гребля на тренажере",
+            "гребной эргометр",
+            "rowing machine",
+            "row erg",
+        ),
+        "movement_pattern": "cardio_row",
+        "machine_variant_tags": (),
+        "execution_variant_tags": ("cyclic",),
+    },
+    "machine-row": {
+        "aliases": (
+            "гребная тяга",
+            "горизонтальная тяга",
+            "machine row",
+            "горизонтальная тяга в тренажере",
+        ),
+        "movement_pattern": "row",
+        "machine_variant_tags": ("selectorized",),
+        "execution_variant_tags": ("bilateral",),
+    },
+    "treadmill-run": {
+        "aliases": ("бег на дорожке", "treadmill run"),
+        "movement_pattern": "running",
+        "machine_variant_tags": (),
+        "execution_variant_tags": ("cyclic",),
+    },
+    "assault-bike": {
+        "aliases": (
+            "аэробайк",
+            "air bike",
+            "assault bike",
+            "воздушный велосипед",
+        ),
+        "movement_pattern": "cycling",
+        "machine_variant_tags": (),
+        "execution_variant_tags": ("cyclic",),
+    },
+    "recumbent-bike": {
+        "aliases": (
+            "велотренажер с горизонтальной посадкой",
+            "лежачий велотренажер",
+            "recumbent bike",
+        ),
+        "movement_pattern": "cycling",
+        "machine_variant_tags": (),
+        "execution_variant_tags": ("cyclic",),
+    },
     "leg-press": {
         "aliases": (
             "leg press",
@@ -157,7 +305,6 @@ CATALOG_METADATA: dict[str, ExerciseCatalogMetadata] = {
     "machine-hip-thrust": {
         "aliases": (
             "ягодичный тренажер",
-            "ягодичный тренажёр",
             "glute drive",
             "machine hip thrust",
             "рычажный ягодичный мост",
@@ -595,6 +742,90 @@ ITEM_GUIDE_CONTENT: dict[str, ExerciseGuideContent] = {
         ],
         "secondary": ["Бицепс", "Задняя дельта", "Предплечья"],
     },
+    "bodyweight-squat": {
+        "steps": [
+            "Поставь стопы устойчиво, выпрямись и направь колени по линии носков.",
+            "Отведи таз назад и присядь до глубины, на которой стопы остаются на полу, а корпус — под контролем.",
+            "Надави всей стопой на пол и встань без рывка и жёсткой блокировки коленей.",
+        ],
+        "breathing": "Вдох перед опусканием, выдох после прохождения тяжёлой части подъёма.",
+        "mistakes": [
+            "Пятки отрываются от пола",
+            "Колени заметно смещаются внутрь",
+            "Падение вниз без контролируемого разворота",
+        ],
+        "secondary": ["Ягодицы", "Бицепс бедра", "Икры", "Кор"],
+    },
+    "bodyweight-glute-bridge": {
+        "steps": [
+            "Ляг на спину, согни колени и поставь стопы на пол примерно на ширине таза.",
+            "Надави стопами в пол и подними таз, разгибая бёдра без чрезмерного прогиба поясницы.",
+            "Задержись в верхнем положении и плавно опусти таз до пола.",
+        ],
+        "breathing": "Вдох при опускании таза, выдох во время подъёма.",
+        "mistakes": [
+            "Подъём за счёт прогиба поясницы",
+            "Стопы стоят слишком далеко и скользят",
+            "Колени расходятся или смещаются внутрь",
+        ],
+        "secondary": ["Бицепс бедра", "Кор"],
+    },
+    "barbell-wrist-curl": {
+        "steps": [
+            "Возьми лёгкую штангу ладонями вверх и положи предплечья на бёдра или скамью, оставив кисти за краем опоры.",
+            "Согни кисти вверх, не отрывая предплечья и не помогая движением локтей.",
+            "Плавно опусти гриф до доступного разгибания запястий, сохраняя хват.",
+        ],
+        "breathing": "Выдох при сгибании кистей, вдох при контролируемом опускании.",
+        "mistakes": [
+            "Слишком тяжёлый вес сокращает амплитуду",
+            "Предплечья отрываются от опоры",
+            "Гриф перекатывается к кончикам пальцев без контроля",
+        ],
+        "secondary": ["Хват"],
+    },
+    "barbell-wrist-extension": {
+        "steps": [
+            "Возьми лёгкую штангу ладонями вниз и положи предплечья на бёдра или скамью, оставив кисти за краем опоры.",
+            "Подними тыльную сторону кистей вверх, сохраняя предплечья неподвижными.",
+            "Плавно опусти гриф до доступного сгибания запястий без рывка.",
+        ],
+        "breathing": "Выдох при разгибании кистей, вдох при контролируемом опускании.",
+        "mistakes": [
+            "Движение выполняется локтями вместо запястий",
+            "Резкое опускание грифа",
+            "Слишком тяжёлый вес не позволяет удержать кисти ровно",
+        ],
+        "secondary": ["Хват"],
+    },
+    "dead-hang": {
+        "steps": [
+            "Возьмись за перекладину устойчивым хватом и убери ноги с опоры без раскачивания.",
+            "Держи корпус спокойно, не подтягивайся и сохраняй контролируемое положение плеч без боли.",
+            "Заверши подход до потери хвата и верни ноги на опору, а не спрыгивай с высоты.",
+        ],
+        "breathing": "Дыши спокойно и не задерживай дыхание во время удержания.",
+        "mistakes": [
+            "Раскачивание корпуса",
+            "Продолжение удержания после потери контроля хвата",
+            "Спрыгивание без устойчивой опоры под ногами",
+        ],
+        "secondary": ["Предплечья", "Спина", "Плечи", "Кор"],
+    },
+    "recumbent-bike": {
+        "steps": [
+            "Настрой сиденье так, чтобы в дальней точке педали колено оставалось слегка согнутым, а спина сохраняла опору.",
+            "Поставь стопы по центру педалей и крути их плавно, удерживая колени по линии стоп.",
+            "Подбирай сопротивление под контролируемый ритм и останови педали перед тем, как убрать ноги.",
+        ],
+        "breathing": "Дыши ровно и свободно, не задерживая дыхание при росте сопротивления.",
+        "mistakes": [
+            "Сиденье слишком близко или далеко от педалей",
+            "Колени заваливаются внутрь",
+            "Рывки педалями вместо ровного цикла",
+        ],
+        "secondary": ["Квадрицепс", "Ягодицы", "Бицепс бедра", "Икры"],
+    },
 }
 
 
@@ -670,6 +901,54 @@ MEDIA_ALT_BY_PHASE: dict[str, dict[str, str]] = {
     "chest-supported-dumbbell-row": {
         "eccentric_end": "Тяга гантелей с упором грудью: исходное положение, руки опущены под скамьёй",
         "concentric_end": "Тяга гантелей с упором грудью: конечное положение, локти отведены назад",
+    },
+    "bodyweight-squat": {
+        "eccentric_end": "Приседания с собственным весом: нижнее положение с устойчивыми стопами",
+        "concentric_end": "Приседания с собственным весом: верхнее положение без жёсткой блокировки коленей",
+    },
+    "bodyweight-glute-bridge": {
+        "technique": "Ягодичный мост с собственным весом: исходное и верхнее положения с опорой стоп и плеч",
+    },
+    "barbell-wrist-curl": {
+        "eccentric_end": "Сгибание кистей со штангой: запястья опущены за краем опоры",
+        "concentric_end": "Сгибание кистей со штангой: кисти подняты, предплечья остаются на опоре",
+    },
+    "barbell-wrist-extension": {
+        "eccentric_end": "Разгибание кистей со штангой: кисти опущены ладонями вниз",
+        "concentric_end": "Разгибание кистей со штангой: тыльная сторона кистей поднята, предплечья неподвижны",
+    },
+    "dead-hang": {
+        "technique": "Вис на перекладине: устойчивый хват, спокойный корпус и безопасная опора для завершения",
+    },
+    "recumbent-bike": {
+        "cycle_one": "Горизонтальный велотренажёр: одна педаль в ближней точке, спина на опоре",
+        "cycle_two": "Горизонтальный велотренажёр: та же нога в дальней точке с мягко согнутым коленом",
+    },
+    "pendlay-row": {
+        "technique": "Тяга Пендлея: старт штанги с пола и верхняя точка у нижней части груди",
+    },
+    "weighted-dip": {
+        "technique": "Отжимания на брусьях с весом: внешнее отягощение на поясе и две контролируемые позиции",
+    },
+    "single-leg-calf-raise": {
+        "technique": "Подъём на носок одной ногой: нижняя и верхняя позиции рабочей стопы на краю опоры",
+    },
+    "hollow-hold": {
+        "technique": "Холлоу-холд: подготовка лёжа и удержание дуги с прижатой поясницей",
+    },
+    "meadows-row": {
+        "eccentric_end": "Тяга Медоуза: рука выпрямлена к свободному концу штанги, корпус устойчив",
+        "concentric_end": "Тяга Медоуза: локоть отведён назад, свободный конец штанги у корпуса",
+    },
+    "captain-chair-leg-raise": {
+        "eccentric_end": "Подъём ног в упоре: корпус на предплечьях и спинке, ноги опущены",
+        "concentric_end": "Подъём ног в упоре: колени подняты без раскачивания корпуса",
+    },
+    "belt-squat": {
+        "technique": "Поясной присед: груз закреплён на поясе, показаны верхняя и нижняя позиции",
+    },
+    "wall-sit": {
+        "technique": "Статический присед у стены: контролируемый вход и удержание с опорой спины",
     },
 }
 

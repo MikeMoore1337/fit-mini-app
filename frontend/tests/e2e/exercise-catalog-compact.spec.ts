@@ -23,6 +23,39 @@ test('client exercise rows stay compact-first across supported mobile widths', a
           has_guide: true,
         },
         {
+          id: 3,
+          title: 'Гоблет-присед с гирей',
+          slug: 'goblet-squat',
+          primary_muscle: 'Квадрицепс',
+          equipment: 'Гиря',
+          primary_muscle_ids: ['quadriceps'],
+          secondary_muscle_ids: ['glutes'],
+          equipment_ids: ['kettlebell'],
+          aliases: ['гоблет', 'goblet squat', 'kettlebell goblet squat'],
+          alternatives: [],
+          difficulty_level: 'beginner',
+          is_custom: false,
+          is_personalized: false,
+          has_guide: true,
+        },
+        {
+          id: 4,
+          title: 'Гоблет-присед с гирей',
+          slug: 'kettlebell-goblet-squat',
+          canonical_slug: 'goblet-squat',
+          primary_muscle: 'Ноги',
+          equipment: 'Гиря',
+          primary_muscle_ids: ['legs'],
+          secondary_muscle_ids: ['glutes'],
+          equipment_ids: ['kettlebell'],
+          aliases: [],
+          alternatives: [],
+          difficulty_level: 'beginner',
+          is_custom: false,
+          is_personalized: false,
+          has_guide: true,
+        },
+        {
           id: 2,
           title: 'Приседания со штангой',
           slug: 'barbell-squat',
@@ -56,9 +89,25 @@ test('client exercise rows stay compact-first across supported mobile widths', a
 
     const primaryAction = rows.first().getByRole('button', { name: /Техника и детали|Подробнее/ });
     expect((await primaryAction.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+
+    const search = page.getByRole('searchbox', { name: 'Поиск' });
+    await search.fill('goblet squat');
+    await expect(page.locator('.exercise-catalog-item')).toHaveCount(1);
+    await expect(page.locator('.exercise-catalog-item')).toContainText('Гоблет-присед с гирей');
     await expectNoHorizontalOverflow(page);
     await page.locator('.exercise-catalog-list').screenshot({
-      path: `../.artifacts/screenshots/task-113A-round-2/exercise-catalog-${name}-${viewport.width}.png`,
+      path: `../.artifacts/screenshots/task-120D/exercise-catalog-${name}-${viewport.width}.png`,
     });
   }
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/app?section=catalog');
+  await page.getByRole('searchbox', { name: 'Поиск' }).fill('гоблет');
+  await expect(page.locator('.exercise-catalog-item')).toHaveCount(1);
+  await expect(page.locator('.exercise-catalog-item')).toContainText('Гоблет-присед с гирей');
+  await expectNoHorizontalOverflow(page);
+  await page.screenshot({
+    path: '../.artifacts/screenshots/task-120D/exercise-catalog-desktop-1280.png',
+    fullPage: true,
+  });
 });
