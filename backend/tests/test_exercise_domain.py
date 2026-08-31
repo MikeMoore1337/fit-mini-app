@@ -519,6 +519,100 @@ def test_task_120e_builder_cannot_mint_semantic_approval(tmp_path: Path) -> None
         load_review_lock(invalid_lock)
 
 
+def test_task_120e_builders_require_exact_gate_b_verdict(tmp_path: Path) -> None:
+    from scripts.build_exercise_human_visual_assets import load_review_lock
+
+    review_path = (
+        Path(__file__).resolve().parents[2]
+        / "docs"
+        / "exercises"
+        / "catalog-v2"
+        / "120E_ASSET_REVIEW.json"
+    )
+    review = json.loads(review_path.read_text(encoding="utf-8"))
+    review["owner_gates"]["gate_b"] = {
+        "status": "approved",
+        "verdict": "APPROVE_DIFFERENT_REVISION",
+        "approved_at": "2026-08-31",
+    }
+    invalid_lock = tmp_path / "wrong-gate-b-verdict-review-lock.json"
+    invalid_lock.write_text(json.dumps(review), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Gate B exact verdict"):
+        load_review_lock(invalid_lock)
+
+
+def test_task_120e_builder_stages_before_replacing_derivatives(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from PIL import Image
+    from scripts import build_exercise_human_visual_assets as builder
+
+    slug = "test-machine"
+    monkeypatch.setattr(
+        builder,
+        "HUMAN_VISUAL_SPECS",
+        {slug: builder.HumanVisualSpec("canonical_test_machine")},
+    )
+    source_dir = tmp_path / "sources"
+    source_dir.mkdir()
+    source_name = f"{slug}-concentric_end-v1.png"
+    source_path = source_dir / source_name
+    Image.new("RGB", (1536, 1024), (32, 32, 32)).save(source_path)
+    source_digest = builder.sha256(source_path)
+    reviews = {
+        "domain": "pass",
+        "anatomy": "pass",
+        "equipment": "pass",
+        "phase": "pass",
+        "visual_style": "pass",
+        "mobile": "pass",
+        "legal": "pass_with_limitations",
+    }
+    lock = {
+        "schema_version": 1,
+        "asset_version": builder.ASSET_VERSION,
+        "review_record_kind": "human_review_exact_revision",
+        "automated_semantic_approval": False,
+        "owner_gates": {
+            "gate_a": {
+                "status": "approved",
+                "verdict": "APPROVE_120E_VISUAL_DIRECTION",
+            },
+            "gate_b": {
+                "status": "approved",
+                "verdict": "APPROVE_120E_EXACT_ASSET_REVISION",
+            },
+        },
+        "exercises": {
+            slug: {
+                "variant_key": "canonical_test_machine",
+                "phases": {
+                    "concentric_end": {
+                        "source_master_filename": source_name,
+                        "source_master_sha256": source_digest,
+                        "reviews": reviews,
+                        "sources": [],
+                    }
+                },
+            }
+        },
+        "source_set_sha256": "not-reached",
+        "derivative_set_sha256": "not-reached",
+    }
+    lock_path = tmp_path / "review-lock.json"
+    lock_path.write_text(json.dumps(lock), encoding="utf-8")
+    asset_dir = tmp_path / "assets"
+    existing = asset_dir / "human-v1" / slug / "concentric_end-480w.webp"
+    existing.parent.mkdir(parents=True)
+    existing.write_bytes(b"approved-existing-derivative")
+
+    with pytest.raises(ValueError, match="Derivative output is not the reviewed revision"):
+        builder.build(source_dir, asset_dir, lock_path)
+
+    assert existing.read_bytes() == b"approved-existing-derivative"
+
+
 def test_task_120c_lower_body_machine_batch_contract_and_workout_integration(client) -> None:
     headers = auth(client, telegram_user_id=32306, is_coach=False)
     catalog_response = client.get("/api/v1/programs/exercises", headers=headers)

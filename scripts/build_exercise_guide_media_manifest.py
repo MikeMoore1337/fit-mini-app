@@ -18,6 +18,7 @@ from PIL import Image
 from build_exercise_human_visual_assets import (
     ASSET_VERSION,
     HUMAN_VISUAL_SPECS,
+    load_review_lock,
 )
 from build_exercise_human_visual_assets import (
     PHASES as HUMAN_PHASES,
@@ -321,17 +322,6 @@ def catalog_definition() -> tuple[
     )
 
 
-def _load_human_review(review_lock: Path) -> dict:
-    payload = json.loads(review_lock.read_text(encoding="utf-8"))
-    if payload.get("schema_version") != 1 or payload.get("asset_version") != ASSET_VERSION:
-        raise ValueError("Unsupported Task 120E review lock")
-    if payload.get("owner_gates", {}).get("gate_a", {}).get("status") != "approved":
-        raise ValueError("Task 120E Gate A is not recorded as approved")
-    if set(payload.get("exercises", {})) != set(HUMAN_VISUAL_SPECS):
-        raise ValueError("Task 120E review lock exercise coverage mismatch")
-    return payload
-
-
 def build_manifest(asset_dir: Path, review_lock: Path) -> dict:
     (
         expected,
@@ -339,7 +329,7 @@ def build_manifest(asset_dir: Path, review_lock: Path) -> dict:
         upstream_source,
         media_alt_by_phase,
     ) = catalog_definition()
-    human_review = _load_human_review(review_lock)
+    human_review = load_review_lock(review_lock)
     expected_paths = {
         name for files in expected.values() for name, _ in files if not name.startswith("human-v1/")
     }
