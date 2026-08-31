@@ -267,12 +267,22 @@ compatibility, keep one active writer and stop before creating another write lea
 
 # Testing and verification
 
-Use risk-based testing. Changes to business logic, API behavior, permissions, state
-transitions, calculations, persistence, parsing/validation or regression-prone UI behavior
-normally require appropriate tests.
+Use risk-based testing. Before implementing a behavioral change, inspect the existing tests for
+the affected contract and decide whether they remain valid. If the intended contract changes,
+update only obsolete expectations and preserve unrelated regression coverage. Do not change tests
+merely to make the current implementation pass, and do not restore superseded behavior solely to
+satisfy a stale test.
+
+Every new feature must include appropriate automated test coverage at the lowest effective layer,
+plus integration or end-to-end coverage when needed to protect a critical user journey. Changes to
+business logic, API behavior, permissions, state transitions, calculations, persistence,
+parsing/validation or regression-prone UI behavior require tests proportionate to their risk.
 
 Test meaningful boundaries and failure paths, not only happy paths. Prefer deterministic
-waits/assertions over sleeps. Add a regression test for a meaningful bug fix when practical.
+waits/assertions over sleeps. Add a regression test for a meaningful bug fix when technically
+applicable. If automated coverage is objectively impractical, document the concrete reason and the
+alternative verification performed; convenience, time pressure or a difficult setup are not
+sufficient exceptions.
 
 For normal backlog tasks:
 

@@ -56,7 +56,14 @@ Researcher возвращает компактные факты, файлы, з�
 - переиспользовать существующие contracts/components/services;
 - не проводить побочный refactor;
 - не добавлять новый architecture/data/API/security scope без требования task;
-- добавить только необходимые tests;
+- до реализации определить test impact и проверить существующее покрытие затронутого поведения;
+- при намеренном изменении contract обновить только устаревшие expectations и сохранить
+  остальное regression coverage; не менять tests только ради прохождения текущей implementation
+  и не восстанавливать superseded behavior ради stale test;
+- новую функциональность покрыть подходящими automated tests на минимально достаточном уровне;
+  critical user journey дополнительно защитить integration/E2E-сценарием, когда это необходимо;
+- для существенного bug fix добавить regression test, если он технически применим; объективную
+  невозможность automated coverage обосновать и зафиксировать выполненную альтернативную проверку;
 - обновить docs, если долговечное поведение реально изменилось;
 - выполнить mobile/error/recovery/a11y состояния, которые прямо относятся к изменённому flow.
 
@@ -97,10 +104,12 @@ Researcher возвращает компактные факты, файлы, з�
 Если task изменила tracked artifacts:
 
 1. Сопоставить результат со всеми acceptance/done-when пунктами.
-2. Запустить минимальный targeted набор checks по изменённой поверхности.
-3. Для UI проверить фактический render и основной affected flow на нужных viewport/states, а не устраивать полный UI audit каждого экрана.
-4. Проверить provisional `git diff` на лишний scope, secrets, migrations/config/dependencies.
-5. Исправить очевидные дефекты до передачи следующей роли.
+2. Сопоставить каждое новое или изменённое поведение с automated test либо с конкретным
+   техническим обоснованием исключения и альтернативной проверкой.
+3. Запустить минимальный targeted набор checks по изменённой поверхности.
+4. Для UI проверить фактический render и основной affected flow на нужных viewport/states, а не устраивать полный UI audit каждого экрана.
+5. Проверить provisional `git diff` на лишний scope, secrets, migrations/config/dependencies.
+6. Исправить очевидные дефекты до передачи следующей роли.
 
 Full repository suite, полный visual audit и полный security audit по умолчанию не нужны.
 
