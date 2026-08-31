@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "task": "120D",
+  "created_at": "2026-08-31",
+  "origin": "openai_image_generation",
+  "asset_type": "split_position_technique_illustration",
+  "max_production_bytes": 204800,
+  "generation": {
+    "workflow": "one dedicated generation call per exercise",
+    "style": "YFC educational 3D, charcoal gym, teal and warm-orange accents",
+    "post_processing": "mechanical resize to 1280px and JPEG quality 88; source masters unchanged"
+  },
+  "rights": {
+    "owner": "Your Fitness Coach",
+    "local_notice": "backend/assets/exercise-guides/NOTICE.md"
+  },
+  "review_contract": {
+    "review_mode": "agent_visual_inspection",
+    "required_checks": [
+      "identity_consistency",
+      "equipment_and_setup",
+      "key_positions",
+      "anatomical_plausibility",
+      "style_consistency",
+      "mobile_legibility"
+    ]
+  },
+  "exercises": {
+    "bodyweight-glute-bridge": {
+      "status": "approved",
+      "path": "bodyweight-glute-bridge-technique.jpg",
+      "sha256": "079ff0d61e08018996340fc49bfa2b4dda8b5847f01c212536721dd5bc652863",
+      "dimensions": [1280, 853],
+      "review": "start and top positions, stable feet, neutral neck, controlled hip extension"
+    },
+    "dead-hang": {
+      "status": "approved",
+      "path": "dead-hang-technique.jpg",
+      "sha256": "9d8e6c4479a42ae1a877a260ad3a4781ad32fb2aed68c4dd8cf9be23e10293b2",
+      "dimensions": [1280, 853],
+      "review": "fixed bar, bilateral overhand grip, straight arms, quiet suspended body"
+    },
+    "pendlay-row": {
+      "status": "approved",
+      "path": "pendlay-row-technique.jpg",
+      "sha256": "3b723296307483498d0217c5cb99e413f72c097db68ddc7580be0cb993866503",
+      "dimensions": [1280, 853],
+      "review": "bar starts on floor, stable hip hinge, neutral spine, pull to lower torso"
+    },
+    "weighted-dip": {
+      "status": "approved",
+      "path": "weighted-dip-technique.jpg",
+      "sha256": "e1574d9487f3369d6efbd0560e30917d8491dadcfc68fb55a29c422478f3e741",
+      "dimensions": [1280, 853],
+      "review": "parallel bars, visible belt and plate, controlled top and safe bottom positions"
+    },
+    "single-leg-calf-raise": {
+      "status": "approved",
+      "path": "single-leg-calf-raise-technique.jpg",
+      "sha256": "436afaa2a2967e75b8caecb2716435856479c71b469453cfea277366d98d2e6f",
+      "dimensions": [1280, 853],
+      "review": "one working forefoot on stable step, light hand support, visible heel travel"
+    },
+    "hollow-hold": {
+      "status": "approved",
+      "path": "hollow-hold-technique.jpg",
+      "sha256": "d1853a5820141ed03ac9b057aa0e52be02741b4a4f67c495b7efb5994ada425f",
+      "dimensions": [1280, 853],
+      "review": "clear setup and hold, shoulders elevated, limbs extended, lumbar region controlled"
+    },
+    "belt-squat": {
+      "status": "approved",
+      "path": "belt-squat-technique.jpg",
+      "sha256": "c9607391aef3baec76e715798d73d02aba5555f4dd5b731f14228056e2b3c202",
+      "dimensions": [1280, 853],
+      "review": "recognizable machine, belt connected below hips, planted feet, aligned squat positions"
+    },
+    "wall-sit": {
+      "status": "approved",
+      "path": "wall-sit-technique.jpg",
+      "sha256": "c46e8e8fc6925e1a07179732f254b1f7b954e655ebd258cb126aba3e3e65497c",
+      "dimensions": [1280, 853],
+      "review": "same wall and person, supported back, planted heels, aligned setup and isometric hold"
+    }
+  }
+}

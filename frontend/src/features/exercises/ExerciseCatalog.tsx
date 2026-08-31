@@ -14,7 +14,7 @@ import {
 } from '../../shared/ui/common';
 import { useModalA11y } from '../../shared/ui/useModalA11y';
 import { ExerciseGuideDialog } from './ExerciseGuideDialog';
-import { matchesExerciseSearch } from './exerciseSearch';
+import { rankExercisesForSearch } from './exerciseSearch';
 
 const difficultyLabels: Record<Exercise['difficulty_level'], string> = {
   beginner: 'Начальный',
@@ -125,7 +125,8 @@ export function ExerciseCatalog({
   }, [rows.data]);
 
   const filtered = useMemo(() => {
-    return (rows.data ?? []).filter((item) => {
+    const canonicalRows = rankExercisesForSearch(rows.data ?? [], search);
+    return canonicalRows.filter((item) => {
       const matchesMuscle =
         !muscle ||
         (muscle.startsWith('legacy:')
@@ -137,10 +138,7 @@ export function ExerciseCatalog({
           ? item.equipment === equipment.slice(7)
           : (item.equipment_ids ?? []).includes(equipment));
       return (
-        matchesMuscle &&
-        matchesEquipment &&
-        (!difficulty || item.difficulty_level === difficulty) &&
-        matchesExerciseSearch(item, search)
+        matchesMuscle && matchesEquipment && (!difficulty || item.difficulty_level === difficulty)
       );
     });
   }, [difficulty, equipment, muscle, rows.data, search]);

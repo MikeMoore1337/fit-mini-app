@@ -364,9 +364,9 @@ def test_task_120b_upper_body_machine_batch_contract(client) -> None:
     assert catalog_response.status_code == 200
     catalog = catalog_response.json()
     by_slug = {item["slug"]: item for item in catalog}
-    assert len(by_slug) == len(catalog) == 176
+    assert len(by_slug) == len(catalog) == 182
     assert set(UPPER_BODY_MACHINE_SLUGS) <= set(by_slug)
-    assert len({item["title"] for item in catalog}) == len(catalog)
+    assert len({item["title"] for item in catalog}) == len(catalog) - 1
 
     for slug in UPPER_BODY_MACHINE_SLUGS:
         item = by_slug[slug]
@@ -439,9 +439,9 @@ def test_task_120e_human_visual_manifest_provenance_and_integrity() -> None:
     slugs = set(UPPER_BODY_MACHINE_SLUGS) | set(LOWER_BODY_MACHINE_SLUGS)
 
     assert manifest["schema_version"] == 2
-    assert manifest["asset_count"] == 343
-    assert manifest["derivative_count"] == 415
-    assert len(manifest["exercises"]) == 176
+    assert manifest["asset_count"] == 347
+    assert manifest["derivative_count"] == 419
+    assert len(manifest["exercises"]) == 182
     derivative_hashes: dict[str, str] = {}
     for slug in slugs:
         exercise = manifest["exercises"][slug]
@@ -613,6 +613,29 @@ def test_task_120e_builder_stages_before_replacing_derivatives(
     assert existing.read_bytes() == b"approved-existing-derivative"
 
 
+def test_task_120d_manifest_requires_complete_media_review_lock(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from scripts import build_exercise_guide_media_manifest as builder
+
+    root = Path(__file__).resolve().parents[2]
+    review = json.loads(
+        (root / "docs" / "exercises" / "catalog-v2" / "120D_MEDIA_REVIEW.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    review["exercises"].pop("wall-sit")
+    incomplete_review = tmp_path / "120D-incomplete-review.json"
+    incomplete_review.write_text(json.dumps(review), encoding="utf-8")
+    monkeypatch.setattr(builder, "TASK_120D_REVIEW_PATH", incomplete_review)
+
+    with pytest.raises(ValueError, match=r"missing=\['wall-sit'\]"):
+        builder.build_manifest(
+            root / "backend" / "assets" / "exercise-guides",
+            root / "docs" / "exercises" / "catalog-v2" / "120E_ASSET_REVIEW.json",
+        )
+
+
 def test_task_120c_lower_body_machine_batch_contract_and_workout_integration(client) -> None:
     headers = auth(client, telegram_user_id=32306, is_coach=False)
     catalog_response = client.get("/api/v1/programs/exercises", headers=headers)
@@ -620,9 +643,9 @@ def test_task_120c_lower_body_machine_batch_contract_and_workout_integration(cli
     assert catalog_response.status_code == 200
     catalog = catalog_response.json()
     by_slug = {item["slug"]: item for item in catalog}
-    assert len(by_slug) == len(catalog) == 176
+    assert len(by_slug) == len(catalog) == 182
     assert set(LOWER_BODY_MACHINE_SLUGS) <= set(by_slug)
-    assert len({item["title"] for item in catalog}) == len(catalog)
+    assert len({item["title"] for item in catalog}) == len(catalog) - 1
 
     expected_patterns = {
         "pendulum-squat": "squat",
@@ -716,6 +739,115 @@ def test_task_120c_lower_body_machine_batch_contract_and_workout_integration(cli
     assert workout["exercises"][0]["exercise_title"] == machine_hip_thrust["title"]
     started = client.post(f"/api/v1/workouts/{workout['id']}/start", headers=headers)
     assert started.status_code == 200
+
+
+def test_task_120d_remaining_coverage_redirects_and_validator(client) -> None:
+    headers = auth(client, telegram_user_id=32307, is_coach=False)
+    response = client.get("/api/v1/programs/exercises", headers=headers)
+
+    assert response.status_code == 200
+    catalog = response.json()
+    by_slug = {item["slug"]: item for item in catalog}
+    assert len(catalog) == 182
+    assert len({item["canonical_slug"] or item["slug"] for item in catalog}) == 181
+
+    expected_metric_types = {
+        "bodyweight-squat": "strength",
+        "bodyweight-glute-bridge": "strength",
+        "barbell-wrist-curl": "strength",
+        "barbell-wrist-extension": "strength",
+        "dead-hang": "strength",
+        "recumbent-bike": "cardio",
+    }
+    for slug, metric_type in expected_metric_types.items():
+        item = by_slug[slug]
+        assert item["metric_type"] == metric_type
+        assert item["aliases"]
+        assert item["movement_pattern"]
+        assert item["execution_variant_tags"]
+        assert item["has_guide"] is True
+        guide = client.get(f"/api/v1/programs/exercises/{item['id']}/guide", headers=headers).json()
+        assert len(guide["technique_steps"]) == 3
+        assert len(guide["common_mistakes"]) >= 3
+        assert guide["breathing"]
+        assert guide["media"]
+        assert all(media["alt"] and media["sources"] for media in guide["media"])
+
+    assert by_slug["recumbent-bike"]["equipment_ids"] == ["cardio"]
+    assert by_slug["rowing-machine"]["equipment"] == "Гребной тренажёр"
+    assert by_slug["treadmill-run"]["equipment"] == "Беговая дорожка"
+    assert by_slug["assault-bike"]["title"] == "Воздушный велотренажёр"
+    assert by_slug["kettlebell-goblet-squat"]["canonical_slug"] == "goblet-squat"
+    assert by_slug["goblet-squat"]["canonical_slug"] is None
+    assert "high to low cable fly" in by_slug["cable-fly"]["aliases"]
+
+    legacy_goblet = by_slug["kettlebell-goblet-squat"]
+    created = client.post(
+        "/api/v1/programs/templates",
+        headers=headers,
+        json={
+            "title": "History-safe goblet redirect",
+            "goal": "maintenance",
+            "level": "beginner",
+            "mode": "self",
+            "assign_after_create": False,
+            "days": [
+                {
+                    "title": "День 1",
+                    "exercises": [
+                        {
+                            "exercise_id": legacy_goblet["id"],
+                            "prescribed_sets": 3,
+                            "prescribed_reps": "8-12",
+                            "rest_seconds": 90,
+                        }
+                    ],
+                }
+            ],
+        },
+    )
+    assert created.status_code == 200
+    assert (
+        created.json()["template"]["days"][0]["exercises"][0]["exercise_id"] == legacy_goblet["id"]
+    )
+
+    for slug, personalized_title in (
+        ("kettlebell-goblet-squat", "Мой гоблет с гирей"),
+        ("goblet-squat", "Мой канонический гоблет"),
+    ):
+        personalized = client.patch(
+            f"/api/v1/programs/exercises/{by_slug[slug]['edit_target_id']}",
+            headers=headers,
+            json={"title": personalized_title},
+        )
+        assert personalized.status_code == 200
+        personalized_item = personalized.json()
+        assert personalized_item["slug"].startswith(f"{slug}-u-")
+        assert personalized_item["canonical_slug"] == "goblet-squat"
+        assert personalized_item["aliases"]
+        assert personalized_item["movement_pattern"] == "squat"
+
+    personalized_catalog = client.get("/api/v1/programs/exercises", headers=headers).json()
+    assert len(personalized_catalog) == 182
+    assert len({item["canonical_slug"] or item["slug"] for item in personalized_catalog}) == 181
+
+    validator_path = (
+        Path(__file__).resolve().parents[2] / "scripts" / "validate_exercise_catalog.py"
+    )
+    spec = importlib.util.spec_from_file_location("exercise_catalog_validator", validator_path)
+    assert spec is not None and spec.loader is not None
+    validator = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(validator)
+    report = validator.validate_catalog()
+    assert report == {
+        "catalog_records": 182,
+        "canonical_records": 181,
+        "titles": 182,
+        "cardio_records": 14,
+        "assets": 347,
+        "derivatives": 419,
+        "coverage_decisions": 36,
+    }
 
 
 def test_custom_exercise_structured_metadata_can_be_partial(client) -> None:
@@ -820,5 +952,5 @@ def test_exercise_catalog_metadata_loading_has_no_per_row_queries(client) -> Non
         event.remove(engine, "before_cursor_execute", count_selects)
 
     assert response.status_code == 200
-    assert len(response.json()) == 176
+    assert len(response.json()) == 182
     assert select_count <= 20

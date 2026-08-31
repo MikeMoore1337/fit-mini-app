@@ -13,7 +13,7 @@ import { AppLink } from '../../shared/navigation/router';
 import { dateInputValue, detectedTimeZone } from '../../shared/dateTime';
 import { applyRestSeconds } from './programRest';
 import { ExerciseGuideDialog } from '../exercises/ExerciseGuideDialog';
-import { matchesExerciseSearch } from '../exercises/exerciseSearch';
+import { normalizeExerciseSearchText, rankExercisesForSearch } from '../exercises/exerciseSearch';
 import { scheduleWeekdaysForSave, templateDraftTitle } from './templateEditing';
 import { DateInput } from '../../shared/ui/PickerInput';
 import { Icon } from '../../shared/ui/Icon';
@@ -89,10 +89,8 @@ function ExercisePicker({
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const results = useMemo(() => {
-    return orderExercisesForLevel(
-      exercises.filter((exercise) => matchesExerciseSearch(exercise, query)),
-      level,
-    );
+    const ranked = rankExercisesForSearch(exercises, query);
+    return normalizeExerciseSearchText(query) ? ranked : orderExercisesForLevel(ranked, level);
   }, [exercises, level, query]);
 
   const currentActiveIndex = Math.min(activeIndex, Math.max(0, results.length - 1));

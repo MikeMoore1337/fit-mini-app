@@ -15,14 +15,24 @@ from pathlib import Path
 
 from PIL import Image
 
-from build_exercise_human_visual_assets import (
-    ASSET_VERSION,
-    HUMAN_VISUAL_SPECS,
-    load_review_lock,
-)
-from build_exercise_human_visual_assets import (
-    PHASES as HUMAN_PHASES,
-)
+if __package__:
+    from scripts.build_exercise_human_visual_assets import (
+        ASSET_VERSION,
+        HUMAN_VISUAL_SPECS,
+        load_review_lock,
+    )
+    from scripts.build_exercise_human_visual_assets import (
+        PHASES as HUMAN_PHASES,
+    )
+else:
+    from build_exercise_human_visual_assets import (
+        ASSET_VERSION,
+        HUMAN_VISUAL_SPECS,
+        load_review_lock,
+    )
+    from build_exercise_human_visual_assets import (
+        PHASES as HUMAN_PHASES,
+    )
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 BACKEND_DIR = ROOT_DIR / "backend"
@@ -33,6 +43,7 @@ INTERNAL_SOURCE = {
     "license": "Иллюстрация создана для приложения",
     "license_url": None,
 }
+TASK_120D_REVIEW_PATH = ROOT_DIR / "docs" / "exercises" / "catalog-v2" / "120D_MEDIA_REVIEW.json"
 PHASES = {
     "concentric_end": "Фаза усилия",
     "eccentric_end": "Фаза возврата",
@@ -55,7 +66,7 @@ CONCENTRIC_END_IN_START_IMAGE_SLUGS = {
     "ab-wheel",
     "bench-dip",
     "bench-press",
-    "belt-squat",
+    "bodyweight-squat",
     "bulgarian-split-squat",
     "chest-dip",
     "dumbbell-fly",
@@ -83,7 +94,6 @@ CONCENTRIC_END_IN_START_IMAGE_SLUGS = {
     "squat",
     "triceps-kickback",
     "upright-row",
-    "weighted-dip",
     "hyperextension",
 }
 
@@ -102,7 +112,6 @@ ECCENTRIC_END_IN_START_IMAGE_SLUGS = {
     "cable-row-one-arm",
     "cable-crunch",
     "calf-press",
-    "captain-chair-leg-raise",
     "chin-up",
     "chest-supported-row",
     "close-grip-bench-press",
@@ -123,6 +132,7 @@ ECCENTRIC_END_IN_START_IMAGE_SLUGS = {
     "glute-ham-raise",
     "hammer-curl",
     "hanging-leg-raise",
+    "captain-chair-leg-raise",
     "hip-abduction",
     "hip-adduction",
     "hip-thrust",
@@ -147,14 +157,13 @@ ECCENTRIC_END_IN_START_IMAGE_SLUGS = {
     "independent-lever-lat-pulldown",
     "machine-pullover",
     "chest-supported-dumbbell-row",
+    "meadows-row",
     "machine-shoulder-press",
     "independent-lever-shoulder-press",
     "machine-triceps-extension",
     "machine-glute-kickback",
     "machine-hip-thrust",
-    "meadows-row",
     "one-arm-dumbbell-row",
-    "pendlay-row",
     "pendulum-squat",
     "plate-loaded-leg-press",
     "preacher-curl",
@@ -171,7 +180,6 @@ ECCENTRIC_END_IN_START_IMAGE_SLUGS = {
     "seated-calf-raise",
     "seated-leg-curl",
     "single-arm-cable-triceps-extension",
-    "single-leg-calf-raise",
     "single-leg-hip-thrust",
     "smith-bench-press",
     "smith-shoulder-press",
@@ -189,6 +197,8 @@ ECCENTRIC_END_IN_START_IMAGE_SLUGS = {
     "lying-dumbbell-triceps-extension",
     "romanian-deadlift",
     "smith-squat",
+    "barbell-wrist-curl",
+    "barbell-wrist-extension",
     "unilateral-leg-press",
     "v-squat-machine",
     "reverse-hyperextension",
@@ -197,8 +207,6 @@ ECCENTRIC_END_IN_START_IMAGE_SLUGS = {
 SPECIAL_PHASES_BY_SLUG = {
     "plank": ("setup", "hold"),
     "side-plank": ("setup", "hold"),
-    "hollow-hold": ("setup", "hold"),
-    "wall-sit": ("setup", "hold"),
     "pallof-press": ("setup", "hold"),
     "overhead-triceps-extension": ("setup", "hold"),
     "dead-bug": ("setup", "work"),
@@ -223,6 +231,7 @@ SPECIAL_PHASES_BY_SLUG = {
     "mountain-climber": ("cycle_one", "cycle_two"),
     "rowing-machine": ("cycle_one", "cycle_two"),
     "russian-twist": ("cycle_one", "cycle_two"),
+    "recumbent-bike": ("cycle_one", "cycle_two"),
     "walking-lunge": ("cycle_one", "cycle_two"),
     "turkish-get-up": ("sequence_start", "sequence_next"),
 }
@@ -252,13 +261,17 @@ def catalog_definition() -> tuple[
         MEDIA_ALT_BY_PHASE,
     )
     from fitminiapp_api.services.exercise_guides import (
-        GENERATED_CARDIO_SLUGS,
         SOURCE_LICENSE,
         SOURCE_NAME,
         SOURCE_URL,
         YFC_ORIGINAL_VECTOR_SLUGS,
+        YFC_SINGLE_IMAGE_SLUGS,
     )
-    from sync_exercise_guide_assets import SOURCE_EXERCISES
+
+    if __package__:
+        from scripts.sync_exercise_guide_assets import SOURCE_EXERCISES
+    else:
+        from sync_exercise_guide_assets import SOURCE_EXERCISES
 
     phase_groups = (
         CONCENTRIC_END_IN_START_IMAGE_SLUGS,
@@ -306,7 +319,15 @@ def catalog_definition() -> tuple[
             (f"human-v1/{slug}/{phase_id}-480w.webp", phase_id) for phase_id in HUMAN_PHASES
         ]
     result.update(
-        {slug: [(f"{slug}-technique.jpg", "technique")] for slug in GENERATED_CARDIO_SLUGS}
+        {
+            slug: [
+                (
+                    f"{slug}-technique.jpg",
+                    "technique",
+                )
+            ]
+            for slug in YFC_SINGLE_IMAGE_SLUGS
+        }
     )
     upstream_source = {
         "name": SOURCE_NAME,
@@ -316,7 +337,7 @@ def catalog_definition() -> tuple[
     }
     return (
         result,
-        GENERATED_CARDIO_SLUGS,
+        YFC_SINGLE_IMAGE_SLUGS,
         upstream_source,
         MEDIA_ALT_BY_PHASE,
     )
@@ -329,7 +350,19 @@ def build_manifest(asset_dir: Path, review_lock: Path) -> dict:
         upstream_source,
         media_alt_by_phase,
     ) = catalog_definition()
+    from fitminiapp_api.services.exercise_guides import YFC_GENERATED_120D_SLUGS
+
     human_review = load_review_lock(review_lock)
+    task_120d_review = json.loads(TASK_120D_REVIEW_PATH.read_text(encoding="utf-8"))
+    task_120d_exercises = task_120d_review["exercises"]
+    expected_task_120d_slugs = {slug for slug in expected if slug in YFC_GENERATED_120D_SLUGS}
+    if set(task_120d_exercises) != expected_task_120d_slugs:
+        missing = sorted(expected_task_120d_slugs - set(task_120d_exercises))
+        unexpected = sorted(set(task_120d_exercises) - expected_task_120d_slugs)
+        raise ValueError(
+            "Task 120D review lock mismatch "
+            f"(missing={missing or 'none'}, unexpected={unexpected or 'none'})"
+        )
     expected_paths = {
         name for files in expected.values() for name, _ in files if not name.startswith("human-v1/")
     }
@@ -338,7 +371,7 @@ def build_manifest(asset_dir: Path, review_lock: Path) -> dict:
             expected_paths.update(source["path"] for source in phase["sources"])
     actual_paths = {
         path.relative_to(asset_dir).as_posix()
-        for pattern in ("*.jpg", "*.webp", "*.svg")
+        for pattern in ("*.jpg", "*.png", "*.webp", "*.svg")
         for path in asset_dir.rglob(pattern)
     }
     missing = sorted(expected_paths - actual_paths)
@@ -371,6 +404,24 @@ def build_manifest(asset_dir: Path, review_lock: Path) -> dict:
                 "generation": human_review["generation"],
                 "rights": human_review["rights"],
                 "owner_gates": human_review["owner_gates"],
+            }
+        elif slug in task_120d_exercises:
+            review = task_120d_exercises[slug]
+            if review["status"] != "approved":
+                raise ValueError(f"Task 120D media is not approved: {slug}")
+            source = {
+                "source_kind": "yfc_ai_generated",
+                "name": "Your Fitness Coach",
+                "url": "/",
+                "source_revision_or_retrieved_at": task_120d_review["created_at"],
+                "license": "Иллюстрация создана для приложения",
+                "license_url": None,
+                "license_url_or_local_notice": task_120d_review["rights"]["local_notice"],
+                "origin": task_120d_review["origin"],
+                "asset_type": task_120d_review["asset_type"],
+                "generation": task_120d_review["generation"],
+                "rights": task_120d_review["rights"],
+                "review": review["review"],
             }
         else:
             source = INTERNAL_SOURCE if slug in generated_cardio_slugs else upstream_source
@@ -430,8 +481,17 @@ def build_manifest(asset_dir: Path, review_lock: Path) -> dict:
                         "reviews": locked_phase["reviews"],
                     }
                 )
-            elif slug in media_alt_by_phase:
-                media_item["asset_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+            else:
+                digest = hashlib.sha256(path.read_bytes()).hexdigest()
+                media_item["asset_sha256"] = digest
+                if slug in task_120d_exercises:
+                    review = task_120d_exercises[slug]
+                    if filename != review["path"] or digest != review["sha256"]:
+                        raise ValueError(f"Task 120D media review lock mismatch: {slug}")
+                    if [width, height] != review["dimensions"]:
+                        raise ValueError(f"Task 120D media dimensions mismatch: {slug}")
+                    if path.stat().st_size > task_120d_review["max_production_bytes"]:
+                        raise ValueError(f"Task 120D media exceeds mobile byte limit: {slug}")
             if alt := media_alt_by_phase.get(slug, {}).get(phase_id):
                 media_item["alt"] = alt
             media.append(media_item)

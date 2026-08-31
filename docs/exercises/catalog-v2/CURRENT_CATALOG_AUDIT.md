@@ -102,3 +102,29 @@ Existing fields достаточно для identity, display name, broad muscle
 - Реальный Telegram, физические устройства и viewports не проверялись: task не меняет UI/runtime.
 - Audit не утверждает биомеханическую эквивалентность по совпадению muscle/pattern; alternatives остаются curated.
 - External source verified для upstream repository/license, но текущий manifest не доказывает file-level immutable provenance или semantic correctness; новый asset проходит полный gate.
+
+## Финальный отчёт Task 120D
+
+Срез после 120B–120D содержит 182 stored seed rows и 181 canonical search card:
+legacy `kettlebell-goblet-squat` history-safe сгруппирован с `goblet-squat`. Stored
+распределение — 168 `strength` / 14 `cardio`, уровни — 85 beginner / 59 intermediate /
+38 advanced; после canonical grouping — 84 / 59 / 38.
+
+Все `must` и `should` строки `COVERAGE_MATRIX.csv` имеют финальный статус `covered` либо
+`intentionally_merged_as_variant`. Добавлены `bodyweight-squat`,
+`bodyweight-glute-bridge`, `barbell-wrist-curl`, `barbell-wrist-extension`, `dead-hang` и
+`recumbent-bike`; направление high-to-low хранится как aliases варианта `cable-fly`.
+Cardio rower/treadmill/air bike используют equipment taxonomy `cardio`, а air bike имеет
+generic display name при сохранённых aliases.
+
+Manifest schema v2 покрывает 182 rows, 347 media items и 419 локальных файлов/derivatives.
+Все media имеют проверяемый SHA-256, alt и provenance. Validator не находит exact hash
+duplicates между разными canonical exercises; совпадающая goblet-пара допустима только
+внутри одного redirect group. Восемь созданных Task 120D split-position JPEG зафиксированы
+в `120D_MEDIA_REVIEW.json` после agent visual inspection identity/setup/key positions,
+анатомии, стиля и mobile legibility. Это не является проверкой в реальном Telegram или на
+физическом устройстве.
+
+Опционально отложены arm ergometer, редкие specialty/manufacturer-specific machines,
+косметические grip/stance варианты и отдельные canonical items для каждого режима
+independent arms: подтверждённого must/should coverage gap для них нет.
