@@ -1,0 +1,1763 @@
+{
+  "schema_version": 1,
+  "review_record_kind": "human_review_exact_revision",
+  "automated_semantic_approval": false,
+  "asset_version": "120e-v1",
+  "created_at": "2026-08-31",
+  "origin": "ai_generated",
+  "asset_type": "render_3d",
+  "generation": {
+    "provider": "OpenAI built-in image_gen",
+    "model_version": "not_exposed_by_provider_interface",
+    "job_or_seed": "not_exposed_by_provider_interface",
+    "brief_or_prompt_version": "120E-style-v1",
+    "input_asset_ids": "YFC-controlled text briefs and same-set generated phase references",
+    "generation_edit_calls": 54,
+    "accepted_source_masters": 36
+  },
+  "rights": {
+    "author_or_rightsholder": "YFC-controlled user workflow, subject to provider terms",
+    "license_name": "OpenAI service terms; YFC internal production asset",
+    "license_url": "https://openai.com/policies/row-terms-of-use/",
+    "local_notice": "backend/assets/exercise-guides/NOTICE.md",
+    "commercial_use_verified": true,
+    "redistribution_verified": true,
+    "modification_verified": true,
+    "model_release_status": "not_applicable_no_real_person_input",
+    "property_release_status": "not_applicable_no_identifiable_property_input"
+  },
+  "owner_gates": {
+    "gate_a": {
+      "status": "approved",
+      "verdict": "APPROVE_120E_VISUAL_DIRECTION",
+      "approved_at": "2026-08-31"
+    },
+    "gate_b": {
+      "status": "approved",
+      "verdict": "APPROVE_120E_EXACT_ASSET_REVISION",
+      "approved_at": "2026-08-31"
+    }
+  },
+  "rejections": [
+    {
+      "slug": "machine-glute-kickback",
+      "source_revision": 1,
+      "reason": "owner_rejected_exercise_identity_not_clear",
+      "resolution": "replaced_by_source_revision_2"
+    }
+  ],
+  "source_set_sha256": "9116e6ee336a65f385fe61c77f53d7075c96e220e3a4ef84e8ae4edac22e797d",
+  "derivative_set_sha256": "bd65781a2bcd3ab85765a43968fc0fb180f2638be025eef35ea5a18db7b58005",
+  "exercises": {
+    "chest-supported-dumbbell-row": {
+      "variant_key": "canonical_bilateral_incline_bench_dumbbell",
+      "phases": {
+        "concentric_end": {
+          "source_master_filename": "chest-supported-dumbbell-row-concentric_end-v1.png",
+          "source_master_sha256": "c188a112b50a187b46664e9776d22ba370bf96c10d75ba96eb5418d27952d4a0",
+          "sources": [
+            {
+              "path": "human-v1/chest-supported-dumbbell-row/concentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 9854,
+              "sha256": "d6fc9f9958a01c0c2a7a73b37edeb6ede96233473f3f1234b9558ccacc7944ab"
+            },
+            {
+              "path": "human-v1/chest-supported-dumbbell-row/concentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 20922,
+              "sha256": "5a942a31b2100f3fd8084dc2385ce630c65105e05eb2440e9e77b5d761006bd9"
+            },
+            {
+              "path": "human-v1/chest-supported-dumbbell-row/concentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 46788,
+              "sha256": "96d0266a0ce6c5d72f2c69f600c169b0a8dccca3abb8401c71d4764beebb14a3"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        },
+        "eccentric_end": {
+          "source_master_filename": "chest-supported-dumbbell-row-eccentric_end-v1.png",
+          "source_master_sha256": "f1a02908423c957cfdb30d4fd60026d509ea078abbb28b45cc1142d35343aa68",
+          "sources": [
+            {
+              "path": "human-v1/chest-supported-dumbbell-row/eccentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 10042,
+              "sha256": "0b6169e52e7d2f8dee9ac3d5aa13962cf4344cff716dfecf306cb82ff11d100c"
+            },
+            {
+              "path": "human-v1/chest-supported-dumbbell-row/eccentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 21418,
+              "sha256": "1f39584af7443236c989dd72109a2cffd7c7054060927ff435c3d536ee8c38e8"
+            },
+            {
+              "path": "human-v1/chest-supported-dumbbell-row/eccentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 48298,
+              "sha256": "e1174f7b3620f13b82f81c3af3b4153565ca8ffac8646ee4caa6340e1f728437"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        }
+      }
+    },
+    "independent-lever-chest-press": {
+      "variant_key": "canonical_bilateral_plate_loaded_independent",
+      "phases": {
+        "concentric_end": {
+          "source_master_filename": "independent-lever-chest-press-concentric_end-v1.png",
+          "source_master_sha256": "b816b69a56c46e4f7cdcd751f672fc9aadf46dac595efb7b6853ebfecbef6aff",
+          "sources": [
+            {
+              "path": "human-v1/independent-lever-chest-press/concentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 14596,
+              "sha256": "331161203d2f52880c59de42bc5a3507647333de43a02a58c0003b6805931d0a"
+            },
+            {
+              "path": "human-v1/independent-lever-chest-press/concentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 30576,
+              "sha256": "5327a9447c018f51dfd898e16c0b7c5d7fa39cbde88583b02b915c886830d810"
+            },
+            {
+              "path": "human-v1/independent-lever-chest-press/concentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 65522,
+              "sha256": "f753c4e93a3fff55b83721c1e369e76349223d72afa50e6089232ca1ea632391"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        },
+        "eccentric_end": {
+          "source_master_filename": "independent-lever-chest-press-eccentric_end-v1.png",
+          "source_master_sha256": "f6a4d8f1e5820720d965ec6540c4d85947a740e9c1fb0ac519e8b4c1928e709a",
+          "sources": [
+            {
+              "path": "human-v1/independent-lever-chest-press/eccentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 13790,
+              "sha256": "7100801421f3ec6239c9406f42f05fdd0fccbdbf6740d956098e02c934b28fcd"
+            },
+            {
+              "path": "human-v1/independent-lever-chest-press/eccentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 29526,
+              "sha256": "3ea1775740771e4023623fd9b393ad16654d8b4a109451036aa277d8b13035ff"
+            },
+            {
+              "path": "human-v1/independent-lever-chest-press/eccentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 63822,
+              "sha256": "3bbeaa390286a51e3c722ffc0be0a4f91bb774905f47180007a4989acac7f692"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        }
+      }
+    },
+    "independent-lever-lat-pulldown": {
+      "variant_key": "canonical_bilateral_plate_loaded_independent",
+      "phases": {
+        "concentric_end": {
+          "source_master_filename": "independent-lever-lat-pulldown-concentric_end-v1.png",
+          "source_master_sha256": "fbd9b255605804f37f7c6a2d4ef5a5005b57a922dc1851a692cb4e4b77435b50",
+          "sources": [
+            {
+              "path": "human-v1/independent-lever-lat-pulldown/concentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 11014,
+              "sha256": "d600194d1502f7c6e83103a9dfce9456d6878bce9a625d7ed12620be5416a79c"
+            },
+            {
+              "path": "human-v1/independent-lever-lat-pulldown/concentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 22384,
+              "sha256": "c15dd6616073ca445ead58a1cdb8a5d29b9735bf0177b2592bf2fd9f87c4f843"
+            },
+            {
+              "path": "human-v1/independent-lever-lat-pulldown/concentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 45922,
+              "sha256": "5f5d2624eebf3573b13a9f3b901abc78a286c4bcb67da08b6a0ac191cb71c02b"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        },
+        "eccentric_end": {
+          "source_master_filename": "independent-lever-lat-pulldown-eccentric_end-v1.png",
+          "source_master_sha256": "ec0e935f4c6a222ea3369c8a6872bd549a21da366b3f5a6d85a54678ef01695b",
+          "sources": [
+            {
+              "path": "human-v1/independent-lever-lat-pulldown/eccentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 10716,
+              "sha256": "d64db2a167db81cf19e2c375d0df8b14cae14f239f8e9ec7cda9f609b9197134"
+            },
+            {
+              "path": "human-v1/independent-lever-lat-pulldown/eccentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 21814,
+              "sha256": "806496396f1aaedbcda67dcd9a84719e9e296a2b91e7fc9511b2c92e6ad1b725"
+            },
+            {
+              "path": "human-v1/independent-lever-lat-pulldown/eccentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 43598,
+              "sha256": "a1f7bd954300f30afa3b23cce2633cece10a022a3b2f4d46033dc2838bf0539c"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        }
+      }
+    },
+    "independent-lever-shoulder-press": {
+      "variant_key": "canonical_bilateral_plate_loaded_independent",
+      "phases": {
+        "concentric_end": {
+          "source_master_filename": "independent-lever-shoulder-press-concentric_end-v1.png",
+          "source_master_sha256": "f20e1517de51d9713c0a2570c1c9f0ff18f860e2a033d7b9882776dd0b213c31",
+          "sources": [
+            {
+              "path": "human-v1/independent-lever-shoulder-press/concentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 9712,
+              "sha256": "de216132b26483214e60b0d97a4f2430d60e1deee890d9cdf7ca2642e931c217"
+            },
+            {
+              "path": "human-v1/independent-lever-shoulder-press/concentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 20770,
+              "sha256": "969dd841d93dd226382756d219d78408ff39c73d6f88a22cedcb3d3f6fcd673f"
+            },
+            {
+              "path": "human-v1/independent-lever-shoulder-press/concentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 45118,
+              "sha256": "9e587c4a201e3dea8cd237731a0ed87bcbb3deeeb808a20c70ae1cbe811d9aba"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        },
+        "eccentric_end": {
+          "source_master_filename": "independent-lever-shoulder-press-eccentric_end-v1.png",
+          "source_master_sha256": "f654cba47edee2bf13192325f8be1458e5571358af922a435f071568f4971bd3",
+          "sources": [
+            {
+              "path": "human-v1/independent-lever-shoulder-press/eccentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 9980,
+              "sha256": "cab4bbc6051b6b6f01bff2837fe110e1e5ec2eb3c3b8b3b28ccc546e9f9741d1"
+            },
+            {
+              "path": "human-v1/independent-lever-shoulder-press/eccentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 21098,
+              "sha256": "10b6d3457e37cafb1b69a70704d9e9310c8ea26c2f9627c16640854214a2b9e8"
+            },
+            {
+              "path": "human-v1/independent-lever-shoulder-press/eccentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 46768,
+              "sha256": "aa76b2a5f5e731c8a18335da8b0855475ac9eb7a7fb8342776957b5032ae6e00"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        }
+      }
+    },
+    "lever-high-row": {
+      "variant_key": "canonical_bilateral_plate_loaded_high_row",
+      "phases": {
+        "concentric_end": {
+          "source_master_filename": "lever-high-row-concentric_end-v1.png",
+          "source_master_sha256": "53cc534177f9891d3adeafd8ab30986743ae9ba852d8d9ed0fd5dae9417f5eca",
+          "sources": [
+            {
+              "path": "human-v1/lever-high-row/concentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 11192,
+              "sha256": "0d124c1cf00db830e06e21e317a24634b9317f9843f02a5a453a17769ff88e41"
+            },
+            {
+              "path": "human-v1/lever-high-row/concentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 23088,
+              "sha256": "81fb9b721f62ac8d0ae86630bff58ebd60e5f5a31b53e1a4c549a1c6f656dec9"
+            },
+            {
+              "path": "human-v1/lever-high-row/concentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 50212,
+              "sha256": "c2f741e525978d1f65005fe1423b163c17682545bb052a8348e6b0317e65a047"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        },
+        "eccentric_end": {
+          "source_master_filename": "lever-high-row-eccentric_end-v1.png",
+          "source_master_sha256": "0d3c33f7f84d8f621f1f5ba21ead219d61d54deb26382831e015f0ef5ab4f89b",
+          "sources": [
+            {
+              "path": "human-v1/lever-high-row/eccentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 12256,
+              "sha256": "f3643ed15d6591004a1ec8db9097f127c18eaf218b91473194b3556ab35a657e"
+            },
+            {
+              "path": "human-v1/lever-high-row/eccentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 25306,
+              "sha256": "ac0b56d7e9a2dbb42d9488da584e0438abdcb250920050d15a0ba420c9ec831a"
+            },
+            {
+              "path": "human-v1/lever-high-row/eccentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 53322,
+              "sha256": "88f77d87137f27614909d586f08be2617a8c1ca8e33e35f20ab6ab4547663ce7"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        }
+      }
+    },
+    "lever-low-row": {
+      "variant_key": "canonical_bilateral_plate_loaded_low_row",
+      "phases": {
+        "concentric_end": {
+          "source_master_filename": "lever-low-row-concentric_end-v1.png",
+          "source_master_sha256": "e77d57729c48b0c3469c2b3747e0686c078c5f1d271ae9ae9e97181e26cd5335",
+          "sources": [
+            {
+              "path": "human-v1/lever-low-row/concentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 11144,
+              "sha256": "b545c7c786100a35e931f5f7ef756c8e44ee3803c01488450a744e67784efd76"
+            },
+            {
+              "path": "human-v1/lever-low-row/concentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 23476,
+              "sha256": "738efc36e3c50f8bcc75dfb1acee66837c99079d720edc46ff68d54db8ff0c7e"
+            },
+            {
+              "path": "human-v1/lever-low-row/concentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 50554,
+              "sha256": "7de0aca7bac60c90c0108b5fc1c089b329a141b53e7066ef4235d26be89b6ca2"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        },
+        "eccentric_end": {
+          "source_master_filename": "lever-low-row-eccentric_end-v1.png",
+          "source_master_sha256": "a130879fb001a76e69afb8eeee0ea5028d140be5f5e828f402d76aff559fc82d",
+          "sources": [
+            {
+              "path": "human-v1/lever-low-row/eccentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 10710,
+              "sha256": "d8404e87b3a17a03e52896fe2e68b9f848c0dc4067eae2f3b6f2f67b77c71d81"
+            },
+            {
+              "path": "human-v1/lever-low-row/eccentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 23022,
+              "sha256": "c6e32be11a7f377dba86595ec659b974d7fc7feaf115fdf27059d035b47e16b6"
+            },
+            {
+              "path": "human-v1/lever-low-row/eccentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 53654,
+              "sha256": "9552f7e1c47b9663b0317a20785f3b5de60cb1e2d99dc23080b92a2b54d7b755"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        }
+      }
+    },
+    "machine-decline-chest-press": {
+      "variant_key": "canonical_bilateral_selectorized_decline",
+      "phases": {
+        "concentric_end": {
+          "source_master_filename": "machine-decline-chest-press-concentric_end-v1.png",
+          "source_master_sha256": "a69aeb0210644f2a05ea19ee1b101c79ea49dfb578f94e2cfd01e93977c9bccf",
+          "sources": [
+            {
+              "path": "human-v1/machine-decline-chest-press/concentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 11112,
+              "sha256": "4cd0b168656251072cf98d281334b60c3f62a519d13728d815f2b405a5e72e39"
+            },
+            {
+              "path": "human-v1/machine-decline-chest-press/concentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 24112,
+              "sha256": "34580fca1257f471b225649a88617d63462a365466295b01e4acb2797df31a35"
+            },
+            {
+              "path": "human-v1/machine-decline-chest-press/concentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 51474,
+              "sha256": "30c4475967d06c9ec31296842c38a5e3ef56dd20809b86093753e851348ce603"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        },
+        "eccentric_end": {
+          "source_master_filename": "machine-decline-chest-press-eccentric_end-v1.png",
+          "source_master_sha256": "cd266c2bcd0e3db8a8acedf7e77e1872d5f346466590a3d702e785afe55196b8",
+          "sources": [
+            {
+              "path": "human-v1/machine-decline-chest-press/eccentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 11096,
+              "sha256": "b4f0e93b214380fcd424a284956989c617a602ac1151b2d3e303d484d8a6e46e"
+            },
+            {
+              "path": "human-v1/machine-decline-chest-press/eccentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 24114,
+              "sha256": "9bf8c75102cc171e39a31fccc7162d7313ed9e102e66a0cae0a1f1f381a2d965"
+            },
+            {
+              "path": "human-v1/machine-decline-chest-press/eccentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 52514,
+              "sha256": "4bed8f392f864641040997fac443ea47ade0176311b212b0fa5fb0ec3ec46f3b"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        }
+      }
+    },
+    "machine-glute-kickback": {
+      "variant_key": "canonical_unilateral_standing_lever_footplate",
+      "phases": {
+        "concentric_end": {
+          "source_master_filename": "machine-glute-kickback-concentric_end-v2.png",
+          "source_master_sha256": "2951c085b401c2929a957e507a5bb8c407d0641799cde47e051945312ac7d52f",
+          "sources": [
+            {
+              "path": "human-v1/machine-glute-kickback/concentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 7692,
+              "sha256": "2742ced47fa47a4b73832c3af47d65a1ca85bf38eff153da0c35bc7710aa7064"
+            },
+            {
+              "path": "human-v1/machine-glute-kickback/concentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 16948,
+              "sha256": "efec8762b487aaeaef16ae41734c21bc6118f3db68c408d490419a4cdf33fe75"
+            },
+            {
+              "path": "human-v1/machine-glute-kickback/concentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 35114,
+              "sha256": "b678f8488c785a4d198e9ca3d104122ebd25676eb02615a7ba20e7359092f75a"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        },
+        "eccentric_end": {
+          "source_master_filename": "machine-glute-kickback-eccentric_end-v2.png",
+          "source_master_sha256": "4e81d8ed71c1ad68901d04d49baec9d28f6d5eadd60db9db3cfa7c56f5d0dde4",
+          "sources": [
+            {
+              "path": "human-v1/machine-glute-kickback/eccentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 7608,
+              "sha256": "f1a13e85280762470310e5981ca4ccd04ea07476bf6a6dece59695e66ce48919"
+            },
+            {
+              "path": "human-v1/machine-glute-kickback/eccentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 16342,
+              "sha256": "c66dc7952abfbbc387bae5e0745678f6ec90e22d618ab721a9f0ffae36832547"
+            },
+            {
+              "path": "human-v1/machine-glute-kickback/eccentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 34912,
+              "sha256": "b6ad6785826a49b1afa671675b3f4692c97b5c10764f59fd8a0e4a821725cbcb"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        }
+      }
+    },
+    "machine-hip-thrust": {
+      "variant_key": "canonical_bilateral_plate_loaded_lap_pad",
+      "phases": {
+        "concentric_end": {
+          "source_master_filename": "machine-hip-thrust-concentric_end-v1.png",
+          "source_master_sha256": "de05853e0f4c096fa49e6470dc6dca01a450eaae3ec9c9ed9e860aa1428e98c3",
+          "sources": [
+            {
+              "path": "human-v1/machine-hip-thrust/concentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 12174,
+              "sha256": "481cd84a68597aa9b74da4e08103c5d5fe41dfdbf3dd12db4991170e3115f9f3"
+            },
+            {
+              "path": "human-v1/machine-hip-thrust/concentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 25908,
+              "sha256": "a84a8fa0f63bd40744847d8fa1d5a680e43d7566ceec566dede83c40fb12af3f"
+            },
+            {
+              "path": "human-v1/machine-hip-thrust/concentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 56872,
+              "sha256": "42b6c148b4e9a00c80ef4d94918f884794835d1ef6bc277ce98fc58f6c8c166b"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        },
+        "eccentric_end": {
+          "source_master_filename": "machine-hip-thrust-eccentric_end-v1.png",
+          "source_master_sha256": "31c07fb3a9ae4711dacf4ce972b8b4dd2f0d3f658d9bcfb3b707d790618a19b8",
+          "sources": [
+            {
+              "path": "human-v1/machine-hip-thrust/eccentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 11768,
+              "sha256": "9207ec8910a956532bb4b5ab8786947e11d2f0135b45c649b2a795ab7bedf562"
+            },
+            {
+              "path": "human-v1/machine-hip-thrust/eccentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 25632,
+              "sha256": "c93bde889227f95fe54e05fd8feaea08ed2dc560cc42d9672fc1a396e0f67e32"
+            },
+            {
+              "path": "human-v1/machine-hip-thrust/eccentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 59954,
+              "sha256": "e55543a4f746a215eafa2897323fdf021d79fdff0bda8314144df3cdb26c36e5"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        }
+      }
+    },
+    "machine-incline-chest-press": {
+      "variant_key": "canonical_bilateral_selectorized_incline",
+      "phases": {
+        "concentric_end": {
+          "source_master_filename": "machine-incline-chest-press-concentric_end-v1.png",
+          "source_master_sha256": "9c8ee171ce68948fd90aff0d68be48b28ee7dfe7a07b68c5cecb18b8ba94c44f",
+          "sources": [
+            {
+              "path": "human-v1/machine-incline-chest-press/concentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 13754,
+              "sha256": "5d2033104304a38c1a005f39d419f3e915798c9765a80db089cc4899b37f88b9"
+            },
+            {
+              "path": "human-v1/machine-incline-chest-press/concentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 28864,
+              "sha256": "3d8973f2dfd89f86358c30277a9a57c1ebc203766087e64aeb2caeca23027d31"
+            },
+            {
+              "path": "human-v1/machine-incline-chest-press/concentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 68820,
+              "sha256": "2586804f006d0cde9a7e328aef97f9c017d369006988ce97fa0fa4d76d9045bd"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        },
+        "eccentric_end": {
+          "source_master_filename": "machine-incline-chest-press-eccentric_end-v1.png",
+          "source_master_sha256": "29bbcb479a2db1ad781df8e826ca613d3638a9a58e36237abf1fcf4aa6442d14",
+          "sources": [
+            {
+              "path": "human-v1/machine-incline-chest-press/eccentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 12664,
+              "sha256": "24375136bcbcb13dcd764b97f4d9025ceb6a51ebdd55801c9341f726f2706feb"
+            },
+            {
+              "path": "human-v1/machine-incline-chest-press/eccentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 27098,
+              "sha256": "3e212b2b1616f0b6221f9f2fb4718db4851ae370021bcb474b1ecc46029a2385"
+            },
+            {
+              "path": "human-v1/machine-incline-chest-press/eccentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 68862,
+              "sha256": "0ef211986a19a25fadffdd66c9f35f43a13b576a9ec7978448ad7616b68575d8"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        }
+      }
+    },
+    "machine-pullover": {
+      "variant_key": "canonical_bilateral_selectorized_elbow_pad",
+      "phases": {
+        "concentric_end": {
+          "source_master_filename": "machine-pullover-concentric_end-v1.png",
+          "source_master_sha256": "db105f5f641de7a60bb779090bc124b94df73ddd445c0ae0bc9422d2836cf7a9",
+          "sources": [
+            {
+              "path": "human-v1/machine-pullover/concentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 11336,
+              "sha256": "d7d6e67a90120309cbd7680da94515bc953a3f39e7fa3d73692139cc7835801a"
+            },
+            {
+              "path": "human-v1/machine-pullover/concentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 24116,
+              "sha256": "af6a8da4cb0fcddde1c4007dbbb904f05205bcf328c5f4613b18027b0f3a9c5a"
+            },
+            {
+              "path": "human-v1/machine-pullover/concentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 52224,
+              "sha256": "6b1ff37370846810aa97dd585b71098b7da556850e029499b9f274323ff63526"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        },
+        "eccentric_end": {
+          "source_master_filename": "machine-pullover-eccentric_end-v1.png",
+          "source_master_sha256": "8ea1f69fb4a41d8eccd292c78fcf64f6e9b800756d01ba660ac52233c63f1467",
+          "sources": [
+            {
+              "path": "human-v1/machine-pullover/eccentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 11132,
+              "sha256": "b3eb661586271a4205e5b4e2118d82f31e861b262575436f82877678ef9d1679"
+            },
+            {
+              "path": "human-v1/machine-pullover/eccentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 23282,
+              "sha256": "339f822c2242f99aa7208443ae2935fe63df095bd2c2d871487d3a8bced90c03"
+            },
+            {
+              "path": "human-v1/machine-pullover/eccentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 52068,
+              "sha256": "6217c2e34c047ad2142e87cbe78798c5cb3846f8cbc07c610c6a2ae47be166c8"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        }
+      }
+    },
+    "machine-triceps-extension": {
+      "variant_key": "canonical_bilateral_selectorized_elbow_pad",
+      "phases": {
+        "concentric_end": {
+          "source_master_filename": "machine-triceps-extension-concentric_end-v1.png",
+          "source_master_sha256": "c8828c365461edb730923b06081221245a22fdb863251d9584e39abe3ce5a327",
+          "sources": [
+            {
+              "path": "human-v1/machine-triceps-extension/concentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 10846,
+              "sha256": "3a6fa5dd66e0815299fe22f9cc5c2970228c6e7a55ccc5c6a4fb82a37b724dd3"
+            },
+            {
+              "path": "human-v1/machine-triceps-extension/concentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 23008,
+              "sha256": "1eccfca4992a0c1a0ef0bd83bcfa04198bcb533f8b30cd8a9c229084282eec8f"
+            },
+            {
+              "path": "human-v1/machine-triceps-extension/concentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 51746,
+              "sha256": "3653bd0c9b65d60face3c9a49b5125806588defcead7aaf4ff17c4d68fe18745"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        },
+        "eccentric_end": {
+          "source_master_filename": "machine-triceps-extension-eccentric_end-v1.png",
+          "source_master_sha256": "5da8a4cf14361d0b0e378115ad29e2e62c425a1142967355fa199da36945fef6",
+          "sources": [
+            {
+              "path": "human-v1/machine-triceps-extension/eccentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 10250,
+              "sha256": "7d4c3837d37b259dd88f227f0faea6c1d6532c55d84fcdd6386db87e595dd68b"
+            },
+            {
+              "path": "human-v1/machine-triceps-extension/eccentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 22410,
+              "sha256": "c63a9d586907769232d4545598495bbf02383dd264747c5210aaff4b8eb62de5"
+            },
+            {
+              "path": "human-v1/machine-triceps-extension/eccentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 50670,
+              "sha256": "a98bb5fd11c6f6ee8f5103aec7dd41ab53da6e11ed78044518a66fc5b9625919"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        }
+      }
+    },
+    "pendulum-squat": {
+      "variant_key": "canonical_bilateral_plate_loaded_pendulum",
+      "phases": {
+        "concentric_end": {
+          "source_master_filename": "pendulum-squat-concentric_end-v1.png",
+          "source_master_sha256": "d94d475bc22ee5b0acd188f6800627d3fb4e4516bfcc8c253c1a79ae56b5484a",
+          "sources": [
+            {
+              "path": "human-v1/pendulum-squat/concentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 11640,
+              "sha256": "b02c200ac28b3b0dd2b1f48e2eb140c927881607d2a6728a1e0c78e9e17ea31b"
+            },
+            {
+              "path": "human-v1/pendulum-squat/concentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 24398,
+              "sha256": "915bdd256ed235912f06415c9c28cdab660f682239eb1c54a45f914b4ca38f52"
+            },
+            {
+              "path": "human-v1/pendulum-squat/concentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 50990,
+              "sha256": "a4b7e16e213e6bebaaea9b053002e6b113e7238ceadad77e35781813549c6b82"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        },
+        "eccentric_end": {
+          "source_master_filename": "pendulum-squat-eccentric_end-v1.png",
+          "source_master_sha256": "a2c7f49a3d77da69f12dab70d62950f32dfc9b024900c492dcc90e42ad045a11",
+          "sources": [
+            {
+              "path": "human-v1/pendulum-squat/eccentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 14598,
+              "sha256": "8ae1cc9b60a29d403c1f4dda104a79b3cd59e0bf312792e39e76b02feb76edf0"
+            },
+            {
+              "path": "human-v1/pendulum-squat/eccentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 31560,
+              "sha256": "e047a642f71bd546b82062ee0141296734983b1b57894fc500ffcc20b7fc39b8"
+            },
+            {
+              "path": "human-v1/pendulum-squat/eccentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 68048,
+              "sha256": "04b2df4b863aaaa0d8d3b5d660b4c29f3291e674896c2cdfbb6224c399ceaed3"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        }
+      }
+    },
+    "plate-loaded-leg-press": {
+      "variant_key": "canonical_bilateral_plate_loaded_sled",
+      "phases": {
+        "concentric_end": {
+          "source_master_filename": "plate-loaded-leg-press-concentric_end-v1.png",
+          "source_master_sha256": "fe1477712b6d6420dc4ad359bb9225912b8279fe1f89497e6cccd4b5eb6cb260",
+          "sources": [
+            {
+              "path": "human-v1/plate-loaded-leg-press/concentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 16496,
+              "sha256": "30e6d5226b7523406547e61bb859781c12c4b0b08087b0c9317a2d1fa3a5a055"
+            },
+            {
+              "path": "human-v1/plate-loaded-leg-press/concentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 34718,
+              "sha256": "b11f468d8256002e66b76a822fcc8ba59646feab27ed12d7a378213448c2bc89"
+            },
+            {
+              "path": "human-v1/plate-loaded-leg-press/concentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 70584,
+              "sha256": "d67b0f95e4ac07f8096bab14d9ab5cddf3b3fee8635c954b248abda8ed1e6acb"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        },
+        "eccentric_end": {
+          "source_master_filename": "plate-loaded-leg-press-eccentric_end-v1.png",
+          "source_master_sha256": "e379544c16c19a630ab15663b1098a1b8da576ab7eec7d08c81e4903a2cbab3e",
+          "sources": [
+            {
+              "path": "human-v1/plate-loaded-leg-press/eccentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 15100,
+              "sha256": "73e2a933efee35f93afd3b5eb993eb93e7f23ab3ecef26700e68fa2fecba6ecf"
+            },
+            {
+              "path": "human-v1/plate-loaded-leg-press/eccentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 32090,
+              "sha256": "135715966a72343fa5c5feb94653608e34a1002093b43838f3a405bca510e895"
+            },
+            {
+              "path": "human-v1/plate-loaded-leg-press/eccentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 67832,
+              "sha256": "fd435dd1f62faea3659a50f85568d6328af4f6170385b91663396950f17aa882"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        }
+      }
+    },
+    "reverse-hyperextension": {
+      "variant_key": "canonical_bilateral_plate_loaded_reverse_hyper",
+      "phases": {
+        "concentric_end": {
+          "source_master_filename": "reverse-hyperextension-concentric_end-v1.png",
+          "source_master_sha256": "79cd83b6cbf8a7f4aeba6edd0c499f67eb83b4e2647c04467df83de3e772ba3d",
+          "sources": [
+            {
+              "path": "human-v1/reverse-hyperextension/concentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 8200,
+              "sha256": "df0fa1f8327930a5b8fbf5a626371045b61d44a22461511a6591fa16e8a269e1"
+            },
+            {
+              "path": "human-v1/reverse-hyperextension/concentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 17410,
+              "sha256": "31a1e855a31bf5681a569397c68ac5e89e5960069c1bafab658a0f90ee154a50"
+            },
+            {
+              "path": "human-v1/reverse-hyperextension/concentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 37366,
+              "sha256": "c3474182b098c0b284211940b3be2c01604e7f7869fce015b7e7d5b356208d64"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        },
+        "eccentric_end": {
+          "source_master_filename": "reverse-hyperextension-eccentric_end-v1.png",
+          "source_master_sha256": "fec7ce6741d2994580c32956fbf72a7b27290e161e58061d74611dd487e311db",
+          "sources": [
+            {
+              "path": "human-v1/reverse-hyperextension/eccentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 8812,
+              "sha256": "f73465dcd1132f8a253c4d26afba8a47928bf2b9a740357c776a3dbaccec798a"
+            },
+            {
+              "path": "human-v1/reverse-hyperextension/eccentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 18148,
+              "sha256": "a2833f571ba0d4ba888b8e658f2b5312b923460520d73ea454070a492dde3aa2"
+            },
+            {
+              "path": "human-v1/reverse-hyperextension/eccentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 39344,
+              "sha256": "83e3dafee374ed94ad05119527d2f7791046341a45a6390b2f13657dd55675ee"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        }
+      }
+    },
+    "smith-split-squat": {
+      "variant_key": "canonical_unilateral_smith_floor_rear_foot",
+      "phases": {
+        "concentric_end": {
+          "source_master_filename": "smith-split-squat-concentric_end-v1.png",
+          "source_master_sha256": "80eab831922afcf90d2058a260f657aaa7625dd02e605e2fa4baa8cecb05dfb7",
+          "sources": [
+            {
+              "path": "human-v1/smith-split-squat/concentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 12166,
+              "sha256": "aeeb5ef10415930aebd3d000747115f36c2ea4f55dd0dd27209eb9db16f6f459"
+            },
+            {
+              "path": "human-v1/smith-split-squat/concentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 25116,
+              "sha256": "2b370d21421a96714aa06aa9e0baf9f19f18e307f5666b7c536c9986242ffc10"
+            },
+            {
+              "path": "human-v1/smith-split-squat/concentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 52378,
+              "sha256": "843777d378b04cfc9dc8df69714bcc6efd4adc963474c44d151b3d952da53a6c"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        },
+        "eccentric_end": {
+          "source_master_filename": "smith-split-squat-eccentric_end-v1.png",
+          "source_master_sha256": "fb396601b129f1417ddb0b414ed77bd182df33a552098aed3822ecd4ea94a459",
+          "sources": [
+            {
+              "path": "human-v1/smith-split-squat/eccentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 13210,
+              "sha256": "160ecb4369c1073286ddf818ef6a7b00e078014a1c1f14c7cbab908455557c20"
+            },
+            {
+              "path": "human-v1/smith-split-squat/eccentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 27630,
+              "sha256": "7a4201e2c103a4a7349c37268f5d3e77ec74fa6b7bd0d7b1152f8afbbe4cc0f2"
+            },
+            {
+              "path": "human-v1/smith-split-squat/eccentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 58534,
+              "sha256": "2d44bd6b7d3165f487e5ad9c1b7b48710beb74803680612aeb0f74bf494015d6"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        }
+      }
+    },
+    "unilateral-leg-press": {
+      "variant_key": "canonical_unilateral_plate_loaded_sled",
+      "phases": {
+        "concentric_end": {
+          "source_master_filename": "unilateral-leg-press-concentric_end-v1.png",
+          "source_master_sha256": "6295a3b7bce0acca346dea5c2d928f959204835999cda558b71202ca538ff284",
+          "sources": [
+            {
+              "path": "human-v1/unilateral-leg-press/concentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 14276,
+              "sha256": "281f8293e19387f996c8d497a2fff0a02678ff3ffe43baf41b77e4a307372243"
+            },
+            {
+              "path": "human-v1/unilateral-leg-press/concentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 30332,
+              "sha256": "8a71f371f91acefcc6620a29521a0bfc1befd3a28cf0e6963f3844f69fd63c22"
+            },
+            {
+              "path": "human-v1/unilateral-leg-press/concentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 63522,
+              "sha256": "70c11a11abbb857792a761f0481898087a3ae9e6d7243a4081f655dc3fb31fc0"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        },
+        "eccentric_end": {
+          "source_master_filename": "unilateral-leg-press-eccentric_end-v1.png",
+          "source_master_sha256": "d0ab8aea0d71002f7b54e50e03546b5f95d46acb7295362b3de2448d3bd64b35",
+          "sources": [
+            {
+              "path": "human-v1/unilateral-leg-press/eccentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 13694,
+              "sha256": "5a1c5db8fb6b5077c2c95a98bb7a016f0fe4d0447ca98b889b11cf2f4bac78da"
+            },
+            {
+              "path": "human-v1/unilateral-leg-press/eccentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 29070,
+              "sha256": "e3df75892891f2fd08ea474294353e7290394061a6effbf76404bf4f99e7aa92"
+            },
+            {
+              "path": "human-v1/unilateral-leg-press/eccentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 61756,
+              "sha256": "05be53d98a8342162eb3ff987995982fa96cb0f49c3e887321c2559364ea9fbd"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        }
+      }
+    },
+    "v-squat-machine": {
+      "variant_key": "canonical_bilateral_plate_loaded_v_squat",
+      "phases": {
+        "concentric_end": {
+          "source_master_filename": "v-squat-machine-concentric_end-v1.png",
+          "source_master_sha256": "3350c460cbb0603b8baf4a1c2924c7bc8758b6071c6688856e11c4bda0e95151",
+          "sources": [
+            {
+              "path": "human-v1/v-squat-machine/concentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 12224,
+              "sha256": "fce8e81e5f55fe34004d1221170a2139af9c45832a7a7078caacdcbdbf42e7e5"
+            },
+            {
+              "path": "human-v1/v-squat-machine/concentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 25334,
+              "sha256": "6b34bd5eaca3f90ba0e0d99f5a4109522af75eccf97b6dd914344df49b25a112"
+            },
+            {
+              "path": "human-v1/v-squat-machine/concentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 55622,
+              "sha256": "0005fd83c461c9cf3b59513e4d00f96daa7c004414b87957d4a5cb76151dfdee"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        },
+        "eccentric_end": {
+          "source_master_filename": "v-squat-machine-eccentric_end-v1.png",
+          "source_master_sha256": "0c4c6780dafe3d1f4b5c193388ed0d546a4ac975348e4f86c47ee14d384b8d7a",
+          "sources": [
+            {
+              "path": "human-v1/v-squat-machine/eccentric_end-480w.webp",
+              "mime_type": "image/webp",
+              "width": 480,
+              "height": 320,
+              "byte_size": 11990,
+              "sha256": "695f1ffc4663e42ba41bf72ab5857a0385002cec6fb8b4793e4da485da56af11"
+            },
+            {
+              "path": "human-v1/v-squat-machine/eccentric_end-768w.webp",
+              "mime_type": "image/webp",
+              "width": 768,
+              "height": 512,
+              "byte_size": 24702,
+              "sha256": "b8b9da8e571fef31a882545d64680b5878030a83f41bc23a8445ea7c7d9406d1"
+            },
+            {
+              "path": "human-v1/v-squat-machine/eccentric_end-1280w.webp",
+              "mime_type": "image/webp",
+              "width": 1280,
+              "height": 853,
+              "byte_size": 53580,
+              "sha256": "4615ad6fb87e030582bee63be1e6aa56e7351a3f50ba2fe11af5e747378b137b"
+            }
+          ],
+          "reviews": {
+            "domain": "pass",
+            "anatomy": "pass",
+            "equipment": "pass",
+            "phase": "pass",
+            "visual_style": "pass",
+            "mobile": "pass",
+            "legal": "pass_with_limitations",
+            "reviewer_roles": [
+              "fitness-domain-reviewer",
+              "product-designer",
+              "ui-audit"
+            ],
+            "reviewed_at": "2026-08-31"
+          }
+        }
+      }
+    }
+  }
+}

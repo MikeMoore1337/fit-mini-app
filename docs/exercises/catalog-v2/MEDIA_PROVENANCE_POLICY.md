@@ -7,14 +7,22 @@
 ## Разрешённые источники
 
 1. Существующее repository-owned original media с подтверждаемой историей создания.
-2. Новые оригинальные YFC schematic/vector illustrations.
+2. Новые оригинальные YFC human-visual illustrations/renders с анатомически
+   читаемым человеком и конкретным оборудованием. Primitive schematic human,
+   stick figure, skeleton-like/line-person и один тренажёр без человека не
+   являются demonstration media, даже если файл технически валиден.
 3. Third-party media только после file-level проверки лицензии на commercial use, modification (если выполняется), bundling/redistribution и нужный способ attribution.
 
 Текущие third-party assets происходят из [`free-exercise-db`](https://github.com/yuhonas/free-exercise-db). На дату аудита upstream repository называет dataset public-domain, а [`LICENSE.md`](https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md) содержит Unlicense и явно разрешает commercial/non-commercial use и distribution. Это подтверждает текущую policy, но не позволяет автоматически считать любой новый web asset частью того же набора: каждый файл должен быть сопоставлен с upstream path/revision и manifest record.
 
-### Current-state gap
+### Current-state boundary
 
-Текущий manifest фиксирует path, dimensions, byte size, phase и общий source/license, но не immutable upstream revision, SHA-256, reviewer/date и verification flags ниже. Exact-hash scan также нашёл восемь cross-exercise duplicate pairs; ручная проверка подтвердила семь неверных item mappings и одну duplicate identity pair. Поэтому current media имеет license-level baseline, но не полную file-level provenance/semantic validation. Их remediation — must scope 120D, а не скрытое утверждение 120A о полной coverage.
+Manifest schema v2 для human-visual набора Task 120E фиксирует versioned local
+paths, responsive sources, dimensions, byte size, explicit `phase_id`, asset и
+variant identity, SHA-256, generation lineage и versioned human-review status.
+Existing `free-exercise-db` media сохраняет legacy source/license baseline; восемь
+найденных ранее cross-exercise duplicate pairs и семь semantic mismatches относятся
+к remediation Task 120D и не объявляются исправленными Task 120E.
 
 ## Запрещено
 
@@ -23,12 +31,14 @@
 - media без source URL/revision/license evidence;
 - packaging/logo/public-figure likeness и trademarks как decorative proxy;
 - generated anatomy/trajectory, представленная как проверенный факт без human domain review;
+- primitive schematic human, stick figure, skeleton-like/line-person и
+  абстрактная траектория вместо читаемого положения человека;
 - fake charts, ranges, joint angles или «идеальная техника» без источника;
 - autoplay со звуком или animation-only explanation.
 
 ## Reusable visual format
 
-Baseline для 120B–D — две статические key positions `Начало` -> `Конечное положение` либо domain-reviewed phase labels. Для cyclic/multi-stage/cardio допускается одна schematic composition или несколько key positions с нейтральными labels.
+Baseline для 120B–D — две статические key positions `Начало` -> `Конечное положение` либо domain-reviewed phase labels. Для cyclic/multi-stage/cardio допускается одна human-readable composition или несколько key positions с нейтральными labels. Схематичная концепция человека не допускается.
 
 В guide это одна спокойная responsive composition: на ширине, где каждая позиция сохраняет читаемый размер, фазы стоят рядом; иначе они переходят в вертикальную последовательность без horizontal scroll. Короткий phase index/стрелка может использовать lime как YFC accent, но направление также выражено порядком и текстовой подписью. Visual не конкурирует с названием и шагами техники, а catalog row содержит только одно явное действие открытия guide.
 
@@ -41,6 +51,8 @@ Baseline для 120B–D — две статические key positions `Нач
 - одинаковая framing/orientation для пары, если это не искажает движение;
 - no decorative crop body/joint landmarks;
 - stable `media_reference`, deterministic `sort_order`, poster/fallback;
+- machine-readable `phase_id`, `asset_id`, `asset_version`, `variant_key` и
+  responsive `sources`; display label не используется как logic key;
 - reduced-motion не теряет информацию.
 
 ## Alt/accessibility
@@ -55,7 +67,10 @@ Alt описывает exercise, позицию и различимый action c
 exercise_slug
 asset_path
 asset_sha256
-source_kind: yfc_original | third_party
+source_kind: yfc_original | commissioned | third_party | ai_generated
+asset_type: photo | render_3d | raster_illustration | human_like_vector
+asset_version
+variant_key
 source_name
 source_url
 source_revision_or_retrieved_at
@@ -64,9 +79,9 @@ license_url_or_local_notice
 commercial_use_verified: true
 redistribution_verified: true
 modification_verified: true|false|not_needed
-author_or_generator_record
-reviewer
-reviewed_at
+model_release_status/property_release_status: verified | not_applicable | blocked
+author_or_generator_record: provider/model/version/job-or-seed/prompt-or-brief/input lineage
+reviews: domain/anatomy/equipment/phase/visual_style/mobile/legal with reviewer/date/status
 width/height/byte_size
 phase/sort_order/alt
 ```
@@ -75,9 +90,9 @@ phase/sort_order/alt
 
 ## YFC original illustration workflow
 
-Brief фиксирует exact exercise/setup/key positions и запрещённые misleading детали. Создатель/генератор записывается. Fitness-domain reviewer проверяет movement identity, equipment setup, left/right consistency, load path и отсутствие unsafe/невозможной позиции. Затем media builder проверяет decode, размеры, manifest и unexpected files.
+Brief фиксирует exact exercise, `variant_key`, setup, key positions, camera/framing и запрещённые misleading детали. Создатель/генератор и input lineage записываются. Fitness-domain reviewer вручную проверяет exact revision: movement identity, equipment setup, anatomy, grip/feet/contact points, left/right consistency, load path, phase order и отсутствие unsafe/невозможной позиции. Отдельный visual/mobile review подтверждает читаемость без zoom. Затем media builder проверяет только объективные invariants: decode, размеры, hashes, responsive derivatives, manifest и unexpected files.
 
-AI-generated visual допустима только как YFC-owned draft при достаточных правах выбранного provider/workflow и human review; model output не является источником техники.
+AI-generated visual допустима только как YFC-controlled draft при достаточных правах выбранного provider/workflow и human review; model output не является источником техники. Automated validator не может выставить semantic/anatomy approval. Approval относится к exact asset hash/version и не переносится на новую генерацию или вариант упражнения.
 
 ## Third-party workflow
 

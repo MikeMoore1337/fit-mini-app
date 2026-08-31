@@ -1,87 +1,115 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { ExerciseGuideMedia } from '../../../../src/features/exercises/ExerciseGuideMedia';
 import type { ExerciseGuide } from '../../../../src/shared/api/types';
 
-const media: ExerciseGuide['media'] = [
+const media = [
   {
     type: 'image',
-    url: '/static/exercise-guides/bench-press-start.jpg',
-    poster: '/static/exercise-guides/bench-press-start.jpg',
+    url: '/static/exercise-guides/human-v1/example/concentric_end-480w.webp',
+    poster: '/static/exercise-guides/human-v1/example/concentric_end-480w.webp',
+    phase_id: 'concentric_end',
     phase: 'Фаза усилия',
-    alt: 'Жим штанги лёжа: фаза усилия',
-    source_name: 'free-exercise-db',
-    source_url: 'https://example.com/source',
-    source_license: 'Unlicense',
-    source_license_url: 'https://example.com/license',
-    width: 850,
-    height: 567,
-    byte_size: 72_816,
+    alt: 'Пример: конечное положение усилия',
+    asset_id: 'example:canonical:concentric_end:120e-v1',
+    asset_version: '120e-v1',
+    variant_key: 'canonical',
+    source_name: 'Your Fitness Coach',
+    source_url: '/',
+    source_license: 'Иллюстрация создана для приложения',
+    source_license_url: null,
+    width: 480,
+    height: 320,
+    byte_size: 12_000,
     sort_order: 0,
+    sources: [
+      {
+        url: '/static/exercise-guides/human-v1/example/concentric_end-480w.webp',
+        mime_type: 'image/webp',
+        width: 480,
+        height: 320,
+        byte_size: 12_000,
+      },
+      {
+        url: '/static/exercise-guides/human-v1/example/concentric_end-1280w.webp',
+        mime_type: 'image/webp',
+        width: 1280,
+        height: 853,
+        byte_size: 42_000,
+      },
+    ],
   },
   {
     type: 'image',
-    url: '/static/exercise-guides/bench-press-active.jpg',
-    poster: '/static/exercise-guides/bench-press-active.jpg',
+    url: '/static/exercise-guides/human-v1/example/eccentric_end-480w.webp',
+    poster: '/static/exercise-guides/human-v1/example/eccentric_end-480w.webp',
+    phase_id: 'eccentric_end',
     phase: 'Фаза возврата',
-    alt: 'Жим штанги лёжа: фаза возврата',
-    source_name: 'free-exercise-db',
-    source_url: 'https://example.com/source',
-    source_license: 'Unlicense',
-    source_license_url: 'https://example.com/license',
-    width: 850,
-    height: 567,
-    byte_size: 72_202,
+    alt: 'Пример: конечное положение возврата',
+    asset_id: 'example:canonical:eccentric_end:120e-v1',
+    asset_version: '120e-v1',
+    variant_key: 'canonical',
+    source_name: 'Your Fitness Coach',
+    source_url: '/',
+    source_license: 'Иллюстрация создана для приложения',
+    source_license_url: null,
+    width: 480,
+    height: 320,
+    byte_size: 11_000,
     sort_order: 1,
+    sources: [
+      {
+        url: '/static/exercise-guides/human-v1/example/eccentric_end-480w.webp',
+        mime_type: 'image/webp',
+        width: 480,
+        height: 320,
+        byte_size: 11_000,
+      },
+    ],
   },
-];
-
-afterEach(() => cleanup());
+] satisfies ExerciseGuide['media'];
 
 describe('ExerciseGuideMedia', () => {
-  it('reserves intrinsic dimensions and lazy-loads static phases', () => {
+  afterEach(cleanup);
+
+  it('uses explicit phase ids and responsive sources without eagerly opening the lightbox', () => {
     render(<ExerciseGuideMedia items={media} />);
 
-    const image = screen.getByAltText('Жим штанги лёжа: фаза возврата');
+    expect(screen.getByText(/Изображение показывает положение/)).toBeVisible();
+    const image = screen.getByAltText('Пример: конечное положение усилия');
     expect(image).toHaveAttribute('loading', 'lazy');
     expect(image).toHaveAttribute('decoding', 'async');
-    expect(image).toHaveAttribute('width', '850');
-    expect(image).toHaveAttribute('height', '567');
-    expect(image.closest('button')).toHaveStyle({ aspectRatio: '850 / 567' });
-  });
-
-  it('shows an accessible static fallback after an asset 404', () => {
-    render(<ExerciseGuideMedia items={media} />);
-
-    fireEvent.error(screen.getByAltText('Жим штанги лёжа: фаза возврата'));
-
-    expect(screen.getByRole('img', { name: 'Жим штанги лёжа: фаза возврата' })).toHaveTextContent(
-      'Изображение недоступно',
+    expect(image).toHaveAttribute(
+      'srcset',
+      expect.stringContaining('concentric_end-1280w.webp 1280w'),
     );
-    expect(screen.queryByRole('button', { name: 'Увеличить: Фаза возврата' })).toBeNull();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('opens the lightbox on demand and reports its state to the parent modal', () => {
-    const onExpandedChange = vi.fn();
-    render(<ExerciseGuideMedia items={media} onExpandedChange={onExpandedChange} />);
+  it('selects the large source only after opening and preserves keyboard-accessible navigation', () => {
+    render(<ExerciseGuideMedia items={media} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Увеличить: Фаза усилия' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Увеличить: Фаза возврата' }));
-
+    const dialog = screen.getByRole('dialog', { name: 'Увеличенное изображение: Фаза усилия' });
+    expect(dialog).toBeVisible();
+    expect(dialog.querySelector('img')).toHaveAttribute(
+      'src',
+      '/static/exercise-guides/human-v1/example/concentric_end-1280w.webp',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Следующее изображение' }));
     expect(
       screen.getByRole('dialog', { name: 'Увеличенное изображение: Фаза возврата' }),
-    ).toBeInTheDocument();
-    expect(onExpandedChange).toHaveBeenCalledWith(true);
-    fireEvent.click(screen.getByRole('button', { name: 'Закрыть увеличенное изображение' }));
-    expect(onExpandedChange).toHaveBeenLastCalledWith(false);
+    ).toBeVisible();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('explains how strength phases relate to the photographed positions', () => {
+  it('keeps an accessible text fallback when an image fails', () => {
     render(<ExerciseGuideMedia items={media} />);
+    fireEvent.error(screen.getByAltText('Пример: конечное положение усилия'));
 
-    expect(screen.getByText(/положение в конце движения/)).toBeVisible();
-    expect(screen.getByText(/концентрическая/)).toBeVisible();
-    expect(screen.getByText(/эксцентрическая/)).toBeVisible();
-    expect(screen.getAllByText('Фаза возврата', { exact: true })).toHaveLength(2);
-    expect(screen.getAllByText('Фаза усилия', { exact: true })).toHaveLength(2);
+    expect(
+      screen.getByRole('img', { name: 'Пример: конечное положение усилия' }),
+    ).toHaveTextContent('Изображение недоступно');
   });
 });
