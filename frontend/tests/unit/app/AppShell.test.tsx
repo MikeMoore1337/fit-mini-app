@@ -102,10 +102,7 @@ describe('AppShell', () => {
       'aria-current',
       'page',
     );
-    expect(within(dialog).getByRole('link', { name: 'База знаний' })).toHaveAttribute(
-      'href',
-      '/knowledge',
-    );
+    expect(within(dialog).queryByRole('link', { name: 'База знаний' })).not.toBeInTheDocument();
 
     fireEvent.keyDown(dialog, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -183,16 +180,20 @@ describe('AppShell', () => {
     expect(within(dialog).getByText('Отдельная сессия')).toBeInTheDocument();
   });
 
-  it('не показывает библиотеку знаний в Telegram Mini App navigation', () => {
-    window.Telegram = { WebApp: { initData: 'signed-init-data' } };
+  it('не показывает библиотеку знаний в Web или Telegram Mini App navigation', () => {
     navigation.path = '/app';
-    render(<AppShell section="today">Содержимое</AppShell>);
+    const web = render(<AppShell section="today">Содержимое</AppShell>);
 
     expect(screen.queryByRole('link', { name: 'База знаний' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Открыть профиль и настройки' }));
     expect(
       within(screen.getByRole('dialog')).queryByRole('link', { name: 'База знаний' }),
     ).not.toBeInTheDocument();
+
+    web.unmount();
+    window.Telegram = { WebApp: { initData: 'signed-init-data' } };
+    render(<AppShell section="today">Содержимое</AppShell>);
+    expect(screen.queryByRole('link', { name: 'База знаний' })).not.toBeInTheDocument();
   });
 
   it('показывает тематическую заглушку, если аватар отсутствует или не загрузился', () => {

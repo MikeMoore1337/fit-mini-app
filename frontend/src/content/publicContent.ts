@@ -84,6 +84,11 @@ export function isPublicContentPath(path: string): boolean {
   return page !== undefined && page.kind !== 'landing';
 }
 
+export function isPublishedKnowledgePath(path: string): boolean {
+  const page = getPublicContentPage(path);
+  return page?.kind === 'knowledge-index' || page?.kind === 'guide';
+}
+
 export function publicGuides(): PublicContentPage[] {
   return publicContent.pages.filter((page) => page.kind === 'guide' && isPublished(page));
 }

@@ -79,14 +79,7 @@ Task 82 становится обязательной частью текуще�
 
 ## 6. Task 85 - Knowledge package
 
-Изменить product placement на Public Web-first:
-
-- dependency: Task 121;
-- long-form articles/pages живут в Public Web;
-- app/TMA дают contextual external handoff;
-- TMA открывает public content во внешнем browser через supported Telegram API;
-- не возвращать Knowledge Base как permanent app nav section;
-- exercise technique остаётся in-app/contextual.
+Не заменять существующую task. Добавить dependency и acceptance из `TASK_85_AMENDMENT.md`.
 
 Task 85 не является обязательной для 124A, если владелец отдельно не включил её в текущий RC.
 

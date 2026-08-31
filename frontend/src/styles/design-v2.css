@@ -6002,6 +6002,28 @@ body.public-shell-mode:has(.public-shell.public-shell--design-v2) {
   box-shadow: none;
 }
 
+.knowledge-handoff__actions .knowledge-handoff__primary {
+  border: 1px solid transparent;
+  background: var(--v2-lime);
+  color: var(--v2-on-lime);
+}
+
+.knowledge-handoff__actions .knowledge-handoff__primary:hover {
+  background: var(--v2-lime-hover);
+  color: var(--v2-on-lime);
+}
+
+.knowledge-handoff__actions .button-link.secondary-link {
+  border: 1px solid var(--v2-border);
+  background: transparent;
+  color: var(--v2-text-primary);
+}
+
+.knowledge-handoff__actions .button-link.secondary-link:hover {
+  background: var(--v2-surface-secondary);
+  color: var(--v2-text-primary);
+}
+
 /* Cardio logging reuses the shared form/list language and stays separate from strength volume. */
 .cardio-log,
 .cardio-history {

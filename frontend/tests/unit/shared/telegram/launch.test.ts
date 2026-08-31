@@ -7,6 +7,16 @@ describe('isTelegramLaunch', () => {
     expect(isTelegramLaunch({ pathname: '/', search: '?tgWebAppPlatform=web', hash: '' })).toBe(
       false,
     );
+    expect(
+      isTelegramLaunch({ pathname: '/knowledgeable', search: '?tgWebAppPlatform=web', hash: '' }),
+    ).toBe(false);
+    expect(
+      isTelegramLaunch({
+        pathname: '/app/knowledgeable',
+        search: '?tgWebAppPlatform=web',
+        hash: '',
+      }),
+    ).toBe(false);
   });
 
   it('detects Telegram launch parameters in query and hash', () => {
@@ -21,6 +31,20 @@ describe('isTelegramLaunch', () => {
     ).toBe(true);
     expect(
       isTelegramLaunch({ pathname: '/demo', search: '?tgWebAppPlatform=android', hash: '' }),
+    ).toBe(true);
+    expect(
+      isTelegramLaunch({
+        pathname: '/knowledge/training/repetitions-in-reserve',
+        search: '?tgWebAppData=signed-data',
+        hash: '',
+      }),
+    ).toBe(true);
+    expect(
+      isTelegramLaunch({
+        pathname: '/app/knowledge/progress/how-to-read-progress',
+        search: '',
+        hash: '#tgWebAppPlatform=ios',
+      }),
     ).toBe(true);
   });
 });

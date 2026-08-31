@@ -42,7 +42,7 @@ Real-user validation перенесена **после production release**. П�
 
 Control-файл `codex-backlog/ux-reset/COMPACT_FIRST_UX_CONTRACT.md` является обязательным UX contract для этого цикла и должен быть перенесён в canonical `PLAIN_LANGUAGE_UX.md` при синхронизации backlog.
 
-Tasks 81/82/84/85/110/111 уже существуют owner-local и поэтому намеренно **не дублируются** в архиве. Их placement/dependencies меняются через `codex-backlog/ux-reset/PATCH_EXISTING_BACKLOG.md`.
+Tasks 81/82/84/85/110/111 уже существуют owner-local и поэтому намеренно **не дублируются** в архиве. Их placement/dependencies меняются через `codex-backlog/ux-reset/PATCH_EXISTING_BACKLOG.md`; Public Web-first contract Task 85 дополнительно закреплён в `TASK_85_AMENDMENT.md`.
 
 ## Рекомендуемый запуск Codex
 
