@@ -1,0 +1,195 @@
+record_type,slug_or_gap_id,display_name_ru,muscle_group,movement_pattern,equipment,equipment_variant,execution_variant,metric_type,priority,batch,status,evidence_note
+current,bench-press,Жим лежа,chest,chest_press,barbell,barbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,incline-bench-press,Жим штанги на наклонной скамье,chest,chest_press,barbell,barbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,decline-bench-press,Жим штанги вниз головой,chest,chest_press,barbell,barbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,close-grip-bench-press,Жим лежа узким хватом,triceps,chest_press,barbell,barbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,dumbbell-bench-press,Жим гантелей лежа,chest,chest_press,dumbbell,dumbbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,incline-dumbbell-press,Жим гантелей на наклонной скамье,chest,chest_press,dumbbell,dumbbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,decline-dumbbell-press,Жим гантелей вниз головой,chest,chest_press,dumbbell,dumbbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,dumbbell-fly,Разведение гантелей лежа,chest,chest_fly,dumbbell,dumbbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,incline-dumbbell-fly,Разведение гантелей на наклонной скамье,chest,chest_fly,dumbbell,dumbbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,cable-fly,Сведение рук в кроссовере,chest,chest_fly,cable,cable,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,low-to-high-cable-fly,Сведение снизу вверх в кроссовере,chest,chest_fly,cable,cable,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,pec-deck,Сведение рук в тренажере,chest,chest_fly,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,machine-chest-press,Жим от груди в тренажере,chest,chest_press,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,smith-bench-press,Жим лежа в Смите,chest,chest_press,machine,smith,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,push-up,Отжимания,chest,pushup_dip,bodyweight,bodyweight,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,weighted-dip,Отжимания на брусьях с весом,chest,pushup_dip,bodyweight,bodyweight,bilateral_or_unspecified,strength,covered,current,present,confirmed media mismatch: shared unweighted dip images; replace in 120D
+current,chest-dip,Отжимания на брусьях с наклоном,chest,pushup_dip,bodyweight,bodyweight,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,dumbbell-pullover,Пуловер с гантелью,chest,pullover,dumbbell,dumbbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,deadlift,Становая тяга,back,hinge,barbell,barbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,rack-pull,Тяга с плинтов,back,hinge,barbell,barbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,pull-up,Подтягивания,back,vertical_pull,bodyweight,bodyweight,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,chin-up,Подтягивания обратным хватом,back,vertical_pull,bodyweight,bodyweight,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,lat-pulldown,Вертикальная тяга,back,vertical_pull,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,reverse-grip-lat-pulldown,Вертикальная тяга обратным хватом,back,vertical_pull,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,close-grip-lat-pulldown,Вертикальная тяга узким хватом,back,vertical_pull,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,straight-arm-pulldown,Пуловер в кроссовере прямыми руками,back,pullover,cable,cable,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,barbell-row,Тяга штанги в наклоне,back,row,barbell,barbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,pendlay-row,Тяга Пендлея,back,row,barbell,barbell,bilateral_or_unspecified,strength,covered,current,present,confirmed media mismatch: shared hang-row images; replace in 120D
+current,t-bar-row,Тяга Т-грифа,back,row,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,one-arm-dumbbell-row,Тяга гантели одной рукой,back,row,dumbbell,dumbbell,unilateral,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,chest-supported-row,Тяга с упором грудью,back,row,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,seated-cable-row,Горизонтальная тяга блока,back,row,cable,cable,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,machine-row,Гребная тяга в тренажере,back,row,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,inverted-row,Австралийские подтягивания,back,row,bodyweight,bodyweight,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,meadows-row,Тяга Медоуза,back,row,barbell,barbell,unilateral,strength,covered,current,present,confirmed media mismatch: shared T-bar row images; replace in 120D
+current,cable-row-one-arm,Тяга блока одной рукой,back,row,cable,cable,unilateral,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,hyperextension,Гиперэкстензия,spinal_erectors,hinge,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,good-morning,Наклоны со штангой,posterior_chain,hinge,barbell,barbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,squat,Приседания,quadriceps,squat,barbell,barbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,front-squat,Фронтальные приседания,quadriceps,squat,barbell,barbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,hack-squat,Гакк-присед,quadriceps,squat,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,smith-squat,Приседания в Смите,quadriceps,squat,machine,smith,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,goblet-squat,Гоблет-присед,quadriceps,squat,kettlebell,kettlebell,bilateral_or_unspecified,strength,covered,current,present,exact media duplicate with kettlebell-goblet-squat; merge decision in 120D
+current,belt-squat,Поясной присед,quadriceps,squat,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,confirmed media mismatch: shared hack-squat images; replace in 120D
+current,leg-press,Жим ногами,quadriceps,squat,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,lunge,Выпады,legs,lunge,dumbbell,dumbbell,unilateral_or_alternating,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,walking-lunge,Выпады в ходьбе,legs,lunge,dumbbell,dumbbell,unilateral_or_alternating,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,reverse-lunge,Обратные выпады,legs,lunge,dumbbell,dumbbell,unilateral_or_alternating,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,bulgarian-split-squat,Болгарские сплит-приседания,legs,lunge,dumbbell,dumbbell,unilateral_or_alternating,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,split-squat,Сплит-присед,legs,lunge,dumbbell,dumbbell,unilateral_or_alternating,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,step-up,Зашагивания на тумбу,legs,lunge,dumbbell,dumbbell,unilateral_or_alternating,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,leg-extension,Разгибание ног,quadriceps,leg_isolation,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,sissy-squat,Сисси-присед,quadriceps,squat,bodyweight,bodyweight,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,wall-sit,Стульчик у стены,quadriceps,squat,bodyweight,bodyweight,isometric,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,romanian-deadlift,Румынская тяга,hamstrings,hinge,barbell,barbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,stiff-leg-deadlift,Тяга на прямых ногах,hamstrings,hinge,barbell,barbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,single-leg-rdl,Румынская тяга на одной ноге,hamstrings,hinge,dumbbell,dumbbell,unilateral,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,leg-curl,Сгибание ног лежа,hamstrings,leg_isolation,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,seated-leg-curl,Сгибание ног сидя,hamstrings,leg_isolation,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,standing-leg-curl,Сгибание ноги стоя,hamstrings,leg_isolation,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,nordic-curl,Нордические сгибания,hamstrings,leg_isolation,bodyweight,bodyweight,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,glute-ham-raise,Подъем корпуса GHD,hamstrings,hinge,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,hip-thrust,Ягодичный мост со штангой,glutes,glute,barbell,barbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,single-leg-hip-thrust,Ягодичный мост на одной ноге,glutes,glute,bodyweight,bodyweight,unilateral,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,barbell-glute-bridge,Ягодичный мост со штангой с пола,glutes,glute,barbell,barbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,cable-pull-through,Протяжка между ног в кроссовере,glutes,hinge,cable,cable,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,kettlebell-swing,Махи гирей,posterior_chain,hinge,kettlebell,kettlebell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,hip-abduction,Отведение бедра в тренажере,glutes,leg_isolation,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,hip-adduction,Сведение бедер в тренажере,adductors,leg_isolation,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,cable-kickback,Отведение ноги назад в кроссовере,glutes,leg_isolation,cable,cable,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,sumo-deadlift,Становая тяга сумо,legs,hinge,barbell,barbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,overhead-press,Жим стоя,shoulders,shoulder_press,barbell,barbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,seated-dumbbell-press,Жим гантелей сидя,shoulders,shoulder_press,dumbbell,dumbbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,arnold-press,Жим Арнольда,shoulders,shoulder_press,dumbbell,dumbbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,machine-shoulder-press,Жим плечами в тренажере,shoulders,shoulder_press,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,smith-shoulder-press,Жим сидя в Смите,shoulders,shoulder_press,machine,smith,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,landmine-press,Жим штанги в упоре,shoulders,shoulder_press,barbell,barbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,dumbbell-lateral-raise,Подъем гантелей через стороны,middle_deltoid,shoulder_raise,dumbbell,dumbbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,cable-lateral-raise,Подъем руки через сторону в кроссовере,middle_deltoid,shoulder_raise,cable,cable,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,machine-lateral-raise,Подъем через стороны в тренажере,middle_deltoid,shoulder_raise,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,dumbbell-front-raise,Подъем гантелей перед собой,anterior_deltoid,shoulder_raise,dumbbell,dumbbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,rear-delt-fly,Разведение гантелей в наклоне,posterior_deltoid,shoulder_raise,dumbbell,dumbbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,reverse-pec-deck,Обратная бабочка,posterior_deltoid,shoulder_raise,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,face-pull,Тяга каната к лицу,posterior_deltoid,row,cable,cable,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,upright-row,Тяга к подбородку,shoulders,row,barbell,barbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,barbell-shrug,Шраги со штангой,trapezius,shoulder_raise,barbell,barbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,dumbbell-shrug,Шраги с гантелями,trapezius,shoulder_raise,dumbbell,dumbbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,y-raise,Y-подъемы,lower_trapezius,shoulder_raise,dumbbell,dumbbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,barbell-curl,Подъем штанги на бицепс,biceps,arm_curl,barbell,barbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,ez-bar-curl,Подъем EZ-штанги на бицепс,biceps,arm_curl,barbell,barbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,dumbbell-curl,Подъем гантелей на бицепс,biceps,arm_curl,dumbbell,dumbbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,hammer-curl,Молотковые сгибания,biceps,arm_curl,dumbbell,dumbbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,incline-dumbbell-curl,Сгибания гантелей на наклонной скамье,biceps,arm_curl,dumbbell,dumbbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,preacher-curl,Сгибания на скамье Скотта,biceps,arm_curl,bench,bench,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,cable-curl,Сгибания рук в кроссовере,biceps,arm_curl,cable,cable,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,concentration-curl,Концентрированные сгибания,biceps,arm_curl,dumbbell,dumbbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,reverse-curl,Подъем штанги обратным хватом,forearms,arm_curl,barbell,barbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,spider-curl,Паучьи сгибания,biceps,arm_curl,bench,bench,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,machine-biceps-curl,Сгибание рук в тренажере,biceps,arm_curl,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,skull-crusher,Французский жим лежа,triceps,triceps,barbell,barbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,rope-pushdown,Разгибание рук с канатом,triceps,triceps,cable,cable,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,cable-pushdown,Разгибание рук на блоке,triceps,triceps,cable,cable,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,overhead-triceps-extension,Разгибание рук из-за головы в кроссовере,triceps,triceps,cable,cable,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,dumbbell-overhead-extension,Французский жим гантели сидя,triceps,triceps,dumbbell,dumbbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,lying-dumbbell-triceps-extension,Разгибание гантелей лежа,triceps,triceps,dumbbell,dumbbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,bench-dip,Обратные отжимания от скамьи,triceps,pushup_dip,bodyweight,bodyweight,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,triceps-kickback,Разгибание руки назад с гантелью,triceps,triceps,dumbbell,dumbbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,machine-dip,Отжимания в тренажере,triceps,pushup_dip,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,single-arm-cable-triceps-extension,Разгибание одной руки на блоке,triceps,triceps,cable,cable,unilateral,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,standing-calf-raise,Подъемы на носки стоя,calves,calf,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,seated-calf-raise,Подъемы на носки сидя,calves,calf,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,donkey-calf-raise,Ослиные подъемы на носки,calves,calf,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,calf-press,Жим носками в тренажере,calves,calf,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,single-leg-calf-raise,Подъем на носок одной ногой,calves,calf,bodyweight,bodyweight,unilateral,strength,covered,current,present,confirmed media mismatch: shared bilateral machine calf images; replace in 120D
+current,plank,Планка,core,core_static,bodyweight,bodyweight,isometric,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,side-plank,Боковая планка,core,core_static,bodyweight,bodyweight,isometric,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,crunch,Скручивания,abs,core_dynamic,bodyweight,bodyweight,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,reverse-crunch,Обратные скручивания,abs,core_dynamic,bodyweight,bodyweight,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,cable-crunch,Скручивания на блоке,abs,core_dynamic,cable,cable,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,hanging-leg-raise,Подъем ног в висе,abs,core_dynamic,bodyweight,bodyweight,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,captain-chair-leg-raise,Подъем ног в упоре,abs,core_dynamic,machine,unspecified_machine,bilateral_or_unspecified,strength,covered,current,present,confirmed media mismatch: shared free-hang images; replace in 120D
+current,ab-wheel,Ролик для пресса,core,core_dynamic,other,other,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,russian-twist,Русские повороты,obliques,core_rotation,other,other,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,pallof-press,Жим Палофа,core,core_rotation,cable,cable,isometric,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,woodchopper,Дровосек в кроссовере,obliques,core_rotation,cable,cable,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,mountain-climber,Альпинист,core,core_dynamic,bodyweight,bodyweight,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,hollow-hold,Холлоу-холд,core,core_static,bodyweight,bodyweight,isometric,strength,covered,current,present,confirmed media mismatch: shared plank images; replace in 120D
+current,dead-bug,Мертвый жук,core,core_static,bodyweight,bodyweight,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,bird-dog,Берд-дог,core,core_static,bodyweight,bodyweight,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,burpee,Берпи,full_body,conditioning,bodyweight,bodyweight,multi_stage_or_cyclic,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,box-jump,Запрыгивания на тумбу,legs,conditioning,other,other,multi_stage_or_cyclic,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,jump-rope,Скакалка,cardio,conditioning,cardio,cardio,cyclic,cardio,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,rowing-machine,Гребной тренажер,cardio,conditioning,machine,unspecified_machine,cyclic,cardio,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,treadmill-run,Беговая дорожка,cardio,running,machine,unspecified_machine,cyclic,cardio,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,assault-bike,Assault bike,cardio,conditioning,machine,unspecified_machine,cyclic,cardio,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,outdoor-run,Бег на улице,cardio,running,bodyweight,bodyweight,cyclic,cardio,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,elliptical-trainer,Эллиптический тренажёр,cardio,elliptical,cardio,cardio,cyclic,cardio,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,outdoor-cycling,Велосипед,cardio,cycling,cardio,cardio,cyclic,cardio,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,stationary-bike,Велотренажёр,cardio,cycling,cardio,cardio,cyclic,cardio,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,outdoor-walk,Ходьба,cardio,walking,bodyweight,bodyweight,cyclic,cardio,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,treadmill-walk,Ходьба на дорожке,cardio,walking,cardio,cardio,cyclic,cardio,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,stair-climber,Степпер / лестница,cardio,stair_climber,cardio,cardio,cyclic,cardio,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,swimming,Плавание,cardio,swimming,cardio,cardio,cyclic,cardio,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,ski-erg,Лыжный тренажёр,cardio,ski_erg,cardio,cardio,cyclic,cardio,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,battle-rope,Канаты,conditioning,conditioning,other,other,multi_stage_or_cyclic,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,sled-push,Толкание саней,legs,conditioning,other,other,multi_stage_or_cyclic,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,sled-pull,Тяга саней,posterior_chain,conditioning,other,other,multi_stage_or_cyclic,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,farmer-walk,Прогулка фермера,grip,carry,dumbbell,dumbbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,suitcase-carry,Чемоданная переноска,core,carry,kettlebell,kettlebell,unilateral,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,medicine-ball-slam,Броски медбола в пол,full_body,conditioning,other,other,multi_stage_or_cyclic,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,wall-ball,Броски мяча в стену,full_body,conditioning,other,other,multi_stage_or_cyclic,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,thruster,Трастер,full_body,conditioning,barbell,barbell,multi_stage_or_cyclic,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,kettlebell-clean,Взятие гири на грудь,full_body,conditioning,kettlebell,kettlebell,multi_stage_or_cyclic,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,kettlebell-snatch,Рывок гири,full_body,conditioning,kettlebell,kettlebell,multi_stage_or_cyclic,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,kettlebell-goblet-squat,Гоблет-присед с гирей,legs,squat,kettlebell,kettlebell,bilateral_or_unspecified,strength,covered,current,present,exact media duplicate with goblet-squat; merge decision in 120D
+current,turkish-get-up,Турецкий подъем,full_body,conditioning,kettlebell,kettlebell,multi_stage_or_cyclic,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,renegade-row,Ренегатская тяга,back,row,dumbbell,dumbbell,bilateral_or_unspecified,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+current,bear-crawl,Медвежья проходка,full_body,conditioning,bodyweight,bodyweight,multi_stage_or_cyclic,strength,covered,current,present,audit-derived pattern/variant; current DB does not store both axes
+gap,machine-incline-chest-press,Жим от груди вверх в тренажёре,chest,chest_press,machine,selectorized_or_lever,bilateral,strength,must,120B,missing,incline machine press absent
+gap,independent-lever-chest-press,Жим от груди в независимом рычажном тренажёре,chest,chest_press,machine,plate_loaded_lever_independent,bilateral_or_unilateral,strength,must,120B,missing,generic machine press does not cover independent lever setup
+gap,lever-high-row,Верхняя рычажная тяга с упором грудью,back,row,machine,plate_loaded_lever,bilateral_or_unilateral,strength,must,120B,missing,high row trajectory absent
+gap,lever-low-row,Нижняя рычажная тяга с упором грудью,back,row,machine,plate_loaded_lever,bilateral_or_unilateral,strength,must,120B,missing,low row trajectory absent
+gap,independent-lever-lat-pulldown,Вертикальная рычажная тяга независимыми руками,back,vertical_pull,machine,plate_loaded_lever_independent,bilateral_or_unilateral,strength,must,120B,missing,lever vertical pull absent
+gap,machine-pullover,Пуловер в тренажёре,back,pullover,machine,selectorized_or_lever,bilateral,strength,must,120B,missing,only dumbbell/cable pullovers present
+gap,independent-lever-shoulder-press,Жим над головой в независимом рычажном тренажёре,shoulders,shoulder_press,machine,plate_loaded_lever_independent,bilateral_or_unilateral,strength,must,120B,missing,independent lever shoulder press absent
+gap,machine-decline-chest-press,Жим от груди вниз в тренажёре,chest,chest_press,machine,selectorized_or_lever,bilateral,strength,should,120B,missing,distinct decline setup only if media confirms
+gap,machine-triceps-extension,Разгибание рук в тренажёре,triceps,triceps,machine,selectorized,bilateral,strength,should,120B,missing,machine dip is not elbow-extension machine
+gap,chest-supported-dumbbell-row,Тяга гантелей с упором грудью,back,row,dumbbell,bench_supported,bilateral,strength,should,120B_or_120D,missing,supported free-weight row absent
+gap,pendulum-squat,Маятниковый присед в тренажёре,quadriceps,squat,machine,plate_loaded_lever,bilateral,strength,must,120C,missing,distinct pendulum path absent
+gap,plate-loaded-leg-press,Жим ногами в тренажёре с дисками,quadriceps,squat,machine,plate_loaded,bilateral,strength,must,120C,missing,current leg press load/setup unspecified
+gap,unilateral-leg-press,Жим одной ногой в тренажёре,quadriceps,squat,machine,selectorized_or_plate_loaded,unilateral,strength,must,120C,missing,material unilateral execution absent
+gap,machine-hip-thrust,Ягодичный мост в рычажном тренажёре,glutes,glute,machine,plate_loaded_lever,bilateral,strength,must,120C,missing,glute-drive setup absent
+gap,smith-split-squat,Сплит-присед в машине Смита,legs,lunge,machine,smith,unilateral,strength,must,120C,missing,Smith unilateral squat/lunge absent
+gap,machine-glute-kickback,Разгибание бедра назад в тренажёре,glutes,leg_isolation,machine,selectorized_or_lever,unilateral,strength,must,120C,missing,only cable kickback present
+gap,v-squat-machine,V-присед в рычажном тренажёре,quadriceps,squat,machine,plate_loaded_lever,bilateral,strength,should,120C,missing,add only with distinct media from hack/pendulum
+gap,reverse-hyperextension,Обратная гиперэкстензия,posterior_chain,hinge,machine,lever_or_bodyweight,bilateral,strength,should,120C,missing,distinct posterior-chain setup absent
+gap,bodyweight-squat,Приседания с собственным весом,quadriceps,squat,bodyweight,bodyweight,bilateral,strength,must,120D,missing,beginner bodyweight squat absent
+gap,bodyweight-glute-bridge,Ягодичный мост с собственным весом,glutes,glute,bodyweight,bodyweight,bilateral,strength,must,120D,missing,basic unloaded bridge absent
+gap,barbell-wrist-curl,Сгибание кистей со штангой,forearms,wrist_flexion,barbell,barbell,bilateral,strength,must,120D,missing,forearm flexion coverage absent
+gap,barbell-wrist-extension,Разгибание кистей со штангой,forearms,wrist_extension,barbell,barbell,bilateral,strength,must,120D,missing,forearm extension coverage absent
+gap,dead-hang,Вис на перекладине,grip,carry_or_grip,bodyweight,bar,bilateral,strength,should,120D,missing,simple isometric grip item absent
+gap,high-to-low-cable-fly,Сведение рук сверху вниз в кроссовере,chest,chest_fly,cable,cable,bilateral,strength,should,120D,missing,distinct cable direction; merge as variant if media not distinct
+gap,recumbent-bike,Горизонтальный велотренажёр,cardio,cycling,cardio,cardio_machine,cyclic,cardio,should,120D,missing,distinct seated cardio setup absent
+decision,merge-goblet-squat,Merge goblet-squat и kettlebell-goblet-squat,legs,squat,kettlebell,kettlebell,bilateral,strength,must,120D,decision_required,confirmed duplicate; preserve history compatibility
+decision,rename-assault-bike,Воздушный велотренажёр,cardio,conditioning,cardio,cardio_machine,cyclic,cardio,must,120D,decision_required,keep stable slug; brand-like name becomes alias
+decision,cardio-equipment-reclass,Reclassify rower/treadmill/air bike equipment,cardio,cyclic,cardio,cardio_machine,cyclic,cardio,must,120D,decision_required,three cardio records currently normalize to broad machine
+decision,search-alias-layer,Shared versioned aliases/normalization/ranking,system,search,n/a,n/a,n/a,n/a,must,120D,missing,no alias model; catalog and ProgramBuilder use substring only
+decision,replace-media-pendlay-row,Replace visual for Pendlay row,back,row,barbell,barbell,bilateral,strength,must,120D,confirmed_blocker,current files exactly duplicate barbell-row and show hang start
+decision,replace-media-weighted-dip,Replace visual for weighted dip,chest,pushup_dip,bodyweight,external_load,bilateral,strength,must,120D,confirmed_blocker,current files exactly duplicate unweighted chest-dip
+decision,replace-media-single-leg-calf,Replace visual for single-leg calf raise,calves,calf,bodyweight,bodyweight,unilateral,strength,must,120D,confirmed_blocker,current files exactly duplicate bilateral machine standing calf raise
+decision,replace-media-hollow-hold,Replace visual for hollow hold,core,core_static,bodyweight,bodyweight,isometric,strength,must,120D,confirmed_blocker,current files exactly duplicate plank sequence
+decision,replace-media-meadows-row,Replace visual for Meadows row,back,row,barbell,landmine,unilateral,strength,must,120D,confirmed_blocker,current files exactly duplicate T-bar row
+decision,replace-media-captain-chair,Replace visual for captain-chair leg raise,abs,core_dynamic,machine,captain_chair,bilateral,strength,must,120D,confirmed_blocker,current files exactly duplicate free-hanging leg raise
+decision,replace-media-belt-squat,Replace visual for belt squat,quadriceps,squat,machine,belt_squat,bilateral,strength,must,120D,confirmed_blocker,current files exactly duplicate hack-squat machine
