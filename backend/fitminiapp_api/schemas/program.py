@@ -28,10 +28,16 @@ EquipmentIdentifier = Literal[
 ExerciseMetricType = Literal["strength", "cardio"]
 ExerciseMovementPattern = Literal[
     "arm_curl",
+    "calf",
     "chest_press",
+    "glute",
+    "hinge",
+    "leg_isolation",
+    "lunge",
     "pullover",
     "row",
     "shoulder_press",
+    "squat",
     "triceps",
     "vertical_pull",
 ]

@@ -30,8 +30,187 @@ UPPER_BODY_MACHINE_SLUGS = (
     "chest-supported-dumbbell-row",
 )
 
+LOWER_BODY_MACHINE_SLUGS = (
+    "pendulum-squat",
+    "plate-loaded-leg-press",
+    "unilateral-leg-press",
+    "machine-hip-thrust",
+    "smith-split-squat",
+    "machine-glute-kickback",
+    "v-squat-machine",
+    "reverse-hyperextension",
+)
+
 
 CATALOG_METADATA: dict[str, ExerciseCatalogMetadata] = {
+    "leg-press": {
+        "aliases": (
+            "leg press",
+            "жим ногами широкая постановка",
+            "жим ногами узкая постановка",
+            "жим ногами стопы выше",
+            "жим ногами стопы ниже",
+        ),
+        "movement_pattern": "squat",
+        "machine_variant_tags": (),
+        "execution_variant_tags": ("bilateral",),
+    },
+    "hack-squat": {
+        "aliases": ("гакк", "hack squat", "гакк машина"),
+        "movement_pattern": "squat",
+        "machine_variant_tags": (),
+        "execution_variant_tags": ("bilateral",),
+    },
+    "smith-squat": {
+        "aliases": ("смит присед", "smith squat", "присед в машине смита"),
+        "movement_pattern": "squat",
+        "machine_variant_tags": ("smith",),
+        "execution_variant_tags": ("bilateral",),
+    },
+    "leg-extension": {
+        "aliases": ("разгибание ног в тренажере", "leg extension"),
+        "movement_pattern": "leg_isolation",
+        "machine_variant_tags": (),
+        "execution_variant_tags": ("bilateral",),
+    },
+    "leg-curl": {
+        "aliases": ("сгибание ног лежа", "lying leg curl"),
+        "movement_pattern": "leg_isolation",
+        "machine_variant_tags": (),
+        "execution_variant_tags": ("bilateral",),
+    },
+    "seated-leg-curl": {
+        "aliases": ("сгибание ног сидя", "seated leg curl"),
+        "movement_pattern": "leg_isolation",
+        "machine_variant_tags": (),
+        "execution_variant_tags": ("bilateral",),
+    },
+    "standing-leg-curl": {
+        "aliases": ("сгибание ног стоя", "standing leg curl"),
+        "movement_pattern": "leg_isolation",
+        "machine_variant_tags": (),
+        "execution_variant_tags": ("unilateral",),
+    },
+    "hip-abduction": {
+        "aliases": ("разведение ног в тренажере", "отведение бедер", "hip abduction machine"),
+        "movement_pattern": "leg_isolation",
+        "machine_variant_tags": (),
+        "execution_variant_tags": ("bilateral",),
+    },
+    "hip-adduction": {
+        "aliases": ("сведение ног в тренажере", "сведение бедер", "hip adduction machine"),
+        "movement_pattern": "leg_isolation",
+        "machine_variant_tags": (),
+        "execution_variant_tags": ("bilateral",),
+    },
+    "standing-calf-raise": {
+        "aliases": ("подъемы на носки в тренажере стоя", "standing calf raise machine"),
+        "movement_pattern": "calf",
+        "machine_variant_tags": (),
+        "execution_variant_tags": ("bilateral",),
+    },
+    "seated-calf-raise": {
+        "aliases": ("подъемы на носки в тренажере сидя", "seated calf raise machine"),
+        "movement_pattern": "calf",
+        "machine_variant_tags": (),
+        "execution_variant_tags": ("bilateral",),
+    },
+    "calf-press": {
+        "aliases": ("жим носками", "calf press machine"),
+        "movement_pattern": "calf",
+        "machine_variant_tags": (),
+        "execution_variant_tags": ("bilateral",),
+    },
+    "pendulum-squat": {
+        "aliases": (
+            "маятниковый присед",
+            "маятник в тренажере",
+            "pendulum squat",
+            "pendulum machine squat",
+        ),
+        "movement_pattern": "squat",
+        "machine_variant_tags": ("plate_loaded", "lever"),
+        "execution_variant_tags": ("bilateral",),
+    },
+    "plate-loaded-leg-press": {
+        "aliases": (
+            "жим ногами на блинах",
+            "жим ногами с дисками",
+            "plate loaded leg press",
+            "рычажный жим ногами",
+        ),
+        "movement_pattern": "squat",
+        "machine_variant_tags": ("plate_loaded",),
+        "execution_variant_tags": ("bilateral",),
+    },
+    "unilateral-leg-press": {
+        "aliases": (
+            "жим одной ногой",
+            "жим ногами одной ногой",
+            "single leg press",
+            "unilateral leg press",
+        ),
+        "movement_pattern": "squat",
+        "machine_variant_tags": ("selectorized", "plate_loaded"),
+        "execution_variant_tags": ("unilateral",),
+    },
+    "machine-hip-thrust": {
+        "aliases": (
+            "ягодичный тренажер",
+            "ягодичный тренажёр",
+            "glute drive",
+            "machine hip thrust",
+            "рычажный ягодичный мост",
+        ),
+        "movement_pattern": "glute",
+        "machine_variant_tags": ("plate_loaded", "lever"),
+        "execution_variant_tags": ("bilateral",),
+    },
+    "smith-split-squat": {
+        "aliases": (
+            "смит сплит",
+            "сплит присед в смите",
+            "smith split squat",
+            "smith lunge",
+            "выпады в смите",
+        ),
+        "movement_pattern": "lunge",
+        "machine_variant_tags": ("smith",),
+        "execution_variant_tags": ("unilateral",),
+    },
+    "machine-glute-kickback": {
+        "aliases": (
+            "разгибание бедра в тренажере",
+            "ягодичный кикбэк в тренажере",
+            "machine glute kickback",
+            "glute kickback machine",
+        ),
+        "movement_pattern": "leg_isolation",
+        "machine_variant_tags": ("selectorized", "lever"),
+        "execution_variant_tags": ("unilateral",),
+    },
+    "v-squat-machine": {
+        "aliases": (
+            "v присед в тренажере",
+            "рычажный v присед",
+            "v squat",
+            "v squat machine",
+        ),
+        "movement_pattern": "squat",
+        "machine_variant_tags": ("plate_loaded", "lever"),
+        "execution_variant_tags": ("bilateral",),
+    },
+    "reverse-hyperextension": {
+        "aliases": (
+            "обратная гиперэкстензия",
+            "обратная гиперэкстензия в тренажере",
+            "reverse hyper",
+            "reverse hyperextension",
+        ),
+        "movement_pattern": "hinge",
+        "machine_variant_tags": ("lever",),
+        "execution_variant_tags": ("bilateral",),
+    },
     "machine-incline-chest-press": {
         "aliases": (
             "наклонный жим в тренажере",
@@ -164,6 +343,118 @@ CATALOG_METADATA: dict[str, ExerciseCatalogMetadata] = {
 
 
 ITEM_GUIDE_CONTENT: dict[str, ExerciseGuideContent] = {
+    "pendulum-squat": {
+        "steps": [
+            "Встань на платформу, расположи плечи под упорами и выбери устойчивую постановку стоп, предусмотренную тренажёром.",
+            "Сними рычаг со стопоров и плавно согни тазобедренные и коленные суставы до глубины, на которой стопы и корпус сохраняют опору.",
+            "Надави всей стопой на платформу и поднимись по дуге тренажёра без резкого выпрямления коленей.",
+        ],
+        "breathing": "Вдох перед опусканием, выдох после прохождения тяжёлой части подъёма.",
+        "mistakes": [
+            "Пятки отрываются от платформы",
+            "Колени заметно смещаются внутрь относительно стоп",
+            "Отскок из нижнего положения вместо контролируемого разворота",
+        ],
+        "secondary": ["Ягодицы", "Бицепс бедра", "Икры"],
+    },
+    "plate-loaded-leg-press": {
+        "steps": [
+            "Настрой спинку и сядь так, чтобы таз и спина оставались на опоре, затем поставь стопы на платформу.",
+            "Сними платформу со стопоров и опусти её до доступной амплитуды без отрыва таза; положение стоп можно менять только сохраняя устойчивую опору.",
+            "Выжми платформу всей стопой и остановись до жёсткой блокировки коленей, затем верни стопоры после последнего повтора.",
+        ],
+        "breathing": "Вдох при контролируемом опускании платформы, выдох после прохождения тяжёлой части жима.",
+        "mistakes": [
+            "Таз отрывается от спинки в нижней точке",
+            "Пятки теряют контакт с платформой",
+            "Платформа резко опускается на ограничители",
+        ],
+        "secondary": ["Ягодицы", "Бицепс бедра", "Икры"],
+    },
+    "unilateral-leg-press": {
+        "steps": [
+            "Сядь по центру спинки, поставь одну стопу на платформу, а свободную ногу убери в предусмотренное тренажёром устойчивое положение.",
+            "Опусти платформу рабочей ногой без поворота таза, направляя колено по линии стопы.",
+            "Выжми платформу всей стопой без резкой блокировки колена и повтори тот же setup для другой стороны.",
+        ],
+        "breathing": "Вдох при опускании платформы, выдох после прохождения тяжёлой части жима.",
+        "mistakes": [
+            "Таз разворачивается или смещается на сиденье",
+            "Колено уходит в сторону от линии стопы",
+            "Свободная нога помогает двигать платформу",
+        ],
+        "secondary": ["Ягодицы", "Бицепс бедра", "Икры"],
+    },
+    "machine-hip-thrust": {
+        "steps": [
+            "Настрой опору и ремень или подушку по инструкции тренажёра, зафиксируй таз и поставь стопы устойчиво.",
+            "Разогни тазобедренные суставы и подними рычаг до положения, где корпус и бёдра образуют почти прямую линию без прогиба поясницы.",
+            "Плавно опусти таз, сохраняя контакт с опорами и натяжение ремня или подушки.",
+        ],
+        "breathing": "Вдох при опускании таза, выдох во время разгибания бёдер.",
+        "mistakes": [
+            "Движение завершается прогибом поясницы вместо разгибания бёдер",
+            "Стопы сдвигаются или теряют полный контакт с опорой",
+            "Рычаг резко опускается на ограничитель",
+        ],
+        "secondary": ["Бицепс бедра", "Кор"],
+    },
+    "smith-split-squat": {
+        "steps": [
+            "Установи страховочные упоры, расположи гриф на верхней части спины и прими устойчивую разножку под направляющими.",
+            "Опустись вниз, сгибая обе ноги и сохраняя переднюю стопу полностью на полу, а корпус — устойчивым под грифом.",
+            "Оттолкнись передней ногой и поднимись без поворота таза; перед сменой стороны надёжно верни гриф на фиксаторы.",
+        ],
+        "breathing": "Вдох перед опусканием, выдох после прохождения тяжёлой части подъёма.",
+        "mistakes": [
+            "Слишком узкая разножка не даёт устойчивой опоры",
+            "Пятка передней ноги отрывается от пола",
+            "Корпус смещается вперёд или в сторону относительно грифа",
+        ],
+        "secondary": ["Квадрицепс", "Ягодицы", "Бицепс бедра", "Кор"],
+    },
+    "machine-glute-kickback": {
+        "steps": [
+            "Настрой подушку и опоры так, чтобы рабочее бедро двигалось свободно, а таз и корпус оставались зафиксированы.",
+            "Отведи бедро назад по траектории тренажёра без разворота таза и без дополнительного прогиба поясницы.",
+            "Плавно верни рычаг до исходного положения, сохраняя опору корпуса.",
+        ],
+        "breathing": "Выдох при отведении бедра назад, вдох при контролируемом возврате.",
+        "mistakes": [
+            "Раскачивание корпусом для разгона рычага",
+            "Разворот таза вслед за рабочей ногой",
+            "Слишком большая амплитуда за счёт прогиба поясницы",
+        ],
+        "secondary": ["Бицепс бедра", "Кор"],
+    },
+    "v-squat-machine": {
+        "steps": [
+            "Расположи плечи под упорами, прижми таз и спину к наклонной опоре и поставь стопы устойчиво на платформу.",
+            "Сними рычаг со стопоров и опустись по заданной траектории, сохраняя контакт корпуса с опорой и колени по линии стоп.",
+            "Надави всей стопой и поднимись без резкой блокировки коленей, затем верни стопоры после подхода.",
+        ],
+        "breathing": "Вдох перед опусканием, выдох после прохождения тяжёлой части подъёма.",
+        "mistakes": [
+            "Таз отрывается от наклонной опоры",
+            "Колени смещаются внутрь относительно стоп",
+            "Резкий разворот движения на ограничителях",
+        ],
+        "secondary": ["Ягодицы", "Бицепс бедра", "Икры"],
+    },
+    "reverse-hyperextension": {
+        "steps": [
+            "Расположи таз у края опоры, зафиксируй корпус и возьмись за рукояти, оставив ноги свободно опущенными.",
+            "Подними ноги разгибанием в тазобедренных суставах примерно до линии корпуса без резкого маха и чрезмерного прогиба поясницы.",
+            "Плавно опусти ноги, сохраняя таз и верх тела на опоре.",
+        ],
+        "breathing": "Выдох при подъёме ног, вдох при контролируемом опускании.",
+        "mistakes": [
+            "Разгон ног раскачиванием",
+            "Подъём выше доступной амплитуды за счёт прогиба поясницы",
+            "Таз или корпус теряют устойчивый контакт с опорой",
+        ],
+        "secondary": ["Ягодицы", "Бицепс бедра", "Разгибатели спины", "Кор"],
+    },
     "machine-incline-chest-press": {
         "steps": [
             "Настрой сиденье так, чтобы рукояти начинали движение у верхней части груди, и прижми спину к опоре.",
@@ -308,6 +599,38 @@ ITEM_GUIDE_CONTENT: dict[str, ExerciseGuideContent] = {
 
 
 MEDIA_ALT_BY_PHASE: dict[str, dict[str, str]] = {
+    "pendulum-squat": {
+        "eccentric_end": "Маятниковый присед: нижнее положение на дуге тренажёра, стопы устойчивы на платформе",
+        "concentric_end": "Маятниковый присед: верхнее положение, плечи под упорами и колени без жёсткой блокировки",
+    },
+    "plate-loaded-leg-press": {
+        "eccentric_end": "Жим ногами с дисками: нижнее положение, платформа приближена к корпусу без отрыва таза",
+        "concentric_end": "Жим ногами с дисками: платформа выжата, стопы полностью сохраняют опору",
+    },
+    "unilateral-leg-press": {
+        "eccentric_end": "Жим одной ногой: нижнее положение, рабочее колено согнуто по линии стопы",
+        "concentric_end": "Жим одной ногой: платформа выжата рабочей ногой, таз остаётся по центру спинки",
+    },
+    "machine-hip-thrust": {
+        "eccentric_end": "Ягодичный мост в рычажном тренажёре: таз опущен, стопы и верх спины на опорах",
+        "concentric_end": "Ягодичный мост в рычажном тренажёре: бёдра разогнуты, корпус и бёдра образуют линию",
+    },
+    "smith-split-squat": {
+        "eccentric_end": "Сплит-присед в Смите: нижнее положение в разножке, передняя стопа полностью на полу",
+        "concentric_end": "Сплит-присед в Смите: верхнее положение под грифом, таз направлен вперёд",
+    },
+    "machine-glute-kickback": {
+        "eccentric_end": "Разгибание бедра в тренажёре: исходное положение, таз и корпус на опорах",
+        "concentric_end": "Разгибание бедра в тренажёре: рабочая нога отведена назад без поворота таза",
+    },
+    "v-squat-machine": {
+        "eccentric_end": "V-присед в тренажёре: нижнее положение, спина и таз сохраняют контакт с наклонной опорой",
+        "concentric_end": "V-присед в тренажёре: верхнее положение, плечи под упорами и стопы на платформе",
+    },
+    "reverse-hyperextension": {
+        "eccentric_end": "Обратная гиперэкстензия: ноги опущены, таз и корпус зафиксированы на опоре",
+        "concentric_end": "Обратная гиперэкстензия: ноги подняты примерно до линии корпуса без чрезмерного прогиба",
+    },
     "machine-incline-chest-press": {
         "eccentric_end": "Жим от груди вверх в тренажёре: исходное положение, рукояти у верхней части груди",
         "concentric_end": "Жим от груди вверх в тренажёре: конечное положение, руки выпрямлены по диагонали вверх",
