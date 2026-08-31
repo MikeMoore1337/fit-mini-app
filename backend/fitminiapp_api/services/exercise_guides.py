@@ -3,6 +3,7 @@ from __future__ import annotations
 from fitminiapp_api.models.exercise import Exercise
 from fitminiapp_api.services.exercise_catalog_metadata import (
     ITEM_GUIDE_CONTENT,
+    LOWER_BODY_MACHINE_SLUGS,
     UPPER_BODY_MACHINE_SLUGS,
 )
 from fitminiapp_api.services.exercise_domain import (
@@ -30,7 +31,7 @@ GENERATED_CARDIO_SLUGS = {
     "ski-erg",
 }
 
-YFC_ORIGINAL_VECTOR_SLUGS = frozenset(UPPER_BODY_MACHINE_SLUGS)
+YFC_ORIGINAL_VECTOR_SLUGS = frozenset(UPPER_BODY_MACHINE_SLUGS + LOWER_BODY_MACHINE_SLUGS)
 
 
 MUSCLE_FUNCTIONS = {
@@ -469,6 +470,7 @@ PROFILE_SLUGS = {
         "cable-pull-through",
         "kettlebell-swing",
         "sumo-deadlift",
+        "reverse-hyperextension",
     },
     "squat": {
         "squat",
@@ -481,6 +483,10 @@ PROFILE_SLUGS = {
         "sissy-squat",
         "wall-sit",
         "kettlebell-goblet-squat",
+        "pendulum-squat",
+        "plate-loaded-leg-press",
+        "unilateral-leg-press",
+        "v-squat-machine",
     },
     "lunge": {
         "lunge",
@@ -489,6 +495,7 @@ PROFILE_SLUGS = {
         "bulgarian-split-squat",
         "split-squat",
         "step-up",
+        "smith-split-squat",
     },
     "leg_isolation": {
         "leg-extension",
@@ -499,8 +506,14 @@ PROFILE_SLUGS = {
         "hip-abduction",
         "hip-adduction",
         "cable-kickback",
+        "machine-glute-kickback",
     },
-    "glute": {"hip-thrust", "single-leg-hip-thrust", "barbell-glute-bridge"},
+    "glute": {
+        "hip-thrust",
+        "single-leg-hip-thrust",
+        "barbell-glute-bridge",
+        "machine-hip-thrust",
+    },
     "shoulder_press": {
         "overhead-press",
         "seated-dumbbell-press",

@@ -4485,7 +4485,7 @@ export interface components {
             /** Aliases */
             aliases?: string[];
             /** Movement Pattern */
-            movement_pattern?: ("arm_curl" | "chest_press" | "pullover" | "row" | "shoulder_press" | "triceps" | "vertical_pull") | null;
+            movement_pattern?: ("arm_curl" | "calf" | "chest_press" | "glute" | "hinge" | "leg_isolation" | "lunge" | "pullover" | "row" | "shoulder_press" | "squat" | "triceps" | "vertical_pull") | null;
             /** Machine Variant Tags */
             machine_variant_tags?: ("selectorized" | "plate_loaded" | "lever" | "independent" | "converging" | "diverging" | "smith")[];
             /** Execution Variant Tags */

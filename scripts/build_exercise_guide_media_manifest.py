@@ -43,6 +43,11 @@ VECTOR_SOURCE = {
     "setup_verified": True,
     "key_positions_verified": True,
 }
+LOWER_BODY_VECTOR_SOURCE = {
+    **VECTOR_SOURCE,
+    "author_or_generator_record": "scripts/build_lower_body_machine_guide_assets.py@Task-120C",
+    "reviewer": "fitness-domain-reviewer / Task 120C",
+}
 PHASES = {
     "concentric_end": "Фаза усилия",
     "eccentric_end": "Фаза возврата",
@@ -160,9 +165,13 @@ ECCENTRIC_END_IN_START_IMAGE_SLUGS = {
     "machine-shoulder-press",
     "independent-lever-shoulder-press",
     "machine-triceps-extension",
+    "machine-glute-kickback",
+    "machine-hip-thrust",
     "meadows-row",
     "one-arm-dumbbell-row",
     "pendlay-row",
+    "pendulum-squat",
+    "plate-loaded-leg-press",
     "preacher-curl",
     "pull-up",
     "rack-pull",
@@ -181,6 +190,7 @@ ECCENTRIC_END_IN_START_IMAGE_SLUGS = {
     "single-leg-hip-thrust",
     "smith-bench-press",
     "smith-shoulder-press",
+    "smith-split-squat",
     "spider-curl",
     "standing-calf-raise",
     "standing-leg-curl",
@@ -194,6 +204,9 @@ ECCENTRIC_END_IN_START_IMAGE_SLUGS = {
     "lying-dumbbell-triceps-extension",
     "romanian-deadlift",
     "smith-squat",
+    "unilateral-leg-press",
+    "v-squat-machine",
+    "reverse-hyperextension",
 }
 
 SPECIAL_PHASES_BY_SLUG = {
@@ -246,11 +259,15 @@ def catalog_definition() -> tuple[
     set[str],
     dict[str, str | None],
     dict[str, dict[str, str]],
+    set[str],
 ]:
     if str(BACKEND_DIR) not in sys.path:
         sys.path.insert(0, str(BACKEND_DIR))
 
-    from fitminiapp_api.services.exercise_catalog_metadata import MEDIA_ALT_BY_PHASE
+    from fitminiapp_api.services.exercise_catalog_metadata import (
+        LOWER_BODY_MACHINE_SLUGS,
+        MEDIA_ALT_BY_PHASE,
+    )
     from fitminiapp_api.services.exercise_guides import (
         GENERATED_CARDIO_SLUGS,
         SOURCE_LICENSE,
@@ -317,11 +334,23 @@ def catalog_definition() -> tuple[
         "license": SOURCE_LICENSE,
         "license_url": SOURCE_LICENSE_URL,
     }
-    return result, GENERATED_CARDIO_SLUGS, upstream_source, MEDIA_ALT_BY_PHASE
+    return (
+        result,
+        GENERATED_CARDIO_SLUGS,
+        upstream_source,
+        MEDIA_ALT_BY_PHASE,
+        set(LOWER_BODY_MACHINE_SLUGS),
+    )
 
 
 def build_manifest(asset_dir: Path) -> dict:
-    expected, generated_cardio_slugs, upstream_source, media_alt_by_phase = catalog_definition()
+    (
+        expected,
+        generated_cardio_slugs,
+        upstream_source,
+        media_alt_by_phase,
+        lower_body_vector_slugs,
+    ) = catalog_definition()
     expected_names = {name for files in expected.values() for name, _ in files}
     actual_names = {path.name for pattern in ("*.jpg", "*.svg") for path in asset_dir.glob(pattern)}
     missing = sorted(expected_names - actual_names)
@@ -339,6 +368,8 @@ def build_manifest(asset_dir: Path) -> dict:
         source = (
             INTERNAL_SOURCE
             if slug in generated_cardio_slugs
+            else LOWER_BODY_VECTOR_SOURCE
+            if slug in lower_body_vector_slugs
             else VECTOR_SOURCE
             if slug in media_alt_by_phase
             else upstream_source

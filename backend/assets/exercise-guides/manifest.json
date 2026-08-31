@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "default_pattern": "static-phases",
-  "asset_count": 327,
-  "total_bytes": 19644537,
+  "asset_count": 343,
+  "total_bytes": 19684839,
   "exercises": {
     "ab-wheel": {
       "source": {
@@ -2985,6 +2985,102 @@
         }
       ]
     },
+    "machine-glute-kickback": {
+      "source": {
+        "source_kind": "yfc_original",
+        "name": "Your Fitness Coach",
+        "url": "/",
+        "source_revision_or_retrieved_at": "2026-08-31",
+        "license": "Иллюстрация создана для приложения",
+        "license_url": null,
+        "license_url_or_local_notice": "backend/assets/exercise-guides/NOTICE.md",
+        "author_or_generator_record": "scripts/build_lower_body_machine_guide_assets.py@Task-120C",
+        "reviewer": "fitness-domain-reviewer / Task 120C",
+        "reviewed_at": "2026-08-31",
+        "commercial_use_verified": true,
+        "redistribution_verified": true,
+        "modification_verified": true,
+        "semantic_identity_verified": true,
+        "setup_verified": true,
+        "key_positions_verified": true
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "machine-glute-kickback-active.svg",
+          "poster_path": "machine-glute-kickback-active.svg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2827,
+          "sort_order": 0,
+          "asset_sha256": "90085d52b6cebba85705d9ff3d703a6aee94d78530ec25b7ee383b7f6c04db7d",
+          "alt": "Разгибание бедра в тренажёре: рабочая нога отведена назад без поворота таза"
+        },
+        {
+          "type": "image",
+          "path": "machine-glute-kickback-start.svg",
+          "poster_path": "machine-glute-kickback-start.svg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2827,
+          "sort_order": 1,
+          "asset_sha256": "62bf7aa4e1c97c6cde7ee00a0a936225b07cc325fbceeef44a6ee99a134d4b3a",
+          "alt": "Разгибание бедра в тренажёре: исходное положение, таз и корпус на опорах"
+        }
+      ]
+    },
+    "machine-hip-thrust": {
+      "source": {
+        "source_kind": "yfc_original",
+        "name": "Your Fitness Coach",
+        "url": "/",
+        "source_revision_or_retrieved_at": "2026-08-31",
+        "license": "Иллюстрация создана для приложения",
+        "license_url": null,
+        "license_url_or_local_notice": "backend/assets/exercise-guides/NOTICE.md",
+        "author_or_generator_record": "scripts/build_lower_body_machine_guide_assets.py@Task-120C",
+        "reviewer": "fitness-domain-reviewer / Task 120C",
+        "reviewed_at": "2026-08-31",
+        "commercial_use_verified": true,
+        "redistribution_verified": true,
+        "modification_verified": true,
+        "semantic_identity_verified": true,
+        "setup_verified": true,
+        "key_positions_verified": true
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "machine-hip-thrust-active.svg",
+          "poster_path": "machine-hip-thrust-active.svg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2252,
+          "sort_order": 0,
+          "asset_sha256": "2b9360d9b69c40f3d800873a52b72a219a66fcff7e3903a57107ae519c5b5f38",
+          "alt": "Ягодичный мост в рычажном тренажёре: бёдра разогнуты, корпус и бёдра образуют линию"
+        },
+        {
+          "type": "image",
+          "path": "machine-hip-thrust-start.svg",
+          "poster_path": "machine-hip-thrust-start.svg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2252,
+          "sort_order": 1,
+          "asset_sha256": "fb33b0043cb8819ddb4c35ec99d9a1097a846d35afd0b1d8e35e4f903e7f2fac",
+          "alt": "Ягодичный мост в рычажном тренажёре: таз опущен, стопы и верх спины на опорах"
+        }
+      ]
+    },
     "machine-incline-chest-press": {
       "source": {
         "source_kind": "yfc_original",
@@ -3608,6 +3704,54 @@
         }
       ]
     },
+    "pendulum-squat": {
+      "source": {
+        "source_kind": "yfc_original",
+        "name": "Your Fitness Coach",
+        "url": "/",
+        "source_revision_or_retrieved_at": "2026-08-31",
+        "license": "Иллюстрация создана для приложения",
+        "license_url": null,
+        "license_url_or_local_notice": "backend/assets/exercise-guides/NOTICE.md",
+        "author_or_generator_record": "scripts/build_lower_body_machine_guide_assets.py@Task-120C",
+        "reviewer": "fitness-domain-reviewer / Task 120C",
+        "reviewed_at": "2026-08-31",
+        "commercial_use_verified": true,
+        "redistribution_verified": true,
+        "modification_verified": true,
+        "semantic_identity_verified": true,
+        "setup_verified": true,
+        "key_positions_verified": true
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "pendulum-squat-active.svg",
+          "poster_path": "pendulum-squat-active.svg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2336,
+          "sort_order": 0,
+          "asset_sha256": "8bb683b6f174f3fbc1e5e5a67b6225f1bedff1f8e89beee7d91f08e05a93e9e1",
+          "alt": "Маятниковый присед: верхнее положение, плечи под упорами и колени без жёсткой блокировки"
+        },
+        {
+          "type": "image",
+          "path": "pendulum-squat-start.svg",
+          "poster_path": "pendulum-squat-start.svg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2336,
+          "sort_order": 1,
+          "asset_sha256": "b57582c9fc4aaf32a64ec81dd1692791cc9cf5b3e91d5ee363cf89a396666be2",
+          "alt": "Маятниковый присед: нижнее положение на дуге тренажёра, стопы устойчивы на платформе"
+        }
+      ]
+    },
     "plank": {
       "source": {
         "name": "free-exercise-db",
@@ -3637,6 +3781,54 @@
           "height": 567,
           "byte_size": 43135,
           "sort_order": 1
+        }
+      ]
+    },
+    "plate-loaded-leg-press": {
+      "source": {
+        "source_kind": "yfc_original",
+        "name": "Your Fitness Coach",
+        "url": "/",
+        "source_revision_or_retrieved_at": "2026-08-31",
+        "license": "Иллюстрация создана для приложения",
+        "license_url": null,
+        "license_url_or_local_notice": "backend/assets/exercise-guides/NOTICE.md",
+        "author_or_generator_record": "scripts/build_lower_body_machine_guide_assets.py@Task-120C",
+        "reviewer": "fitness-domain-reviewer / Task 120C",
+        "reviewed_at": "2026-08-31",
+        "commercial_use_verified": true,
+        "redistribution_verified": true,
+        "modification_verified": true,
+        "semantic_identity_verified": true,
+        "setup_verified": true,
+        "key_positions_verified": true
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "plate-loaded-leg-press-active.svg",
+          "poster_path": "plate-loaded-leg-press-active.svg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2519,
+          "sort_order": 0,
+          "asset_sha256": "7e77c47a1f6ec6bdd792ceb4b79be958ecbedb6a59c9db0816dac409262737d2",
+          "alt": "Жим ногами с дисками: платформа выжата, стопы полностью сохраняют опору"
+        },
+        {
+          "type": "image",
+          "path": "plate-loaded-leg-press-start.svg",
+          "poster_path": "plate-loaded-leg-press-start.svg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2519,
+          "sort_order": 1,
+          "asset_sha256": "e5c85768b3b0a1e72d81f2e4eab5a774927c64877c968a5b9907b01bcc8d6bdd",
+          "alt": "Жим ногами с дисками: нижнее положение, платформа приближена к корпусу без отрыва таза"
         }
       ]
     },
@@ -3925,6 +4117,54 @@
           "height": 567,
           "byte_size": 65340,
           "sort_order": 1
+        }
+      ]
+    },
+    "reverse-hyperextension": {
+      "source": {
+        "source_kind": "yfc_original",
+        "name": "Your Fitness Coach",
+        "url": "/",
+        "source_revision_or_retrieved_at": "2026-08-31",
+        "license": "Иллюстрация создана для приложения",
+        "license_url": null,
+        "license_url_or_local_notice": "backend/assets/exercise-guides/NOTICE.md",
+        "author_or_generator_record": "scripts/build_lower_body_machine_guide_assets.py@Task-120C",
+        "reviewer": "fitness-domain-reviewer / Task 120C",
+        "reviewed_at": "2026-08-31",
+        "commercial_use_verified": true,
+        "redistribution_verified": true,
+        "modification_verified": true,
+        "semantic_identity_verified": true,
+        "setup_verified": true,
+        "key_positions_verified": true
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "reverse-hyperextension-active.svg",
+          "poster_path": "reverse-hyperextension-active.svg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2340,
+          "sort_order": 0,
+          "asset_sha256": "c37ce7d46ec2668ad2d2c3c3bef08ee5a4d32a224b559ffdd1e94b7c531da714",
+          "alt": "Обратная гиперэкстензия: ноги подняты примерно до линии корпуса без чрезмерного прогиба"
+        },
+        {
+          "type": "image",
+          "path": "reverse-hyperextension-start.svg",
+          "poster_path": "reverse-hyperextension-start.svg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2340,
+          "sort_order": 1,
+          "asset_sha256": "2e567ee6ff0f03777e5d8dd425aad654f8c81c4df7a36c43a195abcc160f37fd",
+          "alt": "Обратная гиперэкстензия: ноги опущены, таз и корпус зафиксированы на опоре"
         }
       ]
     },
@@ -4621,6 +4861,54 @@
         }
       ]
     },
+    "smith-split-squat": {
+      "source": {
+        "source_kind": "yfc_original",
+        "name": "Your Fitness Coach",
+        "url": "/",
+        "source_revision_or_retrieved_at": "2026-08-31",
+        "license": "Иллюстрация создана для приложения",
+        "license_url": null,
+        "license_url_or_local_notice": "backend/assets/exercise-guides/NOTICE.md",
+        "author_or_generator_record": "scripts/build_lower_body_machine_guide_assets.py@Task-120C",
+        "reviewer": "fitness-domain-reviewer / Task 120C",
+        "reviewed_at": "2026-08-31",
+        "commercial_use_verified": true,
+        "redistribution_verified": true,
+        "modification_verified": true,
+        "semantic_identity_verified": true,
+        "setup_verified": true,
+        "key_positions_verified": true
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "smith-split-squat-active.svg",
+          "poster_path": "smith-split-squat-active.svg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2686,
+          "sort_order": 0,
+          "asset_sha256": "2a19c1d884548f77a77c8c366bd6996df8dc15654ca01629914d5552ea527872",
+          "alt": "Сплит-присед в Смите: верхнее положение под грифом, таз направлен вперёд"
+        },
+        {
+          "type": "image",
+          "path": "smith-split-squat-start.svg",
+          "poster_path": "smith-split-squat-start.svg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2686,
+          "sort_order": 1,
+          "asset_sha256": "395cb63231e17f13ada78d9cc72a493ce911fffc564aad339b8c4b2ce1bb3eee",
+          "alt": "Сплит-присед в Смите: нижнее положение в разножке, передняя стопа полностью на полу"
+        }
+      ]
+    },
     "smith-squat": {
       "source": {
         "name": "free-exercise-db",
@@ -5217,6 +5505,54 @@
         }
       ]
     },
+    "unilateral-leg-press": {
+      "source": {
+        "source_kind": "yfc_original",
+        "name": "Your Fitness Coach",
+        "url": "/",
+        "source_revision_or_retrieved_at": "2026-08-31",
+        "license": "Иллюстрация создана для приложения",
+        "license_url": null,
+        "license_url_or_local_notice": "backend/assets/exercise-guides/NOTICE.md",
+        "author_or_generator_record": "scripts/build_lower_body_machine_guide_assets.py@Task-120C",
+        "reviewer": "fitness-domain-reviewer / Task 120C",
+        "reviewed_at": "2026-08-31",
+        "commercial_use_verified": true,
+        "redistribution_verified": true,
+        "modification_verified": true,
+        "semantic_identity_verified": true,
+        "setup_verified": true,
+        "key_positions_verified": true
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "unilateral-leg-press-active.svg",
+          "poster_path": "unilateral-leg-press-active.svg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2856,
+          "sort_order": 0,
+          "asset_sha256": "a3cb08e52d3e5734252d3f6f5a48b34382af20852f3878a2390b5a62ede915a9",
+          "alt": "Жим одной ногой: платформа выжата рабочей ногой, таз остаётся по центру спинки"
+        },
+        {
+          "type": "image",
+          "path": "unilateral-leg-press-start.svg",
+          "poster_path": "unilateral-leg-press-start.svg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2856,
+          "sort_order": 1,
+          "asset_sha256": "7e93fcc780959e6accf0ca005249316d9fbeb49ae68d5ec3afb30de39a2e0015",
+          "alt": "Жим одной ногой: нижнее положение, рабочее колено согнуто по линии стопы"
+        }
+      ]
+    },
     "upright-row": {
       "source": {
         "name": "free-exercise-db",
@@ -5246,6 +5582,54 @@
           "height": 567,
           "byte_size": 54626,
           "sort_order": 1
+        }
+      ]
+    },
+    "v-squat-machine": {
+      "source": {
+        "source_kind": "yfc_original",
+        "name": "Your Fitness Coach",
+        "url": "/",
+        "source_revision_or_retrieved_at": "2026-08-31",
+        "license": "Иллюстрация создана для приложения",
+        "license_url": null,
+        "license_url_or_local_notice": "backend/assets/exercise-guides/NOTICE.md",
+        "author_or_generator_record": "scripts/build_lower_body_machine_guide_assets.py@Task-120C",
+        "reviewer": "fitness-domain-reviewer / Task 120C",
+        "reviewed_at": "2026-08-31",
+        "commercial_use_verified": true,
+        "redistribution_verified": true,
+        "modification_verified": true,
+        "semantic_identity_verified": true,
+        "setup_verified": true,
+        "key_positions_verified": true
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "v-squat-machine-active.svg",
+          "poster_path": "v-squat-machine-active.svg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2335,
+          "sort_order": 0,
+          "asset_sha256": "54a1a81d46be9ccc7e8ab0e895e1c7499c96bc63a1465f7006aec18ff5ac0ccf",
+          "alt": "V-присед в тренажёре: верхнее положение, плечи под упорами и стопы на платформе"
+        },
+        {
+          "type": "image",
+          "path": "v-squat-machine-start.svg",
+          "poster_path": "v-squat-machine-start.svg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2335,
+          "sort_order": 1,
+          "asset_sha256": "9d4590306a9eec95299786a24fa3c3365bb48bd352253052d3cef1fce6aaf4ad",
+          "alt": "V-присед в тренажёре: нижнее положение, спина и таз сохраняют контакт с наклонной опорой"
         }
       ]
     },
