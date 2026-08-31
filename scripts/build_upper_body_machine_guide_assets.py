@@ -302,7 +302,7 @@ def build_assets(asset_dir: Path, *, check: bool) -> None:
                 if not path.exists() or path.read_text(encoding="utf-8") != rendered:
                     stale.append(path.name)
             else:
-                path.write_text(rendered, encoding="utf-8")
+                path.write_text(rendered, encoding="utf-8", newline="\n")
     if stale:
         raise SystemExit("Stale Task 120B guide assets: " + ", ".join(stale))
     print(
