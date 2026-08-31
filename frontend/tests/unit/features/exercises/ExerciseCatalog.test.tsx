@@ -15,6 +15,10 @@ const exercises = [
     primary_muscle_ids: ['back'],
     secondary_muscle_ids: ['biceps'],
     equipment_ids: ['cable'],
+    aliases: ['верхняя тяга хаммер'],
+    movement_pattern: 'vertical_pull',
+    machine_variant_tags: [],
+    execution_variant_tags: ['bilateral'],
     alternatives: [{ id: 2, slug: 'pull-up', title: 'Подтягивания' }],
     difficulty_level: 'beginner',
     is_custom: false,
@@ -31,6 +35,10 @@ const exercises = [
     primary_muscle_ids: ['back'],
     secondary_muscle_ids: ['biceps'],
     equipment_ids: ['bodyweight'],
+    aliases: [],
+    movement_pattern: 'vertical_pull',
+    machine_variant_tags: [],
+    execution_variant_tags: ['bilateral'],
     alternatives: [{ id: 1, slug: 'lat-pulldown', title: 'Тяга верхнего блока' }],
     difficulty_level: 'intermediate',
     is_custom: false,
@@ -75,6 +83,12 @@ describe('ExerciseCatalog', () => {
 
     fireEvent.change(screen.getByLabelText('Оборудование'), { target: { value: 'cable' } });
 
+    expect(screen.getByText(/Тяга верхнего блока с очень длинным названием/)).toBeInTheDocument();
+    expect(screen.queryByText('Подтягивания')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Поиск' }), {
+      target: { value: 'верхняя тяга хаммер' },
+    });
     expect(screen.getByText(/Тяга верхнего блока с очень длинным названием/)).toBeInTheDocument();
     expect(screen.queryByText('Подтягивания')).not.toBeInTheDocument();
 

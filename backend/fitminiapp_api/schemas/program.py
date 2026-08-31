@@ -26,6 +26,32 @@ EquipmentIdentifier = Literal[
     "other",
 ]
 ExerciseMetricType = Literal["strength", "cardio"]
+ExerciseMovementPattern = Literal[
+    "arm_curl",
+    "chest_press",
+    "pullover",
+    "row",
+    "shoulder_press",
+    "triceps",
+    "vertical_pull",
+]
+ExerciseMachineVariantTag = Literal[
+    "selectorized",
+    "plate_loaded",
+    "lever",
+    "independent",
+    "converging",
+    "diverging",
+    "smith",
+]
+ExerciseExecutionVariantTag = Literal[
+    "bilateral",
+    "unilateral",
+    "alternating",
+    "isometric",
+    "cyclic",
+    "multi_stage",
+]
 
 
 class ProgramTemplateExerciseCreate(BaseModel):
@@ -461,6 +487,10 @@ class ExerciseCatalogItem(BaseModel):
     primary_muscle_ids: list[str]
     secondary_muscle_ids: list[str]
     equipment_ids: list[str]
+    aliases: list[str] = Field(default_factory=list)
+    movement_pattern: ExerciseMovementPattern | None = None
+    machine_variant_tags: list[ExerciseMachineVariantTag] = Field(default_factory=list)
+    execution_variant_tags: list[ExerciseExecutionVariantTag] = Field(default_factory=list)
     alternatives: list[ExerciseAlternativeItem]
     difficulty_level: Literal["beginner", "intermediate", "advanced"]
     edit_target_id: int | None = None

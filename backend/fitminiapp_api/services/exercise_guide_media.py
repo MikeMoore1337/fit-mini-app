@@ -34,7 +34,7 @@ def get_guide_media(
             "url": f"/static/exercise-guides/{media['path']}",
             "poster": f"/static/exercise-guides/{media['poster_path']}",
             "phase": media["phase"],
-            "alt": f"{exercise_title}: {media['phase'].lower()}",
+            "alt": media.get("alt", f"{exercise_title}: {media['phase'].lower()}"),
             "source_name": source_name,
             "source_url": source_url,
             "source_license": source_license,

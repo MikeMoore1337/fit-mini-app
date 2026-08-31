@@ -13,6 +13,7 @@ import { AppLink } from '../../shared/navigation/router';
 import { dateInputValue, detectedTimeZone } from '../../shared/dateTime';
 import { applyRestSeconds } from './programRest';
 import { ExerciseGuideDialog } from '../exercises/ExerciseGuideDialog';
+import { matchesExerciseSearch } from '../exercises/exerciseSearch';
 import { scheduleWeekdaysForSave, templateDraftTitle } from './templateEditing';
 import { DateInput } from '../../shared/ui/PickerInput';
 import { Icon } from '../../shared/ui/Icon';
@@ -88,15 +89,8 @@ function ExercisePicker({
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const results = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
     return orderExercisesForLevel(
-      exercises.filter(
-        (exercise) =>
-          !normalized ||
-          `${exercise.title} ${exercise.primary_muscle || ''} ${exercise.equipment || ''}`
-            .toLowerCase()
-            .includes(normalized),
-      ),
+      exercises.filter((exercise) => matchesExerciseSearch(exercise, query)),
       level,
     );
   }, [exercises, level, query]);

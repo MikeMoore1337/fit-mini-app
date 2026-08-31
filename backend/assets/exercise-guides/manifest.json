@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "default_pattern": "static-phases",
-  "asset_count": 307,
-  "total_bytes": 19596935,
+  "asset_count": 327,
+  "total_bytes": 19644537,
   "exercises": {
     "ab-wheel": {
       "source": {
@@ -865,6 +865,54 @@
           "height": 567,
           "byte_size": 72525,
           "sort_order": 1
+        }
+      ]
+    },
+    "chest-supported-dumbbell-row": {
+      "source": {
+        "source_kind": "yfc_original",
+        "name": "Your Fitness Coach",
+        "url": "/",
+        "source_revision_or_retrieved_at": "2026-08-31",
+        "license": "Иллюстрация создана для приложения",
+        "license_url": null,
+        "license_url_or_local_notice": "backend/assets/exercise-guides/NOTICE.md",
+        "author_or_generator_record": "scripts/build_upper_body_machine_guide_assets.py@Task-120B",
+        "reviewer": "fitness-domain-reviewer / Task 120B",
+        "reviewed_at": "2026-08-31",
+        "commercial_use_verified": true,
+        "redistribution_verified": true,
+        "modification_verified": true,
+        "semantic_identity_verified": true,
+        "setup_verified": true,
+        "key_positions_verified": true
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "chest-supported-dumbbell-row-active.svg",
+          "poster_path": "chest-supported-dumbbell-row-active.svg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
+          "width": 720,
+          "height": 520,
+          "byte_size": 1915,
+          "sort_order": 0,
+          "asset_sha256": "1015fc5ff56d271c60db28c47cba0f92c70553228147111364912b9f82da3d25",
+          "alt": "Тяга гантелей с упором грудью: конечное положение, локти отведены назад"
+        },
+        {
+          "type": "image",
+          "path": "chest-supported-dumbbell-row-start.svg",
+          "poster_path": "chest-supported-dumbbell-row-start.svg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
+          "width": 720,
+          "height": 520,
+          "byte_size": 1915,
+          "sort_order": 1,
+          "asset_sha256": "e0de46e32d08a41bcf61d3cb92e2c8f276a14b6c106807a7c22e09de5697457d",
+          "alt": "Тяга гантелей с упором грудью: исходное положение, руки опущены под скамьёй"
         }
       ]
     },
@@ -2105,6 +2153,150 @@
         }
       ]
     },
+    "independent-lever-chest-press": {
+      "source": {
+        "source_kind": "yfc_original",
+        "name": "Your Fitness Coach",
+        "url": "/",
+        "source_revision_or_retrieved_at": "2026-08-31",
+        "license": "Иллюстрация создана для приложения",
+        "license_url": null,
+        "license_url_or_local_notice": "backend/assets/exercise-guides/NOTICE.md",
+        "author_or_generator_record": "scripts/build_upper_body_machine_guide_assets.py@Task-120B",
+        "reviewer": "fitness-domain-reviewer / Task 120B",
+        "reviewed_at": "2026-08-31",
+        "commercial_use_verified": true,
+        "redistribution_verified": true,
+        "modification_verified": true,
+        "semantic_identity_verified": true,
+        "setup_verified": true,
+        "key_positions_verified": true
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "independent-lever-chest-press-active.svg",
+          "poster_path": "independent-lever-chest-press-active.svg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2409,
+          "sort_order": 0,
+          "asset_sha256": "e80613f125a59e5eda15224dfe642cf7641ccd8f6df20bf39d6470bc388acbc1",
+          "alt": "Независимый рычажный жим от груди: конечное положение, оба рычага выжаты вперёд"
+        },
+        {
+          "type": "image",
+          "path": "independent-lever-chest-press-start.svg",
+          "poster_path": "independent-lever-chest-press-start.svg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2409,
+          "sort_order": 1,
+          "asset_sha256": "124e96929f3da8aadfd686b9e18989db011f657f3591b3f5482c3e2f11d5335d",
+          "alt": "Независимый рычажный жим от груди: исходное положение, рукояти у груди"
+        }
+      ]
+    },
+    "independent-lever-lat-pulldown": {
+      "source": {
+        "source_kind": "yfc_original",
+        "name": "Your Fitness Coach",
+        "url": "/",
+        "source_revision_or_retrieved_at": "2026-08-31",
+        "license": "Иллюстрация создана для приложения",
+        "license_url": null,
+        "license_url_or_local_notice": "backend/assets/exercise-guides/NOTICE.md",
+        "author_or_generator_record": "scripts/build_upper_body_machine_guide_assets.py@Task-120B",
+        "reviewer": "fitness-domain-reviewer / Task 120B",
+        "reviewed_at": "2026-08-31",
+        "commercial_use_verified": true,
+        "redistribution_verified": true,
+        "modification_verified": true,
+        "semantic_identity_verified": true,
+        "setup_verified": true,
+        "key_positions_verified": true
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "independent-lever-lat-pulldown-active.svg",
+          "poster_path": "independent-lever-lat-pulldown-active.svg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2771,
+          "sort_order": 0,
+          "asset_sha256": "7e58395f2af24c84c34e4a4121cd131dedd5a0fccbdbee9bc866225fcd7a1757",
+          "alt": "Вертикальная рычажная тяга: конечное положение, локти опущены к бокам"
+        },
+        {
+          "type": "image",
+          "path": "independent-lever-lat-pulldown-start.svg",
+          "poster_path": "independent-lever-lat-pulldown-start.svg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2765,
+          "sort_order": 1,
+          "asset_sha256": "f32e0f148b64b5922b7ad4bc38e205fa79f1def6cc04ae72b748b41c7d50e3bd",
+          "alt": "Вертикальная рычажная тяга: исходное положение, независимые рукояти над головой"
+        }
+      ]
+    },
+    "independent-lever-shoulder-press": {
+      "source": {
+        "source_kind": "yfc_original",
+        "name": "Your Fitness Coach",
+        "url": "/",
+        "source_revision_or_retrieved_at": "2026-08-31",
+        "license": "Иллюстрация создана для приложения",
+        "license_url": null,
+        "license_url_or_local_notice": "backend/assets/exercise-guides/NOTICE.md",
+        "author_or_generator_record": "scripts/build_upper_body_machine_guide_assets.py@Task-120B",
+        "reviewer": "fitness-domain-reviewer / Task 120B",
+        "reviewed_at": "2026-08-31",
+        "commercial_use_verified": true,
+        "redistribution_verified": true,
+        "modification_verified": true,
+        "semantic_identity_verified": true,
+        "setup_verified": true,
+        "key_positions_verified": true
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "independent-lever-shoulder-press-active.svg",
+          "poster_path": "independent-lever-shoulder-press-active.svg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2217,
+          "sort_order": 0,
+          "asset_sha256": "99fba81df8ab26b9131a82c42e0d8631a5f01e694ecc2fdea103e12e540826df",
+          "alt": "Независимый рычажный жим над головой: конечное положение, рычаги выжаты вверх"
+        },
+        {
+          "type": "image",
+          "path": "independent-lever-shoulder-press-start.svg",
+          "poster_path": "independent-lever-shoulder-press-start.svg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2220,
+          "sort_order": 1,
+          "asset_sha256": "81eabd48d29d0b94541fdc1ea7d0260c80ed04bb678d68640574fc8f16e01309",
+          "alt": "Независимый рычажный жим над головой: исходное положение, рукояти около плеч"
+        }
+      ]
+    },
     "inverted-row": {
       "source": {
         "name": "free-exercise-db",
@@ -2457,6 +2649,102 @@
         }
       ]
     },
+    "lever-high-row": {
+      "source": {
+        "source_kind": "yfc_original",
+        "name": "Your Fitness Coach",
+        "url": "/",
+        "source_revision_or_retrieved_at": "2026-08-31",
+        "license": "Иллюстрация создана для приложения",
+        "license_url": null,
+        "license_url_or_local_notice": "backend/assets/exercise-guides/NOTICE.md",
+        "author_or_generator_record": "scripts/build_upper_body_machine_guide_assets.py@Task-120B",
+        "reviewer": "fitness-domain-reviewer / Task 120B",
+        "reviewed_at": "2026-08-31",
+        "commercial_use_verified": true,
+        "redistribution_verified": true,
+        "modification_verified": true,
+        "semantic_identity_verified": true,
+        "setup_verified": true,
+        "key_positions_verified": true
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "lever-high-row-active.svg",
+          "poster_path": "lever-high-row-active.svg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2141,
+          "sort_order": 0,
+          "asset_sha256": "d57185f7d895ee0fe8704bc960603ed7c80d1f1d418dccc959d51ff5ce2dc9a3",
+          "alt": "Верхняя рычажная тяга: конечное положение, локти отведены вниз и назад"
+        },
+        {
+          "type": "image",
+          "path": "lever-high-row-start.svg",
+          "poster_path": "lever-high-row-start.svg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2141,
+          "sort_order": 1,
+          "asset_sha256": "8f88c8125c1b7653d69262676d38d3481f1fc4469e1b1189b8c4a1f48b1250e0",
+          "alt": "Верхняя рычажная тяга: исходное положение, грудь на опоре и руки направлены вверх-вперёд"
+        }
+      ]
+    },
+    "lever-low-row": {
+      "source": {
+        "source_kind": "yfc_original",
+        "name": "Your Fitness Coach",
+        "url": "/",
+        "source_revision_or_retrieved_at": "2026-08-31",
+        "license": "Иллюстрация создана для приложения",
+        "license_url": null,
+        "license_url_or_local_notice": "backend/assets/exercise-guides/NOTICE.md",
+        "author_or_generator_record": "scripts/build_upper_body_machine_guide_assets.py@Task-120B",
+        "reviewer": "fitness-domain-reviewer / Task 120B",
+        "reviewed_at": "2026-08-31",
+        "commercial_use_verified": true,
+        "redistribution_verified": true,
+        "modification_verified": true,
+        "semantic_identity_verified": true,
+        "setup_verified": true,
+        "key_positions_verified": true
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "lever-low-row-active.svg",
+          "poster_path": "lever-low-row-active.svg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2143,
+          "sort_order": 0,
+          "asset_sha256": "9536ab01cbec3696e2b4dc061cfc1f464857cc5f694ed31bf601c87e31074a0a",
+          "alt": "Нижняя рычажная тяга: конечное положение, локти отведены назад к талии"
+        },
+        {
+          "type": "image",
+          "path": "lever-low-row-start.svg",
+          "poster_path": "lever-low-row-start.svg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2143,
+          "sort_order": 1,
+          "asset_sha256": "c513c7cdab2aef1f7b0f8dee4861264f37a0d843c8bdd2f65c104405dd60f596",
+          "alt": "Нижняя рычажная тяга: исходное положение, грудь на опоре и руки направлены вперёд-вниз"
+        }
+      ]
+    },
     "low-to-high-cable-fly": {
       "source": {
         "name": "free-exercise-db",
@@ -2617,6 +2905,54 @@
         }
       ]
     },
+    "machine-decline-chest-press": {
+      "source": {
+        "source_kind": "yfc_original",
+        "name": "Your Fitness Coach",
+        "url": "/",
+        "source_revision_or_retrieved_at": "2026-08-31",
+        "license": "Иллюстрация создана для приложения",
+        "license_url": null,
+        "license_url_or_local_notice": "backend/assets/exercise-guides/NOTICE.md",
+        "author_or_generator_record": "scripts/build_upper_body_machine_guide_assets.py@Task-120B",
+        "reviewer": "fitness-domain-reviewer / Task 120B",
+        "reviewed_at": "2026-08-31",
+        "commercial_use_verified": true,
+        "redistribution_verified": true,
+        "modification_verified": true,
+        "semantic_identity_verified": true,
+        "setup_verified": true,
+        "key_positions_verified": true
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "machine-decline-chest-press-active.svg",
+          "poster_path": "machine-decline-chest-press-active.svg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2634,
+          "sort_order": 0,
+          "asset_sha256": "da39b1a3fdbe90cbc6f1818134043a34eeeb5b907ea4d272ff5990b703dc9059",
+          "alt": "Жим от груди вниз в тренажёре: конечное положение, руки выпрямлены вперёд-вниз"
+        },
+        {
+          "type": "image",
+          "path": "machine-decline-chest-press-start.svg",
+          "poster_path": "machine-decline-chest-press-start.svg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2634,
+          "sort_order": 1,
+          "asset_sha256": "dc38dd21fb14b806d1fff7860b41af80658c97be7b0a3452318dc30299e317aa",
+          "alt": "Жим от груди вниз в тренажёре: исходное положение, рукояти у нижней части груди"
+        }
+      ]
+    },
     "machine-dip": {
       "source": {
         "name": "free-exercise-db",
@@ -2649,6 +2985,54 @@
         }
       ]
     },
+    "machine-incline-chest-press": {
+      "source": {
+        "source_kind": "yfc_original",
+        "name": "Your Fitness Coach",
+        "url": "/",
+        "source_revision_or_retrieved_at": "2026-08-31",
+        "license": "Иллюстрация создана для приложения",
+        "license_url": null,
+        "license_url_or_local_notice": "backend/assets/exercise-guides/NOTICE.md",
+        "author_or_generator_record": "scripts/build_upper_body_machine_guide_assets.py@Task-120B",
+        "reviewer": "fitness-domain-reviewer / Task 120B",
+        "reviewed_at": "2026-08-31",
+        "commercial_use_verified": true,
+        "redistribution_verified": true,
+        "modification_verified": true,
+        "semantic_identity_verified": true,
+        "setup_verified": true,
+        "key_positions_verified": true
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "machine-incline-chest-press-active.svg",
+          "poster_path": "machine-incline-chest-press-active.svg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2634,
+          "sort_order": 0,
+          "asset_sha256": "d7f1f6dc595ff7a89469b51b9181d2f9df0888f23d9f92bf5c4cbf10380e7b1f",
+          "alt": "Жим от груди вверх в тренажёре: конечное положение, руки выпрямлены по диагонали вверх"
+        },
+        {
+          "type": "image",
+          "path": "machine-incline-chest-press-start.svg",
+          "poster_path": "machine-incline-chest-press-start.svg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2634,
+          "sort_order": 1,
+          "asset_sha256": "7e230fd3023e6cfa7e89be044e521c87b976129fdfb80321a7a2666ae37851d9",
+          "alt": "Жим от груди вверх в тренажёре: исходное положение, рукояти у верхней части груди"
+        }
+      ]
+    },
     "machine-lateral-raise": {
       "source": {
         "name": "free-exercise-db",
@@ -2678,6 +3062,54 @@
           "height": 567,
           "byte_size": 54479,
           "sort_order": 1
+        }
+      ]
+    },
+    "machine-pullover": {
+      "source": {
+        "source_kind": "yfc_original",
+        "name": "Your Fitness Coach",
+        "url": "/",
+        "source_revision_or_retrieved_at": "2026-08-31",
+        "license": "Иллюстрация создана для приложения",
+        "license_url": null,
+        "license_url_or_local_notice": "backend/assets/exercise-guides/NOTICE.md",
+        "author_or_generator_record": "scripts/build_upper_body_machine_guide_assets.py@Task-120B",
+        "reviewer": "fitness-domain-reviewer / Task 120B",
+        "reviewed_at": "2026-08-31",
+        "commercial_use_verified": true,
+        "redistribution_verified": true,
+        "modification_verified": true,
+        "semantic_identity_verified": true,
+        "setup_verified": true,
+        "key_positions_verified": true
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "machine-pullover-active.svg",
+          "poster_path": "machine-pullover-active.svg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2469,
+          "sort_order": 0,
+          "asset_sha256": "44eebfddf3f743a1a6e8d6e89b5a5663fdad82c67da27a0f97628bf30ffc7e97",
+          "alt": "Пуловер в тренажёре: конечное положение, рычаг опущен дугой к корпусу"
+        },
+        {
+          "type": "image",
+          "path": "machine-pullover-start.svg",
+          "poster_path": "machine-pullover-start.svg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2466,
+          "sort_order": 1,
+          "asset_sha256": "9700edd0e34ade2d87423688b8a9188e39665f5e436d0898ffd34cadf3bf8c6c",
+          "alt": "Пуловер в тренажёре: исходное положение, рычаг над головой и спина на опоре"
         }
       ]
     },
@@ -2742,6 +3174,54 @@
           "height": 567,
           "byte_size": 74210,
           "sort_order": 1
+        }
+      ]
+    },
+    "machine-triceps-extension": {
+      "source": {
+        "source_kind": "yfc_original",
+        "name": "Your Fitness Coach",
+        "url": "/",
+        "source_revision_or_retrieved_at": "2026-08-31",
+        "license": "Иллюстрация создана для приложения",
+        "license_url": null,
+        "license_url_or_local_notice": "backend/assets/exercise-guides/NOTICE.md",
+        "author_or_generator_record": "scripts/build_upper_body_machine_guide_assets.py@Task-120B",
+        "reviewer": "fitness-domain-reviewer / Task 120B",
+        "reviewed_at": "2026-08-31",
+        "commercial_use_verified": true,
+        "redistribution_verified": true,
+        "modification_verified": true,
+        "semantic_identity_verified": true,
+        "setup_verified": true,
+        "key_positions_verified": true
+      },
+      "media": [
+        {
+          "type": "image",
+          "path": "machine-triceps-extension-active.svg",
+          "poster_path": "machine-triceps-extension-active.svg",
+          "phase_id": "concentric_end",
+          "phase": "Фаза усилия",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2471,
+          "sort_order": 0,
+          "asset_sha256": "7f8b56374f6849d062c5aad31897b5a5eff0c2d6b6af19f2c5f56bf6bf9d2a0b",
+          "alt": "Разгибание рук в тренажёре: конечное положение, локти разогнуты под контролем"
+        },
+        {
+          "type": "image",
+          "path": "machine-triceps-extension-start.svg",
+          "poster_path": "machine-triceps-extension-start.svg",
+          "phase_id": "eccentric_end",
+          "phase": "Фаза возврата",
+          "width": 720,
+          "height": 520,
+          "byte_size": 2471,
+          "sort_order": 1,
+          "asset_sha256": "343f1a0f585ec667d115801104567b5793e39b44f3348186d9af7efff8b5d461",
+          "alt": "Разгибание рук в тренажёре: исходное положение, локти на опоре и руки согнуты"
         }
       ]
     },
