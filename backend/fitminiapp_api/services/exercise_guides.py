@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 from fitminiapp_api.models.exercise import Exercise
+from fitminiapp_api.services.exercise_catalog_metadata import (
+    ITEM_GUIDE_CONTENT,
+    UPPER_BODY_MACHINE_SLUGS,
+)
 from fitminiapp_api.services.exercise_domain import (
     DEFAULT_SAFETY_NOTES,
     SOURCE_LICENSE_URL,
@@ -25,6 +29,8 @@ GENERATED_CARDIO_SLUGS = {
     "swimming",
     "ski-erg",
 }
+
+YFC_ORIGINAL_VECTOR_SLUGS = frozenset(UPPER_BODY_MACHINE_SLUGS)
 
 
 MUSCLE_FUNCTIONS = {
@@ -411,6 +417,9 @@ PROFILE_SLUGS = {
         "incline-dumbbell-press",
         "decline-dumbbell-press",
         "machine-chest-press",
+        "machine-incline-chest-press",
+        "independent-lever-chest-press",
+        "machine-decline-chest-press",
         "smith-bench-press",
     },
     "chest_fly": {
@@ -427,6 +436,7 @@ PROFILE_SLUGS = {
         "lat-pulldown",
         "reverse-grip-lat-pulldown",
         "close-grip-lat-pulldown",
+        "independent-lever-lat-pulldown",
     },
     "row": {
         "barbell-row",
@@ -436,6 +446,9 @@ PROFILE_SLUGS = {
         "chest-supported-row",
         "seated-cable-row",
         "machine-row",
+        "lever-high-row",
+        "lever-low-row",
+        "chest-supported-dumbbell-row",
         "inverted-row",
         "meadows-row",
         "cable-row-one-arm",
@@ -443,7 +456,7 @@ PROFILE_SLUGS = {
         "upright-row",
         "renegade-row",
     },
-    "pullover": {"dumbbell-pullover", "straight-arm-pulldown"},
+    "pullover": {"dumbbell-pullover", "straight-arm-pulldown", "machine-pullover"},
     "hinge": {
         "deadlift",
         "rack-pull",
@@ -493,6 +506,7 @@ PROFILE_SLUGS = {
         "seated-dumbbell-press",
         "arnold-press",
         "machine-shoulder-press",
+        "independent-lever-shoulder-press",
         "smith-shoulder-press",
         "landmine-press",
     },
@@ -529,6 +543,7 @@ PROFILE_SLUGS = {
         "lying-dumbbell-triceps-extension",
         "triceps-kickback",
         "single-arm-cable-triceps-extension",
+        "machine-triceps-extension",
     },
     "calf": {
         "standing-calf-raise",
@@ -593,7 +608,7 @@ def get_exercise_guide(
     if profile_name is None:
         return None
 
-    profile = PROFILES[profile_name]
+    profile = ITEM_GUIDE_CONTENT.get(slug, PROFILES[profile_name])
     structured_muscles = exercise_muscle_payload(exercise)
     if not any(item["role"] == "primary" for item in structured_muscles):
         primary = exercise.primary_muscle or "Все тело"
@@ -616,27 +631,25 @@ def get_exercise_guide(
         for item in structured_muscles
     ]
 
-    is_generated_cardio = slug in GENERATED_CARDIO_SLUGS
+    is_yfc_original = slug in GENERATED_CARDIO_SLUGS or slug in YFC_ORIGINAL_VECTOR_SLUGS
     metadata = exercise.guide_metadata
     source_name = (
         metadata.source_name
         if metadata is not None
-        else ("Your Fitness Coach" if is_generated_cardio else SOURCE_NAME)
+        else ("Your Fitness Coach" if is_yfc_original else SOURCE_NAME)
     )
     source_url = (
-        metadata.source_url
-        if metadata is not None
-        else ("/" if is_generated_cardio else SOURCE_URL)
+        metadata.source_url if metadata is not None else ("/" if is_yfc_original else SOURCE_URL)
     )
     source_license = (
         metadata.source_license
         if metadata is not None
-        else ("Иллюстрация создана для приложения" if is_generated_cardio else SOURCE_LICENSE)
+        else ("Иллюстрация создана для приложения" if is_yfc_original else SOURCE_LICENSE)
     )
     source_license_url = (
         metadata.source_license_url
         if metadata is not None
-        else (None if is_generated_cardio else SOURCE_LICENSE_URL)
+        else (None if is_yfc_original else SOURCE_LICENSE_URL)
     )
     media = get_guide_media(
         slug,

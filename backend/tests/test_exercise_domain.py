@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
+import json
 from pathlib import Path
 
 import pytest
@@ -18,6 +20,10 @@ from fitminiapp_api.models.exercise import (
     ExerciseGuideMetadata,
     ExerciseMuscle,
     Muscle,
+)
+from fitminiapp_api.services.exercise_catalog_metadata import (
+    CATALOG_METADATA,
+    UPPER_BODY_MACHINE_SLUGS,
 )
 from fitminiapp_api.services.seed import seed_demo_data
 
@@ -337,6 +343,116 @@ def test_seeded_exercise_metadata_and_alternatives_are_serialized(client) -> Non
         ] == expected_media
 
 
+def test_task_120b_upper_body_machine_batch_contract(client) -> None:
+    headers = auth(client, telegram_user_id=32305, is_coach=False)
+    catalog_response = client.get("/api/v1/programs/exercises", headers=headers)
+
+    assert catalog_response.status_code == 200
+    catalog = catalog_response.json()
+    by_slug = {item["slug"]: item for item in catalog}
+    assert len(by_slug) == len(catalog) == 168
+    assert set(UPPER_BODY_MACHINE_SLUGS) <= set(by_slug)
+    assert len({item["title"] for item in catalog}) == len(catalog)
+
+    for slug in UPPER_BODY_MACHINE_SLUGS:
+        item = by_slug[slug]
+        assert item["metric_type"] == "strength"
+        assert item["aliases"]
+        assert item["movement_pattern"]
+        assert item["execution_variant_tags"]
+        assert item["has_guide"] is True
+        assert item["equipment_ids"] == (
+            ["dumbbell"] if slug == "chest-supported-dumbbell-row" else ["machine"]
+        )
+
+    high_row = by_slug["lever-high-row"]
+    assert "верхняя тяга хаммер" in high_row["aliases"]
+    assert high_row["machine_variant_tags"] == ["plate_loaded", "lever", "independent"]
+    assert high_row["primary_muscle_ids"] == ["back"]
+    assert {item["slug"] for item in high_row["alternatives"]} == {"chest-supported-row"}
+
+    guide_response = client.get(
+        f"/api/v1/programs/exercises/{high_row['id']}/guide",
+        headers=headers,
+    )
+    assert guide_response.status_code == 200
+    guide = guide_response.json()
+    assert guide["source_name"] == "Your Fitness Coach"
+    assert guide["source_license"] == "Иллюстрация создана для приложения"
+    assert guide["source_license_url"] is None
+    assert guide["technique_steps"][0].startswith("Настрой сиденье и грудной упор")
+    assert {item["identifier"] for item in guide["muscles"] if item["role_id"] == "secondary"} == {
+        "biceps",
+        "posterior_deltoid",
+        "forearms",
+    }
+    assert [item["url"].rsplit("/", 1)[-1] for item in guide["media"]] == [
+        "lever-high-row-active.svg",
+        "lever-high-row-start.svg",
+    ]
+    assert [item["phase"] for item in guide["media"]] == [
+        "Фаза усилия",
+        "Фаза возврата",
+    ]
+    assert all("Верхняя рычажная тяга" in item["alt"] for item in guide["media"])
+
+    machine_biceps = by_slug["machine-biceps-curl"]
+    assert "сгибание на скамье Скотта в тренажере" in machine_biceps["aliases"]
+
+    normalized_titles = {
+        " ".join(item["title"].casefold().split()): item["slug"] for item in catalog
+    }
+    alias_owners: dict[str, str] = {}
+    for slug, metadata in CATALOG_METADATA.items():
+        for alias in metadata["aliases"]:
+            normalized = " ".join(alias.casefold().split())
+            assert normalized
+            assert normalized not in alias_owners
+            alias_owners[normalized] = slug
+            if normalized in normalized_titles:
+                assert normalized_titles[normalized] == slug
+
+
+def test_task_120b_vector_media_provenance_and_integrity() -> None:
+    assets = Path(__file__).resolve().parents[1] / "assets" / "exercise-guides"
+    manifest = json.loads((assets / "manifest.json").read_text(encoding="utf-8"))
+
+    assert manifest["asset_count"] == 327
+    assert len(manifest["exercises"]) == 168
+    for slug in UPPER_BODY_MACHINE_SLUGS:
+        exercise = manifest["exercises"][slug]
+        source = exercise["source"]
+        assert source["source_kind"] == "yfc_original"
+        assert source["source_revision_or_retrieved_at"] == "2026-08-31"
+        assert source["license_url_or_local_notice"] == "backend/assets/exercise-guides/NOTICE.md"
+        assert source["commercial_use_verified"] is True
+        assert source["redistribution_verified"] is True
+        assert source["semantic_identity_verified"] is True
+        assert source["setup_verified"] is True
+        assert source["key_positions_verified"] is True
+        assert len(exercise["media"]) == 2
+        for media in exercise["media"]:
+            path = assets / media["path"]
+            assert path.suffix == ".svg"
+            assert path.is_file()
+            assert media["alt"]
+            assert media["width"] == 720
+            assert media["height"] == 520
+            assert hashlib.sha256(path.read_bytes()).hexdigest() == media["asset_sha256"]
+
+    hashes_to_names: dict[str, list[str]] = {}
+    for path in assets.iterdir():
+        if path.suffix not in {".jpg", ".svg"}:
+            continue
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        hashes_to_names.setdefault(digest, []).append(path.name)
+    for slug in UPPER_BODY_MACHINE_SLUGS:
+        for phase in ("start", "active"):
+            filename = f"{slug}-{phase}.svg"
+            digest = hashlib.sha256((assets / filename).read_bytes()).hexdigest()
+            assert hashes_to_names[digest] == [filename]
+
+
 def test_custom_exercise_structured_metadata_can_be_partial(client) -> None:
     headers = auth(client, telegram_user_id=32302, is_coach=False)
 
@@ -439,5 +555,5 @@ def test_exercise_catalog_metadata_loading_has_no_per_row_queries(client) -> Non
         event.remove(engine, "before_cursor_execute", count_selects)
 
     assert response.status_code == 200
-    assert len(response.json()) == 158
+    assert len(response.json()) == 168
     assert select_count <= 20

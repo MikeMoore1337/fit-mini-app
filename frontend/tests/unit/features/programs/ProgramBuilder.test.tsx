@@ -32,6 +32,10 @@ const catalog = [
     primary_muscle_ids: ['chest'],
     secondary_muscle_ids: ['triceps'],
     equipment_ids: ['barbell'],
+    aliases: [],
+    movement_pattern: 'chest_press',
+    machine_variant_tags: [],
+    execution_variant_tags: ['bilateral'],
     alternatives: [],
     difficulty_level: 'beginner',
     is_custom: false,
@@ -48,11 +52,35 @@ const catalog = [
     primary_muscle_ids: ['cardio'],
     secondary_muscle_ids: [],
     equipment_ids: ['cardio'],
+    aliases: [],
+    movement_pattern: null,
+    machine_variant_tags: [],
+    execution_variant_tags: ['cyclic'],
     alternatives: [],
     difficulty_level: 'beginner',
     is_custom: false,
     is_personalized: false,
     has_guide: false,
+  },
+  {
+    id: 13,
+    title: 'Верхняя рычажная тяга с упором грудью',
+    slug: 'lever-high-row',
+    metric_type: 'strength',
+    primary_muscle: 'Спина',
+    equipment: 'Тренажёр',
+    primary_muscle_ids: ['back'],
+    secondary_muscle_ids: ['biceps', 'posterior_deltoid', 'forearms'],
+    equipment_ids: ['machine'],
+    aliases: ['верхняя тяга хаммер', 'high row'],
+    movement_pattern: 'row',
+    machine_variant_tags: ['plate_loaded', 'lever', 'independent'],
+    execution_variant_tags: ['bilateral', 'unilateral'],
+    alternatives: [],
+    difficulty_level: 'beginner',
+    is_custom: false,
+    is_personalized: false,
+    has_guide: true,
   },
 ];
 
@@ -130,5 +158,28 @@ describe('ProgramBuilder type-aware prescription', () => {
         }),
       ),
     );
+  });
+
+  it('находит machine/lever упражнение по разговорному alias и добавляет canonical item', async () => {
+    const user = userEvent.setup();
+    renderBuilder();
+
+    const picker = await screen.findByRole('combobox', { name: 'Поиск упражнения' });
+    await user.type(picker, 'верхняя тяга хаммер');
+
+    const listbox = screen.getByRole('listbox');
+    const option = within(listbox).getByRole('option', {
+      name: /Верхняя рычажная тяга с упором грудью/,
+    });
+    expect(option).toBeVisible();
+    expect(within(listbox).getAllByRole('option')).toHaveLength(1);
+    await user.click(option);
+
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', { name: 'Поиск упражнения' })).toHaveValue(
+        'Верхняя рычажная тяга с упором грудью',
+      ),
+    );
+    expect(screen.getByRole('spinbutton', { name: 'Рабочие подходы' })).toBeVisible();
   });
 });

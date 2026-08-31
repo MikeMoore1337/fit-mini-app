@@ -4482,6 +4482,14 @@ export interface components {
             secondary_muscle_ids: string[];
             /** Equipment Ids */
             equipment_ids: string[];
+            /** Aliases */
+            aliases?: string[];
+            /** Movement Pattern */
+            movement_pattern?: ("arm_curl" | "chest_press" | "pullover" | "row" | "shoulder_press" | "triceps" | "vertical_pull") | null;
+            /** Machine Variant Tags */
+            machine_variant_tags?: ("selectorized" | "plate_loaded" | "lever" | "independent" | "converging" | "diverging" | "smith")[];
+            /** Execution Variant Tags */
+            execution_variant_tags?: ("bilateral" | "unilateral" | "alternating" | "isometric" | "cyclic" | "multi_stage")[];
             /** Alternatives */
             alternatives: components["schemas"]["ExerciseAlternativeItem"][];
             /**

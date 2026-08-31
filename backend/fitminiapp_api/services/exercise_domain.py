@@ -101,16 +101,24 @@ CURATED_ALTERNATIVE_SLUG_PAIRS = (
     ("bench-press", "dumbbell-bench-press"),
     ("bench-press", "machine-chest-press"),
     ("incline-bench-press", "incline-dumbbell-press"),
+    ("incline-bench-press", "machine-incline-chest-press"),
     ("decline-bench-press", "decline-dumbbell-press"),
+    ("decline-bench-press", "machine-decline-chest-press"),
     ("dumbbell-fly", "cable-fly"),
     ("incline-dumbbell-fly", "low-to-high-cable-fly"),
     ("push-up", "machine-chest-press"),
+    ("machine-chest-press", "independent-lever-chest-press"),
     ("pull-up", "lat-pulldown"),
+    ("lat-pulldown", "independent-lever-lat-pulldown"),
     ("chin-up", "reverse-grip-lat-pulldown"),
     ("barbell-row", "chest-supported-row"),
     ("seated-cable-row", "machine-row"),
+    ("chest-supported-row", "lever-high-row"),
+    ("chest-supported-row", "lever-low-row"),
+    ("chest-supported-row", "chest-supported-dumbbell-row"),
     ("one-arm-dumbbell-row", "cable-row-one-arm"),
     ("dumbbell-pullover", "straight-arm-pulldown"),
+    ("dumbbell-pullover", "machine-pullover"),
     ("squat", "goblet-squat"),
     ("squat", "leg-press"),
     ("front-squat", "hack-squat"),
@@ -121,6 +129,7 @@ CURATED_ALTERNATIVE_SLUG_PAIRS = (
     ("hip-thrust", "barbell-glute-bridge"),
     ("overhead-press", "seated-dumbbell-press"),
     ("machine-shoulder-press", "smith-shoulder-press"),
+    ("machine-shoulder-press", "independent-lever-shoulder-press"),
     ("dumbbell-lateral-raise", "cable-lateral-raise"),
     ("cable-lateral-raise", "machine-lateral-raise"),
     ("rear-delt-fly", "reverse-pec-deck"),
@@ -128,6 +137,7 @@ CURATED_ALTERNATIVE_SLUG_PAIRS = (
     ("barbell-curl", "ez-bar-curl"),
     ("dumbbell-curl", "cable-curl"),
     ("rope-pushdown", "cable-pushdown"),
+    ("cable-pushdown", "machine-triceps-extension"),
     ("overhead-triceps-extension", "dumbbell-overhead-extension"),
     ("standing-calf-raise", "single-leg-calf-raise"),
     ("crunch", "cable-crunch"),
@@ -220,12 +230,14 @@ def _base_slug(exercise: Exercise) -> str:
 
 
 def _profile_secondary_names(exercise: Exercise) -> list[str] | None:
+    from fitminiapp_api.services.exercise_catalog_metadata import ITEM_GUIDE_CONTENT
     from fitminiapp_api.services.exercise_guides import PROFILES, SLUG_TO_PROFILE
 
-    profile_name = SLUG_TO_PROFILE.get(_base_slug(exercise))
+    slug = _base_slug(exercise)
+    profile_name = SLUG_TO_PROFILE.get(slug)
     if profile_name is None:
         return None
-    return list(PROFILES[profile_name]["secondary"])
+    return list(ITEM_GUIDE_CONTENT.get(slug, PROFILES[profile_name])["secondary"])
 
 
 def _replace_muscle_links(
@@ -312,10 +324,11 @@ def _sync_guide_metadata(db: Session, exercise: Exercise, *, has_guide: bool) ->
         SOURCE_LICENSE,
         SOURCE_NAME,
         SOURCE_URL,
+        YFC_ORIGINAL_VECTOR_SLUGS,
     )
 
     slug = _base_slug(exercise)
-    generated = slug in GENERATED_CARDIO_SLUGS
+    generated = slug in GENERATED_CARDIO_SLUGS or slug in YFC_ORIGINAL_VECTOR_SLUGS
     values = {
         "safety_notes": list(DEFAULT_SAFETY_NOTES),
         "source_name": "Your Fitness Coach" if generated else SOURCE_NAME,
