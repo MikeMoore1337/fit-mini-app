@@ -3,6 +3,24 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppShell } from '../../../src/app/AppShell';
 
 const logout = vi.fn();
+function stubViewport(initialWidth: number, reducedMotion = false) {
+  let width = initialWidth;
+  Object.defineProperty(window, 'innerWidth', { configurable: true, get: () => width });
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    get matches() {
+      if (query === '(max-width: 899px)') return width < 900;
+      if (query === '(prefers-reduced-motion: reduce)') return reducedMotion;
+      return false;
+    },
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }));
+  return (nextWidth: number) => {
+    width = nextWidth;
+    window.dispatchEvent(new Event('resize'));
+  };
+}
+
 function finishAnimation(element: Element, animationName: string) {
   const event = new Event('animationend', { bubbles: true });
   Object.defineProperty(event, 'animationName', { value: animationName });
@@ -44,6 +62,7 @@ describe('AppShell', () => {
     navigation.search = '';
     logout.mockClear();
     vi.unstubAllGlobals();
+    stubViewport(1280);
     delete window.Telegram;
   });
 
@@ -67,6 +86,7 @@ describe('AppShell', () => {
     expect(screen.queryByRole('button', { name: 'Ещё' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Тренер' })).toHaveAttribute('aria-current', 'page');
     expect(screen.queryByRole('link', { name: 'Админ-панель' })).not.toBeInTheDocument();
+    expect(screen.getByText('Ресурсы')).toBeInTheDocument();
     expect(screen.getByText('Михаил')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Выйти из аккаунта' }));
@@ -88,6 +108,7 @@ describe('AppShell', () => {
   });
 
   it('открывает доступное mobile-меню с secondary navigation и завершает exit после возврата фокуса', async () => {
+    stubViewport(390);
     navigation.path = '/app';
     render(<AppShell section="profile">Содержимое</AppShell>);
 
@@ -127,11 +148,7 @@ describe('AppShell', () => {
   });
 
   it('открывает и закрывает mobile-меню сразу при reduced motion', () => {
-    vi.stubGlobal('matchMedia', () => ({
-      addEventListener: vi.fn(),
-      matches: true,
-      removeEventListener: vi.fn(),
-    }));
+    stubViewport(390, true);
     navigation.path = '/app';
     render(<AppShell section="today">Содержимое</AppShell>);
 
@@ -181,6 +198,7 @@ describe('AppShell', () => {
   });
 
   it('не показывает библиотеку знаний в Web или Telegram Mini App navigation', () => {
+    stubViewport(390);
     navigation.path = '/app';
     const web = render(<AppShell section="today">Содержимое</AppShell>);
 
@@ -198,7 +216,7 @@ describe('AppShell', () => {
 
   it('показывает тематическую заглушку, если аватар отсутствует или не загрузился', () => {
     const { container, rerender } = render(<AppShell>Содержимое</AppShell>);
-    const avatar = container.querySelector('.app-bottom-nav__avatar');
+    const avatar = container.querySelector('.app-desktop-account-entry__avatar');
 
     expect(avatar).toHaveTextContent(/🏋️|💪|🏃|🚴|🥗|⚡|🎯|🔥/);
 
@@ -210,5 +228,63 @@ describe('AppShell', () => {
     fireEvent.error(image!);
     expect(avatar?.querySelector('img')).not.toBeInTheDocument();
     expect(avatar).toHaveTextContent(/🏋️|💪|🏃|🚴|🥗|⚡|🎯|🔥/);
+  });
+
+  it('использует account row под брендом как единственный desktop-вход в профиль без dialog', () => {
+    navigation.path = '/app';
+    render(<AppShell section="profile">Содержимое</AppShell>);
+
+    const profileLink = screen.getByRole('link', { name: 'Профиль и настройки' });
+    expect(profileLink).toHaveAttribute('href', '/app?section=profile');
+    expect(profileLink).toHaveAttribute('aria-current', 'page');
+    expect(profileLink.closest('.app-bottom-nav__profile-slot')).toBeInTheDocument();
+    expect(profileLink.closest('nav')).toHaveAccessibleName('Основная навигация');
+    expect(screen.queryByRole('link', { name: /^Профиль$/ })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Открыть профиль и настройки' }),
+    ).not.toBeInTheDocument();
+    expect(document.getElementById('appMorePanel')).not.toBeInTheDocument();
+  });
+
+  it('закрывает mobile sheet и переносит focus в desktop account row на breakpoint 900px', async () => {
+    const resize = stubViewport(899, true);
+    navigation.path = '/app';
+    render(<AppShell section="today">Содержимое</AppShell>);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Открыть профиль и настройки' }));
+    expect(screen.getByRole('dialog', { name: 'Профиль и настройки' })).toBeInTheDocument();
+    expect(document.body.style.position).toBe('fixed');
+
+    resize(900);
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(document.body.style.position).toBe('');
+    await waitFor(() =>
+      expect(screen.getByRole('link', { name: 'Профиль и настройки' })).toHaveFocus(),
+    );
+
+    resize(899);
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Открыть профиль и настройки' })).toHaveAttribute(
+        'aria-expanded',
+        'false',
+      ),
+    );
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('не перехватывает focus при обычном desktop resize без открытого sheet', async () => {
+    const resize = stubViewport(900);
+    render(
+      <AppShell section="today">
+        <button type="button">Контроль focus</button>
+      </AppShell>,
+    );
+
+    const control = screen.getByRole('button', { name: 'Контроль focus' });
+    control.focus();
+    resize(1100);
+
+    await waitFor(() => expect(control).toHaveFocus());
   });
 });

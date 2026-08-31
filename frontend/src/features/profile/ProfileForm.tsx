@@ -247,7 +247,9 @@ export function ProfileForm() {
         >
           <section className="profile-form-section" aria-labelledby="profile-personal-title">
             <div className="profile-form-section__head">
-              <h3 id="profile-personal-title">Личные данные</h3>
+              <h3 id="profile-personal-title">
+                <Icon name="nav-profile" size={20} /> Личные данные
+              </h3>
               <p>
                 Имя, дата рождения и часовой пояс используются только в вашем рабочем контексте.
               </p>
@@ -314,7 +316,9 @@ export function ProfileForm() {
             aria-labelledby="profile-fitness-title"
           >
             <div className="profile-form-section__head">
-              <h3 id="profile-fitness-title">Цели и параметры</h3>
+              <h3 id="profile-fitness-title">
+                <Icon name="nav-plan" size={20} /> Цели и параметры
+              </h3>
               <p>Цель, уровень и частота тренировок участвуют в рекомендации программы.</p>
             </div>
             <div className="form-grid profile-form-grid profile-form-grid--fitness">

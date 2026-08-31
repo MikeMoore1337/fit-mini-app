@@ -334,96 +334,115 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (path: string)
         )}
       </section>
 
-      <section className="notification-center" aria-labelledby="notification-center-title">
-        <header className="notification-center__head">
-          <div>
-            <span className="eyebrow">Центр уведомлений</span>
+      <details className="notification-center profile-disclosure">
+        <summary>
+          <span>
+            <strong>Центр уведомлений</strong>
+            <small>
+              {notifications.isLoading
+                ? 'Загружаем события…'
+                : notifications.error
+                  ? 'Не удалось загрузить · можно повторить после раскрытия'
+                  : unreadCount
+                    ? `Непрочитанные · ${unreadCount}`
+                    : notifications.data?.length
+                      ? 'Всё прочитано'
+                      : 'Уведомлений пока нет'}
+            </small>
+          </span>
+          <DisclosureIcon />
+        </summary>
+        <div className="profile-disclosure__body">
+          <header className="notification-center__head">
             <h3 id="notification-center-title">
-              {unreadCount ? `Непрочитанные · ${unreadCount}` : 'Всё прочитано'}
+              {unreadCount ? `Непрочитанные · ${unreadCount}` : 'Последние события'}
             </h3>
-          </div>
-          {unreadCount > 0 && (
-            <button
-              type="button"
-              className="secondary"
-              disabled={readAllMutation.isPending}
-              onClick={() => readAllMutation.mutate()}
-            >
-              Отметить всё
-            </button>
-          )}
-        </header>
-        {notifications.isLoading ? (
-          <LoadingState />
-        ) : notifications.error ? (
-          <ErrorState message={(notifications.error as Error).message} />
-        ) : !notifications.data?.length ? (
-          <EmptyState
-            title="Уведомлений пока нет"
-            text="Здесь появятся напоминания и важные изменения от тренера."
-          />
-        ) : (
-          <div className="notification-list">
-            {notifications.data.map((item) => {
-              const canOpen = navigableCategories.has(item.category);
-              const copy = (
-                <>
-                  <span className="notification-row__meta">
-                    {categoryLabels[item.category] ?? 'Событие'}
-                    {!item.read_at && <span>Новое</span>}
-                  </span>
-                  <strong>{item.title}</strong>
-                  <span>{item.body}</span>
-                  <span className="muted">
-                    {item.event_kind === 'reminder' ? 'Запланировано' : 'Создано'}:{' '}
-                    {formatWallTime(item.scheduled_for)}
-                  </span>
-                </>
-              );
-              return (
-                <article
-                  className={`notification-row ${item.read_at ? '' : 'notification-row--unread'}`}
-                  key={item.id}
-                >
-                  {canOpen && onNavigate ? (
+            {unreadCount > 0 && (
+              <button
+                type="button"
+                className="secondary"
+                disabled={readAllMutation.isPending}
+                onClick={() => readAllMutation.mutate()}
+              >
+                Отметить всё
+              </button>
+            )}
+          </header>
+          {notifications.isLoading ? (
+            <LoadingState />
+          ) : notifications.error ? (
+            <ErrorState
+              message={(notifications.error as Error).message}
+              retry={() => void notifications.refetch()}
+            />
+          ) : !notifications.data?.length ? (
+            <EmptyState
+              title="Уведомлений пока нет"
+              text="Здесь появятся напоминания и важные изменения от тренера."
+            />
+          ) : (
+            <div className="notification-list">
+              {notifications.data.map((item) => {
+                const canOpen = navigableCategories.has(item.category);
+                const copy = (
+                  <>
+                    <span className="notification-row__meta">
+                      {categoryLabels[item.category] ?? 'Событие'}
+                      {!item.read_at && <span>Новое</span>}
+                    </span>
+                    <strong>{item.title}</strong>
+                    <span>{item.body}</span>
+                    <span className="muted">
+                      {item.event_kind === 'reminder' ? 'Запланировано' : 'Создано'}:{' '}
+                      {formatWallTime(item.scheduled_for)}
+                    </span>
+                  </>
+                );
+                return (
+                  <article
+                    className={`notification-row ${item.read_at ? '' : 'notification-row--unread'}`}
+                    key={item.id}
+                  >
+                    {canOpen && onNavigate ? (
+                      <button
+                        type="button"
+                        className="notification-row__main text-button notification-action"
+                        aria-label={`Открыть: ${item.title}`}
+                        disabled={openMutation.isPending}
+                        onClick={() => openMutation.mutate(item.id)}
+                      >
+                        {copy}
+                      </button>
+                    ) : (
+                      <div className="notification-row__main">{copy}</div>
+                    )}
                     <button
                       type="button"
-                      className="notification-row__main text-button notification-action"
-                      aria-label={`Открыть: ${item.title}`}
-                      disabled={openMutation.isPending}
-                      onClick={() => openMutation.mutate(item.id)}
+                      className="notification-row__delete"
+                      onClick={async () => {
+                        if (
+                          await confirm({
+                            title: 'Удалить уведомление?',
+                            message: item.title,
+                            confirmText: 'Удалить',
+                          })
+                        ) {
+                          listMutation.mutate({
+                            path: `/api/v1/notifications/${item.id}`,
+                            method: 'DELETE',
+                          });
+                        }
+                      }}
                     >
-                      {copy}
+                      Удалить
                     </button>
-                  ) : (
-                    <div className="notification-row__main">{copy}</div>
-                  )}
-                  <button
-                    type="button"
-                    className="notification-row__delete"
-                    onClick={async () => {
-                      if (
-                        await confirm({
-                          title: 'Удалить уведомление?',
-                          message: item.title,
-                          confirmText: 'Удалить',
-                        })
-                      ) {
-                        listMutation.mutate({
-                          path: `/api/v1/notifications/${item.id}`,
-                          method: 'DELETE',
-                        });
-                      }
-                    }}
-                  >
-                    Удалить
-                  </button>
-                </article>
-              );
-            })}
-          </div>
-        )}
-      </section>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </details>
 
       <details className="notification-personal profile-disclosure">
         <summary>

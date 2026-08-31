@@ -251,11 +251,11 @@ export function TrainingPreferencesFields({
         )}
       </div>
 
-      <details className="training-preferences-disclosure" open>
+      <details className="training-preferences-disclosure">
         <summary>
           <span>
-            <strong>Длительность и расписание</strong>
-            <small>Необязательно · ориентир для проверки программы</small>
+            <strong>Расписание</strong>
+            <small>Дни и длительность · необязательно</small>
           </span>
           <DisclosureIcon />
         </summary>

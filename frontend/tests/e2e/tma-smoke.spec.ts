@@ -374,6 +374,9 @@ test('notification center keeps Mobile Web/TMA parity, unread geometry and an ex
 
   for (const page of [tmaPage, mobilePage]) {
     await expect(page.getByRole('heading', { name: 'Каналы' })).toBeVisible();
+    const notificationCenter = page.locator('details.notification-center');
+    await expect(notificationCenter.locator(':scope > summary')).toContainText('Непрочитанные · 2');
+    await notificationCenter.locator(':scope > summary').click();
     await expect(page.getByRole('heading', { name: 'Непрочитанные · 2' })).toBeVisible();
     await expect(page.getByText('Комментарий тренера к тренировке')).toBeVisible();
     await expectNoHorizontalOverflow(page);
@@ -414,7 +417,9 @@ test('notification center keeps Mobile Web/TMA parity, unread geometry and an ex
   await expect.poll(async () => (await tma.state()).backButton.visible).toBe(true);
   await tma.clickBack();
   await expect(tmaPage).toHaveURL('/app?section=profile#profile-notifications');
-  await expect(tmaPage.getByRole('heading', { name: 'Всё прочитано' })).toBeVisible();
+  await expect(tmaPage.locator('details.notification-center > summary')).toContainText(
+    'Всё прочитано',
+  );
 });
 
 test('program history keeps current block, readable revisions and workout return in Mobile Web/TMA parity', async ({

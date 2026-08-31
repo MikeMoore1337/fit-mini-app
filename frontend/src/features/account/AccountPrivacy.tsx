@@ -13,6 +13,7 @@ import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { useModalA11y } from '../../shared/ui/useModalA11y';
 import { Icon } from '../../shared/ui/Icon';
 import { downloadAccountExport } from './downloadAccountExport';
+import { OAuthProviderButton } from '../auth/OAuthButtons';
 
 const PROVIDER_LABELS: Record<string, string> = {
   telegram: 'Telegram',
@@ -230,22 +231,22 @@ export function AccountPrivacy() {
                       </Button>
                     </>
                   ) : telegramLink ? (
-                    <a
-                      className="button-link"
+                    <OAuthProviderButton
+                      provider={provider}
                       href={telegramLink.telegram_url}
                       target="_blank"
                       rel="noreferrer"
                     >
                       Открыть Telegram
-                    </a>
+                    </OAuthProviderButton>
                   ) : oauthLink ? (
-                    <a className="button-link" href={oauthLink.oauth_url}>
+                    <OAuthProviderButton provider={provider} href={oauthLink.oauth_url}>
                       Продолжить с {label}
-                    </a>
+                    </OAuthProviderButton>
                   ) : (
-                    <Button
-                      type="button"
-                      variant="secondary"
+                    <OAuthProviderButton
+                      provider={provider}
+                      busy={linkingPending}
                       disabled={telegramLinkMutation.isPending || oauthLinkMutation.isPending}
                       onClick={() =>
                         provider === 'telegram'
@@ -254,7 +255,7 @@ export function AccountPrivacy() {
                       }
                     >
                       {linkingPending ? 'Готовим переход…' : `Привязать ${label}`}
-                    </Button>
+                    </OAuthProviderButton>
                   )}
                 </div>
                 {lastIdentity && (

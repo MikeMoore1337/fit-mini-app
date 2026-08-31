@@ -7,10 +7,13 @@ import { useOptionalAuth } from './AuthProvider';
 import { useTelegramOverlayBackButton } from '../shared/telegram/useTelegramOverlayBackButton';
 import { useDocumentScrollLock } from '../shared/ui/useModalA11y';
 import { useMotionPresence } from '../shared/ui/useMotionPresence';
+import {
+  AccountAvatar,
+  AccountIdentity,
+  accountRoleLabel,
+} from '../shared/account/AccountIdentity';
 
 export type AppSection = 'today' | 'progress' | 'programs' | 'catalog' | 'nutrition' | 'profile';
-
-const AVATAR_EMOJIS = ['🏋️', '💪', '🏃', '🚴', '🥗', '⚡', '🎯', '🔥'] as const;
 
 const APP_DESTINATIONS: ReadonlyArray<{
   section: AppSection;
@@ -40,38 +43,26 @@ export interface DemoAppShellConfig {
   resetDisabled?: boolean;
 }
 
-function avatarFallback(name: string): string {
-  const hash = Array.from(name.trim()).reduce(
-    (value, character) => (value * 31 + (character.codePointAt(0) ?? 0)) >>> 0,
-    0,
-  );
-  return AVATAR_EMOJIS[hash % AVATAR_EMOJIS.length] ?? AVATAR_EMOJIS[0];
+function mobileNavigationMatches(): boolean {
+  return window.matchMedia?.('(max-width: 899px)').matches ?? window.innerWidth < 900;
 }
 
-function Avatar({ name, photoUrl }: { name: string; photoUrl?: string | null }) {
-  const [failedPhotoUrl, setFailedPhotoUrl] = useState<string | null>(null);
-  const photoFailed = Boolean(photoUrl && failedPhotoUrl === photoUrl);
+function useMobileNavigation(): boolean {
+  const [mobile, setMobile] = useState(mobileNavigationMatches);
 
-  return (
-    <span className="app-bottom-nav__avatar" aria-hidden="true">
-      {photoUrl && !photoFailed ? (
-        <img
-          src={photoUrl}
-          alt=""
-          referrerPolicy="no-referrer"
-          onError={() => setFailedPhotoUrl(photoUrl)}
-        />
-      ) : (
-        avatarFallback(name)
-      )}
-    </span>
-  );
-}
+  useEffect(() => {
+    const media = window.matchMedia?.('(max-width: 899px)');
+    const sync = () => setMobile(media?.matches ?? window.innerWidth < 900);
+    media?.addEventListener?.('change', sync);
+    window.addEventListener('resize', sync);
+    sync();
+    return () => {
+      media?.removeEventListener?.('change', sync);
+      window.removeEventListener('resize', sync);
+    };
+  }, []);
 
-function accountRole(isRoot: boolean, isCoach: boolean): string {
-  if (isRoot) return isCoach ? 'Root · Тренер' : 'Root · Личный режим';
-  if (isCoach) return 'Тренер';
-  return 'Клиент';
+  return mobile;
 }
 
 export function AppShell({
@@ -94,6 +85,7 @@ export function AppShell({
     closingAnimationName: 'app-more-backdrop-out',
     openingAnimationName: 'app-more-panel-in',
   });
+  const hideMorePresence = morePresence.hide;
   const morePanelRef = useRef<HTMLDivElement>(null);
   const moreTriggerRef = useRef<HTMLElement | null>(null);
   const displayName =
@@ -102,12 +94,51 @@ export function AppShell({
     user?.first_name ||
     user?.username ||
     'Пользователь';
+  const accountRole = accountRoleLabel(Boolean(user?.is_root), Boolean(user?.is_coach));
   const secondaryActive = section === 'catalog' || section === 'profile';
   const isMiniApp = Boolean(window.Telegram?.WebApp?.initData);
+  const mobileNavigation = useMobileNavigation();
   const shellDestinations = demo?.destinations ?? APP_DESTINATIONS;
   const brandTo = demo?.brandTo ?? '/app?section=today';
   const shellVisible = Boolean(user || demo);
   const morePresent = moreOpen || morePresence.present;
+  const moreSurfacePresent = morePresent && (Boolean(demo) || mobileNavigation);
+  const accountDestinations = [
+    {
+      key: 'catalog',
+      label: 'Упражнения',
+      to: '/app?section=catalog',
+      icon: 'catalog' as const,
+      desktopGroup: 'resources' as const,
+      visible: true,
+    },
+    {
+      key: 'profile',
+      label: 'Профиль и настройки',
+      to: '/app?section=profile',
+      icon: 'profile' as const,
+      desktopGroup: null,
+      visible: true,
+    },
+    {
+      key: 'coach',
+      label: 'Кабинет тренера',
+      desktopLabel: 'Тренер',
+      to: '/coach',
+      icon: 'coach' as const,
+      desktopGroup: 'workspaces' as const,
+      visible: Boolean(user?.is_coach),
+    },
+    {
+      key: 'admin',
+      label: 'Администрирование',
+      desktopLabel: 'Админ-панель',
+      to: '/admin',
+      icon: 'admin' as const,
+      desktopGroup: 'workspaces' as const,
+      visible: Boolean(user?.is_root) && !isMiniApp,
+    },
+  ].filter((destination) => destination.visible);
   const morePhase = moreOpen && morePresence.phase === 'closed' ? 'open' : morePresence.phase;
 
   const closeMore = (restoreFocus = false) => {
@@ -120,15 +151,33 @@ export function AppShell({
     setMoreOpen(true);
     morePresence.show();
   };
-  useTelegramOverlayBackButton(morePresent, () => closeMore(true));
+  useTelegramOverlayBackButton(moreSurfacePresent, () => closeMore(true));
 
-  useDocumentScrollLock(morePresent);
+  useDocumentScrollLock(moreSurfacePresent);
 
   useEffect(() => {
     if (moreOpen) {
       morePanelRef.current?.querySelector<HTMLElement>('button, a')?.focus();
     }
   }, [moreOpen]);
+
+  useEffect(() => {
+    if (demo) return;
+    const closeAtDesktopBreakpoint = () => {
+      if (mobileNavigationMatches() || !moreOpen) return;
+      setMoreOpen(false);
+      hideMorePresence();
+      window.requestAnimationFrame(() => {
+        const accountLink = document.getElementById('appAccountProfileLink');
+        const railBrand = document.querySelector<HTMLElement>(
+          '#appBottomNav .app-bottom-nav__brand',
+        );
+        (accountLink ?? railBrand)?.focus();
+      });
+    };
+    window.addEventListener('resize', closeAtDesktopBreakpoint);
+    return () => window.removeEventListener('resize', closeAtDesktopBreakpoint);
+  }, [demo, hideMorePresence, moreOpen]);
 
   if (!demo && !auth) {
     throw new Error('AppShell must be used inside AuthProvider unless demo config is provided');
@@ -158,7 +207,7 @@ export function AppShell({
 
   return (
     <div className="app-shell app-shell--design-v2">
-      {!demo && shellVisible && (
+      {!demo && shellVisible && mobileNavigation && (
         <header className="app-mobile-header">
           <AppLink
             className="app-mobile-header__brand"
@@ -176,7 +225,11 @@ export function AppShell({
             aria-label="Открыть профиль и настройки"
             onClick={(event) => (moreOpen ? closeMore() : openMore(event.currentTarget))}
           >
-            <Avatar name={displayName} photoUrl={user?.photo_url} />
+            <AccountAvatar
+              className="app-bottom-nav__avatar"
+              name={displayName}
+              photoUrl={user?.photo_url}
+            />
           </button>
         </header>
       )}
@@ -197,6 +250,26 @@ export function AppShell({
             >
               <BrandLockup markClassName="app-bottom-nav__brand-mark" />
             </AppLink>
+
+            {!demo && (
+              <div className="app-bottom-nav__profile-slot">
+                <AppLink
+                  id="appAccountProfileLink"
+                  to="/app?section=profile"
+                  className={`app-desktop-account-entry${path === '/app' && section === 'profile' ? ' is-active' : ''}`}
+                  aria-current={path === '/app' && section === 'profile' ? 'page' : undefined}
+                  aria-label="Профиль и настройки"
+                >
+                  <AccountIdentity
+                    avatarClassName="app-desktop-account-entry__avatar"
+                    className="app-desktop-account-entry__identity"
+                    name={displayName}
+                    photoUrl={user?.photo_url}
+                    role={accountRole}
+                  />
+                </AppLink>
+              </div>
+            )}
 
             <div className="app-bottom-nav__primary">
               {shellDestinations.map((destination) => {
@@ -240,80 +313,58 @@ export function AppShell({
                 role="group"
                 aria-label="Дополнительные разделы"
               >
-                <p className="app-bottom-nav__group-label">Мои данные</p>
-                <AppLink
-                  to="/app?section=catalog"
-                  className={`app-bottom-nav__btn${path === '/app' && section === 'catalog' ? ' is-active' : ''}`}
-                  aria-current={path === '/app' && section === 'catalog' ? 'page' : undefined}
-                >
-                  <AppNavigationIcon name="catalog" />
-                  <span className="app-bottom-nav__label">Упражнения</span>
-                </AppLink>
-                <AppLink
-                  to="/app?section=profile"
-                  className={`app-bottom-nav__btn${path === '/app' && section === 'profile' ? ' is-active' : ''}`}
-                  aria-current={path === '/app' && section === 'profile' ? 'page' : undefined}
-                >
-                  <AppNavigationIcon name="profile" />
-                  <span className="app-bottom-nav__label">Профиль</span>
-                </AppLink>
-                {user?.is_coach && (
-                  <>
-                    <p className="app-bottom-nav__group-label">Рабочие пространства</p>
-                    <AppLink
-                      to="/coach"
-                      className={`app-bottom-nav__btn${path === '/coach' ? ' is-active' : ''}`}
-                      aria-current={path === '/coach' ? 'page' : undefined}
-                    >
-                      <AppNavigationIcon name="coach" />
-                      <span className="app-bottom-nav__label">Тренер</span>
-                    </AppLink>
-                  </>
-                )}
-                {user?.is_root && !isMiniApp && (
-                  <AppLink
-                    to="/admin"
-                    className={`app-bottom-nav__btn${path === '/admin' ? ' is-active' : ''}`}
-                    aria-current={path === '/admin' ? 'page' : undefined}
-                    title="Администрирование"
-                  >
-                    <AppNavigationIcon name="admin" />
-                    <span className="app-bottom-nav__label">Админ-панель</span>
-                  </AppLink>
-                )}
+                {(['resources', 'workspaces'] as const).map((group) => {
+                  const destinations = accountDestinations.filter(
+                    (destination) => destination.desktopGroup === group,
+                  );
+                  if (!destinations.length) return null;
+                  return (
+                    <div className="app-bottom-nav__secondary-group" key={group}>
+                      <p className="app-bottom-nav__group-label">
+                        {group === 'resources' ? 'Ресурсы' : 'Рабочие пространства'}
+                      </p>
+                      {destinations.map((destination) => {
+                        const active =
+                          destination.to === '/coach'
+                            ? path === '/coach'
+                            : destination.to === '/admin'
+                              ? path === '/admin'
+                              : path === '/app' && section === destination.key;
+                        return (
+                          <AppLink
+                            key={destination.key}
+                            to={destination.to}
+                            className={`app-bottom-nav__btn${active ? ' is-active' : ''}`}
+                            aria-current={active ? 'page' : undefined}
+                          >
+                            <AppNavigationIcon name={destination.icon} />
+                            <span className="app-bottom-nav__label">
+                              {'desktopLabel' in destination
+                                ? destination.desktopLabel
+                                : destination.label}
+                            </span>
+                          </AppLink>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
               </div>
             )}
 
             <div className="app-bottom-nav__utility">
               <AppThemeToggle navigation />
-              <div className="app-bottom-nav__account">
-                {demo ? (
-                  <Avatar name={displayName} photoUrl={user?.photo_url} />
-                ) : (
-                  <button
-                    type="button"
-                    className="app-bottom-nav__account-entry"
-                    aria-expanded={moreOpen}
-                    aria-controls="appMorePanel"
-                    aria-label="Открыть меню аккаунта"
-                    onClick={(event) => (moreOpen ? closeMore() : openMore(event.currentTarget))}
-                  >
-                    <Avatar name={displayName} photoUrl={user?.photo_url} />
-                    <span>
-                      <strong className="app-bottom-nav__account-name">{displayName}</strong>
-                      <small className="app-bottom-nav__account-role">
-                        {accountRole(Boolean(user?.is_root), Boolean(user?.is_coach))}
-                      </small>
-                    </span>
-                  </button>
-                )}
-                {demo && (
+              {demo ? (
+                <div className="app-bottom-nav__account">
+                  <AccountAvatar
+                    className="app-bottom-nav__avatar"
+                    name={displayName}
+                    photoUrl={user?.photo_url}
+                  />
                   <>
                     <strong className="app-bottom-nav__account-name">{displayName}</strong>
                     <small className="app-bottom-nav__account-role">Отдельная сессия</small>
                   </>
-                )}
-                {demo ? (
                   <AppLink
                     className="app-bottom-nav__logout"
                     to={demo.exitTo}
@@ -322,22 +373,23 @@ export function AppShell({
                   >
                     <AppNavigationIcon name="logout" />
                   </AppLink>
-                ) : (
-                  <button
-                    type="button"
-                    className="app-bottom-nav__logout"
-                    onClick={() => void logout?.()}
-                    aria-label="Выйти из аккаунта"
-                    title="Выйти"
-                  >
-                    <AppNavigationIcon name="logout" />
-                  </button>
-                )}
-              </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="app-bottom-nav__btn app-bottom-nav__logout app-bottom-nav__utility-action"
+                  onClick={() => void logout?.()}
+                  aria-label="Выйти из аккаунта"
+                  title="Выйти из аккаунта"
+                >
+                  <AppNavigationIcon name="logout" />
+                  <span className="app-bottom-nav__label">Выйти</span>
+                </button>
+              )}
             </div>
           </nav>
 
-          {morePresent && (
+          {moreSurfacePresent && (
             <div
               className="app-more-layer"
               data-motion-phase={morePhase}
@@ -360,16 +412,15 @@ export function AppShell({
               >
                 <header className="app-more-panel__header">
                   <div className="app-more-panel__account">
-                    <Avatar name={displayName} photoUrl={user?.photo_url} />
-                    <span>
-                      <strong id="appMoreTitle">
-                        {demo?.menuTitle ?? (demo ? displayName : 'Профиль и настройки')}
-                      </strong>
-                      <small>
-                        {demo
-                          ? 'Отдельная сессия'
-                          : accountRole(Boolean(user?.is_root), Boolean(user?.is_coach))}
-                      </small>
+                    <AccountIdentity
+                      avatarClassName="app-bottom-nav__avatar"
+                      className="app-more-panel__identity"
+                      name={demo?.menuTitle ?? displayName}
+                      photoUrl={user?.photo_url}
+                      role={demo ? 'Отдельная сессия' : accountRole}
+                    />
+                    <span className="sr-only" id="appMoreTitle">
+                      {demo?.menuTitle ?? (demo ? displayName : 'Профиль и настройки')}
                     </span>
                   </div>
                   <button
@@ -395,50 +446,27 @@ export function AppShell({
                         <span>{item.label}</span>
                       </AppLink>
                     ))}
-                  {!demo && (
-                    <>
-                      <AppLink
-                        to="/app?section=catalog"
-                        className="app-more-panel__item"
-                        aria-current={path === '/app' && section === 'catalog' ? 'page' : undefined}
-                        onClick={() => closeMore()}
-                      >
-                        <AppNavigationIcon name="catalog" />
-                        <span>Упражнения</span>
-                      </AppLink>
-                      <AppLink
-                        to="/app?section=profile"
-                        className="app-more-panel__item"
-                        aria-current={path === '/app' && section === 'profile' ? 'page' : undefined}
-                        onClick={() => closeMore()}
-                      >
-                        <AppNavigationIcon name="profile" />
-                        <span>Профиль и настройки</span>
-                      </AppLink>
-                      {user?.is_coach && (
+                  {!demo &&
+                    accountDestinations.map((destination) => {
+                      const active =
+                        destination.to === '/coach'
+                          ? path === '/coach'
+                          : destination.to === '/admin'
+                            ? path === '/admin'
+                            : path === '/app' && section === destination.key;
+                      return (
                         <AppLink
-                          to="/coach"
+                          key={destination.key}
+                          to={destination.to}
                           className="app-more-panel__item"
-                          aria-current={path === '/coach' ? 'page' : undefined}
+                          aria-current={active ? 'page' : undefined}
                           onClick={() => closeMore()}
                         >
-                          <AppNavigationIcon name="coach" />
-                          <span>Кабинет тренера</span>
+                          <AppNavigationIcon name={destination.icon} />
+                          <span>{destination.label}</span>
                         </AppLink>
-                      )}
-                      {user?.is_root && !isMiniApp && (
-                        <AppLink
-                          to="/admin"
-                          className="app-more-panel__item"
-                          aria-current={path === '/admin' ? 'page' : undefined}
-                          onClick={() => closeMore()}
-                        >
-                          <AppNavigationIcon name="admin" />
-                          <span>Администрирование</span>
-                        </AppLink>
-                      )}
-                    </>
-                  )}
+                      );
+                    })}
                 </nav>
 
                 <div className="app-more-panel__actions">

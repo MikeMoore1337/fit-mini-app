@@ -71,6 +71,7 @@ export function TrainerCapabilityCard() {
     <Card
       title="Режим тренера"
       description="Дополнительный рабочий режим внутри вашего обычного аккаунта."
+      collapsible={false}
     >
       {capability.isLoading ? (
         <LoadingState label="Проверяем режим тренера…" />

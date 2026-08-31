@@ -104,7 +104,11 @@ describe('NotificationsPanel', () => {
   it('разделяет каналы и открывает canonical destination через server resolver', async () => {
     const onNavigate = renderPanel();
 
-    expect(await screen.findByText('Непрочитанные · 2')).toBeInTheDocument();
+    expect((await screen.findAllByText('Непрочитанные · 2')).length).toBeGreaterThan(0);
+    const notificationCenter = screen.getByText('Центр уведомлений').closest('details');
+    expect(notificationCenter).not.toHaveAttribute('open');
+    fireEvent.click(screen.getByText('Центр уведомлений'));
+    expect(notificationCenter).toHaveAttribute('open');
     expect(screen.getByText('В приложении')).toBeInTheDocument();
     expect(screen.getByText('Предстоящая тренировка')).toBeInTheDocument();
     expect(screen.queryByText('Комментарий тренера')).not.toBeInTheDocument();
