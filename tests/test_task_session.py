@@ -969,21 +969,159 @@ def test_recover_is_read_only_and_preserves_dirty_unique_task_state(
     assert (worktree / "dirty.txt").exists()
 
 
-def test_finish_never_performs_branch_or_worktree_cleanup(repository: tuple[Path, Any]) -> None:
+def _prepare_finish_state(
+    repository: tuple[Path, Any], task_id: str
+) -> tuple[Any, Path, str, str, str]:
     root, git_repository = repository
+    _write_task(root, task_id, "automatic-closeout")
     base_sha = git_repository.ref("origin/dev")
     controller = task_session.TaskController(git_repository, github=FakeGitHub(base_sha))
-    _task_lease(controller, "402", root, base_sha)
-    lease_path = controller.store.task_lease_path("402")
+    started = controller.start(task_id, owner_launch=True, session_label="pytest", offline=True)
+    worktree = Path(started["lease"]["worktree"])
+    branch = str(started["lease"]["branch"])
+    (worktree / "closeout.txt").write_text("merged task\n", encoding="utf-8")
+    _git(worktree, "add", "closeout.txt")
+    _git(worktree, "commit", "-m", f"[Task {task_id}] test: synthetic closeout")
+    head_sha = _git(worktree, "rev-parse", "HEAD")
+    _git(root, "merge", "--no-ff", branch, "-m", f"[Task {task_id}] merge synthetic task")
+    merge_sha = _git(root, "rev-parse", "HEAD")
+    _git(root, "branch", "-f", "master", merge_sha)
+    _git(root, "push", "origin", "dev", "master")
+
+    lease_path = controller.store.task_lease_path(task_id)
     lease = controller.store.read_json(lease_path)
     lease["lifecycle_state"] = "dev-ci-success"
+    lease["ready_head_sha"] = head_sha
     controller.store.replace_json(lease_path, lease)
     controller.store.create_json(
-        controller.store.history / "task-402.json",
-        {"task_id": "402", "state": "dev-ci-success", "merge_sha": base_sha},
+        controller.store.history / f"task-{task_id}.json",
+        {
+            "task_id": task_id,
+            "state": "dev-ci-success",
+            "head_sha": head_sha,
+            "merge_sha": merge_sha,
+        },
     )
+    return controller, worktree, branch, head_sha, merge_sha
+
+
+def test_finish_removes_exact_clean_merged_worktree_and_local_branch(
+    repository: tuple[Path, Any],
+) -> None:
+    controller, worktree, branch, _, _ = _prepare_finish_state(repository, "402")
+    lease_path = controller.store.task_lease_path("402")
 
     result = controller.finish("402")
 
-    assert result["cleanup_performed"] is False
+    assert result["cleanup_performed"] is True
+    assert result["removed_worktree"] == str(worktree.resolve())
+    assert result["deleted_local_branch"] == branch
+    assert not worktree.exists()
+    assert not controller.repository.ref_exists(branch)
     assert not lease_path.exists()
+    history = controller.store.read_json(controller.store.history / "task-402.json")
+    assert history["state"] == "finished"
+    assert history["cleanup"]["branch"] == branch
+    assert "cleanup_allowed_after_owner_confirmation" not in history
+
+
+def test_finish_refuses_dirty_worktree_and_preserves_state(
+    repository: tuple[Path, Any],
+) -> None:
+    controller, worktree, branch, _, _ = _prepare_finish_state(repository, "403")
+    (worktree / "uncommitted.txt").write_text("preserve me\n", encoding="utf-8")
+
+    with pytest.raises(task_session.TaskSessionError, match="refuses dirty task worktree"):
+        controller.finish("403")
+
+    assert worktree.is_dir()
+    assert controller.repository.ref_exists(branch)
+    assert controller.store.task_lease_path("403").exists()
+    history = controller.store.read_json(controller.store.history / "task-403.json")
+    assert history["state"] == "dev-ci-success"
+
+
+def test_finish_refuses_unique_commits_and_preserves_state(
+    repository: tuple[Path, Any],
+) -> None:
+    controller, worktree, branch, _, _ = _prepare_finish_state(repository, "404")
+    (worktree / "unique.txt").write_text("preserve unique commit\n", encoding="utf-8")
+    _git(worktree, "add", "unique.txt")
+    _git(worktree, "commit", "-m", "[Task 404] test: preserve unique commit")
+    unique_head = _git(worktree, "rev-parse", "HEAD")
+    lease_path = controller.store.task_lease_path("404")
+    lease = controller.store.read_json(lease_path)
+    lease["ready_head_sha"] = unique_head
+    controller.store.replace_json(lease_path, lease)
+    history_path = controller.store.history / "task-404.json"
+    history = controller.store.read_json(history_path)
+    history["head_sha"] = unique_head
+    controller.store.replace_json(history_path, history)
+
+    with pytest.raises(task_session.TaskSessionError, match="unique commits"):
+        controller.finish("404")
+
+    assert worktree.is_dir()
+    assert controller.repository.ref(branch) == unique_head
+    assert lease_path.exists()
+
+
+def test_finish_refuses_ambiguous_task_branch_and_worktree_state(
+    repository: tuple[Path, Any],
+) -> None:
+    controller, worktree, branch, head_sha, _ = _prepare_finish_state(repository, "405")
+    _git(controller.repository.current_worktree, "branch", "task/405-duplicate", head_sha)
+
+    with pytest.raises(task_session.TaskSessionError, match="exactly one matching"):
+        controller.finish("405")
+
+    assert worktree.is_dir()
+    assert controller.repository.ref_exists(branch)
+    assert controller.repository.ref_exists("task/405-duplicate")
+    assert controller.store.task_lease_path("405").exists()
+
+
+def test_finish_refuses_unsynchronized_deployed_refs(
+    repository: tuple[Path, Any],
+) -> None:
+    controller, worktree, branch, _, _ = _prepare_finish_state(repository, "406")
+    previous_master = controller.repository.git("rev-parse", "origin/master^")
+    controller.repository.git("update-ref", "refs/remotes/origin/master", previous_master)
+
+    with pytest.raises(task_session.TaskSessionError, match="requires exact deployed"):
+        controller.finish("406")
+
+    assert worktree.is_dir()
+    assert controller.repository.ref_exists(branch)
+    assert controller.store.task_lease_path("406").exists()
+
+
+def test_finish_refuses_cross_linked_or_non_terminal_history(
+    repository: tuple[Path, Any],
+) -> None:
+    controller, worktree, branch, _, _ = _prepare_finish_state(repository, "407")
+    history_path = controller.store.history / "task-407.json"
+    history = controller.store.read_json(history_path)
+    history["task_id"] = "999"
+    controller.store.replace_json(history_path, history)
+
+    with pytest.raises(task_session.TaskSessionError, match="history does not match"):
+        controller.finish("407")
+
+    assert worktree.is_dir()
+    assert controller.repository.ref_exists(branch)
+    assert controller.store.task_lease_path("407").exists()
+
+
+def test_finish_refuses_execution_from_task_worktree(
+    repository: tuple[Path, Any],
+) -> None:
+    controller, worktree, branch, _, _ = _prepare_finish_state(repository, "408")
+    task_controller = task_session.TaskController(task_session.GitRepository(worktree))
+
+    with pytest.raises(task_session.TaskSessionError, match="canonical dev worktree"):
+        task_controller.finish("408")
+
+    assert worktree.is_dir()
+    assert controller.repository.ref_exists(branch)
+    assert controller.store.task_lease_path("408").exists()

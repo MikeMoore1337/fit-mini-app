@@ -87,7 +87,9 @@ gate, evidence и точки остановки в task-файле.
   владельцу и строго последовательно: `task branch -> task PR dev -> exact-head checks -> serial
   merge -> exact merged-dev push CI -> PR master -> required PR checks -> exact-head merge ->
   post-merge CI -> automatic production deploy -> terminal success -> narrow App sync dev to exact
-  deployed master`. Direct feature push в `dev` и direct push в `master` запрещены.
+  deployed master -> automatic controller finish/clean task worktree and merged local branch ->
+  archive task -> rebuild/check backlog manifests -> terminal report`. Direct feature push в `dev`
+  и direct push в `master` запрещены.
 - Release flow является **strictly serial**. При release lease/open `dev -> master` PR task merge и
   любой другой update `dev` запрещены. Если требуется новая task integration, release PR сначала
   закрывается, candidate обновляется от current `dev`, повторяет exact-head checks и serial merge.
@@ -103,6 +105,12 @@ gate, evidence и точки остановки в task-файле.
 controller/lifecycle после terminal success автоматически продолжает применимые review, QA,
 commit, task PR, serial integration, `dev` CI и normal release без дополнительного owner prompt.
 Тишина владельца не является gate. Следующая product task автоматически не запускается.
+
+После terminal successful normal deploy и exact deployed `master -> dev` sync post-deploy closeout
+тоже не создаёт owner gate: `finish` из canonical `dev` worktree автоматически удаляет только exact
+matching clean task worktree и merged local branch без `--force`, затем canonical archive helper
+переносит task в `tasks/done/` и rebuild/check manifests. Dirty/interrupted/unique/ambiguous state,
+divergence refs или archive/check error останавливают closeout fail-closed с сохранением данных.
 
 Direct push в `master` запрещён. Direct feature push в `dev` также запрещён; единственное bypass
 исключение — exact deployed `master -> dev` sync узкого owner-approved GitHub App.
