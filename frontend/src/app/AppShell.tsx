@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { AppLink, useNavigation } from '../shared/navigation/router';
-import { publicUrlForHostname } from '../shared/navigation/appUrl';
 import { AppThemeToggle } from '../shared/ui/AppThemeToggle';
 import { BrandLockup } from '../shared/ui/BrandLogo';
 import { AppNavigationIcon, type AppNavigationIconName } from './AppNavigationIcon';
@@ -105,7 +104,6 @@ export function AppShell({
     'Пользователь';
   const secondaryActive = section === 'catalog' || section === 'profile';
   const isMiniApp = Boolean(window.Telegram?.WebApp?.initData);
-  const knowledgeUrl = publicUrlForHostname(window.location.hostname, '/knowledge');
   const shellDestinations = demo?.destinations ?? APP_DESTINATIONS;
   const brandTo = demo?.brandTo ?? '/app?section=today';
   const shellVisible = Boolean(user || demo);
@@ -259,13 +257,6 @@ export function AppShell({
                   <AppNavigationIcon name="profile" />
                   <span className="app-bottom-nav__label">Профиль</span>
                 </AppLink>
-                {!isMiniApp && (
-                  <a href={knowledgeUrl} className="app-bottom-nav__btn">
-                    <AppNavigationIcon name="knowledge" />
-                    <span className="app-bottom-nav__label">База знаний</span>
-                  </a>
-                )}
-
                 {user?.is_coach && (
                   <>
                     <p className="app-bottom-nav__group-label">Рабочие пространства</p>
@@ -424,16 +415,6 @@ export function AppShell({
                         <AppNavigationIcon name="profile" />
                         <span>Профиль и настройки</span>
                       </AppLink>
-                      {!isMiniApp && (
-                        <a
-                          href={knowledgeUrl}
-                          className="app-more-panel__item"
-                          onClick={() => closeMore()}
-                        >
-                          <AppNavigationIcon name="knowledge" />
-                          <span>База знаний</span>
-                        </a>
-                      )}
                       {user?.is_coach && (
                         <AppLink
                           to="/coach"

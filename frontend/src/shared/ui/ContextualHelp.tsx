@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { publicUrlForHostname } from '../navigation/appUrl';
+import { PublicWebLink } from '../navigation/PublicWebLink';
 import { Icon } from './Icon';
 
 export function ContextualHelp({
@@ -16,14 +16,9 @@ export function ContextualHelp({
       <summary>{summary}</summary>
       <div className="contextual-help__body">
         <div>{children}</div>
-        <a
-          className="contextual-help__link"
-          href={publicUrlForHostname(window.location.hostname, articlePath)}
-          target="_blank"
-          rel="noreferrer"
-        >
+        <PublicWebLink className="contextual-help__link" path={articlePath}>
           Подробнее на сайте <Icon name="external-link" size={16} />
-        </a>
+        </PublicWebLink>
       </div>
     </details>
   );

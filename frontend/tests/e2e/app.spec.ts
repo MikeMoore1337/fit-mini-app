@@ -1594,6 +1594,7 @@ test('app shell сохраняет композицию и доступност�
     { width: 1440, height: 900 },
     { width: 1280, height: 800 },
     { width: 768, height: 900 },
+    { width: 430, height: 932 },
     { width: 390, height: 780 },
     { width: 360, height: 740 },
   ]) {
@@ -1610,7 +1611,7 @@ test('app shell сохраняет композицию и доступност�
       ).not.toBeVisible();
       await expect(page.getByRole('link', { name: 'Упражнения', exact: true })).toBeVisible();
       await expect(page.getByRole('link', { name: 'Профиль', exact: true })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'База знаний', exact: true })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'База знаний', exact: true })).not.toBeAttached();
       const accountName = page.locator('.app-bottom-nav__account-name');
       const logout = page
         .getByRole('navigation', { name: 'Основная навигация' })
@@ -1634,6 +1635,12 @@ test('app shell сохраняет композицию и доступност�
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);
+    if (viewport.width === 1280 || viewport.width === 360) {
+      await page.screenshot({
+        path: `../.artifacts/screenshots/task-121/web-app-shell-${viewport.width}x${viewport.height}.png`,
+        fullPage: true,
+      });
+    }
   }
 
   await page.setViewportSize({ width: 390, height: 780 });

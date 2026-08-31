@@ -2387,9 +2387,19 @@ test('contextual help covers workout, nutrition and Progress without a TMA libra
   const rirDetails = tmaPage.locator('.active-workout-rir .contextual-help');
   const rirHelp = rirDetails.getByText('Что это?', { exact: true });
   await rirHelp.click();
-  await expect(
-    tmaPage.locator('.active-workout-rir').getByRole('link', { name: /Подробнее на сайте/ }),
-  ).toHaveAttribute('href', '/knowledge/training/repetitions-in-reserve');
+  const rirArticleLink = tmaPage
+    .locator('.active-workout-rir')
+    .getByRole('link', { name: /Подробнее на сайте/ });
+  await expect(rirArticleLink).toHaveAttribute(
+    'href',
+    '/knowledge/training/repetitions-in-reserve',
+  );
+  await rirArticleLink.click();
+  await expect
+    .poll(async () => (await tma.state()).openedLinks)
+    .toContain('http://127.0.0.1:4173/knowledge/training/repetitions-in-reserve');
+  await expect(tmaPage).toHaveURL(/\/app$/);
+  await expect(rirDetails).toHaveAttribute('open', '');
   await tma.setTheme('dark');
   await expect(rirDetails).toHaveAttribute('open', '');
   await rirHelp.click();
@@ -2414,9 +2424,33 @@ test('contextual help covers workout, nutrition and Progress without a TMA libra
   await expectNoHorizontalOverflow(tmaPage);
 
   await tmaPage.goto('/knowledge');
+  await expect(tmaPage.getByRole('heading', { name: 'Продолжить чтение на сайте' })).toBeVisible();
+  await tma.setTheme('dark');
+  await expect(tmaPage.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
+  await tmaPage.screenshot({
+    path: '../.artifacts/screenshots/task-121/tma-knowledge-handoff-390x844-dark.png',
+    fullPage: true,
+  });
+  const publicHandoff = tmaPage.getByRole('link', { name: 'Открыть материал на сайте' });
+  await expectTouchTargets(tmaPage.locator('.knowledge-handoff__actions a'));
+  await expectNoHorizontalOverflow(tmaPage);
+  await tmaPage.keyboard.press('Tab');
+  await expect(publicHandoff).toBeFocused();
+  await publicHandoff.click();
   await expect(tmaPage).toHaveURL('/app');
+  await expect
+    .poll(async () => (await tma.state()).openedLinks)
+    .toContain('http://127.0.0.1:4173/knowledge');
   await expect(tmaPage.getByRole('heading', { name: /^Сегодня ·/ })).toBeVisible();
   await expect(tmaPage.getByRole('heading', { name: /База знаний/i })).not.toBeAttached();
+
+  await tmaPage.goto('/app/knowledge/progress/how-to-read-progress');
+  await expect(tmaPage.getByRole('heading', { name: 'Продолжить чтение на сайте' })).toBeVisible();
+  await tmaPage.getByRole('link', { name: 'Открыть материал на сайте' }).click();
+  await expect(tmaPage).toHaveURL('/app');
+  await expect
+    .poll(async () => (await tma.state()).openedLinks)
+    .toContain('http://127.0.0.1:4173/knowledge/progress/how-to-read-progress');
 });
 
 test('task 72 screenshot packet keeps shared composition across core surfaces', async ({

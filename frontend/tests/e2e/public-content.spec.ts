@@ -43,6 +43,17 @@ const representativePages = [
   },
 ];
 
+test('legacy app knowledge URLs hand off to the equivalent Public Web article', async ({
+  page,
+}) => {
+  await page.goto('/app/knowledge/training/repetitions-in-reserve');
+
+  await expect(page).toHaveURL('/knowledge/training/repetitions-in-reserve');
+  await expect(
+    page.getByRole('heading', { level: 1, name: /повторы в запасе: полезная оценка/i }),
+  ).toBeVisible();
+});
+
 test('landing emits a privacy-safe acquisition event without changing the desktop result', async ({
   page,
 }) => {

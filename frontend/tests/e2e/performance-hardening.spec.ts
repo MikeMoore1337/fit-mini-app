@@ -158,6 +158,20 @@ test('Mocked TMA preserves 404 for an unknown nested public route', async ({ pag
   await expect(page).toHaveURL(/\/knowledge\/unknown-performance-route$/);
 });
 
+test('Telegram knowledge launch keeps the handoff when the SDK is unavailable', async ({
+  page,
+}) => {
+  await page.route('https://telegram.org/js/telegram-web-app.js', (route) => route.abort());
+  await page.goto('/knowledge?tgWebAppPlatform=web');
+
+  await expect(page.getByRole('heading', { name: 'Продолжить чтение на сайте' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Открыть материал на сайте' })).toHaveAttribute(
+    'href',
+    '/knowledge',
+  );
+  await expect(page.getByRole('heading', { name: /База знаний/i })).not.toBeAttached();
+});
+
 test('Client navigation preserves metadata owned by a lazy public route', async ({ page }) => {
   await page.goto('/');
 
