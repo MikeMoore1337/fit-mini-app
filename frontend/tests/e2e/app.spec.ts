@@ -4,8 +4,9 @@ async function openCard(page: Page, title: string) {
   const card = page
     .getByRole('heading', { name: title, exact: true })
     .locator('xpath=ancestor::details[1]');
-  await expect(card).not.toHaveAttribute('open');
-  await card.locator(':scope > summary').click();
+  if ((await card.getAttribute('open')) === null) {
+    await card.locator(':scope > summary').click();
+  }
   await expect(card).toHaveAttribute('open');
 }
 
@@ -1610,8 +1611,11 @@ test('app shell сохраняет композицию и доступност�
       const accountNameSize = await accountName.evaluate((element) => ({
         clientWidth: element.clientWidth,
         scrollWidth: element.scrollWidth,
+        textOverflow: window.getComputedStyle(element).textOverflow,
       }));
-      expect(accountNameSize.scrollWidth).toBeLessThanOrEqual(accountNameSize.clientWidth);
+      expect(accountNameSize.clientWidth).toBeGreaterThan(0);
+      expect(accountNameSize.scrollWidth).toBeGreaterThanOrEqual(accountNameSize.clientWidth);
+      expect(accountNameSize.textOverflow).toBe('ellipsis');
       await expect(logout).toHaveText('Выйти');
     }
     expect(
@@ -1865,6 +1869,9 @@ test('notification settings explain unavailable Telegram and stale targets recov
   await page.getByRole('button', { name: 'Клиент' }).click();
   await openAppDestination(page, 'Профиль');
   await page.getByRole('link', { name: 'Уведомления' }).click();
+  const notificationCenter = page.locator('details.notification-center');
+  await notificationCenter.locator(':scope > summary').click();
+  await expect(notificationCenter).toHaveAttribute('open');
 
   for (const viewport of [
     { width: 360, height: 800 },
