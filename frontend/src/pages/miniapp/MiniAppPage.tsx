@@ -243,7 +243,6 @@ export default function MiniAppPage() {
       `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`,
     );
   }, [toast]);
-  const role = user?.is_coach ? 'Тренер' : 'Клиент';
   const programStart = section === 'programs' ? requestedProgramStart(search) : null;
   const profileReadiness = programProfileReadiness(user?.profile);
   const profileFormKey = JSON.stringify([
@@ -307,9 +306,6 @@ export default function MiniAppPage() {
                     ? 'Текущая программа, тренировочные дни и создание своего плана.'
                     : 'Тренировки, питание и прогресс в одном месте.'}
               </p>
-            </div>
-            <div className="hero-card__meta">
-              <Badge>{role}</Badge>
             </div>
           </header>
         )}

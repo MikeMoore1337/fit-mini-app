@@ -13,7 +13,7 @@ type AppDestination = 'Сегодня' | 'Программа' | 'Прогрес�
 
 async function openAppDestination(page: Page, destination: AppDestination) {
   await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible();
-  const desktopLabel = destination;
+  const desktopLabel = destination === 'Профиль' ? 'Профиль и настройки' : destination;
   const mobileLabel = destination === 'Профиль' ? 'Профиль и настройки' : destination;
   const directLink = page.getByRole('link', { name: desktopLabel, exact: true });
   for (let index = 0; index < (await directLink.count()); index += 1) {
@@ -1456,23 +1456,10 @@ test('desktop app shell centers the brand lockup and navigation surfaces', async
         return Math.abs(referenceBox.left + referenceBox.width / 2 - (left + right) / 2);
       };
       const lockup = element.querySelector('.yfc-lockup');
-      const account = element.querySelector<HTMLElement>('.app-bottom-nav__account');
-      const accountName = element.querySelector<HTMLElement>('.app-bottom-nav__account-name');
-      const accountRole = element.querySelector<HTMLElement>('.app-bottom-nav__account-role');
       const groupLabel = element.querySelector<HTMLElement>('.app-bottom-nav__group-label');
       const themeButton = element.querySelector('.app-theme-toggle--nav');
+      const logoutButton = element.querySelector('.app-bottom-nav__logout');
       return {
-        accountOffset: centerOffset(account),
-        accountWidth: account?.getBoundingClientRect().width ?? 0,
-        accountNameFits: accountName ? accountName.scrollWidth <= accountName.clientWidth : false,
-        accountTextEdgeOffset:
-          accountName && accountRole
-            ? Math.abs(
-                accountName.getBoundingClientRect().left - accountRole.getBoundingClientRect().left,
-              )
-            : Number.POSITIVE_INFINITY,
-        accountTextAlignment: accountName ? window.getComputedStyle(accountName).textAlign : null,
-        accountNameSize: accountName ? window.getComputedStyle(accountName).fontSize : null,
         buttonOffsets: Array.from(
           element.querySelectorAll<HTMLElement>(
             '.app-bottom-nav__primary .app-bottom-nav__btn, .app-bottom-nav__secondary .app-bottom-nav__btn',
@@ -1498,9 +1485,9 @@ test('desktop app shell centers the brand lockup and navigation surfaces', async
         secondaryLabelSize: window.getComputedStyle(
           element.querySelector('.app-bottom-nav__secondary .app-bottom-nav__label')!,
         ).fontSize,
-        accountRoleSize: window.getComputedStyle(
-          element.querySelector('.app-bottom-nav__account-role')!,
-        ).fontSize,
+        logoutButtonHeight: logoutButton?.getBoundingClientRect().height ?? 0,
+        logoutButtonOffset: centerOffset(logoutButton),
+        logoutButtonWidth: logoutButton?.getBoundingClientRect().width ?? 0,
         themeContentOffset: themeButton
           ? groupCenterOffset(
               Array.from(
@@ -1511,7 +1498,9 @@ test('desktop app shell centers the brand lockup and navigation surfaces', async
           : Number.POSITIVE_INFINITY,
         themeBorderStyle: themeButton ? window.getComputedStyle(themeButton).borderTopStyle : null,
         themeBorderWidth: themeButton ? window.getComputedStyle(themeButton).borderTopWidth : null,
+        themeButtonHeight: themeButton?.getBoundingClientRect().height ?? 0,
         themeButtonOffset: centerOffset(themeButton),
+        themeButtonWidth: themeButton?.getBoundingClientRect().width ?? 0,
         themeLabelSize: window.getComputedStyle(
           element.querySelector('.app-theme-toggle--nav .app-bottom-nav__label')!,
         ).fontSize,
@@ -1533,14 +1522,6 @@ test('desktop app shell centers the brand lockup and navigation surfaces', async
     expect(desktopAlignment.markOffset).toBeLessThanOrEqual(1);
     expect(desktopAlignment.fitnessOffset).toBeLessThanOrEqual(1);
     expect(desktopAlignment.coachOffset).toBeLessThanOrEqual(1);
-    expect(desktopAlignment.accountOffset).toBeLessThanOrEqual(1);
-    expect(desktopAlignment.accountWidth).toBeGreaterThanOrEqual(160);
-    expect(desktopAlignment.accountWidth).toBeLessThanOrEqual(196);
-    expect(desktopAlignment.accountNameFits).toBe(true);
-    expect(desktopAlignment.accountTextEdgeOffset).toBeLessThanOrEqual(1);
-    expect(desktopAlignment.accountTextAlignment).toBe('left');
-    expect(desktopAlignment.accountNameSize).toBe('11.2px');
-    expect(desktopAlignment.accountRoleSize).toBe('11.52px');
     expect(desktopAlignment.groupLabelFits).toBe(true);
     expect(desktopAlignment.labelsFit).toBe(true);
     expect(desktopAlignment.primaryLabelSize).toBe('13px');
@@ -1552,6 +1533,9 @@ test('desktop app shell centers the brand lockup and navigation surfaces', async
     expect(desktopAlignment.themeBorderWidth).toBe('1px');
     expect(desktopAlignment.themeButtonOffset).toBeLessThanOrEqual(1);
     expect(desktopAlignment.themeLabelSize).toBe('12.8px');
+    expect(desktopAlignment.logoutButtonOffset).toBeLessThanOrEqual(1);
+    expect(desktopAlignment.logoutButtonWidth).toBe(desktopAlignment.themeButtonWidth);
+    expect(desktopAlignment.logoutButtonHeight).toBe(desktopAlignment.themeButtonHeight);
     expect(contentAlignment).not.toBeNull();
     expect(Math.abs(contentAlignment!.leftGap - contentAlignment!.rightGap)).toBeLessThanOrEqual(1);
 
@@ -1610,9 +1594,13 @@ test('app shell сохраняет композицию и доступност�
         page.getByRole('button', { name: 'Открыть профиль и настройки', exact: true }),
       ).not.toBeVisible();
       await expect(page.getByRole('link', { name: 'Упражнения', exact: true })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Профиль', exact: true })).toBeVisible();
+      await expect(
+        page.getByRole('link', { name: 'Профиль и настройки', exact: true }),
+      ).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Профиль', exact: true })).not.toBeAttached();
+      await expect(page.getByText('Ресурсы', { exact: true })).toBeVisible();
       await expect(page.getByRole('link', { name: 'База знаний', exact: true })).not.toBeAttached();
-      const accountName = page.locator('.app-bottom-nav__account-name');
+      const accountName = page.locator('.app-desktop-account-entry .account-identity__name');
       const logout = page
         .getByRole('navigation', { name: 'Основная навигация' })
         .getByRole('button', {
@@ -1624,13 +1612,7 @@ test('app shell сохраняет композицию и доступност�
         scrollWidth: element.scrollWidth,
       }));
       expect(accountNameSize.scrollWidth).toBeLessThanOrEqual(accountNameSize.clientWidth);
-      const [nameBox, logoutBox] = await Promise.all([
-        accountName.boundingBox(),
-        logout.boundingBox(),
-      ]);
-      expect(nameBox).not.toBeNull();
-      expect(logoutBox).not.toBeNull();
-      expect(logoutBox!.y).toBeGreaterThanOrEqual(nameBox!.y + nameBox!.height);
+      await expect(logout).toHaveText('Выйти');
     }
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
@@ -1684,7 +1666,7 @@ test('desktop sidebar keeps long client names contained and logout reachable', a
   await page.getByRole('button', { name: 'Клиент' }).click();
 
   const navigation = page.getByRole('navigation', { name: 'Основная навигация' });
-  const accountName = navigation.locator('.app-bottom-nav__account-name');
+  const accountName = page.locator('.app-desktop-account-entry .account-identity__name');
   const logout = navigation.getByRole('button', { name: 'Выйти из аккаунта' });
 
   await expect(accountName).toHaveText('Александра Константинопольская-Северная');
@@ -1937,7 +1919,12 @@ test('notification empty and error states keep compact profile rhythm', async ({
   await openAppDestination(page, 'Профиль');
   await page.getByRole('link', { name: 'Уведомления' }).click();
   await expect(page.getByText('Настройки временно недоступны')).toBeVisible();
-  await expect(page.getByText('Уведомлений пока нет')).toBeVisible();
+  const notificationCenter = page.locator('details.notification-center');
+  await expect(
+    notificationCenter.locator('summary').getByText('Уведомлений пока нет'),
+  ).toBeVisible();
+  await notificationCenter.locator(':scope > summary').click();
+  await expect(notificationCenter.locator('.ui-state__title')).toHaveText('Уведомлений пока нет');
 
   const stateHeights = await page
     .locator('#profile-notifications .ui-state')
@@ -2146,6 +2133,7 @@ test('training preferences сохраняют Mobile Web/TMA композици�
     await card.getByText('Упражнения и движения, которых хотите избегать').click();
     await expect(card.getByText(/Это не медицинская оценка/)).toBeVisible();
     if (current.surface === 'tma-mock') {
+      await card.getByText('Расписание', { exact: true }).click();
       const durationMax = card.getByLabel('До, минут');
       await durationMax.fill('75');
       await durationMax.blur();
@@ -2252,12 +2240,11 @@ test('пользователь напрямую включает режим тр
   await page.getByRole('button', { name: 'Клиент' }).click();
   await openAppDestination(page, 'Профиль');
   await openCard(page, 'Тренер и приглашения');
-  await openCard(page, 'Режим тренера');
 
   const activate = page.getByRole('button', { name: 'Включить режим тренера' });
   const trainerCard = page
     .getByRole('heading', { name: 'Режим тренера', exact: true })
-    .locator('xpath=ancestor::details[1]');
+    .locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " card ")][1]');
   await expect(activate).toBeDisabled();
   await trainerCard.screenshot({
     path: '../.artifacts/screenshots/task-70/01-pre-activation-mobile-light.png',
@@ -2317,7 +2304,6 @@ test('пользователь напрямую включает режим тр
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
   await openCard(page, 'Тренер и приглашения');
-  await openCard(page, 'Режим тренера');
   await modeSwitch.getByRole('link', { name: 'Клиенты' }).click();
   await expect(page.getByRole('heading', { name: 'Кабинет тренера' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Клиенты', exact: true }).first()).toHaveAttribute(

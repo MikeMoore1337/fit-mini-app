@@ -86,6 +86,7 @@ export function CoachInvites({
     <Card
       title="Мой тренер"
       description="Подключение происходит только после того, как вы проверите имя и подтвердите приглашение."
+      collapsible={false}
     >
       <div className="metric top-gap">
         <span>Текущий тренер</span>
