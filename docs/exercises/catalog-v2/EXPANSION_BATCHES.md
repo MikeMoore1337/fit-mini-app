@@ -61,6 +61,19 @@ Plate-loaded vs selectorized context, Smith, unilateral, quads/hamstrings/glutes
 
 ## Task 120D — remaining coverage + search hardening
 
+**Финальный статус 31.08.2026:** выполнено. Добавлены шесть canonical items,
+`high-to-low-cable-fly` намеренно объединён с `cable-fly` как направление/alias,
+`chest-supported-dumbbell-row` уже закрыт Task 120B. Legacy
+`kettlebell-goblet-squat` сохранён для истории и направляет search consumers на
+`goblet-squat`. Все обязательные media mismatches исправлены; дополнительно validator
+обнаружил и закрыл неверный shared visual `wall-sit`/`bodyweight-squat`.
+
+Search использует общий NFKC/`ё -> е`/punctuation/token contract, явный relevance
+ranking и canonical grouping в каталоге и ProgramBuilder. Быстрый deterministic
+validator проверяет 182 stored / 181 surfaced canonical records, таксономии, aliases,
+redirect, guide content, provenance, 347 media items, 419 файлов/derivatives, hashes и
+отсутствие cross-canonical exact media duplicates.
+
 ### Must: content/data corrections
 
 1. Merge decision `goblet-squat` + `kettlebell-goblet-squat` с history-safe compatibility.
@@ -91,6 +104,9 @@ Plate-loaded vs selectorized context, Smith, unilateral, quads/hamstrings/glutes
 ### Optional/deferred
 
 Arm ergometer, rare specialty machines, cosmetic grip/stance variations, manufacturer-specific machines and separate canonical items for every independent-arm mode. Они не блокируют matrix после must/should decisions.
+
+Финальный статус этих optional-пунктов: `deferred optional`; конкретного пользовательского
+coverage blocker для отдельного canonical item не обнаружено.
 
 ## Общие запреты
 

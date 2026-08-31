@@ -27,12 +27,16 @@ from fitminiapp_api.schemas.program import (
 )
 from fitminiapp_api.services.exercise_catalog import (
     _effective_exercise_id,
+    _source_exercise_slug,
     create_exercise,
     delete_exercise_for_user,
     list_exercises,
     update_exercise_for_user,
 )
-from fitminiapp_api.services.exercise_catalog_metadata import exercise_catalog_metadata
+from fitminiapp_api.services.exercise_catalog_metadata import (
+    CANONICAL_EXERCISE_REDIRECTS,
+    exercise_catalog_metadata,
+)
 from fitminiapp_api.services.exercise_domain import (
     alternative_payloads_by_exercise_id,
     exercise_equipment_payload,
@@ -95,11 +99,17 @@ def _serialize_exercise(
     guide = get_exercise_guide(exercise, alternatives=alternatives)
     muscles = exercise_muscle_payload(exercise)
     equipment = exercise_equipment_payload(exercise)
-    catalog_metadata = exercise_catalog_metadata(exercise.slug)
+    source_slug = _source_exercise_slug(exercise)
+    redirected_slug = CANONICAL_EXERCISE_REDIRECTS.get(source_slug)
+    catalog_metadata = exercise_catalog_metadata(redirected_slug or source_slug)
+    canonical_slug = redirected_slug
+    if exercise.source_exercise_id is not None:
+        canonical_slug = canonical_slug or source_slug
     return {
         "id": _effective_exercise_id(exercise),
         "edit_target_id": exercise.id,
         "slug": exercise.slug,
+        "canonical_slug": canonical_slug,
         "title": exercise.title,
         "primary_muscle": exercise.primary_muscle,
         "equipment": exercise.equipment,

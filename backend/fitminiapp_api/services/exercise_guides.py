@@ -31,6 +31,20 @@ GENERATED_CARDIO_SLUGS = {
     "ski-erg",
 }
 
+YFC_GENERATED_120D_SLUGS = frozenset(
+    {
+        "bodyweight-glute-bridge",
+        "dead-hang",
+        "pendlay-row",
+        "weighted-dip",
+        "single-leg-calf-raise",
+        "hollow-hold",
+        "belt-squat",
+        "wall-sit",
+    }
+)
+YFC_SINGLE_IMAGE_SLUGS = frozenset(GENERATED_CARDIO_SLUGS) | YFC_GENERATED_120D_SLUGS
+
 YFC_ORIGINAL_VECTOR_SLUGS = frozenset(UPPER_BODY_MACHINE_SLUGS + LOWER_BODY_MACHINE_SLUGS)
 
 
@@ -405,6 +419,26 @@ PROFILES = {
         "mistakes": ["Наклон корпуса", "Плечи у ушей", "Слишком длинные неустойчивые шаги"],
         "secondary": ["Предплечья", "Трапеции", "Кор", "Ягодицы"],
     },
+    "wrist": {
+        "steps": [
+            "Зафиксируй предплечья на устойчивой опоре, оставив кисти свободными.",
+            "Перемещай гриф только в запястьях без движения локтей.",
+            "Вернись в исходное положение медленно, сохраняя хват.",
+        ],
+        "breathing": "Выдох в рабочей фазе, вдох при контролируемом возврате.",
+        "mistakes": ["Движение локтями", "Рывок грифом", "Слишком тяжёлый вес"],
+        "secondary": ["Хват"],
+    },
+    "grip_static": {
+        "steps": [
+            "Создай устойчивый хват и убери ноги с опоры без раскачивания.",
+            "Удерживай корпус спокойно и продолжай ровно дышать.",
+            "Верни ноги на опору до полной потери хвата.",
+        ],
+        "breathing": "Дыши спокойно и не задерживай дыхание.",
+        "mistakes": ["Раскачивание", "Задержка дыхания", "Неконтролируемое завершение"],
+        "secondary": ["Предплечья", "Спина", "Плечи", "Кор"],
+    },
 }
 
 
@@ -478,6 +512,7 @@ PROFILE_SLUGS = {
         "hack-squat",
         "smith-squat",
         "goblet-squat",
+        "bodyweight-squat",
         "belt-squat",
         "leg-press",
         "sissy-squat",
@@ -512,6 +547,7 @@ PROFILE_SLUGS = {
         "hip-thrust",
         "single-leg-hip-thrust",
         "barbell-glute-bridge",
+        "bodyweight-glute-bridge",
         "machine-hip-thrust",
     },
     "shoulder_press": {
@@ -547,6 +583,8 @@ PROFILE_SLUGS = {
         "spider-curl",
         "machine-biceps-curl",
     },
+    "wrist": {"barbell-wrist-curl", "barbell-wrist-extension"},
+    "grip_static": {"dead-hang"},
     "triceps": {
         "skull-crusher",
         "rope-pushdown",
@@ -579,7 +617,7 @@ PROFILE_SLUGS = {
     "carry": {"farmer-walk", "suitcase-carry"},
     "running": {"outdoor-run", "treadmill-run"},
     "walking": {"outdoor-walk", "treadmill-walk"},
-    "cycling": {"outdoor-cycling", "stationary-bike"},
+    "cycling": {"outdoor-cycling", "stationary-bike", "recumbent-bike"},
     "elliptical": {"elliptical-trainer"},
     "stair_climber": {"stair-climber"},
     "swimming": {"swimming"},
@@ -644,7 +682,7 @@ def get_exercise_guide(
         for item in structured_muscles
     ]
 
-    is_yfc_original = slug in GENERATED_CARDIO_SLUGS or slug in YFC_ORIGINAL_VECTOR_SLUGS
+    is_yfc_original = slug in YFC_SINGLE_IMAGE_SLUGS or slug in YFC_ORIGINAL_VECTOR_SLUGS
     metadata = exercise.guide_metadata
     source_name = (
         metadata.source_name

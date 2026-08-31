@@ -29,17 +29,23 @@ ExerciseMetricType = Literal["strength", "cardio"]
 ExerciseMovementPattern = Literal[
     "arm_curl",
     "calf",
+    "cardio_row",
+    "chest_fly",
     "chest_press",
+    "cycling",
     "glute",
+    "grip",
     "hinge",
     "leg_isolation",
     "lunge",
     "pullover",
     "row",
+    "running",
     "shoulder_press",
     "squat",
     "triceps",
     "vertical_pull",
+    "wrist",
 ]
 ExerciseMachineVariantTag = Literal[
     "selectorized",
@@ -514,6 +520,7 @@ class ExerciseCatalogItem(BaseModel):
     difficulty_level: Literal["beginner", "intermediate", "advanced"]
     edit_target_id: int | None = None
     slug: str | None = None
+    canonical_slug: str | None = None
     is_custom: bool = False
     is_personalized: bool = False
     created_by_user_id: int | None = None

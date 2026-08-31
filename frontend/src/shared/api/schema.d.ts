@@ -4485,7 +4485,7 @@ export interface components {
             /** Aliases */
             aliases?: string[];
             /** Movement Pattern */
-            movement_pattern?: ("arm_curl" | "calf" | "chest_press" | "glute" | "hinge" | "leg_isolation" | "lunge" | "pullover" | "row" | "shoulder_press" | "squat" | "triceps" | "vertical_pull") | null;
+            movement_pattern?: ("arm_curl" | "calf" | "cardio_row" | "chest_fly" | "chest_press" | "cycling" | "glute" | "grip" | "hinge" | "leg_isolation" | "lunge" | "pullover" | "row" | "running" | "shoulder_press" | "squat" | "triceps" | "vertical_pull" | "wrist") | null;
             /** Machine Variant Tags */
             machine_variant_tags?: ("selectorized" | "plate_loaded" | "lever" | "independent" | "converging" | "diverging" | "smith")[];
             /** Execution Variant Tags */
@@ -4501,6 +4501,8 @@ export interface components {
             edit_target_id?: number | null;
             /** Slug */
             slug?: string | null;
+            /** Canonical Slug */
+            canonical_slug?: string | null;
             /**
              * Is Custom
              * @default false
