@@ -14,6 +14,7 @@ import {
 } from '../../shared/ui/common';
 import { useModalA11y } from '../../shared/ui/useModalA11y';
 import { ExerciseGuideDialog } from './ExerciseGuideDialog';
+import { matchesExerciseSearch } from './exerciseSearch';
 
 const difficultyLabels: Record<Exercise['difficulty_level'], string> = {
   beginner: 'Начальный',
@@ -124,7 +125,6 @@ export function ExerciseCatalog({
   }, [rows.data]);
 
   const filtered = useMemo(() => {
-    const query = search.trim().toLocaleLowerCase('ru-RU');
     return (rows.data ?? []).filter((item) => {
       const matchesMuscle =
         !muscle ||
@@ -136,15 +136,11 @@ export function ExerciseCatalog({
         (equipment.startsWith('legacy:')
           ? item.equipment === equipment.slice(7)
           : (item.equipment_ids ?? []).includes(equipment));
-      const haystack =
-        `${item.title} ${item.primary_muscle ?? ''} ${item.equipment ?? ''} ${(item.alternatives ?? []).map((alternative) => alternative.title).join(' ')}`.toLocaleLowerCase(
-          'ru-RU',
-        );
       return (
         matchesMuscle &&
         matchesEquipment &&
         (!difficulty || item.difficulty_level === difficulty) &&
-        (!query || haystack.includes(query))
+        matchesExerciseSearch(item, search)
       );
     });
   }, [difficulty, equipment, muscle, rows.data, search]);

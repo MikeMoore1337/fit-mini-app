@@ -32,6 +32,7 @@ from fitminiapp_api.services.exercise_catalog import (
     list_exercises,
     update_exercise_for_user,
 )
+from fitminiapp_api.services.exercise_catalog_metadata import exercise_catalog_metadata
 from fitminiapp_api.services.exercise_domain import (
     alternative_payloads_by_exercise_id,
     exercise_equipment_payload,
@@ -94,6 +95,7 @@ def _serialize_exercise(
     guide = get_exercise_guide(exercise, alternatives=alternatives)
     muscles = exercise_muscle_payload(exercise)
     equipment = exercise_equipment_payload(exercise)
+    catalog_metadata = exercise_catalog_metadata(exercise.slug)
     return {
         "id": _effective_exercise_id(exercise),
         "edit_target_id": exercise.id,
@@ -107,6 +109,14 @@ def _serialize_exercise(
             item["identifier"] for item in muscles if item["role"] == "secondary"
         ],
         "equipment_ids": [item["identifier"] for item in equipment],
+        "aliases": list(catalog_metadata["aliases"]) if catalog_metadata else [],
+        "movement_pattern": catalog_metadata["movement_pattern"] if catalog_metadata else None,
+        "machine_variant_tags": (
+            list(catalog_metadata["machine_variant_tags"]) if catalog_metadata else []
+        ),
+        "execution_variant_tags": (
+            list(catalog_metadata["execution_variant_tags"]) if catalog_metadata else []
+        ),
         "alternatives": alternatives or [],
         "difficulty_level": exercise.difficulty_level,
         "is_custom": exercise.created_by_user_id is not None

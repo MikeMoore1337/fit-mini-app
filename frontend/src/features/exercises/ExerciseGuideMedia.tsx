@@ -47,9 +47,9 @@ export function ExerciseGuideMedia({
     <>
       {hasStrengthPhases && (
         <p className="exercise-guide-images__legend">
-          Фото показывает положение в конце движения. <strong>Фаза усилия</strong> (концентрическая)
-          — преодоление нагрузки. <strong>Фаза возврата</strong> (эксцентрическая) — контролируемое
-          обратное движение.
+          Изображение показывает положение в конце движения. <strong>Фаза усилия</strong>{' '}
+          (концентрическая) — преодоление нагрузки. <strong>Фаза возврата</strong> (эксцентрическая)
+          — контролируемое обратное движение.
         </p>
       )}
       <div className="exercise-guide-images" aria-label="Положения упражнения">

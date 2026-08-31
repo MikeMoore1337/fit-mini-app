@@ -7,8 +7,10 @@ network access, Pillow, a CDN, or an external media API to render exercise guide
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
+import xml.etree.ElementTree as ET
 from functools import lru_cache
 from pathlib import Path
 
@@ -22,6 +24,24 @@ INTERNAL_SOURCE = {
     "url": "/",
     "license": "Иллюстрация создана для приложения",
     "license_url": None,
+}
+VECTOR_SOURCE = {
+    "source_kind": "yfc_original",
+    "name": "Your Fitness Coach",
+    "url": "/",
+    "source_revision_or_retrieved_at": "2026-08-31",
+    "license": "Иллюстрация создана для приложения",
+    "license_url": None,
+    "license_url_or_local_notice": "backend/assets/exercise-guides/NOTICE.md",
+    "author_or_generator_record": "scripts/build_upper_body_machine_guide_assets.py@Task-120B",
+    "reviewer": "fitness-domain-reviewer / Task 120B",
+    "reviewed_at": "2026-08-31",
+    "commercial_use_verified": True,
+    "redistribution_verified": True,
+    "modification_verified": True,
+    "semantic_identity_verified": True,
+    "setup_verified": True,
+    "key_positions_verified": True,
 }
 PHASES = {
     "concentric_end": "Фаза усилия",
@@ -126,10 +146,20 @@ ECCENTRIC_END_IN_START_IMAGE_SLUGS = {
     "low-to-high-cable-fly",
     "machine-biceps-curl",
     "machine-chest-press",
+    "machine-incline-chest-press",
+    "independent-lever-chest-press",
+    "machine-decline-chest-press",
     "machine-dip",
     "machine-lateral-raise",
     "machine-row",
+    "lever-high-row",
+    "lever-low-row",
+    "independent-lever-lat-pulldown",
+    "machine-pullover",
+    "chest-supported-dumbbell-row",
     "machine-shoulder-press",
+    "independent-lever-shoulder-press",
+    "machine-triceps-extension",
     "meadows-row",
     "one-arm-dumbbell-row",
     "pendlay-row",
@@ -212,16 +242,21 @@ def phase_ids_for_slug(slug: str) -> tuple[str, str]:
 
 @lru_cache(maxsize=1)
 def catalog_definition() -> tuple[
-    dict[str, list[tuple[str, str]]], set[str], dict[str, str | None]
+    dict[str, list[tuple[str, str]]],
+    set[str],
+    dict[str, str | None],
+    dict[str, dict[str, str]],
 ]:
     if str(BACKEND_DIR) not in sys.path:
         sys.path.insert(0, str(BACKEND_DIR))
 
+    from fitminiapp_api.services.exercise_catalog_metadata import MEDIA_ALT_BY_PHASE
     from fitminiapp_api.services.exercise_guides import (
         GENERATED_CARDIO_SLUGS,
         SOURCE_LICENSE,
         SOURCE_NAME,
         SOURCE_URL,
+        YFC_ORIGINAL_VECTOR_SLUGS,
     )
     from sync_exercise_guide_assets import SOURCE_EXERCISES
 
@@ -245,9 +280,10 @@ def catalog_definition() -> tuple[
         | set(SPECIAL_PHASES_BY_SLUG)
     )
     source_slugs = set(SOURCE_EXERCISES)
-    if reviewed_slugs != source_slugs:
-        missing = sorted(source_slugs - reviewed_slugs)
-        unexpected = sorted(reviewed_slugs - source_slugs)
+    expected_reviewed_slugs = source_slugs | set(YFC_ORIGINAL_VECTOR_SLUGS)
+    if reviewed_slugs != expected_reviewed_slugs:
+        missing = sorted(expected_reviewed_slugs - reviewed_slugs)
+        unexpected = sorted(reviewed_slugs - expected_reviewed_slugs)
         raise ValueError(
             "Exercise phase mapping mismatch "
             f"(missing={missing or 'none'}, unexpected={unexpected or 'none'})"
@@ -263,6 +299,15 @@ def catalog_definition() -> tuple[
         if {start_phase, active_phase} == {"concentric_end", "eccentric_end"}:
             files.sort(key=lambda item: item[1] != "concentric_end")
         result[slug] = files
+    for slug in YFC_ORIGINAL_VECTOR_SLUGS:
+        start_phase, active_phase = phase_ids_for_slug(slug)
+        files = [
+            (f"{slug}-start.svg", start_phase),
+            (f"{slug}-active.svg", active_phase),
+        ]
+        if {start_phase, active_phase} == {"concentric_end", "eccentric_end"}:
+            files.sort(key=lambda item: item[1] != "concentric_end")
+        result[slug] = files
     result.update(
         {slug: [(f"{slug}-technique.jpg", "technique")] for slug in GENERATED_CARDIO_SLUGS}
     )
@@ -272,13 +317,13 @@ def catalog_definition() -> tuple[
         "license": SOURCE_LICENSE,
         "license_url": SOURCE_LICENSE_URL,
     }
-    return result, GENERATED_CARDIO_SLUGS, upstream_source
+    return result, GENERATED_CARDIO_SLUGS, upstream_source, MEDIA_ALT_BY_PHASE
 
 
 def build_manifest(asset_dir: Path) -> dict:
-    expected, generated_cardio_slugs, upstream_source = catalog_definition()
+    expected, generated_cardio_slugs, upstream_source, media_alt_by_phase = catalog_definition()
     expected_names = {name for files in expected.values() for name, _ in files}
-    actual_names = {path.name for path in asset_dir.glob("*.jpg")}
+    actual_names = {path.name for pattern in ("*.jpg", "*.svg") for path in asset_dir.glob(pattern)}
     missing = sorted(expected_names - actual_names)
     unexpected = sorted(actual_names - expected_names)
     if missing or unexpected:
@@ -291,26 +336,40 @@ def build_manifest(asset_dir: Path) -> dict:
 
     exercises = {}
     for slug in sorted(expected):
-        source = INTERNAL_SOURCE if slug in generated_cardio_slugs else upstream_source
+        source = (
+            INTERNAL_SOURCE
+            if slug in generated_cardio_slugs
+            else VECTOR_SOURCE
+            if slug in media_alt_by_phase
+            else upstream_source
+        )
         media = []
         for sort_order, (filename, phase_id) in enumerate(expected[slug]):
             path = asset_dir / filename
-            with Image.open(path) as image:
-                width, height = image.size
-                image.verify()
-            media.append(
-                {
-                    "type": "image",
-                    "path": filename,
-                    "poster_path": filename,
-                    "phase_id": phase_id,
-                    "phase": PHASES[phase_id],
-                    "width": width,
-                    "height": height,
-                    "byte_size": path.stat().st_size,
-                    "sort_order": sort_order,
-                }
-            )
+            if path.suffix == ".svg":
+                root = ET.parse(path).getroot()
+                width = int(root.attrib["width"])
+                height = int(root.attrib["height"])
+            else:
+                with Image.open(path) as image:
+                    width, height = image.size
+                    image.verify()
+            media_item = {
+                "type": "image",
+                "path": filename,
+                "poster_path": filename,
+                "phase_id": phase_id,
+                "phase": PHASES[phase_id],
+                "width": width,
+                "height": height,
+                "byte_size": path.stat().st_size,
+                "sort_order": sort_order,
+            }
+            if slug in media_alt_by_phase:
+                media_item["asset_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+            if alt := media_alt_by_phase.get(slug, {}).get(phase_id):
+                media_item["alt"] = alt
+            media.append(media_item)
         exercises[slug] = {"source": source, "media": media}
 
     return {

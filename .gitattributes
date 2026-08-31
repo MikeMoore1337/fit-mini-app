@@ -2,3 +2,6 @@
 
 # Container entrypoints must remain executable POSIX shell text on Windows clones.
 *.sh text eol=lf
+
+# Generated exercise-guide vectors must hash identically on every platform.
+/backend/assets/exercise-guides/*.svg text eol=lf
