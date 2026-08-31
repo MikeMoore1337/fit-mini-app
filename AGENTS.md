@@ -370,7 +370,12 @@ tracked logical commit, completed implementation/review/QA/final verification, z
 scoped worktree and no mandatory owner/human/visual gate. The agent must monitor required check
 `checks`, exact merged-dev push CI, post-merge CI and deployment to terminal success. The narrow
 deployed-sync GitHub App then fast-forwards `dev` to the exact successful current `master`; ordinary
-direct user/PAT push remains forbidden. Any failed gate stops the backlog sequence fail-closed.
+direct user/PAT push remains forbidden. После exact ref sync normal post-deploy closeout без нового
+owner prompt выполняет controller `finish` из canonical `dev` worktree, безопасный cleanup exact
+matching clean task worktree и merged local branch, archive task и rebuild/check backlog manifests.
+Dirty/interrupted/unique/ambiguous state, divergence refs или archive/check error останавливают
+closeout fail-closed без `--force` и с сохранением данных. Any failed gate stops the backlog sequence
+fail-closed.
 
 Any exceptional operation that bypasses this path—history rewrite, direct/force push, manual
 production command, infrastructure recovery or deployment of a SHA other than the current merged
@@ -411,6 +416,9 @@ Before declaring tracked backlog implementation complete:
 - confirm every new or changed `MEDIUM/LOW` is synchronized in
   `codex-backlog/bugs/FINDINGS.md` and cite its ID/status in the final report;
 - create the task's one logical commit only after successful applicable verification;
+- after a successful normal production deploy and exact deployed `master -> dev` sync, finish the
+  controller lease, automatically clean only the exact safe task worktree/local branch, archive the
+  task and validate backlog manifests without another generic owner confirmation;
 - do not start the next task.
 
 For backlog tasks, follow the current `TASK_EXECUTION_LIFECYCLE.md` final-report contract.

@@ -1,6 +1,6 @@
 # Task-ветки, worktree и сериализованная интеграция в `dev`
 
-Статус ADR: **принято для repository contract; live enforcement ожидает owner checkpoint**.
+Статус ADR: **принято и действует в repository contract и live GitHub enforcement**.
 
 ## Контекст и решение
 
@@ -69,9 +69,13 @@ file + atomic replace под глобальным `state.lock`. Повреждё
 обязательное состояние являются blocker; controller не удаляет их автоматически.
 
 Task lease содержит task ID/path, branch, абсолютный worktree path, base SHA, mode, timestamps,
-lifecycle state и session label без secrets. `finish` никогда не удаляет branch/worktree: он только
-завершает lease после exact merge SHA и terminal successful `dev` push-CI. Cleanup выполняется лишь
-после отдельного owner confirmation и повторной проверки dirty/unique state.
+lifecycle state и session label без secrets. После terminal successful production deploy и exact
+deployed `master -> dev` sync команда `finish` запускается из canonical `dev` worktree. Она
+автоматически удаляет только exact matching clean task worktree и локальную task branch, уже
+содержащуюся в synchronized `origin/dev`, обычными `git worktree remove` и `git branch -d` без
+`--force`. Dirty state, Git operation, unique commits, duplicate/mismatched branch/worktree,
+divergence refs или запуск из удаляемого worktree останавливают closeout с точным blocker; lease и
+сохранившиеся данные не очищаются.
 
 ## Машинно проверяемые task metadata
 
@@ -114,7 +118,7 @@ python scripts/task_session.py enqueue-integration 119 --pr 123
 python scripts/task_session.py prepare-integration 119
 python scripts/task_session.py withdraw-integration 119 --reason "blocking review fix"
 python scripts/task_session.py complete-integration 119 --merge-sha <exact-dev-merge-sha>
-python scripts/task_session.py finish 119
+python scripts/task_session.py --repo <canonical-dev-worktree> finish 119
 ```
 
 `start` печатает абсолютный worktree, branch/base SHA, canonical task path, metadata, запреты и
@@ -134,7 +138,14 @@ recovery command. Task-файл не копируется в worktree: owner-loc
 7. `prepare-integration` выдаёт eligibility только queue head при current `dev` и exact successful
    checks; создаёт global integration lease.
 8. Merge выполняется ровно один. Controller ждёт exact merge SHA и successful push-CI `dev`.
-9. `complete-integration` открывает следующего candidate. `finish` освобождает task lease без cleanup.
+9. `complete-integration` открывает следующего candidate, но сохраняет task lease до production
+   closeout.
+10. После terminal successful deploy и exact deployed `master -> dev` sync выполнить `git fetch
+    --prune origin`, затем из canonical `dev` worktree запустить `finish`. Controller автоматически
+    удалит только проверенные clean task worktree и merged local branch.
+11. Без отдельного owner prompt выполнить `scripts/archive_backlog_task.py archive`, затем
+    `scripts/archive_backlog_task.py check` и только после успешной проверки сформировать terminal
+    final report.
 
 При release lease/open `dev -> master` PR task PR могут оставаться open/draft, но merge и branch
 update в `dev` запрещены.
@@ -210,8 +221,8 @@ branch delete или force-push.
 - dirty/index/Git operation → `DIRTY_NEEDS_OWNER`;
 - unique commits → `RECOVERY_ANCHOR`;
 - branch/worktree без lease или несколько совпадений → `RECOVERY_REQUIRED`;
-- detached clean state без unique commits → потенциальный `SAFE_TO_REMOVE`, но удаление всё равно
-  требует owner confirmation;
+- detached clean state без active exact task lease → потенциальный `SAFE_TO_REMOVE`, но не входит в
+  automatic `finish` и требует отдельной recovery-классификации;
 - corrupted/stale lease/lock → blocker с точным path.
 
 Main `dev` ahead/behind/dirty блокирует `start`. Candidate после чужого merge становится stale и
