@@ -8,7 +8,6 @@ export type AppNavigationIconName =
   | 'more'
   | 'catalog'
   | 'profile'
-  | 'knowledge'
   | 'coach'
   | 'admin'
   | 'logout'
@@ -22,7 +21,6 @@ const navigationIcons: Record<AppNavigationIconName, IconName> = {
   more: 'nav-more',
   catalog: 'nav-exercise-catalog',
   profile: 'nav-profile',
-  knowledge: 'nav-knowledge',
   coach: 'nav-coach',
   admin: 'nav-admin',
   logout: 'logout',
