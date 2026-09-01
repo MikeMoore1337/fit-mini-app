@@ -213,8 +213,9 @@ export function ProfileForm() {
   return (
     <>
       <Card
-        id="profile-personal"
         className="profile-primary-card"
+        family="neutral"
+        id="profile-personal"
         title={
           <>
             <Icon name="nav-profile" size={20} /> Личные данные и фитнес-профиль

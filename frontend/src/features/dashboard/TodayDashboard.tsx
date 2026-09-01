@@ -25,7 +25,7 @@ import {
 } from '../workouts/activeWorkoutQueue';
 import { WorkoutAdaptation } from '../workouts/WorkoutAdaptation';
 import { TodayWorkout } from '../workouts/TodayWorkout';
-import { Badge, Button, SemanticArtwork, Skeleton } from '../../shared/ui/common';
+import { Badge, Button, SemanticArtwork, SemanticCard, Skeleton } from '../../shared/ui/common';
 import { Icon } from '../../shared/ui/Icon';
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { CardioQuickLog } from '../cardio/CardioLogging';
@@ -217,56 +217,43 @@ function NutritionSummary({ date }: { date: string }) {
     queryFn: () => api<FoodDiaryDay>(`/api/v1/nutrition/diary?diary_date=${date}`),
   });
 
-  return (
-    <section
-      className="today-panel today-summary-card today-summary-card--nutrition today-nutrition"
-      aria-labelledby="today-nutrition-title"
-    >
-      {diary.isLoading ? (
-        <>
-          <h2 className="sr-only" id="today-nutrition-title">
-            Питание
-          </h2>
-          <div className="today-summary-skeleton" aria-label="Загружаем питание" role="status">
-            <Skeleton height="48px" width="100%" />
-          </div>
-        </>
-      ) : diary.error || !diary.data ? (
-        <>
-          <h2 className="sr-only" id="today-nutrition-title">
-            Питание
-          </h2>
-          <div className="today-inline-state" role="alert">
-            <strong>Сводка питания временно недоступна</strong>
-            <button className="today-text-link" type="button" onClick={() => void diary.refetch()}>
-              Повторить
-            </button>
-          </div>
-        </>
-      ) : (
-        <div className="today-summary-card__row">
-          <span className="today-summary-card__icon" aria-hidden="true">
-            <Icon name="nav-nutrition" size={20} />
-          </span>
-          <div className="today-summary-card__main">
-            <h2 id="today-nutrition-title">Питание</h2>
-            <span>
-              {diary.data.meals.some((meal) => meal.entries.length > 0)
-                ? diary.data.targets
-                  ? `${formatAmount(diary.data.totals.energy_kcal)} из ${formatAmount(diary.data.targets.energy_kcal)} ккал · белок ${formatAmount(diary.data.totals.protein_g)} г`
-                  : `${formatAmount(diary.data.totals.energy_kcal)} ккал записано`
-                : 'Записей за день пока нет'}
-            </span>
-          </div>
-          <AppLink
-            className="today-summary-card__action"
-            to={`/app?section=nutrition&date=${date}`}
-          >
-            Добавить
-          </AppLink>
+  if (diary.isLoading) {
+    return (
+      <section className="today-panel today-summary-card" aria-label="Загружаем питание">
+        <div className="today-summary-skeleton" role="status">
+          <Skeleton height="48px" width="100%" />
         </div>
-      )}
-    </section>
+      </section>
+    );
+  }
+
+  if (diary.error || !diary.data) {
+    return (
+      <section className="today-panel today-inline-state" role="alert">
+        <strong>Сводка питания временно недоступна</strong>
+        <button className="today-text-link" type="button" onClick={() => void diary.refetch()}>
+          Повторить
+        </button>
+      </section>
+    );
+  }
+
+  const summary = diary.data.meals.some((meal) => meal.entries.length > 0)
+    ? diary.data.targets
+      ? `${formatAmount(diary.data.totals.energy_kcal)} из ${formatAmount(diary.data.targets.energy_kcal)} ккал · белок ${formatAmount(diary.data.totals.protein_g)} г`
+      : `${formatAmount(diary.data.totals.energy_kcal)} ккал записано`
+    : 'Записей за день пока нет';
+
+  return (
+    <SemanticCard
+      action={<AppLink to={`/app?section=nutrition&date=${date}`}>Добавить</AppLink>}
+      className="today-panel today-summary-card today-summary-card--nutrition today-nutrition"
+      family="nutrition"
+      icon="nav-nutrition"
+      summary={summary}
+      title="Питание"
+      variant="action"
+    />
   );
 }
 
@@ -300,24 +287,19 @@ function ProgressSummaryPanel({ summary }: { summary: ReturnType<typeof useProgr
 
   return (
     <section className="today-progress-grid" aria-label="Главное о прогрессе">
-      <article className="today-panel today-summary-card today-summary-card--progress">
-        <div className="today-summary-card__row">
-          <span className="today-summary-card__icon" aria-hidden="true">
-            <Icon name="nav-progress" size={20} />
-          </span>
-          <div className="today-summary-card__main">
-            <h2>Прогресс</h2>
-            <span>
-              {progressSignals.length > 0
-                ? progressSignals.join(' · ')
-                : 'Появится после первых тренировок и замеров'}
-            </span>
-          </div>
-          <AppLink className="today-summary-card__action" to="/app?section=progress">
-            Открыть
-          </AppLink>
-        </div>
-      </article>
+      <SemanticCard
+        action={<AppLink to="/app?section=progress">Открыть</AppLink>}
+        className="today-panel today-summary-card today-summary-card--progress"
+        family="progress"
+        icon="nav-progress"
+        summary={
+          progressSignals.length > 0
+            ? progressSignals.join(' · ')
+            : 'Появится после первых тренировок и замеров'
+        }
+        title="Прогресс"
+        variant="action"
+      />
     </section>
   );
 }
@@ -849,7 +831,9 @@ export function TodayDashboard() {
 
       <div className="today-dashboard__overview">
         <section
-          className={`today-workout-spotlight${noTodayWorkout ? ' today-workout-spotlight--rest-day' : ''}`}
+          className={`today-workout-spotlight semantic-card semantic-card--action semantic-card--training${noTodayWorkout ? ' today-workout-spotlight--rest-day' : ''}`}
+          data-card-variant="action"
+          data-semantic-family="training"
           aria-labelledby="today-workout-title"
         >
           <span className="today-workout-spotlight__label">Тренировка</span>

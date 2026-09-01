@@ -135,7 +135,9 @@ function DaySummary({ day }: { day: FoodDiaryDay }) {
   });
   return (
     <aside
-      className="nutrition-day-summary"
+      className="nutrition-day-summary semantic-card semantic-card--summary semantic-card--nutrition"
+      data-card-variant="summary"
+      data-semantic-family="nutrition"
       id={motion.elementId}
       aria-labelledby="nutrition-summary-title"
       data-motion-phase={motion.motionPhase}
