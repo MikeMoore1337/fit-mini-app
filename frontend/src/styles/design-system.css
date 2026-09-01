@@ -8,6 +8,7 @@
   --v2-text-primary: #eef0ea;
   --v2-text-secondary: #afb5ad;
   --v2-border: #3a413a;
+  --v2-border-strong: #6d756e;
   --v2-lime: #a8e83a;
   --v2-lime-hover: #98d62f;
   --v2-accent-text: #b9ea72;
@@ -146,6 +147,7 @@
   --v2-text-primary: #161a17;
   --v2-text-secondary: #59605b;
   --v2-border: #c9cdc8;
+  --v2-border-strong: #7f8680;
   --v2-lime: #9ee02b;
   --v2-lime-hover: #8dce20;
   --v2-accent-text: #486414;
