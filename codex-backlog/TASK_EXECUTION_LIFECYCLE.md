@@ -329,12 +329,16 @@ Task является `AUTO_RELEASE_ELIGIBLE`, только если однов�
    sequence fail-closed. Успешный deploy workflow со встроенными rollout/smoke gates является
    достаточным production release evidence; дополнительный live smoke выполнять только если task
    прямо требует его или deploy evidence неоднозначен;
-8. после успешного production deploy узкий owner-approved GitHub App workflow выполняет только
-   fast-forward/sync `dev` к **тому же exact successfully deployed current `origin/master` SHA**.
-   Обычный user/PAT/admin direct push или manual merge запрещён; затем подтвердить равенство refs;
+8. после успешного production deploy job `sync-dev` того же `Release production` workflow выполняет
+   только fast-forward/sync `dev` к **тому же exact successfully deployed current
+   `origin/master` SHA**. Обычный user/PAT/admin direct push или manual merge запрещён; затем
+   подтвердить равенство refs;
 9. pure fast-forward sync `dev` на уже успешно проверенный и задеплоенный exact `master` SHA не
    создаёт нового release candidate. Если такой push автоматически запускает branch CI на `dev`,
-   этот post-sync CI является **информационным, не release gate**: агент не ждёт его terminal result,
+   normal content-equivalent push не создаёт workflow run благодаря empty two-dot tree diff и
+   `paths: ["**"]`. Если нетипичный sync содержит changed files, post-sync CI выполняет только
+   lightweight actor/current-master/successful-deployment provenance, а тяжёлые jobs остаются
+   `skipped`. Он является **информационным, не release gate**: агент не ждёт его terminal result,
    не запускает повторный PR/deploy и не задерживает финализацию уже успешной task. Исключение - если
    sync неожиданно изменил tree/content вместо pure fast-forward; тогда считать это новым изменением,
    остановиться и разобраться до следующей task.

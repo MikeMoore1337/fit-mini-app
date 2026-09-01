@@ -89,7 +89,7 @@ gate, evidence и точки остановки в task-файле.
 - Для `AUTO_RELEASE_ELIGIBLE` task нормальный release path выполняется без дополнительного вопроса
   владельцу и строго последовательно: `task branch -> task PR dev -> exact-head checks -> serial
   merge -> exact merged-dev full push CI -> PR master -> quick provenance/checks -> exact-head merge ->
-  post-merge CI -> automatic production deploy -> terminal success -> narrow App sync dev to exact
+  post-merge CI -> automatic `Release production` deploy -> same-run narrow App sync dev to exact
   deployed master -> automatic controller finish/clean task worktree and merged local branch ->
   archive task -> rebuild/check backlog manifests -> terminal report`. Direct feature push в `dev`
   и direct push в `master` запрещены.
@@ -116,7 +116,10 @@ matching clean task worktree и merged local branch без `--force`, затем
 divergence refs или archive/check error останавливают closeout fail-closed с сохранением данных.
 
 Direct push в `master` запрещён. Direct feature push в `dev` также запрещён; единственное bypass
-исключение — exact deployed `master -> dev` sync узкого owner-approved GitHub App.
+исключение — exact deployed `master -> dev` sync узкого owner-approved GitHub App. Такой push
+при content-equivalent two-dot tree diff не создаёт CI run; при changed files проходит только
+lightweight actor/current-master/successful-deployment provenance. Тяжёлый CI остаётся обязательным
+для любого обычного update `dev` с changed files.
 - Перед началом прочитать корневой `AGENTS.md`, этот файл, lifecycle и только текущую task.
 - Tasks `00-73A`, включая буквенные подзадачи, подтверждены владельцем как завершённые, перенесены в `tasks/done/` и не выполняются повторно.
 - Owner-selected task `103` завершена после owner approval и архивирована.
