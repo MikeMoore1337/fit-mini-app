@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
 import { useAuth } from '../../app/AuthProvider';
 import { api, ApiError } from '../../shared/api/client';
@@ -409,89 +410,91 @@ export function AccountPrivacy() {
         </div>
       </section>
 
-      {deleteDialogOpen && (
-        <div
-          className="modal account-delete-modal"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="account-delete-title"
-          aria-describedby="account-delete-description"
-        >
-          <button
-            className="modal__backdrop"
-            aria-label="Закрыть подтверждение удаления"
-            onClick={() => {
-              if (!deleteMutation.isPending) setDeleteDialogOpen(false);
-            }}
-          />
+      {deleteDialogOpen &&
+        createPortal(
           <div
-            ref={deletePanelRef}
-            className="modal__panel account-delete-modal__panel"
-            tabIndex={-1}
+            className="modal account-delete-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="account-delete-title"
+            aria-describedby="account-delete-description"
           >
             <button
-              type="button"
-              className="account-delete-modal__close"
-              aria-label="Отменить удаление аккаунта"
-              disabled={deleteMutation.isPending}
-              onClick={() => setDeleteDialogOpen(false)}
+              className="modal__backdrop"
+              aria-label="Закрыть подтверждение удаления"
+              onClick={() => {
+                if (!deleteMutation.isPending) setDeleteDialogOpen(false);
+              }}
+            />
+            <div
+              ref={deletePanelRef}
+              className="modal__panel account-delete-modal__panel"
+              tabIndex={-1}
             >
-              <CloseIcon />
-            </button>
-            <span className="eyebrow">Удаление аккаунта</span>
-            <h3 id="account-delete-title">Удалить аккаунт без возможности восстановления?</h3>
-            <p id="account-delete-description">
-              Выход или отключение Google/Telegram не удаляют данные. Это действие удалит сам
-              аккаунт, завершит все сессии и разорвёт связи с тренером.
-            </p>
-            <Field
-              label={`Введите ${DELETE_CONFIRMATION}, чтобы подтвердить`}
-              labelFor="account-delete-confirmation"
-              hint="Фраза вводится русскими заглавными буквами."
-            >
-              <Input
-                id="account-delete-confirmation"
-                value={deletePhrase}
-                autoComplete="off"
-                enterKeyHint="done"
-                disabled={deleteMutation.isPending}
-                onChange={(event) => setDeletePhrase(event.target.value)}
-              />
-            </Field>
-            {deleteMutation.isError && (
-              <p className="account-inline-error" role="alert">
-                {deleteMutation.error instanceof Error
-                  ? deleteMutation.error.message
-                  : 'Удаление не выполнено. Аккаунт и данные сохранены.'}
-              </p>
-            )}
-            <div className="account-delete-modal__actions">
-              <Button
+              <button
                 type="button"
-                variant="secondary"
+                className="account-delete-modal__close"
+                aria-label="Отменить удаление аккаунта"
                 disabled={deleteMutation.isPending}
                 onClick={() => setDeleteDialogOpen(false)}
               >
-                Оставить аккаунт
-              </Button>
-              <Button
-                type="button"
-                variant="danger"
-                disabled={deletePhrase !== DELETE_CONFIRMATION || deleteMutation.isPending}
-                onClick={() => {
-                  trackProductEvent({
-                    name: 'account_delete_started',
-                    surface: productEventSurface(),
-                  });
-                  deleteMutation.mutate();
-                }}
+                <CloseIcon />
+              </button>
+              <span className="eyebrow">Удаление аккаунта</span>
+              <h3 id="account-delete-title">Удалить аккаунт без возможности восстановления?</h3>
+              <p id="account-delete-description">
+                Выход или отключение Google/Telegram не удаляют данные. Это действие удалит сам
+                аккаунт, завершит все сессии и разорвёт связи с тренером.
+              </p>
+              <Field
+                label={`Введите ${DELETE_CONFIRMATION}, чтобы подтвердить`}
+                labelFor="account-delete-confirmation"
+                hint="Фраза вводится русскими заглавными буквами."
               >
-                {deleteMutation.isPending ? 'Удаляем аккаунт…' : 'Удалить аккаунт навсегда'}
-              </Button>
+                <Input
+                  id="account-delete-confirmation"
+                  value={deletePhrase}
+                  autoComplete="off"
+                  enterKeyHint="done"
+                  disabled={deleteMutation.isPending}
+                  onChange={(event) => setDeletePhrase(event.target.value)}
+                />
+              </Field>
+              {deleteMutation.isError && (
+                <p className="account-inline-error" role="alert">
+                  {deleteMutation.error instanceof Error
+                    ? deleteMutation.error.message
+                    : 'Удаление не выполнено. Аккаунт и данные сохранены.'}
+                </p>
+              )}
+              <div className="account-delete-modal__actions">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={deleteMutation.isPending}
+                  onClick={() => setDeleteDialogOpen(false)}
+                >
+                  Оставить аккаунт
+                </Button>
+                <Button
+                  type="button"
+                  variant="danger"
+                  disabled={deletePhrase !== DELETE_CONFIRMATION || deleteMutation.isPending}
+                  onClick={() => {
+                    trackProductEvent({
+                      name: 'account_delete_started',
+                      surface: productEventSurface(),
+                    });
+                    deleteMutation.mutate();
+                  }}
+                >
+                  {deleteMutation.isPending ? 'Удаляем аккаунт…' : 'Удалить аккаунт навсегда'}
+                </Button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </>
   );
 }

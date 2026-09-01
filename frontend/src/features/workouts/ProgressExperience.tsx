@@ -118,7 +118,12 @@ function SectionHeading({
 function SummaryOverview({ summary }: { summary: ProgressSummary }) {
   const weight = summary.body.trends.find((trend) => trend.metric === 'weight_kg');
   return (
-    <section className="progress-summary" aria-labelledby="progress-overview-title">
+    <section
+      className="progress-summary semantic-card semantic-card--summary semantic-card--progress"
+      data-card-variant="summary"
+      data-semantic-family="progress"
+      aria-labelledby="progress-overview-title"
+    >
       <div className="progress-summary__lead">
         <span>Соблюдение плана</span>
         <strong
