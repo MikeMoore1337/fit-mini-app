@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AvatarSettings } from '../../../../src/features/profile/AvatarSettings';
 import { FeedbackProvider } from '../../../../src/shared/ui/FeedbackProvider';
+import { createTelegramMock } from '../../../helpers/telegramMock';
 
 const { api, authState, onClose, updateUser } = vi.hoisted(() => ({
   api: vi.fn(),
@@ -63,6 +64,7 @@ describe('AvatarSettings', () => {
 
   afterEach(() => {
     cleanup();
+    delete window.Telegram;
     vi.unstubAllGlobals();
   });
 
@@ -146,6 +148,34 @@ describe('AvatarSettings', () => {
     fireEvent.keyDown(confirmation, { key: 'Escape' });
 
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Аватар' })).toBeInTheDocument();
+    await waitFor(() => expect(deleteAvatar).toHaveFocus());
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('uses Telegram Back to close only delete confirmation and restore its exact trigger', async () => {
+    const telegram = createTelegramMock();
+    window.Telegram = { WebApp: telegram.webApp };
+    authState.user.custom_avatar = {
+      content_type: 'image/webp',
+      byte_size: 10_000,
+      width: 512,
+      height: 512,
+      updated_at: '2030-01-02T12:00:00',
+    };
+    renderEditor();
+
+    const deleteAvatar = screen.getByRole('button', { name: 'Удалить свой аватар' });
+    fireEvent.click(deleteAvatar);
+    await waitFor(() =>
+      expect(
+        within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Отмена' }),
+      ).toHaveFocus(),
+    );
+
+    telegram.clickBack();
+
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
     expect(screen.getByRole('dialog', { name: 'Аватар' })).toBeInTheDocument();
     await waitFor(() => expect(deleteAvatar).toHaveFocus());
     expect(onClose).not.toHaveBeenCalled();

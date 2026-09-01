@@ -1,7 +1,7 @@
 /// <reference types="node" />
 
 import { expect, test, type Browser, type Page } from '@playwright/test';
-import { installTelegramHarness } from './fixtures/mobile-tma';
+import { installTelegramHarness, TelegramHarness } from './fixtures/mobile-tma';
 import { installPlatformApi, type PlatformApiController } from './fixtures/platform-api';
 
 const avatarFile = {
@@ -136,6 +136,7 @@ test('mocked Telegram Mini App uses the same custom avatar flow', async ({ brows
     safeAreaInset: { top: 16, right: 0, bottom: 20, left: 0 },
     contentSafeAreaInset: { top: 8, right: 0, bottom: 24, left: 0 },
   });
+  const telegram = new TelegramHarness(page);
   const api: PlatformApiController = await installPlatformApi(page, { avatarState: 'default' });
   await openAvatarSettings(page);
 
@@ -144,6 +145,18 @@ test('mocked Telegram Mini App uses the same custom avatar flow', async ({ brows
   await expect(page.getByRole('status')).toContainText('Аватар сохранён');
   await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
   await expect(page.locator('.profile-avatar-setting img')).toHaveAttribute('src', /^blob:/);
+
+  await page.getByRole('button', { name: 'Изменить аватар' }).click();
+  const editor = page.getByRole('dialog', { name: 'Аватар' });
+  const deleteAvatar = editor.getByRole('button', { name: 'Удалить свой аватар' });
+  await deleteAvatar.click();
+  await expect(page.getByRole('alertdialog', { name: 'Удалить свой аватар?' })).toBeVisible();
+  await telegram.clickBack();
+  await expect(page.getByRole('alertdialog', { name: 'Удалить свой аватар?' })).not.toBeAttached();
+  await expect(editor).toBeVisible();
+  await expect(deleteAvatar).toBeFocused();
+  await editor.getByRole('button', { name: 'Закрыть редактор аватара' }).click();
+
   await page.getByRole('button', { name: 'Открыть профиль и настройки' }).click();
   await expect(page.getByRole('dialog', { name: 'Профиль и настройки' })).toBeVisible();
   await expect(page.locator('.app-more-panel__identity img')).toHaveAttribute('src', /^blob:/);

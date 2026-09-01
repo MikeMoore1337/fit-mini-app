@@ -29,6 +29,7 @@ export function AvatarSettings({ open, onClose }: { open: boolean; onClose(): vo
   const deleteButtonRef = useRef<HTMLButtonElement>(null);
   const deleteCancelRef = useRef<HTMLButtonElement>(null);
   const deleteConfirmRef = useRef<HTMLButtonElement>(null);
+  const deleteConfirmationWasOpenRef = useRef(false);
   const previewRef = useRef<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -46,11 +47,20 @@ export function AvatarSettings({ open, onClose }: { open: boolean; onClose(): vo
     if (inputRef.current) inputRef.current.value = '';
   };
 
+  const closeDeleteConfirmation = () => {
+    if (deleting) return;
+    setConfirmDelete(false);
+    setError(null);
+  };
+
   const close = () => {
-    if (blocking || confirmDelete) return;
+    if (blocking) return;
+    if (confirmDelete) {
+      closeDeleteConfirmation();
+      return;
+    }
     clearSelection();
     setError(null);
-    setConfirmDelete(false);
     onClose();
   };
   const panelRef = useModalA11y<HTMLDivElement>(open, close, '.avatar-editor__choose');
@@ -63,7 +73,14 @@ export function AvatarSettings({ open, onClose }: { open: boolean; onClose(): vo
   );
 
   useEffect(() => {
-    if (confirmDelete) deleteCancelRef.current?.focus();
+    if (confirmDelete) {
+      deleteConfirmationWasOpenRef.current = true;
+      deleteCancelRef.current?.focus();
+      return;
+    }
+    if (!deleteConfirmationWasOpenRef.current) return;
+    deleteConfirmationWasOpenRef.current = false;
+    deleteButtonRef.current?.focus();
   }, [confirmDelete]);
 
   if (!open || !user) return null;
@@ -253,8 +270,7 @@ export function AvatarSettings({ open, onClose }: { open: boolean; onClose(): vo
               event.stopPropagation();
               if (event.key === 'Escape' && !deleting) {
                 event.preventDefault();
-                setConfirmDelete(false);
-                window.requestAnimationFrame(() => deleteButtonRef.current?.focus());
+                closeDeleteConfirmation();
                 return;
               }
               if (event.key !== 'Tab') return;
@@ -287,11 +303,7 @@ export function AvatarSettings({ open, onClose }: { open: boolean; onClose(): vo
                 type="button"
                 className="secondary"
                 disabled={deleting}
-                onClick={() => {
-                  setConfirmDelete(false);
-                  setError(null);
-                  window.requestAnimationFrame(() => deleteButtonRef.current?.focus());
-                }}
+                onClick={closeDeleteConfirmation}
               >
                 Отмена
               </button>
