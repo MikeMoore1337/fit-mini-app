@@ -175,7 +175,8 @@ Job `Task provenance` выполняется до aggregate `checks`:
 - normal PR в `master` обязан идти из `dev`; exceptional recovery/hotfix остаётся отдельным
   owner-approved процессом;
 - каждый push SHA в `dev` обязан быть merge result task PR, exact successfully deployed current
-  `master` sync или SHA из owner-controlled `DEV_RECOVERY_APPROVED_SHA`;
+  `master` sync от configured GitHub App или SHA из owner-controlled
+  `DEV_RECOVERY_APPROVED_SHA`;
 - failure/cancel/timeout/stale check не даёт integration eligibility.
 
 Task PR CI не публикует images и не запускает deployment: publish остаётся только для push в
@@ -187,9 +188,11 @@ PR в `master` по-прежнему проходит полный suite.
 
 ## Exact `master -> dev` sync
 
-Выбран `.github/workflows/sync-dev-after-deploy.yml`. Он запускается только после terminal success
-`Deploy production`, повторно проверяет, что workflow SHA равен current `master`, и допускает только
-fast-forward текущего `dev` к этому exact SHA. Любая divergence блокирует sync.
+Sync является последним job `sync-dev` в `.github/workflows/deploy.yml` (`Release production`) и
+имеет dependency от успешного `deploy`. Он повторно проверяет, что workflow SHA равен current
+`master`, и допускает только fast-forward текущего `dev` к этому exact SHA. При failure deploy,
+смене `master` или divergence sync не выполняется/блокируется, а весь release run не становится
+terminal successful.
 
 Workflow включается только при `ENABLE_DEPLOYED_MASTER_DEV_SYNC=true`. В текущем repository path
 активирован: узкий GitHub App установлен только в этот repository с минимальным permission
@@ -200,7 +203,13 @@ Workflow включается только при `ENABLE_DEPLOYED_MASTER_DEV_SY
 
 Expected App actor хранится как несекретный repository contract в
 `.github/deployed-sync-app.json`. `doctor` сравнивает Ruleset `actor_id` с этим exact ID, а не
-принимает произвольный GitHub App. Кроме локального `origin/dev`, online `doctor` и `start`
+принимает произвольный GitHub App. CI push trigger сохраняет `branches: [dev, master]`, но использует
+`paths: ["**"]`: GitHub вычисляет two-dot tree diff, поэтому обычный task/master update с
+изменёнными файлами запускает полный exact-SHA CI, а content-equivalent fast-forward deployed
+`master -> dev` без changed files не создаёт workflow run. Для нетипичного sync с реальным tree
+diff остаётся fail-closed fallback: provenance требует одновременно actor `${app_slug}[bot]`,
+равенство exact SHA текущему `master` и successful `production` deployment этого SHA; только тогда
+тяжёлая matrix остаётся `skipped`. Кроме локального `origin/dev`, online `doctor` и `start`
 сравнивают live GitHub `dev` SHA; stale tracking ref требует fetch/нормализации до новой task.
 
 ## Live GitHub enforcement

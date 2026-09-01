@@ -31,10 +31,14 @@ queue head. Repository `delete_branch_on_merge` не заменяет owner-safe
 `allow_auto_merge` для task PR не используется: second candidate после первого merge обязан
 обновиться от current `dev` и повторить checks.
 
-После successful production deploy `.github/workflows/sync-dev-after-deploy.yml` fast-forward'ит
-`dev` только на exact текущий deployed `master` SHA. В текущем repository этот path активирован
-owner-approved узким GitHub App и `ENABLE_DEPLOYED_MASTER_DEV_SYNC=true`; broad PAT/admin bypass
-запрещён. Изменение App, Ruleset, variable или secrets остаётся exceptional owner-authorized action.
+После successful production deploy job `sync-dev` того же `.github/workflows/deploy.yml`
+fast-forward'ит `dev` только на exact текущий deployed `master` SHA. В текущем repository этот path
+активирован owner-approved узким GitHub App и `ENABLE_DEPLOYED_MASTER_DEV_SYNC=true`; broad
+PAT/admin bypass запрещён. Content-equivalent служебный push не создаёт CI run: `paths: ["**"]`
+оценивается по two-dot tree diff без changed files. Если нетипичный sync всё же меняет tree,
+fallback запускает только лёгкий CI: exact App actor, current `master` и successful `production`
+deployment проверяются, а тяжёлые jobs остаются `skipped`.
+Изменение App, Ruleset, variable или secrets остаётся exceptional owner-authorized action.
 Подробный ADR/runbook: `docs/task-branch-integration.md`.
 
 После merge участие человека заканчивается:
@@ -47,7 +51,10 @@ owner-approved узким GitHub App и `ENABLE_DEPLOYED_MASTER_DEV_SYNC=true`; 
 4. deployment job получает доступ к `production` environment, повторно проверяет, что SHA остаётся
    текущим `origin/master`, и выполняет rollout;
 5. smoke/observation gates фиксируют успех, а ошибка до commit state автоматически возвращает
-   прежний живой slot.
+   прежний живой slot;
+6. только после успешного deployment job `sync-dev` получает App secrets из того же protected
+   environment и fast-forward'ит `dev`; sync использует `deployment: false`, поэтому не создаёт
+   фиктивную вторую production deployment запись.
 
 У `production` environment не должно быть required reviewers или wait timer: это добавило бы
 ручную стадию после уже одобренного merge. `workflow_dispatch` отсутствует, поэтому normal path не

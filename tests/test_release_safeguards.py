@@ -66,10 +66,12 @@ def test_dev_runs_ci_but_cannot_publish_or_deploy_production() -> None:
     deploy_workflow = (root / ".github" / "workflows" / "deploy.yml").read_text(encoding="utf-8")
 
     assert "branches: [dev, master]" in ci_workflow
+    assert 'paths: ["**"]' in ci_workflow
     assert "branches: [main, master]" not in ci_workflow
     assert ci_workflow.count("github.ref == 'refs/heads/master'") == 2
     assert ci_workflow.count("github.ref == 'refs/heads/dev'") == 1
     assert "Validate exact dev update provenance" in ci_workflow
+    assert "two-dot tree diff" in ci_workflow
     assert "branches: [master]" in deploy_workflow
     assert "branches: [dev" not in deploy_workflow
     assert "workflow_dispatch:" not in deploy_workflow
@@ -110,8 +112,19 @@ def test_release_pr_requires_completed_exact_sha_push_ci_and_serial_execution() 
     assert ci_workflow.count("needs: [release-sequence, task-provenance]") == 7
     assert "task-provenance:" in ci_workflow
     assert ci_workflow.count("github.event.pull_request.head.ref != 'dev'") == 7
+    assert (
+        ci_workflow.count("needs.task-provenance.outputs.dev-update-kind != 'deployed-master-sync'")
+        == 7
+    )
+    assert "deployments: read" in ci_workflow
+    assert '--actor "$GITHUB_ACTOR"' in ci_workflow
+    assert "dev-update-kind: ${{ steps.verify-dev.outputs.kind }}" in ci_workflow
     assert "CANONICAL_RELEASE_PR:" in ci_workflow
-    assert 'if [ "$CANONICAL_RELEASE_PR" = "true" ]; then' in ci_workflow
+    assert "LIGHTWEIGHT_DEV_SYNC:" in ci_workflow
+    assert (
+        'if [ "$CANONICAL_RELEASE_PR" = "true" ] || '
+        '[ "$LIGHTWEIGHT_DEV_SYNC" = "true" ]; then' in ci_workflow
+    )
     assert ci_workflow.count('test "$QUALITY_RESULT" = skipped') == 1
     assert ci_workflow.count('test "$CONTAINERS_RESULT" = skipped') == 1
     assert ci_workflow.count('test "$QUALITY_RESULT" = success') == 1
@@ -186,9 +199,7 @@ def test_one_command_delivery_keeps_owner_prompts_internal() -> None:
 def test_task_pr_dev_provenance_and_deployed_master_sync_contract() -> None:
     root = Path(__file__).resolve().parents[1]
     ci_workflow = (root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
-    sync_workflow = (root / ".github" / "workflows" / "sync-dev-after-deploy.yml").read_text(
-        encoding="utf-8"
-    )
+    release_workflow = (root / ".github" / "workflows" / "deploy.yml").read_text(encoding="utf-8")
     controller = (root / "scripts" / "task_session.py").read_text(encoding="utf-8")
 
     assert "Task provenance" in ci_workflow
@@ -201,16 +212,24 @@ def test_task_pr_dev_provenance_and_deployed_master_sync_contract() -> None:
     assert "Only queue head may integrate" in controller
     assert "Exact-head required check 'checks'" in controller
 
-    assert "workflows: [Deploy production]" in sync_workflow
-    assert "workflow_dispatch:" not in sync_workflow
-    assert "ENABLE_DEPLOYED_MASTER_DEV_SYNC == 'true'" in sync_workflow
+    assert not (root / ".github" / "workflows" / "sync-dev-after-deploy.yml").exists()
+    assert "name: Release production" in release_workflow
+    assert "sync-dev:" in release_workflow
+    assert "needs: deploy" in release_workflow
+    assert "needs.deploy.result == 'success'" in release_workflow
+    assert "workflow_dispatch:" not in release_workflow
+    assert "ENABLE_DEPLOYED_MASTER_DEV_SYNC == 'true'" in release_workflow
     assert (
-        "actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349" in sync_workflow
+        "actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349"
+        in release_workflow
     )
-    assert 'if [ "$master_sha" != "$DEPLOY_SHA" ]; then' in sync_workflow
-    assert 'git merge-base --is-ancestor "$dev_sha" "$DEPLOY_SHA"' in sync_workflow
-    assert 'git push origin "$DEPLOY_SHA:refs/heads/dev"' in sync_workflow
-    assert "force" not in sync_workflow.lower()
+    assert "deployment: false" in release_workflow
+    assert 'if [ "$master_sha" != "$DEPLOY_SHA" ]; then' in release_workflow
+    assert 'git merge-base --is-ancestor "$dev_sha" "$DEPLOY_SHA"' in release_workflow
+    assert 'git push origin "$DEPLOY_SHA:refs/heads/dev"' in release_workflow
+    assert "force" not in release_workflow.lower()
+    assert "expected_sync_actor" in controller
+    assert "has_successful_deployment" in controller
 
 
 def test_task_ci_does_not_publish_or_start_production_deploy() -> None:
