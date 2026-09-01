@@ -374,10 +374,12 @@ hotfix/recovery branch). Direct pushes, force-pushes and
 branch deletion are prohibited by the `master` ruleset. The required post-merge CI run intentionally starts
 `.github/workflows/deploy.yml` through `workflow_run`; the workflow additionally verifies that the
 exact SHA is associated with a merged pull request into `master` and is still the current
-`origin/master` head. A successful PR merge is the release authorization: deployment, backup,
-migrations, blue/green switch, smoke checks and automatic failure rollback continue without a
-separate human approval. The `production` environment must therefore not require reviewers or a wait
-timer. Manual workflow dispatch is not part of the normal release path.
+`origin/master` head. Its final `sync-dev` job runs only after successful deployment and
+fast-forwards `dev` with the narrow GitHub App. A successful PR merge is the release authorization:
+deployment, backup, migrations, blue/green switch, smoke checks, automatic failure rollback and
+exact deployed ref sync continue without a separate human approval. The `production` environment
+must therefore not require reviewers or a wait timer. Manual workflow dispatch is not part of the
+normal release path.
 
 For an `AUTO_RELEASE_ELIGIBLE` task, no additional owner prompt is required for task branch push,
 task PR serial integration, release PR creation, checked exact-head merge or the resulting automatic
@@ -389,7 +391,10 @@ scoped worktree and no mandatory owner/human/visual gate. The agent must monitor
 same-repository `dev -> master` PR checks reuse the terminal successful exact merged-dev full CI and
 run only release-sequence/provenance aggregation; exceptional master PRs still run the full suite. The narrow
 deployed-sync GitHub App then fast-forwards `dev` to the exact successful current `master`; ordinary
-direct user/PAT push remains forbidden. После exact ref sync normal post-deploy closeout без нового
+direct user/PAT push remains forbidden. The resulting App push runs only lightweight
+actor/current-master/successful-deployment provenance if its two-dot tree diff contains changed
+files; a normal content-equivalent ref sync creates no CI run. Full CI remains mandatory for
+ordinary `dev` updates with changed files. После exact ref sync normal post-deploy closeout без нового
 owner prompt выполняет controller `finish` из canonical `dev` worktree, безопасный cleanup exact
 matching clean task worktree и merged local branch, archive task и rebuild/check backlog manifests.
 Dirty/interrupted/unique/ambiguous state, divergence refs или archive/check error останавливают

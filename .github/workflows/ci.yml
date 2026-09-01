@@ -3,6 +3,10 @@ name: CI
 on:
   push:
     branches: [dev, master]
+    # Existing-branch push filters use a two-dot tree diff. A normal task/master update changes
+    # files and still runs full exact-SHA CI; the deployed master -> dev fast-forward normally has
+    # an identical tree and therefore creates no redundant workflow run.
+    paths: ["**"]
   pull_request:
     types: [opened, reopened, ready_for_review, synchronize]
 
@@ -87,6 +91,13 @@ jobs:
     name: Task provenance
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+      deployments: read
+      pull-requests: read
+    outputs:
+      dev-update-kind: ${{ steps.verify-dev.outputs.kind }}
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -106,24 +117,34 @@ jobs:
           validate-pr --event "$GITHUB_EVENT_PATH"
 
       - name: Validate exact dev update provenance
+        id: verify-dev
         if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           APPROVED_RECOVERY_SHA: ${{ vars.DEV_RECOVERY_APPROVED_SHA }}
-        run: >-
-          python scripts/task_session.py
-          --github-repository "$GITHUB_REPOSITORY"
-          verify-dev-provenance --sha "$GITHUB_SHA"
-          --approved-recovery-sha "$APPROVED_RECOVERY_SHA"
+        run: |
+          set -Eeuo pipefail
+          result="$(
+            python scripts/task_session.py \
+              --github-repository "$GITHUB_REPOSITORY" \
+              verify-dev-provenance --sha "$GITHUB_SHA" \
+              --actor "$GITHUB_ACTOR" \
+              --approved-recovery-sha "$APPROVED_RECOVERY_SHA"
+          )"
+          kind="$(jq -er '.kind' <<<"$result")"
+          printf 'kind=%s\n' "$kind" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$result"
 
   quality:
     name: Python quality
     needs: [release-sequence, task-provenance]
     if: >-
-      github.event_name != 'pull_request' ||
-      github.event.pull_request.base.ref != 'master' ||
-      github.event.pull_request.head.ref != 'dev' ||
-      github.event.pull_request.head.repo.full_name != github.repository
+      needs.task-provenance.outputs.dev-update-kind != 'deployed-master-sync' &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.base.ref != 'master' ||
+       github.event.pull_request.head.ref != 'dev' ||
+       github.event.pull_request.head.repo.full_name != github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -158,10 +179,11 @@ jobs:
     name: Frontend
     needs: [release-sequence, task-provenance]
     if: >-
-      github.event_name != 'pull_request' ||
-      github.event.pull_request.base.ref != 'master' ||
-      github.event.pull_request.head.ref != 'dev' ||
-      github.event.pull_request.head.repo.full_name != github.repository
+      needs.task-provenance.outputs.dev-update-kind != 'deployed-master-sync' &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.base.ref != 'master' ||
+       github.event.pull_request.head.ref != 'dev' ||
+       github.event.pull_request.head.repo.full_name != github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -227,10 +249,11 @@ jobs:
     name: Frontend smoke (${{ matrix.shard }}/3)
     needs: [release-sequence, task-provenance]
     if: >-
-      github.event_name != 'pull_request' ||
-      github.event.pull_request.base.ref != 'master' ||
-      github.event.pull_request.head.ref != 'dev' ||
-      github.event.pull_request.head.repo.full_name != github.repository
+      needs.task-provenance.outputs.dev-update-kind != 'deployed-master-sync' &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.base.ref != 'master' ||
+       github.event.pull_request.head.ref != 'dev' ||
+       github.event.pull_request.head.repo.full_name != github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -280,10 +303,11 @@ jobs:
     name: Python tests (${{ matrix.shard }})
     needs: [release-sequence, task-provenance]
     if: >-
-      github.event_name != 'pull_request' ||
-      github.event.pull_request.base.ref != 'master' ||
-      github.event.pull_request.head.ref != 'dev' ||
-      github.event.pull_request.head.repo.full_name != github.repository
+      needs.task-provenance.outputs.dev-update-kind != 'deployed-master-sync' &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.base.ref != 'master' ||
+       github.event.pull_request.head.ref != 'dev' ||
+       github.event.pull_request.head.repo.full_name != github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -383,10 +407,11 @@ jobs:
     name: Migrated PostgreSQL stack
     needs: [release-sequence, task-provenance]
     if: >-
-      github.event_name != 'pull_request' ||
-      github.event.pull_request.base.ref != 'master' ||
-      github.event.pull_request.head.ref != 'dev' ||
-      github.event.pull_request.head.repo.full_name != github.repository
+      needs.task-provenance.outputs.dev-update-kind != 'deployed-master-sync' &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.base.ref != 'master' ||
+       github.event.pull_request.head.ref != 'dev' ||
+       github.event.pull_request.head.repo.full_name != github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -502,10 +527,11 @@ jobs:
     name: Dependency audit
     needs: [release-sequence, task-provenance]
     if: >-
-      github.event_name != 'pull_request' ||
-      github.event.pull_request.base.ref != 'master' ||
-      github.event.pull_request.head.ref != 'dev' ||
-      github.event.pull_request.head.repo.full_name != github.repository
+      needs.task-provenance.outputs.dev-update-kind != 'deployed-master-sync' &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.base.ref != 'master' ||
+       github.event.pull_request.head.ref != 'dev' ||
+       github.event.pull_request.head.repo.full_name != github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -543,10 +569,11 @@ jobs:
     name: Container (${{ matrix.image }})
     needs: [release-sequence, task-provenance]
     if: >-
-      github.event_name != 'pull_request' ||
-      github.event.pull_request.base.ref != 'master' ||
-      github.event.pull_request.head.ref != 'dev' ||
-      github.event.pull_request.head.repo.full_name != github.repository
+      needs.task-provenance.outputs.dev-update-kind != 'deployed-master-sync' &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.base.ref != 'master' ||
+       github.event.pull_request.head.ref != 'dev' ||
+       github.event.pull_request.head.repo.full_name != github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -657,6 +684,7 @@ jobs:
       - name: Verify all CI jobs succeeded
         env:
           CANONICAL_RELEASE_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'master' && github.event.pull_request.head.ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository }}
+          LIGHTWEIGHT_DEV_SYNC: ${{ needs.task-provenance.outputs.dev-update-kind == 'deployed-master-sync' }}
           RELEASE_SEQUENCE_RESULT: ${{ needs.release-sequence.result }}
           TASK_PROVENANCE_RESULT: ${{ needs.task-provenance.result }}
           QUALITY_RESULT: ${{ needs.quality.result }}
@@ -669,7 +697,7 @@ jobs:
         run: |
           test "$RELEASE_SEQUENCE_RESULT" = success
           test "$TASK_PROVENANCE_RESULT" = success
-          if [ "$CANONICAL_RELEASE_PR" = "true" ]; then
+          if [ "$CANONICAL_RELEASE_PR" = "true" ] || [ "$LIGHTWEIGHT_DEV_SYNC" = "true" ]; then
             test "$QUALITY_RESULT" = skipped
             test "$FRONTEND_RESULT" = skipped
             test "$FRONTEND_SMOKE_RESULT" = skipped

@@ -488,6 +488,16 @@ class GitHubClient:
         payload = self.api(f"actions/workflows/{workflow}/runs?head_sha={sha}&per_page=100")
         return list(payload.get("workflow_runs", []))
 
+    def has_successful_deployment(self, sha: str, environment: str) -> bool:
+        deployments = self.api(f"deployments?sha={sha}&environment={environment}&per_page=100")
+        for deployment in deployments:
+            if deployment.get("sha") != sha or deployment.get("environment") != environment:
+                continue
+            statuses = self.api(f"deployments/{deployment['id']}/statuses?per_page=1")
+            if statuses and statuses[0].get("state") == "success":
+                return True
+        return False
+
     def branch_head(self, branch: str) -> str:
         payload = self.api(f"git/ref/heads/{branch}")
         return str(payload["object"]["sha"])
@@ -578,16 +588,27 @@ def validate_task_pull_request_files(
         )
 
 
-def expected_sync_app_id(root: Path) -> int:
+def expected_sync_app_config(root: Path) -> dict[str, Any]:
     path = root / SYNC_APP_CONFIG_PATH
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
         app_id = int(payload["app_id"])
+        app_slug = str(payload["app_slug"])
     except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as error:
         raise TaskSessionError(f"Invalid deployed-sync App config {path}: {error}") from error
     if app_id <= 0:
         raise TaskSessionError(f"Invalid deployed-sync App ID in {path}")
-    return app_id
+    if re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", app_slug) is None:
+        raise TaskSessionError(f"Invalid deployed-sync App slug in {path}")
+    return {"app_id": app_id, "app_slug": app_slug}
+
+
+def expected_sync_app_id(root: Path) -> int:
+    return int(expected_sync_app_config(root)["app_id"])
+
+
+def expected_sync_actor(root: Path) -> str:
+    return f"{expected_sync_app_config(root)['app_slug']}[bot]"
 
 
 def validate_dev_ruleset(
@@ -639,7 +660,9 @@ def classify_dev_provenance(
     sha: str,
     master_sha: str,
     associated_pulls: Sequence[Mapping[str, Any]],
-    deploy_runs: Sequence[Mapping[str, Any]],
+    sync_actor: str = "",
+    expected_actor: str = "",
+    successful_production_deployment: bool = False,
     approved_recovery_sha: str = "",
 ) -> dict[str, Any]:
     for pull_request in associated_pulls:
@@ -656,19 +679,18 @@ def classify_dev_provenance(
             if not title.startswith(f"[Task {task_id}]"):
                 raise TaskSessionError(f"Merged task PR title does not preserve [Task {task_id}]")
             return {"kind": "task-pr-merge", "task_id": task_id, "pr": pull_request.get("number")}
-    if sha == master_sha and any(
-        run.get("head_sha") == sha
-        and run.get("status") == "completed"
-        and run.get("conclusion") == "success"
-        and run.get("event") == "workflow_run"
-        for run in deploy_runs
+    if (
+        sha == master_sha
+        and sync_actor
+        and sync_actor == expected_actor
+        and successful_production_deployment
     ):
         return {"kind": "deployed-master-sync", "sha": sha}
     if approved_recovery_sha and sha == approved_recovery_sha:
         return {"kind": "owner-approved-recovery", "sha": sha}
     raise TaskSessionError(
-        "Unauthorized dev update: expected merged task PR, exact successfully deployed master sync, "
-        "or recorded owner-approved recovery SHA"
+        "Unauthorized dev update: expected merged task PR, exact successfully deployed master sync "
+        "by the configured GitHub App, or recorded owner-approved recovery SHA"
     )
 
 
@@ -803,7 +825,8 @@ class TaskController:
                 release_critical_runs = [
                     item
                     for item in active_runs
-                    if item.get("name") in {"Deploy production", "Sync deployed master to dev"}
+                    if item.get("name")
+                    in {"Release production", "Deploy production", "Sync deployed master to dev"}
                     or item.get("head_branch") in {"dev", "master"}
                 ]
                 if release_critical_runs:
@@ -1630,16 +1653,22 @@ def verify_dev_provenance(
     github: GitHubClient,
     *,
     sha: str,
+    actor: str,
     approved_recovery_sha: str,
 ) -> dict[str, Any]:
     associated = github.api(f"commits/{sha}/pulls")
     master_sha = github.branch_head("master")
-    deploy_runs = github.workflow_runs("deploy.yml", sha)
+    configured_actor = expected_sync_actor(repository.current_worktree)
+    successful_production_deployment = False
+    if sha == master_sha and actor == configured_actor:
+        successful_production_deployment = github.has_successful_deployment(sha, "production")
     return classify_dev_provenance(
         sha=sha,
         master_sha=master_sha,
         associated_pulls=associated,
-        deploy_runs=deploy_runs,
+        sync_actor=actor,
+        expected_actor=configured_actor,
+        successful_production_deployment=successful_production_deployment,
         approved_recovery_sha=approved_recovery_sha,
     )
 
@@ -1783,6 +1812,7 @@ def _parser() -> argparse.ArgumentParser:
 
     provenance = subparsers.add_parser("verify-dev-provenance")
     provenance.add_argument("--sha", required=True)
+    provenance.add_argument("--actor", default="")
     provenance.add_argument("--approved-recovery-sha", default="")
     return parser
 
@@ -1869,6 +1899,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     repository,
                     github,
                     sha=args.sha,
+                    actor=args.actor,
                     approved_recovery_sha=args.approved_recovery_sha,
                 )
             )

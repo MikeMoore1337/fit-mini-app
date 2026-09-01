@@ -117,6 +117,12 @@ class FakeGitHub:
         self.open_prs: list[dict[str, Any]] = []
         self.active_runs: list[dict[str, Any]] = []
         self.ruleset_payload: list[dict[str, Any]] = []
+        self.successful_deployments: set[tuple[str, str]] = set()
+
+    def api(self, endpoint: str) -> Any:
+        if endpoint.startswith("commits/") and endpoint.endswith("/pulls"):
+            return []
+        raise AssertionError(f"Unexpected fake GitHub API endpoint: {endpoint}")
 
     def open_pull_requests(self) -> list[dict[str, Any]]:
         return self.open_prs
@@ -138,6 +144,9 @@ class FakeGitHub:
 
     def workflow_runs(self, workflow: str, sha: str) -> list[dict[str, Any]]:
         return self.runs.get(sha, [])
+
+    def has_successful_deployment(self, sha: str, environment: str) -> bool:
+        return (sha, environment) in self.successful_deployments
 
     def active_workflow_runs(self) -> list[dict[str, Any]]:
         return self.active_runs
@@ -902,7 +911,6 @@ def test_dev_provenance_accepts_task_merge_deployed_sync_and_approved_recovery()
             sha="a" * 40,
             master_sha="b" * 40,
             associated_pulls=[task_merge],
-            deploy_runs=[],
         )["kind"]
         == "task-pr-merge"
     )
@@ -911,14 +919,9 @@ def test_dev_provenance_accepts_task_merge_deployed_sync_and_approved_recovery()
             sha="b" * 40,
             master_sha="b" * 40,
             associated_pulls=[],
-            deploy_runs=[
-                {
-                    "head_sha": "b" * 40,
-                    "status": "completed",
-                    "conclusion": "success",
-                    "event": "workflow_run",
-                }
-            ],
+            sync_actor="test-sync[bot]",
+            expected_actor="test-sync[bot]",
+            successful_production_deployment=True,
         )["kind"]
         == "deployed-master-sync"
     )
@@ -927,7 +930,6 @@ def test_dev_provenance_accepts_task_merge_deployed_sync_and_approved_recovery()
             sha="c" * 40,
             master_sha="b" * 40,
             associated_pulls=[],
-            deploy_runs=[],
             approved_recovery_sha="c" * 40,
         )["kind"]
         == "owner-approved-recovery"
@@ -940,8 +942,44 @@ def test_direct_feature_dev_update_is_not_release_eligible() -> None:
             sha="f" * 40,
             master_sha="a" * 40,
             associated_pulls=[],
-            deploy_runs=[],
         )
+
+
+@pytest.mark.parametrize(
+    ("actor", "deployed"),
+    [("someone-else[bot]", True), ("test-sync[bot]", False), ("", True)],
+)
+def test_deployed_sync_requires_exact_app_actor_and_successful_production_deployment(
+    actor: str, deployed: bool
+) -> None:
+    with pytest.raises(task_session.TaskSessionError, match="Unauthorized dev update"):
+        task_session.classify_dev_provenance(
+            sha="b" * 40,
+            master_sha="b" * 40,
+            associated_pulls=[],
+            sync_actor=actor,
+            expected_actor="test-sync[bot]",
+            successful_production_deployment=deployed,
+        )
+
+
+def test_verify_dev_provenance_uses_repository_app_actor_and_production_deployment(
+    repository: tuple[Path, Any],
+) -> None:
+    _, git_repository = repository
+    sha = git_repository.ref("origin/master")
+    github = FakeGitHub(sha)
+    github.successful_deployments.add((sha, "production"))
+
+    result = task_session.verify_dev_provenance(
+        git_repository,
+        github,
+        sha=sha,
+        actor="test-sync[bot]",
+        approved_recovery_sha="",
+    )
+
+    assert result == {"kind": "deployed-master-sync", "sha": sha}
 
 
 @pytest.mark.parametrize(
