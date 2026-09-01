@@ -514,8 +514,9 @@ export function TrainingPreferencesForm() {
   };
   return (
     <Card
-      id="profile-training-preferences"
       className="training-preferences-card"
+      family="neutral"
+      id="profile-training-preferences"
       title={
         <>
           <Icon name="nav-plan" size={20} /> Тренировочные предпочтения

@@ -286,7 +286,12 @@ export function TemplatesList({
 
   return (
     <>
-      <section className="program-active" aria-labelledby="active-program-title">
+      <section
+        className="program-active semantic-card semantic-card--action semantic-card--training"
+        data-card-variant="action"
+        data-semantic-family="training"
+        aria-labelledby="active-program-title"
+      >
         {templates.isLoading ? (
           <LoadingState label="Загружаем текущую программу…" />
         ) : templates.error ? (
@@ -385,6 +390,7 @@ export function TemplatesList({
       />
       <Card
         defaultOpen={defaultLibraryOpen}
+        family="training"
         id="program-library"
         title="Программы и шаблоны"
         description="Ваши заготовки и готовые варианты для быстрого запуска."

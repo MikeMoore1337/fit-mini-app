@@ -12,6 +12,7 @@ import { useSemanticMotion } from '../../shared/ui/useSemanticMotion';
 import { programProfileReadiness } from '../../features/profile/programReadiness';
 import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
 import '../../styles/pulse-concepts.css';
+import '../../styles/semantic-cards.css';
 
 const NotificationsPanel = lazy(() =>
   import('../../features/account/NotificationsPanel').then((module) => ({
@@ -437,6 +438,7 @@ export default function MiniAppPage() {
                 <Card
                   className="profile-settings-group"
                   defaultOpen={Boolean(inviteToken)}
+                  family="neutral"
                   id="profile-trainer"
                   title={
                     <>
@@ -453,6 +455,7 @@ export default function MiniAppPage() {
                 </Card>
                 <Card
                   className="profile-settings-group"
+                  family="neutral"
                   id="profile-notifications"
                   title={
                     <>
@@ -470,6 +473,7 @@ export default function MiniAppPage() {
                 </Card>
                 <Card
                   className="profile-settings-group profile-settings-group--security"
+                  family="neutral"
                   id="profile-security"
                   title={
                     <>

@@ -1,10 +1,19 @@
-import { useState, type ComponentPropsWithoutRef, type ReactNode } from 'react';
+import { useId, useState, type ComponentPropsWithoutRef, type ReactNode } from 'react';
 import { handleTabKeyDown } from './tabs';
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type BadgeTone = 'neutral' | 'success' | 'warning' | 'danger';
 type SemanticArtworkVariant = 'current-action' | 'data-insight' | 'workout-completion';
+export type SemanticCardFamily = 'training' | 'nutrition' | 'progress' | 'wellbeing' | 'neutral';
+export type SemanticCardVariant = 'summary' | 'action' | 'section';
+
+function semanticCardClassName(
+  family: SemanticCardFamily | undefined,
+  variant: SemanticCardVariant,
+): string {
+  return family ? ` semantic-card semantic-card--${variant} semantic-card--${family}` : '';
+}
 
 export function Button({
   className = '',
@@ -181,6 +190,9 @@ export function Card({
   className = '',
   collapsible = true,
   defaultOpen = false,
+  family,
+  summary,
+  variant = 'section',
 }: {
   id?: string;
   title?: ReactNode;
@@ -192,44 +204,156 @@ export function Card({
   collapsible?: boolean;
   /** Contextual deep links may reveal one disclosure without expanding the rest. */
   defaultOpen?: boolean;
+  /** Shared visual meaning; omitted for dense forms and utility containers. */
+  family?: SemanticCardFamily;
+  /** One key fact that keeps the collapsed state useful. */
+  summary?: ReactNode;
+  variant?: SemanticCardVariant;
 }) {
-  const [disclosureOpen, setDisclosureOpen] = useState(defaultOpen);
   if (collapsible && (title || description)) {
     return (
-      <details
-        className={`card card-disclosure ${className}`.trim()}
+      <ExpandableCard
+        actions={actions}
+        className={className}
+        defaultOpen={defaultOpen}
+        description={description}
+        family={family}
         id={id}
-        onToggle={(event) => setDisclosureOpen(event.currentTarget.open)}
-        open={disclosureOpen}
+        summary={summary}
+        title={title}
+        variant={variant}
       >
-        <summary>
-          <span>
-            {title && <h2>{title}</h2>}
-            {description && <small>{description}</small>}
-          </span>
-          <DisclosureIcon />
-        </summary>
-        <div className="card-disclosure__body">
-          {actions && <div className="card-disclosure__actions">{actions}</div>}
-          {children}
-        </div>
-      </details>
+        {children}
+      </ExpandableCard>
     );
   }
 
+  const semanticClasses = semanticCardClassName(family, variant);
   return (
-    <section className={`card ${className}`.trim()} id={id}>
+    <section
+      className={`card${semanticClasses} ${className}`.trim()}
+      data-card-variant={family ? variant : undefined}
+      data-semantic-family={family}
+      id={id}
+    >
       {(title || description || actions) && (
         <div className="section-head">
           <div>
             {title && <h2>{title}</h2>}
             {description && <p className="muted top-gap">{description}</p>}
+            {summary && <div className="semantic-card__summary">{summary}</div>}
           </div>
           {actions}
         </div>
       )}
       {children}
     </section>
+  );
+}
+
+export function ExpandableCard({
+  actions,
+  children,
+  className = '',
+  defaultOpen = false,
+  description,
+  family,
+  id,
+  summary,
+  title,
+  variant = 'section',
+}: {
+  actions?: ReactNode;
+  children: ReactNode;
+  className?: string;
+  defaultOpen?: boolean;
+  description?: string;
+  family?: SemanticCardFamily;
+  id?: string;
+  summary?: ReactNode;
+  title?: ReactNode;
+  variant?: SemanticCardVariant;
+}) {
+  const generatedId = useId();
+  const [disclosureOpen, setDisclosureOpen] = useState(defaultOpen);
+  const bodyId = `${id ?? `semantic-card-${generatedId}`}-details`;
+  const semanticClasses = semanticCardClassName(family, variant);
+
+  return (
+    <details
+      className={`card card-disclosure${semanticClasses} ${className}`.trim()}
+      data-card-variant={family ? variant : undefined}
+      data-semantic-family={family}
+      id={id}
+      onToggle={(event) => setDisclosureOpen(event.currentTarget.open)}
+      open={disclosureOpen}
+    >
+      <summary
+        aria-controls={bodyId}
+        aria-expanded={disclosureOpen}
+        onClick={(event) => {
+          event.preventDefault();
+          setDisclosureOpen((current) => !current);
+        }}
+      >
+        <span>
+          {title && <h2>{title}</h2>}
+          {summary && <span className="semantic-card__summary">{summary}</span>}
+          {description && <small>{description}</small>}
+        </span>
+        <DisclosureIcon />
+      </summary>
+      <div className="card-disclosure__body" id={bodyId}>
+        {actions && <div className="card-disclosure__actions">{actions}</div>}
+        {children}
+      </div>
+    </details>
+  );
+}
+
+export function SemanticCard({
+  action,
+  children,
+  className = '',
+  eyebrow,
+  family,
+  icon,
+  summary,
+  title,
+  variant = 'summary',
+}: {
+  action?: ReactNode;
+  children?: ReactNode;
+  className?: string;
+  eyebrow?: string;
+  family: SemanticCardFamily;
+  icon?: IconName;
+  summary: ReactNode;
+  title: ReactNode;
+  variant?: SemanticCardVariant;
+}) {
+  const titleId = useId();
+
+  return (
+    <article
+      aria-labelledby={titleId}
+      className={`semantic-card semantic-card--compact semantic-card--${variant} semantic-card--${family} ${className}`.trim()}
+      data-card-variant={variant}
+      data-semantic-family={family}
+    >
+      {icon && (
+        <span aria-hidden="true" className="semantic-card__icon">
+          <Icon name={icon} size={20} />
+        </span>
+      )}
+      <div className="semantic-card__copy">
+        {eyebrow && <span className="semantic-card__eyebrow">{eyebrow}</span>}
+        <h2 id={titleId}>{title}</h2>
+        <div className="semantic-card__summary">{summary}</div>
+      </div>
+      {action && <div className="semantic-card__action">{action}</div>}
+      {children && <div className="semantic-card__body">{children}</div>}
+    </article>
   );
 }
 

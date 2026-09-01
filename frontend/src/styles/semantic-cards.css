@@ -1,0 +1,246 @@
+/* Task 123: one semantic compact/disclosure layer for authenticated YFC surfaces. */
+.semantic-card {
+  --semantic-accent: var(--semantic-neutral-accent);
+  --semantic-ink: var(--semantic-neutral-ink);
+  --semantic-tint: var(--semantic-neutral-tint);
+  --semantic-line: var(--semantic-neutral-line);
+  isolation: isolate;
+  overflow: hidden;
+  min-width: 0;
+  border-color: color-mix(in srgb, var(--semantic-line) 72%, var(--v2-border));
+  background:
+    linear-gradient(132deg, var(--v2-surface) 0 56%, transparent 84%), var(--semantic-tint);
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--semantic-line) 12%, transparent);
+  color: var(--v2-text-primary);
+  transition:
+    border-color var(--motion-state) var(--motion-ease),
+    box-shadow var(--motion-state) var(--motion-ease),
+    transform var(--motion-press) var(--motion-ease);
+}
+
+.semantic-card:not(.nutrition-day-summary) {
+  position: relative;
+}
+
+.semantic-card::before {
+  position: absolute;
+  inset: -42% -12% auto auto;
+  z-index: -1;
+  width: clamp(150px, 28vw, 280px);
+  aspect-ratio: 1;
+  border: 1px solid color-mix(in srgb, var(--semantic-accent) 42%, transparent);
+  border-radius: 50%;
+  background:
+    linear-gradient(
+      112deg,
+      transparent 38%,
+      color-mix(in srgb, var(--semantic-accent) 22%, transparent) 39% 41%,
+      transparent 42% 55%,
+      color-mix(in srgb, var(--semantic-accent) 12%, transparent) 56% 58%,
+      transparent 59%
+    ),
+    radial-gradient(
+      circle,
+      color-mix(in srgb, var(--semantic-accent) 18%, transparent),
+      transparent 64%
+    );
+  box-shadow:
+    0 0 0 24px color-mix(in srgb, var(--semantic-accent) 6%, transparent),
+    0 0 0 52px color-mix(in srgb, var(--semantic-accent) 3%, transparent);
+  content: '';
+  opacity: 0.88;
+  pointer-events: none;
+  transform: rotate(-8deg);
+}
+
+.semantic-card--training {
+  --semantic-accent: var(--semantic-training-accent);
+  --semantic-ink: var(--semantic-training-ink);
+  --semantic-tint: var(--semantic-training-tint);
+  --semantic-line: var(--semantic-training-line);
+}
+
+.semantic-card--nutrition {
+  --semantic-accent: var(--semantic-nutrition-accent);
+  --semantic-ink: var(--semantic-nutrition-ink);
+  --semantic-tint: var(--semantic-nutrition-tint);
+  --semantic-line: var(--semantic-nutrition-line);
+}
+
+.semantic-card--progress {
+  --semantic-accent: var(--semantic-progress-accent);
+  --semantic-ink: var(--semantic-progress-ink);
+  --semantic-tint: var(--semantic-progress-tint);
+  --semantic-line: var(--semantic-progress-line);
+}
+
+.semantic-card--wellbeing {
+  --semantic-accent: var(--semantic-wellbeing-accent);
+  --semantic-ink: var(--semantic-wellbeing-ink);
+  --semantic-tint: var(--semantic-wellbeing-tint);
+  --semantic-line: var(--semantic-wellbeing-line);
+}
+
+.semantic-card--neutral {
+  --semantic-accent: var(--semantic-neutral-accent);
+  --semantic-ink: var(--semantic-neutral-ink);
+  --semantic-tint: var(--semantic-neutral-tint);
+  --semantic-line: var(--semantic-neutral-line);
+}
+
+.semantic-card > :not(.ui-semantic-artwork) {
+  position: relative;
+  z-index: 1;
+}
+
+.semantic-card--compact {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--v2-space-3);
+  padding: var(--v2-space-4);
+  border: 1px solid color-mix(in srgb, var(--semantic-line) 72%, var(--v2-border));
+  border-radius: var(--v2-region-radius);
+}
+
+.semantic-card__icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid color-mix(in srgb, var(--semantic-line) 72%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--semantic-tint) 82%, var(--v2-surface));
+  color: var(--semantic-ink);
+}
+
+.semantic-card__copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.semantic-card__copy h2,
+.semantic-card__copy p,
+.semantic-card__summary {
+  margin: 0;
+}
+
+.semantic-card__copy h2 {
+  color: var(--v2-text-primary);
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.semantic-card__eyebrow {
+  color: var(--semantic-ink);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.semantic-card__summary {
+  color: var(--v2-text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.semantic-card__action {
+  display: flex;
+  align-items: center;
+}
+
+.semantic-card__action > :where(a, button) {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--semantic-line) 72%, var(--v2-border));
+  border-radius: var(--radius-action);
+  background: color-mix(in srgb, var(--v2-surface) 88%, transparent);
+  color: var(--v2-text-primary);
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.semantic-card__body {
+  grid-column: 1 / -1;
+  padding-top: var(--v2-space-3);
+  border-top: 1px solid var(--v2-border);
+}
+
+.semantic-card.card-disclosure > summary {
+  min-height: 52px;
+}
+
+.semantic-card.card-disclosure > summary h2 {
+  color: var(--v2-text-primary);
+}
+
+.semantic-card.card-disclosure > summary .disclosure-icon {
+  border: 1px solid color-mix(in srgb, var(--semantic-line) 60%, var(--v2-border));
+  background: color-mix(in srgb, var(--semantic-tint) 78%, var(--v2-surface));
+  color: var(--semantic-ink);
+}
+
+.semantic-card.card-disclosure > .card-disclosure__body {
+  position: relative;
+  margin-inline: calc(var(--v2-space-2) * -1);
+  padding: var(--v2-space-4) var(--v2-space-2) 0;
+  background: var(--v2-surface);
+  color: var(--v2-text-primary);
+  animation: semantic-card-disclose var(--motion-spatial) var(--motion-ease) both;
+}
+
+@keyframes semantic-card-disclose {
+  from {
+    opacity: 0.72;
+    transform: translateY(-6px);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .semantic-card--compact:hover,
+  .semantic-card.card-disclosure:hover {
+    border-color: var(--semantic-line);
+    box-shadow: 0 18px 42px color-mix(in srgb, var(--semantic-line) 16%, transparent);
+    transform: translateY(-1px);
+  }
+
+  .semantic-card__action > :where(a, button):hover {
+    background: color-mix(in srgb, var(--semantic-tint) 74%, var(--v2-surface));
+  }
+}
+
+.semantic-card--compact:active,
+.semantic-card.card-disclosure > summary:active {
+  transform: scale(0.995);
+}
+
+.semantic-card :where(a, button, summary):focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+@media (max-width: 520px) {
+  .semantic-card--compact {
+    padding: var(--v2-space-3);
+  }
+}
+
+.today-workout-spotlight.semantic-card::before {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .semantic-card,
+  .semantic-card::before,
+  .semantic-card.card-disclosure > .card-disclosure__body {
+    animation: none !important;
+    scroll-behavior: auto;
+    transition-duration: 0.01ms !important;
+    transform: none !important;
+  }
+}

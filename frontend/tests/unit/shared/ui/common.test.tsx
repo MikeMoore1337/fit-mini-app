@@ -10,6 +10,7 @@ import {
   IconButton,
   Input,
   Metric,
+  SemanticCard,
   SectionHeader,
   SegmentedControl,
   Select,
@@ -43,6 +44,24 @@ describe('Card', () => {
 
     expect(screen.queryByText('Вход')?.closest('details')).toBeNull();
     expect(screen.getByText('Форма входа')).toBeVisible();
+  });
+
+  it('keeps a semantic summary visible and exposes the expanded state', () => {
+    render(
+      <Card family="training" summary="3 тренировки в неделю" title="Моя программа">
+        <p>Подробный план</p>
+      </Card>,
+    );
+
+    const details = screen.getByText('Моя программа').closest('details');
+    const disclosure = screen.getByText('Моя программа').closest('summary');
+    expect(details).toHaveAttribute('data-semantic-family', 'training');
+    expect(screen.getByText('3 тренировки в неделю')).toBeVisible();
+    expect(disclosure).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(disclosure!);
+    expect(disclosure).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('Подробный план')).toBeVisible();
   });
 });
 
@@ -90,6 +109,24 @@ describe('design-system primitives', () => {
     expect(document.querySelector('.ui-skeleton')).not.toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Повторить' }));
     expect(retry).toHaveBeenCalledOnce();
+  });
+
+  it('renders one reusable compact action card with an explicit family', () => {
+    render(
+      <SemanticCard
+        action={<a href="/app?section=nutrition">Добавить</a>}
+        family="nutrition"
+        icon="nav-nutrition"
+        summary="1 640 из 2 100 ккал"
+        title="Питание"
+        variant="action"
+      />,
+    );
+
+    const card = screen.getByRole('article', { name: 'Питание' });
+    expect(card).toHaveAttribute('data-semantic-family', 'nutrition');
+    expect(card).toHaveAttribute('data-card-variant', 'action');
+    expect(screen.getByRole('link', { name: 'Добавить' })).toBeVisible();
   });
 
   it('supports keyboard selection for segmented controls', () => {
