@@ -11,6 +11,9 @@ vi.mock('../../../../src/shared/api/client', () => ({ api: apiMock }));
 vi.mock('../../../../src/app/AuthProvider', () => ({
   useAuth: () => ({ user: { id: 10, profile: null }, reloadUser }),
 }));
+vi.mock('../../../../src/features/profile/TrainingPreferencesForm', () => ({
+  TrainingPreferencesForm: () => null,
+}));
 
 const previewByGoal = {
   fat_loss: { min_bpm: 130, max_bpm: 140 },
@@ -51,6 +54,36 @@ function restingHeartRateInput(): HTMLInputElement {
   if (!input) throw new Error('Resting heart rate input not found');
   return input;
 }
+
+describe('ProfileForm avatar setting', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    apiMock.mockReset();
+    apiMock.mockResolvedValue({ items: [] });
+  });
+
+  afterEach(cleanup);
+
+  it('opens the avatar editor from Personal data and restores focus to its trigger', async () => {
+    renderForm();
+
+    const avatarSetting = screen.getByText('Фото профиля').closest('.profile-avatar-setting');
+    expect(avatarSetting).not.toBeNull();
+    expect(avatarSetting).toHaveTextContent('Используется нейтральный emoji');
+    const editAvatar = screen.getByRole('button', { name: 'Изменить аватар' });
+    editAvatar.focus();
+    expect(editAvatar).toHaveFocus();
+    fireEvent.click(editAvatar);
+
+    expect(await screen.findByRole('dialog', { name: 'Аватар' })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Выбрать изображение' })).toHaveFocus(),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Закрыть редактор аватара' }));
+
+    await waitFor(() => expect(editAvatar).toHaveFocus());
+  });
+});
 
 describe('ProfileForm heart rate preview', () => {
   beforeEach(() => {
