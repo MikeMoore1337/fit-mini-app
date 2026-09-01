@@ -2544,7 +2544,9 @@ test('поля адаптируются к разным iPhone, а пример 
   );
 
   await openAppDestination(page, 'Питание');
-  await expect(page.getByRole('heading', { name: 'КБЖУ' })).toBeVisible();
+  await expect(
+    page.locator('.nutrition-day-summary').getByRole('heading', { name: 'КБЖУ' }),
+  ).toBeVisible();
   expect(
     await page.evaluate(() => ({
       viewport: document.documentElement.clientWidth,

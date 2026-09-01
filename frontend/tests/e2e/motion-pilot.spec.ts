@@ -287,7 +287,7 @@ test('workout confirmation and Nutrition add keep final production state immedia
   await expect(
     page.getByRole('progressbar', { name: /Калории: 180 из 2.*100 ккал/ }),
   ).toBeVisible();
-  await expect(page.locator('.nutrition-day-summary')).toContainText('Итоги и цель');
+  await expect(page.locator('.nutrition-day-summary')).toContainText('КБЖУ');
   const toast = page.locator('.toast');
   await expect(toast).toHaveAttribute('data-motion-phase', /opening|open/);
   await expect(addedEntry).toHaveAttribute('data-motion-phase', 'idle', { timeout: 2_000 });

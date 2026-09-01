@@ -136,13 +136,13 @@ test('hover and focus use the restrained brand and neutral palette', async ({ br
   await context.close();
 });
 
-test('shared card effects preserve sticky summaries and viewport modals', async ({ browser }) => {
+test('shared card effects preserve summary flow and viewport modals', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
   await openSurface(page, '/app?section=nutrition', 'light');
   await waitForSemanticSurface(page, '/app?section=nutrition');
 
-  await expect(page.locator('.nutrition-day-summary')).toHaveCSS('position', 'sticky');
+  await expect(page.locator('.nutrition-day-summary')).toHaveCSS('position', 'static');
 
   await page.goto('/app?section=profile');
   await expect(page.getByRole('heading', { name: 'Профиль и настройки' })).toBeVisible();

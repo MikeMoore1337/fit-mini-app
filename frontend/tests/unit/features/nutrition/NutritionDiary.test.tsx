@@ -17,7 +17,10 @@ vi.mock('../../../../src/shared/api/client', () => ({ api: apiMock }));
 vi.mock('../../../../src/app/AuthProvider', () => ({ useAuth: useAuthMock }));
 vi.mock('../../../../src/features/nutrition/HydrationTracker', () => ({
   HydrationTracker: ({ diaryDate }: { diaryDate: string }) => (
-    <section aria-label="Гидратация">Гидратация за {diaryDate}</section>
+    <section aria-label="Гидратация">
+      <h2>Напитки</h2>
+      Гидратация за {diaryDate}
+    </section>
   ),
 }));
 
@@ -143,7 +146,26 @@ describe('NutritionDiary', () => {
     expect(await screen.findByText('Овсяная каша')).toBeInTheDocument();
     expect(
       screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent),
-    ).toEqual(expect.arrayContaining(['Завтрак', 'Обед', 'Ужин', 'Перекусы', 'Итоги и цель']));
+    ).toEqual(
+      expect.arrayContaining([
+        'Полнота данных',
+        'Баланс дня',
+        'Еда',
+        'Завтрак',
+        'Обед',
+        'Ужин',
+        'Перекусы',
+        'КБЖУ',
+        'Напитки',
+      ]),
+    );
+    const sectionOrder = screen
+      .getAllByRole('heading', { level: 2 })
+      .map((heading) => heading.textContent)
+      .filter((heading) =>
+        ['Полнота данных', 'Баланс дня', 'Еда', 'КБЖУ', 'Напитки'].includes(heading ?? ''),
+      );
+    expect(sectionOrder).toEqual(['Полнота данных', 'Баланс дня', 'Еда', 'КБЖУ', 'Напитки']);
     expect(screen.getByRole('progressbar', { name: /Калории: 420 из 2.+000 ккал/ })).toBeVisible();
     expect(screen.getByText('Б 18,5')).toBeVisible();
 
@@ -210,7 +232,7 @@ describe('NutritionDiary', () => {
     });
     renderDiary();
 
-    expect(await screen.findByRole('heading', { name: 'День без приёмов пищи' })).toBeVisible();
+    expect(await screen.findByText('День без приёмов пищи', { selector: 'strong' })).toBeVisible();
     expect(screen.getByText(/только если сознательно не ели весь день/i)).toBeVisible();
     expect(screen.queryByText(/пост/i)).not.toBeInTheDocument();
   });
@@ -379,7 +401,7 @@ describe('NutritionDiary', () => {
       throw new Error(`Unexpected API call: ${path}`);
     });
     renderDiary();
-    expect(await screen.findByRole('heading', { name: 'Заполнен частично' })).toBeVisible();
+    expect(await screen.findByText('Заполнен частично', { selector: 'strong' })).toBeVisible();
 
     fireEvent.click(screen.getByRole('button', { name: 'День заполнен' }));
 
@@ -407,7 +429,7 @@ describe('NutritionDiary', () => {
     });
 
     renderDiary();
-    expect(await screen.findByRole('heading', { name: 'Заполнен частично' })).toBeVisible();
+    expect(await screen.findByText('Заполнен частично', { selector: 'strong' })).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Заполнен частично' }));
 
     await waitFor(() =>
