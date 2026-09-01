@@ -17,7 +17,10 @@ commit, lifecycle/review/QA/final verification завершены, незакр�
 findings синхронизированы и отсутствует обязательный owner/human/manual visual gate. Тогда task
 branch через exact-head checked PR сериализованно интегрируется в `dev`; агент ждёт successful
 push-CI exact merge SHA, создаёт/обновляет PR `dev -> master`, проверяет exact PR head SHA и required
-check `checks`, выполняет checked merge и наблюдает post-merge CI/deploy до terminal success. После
+check `checks`, выполняет checked merge и наблюдает post-merge CI/deploy до terminal success. Exact
+merged `dev` push уже является полным release-candidate suite, поэтому canonical `dev -> master` PR
+выполняет только быстрые release-sequence/provenance checks и не повторяет тяжёлые jobs; любой
+exceptional PR в `master` проходит полный suite. После
 успешного release узкий GitHub App fast-forward'ит `dev` к exact deployed `master`.
 Failure/rollback/manual intervention required блокирует следующую backlog task.
 
@@ -29,8 +32,9 @@ queue head. Repository `delete_branch_on_merge` не заменяет owner-safe
 обновиться от current `dev` и повторить checks.
 
 После successful production deploy `.github/workflows/sync-dev-after-deploy.yml` fast-forward'ит
-`dev` только на exact текущий deployed `master` SHA. Workflow выключен до owner-approved GitHub App,
-Ruleset read-back и variable `ENABLE_DEPLOYED_MASTER_DEV_SYNC=true`; broad PAT/admin bypass запрещён.
+`dev` только на exact текущий deployed `master` SHA. В текущем repository этот path активирован
+owner-approved узким GitHub App и `ENABLE_DEPLOYED_MASTER_DEV_SYNC=true`; broad PAT/admin bypass
+запрещён. Изменение App, Ruleset, variable или secrets остаётся exceptional owner-authorized action.
 Подробный ADR/runbook: `docs/task-branch-integration.md`.
 
 После merge участие человека заканчивается:

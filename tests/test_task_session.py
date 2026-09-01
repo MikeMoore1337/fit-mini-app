@@ -42,6 +42,25 @@ def test_run_decodes_command_output_as_utf8(
     assert observed["encoding"] == "utf-8"
 
 
+def test_run_scopes_git_safety_to_exact_worktree(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    observed: dict[str, Any] = {}
+
+    def fake_run(*args: Any, **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        observed["args"] = args[0]
+        return subprocess.CompletedProcess(args[0], 0, stdout="", stderr="")
+
+    monkeypatch.setattr(task_session.subprocess, "run", fake_run)
+
+    task_session._run(["git", "status", "--short"], cwd=tmp_path)
+
+    command = observed["args"]
+    assert command[:3] == ["git", "-c", f"safe.directory={tmp_path.resolve().as_posix()}"]
+    if task_session.os.name == "nt":
+        assert command[3:5] == ["-c", "core.longpaths=true"]
+
+
 def _git(path: Path, *args: str) -> str:
     completed = subprocess.run(["git", *args], cwd=path, check=True, text=True, capture_output=True)
     return completed.stdout.strip()

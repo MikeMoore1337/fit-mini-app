@@ -4,6 +4,12 @@
 
 Фраза владельца `полный task lifecycle` означает: пройти только те стадии и роли, которые явно применимы к текущей task, и остановиться после неё.
 
+Явный выбор task владельцем или запуск `scripts/run_task_delivery.py <ID>` является одним standing
+authorization на весь normal path этой task. Launcher/controller автоматически выполняют внутренние
+стадии `task branch -> dev -> master -> production -> closeout`, не превращая commit/push/PR/merge,
+ожидание CI/deploy и безопасную cleanup в новые вопросы владельцу. Отдельный ответ нужен только для
+явно объявленного human/legal/external/destructive/task-specific gate или terminal blocker.
+
 ## 0. Контракты task имеют приоритет
 
 Перед работой:
@@ -162,7 +168,7 @@ owner-controlled решения, которое прямо изменяет rele
 
 ## 6. Исправление review findings и повторный review
 
-Автоматически исправляются только `BLOCKER/HIGH` текущего scope.
+Автоматически исправляются `BLOCKER/HIGH` и все release-blocking `MEDIUM` текущего scope.
 
 `MEDIUM` можно исправить в этой task только если fix одновременно:
 
@@ -171,7 +177,9 @@ owner-controlled решения, которое прямо изменяет rele
 - не требует новой роли или нового профильного skill;
 - не расширяет touched subsystem.
 
-Иначе `MEDIUM` фиксируется как follow-up и task продолжается к финализации.
+Иначе `MEDIUM` фиксируется как follow-up: local commit/finalization допустимы, но release остаётся
+`AUTO_RELEASE_BLOCKED` до отдельного owner-controlled решения и verified closure. Severity нельзя
+понижать или замалчивать ради release.
 
 `LOW/NIT/OUT_OF_SCOPE` после review автоматически не исправлять.
 
@@ -217,7 +225,9 @@ QA выбирает минимальный набор сценариев с ма
 
 Не прогонять одну и ту же матрицу на каждом layer и не повторять все viewport, если task изменяет один локальный state.
 
-QA findings используют ту же blocking policy: только `BLOCKER/HIGH` блокируют. `MEDIUM/LOW` не должны запускать новый feature cycle.
+QA findings используют ту же blocking policy: `BLOCKER/HIGH` блокируют завершение, а незакрытый
+`MEDIUM` блокирует release eligibility. `MEDIUM/LOW` не должны запускать несогласованный новый
+feature cycle.
 
 После исправления blocking QA defect повторить failed/affected scenario. Не выполнять полный QA заново.
 
@@ -248,7 +258,8 @@ Review/QA не могут сами по себе быть основанием �
 3. Убедиться, что нет случайных files/secrets/generated artifacts и review-driven scope creep.
 4. Проверить migrations/config/dependencies только если они реально изменились.
 5. Убедиться, что все `BLOCKER/HIGH` закрыты либо task остановлена с точным blocker.
-6. `MEDIUM/LOW/OUT_OF_SCOPE` перечислить кратко как non-blocking follow-ups; они не мешают commit.
+6. `MEDIUM/LOW/OUT_OF_SCOPE` перечислить кратко как non-blocking для commit; при этом каждый
+   `MEDIUM` обязан быть исправлен и targeted-rechecked до release eligibility.
 7. Синхронизировать все новые/изменённые `MEDIUM/LOW` в
    `codex-backlog/bugs/FINDINGS.md`; закрытые записи не удалять, а обновлять status/verification.
 8. Создать один логический commit в lease-bound `task/<ID>-<slug>` branch/worktree при tracked
@@ -307,8 +318,10 @@ Task является `AUTO_RELEASE_ELIGIBLE`, только если однов�
    переоткрыть ранее закрытый matching PR, если его base/scope остаются корректными. Если после
    открытия PR требуется ещё один code/config/docs commit или новый task merge, PR необходимо
    закрыть, вернуть change в task branch/worktree и повторить task PR + serial integration;
-5. проверить expected PR head SHA и required check `checks`; required PR checks должны завершиться
-   успешно именно для текущего PR head, а success более раннего branch CI их не подменяет;
+5. проверить expected PR head SHA и required check `checks`. Для canonical same-repository
+   `dev -> master` PR этот быстрый check проверяет release sequence/provenance и terminal successful
+   exact merged-dev push-CI; тяжёлые jobs намеренно `skipped`, потому что уже выполнены для того же
+   tree. Exceptional/non-canonical PR в `master` обязан пройти полный suite;
 6. включить GitHub auto-merge либо после green required PR checks выполнить эквивалентный обычный
    PR merge только для ожидаемого head SHA;
 7. проверить post-merge CI exact merged `master` SHA и затем автоматически запущенный production
@@ -343,7 +356,7 @@ task branch -> PR dev -> exact-head checks
   -> WAIT exact merged dev push CI: success
   -> ensure NO open release PR dev -> master during integration
   -> create/reopen PR dev -> master
-  -> WAIT exact PR required checks: success
+  -> WAIT quick exact release PR provenance/checks: success
   -> merge exact PR head
   -> WAIT post-merge master CI: success
   -> WAIT production deploy exact master SHA: success
