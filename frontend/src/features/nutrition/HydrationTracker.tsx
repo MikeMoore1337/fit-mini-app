@@ -189,8 +189,7 @@ export function HydrationTracker({ diaryDate }: { diaryDate: string }) {
   });
   const loadedGoal = hydration.data?.goal;
   const loadedGoalIsReference = loadedGoal?.source === 'national_academies_beverages';
-  const goalMode =
-    goalModeDraft ?? (loadedGoal && !loadedGoalIsReference ? 'manual' : 'reference');
+  const goalMode = goalModeDraft ?? (loadedGoal && !loadedGoalIsReference ? 'manual' : 'reference');
   const sex =
     sexDraft !== undefined
       ? sexDraft
