@@ -183,6 +183,11 @@ destructive/external authorization or terminal blocker, continue automatically t
 review, QA, commit, PR, merge, CI and normal release stages without waiting for another owner
 prompt. Stop only at the declared gate and report its exact evidence/decision requirement.
 
+An explicit owner selection of a task, or `scripts/run_task_delivery.py <ID>`, is one standing
+authorization for that task's normal path. Treat controller commands, commit/push, task and release
+PR handling, CI/deploy monitoring and safe closeout as internal stages; do not turn them into new
+generic owner prompts.
+
 Если текущая task не объявляет `OWNER_CHECKPOINT`, `HUMAN_EVIDENCE`, `MANUAL_VISUAL_APPROVAL`,
 `LEGAL_COUNSEL_REQUIRED`, `EXTERNAL_AUTHORIZATION`, `DESTRUCTIVE_ACTION` или terminal blocker,
 controller/lifecycle после terminal success автоматически продолжает применимые review, QA,
@@ -252,6 +257,8 @@ repository-native coordination boundary. Runtime leases live only in the shared 
 missing/corrupted state is a blocker. Task PRs target only `dev`, preserve `[Task <ID>]` in branch,
 commit and PR provenance, and merge only as the current integration queue head after exact-head
 `checks`. A release lease or open `dev -> master` PR freezes every mutation of `dev`.
+The normal owner-facing entry is `python scripts/run_task_delivery.py <ID>`; direct controller
+commands are low-level implementation and recovery operations.
 
 Parallel read-only/research sessions are allowed only when task metadata permits them and each has
 its own lease. Parallel write branches may be prepared only when dependency/concurrency metadata
@@ -378,7 +385,9 @@ production deployment. Eligibility requires a
 tracked logical commit, completed implementation/review/QA/final verification, zero unresolved
 `BLOCKER`, `HIGH` and `MEDIUM`, synchronized findings, current `master` ancestry in `dev`, a clean
 scoped worktree and no mandatory owner/human/visual gate. The agent must monitor required check
-`checks`, exact merged-dev push CI, post-merge CI and deployment to terminal success. The narrow
+`checks`, exact merged-dev push CI, post-merge CI and deployment to terminal success. Canonical
+same-repository `dev -> master` PR checks reuse the terminal successful exact merged-dev full CI and
+run only release-sequence/provenance aggregation; exceptional master PRs still run the full suite. The narrow
 deployed-sync GitHub App then fast-forwards `dev` to the exact successful current `master`; ordinary
 direct user/PAT push remains forbidden. После exact ref sync normal post-deploy closeout без нового
 owner prompt выполняет controller `finish` из canonical `dev` worktree, безопасный cleanup exact
@@ -422,7 +431,8 @@ Before declaring tracked backlog implementation complete:
 - confirm no secrets or debug artifacts were introduced;
 - confirm migrations, generated files, dependencies and configuration changes are intentional;
 - confirm all blocking `BLOCKER/HIGH` review/QA findings are resolved or explicitly blocked;
-- keep `MEDIUM/LOW/NIT/OUT_OF_SCOPE` as concise non-blocking follow-ups rather than reopening scope;
+- keep `MEDIUM/LOW/NIT/OUT_OF_SCOPE` as concise non-blocking follow-ups for commit rather than
+  reopening scope, while requiring zero unresolved `MEDIUM` before release;
 - confirm every new or changed `MEDIUM/LOW` is synchronized in
   `codex-backlog/bugs/FINDINGS.md` and cite its ID/status in the final report;
 - create the task's one logical commit only after successful applicable verification;
