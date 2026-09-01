@@ -174,6 +174,14 @@ class AccountExportDownloadLinkResponse(BaseModel):
     expires_at: datetime
 
 
+class AvatarMetadataResponse(BaseModel):
+    content_type: Literal["image/webp"]
+    byte_size: int = Field(gt=0, le=1024 * 1024)
+    width: Literal[512]
+    height: Literal[512]
+    updated_at: datetime
+
+
 class TelegramLinkCreateResponse(BaseModel):
     telegram_url: str
     expires_in_seconds: int
@@ -266,6 +274,7 @@ class UserResponse(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
     photo_url: str | None = None
+    custom_avatar: AvatarMetadataResponse | None = None
     is_coach: bool = False
     is_admin: bool = False
     is_root: bool = False

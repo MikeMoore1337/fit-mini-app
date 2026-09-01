@@ -10,7 +10,9 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 DEFAULT_BODY_LIMIT_BYTES: Final = 1024 * 1024
 AUTH_BODY_LIMIT_BYTES: Final = 64 * 1024
+AVATAR_BODY_LIMIT_BYTES: Final = 6 * 1024 * 1024
 AUTH_PATH_PREFIX: Final = "/api/v1/auth/"
+AVATAR_PATH: Final = "/api/v1/me/avatar"
 REQUEST_ID_PATTERN = re.compile(r"[A-Za-z0-9._:-]{1,128}\Z")
 
 logger = logging.getLogger("app.http")
@@ -19,6 +21,8 @@ logger = logging.getLogger("app.http")
 def _body_limit(path: str) -> int:
     if path == AUTH_PATH_PREFIX.rstrip("/") or path.startswith(AUTH_PATH_PREFIX):
         return AUTH_BODY_LIMIT_BYTES
+    if path == AVATAR_PATH:
+        return AVATAR_BODY_LIMIT_BYTES
     return DEFAULT_BODY_LIMIT_BYTES
 
 

@@ -1,10 +1,11 @@
 from typing import Literal, cast
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import set_committed_value
+from starlette.concurrency import run_in_threadpool
 
 from fitminiapp_api.core.config import settings
 from fitminiapp_api.core.rate_limit import limiter
@@ -21,6 +22,7 @@ from fitminiapp_api.schemas.user import (
     AccountDeleteRequest,
     AccountExportDownloadLinkResponse,
     AccountExportStatusResponse,
+    AvatarMetadataResponse,
     BodyPriorityOptionsResponse,
     BodyPriorityPreference,
     HeartRatePreviewRequest,
@@ -62,6 +64,13 @@ from fitminiapp_api.services.account_linking import (
 )
 from fitminiapp_api.services.accounts import build_account_export, delete_user_cascade
 from fitminiapp_api.services.audit import record_audit_event
+from fitminiapp_api.services.avatars import (
+    AVATAR_UPLOAD_MAX_BYTES,
+    AvatarValidationError,
+    delete_user_avatar,
+    process_avatar_image,
+    save_user_avatar,
+)
 from fitminiapp_api.services.coach_clients import (
     confirm_coach_invite_link,
     get_current_trainer,
@@ -180,6 +189,17 @@ def _build_user_response(db: Session, user) -> UserResponse:
         first_name=user.first_name,
         last_name=user.last_name,
         photo_url=user.photo_url,
+        custom_avatar=(
+            AvatarMetadataResponse(
+                content_type="image/webp",
+                byte_size=user.custom_avatar_byte_size,
+                width=512,
+                height=512,
+                updated_at=user.custom_avatar_updated_at,
+            )
+            if user.custom_avatar_updated_at is not None
+            else None
+        ),
         is_coach=user.is_coach,
         is_admin=user.is_admin,
         is_root=has_verified_root_identity(db, user),
@@ -237,6 +257,89 @@ def _build_user_response(db: Session, user) -> UserResponse:
 
 @router.get("", response_model=UserResponse)
 def read_me(user=Depends(get_current_user), db: Session = Depends(get_db)):
+    return _build_user_response(db, user)
+
+
+@router.get("/avatar")
+def read_avatar(user=Depends(get_current_user), db: Session = Depends(get_db)) -> Response:
+    avatar = (
+        db.query(
+            User.custom_avatar_image_bytes,
+            User.custom_avatar_content_type,
+            User.custom_avatar_byte_size,
+            User.custom_avatar_sha256,
+        )
+        .filter(User.id == user.id, User.custom_avatar_updated_at.is_not(None))
+        .first()
+    )
+    if avatar is None or any(value is None for value in avatar):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Свой аватар не установлен"
+        )
+    image_bytes, content_type, byte_size, sha256 = avatar
+    return Response(
+        content=bytes(image_bytes),
+        media_type=content_type,
+        headers={
+            "Cache-Control": "private, no-store",
+            "Content-Length": str(byte_size),
+            "ETag": f'"{sha256}"',
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.put("/avatar", response_model=UserResponse)
+@limiter.limit("10/hour")
+async def replace_avatar(
+    request: Request,
+    file: UploadFile = File(...),
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> UserResponse:
+    del request
+    try:
+        source = await file.read(AVATAR_UPLOAD_MAX_BYTES + 1)
+    finally:
+        await file.close()
+    try:
+        processed = await run_in_threadpool(process_avatar_image, source)
+    except AvatarValidationError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+    replacing = user.custom_avatar_updated_at is not None
+    current = save_user_avatar(db, user.id, processed)
+    record_audit_event(
+        db,
+        action="account.avatar_replaced" if replacing else "account.avatar_created",
+        resource_type="user_avatar",
+        actor_user_id=user.id,
+        target_user_id=user.id,
+        resource_id=str(user.id),
+        details={
+            "content_type": current.custom_avatar_content_type,
+            "byte_size": current.custom_avatar_byte_size,
+            "width": current.custom_avatar_width,
+            "height": current.custom_avatar_height,
+        },
+    )
+    db.commit()
+    return _build_user_response(db, user)
+
+
+@router.delete("/avatar", response_model=UserResponse)
+def remove_avatar(user=Depends(get_current_user), db: Session = Depends(get_db)) -> UserResponse:
+    deleted = delete_user_avatar(db, user.id)
+    if deleted:
+        record_audit_event(
+            db,
+            action="account.avatar_deleted",
+            resource_type="user_avatar",
+            actor_user_id=user.id,
+            target_user_id=user.id,
+            resource_id=str(user.id),
+        )
+    db.commit()
     return _build_user_response(db, user)
 
 

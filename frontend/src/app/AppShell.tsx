@@ -227,6 +227,7 @@ export function AppShell({
           >
             <AccountAvatar
               className="app-bottom-nav__avatar"
+              customAvatarVersion={user?.custom_avatar?.updated_at}
               name={displayName}
               photoUrl={user?.photo_url}
             />
@@ -263,6 +264,7 @@ export function AppShell({
                   <AccountIdentity
                     avatarClassName="app-desktop-account-entry__avatar"
                     className="app-desktop-account-entry__identity"
+                    customAvatarVersion={user?.custom_avatar?.updated_at}
                     name={displayName}
                     photoUrl={user?.photo_url}
                     role={accountRole}
@@ -415,6 +417,7 @@ export function AppShell({
                     <AccountIdentity
                       avatarClassName="app-bottom-nav__avatar"
                       className="app-more-panel__identity"
+                      customAvatarVersion={user?.custom_avatar?.updated_at}
                       name={demo?.menuTitle ?? displayName}
                       photoUrl={user?.photo_url}
                       role={demo ? 'Отдельная сессия' : accountRole}

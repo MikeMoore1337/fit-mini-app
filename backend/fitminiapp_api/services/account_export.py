@@ -50,7 +50,7 @@ if TYPE_CHECKING:
     from fitminiapp_api.models.recipe import RecipeIngredient
 
 
-ACCOUNT_EXPORT_SCHEMA_VERSION = 4
+ACCOUNT_EXPORT_SCHEMA_VERSION = 5
 
 # Every ORM table whose rows can be reached from users through ownership or actor FKs must be
 # classified here. Tests compare this inventory with SQLAlchemy metadata so a new persistent user
@@ -650,7 +650,6 @@ def build_account_export(db: Session, user: User) -> dict[str, object]:
         .order_by(WorkoutComment.created_at.asc(), WorkoutComment.id.asc())
         .all()
     )
-
     profile = user.profile
     return {
         "schema_version": ACCOUNT_EXPORT_SCHEMA_VERSION,
@@ -667,6 +666,20 @@ def build_account_export(db: Session, user: User) -> dict[str, object]:
             "is_admin": user.is_admin,
             "is_active": user.is_active,
         },
+        "custom_avatar": (
+            {
+                "content_type": user.custom_avatar_content_type,
+                "byte_size": user.custom_avatar_byte_size,
+                "width": user.custom_avatar_width,
+                "height": user.custom_avatar_height,
+                "sha256": user.custom_avatar_sha256,
+                "created_at": user.custom_avatar_created_at,
+                "updated_at": user.custom_avatar_updated_at,
+                "file": "avatar/avatar.webp",
+            }
+            if user.custom_avatar_updated_at is not None
+            else None
+        ),
         "auth_identities": [
             _fields(
                 identity,

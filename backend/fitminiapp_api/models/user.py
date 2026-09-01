@@ -13,6 +13,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
     Time,
@@ -37,6 +38,16 @@ class User(Base):
     first_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
     last_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
     photo_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    custom_avatar_content_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    custom_avatar_image_bytes: Mapped[bytes | None] = mapped_column(
+        LargeBinary, nullable=True, deferred=True
+    )
+    custom_avatar_byte_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    custom_avatar_width: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    custom_avatar_height: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    custom_avatar_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    custom_avatar_created_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    custom_avatar_updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     is_coach: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )

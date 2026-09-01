@@ -165,6 +165,24 @@ describe('api client', () => {
     });
   });
 
+  it('sends FormData with auth without overriding the browser multipart boundary', async () => {
+    setAccessToken('avatar-token');
+    const form = new FormData();
+    form.append('file', new Blob(['avatar'], { type: 'image/png' }), 'avatar.png');
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response('{"ok":true}', { status: 200 }));
+
+    await expect(
+      api<{ ok: boolean }>('/api/v1/me/avatar', { method: 'PUT', body: form }),
+    ).resolves.toEqual({ ok: true });
+
+    const init = fetchMock.mock.calls[0]?.[1];
+    expect(init?.body).toBe(form);
+    expect(init?.headers).toMatchObject({ Authorization: 'Bearer avatar-token' });
+    expect(init?.headers).not.toHaveProperty('Content-Type');
+  });
+
   it('forwards caller cancellation without presenting it as a timeout', async () => {
     const controller = new AbortController();
     vi.spyOn(globalThis, 'fetch').mockImplementationOnce((_input, init) => {

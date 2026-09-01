@@ -238,18 +238,21 @@ export async function api<T>(path: string, options: ApiOptions = {}): Promise<T>
   if (signal?.aborted) abortFromCaller();
   else signal?.addEventListener('abort', abortFromCaller, { once: true });
   const token = getAccessToken();
+  const formData = typeof FormData !== 'undefined' && body instanceof FormData;
   try {
     const response = await fetch(path, {
       ...init,
       credentials: 'same-origin',
       signal: controller.signal,
       headers: {
-        ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+        ...(body !== undefined && !formData ? { 'Content-Type': 'application/json' } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...headers,
       },
       ...(body !== undefined
-        ? { body: typeof body === 'string' ? body : JSON.stringify(body) }
+        ? {
+            body: formData ? body : typeof body === 'string' ? body : JSON.stringify(body),
+          }
         : {}),
     });
     if (response.status === 401 && retryAuth && (await refreshAccessToken())) {

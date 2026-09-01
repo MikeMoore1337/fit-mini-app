@@ -26,8 +26,9 @@ function finishAnimation(element: Element, animationName: string) {
   Object.defineProperty(event, 'animationName', { value: animationName });
   fireEvent(element, event);
 }
-const { authState, navigation, user } = vi.hoisted(() => ({
+const { authState, avatarFile, navigation, user } = vi.hoisted(() => ({
   authState: { missing: false },
+  avatarFile: vi.fn(),
   navigation: { path: '/coach', search: '' },
   user: {
     id: 1,
@@ -36,8 +37,17 @@ const { authState, navigation, user } = vi.hoisted(() => ({
     is_coach: true,
     is_root: false,
     photo_url: null as string | null,
+    custom_avatar: null as null | {
+      content_type: 'image/webp';
+      byte_size: number;
+      width: 512;
+      height: 512;
+      updated_at: string;
+    },
   },
 }));
+
+vi.mock('../../../src/shared/api/client', () => ({ apiFile: avatarFile }));
 
 vi.mock('../../../src/app/AuthProvider', () => ({
   useOptionalAuth: () => (authState.missing ? null : { user, logout }),
@@ -57,10 +67,12 @@ describe('AppShell', () => {
     cleanup();
     authState.missing = false;
     user.photo_url = null;
+    user.custom_avatar = null;
     user.is_root = false;
     navigation.path = '/coach';
     navigation.search = '';
     logout.mockClear();
+    avatarFile.mockReset();
     vi.unstubAllGlobals();
     stubViewport(1280);
     delete window.Telegram;
@@ -228,6 +240,36 @@ describe('AppShell', () => {
     fireEvent.error(image!);
     expect(avatar?.querySelector('img')).not.toBeInTheDocument();
     expect(avatar).toHaveTextContent(/🏋️|💪|🏃|🚴|🥗|⚡|🎯|🔥/);
+  });
+
+  it('показывает private avatar раньше provider photo и возвращается к provider при ошибке', async () => {
+    avatarFile.mockResolvedValue({
+      blob: new Blob(['private-avatar'], { type: 'image/webp' }),
+      filename: null,
+    });
+    user.custom_avatar = {
+      content_type: 'image/webp',
+      byte_size: 4096,
+      width: 512,
+      height: 512,
+      updated_at: '2030-01-02T12:00:00',
+    };
+    user.photo_url = 'https://provider.example.test/avatar.jpg';
+    vi.stubGlobal('URL', {
+      ...URL,
+      createObjectURL: vi.fn(() => 'blob:private-avatar'),
+      revokeObjectURL: vi.fn(),
+    });
+
+    const { container } = render(<AppShell>Содержимое</AppShell>);
+    const avatar = container.querySelector('.app-desktop-account-entry__avatar');
+    await waitFor(() =>
+      expect(avatar?.querySelector('img')).toHaveAttribute('src', 'blob:private-avatar'),
+    );
+    const privateImage = avatar?.querySelector('img');
+    expect(privateImage).not.toBeNull();
+    fireEvent.error(privateImage!);
+    expect(avatar?.querySelector('img')).toHaveAttribute('src', user.photo_url);
   });
 
   it('использует account row под брендом как единственный desktop-вход в профиль без dialog', () => {
