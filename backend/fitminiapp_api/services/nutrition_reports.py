@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from fitminiapp_api.core.timezone import today_for_user
 from fitminiapp_api.models.food_diary import FoodDiaryDayStatus, FoodDiaryEntry
+from fitminiapp_api.models.hydration import HydrationEntry, HydrationGoal
 from fitminiapp_api.models.nutrition import NutritionTarget
 from fitminiapp_api.models.user import User
 from fitminiapp_api.schemas.progress import NutritionReportPeriod
@@ -157,6 +158,18 @@ def _effective_target(
     )
 
 
+def _effective_hydration_goal(goals: list[HydrationGoal], diary_date: date) -> HydrationGoal | None:
+    return next(
+        (
+            goal
+            for goal in goals
+            if goal.effective_from <= diary_date
+            and (goal.effective_to is None or diary_date < goal.effective_to)
+        ),
+        None,
+    )
+
+
 def _metric_summary(points: list[dict], metric: str) -> dict:
     values = [point[metric] for point in points if point[metric] is not None]
     if not values:
@@ -222,6 +235,26 @@ def build_nutrition_report(
         .order_by(NutritionTarget.effective_from.desc(), NutritionTarget.id.desc())
         .all()
     )
+    hydration_rows = (
+        db.query(HydrationEntry.diary_date, func.sum(HydrationEntry.volume_ml).label("total_ml"))
+        .filter(
+            HydrationEntry.user_id == user.id,
+            HydrationEntry.diary_date.between(bounds.start, bounds.end),
+        )
+        .group_by(HydrationEntry.diary_date)
+        .all()
+    )
+    hydration_by_date = {row.diary_date: int(row.total_ml) for row in hydration_rows}
+    hydration_goals = (
+        db.query(HydrationGoal)
+        .filter(
+            HydrationGoal.user_id == user.id,
+            HydrationGoal.effective_from <= bounds.end,
+            or_(HydrationGoal.effective_to.is_(None), HydrationGoal.effective_to > bounds.start),
+        )
+        .order_by(HydrationGoal.effective_from.desc(), HydrationGoal.id.desc())
+        .all()
+    )
     effective_change_dates = {
         target.effective_from
         for target in targets
@@ -246,6 +279,13 @@ def build_nutrition_report(
                 has_entries=False,
             )
         target = _effective_target(targets, diary_date)
+        hydration_goal = _effective_hydration_goal(hydration_goals, diary_date)
+        hydration_target_ml = (
+            hydration_goal.target_ml
+            if hydration_goal is not None and hydration_goal.status == "enabled"
+            else None
+        )
+        hydration_ml = hydration_by_date.get(diary_date)
         is_logged = status in {"complete", "fasted"}
         actual = {
             metric: round(float(getattr(aggregate, metric)), 1)
@@ -299,6 +339,13 @@ def build_nutrition_report(
                 else None
             ),
             "target_changed": diary_date in effective_change_dates,
+            "hydration_ml": hydration_ml,
+            "hydration_target_ml": hydration_target_ml,
+            "hydration_progress_percent": (
+                round(hydration_ml * 100 / hydration_target_ml, 1)
+                if hydration_ml is not None and hydration_target_ml
+                else None
+            ),
         }
         daily.append(point)
         if is_logged:
@@ -346,6 +393,43 @@ def build_nutrition_report(
         for target in sorted(targets, key=lambda item: (item.effective_from, item.id))
         if target.effective_from in effective_change_dates
     ]
+    hydration_visible = bool(hydration_by_date or hydration_goals)
+    hydration_daily_values = [
+        point["hydration_ml"] for point in daily if point["hydration_ml"] is not None
+    ]
+    hydration_comparable = [
+        point
+        for point in daily
+        if point["hydration_ml"] is not None and point["hydration_target_ml"] is not None
+    ]
+    trend_ml = None
+    if len(hydration_daily_values) >= 2:
+        edge = min(3, len(hydration_daily_values) // 2)
+        trend_ml = round(
+            sum(hydration_daily_values[-edge:]) / edge - sum(hydration_daily_values[:edge]) / edge,
+            1,
+        )
+    hydration_summary = (
+        {
+            "total_ml": sum(hydration_daily_values),
+            "average_ml": (
+                round(sum(hydration_daily_values) / len(hydration_daily_values), 1)
+                if hydration_daily_values
+                else None
+            ),
+            "logged_days": len(hydration_daily_values),
+            "eligible_days": len(daily),
+            "coverage_percent": round(len(hydration_daily_values) * 100 / len(daily), 1),
+            "days_meeting_goal": sum(
+                point["hydration_ml"] >= point["hydration_target_ml"]
+                for point in hydration_comparable
+            ),
+            "goal_evaluated_days": len(hydration_comparable),
+            "trend_ml": trend_ml,
+        }
+        if hydration_visible
+        else None
+    )
     return {
         "period": bounds.period,
         "period_start": bounds.start,
@@ -356,6 +440,7 @@ def build_nutrition_report(
         "summary": summary,
         "daily": daily,
         "target_changes": target_changes,
+        "hydration": hydration_summary,
     }
 
 
@@ -394,14 +479,22 @@ def nutrition_report_csv(report: dict) -> str:
         "within_calorie_tolerance",
         "meets_protein_target",
         "target_changed",
+        "hydration_ml",
+        "hydration_target_ml",
+        "hydration_progress_percent",
         "summary_logged_days",
         "summary_eligible_days",
         "summary_coverage_percent",
+        "summary_hydration_total_ml",
+        "summary_hydration_average_ml",
+        "summary_hydration_coverage_percent",
+        "summary_hydration_trend_ml",
     ]
     output = io.StringIO(newline="")
     writer = csv.DictWriter(output, fieldnames=columns, extrasaction="ignore", lineterminator="\n")
     writer.writeheader()
     summary = report["summary"]
+    hydration = report.get("hydration")
     writer.writerow(
         {
             "row_type": "summary",
@@ -410,6 +503,12 @@ def nutrition_report_csv(report: dict) -> str:
             "summary_logged_days": summary["logged_days"],
             "summary_eligible_days": summary["eligible_days"],
             "summary_coverage_percent": summary["coverage_percent"],
+            "summary_hydration_total_ml": hydration["total_ml"] if hydration else None,
+            "summary_hydration_average_ml": hydration["average_ml"] if hydration else None,
+            "summary_hydration_coverage_percent": (
+                hydration["coverage_percent"] if hydration else None
+            ),
+            "summary_hydration_trend_ml": hydration["trend_ml"] if hydration else None,
         }
     )
     for point in report["daily"]:
@@ -435,6 +534,9 @@ def nutrition_report_csv(report: dict) -> str:
             "within_calorie_tolerance": point["within_calorie_tolerance"],
             "meets_protein_target": point["meets_protein_target"],
             "target_changed": point["target_changed"],
+            "hydration_ml": point["hydration_ml"],
+            "hydration_target_ml": point["hydration_target_ml"],
+            "hydration_progress_percent": point["hydration_progress_percent"],
         }
         writer.writerow({key: _safe_csv_value(value) for key, value in row.items()})
     return output.getvalue()

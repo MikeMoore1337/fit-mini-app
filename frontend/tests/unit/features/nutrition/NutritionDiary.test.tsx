@@ -15,6 +15,11 @@ const useAuthMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../../../../src/shared/api/client', () => ({ api: apiMock }));
 vi.mock('../../../../src/app/AuthProvider', () => ({ useAuth: useAuthMock }));
+vi.mock('../../../../src/features/nutrition/HydrationTracker', () => ({
+  HydrationTracker: ({ diaryDate }: { diaryDate: string }) => (
+    <section aria-label="Гидратация">Гидратация за {diaryDate}</section>
+  ),
+}));
 
 const nutrition = {
   energy_kcal: '420.00',

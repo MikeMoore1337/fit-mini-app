@@ -20,6 +20,7 @@ from fitminiapp_api.models.food_diary import (
     FoodDiaryDayStatus,
     FoodDiaryEntry,
 )
+from fitminiapp_api.models.hydration import HydrationEntry, HydrationGoal, HydrationPreset
 from fitminiapp_api.models.news import (
     NewsCluster,
     NewsDraftRevision,
@@ -92,6 +93,9 @@ __all__ = [
     "FoodDiaryEntry",
     "FoodFavorite",
     "HiddenProgramTemplate",
+    "HydrationEntry",
+    "HydrationGoal",
+    "HydrationPreset",
     "LocalCredential",
     "Muscle",
     "NewsCluster",
