@@ -73,6 +73,9 @@ gate, evidence и точки остановки в task-файле.
 - Внутри текущей task после terminal success автоматически выполняются применимые review, QA,
   commit, PR, serial merge в `dev`, CI и normal release шаги, если task явно не объявляет checkpoint
   или blocker. Следующая product task автоматически не запускается.
+- Явный выбор task владельцем или `scripts/run_task_delivery.py <ID>` является одним standing
+  authorization на normal path этой task. Низкоуровневые controller stages не являются действиями
+  владельца и не создают повторных generic approval prompts.
 - `scripts/task_session.py` и shared Git common-dir leases являются обязательной coordination
   boundary. Task PR идёт только в `dev`; exact-head `checks`, current-base policy и global
   integration lease разрешают merge только queue head. Release lease/open `dev -> master` PR
@@ -85,7 +88,7 @@ gate, evidence и точки остановки в task-файле.
   actions с отдельным owner approval, backup и preflight.
 - Для `AUTO_RELEASE_ELIGIBLE` task нормальный release path выполняется без дополнительного вопроса
   владельцу и строго последовательно: `task branch -> task PR dev -> exact-head checks -> serial
-  merge -> exact merged-dev push CI -> PR master -> required PR checks -> exact-head merge ->
+  merge -> exact merged-dev full push CI -> PR master -> quick provenance/checks -> exact-head merge ->
   post-merge CI -> automatic production deploy -> terminal success -> narrow App sync dev to exact
   deployed master -> automatic controller finish/clean task worktree and merged local branch ->
   archive task -> rebuild/check backlog manifests -> terminal report`. Direct feature push в `dev`

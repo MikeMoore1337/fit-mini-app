@@ -102,9 +102,25 @@ integration: task-pr-to-dev
 Umbrella IDs и `executable: false` не запускаются. Start всегда требует явный `--owner-launch`;
 approval другой task не наследуется.
 
-## Команды controller
+## Один пользовательский запуск
 
-Все команды запускаются из canonical repository или любого его worktree.
+Обычный путь запускается одной командой из canonical repository:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\run_task_delivery.py <ID>
+```
+
+Явный выбор task владельцем или эта команда являются standing authorization для normal delivery
+этой task: отдельный worktree, implementation/review/QA, commit, task PR в `dev`, serial
+integration, release PR в `master`, automatic production deploy и safe closeout. Повторные generic
+approval на этих стадиях не запрашиваются. Launcher сам ждёт занятую serial lane, отдаёт компактные
+состояния `STARTED`/`WAITING_FOR_LANE`/`DONE` и останавливается только на точном terminal blocker
+либо реально объявленном human/legal/external/destructive/task-specific gate.
+
+## Низкоуровневые команды controller
+
+Эти команды являются внутренней coordination/recovery boundary и не являются обычными действиями
+владельца. Они запускаются launcher/worker из canonical repository или нужного worktree.
 
 ```powershell
 python scripts/task_session.py doctor
@@ -133,7 +149,7 @@ recovery command. Task-файл не копируется в worktree: owner-loc
 3. Writer завершает implementation/review/QA и один logical commit с `[Task <ID>]`.
 4. `mark-ready` на clean exact HEAD фиксирует успешные review/QA verdicts; research lease эту стадию
    пройти не может. Branch push и PR `[Task <ID>] ...` идут только в `dev`.
-5. CI проверяет branch/title/commit IDs и aggregate `checks`.
+5. CI task PR проверяет branch/title/commit IDs и выполняет полный aggregate `checks`.
 6. `enqueue-integration` фиксирует immutable candidate evidence.
 7. `prepare-integration` выдаёт eligibility только queue head при current `dev` и exact successful
    checks; создаёт global integration lease.
@@ -163,7 +179,11 @@ Job `Task provenance` выполняется до aggregate `checks`:
 - failure/cancel/timeout/stale check не даёт integration eligibility.
 
 Task PR CI не публикует images и не запускает deployment: publish остаётся только для push в
-`master`, deploy — только после successful post-merge master CI.
+`master`, deploy — только после successful post-merge master CI. Exact merged `dev` push повторно
+подтверждает полный release-candidate suite. Поэтому canonical same-repository PR `dev -> master`
+не запускает этот тяжёлый suite третий раз: в нём выполняются только release-sequence, provenance и
+aggregate `checks`, который требует успешный exact `dev` push-CI. Любой exceptional/non-canonical
+PR в `master` по-прежнему проходит полный suite.
 
 ## Exact `master -> dev` sync
 
@@ -171,21 +191,21 @@ Task PR CI не публикует images и не запускает deployment:
 `Deploy production`, повторно проверяет, что workflow SHA равен current `master`, и допускает только
 fast-forward текущего `dev` к этому exact SHA. Любая divergence блокирует sync.
 
-Workflow по умолчанию выключен: `ENABLE_DEPLOYED_MASTER_DEV_SYNC != true`. Для включения нужен
-owner-approved GitHub App, установленный только в этот repository с минимальным permission
-`Contents: Read and write`. Его actor становится единственным bypass actor Ruleset `dev` в режиме
-`always`. Secrets `DEV_SYNC_APP_ID` и `DEV_SYNC_APP_PRIVATE_KEY` хранятся в protected `production`
-environment. Широкий PAT/admin bypass не используется.
+Workflow включается только при `ENABLE_DEPLOYED_MASTER_DEV_SYNC=true`. В текущем repository path
+активирован: узкий GitHub App установлен только в этот repository с минимальным permission
+`Contents: Read and write`, является единственным bypass actor Ruleset `dev` в режиме `always`, а
+последние automatic deployed sync runs завершались успешно. Secrets `DEV_SYNC_APP_ID` и
+`DEV_SYNC_APP_PRIVATE_KEY` хранятся в protected `production` environment. Широкий PAT/admin bypass
+не используется.
 
 Expected App actor хранится как несекретный repository contract в
 `.github/deployed-sync-app.json`. `doctor` сравнивает Ruleset `actor_id` с этим exact ID, а не
 принимает произвольный GitHub App. Кроме локального `origin/dev`, online `doctor` и `start`
 сравнивают live GitHub `dev` SHA; stale tracking ref требует fetch/нормализации до новой task.
 
-## OWNER_CHECKPOINT: live GitHub enforcement
+## Live GitHub enforcement
 
-До owner decision запрещено менять Ruleset, bypass actors, variables, secrets и repository merge
-settings. Для применения владелец подтверждает:
+Действующий контракт уже применён и проверяется online controller preflight:
 
 1. создание/установку узкого GitHub App и его actor ID;
 2. добавление двух environment secrets без передачи значений в chat/log;
@@ -195,7 +215,8 @@ settings. Для применения владелец подтверждает:
 5. `allow_auto_merge=false` либо организационный запрет использовать auto-merge для task PR;
 6. включение `ENABLE_DEPLOYED_MASTER_DEV_SYNC=true` только после successful dry read-back.
 
-После apply выполнить API read-back и сохранить evidence без secret values:
+При отдельном owner-authorized изменении enforcement выполнить API read-back и сохранить evidence
+без secret values:
 
 ```powershell
 gh api repos/MikeMoore1337/fit-mini-app/rulesets/21801287

@@ -96,8 +96,15 @@ def _run(
     check: bool = True,
     env: Mapping[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
+    command = list(args)
+    if command and command[0] == "git":
+        safe_directory = cwd.resolve().as_posix()
+        git_config = ["-c", f"safe.directory={safe_directory}"]
+        if os.name == "nt":
+            git_config.extend(["-c", "core.longpaths=true"])
+        command = ["git", *git_config, *command[1:]]
     completed = subprocess.run(
-        list(args),
+        command,
         cwd=cwd,
         check=False,
         text=True,

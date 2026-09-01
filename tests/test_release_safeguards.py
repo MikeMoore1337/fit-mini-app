@@ -109,6 +109,13 @@ def test_release_pr_requires_completed_exact_sha_push_ci_and_serial_execution() 
     assert r".updated_at <= \"$PR_GATE_AT\"" in ci_workflow
     assert ci_workflow.count("needs: [release-sequence, task-provenance]") == 7
     assert "task-provenance:" in ci_workflow
+    assert ci_workflow.count("github.event.pull_request.head.ref != 'dev'") == 7
+    assert "CANONICAL_RELEASE_PR:" in ci_workflow
+    assert 'if [ "$CANONICAL_RELEASE_PR" = "true" ]; then' in ci_workflow
+    assert ci_workflow.count('test "$QUALITY_RESULT" = skipped') == 1
+    assert ci_workflow.count('test "$CONTAINERS_RESULT" = skipped') == 1
+    assert ci_workflow.count('test "$QUALITY_RESULT" = success') == 1
+    assert ci_workflow.count('test "$CONTAINERS_RESULT" = success') == 1
     assert "TASK_PROVENANCE_RESULT: ${{ needs.task-provenance.result }}" in ci_workflow
     assert "RELEASE_SEQUENCE_RESULT: ${{ needs.release-sequence.result }}" in ci_workflow
     assert 'test "$RELEASE_SEQUENCE_RESULT" = success' in ci_workflow
@@ -160,6 +167,18 @@ def test_task127_global_auto_continue_contract_has_no_implicit_wait() -> None:
     assert "не ждёт дополнительного owner prompt" in global_rules
     assert "integration-only" in agents
     assert "serial merge в `dev`" in global_rules
+
+
+def test_one_command_delivery_keeps_owner_prompts_internal() -> None:
+    root = Path(__file__).resolve().parents[1]
+    launcher = (root / "scripts" / "run_task_delivery.py").read_text(encoding="utf-8")
+
+    assert '"--owner-launch"' in launcher
+    assert '"--approve-for-me"' in launcher
+    assert "standing authorization" in launcher
+    assert "BLOCKER/HIGH/MEDIUM" in launcher
+    assert "WAITING_FOR_LANE" in launcher
+    assert "Не запускай следующую product task" in launcher
 
 
 def test_task_pr_dev_provenance_and_deployed_master_sync_contract() -> None:

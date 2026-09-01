@@ -119,6 +119,11 @@ jobs:
   quality:
     name: Python quality
     needs: [release-sequence, task-provenance]
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.base.ref != 'master' ||
+      github.event.pull_request.head.ref != 'dev' ||
+      github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -152,6 +157,11 @@ jobs:
   frontend:
     name: Frontend
     needs: [release-sequence, task-provenance]
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.base.ref != 'master' ||
+      github.event.pull_request.head.ref != 'dev' ||
+      github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -216,6 +226,11 @@ jobs:
   frontend-smoke:
     name: Frontend smoke (${{ matrix.shard }}/3)
     needs: [release-sequence, task-provenance]
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.base.ref != 'master' ||
+      github.event.pull_request.head.ref != 'dev' ||
+      github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -264,6 +279,11 @@ jobs:
   python-tests:
     name: Python tests (${{ matrix.shard }})
     needs: [release-sequence, task-provenance]
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.base.ref != 'master' ||
+      github.event.pull_request.head.ref != 'dev' ||
+      github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -362,6 +382,11 @@ jobs:
   migrated-stack:
     name: Migrated PostgreSQL stack
     needs: [release-sequence, task-provenance]
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.base.ref != 'master' ||
+      github.event.pull_request.head.ref != 'dev' ||
+      github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -476,6 +501,11 @@ jobs:
   dependency-audit:
     name: Dependency audit
     needs: [release-sequence, task-provenance]
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.base.ref != 'master' ||
+      github.event.pull_request.head.ref != 'dev' ||
+      github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -512,6 +542,11 @@ jobs:
   containers:
     name: Container (${{ matrix.image }})
     needs: [release-sequence, task-provenance]
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.base.ref != 'master' ||
+      github.event.pull_request.head.ref != 'dev' ||
+      github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -621,6 +656,7 @@ jobs:
     steps:
       - name: Verify all CI jobs succeeded
         env:
+          CANONICAL_RELEASE_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'master' && github.event.pull_request.head.ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository }}
           RELEASE_SEQUENCE_RESULT: ${{ needs.release-sequence.result }}
           TASK_PROVENANCE_RESULT: ${{ needs.task-provenance.result }}
           QUALITY_RESULT: ${{ needs.quality.result }}
@@ -633,10 +669,20 @@ jobs:
         run: |
           test "$RELEASE_SEQUENCE_RESULT" = success
           test "$TASK_PROVENANCE_RESULT" = success
-          test "$QUALITY_RESULT" = success
-          test "$FRONTEND_RESULT" = success
-          test "$FRONTEND_SMOKE_RESULT" = success
-          test "$PYTHON_TESTS_RESULT" = success
-          test "$MIGRATED_STACK_RESULT" = success
-          test "$DEPENDENCY_AUDIT_RESULT" = success
-          test "$CONTAINERS_RESULT" = success
+          if [ "$CANONICAL_RELEASE_PR" = "true" ]; then
+            test "$QUALITY_RESULT" = skipped
+            test "$FRONTEND_RESULT" = skipped
+            test "$FRONTEND_SMOKE_RESULT" = skipped
+            test "$PYTHON_TESTS_RESULT" = skipped
+            test "$MIGRATED_STACK_RESULT" = skipped
+            test "$DEPENDENCY_AUDIT_RESULT" = skipped
+            test "$CONTAINERS_RESULT" = skipped
+          else
+            test "$QUALITY_RESULT" = success
+            test "$FRONTEND_RESULT" = success
+            test "$FRONTEND_SMOKE_RESULT" = success
+            test "$PYTHON_TESTS_RESULT" = success
+            test "$MIGRATED_STACK_RESULT" = success
+            test "$DEPENDENCY_AUDIT_RESULT" = success
+            test "$CONTAINERS_RESULT" = success
+          fi
