@@ -178,6 +178,8 @@ def test_one_command_delivery_keeps_owner_prompts_internal() -> None:
     assert "standing authorization" in launcher
     assert "BLOCKER/HIGH/MEDIUM" in launcher
     assert "WAITING_FOR_LANE" in launcher
+    assert "_verify_closeout(started)" in launcher
+    assert '"check"' in launcher and '"--backlog"' in launcher
     assert "Не запускай следующую product task" in launcher
 
 

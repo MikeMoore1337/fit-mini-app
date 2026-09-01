@@ -23,6 +23,7 @@ from typing import Any
 SCRIPT_PATH = Path(__file__).resolve()
 REPOSITORY_ROOT = SCRIPT_PATH.parents[1]
 CONTROLLER_PATH = REPOSITORY_ROOT / "scripts" / "task_session.py"
+ARCHIVE_HELPER_PATH = REPOSITORY_ROOT / "scripts" / "archive_backlog_task.py"
 TASK_ID_RE = re.compile(r"^[0-9]+[A-Z]?$", re.IGNORECASE)
 TRANSIENT_START_MARKERS = (
     "lane is occupied",
@@ -82,6 +83,38 @@ def _history(task_id: str) -> dict[str, Any] | None:
         return dict(json.loads(path.read_text(encoding="utf-8")))
     except (OSError, json.JSONDecodeError) as error:
         raise DeliveryError(f"Cannot read controller history {path}: {error}") from error
+
+
+def _archive_contract(canonical_task_path: str) -> tuple[Path, Path, Path]:
+    source = Path(canonical_task_path).resolve()
+    if source.parent.name == "tasks":
+        backlog_root = source.parent.parent
+        destination = source.parent / "done" / source.name
+    elif source.parent.name == "pending" and source.parent.parent.name == "bugs":
+        backlog_root = source.parent.parent.parent
+        destination = source.parent.parent / "done" / source.name
+    else:
+        raise DeliveryError(f"Unsupported task archive path: {source}")
+    return source, destination, backlog_root
+
+
+def _verify_closeout(started: dict[str, Any]) -> None:
+    source, destination, backlog_root = _archive_contract(
+        str(started["lease"]["canonical_task_path"])
+    )
+    if source.exists():
+        raise DeliveryError(f"Task was not archived after controller finish: {source}")
+    if not destination.is_file():
+        raise DeliveryError(f"Archived task is missing after controller finish: {destination}")
+    _run(
+        [
+            sys.executable,
+            str(ARCHIVE_HELPER_PATH),
+            "check",
+            "--backlog",
+            str(backlog_root),
+        ]
+    )
 
 
 def _is_transient_start_error(detail: str) -> bool:
@@ -232,6 +265,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 f"Worker returned before terminal controller finish (state={state}); "
                 f"inspect {artifacts}"
             )
+        _verify_closeout(started)
         _event(
             "DONE",
             task_id=task_id,

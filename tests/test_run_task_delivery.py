@@ -80,3 +80,34 @@ def test_task_id_normalization_is_strict() -> None:
         assert "Invalid task ID" in str(error)
     else:
         raise AssertionError("invalid task ID was accepted")
+
+
+def test_verify_closeout_requires_archive_and_manifest_check(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    backlog = tmp_path / "codex-backlog"
+    source = backlog / "tasks" / "131-delivery.md"
+    destination = backlog / "tasks" / "done" / source.name
+    destination.parent.mkdir(parents=True)
+    destination.write_text("done", encoding="utf-8")
+    started = {"lease": {"canonical_task_path": str(source)}}
+    observed: dict[str, Any] = {}
+
+    def fake_run(*args: Any, **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        observed["args"] = args[0]
+        return subprocess.CompletedProcess(args[0], 0, stdout="", stderr="")
+
+    monkeypatch.setattr(delivery, "_run", fake_run)
+
+    delivery._verify_closeout(started)
+
+    assert observed["args"][-2:] == ["--backlog", str(backlog)]
+
+
+def test_verify_closeout_rejects_finished_but_unarchived_task(tmp_path: Path) -> None:
+    source = tmp_path / "codex-backlog" / "tasks" / "131-delivery.md"
+    source.parent.mkdir(parents=True)
+    source.write_text("pending", encoding="utf-8")
+
+    with pytest.raises(delivery.DeliveryError, match="was not archived"):
+        delivery._verify_closeout({"lease": {"canonical_task_path": str(source)}})
