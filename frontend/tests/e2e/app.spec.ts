@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { emptyHydrationDay } from './fixtures/platform-api';
 
 async function openCard(page: Page, title: string) {
   const card = page
@@ -620,6 +621,11 @@ async function mockApi(
           },
         },
       });
+    if (path.endsWith('/nutrition/hydration')) {
+      return route.fulfill({
+        json: emptyHydrationDay(url.searchParams.get('diary_date') || '2030-01-10'),
+      });
+    }
     if (path.endsWith('/nutrition/diary'))
       return route.fulfill({
         json: {

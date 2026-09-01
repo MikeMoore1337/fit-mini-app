@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { emptyHydrationDay } from './fixtures/platform-api';
 
 const captureFeedbackAudit = Boolean(
   (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
@@ -261,6 +262,11 @@ async function mockProgress(page: Page, reportState: NutritionReportState = 'par
     }
     if (path.endsWith('/workouts/today')) {
       return route.fulfill({ status: 404, json: { detail: 'На сегодня тренировка не назначена' } });
+    }
+    if (path.endsWith('/nutrition/hydration')) {
+      return route.fulfill({
+        json: emptyHydrationDay(url.searchParams.get('diary_date') || '2030-01-30'),
+      });
     }
     if (path.endsWith('/nutrition/diary')) {
       return route.fulfill({

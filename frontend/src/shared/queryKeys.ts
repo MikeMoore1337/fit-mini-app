@@ -32,6 +32,8 @@ export const queryKeys = {
     currentTarget: ['nutrition', 'targets', 'current'] as const,
     targetHistory: (targetTelegramId?: number | null) =>
       ['nutrition', 'targets', 'history', targetTelegramId ?? 'me'] as const,
+    hydration: ['nutrition', 'hydration'] as const,
+    hydrationDate: (diaryDate: string) => ['nutrition', 'hydration', diaryDate] as const,
   },
   notifications: {
     all: ['notifications'] as const,

@@ -22,9 +22,15 @@ FORBIDDEN_ONLINE_CALLS = {
     "create_check_constraint",
     "create_exclude_constraint",
     "create_foreign_key",
-    "create_index",
     "create_primary_key",
     "create_unique_constraint",
+}
+SAFE_TABLE_CONSTRUCTORS = {
+    "CheckConstraint",
+    "Column",
+    "ForeignKey",
+    "PrimaryKeyConstraint",
+    "UniqueConstraint",
 }
 SAFE_COLUMN_TYPES = {
     "BigInteger",
@@ -128,15 +134,30 @@ def _op_calls(upgrade: ast.AST) -> list[ast.Call]:
 
 
 def _validate_upgrade_call_allowlist(path: Path, upgrade: ast.AST, phase: object) -> None:
+    created_tables = {
+        call.args[0].value
+        for call in _op_calls(upgrade)
+        if call.func.attr == "create_table"
+        and call.args
+        and isinstance(call.args[0], ast.Constant)
+        and isinstance(call.args[0].value, str)
+    }
     for call in (node for node in ast.walk(upgrade) if isinstance(node, ast.Call)):
         function = call.func
         allowed = False
         if isinstance(function, ast.Attribute) and isinstance(function.value, ast.Name):
             owner = function.value.id
             if phase == "expand":
-                allowed = (owner == "op" and function.attr == "add_column") or (
+                allowed = (
+                    owner == "op"
+                    and function.attr in {"add_column", "create_table", "create_index"}
+                ) or (
                     owner == "sa"
-                    and (function.attr == "Column" or function.attr in SAFE_COLUMN_TYPES)
+                    and (
+                        function.attr in SAFE_TABLE_CONSTRUCTORS
+                        or function.attr in SAFE_COLUMN_TYPES
+                        or function.attr == "text"
+                    )
                 )
             elif phase == "backfill":
                 allowed = owner == "op" and function.attr == "execute"
@@ -144,6 +165,23 @@ def _validate_upgrade_call_allowlist(path: Path, upgrade: ast.AST, phase: object
             raise OnlineMigrationError(
                 f"{path} calls a helper or operation outside the {phase!r} online allowlist"
             )
+        if (
+            phase == "expand"
+            and isinstance(function, ast.Attribute)
+            and isinstance(function.value, ast.Name)
+            and function.value.id == "op"
+            and function.attr == "create_index"
+        ):
+            table_name = (
+                call.args[1].value
+                if len(call.args) > 1 and isinstance(call.args[1], ast.Constant)
+                else None
+            )
+            if table_name not in created_tables:
+                raise OnlineMigrationError(
+                    f"{path} contains lock-prone operations: create_index is allowed only for "
+                    "a new empty table in the same migration"
+                )
 
 
 def _validate_nullable_add_column(path: Path, call: ast.Call) -> None:
@@ -271,7 +309,7 @@ def validate_added_migration(path: Path) -> None:
         operation = call.func.attr if isinstance(call.func, ast.Attribute) else ""
         if phase == "expand" and operation == "add_column":
             _validate_nullable_add_column(path, call)
-        elif phase == "expand" and operation not in {"add_column"}:
+        elif phase == "expand" and operation not in {"add_column", "create_table", "create_index"}:
             raise OnlineMigrationError(
                 f"{path} uses op.{operation}, which is not allowlisted for online expand"
             )

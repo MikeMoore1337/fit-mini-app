@@ -80,6 +80,31 @@ const oatmeal = {
   updated_at: '2030-01-09T07:00:00Z',
 };
 
+export function emptyHydrationDay(diaryDate: string) {
+  return {
+    diary_date: diaryDate,
+    timezone: 'Europe/Moscow',
+    total_ml: 0,
+    goal: null,
+    progress_percent: null,
+    entries: [],
+    presets: [
+      { id: null, label: 'Стакан', volume_ml: 250, beverage_type: 'water', is_default: true },
+      {
+        id: null,
+        label: 'Большой стакан',
+        volume_ml: 350,
+        beverage_type: 'water',
+        is_default: true,
+      },
+      { id: null, label: 'Бутылка', volume_ml: 500, beverage_type: 'water', is_default: true },
+    ],
+    last_logged_at: null,
+    reminder_suppression_key: null,
+    action_url: `/app?section=nutrition&date=${diaryDate}&hydration=quick`,
+  };
+}
+
 export async function installPlatformApi(
   page: Page,
   options: PlatformApiOptions = {},
@@ -1870,6 +1895,11 @@ export async function installPlatformApi(
         targetHistory = [currentTarget, closedCurrent, ...targetHistory.slice(1)];
       }
       return route.fulfill({ json: currentTarget });
+    }
+    if (path.endsWith('/nutrition/hydration') && request.method() === 'GET') {
+      return route.fulfill({
+        json: emptyHydrationDay(url.searchParams.get('diary_date') || today),
+      });
     }
     if (path.endsWith('/nutrition/diary') && request.method() === 'GET') {
       const totals = nutritionTotals();

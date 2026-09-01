@@ -22,6 +22,34 @@ def test_online_migration_accepts_declared_additive_expand(tmp_path: Path) -> No
     validate_added_migration(path)
 
 
+def test_online_migration_accepts_empty_table_and_its_index(tmp_path: Path) -> None:
+    path = _migration(
+        tmp_path / "0065_empty_table.py",
+        'online_rollout_phase = "expand"\n'
+        'online_rollout_notes = "Creates one empty table and indexes only that table."\n\n'
+        "def upgrade():\n"
+        '    op.create_table("events", sa.Column("id", sa.Integer(), primary_key=True), '
+        'sa.Column("user_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=False), '
+        'sa.CheckConstraint("user_id > 0", name="ck_events_user"))\n'
+        '    op.create_index("ix_events_user", "events", ["user_id"])\n',
+    )
+
+    validate_added_migration(path)
+
+
+def test_online_migration_rejects_index_on_existing_table(tmp_path: Path) -> None:
+    path = _migration(
+        tmp_path / "0065_existing_index.py",
+        'online_rollout_phase = "expand"\n'
+        'online_rollout_notes = "Index would target an existing populated table."\n\n'
+        "def upgrade():\n"
+        '    op.create_index("ix_users_name", "users", ["name"])\n',
+    )
+
+    with pytest.raises(OnlineMigrationError, match="new empty table"):
+        validate_added_migration(path)
+
+
 @pytest.mark.parametrize("operation", ["drop_table", "drop_column", "alter_column"])
 def test_online_migration_rejects_destructive_contract_operation(
     tmp_path: Path, operation: str

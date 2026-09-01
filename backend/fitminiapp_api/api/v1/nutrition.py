@@ -27,6 +27,16 @@ from fitminiapp_api.schemas.food_diary import (
     FoodDiaryEntryResponse,
     FoodDiaryEntryUpdate,
 )
+from fitminiapp_api.schemas.hydration import (
+    HydrationDayResponse,
+    HydrationEntryCreate,
+    HydrationEntryResponse,
+    HydrationEntryUpdate,
+    HydrationGoalResponse,
+    HydrationGoalSave,
+    HydrationPresetResponse,
+    HydrationPresetSave,
+)
 from fitminiapp_api.schemas.nutrition import (
     EnergyCalibrationDecision,
     EnergyCalibrationHistoryResponse,
@@ -82,6 +92,17 @@ from fitminiapp_api.services.foods import (
     set_food_favorite,
     update_user_food,
 )
+from fitminiapp_api.services.hydration import (
+    HydrationConflictError,
+    HydrationError,
+    create_hydration_entry,
+    delete_hydration_entry,
+    delete_hydration_preset,
+    list_hydration_day,
+    save_hydration_goal,
+    save_hydration_preset,
+    update_hydration_entry,
+)
 from fitminiapp_api.services.nutrition import (
     NutritionConflictError,
     NutritionEnergyMismatchError,
@@ -135,6 +156,104 @@ OptionalIdempotencyKey = Annotated[
     str | None,
     Header(alias="Idempotency-Key", min_length=8, max_length=128),
 ]
+
+
+def _raise_hydration_http_error(exc: HydrationError) -> None:
+    if isinstance(exc, HydrationConflictError):
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if str(exc) in {"Запись не найдена", "Сосуд не найден"}:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/hydration", response_model=HydrationDayResponse)
+def hydration_day(
+    diary_date: date,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    return list_hydration_day(db, current_user, diary_date)
+
+
+@router.post(
+    "/hydration/entries",
+    response_model=HydrationEntryResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def add_hydration_entry(
+    payload: HydrationEntryCreate,
+    idempotency_key: IdempotencyKey,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        return create_hydration_entry(db, current_user, payload, idempotency_key)
+    except HydrationError as exc:
+        _raise_hydration_http_error(exc)
+
+
+@router.patch("/hydration/entries/{entry_id}", response_model=HydrationEntryResponse)
+def edit_hydration_entry(
+    entry_id: int,
+    payload: HydrationEntryUpdate,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        return update_hydration_entry(db, current_user, entry_id, payload)
+    except HydrationError as exc:
+        _raise_hydration_http_error(exc)
+
+
+@router.delete("/hydration/entries/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_hydration_entry(
+    entry_id: int,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        delete_hydration_entry(db, current_user, entry_id)
+    except HydrationError as exc:
+        _raise_hydration_http_error(exc)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/hydration/goal", response_model=HydrationGoalResponse)
+def save_goal_hydration(
+    payload: HydrationGoalSave,
+    idempotency_key: IdempotencyKey,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        return save_hydration_goal(db, current_user, payload, idempotency_key)
+    except HydrationError as exc:
+        _raise_hydration_http_error(exc)
+
+
+@router.post("/hydration/presets", response_model=HydrationPresetResponse)
+def save_preset_hydration(
+    payload: HydrationPresetSave,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        return save_hydration_preset(db, current_user, payload)
+    except HydrationError as exc:
+        _raise_hydration_http_error(exc)
+
+
+@router.delete("/hydration/presets/{preset_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_preset_hydration(
+    preset_id: int,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        delete_hydration_preset(db, current_user, preset_id)
+    except HydrationError as exc:
+        _raise_hydration_http_error(exc)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post(

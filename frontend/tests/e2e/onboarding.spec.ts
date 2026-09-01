@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { emptyHydrationDay } from './fixtures/platform-api';
 import type {
   NutritionReport,
   ProgressSummary,
@@ -79,7 +80,8 @@ async function mockFirstRunApi(
 
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request();
-    const path = new URL(request.url()).pathname;
+    const url = new URL(request.url());
+    const path = url.pathname;
 
     if (path.endsWith('/public/config')) {
       return route.fulfill({
@@ -103,6 +105,11 @@ async function mockFirstRunApi(
     if (path.endsWith('/me')) return route.fulfill({ json: user });
     if (path.endsWith('/workouts/today')) {
       return route.fulfill({ status: 404, json: { detail: 'На сегодня тренировка не назначена' } });
+    }
+    if (path.endsWith('/nutrition/hydration')) {
+      return route.fulfill({
+        json: emptyHydrationDay(url.searchParams.get('diary_date') || '2030-01-30'),
+      });
     }
     if (path.endsWith('/nutrition/diary')) {
       return route.fulfill({

@@ -1845,6 +1845,109 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/nutrition/hydration": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Hydration Day */
+        get: operations["hydration_day_api_v1_nutrition_hydration_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nutrition/hydration/entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Hydration Entry */
+        post: operations["add_hydration_entry_api_v1_nutrition_hydration_entries_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nutrition/hydration/entries/{entry_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Hydration Entry */
+        delete: operations["remove_hydration_entry_api_v1_nutrition_hydration_entries__entry_id__delete"];
+        options?: never;
+        head?: never;
+        /** Edit Hydration Entry */
+        patch: operations["edit_hydration_entry_api_v1_nutrition_hydration_entries__entry_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/nutrition/hydration/goal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Save Goal Hydration */
+        post: operations["save_goal_hydration_api_v1_nutrition_hydration_goal_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nutrition/hydration/presets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Save Preset Hydration */
+        post: operations["save_preset_hydration_api_v1_nutrition_hydration_presets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nutrition/hydration/presets/{preset_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Preset Hydration */
+        delete: operations["remove_preset_hydration_api_v1_nutrition_hydration_presets__preset_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/nutrition/energy-calibration/preview": {
         parameters: {
             query?: never;
@@ -5275,6 +5378,195 @@ export interface components {
             /** Max Bpm */
             max_bpm: number;
         };
+        /**
+         * HydrationBeverageType
+         * @enum {string}
+         */
+        HydrationBeverageType: "water" | "tea" | "coffee" | "milk" | "juice" | "other";
+        /** HydrationDayResponse */
+        HydrationDayResponse: {
+            /**
+             * Diary Date
+             * Format: date
+             */
+            diary_date: string;
+            /** Timezone */
+            timezone: string;
+            /** Total Ml */
+            total_ml: number;
+            goal: components["schemas"]["HydrationGoalResponse"] | null;
+            /** Progress Percent */
+            progress_percent: number | null;
+            /** Entries */
+            entries: components["schemas"]["HydrationEntryResponse"][];
+            /** Presets */
+            presets: components["schemas"]["HydrationPresetResponse"][];
+            /** Last Logged At */
+            last_logged_at: string | null;
+            /** Reminder Suppression Key */
+            reminder_suppression_key: string | null;
+            /** Action Url */
+            action_url: string;
+        };
+        /** HydrationEntryCreate */
+        HydrationEntryCreate: {
+            /** Volume Ml */
+            volume_ml: number;
+            /** @default water */
+            beverage_type: components["schemas"]["HydrationBeverageType"];
+            /** Occurred At */
+            occurred_at?: string | null;
+            /** Diary Date */
+            diary_date?: string | null;
+            /**
+             * Source
+             * @default manual
+             */
+            source: string;
+        };
+        /** HydrationEntryResponse */
+        HydrationEntryResponse: {
+            /** Id */
+            id: number;
+            /** Volume Ml */
+            volume_ml: number;
+            beverage_type: components["schemas"]["HydrationBeverageType"];
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /**
+             * Diary Date
+             * Format: date
+             */
+            diary_date: string;
+            /** Timezone */
+            timezone: string;
+            /** Source */
+            source: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** HydrationEntryUpdate */
+        HydrationEntryUpdate: {
+            /** Volume Ml */
+            volume_ml: number;
+            beverage_type: components["schemas"]["HydrationBeverageType"];
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+        };
+        /** HydrationGoalResponse */
+        HydrationGoalResponse: {
+            /** Id */
+            id: number;
+            /** Enabled */
+            enabled: boolean;
+            /** Target Ml */
+            target_ml: number | null;
+            source: components["schemas"]["HydrationGoalSource"];
+            /** Method Version */
+            method_version: string;
+            /** Reference Scope */
+            reference_scope: string;
+            /** Sex */
+            sex: string | null;
+            /** Adult Confirmed */
+            adult_confirmed: boolean | null;
+            /**
+             * Effective From
+             * Format: date
+             */
+            effective_from: string;
+            /** Effective To */
+            effective_to: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** HydrationGoalSave */
+        HydrationGoalSave: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /** Target Ml */
+            target_ml?: number | null;
+            source: components["schemas"]["HydrationGoalSource"];
+            /** Sex */
+            sex?: string | null;
+            /** Adult Confirmed */
+            adult_confirmed?: boolean | null;
+            /**
+             * Save Sex To Profile
+             * @default false
+             */
+            save_sex_to_profile: boolean;
+            /** Effective From */
+            effective_from?: string | null;
+        };
+        /**
+         * HydrationGoalSource
+         * @enum {string}
+         */
+        HydrationGoalSource: "national_academies_beverages" | "manual";
+        /** HydrationPresetResponse */
+        HydrationPresetResponse: {
+            /** Id */
+            id?: number | null;
+            /** Label */
+            label: string;
+            /** Volume Ml */
+            volume_ml: number;
+            beverage_type: components["schemas"]["HydrationBeverageType"];
+            /**
+             * Is Default
+             * @default false
+             */
+            is_default: boolean;
+        };
+        /** HydrationPresetSave */
+        HydrationPresetSave: {
+            /** Label */
+            label: string;
+            /** Volume Ml */
+            volume_ml: number;
+            /** @default water */
+            beverage_type: components["schemas"]["HydrationBeverageType"];
+        };
+        /** HydrationReportSummary */
+        HydrationReportSummary: {
+            /** Total Ml */
+            total_ml: number;
+            /** Average Ml */
+            average_ml?: number | null;
+            /** Logged Days */
+            logged_days: number;
+            /** Eligible Days */
+            eligible_days: number;
+            /** Coverage Percent */
+            coverage_percent: number;
+            /** Days Meeting Goal */
+            days_meeting_goal: number;
+            /** Goal Evaluated Days */
+            goal_evaluated_days: number;
+            /** Trend Ml */
+            trend_ml?: number | null;
+        };
         /** LatestBodyMeasurement */
         LatestBodyMeasurement: {
             /**
@@ -5585,6 +5877,12 @@ export interface components {
              * @default false
              */
             target_changed: boolean;
+            /** Hydration Ml */
+            hydration_ml?: number | null;
+            /** Hydration Target Ml */
+            hydration_target_ml?: number | null;
+            /** Hydration Progress Percent */
+            hydration_progress_percent?: number | null;
         };
         /** NutritionReportMetricSummary */
         NutritionReportMetricSummary: {
@@ -5622,6 +5920,7 @@ export interface components {
             daily: components["schemas"]["NutritionReportDailyPoint"][];
             /** Target Changes */
             target_changes: components["schemas"]["NutritionReportTargetChange"][];
+            hydration?: components["schemas"]["HydrationReportSummary"] | null;
         };
         /** NutritionReportSummary */
         NutritionReportSummary: {
@@ -7158,6 +7457,8 @@ export interface components {
             full_name?: string | null;
             /** Birth Date */
             birth_date?: string | null;
+            /** Sex */
+            sex?: ("male" | "female") | null;
             /** Goal */
             goal?: string | null;
             /** Level */
@@ -7196,6 +7497,8 @@ export interface components {
             full_name?: string | null;
             /** Birth Date */
             birth_date?: string | null;
+            /** Sex */
+            sex?: ("male" | "female") | null;
             /** Goal */
             goal?: ("muscle_gain" | "fat_loss" | "maintenance" | "recomposition") | null;
             /** Level */
@@ -11899,6 +12202,233 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["WeeklyCheckInResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    hydration_day_api_v1_nutrition_hydration_get: {
+        parameters: {
+            query: {
+                diary_date: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HydrationDayResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_hydration_entry_api_v1_nutrition_hydration_entries_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HydrationEntryCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HydrationEntryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_hydration_entry_api_v1_nutrition_hydration_entries__entry_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    edit_hydration_entry_api_v1_nutrition_hydration_entries__entry_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HydrationEntryUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HydrationEntryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_goal_hydration_api_v1_nutrition_hydration_goal_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HydrationGoalSave"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HydrationGoalResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_preset_hydration_api_v1_nutrition_hydration_presets_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HydrationPresetSave"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HydrationPresetResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_preset_hydration_api_v1_nutrition_hydration_presets__preset_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                preset_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

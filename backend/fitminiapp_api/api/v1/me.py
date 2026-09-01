@@ -210,6 +210,7 @@ def _build_user_response(db: Session, user) -> UserResponse:
         profile=UserProfileResponse(
             full_name=user.profile.full_name if user.profile else None,
             birth_date=user.profile.birth_date if user.profile else None,
+            sex=user.profile.sex if user.profile else None,
             goal=user.profile.goal if user.profile else None,
             level=user.profile.level if user.profile else None,
             height_cm=user.profile.height_cm if user.profile else None,
