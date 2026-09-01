@@ -111,4 +111,48 @@ describe('HydrationTracker', () => {
     expect(screen.getByRole('button', { name: 'Изменить' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Удалить' })).toBeVisible();
   });
+
+  it('initializes the editor from an existing manual goal', async () => {
+    apiMock.mockImplementation((path: string) => {
+      if (path === '/api/v1/me') return Promise.resolve({ profile: { sex: null } });
+      if (path.startsWith('/api/v1/nutrition/hydration?')) {
+        return Promise.resolve({
+          ...day,
+          goal: {
+            ...day.goal,
+            id: 2,
+            source: 'manual',
+            method_version: 'manual-v1',
+            target_ml: 3000,
+            sex: null,
+            adult_confirmed: null,
+          },
+        });
+      }
+      return Promise.resolve({});
+    });
+
+    renderTracker();
+    fireEvent.click(await screen.findByRole('button', { name: 'Другой напиток, история и цель' }));
+
+    expect(screen.getByRole('radio', { name: 'Вручную' })).toBeChecked();
+    expect(screen.getByLabelText('Ориентир, мл в день')).toHaveValue(3000);
+  });
+
+  it('reuses the persisted reference sex even when the profile has none', async () => {
+    apiMock.mockImplementation((path: string) => {
+      if (path === '/api/v1/me') return Promise.resolve({ profile: { sex: null } });
+      if (path.startsWith('/api/v1/nutrition/hydration?')) {
+        return Promise.resolve({ ...day, goal: { ...day.goal, target_ml: 3000, sex: 'male' } });
+      }
+      return Promise.resolve({});
+    });
+
+    renderTracker();
+    fireEvent.click(await screen.findByRole('button', { name: 'Другой напиток, история и цель' }));
+
+    expect(screen.getByRole('radio', { name: 'По справочному ориентиру' })).toBeChecked();
+    expect(screen.getByLabelText('Пол для справочного ориентира')).toHaveValue('male');
+    expect(screen.getByLabelText('Мне 18 лет или больше')).toBeChecked();
+  });
 });

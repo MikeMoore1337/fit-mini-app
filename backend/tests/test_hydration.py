@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from types import SimpleNamespace
+from unittest.mock import MagicMock
+
+from sqlalchemy.exc import IntegrityError
 
 from fitminiapp_api.core.timezone import today_in_timezone
 from fitminiapp_api.db.session import get_session_context
 from fitminiapp_api.models.hydration import HydrationEntry, HydrationGoal, HydrationPreset
 from fitminiapp_api.models.user import User
+from fitminiapp_api.schemas.hydration import HydrationEntryCreate, HydrationGoalSave
+from fitminiapp_api.services import hydration as hydration_service
 from fitminiapp_api.services.account_export import build_account_export
 
 
@@ -173,6 +179,78 @@ def test_hydration_validates_future_and_idempotency_conflict(client) -> None:
         },
     )
     assert future.status_code == 422
+
+
+def test_hydration_entry_uniqueness_race_replays_matching_request() -> None:
+    payload = HydrationEntryCreate(volume_ml=250, beverage_type="water", source="manual")
+    fingerprint = hydration_service._fingerprint(payload)
+    now = datetime.now(UTC)
+    existing = HydrationEntry(
+        id=91,
+        user_id=81_091,
+        occurred_at=now,
+        diary_date=now.date(),
+        timezone="Europe/Moscow",
+        volume_ml=250,
+        beverage_type="water",
+        source="manual",
+        request_key="hydration-entry-race",
+        payload_fingerprint=fingerprint,
+        created_at=now.replace(tzinfo=None),
+        updated_at=now.replace(tzinfo=None),
+    )
+    db = MagicMock()
+    filtered = db.query.return_value.filter.return_value
+    filtered.first.side_effect = [None, existing]
+    db.commit.side_effect = IntegrityError("insert", {}, Exception("duplicate"))
+
+    result = hydration_service.create_hydration_entry(
+        db,
+        SimpleNamespace(id=81_091, profile=None),
+        payload,
+        "hydration-entry-race",
+    )
+
+    assert result["id"] == existing.id
+    db.rollback.assert_called_once_with()
+
+
+def test_hydration_goal_uniqueness_race_replays_matching_request() -> None:
+    payload = HydrationGoalSave(enabled=True, source="manual", target_ml=3000)
+    fingerprint = hydration_service._fingerprint(payload)
+    today = today_in_timezone("Europe/Moscow")
+    now = datetime.now().replace(tzinfo=None)
+    existing = HydrationGoal(
+        id=92,
+        user_id=81_092,
+        status="enabled",
+        target_ml=3000,
+        source="manual",
+        method_version="manual-v1",
+        reference_scope="beverages",
+        sex=None,
+        adult_confirmed=None,
+        effective_from=today,
+        effective_to=None,
+        request_key="hydration-goal-race",
+        payload_fingerprint=fingerprint,
+        created_at=now,
+    )
+    db = MagicMock()
+    filtered = db.query.return_value.filter.return_value
+    filtered.first.side_effect = [None, existing]
+    filtered.order_by.return_value.first.return_value = None
+    db.commit.side_effect = IntegrityError("insert", {}, Exception("duplicate"))
+
+    result = hydration_service.save_hydration_goal(
+        db,
+        SimpleNamespace(id=81_092, profile=None),
+        payload,
+        "hydration-goal-race",
+    )
+
+    assert result["id"] == existing.id
+    db.rollback.assert_called_once_with()
 
 
 def test_hydration_is_in_nutrition_report_without_invented_zero_days(client) -> None:

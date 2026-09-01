@@ -172,10 +172,10 @@ export function HydrationTracker({ diaryDate }: { diaryDate: string }) {
   const [customVolume, setCustomVolume] = useState('');
   const [beverageType, setBeverageType] = useState('water');
   const [undoEntry, setUndoEntry] = useState<HydrationEntry | null>(null);
-  const [goalMode, setGoalMode] = useState<'reference' | 'manual'>('reference');
-  const [sex, setSex] = useState<'male' | 'female' | null>(null);
-  const [adultConfirmed, setAdultConfirmed] = useState(false);
-  const [manualGoal, setManualGoal] = useState('2200');
+  const [goalModeDraft, setGoalMode] = useState<'reference' | 'manual' | null>(null);
+  const [sexDraft, setSex] = useState<'male' | 'female' | null>();
+  const [adultConfirmedDraft, setAdultConfirmed] = useState<boolean>();
+  const [manualGoalDraft, setManualGoal] = useState<string>();
   const [saveSex, setSaveSex] = useState(false);
   const [presetName, setPresetName] = useState('');
   const [presetVolume, setPresetVolume] = useState('');
@@ -187,6 +187,19 @@ export function HydrationTracker({ diaryDate }: { diaryDate: string }) {
     queryKey: ['me'],
     queryFn: () => api<User>('/api/v1/me'),
   });
+  const loadedGoal = hydration.data?.goal;
+  const loadedGoalIsReference = loadedGoal?.source === 'national_academies_beverages';
+  const goalMode =
+    goalModeDraft ?? (loadedGoal && !loadedGoalIsReference ? 'manual' : 'reference');
+  const sex =
+    sexDraft !== undefined
+      ? sexDraft
+      : loadedGoalIsReference && (loadedGoal.sex === 'male' || loadedGoal.sex === 'female')
+        ? loadedGoal.sex
+        : null;
+  const adultConfirmed =
+    adultConfirmedDraft ?? (loadedGoalIsReference && Boolean(loadedGoal.adult_confirmed));
+  const manualGoal = manualGoalDraft ?? String(loadedGoal?.target_ml ?? 2200);
 
   const refresh = async () => {
     await Promise.all([

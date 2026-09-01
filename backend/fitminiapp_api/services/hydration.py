@@ -184,7 +184,18 @@ def save_hydration_goal(
         db.commit()
     except IntegrityError as exc:
         db.rollback()
-        raise HydrationConflictError("Не удалось сохранить версию цели") from exc
+        replay = (
+            db.query(HydrationGoal)
+            .filter(HydrationGoal.user_id == user.id, HydrationGoal.request_key == request_key)
+            .first()
+        )
+        if replay is None:
+            raise HydrationConflictError("Не удалось сохранить версию цели") from exc
+        if replay.payload_fingerprint != fingerprint:
+            raise HydrationConflictError(
+                "Idempotency-Key уже использован с другими данными"
+            ) from exc
+        return _goal_response(replay) or {}
     db.refresh(goal)
     return _goal_response(goal) or {}
 
@@ -245,7 +256,18 @@ def create_hydration_entry(
         db.commit()
     except IntegrityError as exc:
         db.rollback()
-        raise HydrationConflictError("Не удалось сохранить запись") from exc
+        replay = (
+            db.query(HydrationEntry)
+            .filter(HydrationEntry.user_id == user.id, HydrationEntry.request_key == request_key)
+            .first()
+        )
+        if replay is None:
+            raise HydrationConflictError("Не удалось сохранить запись") from exc
+        if replay.payload_fingerprint != fingerprint:
+            raise HydrationConflictError(
+                "Idempotency-Key уже использован с другими данными"
+            ) from exc
+        return _entry_response(replay)
     db.refresh(entry)
     return _entry_response(entry)
 
