@@ -115,7 +115,7 @@ test('hover and focus use the restrained brand and neutral palette', async ({ br
   await openSurface(page, '/app?section=today', 'dark');
 
   const nutritionCard = page.locator('[data-semantic-family="nutrition"]').first();
-  const action = nutritionCard.getByRole('link', { name: 'Добавить' });
+  const action = nutritionCard.getByRole('link', { name: '+ Вода', exact: true });
   await nutritionCard.hover();
   await action.focus();
   await expect(action).toBeFocused();
