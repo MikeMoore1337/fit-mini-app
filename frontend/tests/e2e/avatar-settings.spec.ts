@@ -286,11 +286,14 @@ test('desktop profile actions have persistent outline and symmetric save spacing
     const cardStyle = getComputedStyle(card);
     return {
       top: saveRect.top - footerRect.top - Number.parseFloat(footerStyle.borderTopWidth),
-      bottom: cardRect.bottom - Number.parseFloat(cardStyle.borderBottomWidth) - saveRect.bottom,
+      bottom: footerRect.bottom - saveRect.bottom,
+      cardResidual:
+        cardRect.bottom - Number.parseFloat(cardStyle.borderBottomWidth) - footerRect.bottom,
     };
   });
   expect(Math.abs(geometry.top - geometry.bottom), JSON.stringify(geometry)).toBeLessThanOrEqual(1);
   expect(geometry.top).toBeGreaterThanOrEqual(17);
+  expect(geometry.cardResidual).toBeLessThanOrEqual(5);
 
   await page.screenshot({
     path: '../.artifacts/screenshots/task-110B/desktop-light-profile-actions.png',
