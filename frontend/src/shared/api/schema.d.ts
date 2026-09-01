@@ -362,6 +362,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/avatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Avatar */
+        get: operations["read_avatar_api_v1_me_avatar_get"];
+        /** Replace Avatar */
+        put: operations["replace_avatar_api_v1_me_avatar_put"];
+        post?: never;
+        /** Remove Avatar */
+        delete: operations["remove_avatar_api_v1_me_avatar_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/trainer-capability": {
         parameters: {
             query?: never;
@@ -3289,6 +3308,31 @@ export interface components {
             /** Token */
             token: string;
         };
+        /** AvatarMetadataResponse */
+        AvatarMetadataResponse: {
+            /**
+             * Content Type
+             * @constant
+             */
+            content_type: "image/webp";
+            /** Byte Size */
+            byte_size: number;
+            /**
+             * Width
+             * @constant
+             */
+            width: 512;
+            /**
+             * Height
+             * @constant
+             */
+            height: 512;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** AvoidedExercisePreference */
         AvoidedExercisePreference: {
             /** Exercise Id */
@@ -3432,6 +3476,11 @@ export interface components {
             mode: "balanced" | "muscle_groups";
             /** Muscle Group Ids */
             muscle_group_ids?: string[];
+        };
+        /** Body_replace_avatar_api_v1_me_avatar_put */
+        Body_replace_avatar_api_v1_me_avatar_put: {
+            /** File */
+            file: string;
         };
         /** BotDigestDraftRequest */
         BotDigestDraftRequest: {
@@ -7180,6 +7229,7 @@ export interface components {
             last_name?: string | null;
             /** Photo Url */
             photo_url?: string | null;
+            custom_avatar?: components["schemas"]["AvatarMetadataResponse"] | null;
             /**
              * Is Coach
              * @default false
@@ -8740,6 +8790,79 @@ export interface operations {
         };
     };
     read_me_api_v1_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+        };
+    };
+    read_avatar_api_v1_me_avatar_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    replace_avatar_api_v1_me_avatar_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_replace_avatar_api_v1_me_avatar_put"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_avatar_api_v1_me_avatar_delete: {
         parameters: {
             query?: never;
             header?: never;

@@ -115,10 +115,63 @@ def _workout_rows(payload: dict[str, object]) -> list[dict[str, object]]:
     return rows
 
 
+def _custom_avatar_export_snapshot(
+    db: Session, user_id: int
+) -> tuple[dict[str, object] | None, bytes | None]:
+    avatar = (
+        db.query(
+            User.custom_avatar_image_bytes,
+            User.custom_avatar_content_type,
+            User.custom_avatar_byte_size,
+            User.custom_avatar_width,
+            User.custom_avatar_height,
+            User.custom_avatar_sha256,
+            User.custom_avatar_created_at,
+            User.custom_avatar_updated_at,
+        )
+        .filter(User.id == user_id)
+        .one()
+    )
+    if avatar.custom_avatar_updated_at is None:
+        return None, None
+    required_values = (
+        avatar.custom_avatar_image_bytes,
+        avatar.custom_avatar_content_type,
+        avatar.custom_avatar_byte_size,
+        avatar.custom_avatar_width,
+        avatar.custom_avatar_height,
+        avatar.custom_avatar_sha256,
+        avatar.custom_avatar_created_at,
+    )
+    if any(value is None for value in required_values):
+        raise AccountExportError("Custom avatar storage is incomplete")
+    image_bytes = bytes(avatar.custom_avatar_image_bytes)
+    if (
+        avatar.custom_avatar_byte_size != len(image_bytes)
+        or avatar.custom_avatar_sha256 != hashlib.sha256(image_bytes).hexdigest()
+    ):
+        raise AccountExportError("Custom avatar metadata does not match stored bytes")
+    return (
+        {
+            "content_type": avatar.custom_avatar_content_type,
+            "byte_size": avatar.custom_avatar_byte_size,
+            "width": avatar.custom_avatar_width,
+            "height": avatar.custom_avatar_height,
+            "sha256": avatar.custom_avatar_sha256,
+            "created_at": avatar.custom_avatar_created_at,
+            "updated_at": avatar.custom_avatar_updated_at,
+            "file": "avatar/avatar.webp",
+        },
+        image_bytes,
+    )
+
+
 def build_account_export_archive(db: Session, user: User) -> tuple[bytes, str]:
     """Build a bounded ZIP without durable filesystem artifacts."""
 
+    avatar_metadata, avatar_bytes = _custom_avatar_export_snapshot(db, user.id)
     payload = build_account_export(db, user)
+    payload["custom_avatar"] = avatar_metadata
     files: dict[str, bytes] = {
         "account.json": _json_bytes(payload, indent=2),
         "measurements.csv": _csv_bytes(
@@ -209,6 +262,8 @@ def build_account_export_archive(db: Session, user: User) -> tuple[bytes, str]:
             ),
         ),
     }
+    if avatar_bytes is not None:
+        files["avatar/avatar.webp"] = avatar_bytes
     source_size = sum(len(content) for content in files.values())
     if source_size > ACCOUNT_EXPORT_MAX_SOURCE_BYTES:
         raise AccountExportTooLargeError("Account export source exceeds the bounded limit")
@@ -223,6 +278,7 @@ def build_account_export_archive(db: Session, user: User) -> tuple[bytes, str]:
             "account.json is the complete portability document.",
             "CSV files are tabular views of selected account-owned domains.",
             "Temporary report artifacts and authentication credentials are not included.",
+            "A custom avatar, when present, is normalized WebP without source EXIF metadata.",
         ],
     }
     files["manifest.json"] = _json_bytes(manifest, indent=2)

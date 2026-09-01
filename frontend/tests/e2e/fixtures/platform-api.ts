@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 import type { Page, Route } from '@playwright/test';
 
 type WorkoutStatus = 'planned' | 'in_progress' | 'completed' | 'none';
@@ -19,6 +21,7 @@ export interface PlatformApiOptions {
   trainerActive?: boolean;
   measurementHistory?: 'none' | 'many';
   cardioState?: 'empty' | 'planned' | 'completed';
+  avatarState?: 'default' | 'provider' | 'custom';
 }
 
 export interface PlatformApiController {
@@ -44,6 +47,9 @@ export interface PlatformApiController {
   accountExportCreates(): number;
   accountUnlinks(): string[];
   accountDeletes(): number;
+  failNextAvatarUpload(): void;
+  avatarUploads(): number;
+  avatarDeletes(): number;
 }
 
 const zeroNutrition = {
@@ -100,6 +106,10 @@ export async function installPlatformApi(
   let weeklyReviewSubmits = 0;
   let accountExportCreates = 0;
   let accountDeletes = 0;
+  let avatarState = options.avatarState ?? 'default';
+  let failNextAvatarUpload = false;
+  let avatarUploads = 0;
+  let avatarDeletes = 0;
   let accountExportState = options.accountExportState ?? 'none';
   let authProviders = [...(options.authProviders ?? ['telegram'])];
   const accountUnlinks: string[] = [];
@@ -175,6 +185,47 @@ export async function installPlatformApi(
   let adaptationApplyCalls = 0;
   let adaptationApplyMode: 'success' | 'conflict' | 'error' = 'success';
   const progressionOutcome = options.progressionOutcome ?? 'review';
+  const providerAvatar =
+    'data:image/svg+xml;charset=utf-8,' +
+    encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><rect width="128" height="128" fill="#d8f799"/><circle cx="64" cy="48" r="24" fill="#43631f"/><path d="M22 122c4-31 20-46 42-46s38 15 42 46" fill="#43631f"/></svg>',
+    );
+  const customAvatarUpdatedAt = '2030-01-02T12:00:00Z';
+  const currentUser = () => ({
+    id: 7,
+    telegram_user_id: authProviders.includes('telegram') ? 7007 : null,
+    username: 'mobile_user',
+    first_name: 'Анна',
+    photo_url: avatarState === 'provider' || avatarState === 'custom' ? providerAvatar : null,
+    custom_avatar:
+      avatarState === 'custom'
+        ? {
+            content_type: 'image/webp',
+            byte_size: 1084,
+            width: 512,
+            height: 512,
+            updated_at: customAvatarUpdatedAt,
+          }
+        : null,
+    is_coach: trainerActive,
+    is_admin: false,
+    has_active_program: activeProgram,
+    has_workout_history: false,
+    auth_providers: authProviders,
+    onboarding: { status: 'complete', required_fields: [], missing_fields: [] },
+    profile: {
+      full_name: 'Анна Петрова',
+      timezone: 'Europe/Moscow',
+      goal: 'maintenance',
+      level: 'beginner',
+      height_cm: 168,
+      weight_kg: 67,
+      workouts_per_week: 3,
+      cardio_trainings_per_week: 1,
+      kbju: currentTarget,
+    },
+    trainer: null,
+  });
   const previousTargetDate = new Date(todayDate);
   previousTargetDate.setUTCDate(previousTargetDate.getUTCDate() - 30);
   const targetSource = options.nutritionTargetSource ?? 'manual';
@@ -1166,34 +1217,42 @@ export async function installPlatformApi(
       accountDeletes += 1;
       return route.fulfill({ status: 204 });
     }
+    if (path.endsWith('/me/avatar') && request.method() === 'GET') {
+      if (avatarState !== 'custom') {
+        return route.fulfill({ status: 404, json: { detail: 'Custom avatar not found' } });
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: 'image/webp',
+        body: Buffer.from(
+          'UklGRjQEAABXRUJQVlA4ICgEAADQGwCdASqAAIAAPjEYiUKiIaEWzjQAIAMEs4BqRSMgP/oMLs4xtiueO01Cnb/BX9P/gHbV/a8UIAO+un1nhB2pv8Tkpvxb/afwD+deQD4AeIB6Hn+T88/4B+gHkDTAP45/nvYk/Qf9R/VfyA9hfxL/0vcC/i38r/2H9m/w/uZ+oD9ZvYF/V4b0YSGupd7aYQHC7RGxfixSB86Po6wMWpXPiOwqPEQocFVovGF/jumXFt9kCeY72DgVVkgXqRDsoN7OaLbA6b55lMfm0A2Afnxg+WuQVwnAK5qWYcwVNYQ4RQMxg8fc1uAA/v0lEv/WV/+ZX/5lf75HgMgnRnESCAAfpIPOfGqGc4+DGdJlvJGfpF34XWYV3pL/g07R66uV0G7CXAkxCWPEAD9ibHI0VaXt02JPDARoH99l0/7AACo/7Vk3/js91Rzx8C1zMad8/rQGhB6w5IPcgJfT5iFWK+xF5/ilkNl0+OIwntYK7CyMBcV+omuj+ZR4ubvMv8ux7+sHidS2DA9sFH08nh5R82zn6skw+YB4ZVU3OAnG7j8WACgXAmnQ7GPAxjqNu0Zk9iY4OfDdod559qh7Onvw2MTuHSh/7gu+bSEy5/GxhIYvFWMZJ2unPvX3odo6GHl6Uk4wsKPL4iLxKVqLdN3+6NKwo3KrMfOONxVoWlOVty4WN8blGBoRBCdlDdbTwxbKw1jb9qW1I45aG87wMUiQooJ4jaD6BsckeBzmCNVcjDQniN5WNbg+bHfG/hEQV/2t3aG0OWiVe8TSFupD3yVBnAc2JcWYNxHpz4eJEfsUe21O+JljaqtHUjXuRnyXFnEwXAVa1LtFpSWT++zCv20SSTu4+M5IvVmd/xhjH6k1P7as3Be/os2YeaYXoi/Bopt8Mui346kCQ5fbVmDfJII6oBDpBNVFes5OqlcPfjKvSFsKFQhWC38vmslkAmV50P+e9jkV7Lp/C8br73Ynx4WvImahkZCndKigYjzazD6n4g0Pca37wG1/jZqHedohaSz+O+c91DVUy+lAr4BY1uqcs9zxxJ6DKzJuihFgSkWbxKlay5yxfVVjxjY2dJD2ZYGw+JwGe/szxNCuzjOqSf/miJ1rH35y53yIdBQLxBfR6GWEjuf4xnM9nP8Lg7o67VVGYweSEpWcu8RBYApOjSG5O3pzOuIKUVOO7weBwE9Hbkzi74Q1pALtUMAJdzCKSGs7TzbPIK9FYf+jw2sAIIDFYuuCUC519wquOTol44qxTGCypj0DhyUV+2SnwF2vM2cmnYl4p5PdurFRqqM3yOzI+bjl5h7wu8REg46LJ4UKUqvOP/KzjR/IyugC8aNqyuT6GXMB+Er9Tv1+prbI7wd3+aQvZuK134S6OtQcnpV6KcnBK5tW2R32Rc6Vq86Gby/RWv5+WVVeQYAAAA==',
+          'base64',
+        ),
+      });
+    }
+    if (path.endsWith('/me/avatar') && request.method() === 'PUT') {
+      avatarUploads += 1;
+      if (failNextAvatarUpload) {
+        failNextAvatarUpload = false;
+        return route.fulfill({
+          status: 422,
+          json: { detail: 'Не удалось обработать изображение' },
+        });
+      }
+      avatarState = 'custom';
+      return route.fulfill({ json: currentUser() });
+    }
+    if (path.endsWith('/me/avatar') && request.method() === 'DELETE') {
+      avatarDeletes += 1;
+      avatarState =
+        options.avatarState === 'provider' || options.avatarState === 'custom'
+          ? 'provider'
+          : 'default';
+      return route.fulfill({ json: currentUser() });
+    }
     if (path.endsWith('/me')) {
       meCalls += 1;
-      return route.fulfill({
-        json: {
-          id: 7,
-          telegram_user_id: authProviders.includes('telegram') ? 7007 : null,
-          username: 'mobile_user',
-          first_name: 'Анна',
-          is_coach: trainerActive,
-          is_admin: false,
-          has_active_program: activeProgram,
-          has_workout_history: false,
-          auth_providers: authProviders,
-          onboarding: { status: 'complete', required_fields: [], missing_fields: [] },
-          profile: {
-            full_name: 'Анна Петрова',
-            timezone: 'Europe/Moscow',
-            goal: 'maintenance',
-            level: 'beginner',
-            height_cm: 168,
-            weight_kg: 67,
-            workouts_per_week: 3,
-            cardio_trainings_per_week: 1,
-            kbju: currentTarget,
-          },
-          trainer: null,
-        },
-      });
+      return route.fulfill({ json: currentUser() });
     }
     if (path.endsWith('/coach/clients')) {
       return route.fulfill({
@@ -1997,6 +2056,15 @@ export async function installPlatformApi(
     },
     accountDeletes() {
       return accountDeletes;
+    },
+    failNextAvatarUpload() {
+      failNextAvatarUpload = true;
+    },
+    avatarUploads() {
+      return avatarUploads;
+    },
+    avatarDeletes() {
+      return avatarDeletes;
     },
   };
 }
