@@ -3,12 +3,17 @@
 }
 
 :8080 {
+	@avatar path /api/v1/me/avatar
+	request_body @avatar {
+		max_size 6291456
+	}
+
 	@auth path /api/v1/auth /api/v1/auth/*
 	request_body @auth {
 		max_size 65536
 	}
 
-	@default not path /api/v1/auth /api/v1/auth/*
+	@default not path /api/v1/auth /api/v1/auth/* /api/v1/me/avatar
 	request_body @default {
 		max_size 1048576
 	}

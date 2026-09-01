@@ -1354,23 +1354,35 @@ class TaskController:
             raise TaskSessionError("withdraw-integration requires a non-empty reason")
         integration_path = self.store.mode_lease_path("integration")
         integration = self.store.read_json(integration_path)
-        if integration is None or integration.get("task_id") != expected:
-            raise TaskSessionError(f"Task {expected} does not own integration lease")
-        pull_request = self._github().pull_request(int(integration["pr_number"]))
+        queue = self.store.read_json(self.store.queue_path, {"version": 1, "candidates": []})
+        if not queue["candidates"] or queue["candidates"][0].get("task_id") != expected:
+            raise TaskSessionError(f"Task {expected} is not the integration queue head")
+        candidate = queue["candidates"][0]
+        if integration is None:
+            if candidate.get("state") != "queued":
+                raise TaskSessionError(
+                    f"Task {expected} has no integration lease and is not queued"
+                )
+        elif (
+            integration.get("task_id") != expected
+            or candidate.get("state") != "eligible"
+            or candidate.get("head_sha") != integration.get("head_sha")
+            or candidate.get("pr_number") != integration.get("pr_number")
+        ):
+            raise TaskSessionError(f"Task {expected} does not own matching integration state")
+        pull_request = self._github().pull_request(int(candidate["pr_number"]))
         if pull_request.get("merged_at"):
             raise TaskSessionError("Merged integration cannot be withdrawn; verify exact dev CI")
         with self.store.lock():
             current = self.store.read_json(integration_path)
             if current != integration:
                 raise TaskSessionError("Integration lease changed while withdrawal was validated")
-            queue = self.store.read_json(self.store.queue_path)
-            if (
-                not queue["candidates"]
-                or queue["candidates"][0].get("task_id") != expected
-                or queue["candidates"][0].get("head_sha") != integration.get("head_sha")
-            ):
+            current_queue = self.store.read_json(
+                self.store.queue_path, {"version": 1, "candidates": []}
+            )
+            if not current_queue["candidates"] or current_queue["candidates"][0] != candidate:
                 raise TaskSessionError("Integration queue head changed before withdrawal")
-            withdrawn = queue["candidates"].pop(0)
+            withdrawn = current_queue["candidates"].pop(0)
             withdrawn.update(
                 {
                     "state": "withdrawn-for-fix",
@@ -1387,9 +1399,10 @@ class TaskController:
             task_lease["last_integration_withdrawal"] = withdrawn
             for field in ("ready_head_sha", "review_verdict", "qa_verdict"):
                 task_lease.pop(field, None)
-            StateStore.replace_json(self.store.queue_path, queue)
+            StateStore.replace_json(self.store.queue_path, current_queue)
             StateStore.replace_json(task_lease_path, task_lease)
-            integration_path.unlink()
+            if integration is not None:
+                integration_path.unlink()
         return {"withdrawn": withdrawn, "task_lease": task_lease}
 
     def complete_integration(self, task_id: str, *, merge_sha: str) -> dict[str, Any]:

@@ -64,6 +64,7 @@ interface AuthContextValue {
   config: PublicConfig | null;
   loading: boolean;
   error: string | null;
+  updateUser(user: User): void;
   reloadUser(): Promise<User | null>;
   devLogin(input: DevLoginInput): Promise<void>;
   telegramLogin(telegram?: TelegramWebApp | null): Promise<void>;
@@ -356,6 +357,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       config,
       loading,
       error,
+      updateUser: acceptAuthenticatedUser,
       reloadUser,
       devLogin,
       telegramLogin,
@@ -371,6 +373,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       config,
       loading,
       error,
+      acceptAuthenticatedUser,
       reloadUser,
       devLogin,
       telegramLogin,

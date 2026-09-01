@@ -686,6 +686,28 @@ def test_unmerged_integration_can_be_withdrawn_for_blocking_fix(
     assert not controller.store.mode_lease_path("integration").exists()
 
 
+def test_queued_integration_can_be_withdrawn_before_checks_pass(
+    repository: tuple[Path, Any],
+) -> None:
+    root, git_repository = repository
+    base_sha = git_repository.ref("origin/dev")
+    head_sha = "5" * 40
+    github = FakeGitHub(base_sha)
+    controller = task_session.TaskController(git_repository, github=github)
+    _task_lease(controller, "309", root, base_sha, ready_head_sha=head_sha)
+    github.pulls[9] = _task_pr(9, "309", base_sha, head_sha)
+    github.commits[9] = [_task_commit("309")]
+    controller.enqueue_integration("309", pr_number=9)
+
+    result = controller.withdraw_integration("309", reason="failed required checks")
+
+    assert result["withdrawn"]["state"] == "withdrawn-for-fix"
+    assert result["task_lease"]["lifecycle_state"] == "implementation"
+    assert "ready_head_sha" not in result["task_lease"]
+    assert controller.store.read_json(controller.store.queue_path)["candidates"] == []
+    assert not controller.store.mode_lease_path("integration").exists()
+
+
 def test_research_readonly_lease_cannot_enter_integration_queue(
     repository: tuple[Path, Any],
 ) -> None:

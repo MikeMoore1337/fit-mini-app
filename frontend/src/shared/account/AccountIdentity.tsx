@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { apiFile } from '../api/client';
 
 const AVATAR_EMOJIS = ['🏋️', '💪', '🏃', '🚴', '🥗', '⚡', '🎯', '🔥'] as const;
 
@@ -18,24 +19,66 @@ export function accountRoleLabel(isRoot: boolean, isCoach: boolean): string {
 
 export function AccountAvatar({
   className = 'account-identity__avatar',
+  customAvatarVersion,
   name,
   photoUrl,
+  previewUrl,
 }: {
   className?: string;
+  customAvatarVersion?: string | null;
   name: string;
   photoUrl?: string | null;
+  previewUrl?: string | null;
 }) {
-  const [failedPhotoUrl, setFailedPhotoUrl] = useState<string | null>(null);
-  const photoFailed = Boolean(photoUrl && failedPhotoUrl === photoUrl);
+  const [failedPhotoUrls, setFailedPhotoUrls] = useState<ReadonlySet<string>>(() => new Set());
+  const [privateAvatar, setPrivateAvatar] = useState<{
+    version: string;
+    url: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!customAvatarVersion) return;
+    let active = true;
+    let objectUrl: string | null = null;
+    void apiFile('/api/v1/me/avatar')
+      .then(({ blob }) => {
+        if (!active) return;
+        objectUrl = URL.createObjectURL(blob);
+        setPrivateAvatar({ version: customAvatarVersion, url: objectUrl });
+      })
+      .catch(() => {
+        if (active) setPrivateAvatar({ version: customAvatarVersion, url: null });
+      });
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [customAvatarVersion]);
+
+  const customUrl =
+    privateAvatar && privateAvatar.version === customAvatarVersion ? privateAvatar.url : null;
+  const privateUrl = previewUrl || customUrl || null;
+  const selectedUrl =
+    privateUrl && !failedPhotoUrls.has(privateUrl)
+      ? privateUrl
+      : photoUrl && !failedPhotoUrls.has(photoUrl)
+        ? photoUrl
+        : null;
 
   return (
     <span className={className} aria-hidden="true">
-      {photoUrl && !photoFailed ? (
+      {selectedUrl ? (
         <img
-          src={photoUrl}
+          src={selectedUrl}
           alt=""
           referrerPolicy="no-referrer"
-          onError={() => setFailedPhotoUrl(photoUrl)}
+          onError={() =>
+            setFailedPhotoUrls((current) => {
+              const next = new Set(current);
+              next.add(selectedUrl);
+              return next;
+            })
+          }
         />
       ) : (
         avatarFallback(name)
@@ -47,19 +90,26 @@ export function AccountAvatar({
 export function AccountIdentity({
   avatarClassName,
   className = 'account-identity',
+  customAvatarVersion,
   name,
   photoUrl,
   role,
 }: {
   avatarClassName?: string;
   className?: string;
+  customAvatarVersion?: string | null;
   name: string;
   photoUrl?: string | null;
   role: string;
 }) {
   return (
     <span className={className}>
-      <AccountAvatar className={avatarClassName} name={name} photoUrl={photoUrl} />
+      <AccountAvatar
+        className={avatarClassName}
+        customAvatarVersion={customAvatarVersion}
+        name={name}
+        photoUrl={photoUrl}
+      />
       <span className="account-identity__copy">
         <strong className="account-identity__name">{name}</strong>
         <small className="account-identity__role">{role}</small>
