@@ -107,6 +107,7 @@ class UserProfile(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, unique=True)
     full_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
     birth_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    sex: Mapped[str | None] = mapped_column(String(16), nullable=True)
     goal: Mapped[str | None] = mapped_column(String(32), nullable=True)
     level: Mapped[str | None] = mapped_column(String(32), nullable=True)
     height_cm: Mapped[int | None] = mapped_column(Integer, nullable=True)

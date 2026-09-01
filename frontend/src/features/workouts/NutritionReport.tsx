@@ -565,6 +565,51 @@ export function NutritionPeriodReport({ clientId }: { clientId?: number }) {
             />
           )}
           <CoverageSummary report={report.data} />
+          {report.data.hydration && (
+            <section
+              className="nutrition-hydration-report"
+              aria-labelledby="hydration-report-title"
+            >
+              <div>
+                <span className="progress-section__eyebrow">Фактические напитки</span>
+                <h3 id="hydration-report-title">Гидратация</h3>
+                <p>
+                  В среднем <strong>{report.data.hydration.average_ml ?? 0} мл</strong> в записанный
+                  день · покрытие {report.data.hydration.coverage_percent}%.
+                </p>
+              </div>
+              <dl>
+                <div>
+                  <dt>Всего</dt>
+                  <dd>{report.data.hydration.total_ml} мл</dd>
+                </div>
+                <div>
+                  <dt>Дни с записями</dt>
+                  <dd>
+                    {report.data.hydration.logged_days} из {report.data.hydration.eligible_days}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Ориентир достигнут</dt>
+                  <dd>
+                    {report.data.hydration.days_meeting_goal} из{' '}
+                    {report.data.hydration.goal_evaluated_days}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Изменение среднего</dt>
+                  <dd>
+                    {report.data.hydration.trend_ml == null
+                      ? 'Недостаточно данных'
+                      : `${report.data.hydration.trend_ml > 0 ? '+' : ''}${report.data.hydration.trend_ml} мл`}
+                  </dd>
+                </div>
+              </dl>
+              <p className="progress-note">
+                Тренд описывает только внесённые объёмы и не является оценкой состояния гидратации.
+              </p>
+            </section>
+          )}
           {showWeek && (
             <WeekStrip
               anchorDate={report.data.period_start}

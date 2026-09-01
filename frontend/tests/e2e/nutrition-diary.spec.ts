@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
-import type { FoodDiaryEntry } from '../../src/shared/api/types';
+import type { FoodDiaryEntry, HydrationEntry } from '../../src/shared/api/types';
 
 const zeroNutrition = {
   energy_kcal: '0.00',
@@ -206,8 +206,38 @@ const externalEggFoods = [
   },
 }));
 
-async function mockNutritionApi(page: Page) {
+async function mockNutritionApi(
+  page: Page,
+  hydrationState: 'data' | 'empty' | 'error' | 'loading' = 'data',
+) {
   let entries: FoodDiaryEntry[] = [yogurtEntry];
+  let hydrationEntries: HydrationEntry[] =
+    hydrationState === 'empty'
+      ? []
+      : [
+          {
+            id: 81,
+            volume_ml: 350,
+            beverage_type: 'water',
+            occurred_at: '2026-08-19T06:10:00Z',
+            diary_date: '2026-08-19',
+            timezone: 'Europe/Moscow',
+            source: 'quick_preset',
+            created_at: '2026-08-19T09:10:00',
+            updated_at: '2026-08-19T09:10:00',
+          },
+          {
+            id: 82,
+            volume_ml: 500,
+            beverage_type: 'tea',
+            occurred_at: '2026-08-19T09:40:00Z',
+            diary_date: '2026-08-19',
+            timezone: 'Europe/Moscow',
+            source: 'manual',
+            created_at: '2026-08-19T12:40:00',
+            updated_at: '2026-08-19T12:40:00',
+          },
+        ];
   let dayStatus: 'incomplete' | 'complete' = 'incomplete';
 
   await page.addInitScript(() => {
@@ -243,6 +273,7 @@ async function mockNutritionApi(page: Page) {
           onboarding: { status: 'complete', required_fields: [], missing_fields: [] },
           profile: {
             full_name: 'Анна Петрова',
+            sex: 'female',
             timezone: 'Europe/Moscow',
             goal: 'maintenance',
             kbju: null,
@@ -250,6 +281,127 @@ async function mockNutritionApi(page: Page) {
           trainer: null,
         },
       });
+    }
+    if (path === '/api/v1/auth/telegram/init') {
+      return route.fulfill({
+        json: { access_token: 'telegram-hydration-token', token_type: 'bearer' },
+      });
+    }
+    if (path === '/api/v1/nutrition/hydration' && request.method() === 'GET') {
+      if (hydrationState === 'loading') {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+      if (hydrationState === 'error') {
+        return route.fulfill({ status: 503, json: { detail: 'Гидратация временно недоступна' } });
+      }
+      const totalMl = hydrationEntries.reduce((sum, entry) => sum + entry.volume_ml, 0);
+      return route.fulfill({
+        json: {
+          diary_date: url.searchParams.get('diary_date') || '2026-08-19',
+          timezone: 'Europe/Moscow',
+          total_ml: totalMl,
+          goal:
+            hydrationState === 'empty'
+              ? null
+              : {
+                  id: 1,
+                  enabled: true,
+                  target_ml: 2200,
+                  source: 'national_academies_beverages',
+                  method_version: 'nasem-ai-2005-observed-beverages-v1',
+                  reference_scope: 'beverages',
+                  sex: 'female',
+                  adult_confirmed: true,
+                  effective_from: '2026-08-19',
+                  effective_to: null,
+                  created_at: '2026-08-19T08:00:00',
+                },
+          progress_percent:
+            hydrationState === 'empty' ? null : Math.round((totalMl * 1000) / 2200) / 10,
+          entries: hydrationEntries,
+          presets: [
+            { id: null, label: 'Стакан', volume_ml: 250, beverage_type: 'water', is_default: true },
+            {
+              id: null,
+              label: 'Большой стакан',
+              volume_ml: 350,
+              beverage_type: 'water',
+              is_default: true,
+            },
+            {
+              id: null,
+              label: 'Бутылка',
+              volume_ml: 500,
+              beverage_type: 'water',
+              is_default: true,
+            },
+            {
+              id: 7,
+              label: 'Термокружка',
+              volume_ml: 420,
+              beverage_type: 'tea',
+              is_default: false,
+            },
+          ],
+          last_logged_at: hydrationEntries[0]?.occurred_at ?? null,
+          reminder_suppression_key: hydrationEntries.length
+            ? 'hydration-logged:1:2026-08-19'
+            : null,
+          action_url: '/app?section=nutrition&date=2026-08-19&hydration=quick',
+        },
+      });
+    }
+    if (path === '/api/v1/nutrition/hydration/entries' && request.method() === 'POST') {
+      const body = request.postDataJSON() as {
+        volume_ml: number;
+        beverage_type: HydrationEntry['beverage_type'];
+        diary_date: string;
+        source: string;
+      };
+      const created: HydrationEntry = {
+        id: 90 + hydrationEntries.length,
+        volume_ml: body.volume_ml,
+        beverage_type: body.beverage_type,
+        occurred_at: '2026-08-19T10:00:00Z',
+        diary_date: body.diary_date,
+        timezone: 'Europe/Moscow',
+        source: body.source,
+        created_at: '2026-08-19T13:00:00',
+        updated_at: '2026-08-19T13:00:00',
+      };
+      hydrationEntries = [created, ...hydrationEntries];
+      return route.fulfill({ status: 201, json: created });
+    }
+    if (path.startsWith('/api/v1/nutrition/hydration/entries/') && request.method() === 'DELETE') {
+      const id = Number(path.split('/').at(-1));
+      hydrationEntries = hydrationEntries.filter((entry) => entry.id !== id);
+      return route.fulfill({ status: 204, body: '' });
+    }
+    if (path === '/api/v1/nutrition/hydration/goal' && request.method() === 'POST') {
+      return route.fulfill({
+        json: {
+          id: 2,
+          enabled: true,
+          target_ml: 2200,
+          source: 'national_academies_beverages',
+          method_version: 'nasem-ai-2005-observed-beverages-v1',
+          reference_scope: 'beverages',
+          sex: 'female',
+          adult_confirmed: true,
+          effective_from: '2026-08-19',
+          effective_to: null,
+          created_at: '2026-08-19T13:00:00',
+        },
+      });
+    }
+    if (path === '/api/v1/nutrition/hydration/presets' && request.method() === 'POST') {
+      return route.fulfill({
+        status: 200,
+        json: { id: 8, ...request.postDataJSON(), is_default: false },
+      });
+    }
+    if (path.startsWith('/api/v1/nutrition/hydration/presets/') && request.method() === 'DELETE') {
+      return route.fulfill({ status: 204, body: '' });
     }
     if (path === '/api/v1/nutrition/diary' && request.method() === 'GET') {
       return route.fulfill({
@@ -425,6 +577,124 @@ async function mockNutritionApi(page: Page) {
     return route.fulfill({ status: 404, json: { detail: `Unhandled ${path}` } });
   });
 }
+
+test('hydration visual evidence: mobile web compact and quick add', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-08-19T13:00:00+03:00'));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockNutritionApi(page);
+  await page.goto('/app?section=nutrition&date=2026-08-19');
+  const hydration = page.getByRole('region', { name: 'Гидратация' });
+  await expect(hydration).toBeVisible();
+  await expect(page.getByText('850 из 2200 мл')).toBeVisible();
+  await hydration.screenshot({
+    path: '../.artifacts/screenshots/task-81/mobile-web-light-compact.png',
+  });
+  await hydration.getByRole('button', { name: /Стакан.*250 мл/ }).click();
+  await expect(hydration.getByText('Добавлено 250 мл')).toBeVisible();
+  await hydration.screenshot({
+    path: '../.artifacts/screenshots/task-81/mobile-web-light-quick-add-undo.png',
+  });
+});
+
+test('hydration visual evidence: mocked TMA dark expanded and reduced motion', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-08-19T13:00:00+03:00'));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
+  await page.addInitScript(() => {
+    window.Telegram = {
+      WebApp: {
+        initData: 'signed-task-81-init-data',
+        initDataUnsafe: {},
+        version: '8.0',
+        platform: 'android',
+        colorScheme: 'dark',
+        themeParams: {},
+        viewportHeight: 844,
+        viewportStableHeight: 844,
+        safeAreaInset: { top: 24, right: 0, bottom: 18, left: 0 },
+        contentSafeAreaInset: { top: 8, right: 0, bottom: 10, left: 0 },
+        ready() {},
+        expand() {},
+        onEvent() {},
+        offEvent() {},
+        setHeaderColor() {},
+        setBackgroundColor() {},
+        setBottomBarColor() {},
+      },
+    };
+  });
+  await mockNutritionApi(page);
+  await page.goto('/app?section=nutrition&date=2026-08-19&hydration=quick');
+  const hydration = page.getByRole('region', { name: 'Гидратация' });
+  await expect(hydration.getByRole('heading', { name: 'Личный ориентир' })).toBeVisible();
+  await expect(hydration.getByText(/для здоровых взрослых/i)).toBeVisible();
+  await hydration.scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: '../.artifacts/screenshots/task-81/mock-tma-dark-expanded-reduced-motion.png',
+  });
+});
+
+for (const mode of ['light', 'dark'] as const) {
+  test(`hydration visual evidence: desktop ${mode} expanded`, async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-08-19T13:00:00+03:00'));
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.emulateMedia({ colorScheme: mode });
+    await mockNutritionApi(page);
+    await page.goto('/app?section=nutrition&date=2026-08-19&hydration=quick');
+    const hydration = page.getByRole('region', { name: 'Гидратация' });
+    await expect(hydration.getByText('Термокружка · 420 мл')).toBeVisible();
+    await hydration.screenshot({
+      path: `../.artifacts/screenshots/task-81/desktop-${mode}-expanded.png`,
+    });
+  });
+}
+
+for (const state of ['loading', 'error', 'empty'] as const) {
+  test(`hydration visual evidence: ${state} state`, async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-08-19T13:00:00+03:00'));
+    await page.setViewportSize({ width: 390, height: 844 });
+    await mockNutritionApi(page, state);
+    await page.goto('/app?section=nutrition&date=2026-08-19');
+    const hydration = page.locator('.hydration-card');
+    await expect(hydration).toBeVisible();
+    if (state === 'loading')
+      await expect(hydration.getByText('Загружаем гидратацию…')).toBeVisible();
+    if (state === 'error')
+      await expect(hydration.getByText('Гидратация временно недоступна')).toBeVisible();
+    if (state === 'empty') await expect(hydration.getByText('0 мл записано')).toBeVisible();
+    await hydration.screenshot({
+      path: `../.artifacts/screenshots/task-81/mobile-${state}.png`,
+    });
+  });
+}
+
+test('hydration touch matrix has no horizontal overflow and keeps controls reachable', async ({
+  browser,
+}) => {
+  for (const viewport of [
+    { width: 360, height: 800 },
+    { width: 390, height: 844 },
+    { width: 430, height: 932 },
+  ]) {
+    const context = await browser.newContext({ viewport, hasTouch: true, isMobile: true });
+    const page = await context.newPage();
+    await mockNutritionApi(page);
+    await page.goto('/app?section=nutrition&date=2026-08-19&hydration=quick');
+    const hydration = page.getByRole('region', { name: 'Гидратация' });
+    await expect(hydration).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
+    const quickButtons = hydration.locator('.hydration-presets .ui-button');
+    for (let index = 0; index < (await quickButtons.count()); index += 1) {
+      const box = await quickButtons.nth(index).boundingBox();
+      expect(box?.height).toBeGreaterThanOrEqual(44);
+    }
+    const volume = hydration.getByLabel('Объём, мл').first();
+    await volume.focus();
+    await expect(volume).toBeFocused();
+    await expect(volume).toBeInViewport();
+    await context.close();
+  }
+});
 
 const russianSearchVisualCases = [
   { label: 'desktop-1280', viewport: { width: 1280, height: 900 }, dark: false },

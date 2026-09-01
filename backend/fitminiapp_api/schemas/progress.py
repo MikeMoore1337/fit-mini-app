@@ -127,6 +127,20 @@ class NutritionReportDailyPoint(BaseModel):
     within_calorie_tolerance: bool | None = None
     meets_protein_target: bool | None = None
     target_changed: bool = False
+    hydration_ml: int | None = None
+    hydration_target_ml: int | None = None
+    hydration_progress_percent: float | None = None
+
+
+class HydrationReportSummary(BaseModel):
+    total_ml: int = Field(ge=0)
+    average_ml: float | None = None
+    logged_days: int = Field(ge=0)
+    eligible_days: int = Field(ge=1)
+    coverage_percent: float = Field(ge=0, le=100)
+    days_meeting_goal: int = Field(ge=0)
+    goal_evaluated_days: int = Field(ge=0)
+    trend_ml: float | None = None
 
 
 class NutritionReportTargetChange(BaseModel):
@@ -169,6 +183,7 @@ class NutritionReportResponse(BaseModel):
     summary: NutritionReportSummary
     daily: list[NutritionReportDailyPoint]
     target_changes: list[NutritionReportTargetChange]
+    hydration: HydrationReportSummary | None = None
 
 
 class BodyMetricPoint(BaseModel):

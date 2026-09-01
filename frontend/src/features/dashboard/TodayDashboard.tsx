@@ -5,6 +5,7 @@ import { ApiError, api } from '../../shared/api/client';
 import type {
   CardioSession,
   FoodDiaryDay,
+  HydrationDay,
   ProgressSummary,
   WeeklyCheckInCurrent,
   Workout,
@@ -216,6 +217,10 @@ function NutritionSummary({ date }: { date: string }) {
     queryKey: ['nutrition', 'diary', date],
     queryFn: () => api<FoodDiaryDay>(`/api/v1/nutrition/diary?diary_date=${date}`),
   });
+  const hydration = useQuery({
+    queryKey: queryKeys.nutrition.hydrationDate(date),
+    queryFn: () => api<HydrationDay>(`/api/v1/nutrition/hydration?diary_date=${date}`),
+  });
 
   if (diary.isLoading) {
     return (
@@ -238,15 +243,28 @@ function NutritionSummary({ date }: { date: string }) {
     );
   }
 
-  const summary = diary.data.meals.some((meal) => meal.entries.length > 0)
+  const foodSummary = diary.data.meals.some((meal) => meal.entries.length > 0)
     ? diary.data.targets
       ? `${formatAmount(diary.data.totals.energy_kcal)} из ${formatAmount(diary.data.targets.energy_kcal)} ккал · белок ${formatAmount(diary.data.totals.protein_g)} г`
       : `${formatAmount(diary.data.totals.energy_kcal)} ккал записано`
     : 'Записей за день пока нет';
+  const hydrationSummary = hydration.data
+    ? hydration.data.goal?.enabled && hydration.data.goal.target_ml
+      ? `вода ${hydration.data.total_ml} из ${hydration.data.goal.target_ml} мл`
+      : `вода ${hydration.data.total_ml} мл`
+    : hydration.isLoading
+      ? 'вода загружается…'
+      : 'вода недоступна';
+  const summary = (
+    <>
+      <span>{foodSummary}</span>
+      <span> · {hydrationSummary}</span>
+    </>
+  );
 
   return (
     <SemanticCard
-      action={<AppLink to={`/app?section=nutrition&date=${date}`}>Добавить</AppLink>}
+      action={<AppLink to={`/app?section=nutrition&date=${date}&hydration=quick`}>+ Вода</AppLink>}
       className="today-panel today-summary-card today-summary-card--nutrition today-nutrition"
       family="nutrition"
       icon="nav-nutrition"

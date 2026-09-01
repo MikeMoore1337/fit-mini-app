@@ -23,6 +23,7 @@ from fitminiapp_api.models.food_diary import (
     FoodDiaryDayStatus,
     FoodDiaryEntry,
 )
+from fitminiapp_api.models.hydration import HydrationEntry, HydrationGoal, HydrationPreset
 from fitminiapp_api.models.notification import Notification, NotificationSetting
 from fitminiapp_api.models.nutrition import EnergyCalibration, NutritionTarget
 from fitminiapp_api.models.program import (
@@ -50,7 +51,7 @@ if TYPE_CHECKING:
     from fitminiapp_api.models.recipe import RecipeIngredient
 
 
-ACCOUNT_EXPORT_SCHEMA_VERSION = 5
+ACCOUNT_EXPORT_SCHEMA_VERSION = 6
 
 # Every ORM table whose rows can be reached from users through ownership or actor FKs must be
 # classified here. Tests compare this inventory with SQLAlchemy metadata so a new persistent user
@@ -64,6 +65,9 @@ ACCOUNT_EXPORT_DATA_INVENTORY: dict[str, str] = {
     "body_measurements": "measurements",
     "cardio_sessions": "cardio_sessions",
     "nutrition_targets": "nutrition",
+    "hydration_goals": "hydration",
+    "hydration_entries": "hydration",
+    "hydration_presets": "hydration",
     "energy_calibrations": "energy_calibrations",
     "weekly_check_ins": "weekly_check_ins",
     "foods": "private_foods",
@@ -490,6 +494,24 @@ def build_account_export(db: Session, user: User) -> dict[str, object]:
         .all()
     )
     nutrition = next((row for row in nutrition_history if row.effective_to is None), None)
+    hydration_goals = (
+        db.query(HydrationGoal)
+        .filter(HydrationGoal.user_id == user.id)
+        .order_by(HydrationGoal.effective_from.asc(), HydrationGoal.id.asc())
+        .all()
+    )
+    hydration_entries = (
+        db.query(HydrationEntry)
+        .filter(HydrationEntry.user_id == user.id)
+        .order_by(HydrationEntry.occurred_at.asc(), HydrationEntry.id.asc())
+        .all()
+    )
+    hydration_presets = (
+        db.query(HydrationPreset)
+        .filter(HydrationPreset.user_id == user.id)
+        .order_by(HydrationPreset.position.asc(), HydrationPreset.id.asc())
+        .all()
+    )
     energy_calibrations = (
         db.query(EnergyCalibration)
         .filter(EnergyCalibration.user_id == user.id)
@@ -707,6 +729,7 @@ def build_account_export(db: Session, user: User) -> dict[str, object]:
             {
                 "full_name": profile.full_name,
                 "birth_date": profile.birth_date,
+                "sex": profile.sex,
                 "goal": profile.goal,
                 "level": profile.level,
                 "height_cm": profile.height_cm,
@@ -736,6 +759,51 @@ def build_account_export(db: Session, user: User) -> dict[str, object]:
         "nutrition_target_history": [
             _fields(target, NUTRITION_FIELDS) for target in nutrition_history
         ],
+        "hydration": {
+            "goals": [
+                _fields(
+                    row,
+                    (
+                        "id",
+                        "status",
+                        "target_ml",
+                        "source",
+                        "method_version",
+                        "reference_scope",
+                        "sex",
+                        "adult_confirmed",
+                        "effective_from",
+                        "effective_to",
+                        "created_at",
+                    ),
+                )
+                for row in hydration_goals
+            ],
+            "entries": [
+                _fields(
+                    row,
+                    (
+                        "id",
+                        "occurred_at",
+                        "diary_date",
+                        "timezone",
+                        "volume_ml",
+                        "beverage_type",
+                        "source",
+                        "created_at",
+                        "updated_at",
+                    ),
+                )
+                for row in hydration_entries
+            ],
+            "presets": [
+                _fields(
+                    row,
+                    ("id", "label", "volume_ml", "beverage_type", "position", "created_at"),
+                )
+                for row in hydration_presets
+            ],
+        },
         "energy_calibrations": [
             _fields(row, ENERGY_CALIBRATION_FIELDS) for row in energy_calibrations
         ],

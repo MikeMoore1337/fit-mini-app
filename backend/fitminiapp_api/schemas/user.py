@@ -123,6 +123,7 @@ class BodyPriorityOptionsResponse(BaseModel):
 class UserProfileUpdate(BaseModel):
     full_name: str | None = Field(default=None, max_length=128)
     birth_date: date | None = None
+    sex: Literal["male", "female"] | None = None
     goal: ProfileGoal | None = None
     level: Literal["beginner", "intermediate", "advanced"] | None = None
     height_cm: int | None = Field(default=None, ge=100, le=250)
@@ -230,6 +231,7 @@ class HeartRatePreviewResponse(BaseModel):
 class UserProfileResponse(BaseModel):
     full_name: str | None = None
     birth_date: date | None = None
+    sex: Literal["male", "female"] | None = None
     goal: str | None = None
     level: str | None = None
     height_cm: int | None = None

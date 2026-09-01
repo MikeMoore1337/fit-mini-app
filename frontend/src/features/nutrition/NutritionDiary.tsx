@@ -25,6 +25,7 @@ import {
 import { useFeedback } from '../../shared/ui/FeedbackProvider';
 import { FoodPickerDialog, type MealType } from './FoodPickerDialog';
 import { CopyDiaryDialog, type CopySubject } from './CopyDiaryDialog';
+import { HydrationTracker } from './HydrationTracker';
 import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
 
 const mealOrder: MealType[] = ['breakfast', 'lunch', 'dinner', 'snacks'];
@@ -712,6 +713,8 @@ export function NutritionDiary({
           setSelectedDate(date);
         }}
       />
+
+      <HydrationTracker diaryDate={selectedDate} />
 
       {diary.data && diary.data.meals.some((meal) => meal.entries.length > 0) && (
         <div className="nutrition-day-actions">

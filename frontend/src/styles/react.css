@@ -5293,6 +5293,375 @@ body:has(#appBottomNav) .toast:not(.hidden) {
   }
 }
 
+.hydration-card {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+  border-radius: 22px;
+  background:
+    radial-gradient(
+      circle at 88% 0%,
+      color-mix(in srgb, var(--v2-lime, var(--accent)) 13%, transparent),
+      transparent 34%
+    ),
+    var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.hydration-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 20px 12px;
+}
+
+.hydration-card__header h2,
+.hydration-details h3,
+.nutrition-hydration-report h3 {
+  margin: 3px 0 4px;
+}
+
+.hydration-card__header p,
+.hydration-details p,
+.nutrition-hydration-report p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.hydration-orb {
+  position: relative;
+  display: grid;
+  flex: 0 0 72px;
+  width: 72px;
+  height: 72px;
+  overflow: hidden;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--v2-lime, var(--accent)) 48%, var(--border));
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--v2-lime, var(--accent)) 7%, var(--surface));
+}
+
+.hydration-orb > span {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  min-height: 4px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--v2-lime, var(--accent)) 64%, var(--surface)),
+    color-mix(in srgb, var(--v2-lime-hover, var(--accent-hover)) 82%, var(--text))
+  );
+  transition: height 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.hydration-orb strong {
+  position: relative;
+  z-index: 1;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 8px var(--surface);
+}
+
+.hydration-progress {
+  height: 7px;
+  margin: 0 20px 16px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--v2-lime, var(--accent)) 14%, var(--surface-strong));
+}
+
+.hydration-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    var(--v2-lime-hover, var(--accent-hover)),
+    var(--v2-lime, var(--accent))
+  );
+  transition: width 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.hydration-presets {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0 20px 16px;
+}
+
+.hydration-presets .ui-button {
+  min-height: 58px;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+}
+
+.hydration-presets .ui-button span {
+  overflow: hidden;
+  max-width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hydration-presets .ui-button strong {
+  color: var(--v2-accent-text, var(--accent-strong));
+  font-variant-numeric: tabular-nums;
+}
+
+.hydration-undo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 20px 12px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--border));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+
+.hydration-mutation-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 20px 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--danger-line);
+  border-radius: 14px;
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+
+.hydration-details .hydration-mutation-error {
+  margin: 12px 0 0;
+}
+
+.hydration-expand {
+  width: calc(100% - 40px);
+  margin: 0 20px 20px;
+}
+
+.hydration-details {
+  display: grid;
+  gap: 0;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-strong) 62%, transparent);
+}
+
+.hydration-details > section {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.hydration-details > section:last-child {
+  border-bottom: 0;
+}
+
+.hydration-form-row,
+.hydration-goal-fields,
+.hydration-entry__editor {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.hydration-form-row > .ui-button {
+  align-self: end;
+}
+
+.hydration-choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin: 12px 0;
+}
+
+.hydration-choice label,
+.hydration-check {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 8px;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 44px;
+  padding-block: 10px;
+}
+
+.hydration-choice label {
+  white-space: nowrap;
+}
+
+.hydration-check--adult {
+  align-items: center;
+  padding-block: 6px;
+}
+
+.hydration-check--adult span {
+  white-space: nowrap;
+}
+
+.hydration-goal-fields > .ui-field,
+.hydration-goal-fields > .hydration-check,
+.hydration-goal-fields > .hydration-note {
+  grid-column: 1 / -1;
+}
+
+.hydration-card .ui-button--danger {
+  border: 1px solid var(--danger-line);
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+
+.hydration-note {
+  grid-column: 1 / -1;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.hydration-history {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hydration-custom-presets {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hydration-custom-presets li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 8px 10px 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.hydration-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.hydration-entry > div:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.hydration-entry span,
+.hydration-entry time {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.hydration-entry__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.hydration-entry > .hydration-entry__actions {
+  margin-top: 0;
+}
+
+.hydration-entry__editor {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.hydration-entry__editor .hydration-entry__actions {
+  grid-column: 1 / -1;
+}
+
+.nutrition-hydration-report {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 0.8fr);
+  gap: 20px;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--v2-lime, var(--accent)) 32%, var(--border));
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--v2-lime, var(--accent)) 6%, var(--surface));
+}
+
+.nutrition-hydration-report dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.nutrition-hydration-report dl > div {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.nutrition-hydration-report dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.nutrition-hydration-report dd {
+  margin: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 760px) {
+  .hydration-card__header {
+    padding: 16px 14px 10px;
+  }
+  .hydration-progress {
+    margin-inline: 14px;
+  }
+  .hydration-presets {
+    grid-template-columns: repeat(3, minmax(86px, 1fr));
+    overflow-x: auto;
+    padding-inline: 14px;
+    scrollbar-width: none;
+  }
+  .hydration-expand {
+    width: calc(100% - 28px);
+    margin-inline: 14px;
+  }
+  .hydration-details > section {
+    padding-inline: 14px;
+  }
+  .hydration-form-row,
+  .hydration-goal-fields,
+  .hydration-entry__editor,
+  .nutrition-hydration-report {
+    grid-template-columns: 1fr;
+  }
+  .hydration-entry {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .hydration-entry > .hydration-entry__actions {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 760px) {
   .program-selector-entry {
     grid-template-columns: 1fr;
@@ -7572,6 +7941,10 @@ html[data-yfc-keyboard='visible'] .nutrition-picker :is(input, select, textarea)
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
+    transition: none !important;
+  }
+  .hydration-orb > span,
+  .hydration-progress > span {
     transition: none !important;
   }
 }
