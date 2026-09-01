@@ -293,7 +293,7 @@ export function HydrationTracker({ diaryDate }: { diaryDate: string }) {
       setPresetName('');
       setPresetVolume('');
       await refresh();
-      toast('Сосуд сохранён');
+      toast('Ёмкость добавлена');
     },
     onError: (reason) => toast((reason as Error).message, 'error'),
   });
@@ -302,7 +302,7 @@ export function HydrationTracker({ diaryDate }: { diaryDate: string }) {
       api<void>(`/api/v1/nutrition/hydration/presets/${presetId}`, { method: 'DELETE' }),
     onSuccess: async () => {
       await refresh();
-      toast('Сосуд удалён');
+      toast('Ёмкость удалена');
     },
     onError: (reason) => toast((reason as Error).message, 'error'),
   });
@@ -331,11 +331,11 @@ export function HydrationTracker({ diaryDate }: { diaryDate: string }) {
   const target = data.goal?.enabled ? data.goal.target_ml : null;
   const progress = Math.min(data.progress_percent ?? 0, 100);
   return (
-    <section className="hydration-card" aria-labelledby="hydration-title">
+    <section className="hydration-card" aria-label="Гидратация">
       <header className="hydration-card__header">
         <div>
-          <span className="eyebrow">Напитки</span>
-          <h2 id="hydration-title">Гидратация</h2>
+          <span className="eyebrow">Гидратация</span>
+          <h2 id="hydration-title">Напитки</h2>
           <p>{target ? `${data.total_ml} из ${target} мл` : `${data.total_ml} мл записано`}</p>
         </div>
         <div className="hydration-orb" aria-hidden="true">
@@ -488,24 +488,26 @@ export function HydrationTracker({ diaryDate }: { diaryDate: string }) {
                     <option value="male">Мужской — 3000 мл напитков</option>
                   </Select>
                 </Field>
-                <label className="hydration-check hydration-check--adult">
-                  <input
-                    type="checkbox"
-                    checked={adultConfirmed}
-                    onChange={(event) => setAdultConfirmed(event.target.checked)}
-                  />{' '}
-                  <span>Мне 18 лет или больше</span>
-                </label>
-                {!currentSex && (
-                  <label className="hydration-check">
+                <div className="hydration-profile-checks">
+                  <label className="hydration-check hydration-check--adult">
                     <input
                       type="checkbox"
-                      checked={saveSex}
-                      onChange={(event) => setSaveSex(event.target.checked)}
+                      checked={adultConfirmed}
+                      onChange={(event) => setAdultConfirmed(event.target.checked)}
                     />{' '}
-                    Сохранить выбранный пол в профиле
+                    <span>Мне 18 лет или больше</span>
                   </label>
-                )}
+                  {!currentSex && (
+                    <label className="hydration-check">
+                      <input
+                        type="checkbox"
+                        checked={saveSex}
+                        onChange={(event) => setSaveSex(event.target.checked)}
+                      />{' '}
+                      <span>Сохранить выбранный пол в профиле</span>
+                    </label>
+                  )}
+                </div>
                 <p className="hydration-note">
                   Ориентир относится к напиткам для здоровых взрослых в обычных условиях. Еда даёт
                   дополнительную воду; жара, нагрузка, беременность и медицинские состояния требуют
@@ -554,7 +556,7 @@ export function HydrationTracker({ diaryDate }: { diaryDate: string }) {
           </section>
 
           <section aria-labelledby="hydration-presets-title">
-            <h3 id="hydration-presets-title">Мой сосуд</h3>
+            <h3 id="hydration-presets-title">Мои кружки и бутылки</h3>
             <div className="hydration-form-row">
               <Field label="Название" labelFor="hydration-preset-name">
                 <Input
@@ -581,11 +583,11 @@ export function HydrationTracker({ diaryDate }: { diaryDate: string }) {
                 type="button"
                 onClick={() => savePreset.mutate()}
               >
-                Сохранить сосуд
+                Добавить
               </Button>
             </div>
             {data.presets.some((preset) => !preset.is_default) && (
-              <ul className="hydration-custom-presets" aria-label="Сохранённые сосуды">
+              <ul className="hydration-custom-presets" aria-label="Добавленные кружки и бутылки">
                 {data.presets
                   .filter((preset) => !preset.is_default && preset.id != null)
                   .map((preset) => (
