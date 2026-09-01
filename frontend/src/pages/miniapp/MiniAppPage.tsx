@@ -52,11 +52,6 @@ const ProfileForm = lazy(() =>
     default: module.ProfileForm,
   })),
 );
-const AvatarSettings = lazy(() =>
-  import('../../features/profile/AvatarSettings').then((module) => ({
-    default: module.AvatarSettings,
-  })),
-);
 const ProgramBuilder = lazy(() =>
   import('../../features/programs/ProgramBuilder').then((module) => ({
     default: module.ProgramBuilder,
@@ -433,7 +428,6 @@ export default function MiniAppPage() {
                   </a>
                 </nav>
 
-                <AvatarSettings />
                 <ProfileForm key={profileFormKey} />
                 <Card
                   className="profile-settings-group"

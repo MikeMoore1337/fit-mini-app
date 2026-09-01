@@ -14,6 +14,8 @@ import { profileGoals } from './goals';
 import { BodyPriorityPicker, isBodyPriorityComplete } from './BodyPriorityPicker';
 import { TrainingPreferencesForm } from './TrainingPreferencesForm';
 import { Icon } from '../../shared/ui/Icon';
+import { AccountAvatar } from '../../shared/account/AccountIdentity';
+import { AvatarSettings } from './AvatarSettings';
 
 const emptyProfile: UserProfileUpdate = {
   full_name: '',
@@ -145,6 +147,7 @@ export function ProfileForm() {
   const { user, reloadUser } = useAuth();
   const { toast } = useFeedback();
   const queryClient = useQueryClient();
+  const [avatarEditorOpen, setAvatarEditorOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<ProfileFieldErrors>({});
   const [form, setForm, clearDraft] = usePersistentState<UserProfileUpdate>(
     profileDraftStorageKey(user?.id ?? 'anonymous'),
@@ -198,6 +201,13 @@ export function ProfileForm() {
   });
 
   const numberValue = (value: string) => (value === '' ? null : Number(value));
+  const avatarSource = user?.custom_avatar
+    ? 'Используется свой аватар'
+    : user?.photo_url
+      ? 'Используется фото из способа входа'
+      : 'Используется нейтральный emoji';
+  const displayName =
+    user?.profile?.full_name || user?.first_name || user?.username || 'Пользователь';
   const updateField = <Key extends keyof UserProfileUpdate>(
     key: Key,
     value: UserProfileUpdate[Key],
@@ -252,9 +262,33 @@ export function ProfileForm() {
                 <Icon name="nav-profile" size={20} /> Личные данные
               </h3>
               <p>
-                Имя, дата рождения и часовой пояс используются только в вашем рабочем контексте.
+                Аватар, имя, дата рождения и часовой пояс используются только в вашем рабочем
+                контексте.
               </p>
             </div>
+            {user && (
+              <div className="profile-avatar-setting">
+                <AccountAvatar
+                  className="profile-avatar-setting__avatar"
+                  customAvatarVersion={user.custom_avatar?.updated_at}
+                  name={displayName}
+                  photoUrl={user.photo_url}
+                />
+                <div className="profile-avatar-setting__copy">
+                  <strong>Фото профиля</strong>
+                  <span>{avatarSource}</span>
+                </div>
+                <button
+                  type="button"
+                  className="secondary profile-avatar-setting__action"
+                  aria-label="Изменить аватар"
+                  aria-haspopup="dialog"
+                  onClick={() => setAvatarEditorOpen(true)}
+                >
+                  Изменить
+                </button>
+              </div>
+            )}
             <div className="form-grid profile-form-grid profile-form-grid--personal">
               <label className="field">
                 <span>Имя</span>
@@ -607,6 +641,7 @@ export function ProfileForm() {
         </form>
       </Card>
       <TrainingPreferencesForm />
+      <AvatarSettings open={avatarEditorOpen} onClose={() => setAvatarEditorOpen(false)} />
     </>
   );
 }

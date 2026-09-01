@@ -3,6 +3,9 @@ import { useAuth } from '../../app/AuthProvider';
 import { AccountAvatar } from '../../shared/account/AccountIdentity';
 import { api, ApiError } from '../../shared/api/client';
 import type { User } from '../../shared/api/types';
+import { useFeedback } from '../../shared/ui/FeedbackProvider';
+import { Icon } from '../../shared/ui/Icon';
+import { useModalA11y } from '../../shared/ui/useModalA11y';
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 const SUPPORTED_AVATAR_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -19,33 +22,22 @@ function selectedFileError(file: File): string | null {
   return null;
 }
 
-export function AvatarSettings() {
+export function AvatarSettings({ open, onClose }: { open: boolean; onClose(): void }) {
   const { updateUser, user } = useAuth();
+  const { toast } = useFeedback();
   const inputRef = useRef<HTMLInputElement>(null);
-  const chooseButtonRef = useRef<HTMLButtonElement>(null);
   const deleteButtonRef = useRef<HTMLButtonElement>(null);
-  const confirmDeleteButtonRef = useRef<HTMLButtonElement>(null);
+  const deleteCancelRef = useRef<HTMLButtonElement>(null);
+  const deleteConfirmRef = useRef<HTMLButtonElement>(null);
+  const deleteConfirmationWasOpenRef = useRef(false);
   const previewRef = useRef<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-
-  useEffect(
-    () => () => {
-      if (previewRef.current) URL.revokeObjectURL(previewRef.current);
-    },
-    [],
-  );
-
-  useEffect(() => {
-    if (confirmDelete) confirmDeleteButtonRef.current?.focus();
-  }, [confirmDelete]);
-
-  if (!user) return null;
+  const blocking = saving || deleting;
 
   const clearSelection = () => {
     if (previewRef.current) URL.revokeObjectURL(previewRef.current);
@@ -55,8 +47,45 @@ export function AvatarSettings() {
     if (inputRef.current) inputRef.current.value = '';
   };
 
+  const closeDeleteConfirmation = () => {
+    if (deleting) return;
+    setConfirmDelete(false);
+    setError(null);
+  };
+
+  const close = () => {
+    if (blocking) return;
+    if (confirmDelete) {
+      closeDeleteConfirmation();
+      return;
+    }
+    clearSelection();
+    setError(null);
+    onClose();
+  };
+  const panelRef = useModalA11y<HTMLDivElement>(open, close, '.avatar-editor__choose');
+
+  useEffect(
+    () => () => {
+      if (previewRef.current) URL.revokeObjectURL(previewRef.current);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (confirmDelete) {
+      deleteConfirmationWasOpenRef.current = true;
+      deleteCancelRef.current?.focus();
+      return;
+    }
+    if (!deleteConfirmationWasOpenRef.current) return;
+    deleteConfirmationWasOpenRef.current = false;
+    deleteButtonRef.current?.focus();
+  }, [confirmDelete]);
+
+  if (!open || !user) return null;
+
   const chooseFile = (file: File | null) => {
-    setStatus(null);
     setError(null);
     if (!file) return;
     const validationError = selectedFileError(file);
@@ -76,7 +105,6 @@ export function AvatarSettings() {
     if (!selectedFile || saving) return;
     setSaving(true);
     setError(null);
-    setStatus(null);
     const formData = new FormData();
     formData.append('file', selectedFile, selectedFile.name);
     try {
@@ -87,7 +115,8 @@ export function AvatarSettings() {
       });
       updateUser(current);
       clearSelection();
-      setStatus('Аватар сохранён и уже используется в профиле.');
+      toast('Аватар сохранён');
+      onClose();
     } catch (reason) {
       setError(
         reason instanceof ApiError || reason instanceof Error
@@ -103,18 +132,17 @@ export function AvatarSettings() {
     if (deleting) return;
     setDeleting(true);
     setError(null);
-    setStatus(null);
     try {
       const current = await api<User>('/api/v1/me/avatar', { method: 'DELETE' });
       updateUser(current);
       clearSelection();
-      setConfirmDelete(false);
-      requestAnimationFrame(() => chooseButtonRef.current?.focus());
-      setStatus(
+      toast(
         current.photo_url
-          ? 'Свой аватар удалён. Снова показывается фото из способа входа.'
-          : 'Свой аватар удалён. Снова показывается нейтральный emoji.',
+          ? 'Свой аватар удалён — снова показывается фото из способа входа'
+          : 'Свой аватар удалён — снова показывается нейтральный emoji',
       );
+      setConfirmDelete(false);
+      onClose();
     } catch (reason) {
       setError(
         reason instanceof ApiError || reason instanceof Error
@@ -136,88 +164,126 @@ export function AvatarSettings() {
         : 'Используется нейтральный emoji';
 
   return (
-    <section className="profile-avatar-card" id="profile-avatar" aria-labelledby="avatar-title">
-      <div className="profile-avatar-card__visual">
-        <AccountAvatar
-          className="profile-avatar-card__avatar"
-          customAvatarVersion={user.custom_avatar?.updated_at}
-          name={userDisplayName(user)}
-          photoUrl={user.photo_url}
-          previewUrl={previewUrl}
-        />
-        <span>{sourceLabel}</span>
-      </div>
-
-      <div className="profile-avatar-card__body">
-        <div className="profile-avatar-card__copy">
-          <span className="eyebrow">Персонализация аккаунта</span>
-          <h2 id="avatar-title">Аватар</h2>
-          <p>
-            Выберите JPEG, PNG или WebP до 5 МБ. Перед сохранением изображение будет обрезано по
-            центру до квадрата, а исходные metadata будут удалены.
-          </p>
-        </div>
-
-        <input
-          ref={inputRef}
-          className="sr-only"
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          aria-label="Выбрать изображение для аватара"
-          onChange={(event) => chooseFile(event.target.files?.[0] ?? null)}
-        />
-
-        <div className="profile-avatar-card__actions">
+    <div
+      className="avatar-editor-layer"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) close();
+      }}
+    >
+      <div
+        ref={panelRef}
+        className="avatar-editor"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="avatar-editor-title"
+        aria-describedby="avatar-editor-description"
+        aria-busy={blocking || undefined}
+        tabIndex={-1}
+      >
+        <header className="avatar-editor__header" inert={confirmDelete}>
+          <div>
+            <span className="eyebrow">Настройка аккаунта</span>
+            <h2 id="avatar-editor-title">Аватар</h2>
+          </div>
           <button
-            ref={chooseButtonRef}
             type="button"
-            className="secondary"
-            disabled={saving || deleting}
+            className="avatar-editor__close"
+            aria-label="Закрыть редактор аватара"
+            disabled={blocking}
+            onClick={close}
+          >
+            <Icon name="close" />
+          </button>
+        </header>
+
+        <div className="avatar-editor__content" inert={confirmDelete}>
+          <div className="avatar-editor__preview">
+            <AccountAvatar
+              className="avatar-editor__avatar"
+              customAvatarVersion={user.custom_avatar?.updated_at}
+              name={userDisplayName(user)}
+              photoUrl={user.photo_url}
+              previewUrl={previewUrl}
+            />
+            <div>
+              <strong>{sourceLabel}</strong>
+              <p id="avatar-editor-description">
+                JPEG, PNG или WebP до 5 МБ. Изображение будет обрезано по центру до квадрата без
+                исходных metadata.
+              </p>
+            </div>
+          </div>
+
+          <input
+            ref={inputRef}
+            className="sr-only"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            aria-label="Выбрать изображение для аватара"
+            onChange={(event) => chooseFile(event.target.files?.[0] ?? null)}
+          />
+
+          <button
+            type="button"
+            className="secondary avatar-editor__choose"
+            disabled={blocking}
             onClick={() => inputRef.current?.click()}
           >
-            {selectedFile ? 'Выбрать другое' : hasCustomAvatar ? 'Заменить' : 'Выбрать изображение'}
+            {selectedFile
+              ? 'Выбрать другое'
+              : hasCustomAvatar
+                ? 'Заменить изображение'
+                : 'Выбрать изображение'}
           </button>
-          {selectedFile && (
-            <>
-              <button type="button" disabled={saving} onClick={() => void saveAvatar()}>
-                {saving ? 'Сохраняем…' : error ? 'Повторить сохранение' : 'Сохранить аватар'}
-              </button>
-              <button
-                type="button"
-                className="text-button"
-                disabled={saving}
-                onClick={() => {
-                  clearSelection();
-                  setError(null);
-                }}
-              >
-                Отмена
-              </button>
-            </>
+
+          {error && !confirmDelete && (
+            <div className="avatar-editor__error" role="alert">
+              <strong>Изменение не сохранено</strong>
+              <span>{error}</span>
+            </div>
           )}
+
           {hasCustomAvatar && !selectedFile && (
             <button
               ref={deleteButtonRef}
               type="button"
-              className="secondary profile-avatar-card__delete"
-              disabled={deleting}
-              onClick={() => setConfirmDelete(true)}
+              className="text-button avatar-editor__delete"
+              disabled={blocking}
+              onClick={() => {
+                setError(null);
+                setConfirmDelete(true);
+              }}
             >
               Удалить свой аватар
             </button>
           )}
         </div>
 
-        {confirmDelete && hasCustomAvatar && (
+        {confirmDelete && (
           <div
-            className="profile-avatar-delete-confirmation"
+            className="avatar-editor__delete-confirmation"
             role="alertdialog"
+            aria-modal="true"
             aria-labelledby="avatar-delete-title"
             aria-describedby="avatar-delete-description"
             onKeyDown={(event) => {
-              if (event.key !== 'Escape') return;
-              setConfirmDelete(false);
-              requestAnimationFrame(() => deleteButtonRef.current?.focus());
+              event.stopPropagation();
+              if (event.key === 'Escape' && !deleting) {
+                event.preventDefault();
+                closeDeleteConfirmation();
+                return;
+              }
+              if (event.key !== 'Tab') return;
+              const first = deleteCancelRef.current;
+              const last = deleteConfirmRef.current;
+              if (!first || !last) return;
+              if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+              } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+              }
             }}
           >
             <div>
@@ -225,43 +291,52 @@ export function AvatarSettings() {
               <p id="avatar-delete-description">
                 Свой файл будет удалён. Фото из способа входа или emoji останется доступным.
               </p>
+              {error && (
+                <p className="avatar-editor__delete-error" role="alert">
+                  {error}
+                </p>
+              )}
             </div>
-            <div className="profile-avatar-delete-confirmation__actions">
+            <div className="avatar-editor__delete-actions">
               <button
-                ref={confirmDeleteButtonRef}
+                ref={deleteCancelRef}
+                type="button"
+                className="secondary"
+                disabled={deleting}
+                onClick={closeDeleteConfirmation}
+              >
+                Отмена
+              </button>
+              <button
+                ref={deleteConfirmRef}
                 type="button"
                 className="btn-danger"
                 disabled={deleting}
                 onClick={() => void deleteAvatar()}
               >
-                {deleting ? 'Удаляем…' : 'Удалить'}
-              </button>
-              <button
-                type="button"
-                className="secondary"
-                disabled={deleting}
-                onClick={() => {
-                  setConfirmDelete(false);
-                  requestAnimationFrame(() => deleteButtonRef.current?.focus());
-                }}
-              >
-                Отмена
+                {deleting ? 'Удаляем…' : error ? 'Повторить удаление' : 'Удалить'}
               </button>
             </div>
           </div>
         )}
 
-        {error && (
-          <p className="profile-avatar-card__message is-error" role="alert">
-            {error}
-          </p>
-        )}
-        {status && (
-          <p className="profile-avatar-card__message is-success" role="status">
-            {status}
-          </p>
-        )}
+        <footer className="avatar-editor__actions" inert={confirmDelete}>
+          <button type="button" className="secondary" disabled={blocking} onClick={close}>
+            Отмена
+          </button>
+          <button
+            type="button"
+            disabled={!selectedFile || blocking}
+            onClick={() => void saveAvatar()}
+          >
+            {saving
+              ? 'Сохраняем…'
+              : error && selectedFile
+                ? 'Повторить сохранение'
+                : 'Сохранить аватар'}
+          </button>
+        </footer>
       </div>
-    </section>
+    </div>
   );
 }
