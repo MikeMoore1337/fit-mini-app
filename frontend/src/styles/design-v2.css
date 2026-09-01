@@ -1504,20 +1504,14 @@ body:has(.app-shell--design-v2) {
   color: var(--v2-text-secondary);
 }
 
-.nutrition-diary--design-v2 .nutrition-diary__status {
-  display: flex;
-  min-height: 24px;
-  justify-content: flex-end;
-}
-
-.nutrition-diary--design-v2 .nutrition-diary__layout {
-  grid-template-columns: minmax(0, 1.65fr) minmax(280px, 0.8fr);
-  gap: var(--v2-space-5);
-}
-
 .nutrition-diary--design-v2 .nutrition-meals {
   gap: 0;
   border-top: 1px solid var(--v2-border);
+}
+
+.nutrition-diary--design-v2 .nutrition-food-card .nutrition-meals {
+  padding: 0 var(--v2-space-4) var(--v2-space-4);
+  border-top: 0;
 }
 
 .nutrition-diary--design-v2 .nutrition-meal {
@@ -1525,6 +1519,11 @@ body:has(.app-shell--design-v2) {
   border-bottom: 1px solid var(--v2-border);
   border-radius: 0;
   background: transparent;
+}
+
+.nutrition-diary--design-v2 .nutrition-food-card .nutrition-meal {
+  border-top: 1px solid var(--v2-border);
+  border-bottom: 0;
 }
 
 .nutrition-diary--design-v2 .nutrition-meal__header {
@@ -2786,15 +2785,6 @@ body.public-shell-mode.public-shell-mode:has(.auth-public-shell--design-v2) {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .nutrition-diary--design-v2 .nutrition-diary__layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .nutrition-diary--design-v2 .nutrition-day-summary {
-    position: static;
-    order: -1;
-  }
-
   .auth-public-shell--design-v2 .login-layout {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--v2-space-5);
@@ -2934,10 +2924,6 @@ body.public-shell-mode.public-shell-mode:has(.auth-public-shell--design-v2) {
 
   .nutrition-diary--design-v2 .nutrition-diary__intro h1 {
     font-size: clamp(2.55rem, 13vw, 3.25rem);
-  }
-
-  .nutrition-diary--design-v2 .nutrition-diary__status {
-    justify-content: flex-start;
   }
 
   .nutrition-diary--design-v2 .nutrition-day-summary {

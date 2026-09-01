@@ -2191,7 +2191,10 @@ test('manual nutrition targets validate, preserve keyboard flow and expose effec
   ]);
 
   for (const currentPage of [tmaPage, mobilePage]) {
-    await currentPage.getByRole('heading', { name: 'КБЖУ', exact: true }).click();
+    await currentPage
+      .locator('#nutrition-target-settings')
+      .getByRole('heading', { name: 'КБЖУ', exact: true })
+      .click();
     if (currentPage === mobilePage) {
       await expect(currentPage.getByText('Назначено тренером', { exact: true })).toBeVisible();
       await expect(
@@ -2272,7 +2275,10 @@ test('manual nutrition targets validate, preserve keyboard flow and expose effec
 
   const targetCard = tmaPage.locator('#nutrition-target-settings > details');
   if ((await targetCard.getAttribute('open')) === null) {
-    await tmaPage.getByRole('heading', { name: 'КБЖУ', exact: true }).click();
+    await tmaPage
+      .locator('#nutrition-target-settings')
+      .getByRole('heading', { name: 'КБЖУ', exact: true })
+      .click();
   }
   for (const viewport of Object.values(MOBILE_CONTEXTS)) {
     await tmaPage.setViewportSize(viewport);
@@ -2316,7 +2322,10 @@ test('manual nutrition target history screenshots cover all responsive surfaces 
     }
 
     await page.goto('/app?section=nutrition');
-    await page.getByRole('heading', { name: 'КБЖУ', exact: true }).click();
+    await page
+      .locator('#nutrition-target-settings')
+      .getByRole('heading', { name: 'КБЖУ', exact: true })
+      .click();
     if (current.surface === 'tma-mock') {
       await expect(page.getByText('Назначено тренером', { exact: true })).toBeVisible();
       await page.getByRole('button', { name: 'Указать вручную' }).click();
@@ -2412,7 +2421,10 @@ test('contextual help covers workout, nutrition and Progress without a TMA libra
   await expect(rirDetails).not.toHaveAttribute('open', '');
 
   await tmaPage.getByRole('link', { name: 'Питание', exact: true }).click();
-  await tmaPage.getByRole('heading', { name: 'КБЖУ', exact: true }).click();
+  await tmaPage
+    .locator('#nutrition-target-settings')
+    .getByRole('heading', { name: 'КБЖУ', exact: true })
+    .click();
   await tmaPage.getByRole('button', { name: 'Рассчитать ориентиры' }).click();
   const nutritionHelp = tmaPage.locator('.contextual-help').getByText('Что это?', { exact: true });
   await nutritionHelp.click();

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HydrationTracker } from '../../../../src/features/nutrition/HydrationTracker';
@@ -77,7 +77,7 @@ describe('HydrationTracker', () => {
 
   it('shows a compact factual summary and quick presets', async () => {
     renderTracker();
-    expect(await screen.findByRole('heading', { name: 'Гидратация' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Напитки' })).toBeVisible();
     expect(screen.getByText('850 из 2200 мл')).toBeVisible();
     expect(screen.getByRole('progressbar', { name: 'Прогресс гидратации' })).toHaveAttribute(
       'aria-valuetext',
@@ -154,5 +154,10 @@ describe('HydrationTracker', () => {
     expect(screen.getByRole('radio', { name: 'По справочному ориентиру' })).toBeChecked();
     expect(screen.getByLabelText('Пол для справочного ориентира')).toHaveValue('male');
     expect(screen.getByLabelText('Мне 18 лет или больше')).toBeChecked();
+    expect(screen.getByLabelText('Сохранить выбранный пол в профиле')).toBeVisible();
+    const presets = screen
+      .getByRole('heading', { name: 'Мои кружки и бутылки' })
+      .closest('section') as HTMLElement;
+    expect(within(presets).getByRole('button', { name: 'Добавить' })).toBeVisible();
   });
 });

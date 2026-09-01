@@ -209,6 +209,7 @@ const externalEggFoods = [
 async function mockNutritionApi(
   page: Page,
   hydrationState: 'data' | 'empty' | 'error' | 'loading' = 'data',
+  profileSex: 'female' | null = 'female',
 ) {
   let entries: FoodDiaryEntry[] = [yogurtEntry];
   let hydrationEntries: HydrationEntry[] =
@@ -273,7 +274,7 @@ async function mockNutritionApi(
           onboarding: { status: 'complete', required_fields: [], missing_fields: [] },
           profile: {
             full_name: 'Анна Петрова',
-            sex: 'female',
+            sex: profileSex,
             timezone: 'Europe/Moscow',
             goal: 'maintenance',
             kbju: null,
@@ -578,6 +579,88 @@ async function mockNutritionApi(
   });
 }
 
+test('Task 81A groups nutrition into five cards and keeps profile choices compact', async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date('2026-08-19T13:00:00+03:00'));
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await mockNutritionApi(page, 'data', null);
+  await page.goto('/app?section=nutrition&date=2026-08-19&hydration=quick');
+
+  const cardTitles = [
+    page.locator('.nutrition-completeness > .nutrition-completeness__copy h2'),
+    page.locator('.nutrition-day-balance h2'),
+    page.locator('.nutrition-food-card__header h2'),
+    page.locator('.nutrition-day-summary h2'),
+    page.locator('.hydration-card h2'),
+  ];
+  const titlePositions: number[] = [];
+  for (const heading of cardTitles) {
+    await expect(heading).toBeVisible();
+    titlePositions.push((await heading.boundingBox())?.y ?? 0);
+  }
+  expect(titlePositions).toEqual([...titlePositions].sort((left, right) => left - right));
+  const balance = page.locator('.nutrition-day-balance');
+  await expect(balance.getByRole('progressbar', { name: /Еда:/ })).toBeVisible();
+  await expect(balance.getByRole('progressbar', { name: /Жидкость:/ })).toBeVisible();
+  const foodCard = page.locator('.nutrition-food-card');
+  const firstMeal = foodCard.locator('.nutrition-meal').first();
+  const [foodCardBox, firstMealBox] = await Promise.all([
+    foodCard.boundingBox(),
+    firstMeal.boundingBox(),
+  ]);
+  expect(firstMealBox!.x - foodCardBox!.x).toBeGreaterThanOrEqual(14);
+  expect(
+    foodCardBox!.x + foodCardBox!.width - firstMealBox!.x - firstMealBox!.width,
+  ).toBeGreaterThanOrEqual(14);
+  await expect(page.getByRole('heading', { name: 'Мои кружки и бутылки' })).toBeVisible();
+  await page.screenshot({
+    fullPage: true,
+    path: '../.artifacts/screenshots/task-81A/desktop-light-five-cards.png',
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
+  const mobileCards = [
+    page.getByRole('navigation', { name: 'Неделя дневника' }),
+    page.locator('.nutrition-completeness'),
+    page.locator('.nutrition-day-balance'),
+    page.locator('.nutrition-food-card'),
+    page.locator('.nutrition-day-summary'),
+    page.locator('.hydration-card'),
+  ];
+  const mobileCardPositions: number[] = [];
+  for (const card of mobileCards) {
+    await expect(card).toBeVisible();
+    mobileCardPositions.push((await card.boundingBox())?.y ?? 0);
+  }
+  expect(mobileCardPositions).toEqual([...mobileCardPositions].sort((left, right) => left - right));
+  const [mobileFoodCardBox, mobileFirstMealBox] = await Promise.all([
+    foodCard.boundingBox(),
+    firstMeal.boundingBox(),
+  ]);
+  expect(mobileFirstMealBox!.x - mobileFoodCardBox!.x).toBeGreaterThanOrEqual(12);
+  expect(
+    mobileFoodCardBox!.x +
+      mobileFoodCardBox!.width -
+      mobileFirstMealBox!.x -
+      mobileFirstMealBox!.width,
+  ).toBeGreaterThanOrEqual(12);
+  const saveSex = page.getByText('Сохранить выбранный пол в профиле', { exact: true });
+  await expect(saveSex).toBeVisible();
+  expect(await saveSex.evaluate((element) => getComputedStyle(element).whiteSpace)).toBe('nowrap');
+  expect((await saveSex.boundingBox())?.height).toBeLessThanOrEqual(24);
+  await page.locator('.nutrition-diary').screenshot({
+    path: '../.artifacts/screenshots/task-81A/mobile-light-ordered-cards-round-2.png',
+  });
+  const hydration = page.getByRole('region', { name: 'Гидратация' });
+  await hydration.scrollIntoViewIfNeeded();
+  await hydration.screenshot({
+    path: '../.artifacts/screenshots/task-81A/mobile-light-expanded-profile-and-containers.png',
+  });
+});
+
 test('hydration visual evidence: mobile web compact and quick add', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-08-19T13:00:00+03:00'));
   await page.setViewportSize({ width: 390, height: 844 });
@@ -781,7 +864,9 @@ test('nutrition diary is responsive, keyboard-safe and supports local quick add'
 
   await expect(page.getByRole('heading', { name: 'Питание', exact: true })).toBeVisible();
   await expect(page.getByText('Греческий йогурт')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'КБЖУ' })).toBeVisible();
+  await expect(
+    page.locator('.nutrition-day-summary').getByRole('heading', { name: 'КБЖУ' }),
+  ).toBeVisible();
   await expect(page.getByText('Немного выше ориентира: 20 ккал')).toBeVisible();
   await expect(page.locator('.nutrition-target').first()).not.toHaveClass(/is-over/);
   for (const viewport of [
@@ -802,17 +887,17 @@ test('nutrition diary is responsive, keyboard-safe and supports local quick add'
     expect((await selectedDay.boundingBox())?.height).toBeGreaterThanOrEqual(44);
     const borderTop = await week.evaluate((element) => getComputedStyle(element).borderTopWidth);
     expect(borderTop).toBe(viewport.width <= 640 ? '0px' : '1px');
-    const status = page.locator('.nutrition-diary__status');
-    const targetBadge = status.getByText('Цель КБЖУ настроена', { exact: true });
-    const [weekBox, statusBox, targetBadgeBox] = await Promise.all([
+    const summary = page.locator('.nutrition-day-summary');
+    const targetBadge = summary.getByText('Цель КБЖУ настроена', { exact: true });
+    const [weekBox, summaryBox, targetBadgeBox] = await Promise.all([
       week.boundingBox(),
-      status.boundingBox(),
+      summary.boundingBox(),
       targetBadge.boundingBox(),
     ]);
     expect(weekBox).not.toBeNull();
-    expect(statusBox).not.toBeNull();
+    expect(summaryBox).not.toBeNull();
     expect(targetBadgeBox).not.toBeNull();
-    expect(statusBox!.y).toBeGreaterThanOrEqual(weekBox!.y + weekBox!.height);
+    expect(summaryBox!.y).toBeGreaterThanOrEqual(weekBox!.y + weekBox!.height);
     expect(targetBadgeBox!.y).toBeGreaterThanOrEqual(weekBox!.y + weekBox!.height);
   }
 

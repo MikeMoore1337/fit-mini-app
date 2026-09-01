@@ -12,6 +12,7 @@ import type {
   FoodDiaryEntry,
   FoodDiaryMeal,
   FoodDiaryNutrition,
+  HydrationDay,
 } from '../../shared/api/types';
 import {
   Badge,
@@ -129,6 +130,79 @@ function MacroProgress({
   );
 }
 
+function DayBalance({
+  day,
+  hydration,
+  hydrationUnavailable,
+}: {
+  day: FoodDiaryDay;
+  hydration?: HydrationDay;
+  hydrationUnavailable: boolean;
+}) {
+  const foodTarget = day.targets ? Number(day.targets.energy_kcal) : null;
+  const hydrationTarget = hydration?.goal?.enabled ? hydration.goal.target_ml : null;
+  return (
+    <section
+      className="nutrition-section-card nutrition-day-balance"
+      aria-labelledby="nutrition-balance-title"
+    >
+      <header className="nutrition-section-card__header">
+        <div>
+          <span className="eyebrow">Сводка дня</span>
+          <h2 id="nutrition-balance-title">Баланс дня</h2>
+        </div>
+        <p>Еда и жидкость — рядом, без смешивания показателей.</p>
+      </header>
+      <div className="nutrition-day-balance__metrics">
+        <div>
+          {foodTarget ? (
+            <QuantitativeProgress
+              label="Еда"
+              maximum={foodTarget}
+              unit="ккал"
+              value={Number(day.totals.energy_kcal)}
+            />
+          ) : (
+            <div className="nutrition-day-balance__value">
+              <span>Еда</span>
+              <strong>{formatNumber(day.totals.energy_kcal)} ккал</strong>
+              <small>Ориентир не задан</small>
+            </div>
+          )}
+        </div>
+        <div>
+          {hydration && hydrationTarget ? (
+            <QuantitativeProgress
+              label="Жидкость"
+              maximum={hydrationTarget}
+              unit="мл"
+              value={hydration.total_ml}
+            />
+          ) : (
+            <div className="nutrition-day-balance__value">
+              <span>Жидкость</span>
+              <strong>
+                {hydration
+                  ? `${formatNumber(hydration.total_ml)} мл`
+                  : hydrationUnavailable
+                    ? 'Недоступно'
+                    : 'Загружается…'}
+              </strong>
+              <small>
+                {hydration
+                  ? 'Ориентир не задан'
+                  : hydrationUnavailable
+                    ? 'Проверьте карточку «Напитки»'
+                    : 'Получаем записи напитков'}
+              </small>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function DaySummary({ day }: { day: FoodDiaryDay }) {
   const { totals, targets, remaining } = day;
   const motion = useSemanticMotion<HTMLElement>(JSON.stringify([totals, targets, remaining]), {
@@ -146,8 +220,11 @@ function DaySummary({ day }: { day: FoodDiaryDay }) {
       onAnimationEnd={motion.onMotionAnimationEnd}
     >
       <div className="nutrition-day-summary__head">
-        <span className="eyebrow">Баланс дня</span>
-        <h2 id="nutrition-summary-title">Итоги и цель</h2>
+        <div>
+          <span className="eyebrow">Ориентиры дня</span>
+          <h2 id="nutrition-summary-title">КБЖУ</h2>
+        </div>
+        {day.targets ? <Badge tone="success">Цель КБЖУ настроена</Badge> : <Badge>Без цели</Badge>}
       </div>
       {targets && remaining ? (
         <div className="nutrition-targets">
@@ -543,13 +620,14 @@ function DayCompleteness({ day }: { day: FoodDiaryDay }) {
     >
       <div className="nutrition-completeness__copy">
         <div>
-          <span className="eyebrow">Полнота данных</span>
-          <h2 id="nutrition-completeness-title">{copy.label}</h2>
+          <span className="eyebrow">Статус дневника</span>
+          <h2 id="nutrition-completeness-title">Полнота данных</h2>
         </div>
         <Badge tone={day.status === 'complete' || day.status === 'fasted' ? 'success' : undefined}>
           {day.status_is_explicit ? 'Подтверждено' : 'Не подтверждено'}
         </Badge>
       </div>
+      <strong className="nutrition-completeness__status">{copy.label}</strong>
       <p>{copy.description}</p>
       <div className="nutrition-completeness__actions">
         <Button
@@ -668,6 +746,11 @@ export function NutritionDiary({
     queryKey: queryKeys.nutrition.diaryDate(selectedDate),
     queryFn: () => api<FoodDiaryDay>(`/api/v1/nutrition/diary?diary_date=${selectedDate}`),
   });
+  const hydration = useQuery({
+    queryKey: queryKeys.nutrition.hydrationDate(selectedDate),
+    queryFn: () => api<HydrationDay>(`/api/v1/nutrition/hydration?diary_date=${selectedDate}`),
+    enabled: false,
+  });
   const dateLabel = formatDate(selectedDate, today);
   const meals = useMemo(() => normalizeMeals(diary.data?.meals ?? []), [diary.data?.meals]);
   const newEntryIds = useMemo(
@@ -714,33 +797,6 @@ export function NutritionDiary({
         }}
       />
 
-      <HydrationTracker diaryDate={selectedDate} />
-
-      {diary.data && diary.data.meals.some((meal) => meal.entries.length > 0) && (
-        <div className="nutrition-day-actions">
-          <button
-            type="button"
-            onClick={() =>
-              setCopySubject({
-                scope: 'day',
-                sourceDate: selectedDate,
-                label: `Все записи за ${dateLabel.title.toLowerCase()}`,
-              })
-            }
-          >
-            Скопировать день
-          </button>
-        </div>
-      )}
-
-      <div className="nutrition-diary__status" aria-live="polite">
-        {diary.data?.targets ? (
-          <Badge tone="success">Цель КБЖУ настроена</Badge>
-        ) : diary.data ? (
-          <Badge>Без цели</Badge>
-        ) : null}
-      </div>
-
       {diary.isLoading && <LoadingState label="Загружаем дневник…" />}
       {diary.error && (
         <ErrorState message={(diary.error as Error).message} retry={() => void diary.refetch()} />
@@ -748,7 +804,36 @@ export function NutritionDiary({
       {diary.data && (
         <>
           <DayCompleteness day={diary.data} />
-          <div className="nutrition-diary__layout">
+          <DayBalance
+            day={diary.data}
+            hydration={hydration.data}
+            hydrationUnavailable={hydration.isError}
+          />
+          <section
+            className="nutrition-section-card nutrition-food-card"
+            aria-labelledby="nutrition-food-title"
+          >
+            <header className="nutrition-section-card__header nutrition-food-card__header">
+              <div>
+                <span className="eyebrow">Дневник приёмов пищи</span>
+                <h2 id="nutrition-food-title">Еда</h2>
+              </div>
+              {diary.data.meals.some((meal) => meal.entries.length > 0) && (
+                <button
+                  className="nutrition-food-card__copy"
+                  type="button"
+                  onClick={() =>
+                    setCopySubject({
+                      scope: 'day',
+                      sourceDate: selectedDate,
+                      label: `Все записи за ${dateLabel.title.toLowerCase()}`,
+                    })
+                  }
+                >
+                  Скопировать день
+                </button>
+              )}
+            </header>
             <div className="nutrition-meals">
               {meals.map((meal) => (
                 <MealSection
@@ -794,10 +879,12 @@ export function NutritionDiary({
                 />
               ))}
             </div>
-            <DaySummary day={diary.data} />
-          </div>
+          </section>
+          <DaySummary day={diary.data} />
         </>
       )}
+
+      <HydrationTracker diaryDate={selectedDate} />
 
       {addingTo && (
         <FoodPickerDialog
