@@ -223,39 +223,41 @@ export function AvatarSettings({ open, onClose }: { open: boolean; onClose(): vo
             onChange={(event) => chooseFile(event.target.files?.[0] ?? null)}
           />
 
-          <button
-            type="button"
-            className="secondary avatar-editor__choose"
-            disabled={blocking}
-            onClick={() => inputRef.current?.click()}
-          >
-            {selectedFile
-              ? 'Выбрать другое'
-              : hasCustomAvatar
-                ? 'Заменить изображение'
-                : 'Выбрать изображение'}
-          </button>
+          <div className="avatar-editor__media-actions">
+            <button
+              type="button"
+              className="secondary avatar-editor__choose"
+              disabled={blocking}
+              onClick={() => inputRef.current?.click()}
+            >
+              {selectedFile
+                ? 'Выбрать другое'
+                : hasCustomAvatar
+                  ? 'Заменить изображение'
+                  : 'Выбрать изображение'}
+            </button>
+
+            {hasCustomAvatar && !selectedFile && (
+              <button
+                ref={deleteButtonRef}
+                type="button"
+                className="avatar-editor__delete"
+                disabled={blocking}
+                onClick={() => {
+                  setError(null);
+                  setConfirmDelete(true);
+                }}
+              >
+                Удалить свой аватар
+              </button>
+            )}
+          </div>
 
           {error && !confirmDelete && (
             <div className="avatar-editor__error" role="alert">
               <strong>Изменение не сохранено</strong>
               <span>{error}</span>
             </div>
-          )}
-
-          {hasCustomAvatar && !selectedFile && (
-            <button
-              ref={deleteButtonRef}
-              type="button"
-              className="text-button avatar-editor__delete"
-              disabled={blocking}
-              onClick={() => {
-                setError(null);
-                setConfirmDelete(true);
-              }}
-            >
-              Удалить свой аватар
-            </button>
           )}
         </div>
 
