@@ -340,6 +340,22 @@ describe('TodayDashboard', () => {
     expect(await screen.findByText('Активная тренировка открыта')).toBeInTheDocument();
   });
 
+  it('announces the nutrition loading state from the live status element', async () => {
+    apiMock.mockImplementation((path: string) => {
+      if (path === '/api/v1/workouts/today') return Promise.resolve(plannedWorkout);
+      if (path.startsWith('/api/v1/workouts/progress/summary')) {
+        return Promise.resolve(progressSummary);
+      }
+      if (path.startsWith('/api/v1/nutrition/diary')) return new Promise(() => undefined);
+      const auxiliary = auxiliaryResponse(path, { week: [plannedWorkout] });
+      if (auxiliary) return auxiliary;
+      throw new Error(`Unexpected API path: ${path}`);
+    });
+    renderDashboard();
+
+    expect(await screen.findByRole('status', { name: 'Загружаем питание' })).toBeInTheDocument();
+  });
+
   it('keeps the workout usable when the nutrition request fails', async () => {
     useAvailableData();
     apiMock.mockImplementation((path: string) => {

@@ -136,6 +136,44 @@ test('hover and focus use the restrained brand and neutral palette', async ({ br
   await context.close();
 });
 
+test('shared card effects preserve sticky summaries and viewport modals', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  await openSurface(page, '/app?section=nutrition', 'light');
+  await waitForSemanticSurface(page, '/app?section=nutrition');
+
+  await expect(page.locator('.nutrition-day-summary')).toHaveCSS('position', 'sticky');
+
+  await page.goto('/app?section=profile');
+  await expect(page.getByRole('heading', { name: 'Профиль и настройки' })).toBeVisible();
+  const securityCard = page.locator('#profile-security');
+  await securityCard.locator(':scope > summary').click();
+  await securityCard.hover();
+  await securityCard.getByRole('button', { name: 'Удалить аккаунт', exact: true }).click();
+
+  const dialog = page.getByRole('dialog', {
+    name: 'Удалить аккаунт без возможности восстановления?',
+  });
+  await expect(dialog).toBeVisible();
+  const modalContract = await dialog.evaluate((dialogElement) => {
+    const dialogStyle = getComputedStyle(dialogElement);
+    const rect = dialogElement.getBoundingClientRect();
+    return {
+      dialogPosition: dialogStyle.position,
+      height: rect.height,
+      parent: dialogElement.parentElement?.tagName,
+      width: rect.width,
+    };
+  });
+  expect(modalContract).toEqual({
+    dialogPosition: 'fixed',
+    height: 900,
+    parent: 'BODY',
+    width: 1440,
+  });
+  await context.close();
+});
+
 test('captures paired Light and Dark evidence for representative Web and mocked TMA states', async ({
   browser,
 }) => {

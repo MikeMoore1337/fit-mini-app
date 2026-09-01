@@ -4,7 +4,6 @@
   --semantic-ink: var(--semantic-neutral-ink);
   --semantic-tint: var(--semantic-neutral-tint);
   --semantic-line: var(--semantic-neutral-line);
-  position: relative;
   isolation: isolate;
   overflow: hidden;
   min-width: 0;
@@ -17,6 +16,10 @@
     border-color var(--motion-state) var(--motion-ease),
     box-shadow var(--motion-state) var(--motion-ease),
     transform var(--motion-press) var(--motion-ease);
+}
+
+.semantic-card:not(.nutrition-day-summary) {
+  position: relative;
 }
 
 .semantic-card::before {

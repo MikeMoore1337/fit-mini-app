@@ -219,8 +219,8 @@ function NutritionSummary({ date }: { date: string }) {
 
   if (diary.isLoading) {
     return (
-      <section className="today-panel today-summary-card" aria-label="Загружаем питание">
-        <div className="today-summary-skeleton" role="status">
+      <section className="today-panel today-summary-card">
+        <div aria-label="Загружаем питание" className="today-summary-skeleton" role="status">
           <Skeleton height="48px" width="100%" />
         </div>
       </section>
