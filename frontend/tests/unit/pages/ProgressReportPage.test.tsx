@@ -49,9 +49,7 @@ describe('ProgressReportPage', () => {
     expect(screen.getByText('84')).toBeVisible();
     expect(screen.getByRole('table', { name: 'Таблица замеров массы' })).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Сон и настроение' })).toBeVisible();
-    expect(
-      screen.getByText(/заметки не включены в агрегаты, PDF и доступ тренера/),
-    ).toBeVisible();
+    expect(screen.getByText(/заметки не включены в агрегаты, PDF и доступ тренера/)).toBeVisible();
     expect(screen.getByText(/Пропущенный или неполный день/)).toBeVisible();
     expect(screen.getByText(/не медицинская оценка/)).toBeVisible();
     expect(screen.getByText('Тренер', { exact: true })).toBeVisible();
