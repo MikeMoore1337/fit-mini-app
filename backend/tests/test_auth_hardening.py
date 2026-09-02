@@ -7,7 +7,6 @@ from uuid import uuid4
 import jwt
 import pytest
 from fastapi import Response
-from fastapi.responses import RedirectResponse
 from starlette.testclient import TestClient
 
 from fitminiapp_api.api.v1 import auth as auth_api
@@ -21,7 +20,7 @@ from fitminiapp_api.models.token import RefreshToken
 from fitminiapp_api.models.user import User
 from fitminiapp_api.services.auth_redirects import auth_error_redirect, safe_auth_next_path
 from fitminiapp_api.services.jwt import ALGORITHM, decode_token, hash_token
-from fitminiapp_api.services.oauth_login import OAuthStateError, get_or_create_oauth_user
+from fitminiapp_api.services.oauth_login import get_or_create_oauth_user
 from fitminiapp_api.services.password_auth import utcnow
 from fitminiapp_api.services.telegram_auth import get_or_create_user_from_init_data
 
@@ -50,14 +49,17 @@ class _FakeGoogleClient:
     def __init__(self, claims: dict[str, object]) -> None:
         self.claims = claims
 
-    async def authorize_redirect(self, request, callback_url):
-        del callback_url
-        request.session["fake_oauth_state"] = "active"
-        return RedirectResponse("https://accounts.example/authorize")
+    async def create_authorization_url(self, callback_url):
+        state = f"fake-google-state-{id(self)}"
+        return {
+            "url": f"https://accounts.example/authorize?state={state}",
+            "state": state,
+            "code_verifier": "fake-google-code-verifier",
+            "redirect_uri": callback_url,
+        }
 
     async def authorize_access_token(self, request):
-        if request.session.pop("fake_oauth_state", None) != "active":
-            raise OAuthStateError("state expired")
+        del request
         return {"userinfo": self.claims}
 
 
@@ -91,14 +93,25 @@ def test_oauth_link_is_bound_to_owner_session_and_is_one_time(client, monkeypatc
 
     started = client.get(link_url, follow_redirects=False)
     assert started.status_code in {302, 307}
-    callback = client.get("/api/v1/auth/oauth/google/callback", follow_redirects=False)
+    state = parse_qs(urlparse(started.headers["location"]).query)["state"][0]
+    callback = client.get(
+        "/api/v1/auth/oauth/google/callback",
+        params={"code": "provider-code", "state": state},
+        follow_redirects=False,
+    )
     assert callback.status_code == 303
     assert callback.headers["location"] == "/app?auth_linked=google"
     assert settings.refresh_cookie_name not in callback.headers.get("set-cookie", "")
 
-    replayed = client.get("/api/v1/auth/oauth/google/callback", follow_redirects=False)
+    replayed = client.get(
+        "/api/v1/auth/oauth/google/callback",
+        params={"code": "provider-code", "state": state},
+        follow_redirects=False,
+    )
     assert replayed.status_code == 303
-    assert replayed.headers["location"] == "/login?next=%2Fapp&auth_error=invalid_state"
+    assert replayed.headers["location"] == (
+        "/login?next=%2Fapp&auth_error=invalid_state&oauth_provider=google"
+    )
     with get_session_context() as db:
         identities = db.query(AuthIdentity).filter(AuthIdentity.user_id == owner_id).all()
         assert sorted(identity.provider for identity in identities) == ["google", "telegram"]
@@ -150,22 +163,31 @@ def test_oauth_browser_errors_are_normalized(client, monkeypatch):
         lambda provider: _FakeGoogleClient(blocked_claims) if provider == "google" else None,
     )
 
-    assert client.get("/api/v1/auth/oauth/google/start", follow_redirects=False).status_code in {
+    started = client.get("/api/v1/auth/oauth/google/start", follow_redirects=False)
+    assert started.status_code in {
         302,
         307,
     }
+    state = parse_qs(urlparse(started.headers["location"]).query)["state"][0]
     denied = client.get(
-        "/api/v1/auth/oauth/google/callback?error=access_denied",
+        "/api/v1/auth/oauth/google/callback",
+        params={"error": "access_denied", "state": state},
         follow_redirects=False,
     )
-    assert denied.headers["location"] == "/login?next=%2Fapp&auth_error=denied"
+    assert denied.headers["location"] == (
+        "/login?next=%2Fapp&auth_error=denied&oauth_provider=google"
+    )
 
-    client.get("/api/v1/auth/oauth/google/start", follow_redirects=False)
+    started = client.get("/api/v1/auth/oauth/google/start", follow_redirects=False)
+    state = parse_qs(urlparse(started.headers["location"]).query)["state"][0]
     blocked_response = client.get(
         "/api/v1/auth/oauth/google/callback",
+        params={"code": "provider-code", "state": state},
         follow_redirects=False,
     )
-    assert blocked_response.headers["location"] == "/login?next=%2Fapp&auth_error=blocked"
+    assert blocked_response.headers["location"] == (
+        "/login?next=%2Fapp&auth_error=blocked&oauth_provider=google"
+    )
 
 
 def test_refresh_replay_revokes_only_its_family_and_logout_revokes_access():

@@ -102,7 +102,19 @@ def create_action_token(
 
 
 def consume_action_token(db: Session, raw_token: str, *, purpose: str) -> AuthActionToken:
-    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    return consume_action_token_hash(
+        db,
+        hashlib.sha256(raw_token.encode()).hexdigest(),
+        purpose=purpose,
+    )
+
+
+def consume_action_token_hash(
+    db: Session,
+    token_hash: str,
+    *,
+    purpose: str,
+) -> AuthActionToken:
     row = (
         db.query(AuthActionToken)
         .filter(

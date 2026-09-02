@@ -1,8 +1,9 @@
 import logging
-from datetime import timedelta
+from datetime import UTC, timedelta
+from typing import Any
 from uuid import uuid4
 
-from authlib.integrations.base_client.errors import OAuthError
+from authlib.integrations.base_client.errors import MismatchingStateError, OAuthError
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from httpx import HTTPError
@@ -38,11 +39,7 @@ from fitminiapp_api.services.account_linking import (
 from fitminiapp_api.services.audit import record_audit_event
 from fitminiapp_api.services.auth_email import password_reset_email, verification_email
 from fitminiapp_api.services.auth_identities import ensure_auth_identity, ensure_telegram_identity
-from fitminiapp_api.services.auth_redirects import (
-    account_link_error_redirect,
-    auth_error_redirect,
-    safe_auth_next_path,
-)
+from fitminiapp_api.services.auth_redirects import auth_error_redirect, safe_auth_next_path
 from fitminiapp_api.services.jwt import (
     AuthError,
     build_access_token,
@@ -51,11 +48,26 @@ from fitminiapp_api.services.jwt import (
     extract_bearer_token,
 )
 from fitminiapp_api.services.oauth_login import (
+    VK_SESSION_KEY,
     OAuthAccountBlockedError,
     OAuthProviderResponseError,
     OAuthStateError,
     configured_oauth_client,
     get_or_create_oauth_user,
+    merge_vk_callback_payload,
+)
+from fitminiapp_api.services.oauth_transactions import (
+    OAUTH_BROWSER_MARKER_KEY,
+    authlib_state_data,
+    browser_marker_from_session,
+    claim_oauth_transaction,
+    create_oauth_transaction,
+    finish_oauth_transaction,
+    has_pending_oauth_transactions,
+    is_valid_oauth_state,
+    prepare_oauth_session,
+    scrub_legacy_oauth_session,
+    transaction_hash_prefix,
 )
 from fitminiapp_api.services.password_auth import (
     PasswordAuthError,
@@ -134,6 +146,56 @@ def _safe_next_path(value: str | None) -> str | None:
     return safe_auth_next_path(value)
 
 
+def _clear_oauth_cookie(response: Response) -> None:
+    response.delete_cookie(
+        key=settings.oauth_session_cookie_name,
+        path="/",
+        secure=settings.app_env == "prod",
+        httponly=True,
+        samesite="none" if settings.app_env == "prod" else "lax",
+    )
+
+
+def _log_oauth_event(
+    event: str,
+    request: Request,
+    *,
+    provider: str,
+    purpose: str,
+    reason: str,
+    state: str | None = None,
+) -> None:
+    extra: dict[str, str] = {
+        "provider": provider,
+        "purpose": purpose,
+        "reason": reason,
+    }
+    if state and is_valid_oauth_state(state):
+        extra["transaction_hash_prefix"] = transaction_hash_prefix(state)
+    request_id = getattr(request.state, "request_id", None)
+    if request_id:
+        extra["request_id"] = request_id
+    logger.warning(event, extra=extra)
+
+
+def _cleanup_oauth_artifact(
+    request: Request,
+    response: Response,
+    db: Session,
+    *,
+    browser_marker: str | None,
+) -> None:
+    scrub_legacy_oauth_session(request.session)
+    if has_pending_oauth_transactions(db, browser_marker):
+        return
+    request.session.pop(OAUTH_BROWSER_MARKER_KEY, None)
+
+    # SessionMiddleware turns a bad or expired signed cookie into an empty
+    # session. Explicitly remove that cookie once no OAuth attempt remains.
+    if not request.session and request.cookies.get(settings.oauth_session_cookie_name):
+        _clear_oauth_cookie(response)
+
+
 def _oauth_error_code(provider_error: str) -> str:
     return (
         "denied"
@@ -142,15 +204,6 @@ def _oauth_error_code(provider_error: str) -> str:
         if provider_error in {"invalid_state", "mismatching_state", "missing_state"}
         else "provider_failure"
     )
-
-
-async def _oauth_callback_error(request: Request) -> str | None:
-    provider_error = request.query_params.get("error")
-    if provider_error or request.method == "GET":
-        return provider_error
-    form = await request.form()
-    form_error = form.get("error")
-    return form_error if isinstance(form_error, str) else None
 
 
 def _clear_refresh_cookie(response: Response) -> None:
@@ -280,24 +333,62 @@ def telegram_init_auth(
 
 @router.get("/oauth/{provider}/start")
 @limiter.limit("20/minute")
-async def oauth_start(request: Request, provider: str, next: str | None = None):
+async def oauth_start(
+    request: Request,
+    provider: str,
+    next: str | None = None,
+    db: Session = Depends(get_db),
+):
     _require_web_auth()
-    client = configured_oauth_client(provider)
+    normalized_provider = provider.strip().lower()
+    client = configured_oauth_client(normalized_provider)
     if client is None:
         return RedirectResponse(
             url=auth_error_redirect("unavailable", next_path=next), status_code=303
         )
-    request.session["oauth_next"] = _safe_next_path(next)
+    next_path = _safe_next_path(next)
+    browser_marker = prepare_oauth_session(request.session)
     try:
-        return await client.authorize_redirect(request, _oauth_callback_url(provider))
-    except (HTTPError, OAuthError, ValueError) as exc:
-        logger.warning(
+        callback_url = _oauth_callback_url(normalized_provider)
+        authorization_data = await _create_authorization_data(
+            client,
+            normalized_provider,
+            callback_url,
+        )
+        create_oauth_transaction(
+            db=db,
+            browser_marker=browser_marker,
+            provider=normalized_provider,
+            purpose="login",
+            authorization_data=authorization_data,
+            next_path=next_path,
+        )
+    except HTTPError, OAuthError, IntegrityError, RuntimeError, ValueError:
+        db.rollback()
+        _log_oauth_event(
             "oauth_start_failed",
-            extra={"provider": provider, "reason": type(exc).__name__},
+            request,
+            provider=normalized_provider,
+            purpose="login",
+            reason="provider_failure",
         )
-        return RedirectResponse(
-            url=auth_error_redirect("unavailable", next_path=next), status_code=303
+        response = RedirectResponse(
+            auth_error_redirect(
+                "unavailable",
+                next_path=next_path,
+                provider=normalized_provider,
+            ),
+            status_code=303,
         )
+        _cleanup_oauth_artifact(
+            request,
+            response,
+            db,
+            browser_marker=browser_marker,
+        )
+        return response
+
+    return RedirectResponse(authorization_data["url"], status_code=302)
 
 
 @router.get("/oauth/{provider}/link/start")
@@ -343,17 +434,104 @@ async def oauth_link_start(
         )
         db.commit()
         raise HTTPException(status_code=403, detail="Ссылка создана в другой сессии")
-    request.session["oauth_link_token"] = token
-    request.session["oauth_link_provider"] = normalized_provider
-    request.session["oauth_link_family"] = session_family_id
+    browser_marker = prepare_oauth_session(request.session)
     try:
-        return await client.authorize_redirect(request, _oauth_callback_url(normalized_provider))
-    except (HTTPError, OAuthError, ValueError) as exc:
-        logger.warning(
-            "oauth_link_start_failed",
-            extra={"provider": normalized_provider, "reason": type(exc).__name__},
+        callback_url = _oauth_callback_url(normalized_provider)
+        authorization_data = await _create_authorization_data(
+            client,
+            normalized_provider,
+            callback_url,
         )
-        return RedirectResponse(url=account_link_error_redirect("unavailable"), status_code=303)
+        create_oauth_transaction(
+            db,
+            browser_marker=browser_marker,
+            provider=normalized_provider,
+            purpose="link",
+            authorization_data=authorization_data,
+            link_action_token_hash=action_token.token_hash,
+            link_user_id=target.id,
+            session_family_id=session_family_id,
+        )
+    except HTTPError, OAuthError, IntegrityError, RuntimeError, ValueError:
+        db.rollback()
+        _log_oauth_event(
+            "oauth_link_start_failed",
+            request,
+            provider=normalized_provider,
+            purpose="link",
+            reason="provider_failure",
+        )
+        response = RedirectResponse(
+            auth_error_redirect("unavailable", provider=normalized_provider, link=True),
+            status_code=303,
+        )
+        _cleanup_oauth_artifact(
+            request,
+            response,
+            db,
+            browser_marker=browser_marker,
+        )
+        return response
+
+    return RedirectResponse(authorization_data["url"], status_code=302)
+
+
+async def _create_authorization_data(
+    client: Any,
+    provider: str,
+    redirect_uri: str,
+) -> dict[str, Any]:
+    if provider == "vk":
+        data = client.create_authorization_data(redirect_uri)
+    else:
+        data = await client.create_authorization_url(redirect_uri)
+    if not isinstance(data, dict) or not isinstance(data.get("url"), str):
+        raise ValueError("OAuth provider returned invalid authorization data")
+    result = dict(data)
+    result["redirect_uri"] = redirect_uri
+    return result
+
+
+def _add_callback_param(params: dict[str, str], key: str, value: object) -> None:
+    normalized = str(value)
+    existing = params.get(key)
+    if existing is not None and existing != normalized:
+        raise ValueError("OAuth callback contains conflicting parameters")
+    params[key] = normalized
+
+
+async def _oauth_callback_params(request: Request, provider: str) -> dict[str, str]:
+    params: dict[str, str] = {}
+    for query_key, query_value in request.query_params.multi_items():
+        _add_callback_param(params, query_key, query_value)
+    if request.scope.get("method", "GET") != "GET":
+        async with request.form() as form:
+            for form_key, form_value in form.multi_items():
+                _add_callback_param(params, form_key, form_value)
+    if provider == "vk":
+        return merge_vk_callback_payload(params)
+    return params
+
+
+def _set_temporary_authlib_state(
+    request: Request,
+    client: Any,
+    provider: str,
+    row,
+) -> None:
+    state_payload = authlib_state_data(row)
+    if provider == "vk":
+        request.session[VK_SESSION_KEY] = {
+            "state": row.state,
+            "code_verifier": row.code_verifier,
+            "redirect_uri": row.redirect_uri,
+        }
+        return
+    client_name = getattr(client, "name", None) or provider
+    request.session[f"_state_{client_name}_{row.state}"] = {
+        "data": state_payload,
+        "exp": row.expires_at.replace(tzinfo=UTC).timestamp(),
+    }
 
 
 async def _oauth_callback_impl(
@@ -362,36 +540,107 @@ async def _oauth_callback_impl(
     db: Session,
 ) -> Response:
     _require_web_auth()
-    next_path = _safe_next_path(request.session.pop("oauth_next", None))
-    link_token = request.session.pop("oauth_link_token", None)
-    link_provider = request.session.pop("oauth_link_provider", None)
-    link_family_id = request.session.pop("oauth_link_family", None)
-
-    def error_redirect(code: str) -> str:
-        return (
-            account_link_error_redirect(code)
-            if link_token
-            else auth_error_redirect(code, next_path=next_path)
-        )
-
-    client = configured_oauth_client(provider)
+    normalized_provider = provider.strip().lower()
+    client = configured_oauth_client(normalized_provider)
     if client is None:
-        return RedirectResponse(url=error_redirect("unavailable"), status_code=303)
-    if link_token and (
-        link_provider != provider or not isinstance(link_family_id, str) or not link_family_id
-    ):
-        return RedirectResponse(url=error_redirect("invalid_state"), status_code=303)
-    provider_error = await _oauth_callback_error(request)
-    if provider_error:
-        return RedirectResponse(
-            url=error_redirect(_oauth_error_code(provider_error)),
+        raise HTTPException(status_code=404, detail="Провайдер входа не настроен")
+    browser_marker = browser_marker_from_session(request.session)
+    try:
+        params = await _oauth_callback_params(request, normalized_provider)
+    except ValueError, RuntimeError:
+        _log_oauth_event(
+            "oauth_login_failed",
+            request,
+            provider=normalized_provider,
+            purpose="login",
+            reason="malformed_session",
+        )
+        response = RedirectResponse(
+            auth_error_redirect("invalid_state", provider=normalized_provider),
             status_code=303,
         )
+        _cleanup_oauth_artifact(
+            request,
+            response,
+            db,
+            browser_marker=browser_marker,
+        )
+        return response
+
+    state = params.get("state")
+    claim = claim_oauth_transaction(
+        db,
+        browser_marker=browser_marker,
+        provider=normalized_provider,
+        state=state,
+    )
+    row = claim.transaction
+    if claim.reason is not None or row is None:
+        purpose = row.purpose if row is not None else "login"
+        is_link = purpose == "link"
+        _log_oauth_event(
+            "oauth_login_failed",
+            request,
+            provider=normalized_provider,
+            purpose=purpose,
+            reason=claim.reason or "invalid_state",
+            state=state,
+        )
+        response = RedirectResponse(
+            auth_error_redirect(
+                "invalid_state",
+                next_path=row.next_path if row is not None and not is_link else None,
+                provider=normalized_provider,
+                link=is_link,
+            ),
+            status_code=303,
+        )
+        _cleanup_oauth_artifact(
+            request,
+            response,
+            db,
+            browser_marker=browser_marker,
+        )
+        return response
+
+    is_link = row.purpose == "link"
     try:
+        provider_error = params.get("error")
+        if provider_error:
+            code = _oauth_error_code(provider_error)
+            failure_reason = "provider_denied" if code == "denied" else "provider_failure"
+            finish_oauth_transaction(db, row, failure_reason=failure_reason)
+            _log_oauth_event(
+                "oauth_link_failed" if is_link else "oauth_login_failed",
+                request,
+                provider=normalized_provider,
+                purpose=row.purpose,
+                reason=failure_reason,
+                state=state,
+            )
+            response = RedirectResponse(
+                auth_error_redirect(
+                    code,
+                    next_path=row.next_path,
+                    provider=normalized_provider,
+                    link=is_link,
+                ),
+                status_code=303,
+            )
+            _cleanup_oauth_artifact(
+                request,
+                response,
+                db,
+                browser_marker=browser_marker,
+            )
+            return response
+
+        _set_temporary_authlib_state(request, client, normalized_provider, row)
+        request.state.oauth_callback_params = params
         token = await client.authorize_access_token(request)
         if not isinstance(token, dict):
             raise ValueError("OAuth provider returned an invalid token response")
-        if provider == "yandex":
+        if normalized_provider == "yandex":
             profile_response = await client.get("info?format=json", token=token)
             profile_response.raise_for_status()
             raw_claims = profile_response.json()
@@ -402,77 +651,322 @@ async def _oauth_callback_impl(
             if not isinstance(userinfo, dict):
                 raise ValueError("OAuth provider returned invalid identity claims")
             raw_claims = dict(userinfo)
-        if link_token:
+        if is_link:
+            if not row.link_action_token_hash or not row.link_user_id or not row.session_family_id:
+                raise OAuthLinkError("Сессия привязки недействительна")
+            try:
+                session_user, session_family_id = _active_refresh_session(request, db)
+            except HTTPException as exc:
+                raise OAuthLinkError("Сессия привязки недействительна") from exc
+            if session_user.id != row.link_user_id or session_family_id != row.session_family_id:
+                raise OAuthLinkError("Сессия привязки недействительна")
             try:
                 user = link_oauth_account(
                     db,
-                    raw_token=link_token,
-                    provider=provider,
+                    action_token_hash=row.link_action_token_hash,
+                    provider=normalized_provider,
                     raw_claims=raw_claims,
-                    expected_session_family_id=link_family_id,
+                    expected_session_family_id=row.session_family_id,
                 )
-            except OAuthLinkConflictError as exc:
+            except OAuthLinkConflictError:
                 db.commit()
-                logger.warning(
-                    "oauth_link_conflict",
-                    extra={"provider": provider, "reason": type(exc).__name__},
-                )
-                return RedirectResponse(
-                    url=account_link_error_redirect("conflict"), status_code=303
-                )
-            except (OAuthLinkError, PasswordAuthError) as exc:
-                db.commit()
-                logger.warning(
+                finish_oauth_transaction(db, row, failure_reason="conflict")
+                _log_oauth_event(
                     "oauth_link_failed",
-                    extra={"provider": provider, "reason": type(exc).__name__},
+                    request,
+                    provider=normalized_provider,
+                    purpose="link",
+                    reason="conflict",
+                    state=state,
                 )
-                return RedirectResponse(
-                    url=account_link_error_redirect("invalid_state"), status_code=303
+                response = RedirectResponse(
+                    auth_error_redirect(
+                        "conflict",
+                        provider=normalized_provider,
+                        link=True,
+                    ),
+                    status_code=303,
                 )
+                _cleanup_oauth_artifact(
+                    request,
+                    response,
+                    db,
+                    browser_marker=browser_marker,
+                )
+                return response
+            except OAuthLinkError, PasswordAuthError:
+                db.commit()
+                finish_oauth_transaction(db, row, failure_reason="invalid_state")
+                _log_oauth_event(
+                    "oauth_link_failed",
+                    request,
+                    provider=normalized_provider,
+                    purpose="link",
+                    reason="invalid_state",
+                    state=state,
+                )
+                response = RedirectResponse(
+                    auth_error_redirect(
+                        "invalid_state",
+                        provider=normalized_provider,
+                        link=True,
+                    ),
+                    status_code=303,
+                )
+                _cleanup_oauth_artifact(
+                    request,
+                    response,
+                    db,
+                    browser_marker=browser_marker,
+                )
+                return response
+            finish_oauth_transaction(db, row, commit=False)
+            db.commit()
+            response = RedirectResponse(
+                url=f"/app?auth_linked={normalized_provider}",
+                status_code=303,
+            )
+            _cleanup_oauth_artifact(
+                request,
+                response,
+                db,
+                browser_marker=browser_marker,
+            )
+            return response
         else:
-            user = get_or_create_oauth_user(db, provider=provider, raw_claims=raw_claims)
-    except OAuthAccountBlockedError as exc:
-        logger.warning(
-            "oauth_login_blocked", extra={"provider": provider, "reason": type(exc).__name__}
-        )
-        return RedirectResponse(url=error_redirect("blocked"), status_code=303)
-    except OAuthStateError as exc:
-        logger.warning(
-            "oauth_login_failed", extra={"provider": provider, "reason": type(exc).__name__}
-        )
-        return RedirectResponse(url=error_redirect("invalid_state"), status_code=303)
-    except OAuthProviderResponseError as exc:
-        logger.warning(
-            "oauth_login_failed", extra={"provider": provider, "reason": type(exc).__name__}
-        )
-        return RedirectResponse(
-            url=error_redirect(_oauth_error_code(exc.error)),
+            user = get_or_create_oauth_user(
+                db,
+                provider=normalized_provider,
+                raw_claims=raw_claims,
+            )
+        response = RedirectResponse(
+            url=row.next_path or "/app",
             status_code=303,
         )
+        issue_token_pair(db, user, response, commit=False)
+        finish_oauth_transaction(db, row, commit=False)
+        db.commit()
+        _cleanup_oauth_artifact(
+            request,
+            response,
+            db,
+            browser_marker=browser_marker,
+        )
+        return response
+    except OAuthAccountBlockedError:
+        db.rollback()
+        finish_oauth_transaction(db, row, failure_reason="blocked")
+        _log_oauth_event(
+            "oauth_login_blocked",
+            request,
+            provider=normalized_provider,
+            purpose=row.purpose,
+            reason="blocked",
+            state=state,
+        )
+        response = RedirectResponse(
+            auth_error_redirect(
+                "blocked",
+                next_path=row.next_path if not is_link else None,
+                provider=normalized_provider,
+                link=is_link,
+            ),
+            status_code=303,
+        )
+        _cleanup_oauth_artifact(
+            request,
+            response,
+            db,
+            browser_marker=browser_marker,
+        )
+        return response
+    except OAuthStateError:
+        db.rollback()
+        finish_oauth_transaction(db, row, failure_reason="invalid_state")
+        _log_oauth_event(
+            "oauth_login_failed",
+            request,
+            provider=normalized_provider,
+            purpose=row.purpose,
+            reason="invalid_state",
+            state=state,
+        )
+        response = RedirectResponse(
+            auth_error_redirect(
+                "invalid_state",
+                next_path=row.next_path if not is_link else None,
+                provider=normalized_provider,
+                link=is_link,
+            ),
+            status_code=303,
+        )
+        _cleanup_oauth_artifact(
+            request,
+            response,
+            db,
+            browser_marker=browser_marker,
+        )
+        return response
+    except OAuthProviderResponseError as exc:
+        code = _oauth_error_code(exc.error)
+        db.rollback()
+        finish_oauth_transaction(
+            db,
+            row,
+            failure_reason="provider_denied" if code == "denied" else "provider_failure",
+        )
+        _log_oauth_event(
+            "oauth_login_failed",
+            request,
+            provider=normalized_provider,
+            purpose=row.purpose,
+            reason=code,
+            state=state,
+        )
+        response = RedirectResponse(
+            auth_error_redirect(
+                code,
+                next_path=row.next_path if not is_link else None,
+                provider=normalized_provider,
+                link=is_link,
+            ),
+            status_code=303,
+        )
+        _cleanup_oauth_artifact(
+            request,
+            response,
+            db,
+            browser_marker=browser_marker,
+        )
+        return response
+    except MismatchingStateError:
+        db.rollback()
+        finish_oauth_transaction(db, row, failure_reason="invalid_state")
+        _log_oauth_event(
+            "oauth_login_failed",
+            request,
+            provider=normalized_provider,
+            purpose=row.purpose,
+            reason="invalid_state",
+            state=state,
+        )
+        response = RedirectResponse(
+            auth_error_redirect(
+                "invalid_state",
+                next_path=row.next_path if not is_link else None,
+                provider=normalized_provider,
+                link=is_link,
+            ),
+            status_code=303,
+        )
+        _cleanup_oauth_artifact(
+            request,
+            response,
+            db,
+            browser_marker=browser_marker,
+        )
+        return response
     except OAuthError as exc:
         oauth_error = getattr(exc, "error", "")
-        logger.warning(
-            "oauth_login_failed", extra={"provider": provider, "reason": type(exc).__name__}
+        code = _oauth_error_code(oauth_error)
+        db.rollback()
+        finish_oauth_transaction(
+            db,
+            row,
+            failure_reason="provider_denied" if code == "denied" else "provider_failure",
         )
-        return RedirectResponse(
-            url=error_redirect(_oauth_error_code(oauth_error)),
+        _log_oauth_event(
+            "oauth_login_failed",
+            request,
+            provider=normalized_provider,
+            purpose=row.purpose,
+            reason=code,
+            state=state,
+        )
+        response = RedirectResponse(
+            auth_error_redirect(
+                code,
+                next_path=row.next_path if not is_link else None,
+                provider=normalized_provider,
+                link=is_link,
+            ),
             status_code=303,
         )
-    except (HTTPError, OAuthLinkError, PasswordAuthError, IntegrityError, ValueError) as exc:
-        logger.warning(
-            "oauth_login_failed", extra={"provider": provider, "reason": type(exc).__name__}
+        _cleanup_oauth_artifact(
+            request,
+            response,
+            db,
+            browser_marker=browser_marker,
         )
-        return RedirectResponse(url=error_redirect("provider_failure"), status_code=303)
-
-    redirect = RedirectResponse(
-        url=(f"/app?auth_linked={provider}" if link_token else next_path or "/app"),
-        status_code=303,
-    )
-    if link_token:
+        return response
+    except OAuthLinkConflictError:
         db.commit()
-    else:
-        issue_token_pair(db, user, redirect)
-    return redirect
+        finish_oauth_transaction(db, row, failure_reason="conflict")
+        response = RedirectResponse(
+            auth_error_redirect("conflict", provider=normalized_provider, link=True),
+            status_code=303,
+        )
+        _cleanup_oauth_artifact(
+            request,
+            response,
+            db,
+            browser_marker=browser_marker,
+        )
+        return response
+    except OAuthLinkError, PasswordAuthError:
+        db.commit()
+        finish_oauth_transaction(db, row, failure_reason="invalid_state")
+        _log_oauth_event(
+            "oauth_link_failed" if is_link else "oauth_login_failed",
+            request,
+            provider=normalized_provider,
+            purpose=row.purpose,
+            reason="invalid_state",
+            state=state,
+        )
+        response = RedirectResponse(
+            auth_error_redirect(
+                "invalid_state",
+                next_path=row.next_path if not is_link else None,
+                provider=normalized_provider,
+                link=is_link,
+            ),
+            status_code=303,
+        )
+        _cleanup_oauth_artifact(
+            request,
+            response,
+            db,
+            browser_marker=browser_marker,
+        )
+        return response
+    except HTTPError, IntegrityError, ValueError, RuntimeError:
+        db.rollback()
+        finish_oauth_transaction(db, row, failure_reason="provider_failure")
+        _log_oauth_event(
+            "oauth_link_failed" if is_link else "oauth_login_failed",
+            request,
+            provider=normalized_provider,
+            purpose=row.purpose,
+            reason="provider_failure",
+            state=state,
+        )
+        response = RedirectResponse(
+            auth_error_redirect(
+                "provider_failure",
+                next_path=row.next_path if not is_link else None,
+                provider=normalized_provider,
+                link=is_link,
+            ),
+            status_code=303,
+        )
+        _cleanup_oauth_artifact(
+            request,
+            response,
+            db,
+            browser_marker=browser_marker,
+        )
+        return response
 
 
 @router.get(

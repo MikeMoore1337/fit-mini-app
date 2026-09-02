@@ -12,7 +12,11 @@ from fitminiapp_api.models.user import User
 from fitminiapp_api.services.audit import record_audit_event
 from fitminiapp_api.services.auth_identities import ensure_auth_identity, ensure_telegram_identity
 from fitminiapp_api.services.oauth_login import normalize_oauth_claims
-from fitminiapp_api.services.password_auth import consume_action_token, create_action_token
+from fitminiapp_api.services.password_auth import (
+    consume_action_token,
+    consume_action_token_hash,
+    create_action_token,
+)
 from fitminiapp_api.services.root_admin import is_root_telegram_user_id
 from fitminiapp_api.services.telegram_auth import normalize_telegram_username
 from fitminiapp_api.services.token_service import is_refresh_token_family_active
@@ -86,24 +90,36 @@ def create_oauth_link_url(
 def link_oauth_account(
     db: Session,
     *,
-    raw_token: str,
+    raw_token: str | None = None,
+    action_token_hash: str | None = None,
     provider: str,
     raw_claims: dict[str, object],
-    expected_session_family_id: str,
+    expected_session_family_id: str | None = None,
 ) -> User:
     normalized_provider = provider.strip().lower()
-    token = consume_action_token(
-        db,
-        raw_token,
-        purpose=oauth_link_purpose(normalized_provider),
-    )
-    if token.session_family_id != expected_session_family_id:
-        raise OAuthLinkError("Сессия привязки недействительна")
+    if action_token_hash:
+        token = consume_action_token_hash(
+            db,
+            action_token_hash,
+            purpose=oauth_link_purpose(normalized_provider),
+        )
+    elif raw_token:
+        token = consume_action_token(
+            db,
+            raw_token,
+            purpose=oauth_link_purpose(normalized_provider),
+        )
+    else:
+        raise OAuthLinkError("Ссылка привязки недействительна")
+    if expected_session_family_id is not None:
+        family_id = expected_session_family_id
+        if token.session_family_id != family_id:
+            raise OAuthLinkError("Сессия привязки недействительна")
+        if not is_refresh_token_family_active(db, token.user_id, family_id):
+            raise OAuthLinkError("Сессия привязки недействительна")
     target = db.query(User).filter(User.id == token.user_id).with_for_update().first()
     if target is None or not target.is_active:
         raise OAuthLinkError("Аккаунт для привязки недоступен")
-    if not is_refresh_token_family_active(db, target.id, expected_session_family_id):
-        raise OAuthLinkError("Сессия привязки недействительна")
 
     claims = normalize_oauth_claims(normalized_provider, raw_claims)
     subject = claims["subject"]

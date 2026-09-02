@@ -4138,6 +4138,15 @@ def test_oauth_callback_creates_browser_session_without_exposing_access_token(cl
     from fitminiapp_api.core.config import settings
 
     class FakeTelegramClient:
+        async def create_authorization_url(self, callback_url):
+            state = "fake-telegram-state"
+            return {
+                "url": f"https://telegram.example/authorize?state={state}",
+                "state": state,
+                "code_verifier": "fake-telegram-code-verifier",
+                "redirect_uri": callback_url,
+            }
+
         async def authorize_access_token(self, request):
             del request
             return {
@@ -4155,8 +4164,11 @@ def test_oauth_callback_creates_browser_session_without_exposing_access_token(cl
         "configured_oauth_client",
         lambda provider: FakeTelegramClient() if provider == "telegram" else None,
     )
+    started = client.get("/api/v1/auth/oauth/telegram/start", follow_redirects=False)
+    state = parse_qs(urlparse(started.headers["location"]).query)["state"][0]
     response = client.get(
         "/api/v1/auth/oauth/telegram/callback",
+        params={"code": "provider-code", "state": state},
         follow_redirects=False,
     )
 
@@ -4319,8 +4331,6 @@ def test_telegram_user_cannot_create_another_link(client):
 
 
 def test_telegram_account_explicitly_links_google_login(client, monkeypatch):
-    from fastapi.responses import RedirectResponse
-
     from fitminiapp_api.api.v1 import auth as auth_api
     from fitminiapp_api.services.oauth_login import get_or_create_oauth_user
 
@@ -4332,9 +4342,14 @@ def test_telegram_account_explicitly_links_google_login(client, monkeypatch):
     }
 
     class FakeGoogleClient:
-        async def authorize_redirect(self, request, callback_url):
-            del request, callback_url
-            return RedirectResponse("https://accounts.example/authorize")
+        async def create_authorization_url(self, callback_url):
+            state = "fake-google-link-state"
+            return {
+                "url": f"https://accounts.example/authorize?state={state}",
+                "state": state,
+                "code_verifier": "fake-google-link-code-verifier",
+                "redirect_uri": callback_url,
+            }
 
         async def authorize_access_token(self, request):
             del request
@@ -4358,9 +4373,14 @@ def test_telegram_account_explicitly_links_google_login(client, monkeypatch):
 
     started = client.get(created.json()["oauth_url"], follow_redirects=False)
     assert started.status_code in {302, 307}
-    assert started.headers["location"] == "https://accounts.example/authorize"
+    assert started.headers["location"].startswith("https://accounts.example/authorize?")
+    state = parse_qs(urlparse(started.headers["location"]).query)["state"][0]
 
-    callback = client.get("/api/v1/auth/oauth/google/callback", follow_redirects=False)
+    callback = client.get(
+        "/api/v1/auth/oauth/google/callback",
+        params={"code": "provider-code", "state": state},
+        follow_redirects=False,
+    )
     assert callback.status_code == 303
     assert callback.headers["location"] == "/app?auth_linked=google"
 
@@ -4374,8 +4394,6 @@ def test_telegram_account_explicitly_links_google_login(client, monkeypatch):
 
 
 def test_oauth_link_refuses_identity_owned_by_another_account(client, monkeypatch):
-    from fastapi.responses import RedirectResponse
-
     from fitminiapp_api.api.v1 import auth as auth_api
     from fitminiapp_api.services.oauth_login import get_or_create_oauth_user
 
@@ -4394,9 +4412,14 @@ def test_oauth_link_refuses_identity_owned_by_another_account(client, monkeypatc
         existing_google_id = existing_google.id
 
     class FakeGoogleClient:
-        async def authorize_redirect(self, request, callback_url):
-            del request, callback_url
-            return RedirectResponse("https://accounts.example/authorize")
+        async def create_authorization_url(self, callback_url):
+            state = "fake-google-link-conflict-state"
+            return {
+                "url": f"https://accounts.example/authorize?state={state}",
+                "state": state,
+                "code_verifier": "fake-google-link-conflict-code-verifier",
+                "redirect_uri": callback_url,
+            }
 
         async def authorize_access_token(self, request):
             del request
@@ -4414,11 +4437,18 @@ def test_oauth_link_refuses_identity_owned_by_another_account(client, monkeypatc
     telegram_id = client.get("/api/v1/me", headers=telegram_headers).json()["id"]
 
     created = client.post("/api/v1/me/auth/oauth-link/google", headers=telegram_headers)
-    client.get(created.json()["oauth_url"], follow_redirects=False)
-    callback = client.get("/api/v1/auth/oauth/google/callback", follow_redirects=False)
+    started = client.get(created.json()["oauth_url"], follow_redirects=False)
+    state = parse_qs(urlparse(started.headers["location"]).query)["state"][0]
+    callback = client.get(
+        "/api/v1/auth/oauth/google/callback",
+        params={"code": "provider-code", "state": state},
+        follow_redirects=False,
+    )
 
     assert callback.status_code == 303
-    assert callback.headers["location"] == "/app?auth_error=conflict"
+    assert (
+        callback.headers["location"] == "/app?auth_error=oauth_link_conflict&oauth_provider=google"
+    )
     me = client.get("/api/v1/me", headers=telegram_headers).json()
     assert me["id"] == telegram_id
     assert me["auth_providers"] == ["telegram"]

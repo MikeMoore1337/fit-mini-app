@@ -1,6 +1,11 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { AppShell, type AppSection } from '../../app/AppShell';
 import { useAuth } from '../../app/AuthProvider';
+import {
+  authRecoveryMessage,
+  providerLabel,
+  safeOAuthProvider,
+} from '../../shared/auth/oauthRecovery';
 import { TelegramLinkPrompt } from '../../features/account/TelegramLinkPrompt';
 import { TodayDashboard } from '../../features/dashboard/TodayDashboard';
 import type { WorkoutNavigationTarget } from '../../features/workouts/WorkoutHistory';
@@ -216,34 +221,27 @@ export default function MiniAppPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const linkedProvider = params.get('auth_linked');
+    const rawLinkedProvider = params.get('auth_linked');
+    const linkedProvider = safeOAuthProvider(rawLinkedProvider);
     const authError = params.get('auth_error');
-    if (!linkedProvider && !authError) return;
+    const oauthProvider = safeOAuthProvider(params.get('oauth_provider'));
+    if (!rawLinkedProvider && !authError) return;
 
-    const labels: Record<string, string> = {
-      google: 'Google',
-      yandex: 'Яндекс',
-      vk: 'VK ID',
-      apple: 'Apple',
-    };
     if (linkedProvider) {
-      toast(`${labels[linkedProvider] ?? linkedProvider} привязан к аккаунту`);
-    } else if (authError === 'conflict') {
-      toast('Этот способ входа уже привязан к другому аккаунту', 'error');
-    } else if (authError === 'denied') {
-      toast('Авторизация отменена или не разрешена', 'error');
-    } else if (authError === 'invalid_state') {
-      toast('Ссылка авторизации недействительна или устарела', 'error');
-    } else if (authError === 'blocked') {
-      toast('Аккаунт заблокирован', 'error');
-    } else if (authError === 'unavailable') {
-      toast('Этот способ входа временно недоступен', 'error');
+      toast(`${providerLabel(linkedProvider)} привязан к аккаунту`);
     } else {
-      toast('Не удалось связаться с сервисом авторизации', 'error');
+      const linkError = authError === 'conflict' ? 'oauth_link_conflict' : authError;
+      toast(
+        authRecoveryMessage(linkError, oauthProvider) ??
+          'Не удалось связаться с сервисом авторизации',
+        'error',
+      );
     }
 
     params.delete('auth_linked');
     params.delete('auth_error');
+    params.delete('oauth_provider');
+    params.delete('next');
     const query = params.toString();
     window.history.replaceState(
       null,

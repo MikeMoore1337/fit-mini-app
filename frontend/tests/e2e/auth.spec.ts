@@ -14,6 +14,7 @@ type MockAuthCalls = {
   refresh: number;
   telegramInit: number;
   meAuthorization: string[];
+  oauthStarts: string[];
 };
 
 function userPayload() {
@@ -44,7 +45,12 @@ async function mockAuthApi(
 ): Promise<MockAuthCalls> {
   let hasSession = authenticated;
   let activeUser = initialUser;
-  const calls: MockAuthCalls = { refresh: 0, telegramInit: 0, meAuthorization: [] };
+  const calls: MockAuthCalls = {
+    refresh: 0,
+    telegramInit: 0,
+    meAuthorization: [],
+    oauthStarts: [],
+  };
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
@@ -65,6 +71,10 @@ async function mockAuthApi(
       return hasSession
         ? route.fulfill({ json: { access_token: 'refreshed-token' } })
         : route.fulfill({ status: 401, json: { detail: 'Сессия отсутствует' } });
+    }
+    if (path.includes('/auth/oauth/') && path.endsWith('/start')) {
+      calls.oauthStarts.push(request.url());
+      return route.fulfill({ status: 204 });
     }
     if (path.endsWith('/auth/telegram/init')) {
       calls.telegramInit += 1;
@@ -271,7 +281,7 @@ test('Повторить сохраняет контраст и единый hov
     await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
     await page.goto('/login?auth_error=provider_failure');
 
-    const retry = page.getByRole('button', { name: 'Повторить' });
+    const retry = page.getByRole('link', { name: 'Повторить' });
     const provider = page.getByRole('link', { name: 'Продолжить с Google' });
     await retry.hover();
     const retryStyles = await retry.evaluate((element) => {
@@ -300,6 +310,26 @@ test('Повторить сохраняет контраст и единый hov
     );
     expect(retryStyles.color).toBe(scheme === 'light' ? 'rgb(22, 26, 23)' : 'rgb(238, 240, 234)');
   }
+});
+
+test('OAuth invalid_state retry starts a fresh provider flow without reload loop', async ({
+  page,
+}) => {
+  const calls = await mockAuthApi(page, { providers: ['google'] });
+  await page.goto(
+    '/login?next=%2Fcoach&auth_error=invalid_state&oauth_provider=google&code=secret-code',
+  );
+
+  const retry = page.getByRole('link', { name: 'Повторить вход через Google' });
+  await expect(retry).toHaveAttribute('href', '/api/v1/auth/oauth/google/start?next=%2Fcoach');
+  await retry.click();
+
+  expect(calls.oauthStarts).toHaveLength(1);
+  const oauthStart = calls.oauthStarts[0];
+  if (!oauthStart) throw new Error('OAuth start request was not captured');
+  expect(new URL(oauthStart).pathname).toBe('/api/v1/auth/oauth/google/start');
+  expect(oauthStart).toContain('next=%2Fcoach');
+  expect(oauthStart).not.toContain('secret-code');
 });
 
 test('already authenticated Login возвращает в safe destination', async ({ page }) => {

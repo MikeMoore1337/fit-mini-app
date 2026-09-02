@@ -123,8 +123,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
       if (reason instanceof ApiError && [401, 403].includes(reason.status)) {
+        clearAccessToken();
         clearCurrentUserData();
         setUser(null);
+        setError(null);
+        return null;
       }
       setError(reason instanceof Error ? reason.message : 'Не удалось загрузить профиль');
       return null;

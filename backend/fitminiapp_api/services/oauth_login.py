@@ -167,26 +167,6 @@ _register_oidc(
 _register_yandex(settings.yandex_oauth_client_id, settings.yandex_oauth_client_secret)
 
 
-def _vk_callback_params(request) -> dict[str, str]:
-    """Accept both VK ID's flat callback and its JSON ``payload`` form."""
-
-    params = dict(request.query_params.items())
-    raw_payload = params.get("payload")
-    if raw_payload:
-        payload = json.loads(raw_payload)
-        if not isinstance(payload, dict):
-            raise ValueError("VK ID returned an invalid callback payload")
-        for key, value in payload.items():
-            if value is None:
-                continue
-            normalized_value = str(value)
-            if key in params and key != "payload" and params[key] != normalized_value:
-                raise OAuthStateError("VK ID returned conflicting callback parameters")
-            params[key] = normalized_value
-    params.pop("payload", None)
-    return params
-
-
 def _pkce_challenge(code_verifier: str) -> str:
     digest = hashlib.sha256(code_verifier.encode("ascii")).digest()
     return base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
@@ -198,16 +178,9 @@ class VKOAuthClient:
     def __init__(self, client_id: str) -> None:
         self.client_id = client_id
 
-    async def authorize_redirect(self, request, redirect_uri: str):
-        from starlette.responses import RedirectResponse
-
+    def create_authorization_data(self, redirect_uri: str) -> dict[str, str]:
         state = secrets.token_urlsafe(32)
         code_verifier = secrets.token_urlsafe(48)
-        request.session[VK_SESSION_KEY] = {
-            "state": state,
-            "code_verifier": code_verifier,
-            "redirect_uri": redirect_uri,
-        }
         query = urlencode(
             {
                 "response_type": "code",
@@ -216,14 +189,40 @@ class VKOAuthClient:
                 "scope": VK_SCOPE,
                 "state": state,
                 "code_challenge": _pkce_challenge(code_verifier),
-                # VK ID's current Web SDK sends the method token in lowercase.
-                "code_challenge_method": "s256",
+                "code_challenge_method": "S256",
             }
         )
-        return RedirectResponse(f"{VK_AUTHORIZE_URL}?{query}", status_code=302)
+        return {
+            "url": f"{VK_AUTHORIZE_URL}?{query}",
+            "state": state,
+            "code_verifier": code_verifier,
+            "redirect_uri": redirect_uri,
+        }
+
+    async def _callback_params(self, request) -> dict[str, str]:
+        cached = getattr(request.state, "oauth_callback_params", None)
+        if isinstance(cached, dict):
+            return cached
+
+        params: dict[str, str] = {}
+        for key, value in request.query_params.multi_items():
+            normalized = str(value)
+            existing = params.get(key)
+            if existing is not None and existing != normalized:
+                raise OAuthStateError("VK ID returned conflicting callback parameters")
+            params[key] = normalized
+        if request.scope.get("method", "GET") != "GET":
+            async with request.form() as form:
+                for key, value in form.multi_items():
+                    normalized = str(value)
+                    existing = params.get(key)
+                    if existing is not None and existing != normalized:
+                        raise OAuthStateError("VK ID returned conflicting callback parameters")
+                    params[key] = normalized
+        return merge_vk_callback_payload(params)
 
     async def authorize_access_token(self, request) -> dict[str, object]:
-        params = _vk_callback_params(request)
+        params = await self._callback_params(request)
         error = params.get("error")
         if error:
             raise OAuthProviderResponseError(error)
@@ -289,6 +288,30 @@ class VKOAuthClient:
             if not isinstance(profile, dict) or not isinstance(profile.get("user"), dict):
                 raise ValueError("VK ID returned an invalid user profile")
             return {**token, "userinfo": profile["user"]}
+
+
+def merge_vk_callback_payload(params: dict[str, str]) -> dict[str, str]:
+    """Merge VK flat and JSON callback forms while rejecting conflicts."""
+
+    merged = dict(params)
+    raw_payload = merged.pop("payload", None)
+    if not raw_payload:
+        return merged
+    try:
+        payload = json.loads(raw_payload)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("VK ID returned an invalid callback payload") from exc
+    if not isinstance(payload, dict):
+        raise ValueError("VK ID returned an invalid callback payload")
+    for key, value in payload.items():
+        if value is None:
+            continue
+        normalized = str(value)
+        existing = merged.get(key)
+        if existing is not None and existing != normalized:
+            raise OAuthStateError("VK ID returned conflicting callback parameters")
+        merged[key] = normalized
+    return merged
 
 
 def configured_oauth_client(provider: str):

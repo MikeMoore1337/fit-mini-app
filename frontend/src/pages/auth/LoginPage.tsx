@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../app/AuthProvider';
 import { EmailAuthPanel } from '../../features/auth/EmailAuthPanel';
 import { configuredOAuthProviders, OAuthButtons } from '../../features/auth/OAuthButtons';
+import { oauthStartHref, providerLabel, safeOAuthProvider } from '../../shared/auth/oauthRecovery';
 import { safeAuthNextPath } from '../../shared/auth/redirects';
 import { AppLink, demoReturnPathFromLogin, useNavigation } from '../../shared/navigation/router';
 import { ErrorState, LoadingState } from '../../shared/ui/common';
@@ -124,6 +125,16 @@ export default function LoginPage() {
   const demoReturnPath = demoReturnPathFromLogin(window.location.search);
   const authErrorCode = params.get('auth_error');
   const providers = configuredOAuthProviders(config?.enable_web_auth ? config.oauth_providers : []);
+  const requestedOAuthProvider = safeOAuthProvider(params.get('oauth_provider'));
+  const retryProvider =
+    requestedOAuthProvider && providers.includes(requestedOAuthProvider)
+      ? requestedOAuthProvider
+      : (providers[0] ?? null);
+  const retryHref = retryProvider ? oauthStartHref(retryProvider, nextPath) : null;
+  const retryLabel =
+    retryProvider && retryProvider === requestedOAuthProvider
+      ? `Повторить вход через ${providerLabel(retryProvider)}`
+      : 'Повторить';
   const telegramAppUrl = config?.telegram_bot_username
     ? telegramMiniAppUrl(config.telegram_bot_username)
     : null;
@@ -215,14 +226,14 @@ export default function LoginPage() {
               )}
               {config?.enable_email_auth && <EmailAuthPanel nextPath={nextPath} />}
               {config?.enable_dev_auth && <DevLoginControls nextPath={nextPath} />}
-              {(error || authErrorCode) && (
-                <button
-                  type="button"
+              {(error || authErrorCode) && retryHref && (
+                <a
                   className="login-retry"
-                  onClick={() => window.location.reload()}
+                  href={retryHref}
+                  onClick={() => markProductLoginStarted()}
                 >
-                  Повторить
-                </button>
+                  {retryLabel}
+                </a>
               )}
             </div>
           )}

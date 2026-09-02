@@ -2,12 +2,11 @@ import hashlib
 import hmac
 import json
 import time
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode, urlparse
 
 import httpx
 import pytest
 from authlib.integrations.base_client.errors import OAuthError
-from fastapi.responses import RedirectResponse
 from pydantic import ValidationError
 
 from fitminiapp_api.api.v1 import auth as auth_api
@@ -52,9 +51,14 @@ class _FakeOAuthClient:
         self.claims = claims or {}
         self.error = error
 
-    async def authorize_redirect(self, request, redirect_uri):
-        request.session["fake_redirect_uri"] = redirect_uri
-        return RedirectResponse("https://provider.example/authorize", status_code=302)
+    async def create_authorization_url(self, redirect_uri):
+        state = "provider-test-state"
+        return {
+            "url": f"https://provider.example/authorize?state={state}",
+            "state": state,
+            "code_verifier": "provider-test-code-verifier",
+            "redirect_uri": redirect_uri,
+        }
 
     async def authorize_access_token(self, request):
         del request
@@ -291,7 +295,13 @@ def test_yandex_callback_uses_stable_id_and_unverified_contact_email(client, mon
         ),
     )
 
-    response = client.get("/api/v1/auth/oauth/yandex/callback", follow_redirects=False)
+    started = client.get("/api/v1/auth/oauth/yandex/start", follow_redirects=False)
+    state = parse_qs(urlparse(started.headers["location"]).query)["state"][0]
+    response = client.get(
+        "/api/v1/auth/oauth/yandex/callback",
+        params={"code": "yandex-code", "state": state},
+        follow_redirects=False,
+    )
 
     assert response.status_code == 303
     assert response.headers["location"] == "/app"
@@ -314,32 +324,62 @@ def test_oauth_library_errors_are_normalized(client, monkeypatch, error, expecte
         lambda provider: _FakeOAuthClient(error=OAuthError(error=error)),
     )
 
-    response = client.get("/api/v1/auth/oauth/google/callback", follow_redirects=False)
+    started = client.get("/api/v1/auth/oauth/google/start", follow_redirects=False)
+    state = parse_qs(urlparse(started.headers["location"]).query)["state"][0]
+    response = client.get(
+        "/api/v1/auth/oauth/google/callback",
+        params={"code": "google-code", "state": state},
+        follow_redirects=False,
+    )
 
     assert response.status_code == 303
-    assert response.headers["location"] == f"/login?next=%2Fapp&auth_error={expected}"
+    assert response.headers["location"] == (
+        f"/login?next=%2Fapp&auth_error={expected}&oauth_provider=google"
+    )
 
 
 def test_provider_timeout_is_safe_on_start_and_callback(client, monkeypatch):
-    class TimeoutClient(_FakeOAuthClient):
-        async def authorize_redirect(self, request, redirect_uri):
-            del request, redirect_uri
+    class StartTimeoutClient(_FakeOAuthClient):
+        async def create_authorization_url(self, redirect_uri):
+            del redirect_uri
             raise httpx.ConnectTimeout("provider timeout")
+
+    class CallbackTimeoutClient(_FakeOAuthClient):
+        async def authorize_access_token(self, request):
+            del request
+            raise httpx.ReadTimeout("provider timeout")
 
     monkeypatch.setattr(settings, "enable_web_auth", True)
     monkeypatch.setattr(
         auth_api,
         "configured_oauth_client",
-        lambda provider: TimeoutClient(error=httpx.ReadTimeout("provider timeout")),
+        lambda provider: StartTimeoutClient() if provider == "google" else None,
     )
 
     started = client.get("/api/v1/auth/oauth/google/start", follow_redirects=False)
-    callback = client.get("/api/v1/auth/oauth/google/callback", follow_redirects=False)
 
     assert started.status_code == 303
-    assert started.headers["location"] == "/login?next=%2Fapp&auth_error=unavailable"
+    assert started.headers["location"] == (
+        "/login?next=%2Fapp&auth_error=unavailable&oauth_provider=google"
+    )
+
+    monkeypatch.setattr(
+        auth_api,
+        "configured_oauth_client",
+        lambda provider: CallbackTimeoutClient() if provider == "google" else None,
+    )
+    started = client.get("/api/v1/auth/oauth/google/start", follow_redirects=False)
+    state = parse_qs(urlparse(started.headers["location"]).query)["state"][0]
+    callback = client.get(
+        "/api/v1/auth/oauth/google/callback",
+        params={"code": "google-code", "state": state},
+        follow_redirects=False,
+    )
+
     assert callback.status_code == 303
-    assert callback.headers["location"] == "/login?next=%2Fapp&auth_error=provider_failure"
+    assert callback.headers["location"] == (
+        "/login?next=%2Fapp&auth_error=provider_failure&oauth_provider=google"
+    )
 
 
 def test_post_callback_cancel_is_normalized_without_provider_call(client, monkeypatch):
@@ -351,14 +391,18 @@ def test_post_callback_cancel_is_normalized_without_provider_call(client, monkey
     monkeypatch.setattr(settings, "enable_web_auth", True)
     monkeypatch.setattr(auth_api, "configured_oauth_client", lambda provider: UnexpectedClient())
 
+    started = client.get("/api/v1/auth/oauth/apple/start", follow_redirects=False)
+    state = parse_qs(urlparse(started.headers["location"]).query)["state"][0]
     response = client.post(
         "/api/v1/auth/oauth/apple/callback",
-        data={"error": "user_cancelled"},
+        data={"error": "user_cancelled", "state": state},
         follow_redirects=False,
     )
 
     assert response.status_code == 303
-    assert response.headers["location"] == "/login?next=%2Fapp&auth_error=denied"
+    assert response.headers["location"] == (
+        "/login?next=%2Fapp&auth_error=denied&oauth_provider=apple"
+    )
 
 
 def test_post_callback_success_keeps_form_available_for_provider_client(client, monkeypatch):
@@ -366,7 +410,7 @@ def test_post_callback_success_keeps_form_available_for_provider_client(client, 
         async def authorize_access_token(self, request):
             async with request.form() as form:
                 assert form.get("code") == "apple-code"
-                assert form.get("state") == "apple-state"
+                assert form.get("state") == state
             return {
                 "userinfo": {
                     "sub": "apple-form-subject",
@@ -378,9 +422,11 @@ def test_post_callback_success_keeps_form_available_for_provider_client(client, 
     monkeypatch.setattr(settings, "enable_web_auth", True)
     monkeypatch.setattr(auth_api, "configured_oauth_client", lambda provider: FormReadingClient())
 
+    started = client.get("/api/v1/auth/oauth/apple/start", follow_redirects=False)
+    state = parse_qs(urlparse(started.headers["location"]).query)["state"][0]
     response = client.post(
         "/api/v1/auth/oauth/apple/callback",
-        data={"code": "apple-code", "state": "apple-state"},
+        data={"code": "apple-code", "state": state},
         follow_redirects=False,
     )
 

@@ -103,8 +103,8 @@ app.add_middleware(RequestContextMiddleware)
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.secret_key,
-    session_cookie="fit_oauth_session",
-    max_age=10 * 60,
+    session_cookie=settings.oauth_session_cookie_name,
+    max_age=settings.oauth_transaction_ttl_seconds,
     same_site="none" if settings.app_env == "prod" else "lax",
     https_only=settings.app_env == "prod",
 )
