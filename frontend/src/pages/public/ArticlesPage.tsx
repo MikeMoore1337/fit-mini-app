@@ -6,6 +6,7 @@ import { appUrlForHostname } from '../../shared/navigation/appUrl';
 import { AppLink, Redirect, useNavigation } from '../../shared/navigation/router';
 import { applyArticleRouteMetadata, type PublicArticleSeoData } from '../../shared/seo/metadata';
 import { productEventSurface, trackProductEvent } from '../../shared/analytics/productEvents';
+import { PUBLIC_TELEGRAM_LINKS } from '../../shared/telegram/publicLinks';
 import { useWebTheme } from '../../shared/useWebTheme';
 import { Icon } from '../../shared/ui/Icon';
 import { PublicFooter, PublicHeader } from './PublicContentPage';
@@ -229,7 +230,12 @@ function ArticleDetail({ slug }: { slug: string }) {
   const relatedArticles =
     related.data?.filter((item) => data.related_slugs.includes(item.slug)) ?? [];
   const appUrl = appUrlForHostname(window.location.hostname);
-  const ctaHref = data.cta.destination === 'landing' ? '/' : appUrl;
+  const ctaHref =
+    data.cta.destination === 'landing'
+      ? '/'
+      : data.cta.destination === 'tma'
+        ? PUBLIC_TELEGRAM_LINKS.miniApp
+        : appUrl;
 
   return (
     <ArticleLayout>

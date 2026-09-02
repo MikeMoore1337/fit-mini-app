@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import hashlib
+import time
 
 import pytest
-from pydantic import ValidationError
+from pydantic import SecretStr, ValidationError
 
+from fitminiapp_api.core.config import settings
 from fitminiapp_api.db.session import SessionLocal
 from fitminiapp_api.models.news import WebArticle, WebArticleRevision
-from fitminiapp_api.schemas.articles import HermesWebArticleIntakeRequest
+from fitminiapp_api.schemas.articles import ArticleSource, HermesWebArticleIntakeRequest
+from fitminiapp_api.services.news_hermes import hermes_signature
 from fitminiapp_api.services.web_articles import (
     ArticleCandidateSignals,
     WebArticleError,
@@ -182,6 +185,65 @@ def test_hermes_article_intake_is_idempotent_and_creates_draft(db_session) -> No
 def test_sensitive_article_requires_domain_reviewer() -> None:
     with pytest.raises(ValidationError, match="domain_reviewer"):
         _payload("a" * 32, risk_level="high")
+
+
+def test_article_sources_require_https() -> None:
+    with pytest.raises(ValidationError, match="must use HTTPS"):
+        ArticleSource.model_validate(
+            {
+                "source_id": "source-one",
+                "title": "Source",
+                "publisher": "Publisher",
+                "url": "http://example.com/source",
+                "source_type": "official_organization",
+            }
+        )
+
+
+def test_signed_hermes_article_intake_is_idempotent_and_never_publishes(
+    client, monkeypatch
+) -> None:
+    monkeypatch.setattr(settings, "hermes_intake_enabled", True)
+    monkeypatch.setattr(settings, "hermes_intake_key_id", "hermes-test")
+    monkeypatch.setattr(
+        settings,
+        "hermes_intake_shared_secret",
+        SecretStr("test-hermes-shared-secret-that-is-long-enough"),
+    )
+    with SessionLocal() as db:
+        candidate_id = _candidate(db)
+        db.commit()
+
+    payload = _payload(candidate_id)
+    body = payload.model_dump_json().encode()
+    timestamp = str(int(time.time()))
+    nonce = "article-request-nonce-001"
+    headers = {
+        "X-Hermes-Key-Id": "hermes-test",
+        "X-Hermes-Timestamp": timestamp,
+        "X-Hermes-Nonce": nonce,
+        "X-Hermes-Signature": hermes_signature(
+            "test-hermes-shared-secret-that-is-long-enough",
+            timestamp=timestamp,
+            nonce=nonce,
+            body=body,
+        ),
+    }
+
+    first = client.post("/api/v1/hermes/articles/intake", content=body, headers=headers)
+    second = client.post("/api/v1/hermes/articles/intake", content=body, headers=headers)
+
+    assert first.status_code == 200, first.text
+    assert second.status_code == 200, second.text
+    assert first.json()["status"] == "accepted"
+    assert second.json()["status"] == "duplicate"
+    assert first.json()["article_status"] == "draft"
+    assert first.json()["article_id"] == second.json()["article_id"]
+
+    with SessionLocal() as db:
+        article = db.get(WebArticle, first.json()["article_id"])
+        assert article is not None
+        assert article.status == "draft"
 
 
 def test_publish_requires_approval_and_update_preserves_revision(db_session) -> None:

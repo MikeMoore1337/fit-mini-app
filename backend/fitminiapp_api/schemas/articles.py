@@ -61,6 +61,12 @@ class ArticleSource(BaseModel):
     published_at: str | None = Field(default=None, max_length=32)
     limitations: str = Field(default="", max_length=800)
 
+    @model_validator(mode="after")
+    def require_https(self) -> ArticleSource:
+        if self.url.scheme != "https":
+            raise ValueError("article sources must use HTTPS")
+        return self
+
 
 class ArticleClaimSourceMatrixItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
