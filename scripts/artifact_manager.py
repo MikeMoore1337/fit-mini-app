@@ -1408,6 +1408,9 @@ def _human_result(payload: Mapping[str, Any]) -> str:
         f"operation: {payload.get('operation', 'unknown')}",
         f"root: {payload.get('root', '<not recorded>')}",
     ]
+    for key in ("task_id", "path", "delivery_path"):
+        if key in payload:
+            lines.append(f"{key}: {payload[key]}")
     if payload.get("plan_sha256"):
         lines.append(f"plan_sha256: {payload['plan_sha256']}")
     summary = payload.get("summary")
@@ -1472,7 +1475,7 @@ def _parser() -> argparse.ArgumentParser:
     allocate.add_argument("classification", choices=CLASSIFICATIONS)
     allocate.add_argument("relative_path")
     allocate.add_argument("--purpose", required=True)
-    allocate.add_argument("--command", required=True)
+    allocate.add_argument("--command", dest="provenance_command", required=True)
     allocate.add_argument("--owner", default="task-worker")
     allocate.add_argument("--directory", action="store_true")
 
@@ -1526,7 +1529,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     args.classification,
                     args.relative_path,
                     purpose=args.purpose,
-                    command=args.command,
+                    command=args.provenance_command,
                     owner=args.owner,
                 )
             else:
@@ -1535,7 +1538,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     args.classification,
                     args.relative_path,
                     purpose=args.purpose,
-                    command=args.command,
+                    command=args.provenance_command,
                     owner=args.owner,
                 )
             payload = {

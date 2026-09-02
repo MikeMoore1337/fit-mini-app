@@ -71,6 +71,31 @@ def test_allocate_writes_task_manifest_and_rejects_wrong_task_class(tmp_path: Pa
         )
 
 
+def test_cli_allocate_records_provenance_command(tmp_path: Path, capsys) -> None:
+    root = tmp_path / ".artifacts"
+
+    exit_code = artifact_manager.main(
+        [
+            "--root",
+            str(root),
+            "allocate",
+            "133",
+            "temporary",
+            "temporary/cli-run",
+            "--purpose",
+            "CLI test",
+            "--command",
+            "pytest -q",
+            "--directory",
+        ]
+    )
+
+    assert exit_code == 0
+    assert "cli-run" in capsys.readouterr().out
+    manifest = json.loads((root / "tasks" / "133" / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["entries"][0]["command"] == "pytest -q"
+
+
 def test_cleanup_task_is_exact_idempotent_and_preserves_evidence(tmp_path: Path) -> None:
     manager = _manager(tmp_path)
     temporary = manager.allocate_directory(
